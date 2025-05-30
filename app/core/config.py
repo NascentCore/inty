@@ -6,6 +6,14 @@ import sys
 from pydantic import AnyHttpUrl
 
 @dataclass
+class LoggingConfig:
+    level: str
+    format: str
+    file: str
+    rotation: str
+    retention: str
+
+@dataclass
 class SecurityConfig:
     secret_key: str
     algorithm: str = "HS256"
@@ -51,6 +59,7 @@ class Config:
     database: DatabaseSettings
     google_oauth: GoogleOAuthConfig
     verification: VerificationConfig
+    logging: LoggingConfig
 
 def load_config(path: str = "config.yaml") -> Config:
     config_path = Path(path)
@@ -66,7 +75,8 @@ def load_config(path: str = "config.yaml") -> Config:
         security=SecurityConfig(**data.get("security", {})),
         database=DatabaseSettings(**data.get("database", {})),
         google_oauth=GoogleOAuthConfig(**data.get("google_oauth", {})),
-        verification=VerificationConfig(**data.get("verification", {}))
+        verification=VerificationConfig(**data.get("verification", {})),
+        logging=LoggingConfig(**data.get("logging", {}))
     )
 
 # load config

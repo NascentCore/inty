@@ -13,6 +13,10 @@ from app.middleware.error_handler import (
     sqlalchemy_exception_handler,
     validation_error_handler
 )
+from app.core.logging import init_logger
+from loguru import logger
+
+init_logger()
 
 app = FastAPI(
     title=settings.app.name,
