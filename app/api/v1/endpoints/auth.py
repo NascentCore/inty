@@ -21,7 +21,7 @@ from app.models.user import AuthType
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_PREFIX}/auth/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.app.api_v1_prefix}/auth/login")
 
 
 @router.post("/register", response_model=schemas.Token)
@@ -129,7 +129,7 @@ async def google_login(
         idinfo = id_token.verify_oauth2_token(
             login_in.id_token, 
             google_requests.Request(), 
-            settings.GOOGLE_CLIENT_ID
+            settings.google_oauth.client_id
         )
 
         # 验证发行者

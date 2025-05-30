@@ -20,7 +20,7 @@ def create_verification_code(db: Session, phone: str) -> VerificationCode:
     code = generate_code()
     
     # 计算过期时间
-    expires_at = datetime.utcnow() + timedelta(minutes=settings.VERIFICATION_CODE_EXPIRE_MINUTES)
+    expires_at = datetime.utcnow() + timedelta(minutes=settings.verification.code_expire_minutes)
     
     # 创建验证码记录
     verification_code = VerificationCode(

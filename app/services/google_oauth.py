@@ -12,11 +12,11 @@ async def get_google_token(code: str) -> Dict:
             response = await client.post(
                 "https://oauth2.googleapis.com/token",
                 data={
-                    "client_id": settings.GOOGLE_CLIENT_ID,
-                    "client_secret": settings.GOOGLE_CLIENT_SECRET,
+                    "client_id": settings.google_oauth.client_id,
+                    "client_secret": settings.google_oauth.client_secret,
                     "code": code,
                     "grant_type": "authorization_code",
-                    "redirect_uri": settings.GOOGLE_REDIRECT_URI
+                    "redirect_uri": settings.google_oauth.redirect_uri
                 }
             )
             response.raise_for_status()

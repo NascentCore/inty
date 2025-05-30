@@ -13,7 +13,7 @@ from app.models.user import User
 from app.schemas.token import TokenPayload
 
 oauth2_scheme = OAuth2PasswordBearer(
-    tokenUrl=f"{settings.API_V1_PREFIX}/auth/login"
+    tokenUrl=f"{settings.app.api_v1_prefix}/auth/login"
 )
 
 def get_db() -> Generator:
@@ -32,8 +32,8 @@ async def get_current_user(
     try:
         payload = jwt.decode(
             token,
-            settings.SECRET_KEY,
-            algorithms=[settings.ALGORITHM]
+            settings.security.secret_key,
+            algorithms=[settings.security.algorithm]
         )
         token_data = TokenPayload(**payload)
     except (JWTError, ValidationError):

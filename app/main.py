@@ -15,15 +15,15 @@ from app.middleware.error_handler import (
 )
 
 app = FastAPI(
-    title=settings.APP_NAME,
-    openapi_url=f"{settings.API_V1_PREFIX}/openapi.json"
+    title=settings.app.name,
+    openapi_url=f"{settings.app.api_v1_prefix}/openapi.json"
 )
 
 # Set all CORS enabled origins
-if settings.BACKEND_CORS_ORIGINS:
+if settings.app.backend_cors_origins:
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=[str(origin) for origin in settings.BACKEND_CORS_ORIGINS],
+        allow_origins=[str(origin) for origin in settings.app.backend_cors_origins],
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
@@ -35,7 +35,7 @@ app.add_exception_handler(JWTError, jwt_exception_handler)
 app.add_exception_handler(SQLAlchemyError, sqlalchemy_exception_handler)
 app.add_exception_handler(ValidationError, validation_error_handler)
 
-app.include_router(api_router, prefix=settings.API_V1_PREFIX)
+app.include_router(api_router, prefix=settings.app.api_v1_prefix)
 
 @app.get("/")
 async def root():
@@ -44,7 +44,7 @@ async def root():
         "code": 200,
         "message": "success",
         "data": {
-            "app_name": settings.APP_NAME,
+            "app_name": settings.app.name,
             "version": "1.0.0"
         }
     } 

@@ -1,58 +1,73 @@
 from typing import Any, Dict, Optional, List, Union
+from dataclasses import dataclass
+from pathlib import Path
+import yaml
+import sys
+from pydantic import AnyHttpUrl
 
-from pydantic_settings import BaseSettings
-from pydantic import field_validator, AnyHttpUrl, ValidationInfo
+@dataclass
+class SecurityConfig:
+    secret_key: str
+    algorithm: str = "HS256"
+    access_token_expire_minutes: int = 60 * 24 * 7  # 7 days
 
+@dataclass
+class DatabaseSettings:
+    host: str
+    port: int
+    user: str
+    password: str
+    db: str
 
-class Settings(BaseSettings):
-    # 应用配置
-    APP_NAME: str = "InTy"
-    DEBUG: bool = False
-    API_V1_PREFIX: str = "/api/v1"
+    @property
+    def url(self) -> str:
+        return f"postgresql://{self.user}:{self.password}@{self.host}:{self.port}/{self.db}"
+
+@dataclass
+class GoogleOAuthConfig:
+    client_id: Optional[str] = None
+    client_secret: Optional[str] = None
+    redirect_uri: Optional[str] = None
+
+@dataclass
+class VerificationConfig:
+    code_expire_minutes: int = 5
+
+@dataclass
+class AppConfig:
+    name: str = "InTy"
+    debug: bool = False
+    api_v1_prefix: str = "/api/v1"
+    backend_cors_origins: List[AnyHttpUrl] = None
+
+    def __post_init__(self):
+        if self.backend_cors_origins is None:
+            self.backend_cors_origins = []
+
+@dataclass
+class Config:
+    app: AppConfig
+    security: SecurityConfig
+    database: DatabaseSettings
+    google_oauth: GoogleOAuthConfig
+    verification: VerificationConfig
+
+def load_config(path: str = "config.yaml") -> Config:
+    config_path = Path(path)
+    if not config_path.exists():
+        print(f"config file {path} not found!")
+        sys.exit(1)
     
-    # 安全配置
-    SECRET_KEY: str
-    ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
-    
-    # CORS配置
-    BACKEND_CORS_ORIGINS: List[AnyHttpUrl] = []
+    with open(path, "r", encoding="utf-8") as f:
+        data = yaml.safe_load(f)
 
-    @field_validator("BACKEND_CORS_ORIGINS", mode="before")
-    @classmethod
-    def assemble_cors_origins(cls, v: Union[str, List[str]]) -> Union[List[str], str]:
-        if isinstance(v, str) and not v.startswith("["):
-            return [i.strip() for i in v.split(",")]
-        elif isinstance(v, (list, str)):
-            return v
-        raise ValueError(v)
+    return Config(
+        app=AppConfig(**data.get("app", {})),
+        security=SecurityConfig(**data.get("security", {})),
+        database=DatabaseSettings(**data.get("database", {})),
+        google_oauth=GoogleOAuthConfig(**data.get("google_oauth", {})),
+        verification=VerificationConfig(**data.get("verification", {}))
+    )
 
-    # 数据库配置
-    POSTGRES_SERVER: str
-    POSTGRES_USER: str
-    POSTGRES_PASSWORD: str
-    POSTGRES_DB: str
-    DATABASE_URL: Optional[str] = None
-
-    @field_validator("DATABASE_URL", mode="before")
-    @classmethod
-    def assemble_db_connection(cls, v: Optional[str], info: ValidationInfo) -> Any:
-        if isinstance(v, str):
-            return v
-        values = info.data
-        return f"postgresql://{values['POSTGRES_USER']}:{values['POSTGRES_PASSWORD']}@{values['POSTGRES_SERVER']}/{values['POSTGRES_DB']}"
-
-    # Google OAuth配置
-    GOOGLE_CLIENT_ID: Optional[str] = None
-    GOOGLE_CLIENT_SECRET: Optional[str] = None
-    GOOGLE_REDIRECT_URI: Optional[str] = None
-    
-    # 验证码配置
-    VERIFICATION_CODE_EXPIRE_MINUTES: int = 5  # 验证码有效期（分钟）
-    
-    class Config:
-        env_file = ".env"
-        case_sensitive = True
-
-
-settings = Settings() 
+# load config
+settings = load_config() 

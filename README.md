@@ -70,8 +70,8 @@ pip install -r requirements.txt
 
 4. 配置环境变量
 ```bash
-cp .env.example .env
-# 编辑 .env 文件，设置必要的环境变量：
+cp comfig.yaml.example comfig.yaml
+# 编辑comfig.yaml文件，设置必要的环境变量：
 # - 数据库连接信息
 # - JWT 密钥
 # - Google OAuth 配置
@@ -114,11 +114,9 @@ inty-backend/
 │   ├── services/        # 业务逻辑
 │   └── main.py          # 应用入口
 ├── tests/               # 测试文件
-├── .env                 # 环境变量
-├── .env.example         # 环境变量示例
 ├── alembic.ini          # Alembic 配置
 ├── requirements.txt     # 项目依赖
-└── README.md           # 项目文档
+└── README.md            # 项目文档
 ```
 
 ## 测试
