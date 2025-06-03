@@ -1,10 +1,10 @@
-package com.ai.inty.storage
+package com.inty.utils.storage
 
 import com.inty.utils.AppEnv
 import com.tencent.mmkv.MMKV
 
 
-object Setting {
+object IntySetting {
 
     private val allUserSetting: MMKV
 
@@ -44,6 +44,14 @@ object Setting {
 
     fun getCurToken(): String {
         return curUserSetting.decodeString("token") ?: ""
+    }
+
+    fun setDeviceID(id: String?) {
+        allUserSetting.putString("deviceID", id)
+    }
+
+    fun getDeviceID(): String? {
+        return allUserSetting.decodeString("deviceID")
     }
 
 

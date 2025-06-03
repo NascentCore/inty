@@ -24,4 +24,5 @@ dependencyResolutionManagement {
 rootProject.name = "Inty"
 include(":app")
 include(":utils")
+include(":network")
 

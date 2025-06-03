@@ -26,6 +26,6 @@ fun EasyLog.simpleInit(size: Int, duration: Long, pipeline: Pipeline<*, *>, isLo
 fun EasyLog.defaultInit() {
     EasyLog.apply {
         addInterceptor(LogcatInterceptor())
-        addInterceptor(FileInterceptor())
+//        addInterceptor(FileInterceptor())
     }
 }

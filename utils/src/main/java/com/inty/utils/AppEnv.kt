@@ -3,7 +3,9 @@ package com.inty.utils
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
+import android.provider.Settings
 import com.inty.utils.env.getCurrentProcessName
+import com.inty.utils.storage.IntySetting
 import java.io.File
 import java.lang.ref.WeakReference
 import java.util.Locale
@@ -36,6 +38,16 @@ object AppEnv {
         (locale.language == "zh")
     }
 
+    val DeviceID: String by lazy {
+        var id = IntySetting.getDeviceID()
+        if (id.isNullOrEmpty()) {
+            id = Settings.Secure.getString(
+                context.getContentResolver(), Settings.Secure.ANDROID_ID
+            )
+            IntySetting.setDeviceID(id)
+        }
+        id ?: ""
+    }
 }
 
 class DirsEnv {

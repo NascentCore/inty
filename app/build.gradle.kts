@@ -26,15 +26,27 @@ android {
             abiFilters.add("arm64-v8a")
         }
     }
+    signingConfigs {
+        create("inty") {
+            storeFile = file("../sign/key.jks")
+            storePassword = "inty.sxwl.ai"
+            keyAlias = "key0"
+            keyPassword = "inty.sxwl.ai"
+        }
+    }
 
     buildTypes {
         release {
+            signingConfig = signingConfigs.getByName("inty")
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+        }
+        debug {
+            signingConfig = signingConfigs.getByName("inty")
         }
     }
     compileOptions {
@@ -48,12 +60,15 @@ android {
         compose = true
         buildConfig = true
     }
+    lint {
+        checkReleaseBuilds=false
+    }
 }
 
 TheRouter {
     debug = false
     // 编译期检查路由表合法性，可选参数 warning(仅告警)/error(编译期抛异常)/delete(每次根据注解重新生成路由表)，不配置则不校验
-    checkRouteMap = "delete"
+//    checkRouteMap = "delete"
     // 检查 FlowTask 是否有循环引用，可选参数 warning(仅打印日志)/error(编译期抛异常)，不配置则不校验
     checkFlowDepend = "warning"
     // 图形化展示当前的 FlowTask 依赖图
@@ -87,4 +102,14 @@ dependencies {
     ksp(libs.therouter.apt)
 
     implementation(project(":utils"))
+    implementation(project(":network"))
+
+    debugImplementation (libs.library)
+    releaseImplementation (libs.library.no.op)
+
+    api(libs.retrofit.core)
+
+    implementation(libs.retrofit2.kotlin.coroutines.adapter)
+
+
 }

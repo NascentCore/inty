@@ -3,6 +3,8 @@ package com.ai.inty
 import android.app.Application
 import android.content.Context
 import com.inty.utils.AppEnv
+import com.inty.utils.log.EasyLog
+import com.inty.utils.log.defaultInit
 import com.therouter.TheRouter
 
 class IntyApp : Application() {
@@ -11,6 +13,7 @@ class IntyApp : Application() {
     override fun attachBaseContext(base: Context?) {
         AppEnv.context = this
         AppEnv.DEBUG = BuildConfig.DEBUG
+        AppEnv.testEnv = BuildConfig.DEBUG
         AppEnv.version_code = BuildConfig.VERSION_CODE
         AppEnv.version_name = BuildConfig.VERSION_NAME
         AppEnv.APPLICATION_ID = BuildConfig.APPLICATION_ID
@@ -23,5 +26,7 @@ class IntyApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+
+        EasyLog.defaultInit()
     }
 }

@@ -1,7 +1,5 @@
 package com.ai.inty.base
 
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.inty.utils.log.EasyLog
@@ -12,8 +10,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 open class BaseViewModel: ViewModel() {
-//    private val _snackbar = MutableSharedFlow<String>()
-//    val snackbar = _snackbar.asSharedFlow()
 
     fun showSnackbar(text: String) {
         viewModelScope.launch {
