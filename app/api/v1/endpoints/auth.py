@@ -84,7 +84,7 @@ def login(
     }
 
 
-@router.post("/guest", response_model=schemas.Token)
+@router.post("/guest", response_model=schemas.TokenResponse)
 def create_guest(
     *,
     db: Session = Depends(get_db),
@@ -104,9 +104,13 @@ def create_guest(
         access_token = create_access_token(user.id)
         logger.info(f"访问令牌创建成功: user_id={user.id}")
         return {
-            "access_token": access_token,
-            "token_type": "bearer",
-            "user": user
+            "code": 200,
+            "message": "success",
+            "data": {
+                "guest_id": user.id,
+                "token": access_token,
+                "is_new_guest": True
+            }
         }
     except Exception as e:
         logger.error(f"创建游客账号失败: error={str(e)}")
