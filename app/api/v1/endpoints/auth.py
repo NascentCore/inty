@@ -14,8 +14,9 @@ from google.auth.transport import requests as google_requests
 from app import schemas
 from app.core.config import settings
 from app.core.security import create_access_token
+from app.core.uuid import uid
 from app.db.session import get_db
-from app.services.auth_service import register_user, get_user_by_phone, create_guest_user
+from app.services.user_service import register_user, get_user_by_phone, create_guest_user
 from app.models import User
 from app.models.user import AuthType
 
@@ -166,7 +167,7 @@ async def google_login(
             }
         
         # 创建新用户
-        user_id = str(uuid.uuid4())
+        user_id = uid(prefix="user")
         new_user = User(
             id=user_id,
             auth_type=AuthType.GOOGLE,

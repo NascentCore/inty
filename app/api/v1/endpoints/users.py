@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from app import schemas
 from app.api import deps
-from app.services import auth_service
+from app.services import user_service
 
 router = APIRouter()
 
@@ -39,7 +39,7 @@ def get_user_profile(
     """
     Get user profile by ID.
     """
-    user = auth_service.get_user(db, user_id)
+    user = user_service.get_user(db, user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     return user 
