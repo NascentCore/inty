@@ -156,7 +156,6 @@ yarn.lock
 # 数据库相关
 *.sqlite3
 *.db
-alembic.ini
 
 # 日志文件
 *.log
