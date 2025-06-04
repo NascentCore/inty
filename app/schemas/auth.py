@@ -125,7 +125,7 @@ class LoginUserResponse(BaseModel):
     nickname: str
     avatar: str
     email: str
-    phone: str
+    phone: Optional[str] = None
     auth_type: AuthType
     is_new_user: bool
 
