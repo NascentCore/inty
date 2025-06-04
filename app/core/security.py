@@ -22,7 +22,7 @@ def create_access_token(
         )
     
     to_encode = {
-        "exp": expire,
+        "exp": int(expire.timestamp()),  # 转换为 Unix 时间戳
         "sub": str(subject)
     }
     encoded_jwt = jwt.encode(

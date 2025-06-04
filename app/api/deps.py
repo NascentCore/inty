@@ -29,30 +29,31 @@ def get_db() -> Generator:
         db.close()
 
 async def get_current_user(
-    db: AsyncSession = Depends(get_async_db),
-    token: str = Depends(oauth2_scheme)
+    token: str = Depends(oauth2_scheme),
+    db: AsyncSession = Depends(get_async_db)
 ) -> User:
     """获取当前用户"""
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
     try:
         payload = jwt.decode(
             token,
             settings.security.secret_key,
             algorithms=[settings.security.algorithm]
         )
-        token_data = TokenPayload(**payload)
+        user_id: str = payload.get("sub")
+        if user_id is None:
+            raise credentials_exception
     except (JWTError, ValidationError):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Could not validate credentials",
-        )
+        raise credentials_exception
     
-    user = await db.execute(select(User).where(User.id == token_data.sub))
+    user = await db.execute(select(User).where(User.id == user_id))
     user = user.scalar_one_or_none()
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
-        )
+        raise credentials_exception
     return user
 
 async def get_current_active_user(

@@ -14,7 +14,7 @@ class Token(BaseModel):
 class TokenPayload(BaseModel):
     """令牌载荷"""
     sub: str  # 用户ID
-    exp: datetime  # 过期时间
+    exp: int  # 过期时间（Unix 时间戳）
 
 
 class AuthDataBase(BaseModel):

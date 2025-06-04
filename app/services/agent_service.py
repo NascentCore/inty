@@ -1,62 +1,54 @@
 from typing import List, Optional
-from sqlalchemy.orm import Session
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import models, schemas
 
-def get_agent(db: Session, agent_id: str) -> Optional[models.Agent]:
+async def get_agent(db: AsyncSession, agent_id: str) -> Optional[models.Agent]:
     """
     通过ID获取AI角色
     """
-    return db.query(models.Agent).filter(models.Agent.id == agent_id).first()
+    result = await db.execute(
+        select(models.Agent)
+        .where(models.Agent.id == agent_id)
+    )
+    return result.scalar_one_or_none()
 
-def get_agents(
-    db: Session, skip: int = 0, limit: int = 100
-) -> List[models.Agent]:
+async def get_agents(db: AsyncSession, skip: int = 0, limit: int = 100) -> List[models.Agent]:
     """
     获取AI角色列表
     """
-    return db.query(models.Agent).offset(skip).limit(limit).all()
+    result = await db.execute(
+        select(models.Agent)
+        .offset(skip)
+        .limit(limit)
+    )
+    return result.scalars().all()
 
-def create_agent(
-    db: Session, agent_in: schemas.AgentCreate, user_id: str
-) -> models.Agent:
+async def create_agent(db: AsyncSession, agent_in: schemas.AgentCreate, user_id: str) -> models.Agent:
     """
     创建新的AI角色
     """
-    db_agent = models.Agent(
-        **agent_in.dict(),
-        user_id=user_id
-    )
+    db_agent = models.Agent(**agent_in.dict(), user_id=user_id)
     db.add(db_agent)
-    db.commit()
-    db.refresh(db_agent)
+    await db.commit()
+    await db.refresh(db_agent)
     return db_agent
 
-def update_agent(
-    db: Session,
-    *,
-    db_agent: models.Agent,
-    agent_in: schemas.AgentUpdate
-) -> models.Agent:
+async def update_agent(db: AsyncSession, db_agent: models.Agent, agent_in: schemas.AgentUpdate) -> models.Agent:
     """
     更新AI角色
     """
-    update_data = agent_in.dict(exclude_unset=True)
-    for field, value in update_data.items():
+    for field, value in agent_in.dict(exclude_unset=True).items():
         setattr(db_agent, field, value)
-    db.add(db_agent)
-    db.commit()
-    db.refresh(db_agent)
+    await db.commit()
+    await db.refresh(db_agent)
     return db_agent
 
-def delete_agent(
-    db: Session,
-    *,
-    db_agent: models.Agent
-) -> models.Agent:
+async def delete_agent(db: AsyncSession, db_agent: models.Agent) -> models.Agent:
     """
     删除AI角色
     """
-    db.delete(db_agent)
-    db.commit()
+    await db.delete(db_agent)
+    await db.commit()
     return db_agent 
