@@ -4,6 +4,7 @@ import logging
 import traceback
 import uuid
 
+from app.core.uuid import uid
 from app.models import User
 from app.models.user import AuthType
 
@@ -49,12 +50,12 @@ def create_guest_user(
             ).first()
             if existing_user:
                 return existing_user
-        user_id = str(uuid.uuid4())
+        user_id = uid(prefix="user")
         user = User(
             id=user_id,
             auth_type=AuthType.GUEST,
             device_id=device_id,
-            nickname=f"Guest_{user_id[:8]}",
+            nickname=f"Guest_{user_id[-8:]}",
             system_language=system_language or "en",
             is_active=True
         )

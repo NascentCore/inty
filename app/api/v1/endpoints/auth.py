@@ -1,91 +1,89 @@
-from typing import Any
-from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
-from jose import jwt
-from pydantic import ValidationError
-from sqlalchemy.orm import Session
 import logging
-import traceback
-import httpx
-import uuid
-from google.oauth2 import id_token
+from typing import Any
+
+from fastapi import APIRouter, Depends
+from fastapi.security import OAuth2PasswordBearer
 from google.auth.transport import requests as google_requests
+from google.oauth2 import id_token
+from sqlalchemy.orm import Session
 
 from app import schemas
 from app.core.config import settings
 from app.core.security import create_access_token
 from app.core.uuid import uid
 from app.db.session import get_db
-from app.services.user_service import register_user, get_user_by_phone, create_guest_user
 from app.models import User
 from app.models.user import AuthType
+from app.schemas.auth import LoginResponse, LoginUserResponse, GuestResponse
+from app.schemas.response import APIResponse
+from app.services.user_service import create_guest_user
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.app.api_v1_prefix}/auth/login")
 
 
-@router.post("/register", response_model=schemas.Token)
-async def register(
-    *,
-    db: Session = Depends(get_db),
-    user_in: schemas.UserCreate,
-) -> Any:
-    """注册新用户"""
-    try:
-        # 处理手机号注册
-        user = register_user(db, user_in)
-        access_token = create_access_token(user.id)
-        return {
-            "code": 200,
-            "message": "success",
-            "data": {
-                "token": access_token,
-                "user": {
-                    "id": user.id,
-                    "nickname": user.nickname,
-                    "avatar": user.avatar,
-                    "email": user.email,
-                    "phone": user.phone,
-                    "auth_type": user.auth_type,
-                    "is_new_user": True
-                }
-            }
-        }
-    except Exception as e:
-        logger.error(f"注册失败: {str(e)}")
-        logger.error(f"错误堆栈: {traceback.format_exc()}")
-        raise HTTPException(
-            status_code=400,
-            detail=str(e)
-        )
+# @router.post("/register", response_model=schemas.Token)
+# async def register(
+#     *,
+#     db: Session = Depends(get_db),
+#     user_in: schemas.UserCreate,
+# ) -> Any:
+#     """注册新用户"""
+#     try:
+#         # 处理手机号注册
+#         user = register_user(db, user_in)
+#         access_token = create_access_token(user.id)
+#         return {
+#             "code": 200,
+#             "message": "success",
+#             "data": {
+#                 "token": access_token,
+#                 "user": {
+#                     "id": user.id,
+#                     "nickname": user.nickname,
+#                     "avatar": user.avatar,
+#                     "email": user.email,
+#                     "phone": user.phone,
+#                     "auth_type": user.auth_type,
+#                     "is_new_user": True
+#                 }
+#             }
+#         }
+#     except Exception as e:
+#         logger.error(f"注册失败: {str(e)}")
+#         logger.error(f"错误堆栈: {traceback.format_exc()}")
+#         raise HTTPException(
+#             status_code=400,
+#             detail=str(e)
+#         )
 
 
-@router.post("/login", response_model=schemas.Token)
-def login(
-    *,
-    db: Session = Depends(get_db),
-    login_in: schemas.LoginRequest,
-) -> Any:
-    """
-    用户登录
-    """
-    user = get_user_by_phone(db, login_in.phone)
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect phone number or verification code",
-        )
-    # TODO: 验证验证码
-    access_token = create_access_token(user.id)
-    return {
-        "access_token": access_token,
-        "token_type": "bearer",
-        "user": user
-    }
+# @router.post("/login", response_model=schemas.Token)
+# def login(
+#     *,
+#     db: Session = Depends(get_db),
+#     login_in: schemas.LoginRequest,
+# ) -> Any:
+#     """
+#     用户登录
+#     """
+#     user = get_user_by_phone(db, login_in.phone)
+#     if not user:
+#         raise HTTPException(
+#             status_code=status.HTTP_401_UNAUTHORIZED,
+#             detail="Incorrect phone number or verification code",
+#         )
+#     # TODO: 验证验证码
+#     access_token = create_access_token(user.id)
+#     return {
+#         "access_token": access_token,
+#         "token_type": "bearer",
+#         "user": user
+#     }
 
 
-@router.post("/guest", response_model=schemas.TokenResponse)
+@router.post("/guest", response_model=APIResponse[GuestResponse])
 def create_guest(
     *,
     db: Session = Depends(get_db),
@@ -95,34 +93,23 @@ def create_guest(
     创建游客账号
     """
     try:
-        logger.info(f"开始创建游客账号: device_id={guest_in.device_id}, system_language={guest_in.system_language}")
         user = create_guest_user(
             db,
             device_id=guest_in.device_id,
             system_language=guest_in.system_language
         )
-        logger.info(f"游客账号创建成功: user_id={user.id}")
         access_token = create_access_token(user.id)
-        logger.info(f"访问令牌创建成功: user_id={user.id}")
-        return {
-            "code": 200,
-            "message": "success",
-            "data": {
-                "guest_id": user.id,
-                "token": access_token,
-                "is_new_guest": True
-            }
-        }
+        return APIResponse.success(data=GuestResponse(
+            guest_id=user.id,
+            token=access_token,
+            is_new_guest=True
+        ))
     except Exception as e:
-        logger.error(f"创建游客账号失败: error={str(e)}")
-        logger.error(f"错误堆栈: {traceback.format_exc()}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e)
-        )
+        logger.error(f"create guest user error: {str(e)}")
+        return APIResponse.error(message=str(e))
 
 
-@router.post("/google/login", response_model=schemas.TokenResponse)
+@router.post("/google/login", response_model=APIResponse[LoginResponse])
 async def google_login(
     *,
     db: Session = Depends(get_db),
@@ -139,7 +126,8 @@ async def google_login(
 
         # 验证发行者
         if idinfo['iss'] not in ['accounts.google.com', 'https://accounts.google.com']:
-            raise ValueError('Invalid token issuer')
+            logger.error(f"invalid google token issuer: {idinfo['iss']}")
+            return APIResponse.error(message="invalid google token issuer")
 
         # 检查用户是否已存在
         existing_user = db.query(User).filter(
@@ -149,22 +137,18 @@ async def google_login(
         if existing_user:
             # 如果用户已存在，直接返回 token
             access_token = create_access_token(existing_user.id)
-            return {
-                "code": 200,
-                "message": "success",
-                "data": {
-                    "token": access_token,
-                    "user": {
-                        "id": existing_user.id,
-                        "nickname": existing_user.nickname,
-                        "avatar": existing_user.avatar,
-                        "email": existing_user.email,
-                        "phone": existing_user.phone,
-                        "auth_type": existing_user.auth_type,
-                        "is_new_user": False
-                    }
-                }
-            }
+            return APIResponse.success(data=LoginResponse(
+                token=access_token,
+                user=LoginUserResponse(
+                    id=existing_user.id,
+                    nickname=existing_user.nickname,
+                    avatar=existing_user.avatar,
+                    email=existing_user.email,
+                    phone=existing_user.phone,
+                    auth_type=existing_user.auth_type,
+                    is_new_user=False
+                )
+            ))
         
         # 创建新用户
         user_id = uid(prefix="user")
@@ -189,33 +173,21 @@ async def google_login(
         
         # 生成 token
         access_token = create_access_token(new_user.id)
-        return {
-            "code": 200,
-            "message": "success",
-            "data": {
-                "token": access_token,
-                "user": {
-                    "id": new_user.id,
-                    "nickname": new_user.nickname,
-                    "avatar": new_user.avatar,
-                    "email": new_user.email,
-                    "phone": new_user.phone,
-                    "auth_type": new_user.auth_type,
-                    "is_new_user": True
-                }
-            }
-        }
+        return APIResponse.success(data=LoginResponse(
+            token=access_token,
+            user=LoginUserResponse(
+                id=new_user.id,
+                nickname=new_user.nickname,
+                avatar=new_user.avatar,
+                email=new_user.email,
+                phone=new_user.phone,
+                auth_type=new_user.auth_type,
+                is_new_user=True
+            )
+        ))
     except ValueError as e:
-        logger.error(f"Google登录失败: {str(e)}")
-        logger.error(f"错误堆栈: {traceback.format_exc()}")
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid Google ID token"
-        )
+        logger.error(f"Google login error: {str(e)}")
+        return APIResponse.error(message="Invalid Google ID token")
     except Exception as e:
-        logger.error(f"Google登录失败: {str(e)}")
-        logger.error(f"错误堆栈: {traceback.format_exc()}")
-        raise HTTPException(
-            status_code=400,
-            detail=str(e)
-        ) 
+        logger.error(f"Google login error: {str(e)}")
+        return APIResponse.error(message=str(e))

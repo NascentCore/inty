@@ -11,7 +11,7 @@ def uid(prefix: Optional[str] = None) -> str:
     Returns:
         str: 生成的 ID 字符串
     """
-    ulid_str = str(ulid.new())
+    ulid_str = str(ulid.ULID())
     if prefix:
         return f"{prefix}-{ulid_str}"
     return ulid_str

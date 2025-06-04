@@ -117,3 +117,20 @@ class GoogleAuthUrlResponse(BaseModel):
     code: int = 200
     message: str = "success"
     data: Dict[str, str] 
+
+
+class LoginUserResponse(BaseModel):
+    """登录用户响应"""
+    id: str
+    nickname: str
+    avatar: str
+    email: str
+    phone: str
+    auth_type: AuthType
+    is_new_user: bool
+
+
+class LoginResponse(BaseModel):
+    """登录响应"""
+    token: str
+    user: LoginUserResponse
