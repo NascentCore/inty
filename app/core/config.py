@@ -62,6 +62,20 @@ class AppConfig:
             self.backend_cors_origins = []
 
 @dataclass
+class EmbeddingConfig:
+    base_url: str = "http://localhost:8001/v1"
+    api_key: str = "sk-proj-1234567890"
+    model: str = "DMetaSoul/Dmeta-embedding-zh-small"
+
+
+class AgentConfig:
+    model: str = "ep-20250210154211-js9rc"
+    base_url: str = "https://ark.cn-beijing.volces.com/api/v3"
+    api_key: str = "ff9ed2dd-cdf0-40d4-b4ec-d3aa19e2bd0b"
+    temperature: float = 0.5
+    max_tokens: int = 1000
+
+@dataclass
 class Config:
     app: AppConfig
     security: SecurityConfig
@@ -69,6 +83,8 @@ class Config:
     google_oauth: GoogleOAuthConfig
     verification: VerificationConfig
     logging: LoggingConfig
+    embedding: EmbeddingConfig
+    agent: AgentConfig
 
 def load_config(path: str = "config.yaml") -> Config:
     config_path = Path(path)
@@ -85,7 +101,9 @@ def load_config(path: str = "config.yaml") -> Config:
         database=DatabaseSettings(**data.get("database", {})),
         google_oauth=GoogleOAuthConfig(**data.get("google_oauth", {})),
         verification=VerificationConfig(**data.get("verification", {})),
-        logging=LoggingConfig(**data.get("logging", {}))
+        logging=LoggingConfig(**data.get("logging", {})),
+        embedding=EmbeddingConfig(**data.get("embedding", {})),
+        agent=AgentConfig(**data.get("agent", {}))
     )
 
 # load config

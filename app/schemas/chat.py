@@ -93,7 +93,8 @@ class ChatBase(BaseModel):
 
 class ChatCreate(ChatBase):
     """创建聊天"""
-    pass
+    agent_id: str
+    user_id: str
 
 
 class ChatUpdate(ChatBase):
