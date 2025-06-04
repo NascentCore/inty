@@ -1,17 +1,19 @@
 import logging
 from typing import Any
+import traceback
 
 from fastapi import APIRouter, Depends
 from fastapi.security import OAuth2PasswordBearer
 from google.auth.transport import requests as google_requests
 from google.oauth2 import id_token
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 
 from app import schemas
 from app.core.config import settings
 from app.core.security import create_access_token
 from app.core.uuid import uid
-from app.db.session import get_db
+from app.db.session import get_async_db
 from app.models import User
 from app.models.user import AuthType
 from app.schemas.auth import LoginResponse, LoginUserResponse, GuestResponse
@@ -84,16 +86,16 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.app.api_v1_prefix}/aut
 
 
 @router.post("/guest", response_model=APIResponse[GuestResponse])
-def create_guest(
+async def create_guest(
     *,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
     guest_in: schemas.GuestRequest,
 ) -> Any:
     """
     创建游客账号
     """
     try:
-        user = create_guest_user(
+        user = await create_guest_user(
             db,
             device_id=guest_in.device_id,
             system_language=guest_in.system_language
@@ -106,13 +108,14 @@ def create_guest(
         ))
     except Exception as e:
         logger.error(f"create guest user error: {str(e)}")
+        traceback.print_exc()
         return APIResponse.error(message=str(e))
 
 
 @router.post("/google/login", response_model=APIResponse[LoginResponse])
 async def google_login(
     *,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
     login_in: schemas.GoogleAuthRequest,
 ) -> Any:
     """Google登录"""
@@ -130,9 +133,9 @@ async def google_login(
             return APIResponse.error(message="invalid google token issuer")
 
         # 检查用户是否已存在
-        existing_user = db.query(User).filter(
-            User.google_id == idinfo["sub"]
-        ).first()
+        stmt = select(User).where(User.google_id == idinfo["sub"])
+        result = await db.execute(stmt)
+        existing_user = result.scalar_one_or_none()
         
         if existing_user:
             # 如果用户已存在，直接返回 token
@@ -168,8 +171,8 @@ async def google_login(
             new_user.age_group = login_in.user_info.age_group
         
         db.add(new_user)
-        db.commit()
-        db.refresh(new_user)
+        await db.commit()
+        await db.refresh(new_user)
         
         # 生成 token
         access_token = create_access_token(new_user.id)

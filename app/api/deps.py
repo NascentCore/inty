@@ -1,14 +1,17 @@
 from typing import Generator, Optional
+from typing_extensions import deprecated
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import jwt, JWTError
 from pydantic import ValidationError
-from sqlalchemy.orm import Session
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import models, schemas
 from app.core import security
 from app.core.config import settings
 from app.db.base import SessionLocal
+from app.db.session import get_async_db
 from app.models.user import User
 from app.schemas.token import TokenPayload
 
@@ -16,6 +19,7 @@ oauth2_scheme = OAuth2PasswordBearer(
     tokenUrl=f"{settings.app.api_v1_prefix}/auth/login"
 )
 
+@deprecated("Use app.db.session get_async_db instead")
 def get_db() -> Generator:
     """获取数据库会话"""
     try:
@@ -25,7 +29,7 @@ def get_db() -> Generator:
         db.close()
 
 async def get_current_user(
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
     token: str = Depends(oauth2_scheme)
 ) -> User:
     """获取当前用户"""
@@ -42,7 +46,8 @@ async def get_current_user(
             detail="Could not validate credentials",
         )
     
-    user = db.query(User).filter(User.id == token_data.sub).first()
+    user = await db.execute(select(User).where(User.id == token_data.sub))
+    user = user.scalar_one_or_none()
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

@@ -1,5 +1,7 @@
 from typing import Optional
 from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 import logging
 import traceback
 import uuid
@@ -36,18 +38,20 @@ def get_user_by_phone(db: Session, phone: str) -> Optional[User]:
     """通过手机号获取用户"""
     return db.query(User).filter(User.phone == phone).first()
 
-def create_guest_user(
-    db: Session,
+async def create_guest_user(
+    db: AsyncSession,
     device_id: Optional[str] = None,
     system_language: Optional[str] = None
 ) -> User:
     """创建游客用户"""
     try:
         if device_id:
-            existing_user = db.query(User).filter(
+            stmt = select(User).where(
                 User.device_id == device_id,
                 User.auth_type == AuthType.GUEST
-            ).first()
+            )
+            result = await db.execute(stmt)
+            existing_user = result.scalars().first()
             if existing_user:
                 return existing_user
         user_id = uid(prefix="user")
@@ -60,8 +64,8 @@ def create_guest_user(
             is_active=True
         )
         db.add(user)
-        db.commit()
-        db.refresh(user)
+        await db.commit()
+        await db.refresh(user)
         return user
     except Exception as e:
         logger.error(f"创建游客用户失败: {str(e)}")
