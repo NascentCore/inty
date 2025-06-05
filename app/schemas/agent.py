@@ -18,6 +18,7 @@ class AgentBase(BaseModel):
     visibility: AgentVisibility = AgentVisibility.PUBLIC
     photos: Optional[List[str]] = None
     category: Optional[str] = None
+    prompt: Optional[str] = None
 
 class AgentCreate(AgentBase):
     """创建AI角色"""
@@ -28,6 +29,7 @@ class AgentUpdate(AgentBase):
     name: Optional[str] = None
     gender: Optional[str] = None
     visibility: Optional[AgentVisibility] = None
+    prompt: Optional[str] = None
 
 class AgentInDB(AgentBase):
     """数据库中的AI角色"""

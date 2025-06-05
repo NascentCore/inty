@@ -21,7 +21,7 @@ client = OpenAI(
 
 def embed_texts(texts: list[str]) -> list[list[float]]:
     response = client.embeddings.create(
-        model=settings.EMBEDDING_MODEL,
+        model=settings.embedding.model,
         input=texts,
     )
     return [e.embedding for e in response.data]
@@ -38,7 +38,7 @@ PostgresChatMessageHistory.create_tables(conn,table_name)
 postgres_store = PostgresStore(
     conn=conn,
     index={
-        "dims": 1536,
+        "dims": 768,
         "embed": embed_texts,
     }
 )
@@ -50,6 +50,7 @@ class Agent:
     def __init__(self, name: str, model_config: dict, system_prompt: str):
         self.name = name
         self.model_config = model_config
+
         model = ChatOpenAI(
             model=settings.agent.model,
             openai_api_key=settings.agent.api_key,
@@ -81,19 +82,25 @@ class Agent:
         config = {'configurable':{'user_id':user_id,'thread_id':user_id}}
         response = self.agent.invoke(messages, config)
 
-        for message in response.get("messages",[]):
-            if isinstance(message, AIMessage):
-                history.add_messages([message])
-                return message.content
+        ai_messages = [message for message in response.get("messages",[]) if isinstance(message, AIMessage)]
+        response = ai_messages[-1].content if ai_messages else "抱歉，我无法理解您的消息。请再试一次。"
 
-        return ""
+        history.add_messages([AIMessage(content=response)])
+        return response
+
 
 
     def chat_stream(self, user_id: str, session_id: str, messages: dict[str, Any]):
+        history = PostgresChatMessageHistory(
+            table_name,
+            session_id,
+            sync_connection=conn
+        )
 
-        for message in self.agent.stream(messages, "messages"):
-            yield message
+        config = {'configurable':{'user_id':user_id,'thread_id':user_id}}
 
+        for message_chunk,metadata in self.agent.stream(messages,config,stream_mode="messages"):
+            print(message_chunk,metadata)
 
 class AgentManager:
     pass
@@ -105,7 +112,5 @@ if __name__ == "__main__":
         model_config={},
         system_prompt="You are a helpful assistant.",
     )
-    response = agent.chat(user_id="123", session_id=str(uuid.uuid5(uuid.NAMESPACE_DNS, "test")), messages={"messages": [HumanMessage(content="我的显示偏好是黑色")]})
-    print(response)
     response = agent.chat(user_id="123", session_id=str(uuid.uuid5(uuid.NAMESPACE_DNS, "test")), messages={"messages": [HumanMessage(content="还记得我的显示偏好吗")]})
     print(response)
