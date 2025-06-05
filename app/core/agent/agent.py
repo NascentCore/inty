@@ -112,5 +112,7 @@ if __name__ == "__main__":
         model_config={},
         system_prompt="You are a helpful assistant.",
     )
+    # response = agent.chat(user_id="123", session_id=str(uuid.uuid5(uuid.NAMESPACE_DNS, "test")), messages={"messages": [HumanMessage(content="我的显示偏好是黑色")]})
+    # print(response)
     response = agent.chat(user_id="123", session_id=str(uuid.uuid5(uuid.NAMESPACE_DNS, "test")), messages={"messages": [HumanMessage(content="还记得我的显示偏好吗")]})
     print(response)

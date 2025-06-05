@@ -34,11 +34,15 @@ async def jwt_exception_handler(request: Request, exc: JWTError):
 
 async def sqlalchemy_exception_handler(request: Request, exc: SQLAlchemyError):
     """处理数据库错误"""
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.error(f"SQLAlchemy错误: {str(exc)}")
+    
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={
             "code": status.HTTP_500_INTERNAL_SERVER_ERROR,
-            "message": "数据库操作失败",
+            "message": f"数据库操作失败: {str(exc)}",
             "data": None
         }
     )

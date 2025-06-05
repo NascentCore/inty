@@ -39,4 +39,4 @@ class Message(Base):
     agent = relationship("Agent", back_populates="messages")
 
     chat_id = Column(String, ForeignKey("chats.id"))
-    chat = relationship("Chat", back_populates="messages") 
+    chat = relationship("Chat") 

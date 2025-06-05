@@ -94,7 +94,6 @@ class ChatBase(BaseModel):
 class ChatCreate(ChatBase):
     """创建聊天"""
     agent_id: str
-    user_id: str
 
 
 class ChatUpdate(ChatBase):
@@ -116,5 +115,6 @@ class ChatInDB(ChatBase):
 
 class Chat(ChatInDB):
     """聊天"""
-    messages: Optional[List[Message]] = None
+    last_message: Optional[str] = None
+    agent_name: Optional[str] = None
     settings: Optional[ChatSettings] = None 
