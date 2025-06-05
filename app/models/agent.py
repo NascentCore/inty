@@ -39,6 +39,7 @@ class Agent(Base):
     status = Column(Enum(AgentStatus), default=AgentStatus.PENDING)
     created_at = Column(DateTime(timezone=True), server_default=sa.text('now()'))
     updated_at = Column(DateTime(timezone=True), onupdate=sa.text('now()'))
+    prompt = Column(String)
 
     # 外键
     creator_id = Column(String, ForeignKey("users.id"))

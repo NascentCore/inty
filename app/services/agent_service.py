@@ -29,7 +29,10 @@ async def create_agent(db: AsyncSession, agent_in: schemas.AgentCreate, user_id:
     """
     创建新的AI角色
     """
-    db_agent = models.Agent(**agent_in.dict(), user_id=user_id)
+    db_agent = models.Agent(
+        **agent_in.dict(),
+        creator_id=user_id
+    )
     db.add(db_agent)
     await db.commit()
     await db.refresh(db_agent)
