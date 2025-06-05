@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.api.v1.endpoints import auth, users, agents, chats, messages, settings, resources, report
+from app.api.v1.endpoints import auth, users, agents, chats, settings, resources, report
 from app.api.v1 import verification_code
 
 api_router = APIRouter()
