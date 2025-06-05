@@ -1,5 +1,5 @@
 from typing import List, Optional
-from sqlalchemy import select
+from sqlalchemy import select, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 from sqlalchemy.orm import selectinload
@@ -8,6 +8,7 @@ import logging
 import uuid
 
 from app import models, schemas
+from app.models.agent import AgentVisibility, AgentStatus
 
 logger = logging.getLogger(__name__)
 
@@ -28,9 +29,9 @@ async def get_agent(db: AsyncSession, agent_id: str) -> Optional[models.Agent]:
         logger.error(f"未知错误 - 获取角色 {agent_id}: {str(e)}")
         raise HTTPException(status_code=500, detail="服务器内部错误")
 
-async def get_agents(db: AsyncSession, skip: int = 0, limit: int = 100) -> List[models.Agent]:
+async def get_user_agents(db: AsyncSession, user_id: str, skip: int = 0, limit: int = 100) -> List[models.Agent]:
     """
-    获取AI角色列表
+    获取用户创建的AI角色列表
     """
     try:
         # 验证参数
@@ -41,17 +42,50 @@ async def get_agents(db: AsyncSession, skip: int = 0, limit: int = 100) -> List[
             
         result = await db.execute(
             select(models.Agent)
+            .where(models.Agent.creator_id == user_id)
             .offset(skip)
             .limit(limit)
+            .order_by(desc(models.Agent.created_at))
         )
         return result.scalars().all()
     except HTTPException:
         raise
     except SQLAlchemyError as e:
-        logger.error(f"数据库查询错误 - 获取角色列表: {str(e)}")
+        logger.error(f"数据库查询错误 - 获取用户角色列表: {str(e)}")
         raise HTTPException(status_code=500, detail="数据库查询失败")
     except Exception as e:
-        logger.error(f"未知错误 - 获取角色列表: {str(e)}")
+        logger.error(f"未知错误 - 获取用户角色列表: {str(e)}")
+        raise HTTPException(status_code=500, detail="服务器内部错误")
+
+async def get_recommended_agents(db: AsyncSession, skip: int = 0, limit: int = 100) -> List[models.Agent]:
+    """
+    获取推荐的AI角色列表（公开且已审核的角色，按创建时间倒序）
+    """
+    try:
+        # 验证参数
+        if skip < 0:
+            raise HTTPException(status_code=400, detail="skip参数不能为负数")
+        if limit <= 0 or limit > 1000:
+            raise HTTPException(status_code=400, detail="limit参数必须在1-1000之间")
+            
+        result = await db.execute(
+            select(models.Agent)
+            .where(
+                models.Agent.visibility == AgentVisibility.PUBLIC,
+                # models.Agent.status == AgentStatus.APPROVED
+            )
+            .offset(skip)
+            .limit(limit)
+            .order_by(desc(models.Agent.created_at))
+        )
+        return result.scalars().all()
+    except HTTPException:
+        raise
+    except SQLAlchemyError as e:
+        logger.error(f"数据库查询错误 - 获取推荐角色列表: {str(e)}")
+        raise HTTPException(status_code=500, detail="数据库查询失败")
+    except Exception as e:
+        logger.error(f"未知错误 - 获取推荐角色列表: {str(e)}")
         raise HTTPException(status_code=500, detail="服务器内部错误")
 
 async def create_agent(db: AsyncSession, agent_in: schemas.AgentCreate, user_id: str) -> models.Agent:

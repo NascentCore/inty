@@ -16,9 +16,22 @@ async def list_agents(
     current_user: schemas.User = Depends(deps.get_current_active_user),
 ) -> Any:
     """
-    获取AI角色列表
+    获取当前用户创建的AI角色列表
     """
-    agents = await agent_service.get_agents(db, skip=skip, limit=limit)
+    agents = await agent_service.get_user_agents(db, user_id=current_user.id, skip=skip, limit=limit)
+    return agents
+
+@router.get("/recommend", response_model=List[schemas.Agent])
+async def recommend_agents(
+    db: AsyncSession = Depends(deps.get_async_db),
+    skip: int = 0,
+    limit: int = 100,
+    current_user: schemas.User = Depends(deps.get_current_active_user),
+) -> Any:
+    """
+    获取推荐的AI角色列表（公开且已审核的角色，按创建时间倒序）
+    """
+    agents = await agent_service.get_recommended_agents(db, skip=skip, limit=limit)
     return agents
 
 @router.post("/", response_model=schemas.Agent)
