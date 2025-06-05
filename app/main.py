@@ -15,6 +15,8 @@ from app.middleware.error_handler import (
     validation_error_handler
 )
 from app.core.logging import init_logger
+from app.core.agent.agent import agent_manager
+from app.api.deps import get_async_db
 from loguru import logger
 
 init_logger()
@@ -56,6 +58,29 @@ app.add_exception_handler(SQLAlchemyError, sqlalchemy_exception_handler)
 app.add_exception_handler(ValidationError, validation_error_handler)
 
 app.include_router(api_router, prefix=settings.app.api_v1_prefix)
+
+@app.on_event("startup")
+async def startup_event():
+    """应用启动事件"""
+    try:
+        logger.info("正在初始化常用Agent...")
+        # 获取数据库会话
+        async for db_session in get_async_db():
+            await agent_manager.initialize_popular_agents(db_session)
+            break  # 只需要一次初始化
+        logger.info("Agent初始化完成")
+    except Exception as e:
+        logger.error(f"Agent初始化失败: {str(e)}")
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """应用关闭事件"""
+    try:
+        logger.info("正在停止Agent管理器...")
+        agent_manager.stop()
+        logger.info("Agent管理器已停止")
+    except Exception as e:
+        logger.error(f"停止Agent管理器失败: {str(e)}")
 
 def custom_openapi():
     if app.openapi_schema:

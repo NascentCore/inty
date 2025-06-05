@@ -1,10 +1,17 @@
 from typing import Any, List
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
+import json
+import uuid
+import time
+from pydantic import BaseModel
 
 from app import schemas
 from app.api import deps
-from app.services import chat_service
+from app.services import chat_service, agent_service
+from app.core.agent.agent import agent_manager
+from langchain_core.messages import HumanMessage
 
 router = APIRouter()
 
@@ -80,4 +87,247 @@ async def delete_chat(
     if not chat:
         raise HTTPException(status_code=404, detail="Chat not found")
     chat = await chat_service.delete_chat(db, db_chat=chat)
-    return chat 
+    return chat
+
+
+# OpenAI风格的消息模型
+class ChatMessage(BaseModel):
+    role: str  # "user" 或 "assistant"
+    content: str
+
+
+class ChatCompletionRequest(BaseModel):
+    messages: List[ChatMessage]
+    stream: bool = False
+    model: str = "chatbot"
+
+
+@router.post("/{chat_id}/chat/completions")
+async def chat_completions(
+    *,
+    db: AsyncSession = Depends(deps.get_async_db),
+    chat_id: str,
+    request: ChatCompletionRequest,
+    current_user: schemas.User = Depends(deps.get_current_active_user),
+):
+    """
+    OpenAI风格的聊天接口
+    """
+    # 验证聊天是否存在并获取关联的agent
+    chat = await chat_service.get_chat(db, chat_id=chat_id)
+    if not chat:
+        raise HTTPException(status_code=404, detail="Chat not found")
+    
+    # 验证聊天是否属于当前用户
+    if chat.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+    
+    # 获取Agent配置
+    agent_db = await agent_service.get_agent(db, agent_id=chat.agent_id)
+    if not agent_db:
+        raise HTTPException(status_code=404, detail="Agent not found")
+    
+    try:
+        # 获取最后一条用户消息
+        user_messages = [msg for msg in request.messages if msg.role == "user"]
+        if not user_messages:
+            raise HTTPException(status_code=400, detail="No user message found")
+        
+        last_user_message = user_messages[-1].content
+        
+        # 构建LangChain消息格式
+        messages = {
+            "messages": [HumanMessage(content=last_user_message)]
+        }
+        
+        # 获取或创建Agent实例
+        agent_data = {
+            'id': agent_db.id,
+            'name': agent_db.name,
+            'prompt': agent_db.prompt,
+            'settings': agent_db.settings
+        }
+        agent = await agent_manager.get_agent(agent_data)
+        
+        session_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, chat_id))
+        
+        if request.stream:
+            return StreamingResponse(
+                generate_chat_stream(
+                    agent=agent,
+                    messages=messages,
+                    user_id=current_user.id,
+                    session_id=session_id,
+                    chat_id=chat_id,
+                    model_name=request.model
+                ),
+                media_type="text/event-stream",
+                headers={
+                    "Cache-Control": "no-cache",
+                    "Connection": "keep-alive",
+                }
+            )
+        else:
+            # 非流式聊天
+            response_content = agent.chat(
+                user_id=current_user.id,
+                session_id=session_id,
+                messages=messages
+            )
+            
+            return {
+                "id": f"chatcmpl-{uuid.uuid4().hex[:12]}",
+                "object": "chat.completion",
+                "created": int(time.time()),
+                "model": request.model,
+                "choices": [
+                    {
+                        "index": 0,
+                        "message": {
+                            "role": "assistant",
+                            "content": response_content
+                        },
+                        "finish_reason": "stop"
+                    }
+                ],
+                "usage": {
+                    "prompt_tokens": len(last_user_message.split()),
+                    "completion_tokens": len(response_content.split()),
+                    "total_tokens": len(last_user_message.split()) + len(response_content.split())
+                }
+            }
+            
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"聊天失败: {str(e)}")
+
+
+async def generate_chat_stream(agent, messages: dict, user_id: str, session_id: str, chat_id: str, model_name: str):
+    """生成流式聊天响应"""
+    try:
+        completion_id = f"chatcmpl-{uuid.uuid4().hex[:12]}"
+        created_time = int(time.time())
+        
+        # 发送开始事件
+        start_chunk = {
+            "id": completion_id,
+            "object": "chat.completion.chunk",
+            "created": created_time,
+            "model": model_name,
+            "choices": [
+                {
+                    "index": 0,
+                    "delta": {"role": "assistant", "content": ""},
+                    "finish_reason": None
+                }
+            ]
+        }
+        yield f"data: {json.dumps(start_chunk, ensure_ascii=False)}\n\n"
+        
+        # 流式获取AI响应
+        full_content = ""
+        for message_chunk, metadata in agent.chat_stream(
+            user_id=user_id,
+            session_id=session_id,
+            messages=messages
+        ):
+            if hasattr(message_chunk, 'content') and message_chunk.content:
+                content = str(message_chunk.content)
+                full_content += content
+                
+                chunk = {
+                    "id": completion_id,
+                    "object": "chat.completion.chunk",
+                    "created": created_time,
+                    "model": model_name,
+                    "choices": [
+                        {
+                            "index": 0,
+                            "delta": {"content": content},
+                            "finish_reason": None
+                        }
+                    ]
+                }
+                yield f"data: {json.dumps(chunk, ensure_ascii=False)}\n\n"
+        
+        # 发送结束事件
+        end_chunk = {
+            "id": completion_id,
+            "object": "chat.completion.chunk",
+            "created": created_time,
+            "model": model_name,
+            "choices": [
+                {
+                    "index": 0,
+                    "delta": {},
+                    "finish_reason": "stop"
+                }
+            ]
+        }
+        yield f"data: {json.dumps(end_chunk, ensure_ascii=False)}\n\n"
+        yield "data: [DONE]\n\n"
+        
+    except Exception as e:
+        error_chunk = {
+            "error": {
+                "message": f"聊天失败: {str(e)}",
+                "type": "server_error",
+                "code": "internal_error"
+            }
+        }
+        yield f"data: {json.dumps(error_chunk, ensure_ascii=False)}\n\n"
+
+
+@router.get("/agents/status")
+async def get_agent_status(
+    current_user: schemas.User = Depends(deps.get_current_active_user),
+):
+    """
+    获取Agent管理器状态
+    """
+    return {
+        "active_agents": agent_manager.get_agent_count(),
+        "max_agents": agent_manager.max_agents,
+        "cleanup_interval": agent_manager.cleanup_interval,
+        "max_idle_time": agent_manager.max_idle_time
+    }
+
+
+@router.post("/agents/initialize")
+async def initialize_agents(
+    *,
+    db: AsyncSession = Depends(deps.get_async_db),
+    current_user: schemas.User = Depends(deps.get_current_active_user),
+):
+    """
+    手动初始化常用Agent（管理员功能）
+    """
+    try:
+        await agent_manager.initialize_popular_agents(db)
+        return {
+            "status": "success",
+            "message": "常用Agent初始化完成",
+            "active_agents": agent_manager.get_agent_count()
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"初始化失败: {str(e)}")
+
+
+@router.delete("/agents/cleanup")
+async def cleanup_idle_agents(
+    current_user: schemas.User = Depends(deps.get_current_active_user),
+):
+    """
+    手动清理空闲Agent（管理员功能）
+    """
+    try:
+        old_count = agent_manager.get_agent_count()
+        agent_manager._cleanup_idle_agents()
+        new_count = agent_manager.get_agent_count()
+        return {
+            "status": "success",
+            "message": "空闲Agent清理完成",
+            "cleaned_count": old_count - new_count,
+            "remaining_agents": new_count
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"清理失败: {str(e)}") 

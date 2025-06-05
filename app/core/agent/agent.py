@@ -1,5 +1,8 @@
-from typing import Any
+from typing import Any, Dict, Optional
 import uuid
+import time
+import asyncio
+from threading import Lock
 from langgraph.prebuilt import create_react_agent
 from langchain_openai import ChatOpenAI
 from langmem import create_manage_memory_tool,create_search_memory_tool
@@ -47,14 +50,21 @@ postgres_store.setup()
 checkpointer = MemorySaver()
 
 class Agent:
-    def __init__(self, name: str, model_config: dict, system_prompt: str):
+    def __init__(self, agent_id: str, name: str, model_config: dict, system_prompt: str):
+        self.agent_id = agent_id
         self.name = name
         self.model_config = model_config
+        self.last_used = time.time()
+
+        # 使用配置中的模型设置，如果没有则使用默认设置
+        model_name = model_config.get('model', settings.agent.model)
+        api_key = model_config.get('api_key', settings.agent.api_key)
+        base_url = model_config.get('base_url', settings.agent.base_url)
 
         model = ChatOpenAI(
-            model=settings.agent.model,
-            openai_api_key=settings.agent.api_key,
-            openai_api_base=settings.agent.base_url,
+            model=model_name,
+            openai_api_key=api_key,
+            openai_api_base=base_url,
         )
         self.checkpointer = MemorySaver()
         self.agent = create_react_agent(
@@ -70,6 +80,7 @@ class Agent:
         )
 
     def chat(self, user_id: str, session_id: str, messages: dict[str, Any]):
+        self.last_used = time.time()
 
         history = PostgresChatMessageHistory(
             table_name,
@@ -88,9 +99,9 @@ class Agent:
         history.add_messages([AIMessage(content=response)])
         return response
 
-
-
     def chat_stream(self, user_id: str, session_id: str, messages: dict[str, Any]):
+        self.last_used = time.time()
+        
         history = PostgresChatMessageHistory(
             table_name,
             session_id,
@@ -100,14 +111,131 @@ class Agent:
         config = {'configurable':{'user_id':user_id,'thread_id':user_id}}
 
         for message_chunk,metadata in self.agent.stream(messages,config,stream_mode="messages"):
-            print(message_chunk,metadata)
+            yield message_chunk, metadata
+
 
 class AgentManager:
-    pass
+    def __init__(self, max_agents: int = 50, cleanup_interval: int = 3600, max_idle_time: int = 7200):
+        """
+        初始化Agent管理器
+        
+        Args:
+            max_agents: 最大Agent实例数量
+            cleanup_interval: 清理检查间隔（秒）
+            max_idle_time: 最大空闲时间（秒）
+        """
+        self.agents: Dict[str, Agent] = {}
+        self.max_agents = max_agents
+        self.cleanup_interval = cleanup_interval
+        self.max_idle_time = max_idle_time
+        self.lock = Lock()
+        self._cleanup_task = None
+        self._start_cleanup_task()
+
+    def _start_cleanup_task(self):
+        """启动清理任务"""
+        async def cleanup_loop():
+            while True:
+                await asyncio.sleep(self.cleanup_interval)
+                self._cleanup_idle_agents()
+        
+        self._cleanup_task = asyncio.create_task(cleanup_loop())
+
+    def _cleanup_idle_agents(self):
+        """清理长时间空闲的Agent实例"""
+        current_time = time.time()
+        with self.lock:
+            idle_agents = []
+            for agent_id, agent in self.agents.items():
+                if current_time - agent.last_used > self.max_idle_time:
+                    idle_agents.append(agent_id)
+            
+            for agent_id in idle_agents:
+                del self.agents[agent_id]
+                print(f"清理空闲Agent: {agent_id}")
+
+    async def get_agent(self, agent_data: dict) -> Agent:
+        """
+        获取或创建Agent实例
+        
+        Args:
+            agent_data: Agent配置数据，包含id, name, prompt, settings等
+        """
+        agent_id = agent_data['id']
+        
+        with self.lock:
+            # 如果Agent已存在，直接返回
+            if agent_id in self.agents:
+                return self.agents[agent_id]
+            
+            # 如果达到最大数量，清理最久未使用的Agent
+            if len(self.agents) >= self.max_agents:
+                oldest_agent_id = min(
+                    self.agents.keys(),
+                    key=lambda x: self.agents[x].last_used
+                )
+                del self.agents[oldest_agent_id]
+                print(f"达到最大Agent数量，清理最旧的Agent: {oldest_agent_id}")
+            
+            # 创建新的Agent实例
+            model_config = {}
+            if agent_data.get('settings'):
+                model_config = agent_data['settings'].get('model_config', {})
+            
+            system_prompt = agent_data.get('prompt', "你是一个聊天助手，请用中文回答用户的问题。")
+            
+            agent = Agent(
+                agent_id=agent_id,
+                name=agent_data['name'],
+                model_config=model_config,
+                system_prompt=system_prompt
+            )
+            
+            self.agents[agent_id] = agent
+            print(f"创建新的Agent实例: {agent_id} - {agent_data['name']}")
+            return agent
+
+    async def initialize_popular_agents(self, db_session):
+        """
+        初始化常用的Agent实例
+        """
+        from app.services import agent_service
+        
+        try:
+            # 获取推荐的Agent列表作为常用Agent
+            popular_agents = await agent_service.get_recommended_agents(db_session, skip=0, limit=10)
+            
+            for agent_db in popular_agents:
+                agent_data = {
+                    'id': agent_db.id,
+                    'name': agent_db.name,
+                    'prompt': agent_db.prompt,
+                    'settings': agent_db.settings
+                }
+                await self.get_agent(agent_data)
+                
+            print(f"初始化了 {len(popular_agents)} 个常用Agent")
+            
+        except Exception as e:
+            print(f"初始化常用Agent失败: {str(e)}")
+
+    def get_agent_count(self) -> int:
+        """获取当前Agent实例数量"""
+        return len(self.agents)
+
+    def stop(self):
+        """停止Agent管理器"""
+        if self._cleanup_task:
+            self._cleanup_task.cancel()
+
+
+# 创建全局Agent管理器实例
+agent_manager = AgentManager()
 
 
 if __name__ == "__main__":
     agent = Agent(
+        agent_id="test",
         name="test",
         model_config={},
         system_prompt="You are a helpful assistant.",
