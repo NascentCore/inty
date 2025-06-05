@@ -54,4 +54,5 @@ class User(Base):
     chat_settings = relationship("ChatSettings", back_populates="user")
     chats = relationship("Chat", back_populates="user")
     resources = relationship("Resource", back_populates="user")
-    settings = relationship("Settings", back_populates="user", uselist=False) 
+    settings = relationship("Settings", back_populates="user", uselist=False)
+    reports = relationship("Report", back_populates="reporter") 

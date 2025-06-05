@@ -10,7 +10,7 @@ class UserBase(BaseModel):
     avatar: Optional[str] = None
     email: Optional[EmailStr] = None
     phone: Optional[str] = None
-    gender: Optional[str] = None
+    gender: Optional[Gender] = None
     age_group: Optional[str] = None
     description: Optional[str] = None
     system_language: Optional[str] = None
@@ -31,6 +31,7 @@ class UserInDBBase(UserBase):
     is_active: bool
     created_at: datetime
     updated_at: Optional[datetime] = None
+    is_superuser: bool = False
 
     class Config:
         from_attributes = True

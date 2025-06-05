@@ -8,6 +8,7 @@ from google.auth.transport import requests as google_requests
 from google.oauth2 import id_token
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from loguru import logger
 
 from app import schemas
 from app.core.config import settings
@@ -20,7 +21,6 @@ from app.schemas.auth import LoginResponse, LoginUserResponse, GuestResponse
 from app.schemas.response import APIResponse
 from app.services.user_service import create_guest_user
 
-logger = logging.getLogger(__name__)
 router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.app.api_v1_prefix}/auth/login")
 

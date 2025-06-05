@@ -9,6 +9,7 @@ import uuid
 from app.core.uuid import uid
 from app.models import User
 from app.models.user import AuthType
+from app.schemas import UserUpdate
 
 logger = logging.getLogger(__name__)
 
@@ -71,3 +72,30 @@ async def create_guest_user(
         logger.error(f"创建游客用户失败: {str(e)}")
         logger.error(f"错误堆栈: {traceback.format_exc()}")
         raise e 
+
+async def update_user(
+    db: AsyncSession,
+    user_id: str,
+    user_in: UserUpdate
+) -> User:
+    """更新用户信息"""
+    try:
+        stmt = select(User).where(User.id == user_id)
+        result = await db.execute(stmt)
+        user = result.scalars().first()
+        
+        if not user:
+            raise ValueError(f"用户不存在: {user_id}")
+            
+        update_data = user_in.dict(exclude_unset=True)
+        for field, value in update_data.items():
+            setattr(user, field, value)
+            
+        await db.commit()
+        await db.refresh(user)
+        return user
+    except Exception as e:
+        logger.error(f"更新用户信息失败: {str(e)}")
+        logger.error(f"错误堆栈: {traceback.format_exc()}")
+        raise e 
+
