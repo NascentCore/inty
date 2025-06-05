@@ -393,31 +393,88 @@ async def get_chat_detail(
         raise HTTPException(status_code=500, detail=f"获取对话详情失败: {str(e)}")
 
 
-@router.get("/{chat_id}/messages")
-async def get_chat_messages(
+@router.get("/agents/{agent_id}/detail")
+async def get_agent_chat_detail(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
-    chat_id: str,
+    agent_id: str,
+    current_user: schemas.User = Depends(deps.get_current_active_user),
+    limit: int = Query(20, ge=1, le=100, description="每页消息数量"),
+    offset: int = Query(0, ge=0, description="偏移量（跳过的消息数量）"),
+) -> Any:
+    """
+    根据Agent ID获取对话详情，包含分页的消息记录
+    如果用户还没有和该Agent创建会话，则自动创建
+    支持滚屏加载更早的对话
+    """
+    try:
+        # 获取或创建与该Agent的唯一会话
+        chat = await chat_service.get_or_create_chat_by_agent(
+            db=db,
+            user_id=current_user.id,
+            agent_id=agent_id
+        )
+        
+        # 使用统一的session_id生成规则
+        session_id = generate_session_id(chat.id)
+        
+        # 获取分页消息
+        messages_data = chat_history_service.get_messages_paginated(
+            session_id=session_id,
+            limit=limit,
+            offset=offset
+        )
+        
+        # 组装返回数据
+        return {
+            "chat_info": {
+                "id": chat.id,
+                "agent_id": chat.agent_id,
+                "agent_name": chat.agent_name,
+                "user_id": chat.user_id,
+                "created_at": chat.created_at.isoformat() if chat.created_at else None,
+                "updated_at": chat.updated_at.isoformat() if chat.updated_at else None,
+            },
+            "messages": messages_data["messages"],
+            "pagination": {
+                "total": messages_data["total"],
+                "limit": messages_data["limit"],
+                "offset": messages_data["offset"],
+                "page": messages_data["page"],
+                "has_more": messages_data["has_more"],
+                "total_pages": (messages_data["total"] + limit - 1) // limit if limit > 0 else 1
+            }
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"获取对话详情失败: {str(e)}")
+
+
+@router.get("/agents/{agent_id}/messages")
+async def get_agent_chat_messages(
+    *,
+    db: AsyncSession = Depends(deps.get_async_db),
+    agent_id: str,
     current_user: schemas.User = Depends(deps.get_current_active_user),
     limit: int = Query(20, ge=1, le=100, description="每页消息数量"),
     offset: int = Query(0, ge=0, description="偏移量"),
     order: str = Query("desc", regex="^(asc|desc)$", description="排序方式：asc=旧消息在前，desc=新消息在前"),
 ) -> Any:
     """
-    仅获取聊天消息记录（更轻量级的接口）
+    根据Agent ID仅获取聊天消息记录（更轻量级的接口）
+    如果用户还没有和该Agent创建会话，则自动创建
     专门用于滚动加载
     """
-    # 验证聊天是否存在且属于当前用户
-    chat = await chat_service.get_chat(db, chat_id=chat_id)
-    if not chat:
-        raise HTTPException(status_code=404, detail="Chat not found")
-    
-    if chat.user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Not enough permissions")
-    
     try:
+        # 获取或创建与该Agent的唯一会话
+        chat = await chat_service.get_or_create_chat_by_agent(
+            db=db,
+            user_id=current_user.id,
+            agent_id=agent_id
+        )
+        
         # 使用统一的session_id生成规则
-        session_id = generate_session_id(chat_id)
+        session_id = generate_session_id(chat.id)
         
         # 获取分页消息
         messages_data = chat_history_service.get_messages_paginated(
@@ -434,4 +491,103 @@ async def get_chat_messages(
         return messages_data
         
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"获取消息记录失败: {str(e)}") 
+        raise HTTPException(status_code=500, detail=f"获取消息记录失败: {str(e)}")
+
+
+@router.post("/agents/{agent_id}/chat/completions")
+async def agent_chat_completions(
+    *,
+    db: AsyncSession = Depends(deps.get_async_db),
+    agent_id: str,
+    request: ChatCompletionRequest,
+    current_user: schemas.User = Depends(deps.get_current_active_user),
+):
+    """
+    基于Agent ID的OpenAI风格聊天接口
+    如果用户还没有和该Agent创建会话，则自动创建
+    """
+    try:
+        # 获取或创建与该Agent的唯一会话
+        chat = await chat_service.get_or_create_chat_by_agent(
+            db=db,
+            user_id=current_user.id,
+            agent_id=agent_id
+        )
+        
+        # 获取Agent配置
+        agent_db = await agent_service.get_agent(db, agent_id=agent_id)
+        if not agent_db:
+            raise HTTPException(status_code=404, detail="Agent not found")
+        
+        # 获取最后一条用户消息
+        user_messages = [msg for msg in request.messages if msg.role == "user"]
+        if not user_messages:
+            raise HTTPException(status_code=400, detail="No user message found")
+        
+        last_user_message = user_messages[-1].content
+        
+        # 构建LangChain消息格式
+        messages = {
+            "messages": [HumanMessage(content=last_user_message)]
+        }
+        
+        # 获取或创建Agent实例
+        agent_data = {
+            'id': agent_db.id,
+            'name': agent_db.name,
+            'prompt': agent_db.prompt,
+            'settings': agent_db.settings
+        }
+        agent = await agent_manager.get_agent(agent_data)
+        
+        # 使用统一的session_id生成规则
+        session_id = generate_session_id(chat.id)
+        
+        if request.stream:
+            return StreamingResponse(
+                generate_chat_stream(
+                    agent=agent,
+                    messages=messages,
+                    user_id=current_user.id,
+                    session_id=session_id,
+                    chat_id=chat.id,
+                    model_name=request.model
+                ),
+                media_type="text/event-stream",
+                headers={
+                    "Cache-Control": "no-cache",
+                    "Connection": "keep-alive",
+                }
+            )
+        else:
+            # 非流式聊天
+            response_content = agent.chat(
+                user_id=current_user.id,
+                session_id=session_id,
+                messages=messages
+            )
+            
+            return {
+                "id": f"chatcmpl-{uuid.uuid4().hex[:12]}",
+                "object": "chat.completion",
+                "created": int(time.time()),
+                "model": request.model,
+                "choices": [
+                    {
+                        "index": 0,
+                        "message": {
+                            "role": "assistant",
+                            "content": response_content
+                        },
+                        "finish_reason": "stop"
+                    }
+                ],
+                "usage": {
+                    "prompt_tokens": len(last_user_message.split()),
+                    "completion_tokens": len(response_content.split()),
+                    "total_tokens": len(last_user_message.split()) + len(response_content.split())
+                }
+            }
+            
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"聊天失败: {str(e)}") 

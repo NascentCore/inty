@@ -244,4 +244,125 @@ async def delete_chat(
     except Exception as e:
         await db.rollback()
         logger.error(f"未知错误 - 删除聊天 {db_chat.id if db_chat else 'unknown'}: {str(e)}")
+        raise HTTPException(status_code=500, detail="服务器内部错误")
+
+async def get_or_create_chat_by_agent(
+    db: AsyncSession, user_id: str, agent_id: str
+) -> models.Chat:
+    """
+    根据用户ID和Agent ID获取或创建唯一的聊天会话
+    每个用户和每个Agent只能有一个会话
+    """
+    try:
+        # 首先查找是否已存在会话
+        result = await db.execute(
+            select(models.Chat)
+            .options(
+                selectinload(models.Chat.settings),
+                selectinload(models.Chat.agent)
+            )
+            .where(
+                models.Chat.user_id == user_id,
+                models.Chat.agent_id == agent_id,
+                models.Chat.is_active == True
+            )
+        )
+        existing_chat = result.scalar_one_or_none()
+        
+        if existing_chat:
+            # 获取最近消息
+            try:
+                session_id = generate_session_id(existing_chat.id)
+                existing_chat.last_message = chat_history_service.get_last_message(session_id)
+            except Exception as e:
+                logger.error(f"获取最近消息失败: {str(e)}")
+                existing_chat.last_message = None
+            existing_chat.agent_name = existing_chat.agent.name if existing_chat.agent else None
+            return existing_chat
+        
+        # 如果不存在，则创建新的会话
+        # 首先验证Agent是否存在
+        agent_result = await db.execute(
+            select(models.Agent)
+            .where(models.Agent.id == agent_id)
+        )
+        agent = agent_result.scalar_one_or_none()
+        if not agent:
+            raise HTTPException(status_code=404, detail="Agent不存在")
+        
+        # 创建新的聊天会话
+        chat_id = str(uuid.uuid4())
+        db_chat = models.Chat(
+            id=chat_id,
+            user_id=user_id,
+            agent_id=agent_id
+        )
+        
+        db.add(db_chat)
+        await db.commit()
+        await db.refresh(db_chat)
+        
+        # 添加Agent开场白到chat_history
+        if agent.opening:
+            try:
+                session_id = generate_session_id(chat_id)
+                chat_history_service.add_agent_opening_message(session_id, agent.opening)
+            except Exception as e:
+                logger.error(f"添加开场白失败: {str(e)}")
+                # 继续执行，不影响chat创建
+        
+        # 重新查询以加载关系数据
+        result = await db.execute(
+            select(models.Chat)
+            .options(
+                selectinload(models.Chat.settings),
+                selectinload(models.Chat.agent)
+            )
+            .where(models.Chat.id == db_chat.id)
+        )
+        new_chat = result.scalar_one()
+        
+        # 获取最近消息和agent名称
+        try:
+            session_id = generate_session_id(new_chat.id)
+            new_chat.last_message = chat_history_service.get_last_message(session_id)
+        except Exception as e:
+            logger.error(f"获取最近消息失败: {str(e)}")
+            new_chat.last_message = None
+        new_chat.agent_name = new_chat.agent.name if new_chat.agent else None
+        
+        return new_chat
+        
+    except HTTPException:
+        raise
+    except IntegrityError as e:
+        await db.rollback()
+        logger.error(f"数据完整性错误 - 获取或创建聊天: {str(e)}")
+        # 可能是并发创建导致的重复，尝试再次查询
+        try:
+            result = await db.execute(
+                select(models.Chat)
+                .options(
+                    selectinload(models.Chat.settings),
+                    selectinload(models.Chat.agent)
+                )
+                .where(
+                    models.Chat.user_id == user_id,
+                    models.Chat.agent_id == agent_id,
+                    models.Chat.is_active == True
+                )
+            )
+            existing_chat = result.scalar_one_or_none()
+            if existing_chat:
+                return existing_chat
+        except Exception:
+            pass
+        raise HTTPException(status_code=500, detail="创建聊天会话失败")
+    except SQLAlchemyError as e:
+        await db.rollback()
+        logger.error(f"数据库错误 - 获取或创建聊天: {str(e)}")
+        raise HTTPException(status_code=500, detail="数据库操作失败")
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"未知错误 - 获取或创建聊天: {str(e)}")
         raise HTTPException(status_code=500, detail="服务器内部错误") 
