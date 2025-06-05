@@ -28,6 +28,10 @@ object IntySetting {
         return allUserSetting.decodeString("guest_uid") ?: ""
     }
 
+    fun isGuestUser(): Boolean {
+        return getCurUserID() == geGuestUserID()
+    }
+
     fun changeUser(uid: String) {
         val last = curUserSetting
 
@@ -54,5 +58,16 @@ object IntySetting {
         return allUserSetting.decodeString("deviceID")
     }
 
+    fun isLogin(): Boolean {
+        return getCurUserID().isNotEmpty()
+    }
+
+    fun login(isGuest: Boolean, uid: String, token: String) {
+        changeUser(uid)
+        setToken(token)
+        if (isGuest) {
+            allUserSetting.putString("guest_uid", uid)
+        }
+    }
 
 }

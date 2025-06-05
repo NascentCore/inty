@@ -81,6 +81,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
     implementation(platform(libs.androidx.compose.bom))
+    implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
@@ -110,6 +111,7 @@ dependencies {
     api(libs.retrofit.core)
 
     implementation(libs.retrofit2.kotlin.coroutines.adapter)
+    implementation(libs.bundles.coils)
 
 
 }

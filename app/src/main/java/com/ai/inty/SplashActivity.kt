@@ -76,6 +76,7 @@ class SplashActivity : ComponentActivity() {
                     SplashViewModel.InitState.Success -> {
                         TheRouter.build(Constant.ROUTE_MAIN)
                             .navigation(this@SplashActivity)
+                        finish()
                     }
                     else -> {
 

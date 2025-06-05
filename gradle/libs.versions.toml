@@ -15,6 +15,7 @@ appcompat = "1.7.0"
 material = "1.12.0"
 activity = "1.10.1"
 constraintlayout = "2.2.1"
+navigationCompose = "2.9.0"
 theRouter="1.2.4"
 mmkv="1.2.16"
 mars="1.2.5"
@@ -26,6 +27,7 @@ moshi="1.15.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+androidx-navigation-compose = { module = "androidx.navigation:navigation-compose", version.ref = "navigationCompose" }
 library = { module = "com.github.chuckerteam.chucker:library", version.ref = "library" }
 library-no-op = { module = "com.github.chuckerteam.chucker:library-no-op", version.ref = "library" }
 router = { module = "cn.therouter:router", version.ref = "theRouter" }
