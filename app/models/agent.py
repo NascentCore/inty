@@ -6,6 +6,7 @@ import sqlalchemy as sa
 
 from app.db.base_class import Base
 from app.models.associations import agent_followers
+from app.models.user import Gender
 
 
 class AgentStatus(str, enum.Enum):
@@ -26,17 +27,17 @@ class Agent(Base):
     __tablename__ = "agents"
 
     id = Column(String, primary_key=True, index=True)
-    name = Column(String, index=True)
-    gender = Column(Enum("MALE", "FEMALE", "OTHER"))
+    name = Column(String(30), index=True, nullable=False)
+    gender = Column(Enum(Gender, name="gender"), nullable=False)
     avatar = Column(String)
     voice_id = Column(String)
-    settings = Column(String)
+    settings = Column(JSON)
     intro = Column(String)
     opening = Column(String)
-    visibility = Column(Enum(AgentVisibility), default=AgentVisibility.PUBLIC)
+    visibility = Column(Enum(AgentVisibility, name="visibility"), default=AgentVisibility.PUBLIC)
     photos = Column(JSON)
     category = Column(String)
-    status = Column(Enum(AgentStatus), default=AgentStatus.PENDING)
+    status = Column(Enum(AgentStatus, name="agentstatus"), default=AgentStatus.PENDING)
     created_at = Column(DateTime(timezone=True), server_default=sa.text('now()'))
     updated_at = Column(DateTime(timezone=True), onupdate=sa.text('now()'))
     prompt = Column(String)

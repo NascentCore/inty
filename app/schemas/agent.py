@@ -1,4 +1,4 @@
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from pydantic import BaseModel
 from datetime import datetime
 
@@ -12,7 +12,7 @@ class AgentBase(BaseModel):
     gender: str
     avatar: Optional[str] = None
     voice_id: Optional[str] = None
-    settings: Optional[str] = None
+    settings: Optional[Dict[str, Any]] = None
     intro: Optional[str] = None
     opening: Optional[str] = None
     visibility: AgentVisibility = AgentVisibility.PUBLIC
@@ -22,7 +22,7 @@ class AgentBase(BaseModel):
 
 class AgentCreate(AgentBase):
     """创建AI角色"""
-    pass
+    creator_id: Optional[str] = None
 
 class AgentUpdate(AgentBase):
     """更新AI角色"""
@@ -35,7 +35,7 @@ class AgentInDB(AgentBase):
     """数据库中的AI角色"""
     id: str
     status: AgentStatus
-    creator_id: str
+    creator_id: Optional[str] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
 
@@ -45,7 +45,7 @@ class AgentInDB(AgentBase):
 class Agent(AgentInDB):
     """AI角色"""
     is_followed: bool = False
-    creator: Optional[dict] = None
+    creator: Optional[User] = None
 
 class AgentList(BaseModel):
     total: int
