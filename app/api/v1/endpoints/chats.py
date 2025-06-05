@@ -1,5 +1,5 @@
 from typing import Any, List
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 import json
@@ -9,7 +9,8 @@ from pydantic import BaseModel
 
 from app import schemas
 from app.api import deps
-from app.services import chat_service, agent_service
+from app.services import chat_service, agent_service, chat_history_service
+from app.services.chat_service import generate_session_id
 from app.core.agent.agent import agent_manager
 from langchain_core.messages import HumanMessage
 
@@ -149,7 +150,8 @@ async def chat_completions(
         }
         agent = await agent_manager.get_agent(agent_data)
         
-        session_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, chat_id))
+        # 使用统一的session_id生成规则
+        session_id = generate_session_id(chat_id)
         
         if request.stream:
             return StreamingResponse(
@@ -330,4 +332,106 @@ async def cleanup_idle_agents(
             "remaining_agents": new_count
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"清理失败: {str(e)}") 
+        raise HTTPException(status_code=500, detail=f"清理失败: {str(e)}")
+
+
+@router.get("/{chat_id}/detail")
+async def get_chat_detail(
+    *,
+    db: AsyncSession = Depends(deps.get_async_db),
+    chat_id: str,
+    current_user: schemas.User = Depends(deps.get_current_active_user),
+    limit: int = Query(20, ge=1, le=100, description="每页消息数量"),
+    offset: int = Query(0, ge=0, description="偏移量（跳过的消息数量）"),
+) -> Any:
+    """
+    获取对话详情，包含分页的消息记录
+    支持滚屏加载更早的对话
+    """
+    # 验证聊天是否存在
+    chat = await chat_service.get_chat(db, chat_id=chat_id)
+    if not chat:
+        raise HTTPException(status_code=404, detail="Chat not found")
+    
+    # 验证聊天是否属于当前用户
+    if chat.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+    
+    try:
+        # 使用统一的session_id生成规则
+        session_id = generate_session_id(chat_id)
+        
+        # 获取分页消息
+        messages_data = chat_history_service.get_messages_paginated(
+            session_id=session_id,
+            limit=limit,
+            offset=offset
+        )
+        
+        # 组装返回数据
+        return {
+            "chat_info": {
+                "id": chat.id,
+                "agent_id": chat.agent_id,
+                "agent_name": chat.agent_name,
+                "user_id": chat.user_id,
+                "created_at": chat.created_at.isoformat() if chat.created_at else None,
+                "updated_at": chat.updated_at.isoformat() if chat.updated_at else None,
+            },
+            "messages": messages_data["messages"],
+            "pagination": {
+                "total": messages_data["total"],
+                "limit": messages_data["limit"],
+                "offset": messages_data["offset"],
+                "page": messages_data["page"],
+                "has_more": messages_data["has_more"],
+                "total_pages": (messages_data["total"] + limit - 1) // limit if limit > 0 else 1
+            }
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"获取对话详情失败: {str(e)}")
+
+
+@router.get("/{chat_id}/messages")
+async def get_chat_messages(
+    *,
+    db: AsyncSession = Depends(deps.get_async_db),
+    chat_id: str,
+    current_user: schemas.User = Depends(deps.get_current_active_user),
+    limit: int = Query(20, ge=1, le=100, description="每页消息数量"),
+    offset: int = Query(0, ge=0, description="偏移量"),
+    order: str = Query("desc", regex="^(asc|desc)$", description="排序方式：asc=旧消息在前，desc=新消息在前"),
+) -> Any:
+    """
+    仅获取聊天消息记录（更轻量级的接口）
+    专门用于滚动加载
+    """
+    # 验证聊天是否存在且属于当前用户
+    chat = await chat_service.get_chat(db, chat_id=chat_id)
+    if not chat:
+        raise HTTPException(status_code=404, detail="Chat not found")
+    
+    if chat.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+    
+    try:
+        # 使用统一的session_id生成规则
+        session_id = generate_session_id(chat_id)
+        
+        # 获取分页消息
+        messages_data = chat_history_service.get_messages_paginated(
+            session_id=session_id,
+            limit=limit,
+            offset=offset
+        )
+        
+        # 如果要求升序（旧消息在前），则不反转
+        # 如果要求降序（新消息在前），则反转消息列表
+        if order == "desc":
+            messages_data["messages"].reverse()
+        
+        return messages_data
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"获取消息记录失败: {str(e)}") 

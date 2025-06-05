@@ -12,6 +12,13 @@ from app.services import chat_history_service
 
 logger = logging.getLogger(__name__)
 
+def generate_session_id(chat_id: str) -> str:
+    """
+    根据chat_id生成一致的session_id
+    确保在创建chat和聊天时使用相同的session_id
+    """
+    return str(uuid.uuid5(uuid.NAMESPACE_DNS, chat_id))
+
 async def get_chat(db: AsyncSession, chat_id: str) -> Optional[models.Chat]:
     """
     通过ID获取聊天
@@ -27,9 +34,10 @@ async def get_chat(db: AsyncSession, chat_id: str) -> Optional[models.Chat]:
         )
         chat = result.scalar_one_or_none()
         if chat:
-            # 获取最近消息 (chat_id 等于 session_id)
+            # 获取最近消息，使用统一的session_id生成规则
             try:
-                chat.last_message = chat_history_service.get_last_message(chat.id)
+                session_id = generate_session_id(chat.id)
+                chat.last_message = chat_history_service.get_last_message(session_id)
             except Exception as e:
                 logger.error(f"获取最近消息失败: {str(e)}")
                 chat.last_message = None
@@ -72,7 +80,9 @@ async def get_chats(
         # 为每个chat获取最近消息和agent名称
         for chat in chats:
             try:
-                chat.last_message = chat_history_service.get_last_message(chat.id)
+                # 使用统一的session_id生成规则
+                session_id = generate_session_id(chat.id)
+                chat.last_message = chat_history_service.get_last_message(session_id)
             except Exception as e:
                 logger.error(f"获取最近消息失败: {str(e)}")
                 chat.last_message = None
@@ -95,7 +105,7 @@ async def create_chat(
     创建新的聊天
     """
     try:
-        # 生成唯一ID (这个ID同时作为session_id)
+        # 生成唯一ID
         chat_id = str(uuid.uuid4())
         
         # 首先获取Agent的开场白
@@ -117,10 +127,11 @@ async def create_chat(
         await db.commit()
         await db.refresh(db_chat)
         
-        # 添加Agent开场白到chat_history (chat_id 作为 session_id)
+        # 添加Agent开场白到chat_history，使用统一的session_id生成规则
         if agent.opening:
             try:
-                chat_history_service.add_agent_opening_message(chat_id, agent.opening)
+                session_id = generate_session_id(chat_id)
+                chat_history_service.add_agent_opening_message(session_id, agent.opening)
             except Exception as e:
                 logger.error(f"添加开场白失败: {str(e)}")
                 # 继续执行，不影响chat创建
@@ -138,7 +149,8 @@ async def create_chat(
         
         # 获取最近消息 (应该是刚添加的开场白) 和agent名称
         try:
-            chat.last_message = chat_history_service.get_last_message(chat.id)
+            session_id = generate_session_id(chat.id)
+            chat.last_message = chat_history_service.get_last_message(session_id)
         except Exception as e:
             logger.error(f"获取最近消息失败: {str(e)}")
             chat.last_message = None

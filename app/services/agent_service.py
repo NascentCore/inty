@@ -100,8 +100,8 @@ async def create_agent(db: AsyncSession, agent_in: schemas.AgentCreate, user_id:
         # 生成唯一ID
         agent_id = str(uuid.uuid4())
         
-        # 排除creator_id字段避免重复参数
-        agent_data = agent_in.dict(exclude={'creator_id'})
+        # 获取Agent数据
+        agent_data = agent_in.dict()
         
         db_agent = models.Agent(
             id=agent_id,

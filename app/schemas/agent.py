@@ -22,7 +22,7 @@ class AgentBase(BaseModel):
 
 class AgentCreate(AgentBase):
     """创建AI角色"""
-    creator_id: Optional[str] = None
+    pass
 
 class AgentUpdate(AgentBase):
     """更新AI角色"""
