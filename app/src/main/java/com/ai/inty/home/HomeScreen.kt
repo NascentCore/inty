@@ -3,15 +3,12 @@ package com.ai.inty.home
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -19,19 +16,18 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.ai.inty.Constant
 import com.ai.inty.R
-import com.ai.inty.base.IntyCircleImage
 import com.ai.inty.base.IntyImage
 import com.ai.inty.base.noRippleClickable
-import com.ai.inty.beans.AgentInfo
 import com.ai.inty.chat.ChatPage
 import com.ai.inty.ui.theme.BackGround
 import com.ai.inty.viewmodels.ChatViewModel
 import com.ai.inty.viewmodels.HomeTabIndex
 import com.ai.inty.viewmodels.MainViewModel
+import com.therouter.TheRouter
 
 data class TabInfo(
     val normalImage: Int,
@@ -55,6 +51,7 @@ fun HomeScreen(
 
     val selectedTab = mainViewModel.selectedTab.collectAsState()
 
+    val context = LocalContext.current
 
     Scaffold(
         modifier = modifier.fillMaxSize().background(BackGround),
@@ -93,9 +90,15 @@ fun HomeScreen(
             HomeTabIndex.Add -> {
             }
             HomeTabIndex.Suggest -> {
-                Box(modifier = Modifier.padding(innerPadding).background(Color.Yellow),) {
-                    Text("推荐")
-                }
+                RecommendPage(
+                    modifier = Modifier,
+                    agents = mainViewModel.agentList,
+                    onClickAgent = { agent ->
+                        TheRouter.build(Constant.ROUTE_CHAT)
+                            .withObject("agent", agent)
+                            .navigation(context)
+                    }
+                )
             }
             HomeTabIndex.My -> {
                 Box(modifier = Modifier.padding(innerPadding).background(Color.Yellow),) {

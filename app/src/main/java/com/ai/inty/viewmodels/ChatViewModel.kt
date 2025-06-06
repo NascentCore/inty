@@ -5,7 +5,11 @@ import androidx.lifecycle.viewModelScope
 import com.ai.inty.base.BaseActivityViewModel
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.beans.MsgInfo
+import com.ai.inty.beans.SendMsgReq
+import com.ai.inty.net.IChatApi
+import com.architecture.httplib.core.HttpResult
 import com.inty.utils.log.EasyLog
+import com.therouter.TheRouter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,6 +26,8 @@ class ChatViewModel: BaseActivityViewModel() {
 
     val inputData = MutableStateFlow<String>("")
 
+    val chatApi = TheRouter.get(IChatApi::class.java)!!
+
     init {
 
         EasyLog.log("ChatViewModel = ${hashCode()}")
@@ -29,21 +35,41 @@ class ChatViewModel: BaseActivityViewModel() {
 
 
     fun setAgentInfo(agentInfo: AgentInfo?) {
+        EasyLog.log("agent = $agentInfo")
+        if (_agentInfo.value == agentInfo) {
+            return
+        }
         _agentInfo.value = agentInfo
+        msgs.clear()
 
         queryMsgs()
     }
 
     fun queryMsgs() {
         viewModelScope.launch(Dispatchers.IO) {
-            for (i in 0 .. 100) {
-                msgs.add(
-                    0,
-                    MsgInfo(
-                        content = "msgmsgmsgmsgmsgmsgmsgmsgmsgmsgmsgmsgmsgmsgmsgmsgmsgmsgmsgmsgmsgmsgmsgmsgmsgmsgmsgmsgmsg $i",
-                        senderType = if (i % 2 == 0) "AI" else "USER"
-                    )
-                )
+//            for (i in 0 .. 100) {
+//                msgs.add(
+//                    0,
+//                    MsgInfo(
+//                        content = "msgmsgmsgmsgmsgmsgmsgmsgmsgmsgmsgmsgmsgmsgmsgmsgmsgmsgmsgmsgmsgmsgmsgmsgmsgmsgmsgmsgmsg $i",
+//                        senderType = if (i % 2 == 0) "AI" else "USER"
+//                    )
+//                )
+//            }
+
+            agentInfo.value?.let { agent ->
+                val result = chatApi.getMsgs(agent.id, 100, 0)
+                EasyLog.log("get msgs = $result")
+
+                when (result) {
+                    is HttpResult.Success -> {
+                        msgs.addAll(result.data.messages)
+                    }
+                    is HttpResult.Failure -> {
+                        showSnackbar(result.message)
+                    }
+                }
+
             }
         }
     }
@@ -54,19 +80,39 @@ class ChatViewModel: BaseActivityViewModel() {
             inputData.value = ""
             EasyLog.log("send msg ${inputMsg}")
 
-            delay(100)
+            val msgInfo = MsgInfo(
+                content = inputMsg,
+                role = "user"
+            )
 
             withContext(Dispatchers.Main) {
                 EasyLog.log("msgs count = ${msgs.size}")
                 msgs.add(
                     0,
-                    MsgInfo(
-                        content = inputMsg,
-                        senderType = "USER"
-                    )
+                    msgInfo
                 )
                 EasyLog.log("msgs count = ${msgs.size}")
             }
+
+            val req = SendMsgReq(listOf(msgInfo))
+
+            agentInfo.value?.let { agent ->
+                val result = chatApi.sendMsg(agent.id, req)
+
+                EasyLog.log("sendMsg $req -> $result")
+
+                when (result) {
+                    is HttpResult.Success -> {
+                        for (choice in result.data.choices) {
+                            msgs.add(0, choice.message)
+                        }
+                    }
+                    is HttpResult.Failure -> {
+                        showSnackbar(result.message)
+                    }
+                }
+            }
+
 
         }
     }

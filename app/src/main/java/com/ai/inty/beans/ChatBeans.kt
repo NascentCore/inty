@@ -5,19 +5,50 @@ import com.squareup.moshi.Json
 
 @JsonClass(generateAdapter = true)
 data class SendMsgReq(
-    @Json(name = "content")
-    val content: String = "",
-    @Json(name = "type")
-    val type: String = ""
+    @Json(name = "messages")
+    val messages: List<MsgInfo> = listOf(),
+    @Json(name = "model")
+    val model: String = "chatbot",
+    @Json(name = "stream")
+    val stream: Boolean = false
 )
 
 @JsonClass(generateAdapter = true)
 data class SendMsgResponse(
-    @Json(name = "message_id")
-    val messageId: String = "",
-    @Json(name = "status")
-    val status: String = ""
+    @Json(name = "choices")
+    val choices: List<Choice> = listOf(),
+    @Json(name = "created")
+    val created: Int = 0,
+    @Json(name = "id")
+    val id: String = "",
+    @Json(name = "model")
+    val model: String = "",
+    @Json(name = "object")
+    val objectX: String = "",
+    @Json(name = "usage")
+    val usage: Usage = Usage()
 )
+
+@JsonClass(generateAdapter = true)
+data class Choice(
+    @Json(name = "finish_reason")
+    val finishReason: String = "",
+    @Json(name = "index")
+    val index: Int = 0,
+    @Json(name = "message")
+    val message: MsgInfo = MsgInfo()
+)
+
+@JsonClass(generateAdapter = true)
+data class Usage(
+    @Json(name = "completion_tokens")
+    val completionTokens: Int = 0,
+    @Json(name = "prompt_tokens")
+    val promptTokens: Int = 0,
+    @Json(name = "total_tokens")
+    val totalTokens: Int = 0
+)
+
 
 @JsonClass(generateAdapter = true)
 data class QueryMsgReq(
@@ -29,38 +60,24 @@ data class QueryMsgReq(
 
 @JsonClass(generateAdapter = true)
 data class QueryMsgsResponse(
-    @Json(name = "items")
-    val items: List<MsgInfo> = listOf(),
+    @Json(name = "has_more")
+    val hasMore: Boolean = false,
+    @Json(name = "limit")
+    val limit: Int = 0,
+    @Json(name = "messages")
+    val messages: List<MsgInfo> = listOf(),
+    @Json(name = "offset")
+    val offset: Int = 0,
     @Json(name = "page")
-    val page: String = "",
-    @Json(name = "page_size")
-    val pageSize: String = "",
+    val page: Int = 0,
     @Json(name = "total")
-    val total: String = ""
+    val total: Int = 0
 )
 
 @JsonClass(generateAdapter = true)
 data class MsgInfo(
     @Json(name = "content")
     val content: String = "",
-    @Json(name = "created_at")
-    val createdAt: String = "",
-    @Json(name = "id")
-    val id: String = "",
-    @Json(name = "sender")
-    val sender: MsgSender = MsgSender(),
-    @Json(name = "sender_type")
-    val senderType: String = "",
-    @Json(name = "type")
-    val type: String = ""
-)
-
-@JsonClass(generateAdapter = true)
-data class MsgSender(
-    @Json(name = "avatar")
-    val avatar: String = "",
-    @Json(name = "id")
-    val id: String = "",
-    @Json(name = "name")
-    val name: String = ""
+    @Json(name = "role")
+    val role: String = "",
 )

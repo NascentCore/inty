@@ -47,7 +47,7 @@ fun IntyImage(
         contentDescription = contentDescription,
         modifier = modifier,
         placeholder = placeholder,
-        error = error,
+        error = if (error == null) placeholder else error,
         fallback = fallback,
         onLoading = onLoading,
         onSuccess = onSuccess,

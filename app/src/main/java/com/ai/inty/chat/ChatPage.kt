@@ -26,6 +26,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
@@ -34,6 +35,7 @@ import com.ai.inty.R
 import com.ai.inty.base.IntyCircleImage
 import com.ai.inty.base.IntyImage
 import com.ai.inty.base.IntySmallTextField
+import com.ai.inty.base.noRippleClickable
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.beans.MsgInfo
 import com.ai.inty.home.BottomBar
@@ -55,6 +57,7 @@ fun ChatPage(
         IntyImage(
             modifier = Modifier.fillMaxSize(),
             model = agentInfo?.avatar,
+
         )
         val colors = listOf(
             Color(0xFF000000),
@@ -156,7 +159,9 @@ fun ChatPage(
                     )
 
                     IntyImage(
-                        modifier = Modifier.padding(16.dp, 0.dp).size(24.dp),
+                        modifier = Modifier.padding(16.dp, 0.dp).size(24.dp).noRippleClickable {
+                            chatViewModel.sendMsg()
+                        },
                         model = R.drawable.btn_add2
                     )
                 }
@@ -170,12 +175,15 @@ fun ChatPage(
 fun ChatItem(
     item: MsgInfo
 ) {
-    when (item.senderType) {
-        "AI" -> {
+    when (item.role) {
+        "assistant" -> {
             ChatItemAI(item)
         }
-        "USER" -> {
+        "user" -> {
             ChatItemUser(item)
+        }
+        else -> {
+            EasyLog.log("unknown role: $item")
         }
     }
 }

@@ -7,6 +7,7 @@ import com.architecture.httplib.error.GlobalErrorHandler
 import com.chuckerteam.chucker.api.ChuckerInterceptor
 import com.inty.utils.AppEnv
 import com.inty.utils.log.EasyLog
+import com.inty.utils.storage.IntySetting
 import com.jakewharton.retrofit2.adapter.kotlin.coroutines.CoroutineCallAdapterFactory
 import com.squareup.moshi.DefaultIfNullFactory
 import com.squareup.moshi.Moshi
@@ -27,6 +28,7 @@ class AuthInterceptor : Interceptor {
             chain.request().newBuilder()
                 .addHeader("accept", "application/json")
                 .addHeader("Content-Type", "application/json")
+                .addHeader("Authorization", "Bearer ${IntySetting.getCurToken()}")
                 .build()
 
         return chain.proceed(request)
@@ -53,6 +55,15 @@ object NetServiceMgr {
                 //添加返回的json 数据自定义解析器
                 .add(DefaultIfNullFactory())
                 .add(MoshiResultTypeAdapterFactory(getHttpWrapperHandler()))
+                .addLast(KotlinJsonAdapterFactory()) //
+                .build()
+        }
+    val moshiNoWrapper: Moshi
+        get() {
+            return Moshi.Builder()
+                //添加返回的json 数据自定义解析器
+                .add(DefaultIfNullFactory())
+                .add(MoshiResultTypeAdapterFactory(null))
                 .addLast(KotlinJsonAdapterFactory()) //
                 .build()
         }
@@ -105,9 +116,35 @@ object NetServiceMgr {
             return retrofitUser
         }
 
+    val retrofitNoWrapper: Retrofit
+        get() {
+
+            val retrofitUser =
+                Retrofit.Builder()
+                    .baseUrl(baseUrl())
+                    .client(okHttpClient)
+                    .addConverterFactory(MoshiConverterFactory.create(moshiNoWrapper))
+                    .addCallAdapterFactory(CoroutineCallAdapterFactory())
+                    .addCallAdapterFactory(
+                        HttpResponseCallAdapterFactory(globalErrorHandler) //全局的错误处理器
+                    )
+                    .build()
+
+            return retrofitUser
+        }
 }
 
 @ServiceProvider
 fun getUserApi(): IUserApi {
     return NetServiceMgr.retrofitNormal.create(IUserApi::class.java)
+}
+
+@ServiceProvider
+fun getAgentApi(): IAgentApi {
+    return NetServiceMgr.retrofitNormal.create(IAgentApi::class.java)
+}
+
+@ServiceProvider
+fun getChatApi(): IChatApi {
+    return NetServiceMgr.retrofitNoWrapper.create(IChatApi::class.java)
 }

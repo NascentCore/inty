@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.ai.inty.base.BaseActivityViewModel
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.beans.CreateGuestReq
+import com.ai.inty.net.IAgentApi
 import com.ai.inty.net.IUserApi
 import com.architecture.httplib.core.HttpResult
 import com.inty.utils.AppEnv
@@ -29,6 +30,7 @@ enum class HomeTabIndex {
 class MainViewModel: BaseActivityViewModel() {
 
     val userApi: IUserApi = TheRouter.get(IUserApi::class.java)!!
+    val agentApi: IAgentApi = TheRouter.get(IAgentApi::class.java)!!
 
     val agentList = mutableStateListOf<AgentInfo>()
 
@@ -70,12 +72,20 @@ class MainViewModel: BaseActivityViewModel() {
     fun getAgents() {
         EasyLog.log("getAgents")
         viewModelScope.launch(Dispatchers.IO) {
-            delay(100)
-            agentList.add(
-                AgentInfo(
-                    avatar = "https://pic-go-bed.oss-cn-beijing.aliyuncs.com/img/20220316151929.png",
-                    name = "test",
-                ))
+
+            val result = agentApi.recommendAgents(0, 10)
+            EasyLog.log("getAgents = $result")
+
+            when (result) {
+                is HttpResult.Success -> {
+                    result.data.list?.let { agents ->
+                        agentList.addAll(agents)
+                    }
+                }
+                is HttpResult.Failure -> {
+                    showSnackbar(result.message)
+                }
+            }
 
             EasyLog.log("Agents = $agentList")
 

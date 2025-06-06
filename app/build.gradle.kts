@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     id("com.google.devtools.ksp") version "2.0.0-1.0.22"
     id("therouter")
+    id("kotlin-parcelize")
 }
 
 android {

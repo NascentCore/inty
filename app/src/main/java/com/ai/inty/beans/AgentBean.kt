@@ -1,8 +1,11 @@
 package com.ai.inty.beans
+import android.os.Parcelable
 import com.squareup.moshi.JsonClass
 import com.squareup.moshi.Json
+import kotlinx.android.parcel.Parcelize
 
 
+@Parcelize
 @JsonClass(generateAdapter = true)
 data class AgentInfo(
     @Json(name = "avatar")
@@ -16,15 +19,19 @@ data class AgentInfo(
     @Json(name = "id")
     val id: String = "",
     @Json(name = "is_followed")
-    val isFollowed: String = "",
+    val isFollowed: Boolean = false,
     @Json(name = "name")
     val name: String = "",
     @Json(name = "opening")
     val opening: String = "",
     @Json(name = "voice_preview")
     val voicePreview: String = ""
+): Parcelable
+
+
+
+
+@JsonClass(generateAdapter = true)
+data class AgentInfoResponse(
+    val list: List<AgentInfo>? = null
 )
-
-
-
-

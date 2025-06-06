@@ -29,7 +29,11 @@
             android:label="@string/app_name"
             android:theme="@style/Theme.Inty">
         </activity>
-
+        <activity
+            android:name=".ChatActivity"
+            android:exported="true"
+            android:theme="@style/Theme.Inty">
+        </activity>
     </application>
 
 </manifest>

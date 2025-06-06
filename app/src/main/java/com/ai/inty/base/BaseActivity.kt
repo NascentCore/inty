@@ -6,6 +6,7 @@ import android.os.PersistableBundle
 import androidx.activity.ComponentActivity
 import androidx.core.view.WindowCompat
 import com.inty.utils.log.EasyLog
+import com.therouter.TheRouter
 
 open class BaseActivity : ComponentActivity() {
 
@@ -16,6 +17,7 @@ open class BaseActivity : ComponentActivity() {
 
     private fun onInit() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
+        TheRouter.inject(this)
     }
 
     override fun onCreate(savedInstanceState: Bundle?, persistentState: PersistableBundle?) {
