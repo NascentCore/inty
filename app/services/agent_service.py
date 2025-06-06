@@ -19,6 +19,7 @@ async def get_agent(db: AsyncSession, agent_id: str) -> Optional[models.Agent]:
     try:
         result = await db.execute(
             select(models.Agent)
+            .options(selectinload(models.Agent.creator))
             .where(models.Agent.id == agent_id)
         )
         return result.scalar_one_or_none()
@@ -42,6 +43,7 @@ async def get_user_agents(db: AsyncSession, user_id: str, skip: int = 0, limit: 
             
         result = await db.execute(
             select(models.Agent)
+            .options(selectinload(models.Agent.creator))
             .where(models.Agent.creator_id == user_id)
             .offset(skip)
             .limit(limit)
@@ -70,6 +72,7 @@ async def get_recommended_agents(db: AsyncSession, skip: int = 0, limit: int = 1
             
         result = await db.execute(
             select(models.Agent)
+            .options(selectinload(models.Agent.creator))
             .where(
                 models.Agent.visibility == AgentVisibility.PUBLIC,
                 # models.Agent.status == AgentStatus.APPROVED
@@ -161,7 +164,14 @@ async def update_agent(db: AsyncSession, db_agent: models.Agent, agent_in: schem
             
         await db.commit()
         await db.refresh(db_agent)
-        return db_agent
+        
+        # 重新查询以加载关系数据
+        result = await db.execute(
+            select(models.Agent)
+            .options(selectinload(models.Agent.creator))
+            .where(models.Agent.id == db_agent.id)
+        )
+        return result.scalar_one()
         
     except HTTPException:
         raise
