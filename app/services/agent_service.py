@@ -1,11 +1,12 @@
 from typing import List, Optional
-from sqlalchemy import select, desc
+from sqlalchemy import select, desc, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 from sqlalchemy.orm import selectinload
 from fastapi import HTTPException
 import logging
 import uuid
+import math
 
 from app import models, schemas
 from app.models.agent import AgentVisibility, AgentStatus
@@ -89,6 +90,65 @@ async def get_recommended_agents(db: AsyncSession, skip: int = 0, limit: int = 1
         raise HTTPException(status_code=500, detail="数据库查询失败")
     except Exception as e:
         logger.error(f"未知错误 - 获取推荐角色列表: {str(e)}")
+        raise HTTPException(status_code=500, detail="服务器内部错误")
+
+async def get_recommended_agents_paginated(db: AsyncSession, page: int = 1, page_size: int = 10) -> schemas.PaginationData[schemas.Agent]:
+    """
+    获取推荐的AI角色列表（分页版本）
+    """
+    try:
+        # 验证参数
+        if page <= 0:
+            raise HTTPException(status_code=400, detail="page参数必须大于0")
+        if page_size <= 0 or page_size > 100:
+            raise HTTPException(status_code=400, detail="page_size参数必须在1-100之间")
+            
+        # 计算偏移量
+        skip = (page - 1) * page_size
+        
+        # 构建基础查询条件
+        base_query = select(models.Agent).where(
+            models.Agent.visibility == AgentVisibility.PUBLIC,
+            # models.Agent.status == AgentStatus.APPROVED
+        )
+        
+        # 获取总数
+        count_query = select(func.count()).select_from(
+            base_query.subquery()
+        )
+        count_result = await db.execute(count_query)
+        total = count_result.scalar()
+        
+        # 获取分页数据
+        data_query = (
+            base_query
+            .options(selectinload(models.Agent.creator))
+            .offset(skip)
+            .limit(page_size)
+            .order_by(desc(models.Agent.created_at))
+        )
+        
+        result = await db.execute(data_query)
+        agents = result.scalars().all()
+        
+        # 计算总页数
+        total_pages = math.ceil(total / page_size) if total > 0 else 1
+        
+        return schemas.PaginationData[schemas.Agent](
+            list=agents,
+            total=total,
+            page=page,
+            page_size=page_size,
+            total_pages=total_pages
+        )
+        
+    except HTTPException:
+        raise
+    except SQLAlchemyError as e:
+        logger.error(f"数据库查询错误 - 获取推荐角色分页列表: {str(e)}")
+        raise HTTPException(status_code=500, detail="数据库查询失败")
+    except Exception as e:
+        logger.error(f"未知错误 - 获取推荐角色分页列表: {str(e)}")
         raise HTTPException(status_code=500, detail="服务器内部错误")
 
 async def create_agent(db: AsyncSession, agent_in: schemas.AgentCreate, user_id: str) -> models.Agent:

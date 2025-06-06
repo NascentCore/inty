@@ -1,5 +1,5 @@
 from typing import Any, List
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import schemas
@@ -21,18 +21,18 @@ async def list_agents(
     agents = await agent_service.get_user_agents(db, user_id=current_user.id, skip=skip, limit=limit)
     return agents
 
-@router.get("/recommend", response_model=List[schemas.Agent])
+@router.get("/recommend", response_model=schemas.APIResponse[schemas.PaginationData[schemas.Agent]])
 async def recommend_agents(
     db: AsyncSession = Depends(deps.get_async_db),
-    skip: int = 0,
-    limit: int = 100,
+    page: int = Query(1, ge=1, description="页码，从1开始"),
+    page_size: int = Query(10, ge=1, le=100, description="每页数量，最大100"),
     current_user: schemas.User = Depends(deps.get_current_active_user),
 ) -> Any:
     """
     获取推荐的AI角色列表（公开且已审核的角色，按创建时间倒序）
     """
-    agents = await agent_service.get_recommended_agents(db, skip=skip, limit=limit)
-    return agents
+    pagination_data = await agent_service.get_recommended_agents_paginated(db, page=page, page_size=page_size)
+    return schemas.APIResponse.success(data=pagination_data)
 
 @router.post("/", response_model=schemas.Agent)
 async def create_agent(
