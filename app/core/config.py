@@ -76,6 +76,11 @@ class AgentConfig:
     max_tokens: int = 1000
 
 @dataclass
+class GCSConfig:
+    bucket: str
+    credentials: str
+
+@dataclass
 class Config:
     app: AppConfig
     security: SecurityConfig
@@ -85,6 +90,7 @@ class Config:
     logging: LoggingConfig
     embedding: EmbeddingConfig
     agent: AgentConfig
+    gcs: GCSConfig
 
 def load_config(path: str = "config.yaml") -> Config:
     config_path = Path(path)
@@ -103,7 +109,8 @@ def load_config(path: str = "config.yaml") -> Config:
         verification=VerificationConfig(**data.get("verification", {})),
         logging=LoggingConfig(**data.get("logging", {})),
         embedding=EmbeddingConfig(**data.get("embedding", {})),
-        agent=AgentConfig(**data.get("agent", {}))
+        agent=AgentConfig(**data.get("agent", {})),
+        gcs=GCSConfig(**data.get("gcs", {}))
     )
 
 # load config

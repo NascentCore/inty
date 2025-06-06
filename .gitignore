@@ -175,3 +175,6 @@ config.yaml
 
 # 数据库备份
 backend/alembic.ini
+
+# google key
+inty-backend-key.json

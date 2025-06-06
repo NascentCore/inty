@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Optional
 from sqlalchemy.orm import Session
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,6 +11,7 @@ from app.core.uuid import uid
 from app.models import User
 from app.models.user import AuthType
 from app.schemas import UserUpdate
+from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -99,3 +101,24 @@ async def update_user(
         logger.error(f"错误堆栈: {traceback.format_exc()}")
         raise e 
 
+def generate_avatar_path(user_id: str, filename: str) -> str:
+    ext = filename.split('.')[-1].lower()
+    if ext not in ['jpg', 'jpeg', 'png', 'webp']:
+        raise ValueError(f"Unsupported file type: {ext}")
+    
+    timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    unique_id = uuid.uuid4().hex[:8]
+    return f"avatars/{user_id}/avatar-{timestamp}-{unique_id}.{ext}"
+
+def get_path_from_gcs_url(url: str) -> str:
+    if not url:
+        return ""
+    parts = url.split(".com/")
+    if len(parts) < 2:
+        return ""
+    path = parts[1]
+    # 去掉bucket名前缀
+    bucket = settings.gcs.bucket
+    if path.startswith(bucket + "/"):
+        path = path[len(bucket) + 1 :]
+    return path
