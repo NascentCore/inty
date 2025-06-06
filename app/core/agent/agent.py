@@ -130,16 +130,25 @@ class AgentManager:
         self.max_idle_time = max_idle_time
         self.lock = Lock()
         self._cleanup_task = None
-        self._start_cleanup_task()
+        self._cleanup_started = False
 
     def _start_cleanup_task(self):
-        """启动清理任务"""
-        async def cleanup_loop():
-            while True:
-                await asyncio.sleep(self.cleanup_interval)
-                self._cleanup_idle_agents()
+        """启动清理任务（仅在有事件循环时）"""
+        if self._cleanup_started:
+            return
         
-        self._cleanup_task = asyncio.create_task(cleanup_loop())
+        try:
+            async def cleanup_loop():
+                while True:
+                    await asyncio.sleep(self.cleanup_interval)
+                    self._cleanup_idle_agents()
+            
+            self._cleanup_task = asyncio.create_task(cleanup_loop())
+            self._cleanup_started = True
+            print("Agent清理任务已启动")
+        except RuntimeError:
+            # 没有运行的事件循环，延迟启动
+            print("暂时无法启动清理任务，将在首次使用时启动")
 
     def _cleanup_idle_agents(self):
         """清理长时间空闲的Agent实例"""
@@ -161,6 +170,10 @@ class AgentManager:
         Args:
             agent_data: Agent配置数据，包含id, name, prompt, settings等
         """
+        # 尝试启动清理任务（如果还没启动）
+        if not self._cleanup_started:
+            self._start_cleanup_task()
+        
         agent_id = agent_data['id']
         
         with self.lock:
@@ -240,7 +253,7 @@ if __name__ == "__main__":
         model_config={},
         system_prompt="You are a helpful assistant.",
     )
-    response = agent.chat(user_id="123", session_id=str(uuid.uuid5(uuid.NAMESPACE_DNS, "test")), messages={"messages": [HumanMessage(content="我最喜欢NBA的球星是kebe")]})
-    print(response)
+    # response = agent.chat(user_id="123", session_id=str(uuid.uuid5(uuid.NAMESPACE_DNS, "test")), messages={"messages": [HumanMessage(content="我最喜欢NBA的球星是kebe")]})
+    # print(response)
     response = agent.chat(user_id="123", session_id=str(uuid.uuid5(uuid.NAMESPACE_DNS, "test")), messages={"messages": [HumanMessage(content="还记得我最喜欢NBA的球星吗")]})
     print(response)
