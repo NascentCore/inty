@@ -14,6 +14,9 @@ from openai import OpenAI
 from app.core.config import settings
 from psycopg import Connection
 from langchain_core.messages import BaseMessage, HumanMessage, AIMessage
+from langchain_core.tools import Tool
+from langchain_google_community import GoogleSearchAPIWrapper
+
 
 
 # 初始化自定义的embedding服务
@@ -49,6 +52,19 @@ postgres_store.setup()
 
 checkpointer = MemorySaver()
 
+# 初始化Google搜索工具
+search = GoogleSearchAPIWrapper(
+    google_api_key=settings.google_search.api_key,
+    google_cse_id=settings.google_search.cse_id
+)
+
+google_search_tool = Tool(
+    name="google_search",
+    description="Search Google for recent results.",
+    func=search.run,
+)
+
+
 class Agent:
     def __init__(self, agent_id: str, name: str, model_config: dict, system_prompt: str):
         self.agent_id = agent_id
@@ -72,7 +88,8 @@ class Agent:
             model=model,
             tools=[
                 create_manage_memory_tool(namespace=('memories',name,'{user_id}')),
-                create_search_memory_tool(namespace=('memories',name,'{user_id}'))
+                create_search_memory_tool(namespace=('memories',name,'{user_id}')),
+                google_search_tool
                 ],
             prompt=system_prompt,
             store = postgres_store,
@@ -255,5 +272,5 @@ if __name__ == "__main__":
     )
     # response = agent.chat(user_id="123", session_id=str(uuid.uuid5(uuid.NAMESPACE_DNS, "test")), messages={"messages": [HumanMessage(content="我最喜欢NBA的球星是kebe")]})
     # print(response)
-    response = agent.chat(user_id="123", session_id=str(uuid.uuid5(uuid.NAMESPACE_DNS, "test")), messages={"messages": [HumanMessage(content="还记得我最喜欢NBA的球星吗")]})
+    response = agent.chat(user_id="123", session_id=str(uuid.uuid5(uuid.NAMESPACE_DNS, "test")), messages={"messages": [HumanMessage(content="特朗普和马斯克骂战的最新进展？")]})
     print(response)

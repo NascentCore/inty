@@ -68,6 +68,11 @@ class EmbeddingConfig:
     model: str = "DMetaSoul/Dmeta-embedding-zh-small"
 
 
+@dataclass
+class GoogleSearchConfig:
+    api_key: str
+    cse_id: str
+
 class AgentConfig:
     model: str = "ep-20250210154211-js9rc"
     base_url: str = "https://ark.cn-beijing.volces.com/api/v3"
@@ -91,6 +96,7 @@ class Config:
     embedding: EmbeddingConfig
     agent: AgentConfig
     gcs: GCSConfig
+    google_search: GoogleSearchConfig
 
 def load_config(path: str = "config.yaml") -> Config:
     config_path = Path(path)
@@ -110,7 +116,8 @@ def load_config(path: str = "config.yaml") -> Config:
         logging=LoggingConfig(**data.get("logging", {})),
         embedding=EmbeddingConfig(**data.get("embedding", {})),
         agent=AgentConfig(**data.get("agent", {})),
-        gcs=GCSConfig(**data.get("gcs", {}))
+        gcs=GCSConfig(**data.get("gcs", {})),
+        google_search=GoogleSearchConfig(**data.get("google_search", {}))
     )
 
 # load config
