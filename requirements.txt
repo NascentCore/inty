@@ -58,9 +58,6 @@ pgvector==0.3.6
 pluggy==1.6.0
 proto-plus==1.26.1
 protobuf==6.31.1
-psycopg==3.2.9
-psycopg-pool==3.2.6
-psycopg2==2.9.10
 psycopg2-binary==2.9.10
 pyasn1==0.4.8
 pyasn1_modules==0.4.1
