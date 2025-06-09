@@ -7,9 +7,11 @@ from fastapi import HTTPException
 import logging
 import uuid
 import math
+from datetime import datetime
 
 from app import models, schemas
 from app.models.agent import AgentVisibility, AgentStatus
+from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -273,4 +275,38 @@ async def delete_agent(db: AsyncSession, db_agent: models.Agent) -> models.Agent
     except Exception as e:
         await db.rollback()
         logger.error(f"未知错误 - 删除角色 {db_agent.id if db_agent else 'unknown'}: {str(e)}")
-        raise HTTPException(status_code=500, detail="服务器内部错误") 
+        raise HTTPException(status_code=500, detail="服务器内部错误")
+
+def generate_agent_avatar_path(agent_id: str, filename: str) -> str:
+    """生成agent头像的存储路径"""
+    ext = filename.split('.')[-1].lower()
+    if ext not in ['jpg', 'jpeg', 'png', 'webp']:
+        raise ValueError(f"Unsupported file type: {ext}")
+    
+    timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    unique_id = uuid.uuid4().hex[:8]
+    return f"agents/{agent_id}/avatar-{timestamp}-{unique_id}.{ext}"
+
+def generate_agent_background_path(agent_id: str, filename: str) -> str:
+    """生成agent背景图的存储路径"""
+    ext = filename.split('.')[-1].lower()
+    if ext not in ['jpg', 'jpeg', 'png', 'webp']:
+        raise ValueError(f"Unsupported file type: {ext}")
+    
+    timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    unique_id = uuid.uuid4().hex[:8]
+    return f"agents/{agent_id}/background-{timestamp}-{unique_id}.{ext}"
+
+def get_path_from_gcs_url(url: str) -> str:
+    """从GCS URL中提取文件路径"""
+    if not url:
+        return ""
+    parts = url.split(".com/")
+    if len(parts) < 2:
+        return ""
+    path = parts[1]
+    # 去掉bucket名前缀
+    bucket = settings.gcs.bucket
+    if path.startswith(bucket + "/"):
+        path = path[len(bucket) + 1 :]
+    return path 

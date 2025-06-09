@@ -209,6 +209,7 @@ GET /api/v1/ai/agents/{agent_id}
     "name": "string",
     "gender": "enum",
     "avatar": "string",
+    "background": "string",
     "voice_id": "string",
     "settings": "string",
     "intro": "string",
@@ -259,6 +260,7 @@ POST /api/v1/ai/agents
   "name": "string", // 昵称，最大30个字符
   "gender": "enum", // 性别：MALE/FEMALE/OTHER
   "avatar": "string", // 头像URL
+  "background": "string", // 背景图URL
   "voice_id": "string", // 语音包ID
   "settings": "string", // 对话效果设置
   "intro": "string", // 角色简介
@@ -281,6 +283,7 @@ POST /api/v1/ai/agents
     "name": "string",
     "gender": "enum",
     "avatar": "string",
+    "background": "string",
     "voice_id": "string",
     "settings": "string",
     "intro": "string",
@@ -307,6 +310,7 @@ PUT /api/v1/ai/agents/{cagent_id}
   "name": "string", // 昵称，最大30个字符
   "gender": "enum", // 性别：MALE/FEMALE/OTHER
   "avatar": "string", // 头像URL
+  "background": "string", // 背景图URL
   "voice_id": "string", // 语音包ID
   "settings": "string", // 对话效果设置
   "intro": "string", // 角色简介
@@ -329,6 +333,7 @@ PUT /api/v1/ai/agents/{cagent_id}
     "name": "string",
     "gender": "enum",
     "avatar": "string",
+    "background": "string",
     "voice_id": "string",
     "settings": "string",
     "intro": "string",

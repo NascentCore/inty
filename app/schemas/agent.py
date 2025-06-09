@@ -11,6 +11,7 @@ class AgentBase(BaseModel):
     name: str
     gender: str
     avatar: Optional[str] = None
+    background: Optional[str] = None
     voice_id: Optional[str] = None
     settings: Optional[Dict[str, Any]] = None
     intro: Optional[str] = None

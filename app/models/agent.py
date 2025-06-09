@@ -30,6 +30,7 @@ class Agent(Base):
     name = Column(String(30), index=True, nullable=False)
     gender = Column(Enum(Gender, name="gender"), nullable=False)
     avatar = Column(String)
+    background = Column(String)
     voice_id = Column(String)
     settings = Column(JSON)
     intro = Column(String)

@@ -1,10 +1,15 @@
 from typing import Any, List
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, File, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
+from loguru import logger
+import traceback
 
 from app import schemas
 from app.api import deps
 from app.services import agent_service
+from app.utils.gcs import upload_to_gcs, delete_from_gcs
+from app.core.config import settings
+from app.schemas.response import APIResponse
 
 router = APIRouter()
 
@@ -93,4 +98,112 @@ async def delete_agent(
     if not agent:
         raise HTTPException(status_code=404, detail="Agent not found")
     agent = await agent_service.delete_agent(db, db_agent=agent)
-    return agent 
+    return agent
+
+@router.post("/{agent_id}/avatar", response_model=APIResponse[schemas.Agent])
+async def upload_agent_avatar(
+    agent_id: str,
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(deps.get_async_db),
+    current_user: schemas.User = Depends(deps.get_current_active_user)
+):
+    """
+    上传AI角色头像
+    """
+    try:
+        # 验证agent是否存在且用户有权限修改
+        agent = await agent_service.get_agent(db, agent_id=agent_id)
+        if not agent:
+            raise HTTPException(status_code=404, detail="Agent not found")
+        
+        # 检查用户是否是该agent的创建者
+        if agent.creator_id != current_user.id:
+            raise HTTPException(status_code=403, detail="Permission denied")
+        
+        # 读取文件数据
+        file_data = await file.read()
+        
+        # 生成存储路径
+        avatar_path = agent_service.generate_agent_avatar_path(agent_id, file.filename)
+        
+        # 上传到GCS
+        url = upload_to_gcs(file_data, file.content_type, settings.gcs.bucket, avatar_path)
+        
+        # 删除旧头像
+        if agent.avatar:
+            old_path = agent_service.get_path_from_gcs_url(agent.avatar)
+            if old_path:
+                delete_from_gcs(settings.gcs.bucket, old_path)
+        
+        # 更新数据库
+        updated_agent = await agent_service.update_agent(
+            db, 
+            db_agent=agent, 
+            agent_in=schemas.AgentUpdate(avatar=url)
+        )
+        
+        return APIResponse.success(data=updated_agent)
+        
+    except HTTPException:
+        raise
+    except ValueError as e:
+        logger.error(f"文件类型错误: {str(e)}")
+        return APIResponse.error(message=str(e))
+    except Exception as e:
+        logger.error(f"头像上传失败: {str(e)}")
+        logger.error(f"错误堆栈: {traceback.format_exc()}")
+        return APIResponse.error(message="头像上传失败")
+
+@router.post("/{agent_id}/background", response_model=APIResponse[schemas.Agent])
+async def upload_agent_background(
+    agent_id: str,
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(deps.get_async_db),
+    current_user: schemas.User = Depends(deps.get_current_active_user)
+):
+    """
+    上传AI角色背景图
+    """
+    try:
+        # 验证agent是否存在且用户有权限修改
+        agent = await agent_service.get_agent(db, agent_id=agent_id)
+        if not agent:
+            raise HTTPException(status_code=404, detail="Agent not found")
+        
+        # 检查用户是否是该agent的创建者
+        if agent.creator_id != current_user.id:
+            raise HTTPException(status_code=403, detail="Permission denied")
+        
+        # 读取文件数据
+        file_data = await file.read()
+        
+        # 生成存储路径
+        background_path = agent_service.generate_agent_background_path(agent_id, file.filename)
+        
+        # 上传到GCS
+        url = upload_to_gcs(file_data, file.content_type, settings.gcs.bucket, background_path)
+        
+        # 删除旧背景图
+        if agent.background:
+            old_path = agent_service.get_path_from_gcs_url(agent.background)
+            if old_path:
+                delete_from_gcs(settings.gcs.bucket, old_path)
+        
+        # 更新数据库
+        updated_agent = await agent_service.update_agent(
+            db, 
+            db_agent=agent, 
+            agent_in=schemas.AgentUpdate(background=url)
+        )
+        
+        return APIResponse.success(data=updated_agent)
+        
+    except HTTPException:
+        raise
+    except ValueError as e:
+        logger.error(f"文件类型错误: {str(e)}")
+        return APIResponse.error(message=str(e))
+    except Exception as e:
+        logger.error(f"背景图上传失败: {str(e)}")
+        logger.error(f"错误堆栈: {traceback.format_exc()}")
+        return APIResponse.error(message="背景图上传失败") 
