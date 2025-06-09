@@ -41,8 +41,9 @@ async def get_chat(db: AsyncSession, chat_id: str) -> Optional[models.Chat]:
             except Exception as e:
                 logger.error(f"获取最近消息失败: {str(e)}")
                 chat.last_message = None
-            # 设置agent名称
+            # 设置agent名称和头像
             chat.agent_name = chat.agent.name if chat.agent else None
+            chat.agent_avatar = chat.agent.avatar if chat.agent else None
         return chat
     except SQLAlchemyError as e:
         logger.error(f"数据库查询错误 - 获取聊天 {chat_id}: {str(e)}")
@@ -87,6 +88,7 @@ async def get_chats(
                 logger.error(f"获取最近消息失败: {str(e)}")
                 chat.last_message = None
             chat.agent_name = chat.agent.name if chat.agent else None
+            chat.agent_avatar = chat.agent.avatar if chat.agent else None
             
         return chats
     except HTTPException:
@@ -155,6 +157,7 @@ async def create_chat(
             logger.error(f"获取最近消息失败: {str(e)}")
             chat.last_message = None
         chat.agent_name = chat.agent.name if chat.agent else None
+        chat.agent_avatar = chat.agent.avatar if chat.agent else None
         
         return chat
         
@@ -278,6 +281,7 @@ async def get_or_create_chat_by_agent(
                 logger.error(f"获取最近消息失败: {str(e)}")
                 existing_chat.last_message = None
             existing_chat.agent_name = existing_chat.agent.name if existing_chat.agent else None
+            existing_chat.agent_avatar = existing_chat.agent.avatar if existing_chat.agent else None
             return existing_chat
         
         # 如果不存在，则创建新的会话
@@ -330,6 +334,7 @@ async def get_or_create_chat_by_agent(
             logger.error(f"获取最近消息失败: {str(e)}")
             new_chat.last_message = None
         new_chat.agent_name = new_chat.agent.name if new_chat.agent else None
+        new_chat.agent_avatar = new_chat.agent.avatar if new_chat.agent else None
         
         return new_chat
         
