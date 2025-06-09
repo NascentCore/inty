@@ -28,6 +28,7 @@ import com.ai.inty.R
 import com.ai.inty.base.IntyImage
 import com.ai.inty.base.noRippleClickable
 import com.ai.inty.beans.AgentInfo
+import com.ai.inty.beans.ConversationItem
 import com.ai.inty.viewmodels.MainViewModel
 import com.inty.utils.log.EasyLog
 

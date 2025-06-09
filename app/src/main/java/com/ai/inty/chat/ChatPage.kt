@@ -158,12 +158,21 @@ fun ChatPage(
                         )
                     )
 
-                    IntyImage(
-                        modifier = Modifier.padding(16.dp, 0.dp).size(24.dp).noRippleClickable {
-                            chatViewModel.sendMsg()
-                        },
-                        model = R.drawable.btn_add2
-                    )
+                    if (inputData.value.isNotEmpty()) {
+                        IntyImage(
+                            modifier = Modifier.padding(16.dp, 0.dp).size(24.dp).noRippleClickable {
+                                chatViewModel.sendMsg()
+                            },
+                            model = R.drawable.btn_send
+                        )
+                    } else {
+                        IntyImage(
+                            modifier = Modifier.padding(16.dp, 0.dp).size(24.dp).noRippleClickable {
+
+                            },
+                            model = R.drawable.btn_add2
+                        )
+                    }
                 }
 
             }

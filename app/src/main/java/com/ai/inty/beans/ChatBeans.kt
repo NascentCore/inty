@@ -1,4 +1,6 @@
 package com.ai.inty.beans
+import com.inty.utils.convertUtcToLocal
+import com.inty.utils.storage.IntySetting
 import com.squareup.moshi.JsonClass
 
 import com.squareup.moshi.Json
@@ -81,3 +83,33 @@ data class MsgInfo(
     @Json(name = "role")
     val role: String = "",
 )
+
+
+@JsonClass(generateAdapter = true)
+data class ConversationItem(
+    @Json(name = "agent_id")
+    val agentId: String = "",
+    @Json(name = "agent_name")
+    val agentName: String = "",
+    @Json(name = "agent_avatar")
+    val agentAvatar: String = "",
+    @Json(name = "created_at")
+    val createdAt: String = "",
+    @Json(name = "id")
+    val id: String = "",
+    @Json(name = "last_message")
+    val lastMessage: String = "",
+    @Json(name = "settings")
+    val settings: Any? = null,
+    @Json(name = "updated_at")
+    val updatedAt: Any? = null,
+    @Json(name = "user_id")
+    val userId: String = "",
+    val isNew: Boolean = !IntySetting.isConversationReaded(agentId, lastMessage)
+) {
+    fun getShowTime(): String {
+        return convertUtcToLocal(createdAt)
+    }
+
+}
+

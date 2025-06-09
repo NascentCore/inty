@@ -27,18 +27,27 @@ class ChatActivity : BaseActivity() {
     @Autowired
     var agent: AgentInfo? = null
 
+    @Autowired
+    var agent_id: String? = null
+
     val chatViewModel: ChatViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        chatViewModel.setAgentInfo(agent)
+        if (agent == null) {
+            chatViewModel.setAgentID(agent_id!!)
+        } else {
+            chatViewModel.setAgentInfo(agent)
+        }
 
         setContent {
             IntyTheme {
                 ChatPage(
-                    modifier = Modifier.fillMaxSize().background(BackGround),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(BackGround),
                     chatViewModel = chatViewModel
                 )
             }

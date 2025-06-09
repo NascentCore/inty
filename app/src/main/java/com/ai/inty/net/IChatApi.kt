@@ -1,5 +1,7 @@
 package com.ai.inty.net
 
+import com.ai.inty.beans.AgentInfo
+import com.ai.inty.beans.ConversationItem
 import com.ai.inty.beans.QueryMsgReq
 import com.ai.inty.beans.QueryMsgsResponse
 import com.ai.inty.beans.SendMsgReq
@@ -19,6 +21,12 @@ interface IChatApi {
 
     @GET("/api/v1/chats/agents/{agent_id}/messages")
     suspend fun getMsgs(@Path("agent_id") agent_id: String, @Query("limit")limit: Int, @Query("offset") offset: Int, @Query("order") order: String = "desc"): HttpResult<QueryMsgsResponse>
+
+    @GET("/api/v1/chats/")
+    suspend fun getConversions(@Query("skip")skip: Int, @Query("limit")limit: Int): HttpResult<List<ConversationItem>>
+
+    @GET("/api/v1/ai/agents/{agent_id}")
+    suspend fun getAgentInfo(@Path("agent_id") agent_id: String): HttpResult<AgentInfo>
 }
 
 

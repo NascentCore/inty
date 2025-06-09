@@ -1,6 +1,7 @@
 package com.inty.utils.storage
 
 import com.inty.utils.AppEnv
+import com.inty.utils.log.EasyLog
 import com.tencent.mmkv.MMKV
 
 
@@ -68,6 +69,17 @@ object IntySetting {
         if (isGuest) {
             allUserSetting.putString("guest_uid", uid)
         }
+    }
+
+    fun isConversationReaded(agentID: String, lastMessage: String): Boolean {
+        val configLastMsg = curUserSetting.decodeString("conversation_last_$agentID", agentID)
+        EasyLog.log("$agentID = $configLastMsg, new=$lastMessage")
+        return (configLastMsg == lastMessage)
+    }
+
+    fun setConversationReaded(agentID: String, lastMessage: String) {
+        EasyLog.log("$agentID = $lastMessage")
+        curUserSetting.putString("conversation_last_$agentID", lastMessage)
     }
 
 }

@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.ai.inty.base.BaseActivityViewModel
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.beans.CreateGuestReq
+import com.ai.inty.home.ConversionsPageTab
 import com.ai.inty.net.IAgentApi
 import com.ai.inty.net.IUserApi
 import com.architecture.httplib.core.HttpResult
@@ -36,6 +37,9 @@ class MainViewModel: BaseActivityViewModel() {
 
     private val _selectedTab = MutableStateFlow(HomeTabIndex.Chat)
     val selectedTab = _selectedTab.asStateFlow()
+
+    private val _selectedConversionsTab = MutableStateFlow(ConversionsPageTab.TabMessage)
+    val selectedConversionsTab = _selectedConversionsTab.asStateFlow()
 
     private var chatViewModel: ChatViewModel? = null
 
@@ -95,12 +99,24 @@ class MainViewModel: BaseActivityViewModel() {
 
     fun selectTab(tab: Int) {
         _selectedTab.value = HomeTabIndex.entries.toTypedArray()[tab]
+        when (_selectedTab.value) {
+            HomeTabIndex.Conversions -> {
+                chatViewModel?.getConversions()
+            }
+            else -> {
+
+            }
+        }
     }
 
     fun setChatViewModel(chatViewModel: ChatViewModel) {
         this.chatViewModel = chatViewModel
 
         chatViewModel.setAgentInfo(agentList.firstOrNull())
+    }
+
+    fun onSelectConversionsTab(tab: ConversionsPageTab) {
+        _selectedConversionsTab.value = tab
     }
 
 }

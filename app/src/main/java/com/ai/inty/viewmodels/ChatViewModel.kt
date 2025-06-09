@@ -4,14 +4,15 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.lifecycle.viewModelScope
 import com.ai.inty.base.BaseActivityViewModel
 import com.ai.inty.beans.AgentInfo
+import com.ai.inty.beans.ConversationItem
 import com.ai.inty.beans.MsgInfo
 import com.ai.inty.beans.SendMsgReq
 import com.ai.inty.net.IChatApi
 import com.architecture.httplib.core.HttpResult
 import com.inty.utils.log.EasyLog
+import com.inty.utils.storage.IntySetting
 import com.therouter.TheRouter
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -23,6 +24,7 @@ class ChatViewModel: BaseActivityViewModel() {
     val agentInfo = _agentInfo.asStateFlow()
 
     val msgs = mutableStateListOf<MsgInfo>()
+    val conversions = mutableStateListOf<ConversationItem>()
 
     val inputData = MutableStateFlow<String>("")
 
@@ -31,6 +33,8 @@ class ChatViewModel: BaseActivityViewModel() {
     init {
 
         EasyLog.log("ChatViewModel = ${hashCode()}")
+
+        getConversions()
     }
 
 
@@ -106,6 +110,7 @@ class ChatViewModel: BaseActivityViewModel() {
                         for (choice in result.data.choices) {
                             msgs.add(0, choice.message)
                         }
+                        IntySetting.setConversationReaded(agent.id, result.data.choices.last()?.message?.content ?: "")
                     }
                     is HttpResult.Failure -> {
                         showSnackbar(result.message)
@@ -114,6 +119,51 @@ class ChatViewModel: BaseActivityViewModel() {
             }
 
 
+        }
+    }
+
+    fun getConversions() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val result = chatApi.getConversions(0, 100)
+            EasyLog.log("get msgs = $result")
+            conversions.clear()
+            when (result) {
+                is HttpResult.Success -> {
+                    conversions.addAll(result.data)
+                }
+                is HttpResult.Failure -> {
+                    showSnackbar(result.message)
+                }
+
+            }
+        }
+    }
+
+    fun setAgentID(agentId: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val result = chatApi.getAgentInfo(agentId)
+            EasyLog.log("getAgentInfo = $result")
+            when (result) {
+                is HttpResult.Success -> {
+                    setAgentInfo(result.data)
+
+                }
+                is HttpResult.Failure -> {
+                    showSnackbar(result.message)
+                }
+            }
+        }
+
+    }
+
+    fun setConversionReaded(conversationItem: ConversationItem) {
+        IntySetting.setConversationReaded(conversationItem.agentId, conversationItem.lastMessage)
+
+        val index = conversions.indexOfFirst {
+            (it.id == conversationItem.id) && (it.agentId == conversationItem.agentId)
+        }
+        if (index >= 0) {
+            conversions[index] = conversationItem.copy(isNew = false)
         }
     }
 

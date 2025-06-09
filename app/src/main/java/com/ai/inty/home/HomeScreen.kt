@@ -27,6 +27,7 @@ import com.ai.inty.ui.theme.BackGround
 import com.ai.inty.viewmodels.ChatViewModel
 import com.ai.inty.viewmodels.HomeTabIndex
 import com.ai.inty.viewmodels.MainViewModel
+import com.inty.utils.storage.IntySetting
 import com.therouter.TheRouter
 
 data class TabInfo(
@@ -50,6 +51,7 @@ fun HomeScreen(
 ) {
 
     val selectedTab = mainViewModel.selectedTab.collectAsState()
+    val selectedConversionsTab = mainViewModel.selectedConversionsTab.collectAsState()
 
     val context = LocalContext.current
 
@@ -61,9 +63,11 @@ fun HomeScreen(
         bottomBar = {
             BottomBar(
                 modifier = Modifier
+                    .padding(bottom = 32.dp)
                     .fillMaxWidth()
                     .background(BackGround)
-                    .height(48.25.dp),
+                    .height(48.25.dp)
+                ,
                 selectedTab = selectedTab.value.ordinal,
                 onSelectTab = {
                     if (it == HomeTabIndex.Add.ordinal) {
@@ -83,9 +87,23 @@ fun HomeScreen(
                 )
             }
             HomeTabIndex.Conversions -> {
-                Box(modifier = Modifier.padding(innerPadding).background(Color.Yellow),) {
-                    Text("会话列表")
-                }
+                val conversions = chatViewModel.conversions
+                ConversionsPage(
+                    modifier = Modifier,
+                    selectedTab = selectedConversionsTab.value,
+                    conversions = conversions,
+                    onSelectTab = {
+                        mainViewModel.onSelectConversionsTab(it)
+                    },
+                    onClickConversionItem = { conversion ->
+                        chatViewModel.setConversionReaded(conversion)
+                        TheRouter.build(Constant.ROUTE_CHAT)
+                            .withObject("agent_id", conversion.agentId)
+                            .navigation(context)
+
+
+                    }
+                )
             }
             HomeTabIndex.Add -> {
             }
