@@ -1,5 +1,6 @@
 package com.ai.inty.beans
 
+import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 
 data class UserBean(
@@ -18,4 +19,37 @@ data class CreateGuestResult(
     val guest_id: String,
     val token: String,
     val is_new_guest: Boolean,
+)
+
+
+@JsonClass(generateAdapter = true)
+data class UserProfile(
+    @Json(name = "age_group")
+    val ageGroup: Any? = null,
+    @Json(name = "auth_type")
+    val authType: String = "",
+    @Json(name = "avatar")
+    val avatar: Any? = null,
+    @Json(name = "created_at")
+    val createdAt: String = "",
+    @Json(name = "description")
+    val description: String? = null,
+    @Json(name = "email")
+    val email: String? = null,
+    @Json(name = "gender")
+    val gender: String? = null,
+    @Json(name = "id")
+    val id: String = "",
+    @Json(name = "is_active")
+    val isActive: Boolean = false,
+    @Json(name = "is_superuser")
+    val isSuperuser: Boolean = false,
+    @Json(name = "nickname")
+    val nickname: String = "",
+    @Json(name = "phone")
+    val phone: String? = null,
+    @Json(name = "system_language")
+    val systemLanguage: String = "",
+    @Json(name = "updated_at")
+    val updatedAt: String? = null
 )

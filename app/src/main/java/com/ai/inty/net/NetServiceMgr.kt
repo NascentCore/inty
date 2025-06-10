@@ -140,6 +140,11 @@ fun getUserApi(): IUserApi {
 }
 
 @ServiceProvider
+fun getUserApi2(): IUserApi2 {
+    return NetServiceMgr.retrofitNoWrapper.create(IUserApi2::class.java)
+}
+
+@ServiceProvider
 fun getAgentApi(): IAgentApi {
     return NetServiceMgr.retrofitNormal.create(IAgentApi::class.java)
 }

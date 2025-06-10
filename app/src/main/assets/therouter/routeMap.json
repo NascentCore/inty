@@ -1,5 +1,12 @@
 [
   {
+    "path": "http://inty.ai/setting",
+    "className": "com.ai.inty.SettingActivity",
+    "action": "",
+    "description": "",
+    "params": {}
+  },
+  {
     "path": "http://inty.ai/main",
     "className": "com.ai.inty.MainActivity",
     "action": "",

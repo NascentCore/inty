@@ -2,5 +2,13 @@
     <string name="app_name">Inty</string>
     <string name="tab_message">Message</string>
     <string name="tab_following">Following</string>
-
+    <string name="ID">ID:%s</string>
+    <string name="no_agent">No relevant content</string>
+    <string name="settings">Settings</string>
+    <string name="settings_keep_talking">Show “Keep Talking” button</string>
+    <string name="settings_auto_play_audio">Auto-play voice messages</string>
+    <string name="settings_email_support">Email Support</string>
+    <string name="settings_email_inty">inty@gmail.com</string>
+    <string name="settings_about">About Inty</string>
+    <string name="logout">Log out</string>
 </resources>

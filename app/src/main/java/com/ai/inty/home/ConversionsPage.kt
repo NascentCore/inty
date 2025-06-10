@@ -77,13 +77,13 @@ fun ConversionsPage(
                         },
                         stringResource(R.string.tab_message), selectedTab==ConversionsPageTab.TabMessage
                     )
-                    Spacer(Modifier.width(15.dp))
-                    ConversionsPageTabItem(
-                        Modifier.noRippleClickable {
-                            onSelectTab(ConversionsPageTab.TabFollowing)
-                        },
-                        stringResource(R.string.tab_following), selectedTab==ConversionsPageTab.TabFollowing
-                    )
+//                    Spacer(Modifier.width(15.dp))
+//                    ConversionsPageTabItem(
+//                        Modifier.noRippleClickable {
+//                            onSelectTab(ConversionsPageTab.TabFollowing)
+//                        },
+//                        stringResource(R.string.tab_following), selectedTab==ConversionsPageTab.TabFollowing
+//                    )
                 }
 
                 Spacer(Modifier.height(22.dp))

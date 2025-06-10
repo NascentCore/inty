@@ -119,9 +119,15 @@ fun HomeScreen(
                 )
             }
             HomeTabIndex.My -> {
-                Box(modifier = Modifier.padding(innerPadding).background(Color.Yellow),) {
-                    Text("我的")
-                }
+                val userProfile = mainViewModel.userProfile.collectAsState()
+                MyPage(
+                    modifier = Modifier,
+                    userProfile = userProfile.value,
+                    agents = listOf(),
+                    onClickAgent = {
+
+                    }
+                )
             }
         }
     }

@@ -5,9 +5,11 @@ import androidx.lifecycle.viewModelScope
 import com.ai.inty.base.BaseActivityViewModel
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.beans.CreateGuestReq
+import com.ai.inty.beans.UserProfile
 import com.ai.inty.home.ConversionsPageTab
 import com.ai.inty.net.IAgentApi
 import com.ai.inty.net.IUserApi
+import com.ai.inty.net.IUserApi2
 import com.architecture.httplib.core.HttpResult
 import com.inty.utils.AppEnv
 import com.inty.utils.log.EasyLog
@@ -32,6 +34,7 @@ class MainViewModel: BaseActivityViewModel() {
 
     val userApi: IUserApi = TheRouter.get(IUserApi::class.java)!!
     val agentApi: IAgentApi = TheRouter.get(IAgentApi::class.java)!!
+    val userApi2: IUserApi2 = TheRouter.get(IUserApi2::class.java)!!
 
     val agentList = mutableStateListOf<AgentInfo>()
 
@@ -43,15 +46,23 @@ class MainViewModel: BaseActivityViewModel() {
 
     private var chatViewModel: ChatViewModel? = null
 
+    private val _userProfile = MutableStateFlow<UserProfile>(UserProfile())
+    val userProfile = _userProfile.asStateFlow()
+
     init {
 
         if (IntySetting.isLogin()) {
-            getAgents()
+            onLoginSuccess()
         } else {
             createGuest() {
-                getAgents()
+                onLoginSuccess()
             }
         }
+    }
+
+    private fun onLoginSuccess() {
+        getAgents()
+        getUserProfile()
     }
 
     fun createGuest(onSuccess: () -> Unit) {
@@ -119,4 +130,20 @@ class MainViewModel: BaseActivityViewModel() {
         _selectedConversionsTab.value = tab
     }
 
+
+    fun getUserProfile() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val result = userApi2.getUserProfile()
+
+            when (result) {
+                is HttpResult.Success -> {
+                    _userProfile.value = result.data
+                }
+
+                is HttpResult.Failure -> {
+                    showSnackbar(result.message)
+                }
+            }
+        }
+    }
 }

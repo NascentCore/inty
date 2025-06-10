@@ -34,6 +34,11 @@
             android:exported="true"
             android:theme="@style/Theme.Inty">
         </activity>
+        <activity
+            android:name=".SettingActivity"
+            android:exported="true"
+            android:theme="@style/Theme.Inty">
+        </activity>
     </application>
 
 </manifest>

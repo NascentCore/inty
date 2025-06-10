@@ -82,4 +82,28 @@ object IntySetting {
         curUserSetting.putString("conversation_last_$agentID", lastMessage)
     }
 
+    fun setShowKeepTalking(show: Boolean) {
+        curUserSetting.putBoolean("show_keep_talking", show)
+    }
+
+    fun isShowKeepTalking(): Boolean {
+        return curUserSetting.decodeBool("show_keep_talking", false)
+    }
+
+    fun setAutoPlayAudio(play: Boolean) {
+        curUserSetting.putBoolean("auto_play_audio", play)
+    }
+
+    fun isAutoPlayAudio(): Boolean {
+        return curUserSetting.decodeBool("auto_play_audio", false)
+    }
+
+    fun logout() {
+        if (isGuestUser()) {
+            return
+        }
+        setToken("")
+        changeUser(geGuestUserID())
+    }
+
 }
