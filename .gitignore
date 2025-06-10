@@ -178,3 +178,6 @@ backend/alembic.ini
 
 # google key
 inty-backend-key.json
+
+# cursor
+.cursor/

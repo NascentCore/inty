@@ -1,11 +1,12 @@
 from fastapi import APIRouter
 
-from app.api.v1.endpoints import auth, users, agents, chats, settings, resources, report
+from app.api.v1.endpoints import auth, notification, users, agents, chats, settings, resources, report
 from app.api.v1 import verification_code
 
 api_router = APIRouter()
 api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
 api_router.include_router(users.router, prefix="/users", tags=["users"])
+api_router.include_router(notification.router, prefix="/notifications", tags=["notification"])
 api_router.include_router(report.router, prefix="/report", tags=["report"])
 api_router.include_router(agents.router, prefix="/ai/agents", tags=["agents"])
 api_router.include_router(chats.router, prefix="/chats", tags=["chats"])

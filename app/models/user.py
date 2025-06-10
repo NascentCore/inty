@@ -6,6 +6,7 @@ import sqlalchemy as sa
 
 from app.db.base_class import Base
 from app.models.associations import agent_followers
+from app.models.notification import UserNotification
 
 
 class AuthType(str, enum.Enum):
@@ -55,4 +56,5 @@ class User(Base):
     chats = relationship("Chat", back_populates="user")
     resources = relationship("Resource", back_populates="user")
     settings = relationship("Settings", back_populates="user", uselist=False)
-    reports = relationship("Report", back_populates="reporter") 
+    reports = relationship("Report", back_populates="reporter")
+    notifications = relationship("UserNotification", back_populates="user")

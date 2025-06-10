@@ -1,12 +1,11 @@
 from typing import Any
 import traceback
 from fastapi import APIRouter, Depends, HTTPException, File, UploadFile
-from sqlalchemy.orm import Session
 from sqlalchemy.ext.asyncio import AsyncSession
 from loguru import logger
 
 from app.schemas.response import APIResponse
-from app.schemas.user import AvatarUploadResponse, User, UserUpdate
+from app.schemas.user import User, UserUpdate
 from app.api import deps
 from app.db.session import get_async_db
 from app.services import user_service
