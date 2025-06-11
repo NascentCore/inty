@@ -2,7 +2,7 @@ from typing import Any, Dict, Optional
 import uuid
 import time
 import asyncio
-from threading import Lock
+from threading import Lock, RLock
 from langgraph.prebuilt import create_react_agent
 from langchain_openai import ChatOpenAI
 from langmem import create_manage_memory_tool,create_search_memory_tool
@@ -71,6 +71,8 @@ class Agent:
         self.name = name
         self.model_config = model_config
         self.last_used = time.time()
+        self.system_prompt = system_prompt
+        self._lock = RLock()  # 添加实例级别的锁
 
         # 使用配置中的模型设置，如果没有则使用默认设置
         model_name = model_config.get('model', settings.agent.model)
@@ -82,7 +84,10 @@ class Agent:
             openai_api_key=api_key,
             openai_api_base=base_url,
         )
+        
+        # 为每个Agent创建独立的checkpointer
         self.checkpointer = MemorySaver()
+        
         self.agent = create_react_agent(
             name=name,
             model=model,
@@ -93,42 +98,66 @@ class Agent:
                 ],
             prompt=system_prompt,
             store = postgres_store,
-            checkpointer=checkpointer
+            checkpointer=self.checkpointer  # 使用实例级别的checkpointer
         )
 
     def chat(self, user_id: str, session_id: str, messages: dict[str, Any]):
-        self.last_used = time.time()
+        with self._lock:  # 保护并发访问
+            self.last_used = time.time()
 
-        history = PostgresChatMessageHistory(
-            table_name,
-            session_id,
-            sync_connection=conn
-        )
+            # 创建独立的数据库连接
+            conn_local = Connection.connect(
+                settings.database.url,
+                autocommit=True
+            )
+            
+            try:
+                history = PostgresChatMessageHistory(
+                    table_name,
+                    session_id,
+                    sync_connection=conn_local
+                )
 
-        history.add_messages(messages["messages"])
+                history.add_messages(messages["messages"])
 
-        config = {'configurable':{'user_id':user_id,'thread_id':user_id}}
-        response = self.agent.invoke(messages, config)
+                # 使用更精确的thread_id，包含agent_id避免混淆
+                thread_id = f"{user_id}_{self.agent_id}"
+                config = {'configurable':{'user_id':user_id,'thread_id':thread_id}}
+                response = self.agent.invoke(messages, config)
 
-        ai_messages = [message for message in response.get("messages",[]) if isinstance(message, AIMessage)]
-        response = ai_messages[-1].content if ai_messages else "抱歉，我无法理解您的消息。请再试一次。"
+                ai_messages = [message for message in response.get("messages",[]) if isinstance(message, AIMessage)]
+                response = ai_messages[-1].content if ai_messages else "抱歉，我无法理解您的消息。请再试一次。"
 
-        history.add_messages([AIMessage(content=response)])
-        return response
+                history.add_messages([AIMessage(content=response)])
+                return response
+            finally:
+                conn_local.close()  # 确保连接关闭
 
     def chat_stream(self, user_id: str, session_id: str, messages: dict[str, Any]):
-        self.last_used = time.time()
-        
-        history = PostgresChatMessageHistory(
-            table_name,
-            session_id,
-            sync_connection=conn
-        )
+        with self._lock:  # 保护并发访问
+            self.last_used = time.time()
+            
+            # 创建独立的数据库连接
+            conn_local = Connection.connect(
+                settings.database.url,
+                autocommit=True
+            )
+            
+            try:
+                history = PostgresChatMessageHistory(
+                    table_name,
+                    session_id,
+                    sync_connection=conn_local
+                )
 
-        config = {'configurable':{'user_id':user_id,'thread_id':user_id}}
+                # 使用更精确的thread_id，包含agent_id避免混淆
+                thread_id = f"{user_id}_{self.agent_id}"
+                config = {'configurable':{'user_id':user_id,'thread_id':thread_id}}
 
-        for message_chunk,metadata in self.agent.stream(messages,config,stream_mode="messages"):
-            yield message_chunk, metadata
+                for message_chunk,metadata in self.agent.stream(messages,config,stream_mode="messages"):
+                    yield message_chunk, metadata
+            finally:
+                conn_local.close()  # 确保连接关闭
 
 
 class AgentManager:
@@ -203,9 +232,13 @@ class AgentManager:
                 # 验证实例中的agent_id是否与请求的一致
                 if existing_agent.agent_id != agent_id:
                     print(f"警告：Agent实例ID不匹配！请求: {agent_id}, 实例: {existing_agent.agent_id}")
-                    # 删除不匹配的实例，重新创建
+                    # 删除不匹配的实例，创建新的
                     del self.agents[agent_id]
+                    # 继续到创建新实例的逻辑
                 else:
+                    # 更新最后使用时间（线程安全）
+                    with existing_agent._lock:
+                        existing_agent.last_used = time.time()
                     return existing_agent
             
             # 如果达到最大数量，清理最久未使用的Agent
@@ -226,21 +259,29 @@ class AgentManager:
             
             print(f"创建新的Agent实例 - Agent ID: {agent_id}, Name: {agent_data['name']}")
             
-            agent = Agent(
-                agent_id=agent_id,  # 确保使用正确的agent_id
-                name=agent_data['name'],
-                model_config=model_config,
-                system_prompt=system_prompt
-            )
-            
-            # 验证创建的Agent实例的agent_id
-            if agent.agent_id != agent_id:
-                print(f"错误：创建的Agent实例ID不匹配！期望: {agent_id}, 实际: {agent.agent_id}")
-                raise ValueError(f"Agent实例创建失败: ID不匹配")
-            
-            self.agents[agent_id] = agent
-            print(f"成功创建并缓存Agent实例 - Agent ID: {agent_id}, 实例ID: {agent.agent_id}")
-            return agent
+            try:
+                agent = Agent(
+                    agent_id=agent_id,  # 确保使用正确的agent_id
+                    name=agent_data['name'],
+                    model_config=model_config,
+                    system_prompt=system_prompt
+                )
+                
+                # 验证创建的Agent实例的agent_id
+                if agent.agent_id != agent_id:
+                    print(f"错误：创建的Agent实例ID不匹配！期望: {agent_id}, 实际: {agent.agent_id}")
+                    raise ValueError(f"Agent实例创建失败: ID不匹配")
+                
+                self.agents[agent_id] = agent
+                print(f"成功创建并缓存Agent实例 - Agent ID: {agent_id}, 实例ID: {agent.agent_id}")
+                return agent
+                
+            except Exception as e:
+                print(f"创建Agent实例失败 - Agent ID: {agent_id}, 错误: {str(e)}")
+                # 确保失败的实例不会留在缓存中
+                if agent_id in self.agents:
+                    del self.agents[agent_id]
+                raise
 
     async def initialize_popular_agents(self, db_session):
         """

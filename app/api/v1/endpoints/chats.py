@@ -412,4 +412,70 @@ async def agent_chat_completions(
             }
             
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"聊天失败: {str(e)}") 
+        raise HTTPException(status_code=500, detail=f"聊天失败: {str(e)}")
+
+
+async def generate_chat_stream(
+    agent,
+    messages: dict,
+    user_id: str,
+    session_id: str,
+    chat_id: str,
+    model_name: str
+):
+    """
+    生成流式聊天响应
+    """
+    try:
+        # 使用Agent的chat_stream方法
+        for message_chunk, metadata in agent.chat_stream(
+            user_id=user_id,
+            session_id=session_id,
+            messages=messages
+        ):
+            # 检查消息块类型，只发送AI消息
+            if hasattr(message_chunk, 'content') and message_chunk.content:
+                chunk_data = {
+                    "id": f"chatcmpl-{uuid.uuid4().hex[:12]}",
+                    "object": "chat.completion.chunk",
+                    "created": int(time.time()),
+                    "model": model_name,
+                    "choices": [
+                        {
+                            "index": 0,
+                            "delta": {
+                                "role": "assistant",
+                                "content": message_chunk.content
+                            },
+                            "finish_reason": None
+                        }
+                    ]
+                }
+                yield f"data: {json.dumps(chunk_data, ensure_ascii=False)}\n\n"
+        
+        # 发送结束标记
+        end_chunk = {
+            "id": f"chatcmpl-{uuid.uuid4().hex[:12]}",
+            "object": "chat.completion.chunk",
+            "created": int(time.time()),
+            "model": model_name,
+            "choices": [
+                {
+                    "index": 0,
+                    "delta": {},
+                    "finish_reason": "stop"
+                }
+            ]
+        }
+        yield f"data: {json.dumps(end_chunk, ensure_ascii=False)}\n\n"
+        yield "data: [DONE]\n\n"
+        
+    except Exception as e:
+        logger.error(f"流式聊天失败: {str(e)}")
+        error_chunk = {
+            "error": {
+                "message": f"聊天失败: {str(e)}",
+                "type": "server_error"
+            }
+        }
+        yield f"data: {json.dumps(error_chunk, ensure_ascii=False)}\n\n" 
