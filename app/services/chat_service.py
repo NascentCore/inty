@@ -34,13 +34,21 @@ async def get_chat(db: AsyncSession, chat_id: str) -> Optional[models.Chat]:
         )
         chat = result.scalar_one_or_none()
         if chat:
-            # 获取最近消息，使用统一的session_id生成规则
+            # 获取最近消息和时间戳，使用统一的session_id生成规则
             try:
                 session_id = generate_session_id(chat.id)
-                chat.last_message = chat_history_service.get_last_message(session_id)
+                last_message_data = chat_history_service.get_last_message_with_timestamp(session_id)
+                
+                if last_message_data:
+                    chat.last_message = last_message_data['content']
+                    chat.last_message_time = last_message_data['timestamp']
+                else:
+                    chat.last_message = None
+                    chat.last_message_time = None
             except Exception as e:
                 logger.error(f"获取最近消息失败: {str(e)}")
                 chat.last_message = None
+                chat.last_message_time = None
             # 设置agent名称和头像
             chat.agent_name = chat.agent.name if chat.agent else None
             chat.agent_avatar = chat.agent.avatar if chat.agent else None
@@ -56,7 +64,7 @@ async def get_chats(
     db: AsyncSession, user_id: str, skip: int = 0, limit: int = 100
 ) -> List[models.Chat]:
     """
-    获取用户的聊天列表
+    获取用户的聊天列表，按最近消息时间降序排列
     """
     try:
         # 验证参数
@@ -72,25 +80,41 @@ async def get_chats(
                 selectinload(models.Chat.agent)
             )
             .where(models.Chat.user_id == user_id)
-            .offset(skip)
-            .limit(limit)
-            .order_by(models.Chat.updated_at.desc())
         )
-        chats = result.scalars().all()
+        all_chats = result.scalars().all()
         
-        # 为每个chat获取最近消息和agent名称
-        for chat in chats:
+        # 为每个chat获取最近消息和时间戳
+        chats_with_message_time = []
+        for chat in all_chats:
             try:
                 # 使用统一的session_id生成规则
                 session_id = generate_session_id(chat.id)
-                chat.last_message = chat_history_service.get_last_message(session_id)
+                last_message_data = chat_history_service.get_last_message_with_timestamp(session_id)
+                
+                if last_message_data:
+                    chat.last_message = last_message_data['content']
+                    chat.last_message_time = last_message_data['timestamp']
+                else:
+                    chat.last_message = None
+                    chat.last_message_time = None
+                    
             except Exception as e:
                 logger.error(f"获取最近消息失败: {str(e)}")
                 chat.last_message = None
+                chat.last_message_time = None
+                
             chat.agent_name = chat.agent.name if chat.agent else None
             chat.agent_avatar = chat.agent.avatar if chat.agent else None
-            
-        return chats
+            chats_with_message_time.append(chat)
+        
+        # 根据最近消息时间排序（没有消息的聊天放在最后，按创建时间排列）
+        chats_with_message_time.sort(
+            key=lambda x: x.last_message_time if x.last_message_time else x.created_at,
+            reverse=True
+        )
+        
+        # 应用分页
+        return chats_with_message_time[skip:skip + limit]
     except HTTPException:
         raise
     except SQLAlchemyError as e:
@@ -149,13 +173,21 @@ async def create_chat(
         )
         chat = result.scalar_one()
         
-        # 获取最近消息 (应该是刚添加的开场白) 和agent名称
+        # 获取最近消息和时间戳 (应该是刚添加的开场白) 和agent名称
         try:
             session_id = generate_session_id(chat.id)
-            chat.last_message = chat_history_service.get_last_message(session_id)
+            last_message_data = chat_history_service.get_last_message_with_timestamp(session_id)
+            
+            if last_message_data:
+                chat.last_message = last_message_data['content']
+                chat.last_message_time = last_message_data['timestamp']
+            else:
+                chat.last_message = None
+                chat.last_message_time = None
         except Exception as e:
             logger.error(f"获取最近消息失败: {str(e)}")
             chat.last_message = None
+            chat.last_message_time = None
         chat.agent_name = chat.agent.name if chat.agent else None
         chat.agent_avatar = chat.agent.avatar if chat.agent else None
         
@@ -273,13 +305,21 @@ async def get_or_create_chat_by_agent(
         existing_chat = result.scalar_one_or_none()
         
         if existing_chat:
-            # 获取最近消息
+            # 获取最近消息和时间戳
             try:
                 session_id = generate_session_id(existing_chat.id)
-                existing_chat.last_message = chat_history_service.get_last_message(session_id)
+                last_message_data = chat_history_service.get_last_message_with_timestamp(session_id)
+                
+                if last_message_data:
+                    existing_chat.last_message = last_message_data['content']
+                    existing_chat.last_message_time = last_message_data['timestamp']
+                else:
+                    existing_chat.last_message = None
+                    existing_chat.last_message_time = None
             except Exception as e:
                 logger.error(f"获取最近消息失败: {str(e)}")
                 existing_chat.last_message = None
+                existing_chat.last_message_time = None
             existing_chat.agent_name = existing_chat.agent.name if existing_chat.agent else None
             existing_chat.agent_avatar = existing_chat.agent.avatar if existing_chat.agent else None
             return existing_chat
@@ -326,13 +366,21 @@ async def get_or_create_chat_by_agent(
         )
         new_chat = result.scalar_one()
         
-        # 获取最近消息和agent名称
+        # 获取最近消息和时间戳以及agent名称
         try:
             session_id = generate_session_id(new_chat.id)
-            new_chat.last_message = chat_history_service.get_last_message(session_id)
+            last_message_data = chat_history_service.get_last_message_with_timestamp(session_id)
+            
+            if last_message_data:
+                new_chat.last_message = last_message_data['content']
+                new_chat.last_message_time = last_message_data['timestamp']
+            else:
+                new_chat.last_message = None
+                new_chat.last_message_time = None
         except Exception as e:
             logger.error(f"获取最近消息失败: {str(e)}")
             new_chat.last_message = None
+            new_chat.last_message_time = None
         new_chat.agent_name = new_chat.agent.name if new_chat.agent else None
         new_chat.agent_avatar = new_chat.agent.avatar if new_chat.agent else None
         

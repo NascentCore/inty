@@ -29,7 +29,9 @@ class Chat(Base):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self._last_message = None
+        self._last_message_time = None
         self._agent_name = None
+        self._agent_avatar = None
     
     @property 
     def last_message(self):
@@ -40,9 +42,25 @@ class Chat(Base):
         self._last_message = value
         
     @property 
+    def last_message_time(self):
+        return getattr(self, '_last_message_time', None)
+    
+    @last_message_time.setter
+    def last_message_time(self, value):
+        self._last_message_time = value
+        
+    @property 
     def agent_name(self):
         return getattr(self, '_agent_name', None)
     
     @agent_name.setter
     def agent_name(self, value):
         self._agent_name = value
+
+    @property 
+    def agent_avatar(self):
+        return getattr(self, '_agent_avatar', None)
+    
+    @agent_avatar.setter
+    def agent_avatar(self, value):
+        self._agent_avatar = value

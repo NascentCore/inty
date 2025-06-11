@@ -116,6 +116,7 @@ class ChatInDB(ChatBase):
 class Chat(ChatInDB):
     """聊天"""
     last_message: Optional[str] = None
+    last_message_time: Optional[datetime] = None
     agent_name: Optional[str] = None
     agent_avatar: Optional[str] = None
     settings: Optional[ChatSettings] = None 

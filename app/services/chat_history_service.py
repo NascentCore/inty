@@ -82,6 +82,60 @@ def get_last_message(session_id: str) -> Optional[str]:
         # 返回None而不是抛出异常，让主要功能继续工作
         return None
 
+def get_last_message_with_timestamp(session_id: str) -> Optional[Dict[str, Any]]:
+    """获取最近一条消息内容和时间戳"""
+    try:
+        ensure_table_initialized()
+        conn = get_chat_history_connection()
+        
+        # 查询最近一条消息
+        query = """
+            SELECT message, created_at
+            FROM chat_history 
+            WHERE session_id = %s 
+            ORDER BY created_at DESC 
+            LIMIT 1
+        """
+        
+        with conn.cursor() as cur:
+            cur.execute(query, (session_id,))
+            row = cur.fetchone()
+            
+            if row:
+                try:
+                    # 处理消息数据
+                    message_raw = row[0]
+                    if isinstance(message_raw, str):
+                        message_data = json.loads(message_raw)
+                    elif isinstance(message_raw, dict):
+                        message_data = message_raw
+                    else:
+                        message_data = json.loads(str(message_raw))
+                    
+                    created_at = row[1]
+                    
+                    # 解析消息内容
+                    content = ''
+                    if 'data' in message_data and 'content' in message_data['data']:
+                        content = message_data['data']['content']
+                    elif 'content' in message_data:
+                        content = message_data['content']
+                    
+                    return {
+                        'content': content,
+                        'timestamp': created_at
+                    }
+                    
+                except (json.JSONDecodeError, TypeError, KeyError) as e:
+                    logger.warning(f"解析最近消息失败 {session_id}: {str(e)}, 原始数据: {row[0]}")
+                    return None
+            
+            return None
+            
+    except Exception as e:
+        logger.error(f"获取最近消息失败 {session_id}: {str(e)}")
+        return None
+
 def add_user_message(session_id: str, message: str) -> None:
     """添加用户消息到聊天历史"""
     try:
