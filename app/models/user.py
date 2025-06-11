@@ -1,5 +1,5 @@
-from sqlalchemy import Boolean, Column, String, DateTime, Enum, ForeignKey, JSON
-from sqlalchemy.sql import func
+from datetime import datetime, UTC
+from sqlalchemy import Boolean, Column, String, DateTime, Enum, ForeignKey, JSON, Index, Text, Integer
 from sqlalchemy.orm import relationship
 import enum
 import sqlalchemy as sa
@@ -58,3 +58,25 @@ class User(Base):
     settings = relationship("Settings", back_populates="user", uselist=False)
     reports = relationship("Report", back_populates="reporter")
     notifications = relationship("UserNotification", back_populates="user")
+    device_tokens = relationship("DeviceToken", back_populates="user")
+
+class DeviceToken(Base):
+    __tablename__ = 'device_tokens'
+
+    id = Column(Integer, primary_key=True)
+    token = Column(Text, nullable=False, unique=True)
+    user_id = Column(String, ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC))
+
+    # 索引
+    __table_args__ = (
+        Index('ix_device_tokens_user_id', 'user_id'),
+        Index('ix_device_tokens_token', 'token', unique=True),
+    )
+
+    # 关联关系
+    user = relationship("User", back_populates="device_tokens")
+
+    def __repr__(self):
+        return f"<DeviceToken(id={self.id}, user_id={self.user_id})>"

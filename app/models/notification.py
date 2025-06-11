@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, UTC
 from typing import List, Optional
 from sqlalchemy import Column, Integer, String, Text, Boolean, DateTime, ForeignKey, ARRAY, JSON, Index, text, Enum
 from sqlalchemy.orm import relationship
@@ -36,8 +36,8 @@ class NotificationTemplate(Base):
     image_urls = Column(ARRAY(String))  # 可为空，支持多个图片
     link_urls = Column(ARRAY(String))  # 可为空，支持多个链接
     is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC))
+    updated_at = Column(DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC))
 
     # 索引
     __table_args__ = (
@@ -65,7 +65,7 @@ class UserNotification(Base):
     link_urls = Column(ARRAY(String))  # 实际使用链接
     is_read = Column(Boolean, default=False)
     read_at = Column(DateTime)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now())  # 使用 naive datetime
     deleted_at = Column(DateTime)
 
     # 索引

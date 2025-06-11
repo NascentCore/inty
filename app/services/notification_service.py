@@ -1,14 +1,20 @@
 from typing import Optional, List, Tuple
 from app.models.user import User
-from sqlalchemy import select, func
+from sqlalchemy import select, func, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.notification import UserNotification, NotificationTemplate, NotificationTemplateType
 from app.schemas.notification import NotificationQuery, NotificationTemplateCreate, NotificationSendRequest
 from loguru import logger
-from datetime import datetime
+from datetime import datetime, UTC
 from app.core.uuid import uid
 from jinja2 import Template
 from jinja2.exceptions import TemplateError
+from firebase_admin import messaging
+from app.services import user_service
+from app.models.user import DeviceToken
+import traceback
+from fastapi import BackgroundTasks
+from firebase_admin.exceptions import InvalidArgumentError
 
 # 类型映射字典
 TEMPLATE_TYPE_MAP = {
@@ -109,8 +115,9 @@ async def query_notifications(
 
 async def send_notification(
     db: AsyncSession,
+    background_tasks: BackgroundTasks,
     request: NotificationSendRequest
-) -> Tuple[int, int]:  # 返回 (成功数, 失败数)
+) -> None:
     """
     发送通知
     """
@@ -163,8 +170,6 @@ async def send_notification(
             raise ValueError(f"模板渲染失败: {str(e)}")
 
         # 4. 生成通知
-        success_count = 0
-        fail_count = 0
         notifications = []
 
         for user_id in user_ids:
@@ -187,18 +192,115 @@ async def send_notification(
                     read_at=datetime.now()
                 )
                 notifications.append(notification)
-                success_count += 1
             except Exception as e:
                 logger.error(f"为用户 {user_id} 创建通知失败: {str(e)}")
-                fail_count += 1
 
         # 5. 批量保存通知
         if notifications:
             db.add_all(notifications)
             await db.commit()
 
-        return success_count, fail_count
+        # 6. 异步发送FCM消息（后台任务）
+        background_tasks.add_task(
+            send_fcm_multicast,
+            db,
+            user_ids,
+            rendered_title,
+            rendered_content,
+            request.params,
+            rendered_image_urls[0] if rendered_image_urls else None
+        )
 
     except Exception as e:
         logger.error(f"发送通知失败: {str(e)}")
         raise 
+
+INVALID_EXCEPTIONS = (
+    messaging.UnregisteredError,
+    InvalidArgumentError,
+    messaging.SenderIdMismatchError,
+)
+
+async def send_fcm_multicast(
+    db: AsyncSession,
+    user_ids: List[str],
+    title: str,
+    body: str,
+    data: Optional[dict] = None,
+    image_url: Optional[str] = None
+) -> bool:
+    """发送FCM多播消息推送
+    
+    适用于多用户同一条通知
+    
+    Args:
+        db: 数据库会话
+        user_ids: 用户ID列表
+        title: 通知标题
+        body: 通知内容
+        data: 额外数据（可选）
+        image_url: 图片URL（可选）
+        
+    Returns:
+        bool: 是否发送成功
+    """
+    try:
+        # 1. 获取多个用户的所有设备token
+        tokens = await user_service.get_users_device_tokens(db, user_ids)
+        
+        if not tokens:
+            logger.warning(f"用户 {user_ids} 没有注册任何设备token")
+            return False
+        
+        # 2. 发送消息
+        success_count = 0
+        fail_count = 0
+        invalid_tokens = []
+        
+        for token in tokens:
+            try:
+                single_message = messaging.Message(
+                    token=token,
+                    notification=messaging.Notification(
+                        title=title,
+                        body=body,
+                        image=image_url
+                    ),
+                    data=data or {}
+                )
+                messaging.send(single_message)
+                success_count += 1
+            except INVALID_EXCEPTIONS:
+                invalid_tokens.append(token)
+                fail_count += 1
+            except Exception as e:
+                logger.error(f"发送到设备 {token} 失败: {str(e)}")
+                fail_count += 1
+                
+        # 3. 处理结果
+        if fail_count > 0:
+            logger.error(f"FCM消息发送失败: {fail_count} 个设备失败")
+            
+
+        # 4. 清理失效的token
+        if invalid_tokens:
+            try:
+                await db.execute(
+                    delete(DeviceToken).where(DeviceToken.token.in_(invalid_tokens))
+                )
+                await db.commit()
+                logger.info(f"已清理 {len(invalid_tokens)} 个失效的token")
+            except Exception as e:
+                logger.error(f"清理失效token失败: {str(e)}")
+                logger.error(f"错误堆栈: {traceback.format_exc()}")
+            
+            return False
+            
+        logger.info(f"FCM消息发送成功: {success_count} 个设备")
+        return True
+        
+    except Exception as e:
+        logger.error(f"发送FCM消息失败: {str(e)}")
+        logger.error(f"错误堆栈: {traceback.format_exc()}")
+        return False 
+

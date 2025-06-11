@@ -73,6 +73,7 @@ class GoogleSearchConfig:
     api_key: str
     cse_id: str
 
+@dataclass
 class AgentConfig:
     model: str = "ep-20250210154211-js9rc"
     base_url: str = "https://ark.cn-beijing.volces.com/api/v3"
@@ -86,6 +87,10 @@ class GCSConfig:
     credentials: str
 
 @dataclass
+class FirebaseConfig:
+    service_account_path: str
+
+@dataclass
 class Config:
     app: AppConfig
     security: SecurityConfig
@@ -97,6 +102,7 @@ class Config:
     agent: AgentConfig
     gcs: GCSConfig
     google_search: GoogleSearchConfig
+    firebase: FirebaseConfig
 
 def load_config(path: str = "config.yaml") -> Config:
     config_path = Path(path)
@@ -117,7 +123,8 @@ def load_config(path: str = "config.yaml") -> Config:
         embedding=EmbeddingConfig(**data.get("embedding", {})),
         agent=AgentConfig(**data.get("agent", {})),
         gcs=GCSConfig(**data.get("gcs", {})),
-        google_search=GoogleSearchConfig(**data.get("google_search", {}))
+        google_search=GoogleSearchConfig(**data.get("google_search", {})),
+        firebase=FirebaseConfig(**data.get("firebase", {}))
     )
 
 # load config

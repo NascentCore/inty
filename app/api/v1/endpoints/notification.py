@@ -1,12 +1,11 @@
 from typing import List, Optional, Dict
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.api import deps
-from app.models.notification import UserNotification, NotificationTemplateType, TEMPLATE_TYPE_MAP
+from app.models.notification import TEMPLATE_TYPE_MAP
 from app.schemas.notification import (
     NotificationItem, 
     NotificationQuery,
-    NotificationSendResponse,
     NotificationTemplateCreate,
     NotificationTemplateItem,
     NotificationSendRequest
@@ -17,9 +16,10 @@ from loguru import logger
 
 router = APIRouter()
 
-@router.post("/", response_model=APIResponse[NotificationSendResponse])
+@router.post("/", response_model=APIResponse)
 async def send_notification(
     request: NotificationSendRequest,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(deps.get_async_db),
     current_user = Depends(deps.get_current_active_user),
 ) -> APIResponse[Dict[str, int]]:
@@ -33,11 +33,8 @@ async def send_notification(
             logger.error("非超级管理员不能发送通知")
             return APIResponse.error(message="非超级管理员不能发送通知")
             
-        success_count, fail_count = await notification_service.send_notification(db, request)
-        return APIResponse.success(data={
-            "success_count": success_count,
-            "fail_count": fail_count
-        })
+        await notification_service.send_notification(db, background_tasks, request)
+        return APIResponse.success(message="通知发送成功")
     except ValueError as e:
         logger.error(f"发送通知参数错误: {str(e)}")
         return APIResponse.error(message=str(e))

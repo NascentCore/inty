@@ -59,8 +59,3 @@ class NotificationSendRequest(BaseModel):
     all_users: bool = False
     user_ids: Optional[List[str]] = None
     params: Optional[dict] = {}
-
-class NotificationSendResponse(BaseModel):
-    """发送通知响应"""
-    success_count: int
-    fail_count: int

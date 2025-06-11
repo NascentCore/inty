@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from loguru import logger
 
 from app.schemas.response import APIResponse
-from app.schemas.user import User, UserUpdate
+from app.schemas.user import User, UserUpdate, DeviceTokenRegister
 from app.api import deps
 from app.db.session import get_async_db
 from app.services import user_service
@@ -63,6 +63,27 @@ async def upload_avatar(
         logger.error(f"头像上传失败: {str(e)}")
         return APIResponse.error(message=str(e))
 
+@router.post("/device/register", response_model=APIResponse)
+async def register_device_token(
+    device_in: DeviceTokenRegister,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(deps.get_current_active_user),
+) -> Any:
+    """
+    注册或更新设备token
+    """
+    try:
+        device_token = await user_service.register_device_token(
+            db=db,
+            token=device_in.token,
+            user_id=current_user.id
+        )
+        return APIResponse.success(message="设备token注册成功")
+    except Exception as e:
+        logger.error(f"注册设备token失败: {str(e)}")
+        logger.error(f"错误堆栈: {traceback.format_exc()}")
+        return APIResponse.error(message=str(e))
+
 # @router.get("/{user_id}/profile", response_model=schemas.User)
 # def get_user_profile(
 #     user_id: str,
@@ -76,3 +97,4 @@ async def upload_avatar(
 #     if not user:
 #         raise HTTPException(status_code=404, detail="User not found")
 #     return user 
+

@@ -53,3 +53,7 @@ class TokenPayload(BaseModel):
 
 class AvatarUploadResponse(BaseModel):
     avatar: str
+
+class DeviceTokenRegister(BaseModel):
+    """设备token注册请求"""
+    token: str

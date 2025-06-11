@@ -178,6 +178,7 @@ backend/alembic.ini
 
 # google key
 inty-backend-key.json
+inty-firebase-key.json
 
 # cursor
 .cursor/

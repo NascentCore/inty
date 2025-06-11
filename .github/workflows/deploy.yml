@@ -55,4 +55,5 @@ jobs:
             -p 8000:8000 \
             -v /opt/inty/config.yaml:/app/config.yaml \
             -v /opt/inty/inty-backend-key.json:/app/inty-backend-key.json \
+            -v /opt/inty/inty-firebase-key.json:/app/inty-firebase-key.json \
             ${{ env.REGISTRY }}/${{ env.DOCKER_IMAGE }}:${{ env.DOCKER_TAG }} 

@@ -18,6 +18,7 @@ from app.core.logging import init_logger
 from app.core.agent.agent import agent_manager
 from app.api.deps import get_async_db
 from loguru import logger
+from app.core.firebase import init_firebase
 
 init_logger()
 
@@ -58,6 +59,9 @@ app.add_exception_handler(SQLAlchemyError, sqlalchemy_exception_handler)
 app.add_exception_handler(ValidationError, validation_error_handler)
 
 app.include_router(api_router, prefix=settings.app.api_v1_prefix)
+
+# 初始化 Firebase
+init_firebase()
 
 @app.on_event("startup")
 async def startup_event():
