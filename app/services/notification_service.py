@@ -125,9 +125,9 @@ async def send_notification(
         # 2. 获取接收用户列表
         if request.all_users:
             # 全员发送，这里需要根据实际情况查询所有用户
-            stmt = select(User.id).select_from(User).where(User.is_active == True)
+            stmt = select(User.id).where(User.is_active == True)
             result = await db.execute(stmt)
-            user_ids = [row[0] for row in result.scalars().all()]
+            user_ids = [row[0] for row in result.all()]
         else:
             if not request.user_ids:
                 raise ValueError("接收用户列表为空")
