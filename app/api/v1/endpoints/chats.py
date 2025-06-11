@@ -13,8 +13,11 @@ from app.services import chat_service, agent_service, chat_history_service
 from app.services.chat_service import generate_session_id
 from app.core.agent.agent import agent_manager
 from langchain_core.messages import HumanMessage
+import logging
 
 router = APIRouter()
+
+logger = logging.getLogger(__name__)
 
 @router.get("/", response_model=List[schemas.Chat])
 async def list_chats(
@@ -201,12 +204,19 @@ async def get_agent_chat_detail(
     支持滚屏加载更早的对话
     """
     try:
+        logger.info(f"获取Agent聊天详情 - Agent ID: {agent_id}")
+        
         # 获取或创建与该Agent的唯一会话
         chat = await chat_service.get_or_create_chat_by_agent(
             db=db,
             user_id=current_user.id,
             agent_id=agent_id
         )
+        
+        # 验证返回的chat中的agent_id是否与传入的一致
+        if chat.agent_id != agent_id:
+            logger.error(f"Agent ID不匹配: 传入={agent_id}, 实际={chat.agent_id}")
+            raise HTTPException(status_code=500, detail=f"Agent ID不匹配: 传入={agent_id}, 实际={chat.agent_id}")
         
         # 使用统一的session_id生成规则
         session_id = generate_session_id(chat.id)
@@ -260,12 +270,19 @@ async def get_agent_chat_messages(
     专门用于滚动加载
     """
     try:
+        logger.info(f"获取Agent聊天消息 - Agent ID: {agent_id}")
+        
         # 获取或创建与该Agent的唯一会话
         chat = await chat_service.get_or_create_chat_by_agent(
             db=db,
             user_id=current_user.id,
             agent_id=agent_id
         )
+        
+        # 验证返回的chat中的agent_id是否与传入的一致
+        if chat.agent_id != agent_id:
+            logger.error(f"Agent ID不匹配: 传入={agent_id}, 实际={chat.agent_id}")
+            raise HTTPException(status_code=500, detail=f"Agent ID不匹配: 传入={agent_id}, 实际={chat.agent_id}")
         
         # 使用统一的session_id生成规则
         session_id = generate_session_id(chat.id)
@@ -301,6 +318,14 @@ async def agent_chat_completions(
     如果用户还没有和该Agent创建会话，则自动创建
     """
     try:
+        # 首先验证Agent是否存在
+        agent_db = await agent_service.get_agent(db, agent_id=agent_id)
+        if not agent_db:
+            raise HTTPException(status_code=404, detail="Agent not found")
+        
+        # 添加日志记录传入的agent_id
+        logger.info(f"请求的Agent ID: {agent_id}")
+        
         # 获取或创建与该Agent的唯一会话
         chat = await chat_service.get_or_create_chat_by_agent(
             db=db,
@@ -308,10 +333,13 @@ async def agent_chat_completions(
             agent_id=agent_id
         )
         
-        # 获取Agent配置
-        agent_db = await agent_service.get_agent(db, agent_id=agent_id)
-        if not agent_db:
-            raise HTTPException(status_code=404, detail="Agent not found")
+        # 验证返回的chat中的agent_id是否与传入的一致
+        if chat.agent_id != agent_id:
+            logger.error(f"Agent ID不匹配: 传入={agent_id}, 实际={chat.agent_id}")
+            raise HTTPException(status_code=500, detail=f"Agent ID不匹配: 传入={agent_id}, 实际={chat.agent_id}")
+        
+        # 记录实际使用的agent_id
+        logger.info(f"实际聊天的Agent ID: {chat.agent_id}")
         
         # 获取最后一条用户消息
         user_messages = [msg for msg in request.messages if msg.role == "user"]
@@ -325,9 +353,9 @@ async def agent_chat_completions(
             "messages": [HumanMessage(content=last_user_message)]
         }
         
-        # 获取或创建Agent实例
+        # 获取或创建Agent实例 - 使用chat中的agent_id确保一致性
         agent_data = {
-            'id': agent_db.id,
+            'id': chat.agent_id,  # 使用chat中的agent_id而不是传入的agent_id
             'name': agent_db.name,
             'prompt': agent_db.prompt,
             'settings': agent_db.settings

@@ -289,6 +289,8 @@ async def get_or_create_chat_by_agent(
     每个用户和每个Agent只能有一个会话
     """
     try:
+        logger.info(f"获取或创建聊天会话 - 用户ID: {user_id}, Agent ID: {agent_id}")
+        
         # 首先查找是否已存在会话
         result = await db.execute(
             select(models.Chat)
@@ -305,6 +307,13 @@ async def get_or_create_chat_by_agent(
         existing_chat = result.scalar_one_or_none()
         
         if existing_chat:
+            logger.info(f"找到已存在的聊天会话 - Chat ID: {existing_chat.id}, Agent ID: {existing_chat.agent_id}")
+            
+            # 验证agent_id的一致性
+            if existing_chat.agent_id != agent_id:
+                logger.error(f"聊天会话中的Agent ID不匹配！期望: {agent_id}, 实际: {existing_chat.agent_id}")
+                raise HTTPException(status_code=500, detail=f"聊天会话数据不一致: 期望Agent ID {agent_id}, 实际 {existing_chat.agent_id}")
+            
             # 获取最近消息和时间戳
             try:
                 session_id = generate_session_id(existing_chat.id)
@@ -325,6 +334,8 @@ async def get_or_create_chat_by_agent(
             return existing_chat
         
         # 如果不存在，则创建新的会话
+        logger.info(f"未找到已存在的聊天会话，创建新的会话 - Agent ID: {agent_id}")
+        
         # 首先验证Agent是否存在
         agent_result = await db.execute(
             select(models.Agent)
@@ -332,25 +343,36 @@ async def get_or_create_chat_by_agent(
         )
         agent = agent_result.scalar_one_or_none()
         if not agent:
+            logger.error(f"Agent不存在: {agent_id}")
             raise HTTPException(status_code=404, detail="Agent不存在")
+        
+        logger.info(f"验证Agent存在 - Agent ID: {agent.id}, Name: {agent.name}")
         
         # 创建新的聊天会话
         chat_id = str(uuid.uuid4())
         db_chat = models.Chat(
             id=chat_id,
             user_id=user_id,
-            agent_id=agent_id
+            agent_id=agent_id  # 确保使用传入的agent_id
         )
+        
+        logger.info(f"创建新聊天会话 - Chat ID: {chat_id}, User ID: {user_id}, Agent ID: {agent_id}")
         
         db.add(db_chat)
         await db.commit()
         await db.refresh(db_chat)
+        
+        # 验证创建后的agent_id
+        if db_chat.agent_id != agent_id:
+            logger.error(f"创建聊天会话后Agent ID不匹配！期望: {agent_id}, 实际: {db_chat.agent_id}")
+            raise HTTPException(status_code=500, detail=f"创建聊天会话失败: Agent ID不匹配")
         
         # 添加Agent开场白到chat_history
         if agent.opening:
             try:
                 session_id = generate_session_id(chat_id)
                 chat_history_service.add_agent_opening_message(session_id, agent.opening)
+                logger.info(f"添加Agent开场白成功 - Session ID: {session_id}")
             except Exception as e:
                 logger.error(f"添加开场白失败: {str(e)}")
                 # 继续执行，不影响chat创建
@@ -365,6 +387,11 @@ async def get_or_create_chat_by_agent(
             .where(models.Chat.id == db_chat.id)
         )
         new_chat = result.scalar_one()
+        
+        # 最终验证
+        if new_chat.agent_id != agent_id:
+            logger.error(f"重新查询后Agent ID不匹配！期望: {agent_id}, 实际: {new_chat.agent_id}")
+            raise HTTPException(status_code=500, detail=f"聊天会话数据异常: Agent ID不匹配")
         
         # 获取最近消息和时间戳以及agent名称
         try:
@@ -384,6 +411,7 @@ async def get_or_create_chat_by_agent(
         new_chat.agent_name = new_chat.agent.name if new_chat.agent else None
         new_chat.agent_avatar = new_chat.agent.avatar if new_chat.agent else None
         
+        logger.info(f"成功创建新聊天会话 - Chat ID: {new_chat.id}, Agent ID: {new_chat.agent_id}")
         return new_chat
         
     except HTTPException:
@@ -407,8 +435,10 @@ async def get_or_create_chat_by_agent(
             )
             existing_chat = result.scalar_one_or_none()
             if existing_chat:
+                logger.info(f"并发创建冲突，返回已存在的聊天会话 - Chat ID: {existing_chat.id}")
                 return existing_chat
-        except Exception:
+        except Exception as retry_e:
+            logger.error(f"重试查询失败: {str(retry_e)}")
             pass
         raise HTTPException(status_code=500, detail="创建聊天会话失败")
     except SQLAlchemyError as e:

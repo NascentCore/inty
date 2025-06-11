@@ -192,11 +192,21 @@ class AgentManager:
             self._start_cleanup_task()
         
         agent_id = agent_data['id']
+        print(f"请求获取Agent实例 - Agent ID: {agent_id}")
         
         with self.lock:
             # 如果Agent已存在，直接返回
             if agent_id in self.agents:
-                return self.agents[agent_id]
+                existing_agent = self.agents[agent_id]
+                print(f"返回已存在的Agent实例 - Agent ID: {agent_id}, 实例ID: {existing_agent.agent_id}")
+                
+                # 验证实例中的agent_id是否与请求的一致
+                if existing_agent.agent_id != agent_id:
+                    print(f"警告：Agent实例ID不匹配！请求: {agent_id}, 实例: {existing_agent.agent_id}")
+                    # 删除不匹配的实例，重新创建
+                    del self.agents[agent_id]
+                else:
+                    return existing_agent
             
             # 如果达到最大数量，清理最久未使用的Agent
             if len(self.agents) >= self.max_agents:
@@ -214,15 +224,22 @@ class AgentManager:
             
             system_prompt = agent_data.get('prompt', "你是一个聊天助手，请用中文回答用户的问题。")
             
+            print(f"创建新的Agent实例 - Agent ID: {agent_id}, Name: {agent_data['name']}")
+            
             agent = Agent(
-                agent_id=agent_id,
+                agent_id=agent_id,  # 确保使用正确的agent_id
                 name=agent_data['name'],
                 model_config=model_config,
                 system_prompt=system_prompt
             )
             
+            # 验证创建的Agent实例的agent_id
+            if agent.agent_id != agent_id:
+                print(f"错误：创建的Agent实例ID不匹配！期望: {agent_id}, 实际: {agent.agent_id}")
+                raise ValueError(f"Agent实例创建失败: ID不匹配")
+            
             self.agents[agent_id] = agent
-            print(f"创建新的Agent实例: {agent_id} - {agent_data['name']}")
+            print(f"成功创建并缓存Agent实例 - Agent ID: {agent_id}, 实例ID: {agent.agent_id}")
             return agent
 
     async def initialize_popular_agents(self, db_session):
@@ -267,10 +284,14 @@ if __name__ == "__main__":
     agent = Agent(
         agent_id="test",
         name="test",
-        model_config={},
-        system_prompt="You are a helpful assistant.",
+        model_config={
+            "model": "chatbot",
+            "api_key": settings.agent.api_key,
+            "base_url": settings.agent.base_url
+        },
+        system_prompt="你是AI性伴侣",
     )
     # response = agent.chat(user_id="123", session_id=str(uuid.uuid5(uuid.NAMESPACE_DNS, "test")), messages={"messages": [HumanMessage(content="我最喜欢NBA的球星是kebe")]})
     # print(response)
-    response = agent.chat(user_id="123", session_id=str(uuid.uuid5(uuid.NAMESPACE_DNS, "test")), messages={"messages": [HumanMessage(content="特朗普和马斯克骂战的最新进展？")]})
+    response = agent.chat(user_id="123", session_id=str(uuid.uuid5(uuid.NAMESPACE_DNS, "test")), messages={"messages": [HumanMessage(content="fuck you !")]})
     print(response)

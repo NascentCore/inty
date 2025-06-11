@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, DateTime, ForeignKey, Boolean
+from sqlalchemy import Column, String, DateTime, ForeignKey, Boolean, UniqueConstraint, Index
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.hybrid import hybrid_property
@@ -24,6 +24,12 @@ class Chat(Base):
     # 时间戳
     created_at = Column(DateTime(timezone=True), server_default=sa.text('now()'))
     updated_at = Column(DateTime(timezone=True), onupdate=sa.text('now()'))
+    
+    # 唯一约束：每个用户与每个Agent只能有一个活跃的聊天会话
+    # 注意：这里先添加普通索引，实际的唯一约束将通过迁移文件添加
+    __table_args__ = (
+        Index('ix_chats_user_agent_active', 'user_id', 'agent_id', 'is_active'),
+    )
     
     # 非数据库字段，用于存储最近消息和agent名称
     def __init__(self, **kwargs):
