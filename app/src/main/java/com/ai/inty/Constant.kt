@@ -9,5 +9,9 @@ class Constant {
         const val ROUTE_MAIN = "${ROUTE_HOME_URL}main"
         const val ROUTE_CHAT = "${ROUTE_HOME_URL}chat"
         const val ROUTE_SETTING = "${ROUTE_HOME_URL}setting"
+        const val ROUTE_SETTING_MY = "${ROUTE_HOME_URL}setting/my"
+
+
+        const val ACTION_USER_PROFILE_CHANGED = "ACTION_USER_PROFILE_CHANGED"
     }
 }

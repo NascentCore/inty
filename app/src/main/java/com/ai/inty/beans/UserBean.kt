@@ -29,7 +29,7 @@ data class UserProfile(
     @Json(name = "auth_type")
     val authType: String = "",
     @Json(name = "avatar")
-    val avatar: Any? = null,
+    val avatar: String? = null,
     @Json(name = "created_at")
     val createdAt: String = "",
     @Json(name = "description")
@@ -53,3 +53,10 @@ data class UserProfile(
     @Json(name = "updated_at")
     val updatedAt: String? = null
 )
+
+enum class GENDER(val value: String) {
+    MALE("MALE"),
+    FEMALE("FEMALE"),
+    OTHER("OTHER"),
+}
+

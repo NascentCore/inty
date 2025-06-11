@@ -5,6 +5,7 @@ plugins {
     id("com.google.devtools.ksp") version "2.0.0-1.0.22"
     id("therouter")
     id("kotlin-parcelize")
+    id("com.google.gms.google-services")
 }
 
 android {
@@ -114,5 +115,9 @@ dependencies {
     implementation(libs.retrofit2.kotlin.coroutines.adapter)
     implementation(libs.bundles.coils)
 
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.analytics)
+
+    api(libs.ucrop)
 
 }

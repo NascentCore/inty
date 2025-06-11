@@ -182,7 +182,11 @@ fun MyPage(
                     Spacer(Modifier.weight(1f))
 
                     IntyImage(
-                        modifier = Modifier.size(40.dp),
+                        modifier = Modifier.size(40.dp).noRippleClickable {
+                            TheRouter.build(Constant.ROUTE_SETTING_MY)
+                                .withObject("userProfile", userProfile)
+                                .navigation(context)
+                        },
                         model = R.drawable.icon_edit
                     )
                 }

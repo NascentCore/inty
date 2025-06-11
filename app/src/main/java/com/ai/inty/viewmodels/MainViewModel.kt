@@ -1,7 +1,9 @@
 package com.ai.inty.viewmodels
 
+import android.content.Context
 import androidx.compose.runtime.mutableStateListOf
 import androidx.lifecycle.viewModelScope
+import com.ai.inty.Constant
 import com.ai.inty.base.BaseActivityViewModel
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.beans.CreateGuestReq
@@ -15,6 +17,8 @@ import com.inty.utils.AppEnv
 import com.inty.utils.log.EasyLog
 import com.inty.utils.storage.IntySetting
 import com.therouter.TheRouter
+import com.therouter.router.Navigator
+import com.therouter.router.action.interceptor.ActionInterceptor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -49,6 +53,14 @@ class MainViewModel: BaseActivityViewModel() {
     private val _userProfile = MutableStateFlow<UserProfile>(UserProfile())
     val userProfile = _userProfile.asStateFlow()
 
+    val userProfileChanged = object : ActionInterceptor() {
+        override fun handle(context: Context, navigator: Navigator): Boolean {
+            getUserProfile()
+
+            return super.handle(context, navigator)
+        }
+    }
+
     init {
 
         if (IntySetting.isLogin()) {
@@ -58,6 +70,8 @@ class MainViewModel: BaseActivityViewModel() {
                 onLoginSuccess()
             }
         }
+
+        TheRouter.addActionInterceptor(Constant.ACTION_USER_PROFILE_CHANGED, userProfileChanged)
     }
 
     private fun onLoginSuccess() {
@@ -145,5 +159,11 @@ class MainViewModel: BaseActivityViewModel() {
                 }
             }
         }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+
+        TheRouter.removeActionInterceptor(Constant.ACTION_USER_PROFILE_CHANGED, userProfileChanged)
     }
 }

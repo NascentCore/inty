@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "53991309802",
+    "project_id": "inty-87a58",
+    "storage_bucket": "inty-87a58.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:53991309802:android:44f13e44c1a1582b913293",
+        "android_client_info": {
+          "package_name": "com.ai.inty"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAPIKlQbLfPPQ3gW4H7n5rFa10kgUZ4BEU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

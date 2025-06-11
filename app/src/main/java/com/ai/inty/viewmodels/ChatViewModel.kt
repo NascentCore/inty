@@ -63,7 +63,7 @@ class ChatViewModel: BaseActivityViewModel() {
 
             agentInfo.value?.let { agent ->
                 val result = chatApi.getMsgs(agent.id, 100, 0)
-                EasyLog.log("get msgs = $result")
+                EasyLog.log("get msgs($agent) = $result")
 
                 when (result) {
                     is HttpResult.Success -> {
@@ -103,7 +103,7 @@ class ChatViewModel: BaseActivityViewModel() {
             agentInfo.value?.let { agent ->
                 val result = chatApi.sendMsg(agent.id, req)
 
-                EasyLog.log("sendMsg $req -> $result")
+                EasyLog.log("sendMsg($agent, $req) -> $result")
 
                 when (result) {
                     is HttpResult.Success -> {

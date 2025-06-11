@@ -7,6 +7,13 @@
     "params": {}
   },
   {
+    "path": "http://inty.ai/setting/my",
+    "className": "com.ai.inty.MySettingActivity",
+    "action": "",
+    "description": "",
+    "params": {}
+  },
+  {
     "path": "http://inty.ai/main",
     "className": "com.ai.inty.MainActivity",
     "action": "",

@@ -111,8 +111,8 @@ fun ConversionsPageTabItem(
     ) {
         if (isSelected) {
             val colorStops = arrayOf(
-                0.0f to Color(0xFFC122FF),
-                1.0f to Color(0xFFFF905D)
+                0.0f to Color(0xFFFF905D),
+                1.0f to Color(0xFFC122FF)
             )
             val brush = Brush.horizontalGradient(colorStops = colorStops)
 
