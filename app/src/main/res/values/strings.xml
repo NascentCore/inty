@@ -12,4 +12,5 @@
     <string name="settings_about">About Inty</string>
     <string name="logout">Log out</string>
     <string name="crop_image">Face Recognition</string>
+    <string name="sys_notify_title">System Notification</string>
 </resources>

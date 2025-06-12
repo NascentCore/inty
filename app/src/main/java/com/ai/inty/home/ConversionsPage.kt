@@ -26,14 +26,15 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.ai.inty.Constant
 import com.ai.inty.R
 import com.ai.inty.base.IntyImage
 import com.ai.inty.base.RedDot
 import com.ai.inty.base.noRippleClickable
 import com.ai.inty.beans.ConversationItem
+import com.ai.inty.beans.SysMsgItem
 
 
 enum class ConversionsPageTab {
@@ -46,8 +47,10 @@ fun ConversionsPage(
     modifier: Modifier,
     selectedTab: ConversionsPageTab,
     conversions: List<ConversationItem>,
+    lastSysMsg: SysMsgItem?,
     onSelectTab: (ConversionsPageTab) -> Unit,
     onClickConversionItem: (ConversationItem) -> Unit,
+    onClickSysMsg: () -> Unit,
 ) {
     Box(
         modifier = modifier
@@ -93,7 +96,9 @@ fun ConversionsPage(
                     conversions = conversions,
                     onClickConversionItem = {
                         onClickConversionItem(it)
-                    }
+                    },
+                    lastSysMsg = lastSysMsg,
+                    onClickSysMsg = onClickSysMsg
                 )
             }
         }
@@ -144,21 +149,7 @@ fun ConversionsPageTabItem(
     }
 }
 
-@Preview(showBackground = true, backgroundColor = 0xff000000)
-@Composable
-fun ConversionsPagePreview() {
-    ConversionsPage(
-        Modifier,
-        ConversionsPageTab.TabMessage,
-        listOf(),
-        {
 
-        },
-        {
-
-        }
-    )
-}
 
 
 @Composable
@@ -166,12 +157,34 @@ fun ConversionsPage(
     modifier: Modifier,
     conversions: List<ConversationItem>,
     onClickConversionItem: (ConversationItem) -> Unit,
+    lastSysMsg: SysMsgItem?,
+    onClickSysMsg: () -> Unit,
 
-) {
+    ) {
     val context = LocalContext.current
     LazyColumn(
         modifier = modifier,
     ) {
+
+        lastSysMsg?.let { sysMsg ->
+            item {
+                ConversationItem(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(color = Color(0x3378599A))
+                        .noRippleClickable {
+                            onClickSysMsg()
+                        },
+                    conversation = ConversationItem(
+                        agentId = Constant.SYS_NOTIFICATION_ID,
+                        agentName = "System Notification",
+                        lastMessage = sysMsg.content,
+                        createdAt = sysMsg.createdAt
+                    ),
+                    placeholderID = R.drawable.icon_sys_notify
+                )
+            }
+        }
 
         items(conversions) { conversion ->
             ConversationItem(
@@ -188,7 +201,8 @@ fun ConversionsPage(
 @Composable
 fun ConversationItem(
     modifier: Modifier,
-    conversation: ConversationItem
+    conversation: ConversationItem,
+    placeholderID: Int = R.drawable.ic_launcher_background
 ) {
     Row(
         modifier = modifier.height(88.dp),
@@ -199,7 +213,7 @@ fun ConversationItem(
         IntyImage(
             modifier = Modifier.size(56.dp),
             model = conversation.agentAvatar,
-            placeholder = painterResource(R.drawable.ic_launcher_background)
+            placeholder = painterResource(placeholderID)
         )
 
         Spacer(Modifier.width(14.dp))

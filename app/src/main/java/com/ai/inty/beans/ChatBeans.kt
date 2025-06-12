@@ -1,9 +1,9 @@
 package com.ai.inty.beans
+
 import com.inty.utils.convertUtcToLocal
 import com.inty.utils.storage.IntySetting
-import com.squareup.moshi.JsonClass
-
 import com.squareup.moshi.Json
+import com.squareup.moshi.JsonClass
 
 @JsonClass(generateAdapter = true)
 data class SendMsgReq(
@@ -113,3 +113,40 @@ data class ConversationItem(
 
 }
 
+@JsonClass(generateAdapter = true)
+data class SysMsgResponse(
+    @Json(name = "list")
+    val list: List<SysMsgItem> = listOf(),
+    @Json(name = "page")
+    val page: Int = 0,
+    @Json(name = "page_size")
+    val pageSize: Int = 0,
+    @Json(name = "total")
+    val total: Int = 0,
+    @Json(name = "total_pages")
+    val totalPages: Int = 0
+)
+
+@JsonClass(generateAdapter = true)
+data class SysMsgItem(
+    @Json(name = "content")
+    val content: String = "",
+    @Json(name = "created_at")
+    val createdAt: String = "",
+    @Json(name = "id")
+    val id: String = "",
+    @Json(name = "image_urls")
+    val imageUrls: List<Any?> = listOf(),
+    @Json(name = "is_read")
+    val isRead: Boolean = false,
+    @Json(name = "link_urls")
+    val linkUrls: List<String> = listOf(),
+    @Json(name = "read_at")
+    val readAt: String = "",
+    @Json(name = "template_id")
+    val templateId: Int = 0,
+    @Json(name = "title")
+    val title: String = "",
+    @Json(name = "type")
+    val type: Int = 0
+)

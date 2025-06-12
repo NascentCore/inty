@@ -13,7 +13,6 @@ import com.squareup.moshi.DefaultIfNullFactory
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import com.therouter.inject.ServiceProvider
-import com.therouter.inject.Singleton
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.Response
@@ -27,10 +26,11 @@ class AuthInterceptor : Interceptor {
         val request =
             chain.request().newBuilder()
                 .addHeader("accept", "application/json")
-                .addHeader("Content-Type", "application/json")
+//                .addHeader("Content-Type", "application/json")
                 .addHeader("Authorization", "Bearer ${IntySetting.getCurToken()}")
                 .build()
 
+        EasyLog.log("request = $request")
         return chain.proceed(request)
     }
 

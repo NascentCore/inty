@@ -26,6 +26,7 @@ import com.ai.inty.ui.theme.BackGround
 import com.ai.inty.viewmodels.ChatViewModel
 import com.ai.inty.viewmodels.HomeTabIndex
 import com.ai.inty.viewmodels.MainViewModel
+import com.inty.utils.storage.IntySetting
 import com.therouter.TheRouter
 
 data class TabInfo(
@@ -86,6 +87,7 @@ fun HomeScreen(
             }
             HomeTabIndex.Conversions -> {
                 val conversions = chatViewModel.conversions
+                val sysMsgs = mainViewModel.sysMsgs
                 ConversionsPage(
                     modifier = Modifier,
                     selectedTab = selectedConversionsTab.value,
@@ -98,8 +100,12 @@ fun HomeScreen(
                         TheRouter.build(Constant.ROUTE_CHAT)
                             .withObject("agent_id", conversion.agentId)
                             .navigation(context)
-
-
+                    },
+                    lastSysMsg = sysMsgs.firstOrNull(),
+                    onClickSysMsg = {
+                        IntySetting.setConversationReaded(Constant.SYS_NOTIFICATION_ID, sysMsgs.firstOrNull()?.content ?: "")
+                        TheRouter.build(Constant.ROUTE_SYS_MSGS)
+                            .navigation(context)
                     }
                 )
             }

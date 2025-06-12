@@ -7,6 +7,7 @@ import com.ai.inty.Constant
 import com.ai.inty.base.BaseActivityViewModel
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.beans.CreateGuestReq
+import com.ai.inty.beans.SysMsgItem
 import com.ai.inty.beans.TokenBean
 import com.ai.inty.beans.UserProfile
 import com.ai.inty.home.ConversionsPageTab
@@ -55,6 +56,9 @@ class MainViewModel: BaseActivityViewModel() {
     private val _userProfile = MutableStateFlow<UserProfile>(UserProfile())
     val userProfile = _userProfile.asStateFlow()
 
+    val sysMsgs = mutableStateListOf<SysMsgItem>()
+
+
     val userProfileChanged = object : ActionInterceptor() {
         override fun handle(context: Context, navigator: Navigator): Boolean {
             getUserProfile()
@@ -80,6 +84,7 @@ class MainViewModel: BaseActivityViewModel() {
         getAgents()
         getUserProfile()
         regFCM()
+        getSysMsgs()
     }
 
     fun createGuest(onSuccess: () -> Unit) {
@@ -130,6 +135,7 @@ class MainViewModel: BaseActivityViewModel() {
         when (_selectedTab.value) {
             HomeTabIndex.Conversions -> {
                 chatViewModel?.getConversions()
+                getSysMsgs()
             }
             else -> {
 
@@ -188,6 +194,21 @@ class MainViewModel: BaseActivityViewModel() {
                     EasyLog.log("regFCM = $result")
                 }
             })
+        }
+    }
+
+    fun getSysMsgs() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val result = userApi.getSysMsgs(1, 10)
+            EasyLog.log("getSysMsgs = $result")
+            when (result) {
+                is HttpResult.Success -> {
+                    sysMsgs.addAll(result.data.list)
+                }
+                is HttpResult.Failure -> {
+
+                }
+            }
         }
     }
 }
