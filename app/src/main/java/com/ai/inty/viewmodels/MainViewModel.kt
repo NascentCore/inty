@@ -7,12 +7,15 @@ import com.ai.inty.Constant
 import com.ai.inty.base.BaseActivityViewModel
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.beans.CreateGuestReq
+import com.ai.inty.beans.TokenBean
 import com.ai.inty.beans.UserProfile
 import com.ai.inty.home.ConversionsPageTab
 import com.ai.inty.net.IAgentApi
 import com.ai.inty.net.IUserApi
 import com.ai.inty.net.IUserApi2
 import com.architecture.httplib.core.HttpResult
+import com.google.android.gms.tasks.OnCompleteListener
+import com.google.firebase.messaging.FirebaseMessaging
 import com.inty.utils.AppEnv
 import com.inty.utils.log.EasyLog
 import com.inty.utils.storage.IntySetting
@@ -20,7 +23,6 @@ import com.therouter.TheRouter
 import com.therouter.router.Navigator
 import com.therouter.router.action.interceptor.ActionInterceptor
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -77,6 +79,7 @@ class MainViewModel: BaseActivityViewModel() {
     private fun onLoginSuccess() {
         getAgents()
         getUserProfile()
+        regFCM()
     }
 
     fun createGuest(onSuccess: () -> Unit) {
@@ -165,5 +168,26 @@ class MainViewModel: BaseActivityViewModel() {
         super.onCleared()
 
         TheRouter.removeActionInterceptor(Constant.ACTION_USER_PROFILE_CHANGED, userProfileChanged)
+    }
+
+    fun regFCM() {
+        viewModelScope.launch {
+            FirebaseMessaging.getInstance().token.addOnCompleteListener(OnCompleteListener { task ->
+                if (!task.isSuccessful) {
+                    EasyLog.log("Fetching FCM registration token failed, ${task.exception}", EasyLog.ERROR)
+                    task.exception?.let { EasyLog.log(it) }
+                    return@OnCompleteListener
+                }
+
+                // Get new FCM registration token
+                val token = task.result
+
+                EasyLog.log("FCM token = $token")
+                viewModelScope.launch(Dispatchers.IO) {
+                    val result = userApi.regFCM(TokenBean(token))
+                    EasyLog.log("regFCM = $result")
+                }
+            })
+        }
     }
 }

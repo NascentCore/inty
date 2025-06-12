@@ -2,6 +2,7 @@ package com.ai.inty.net
 
 import com.ai.inty.beans.CreateGuestReq
 import com.ai.inty.beans.CreateGuestResult
+import com.ai.inty.beans.TokenBean
 import com.ai.inty.beans.UserProfile
 import com.architecture.httplib.core.HttpResult
 import com.therouter.inject.Singleton
@@ -20,6 +21,8 @@ interface IUserApi {
     @POST("/api/v1/users/avatar")
     suspend fun uploadAvatar(@Part file: MultipartBody.Part): HttpResult<UserProfile>
 
+    @POST("/api/v1/users/device/register")
+    suspend fun regFCM(@Body reqq: TokenBean): HttpResult<Any>
 
 }
 

@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
@@ -27,7 +26,6 @@ import com.ai.inty.ui.theme.BackGround
 import com.ai.inty.viewmodels.ChatViewModel
 import com.ai.inty.viewmodels.HomeTabIndex
 import com.ai.inty.viewmodels.MainViewModel
-import com.inty.utils.storage.IntySetting
 import com.therouter.TheRouter
 
 data class TabInfo(
@@ -63,10 +61,10 @@ fun HomeScreen(
         bottomBar = {
             BottomBar(
                 modifier = Modifier
-                    .padding(bottom = 32.dp)
                     .fillMaxWidth()
                     .background(BackGround)
-                    .height(48.25.dp)
+                    .height(80.dp)
+                    .padding(bottom = 32.dp)
                 ,
                 selectedTab = selectedTab.value.ordinal,
                 onSelectTab = {

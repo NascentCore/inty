@@ -60,3 +60,8 @@ enum class GENDER(val value: String) {
     OTHER("OTHER"),
 }
 
+@JsonClass(generateAdapter = true)
+data class TokenBean(
+    @Json(name = "token")
+    val token: String
+)
