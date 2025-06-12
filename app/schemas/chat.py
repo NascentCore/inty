@@ -83,7 +83,7 @@ class ChatSettingsInDB(ChatSettingsBase):
 
 class ChatSettings(ChatSettingsInDB):
     """聊天设置"""
-    agent: Optional[dict] = None
+    pass
 
 
 class ChatBase(BaseModel):

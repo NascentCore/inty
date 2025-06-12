@@ -415,6 +415,111 @@ async def agent_chat_completions(
         raise HTTPException(status_code=500, detail=f"聊天失败: {str(e)}")
 
 
+@router.put("/agents/{agent_id}/settings", response_model=schemas.ChatSettings)
+async def update_agent_chat_settings(
+    *,
+    db: AsyncSession = Depends(deps.get_async_db),
+    agent_id: str,
+    settings_update: schemas.ChatSettingsUpdate,
+    current_user: schemas.User = Depends(deps.get_current_active_user),
+) -> Any:
+    """
+    根据Agent ID更新聊天设置
+    传入agent_id，找到用户与该Agent的唯一聊天会话，更新聊天设置
+    如果聊天会话不存在，则自动创建
+    """
+    try:
+        logger.info(f"更新Agent聊天设置 - Agent ID: {agent_id}, User ID: {current_user.id}")
+        
+        # 首先验证Agent是否存在
+        agent_db = await agent_service.get_agent(db, agent_id=agent_id)
+        if not agent_db:
+            raise HTTPException(status_code=404, detail="Agent不存在")
+        
+        # 获取或创建与该Agent的唯一会话
+        chat = await chat_service.get_or_create_chat_by_agent(
+            db=db,
+            user_id=current_user.id,
+            agent_id=agent_id
+        )
+        
+        # 验证返回的chat中的agent_id是否与传入的一致
+        if chat.agent_id != agent_id:
+            logger.error(f"Agent ID不匹配: 传入={agent_id}, 实际={chat.agent_id}")
+            raise HTTPException(status_code=500, detail=f"Agent ID不匹配")
+        
+        # 获取或创建聊天设置，然后更新
+        # 首先确保设置存在
+        settings = await chat_service.get_or_create_chat_settings(
+            db=db,
+            chat_id=chat.id,
+            user_id=current_user.id,
+            agent_id=agent_id
+        )
+        
+        # 然后更新设置
+        settings = await chat_service.update_chat_settings(
+            db=db,
+            chat_id=chat.id,
+            settings_update=settings_update
+        )
+        
+        logger.info(f"成功更新Agent聊天设置 - Agent ID: {agent_id}, Settings ID: {settings.id}")
+        
+        return settings
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"更新Agent聊天设置失败 - Agent ID: {agent_id}, Error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"更新聊天设置失败: {str(e)}")
+
+
+@router.get("/agents/{agent_id}/settings", response_model=schemas.ChatSettings)
+async def get_agent_chat_settings(
+    *,
+    db: AsyncSession = Depends(deps.get_async_db),
+    agent_id: str,
+    current_user: schemas.User = Depends(deps.get_current_active_user),
+) -> Any:
+    """
+    根据Agent ID获取聊天设置
+    如果聊天会话或设置不存在，则自动创建
+    """
+    try:
+        logger.info(f"获取Agent聊天设置 - Agent ID: {agent_id}, User ID: {current_user.id}")
+        
+        # 首先验证Agent是否存在
+        agent_db = await agent_service.get_agent(db, agent_id=agent_id)
+        if not agent_db:
+            raise HTTPException(status_code=404, detail="Agent不存在")
+        
+        # 获取或创建与该Agent的唯一会话
+        chat = await chat_service.get_or_create_chat_by_agent(
+            db=db,
+            user_id=current_user.id,
+            agent_id=agent_id
+        )
+        
+        # 获取或创建聊天设置
+        settings = await chat_service.get_or_create_chat_settings(
+            db=db,
+            chat_id=chat.id,
+            user_id=current_user.id,
+            agent_id=agent_id
+        )
+        
+        logger.info(f"成功获取Agent聊天设置 - Agent ID: {agent_id}, Settings ID: {settings.id}")
+        
+        return settings
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"获取Agent聊天设置失败 - Agent ID: {agent_id}, Error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"获取聊天设置失败: {str(e)}")
+
+
 async def generate_chat_stream(
     agent,
     messages: dict,

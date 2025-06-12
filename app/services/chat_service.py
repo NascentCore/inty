@@ -448,4 +448,139 @@ async def get_or_create_chat_by_agent(
     except Exception as e:
         await db.rollback()
         logger.error(f"未知错误 - 获取或创建聊天: {str(e)}")
+        raise HTTPException(status_code=500, detail="服务器内部错误")
+
+async def get_or_create_chat_settings(
+    db: AsyncSession, chat_id: str, user_id: str, agent_id: str
+) -> models.ChatSettings:
+    """
+    获取或创建聊天设置
+    """
+    try:
+        # 先查找是否已存在设置，预加载agent关系
+        result = await db.execute(
+            select(models.ChatSettings)
+            .options(selectinload(models.ChatSettings.agent))
+            .where(models.ChatSettings.chat_id == chat_id)
+        )
+        settings = result.scalar_one_or_none()
+        
+        if settings:
+            return settings
+        
+        # 如果不存在，创建新的设置
+        settings_id = str(uuid.uuid4())
+        db_settings = models.ChatSettings(
+            id=settings_id,
+            user_id=user_id,
+            agent_id=agent_id,
+            chat_id=chat_id,
+            language="zh",  # 默认中文
+            voice_enabled=True,
+            keep_talking=True
+        )
+        
+        db.add(db_settings)
+        await db.commit()
+        await db.refresh(db_settings)
+        
+        # 重新查询以加载关系数据
+        result = await db.execute(
+            select(models.ChatSettings)
+            .options(selectinload(models.ChatSettings.agent))
+            .where(models.ChatSettings.id == db_settings.id)
+        )
+        settings_with_agent = result.scalar_one()
+        
+        return settings_with_agent
+        
+    except SQLAlchemyError as e:
+        await db.rollback()
+        logger.error(f"数据库错误 - 获取或创建聊天设置 {chat_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="数据库操作失败")
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"未知错误 - 获取或创建聊天设置 {chat_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="服务器内部错误")
+
+
+async def update_chat_settings(
+    db: AsyncSession,
+    chat_id: str,
+    settings_update: schemas.ChatSettingsUpdate
+) -> models.ChatSettings:
+    """
+    根据chat_id更新聊天设置
+    """
+    try:
+        # 查找现有设置，预加载agent关系
+        result = await db.execute(
+            select(models.ChatSettings)
+            .options(selectinload(models.ChatSettings.agent))
+            .where(models.ChatSettings.chat_id == chat_id)
+        )
+        settings = result.scalar_one_or_none()
+        
+        if not settings:
+            raise HTTPException(status_code=404, detail="聊天设置不存在")
+        
+        # 更新设置
+        update_data = settings_update.dict(exclude_unset=True)
+        if not update_data:
+            raise HTTPException(status_code=400, detail="没有提供要更新的数据")
+            
+        for field, value in update_data.items():
+            setattr(settings, field, value)
+            
+        await db.commit()
+        await db.refresh(settings)
+        
+        # 重新查询以确保关系数据已加载
+        result = await db.execute(
+            select(models.ChatSettings)
+            .options(selectinload(models.ChatSettings.agent))
+            .where(models.ChatSettings.id == settings.id)
+        )
+        updated_settings = result.scalar_one()
+        
+        return updated_settings
+        
+    except HTTPException:
+        raise
+    except SQLAlchemyError as e:
+        await db.rollback()
+        logger.error(f"数据库错误 - 更新聊天设置 {chat_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="数据库操作失败")
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"未知错误 - 更新聊天设置 {chat_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="服务器内部错误")
+
+
+async def get_chat_by_agent_and_user(
+    db: AsyncSession, agent_id: str, user_id: str
+) -> Optional[models.Chat]:
+    """
+    根据agent_id和user_id获取唯一的聊天会话
+    """
+    try:
+        result = await db.execute(
+            select(models.Chat)
+            .options(
+                selectinload(models.Chat.settings),
+                selectinload(models.Chat.agent)
+            )
+            .where(
+                models.Chat.agent_id == agent_id,
+                models.Chat.user_id == user_id,
+                models.Chat.is_active == True
+            )
+        )
+        return result.scalar_one_or_none()
+        
+    except SQLAlchemyError as e:
+        logger.error(f"数据库查询错误 - 获取聊天会话 agent_id={agent_id}, user_id={user_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="数据库查询失败")
+    except Exception as e:
+        logger.error(f"未知错误 - 获取聊天会话 agent_id={agent_id}, user_id={user_id}: {str(e)}")
         raise HTTPException(status_code=500, detail="服务器内部错误") 
