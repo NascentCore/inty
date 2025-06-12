@@ -3,6 +3,7 @@ import uuid
 import time
 import asyncio
 from threading import Lock, RLock
+from concurrent.futures import ThreadPoolExecutor
 from langgraph.prebuilt import create_react_agent
 from langchain_openai import ChatOpenAI
 from langmem import create_manage_memory_tool,create_search_memory_tool
@@ -13,11 +14,13 @@ from langchain_postgres import PostgresChatMessageHistory
 from openai import OpenAI
 from app.core.config import settings
 from psycopg import Connection
+from psycopg_pool import ConnectionPool
 from langchain_core.messages import BaseMessage, HumanMessage, AIMessage
 from langchain_core.tools import Tool
 from langchain_google_community import GoogleSearchAPIWrapper
+import logging
 
-
+logger = logging.getLogger(__name__)
 
 # 初始化自定义的embedding服务
 client = OpenAI(
@@ -31,6 +34,23 @@ def embed_texts(texts: list[str]) -> list[list[float]]:
         input=texts,
     )
     return [e.embedding for e in response.data]
+
+# 全局连接池
+_connection_pool = None
+
+def get_connection_pool():
+    """获取数据库连接池"""
+    global _connection_pool
+    if _connection_pool is None:
+        _connection_pool = ConnectionPool(
+            settings.database.url,
+            min_size=settings.database.pool_size // 4,  # 最小连接数
+            max_size=settings.database.pool_size,       # 最大连接数
+            max_idle=300,  # 连接最大空闲时间（秒）
+            max_lifetime=1800,  # 连接最大生命周期（秒）
+        )
+        logger.info(f"初始化数据库连接池: min_size={settings.database.pool_size // 4}, max_size={settings.database.pool_size}")
+    return _connection_pool
 
 # 初始化聊天历史表和记忆表
 conn = Connection.connect(
@@ -72,7 +92,13 @@ class Agent:
         self.model_config = model_config
         self.last_used = time.time()
         self.system_prompt = system_prompt
-        self._lock = RLock()  # 添加实例级别的锁
+        self._last_used_lock = RLock()  # 仅保护last_used更新
+        
+        # 线程池用于异步执行聊天任务
+        self._executor = ThreadPoolExecutor(
+            max_workers=min(32, (settings.database.pool_size or 20) // 2),
+            thread_name_prefix=f"agent-{agent_id}"
+        )
 
         # 使用配置中的模型设置，如果没有则使用默认设置
         model_name = model_config.get('model', settings.agent.model)
@@ -101,16 +127,18 @@ class Agent:
             checkpointer=self.checkpointer  # 使用实例级别的checkpointer
         )
 
-    def chat(self, user_id: str, session_id: str, messages: dict[str, Any]):
-        with self._lock:  # 保护并发访问
+    def _update_last_used(self):
+        """线程安全地更新最后使用时间"""
+        with self._last_used_lock:
             self.last_used = time.time()
 
-            # 创建独立的数据库连接
-            conn_local = Connection.connect(
-                settings.database.url,
-                autocommit=True
-            )
-            
+    def _chat_sync(self, user_id: str, session_id: str, messages: dict[str, Any]) -> str:
+        """同步聊天方法，在线程池中执行"""
+        self._update_last_used()
+        
+        # 从连接池获取连接
+        pool = get_connection_pool()
+        with pool.connection() as conn_local:
             try:
                 history = PostgresChatMessageHistory(
                     table_name,
@@ -130,34 +158,70 @@ class Agent:
 
                 history.add_messages([AIMessage(content=response)])
                 return response
-            finally:
-                conn_local.close()  # 确保连接关闭
+            except Exception as e:
+                logger.error(f"聊天处理失败 - Agent: {self.agent_id}, Session: {session_id}, Error: {str(e)}")
+                raise
 
-    def chat_stream(self, user_id: str, session_id: str, messages: dict[str, Any]):
-        with self._lock:  # 保护并发访问
-            self.last_used = time.time()
-            
-            # 创建独立的数据库连接
-            conn_local = Connection.connect(
-                settings.database.url,
-                autocommit=True
+    async def chat(self, user_id: str, session_id: str, messages: dict[str, Any]) -> str:
+        """异步聊天方法"""
+        loop = asyncio.get_event_loop()
+        try:
+            # 在线程池中执行同步聊天逻辑
+            result = await loop.run_in_executor(
+                self._executor,
+                self._chat_sync,
+                user_id,
+                session_id,
+                messages
             )
-            
-            try:
-                history = PostgresChatMessageHistory(
-                    table_name,
-                    session_id,
-                    sync_connection=conn_local
-                )
+            return result
+        except Exception as e:
+            logger.error(f"异步聊天失败 - Agent: {self.agent_id}, Error: {str(e)}")
+            raise
 
-                # 使用更精确的thread_id，包含agent_id避免混淆
-                thread_id = f"{user_id}_{self.agent_id}"
-                config = {'configurable':{'user_id':user_id,'thread_id':thread_id}}
+    async def chat_stream(self, user_id: str, session_id: str, messages: dict[str, Any]):
+        """异步流式聊天方法"""
+        self._update_last_used()
+        
+        def _stream_generator():
+            # 从连接池获取连接
+            pool = get_connection_pool()
+            with pool.connection() as conn_local:
+                try:
+                    history = PostgresChatMessageHistory(
+                        table_name,
+                        session_id,
+                        sync_connection=conn_local
+                    )
 
-                for message_chunk,metadata in self.agent.stream(messages,config,stream_mode="messages"):
-                    yield message_chunk, metadata
-            finally:
-                conn_local.close()  # 确保连接关闭
+                    # 使用更精确的thread_id，包含agent_id避免混淆
+                    thread_id = f"{user_id}_{self.agent_id}"
+                    config = {'configurable':{'user_id':user_id,'thread_id':thread_id}}
+
+                    for message_chunk, metadata in self.agent.stream(messages, config, stream_mode="messages"):
+                        yield message_chunk, metadata
+                except Exception as e:
+                    logger.error(f"流式聊天处理失败 - Agent: {self.agent_id}, Session: {session_id}, Error: {str(e)}")
+                    raise
+
+        # 在线程池中执行生成器
+        loop = asyncio.get_event_loop()
+        try:
+            # 使用异步迭代器包装同步生成器
+            generator = await loop.run_in_executor(
+                self._executor,
+                lambda: list(_stream_generator())
+            )
+            for item in generator:
+                yield item
+        except Exception as e:
+            logger.error(f"异步流式聊天失败 - Agent: {self.agent_id}, Error: {str(e)}")
+            raise
+
+    def cleanup(self):
+        """清理资源"""
+        if hasattr(self, '_executor'):
+            self._executor.shutdown(wait=False)
 
 
 class AgentManager:
@@ -174,9 +238,22 @@ class AgentManager:
         self.max_agents = max_agents
         self.cleanup_interval = cleanup_interval
         self.max_idle_time = max_idle_time
-        self.lock = Lock()
+        
+        # 使用读写锁提升并发性能
+        self._read_lock = Lock()
+        self._write_lock = Lock()
+        self._agent_locks: Dict[str, Lock] = {}  # 每个Agent一个锁
+        self._locks_lock = Lock()  # 保护_agent_locks字典
+        
         self._cleanup_task = None
         self._cleanup_started = False
+
+    def _get_agent_lock(self, agent_id: str) -> Lock:
+        """获取或创建Agent专用锁"""
+        with self._locks_lock:
+            if agent_id not in self._agent_locks:
+                self._agent_locks[agent_id] = Lock()
+            return self._agent_locks[agent_id]
 
     def _start_cleanup_task(self):
         """启动清理任务（仅在有事件循环时）"""
@@ -191,27 +268,45 @@ class AgentManager:
             
             self._cleanup_task = asyncio.create_task(cleanup_loop())
             self._cleanup_started = True
-            print("Agent清理任务已启动")
+            logger.info("Agent清理任务已启动")
         except RuntimeError:
             # 没有运行的事件循环，延迟启动
-            print("暂时无法启动清理任务，将在首次使用时启动")
+            logger.info("暂时无法启动清理任务，将在首次使用时启动")
 
     def _cleanup_idle_agents(self):
         """清理长时间空闲的Agent实例"""
         current_time = time.time()
-        with self.lock:
-            idle_agents = []
+        idle_agents = []
+        
+        # 使用读锁检查空闲Agent
+        with self._read_lock:
             for agent_id, agent in self.agents.items():
-                if current_time - agent.last_used > self.max_idle_time:
-                    idle_agents.append(agent_id)
-            
-            for agent_id in idle_agents:
-                del self.agents[agent_id]
-                print(f"清理空闲Agent: {agent_id}")
+                with agent._last_used_lock:
+                    if current_time - agent.last_used > self.max_idle_time:
+                        idle_agents.append(agent_id)
+        
+        # 如果有空闲Agent，使用写锁删除
+        if idle_agents:
+            with self._write_lock:
+                for agent_id in idle_agents:
+                    if agent_id in self.agents:
+                        agent = self.agents[agent_id]
+                        # 清理Agent资源
+                        try:
+                            agent.cleanup()
+                        except Exception as e:
+                            logger.error(f"清理Agent资源失败 {agent_id}: {str(e)}")
+                        
+                        del self.agents[agent_id]
+                        logger.info(f"清理空闲Agent: {agent_id}")
+                        
+                        # 清理对应的锁
+                        with self._locks_lock:
+                            self._agent_locks.pop(agent_id, None)
 
     async def get_agent(self, agent_data: dict) -> Agent:
         """
-        获取或创建Agent实例
+        获取或创建Agent实例（优化版本）
         
         Args:
             agent_data: Agent配置数据，包含id, name, prompt, settings等
@@ -221,67 +316,83 @@ class AgentManager:
             self._start_cleanup_task()
         
         agent_id = agent_data['id']
-        print(f"请求获取Agent实例 - Agent ID: {agent_id}")
+        logger.debug(f"请求获取Agent实例 - Agent ID: {agent_id}")
         
-        with self.lock:
-            # 如果Agent已存在，直接返回
+        # 首先尝试读取现有Agent（使用读锁）
+        with self._read_lock:
             if agent_id in self.agents:
                 existing_agent = self.agents[agent_id]
-                print(f"返回已存在的Agent实例 - Agent ID: {agent_id}, 实例ID: {existing_agent.agent_id}")
                 
                 # 验证实例中的agent_id是否与请求的一致
-                if existing_agent.agent_id != agent_id:
-                    print(f"警告：Agent实例ID不匹配！请求: {agent_id}, 实例: {existing_agent.agent_id}")
-                    # 删除不匹配的实例，创建新的
-                    del self.agents[agent_id]
-                    # 继续到创建新实例的逻辑
-                else:
+                if existing_agent.agent_id == agent_id:
                     # 更新最后使用时间（线程安全）
-                    with existing_agent._lock:
-                        existing_agent.last_used = time.time()
+                    existing_agent._update_last_used()
+                    logger.debug(f"返回已存在的Agent实例 - Agent ID: {agent_id}")
                     return existing_agent
-            
-            # 如果达到最大数量，清理最久未使用的Agent
-            if len(self.agents) >= self.max_agents:
-                oldest_agent_id = min(
-                    self.agents.keys(),
-                    key=lambda x: self.agents[x].last_used
-                )
-                del self.agents[oldest_agent_id]
-                print(f"达到最大Agent数量，清理最旧的Agent: {oldest_agent_id}")
-            
-            # 创建新的Agent实例
-            model_config = {}
-            if agent_data.get('settings'):
-                model_config = agent_data['settings'].get('model_config', {})
-            
-            system_prompt = agent_data.get('prompt', "你是一个聊天助手，请用中文回答用户的问题。")
-            
-            print(f"创建新的Agent实例 - Agent ID: {agent_id}, Name: {agent_data['name']}")
-            
-            try:
-                agent = Agent(
-                    agent_id=agent_id,  # 确保使用正确的agent_id
-                    name=agent_data['name'],
-                    model_config=model_config,
-                    system_prompt=system_prompt
-                )
-                
-                # 验证创建的Agent实例的agent_id
-                if agent.agent_id != agent_id:
-                    print(f"错误：创建的Agent实例ID不匹配！期望: {agent_id}, 实际: {agent.agent_id}")
-                    raise ValueError(f"Agent实例创建失败: ID不匹配")
-                
-                self.agents[agent_id] = agent
-                print(f"成功创建并缓存Agent实例 - Agent ID: {agent_id}, 实例ID: {agent.agent_id}")
-                return agent
-                
-            except Exception as e:
-                print(f"创建Agent实例失败 - Agent ID: {agent_id}, 错误: {str(e)}")
-                # 确保失败的实例不会留在缓存中
+        
+        # 需要创建或替换Agent实例，使用Agent专用锁
+        agent_lock = self._get_agent_lock(agent_id)
+        with agent_lock:
+            # 双重检查，防止其他线程已经创建
+            with self._read_lock:
                 if agent_id in self.agents:
-                    del self.agents[agent_id]
-                raise
+                    existing_agent = self.agents[agent_id]
+                    if existing_agent.agent_id == agent_id:
+                        existing_agent._update_last_used()
+                        return existing_agent
+            
+            # 使用写锁进行创建或替换
+            with self._write_lock:
+                # 如果达到最大数量，清理最久未使用的Agent
+                if len(self.agents) >= self.max_agents:
+                    oldest_agent_id = min(
+                        self.agents.keys(),
+                        key=lambda x: self.agents[x].last_used
+                    )
+                    old_agent = self.agents[oldest_agent_id]
+                    try:
+                        old_agent.cleanup()
+                    except Exception as e:
+                        logger.error(f"清理旧Agent失败 {oldest_agent_id}: {str(e)}")
+                    
+                    del self.agents[oldest_agent_id]
+                    logger.info(f"达到最大Agent数量，清理最旧的Agent: {oldest_agent_id}")
+                    
+                    # 清理对应的锁
+                    with self._locks_lock:
+                        self._agent_locks.pop(oldest_agent_id, None)
+                
+                # 创建新的Agent实例
+                model_config = {}
+                if agent_data.get('settings'):
+                    model_config = agent_data['settings'].get('model_config', {})
+                
+                system_prompt = agent_data.get('prompt', "你是一个聊天助手，请用中文回答用户的问题。")
+                
+                logger.info(f"创建新的Agent实例 - Agent ID: {agent_id}, Name: {agent_data['name']}")
+                
+                try:
+                    agent = Agent(
+                        agent_id=agent_id,
+                        name=agent_data['name'],
+                        model_config=model_config,
+                        system_prompt=system_prompt
+                    )
+                    
+                    # 验证创建的Agent实例的agent_id
+                    if agent.agent_id != agent_id:
+                        logger.error(f"错误：创建的Agent实例ID不匹配！期望: {agent_id}, 实际: {agent.agent_id}")
+                        raise ValueError(f"Agent实例创建失败: ID不匹配")
+                    
+                    self.agents[agent_id] = agent
+                    logger.info(f"成功创建并缓存Agent实例 - Agent ID: {agent_id}")
+                    return agent
+                    
+                except Exception as e:
+                    logger.error(f"创建Agent实例失败 - Agent ID: {agent_id}, 错误: {str(e)}")
+                    # 确保失败的实例不会留在缓存中
+                    self.agents.pop(agent_id, None)
+                    raise
 
     async def initialize_popular_agents(self, db_session):
         """
@@ -309,12 +420,97 @@ class AgentManager:
 
     def get_agent_count(self) -> int:
         """获取当前Agent实例数量"""
-        return len(self.agents)
+        with self._read_lock:
+            return len(self.agents)
+
+    def get_agent_stats(self) -> Dict[str, Any]:
+        """获取Agent管理器详细统计信息"""
+        current_time = time.time()
+        stats = {
+            "total_agents": 0,
+            "active_agents": 0,
+            "idle_agents": 0,
+            "agents_info": []
+        }
+        
+        with self._read_lock:
+            stats["total_agents"] = len(self.agents)
+            
+            for agent_id, agent in self.agents.items():
+                with agent._last_used_lock:
+                    idle_time = current_time - agent.last_used
+                    is_idle = idle_time > self.max_idle_time
+                    
+                    if is_idle:
+                        stats["idle_agents"] += 1
+                    else:
+                        stats["active_agents"] += 1
+                    
+                    stats["agents_info"].append({
+                        "agent_id": agent_id,
+                        "name": agent.name,
+                        "last_used": agent.last_used,
+                        "idle_time": idle_time,
+                        "is_idle": is_idle
+                    })
+        
+        return stats
+
+    def force_cleanup_agent(self, agent_id: str) -> bool:
+        """强制清理指定Agent"""
+        agent_lock = self._get_agent_lock(agent_id)
+        with agent_lock:
+            with self._write_lock:
+                if agent_id in self.agents:
+                    agent = self.agents[agent_id]
+                    try:
+                        agent.cleanup()
+                    except Exception as e:
+                        logger.error(f"强制清理Agent资源失败 {agent_id}: {str(e)}")
+                    
+                    del self.agents[agent_id]
+                    logger.info(f"强制清理Agent: {agent_id}")
+                    
+                    # 清理对应的锁
+                    with self._locks_lock:
+                        self._agent_locks.pop(agent_id, None)
+                    
+                    return True
+        return False
 
     def stop(self):
-        """停止Agent管理器"""
+        """停止Agent管理器并清理所有资源"""
+        logger.info("正在停止Agent管理器...")
+        
+        # 停止清理任务
         if self._cleanup_task:
             self._cleanup_task.cancel()
+            
+        # 清理所有Agent实例
+        with self._write_lock:
+            for agent_id, agent in list(self.agents.items()):
+                try:
+                    agent.cleanup()
+                except Exception as e:
+                    logger.error(f"清理Agent资源失败 {agent_id}: {str(e)}")
+            
+            self.agents.clear()
+            
+        # 清理锁
+        with self._locks_lock:
+            self._agent_locks.clear()
+            
+        # 关闭连接池
+        global _connection_pool
+        if _connection_pool:
+            try:
+                _connection_pool.close()
+                _connection_pool = None
+                logger.info("数据库连接池已关闭")
+            except Exception as e:
+                logger.error(f"关闭连接池失败: {str(e)}")
+                
+        logger.info("Agent管理器已停止")
 
 
 # 创建全局Agent管理器实例

@@ -382,8 +382,8 @@ async def agent_chat_completions(
                 }
             )
         else:
-            # 非流式聊天
-            response_content = agent.chat(
+            # 非流式聊天（异步）
+            response_content = await agent.chat(
                 user_id=current_user.id,
                 session_id=session_id,
                 messages=messages
@@ -424,11 +424,11 @@ async def generate_chat_stream(
     model_name: str
 ):
     """
-    生成流式聊天响应
+    生成流式聊天响应（异步版本）
     """
     try:
-        # 使用Agent的chat_stream方法
-        for message_chunk, metadata in agent.chat_stream(
+        # 使用Agent的异步chat_stream方法
+        async for message_chunk, metadata in agent.chat_stream(
             user_id=user_id,
             session_id=session_id,
             messages=messages
