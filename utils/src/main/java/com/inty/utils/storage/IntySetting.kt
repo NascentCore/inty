@@ -60,7 +60,7 @@ object IntySetting {
     }
 
     fun isLogin(): Boolean {
-        return getCurUserID().isNotEmpty()
+        return getCurUserID().isNotEmpty() && getCurToken().isNotEmpty()
     }
 
     fun login(isGuest: Boolean, uid: String, token: String) {
@@ -99,10 +99,10 @@ object IntySetting {
     }
 
     fun logout() {
+        setToken("")
         if (isGuestUser()) {
             return
         }
-        setToken("")
         changeUser(geGuestUserID())
     }
 

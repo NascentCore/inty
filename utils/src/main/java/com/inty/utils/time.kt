@@ -23,3 +23,12 @@ fun convertUtcToLocal(utcString: String): String {
         localDateTime.format(DateTimeFormatter.ofPattern("MM/dd"))
     }
 }
+
+fun convertUtcToLocalFull(utcString: String): String {
+    val instant = Instant.parse(utcString)
+
+    val localDateTime = instant.atZone(ZoneId.systemDefault())
+
+
+    return localDateTime.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
+}

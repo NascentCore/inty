@@ -19,18 +19,18 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.ai.inty.Constant
 import com.ai.inty.R
 import com.ai.inty.base.IntyCircleImage
 import com.ai.inty.base.IntyImage
@@ -38,10 +38,9 @@ import com.ai.inty.base.IntySmallTextField
 import com.ai.inty.base.noRippleClickable
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.beans.MsgInfo
-import com.ai.inty.home.BottomBar
 import com.ai.inty.viewmodels.ChatViewModel
 import com.inty.utils.log.EasyLog
-import okhttp3.internal.wait
+import com.therouter.TheRouter
 
 @Composable
 fun ChatPage(
@@ -250,6 +249,7 @@ fun TopBar(
     modifier: Modifier,
     agentInfo: AgentInfo,
 ) {
+    val context = LocalContext.current
     Row(
         modifier = modifier,
         verticalAlignment = Alignment.CenterVertically
@@ -259,7 +259,13 @@ fun TopBar(
             verticalAlignment = Alignment.CenterVertically
         ) {
             IntyCircleImage(
-                modifier = Modifier.padding(2.dp).size(36.dp),
+                modifier = Modifier.padding(2.dp).size(36.dp)
+                    .noRippleClickable {
+                        TheRouter.build(Constant.ROUTE_AGENT_INFO)
+                            .withObject("agent", agentInfo)
+                            .navigation(context)
+                    }
+                ,
                 url = agentInfo.avatar,
                 placeholderResID = R.drawable.ic_launcher_foreground
             )

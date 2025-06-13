@@ -13,4 +13,13 @@
     <string name="logout">Log out</string>
     <string name="crop_image">Face Recognition</string>
     <string name="sys_notify_title">System Notification</string>
+    <string name="creator">Creator:</string>
+    <string name="info">Info:</string>
+    <string name="introduction">Introduction</string>
+    <string name="opening">Opening</string>
+    <string name="creation_info">Creation Info</string>
+    <string name="inspiration">Inspiration</string>
+    <string name="create_time">Create time %s</string>
+
+
 </resources>

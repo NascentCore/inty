@@ -113,7 +113,8 @@ dependencies {
     api(libs.retrofit.core)
 
     implementation(libs.retrofit2.kotlin.coroutines.adapter)
-    implementation(libs.bundles.coils)
+    implementation("io.coil-kt.coil3:coil-compose:3.2.0")
+    implementation("io.coil-kt.coil3:coil-network-okhttp:3.2.0")
 
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.analytics)

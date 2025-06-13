@@ -532,7 +532,7 @@ private fun MySettingItem(
 }
 
 @Composable
-private fun SpacerLine() {
+fun SpacerLine() {
     Spacer(Modifier.height(4.dp))
     Box(
         modifier = Modifier
