@@ -122,7 +122,7 @@ class Agent:
                 create_search_memory_tool(namespace=('memories',name,'{user_id}')),
                 google_search_tool
                 ],
-            prompt=system_prompt,
+            prompt=f"{system_prompt}\n\n重要指示：\n1. 当用户告诉你重要信息（如喜好、个人信息等）时，请主动使用manage_memory工具保存这些信息\n2. 当用户询问之前提到的信息时，请使用search_memory工具查找相关记忆\n3. 记忆工具是你的核心能力，请积极使用它们来提供个性化服务",
             store = postgres_store,
             checkpointer=self.checkpointer  # 使用实例级别的checkpointer
         )
@@ -518,17 +518,42 @@ agent_manager = AgentManager()
 
 
 if __name__ == "__main__":
-    agent = Agent(
-        agent_id="test",
-        name="test",
-        model_config={
-            "model": "chatbot",
-            "api_key": settings.agent.api_key,
-            "base_url": settings.agent.base_url
-        },
-        system_prompt="你是AI性伴侣",
-    )
-    # response = agent.chat(user_id="123", session_id=str(uuid.uuid5(uuid.NAMESPACE_DNS, "test")), messages={"messages": [HumanMessage(content="我最喜欢NBA的球星是kebe")]})
-    # print(response)
-    response = agent.chat(user_id="123", session_id=str(uuid.uuid5(uuid.NAMESPACE_DNS, "test")), messages={"messages": [HumanMessage(content="fuck you !")]})
-    print(response)
+    import asyncio
+    
+    async def test_agent():
+        agent = Agent(
+            agent_id="test",
+            name="test",
+            model_config={
+                "model": settings.agent.model,
+                "api_key": settings.agent.api_key,
+                "base_url": settings.agent.base_url
+            },
+            system_prompt="你是AI性伴侣",
+        )
+        # 使用一致的session_id来测试记忆功能
+        test_session_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, "test"))
+        test_user_id = "123"
+        
+        # print("=== 测试记忆功能 ===")
+        # print("第一次对话：告诉Agent信息")
+        # response1 = await agent.chat(
+        #     user_id=test_user_id, 
+        #     session_id=test_session_id, 
+        #     messages={"messages": [HumanMessage(content="我最喜欢NBA的球星是科比，他是我的偶像")]}
+        # )
+        # print("用户:", "我最喜欢NBA的球星是科比，他是我的偶像")
+        # print("Agent:", response1)
+        # print("\n" + "="*50 + "\n")
+        
+        print("第二次对话：测试记忆是否有效")
+        response2 = await agent.chat(
+            user_id=test_user_id, 
+            session_id=test_session_id, 
+            messages={"messages": [HumanMessage(content="还记得我最喜欢的NBA球星吗？")]}
+        )
+        print("用户:", "还记得我最喜欢的NBA球星吗？")
+        print("Agent:", response2)
+    
+    # 运行异步测试
+    asyncio.run(test_agent())
