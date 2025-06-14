@@ -1,4 +1,4 @@
-from atproto import Client, models
+from atproto import Client
 import os
 from dotenv import load_dotenv
 

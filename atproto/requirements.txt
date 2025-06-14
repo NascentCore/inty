@@ -1,3 +1,2 @@
 python-dotenv==1.0.1
-atproto==0.0.30
-pydantic<=2.0.0
+atproto==0.0.33
