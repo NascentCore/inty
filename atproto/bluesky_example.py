@@ -11,8 +11,8 @@ def bluesky_example():
     
     # Login to Bluesky
     client.login(
-        login=os.getenv('BLUESKY_USERNAME'),
-        password=os.getenv('BLUESKY_PASSWORD')
+        os.getenv('BLUESKY_USERNAME'),  # Your handle or email
+        os.getenv('BLUESKY_PASSWORD')   # Your app password
     )
     
     # Create a post
@@ -29,11 +29,11 @@ def bluesky_example():
         print(f"- {post.author.handle}: {post.record.text}")
     
     # Get your profile
-    profile = client.get_profile({'actor': client.me.did})
+    profile = client.get_profile(client.me.did)  # Pass the DID string directly
     print(f"\nYour profile:")
     print(f"Handle: {profile.handle}")
-    print(f"Display Name: {profile.displayName}")
+    print(f"Display Name: {profile.display_name}")
     print(f"Description: {profile.description}")
 
 if __name__ == "__main__":
-    bluesky_example() 
+    bluesky_example()
