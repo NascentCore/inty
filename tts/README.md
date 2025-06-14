@@ -10,3 +10,5 @@ python -m venv .venv
 pip install -r requirements.txt
 python tts_example.py
 ```
+
+The delay is about 1 second. Not too bad.
