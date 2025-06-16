@@ -71,6 +71,8 @@ fun HomeScreen(
                 onSelectTab = {
                     if (it == HomeTabIndex.Add.ordinal) {
                         mainViewModel.showSnackbar("ADD")
+                        TheRouter.build(Constant.ROUTE_REG_INFO)
+                            .navigation(context)
                         return@BottomBar
                     }
                     mainViewModel.selectTab(it)
