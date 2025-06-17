@@ -88,7 +88,7 @@ class MainViewModel: BaseActivityViewModel() {
     }
 
     fun createGuest(onSuccess: () -> Unit) {
-        EasyLog.log("getAgents")
+        EasyLog.log("createGuest")
         viewModelScope.launch(Dispatchers.IO) {
             val result = userApi.createGuest(CreateGuestReq(device_id = AppEnv.DeviceID, AppEnv.locale.language))
             EasyLog.log("create guest = $result", EasyLog.INFO)

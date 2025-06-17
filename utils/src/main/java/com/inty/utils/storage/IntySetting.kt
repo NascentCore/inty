@@ -40,7 +40,7 @@ object IntySetting {
         curUserSetting = MMKV.mmkvWithID("user_$curUid", MMKV.MULTI_PROCESS_MODE)
         allUserSetting.putString("cur_uid", uid)
 
-        last.close()
+//        last.close()
     }
 
     fun setToken(token: String) {
