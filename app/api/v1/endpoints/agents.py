@@ -3,6 +3,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query, File, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 from loguru import logger
 import traceback
+import uuid
+import vertexai
 
 from app import schemas
 from app.api import deps
@@ -10,6 +12,7 @@ from app.services import agent_service
 from app.utils.gcs import upload_to_gcs, delete_from_gcs
 from app.core.config import settings
 from app.schemas.response import APIResponse
+from app.core.agent.avater import generate_background_image_to_gcs
 
 router = APIRouter()
 
@@ -99,6 +102,37 @@ async def delete_agent(
         raise HTTPException(status_code=404, detail="Agent not found")
     agent = await agent_service.delete_agent(db, db_agent=agent)
     return agent
+
+@router.post("/generate_background", response_model=APIResponse[dict])
+async def generate_background(
+    prompt: str,
+    db: AsyncSession = Depends(deps.get_async_db),
+    current_user: schemas.User = Depends(deps.get_current_active_user)
+):
+    """
+    根据prompt生成背景图片，直接保存到GCS，返回图片URL
+    """
+    try:
+        # 构造GCS路径
+        gcs_path = f"backgrounds/tmp/{current_user.id}/{uuid.uuid4().hex}.png"
+        gcs_uri = f"gs://{settings.gcs.bucket}/{gcs_path}"
+        
+        # 生成图片并获取实际的GCS路径
+        actual_gcs_uri = generate_background_image_to_gcs(prompt, gcs_uri, aspect_ratio="16:9")
+        
+        # 将gs://bucket/path格式转换为https://storage.googleapis.com/bucket/path格式
+        if actual_gcs_uri.startswith("gs://"):
+            # 去掉gs://前缀，构建HTTPS URL
+            gcs_path_actual = actual_gcs_uri[5:]  # 去掉"gs://"
+            url = f"https://storage.googleapis.com/{gcs_path_actual}"
+        else:
+            # 备用方案：使用原始路径
+            url = f"https://storage.googleapis.com/{settings.gcs.bucket}/{gcs_path}"
+        
+        return APIResponse.success(data={"url": url, "format": "png"})
+    except Exception as e:
+        logger.error(f"背景图生成失败: {str(e)}")
+        return APIResponse.error(message="背景图生成失败")
 
 @router.post("/{agent_id}/avatar", response_model=APIResponse[schemas.Agent])
 async def upload_agent_avatar(

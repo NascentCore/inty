@@ -168,9 +168,18 @@ async def create_agent(db: AsyncSession, agent_in: schemas.AgentCreate, user_id:
         # 获取Agent数据
         agent_data = agent_in.dict()
         
+        # 处理图片URL：验证、复制临时文件到永久路径、删除临时文件
+        try:
+            processed_agent_data = process_agent_image_urls(agent_data, agent_id, user_id)
+            logger.info(f"成功处理Agent图片URL - Agent ID: {agent_id}")
+        except Exception as e:
+            logger.error(f"处理Agent图片URL失败 - Agent ID: {agent_id}, Error: {str(e)}")
+            # 图片处理失败不应该阻止Agent创建，使用原始数据
+            processed_agent_data = agent_data
+        
         db_agent = models.Agent(
             id=agent_id,
-            **agent_data,
+            **processed_agent_data,
             creator_id=user_id
         )
         
@@ -309,4 +318,130 @@ def get_path_from_gcs_url(url: str) -> str:
     bucket = settings.gcs.bucket
     if path.startswith(bucket + "/"):
         path = path[len(bucket) + 1 :]
-    return path 
+    return path
+
+def process_agent_image_urls(agent_data: dict, agent_id: str, user_id: str) -> dict:
+    """
+    处理Agent创建时的图片URL，将临时路径的图片复制到永久路径
+    
+    Args:
+        agent_data: Agent数据字典
+        agent_id: Agent ID
+        user_id: 用户ID
+    
+    Returns:
+        处理后的agent_data，包含更新的图片URL
+    """
+    from app.utils.gcs import is_valid_gcs_url, is_temp_gcs_path, copy_gcs_file, delete_from_gcs
+    
+    processed_data = agent_data.copy()
+    temp_files_to_delete = []
+    
+    # 处理头像
+    if agent_data.get('avatar'):
+        avatar_url = agent_data['avatar']
+        if is_valid_gcs_url(avatar_url):
+            if is_temp_gcs_path(avatar_url, user_id):
+                try:
+                    # 生成永久路径
+                    # 从临时URL中提取文件扩展名
+                    temp_path = get_path_from_gcs_url(avatar_url)
+                    file_ext = temp_path.split('.')[-1] if '.' in temp_path else 'png'
+                    permanent_path = generate_agent_avatar_path(agent_id, f"avatar.{file_ext}")
+                    
+                    # 复制到永久路径
+                    new_avatar_url = copy_gcs_file(avatar_url, permanent_path, settings.gcs.bucket)
+                    processed_data['avatar'] = new_avatar_url
+                    
+                    # 标记临时文件待删除
+                    temp_files_to_delete.append(avatar_url)
+                    
+                    logger.info(f"复制头像从临时路径到永久路径: {avatar_url} -> {new_avatar_url}")
+                except Exception as e:
+                    logger.error(f"复制头像失败: {str(e)}")
+                    # 如果复制失败，保持原URL
+        else:
+            logger.warning(f"无效的头像URL: {avatar_url}")
+            processed_data['avatar'] = None
+    
+    # 处理背景图
+    if agent_data.get('background'):
+        background_url = agent_data['background']
+        if is_valid_gcs_url(background_url):
+            if is_temp_gcs_path(background_url, user_id):
+                try:
+                    # 生成永久路径
+                    temp_path = get_path_from_gcs_url(background_url)
+                    file_ext = temp_path.split('.')[-1] if '.' in temp_path else 'png'
+                    permanent_path = generate_agent_background_path(agent_id, f"background.{file_ext}")
+                    
+                    # 复制到永久路径
+                    new_background_url = copy_gcs_file(background_url, permanent_path, settings.gcs.bucket)
+                    processed_data['background'] = new_background_url
+                    
+                    # 标记临时文件待删除
+                    temp_files_to_delete.append(background_url)
+                    
+                    logger.info(f"复制背景图从临时路径到永久路径: {background_url} -> {new_background_url}")
+                except Exception as e:
+                    logger.error(f"复制背景图失败: {str(e)}")
+                    # 如果复制失败，保持原URL
+        else:
+            logger.warning(f"无效的背景图URL: {background_url}")
+            processed_data['background'] = None
+    
+    # 处理相册图片
+    if agent_data.get('photos') and isinstance(agent_data['photos'], list):
+        processed_photos = []
+        for i, photo_url in enumerate(agent_data['photos']):
+            if is_valid_gcs_url(photo_url):
+                if is_temp_gcs_path(photo_url, user_id):
+                    try:
+                        # 生成永久路径
+                        temp_path = get_path_from_gcs_url(photo_url)
+                        file_ext = temp_path.split('.')[-1] if '.' in temp_path else 'png'
+                        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+                        unique_id = uuid.uuid4().hex[:8]
+                        permanent_path = f"agents/{agent_id}/photos/photo-{i+1}-{timestamp}-{unique_id}.{file_ext}"
+                        
+                        # 复制到永久路径
+                        new_photo_url = copy_gcs_file(photo_url, permanent_path, settings.gcs.bucket)
+                        processed_photos.append(new_photo_url)
+                        
+                        # 标记临时文件待删除
+                        temp_files_to_delete.append(photo_url)
+                        
+                        logger.info(f"复制相册图片从临时路径到永久路径: {photo_url} -> {new_photo_url}")
+                    except Exception as e:
+                        logger.error(f"复制相册图片失败: {str(e)}")
+                        # 如果复制失败，跳过这张图片
+                        continue
+                else:
+                    # 非临时路径，直接保留
+                    processed_photos.append(photo_url)
+            else:
+                logger.warning(f"无效的相册图片URL: {photo_url}")
+                # 无效URL，跳过
+                continue
+        
+        processed_data['photos'] = processed_photos
+    
+    # 删除临时文件（在后台异步执行）
+    if temp_files_to_delete:
+        def cleanup_temp_files():
+            for temp_url in temp_files_to_delete:
+                try:
+                    temp_path = get_path_from_gcs_url(temp_url)
+                    if temp_path:
+                        delete_from_gcs(settings.gcs.bucket, temp_path)
+                        logger.info(f"删除临时文件: {temp_url}")
+                except Exception as e:
+                    logger.error(f"删除临时文件失败 {temp_url}: {str(e)}")
+        
+        # 在后台线程中执行清理
+        import threading
+        cleanup_thread = threading.Thread(target=cleanup_temp_files)
+        cleanup_thread.daemon = True
+        cleanup_thread.start()
+    
+    return processed_data 

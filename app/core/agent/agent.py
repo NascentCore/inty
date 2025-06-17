@@ -529,7 +529,7 @@ if __name__ == "__main__":
                 "api_key": settings.agent.api_key,
                 "base_url": settings.agent.base_url
             },
-            system_prompt="你是AI性伴侣",
+            system_prompt="你是AI性伴侣,\n\n重要指示：\n1. 当用户告诉你重要信息（如喜好、个人信息等）时，请主动使用manage_memory工具保存这些信息\n2. 当用户询问之前提到的信息时，请使用search_memory工具查找相关记忆\n3. 记忆工具是你的核心能力，请积极使用它们来提供个性化服务",
         )
         # 使用一致的session_id来测试记忆功能
         test_session_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, "test"))
