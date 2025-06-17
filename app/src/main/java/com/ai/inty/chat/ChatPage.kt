@@ -1,10 +1,13 @@
 package com.ai.inty.chat
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -17,30 +20,42 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ai.inty.Constant
+import com.ai.inty.MySettingItem
 import com.ai.inty.R
 import com.ai.inty.base.IntyCircleImage
 import com.ai.inty.base.IntyImage
 import com.ai.inty.base.IntySmallTextField
+import com.ai.inty.base.MyModalNavigationDrawer
 import com.ai.inty.base.noRippleClickable
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.beans.MsgInfo
 import com.ai.inty.viewmodels.ChatViewModel
 import com.inty.utils.log.EasyLog
+import com.inty.utils.storage.IntySetting
 import com.therouter.TheRouter
+import kotlinx.coroutines.launch
 
 @Composable
 fun ChatPage(
@@ -49,6 +64,9 @@ fun ChatPage(
 
 ) {
     val agentInfo = chatViewModel.agentInfo.collectAsState().value
+
+    var showKeepTalking by remember { mutableStateOf(IntySetting.isShowKeepTalking()) }
+    var isAutoPlayAudio by remember { mutableStateOf(IntySetting.isAutoPlayAudio()) }
 
     Box(
         modifier = modifier
@@ -87,6 +105,11 @@ fun ChatPage(
 
         }
 
+        val drawerState = remember {
+            mutableStateOf(DrawerValue.Closed)
+        }
+        val scope = rememberCoroutineScope()
+
         Scaffold(
             modifier = Modifier.fillMaxSize().background(Color.Transparent),
             containerColor = Color.Transparent,
@@ -94,6 +117,8 @@ fun ChatPage(
             },
 
         ) { innerPadding ->
+
+
             Column(
                 modifier = Modifier.padding(innerPadding)
             ) {
@@ -103,7 +128,16 @@ fun ChatPage(
                             .fillMaxWidth()
                             .height(36.dp)
                             .padding(horizontal = 18.dp, vertical = 0.dp),
-                        agentInfo = agentInfo
+                        agentInfo = agentInfo,
+                        onClickMore = {
+                            scope.launch {
+                                if (drawerState.value == DrawerValue.Closed) {
+                                    drawerState.value = DrawerValue.Open
+                                } else {
+                                    drawerState.value = DrawerValue.Closed
+                                }
+                            }
+                        }
                     )
                 }
 
@@ -176,6 +210,151 @@ fun ChatPage(
 
             }
         }
+
+        MyModalNavigationDrawer(
+            modifier = Modifier
+            ,
+            drawerState = drawerState,
+            drawerContent = {
+                Column(
+                    modifier = Modifier
+                        .width(319.dp)
+                        .fillMaxHeight()
+                        .background(
+                            brush = Brush.verticalGradient(
+                                colors = listOf(
+                                    Color(0xFF322341),
+                                    Color(0xFF120E24)
+                                )
+                            )
+                        )
+                ) {
+                    Text(
+                        text ="Following",
+                        modifier = Modifier.padding(top = 58.dp, start = 16.dp),
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color.White
+                    )
+
+                    Spacer(Modifier.height(14.dp))
+
+                    Column(
+                        modifier = Modifier
+                            .padding(horizontal = 16.dp)
+                            .fillMaxWidth()
+                            .border(
+                                brush = Brush.linearGradient(
+                                    colors = listOf(Color.Transparent, Color.White.copy(0.2f), Color.Transparent)
+                                ),
+                                width = 1.dp,
+                                shape = RoundedCornerShape(8.dp)
+                            )
+                            .background(
+                                color = Color(0x3378599A),
+                                shape = RoundedCornerShape(8.dp)
+                            )
+                    ) {
+                        MySettingItem(
+                            key = "Name",
+                            value = "Rose",
+                            onClick = {
+
+                            }
+                        )
+                        MySettingItem(
+                            key = "My Pronoun",
+                            value = "She/Her",
+                            onClick = {
+
+                            }
+                        )
+                        MySettingItem(
+                            key = "My Persona",
+                            value = "Edit",
+                            onClick = {
+
+                            }
+                        )
+                    }
+
+
+                    Spacer(Modifier.height(30.dp))
+
+                    Text(
+                        text ="Chat Settings",
+                        modifier = Modifier.padding(start = 16.dp),
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color.White
+                    )
+
+                    Spacer(Modifier.height(14.dp))
+
+                    Column(
+                        modifier = Modifier
+                            .padding(horizontal = 16.dp)
+                            .fillMaxWidth()
+                            .border(
+                                brush = Brush.linearGradient(
+                                    colors = listOf(Color.Transparent, Color.White.copy(0.2f), Color.Transparent)
+                                ),
+                                width = 1.dp,
+                                shape = RoundedCornerShape(8.dp)
+                            )
+                            .background(
+                                color = Color(0x3378599A),
+                                shape = RoundedCornerShape(8.dp)
+                            )
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 16.dp).noRippleClickable {
+                                showKeepTalking = !showKeepTalking
+                                IntySetting.setShowKeepTalking(showKeepTalking)
+                            },
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = stringResource(R.string.settings_keep_talking),
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Normal,
+                                color = Color.White
+                            )
+                            Spacer(Modifier.weight(1f))
+                            Image(
+                                painter = if (showKeepTalking) painterResource(R.drawable.opened) else painterResource(R.drawable.closed),
+                                contentDescription = null,
+                            )
+                        }
+                        Row(
+                            modifier = Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 16.dp).noRippleClickable {
+                                isAutoPlayAudio = !isAutoPlayAudio
+                                IntySetting.setAutoPlayAudio(isAutoPlayAudio)
+                            },
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = stringResource(R.string.settings_auto_play_audio),
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Normal,
+                                color = Color.White
+
+                            )
+                            Spacer(Modifier.weight(1f))
+                            Image(
+                                painter = if (isAutoPlayAudio) painterResource(R.drawable.opened) else painterResource(R.drawable.closed),
+                                contentDescription = null,
+                            )
+                        }
+                    }
+
+                }
+
+            }
+        ) {
+            // 主屏内容
+        }
+
     }
 }
 
@@ -248,6 +427,7 @@ fun ChatItemUser(
 fun TopBar(
     modifier: Modifier,
     agentInfo: AgentInfo,
+    onClickMore: () -> Unit,
 ) {
     val context = LocalContext.current
     Row(
@@ -293,7 +473,9 @@ fun TopBar(
         Spacer(modifier = Modifier.weight(1f))
 
         IntyImage(
-            modifier = Modifier.size(20.dp),
+            modifier = Modifier.size(20.dp).noRippleClickable {
+                onClickMore()
+            },
             model = R.drawable.icon_more
         )
     }

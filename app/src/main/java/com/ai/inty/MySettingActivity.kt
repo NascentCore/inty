@@ -493,7 +493,7 @@ private fun SaveBtn(onSave: () -> Unit) {
 }
 
 @Composable
-private fun MySettingItem(
+fun MySettingItem(
     key: String,
     value: String,
     onClick: () -> Unit,
