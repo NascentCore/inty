@@ -12,3 +12,5 @@ python tts_example.py
 ```
 
 The delay is about 1 second. Not too bad.
+
+![image](https://github.com/user-attachments/assets/3a2963a4-deb6-4451-8562-e4edb591bd68)
