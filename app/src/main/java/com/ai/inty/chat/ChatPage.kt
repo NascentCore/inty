@@ -41,6 +41,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.ai.inty.Constant
 import com.ai.inty.MySettingItem
 import com.ai.inty.R
@@ -51,10 +53,13 @@ import com.ai.inty.base.MyModalNavigationDrawer
 import com.ai.inty.base.noRippleClickable
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.beans.MsgInfo
+import com.ai.inty.ui.theme.BackGround
 import com.ai.inty.viewmodels.ChatViewModel
 import com.inty.utils.log.EasyLog
 import com.inty.utils.storage.IntySetting
 import com.therouter.TheRouter
+import github.leavesczy.composebottomsheetdialog.BottomSheetDialog
+import github.leavesczy.composebottomsheetdialog.DiaAmountLayout
 import kotlinx.coroutines.launch
 
 @Composable
@@ -63,6 +68,7 @@ fun ChatPage(
     chatViewModel: ChatViewModel,
 
 ) {
+    val context = LocalContext.current
     val agentInfo = chatViewModel.agentInfo.collectAsState().value
 
     var showKeepTalking by remember { mutableStateOf(IntySetting.isShowKeepTalking()) }
@@ -168,10 +174,12 @@ fun ChatPage(
                     }
                 }
 
+                var showMorePanel by remember { mutableStateOf(false) }
                 Row(
                     modifier = Modifier
                         .padding(horizontal = 16.dp, vertical = 8.dp)
-                        .fillMaxWidth().height(64.dp)
+                        .fillMaxWidth()
+                        .height(64.dp)
                         .background(Color(0x9937303D), RoundedCornerShape(24.dp))
                     ,
                     verticalAlignment = Alignment.CenterVertically
@@ -201,13 +209,58 @@ fun ChatPage(
                     } else {
                         IntyImage(
                             modifier = Modifier.padding(16.dp, 0.dp).size(24.dp).noRippleClickable {
-
+                                showMorePanel = !showMorePanel
                             },
-                            model = R.drawable.btn_add2
+                            model = if (showMorePanel) R.drawable.btn_down else R.drawable.btn_add2
                         )
                     }
                 }
 
+                if (showMorePanel) {
+                    Spacer(Modifier.height(90.dp))
+                    Dialog(
+                        onDismissRequest = {
+                            showMorePanel = false
+                        },
+                        properties = DialogProperties(
+                            usePlatformDefaultWidth = false
+                        )
+
+                    ) {
+                        DiaAmountLayout {
+                            SetDiaAmount(0f)
+                            BottomSheetDialog(
+                                modifier = Modifier,
+                                visible = true,
+                                onDismissRequest = {
+                                    showMorePanel = false
+                                }
+
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .background(
+                                            color = BackGround
+                                        )
+                                ) {
+                                    Spacer(Modifier.width(16.dp))
+                                    MorePanelItem(
+                                        icon = R.drawable.icon_report,
+                                        text = "Report",
+                                        onClick = {
+                                            TheRouter.build(Constant.ROUTE_REPORT)
+                                                .withString("targetID", agentInfo?.id)
+                                                .navigation(context)
+                                        }
+                                    )
+                                    Spacer(Modifier.width(16.dp))
+                                }
+                            }
+                        }
+                    }
+
+                }
             }
         }
 
@@ -480,4 +533,39 @@ fun TopBar(
         )
     }
 
+}
+
+
+@Composable
+fun MorePanelItem(
+    icon: Int,
+    text: String,
+    onClick: () -> Unit
+) {
+
+    Column(
+        modifier = Modifier.noRippleClickable { onClick() },
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Spacer(Modifier.height(20.dp))
+        Box(
+            modifier = Modifier
+                .size(64.dp)
+                .background(color = Color.White.copy(0.05f), shape = RoundedCornerShape(8.dp))
+        ) {
+            Image(
+                modifier = Modifier.size(36.dp).align(Alignment.Center),
+                painter = painterResource(id = icon),
+                contentDescription = null
+            )
+        }
+        Spacer(Modifier.height(6.dp))
+        Text(
+            text = text,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Normal,
+            color = Color.White,
+        )
+        Spacer(Modifier.height(60.dp))
+    }
 }

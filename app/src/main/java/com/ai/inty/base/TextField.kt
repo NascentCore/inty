@@ -2,11 +2,8 @@ package com.ai.inty.base
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -17,7 +14,6 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ai.inty.ui.theme.TextFieldColor
 
@@ -44,12 +40,12 @@ fun IntySmallTextField(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         leadingIcon?.let { it() }
-        Spacer(modifier = Modifier.width(19.dp))
+//        Spacer(modifier = Modifier.width(19.dp))
 //        DividerRow(
 //            modifier = Modifier.height(19.dp),
 //            color = Color(0xff9f9f9f), thickness = 1.dp
 //        )
-        Spacer(modifier = Modifier.width(7.dp))
+//        Spacer(modifier = Modifier.width(7.dp))
 
         val focusManager = LocalFocusManager.current
 
@@ -82,8 +78,9 @@ fun IntySmallTextField(
 
         Box(
             modifier = Modifier
+                .fillMaxHeight()
                 .weight(1f),
-            contentAlignment = Alignment.CenterStart,
+            contentAlignment = if (singleLine) Alignment.CenterStart else Alignment.TopStart,
         ) {
             BasicTextField(
                 modifier = Modifier
@@ -108,7 +105,7 @@ fun IntySmallTextField(
 
         trailingIcon?.let { it() }
 
-        Spacer(modifier = Modifier.width(10.dp))
+//        Spacer(modifier = Modifier.width(10.dp))
 
     }
 }

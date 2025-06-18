@@ -15,6 +15,7 @@ class Constant {
         const val ROUTE_SYS_MSGS = "${ROUTE_HOME_URL}sys_msgs"
         const val ROUTE_AGENT_INFO = "${ROUTE_HOME_URL}agent/info"
         const val ROUTE_REG_INFO = "${ROUTE_HOME_URL}reg/info"
+        const val ROUTE_REPORT = "${ROUTE_HOME_URL}report"
 
 
         const val ACTION_USER_PROFILE_CHANGED = "ACTION_USER_PROFILE_CHANGED"

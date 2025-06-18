@@ -14,6 +14,13 @@
     "params": {}
   },
   {
+    "path": "http://inty.ai/report",
+    "className": "com.ai.inty.ReportActivity",
+    "action": "",
+    "description": "",
+    "params": {}
+  },
+  {
     "path": "http://inty.ai/reg/info",
     "className": "com.ai.inty.RegInfoActivity",
     "action": "",

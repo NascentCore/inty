@@ -1,6 +1,7 @@
 package com.ai.inty.net
 
 import com.ai.inty.Constant
+import com.ai.inty.restartAppProcess
 import com.architecture.httplib.core.HttpResponseCallAdapterFactory
 import com.architecture.httplib.core.MoshiResultTypeAdapterFactory
 import com.architecture.httplib.error.GlobalErrorHandler
@@ -31,7 +32,17 @@ class AuthInterceptor : Interceptor {
                 .build()
 
         EasyLog.log("request = $request")
-        return chain.proceed(request)
+        val response = chain.proceed(request)
+
+        when (response.code) {
+            401 -> {
+                EasyLog.log("http 401 for ${request.url}", EasyLog.ERROR)
+                IntySetting.logout()
+                restartAppProcess(context = AppEnv.context)
+            }
+        }
+
+        return response
     }
 
 }
@@ -152,4 +163,9 @@ fun getAgentApi(): IAgentApi {
 @ServiceProvider
 fun getChatApi(): IChatApi {
     return NetServiceMgr.retrofitNoWrapper.create(IChatApi::class.java)
+}
+
+@ServiceProvider
+fun getReportApi(): IReportApi {
+    return NetServiceMgr.retrofitNormal.create(IReportApi::class.java)
 }

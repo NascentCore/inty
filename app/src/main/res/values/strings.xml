@@ -20,6 +20,7 @@
     <string name="creation_info">Creation Info</string>
     <string name="inspiration">Inspiration</string>
     <string name="create_time">Create time %s</string>
+    <string name="report">Report</string>
 
 
 </resources>
