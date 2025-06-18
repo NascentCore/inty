@@ -29,6 +29,27 @@ async def list_agents(
     agents = await agent_service.get_user_agents(db, user_id=current_user.id, skip=skip, limit=limit, current_user_id=current_user.id)
     return agents
 
+@router.get("/search", response_model=schemas.APIResponse[schemas.PaginationData[schemas.Agent]])
+async def search_agents(
+    q: str = Query(..., description="搜索关键字"),
+    page: int = Query(1, ge=1, description="页码，从1开始"),
+    page_size: int = Query(10, ge=1, le=100, description="每页数量，最大100"),
+    db: AsyncSession = Depends(deps.get_async_db),
+    current_user: schemas.User = Depends(deps.get_current_active_user),
+) -> Any:
+    """
+    搜索公开的AI角色
+    支持按名称、介绍、分类进行模糊查询
+    """
+    pagination_data = await agent_service.search_agents(
+        db, 
+        keyword=q, 
+        page=page, 
+        page_size=page_size, 
+        current_user_id=current_user.id
+    )
+    return schemas.APIResponse.success(data=pagination_data)
+
 @router.get("/recommend", response_model=schemas.APIResponse[schemas.PaginationData[schemas.Agent]])
 async def recommend_agents(
     db: AsyncSession = Depends(deps.get_async_db),

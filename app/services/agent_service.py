@@ -1,5 +1,5 @@
 from typing import List, Optional
-from sqlalchemy import select, desc, func, and_
+from sqlalchemy import select, desc, func, and_, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 from sqlalchemy.orm import selectinload
@@ -746,4 +746,115 @@ async def get_user_followed_agents(db: AsyncSession, user_id: str, page: int = 1
         raise HTTPException(status_code=500, detail="数据库查询失败")
     except Exception as e:
         logger.error(f"未知错误 - 获取用户关注列表: {str(e)}")
+        raise HTTPException(status_code=500, detail="服务器内部错误")
+
+async def search_agents(db: AsyncSession, keyword: str, page: int = 1, page_size: int = 10, current_user_id: Optional[str] = None) -> schemas.PaginationData[schemas.Agent]:
+    """
+    搜索公开的AI角色（分页版本）
+    支持按名称、介绍、分类进行模糊查询
+    """
+    try:
+        # 验证参数
+        if page <= 0:
+            raise HTTPException(status_code=400, detail="page参数必须大于0")
+        if page_size <= 0 or page_size > 100:
+            raise HTTPException(status_code=400, detail="page_size参数必须在1-100之间")
+        if not keyword or not keyword.strip():
+            raise HTTPException(status_code=400, detail="搜索关键字不能为空")
+            
+        # 计算偏移量
+        skip = (page - 1) * page_size
+        keyword = keyword.strip()
+        
+        # 构建搜索条件 - 在name, intro, category字段中进行模糊搜索
+        search_conditions = []
+        if keyword:
+            search_pattern = f"%{keyword}%"
+            search_conditions = [
+                models.Agent.name.ilike(search_pattern),
+                models.Agent.intro.ilike(search_pattern),
+                models.Agent.category.ilike(search_pattern)
+            ]
+        
+        # 构建基础查询条件 - 只搜索公开的agent
+        base_conditions = [
+            models.Agent.visibility == AgentVisibility.PUBLIC,
+            # models.Agent.status == AgentStatus.APPROVED  # 如果需要只搜索已审核的
+        ]
+        
+        # 如果有搜索条件，添加OR条件
+        if search_conditions:
+            base_conditions.append(or_(*search_conditions))
+        
+        # 构建基础查询
+        base_query = select(models.Agent).where(*base_conditions)
+        
+        # 获取总数
+        count_query = select(func.count()).select_from(
+            base_query.subquery()
+        )
+        count_result = await db.execute(count_query)
+        total = count_result.scalar()
+        
+        # 获取分页数据包含关注者数量
+        data_query = (
+            select(
+                models.Agent,
+                func.count(agent_followers.c.user_id).label('follower_count')
+            )
+            .outerjoin(agent_followers, models.Agent.id == agent_followers.c.agent_id)
+            .options(selectinload(models.Agent.creator))
+            .where(*base_conditions)
+            .group_by(models.Agent.id)
+            .offset(skip)
+            .limit(page_size)
+            .order_by(desc(models.Agent.created_at))  # 按创建时间倒序排列
+        )
+        
+        result = await db.execute(data_query)
+        rows = result.all()
+        
+        agents = []
+        agent_ids = []
+        
+        for row in rows:
+            agent = row[0]
+            follower_count = row[1] or 0
+            agent.follower_count = follower_count
+            agent.is_followed = False  # 默认值
+            agents.append(agent)
+            agent_ids.append(agent.id)
+        
+        # 批量检查当前用户是否关注了这些agents
+        if current_user_id and agent_ids:
+            follow_query = select(agent_followers.c.agent_id).where(
+                and_(
+                    agent_followers.c.user_id == current_user_id,
+                    agent_followers.c.agent_id.in_(agent_ids)
+                )
+            )
+            follow_result = await db.execute(follow_query)
+            followed_agent_ids = {row[0] for row in follow_result}
+            
+            for agent in agents:
+                agent.is_followed = agent.id in followed_agent_ids
+        
+        # 计算总页数
+        total_pages = math.ceil(total / page_size) if total > 0 else 1
+        
+        return schemas.PaginationData[schemas.Agent](
+            list=agents,
+            total=total,
+            page=page,
+            page_size=page_size,
+            total_pages=total_pages
+        )
+        
+    except HTTPException:
+        raise
+    except SQLAlchemyError as e:
+        logger.error(f"数据库查询错误 - 搜索角色: {str(e)}")
+        raise HTTPException(status_code=500, detail="数据库查询失败")
+    except Exception as e:
+        logger.error(f"未知错误 - 搜索角色: {str(e)}")
         raise HTTPException(status_code=500, detail="服务器内部错误") 
