@@ -1,5 +1,5 @@
 from typing import List, Optional
-from sqlalchemy import select, desc, func
+from sqlalchemy import select, desc, func, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 from sqlalchemy.orm import selectinload
@@ -11,21 +11,54 @@ from datetime import datetime
 
 from app import models, schemas
 from app.models.agent import AgentVisibility, AgentStatus
+from app.models.associations import agent_followers
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
-async def get_agent(db: AsyncSession, agent_id: str) -> Optional[models.Agent]:
+async def get_agent(db: AsyncSession, agent_id: str, current_user_id: Optional[str] = None) -> Optional[models.Agent]:
     """
     通过ID获取AI角色
     """
     try:
-        result = await db.execute(
-            select(models.Agent)
+        # 获取agent的基本信息和关注者数量
+        query = (
+            select(
+                models.Agent,
+                func.count(agent_followers.c.user_id).label('follower_count')
+            )
+            .outerjoin(agent_followers, models.Agent.id == agent_followers.c.agent_id)
             .options(selectinload(models.Agent.creator))
             .where(models.Agent.id == agent_id)
+            .group_by(models.Agent.id)
         )
-        return result.scalar_one_or_none()
+        
+        result = await db.execute(query)
+        row = result.first()
+        
+        if not row:
+            return None
+            
+        agent = row[0]
+        follower_count = row[1] or 0
+        
+        # 设置follower_count属性
+        agent.follower_count = follower_count
+        
+        # 检查当前用户是否关注了这个agent
+        if current_user_id:
+            follow_query = select(agent_followers).where(
+                and_(
+                    agent_followers.c.user_id == current_user_id,
+                    agent_followers.c.agent_id == agent_id
+                )
+            )
+            follow_result = await db.execute(follow_query)
+            agent.is_followed = follow_result.first() is not None
+        else:
+            agent.is_followed = False
+            
+        return agent
     except SQLAlchemyError as e:
         logger.error(f"数据库查询错误 - 获取角色 {agent_id}: {str(e)}")
         raise HTTPException(status_code=500, detail="数据库查询失败")
@@ -33,7 +66,7 @@ async def get_agent(db: AsyncSession, agent_id: str) -> Optional[models.Agent]:
         logger.error(f"未知错误 - 获取角色 {agent_id}: {str(e)}")
         raise HTTPException(status_code=500, detail="服务器内部错误")
 
-async def get_user_agents(db: AsyncSession, user_id: str, skip: int = 0, limit: int = 100) -> List[models.Agent]:
+async def get_user_agents(db: AsyncSession, user_id: str, skip: int = 0, limit: int = 100, current_user_id: Optional[str] = None) -> List[models.Agent]:
     """
     获取用户创建的AI角色列表
     """
@@ -44,15 +77,50 @@ async def get_user_agents(db: AsyncSession, user_id: str, skip: int = 0, limit: 
         if limit <= 0 or limit > 1000:
             raise HTTPException(status_code=400, detail="limit参数必须在1-1000之间")
             
-        result = await db.execute(
-            select(models.Agent)
+        # 获取agents和关注者数量
+        query = (
+            select(
+                models.Agent,
+                func.count(agent_followers.c.user_id).label('follower_count')
+            )
+            .outerjoin(agent_followers, models.Agent.id == agent_followers.c.agent_id)
             .options(selectinload(models.Agent.creator))
             .where(models.Agent.creator_id == user_id)
+            .group_by(models.Agent.id)
             .offset(skip)
             .limit(limit)
             .order_by(desc(models.Agent.created_at))
         )
-        return result.scalars().all()
+        
+        result = await db.execute(query)
+        rows = result.all()
+        
+        agents = []
+        agent_ids = []
+        
+        for row in rows:
+            agent = row[0]
+            follower_count = row[1] or 0
+            agent.follower_count = follower_count
+            agent.is_followed = False  # 默认值
+            agents.append(agent)
+            agent_ids.append(agent.id)
+        
+        # 批量检查当前用户是否关注了这些agents
+        if current_user_id and agent_ids:
+            follow_query = select(agent_followers.c.agent_id).where(
+                and_(
+                    agent_followers.c.user_id == current_user_id,
+                    agent_followers.c.agent_id.in_(agent_ids)
+                )
+            )
+            follow_result = await db.execute(follow_query)
+            followed_agent_ids = {row[0] for row in follow_result}
+            
+            for agent in agents:
+                agent.is_followed = agent.id in followed_agent_ids
+                
+        return agents
     except HTTPException:
         raise
     except SQLAlchemyError as e:
@@ -62,7 +130,7 @@ async def get_user_agents(db: AsyncSession, user_id: str, skip: int = 0, limit: 
         logger.error(f"未知错误 - 获取用户角色列表: {str(e)}")
         raise HTTPException(status_code=500, detail="服务器内部错误")
 
-async def get_recommended_agents(db: AsyncSession, skip: int = 0, limit: int = 100) -> List[models.Agent]:
+async def get_recommended_agents(db: AsyncSession, skip: int = 0, limit: int = 100, current_user_id: Optional[str] = None) -> List[models.Agent]:
     """
     获取推荐的AI角色列表（公开且已审核的角色，按创建时间倒序）
     """
@@ -73,18 +141,53 @@ async def get_recommended_agents(db: AsyncSession, skip: int = 0, limit: int = 1
         if limit <= 0 or limit > 1000:
             raise HTTPException(status_code=400, detail="limit参数必须在1-1000之间")
             
-        result = await db.execute(
-            select(models.Agent)
+        # 获取agents和关注者数量
+        query = (
+            select(
+                models.Agent,
+                func.count(agent_followers.c.user_id).label('follower_count')
+            )
+            .outerjoin(agent_followers, models.Agent.id == agent_followers.c.agent_id)
             .options(selectinload(models.Agent.creator))
             .where(
                 models.Agent.visibility == AgentVisibility.PUBLIC,
                 # models.Agent.status == AgentStatus.APPROVED
             )
+            .group_by(models.Agent.id)
             .offset(skip)
             .limit(limit)
             .order_by(desc(models.Agent.created_at))
         )
-        return result.scalars().all()
+        
+        result = await db.execute(query)
+        rows = result.all()
+        
+        agents = []
+        agent_ids = []
+        
+        for row in rows:
+            agent = row[0]
+            follower_count = row[1] or 0
+            agent.follower_count = follower_count
+            agent.is_followed = False  # 默认值
+            agents.append(agent)
+            agent_ids.append(agent.id)
+        
+        # 批量检查当前用户是否关注了这些agents
+        if current_user_id and agent_ids:
+            follow_query = select(agent_followers.c.agent_id).where(
+                and_(
+                    agent_followers.c.user_id == current_user_id,
+                    agent_followers.c.agent_id.in_(agent_ids)
+                )
+            )
+            follow_result = await db.execute(follow_query)
+            followed_agent_ids = {row[0] for row in follow_result}
+            
+            for agent in agents:
+                agent.is_followed = agent.id in followed_agent_ids
+                
+        return agents
     except HTTPException:
         raise
     except SQLAlchemyError as e:
@@ -94,7 +197,7 @@ async def get_recommended_agents(db: AsyncSession, skip: int = 0, limit: int = 1
         logger.error(f"未知错误 - 获取推荐角色列表: {str(e)}")
         raise HTTPException(status_code=500, detail="服务器内部错误")
 
-async def get_recommended_agents_paginated(db: AsyncSession, page: int = 1, page_size: int = 10) -> schemas.PaginationData[schemas.Agent]:
+async def get_recommended_agents_paginated(db: AsyncSession, page: int = 1, page_size: int = 10, current_user_id: Optional[str] = None) -> schemas.PaginationData[schemas.Agent]:
     """
     获取推荐的AI角色列表（分页版本）
     """
@@ -121,17 +224,51 @@ async def get_recommended_agents_paginated(db: AsyncSession, page: int = 1, page
         count_result = await db.execute(count_query)
         total = count_result.scalar()
         
-        # 获取分页数据
+        # 获取分页数据包含关注者数量
         data_query = (
-            base_query
+            select(
+                models.Agent,
+                func.count(agent_followers.c.user_id).label('follower_count')
+            )
+            .outerjoin(agent_followers, models.Agent.id == agent_followers.c.agent_id)
             .options(selectinload(models.Agent.creator))
+            .where(
+                models.Agent.visibility == AgentVisibility.PUBLIC,
+                # models.Agent.status == AgentStatus.APPROVED
+            )
+            .group_by(models.Agent.id)
             .offset(skip)
             .limit(page_size)
             .order_by(desc(models.Agent.created_at))
         )
         
         result = await db.execute(data_query)
-        agents = result.scalars().all()
+        rows = result.all()
+        
+        agents = []
+        agent_ids = []
+        
+        for row in rows:
+            agent = row[0]
+            follower_count = row[1] or 0
+            agent.follower_count = follower_count
+            agent.is_followed = False  # 默认值
+            agents.append(agent)
+            agent_ids.append(agent.id)
+        
+        # 批量检查当前用户是否关注了这些agents
+        if current_user_id and agent_ids:
+            follow_query = select(agent_followers.c.agent_id).where(
+                and_(
+                    agent_followers.c.user_id == current_user_id,
+                    agent_followers.c.agent_id.in_(agent_ids)
+                )
+            )
+            follow_result = await db.execute(follow_query)
+            followed_agent_ids = {row[0] for row in follow_result}
+            
+            for agent in agents:
+                agent.is_followed = agent.id in followed_agent_ids
         
         # 计算总页数
         total_pages = math.ceil(total / page_size) if total > 0 else 1
@@ -445,3 +582,168 @@ def process_agent_image_urls(agent_data: dict, agent_id: str, user_id: str) -> d
         cleanup_thread.start()
     
     return processed_data 
+
+async def follow_agent(db: AsyncSession, agent_id: str, user_id: str) -> bool:
+    """
+    用户关注AI角色
+    """
+    try:
+        # 检查agent是否存在
+        agent = await get_agent(db, agent_id)
+        if not agent:
+            raise HTTPException(status_code=404, detail="AI角色不存在")
+        
+        # 检查是否已经关注
+        follow_query = select(agent_followers).where(
+            and_(
+                agent_followers.c.user_id == user_id,
+                agent_followers.c.agent_id == agent_id
+            )
+        )
+        result = await db.execute(follow_query)
+        if result.first():
+            raise HTTPException(status_code=400, detail="已经关注了这个AI角色")
+        
+        # 插入关注记录
+        insert_query = agent_followers.insert().values(
+            user_id=user_id,
+            agent_id=agent_id
+        )
+        await db.execute(insert_query)
+        await db.commit()
+        
+        return True
+    except HTTPException:
+        raise
+    except IntegrityError as e:
+        await db.rollback()
+        logger.error(f"数据完整性错误 - 关注角色: {str(e)}")
+        if "user_id" in str(e) or "agent_id" in str(e):
+            raise HTTPException(status_code=400, detail="用户或AI角色不存在")
+        else:
+            raise HTTPException(status_code=400, detail="已经关注了这个AI角色")
+    except SQLAlchemyError as e:
+        await db.rollback()
+        logger.error(f"数据库错误 - 关注角色: {str(e)}")
+        raise HTTPException(status_code=500, detail="数据库操作失败")
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"未知错误 - 关注角色: {str(e)}")
+        raise HTTPException(status_code=500, detail="服务器内部错误")
+
+async def unfollow_agent(db: AsyncSession, agent_id: str, user_id: str) -> bool:
+    """
+    用户取消关注AI角色
+    """
+    try:
+        # 检查是否已经关注
+        follow_query = select(agent_followers).where(
+            and_(
+                agent_followers.c.user_id == user_id,
+                agent_followers.c.agent_id == agent_id
+            )
+        )
+        result = await db.execute(follow_query)
+        if not result.first():
+            raise HTTPException(status_code=400, detail="尚未关注这个AI角色")
+        
+        # 删除关注记录
+        delete_query = agent_followers.delete().where(
+            and_(
+                agent_followers.c.user_id == user_id,
+                agent_followers.c.agent_id == agent_id
+            )
+        )
+        await db.execute(delete_query)
+        await db.commit()
+        
+        return True
+    except HTTPException:
+        raise
+    except SQLAlchemyError as e:
+        await db.rollback()
+        logger.error(f"数据库错误 - 取消关注角色: {str(e)}")
+        raise HTTPException(status_code=500, detail="数据库操作失败")
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"未知错误 - 取消关注角色: {str(e)}")
+        raise HTTPException(status_code=500, detail="服务器内部错误")
+
+async def get_user_followed_agents(db: AsyncSession, user_id: str, page: int = 1, page_size: int = 10) -> schemas.PaginationData[schemas.Agent]:
+    """
+    获取用户关注的AI角色列表（分页）
+    """
+    try:
+        # 验证参数
+        if page <= 0:
+            raise HTTPException(status_code=400, detail="page参数必须大于0")
+        if page_size <= 0 or page_size > 100:
+            raise HTTPException(status_code=400, detail="page_size参数必须在1-100之间")
+            
+        # 计算偏移量
+        skip = (page - 1) * page_size
+        
+        # 获取总数
+        count_query = select(func.count()).select_from(
+            agent_followers
+        ).where(agent_followers.c.user_id == user_id)
+        count_result = await db.execute(count_query)
+        total = count_result.scalar()
+        
+        # 获取分页数据
+        # 首先获取用户关注的agent IDs
+        followed_agents_query = (
+            select(agent_followers.c.agent_id)
+            .where(agent_followers.c.user_id == user_id)
+            .offset(skip)
+            .limit(page_size)
+        )
+        followed_result = await db.execute(followed_agents_query)
+        followed_agent_ids = [row[0] for row in followed_result]
+        
+        if not followed_agent_ids:
+            agents = []
+        else:
+            # 然后获取这些agents的详细信息和follower数量
+            data_query = (
+                select(
+                    models.Agent,
+                    func.count(agent_followers.c.user_id).label('follower_count')
+                )
+                .outerjoin(agent_followers, models.Agent.id == agent_followers.c.agent_id)
+                .options(selectinload(models.Agent.creator))
+                .where(models.Agent.id.in_(followed_agent_ids))
+                .group_by(models.Agent.id)
+                .order_by(desc(models.Agent.created_at))
+            )
+        
+            result = await db.execute(data_query)
+            rows = result.all()
+            
+            agents = []
+            for row in rows:
+                agent = row[0]
+                follower_count = row[1] or 0
+                agent.follower_count = follower_count
+                agent.is_followed = True  # 这些都是用户关注的
+                agents.append(agent)
+        
+        # 计算总页数
+        total_pages = math.ceil(total / page_size) if total > 0 else 1
+        
+        return schemas.PaginationData[schemas.Agent](
+            list=agents,
+            total=total,
+            page=page,
+            page_size=page_size,
+            total_pages=total_pages
+        )
+        
+    except HTTPException:
+        raise
+    except SQLAlchemyError as e:
+        logger.error(f"数据库查询错误 - 获取用户关注列表: {str(e)}")
+        raise HTTPException(status_code=500, detail="数据库查询失败")
+    except Exception as e:
+        logger.error(f"未知错误 - 获取用户关注列表: {str(e)}")
+        raise HTTPException(status_code=500, detail="服务器内部错误") 

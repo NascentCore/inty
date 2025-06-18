@@ -46,6 +46,7 @@ class AgentInDB(AgentBase):
 class Agent(AgentInDB):
     """AI角色"""
     is_followed: bool = False
+    follower_count: int = 0
     creator: Optional[User] = None
 
 class AgentList(BaseModel):

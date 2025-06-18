@@ -26,7 +26,7 @@ async def list_agents(
     """
     获取当前用户创建的AI角色列表
     """
-    agents = await agent_service.get_user_agents(db, user_id=current_user.id, skip=skip, limit=limit)
+    agents = await agent_service.get_user_agents(db, user_id=current_user.id, skip=skip, limit=limit, current_user_id=current_user.id)
     return agents
 
 @router.get("/recommend", response_model=schemas.APIResponse[schemas.PaginationData[schemas.Agent]])
@@ -39,7 +39,20 @@ async def recommend_agents(
     """
     获取推荐的AI角色列表（公开且已审核的角色，按创建时间倒序）
     """
-    pagination_data = await agent_service.get_recommended_agents_paginated(db, page=page, page_size=page_size)
+    pagination_data = await agent_service.get_recommended_agents_paginated(db, page=page, page_size=page_size, current_user_id=current_user.id)
+    return schemas.APIResponse.success(data=pagination_data)
+
+@router.get("/following", response_model=schemas.APIResponse[schemas.PaginationData[schemas.Agent]])
+async def get_following_agents(
+    db: AsyncSession = Depends(deps.get_async_db),
+    page: int = Query(1, ge=1, description="页码，从1开始"),
+    page_size: int = Query(10, ge=1, le=100, description="每页数量，最大100"),
+    current_user: schemas.User = Depends(deps.get_current_active_user),
+) -> Any:
+    """
+    获取当前用户关注的AI角色列表
+    """
+    pagination_data = await agent_service.get_user_followed_agents(db, user_id=current_user.id, page=page, page_size=page_size)
     return schemas.APIResponse.success(data=pagination_data)
 
 @router.post("/", response_model=schemas.Agent)
@@ -65,10 +78,48 @@ async def get_agent(
     """
     通过ID获取AI角色
     """
-    agent = await agent_service.get_agent(db, agent_id=agent_id)
+    agent = await agent_service.get_agent(db, agent_id=agent_id, current_user_id=current_user.id)
     if not agent:
         raise HTTPException(status_code=404, detail="Agent not found")
     return agent
+
+@router.post("/{agent_id}/follow", response_model=schemas.APIResponse[dict])
+async def follow_agent(
+    *,
+    db: AsyncSession = Depends(deps.get_async_db),
+    agent_id: str,
+    current_user: schemas.User = Depends(deps.get_current_active_user),
+) -> Any:
+    """
+    关注AI角色
+    """
+    try:
+        await agent_service.follow_agent(db, agent_id=agent_id, user_id=current_user.id)
+        return schemas.APIResponse.success(data={"message": "关注成功"})
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"关注AI角色失败: {str(e)}")
+        return schemas.APIResponse.error(message="关注失败")
+
+@router.delete("/{agent_id}/follow", response_model=schemas.APIResponse[dict])
+async def unfollow_agent(
+    *,
+    db: AsyncSession = Depends(deps.get_async_db),
+    agent_id: str,
+    current_user: schemas.User = Depends(deps.get_current_active_user),
+) -> Any:
+    """
+    取消关注AI角色
+    """
+    try:
+        await agent_service.unfollow_agent(db, agent_id=agent_id, user_id=current_user.id)
+        return schemas.APIResponse.success(data={"message": "取消关注成功"})
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"取消关注AI角色失败: {str(e)}")
+        return schemas.APIResponse.error(message="取消关注失败")
 
 @router.put("/{agent_id}", response_model=schemas.Agent)
 async def update_agent(
