@@ -500,7 +500,7 @@ fun TopBar(
                     }
                 ,
                 url = agentInfo.avatar,
-                placeholderResID = R.drawable.ic_launcher_foreground
+                placeholderResID = R.drawable.app_2
             )
 
             Spacer(modifier = Modifier.width(6.dp))

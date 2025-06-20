@@ -5,28 +5,22 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
-import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.unit.TextUnit
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewModelScope
 import com.ai.inty.ui.theme.IntyTheme
 import com.ai.inty.viewmodels.SplashViewModel
 import com.inty.utils.log.EasyLog
 import com.therouter.TheRouter
-import kotlinx.coroutines.flow.observeOn
 import kotlinx.coroutines.launch
 
 class SplashActivity : ComponentActivity() {
@@ -45,18 +39,19 @@ class SplashActivity : ComponentActivity() {
                     ) {
                         Image(
                             modifier = Modifier.fillMaxSize(),
-                            painter = painterResource(R.drawable.ic_launcher_background),
-                            contentScale = ContentScale.FillBounds,
+                            painter = painterResource(R.drawable.app_bg),
+                            contentScale = ContentScale.Crop,
+                            alignment = Alignment.TopCenter,
                             contentDescription = ""
                         )
                         Image(
-                            modifier = Modifier.align(Alignment.Center),
-                            painter = painterResource(R.drawable.ic_launcher_foreground),
+                            modifier = Modifier
+                                .align(Alignment.BottomCenter)
+                                .padding(bottom = 80.dp)
+                                .size(80.dp)
+                            ,
+                            painter = painterResource(R.drawable.app_2),
                             contentDescription = ""
-                        )
-                        Text(
-                            text = "启动页logo",
-                            modifier = Modifier.align(Alignment.Center)
                         )
 
                     }

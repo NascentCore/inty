@@ -88,7 +88,7 @@ fun MyPage(
                         IntyCircleImage(
                             modifier = Modifier.fillMaxSize(),
                             url = userProfile.avatar,
-                            placeholderResID = R.drawable.ic_launcher_background
+                            placeholderResID = R.drawable.app_2
                         )
                     }
                     Spacer(Modifier.width(19.dp))

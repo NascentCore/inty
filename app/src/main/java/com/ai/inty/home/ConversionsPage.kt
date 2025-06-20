@@ -202,7 +202,7 @@ fun ConversionsPage(
 fun ConversationItem(
     modifier: Modifier,
     conversation: ConversationItem,
-    placeholderID: Int = R.drawable.ic_launcher_background
+    placeholderID: Int = R.drawable.app_2
 ) {
     Row(
         modifier = modifier.height(88.dp),

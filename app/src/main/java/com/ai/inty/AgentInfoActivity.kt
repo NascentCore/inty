@@ -205,7 +205,7 @@ fun AgentInfoScreen(
                     IntyCircleImage(
                         modifier = Modifier.size(16.dp),
                         url = agent.creator?.avatar,
-                        placeholderResID = R.drawable.ic_launcher_foreground
+                        placeholderResID = R.drawable.app_2
                     )
                     Text(
                         text = agent.creator?.nickname ?: "",
@@ -334,7 +334,7 @@ fun AgentInfoScreen(
                                 .clip(RoundedCornerShape(8.dp))
                             ,
                             model = agent.creator?.avatar,
-                            placeholder = painterResource(R.drawable.ic_launcher_background)
+                            placeholder = painterResource(R.drawable.app_2)
                         )
                         Spacer(Modifier.width(6.dp))
                         Column(

@@ -41,7 +41,7 @@ class FCMService : FirebaseMessagingService() {
     @SuppressLint("MissingPermission")
     private fun showNotification(title: String, body: String) {
         val builder: NotificationCompat.Builder = NotificationCompat.Builder(this, "channel_id")
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setSmallIcon(R.drawable.app_2)
             .setContentTitle(title)
             .setContentText(body)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)

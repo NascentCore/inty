@@ -103,8 +103,8 @@ fun RecommendPageItem(
         IntyImage(
             modifier = Modifier.fillMaxSize(),
             model = agentInfo.avatar,
-            placeholder = painterResource(R.drawable.ic_launcher_background),
-            error = painterResource(R.drawable.ic_launcher_background),
+            placeholder = painterResource(R.drawable.app_2),
+            error = painterResource(R.drawable.app_2),
         )
         Text(
             modifier = Modifier.align(Alignment.BottomStart).padding(12.dp),
