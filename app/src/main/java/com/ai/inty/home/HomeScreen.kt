@@ -17,11 +17,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.ViewModelProvider
 import com.ai.inty.Constant
 import com.ai.inty.R
 import com.ai.inty.base.IntyImage
 import com.ai.inty.base.noRippleClickable
-import com.ai.inty.chat.ChatPage
+import com.ai.inty.chat.ChatPageContainer
 import com.ai.inty.ui.theme.BackGround
 import com.ai.inty.viewmodels.ChatViewModel
 import com.ai.inty.viewmodels.HomeTabIndex
@@ -47,10 +48,13 @@ fun HomeScreen(
     modifier: Modifier = Modifier,
     mainViewModel: MainViewModel,
     chatViewModel: ChatViewModel,
+    viewModelFactory: ViewModelProvider.Factory,
 ) {
 
     val selectedTab = mainViewModel.selectedTab.collectAsState()
     val selectedConversionsTab = mainViewModel.selectedConversionsTab.collectAsState()
+
+    val agentList = mainViewModel.agentList
 
     val context = LocalContext.current
 
@@ -82,9 +86,10 @@ fun HomeScreen(
     ) { innerPadding ->
         when (selectedTab.value) {
             HomeTabIndex.Chat -> {
-                ChatPage(
+                ChatPageContainer(
                     modifier = Modifier.padding(0.dp, 0.dp, 0.dp, innerPadding.calculateBottomPadding()),
-                    chatViewModel = chatViewModel,
+                    viewModelFactory = viewModelFactory,
+                    agentList = agentList
                 )
             }
             HomeTabIndex.Conversions -> {

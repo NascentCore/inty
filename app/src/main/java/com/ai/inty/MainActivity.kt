@@ -42,7 +42,12 @@ class MainActivity : BaseActivity() {
         mainViewModel.setChatViewModel(chatViewModel)
         setContent {
             IntyTheme {
-                HomeScreen(modifier = Modifier.fillMaxSize(), mainViewModel = mainViewModel, chatViewModel = chatViewModel)
+                HomeScreen(
+                    modifier = Modifier.fillMaxSize(),
+                    mainViewModel = mainViewModel,
+                    chatViewModel = chatViewModel,
+                    viewModelFactory = defaultViewModelProviderFactory
+                )
 //                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
 //                    var msg by remember { mutableStateOf("${IntySetting.getCurUserID()} = ${IntySetting.getCurToken()}") }
 //                    Column {
