@@ -89,23 +89,28 @@ fun HomeScreen(
                 ChatPageContainer(
                     modifier = Modifier.padding(0.dp, 0.dp, 0.dp, innerPadding.calculateBottomPadding()),
                     viewModelFactory = viewModelFactory,
-                    agentList = agentList
+                    agentList = agentList,
+                    onFollowAgent = { agentId ->
+                        mainViewModel.followAgent(agentId)
+                    }
                 )
             }
             HomeTabIndex.Conversions -> {
                 val conversions = chatViewModel.conversions
                 val sysMsgs = mainViewModel.sysMsgs
+                val followingAgents = mainViewModel.followingAgents
                 ConversionsPage(
                     modifier = Modifier,
                     selectedTab = selectedConversionsTab.value,
                     conversions = conversions,
+                    followingAgents = followingAgents,
                     onSelectTab = {
                         mainViewModel.onSelectConversionsTab(it)
                     },
-                    onClickConversionItem = { conversion ->
-                        chatViewModel.setConversionReaded(conversion)
+                    onClickConversionItem = { conversation ->
+                        chatViewModel.setConversionReaded(conversation)
                         TheRouter.build(Constant.ROUTE_CHAT)
-                            .withObject("agent_id", conversion.agentId)
+                            .withObject("agent_id", conversation.agentId)
                             .navigation(context)
                     },
                     lastSysMsg = sysMsgs.firstOrNull(),
@@ -113,6 +118,14 @@ fun HomeScreen(
                         IntySetting.setConversationReaded(Constant.SYS_NOTIFICATION_ID, sysMsgs.firstOrNull()?.content ?: "")
                         TheRouter.build(Constant.ROUTE_SYS_MSGS)
                             .navigation(context)
+                    },
+                    onClickFollowingAgent = { agent ->
+                        TheRouter.build(Constant.ROUTE_AGENT_INFO)
+                            .withObject("agent", agent)
+                            .navigation(context)
+                    },
+                    onUnfollowAgent = { agentId ->
+                        mainViewModel.unfollowAgent(agentId)
                     }
                 )
             }

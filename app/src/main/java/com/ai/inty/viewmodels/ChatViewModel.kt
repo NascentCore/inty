@@ -40,13 +40,22 @@ class ChatViewModel: BaseActivityViewModel() {
 
     fun setAgentInfo(agentInfo: AgentInfo?) {
         EasyLog.log("agent = $agentInfo")
-        if (_agentInfo.value == agentInfo) {
+        if (_agentInfo.value?.id == agentInfo?.id) {
+            _agentInfo.value = agentInfo
             return
         }
         _agentInfo.value = agentInfo
         msgs.clear()
 
         queryMsgs()
+    }
+    
+    fun updateAgentFollowState(agentId: String, isFollowed: Boolean) {
+        _agentInfo.value?.let { currentAgent ->
+            if (currentAgent.id == agentId) {
+                _agentInfo.value = currentAgent.copy(isFollowed = isFollowed)
+            }
+        }
     }
 
     fun queryMsgs() {

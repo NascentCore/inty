@@ -16,6 +16,7 @@ fun ChatPageContainer(
     modifier: Modifier,
     viewModelFactory: ViewModelProvider.Factory,
     agentList: List<AgentInfo>,
+    onFollowAgent: ((String) -> Unit)? = null,
 ) {
     val pageState = rememberPagerState {
         agentList.size
@@ -39,6 +40,7 @@ fun ChatPageContainer(
         ChatPage(
             modifier = Modifier.fillMaxSize(),
             chatViewModel = chatViewModel,
+            onFollowAgent = onFollowAgent,
         )
     }
 

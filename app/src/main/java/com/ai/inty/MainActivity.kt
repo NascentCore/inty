@@ -1,8 +1,13 @@
 package com.ai.inty
 
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
@@ -31,6 +36,14 @@ class MainActivity : BaseActivity() {
 
     val mainViewModel: MainViewModel by viewModels()
     val chatViewModel: ChatViewModel by viewModels()
+
+    private val followStateReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == "FOLLOW_STATE_CHANGED") {
+                mainViewModel.refreshFollowingListIfOnTab()
+            }
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -88,12 +101,27 @@ class MainActivity : BaseActivity() {
 
 
         requestNotifyPermission()
+        
+        // Register broadcast receiver
+        LocalBroadcastManager.getInstance(this).registerReceiver(
+            followStateReceiver,
+            IntentFilter("FOLLOW_STATE_CHANGED")
+        )
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Refresh following list when returning to MainActivity (e.g., from agent detail page)
+        mainViewModel.refreshFollowingListIfOnTab()
     }
 
     override fun onDestroy() {
         super.onDestroy()
         // 释放 BillingManager 资源
         BillingManager.release()
+        
+        // Unregister broadcast receiver
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(followStateReceiver)
     }
 
     private fun requestNotifyPermission() {

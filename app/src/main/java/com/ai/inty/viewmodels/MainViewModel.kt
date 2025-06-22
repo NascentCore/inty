@@ -27,6 +27,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 
 
 enum class HomeTabIndex {
@@ -44,6 +45,7 @@ class MainViewModel: BaseActivityViewModel() {
     val userApi2: IUserApi2 = TheRouter.get(IUserApi2::class.java)!!
 
     val agentList = mutableStateListOf<AgentInfo>()
+    val followingAgents = mutableStateListOf<AgentInfo>()
 
     private val _selectedTab = MutableStateFlow(HomeTabIndex.Chat)
     val selectedTab = _selectedTab.asStateFlow()
@@ -151,6 +153,12 @@ class MainViewModel: BaseActivityViewModel() {
 
     fun onSelectConversionsTab(tab: ConversionsPageTab) {
         _selectedConversionsTab.value = tab
+        when (tab) {
+            ConversionsPageTab.TabFollowing -> {
+                getFollowingAgents()
+            }
+            else -> {}
+        }
     }
 
 
@@ -208,6 +216,92 @@ class MainViewModel: BaseActivityViewModel() {
                 is HttpResult.Failure -> {
 
                 }
+            }
+        }
+    }
+    
+    fun getFollowingAgents() {
+        EasyLog.log("getFollowingAgents")
+        viewModelScope.launch(Dispatchers.IO) {
+            val result = agentApi.getFollowingAgents(1, 10)
+            EasyLog.log("getFollowingAgents = $result")
+            
+            when (result) {
+                is HttpResult.Success -> {
+                    followingAgents.clear()
+                    result.data.list?.let { agents ->
+                        followingAgents.addAll(agents)
+                    }
+                }
+                is HttpResult.Failure -> {
+                    showSnackbar(result.message)
+                }
+            }
+        }
+    }
+    
+    fun followAgent(agentId: String) {
+        EasyLog.log("followAgent: $agentId")
+        viewModelScope.launch(Dispatchers.IO) {
+            val result = agentApi.followAgent(agentId)
+            EasyLog.log("followAgent = $result")
+            
+            when (result) {
+                is HttpResult.Success -> {
+                    showSnackbar(result.data.message)
+                    refreshFollowingStateIfNeeded()
+                    
+                    agentList.forEachIndexed { index, agent ->
+                        if (agent.id == agentId) {
+                            agentList[index] = agent.copy(isFollowed = true)
+                        }
+                    }
+                }
+                is HttpResult.Failure -> {
+                    showSnackbar(result.message)
+                }
+            }
+        }
+    }
+    
+    fun unfollowAgent(agentId: String) {
+        EasyLog.log("unfollowAgent: $agentId")
+        viewModelScope.launch(Dispatchers.IO) {
+            val result = agentApi.unfollowAgent(agentId)
+            EasyLog.log("unfollowAgent = $result")
+            
+            when (result) {
+                is HttpResult.Success -> {
+                    showSnackbar(result.data.message)
+                    refreshFollowingStateIfNeeded()
+                    
+                    agentList.forEachIndexed { index, agent ->
+                        if (agent.id == agentId) {
+                            agentList[index] = agent.copy(isFollowed = false)
+                        }
+                    }
+                }
+                is HttpResult.Failure -> {
+                    showSnackbar(result.message)
+                }
+            }
+        }
+    }
+    
+    private fun refreshFollowingStateIfNeeded() {
+        if (_selectedConversionsTab.value == ConversionsPageTab.TabFollowing) {
+            viewModelScope.launch(Dispatchers.IO) {
+                delay(1000) // Increased delay to ensure backend is updated
+                getFollowingAgents()
+            }
+        }
+    }
+    
+    fun refreshFollowingListIfOnTab() {
+        if (_selectedConversionsTab.value == ConversionsPageTab.TabFollowing) {
+            viewModelScope.launch(Dispatchers.IO) {
+                delay(1000) // Ensure backend is updated
+                getFollowingAgents()
             }
         }
     }

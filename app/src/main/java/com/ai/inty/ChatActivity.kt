@@ -18,6 +18,16 @@ import com.ai.inty.ui.theme.BackGround
 import com.ai.inty.ui.theme.IntyTheme
 import com.ai.inty.viewmodels.ChatViewModel
 import com.ai.inty.viewmodels.MainViewModel
+import com.ai.inty.net.IAgentApi
+import com.architecture.httplib.core.HttpResult
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import com.therouter.TheRouter
+import com.inty.utils.log.EasyLog
+import com.ai.inty.base.ToastUtils
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
+import android.content.Intent
 import com.therouter.router.Autowired
 import com.therouter.router.Route
 
@@ -31,6 +41,7 @@ class ChatActivity : BaseActivity() {
     var agent_id: String? = null
 
     val chatViewModel: ChatViewModel by viewModels()
+    private val agentApi: IAgentApi = TheRouter.get(IAgentApi::class.java)!!
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -48,8 +59,44 @@ class ChatActivity : BaseActivity() {
                     modifier = Modifier
                         .fillMaxSize()
                         .background(BackGround),
-                    chatViewModel = chatViewModel
+                    chatViewModel = chatViewModel,
+                    onFollowAgent = { agentId ->
+                        followAgent(agentId)
+                    }
                 )
+            }
+        }
+    }
+    
+    private fun followAgent(agentId: String) {
+        EasyLog.log("followAgent: $agentId")
+        lifecycleScope.launch(Dispatchers.IO) {
+            val result = agentApi.followAgent(agentId)
+            EasyLog.log("followAgent = $result")
+            
+            when (result) {
+                is HttpResult.Success -> {
+                    runOnUiThread {
+                        lifecycleScope.launch {
+                            ToastUtils.showToast(result.data.message)
+                        }
+                    }
+                    // Update agent state in ChatViewModel
+                    chatViewModel.updateAgentFollowState(agentId, true)
+                    
+                    // Notify other components about follow state change
+                    val intent = Intent("FOLLOW_STATE_CHANGED")
+                    intent.putExtra("agentId", agentId)
+                    intent.putExtra("isFollowed", true)
+                    LocalBroadcastManager.getInstance(this@ChatActivity).sendBroadcast(intent)
+                }
+                is HttpResult.Failure -> {
+                    runOnUiThread {
+                        lifecycleScope.launch {
+                            ToastUtils.showToast(result.message)
+                        }
+                    }
+                }
             }
         }
     }

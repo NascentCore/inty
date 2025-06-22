@@ -112,7 +112,6 @@ fun RecommendPageItem(
             fontSize = 14.sp,
             fontWeight = FontWeight.SemiBold,
             color = Color.White,
-
         )
     }
 }

@@ -66,5 +66,16 @@ data class CreatorInfo(
 
 @JsonClass(generateAdapter = true)
 data class AgentInfoResponse(
-    val list: List<AgentInfo>? = null
+    val list: List<AgentInfo>? = null,
+    val total: Int = 0,
+    val page: Int = 1,
+    @Json(name = "page_size")
+    val pageSize: Int = 10,
+    @Json(name = "total_pages")
+    val totalPages: Int = 1
+)
+
+@JsonClass(generateAdapter = true)
+data class FollowResponse(
+    val message: String = ""
 )

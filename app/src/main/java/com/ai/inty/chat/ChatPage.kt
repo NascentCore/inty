@@ -66,6 +66,7 @@ import kotlinx.coroutines.launch
 fun ChatPage(
     modifier: Modifier,
     chatViewModel: ChatViewModel,
+    onFollowAgent: ((String) -> Unit)? = null,
 
 ) {
     val context = LocalContext.current
@@ -143,7 +144,8 @@ fun ChatPage(
                                     drawerState.value = DrawerValue.Closed
                                 }
                             }
-                        }
+                        },
+                        onFollowAgent = onFollowAgent
                     )
                 }
 
@@ -186,8 +188,9 @@ fun ChatPage(
                 ) {
                     val inputData = chatViewModel.inputData.collectAsState()
                     IntySmallTextField(
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.weight(1f).padding(horizontal = 16.dp),
                         value = inputData.value,
+                        singleLine = true,
                         onValueChange = {
                             chatViewModel.inputData.value = it
                         },
@@ -481,6 +484,7 @@ fun TopBar(
     modifier: Modifier,
     agentInfo: AgentInfo,
     onClickMore: () -> Unit,
+    onFollowAgent: ((String) -> Unit)? = null,
 ) {
     val context = LocalContext.current
     Row(
@@ -515,7 +519,9 @@ fun TopBar(
             Spacer(modifier = Modifier.width(6.dp))
 
             IntyImage(
-                modifier = Modifier.size(20.dp),
+                modifier = Modifier.size(20.dp).noRippleClickable {
+                    onFollowAgent?.invoke(agentInfo.id)
+                },
                 model = R.drawable.btn_add
             )
 

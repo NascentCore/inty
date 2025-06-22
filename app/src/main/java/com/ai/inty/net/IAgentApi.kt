@@ -3,9 +3,12 @@ package com.ai.inty.net
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.beans.AgentInfoResponse
 import com.ai.inty.beans.CreateGuestResult
+import com.ai.inty.beans.FollowResponse
 import com.architecture.httplib.core.HttpResult
 import com.therouter.inject.Singleton
+import retrofit2.http.DELETE
 import retrofit2.http.GET
+import retrofit2.http.POST
 import retrofit2.http.Path
 import retrofit2.http.Query
 
@@ -17,4 +20,13 @@ interface IAgentApi {
 //    @GET("/api/v1/recommendations/agents")
     @GET("api/v1/ai/agents/recommend")
     suspend fun recommendAgents(@Query("skip") skip: Int, @Query("limit")limit: Int): HttpResult<AgentInfoResponse>
+    
+    @GET("/api/v1/ai/agents/following")
+    suspend fun getFollowingAgents(@Query("page") page: Int, @Query("page_size") pageSize: Int): HttpResult<AgentInfoResponse>
+    
+    @POST("/api/v1/ai/agents/{agentId}/follow")
+    suspend fun followAgent(@Path("agentId") agentId: String): HttpResult<FollowResponse>
+    
+    @DELETE("/api/v1/ai/agents/{agentId}/follow")
+    suspend fun unfollowAgent(@Path("agentId") agentId: String): HttpResult<FollowResponse>
 }
