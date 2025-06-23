@@ -1,9 +1,11 @@
 package com.ai.inty.viewmodels
 
 import android.content.Context
+import android.content.Intent
 import androidx.compose.runtime.mutableStateListOf
 import androidx.lifecycle.viewModelScope
 import com.ai.inty.Constant
+import com.ai.inty.MainActivity
 import com.ai.inty.base.BaseActivityViewModel
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.beans.CreateGuestReq
@@ -14,6 +16,7 @@ import com.ai.inty.home.ConversionsPageTab
 import com.ai.inty.net.IAgentApi
 import com.ai.inty.net.IUserApi
 import com.ai.inty.net.IUserApi2
+import com.ai.inty.utils.UserProfileManager
 import com.architecture.httplib.core.HttpResult
 import com.google.android.gms.tasks.OnCompleteListener
 import com.google.firebase.messaging.FirebaseMessaging
@@ -68,42 +71,26 @@ class MainViewModel: BaseActivityViewModel() {
     }
 
     init {
-
-        if (IntySetting.isLogin()) {
-            onLoginSuccess()
-        } else {
-            createGuest() {
-                onLoginSuccess()
-            }
-        }
+        EasyLog.log("MainViewModel init - current user: ${IntySetting.getCurUserID()}")
+        
+        // 直接加载业务数据，登录状态已在 SplashActivity 中处理
+        loadBusinessData()
 
         TheRouter.addActionInterceptor(Constant.ACTION_USER_PROFILE_CHANGED, userProfileChanged)
     }
 
-    private fun onLoginSuccess() {
+    private fun loadBusinessData() {
+        // 优先从本地缓存获取用户信息
+        if (UserProfileManager.hasUserProfile()) {
+            _userProfile.value = UserProfileManager.getUserProfile()
+            EasyLog.log("Loaded user profile from cache: ${_userProfile.value.nickname}")
+        }
+        
+        // 加载业务数据
         getAgents()
-        getUserProfile()
+        getUserProfile() // 从服务器获取最新信息并更新本地缓存
         regFCM()
         getSysMsgs()
-    }
-
-    fun createGuest(onSuccess: () -> Unit) {
-        EasyLog.log("createGuest")
-        viewModelScope.launch(Dispatchers.IO) {
-            val result = userApi.createGuest(CreateGuestReq(device_id = AppEnv.DeviceID, AppEnv.locale.language))
-            EasyLog.log("create guest = $result", EasyLog.INFO)
-            when (result) {
-                is HttpResult.Success -> {
-                    IntySetting.login(true, result.data.guest_id, result.data.token)
-                    onSuccess()
-                }
-                is HttpResult.Failure -> {
-                    EasyLog.log("error: $result", priority = EasyLog.ERROR)
-                    showSnackbar(result.message)
-
-                }
-            }
-        }
     }
 
     fun getAgents() {
@@ -161,6 +148,9 @@ class MainViewModel: BaseActivityViewModel() {
             when (result) {
                 is HttpResult.Success -> {
                     _userProfile.value = result.data
+                    // 更新本地缓存
+                    UserProfileManager.saveUserProfile(result.data)
+                    EasyLog.log("Updated user profile from server: ${result.data.nickname}")
                 }
 
                 is HttpResult.Failure -> {
@@ -210,5 +200,29 @@ class MainViewModel: BaseActivityViewModel() {
                 }
             }
         }
+    }
+
+    // 新增：用户登出方法
+    fun logout() {
+        EasyLog.log("User logout - clearing all data")
+        
+        // 清理本地存储
+        IntySetting.logout()
+        UserProfileManager.clearUserProfile()
+        
+        // 清理内存数据
+        agentList.clear()
+        sysMsgs.clear()
+        _userProfile.value = UserProfile()
+        chatViewModel?.let { chat ->
+            chat.clearAllData()
+        }
+        EasyLog.log("User logged out successfully")
+        
+        // 重启应用以完全清理状态
+        val intent = Intent(AppEnv.context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
+        AppEnv.context.startActivity(intent)
     }
 }

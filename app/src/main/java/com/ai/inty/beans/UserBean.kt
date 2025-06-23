@@ -2,6 +2,7 @@ package com.ai.inty.beans
 
 import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
+import android.os.Parcelable
 
 data class UserBean(
     var uid: String = "",
@@ -20,7 +21,6 @@ data class CreateGuestResult(
     val token: String,
     val is_new_guest: Boolean,
 )
-
 
 @JsonClass(generateAdapter = true)
 data class UserProfile(
@@ -64,4 +64,18 @@ enum class GENDER(val value: String) {
 data class TokenBean(
     @Json(name = "token")
     val token: String
+)
+
+@JsonClass(generateAdapter = true)
+data class GoogleLoginRequest(
+    @Json(name = "id_token")
+    val idToken: String
+)
+
+@JsonClass(generateAdapter = true)
+data class GoogleLoginResponse(
+    @Json(name = "token")
+    val token: String,
+    @Json(name = "user")
+    val user: UserProfile
 )

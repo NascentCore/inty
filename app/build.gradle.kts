@@ -120,6 +120,7 @@ dependencies {
     implementation(libs.firebase.analytics)
     implementation(libs.firebase.messaging)
     implementation(libs.firebase.messaging.directboot)
+    implementation("com.google.android.gms:play-services-auth:21.2.0")
 
     api(libs.ucrop)
 

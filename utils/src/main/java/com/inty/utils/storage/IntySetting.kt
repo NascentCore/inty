@@ -106,4 +106,47 @@ object IntySetting {
         changeUser(geGuestUserID())
     }
 
+    // 通用的用户信息存储方法（不依赖具体的 UserProfile 类）
+    fun setUserProfileData(key: String, value: String) {
+        curUserSetting.putString("user_profile_$key", value)
+    }
+
+    fun getUserProfileData(key: String): String? {
+        return curUserSetting.decodeString("user_profile_$key")
+    }
+
+    fun setUserProfileBoolean(key: String, value: Boolean) {
+        curUserSetting.putBoolean("user_profile_$key", value)
+    }
+
+    fun getUserProfileBoolean(key: String, defaultValue: Boolean = false): Boolean {
+        return curUserSetting.decodeBool("user_profile_$key", defaultValue)
+    }
+
+    fun setUserProfileInt(key: String, value: Int) {
+        curUserSetting.putInt("user_profile_$key", value)
+    }
+
+    fun getUserProfileInt(key: String, defaultValue: Int = 0): Int {
+        return curUserSetting.decodeInt("user_profile_$key", defaultValue)
+    }
+
+    fun hasUserProfileData(key: String): Boolean {
+        return curUserSetting.decodeString("user_profile_$key")?.isNotEmpty() == true
+    }
+
+    fun clearUserProfileData(key: String) {
+        curUserSetting.removeValueForKey("user_profile_$key")
+    }
+
+    fun clearAllUserProfileData() {
+        // 清除所有以 user_profile_ 开头的键
+        val keys = curUserSetting.allKeys()
+        keys?.forEach { key ->
+            if (key.startsWith("user_profile_")) {
+                curUserSetting.removeValueForKey(key)
+            }
+        }
+    }
+
 }
