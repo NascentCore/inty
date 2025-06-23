@@ -149,6 +149,9 @@ async def google_login(
                     email=existing_user.email,
                     phone=existing_user.phone,
                     auth_type=existing_user.auth_type,
+                    gender=existing_user.gender,
+                    age_group=existing_user.age_group,
+                    system_language=existing_user.system_language,
                     is_new_user=False
                 )
             ))
@@ -185,6 +188,9 @@ async def google_login(
                 email=new_user.email,
                 phone=new_user.phone,
                 auth_type=new_user.auth_type,
+                gender=new_user.gender,
+                age_group=new_user.age_group,
+                system_language=new_user.system_language,
                 is_new_user=True
             )
         ))

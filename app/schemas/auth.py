@@ -127,6 +127,9 @@ class LoginUserResponse(BaseModel):
     email: str
     phone: Optional[str] = None
     auth_type: AuthType
+    gender: Optional[Gender] = None
+    age_group: Optional[str] = None
+    system_language: Optional[str] = None
     is_new_user: bool
 
 
