@@ -22,7 +22,6 @@ import kotlinx.coroutines.withContext
 class LoginActivityViewModel: BaseActivityViewModel() {
 
     private val userApi = TheRouter.get(IUserApi::class.java)!!
-    private val userApi2 = TheRouter.get(IUserApi2::class.java)!!
 
     fun onGoogleLoginSuccess(idToken: String) {
         viewModelScope.launch(Dispatchers.IO) {
@@ -40,7 +39,6 @@ class LoginActivityViewModel: BaseActivityViewModel() {
                     IntySetting.login(false, userProfile.id, token) // false 表示不是游客用户
                     UserProfileManager.saveUserProfile(userProfile)
                     
-                    // 登录成功后重启 MainActivity 以清理所有缓存数据
                     withContext(Dispatchers.Main) {
                         // 关闭当前登录页面
                         closeActivity()
@@ -57,27 +55,6 @@ class LoginActivityViewModel: BaseActivityViewModel() {
                     withContext(Dispatchers.Main) {
                         showSnackbar(result.message)
                     }
-                }
-            }
-        }
-    }
-
-    fun onSave(gender: GENDER, age: String) {
-        viewModelScope.launch(Dispatchers.IO) {
-            val result = userApi2.setUserProfile(
-                userProfile = UserProfile(
-                    gender = gender.value,
-                    ageGroup = age,
-                )
-            )
-            EasyLog.log("setUserProfile($gender, $age) = $result")
-
-            when (result) {
-                is HttpResult.Success -> {
-                    closeActivity()
-                }
-                is HttpResult.Failure -> {
-                    showSnackbar(result.message)
                 }
             }
         }
