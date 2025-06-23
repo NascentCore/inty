@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewModelScope
 import com.ai.inty.ui.theme.IntyTheme
 import com.ai.inty.viewmodels.SplashViewModel
+import com.ai.inty.viewmodels.InitState
 import com.inty.utils.log.EasyLog
 import com.therouter.TheRouter
 import kotlinx.coroutines.launch
@@ -68,13 +69,23 @@ class SplashActivity : ComponentActivity() {
                 EasyLog.log("initState=$it")
 
                 when (it) {
-                    SplashViewModel.InitState.Success -> {
+                    InitState.Loading -> {
+                        // 正在加载中，继续显示 Splash 页面
+                        EasyLog.log("Initialization in progress...")
+                    }
+                    InitState.Success -> {
                         TheRouter.build(Constant.ROUTE_MAIN)
                             .navigation(this@SplashActivity)
                         finish()
                     }
-                    else -> {
-
+                    InitState.Failed -> {
+                        // 初始化失败，显示错误信息并重试
+                        EasyLog.log("Initialization failed, showing error")
+                        // 可以在这里显示错误提示，或者自动重试
+                        // 暂时直接跳转到主页面，让用户手动处理
+                        TheRouter.build(Constant.ROUTE_MAIN)
+                            .navigation(this@SplashActivity)
+                        finish()
                     }
                 }
             }

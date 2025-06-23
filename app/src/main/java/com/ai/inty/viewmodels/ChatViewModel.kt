@@ -33,8 +33,6 @@ class ChatViewModel: BaseActivityViewModel() {
     init {
 
         EasyLog.log("ChatViewModel = ${hashCode()}")
-
-        getConversions()
     }
 
 
@@ -167,4 +165,12 @@ class ChatViewModel: BaseActivityViewModel() {
         }
     }
 
+    // 新增：清理所有数据的方法
+    fun clearAllData() {
+        msgs.clear()
+        conversions.clear()
+        _agentInfo.value = null
+        inputData.value = ""
+        EasyLog.log("ChatViewModel cleared all data")
+    }
 }
