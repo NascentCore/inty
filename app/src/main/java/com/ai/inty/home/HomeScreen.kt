@@ -74,9 +74,12 @@ fun HomeScreen(
                 selectedTab = selectedTab.value.ordinal,
                 onSelectTab = {
                     if (it == HomeTabIndex.Add.ordinal) {
-                        mainViewModel.showSnackbar("ADD")
-                        TheRouter.build(Constant.ROUTE_LOGIN)
-                            .navigation(context)
+                        if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
+                            mainViewModel.showSnackbar("页面开发中")
+                        } else {
+                            TheRouter.build(Constant.ROUTE_LOGIN)
+                                .navigation(context)
+                        }
                         return@BottomBar
                     }
                     mainViewModel.selectTab(it)

@@ -58,10 +58,15 @@ import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
 import com.inty.utils.log.EasyLog
+import com.therouter.TheRouter
 import com.therouter.router.Route
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import com.ai.inty.utils.UserProfileManager
 
 @Route(path = Constant.ROUTE_LOGIN)
 class LoginActivity : BaseActivity() {
@@ -78,9 +83,6 @@ class LoginActivity : BaseActivity() {
                     onClose = {
                         finish()
                     },
-                    onSave = { gender, age ->
-                        viewModel.onSave(gender, age)
-                    },
                     onGoogleLoginSuccess = { idToken ->
                         viewModel.onGoogleLoginSuccess(idToken)
                     }
@@ -91,9 +93,24 @@ class LoginActivity : BaseActivity() {
         lifecycleScope.launch {
             viewModel.finishActivity.collect {
                 if (it) {
+                    checkAndShowRegInfo()
                     finish()
                 }
             }
+        }
+    }
+
+    private fun checkAndShowRegInfo() {
+        val userProfile = UserProfileManager.getUserProfile()
+        if (userProfile.gender.isNullOrEmpty()) {
+            EasyLog.log("User has not set gender, showing RegInfoActivity")
+            CoroutineScope(Dispatchers.Main).launch {
+                delay(300)
+                TheRouter.build(Constant.ROUTE_REG_INFO)
+                    .navigation(this@LoginActivity)
+            }
+        } else {
+            EasyLog.log("User has set gender, no need to show RegInfoActivity")
         }
     }
 }
@@ -101,7 +118,6 @@ class LoginActivity : BaseActivity() {
 @Composable
 fun LoginScreen(
     onClose: () -> Unit = {},
-    onSave: (gender: GENDER, age: String) -> Unit = { _, _ -> },
     onGoogleLoginSuccess: (idToken: String) -> Unit
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -286,33 +302,6 @@ private fun PolicyText() {
                 style = linkTextStyle
             )
         }
-    }
-}
-
-@Composable
-private fun SaveBtn(onSave: () -> Unit) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp)
-            .height(50.dp)
-            .background(
-                brush = Brush.linearGradient(
-                    colors = listOf(Color(0xFFC122FF), Color(0xFFFF905D))
-                ),
-                shape = RoundedCornerShape(25.dp)
-            )
-            .noRippleClickable {
-                onSave()
-            }
-    ) {
-        Text(
-            modifier = Modifier.align(Alignment.Center),
-            text = "Enter",
-            fontSize = 16.sp,
-            fontWeight = FontWeight.Normal,
-            color = Color.White,
-        )
     }
 }
 
