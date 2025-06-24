@@ -41,7 +41,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.lifecycleScope
 import com.ai.inty.base.BaseActivity
 import com.ai.inty.base.IntyImage
-import com.ai.inty.base.IntySmallTextField
+import com.ai.inty.base.IntySmallTextField2
 import com.ai.inty.base.noRippleClickable
 import com.ai.inty.beans.ReportItem
 import com.ai.inty.ui.theme.BackGround
@@ -277,7 +277,7 @@ fun ReportScreen(
                         )
                         .padding(vertical = 10.dp)
                 ) {
-                    IntySmallTextField(
+                    IntySmallTextField2(
                         modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
                         value = description,
                         placeholder = {
