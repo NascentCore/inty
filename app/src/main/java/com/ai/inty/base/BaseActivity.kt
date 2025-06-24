@@ -1,10 +1,10 @@
 package com.ai.inty.base
 
-import android.content.res.Resources
+import android.content.Context
+import android.content.res.Configuration
 import android.os.Bundle
 import android.os.PersistableBundle
 import androidx.activity.ComponentActivity
-import androidx.core.view.WindowCompat
 import com.inty.utils.log.EasyLog
 import com.therouter.TheRouter
 
@@ -16,23 +16,18 @@ open class BaseActivity : ComponentActivity() {
     }
 
     private fun onInit() {
-        WindowCompat.setDecorFitsSystemWindows(window, false)
         TheRouter.inject(this)
+    }
+
+    override fun attachBaseContext(newBase: Context) {
+        val overrideConfiguration = Configuration(newBase.resources.configuration)
+        overrideConfiguration.fontScale = 1.0f
+        super.attachBaseContext(newBase.createConfigurationContext(overrideConfiguration))
     }
 
     override fun onCreate(savedInstanceState: Bundle?, persistentState: PersistableBundle?) {
         super.onCreate(savedInstanceState, persistentState)
         onInit()
-    }
-
-    override fun getResources(): Resources {
-        val resources = super.getResources();
-        val configContext = createConfigurationContext(resources.configuration)
-
-        return configContext.resources.apply {
-            configuration.fontScale = 1.0f
-            displayMetrics.scaledDensity = displayMetrics.density * configuration.fontScale
-        }
     }
 
     override fun finish() {

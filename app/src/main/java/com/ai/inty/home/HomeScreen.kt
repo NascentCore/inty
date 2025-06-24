@@ -22,6 +22,7 @@ import com.ai.inty.Constant
 import com.ai.inty.R
 import com.ai.inty.base.IntyImage
 import com.ai.inty.base.noRippleClickable
+import com.ai.inty.beans.UserProfile
 import com.ai.inty.chat.ChatPageContainer
 import com.ai.inty.ui.theme.BackGround
 import com.ai.inty.viewmodels.ChatViewModel
@@ -74,8 +75,7 @@ fun HomeScreen(
                 selectedTab = selectedTab.value.ordinal,
                 onSelectTab = {
                     if (it == HomeTabIndex.Add.ordinal) {
-                        mainViewModel.showSnackbar("ADD")
-                        TheRouter.build(Constant.ROUTE_REG_INFO)
+                        TheRouter.build(Constant.ROUTE_CREATE_ROLE)
                             .navigation(context)
                         return@BottomBar
                     }
@@ -144,14 +144,41 @@ fun HomeScreen(
             }
             HomeTabIndex.My -> {
                 val userProfile = mainViewModel.userProfile.collectAsState()
+                val userCreatedAgents = mainViewModel.userCreatedAgents
+                
+                // 确保用户信息有效，避免崩溃
+                val safeUserProfile = userProfile.value.let { profile ->
+                    if (profile.id.isEmpty()) {
+                        UserProfile(
+                            id = "loading",
+                            nickname = "加载中...",
+                            avatar = null,
+                            description = "正在加载用户信息..."
+                        )
+                    } else {
+                        profile
+                    }
+                }
+                
                 MyPage(
                     modifier = Modifier,
-                    userProfile = userProfile.value,
-                    agents = listOf(),
-                    onClickAgent = {
-
+                    userProfile = safeUserProfile,
+                    agents = userCreatedAgents,
+                    onClickAgent = { agent ->
+                        TheRouter.build(Constant.ROUTE_CHAT)
+                            .withObject("agent", agent)
+                            .navigation(context)
                     }
                 )
+                
+                // Load user created agents when My page is displayed
+                androidx.compose.runtime.LaunchedEffect(Unit) {
+                    try {
+                        mainViewModel.getUserCreatedAgents()
+                    } catch (e: Exception) {
+                        // Ignore errors for now
+                    }
+                }
             }
         }
     }

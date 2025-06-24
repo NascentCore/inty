@@ -11,7 +11,7 @@ import retrofit2.http.PUT
 @Singleton
 interface IUserApi2 {
     @GET("/api/v1/users/profile")
-    suspend fun getUserProfile(): HttpResult<UserProfile>
+    suspend fun getUserProfile(): HttpResult<List<UserProfile>>
 
     @PUT("/api/v1/users/profile")
     suspend fun setUserProfile(@Body userProfile: UserProfile): HttpResult<UserProfile>

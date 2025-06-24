@@ -1,0 +1,592 @@
+package com.ai.inty
+
+import android.os.Bundle
+import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.ai.inty.base.BaseActivity
+import com.ai.inty.base.noRippleClickable
+import com.ai.inty.ui.theme.BackGround
+import com.ai.inty.ui.theme.IntyTheme
+import com.ai.inty.viewmodels.MainViewModel
+import com.ai.inty.beans.CreateAgentRequest
+import com.ai.inty.viewmodels.HomeTabIndex
+import com.therouter.TheRouter
+import com.therouter.router.Route
+import androidx.lifecycle.ViewModelProvider
+import androidx.compose.ui.platform.LocalContext
+import android.widget.Toast
+import com.inty.utils.log.EasyLog
+
+@Route(path = Constant.ROUTE_CREATE_ROLE)
+class CreateRoleActivity : BaseActivity() {
+
+    private val mainViewModel: MainViewModel by lazy {
+        ViewModelProvider(this)[MainViewModel::class.java]
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
+
+        setContent {
+            IntyTheme {
+                CreateRolePage(
+                    modifier = Modifier.fillMaxSize(),
+                    mainViewModel = mainViewModel,
+                    onBack = { finish() },
+                    onCreateSuccess = { finish() }
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CreateRolePage(
+    modifier: Modifier = Modifier,
+    mainViewModel: MainViewModel,
+    onBack: () -> Unit,
+    onCreateSuccess: () -> Unit
+) {
+    var name by remember { mutableStateOf("") }
+    var gender by remember { mutableStateOf("FEMALE") }
+    var settings by remember { mutableStateOf("") }
+    var intro by remember { mutableStateOf("") }
+    var opening by remember { mutableStateOf("") }
+    var visibility by remember { mutableStateOf("PUBLIC") }
+    var isLoading by remember { mutableStateOf(false) }
+    
+    val context = LocalContext.current
+
+    Scaffold(
+        modifier = modifier.background(BackGround),
+        containerColor = BackGround,
+        topBar = {
+            CenterAlignedTopAppBar(
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors().copy(containerColor = Color.Transparent),
+                title = {
+                    Text(
+                        text = "InTy",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color.White
+                    )
+                },
+                navigationIcon = {
+                    Image(
+                        modifier = Modifier
+                            .padding(horizontal = 12.dp)
+                            .noRippleClickable { onBack() },
+                        painter = painterResource(R.drawable.close),
+                        contentDescription = null,
+                    )
+                }
+            )
+        }
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp)
+        ) {
+            Spacer(modifier = Modifier.height(24.dp))
+            
+            // Avatar Upload Section
+            AvatarUploadSection()
+            
+            Spacer(modifier = Modifier.height(32.dp))
+            
+            // Name Field
+            CustomTextField(
+                label = "Name *",
+                value = name,
+                onValueChange = { name = it },
+                placeholder = "Name your InTy"
+            )
+            
+            Spacer(modifier = Modifier.height(24.dp))
+            
+            // Gender Selection
+            GenderSelectionSection(
+                selectedGender = gender,
+                onGenderChange = { gender = it }
+            )
+            
+            Spacer(modifier = Modifier.height(24.dp))
+            
+            // Settings Field
+            CustomTextField(
+                label = "Settings (Determines dialogue effect) *",
+                value = settings,
+                onValueChange = { settings = it },
+                placeholder = "Please fill in the dialogue effect...",
+                minLines = 4
+            )
+            
+            Spacer(modifier = Modifier.height(24.dp))
+            
+            // Intro Field
+            CustomTextField(
+                label = "Intro (No impact on dialogue effect) *",
+                value = intro,
+                onValueChange = { intro = it },
+                placeholder = "Please fill in the character introduction...",
+                minLines = 3
+            )
+            
+            Spacer(modifier = Modifier.height(24.dp))
+            
+            // Opening Field
+            CustomTextField(
+                label = "Opening *",
+                value = opening,
+                onValueChange = { opening = it },
+                placeholder = "Please fill in the character's opening remarks...",
+                minLines = 3
+            )
+            
+            Spacer(modifier = Modifier.height(24.dp))
+            
+            // Sound Section
+            SoundSelectionSection()
+            
+            Spacer(modifier = Modifier.height(24.dp))
+            
+            // Visibility Section
+            VisibilitySelectionSection(
+                selectedVisibility = visibility,
+                onVisibilityChange = { visibility = it }
+            )
+            
+            Spacer(modifier = Modifier.height(40.dp))
+            
+            // Create Button
+            CreateButton(
+                isLoading = isLoading,
+                onClick = {
+                    // Validate required fields
+                    if (name.isBlank() || intro.isBlank() || opening.isBlank() || settings.isBlank()) {
+                        Toast.makeText(context, "请填写所有必填字段", Toast.LENGTH_SHORT).show()
+                        return@CreateButton
+                    }
+                    
+                    isLoading = true
+                    
+                    try {
+                        // Create API request
+                        val request = CreateAgentRequest(
+                            name = name,
+                            gender = gender,
+                            settings = mapOf("description" to settings),
+                            intro = intro,
+                            opening = opening,
+                            visibility = visibility,
+                            prompt = settings
+                        )
+                        
+                        // Call API through ViewModel
+                        mainViewModel.createAgent(
+                            request = request,
+                            onSuccess = { agentInfo ->
+                                isLoading = false
+                                Toast.makeText(context, "角色创建成功！", Toast.LENGTH_SHORT).show()
+                                onCreateSuccess()
+                            },
+                            onError = { error ->
+                                isLoading = false
+                                val errorMessage = if (error.isBlank()) "创建失败，请稍后重试" else "创建失败：$error"
+                                Toast.makeText(context, errorMessage, Toast.LENGTH_LONG).show()
+                            }
+                        )
+                    } catch (e: Exception) {
+                        isLoading = false
+                        val errorMessage = "创建出错：${e.message ?: "未知错误"}"
+                        Toast.makeText(context, errorMessage, Toast.LENGTH_LONG).show()
+                        EasyLog.log("CreateRole error: ${e.message}", EasyLog.ERROR)
+                        EasyLog.log(e)
+                    }
+                }
+            )
+            
+            Spacer(modifier = Modifier.height(32.dp))
+        }
+    }
+}
+
+@Composable
+fun AvatarUploadSection() {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Box(
+            modifier = Modifier
+                .size(120.dp)
+                .border(
+                    width = 2.dp,
+                    color = Color(0xFFE91E63),
+                    shape = RoundedCornerShape(12.dp)
+                )
+                .background(
+                    color = Color(0x1A78599A),
+                    shape = RoundedCornerShape(12.dp)
+                )
+                .noRippleClickable { /* TODO: Implement image picker */ },
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Image(
+                    painter = painterResource(R.drawable.btn_add),
+                    contentDescription = null,
+                    modifier = Modifier.size(32.dp)
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "Avatar",
+                    fontSize = 12.sp,
+                    color = Color.White.copy(0.7f),
+                    textAlign = TextAlign.Center
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun GenderSelectionSection(
+    selectedGender: String,
+    onGenderChange: (String) -> Unit
+) {
+    Column {
+        Text(
+            text = "Gender (Unmodified after Creation) *",
+            fontSize = 16.sp,
+            color = Color.White,
+            fontWeight = FontWeight.Medium
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            GenderButton(
+                text = "Male",
+                isSelected = selectedGender == "MALE",
+                onClick = { onGenderChange("MALE") },
+                modifier = Modifier.weight(1f)
+            )
+            GenderButton(
+                text = "Female",
+                isSelected = selectedGender == "FEMALE",
+                onClick = { onGenderChange("FEMALE") },
+                modifier = Modifier.weight(1f)
+            )
+            GenderButton(
+                text = "Non-Binary",
+                isSelected = selectedGender == "NON_BINARY",
+                onClick = { onGenderChange("NON_BINARY") },
+                modifier = Modifier.weight(1f)
+            )
+        }
+    }
+}
+
+@Composable
+fun SoundSelectionSection() {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(56.dp)
+            .background(
+                color = Color(0x1A78599A),
+                shape = RoundedCornerShape(12.dp)
+            )
+            .border(
+                width = 1.dp,
+                color = Color.White.copy(0.2f),
+                shape = RoundedCornerShape(12.dp)
+            )
+            .padding(horizontal = 16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(32.dp)
+                .background(
+                    color = Color(0xFFE91E63),
+                    shape = RoundedCornerShape(8.dp)
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = "🎵",
+                fontSize = 16.sp
+            )
+        }
+        
+        Spacer(modifier = Modifier.width(12.dp))
+        
+        Text(
+            text = "Sound *",
+            fontSize = 16.sp,
+            color = Color.White,
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier.weight(1f)
+        )
+        
+        Text(
+            text = "Inty Voice",
+            fontSize = 14.sp,
+            color = Color.White.copy(0.7f)
+        )
+        
+        Spacer(modifier = Modifier.width(8.dp))
+        
+        Text(
+            text = ">",
+            fontSize = 16.sp,
+            color = Color.White.copy(0.7f)
+        )
+    }
+}
+
+@Composable
+fun VisibilitySelectionSection(
+    selectedVisibility: String,
+    onVisibilityChange: (String) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(56.dp)
+            .background(
+                color = Color(0x1A78599A),
+                shape = RoundedCornerShape(12.dp)
+            )
+            .border(
+                width = 1.dp,
+                color = Color.White.copy(0.2f),
+                shape = RoundedCornerShape(12.dp)
+            )
+            .padding(horizontal = 16.dp)
+            .noRippleClickable {
+                onVisibilityChange(if (selectedVisibility == "PUBLIC") "PRIVATE" else "PUBLIC")
+            },
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(32.dp)
+                .background(
+                    color = Color(0xFF2196F3),
+                    shape = RoundedCornerShape(8.dp)
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = "★",
+                fontSize = 16.sp,
+                color = Color.White
+            )
+        }
+        
+        Spacer(modifier = Modifier.width(12.dp))
+        
+        Text(
+            text = "Visibility *",
+            fontSize = 16.sp,
+            color = Color.White,
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier.weight(1f)
+        )
+        
+        Text(
+            text = selectedVisibility.lowercase().replaceFirstChar { it.uppercase() },
+            fontSize = 14.sp,
+            color = Color.White.copy(0.7f)
+        )
+        
+        Spacer(modifier = Modifier.width(8.dp))
+        
+        Text(
+            text = ">",
+            fontSize = 16.sp,
+            color = Color.White.copy(0.7f)
+        )
+    }
+}
+
+
+@Composable
+fun CustomTextField(
+    label: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+    placeholder: String,
+    minLines: Int = 1
+) {
+    Column {
+        Text(
+            text = label,
+            fontSize = 16.sp,
+            color = Color.White,
+            fontWeight = FontWeight.Medium
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        
+        BasicTextField(
+            value = value,
+            onValueChange = onValueChange,
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    color = Color(0x1A78599A),
+                    shape = RoundedCornerShape(12.dp)
+                )
+                .border(
+                    width = 1.dp,
+                    color = Color.White.copy(0.2f),
+                    shape = RoundedCornerShape(12.dp)
+                )
+                .padding(16.dp)
+                .let { if (minLines > 1) it.height((minLines * 24 + 32).dp) else it },
+            textStyle = TextStyle(
+                color = Color.White,
+                fontSize = 16.sp
+            ),
+            cursorBrush = SolidColor(Color.White),
+            decorationBox = { innerTextField ->
+                Box {
+                    if (value.isEmpty()) {
+                        Text(
+                            text = placeholder,
+                            fontSize = 16.sp,
+                            color = Color.White.copy(0.5f)
+                        )
+                    }
+                    innerTextField()
+                }
+            }
+        )
+    }
+}
+
+@Composable
+fun GenderButton(
+    text: String,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Button(
+        onClick = onClick,
+        colors = ButtonDefaults.buttonColors(
+            containerColor = Color(0x1A78599A)
+        ),
+        shape = RoundedCornerShape(20.dp),
+        modifier = modifier
+            .border(
+                width = if (isSelected) 2.dp else 1.dp,
+                color = if (isSelected) Color(0xFFE91E63) else Color.White.copy(0.3f),
+                shape = RoundedCornerShape(20.dp)
+            )
+    ) {
+        Text(
+            text = text,
+            fontSize = 12.sp,
+            color = Color.White,
+            modifier = Modifier.padding(horizontal = 2.dp, vertical = 4.dp)
+        )
+    }
+}
+
+
+@Composable
+fun CreateButton(
+    isLoading: Boolean,
+    onClick: () -> Unit
+) {
+    Button(
+        onClick = onClick,
+        enabled = !isLoading,
+        colors = ButtonDefaults.buttonColors(
+            containerColor = Color.Transparent
+        ),
+        shape = RoundedCornerShape(25.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(56.dp)
+            .background(
+                brush = androidx.compose.ui.graphics.Brush.horizontalGradient(
+                    colors = listOf(
+                        Color(0xFFE91E63),
+                        Color(0xFFFF9800)
+                    )
+                ),
+                shape = RoundedCornerShape(25.dp)
+            )
+    ) {
+        if (isLoading) {
+            CircularProgressIndicator(
+                color = Color.White,
+                modifier = Modifier.size(24.dp)
+            )
+        } else {
+            Text(
+                text = "Creat My InTy",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Color.White
+            )
+        }
+    }
+}

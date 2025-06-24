@@ -79,3 +79,75 @@ data class AgentInfoResponse(
 data class FollowResponse(
     val message: String = ""
 )
+
+@JsonClass(generateAdapter = true)
+data class CreateAgentRequest(
+    @Json(name = "name")
+    val name: String,
+    @Json(name = "gender")
+    val gender: String,
+    @Json(name = "avatar")
+    val avatar: String? = null,
+    @Json(name = "background")
+    val background: String? = null,
+    @Json(name = "voice_id")
+    val voiceId: String = "",
+    @Json(name = "settings")
+    val settings: Map<String, Any> = emptyMap(),
+    @Json(name = "intro")
+    val intro: String,
+    @Json(name = "opening")
+    val opening: String,
+    @Json(name = "visibility")
+    val visibility: String,
+    @Json(name = "photos")
+    val photos: List<String> = emptyList(),
+    @Json(name = "category")
+    val category: String = "",
+    @Json(name = "prompt")
+    val prompt: String
+)
+
+@JsonClass(generateAdapter = true)
+data class CreateAgentResponse(
+    @Json(name = "name")
+    val name: String = "",
+    @Json(name = "gender")
+    val gender: String = "",
+    @Json(name = "avatar")
+    val avatar: String? = null,
+    @Json(name = "background")
+    val background: String? = null,
+    @Json(name = "voice_id")
+    val voiceId: String = "",
+    @Json(name = "settings")
+    val settings: Map<String, Any>? = null,
+    @Json(name = "intro")
+    val intro: String = "",
+    @Json(name = "opening")
+    val opening: String = "",
+    @Json(name = "visibility")
+    val visibility: String = "",
+    @Json(name = "photos")
+    val photos: List<String> = emptyList(),
+    @Json(name = "category")
+    val category: String = "",
+    @Json(name = "prompt")
+    val prompt: String = "",
+    @Json(name = "id")
+    val id: String = "",
+    @Json(name = "status")
+    val status: String = "",
+    @Json(name = "creator_id")
+    val creatorId: String = "",
+    @Json(name = "created_at")
+    val createdAt: String = "",
+    @Json(name = "updated_at")
+    val updatedAt: String? = null,
+    @Json(name = "is_followed")
+    val isFollowed: Boolean = false,
+    @Json(name = "follower_count")
+    val followerCount: Int = 0,
+    @Json(name = "creator")
+    val creator: CreatorInfo? = null
+)

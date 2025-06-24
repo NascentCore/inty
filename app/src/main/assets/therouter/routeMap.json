@@ -42,6 +42,13 @@
     "params": {}
   },
   {
+    "path": "http://inty.ai/create/role",
+    "className": "com.ai.inty.CreateRoleActivity",
+    "action": "",
+    "description": "",
+    "params": {}
+  },
+  {
     "path": "http://inty.ai/chat",
     "className": "com.ai.inty.ChatActivity",
     "action": "",

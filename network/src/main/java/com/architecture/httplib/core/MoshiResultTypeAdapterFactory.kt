@@ -74,14 +74,28 @@ class MoshiResultTypeAdapterFactory(private val httpWrapper: HttpWrapper?) : Jso
          */
         override fun fromJson(reader: JsonReader): T? {
             if (httpWrapper != null) {
-                reader.beginObject()
-
-                //一般都是code +msg + result/data
-
                 var errcode: Int? = null
                 var msg: String? = null
                 var data: Any? = null
+                var errcodeFound = false
 
+                val peeked = reader.peekJson()
+                peeked.beginObject()
+                while (peeked.hasNext()) {
+                    if (peeked.nextName() == httpWrapper.getStatusCodeKey()) {
+                        errcodeFound = true
+                        break
+                    }
+                    peeked.skipValue()
+                }
+                peeked.close()
+
+                if (!errcodeFound) {
+                    // "err code" not found, assume raw data object
+                    return dataTypeAdapter.fromJson(reader)
+                }
+
+                reader.beginObject()
                 while (reader.hasNext()) {
                     val nextName = reader.nextName()
                     when (nextName) {
@@ -124,8 +138,10 @@ class MoshiResultTypeAdapterFactory(private val httpWrapper: HttpWrapper?) : Jso
 
                 // 这个字段要看看是否服务器是否是必传字段
                 // 否则没有必要抛异常
-                if (errcode == null)
-                    throw JsonDataException("Expected field [err code] not present.")
+                if (errcode == null) {
+                    // throw JsonDataException("Expected field [err code] not present.")
+                    errcode = -1 // Assign a default error code if not present
+                }
 
                 if (httpWrapper.isRequestSuccess(errcode)){
                     return data as T

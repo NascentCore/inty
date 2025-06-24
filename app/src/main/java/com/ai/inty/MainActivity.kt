@@ -53,6 +53,10 @@ class MainActivity : BaseActivity() {
         BillingManager.initialize(this)
 
         mainViewModel.setChatViewModel(chatViewModel)
+        
+        // Load user created agents
+        mainViewModel.getUserCreatedAgents()
+        
         setContent {
             IntyTheme {
                 HomeScreen(
@@ -113,6 +117,8 @@ class MainActivity : BaseActivity() {
         super.onResume()
         // Refresh following list when returning to MainActivity (e.g., from agent detail page)
         mainViewModel.refreshFollowingListIfOnTab()
+        // Refresh created agents list when returning to MainActivity
+        mainViewModel.refreshCreatedAgentsListIfOnTab()
     }
 
     override fun onDestroy() {

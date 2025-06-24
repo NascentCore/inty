@@ -6,6 +6,8 @@ import androidx.lifecycle.viewModelScope
 import com.ai.inty.Constant
 import com.ai.inty.base.BaseActivityViewModel
 import com.ai.inty.beans.AgentInfo
+import com.ai.inty.beans.CreateAgentRequest
+import com.ai.inty.beans.CreateAgentResponse
 import com.ai.inty.beans.CreateGuestReq
 import com.ai.inty.beans.SysMsgItem
 import com.ai.inty.beans.TokenBean
@@ -28,6 +30,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 
 
 enum class HomeTabIndex {
@@ -46,6 +49,7 @@ class MainViewModel: BaseActivityViewModel() {
 
     val agentList = mutableStateListOf<AgentInfo>()
     val followingAgents = mutableStateListOf<AgentInfo>()
+    val userCreatedAgents = mutableStateListOf<AgentInfo>()
 
     private val _selectedTab = MutableStateFlow(HomeTabIndex.Chat)
     val selectedTab = _selectedTab.asStateFlow()
@@ -139,6 +143,10 @@ class MainViewModel: BaseActivityViewModel() {
                 chatViewModel?.getConversions()
                 getSysMsgs()
             }
+            HomeTabIndex.My -> {
+                // Temporarily commented out to isolate crash issue
+                // getUserCreatedAgents()
+            }
             else -> {
 
             }
@@ -164,17 +172,52 @@ class MainViewModel: BaseActivityViewModel() {
 
     fun getUserProfile() {
         viewModelScope.launch(Dispatchers.IO) {
-            val result = userApi2.getUserProfile()
+            try {
+                val result = userApi2.getUserProfile()
+                EasyLog.log("getUserProfile result = $result")
 
-            when (result) {
-                is HttpResult.Success -> {
-                    _userProfile.value = result.data
-                }
+                when (result) {
+                    is HttpResult.Success -> {
+                        if (result.data.isNotEmpty()) {
+                            _userProfile.value = result.data.first()
+                            EasyLog.log("getUserProfile success: ${result.data.first()}")
+                        } else {
+                            EasyLog.log("getUserProfile returned empty array", priority = EasyLog.WARN)
+                            withContext(Dispatchers.Main) {
+                                showSnackbar("User profile not found.")
+                            }
+                            setDefaultUserProfile()
+                        }
+                    }
 
-                is HttpResult.Failure -> {
-                    showSnackbar(result.message)
+                    is HttpResult.Failure -> {
+                        EasyLog.log("getUserProfile failure: ${result.message}", priority = EasyLog.ERROR)
+                        withContext(Dispatchers.Main) {
+                            showSnackbar(result.message)
+                        }
+                        setDefaultUserProfile()
+                    }
                 }
+            } catch (e: Exception) {
+                EasyLog.log("getUserProfile exception: ${e.message}", priority = EasyLog.ERROR)
+                EasyLog.log(e)
+                withContext(Dispatchers.Main) {
+                    showSnackbar("获取用户信息失败: ${e.message}")
+                }
+                setDefaultUserProfile()
             }
+        }
+    }
+
+    private fun setDefaultUserProfile() {
+        // 设置默认的用户信息，避免UI崩溃
+        if (_userProfile.value.id.isEmpty()) {
+            _userProfile.value = UserProfile(
+                id = "unknown",
+                nickname = "用户",
+                avatar = null,
+                description = null
+            )
         }
     }
 
@@ -236,6 +279,33 @@ class MainViewModel: BaseActivityViewModel() {
                 is HttpResult.Failure -> {
                     showSnackbar(result.message)
                 }
+            }
+        }
+    }
+    
+    fun getUserCreatedAgents() {
+        EasyLog.log("getUserCreatedAgents - Starting API call")
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val result = agentApi.getUserCreatedAgents(0, 10)
+                EasyLog.log("getUserCreatedAgents API result = $result")
+                
+                when (result) {
+                    is HttpResult.Success -> {
+                        EasyLog.log("getUserCreatedAgents - Success: Found ${result.data.size} agents")
+                        userCreatedAgents.clear()
+                        userCreatedAgents.addAll(result.data)
+                        EasyLog.log("getUserCreatedAgents - Updated userCreatedAgents list with ${userCreatedAgents.size} items")
+                    }
+                    is HttpResult.Failure -> {
+                        EasyLog.log("getUserCreatedAgents - API failure: ${result.message}", priority = EasyLog.ERROR)
+                        showSnackbar(result.message)
+                    }
+                }
+            } catch (e: Exception) {
+                EasyLog.log("getUserCreatedAgents - Exception occurred: ${e.message}", priority = EasyLog.ERROR)
+                EasyLog.log(e)
+                showSnackbar("Failed to load created agents: ${e.message}")
             }
         }
     }
@@ -302,6 +372,57 @@ class MainViewModel: BaseActivityViewModel() {
             viewModelScope.launch(Dispatchers.IO) {
                 delay(1000) // Ensure backend is updated
                 getFollowingAgents()
+            }
+        }
+    }
+    
+    fun refreshCreatedAgentsListIfOnTab() {
+        if (_selectedTab.value == HomeTabIndex.My) {
+            viewModelScope.launch(Dispatchers.IO) {
+                delay(1000) // Ensure backend is updated
+                getUserCreatedAgents()
+            }
+        }
+    }
+    
+    fun createAgent(
+        request: CreateAgentRequest,
+        onSuccess: (AgentInfo) -> Unit,
+        onError: (String) -> Unit
+    ) {
+        EasyLog.log("createAgent: ${request.name}")
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val result = agentApi.createAgent(request)
+                EasyLog.log("createAgent = $result")
+                
+                withContext(Dispatchers.Main) {
+                    when (result) {
+                        is HttpResult.Success -> {
+                            EasyLog.log("createAgent success: ${result.data}")
+                            // 刷新用户创建的角色列表
+                            refreshCreatedAgentsListIfOnTab()
+                            onSuccess(result.data)
+                        }
+                        is HttpResult.Failure -> {
+                            EasyLog.log("createAgent error: $result", priority = EasyLog.ERROR)
+                            val errorMessage = if (result.message.isBlank()) "创建失败，请检查网络连接" else result.message
+                            onError(errorMessage)
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                EasyLog.log("createAgent exception: ${e.message}", priority = EasyLog.ERROR)
+                EasyLog.log(e)
+                val errorMessage = when {
+                    e.message?.contains("timeout", ignoreCase = true) == true -> "网络超时，请稍后重试"
+                    e.message?.contains("network", ignoreCase = true) == true -> "网络连接失败，请检查网络"
+                    e.message?.contains("json", ignoreCase = true) == true -> "数据格式错误，请稍后重试"
+                    else -> "创建失败：${e.message ?: "未知错误"}"
+                }
+                withContext(Dispatchers.Main) {
+                    onError(errorMessage)
+                }
             }
         }
     }

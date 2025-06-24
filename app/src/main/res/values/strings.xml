@@ -21,6 +21,28 @@
     <string name="inspiration">Inspiration</string>
     <string name="create_time">Create time %s</string>
     <string name="report">Report</string>
+    <string name="create_role">Create Role</string>
+    <string name="create_my_inty">Create My InTy</string>
+    <string name="click_to_set_appearance">Click to Set\nAppearance</string>
+    <string name="sound">Sound</string>
+    <string name="inty">InTy</string>
+    <string name="name_required">Name *</string>
+    <string name="name_placeholder">Name your InTy</string>
+    <string name="gender_required">Gender (Unmodified after Creation) *</string>
+    <string name="male">Male</string>
+    <string name="female">Female</string>
+    <string name="non_binary">Non-Binary</string>
+    <string name="settings_required">Settings (Determines dialogue effect) *</string>
+    <string name="settings_placeholder">输入角色设定...</string>
+    <string name="intro_required">Intro (No impact on dialogue effect) *</string>
+    <string name="intro_placeholder">输入角色介绍...</string>
+    <string name="opening_required">Opening *</string>
+    <string name="opening_placeholder">输入开场白...</string>
+    <string name="visibility_required">Visibility *</string>
+    <string name="public_visibility">Public</string>
+    <string name="private_visibility">Private</string>
+    <string name="inty_voice">Inty Voice</string>
+    <string name="add_voice">Add Voice ></string>
 
 
 </resources>
