@@ -116,14 +116,14 @@ fun MyModalNavigationDrawer(
                     .background(color = Color(0xff000000)).clickable {
                         drawerState.value = DrawerValue.Closed
                     }) {}
-        }
-        // 抽屉
-        Box(modifier = Modifier.onSizeChanged {
-            drawerWidth.value = it.width
-        }.graphicsLayer {
-            translationX = xOffset
-        }) {
-            drawerContent()
+            // 抽屉
+            Box(modifier = Modifier.onSizeChanged {
+                drawerWidth.value = it.width
+            }.graphicsLayer {
+                translationX = xOffset
+            }) {
+                drawerContent()
+            }
         }
     }
 }
