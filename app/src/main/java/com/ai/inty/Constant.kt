@@ -16,6 +16,7 @@ class Constant {
         const val ROUTE_AGENT_INFO = "${ROUTE_HOME_URL}agent/info"
         const val ROUTE_CREATE_ROLE = "${ROUTE_HOME_URL}create/role"
         const val ROUTE_REG_INFO = "${ROUTE_HOME_URL}reg/info"
+        const val ROUTE_LOGIN = "${ROUTE_HOME_URL}login"
         const val ROUTE_REPORT = "${ROUTE_HOME_URL}report"
 
 

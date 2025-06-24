@@ -75,8 +75,13 @@ fun HomeScreen(
                 selectedTab = selectedTab.value.ordinal,
                 onSelectTab = {
                     if (it == HomeTabIndex.Add.ordinal) {
-                        TheRouter.build(Constant.ROUTE_CREATE_ROLE)
-                            .navigation(context)
+                        if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
+                            TheRouter.build(Constant.ROUTE_CREATE_ROLE)
+                                .navigation(context)
+                        } else {
+                            TheRouter.build(Constant.ROUTE_LOGIN)
+                                .navigation(context)
+                        }
                         return@BottomBar
                     }
                     mainViewModel.selectTab(it)

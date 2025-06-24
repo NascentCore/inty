@@ -64,8 +64,7 @@
             android:theme="@style/Theme.Inty"></activity>
         <activity
             android:name=".SysMsgsActivity"
-            android:exported="true"
-            android:theme="@style/Theme.Inty"></activity>
+            android:exported="false" />
         <activity
             android:name=".AgentInfoActivity"
             android:exported="true"
@@ -86,7 +85,10 @@
             android:name="com.yalantis.ucrop.UCropActivity"
             android:screenOrientation="portrait"
             android:theme="@style/Theme.AppCompat.Light.NoActionBar" />
-
+        <activity
+            android:name=".LoginActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Inty"></activity>
 
     </application>
 

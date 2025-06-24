@@ -49,6 +49,13 @@
     "params": {}
   },
   {
+    "path": "http://inty.ai/login",
+    "className": "com.ai.inty.LoginActivity",
+    "action": "",
+    "description": "",
+    "params": {}
+  },
+  {
     "path": "http://inty.ai/chat",
     "className": "com.ai.inty.ChatActivity",
     "action": "",

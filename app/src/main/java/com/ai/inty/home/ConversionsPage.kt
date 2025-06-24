@@ -45,6 +45,7 @@ import com.ai.inty.base.noRippleClickable
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.beans.ConversationItem
 import com.ai.inty.beans.SysMsgItem
+import com.ai.inty.utils.AuthClickable
 
 
 enum class ConversionsPageTab {
@@ -193,31 +194,38 @@ fun ConversionsPageContent(
 
         lastSysMsg?.let { sysMsg ->
             item {
-                ConversationItem(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(color = Color(0x3378599A))
-                        .noRippleClickable {
-                            onClickSysMsg()
-                        },
-                    conversation = ConversationItem(
-                        agentId = Constant.SYS_NOTIFICATION_ID,
-                        agentName = "System Notification",
-                        lastMessage = sysMsg.content,
-                        createdAt = sysMsg.createdAt
-                    ),
-                    placeholderID = R.drawable.icon_sys_notify
-                )
+                AuthClickable(
+                    onClick = {
+                        onClickSysMsg()
+                    }
+                ) { authModifier ->
+                    ConversationItem(
+                        modifier = authModifier
+                            .fillMaxWidth()
+                            .background(color = Color(0x3378599A)),
+                        conversation = ConversationItem(
+                            agentId = Constant.SYS_NOTIFICATION_ID,
+                            agentName = "System Notification",
+                            lastMessage = sysMsg.content,
+                            createdAt = sysMsg.createdAt
+                        ),
+                        placeholderID = R.drawable.icon_sys_notify
+                    )
+                }
             }
         }
 
         items(conversions) { conversion ->
-            ConversationItem(
-                modifier = Modifier.fillMaxWidth().noRippleClickable {
+            AuthClickable(
+                onClick = {
                     onClickConversionItem(conversion)
-                },
-                conversation = conversion
-            )
+                }
+            ) { authModifier ->
+                ConversationItem(
+                    modifier = authModifier.fillMaxWidth(),
+                    conversation = conversion
+                )
+            }
         }
     }
 

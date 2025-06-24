@@ -35,6 +35,7 @@ import com.ai.inty.base.IntyImage
 import com.ai.inty.base.noRippleClickable
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.beans.UserProfile
+import com.ai.inty.utils.AuthClickable
 import com.therouter.TheRouter
 
 
@@ -63,13 +64,17 @@ fun MyPage(
 
                 Row {
                     Spacer(Modifier.weight(1f))
-                    IntyImage(
-                        modifier = Modifier.size(24.dp).noRippleClickable {
+                    AuthClickable(
+                        onClick = {
                             TheRouter.build(Constant.ROUTE_SETTING)
                                 .navigation(context)
-                        },
-                        model = R.drawable.icon_setting
-                    )
+                        }
+                    ) { authModifier ->
+                        IntyImage(
+                            modifier = authModifier.size(24.dp),
+                            model = R.drawable.icon_setting
+                        )
+                    }
                     Spacer(Modifier.width(16.dp))
                 }
 
@@ -181,14 +186,18 @@ fun MyPage(
 
                     Spacer(Modifier.weight(1f))
 
-                    IntyImage(
-                        modifier = Modifier.size(40.dp).noRippleClickable {
+                    AuthClickable(
+                        onClick = {
                             TheRouter.build(Constant.ROUTE_SETTING_MY)
                                 .withObject("userProfile", userProfile)
                                 .navigation(context)
-                        },
-                        model = R.drawable.icon_edit
-                    )
+                        }
+                    ) { authModifier ->
+                        IntyImage(
+                            modifier = authModifier.size(40.dp),
+                            model = R.drawable.icon_edit
+                        )
+                    }
                 }
 
                 Spacer(Modifier.height(24.dp))

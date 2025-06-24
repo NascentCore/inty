@@ -1,9 +1,11 @@
 package com.ai.inty.viewmodels
 
 import android.content.Context
+import android.content.Intent
 import androidx.compose.runtime.mutableStateListOf
 import androidx.lifecycle.viewModelScope
 import com.ai.inty.Constant
+import com.ai.inty.MainActivity
 import com.ai.inty.base.BaseActivityViewModel
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.beans.CreateAgentRequest
@@ -16,6 +18,7 @@ import com.ai.inty.home.ConversionsPageTab
 import com.ai.inty.net.IAgentApi
 import com.ai.inty.net.IUserApi
 import com.ai.inty.net.IUserApi2
+import com.ai.inty.utils.UserProfileManager
 import com.architecture.httplib.core.HttpResult
 import com.google.android.gms.tasks.OnCompleteListener
 import com.google.firebase.messaging.FirebaseMessaging
@@ -74,42 +77,26 @@ class MainViewModel: BaseActivityViewModel() {
     }
 
     init {
-
-        if (IntySetting.isLogin()) {
-            onLoginSuccess()
-        } else {
-            createGuest() {
-                onLoginSuccess()
-            }
-        }
+        EasyLog.log("MainViewModel init - current user: ${IntySetting.getCurUserID()}")
+        
+        // 直接加载业务数据，登录状态已在 SplashActivity 中处理
+        loadBusinessData()
 
         TheRouter.addActionInterceptor(Constant.ACTION_USER_PROFILE_CHANGED, userProfileChanged)
     }
 
-    private fun onLoginSuccess() {
+    private fun loadBusinessData() {
+        // 优先从本地缓存获取用户信息
+        if (UserProfileManager.hasUserProfile()) {
+            _userProfile.value = UserProfileManager.getUserProfile()
+            EasyLog.log("Loaded user profile from cache: ${_userProfile.value.nickname}")
+        }
+        
+        // 加载业务数据
         getAgents()
-        getUserProfile()
+        getUserProfile() // 从服务器获取最新信息并更新本地缓存
         regFCM()
         getSysMsgs()
-    }
-
-    fun createGuest(onSuccess: () -> Unit) {
-        EasyLog.log("createGuest")
-        viewModelScope.launch(Dispatchers.IO) {
-            val result = userApi.createGuest(CreateGuestReq(device_id = AppEnv.DeviceID, AppEnv.locale.language))
-            EasyLog.log("create guest = $result", EasyLog.INFO)
-            when (result) {
-                is HttpResult.Success -> {
-                    IntySetting.login(true, result.data.guest_id, result.data.token)
-                    onSuccess()
-                }
-                is HttpResult.Failure -> {
-                    EasyLog.log("error: $result", priority = EasyLog.ERROR)
-                    showSnackbar(result.message)
-
-                }
-            }
-        }
     }
 
     fun getAgents() {
@@ -178,16 +165,10 @@ class MainViewModel: BaseActivityViewModel() {
 
                 when (result) {
                     is HttpResult.Success -> {
-                        if (result.data.isNotEmpty()) {
-                            _userProfile.value = result.data.first()
-                            EasyLog.log("getUserProfile success: ${result.data.first()}")
-                        } else {
-                            EasyLog.log("getUserProfile returned empty array", priority = EasyLog.WARN)
-                            withContext(Dispatchers.Main) {
-                                showSnackbar("User profile not found.")
-                            }
-                            setDefaultUserProfile()
-                        }
+                        _userProfile.value = result.data
+                        // 更新本地缓存
+                        UserProfileManager.saveUserProfile(result.data)
+                        EasyLog.log("Updated user profile from server: ${result.data.nickname}")
                     }
 
                     is HttpResult.Failure -> {
@@ -195,7 +176,6 @@ class MainViewModel: BaseActivityViewModel() {
                         withContext(Dispatchers.Main) {
                             showSnackbar(result.message)
                         }
-                        setDefaultUserProfile()
                     }
                 }
             } catch (e: Exception) {
@@ -204,20 +184,7 @@ class MainViewModel: BaseActivityViewModel() {
                 withContext(Dispatchers.Main) {
                     showSnackbar("获取用户信息失败: ${e.message}")
                 }
-                setDefaultUserProfile()
             }
-        }
-    }
-
-    private fun setDefaultUserProfile() {
-        // 设置默认的用户信息，避免UI崩溃
-        if (_userProfile.value.id.isEmpty()) {
-            _userProfile.value = UserProfile(
-                id = "unknown",
-                nickname = "用户",
-                avatar = null,
-                description = null
-            )
         }
     }
 
@@ -283,6 +250,73 @@ class MainViewModel: BaseActivityViewModel() {
         }
     }
     
+    fun followAgent(agentId: String) {
+        EasyLog.log("followAgent: $agentId")
+        viewModelScope.launch(Dispatchers.IO) {
+            val result = agentApi.followAgent(agentId)
+            EasyLog.log("followAgent = $result")
+            
+            when (result) {
+                is HttpResult.Success -> {
+                    EasyLog.log("followAgent success")
+                    // Update the agent list to reflect follow status
+                    agentList.find { it.id == agentId }?.let { agent ->
+                        val index = agentList.indexOf(agent)
+                        if (index != -1) {
+                            agentList[index] = agent.copy(isFollowed = true)
+                        }
+                    }
+                    // Send broadcast to update UI
+                    val intent = Intent("FOLLOW_STATE_CHANGED")
+                    LocalBroadcastManager.getInstance(AppEnv.context).sendBroadcast(intent)
+                    // Refresh following list if on conversions tab
+                    refreshFollowingListIfOnTab()
+                }
+                is HttpResult.Failure -> {
+                    EasyLog.log("followAgent error: $result", priority = EasyLog.ERROR)
+                    showSnackbar(result.message)
+                }
+            }
+        }
+    }
+    
+    fun unfollowAgent(agentId: String) {
+        EasyLog.log("unfollowAgent: $agentId")
+        viewModelScope.launch(Dispatchers.IO) {
+            val result = agentApi.unfollowAgent(agentId)
+            EasyLog.log("unfollowAgent = $result")
+            
+            when (result) {
+                is HttpResult.Success -> {
+                    EasyLog.log("unfollowAgent success")
+                    // Update the agent list to reflect follow status
+                    agentList.find { it.id == agentId }?.let { agent ->
+                        val index = agentList.indexOf(agent)
+                        if (index != -1) {
+                            agentList[index] = agent.copy(isFollowed = false)
+                        }
+                    }
+                    // Remove from following list
+                    followingAgents.removeAll { it.id == agentId }
+                    // Send broadcast to update UI
+                    val intent = Intent("FOLLOW_STATE_CHANGED")
+                    LocalBroadcastManager.getInstance(AppEnv.context).sendBroadcast(intent)
+                }
+                is HttpResult.Failure -> {
+                    EasyLog.log("unfollowAgent error: $result", priority = EasyLog.ERROR)
+                    showSnackbar(result.message)
+                }
+            }
+        }
+    }
+    
+    fun refreshFollowingListIfOnTab() {
+        if (_selectedTab.value == HomeTabIndex.Conversions && 
+            _selectedConversionsTab.value == ConversionsPageTab.Following) {
+            getFollowingAgents()
+        }
+    }
+    
     fun getUserCreatedAgents() {
         EasyLog.log("getUserCreatedAgents - Starting API call")
         viewModelScope.launch(Dispatchers.IO) {
@@ -310,78 +344,9 @@ class MainViewModel: BaseActivityViewModel() {
         }
     }
     
-    fun followAgent(agentId: String) {
-        EasyLog.log("followAgent: $agentId")
-        viewModelScope.launch(Dispatchers.IO) {
-            val result = agentApi.followAgent(agentId)
-            EasyLog.log("followAgent = $result")
-            
-            when (result) {
-                is HttpResult.Success -> {
-                    showSnackbar(result.data.message)
-                    refreshFollowingStateIfNeeded()
-                    
-                    agentList.forEachIndexed { index, agent ->
-                        if (agent.id == agentId) {
-                            agentList[index] = agent.copy(isFollowed = true)
-                        }
-                    }
-                }
-                is HttpResult.Failure -> {
-                    showSnackbar(result.message)
-                }
-            }
-        }
-    }
-    
-    fun unfollowAgent(agentId: String) {
-        EasyLog.log("unfollowAgent: $agentId")
-        viewModelScope.launch(Dispatchers.IO) {
-            val result = agentApi.unfollowAgent(agentId)
-            EasyLog.log("unfollowAgent = $result")
-            
-            when (result) {
-                is HttpResult.Success -> {
-                    showSnackbar(result.data.message)
-                    refreshFollowingStateIfNeeded()
-                    
-                    agentList.forEachIndexed { index, agent ->
-                        if (agent.id == agentId) {
-                            agentList[index] = agent.copy(isFollowed = false)
-                        }
-                    }
-                }
-                is HttpResult.Failure -> {
-                    showSnackbar(result.message)
-                }
-            }
-        }
-    }
-    
-    private fun refreshFollowingStateIfNeeded() {
-        if (_selectedConversionsTab.value == ConversionsPageTab.TabFollowing) {
-            viewModelScope.launch(Dispatchers.IO) {
-                delay(1000) // Increased delay to ensure backend is updated
-                getFollowingAgents()
-            }
-        }
-    }
-    
-    fun refreshFollowingListIfOnTab() {
-        if (_selectedConversionsTab.value == ConversionsPageTab.TabFollowing) {
-            viewModelScope.launch(Dispatchers.IO) {
-                delay(1000) // Ensure backend is updated
-                getFollowingAgents()
-            }
-        }
-    }
-    
     fun refreshCreatedAgentsListIfOnTab() {
         if (_selectedTab.value == HomeTabIndex.My) {
-            viewModelScope.launch(Dispatchers.IO) {
-                delay(1000) // Ensure backend is updated
-                getUserCreatedAgents()
-            }
+            getUserCreatedAgents()
         }
     }
     
@@ -425,5 +390,29 @@ class MainViewModel: BaseActivityViewModel() {
                 }
             }
         }
+    }
+
+    // 新增：用户登出方法
+    fun logout() {
+        EasyLog.log("User logout - clearing all data")
+        
+        // 清理本地存储
+        IntySetting.logout()
+        UserProfileManager.clearUserProfile()
+        
+        // 清理内存数据
+        agentList.clear()
+        sysMsgs.clear()
+        _userProfile.value = UserProfile()
+        chatViewModel?.let { chat ->
+            chat.clearAllData()
+        }
+        EasyLog.log("User logged out successfully")
+        
+        // 重启应用以完全清理状态
+        val intent = Intent(AppEnv.context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
+        AppEnv.context.startActivity(intent)
     }
 }
