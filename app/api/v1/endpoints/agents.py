@@ -16,7 +16,7 @@ from app.core.agent.avater import generate_background_image_to_gcs
 
 router = APIRouter()
 
-@router.get("/", response_model=List[schemas.Agent])
+@router.get("/", response_model=schemas.APIResponse[List[schemas.Agent]])
 async def list_agents(
     db: AsyncSession = Depends(deps.get_async_db),
     skip: int = 0,
@@ -27,7 +27,7 @@ async def list_agents(
     获取当前用户创建的AI角色列表
     """
     agents = await agent_service.get_user_agents(db, user_id=current_user.id, skip=skip, limit=limit, current_user_id=current_user.id)
-    return agents
+    return schemas.APIResponse.success(data=agents)
 
 @router.get("/search", response_model=schemas.APIResponse[schemas.PaginationData[schemas.Agent]])
 async def search_agents(
@@ -76,7 +76,7 @@ async def get_following_agents(
     pagination_data = await agent_service.get_user_followed_agents(db, user_id=current_user.id, page=page, page_size=page_size)
     return schemas.APIResponse.success(data=pagination_data)
 
-@router.post("/", response_model=schemas.Agent)
+@router.post("/", response_model=schemas.APIResponse[schemas.Agent])
 async def create_agent(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
@@ -87,7 +87,7 @@ async def create_agent(
     创建新的AI角色
     """
     agent = await agent_service.create_agent(db, agent_in=agent_in, user_id=current_user.id)
-    return agent
+    return schemas.APIResponse.success(data=agent)
 
 @router.get("/{agent_id}", response_model=schemas.Agent)
 async def get_agent(
