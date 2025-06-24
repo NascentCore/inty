@@ -89,10 +89,13 @@ fun HomeScreen(
     ) { innerPadding ->
         when (selectedTab.value) {
             HomeTabIndex.Chat -> {
+                val userProfile = mainViewModel.userProfile.collectAsState()
+
                 ChatPageContainer(
                     modifier = Modifier.padding(0.dp, 0.dp, 0.dp, innerPadding.calculateBottomPadding()),
                     viewModelFactory = viewModelFactory,
-                    agentList = agentList
+                    agentList = agentList,
+                    userProfile = userProfile.value,
                 )
             }
             HomeTabIndex.Conversions -> {

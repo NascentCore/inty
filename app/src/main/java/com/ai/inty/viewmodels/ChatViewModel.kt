@@ -7,7 +7,9 @@ import com.ai.inty.beans.AgentInfo
 import com.ai.inty.beans.ConversationItem
 import com.ai.inty.beans.MsgInfo
 import com.ai.inty.beans.SendMsgReq
+import com.ai.inty.beans.UserProfile
 import com.ai.inty.net.IChatApi
+import com.ai.inty.utils.UserProfileManager
 import com.architecture.httplib.core.HttpResult
 import com.inty.utils.log.EasyLog
 import com.inty.utils.storage.IntySetting
@@ -27,6 +29,10 @@ class ChatViewModel: BaseActivityViewModel() {
     val conversions = mutableStateListOf<ConversationItem>()
 
     val inputData = MutableStateFlow<String>("")
+
+    private val _userProfile = MutableStateFlow<UserProfile>(UserProfile())
+    val userProfile = _userProfile.asStateFlow()
+
 
     val chatApi = TheRouter.get(IChatApi::class.java)!!
 
@@ -172,5 +178,16 @@ class ChatViewModel: BaseActivityViewModel() {
         _agentInfo.value = null
         inputData.value = ""
         EasyLog.log("ChatViewModel cleared all data")
+    }
+
+    fun setUserProfile(userProfile: UserProfile) {
+        _userProfile.value = userProfile
+    }
+
+    fun updateUserInfo() {
+        if (UserProfileManager.hasUserProfile()) {
+            _userProfile.value = UserProfileManager.getUserProfile()
+            EasyLog.log("Loaded user profile from cache: ${_userProfile.value.nickname}")
+        }
     }
 }
