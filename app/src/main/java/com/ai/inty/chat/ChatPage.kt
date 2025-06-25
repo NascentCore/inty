@@ -52,6 +52,7 @@ import com.ai.inty.base.IntySmallTextField
 import com.ai.inty.base.MyModalNavigationDrawer
 import com.ai.inty.base.noRippleClickable
 import com.ai.inty.beans.AgentInfo
+import com.ai.inty.beans.GENDER
 import com.ai.inty.beans.MsgInfo
 import com.ai.inty.ui.theme.BackGround
 import com.ai.inty.viewmodels.ChatViewModel
@@ -311,17 +312,28 @@ fun ChatPage(
                                 shape = RoundedCornerShape(8.dp)
                             )
                     ) {
+                        val userProfile = chatViewModel.userProfile.collectAsState()
                         MySettingItem(
                             key = "Name",
-                            value = "Rose",
+                            value = userProfile.value.nickname,
                             onClick = {
+                                TheRouter.build(Constant.ROUTE_SETTING_MY)
+                                    .withObject("userProfile", userProfile.value)
+                                    .navigation(context)
 
                             }
                         )
                         MySettingItem(
                             key = "My Pronoun",
-                            value = "She/Her",
+                            value = when(userProfile.value.gender) {
+                                GENDER.MALE.value -> "He/Him"
+                                GENDER.FEMALE.value -> "She/Her"
+                                else -> "They/Them"
+                            },
                             onClick = {
+                                TheRouter.build(Constant.ROUTE_SETTING_MY)
+                                    .withObject("userProfile", userProfile.value)
+                                    .navigation(context)
 
                             }
                         )
@@ -329,6 +341,9 @@ fun ChatPage(
                             key = "My Persona",
                             value = "Edit",
                             onClick = {
+                                TheRouter.build(Constant.ROUTE_SETTING_MY)
+                                    .withObject("userProfile", userProfile.value)
+                                    .navigation(context)
 
                             }
                         )

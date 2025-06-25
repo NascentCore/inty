@@ -1,13 +1,18 @@
 package com.ai.inty.base
 
 
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.offset
+import androidx.compose.material3.DrawerState
 import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
@@ -22,6 +27,43 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import kotlin.math.absoluteValue
+
+
+@Composable
+fun RightSlideDrawer(
+    drawerContent: @Composable () -> Unit,
+    modifier: Modifier = Modifier,
+    drawerState: DrawerState = rememberDrawerState(DrawerValue.Closed),
+    content: @Composable () -> Unit
+) {
+
+    val configuration = LocalConfiguration.current
+    val screenWidthDp = configuration.screenWidthDp
+
+    // 计算抽屉偏移量：打开时滑入屏幕，关闭时滑出屏幕右侧
+    val offsetX by animateDpAsState(
+        targetValue = if (drawerState.isOpen) 0.dp else screenWidthDp.dp,
+        label = "drawerAnimation"
+    )
+
+    ModalNavigationDrawer(
+        modifier = modifier,
+        drawerState = drawerState,
+        gesturesEnabled = true, // 启用手势滑动
+        drawerContent = {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize(0.8f)
+                    .offset(x = offsetX) // 关键：控制横向偏移
+            ) {
+                drawerContent()
+            }
+        }
+        ,
+        content = content
+    )
+}
+
 
 @Composable
 fun MyModalNavigationDrawer(
@@ -74,14 +116,14 @@ fun MyModalNavigationDrawer(
                     .background(color = Color(0xff000000)).clickable {
                         drawerState.value = DrawerValue.Closed
                     }) {}
-        }
-        // 抽屉
-        Box(modifier = Modifier.onSizeChanged {
-            drawerWidth.value = it.width
-        }.graphicsLayer {
-            translationX = xOffset
-        }) {
-            drawerContent()
+            // 抽屉
+            Box(modifier = Modifier.onSizeChanged {
+                drawerWidth.value = it.width
+            }.graphicsLayer {
+                translationX = xOffset
+            }) {
+                drawerContent()
+            }
         }
     }
 }

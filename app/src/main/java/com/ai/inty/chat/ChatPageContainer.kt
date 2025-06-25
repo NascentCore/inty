@@ -9,6 +9,7 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ai.inty.beans.AgentInfo
+import com.ai.inty.beans.UserProfile
 import com.ai.inty.viewmodels.ChatViewModel
 
 @Composable
@@ -16,6 +17,7 @@ fun ChatPageContainer(
     modifier: Modifier,
     viewModelFactory: ViewModelProvider.Factory,
     agentList: List<AgentInfo>,
+    userProfile: UserProfile,
     onFollowAgent: ((String) -> Unit)? = null,
 ) {
     val pageState = rememberPagerState {
@@ -35,6 +37,7 @@ fun ChatPageContainer(
 
         LaunchedEffect(key1 = agent.id) {
             chatViewModel.setAgentInfo(agent)
+            chatViewModel.setUserProfile(userProfile)
         }
 
         ChatPage(
