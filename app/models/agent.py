@@ -41,6 +41,7 @@ class Agent(Base):
     status = Column(Enum(AgentStatus, name="agentstatus"), default=AgentStatus.PENDING)
     created_at = Column(DateTime(timezone=True), server_default=sa.text('now()'))
     updated_at = Column(DateTime(timezone=True), onupdate=sa.text('now()'))
+    deleted_at = Column(DateTime(timezone=True), nullable=True)
     prompt = Column(String)
 
     # 外键

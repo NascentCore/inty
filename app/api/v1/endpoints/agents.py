@@ -159,7 +159,7 @@ async def update_agent(
     agent = await agent_service.update_agent(db, db_agent=agent, agent_in=agent_in)
     return agent
 
-@router.delete("/{agent_id}", response_model=schemas.Agent)
+@router.delete("/{agent_id}", response_model=schemas.APIResponse[schemas.Agent])
 async def delete_agent(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
@@ -172,8 +172,13 @@ async def delete_agent(
     agent = await agent_service.get_agent(db, agent_id=agent_id)
     if not agent:
         raise HTTPException(status_code=404, detail="Agent not found")
-    agent = await agent_service.delete_agent(db, db_agent=agent)
-    return agent
+    
+    # 检查权限：只有创建者可以删除
+    if agent.creator_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Permission denied")
+    
+    deleted_agent = await agent_service.delete_agent(db, db_agent=agent)
+    return schemas.APIResponse.success(data=deleted_agent)
 
 @router.post("/generate_background", response_model=APIResponse[dict])
 async def generate_background(
