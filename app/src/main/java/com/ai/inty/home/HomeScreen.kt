@@ -137,13 +137,18 @@ fun HomeScreen(
             HomeTabIndex.Add -> {
             }
             HomeTabIndex.Suggest -> {
+                val isLoading = mainViewModel.isLoading.collectAsState()
                 RecommendPage(
                     modifier = Modifier,
                     agents = mainViewModel.agentList,
+                    isLoading = isLoading.value,
                     onClickAgent = { agent ->
                         TheRouter.build(Constant.ROUTE_CHAT)
                             .withObject("agent", agent)
                             .navigation(context)
+                    },
+                    onLoadMore = {
+                        mainViewModel.loadMoreAgents()
                     }
                 )
             }
@@ -176,14 +181,6 @@ fun HomeScreen(
                     }
                 )
                 
-                // Load user created agents when My page is displayed
-                androidx.compose.runtime.LaunchedEffect(Unit) {
-                    try {
-                        mainViewModel.getUserCreatedAgents()
-                    } catch (e: Exception) {
-                        // Ignore errors for now
-                    }
-                }
             }
         }
     }

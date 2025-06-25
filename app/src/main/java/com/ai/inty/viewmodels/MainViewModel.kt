@@ -34,6 +34,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 
 
 enum class HomeTabIndex {
@@ -53,6 +54,11 @@ class MainViewModel: BaseActivityViewModel() {
     val agentList = mutableStateListOf<AgentInfo>()
     val followingAgents = mutableStateListOf<AgentInfo>()
     val userCreatedAgents = mutableStateListOf<AgentInfo>()
+    
+    private var currentPage = 0
+    private var _isLoading = MutableStateFlow(false)
+    val isLoading = _isLoading.asStateFlow()
+    private var hasMoreData = true
 
     private val _selectedTab = MutableStateFlow(HomeTabIndex.Chat)
     val selectedTab = _selectedTab.asStateFlow()
@@ -100,26 +106,56 @@ class MainViewModel: BaseActivityViewModel() {
     }
 
     fun getAgents() {
-        EasyLog.log("getAgents")
+        EasyLog.log("getAgents - Loading first page")
+        currentPage = 1
+        agentList.clear()
+        hasMoreData = true
+        loadAgents()
+    }
+    
+    fun loadMoreAgents() {
+        if (!_isLoading.value && hasMoreData) {
+            currentPage++
+            loadAgents()
+        }
+    }
+    
+    private fun loadAgents() {
+        if (_isLoading.value) return
+        
+        _isLoading.value = true
+        EasyLog.log("loadAgents - page: $currentPage")
         viewModelScope.launch(Dispatchers.IO) {
-
-            val result = agentApi.recommendAgents(0, 10)
-            EasyLog.log("getAgents = $result")
+            val result = agentApi.recommendAgents(currentPage, 10)
+            EasyLog.log("loadAgents = $result")
 
             when (result) {
                 is HttpResult.Success -> {
                     result.data.list?.let { agents ->
-                        agentList.addAll(agents)
+                        if (agents.isEmpty()) {
+                            hasMoreData = false
+                            EasyLog.log("No more agents to load")
+                        } else {
+                            agentList.addAll(agents)
+                            EasyLog.log("Added ${agents.size} agents, total: ${agentList.size}")
+                            // 只在第一页加载时设置chatViewModel
+                            if (currentPage == 1) {
+                                chatViewModel?.setAgentInfo(agentList.firstOrNull())
+                            }
+                        }
                     }
                 }
                 is HttpResult.Failure -> {
                     showSnackbar(result.message)
+                    // 如果加载失败，回退页码
+                    if (currentPage > 1) {
+                        currentPage--
+                    }
                 }
             }
+            _isLoading.value = false
 
             EasyLog.log("Agents = $agentList")
-
-            chatViewModel?.setAgentInfo(agentList.firstOrNull())
         }
     }
 
@@ -131,8 +167,7 @@ class MainViewModel: BaseActivityViewModel() {
                 getSysMsgs()
             }
             HomeTabIndex.My -> {
-                // Temporarily commented out to isolate crash issue
-                // getUserCreatedAgents()
+                getUserCreatedAgents()
             }
             else -> {
 
@@ -165,10 +200,17 @@ class MainViewModel: BaseActivityViewModel() {
 
                 when (result) {
                     is HttpResult.Success -> {
-                        _userProfile.value = result.data
-                        // 更新本地缓存
-                        UserProfileManager.saveUserProfile(result.data)
-                        EasyLog.log("Updated user profile from server: ${result.data.nickname}")
+                        if (result.data.isNotEmpty()) {
+                            _userProfile.value = result.data.first()
+                            // 更新本地缓存
+                            UserProfileManager.saveUserProfile(result.data.first())
+                            EasyLog.log("Updated user profile from server: ${result.data.first().nickname}")
+                        } else {
+                            EasyLog.log("getUserProfile returned empty array", priority = EasyLog.WARN)
+                            withContext(Dispatchers.Main) {
+                                showSnackbar("User profile not found.")
+                            }
+                        }
                     }
 
                     is HttpResult.Failure -> {
@@ -312,7 +354,7 @@ class MainViewModel: BaseActivityViewModel() {
     
     fun refreshFollowingListIfOnTab() {
         if (_selectedTab.value == HomeTabIndex.Conversions && 
-            _selectedConversionsTab.value == ConversionsPageTab.Following) {
+            _selectedConversionsTab.value == ConversionsPageTab.TabFollowing) {
             getFollowingAgents()
         }
     }

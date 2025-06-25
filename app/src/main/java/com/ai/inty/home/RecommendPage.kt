@@ -14,9 +14,14 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -34,7 +39,9 @@ import com.ai.inty.utils.AuthClickable
 fun RecommendPage(
     modifier: Modifier,
     agents: List<AgentInfo>,
+    isLoading: Boolean = false,
     onClickAgent: (AgentInfo) -> Unit,
+    onLoadMore: () -> Unit = {},
 ) {
 //    val agents = viewModel.agentList
     Box(
@@ -67,7 +74,25 @@ fun RecommendPage(
 
                 Spacer(Modifier.height(30.dp))
 
+                val gridState = rememberLazyGridState()
+                
+                // 检测是否滚动到底部
+                val reachedBottom = remember {
+                    derivedStateOf {
+                        val lastVisibleItem = gridState.layoutInfo.visibleItemsInfo.lastOrNull()
+                        lastVisibleItem?.index != null && lastVisibleItem.index >= agents.size - 3
+                    }
+                }
+                
+                // 触发加载更多
+                LaunchedEffect(reachedBottom.value) {
+                    if (reachedBottom.value && agents.isNotEmpty() && !isLoading) {
+                        onLoadMore()
+                    }
+                }
+
                 LazyVerticalGrid(
+                    state = gridState,
                     modifier = Modifier.padding(bottom = innerPadding.calculateBottomPadding(), start = 16.dp, end = 16.dp),
                     columns = GridCells.Fixed(2),
                     horizontalArrangement = Arrangement.spacedBy(13.dp),
@@ -86,6 +111,23 @@ fun RecommendPage(
                         }
                     }
 
+                    // 加载更多指示器
+                    if (isLoading && agents.isNotEmpty()) {
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .size(165.dp, 60.dp)
+                                    .padding(16.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(24.dp),
+                                    color = Color.White.copy(0.7f)
+                                )
+                            }
+                        }
+                    }
+                    
                     item {
                         Spacer(Modifier.height(100.dp))
                     }

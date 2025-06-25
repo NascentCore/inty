@@ -42,15 +42,15 @@
     "params": {}
   },
   {
-    "path": "http://inty.ai/create/role",
-    "className": "com.ai.inty.CreateRoleActivity",
+    "path": "http://inty.ai/login",
+    "className": "com.ai.inty.LoginActivity",
     "action": "",
     "description": "",
     "params": {}
   },
   {
-    "path": "http://inty.ai/login",
-    "className": "com.ai.inty.LoginActivity",
+    "path": "http://inty.ai/create/role",
+    "className": "com.ai.inty.CreateRoleActivity",
     "action": "",
     "description": "",
     "params": {}

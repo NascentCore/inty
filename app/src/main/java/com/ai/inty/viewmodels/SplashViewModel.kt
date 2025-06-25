@@ -87,8 +87,12 @@ class SplashViewModel : BaseActivityViewModel() {
         val result = userApi2.getUserProfile()
         when (result) {
             is HttpResult.Success -> {
-                UserProfileManager.saveUserProfile(result.data)
-                EasyLog.log("Updated user profile from server: ${result.data.nickname}")
+                if (result.data.isNotEmpty()) {
+                    UserProfileManager.saveUserProfile(result.data.first())
+                    EasyLog.log("Updated user profile from server: ${result.data.first().nickname}")
+                } else {
+                    EasyLog.log("getUserProfile returned empty array", EasyLog.WARN)
+                }
             }
             is HttpResult.Failure -> {
                 EasyLog.log("Failed to get user profile: ${result.message}", EasyLog.ERROR)
