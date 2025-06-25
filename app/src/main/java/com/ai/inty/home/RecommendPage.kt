@@ -18,6 +18,20 @@ import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.foundation.layout.offset
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.Velocity
+import kotlin.math.roundToInt
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -42,17 +56,97 @@ fun RecommendPage(
     isLoading: Boolean = false,
     onClickAgent: (AgentInfo) -> Unit,
     onLoadMore: () -> Unit = {},
+    onRefresh: () -> Unit = {},
 ) {
-//    val agents = viewModel.agentList
+    // 下拉刷新状态
+    var pullOffset by remember { mutableStateOf(0f) }
+    var isRefreshing by remember { mutableStateOf(false) }
+    val pullThreshold = 120f // 触发刷新的阈值
+    
+    // 动画化偏移
+    val animatedOffset by animateFloatAsState(
+        targetValue = if (isRefreshing) 80f else pullOffset,
+        animationSpec = tween(if (isRefreshing) 300 else 0),
+        label = "pullOffset"
+    )
+    
+    // 监听加载状态变化，刷新完成时重置状态
+    LaunchedEffect(isLoading) {
+        if (!isLoading && isRefreshing) {
+            isRefreshing = false
+            pullOffset = 0f
+        }
+    }
+    
+    // NestedScroll连接，处理下拉刷新
+    val nestedScrollConnection = remember {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                // 当向上滚动且有下拉偏移时，先消费下拉偏移
+                return if (available.y < 0 && pullOffset > 0) {
+                    val consumed = -pullOffset.coerceAtMost(-available.y)
+                    pullOffset += consumed
+                    Offset(0f, consumed)
+                } else {
+                    Offset.Zero
+                }
+            }
+            
+            override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
+                // 当向下滚动且已经滚动到顶部时，开始下拉
+                return if (available.y > 0 && source == NestedScrollSource.Drag) {
+                    pullOffset = (pullOffset + available.y).coerceAtMost(pullThreshold * 1.5f)
+                    Offset(0f, available.y)
+                } else {
+                    Offset.Zero
+                }
+            }
+            
+            override suspend fun onPreFling(available: Velocity): Velocity {
+                // 处理下拉刷新触发
+                return if (pullOffset >= pullThreshold && !isLoading) {
+                    isRefreshing = true
+                    onRefresh()
+                    available
+                } else {
+                    if (pullOffset > 0) {
+                        pullOffset = 0f
+                    }
+                    Velocity.Zero
+                }
+            }
+        }
+    }
+
     Box(
-        modifier = modifier
+        modifier = modifier.nestedScroll(nestedScrollConnection)
     ) {
         IntyImage(
             modifier = Modifier.align(Alignment.TopEnd),
             model = R.drawable.notify_header_bg
         )
+        // 下拉刷新指示器
+        if (animatedOffset > 0) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .offset { IntOffset(0, (animatedOffset - 30f).roundToInt()) }
+                    .padding(top = 60.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(24.dp),
+                    color = Color.White.copy(0.8f),
+                    strokeWidth = 2.dp
+                )
+            }
+        }
+        
         Scaffold(
-            modifier = Modifier.fillMaxSize().background(Color.Transparent),
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Transparent)
+                .offset { IntOffset(0, animatedOffset.roundToInt()) },
             containerColor = Color.Transparent
         ) { innerPadding ->
 
@@ -75,6 +169,13 @@ fun RecommendPage(
                 Spacer(Modifier.height(30.dp))
 
                 val gridState = rememberLazyGridState()
+                
+                // 检测是否在顶部
+                val isAtTop = remember {
+                    derivedStateOf {
+                        gridState.firstVisibleItemIndex == 0 && gridState.firstVisibleItemScrollOffset == 0
+                    }
+                }
                 
                 // 检测是否滚动到底部
                 val reachedBottom = remember {
@@ -133,8 +234,6 @@ fun RecommendPage(
                     }
                 }
             }
-
-
         }
     }
 }

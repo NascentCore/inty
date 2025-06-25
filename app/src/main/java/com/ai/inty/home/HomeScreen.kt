@@ -152,6 +152,9 @@ fun HomeScreen(
                     },
                     onLoadMore = {
                         mainViewModel.loadMoreAgents()
+                    },
+                    onRefresh = {
+                        mainViewModel.getAgents()
                     }
                 )
             }

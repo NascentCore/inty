@@ -200,17 +200,10 @@ class MainViewModel: BaseActivityViewModel() {
 
                 when (result) {
                     is HttpResult.Success -> {
-                        if (result.data.isNotEmpty()) {
-                            _userProfile.value = result.data.first()
-                            // 更新本地缓存
-                            UserProfileManager.saveUserProfile(result.data.first())
-                            EasyLog.log("Updated user profile from server: ${result.data.first().nickname}")
-                        } else {
-                            EasyLog.log("getUserProfile returned empty array", priority = EasyLog.WARN)
-                            withContext(Dispatchers.Main) {
-                                showSnackbar("User profile not found.")
-                            }
-                        }
+                        _userProfile.value = result.data
+                        // 更新本地缓存
+                        UserProfileManager.saveUserProfile(result.data)
+                        EasyLog.log("Updated user profile from server: ${result.data.nickname}")
                     }
 
                     is HttpResult.Failure -> {
