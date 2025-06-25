@@ -29,7 +29,12 @@ async def get_agent(db: AsyncSession, agent_id: str, current_user_id: Optional[s
             )
             .outerjoin(agent_followers, models.Agent.id == agent_followers.c.agent_id)
             .options(selectinload(models.Agent.creator))
-            .where(models.Agent.id == agent_id)
+            .where(
+                and_(
+                    models.Agent.id == agent_id,
+                    models.Agent.deleted_at.is_(None)
+                )
+            )
             .group_by(models.Agent.id)
         )
         
@@ -85,7 +90,12 @@ async def get_user_agents(db: AsyncSession, user_id: str, skip: int = 0, limit: 
             )
             .outerjoin(agent_followers, models.Agent.id == agent_followers.c.agent_id)
             .options(selectinload(models.Agent.creator))
-            .where(models.Agent.creator_id == user_id)
+            .where(
+                and_(
+                    models.Agent.creator_id == user_id,
+                    models.Agent.deleted_at.is_(None)
+                )
+            )
             .group_by(models.Agent.id)
             .offset(skip)
             .limit(limit)
@@ -150,8 +160,11 @@ async def get_recommended_agents(db: AsyncSession, skip: int = 0, limit: int = 1
             .outerjoin(agent_followers, models.Agent.id == agent_followers.c.agent_id)
             .options(selectinload(models.Agent.creator))
             .where(
-                models.Agent.visibility == AgentVisibility.PUBLIC,
-                # models.Agent.status == AgentStatus.APPROVED
+                and_(
+                    models.Agent.visibility == AgentVisibility.PUBLIC,
+                    models.Agent.deleted_at.is_(None)
+                    # models.Agent.status == AgentStatus.APPROVED
+                )
             )
             .group_by(models.Agent.id)
             .offset(skip)
@@ -213,8 +226,11 @@ async def get_recommended_agents_paginated(db: AsyncSession, page: int = 1, page
         
         # 构建基础查询条件
         base_query = select(models.Agent).where(
-            models.Agent.visibility == AgentVisibility.PUBLIC,
-            # models.Agent.status == AgentStatus.APPROVED
+            and_(
+                models.Agent.visibility == AgentVisibility.PUBLIC,
+                models.Agent.deleted_at.is_(None)
+                # models.Agent.status == AgentStatus.APPROVED
+            )
         )
         
         # 获取总数
@@ -233,8 +249,11 @@ async def get_recommended_agents_paginated(db: AsyncSession, page: int = 1, page
             .outerjoin(agent_followers, models.Agent.id == agent_followers.c.agent_id)
             .options(selectinload(models.Agent.creator))
             .where(
-                models.Agent.visibility == AgentVisibility.PUBLIC,
-                # models.Agent.status == AgentStatus.APPROVED
+                and_(
+                    models.Agent.visibility == AgentVisibility.PUBLIC,
+                    models.Agent.deleted_at.is_(None)
+                    # models.Agent.status == AgentStatus.APPROVED
+                )
             )
             .group_by(models.Agent.id)
             .offset(skip)
@@ -398,29 +417,40 @@ async def update_agent(db: AsyncSession, db_agent: models.Agent, agent_in: schem
 
 async def delete_agent(db: AsyncSession, db_agent: models.Agent) -> models.Agent:
     """
-    删除AI角色
+    逻辑删除AI角色
+    设置deleted_at字段，不删除相关资源
     """
     try:
         if not db_agent:
             raise HTTPException(status_code=404, detail="角色不存在")
-            
-        await db.delete(db_agent)
+        
+        # 检查是否已经被删除
+        if db_agent.deleted_at:
+            raise HTTPException(status_code=400, detail="角色已被删除")
+        
+        agent_id = db_agent.id
+        logger.info(f"开始逻辑删除agent {agent_id}")
+        
+        # 设置删除时间戳
+        from datetime import datetime
+        db_agent.deleted_at = datetime.utcnow()
+        
+        # 提交更改
         await db.commit()
+        await db.refresh(db_agent)
+        
+        logger.info(f"成功逻辑删除agent {agent_id}")
         return db_agent
         
     except HTTPException:
         raise
-    except IntegrityError as e:
-        await db.rollback()
-        logger.error(f"数据完整性错误 - 删除角色 {db_agent.id if db_agent else 'unknown'}: {str(e)}")
-        raise HTTPException(status_code=400, detail="无法删除角色，存在关联数据")
     except SQLAlchemyError as e:
         await db.rollback()
-        logger.error(f"数据库错误 - 删除角色 {db_agent.id if db_agent else 'unknown'}: {str(e)}")
+        logger.error(f"数据库错误 - 逻辑删除角色 {db_agent.id if db_agent else 'unknown'}: {str(e)}")
         raise HTTPException(status_code=500, detail="数据库操作失败")
     except Exception as e:
         await db.rollback()
-        logger.error(f"未知错误 - 删除角色 {db_agent.id if db_agent else 'unknown'}: {str(e)}")
+        logger.error(f"未知错误 - 逻辑删除角色 {db_agent.id if db_agent else 'unknown'}: {str(e)}")
         raise HTTPException(status_code=500, detail="服务器内部错误")
 
 def generate_agent_avatar_path(agent_id: str, filename: str) -> str:
@@ -683,18 +713,37 @@ async def get_user_followed_agents(db: AsyncSession, user_id: str, page: int = 1
         # 计算偏移量
         skip = (page - 1) * page_size
         
-        # 获取总数
+        # 获取总数（只计算未删除的agents）
         count_query = select(func.count()).select_from(
-            agent_followers
-        ).where(agent_followers.c.user_id == user_id)
+            agent_followers.join(
+                models.Agent, 
+                agent_followers.c.agent_id == models.Agent.id
+            )
+        ).where(
+            and_(
+                agent_followers.c.user_id == user_id,
+                models.Agent.deleted_at.is_(None)
+            )
+        )
         count_result = await db.execute(count_query)
         total = count_result.scalar()
         
         # 获取分页数据
-        # 首先获取用户关注的agent IDs
+        # 首先获取用户关注的未删除agent IDs
         followed_agents_query = (
             select(agent_followers.c.agent_id)
-            .where(agent_followers.c.user_id == user_id)
+            .select_from(
+                agent_followers.join(
+                    models.Agent, 
+                    agent_followers.c.agent_id == models.Agent.id
+                )
+            )
+            .where(
+                and_(
+                    agent_followers.c.user_id == user_id,
+                    models.Agent.deleted_at.is_(None)
+                )
+            )
             .offset(skip)
             .limit(page_size)
         )
@@ -712,7 +761,12 @@ async def get_user_followed_agents(db: AsyncSession, user_id: str, page: int = 1
                 )
                 .outerjoin(agent_followers, models.Agent.id == agent_followers.c.agent_id)
                 .options(selectinload(models.Agent.creator))
-                .where(models.Agent.id.in_(followed_agent_ids))
+                .where(
+                    and_(
+                        models.Agent.id.in_(followed_agent_ids),
+                        models.Agent.deleted_at.is_(None)
+                    )
+                )
                 .group_by(models.Agent.id)
                 .order_by(desc(models.Agent.created_at))
             )
@@ -776,9 +830,10 @@ async def search_agents(db: AsyncSession, keyword: str, page: int = 1, page_size
                 models.Agent.category.ilike(search_pattern)
             ]
         
-        # 构建基础查询条件 - 只搜索公开的agent
+        # 构建基础查询条件 - 只搜索公开且未删除的agent
         base_conditions = [
             models.Agent.visibility == AgentVisibility.PUBLIC,
+            models.Agent.deleted_at.is_(None),
             # models.Agent.status == AgentStatus.APPROVED  # 如果需要只搜索已审核的
         ]
         
