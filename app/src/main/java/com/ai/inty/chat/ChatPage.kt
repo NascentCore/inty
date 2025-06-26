@@ -638,7 +638,7 @@ fun TopBar(
                 modifier = Modifier.size(20.dp).noRippleClickable {
                     onFollowAgent?.invoke(agentInfo.id)
                 },
-                model = R.drawable.btn_add
+                model = if (agentInfo.isFollowed) R.drawable.checked else R.drawable.btn_add
             )
 
 

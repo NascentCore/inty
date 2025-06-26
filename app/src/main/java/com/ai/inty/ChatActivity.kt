@@ -58,10 +58,21 @@ class ChatActivity : BaseActivity() {
                         .background(BackGround),
                     chatViewModel = chatViewModel,
                     onFollowAgent = { agentId ->
-                        followAgent(agentId)
+                        toggleFollowAgent(agentId)
                     }
                 )
             }
+        }
+    }
+    
+    private fun toggleFollowAgent(agentId: String) {
+        val currentAgent = chatViewModel.agentInfo.value
+        val isCurrentlyFollowed = currentAgent?.isFollowed ?: false
+        
+        if (isCurrentlyFollowed) {
+            unfollowAgent(agentId)
+        } else {
+            followAgent(agentId)
         }
     }
     
@@ -75,7 +86,7 @@ class ChatActivity : BaseActivity() {
                 is HttpResult.Success -> {
                     runOnUiThread {
                         lifecycleScope.launch {
-                            ToastUtils.showToast(result.data.message)
+                            ToastUtils.showToast("关注成功")
                         }
                     }
                     // Update agent state in ChatViewModel
@@ -86,11 +97,48 @@ class ChatActivity : BaseActivity() {
                     intent.putExtra("agentId", agentId)
                     intent.putExtra("isFollowed", true)
                     LocalBroadcastManager.getInstance(this@ChatActivity).sendBroadcast(intent)
+                    
+                    EasyLog.log("Sent FOLLOW_STATE_CHANGED broadcast - followed: $agentId")
                 }
                 is HttpResult.Failure -> {
                     runOnUiThread {
                         lifecycleScope.launch {
-                            ToastUtils.showToast(result.message)
+                            ToastUtils.showToast("关注失败: ${result.message}")
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    private fun unfollowAgent(agentId: String) {
+        EasyLog.log("unfollowAgent: $agentId")
+        lifecycleScope.launch(Dispatchers.IO) {
+            val result = agentApi.unfollowAgent(agentId)
+            EasyLog.log("unfollowAgent = $result")
+            
+            when (result) {
+                is HttpResult.Success -> {
+                    runOnUiThread {
+                        lifecycleScope.launch {
+                            ToastUtils.showToast("取消关注成功")
+                        }
+                    }
+                    // Update agent state in ChatViewModel
+                    chatViewModel.updateAgentFollowState(agentId, false)
+                    
+                    // Notify other components about follow state change
+                    val intent = Intent("FOLLOW_STATE_CHANGED")
+                    intent.putExtra("agentId", agentId)
+                    intent.putExtra("isFollowed", false)
+                    LocalBroadcastManager.getInstance(this@ChatActivity).sendBroadcast(intent)
+                    
+                    EasyLog.log("Sent FOLLOW_STATE_CHANGED broadcast - unfollowed: $agentId")
+                }
+                is HttpResult.Failure -> {
+                    runOnUiThread {
+                        lifecycleScope.launch {
+                            ToastUtils.showToast("取消关注失败: ${result.message}")
                         }
                     }
                 }
