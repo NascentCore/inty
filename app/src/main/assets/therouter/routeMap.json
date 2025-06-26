@@ -63,6 +63,13 @@
     "params": {}
   },
   {
+    "path": "http://inty.ai/avatar/generate",
+    "className": "com.ai.inty.AvatarGenerateActivity",
+    "action": "",
+    "description": "",
+    "params": {}
+  },
+  {
     "path": "http://inty.ai/agent/info",
     "className": "com.ai.inty.AgentInfoActivity",
     "action": "",

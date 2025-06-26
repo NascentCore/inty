@@ -114,6 +114,9 @@ class ChatViewModel: BaseActivityViewModel() {
             val req = SendMsgReq(listOf(msgInfo))
 
             agentInfo.value?.let { agent ->
+                // 标记为用户主动发起的对话
+                IntySetting.setUserInitiatedConversation(agent.id)
+                
                 val result = chatApi.sendMsg(agent.id, req)
 
                 EasyLog.log("sendMsg($agent, $req) -> $result")
@@ -135,6 +138,45 @@ class ChatViewModel: BaseActivityViewModel() {
         }
     }
 
+    fun sendKeepTalkingMessage() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val keepTalkingMsg = "keep talking"
+            EasyLog.log("send keep talking msg")
+
+            val msgInfo = MsgInfo(
+                content = keepTalkingMsg,
+                role = "user"
+            )
+
+            withContext(Dispatchers.Main) {
+                msgs.add(0, msgInfo)
+            }
+
+            val req = SendMsgReq(listOf(msgInfo))
+
+            agentInfo.value?.let { agent ->
+                // 标记为用户主动发起的对话
+                IntySetting.setUserInitiatedConversation(agent.id)
+                
+                val result = chatApi.sendMsg(agent.id, req)
+
+                EasyLog.log("sendKeepTalkingMessage($agent, $req) -> $result")
+
+                when (result) {
+                    is HttpResult.Success -> {
+                        for (choice in result.data.choices) {
+                            msgs.add(0, choice.message)
+                        }
+                        IntySetting.setConversationReaded(agent.id, result.data.choices.last()?.message?.content ?: "")
+                    }
+                    is HttpResult.Failure -> {
+                        showSnackbar(result.message)
+                    }
+                }
+            }
+        }
+    }
+
     fun getConversions() {
         viewModelScope.launch(Dispatchers.IO) {
             val result = chatApi.getConversions(0, 100)
@@ -142,7 +184,12 @@ class ChatViewModel: BaseActivityViewModel() {
             conversions.clear()
             when (result) {
                 is HttpResult.Success -> {
-                    conversions.addAll(result.data)
+                    // 只显示用户主动发起的对话
+                    val userInitiatedConversations = result.data.filter { conversation ->
+                        IntySetting.isUserInitiatedConversation(conversation.agentId)
+                    }
+                    conversions.addAll(userInitiatedConversations)
+                    EasyLog.log("Filtered conversations: ${userInitiatedConversations.size} out of ${result.data.size}")
                 }
                 is HttpResult.Failure -> {
                     showSnackbar(result.message)

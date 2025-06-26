@@ -81,6 +81,16 @@ object IntySetting {
         EasyLog.log("$agentID = $lastMessage")
         curUserSetting.putString("conversation_last_$agentID", lastMessage)
     }
+    
+    // 标记用户主动发起的对话
+    fun setUserInitiatedConversation(agentID: String) {
+        curUserSetting.putBoolean("user_initiated_$agentID", true)
+    }
+    
+    // 检查对话是否为用户主动发起
+    fun isUserInitiatedConversation(agentID: String): Boolean {
+        return curUserSetting.decodeBool("user_initiated_$agentID", false)
+    }
 
     fun setShowKeepTalking(show: Boolean) {
         curUserSetting.putBoolean("show_keep_talking", show)
@@ -96,6 +106,29 @@ object IntySetting {
 
     fun isAutoPlayAudio(): Boolean {
         return curUserSetting.decodeBool("auto_play_audio", false)
+    }
+
+    // 角色专用的keep talking设置 (三状态: true/false/null)
+    fun setAgentKeepTalking(agentId: String, show: Boolean?) {
+        if (show == null) {
+            curUserSetting.removeValueForKey("agent_keep_talking_$agentId")
+        } else {
+            curUserSetting.putBoolean("agent_keep_talking_$agentId", show)
+        }
+    }
+
+    fun getAgentKeepTalking(agentId: String): Boolean? {
+        return if (curUserSetting.containsKey("agent_keep_talking_$agentId")) {
+            curUserSetting.decodeBool("agent_keep_talking_$agentId", false)
+        } else {
+            null // 默认状态：跟随全局配置
+        }
+    }
+
+    // 获取最终的keep talking显示状态（角色设置优先于全局设置）
+    fun shouldShowKeepTalking(agentId: String): Boolean {
+        val agentSetting = getAgentKeepTalking(agentId)
+        return agentSetting ?: isShowKeepTalking()
     }
 
     fun logout() {

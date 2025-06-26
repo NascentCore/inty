@@ -6,6 +6,8 @@ import com.ai.inty.beans.CreateAgentRequest
 import com.ai.inty.beans.CreateAgentResponse
 import com.ai.inty.beans.CreateGuestResult
 import com.ai.inty.beans.FollowResponse
+import com.ai.inty.beans.GenerateBackgroundRequest
+import com.ai.inty.beans.GenerateBackgroundResponse
 import com.architecture.httplib.core.HttpResult
 import com.therouter.inject.Singleton
 import retrofit2.http.Body
@@ -38,4 +40,7 @@ interface IAgentApi {
     
     @GET("/api/v1/ai/agents/")
     suspend fun getUserCreatedAgents(@Query("skip") skip: Int, @Query("limit") limit: Int): HttpResult<List<AgentInfo>>
+    
+    @POST("/api/v1/ai/agents/generate_background")
+    suspend fun generateBackground(@Body request: GenerateBackgroundRequest): HttpResult<GenerateBackgroundResponse>
 }

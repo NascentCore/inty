@@ -7,14 +7,19 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -73,17 +78,32 @@ fun ChatPage(
     val context = LocalContext.current
     val agentInfo = chatViewModel.agentInfo.collectAsState().value
 
-    var showKeepTalking by remember { mutableStateOf(IntySetting.isShowKeepTalking()) }
     var isAutoPlayAudio by remember { mutableStateOf(IntySetting.isAutoPlayAudio()) }
+    var agentKeepTalking by remember(agentInfo?.id) { 
+        mutableStateOf(
+            agentInfo?.let { IntySetting.getAgentKeepTalking(it.id) }
+        ) 
+    }
+    
+    // 用于实时更新按钮显示状态
+    var shouldShowButton by remember(agentInfo?.id) {
+        mutableStateOf(
+            agentInfo?.let { IntySetting.shouldShowKeepTalking(it.id) } ?: false
+        )
+    }
+
+    var showMorePanel by remember { mutableStateOf(false) }
 
     Box(
         modifier = modifier
     ) {
+        // 背景图片 - 固定位置，不受键盘影响
         IntyImage(
             modifier = Modifier.fillMaxSize(),
             model = agentInfo?.avatar,
-
         )
+        
+        // 顶部渐变遮罩 - 固定位置
         val colors = listOf(
             Color(0xFF000000),
             Color(0x00000000)
@@ -95,9 +115,9 @@ fun ChatPage(
                 brush = Brush.verticalGradient(colors),
             )
         ) {
-
         }
 
+        // 底部渐变遮罩 - 固定位置
         val bottomColors = listOf(
             Color(0x001C1523),
             Color(0xFF1C1523)
@@ -110,7 +130,6 @@ fun ChatPage(
             )
             .align(Alignment.BottomCenter)
         ) {
-
         }
 
         val drawerState = remember {
@@ -121,6 +140,7 @@ fun ChatPage(
         Scaffold(
             modifier = Modifier.fillMaxSize().background(Color.Transparent),
             containerColor = Color.Transparent,
+            contentWindowInsets = WindowInsets(0),
             topBar = {
             },
 
@@ -128,8 +148,11 @@ fun ChatPage(
 
 
             Column(
-                modifier = Modifier.padding(innerPadding)
+                modifier = Modifier
+                    .padding(innerPadding)
             ) {
+                Spacer(Modifier.height(48.dp))
+                
                 if (agentInfo != null) {
                     TopBar(
                         modifier = Modifier
@@ -150,7 +173,7 @@ fun ChatPage(
                     )
                 }
 
-                Spacer(Modifier.height(100.dp))
+                Spacer(Modifier.height(16.dp))
 
                 LazyColumn(
                     modifier = Modifier.weight(1f).padding(horizontal = 16.dp),
@@ -176,17 +199,61 @@ fun ChatPage(
                         )
                     }
                 }
+                
 
-                var showMorePanel by remember { mutableStateOf(false) }
-                Row(
-                    modifier = Modifier
-                        .padding(horizontal = 16.dp, vertical = 8.dp)
-                        .fillMaxWidth()
-                        .height(64.dp)
-                        .background(Color(0x9937303D), RoundedCornerShape(24.dp))
-                    ,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+                // 输入框区域 - 受键盘影响会向上推
+                Column {
+                    // Keep talking 按钮 - 放在输入框左上方
+                    if (shouldShowButton) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp),
+                                horizontalArrangement = androidx.compose.foundation.layout.Arrangement.Start
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .width(80.dp)
+                                        .height(32.dp)
+                                        .background(
+                                            Color.Transparent,
+                                            RoundedCornerShape(16.dp)
+                                        )
+                                        .noRippleClickable {
+                                            chatViewModel.sendKeepTalkingMessage()
+                                        },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    // 播放按钮图标 (>>)
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = "▶",
+                                            color = Color.White,
+                                            fontSize = 12.sp
+                                        )
+                                        Spacer(modifier = Modifier.width(1.dp))
+                                        Text(
+                                            text = "▶",
+                                            color = Color.White,
+                                            fontSize = 12.sp
+                                        )
+                                    }
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(8.dp))
+                    }
+                    
+                    // 输入框
+                    Row(
+                        modifier = Modifier
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                            .fillMaxWidth()
+                            .height(64.dp)
+                            .background(Color(0x9937303D), RoundedCornerShape(24.dp)),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                     val inputData = chatViewModel.inputData.collectAsState()
                     IntySmallTextField(
                         modifier = Modifier.weight(1f).padding(horizontal = 16.dp),
@@ -217,53 +284,52 @@ fun ChatPage(
                             },
                             model = if (showMorePanel) R.drawable.btn_down else R.drawable.btn_add2
                         )
+                        }
                     }
                 }
 
-                if (showMorePanel) {
-                    Spacer(Modifier.height(90.dp))
-                    Dialog(
+            }
+        }
+
+        // MorePanel - 独立于Scaffold，不受键盘影响
+        if (showMorePanel) {
+            Dialog(
+                onDismissRequest = {
+                    showMorePanel = false
+                },
+                properties = DialogProperties(
+                    usePlatformDefaultWidth = false
+                )
+            ) {
+                DiaAmountLayout {
+                    SetDiaAmount(0f)
+                    BottomSheetDialog(
+                        modifier = Modifier,
+                        visible = true,
                         onDismissRequest = {
                             showMorePanel = false
-                        },
-                        properties = DialogProperties(
-                            usePlatformDefaultWidth = false
-                        )
-
+                        }
                     ) {
-                        DiaAmountLayout {
-                            SetDiaAmount(0f)
-                            BottomSheetDialog(
-                                modifier = Modifier,
-                                visible = true,
-                                onDismissRequest = {
-                                    showMorePanel = false
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(
+                                    color = BackGround
+                                )
+                        ) {
+                            Spacer(Modifier.width(16.dp))
+                            MorePanelItem(
+                                icon = R.drawable.icon_report,
+                                text = "Report",
+                                onClick = {
+                                    TheRouter.build(Constant.ROUTE_REPORT)
+                                        .withString("targetID", agentInfo?.id)
+                                        .navigation(context)
                                 }
-
-                            ) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .background(
-                                            color = BackGround
-                                        )
-                                ) {
-                                    Spacer(Modifier.width(16.dp))
-                                    MorePanelItem(
-                                        icon = R.drawable.icon_report,
-                                        text = "Report",
-                                        onClick = {
-                                            TheRouter.build(Constant.ROUTE_REPORT)
-                                                .withString("targetID", agentInfo?.id)
-                                                .navigation(context)
-                                        }
-                                    )
-                                    Spacer(Modifier.width(16.dp))
-                                }
-                            }
+                            )
+                            Spacer(Modifier.width(16.dp))
                         }
                     }
-
                 }
             }
         }
@@ -380,25 +446,6 @@ fun ChatPage(
                     ) {
                         Row(
                             modifier = Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 16.dp).noRippleClickable {
-                                showKeepTalking = !showKeepTalking
-                                IntySetting.setShowKeepTalking(showKeepTalking)
-                            },
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = stringResource(R.string.settings_keep_talking),
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Normal,
-                                color = Color.White
-                            )
-                            Spacer(Modifier.weight(1f))
-                            Image(
-                                painter = if (showKeepTalking) painterResource(R.drawable.opened) else painterResource(R.drawable.closed),
-                                contentDescription = null,
-                            )
-                        }
-                        Row(
-                            modifier = Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 16.dp).noRippleClickable {
                                 isAutoPlayAudio = !isAutoPlayAudio
                                 IntySetting.setAutoPlayAudio(isAutoPlayAudio)
                             },
@@ -416,6 +463,60 @@ fun ChatPage(
                                 painter = if (isAutoPlayAudio) painterResource(R.drawable.opened) else painterResource(R.drawable.closed),
                                 contentDescription = null,
                             )
+                        }
+                        
+                        // 角色专用的keep talking设置（三状态）
+                        agentInfo?.let { agent ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 16.dp).noRippleClickable {
+                                    val newValue = when (agentKeepTalking) {
+                                        null -> true    // 跟随全局 -> 开启
+                                        true -> false   // 开启 -> 关闭
+                                        false -> null   // 关闭 -> 跟随全局
+                                    }
+                                    agentKeepTalking = newValue
+                                    IntySetting.setAgentKeepTalking(agent.id, newValue)
+                                    // 更新按钮显示状态
+                                    shouldShowButton = IntySetting.shouldShowKeepTalking(agent.id)
+                                },
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column {
+                                    Text(
+                                        text = "Keep Talking for ${agent.name}",
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Normal,
+                                        color = Color.White
+                                    )
+                                    Text(
+                                        text = when (agentKeepTalking) {
+                                            true -> "On"
+                                            false -> "Off"
+                                            null -> "Follow global setting"
+                                        },
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Normal,
+                                        color = Color.White.copy(0.6f)
+                                    )
+                                }
+                                Spacer(Modifier.weight(1f))
+                                // 三状态图标显示
+                                when (agentKeepTalking) {
+                                    true -> Image(
+                                        painter = painterResource(R.drawable.opened),
+                                        contentDescription = null,
+                                    )
+                                    false -> Image(
+                                        painter = painterResource(R.drawable.closed),
+                                        contentDescription = null,
+                                    )
+                                    null -> Text(
+                                        text = "Auto",
+                                        fontSize = 12.sp,
+                                        color = Color.White.copy(0.7f)
+                                    )
+                                }
+                            }
                         }
                     }
 
