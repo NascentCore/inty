@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Scaffold
@@ -60,7 +62,12 @@ fun HomeScreen(
     val context = LocalContext.current
 
     Scaffold(
-        modifier = modifier.fillMaxSize().background(BackGround),
+        modifier = modifier
+            .fillMaxSize()
+            .background(BackGround)
+            .imePadding()
+            .navigationBarsPadding()
+        ,
         containerColor = Color.Transparent,
         topBar = {
         },

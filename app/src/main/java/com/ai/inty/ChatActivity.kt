@@ -1,31 +1,31 @@
 package com.ai.inty
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.lifecycleScope
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.ai.inty.base.BaseActivity
+import com.ai.inty.base.ToastUtils
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.chat.ChatPage
+import com.ai.inty.net.IAgentApi
 import com.ai.inty.ui.theme.BackGround
 import com.ai.inty.ui.theme.IntyTheme
 import com.ai.inty.viewmodels.ChatViewModel
-import com.ai.inty.viewmodels.MainViewModel
-import com.ai.inty.net.IAgentApi
 import com.architecture.httplib.core.HttpResult
-import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import com.therouter.TheRouter
 import com.inty.utils.log.EasyLog
-import com.ai.inty.base.ToastUtils
-import androidx.localbroadcastmanager.content.LocalBroadcastManager
-import android.content.Intent
+import com.therouter.TheRouter
 import com.therouter.router.Autowired
 import com.therouter.router.Route
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 @Route(path = Constant.ROUTE_CHAT)
 class ChatActivity : BaseActivity() {
@@ -55,12 +55,33 @@ class ChatActivity : BaseActivity() {
                 ChatPage(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(BackGround),
+                        .background(BackGround)
+                        .imePadding()
+                    ,
                     chatViewModel = chatViewModel,
                     onFollowAgent = { agentId ->
                         toggleFollowAgent(agentId)
                     }
                 )
+//                Box(
+//                    modifier = Modifier
+//                        .fillMaxSize()
+//                        .background(BackGround)
+//                        .imePadding()
+//                    ,
+//                ) {
+//                    var textData by remember { mutableStateOf("") }
+//                    IntySmallTextField(
+//                        modifier = Modifier.fillMaxWidth().height(80.dp)
+//                            .background(Color.Red)
+//                            .align(Alignment.BottomCenter)
+//                        ,
+//                        value = textData,
+//                        onValueChange = {
+//                            textData = it
+//                        }
+//                    )
+//                }
             }
         }
     }

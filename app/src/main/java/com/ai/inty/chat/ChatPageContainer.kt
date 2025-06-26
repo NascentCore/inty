@@ -101,7 +101,7 @@ fun ChatPageContainer(
 
                     IntySetting.setShowGuested()
 
-                    delay(3000)
+                    delay(1000)
                     showHand.targetState = false
                     pageState.animateScrollToPage(pageState.currentPage)
             }
