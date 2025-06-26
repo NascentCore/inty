@@ -151,3 +151,15 @@ data class CreateAgentResponse(
     @Json(name = "creator")
     val creator: CreatorInfo? = null
 )
+
+@JsonClass(generateAdapter = true)
+data class GenerateBackgroundRequest(
+    @Json(name = "prompt")
+    val prompt: String
+)
+
+@JsonClass(generateAdapter = true)
+data class GenerateBackgroundResponse(
+    @Json(name = "url")
+    val imageUrl: String = ""
+)

@@ -11,6 +11,8 @@ import com.ai.inty.beans.AgentInfo
 import com.ai.inty.beans.CreateAgentRequest
 import com.ai.inty.beans.CreateAgentResponse
 import com.ai.inty.beans.CreateGuestReq
+import com.ai.inty.beans.GenerateBackgroundRequest
+import com.ai.inty.beans.GenerateBackgroundResponse
 import com.ai.inty.beans.SysMsgItem
 import com.ai.inty.beans.TokenBean
 import com.ai.inty.beans.UserProfile
@@ -391,6 +393,8 @@ class MainViewModel: BaseActivityViewModel() {
         onError: (String) -> Unit
     ) {
         EasyLog.log("createAgent: ${request.name}")
+        EasyLog.log("createAgent request full details: $request")
+        EasyLog.log("createAgent avatar URL: ${request.avatar}")
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val result = agentApi.createAgent(request)
@@ -437,17 +441,56 @@ class MainViewModel: BaseActivityViewModel() {
         
         // 清理内存数据
         agentList.clear()
+        followingAgents.clear()
+        userCreatedAgents.clear()
         sysMsgs.clear()
         _userProfile.value = UserProfile()
         chatViewModel?.let { chat ->
             chat.clearAllData()
         }
-        EasyLog.log("User logged out successfully")
         
-        // 重启应用以完全清理状态
-        val intent = Intent(AppEnv.context, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        // 切换到游客模式，不重启应用
+        loadBusinessData()
+        EasyLog.log("User logged out successfully - switched to guest mode")
+    }
+    
+    fun generateBackground(
+        request: GenerateBackgroundRequest,
+        onSuccess: (GenerateBackgroundResponse) -> Unit,
+        onError: (String) -> Unit
+    ) {
+        EasyLog.log("generateBackground: ${request.prompt}")
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val result = agentApi.generateBackground(request)
+                EasyLog.log("generateBackground = $result")
+                
+                withContext(Dispatchers.Main) {
+                    when (result) {
+                        is HttpResult.Success -> {
+                            EasyLog.log("generateBackground success: ${result.data}")
+                            onSuccess(result.data)
+                        }
+                        is HttpResult.Failure -> {
+                            EasyLog.log("generateBackground error: $result", priority = EasyLog.ERROR)
+                            val errorMessage = if (result.message.isBlank()) "生成失败，请检查网络连接" else result.message
+                            onError(errorMessage)
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                EasyLog.log("generateBackground exception: ${e.message}", priority = EasyLog.ERROR)
+                EasyLog.log(e)
+                val errorMessage = when {
+                    e.message?.contains("timeout", ignoreCase = true) == true -> "网络超时，请稍后重试"
+                    e.message?.contains("network", ignoreCase = true) == true -> "网络连接失败，请检查网络"
+                    e.message?.contains("json", ignoreCase = true) == true -> "数据格式错误，请稍后重试"
+                    else -> "生成失败：${e.message ?: "未知错误"}"
+                }
+                withContext(Dispatchers.Main) {
+                    onError(errorMessage)
+                }
+            }
         }
-        AppEnv.context.startActivity(intent)
     }
 }
