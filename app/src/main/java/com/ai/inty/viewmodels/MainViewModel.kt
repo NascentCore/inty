@@ -187,6 +187,8 @@ class MainViewModel: BaseActivityViewModel() {
         _selectedConversionsTab.value = tab
         when (tab) {
             ConversionsPageTab.TabFollowing -> {
+                // 每次切换到关注列表时都刷新
+                EasyLog.log("Switching to following tab - refreshing following agents")
                 getFollowingAgents()
             }
             else -> {}
@@ -348,9 +350,13 @@ class MainViewModel: BaseActivityViewModel() {
     }
     
     fun refreshFollowingListIfOnTab() {
+        EasyLog.log("refreshFollowingListIfOnTab - selectedTab: ${_selectedTab.value}, selectedConversionsTab: ${_selectedConversionsTab.value}")
         if (_selectedTab.value == HomeTabIndex.Conversions && 
             _selectedConversionsTab.value == ConversionsPageTab.TabFollowing) {
+            EasyLog.log("Refreshing following agents due to follow state change")
             getFollowingAgents()
+        } else {
+            EasyLog.log("Not refreshing - not on following tab")
         }
     }
     

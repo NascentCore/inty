@@ -47,9 +47,16 @@ import com.ai.inty.ui.theme.BackGround
 import com.ai.inty.ui.theme.IntyTheme
 import com.inty.utils.storage.IntySetting
 import com.therouter.router.Route
+import androidx.lifecycle.ViewModelProvider
+import com.ai.inty.viewmodels.MainViewModel
+import com.therouter.TheRouter
 
 @Route(path = Constant.ROUTE_SETTING)
 class SettingActivity : BaseActivity() {
+
+    private val mainViewModel: MainViewModel by lazy {
+        ViewModelProvider(this)[MainViewModel::class.java]
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -64,6 +71,13 @@ class SettingActivity : BaseActivity() {
                         .background(BackGround),
                     onBack = {
                         finish()
+                    },
+                    onLogout = {
+                        // 使用MainViewModel的logout方法，不重启应用
+                        mainViewModel.logout()
+                        // 返回到主页面
+                        TheRouter.build(Constant.ROUTE_MAIN).navigation(this@SettingActivity)
+                        finish()
                     }
                 )
             }
@@ -77,6 +91,7 @@ class SettingActivity : BaseActivity() {
 fun SettingScreen(
     modifier: Modifier,
     onBack: () -> Unit,
+    onLogout: () -> Unit,
 ) {
 
     val context = LocalContext.current
@@ -290,8 +305,7 @@ fun SettingScreen(
                         shape = RoundedCornerShape(8.dp)
                     )
                     .noRippleClickable {
-                        IntySetting.logout()
-                        restartAppProcess(context = context)
+                        onLogout()
                     }
             ) {
                 Spacer(Modifier.height(21.dp))
