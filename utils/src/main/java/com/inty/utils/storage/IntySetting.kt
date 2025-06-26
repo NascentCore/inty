@@ -182,4 +182,12 @@ object IntySetting {
         }
     }
 
+    fun hasShowGuest(): Boolean {
+        return allUserSetting.decodeBool("show_guest", false)
+    }
+
+    fun setShowGuested() {
+        allUserSetting.putBoolean("show_guest", true)
+    }
+
 }
