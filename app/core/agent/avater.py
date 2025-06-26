@@ -19,7 +19,7 @@ def generate_background_image_to_gcs(prompt: str, gcs_uri: str, aspect_ratio="16
         number_of_images=1,
         aspect_ratio=aspect_ratio,
         safety_filter_level="block_some",
-        person_generation="allow_adult",
+        person_generation="allow_all",
         output_gcs_uri=gcs_uri
     )
     
