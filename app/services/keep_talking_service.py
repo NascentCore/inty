@@ -146,17 +146,13 @@ class KeepTalkingService:
                         logger.debug(f"会话 {chat.id} 空闲时间: {idle_seconds:.0f}秒, 阈值: {self.max_idle_time}秒")
                         
                         if idle_seconds > self.max_idle_time:
-                            # 检查最后一条消息是否是用户发送的
-                            if await self._is_last_message_from_user(session_id):
-                                # 检查是否已达到keep_talking消息上限
-                                keep_talking_count = self._keep_talking_counts.get(chat.id, 0)
-                                if keep_talking_count < self.max_keep_talking_messages:
-                                    idle_chats.append(chat)
-                                    logger.debug(f"会话 {chat.id} 符合keep_talking条件，已发送消息数: {keep_talking_count}")
-                                else:
-                                    logger.debug(f"会话 {chat.id} 已达到keep_talking消息上限: {keep_talking_count}")
+                            # 检查是否已达到keep_talking消息上限（不再检查最后一条消息的发送者）
+                            keep_talking_count = self._keep_talking_counts.get(chat.id, 0)
+                            if keep_talking_count < self.max_keep_talking_messages:
+                                idle_chats.append(chat)
+                                logger.debug(f"会话 {chat.id} 符合keep_talking条件，已发送消息数: {keep_talking_count}")
                             else:
-                                logger.debug(f"会话 {chat.id} 最后一条消息不是用户发送，跳过")
+                                logger.debug(f"会话 {chat.id} 已达到keep_talking消息上限: {keep_talking_count}")
                         
                     except Exception as e:
                         logger.error(f"检查会话 {chat.id} 时出错: {str(e)}")
@@ -176,27 +172,7 @@ class KeepTalkingService:
             finally:
                 break  # 只需要一个数据库会话
     
-    async def _is_last_message_from_user(self, session_id: str) -> bool:
-        """检查最后一条消息是否来自用户"""
-        try:
-            # 获取最近几条消息来判断
-            messages_data = chat_history_service.get_messages_paginated(
-                session_id=session_id,
-                limit=5,
-                offset=0
-            )
-            
-            messages = messages_data.get('messages', [])
-            if not messages:
-                return False
-            
-            # 获取最后一条消息（按时间排序后的最后一条）
-            last_message = messages[-1]
-            return last_message.get('role') == 'user'
-            
-        except Exception as e:
-            logger.error(f"检查最后消息发送者时出错 {session_id}: {str(e)}")
-            return False
+
     
     async def _send_keep_talking_message(self, chat: Chat):
         """为指定会话发送keep_talking消息"""
@@ -251,14 +227,31 @@ class KeepTalkingService:
     def _generate_keep_talking_prompt(self, messages_context: List[Dict], agent_name: str) -> str:
         """生成keep_talking提示词"""
         
-        # 基础的keep_talking提示词
-        base_prompts = [
-            "用户似乎暂时没有回复，请基于前面的对话内容，主动延续这个话题或者提出一个相关的问题来继续我们的聊天。",
-            "我注意到用户可能在忙，请根据之前的聊天内容，主动分享一些相关的想法或者询问用户的看法。",
-            "看起来用户可能需要一点时间思考，请基于我们刚才的对话，提供一些额外的信息或建议。",
-            "用户暂时没有回复，请主动根据前面的对话内容，继续这个话题或者提出新的相关问题。",
-            "我想继续我们的对话，请基于之前的聊天内容，主动分享一些有趣的观点或者询问相关问题。"
-        ]
+        # 检查最后一条消息的发送者
+        last_message_from_user = False
+        if messages_context:
+            last_message = messages_context[-1]
+            last_message_from_user = last_message.get('role') == 'user'
+        
+        # 根据最后消息发送者选择不同的提示词策略
+        if last_message_from_user:
+            # 用户最后发言但没有回复的情况
+            base_prompts = [
+                "请基于前面的对话内容，主动延续这个话题或者提出一个相关的问题来继续我们的聊天。",
+                "请根据之前的聊天内容，主动分享一些相关的想法或者询问用户的看法。",
+                "请基于我们刚才的对话，提供一些额外的信息或建议。",
+                "请主动根据前面的对话内容，继续这个话题或者提出新的相关问题。",
+                "请基于之前的聊天内容，主动分享一些有趣的观点或者询问相关问题。"
+            ]
+        else:
+            # agent最后发言的情况，需要更自然地继续对话
+            base_prompts = [
+                "请基于当前的对话话题，继续分享一些相关的内容或者换个角度来聊这个话题。",
+                "请延续刚才的话题，提供一些补充信息或者询问用户的想法。",
+                "请基于我们正在讨论的内容，进一步展开话题或者分享相关的见解。",
+                "请继续当前的对话主题，可以分享一些有趣的细节或者相关的思考。",
+                "请自然地延续我们的对话，可以从不同的角度来探讨这个话题。"
+            ]
         
         # 根据对话历史的长度选择不同的提示词
         if len(messages_context) == 0:
@@ -266,23 +259,28 @@ class KeepTalkingService:
         elif len(messages_context) <= 2:
             prompt = "请基于刚开始的对话，主动提出一个相关的话题或问题来继续聊天。"
         else:
-            # 从基础提示词中随机选择一个，或者根据对话内容定制
+            # 从基础提示词中随机选择一个
             import random
             prompt = random.choice(base_prompts)
         
         # 添加对话历史摘要（如果有的话）
         if messages_context:
-            recent_messages = messages_context[-3:]  # 最近3条消息
+            recent_messages = messages_context[-4:]  # 最近4条消息，获取更多上下文
             context_summary = "最近的对话内容：\n"
             for msg in recent_messages:
                 role_name = "用户" if msg.get('role') == 'user' else agent_name
-                content = msg.get('content', '')[:100]  # 限制长度
+                content = msg.get('content', '')[:120]  # 稍微增加长度限制
                 context_summary += f"{role_name}: {content}\n"
             
             prompt = f"{context_summary}\n{prompt}"
         
-        # 添加行为指导
-        prompt += "\n\n请注意：这是一个主动延续对话的消息，请保持自然、友好的语调，不要提及用户没有回复这件事。"
+        # 根据最后消息发送者添加不同的行为指导
+        if last_message_from_user:
+            guidance = "\n\n请注意：这是一个主动延续对话的消息，请保持自然、友好的语调，不要提及没有回复这件事。"
+        else:
+            guidance = "\n\n请注意：请自然地继续对话，就像是正常聊天的延续，保持话题的连贯性和趣味性。"
+        
+        prompt += guidance
         
         return prompt
 
