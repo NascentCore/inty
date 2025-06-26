@@ -82,9 +82,6 @@ class AgentInfoActivity : BaseActivity() {
                         agent = it,
                         onBack = {
                             finish()
-                        },
-                        onFollowAgent = { agentId ->
-                            viewModel.followAgent(agentId, this@AgentInfoActivity)
                         }
                     )
                 }
@@ -99,7 +96,6 @@ class AgentInfoActivity : BaseActivity() {
 fun AgentInfoScreen(
     agent: AgentInfo,
     onBack: () -> Unit,
-    onFollowAgent: ((String) -> Unit)? = null,
 ) {
 
     Box(
@@ -159,33 +155,16 @@ fun AgentInfoScreen(
 
                     },
                     actions = {
-                        if (onFollowAgent != null) {
-                            Button(
-                                onClick = { onFollowAgent(agent.id) },
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = if (agent.isFollowed) Color.Gray else Color(0xFFFF905D)
-                                ),
-                                shape = RoundedCornerShape(12.dp),
-                                modifier = Modifier.padding(horizontal = 12.dp)
-                            ) {
-                                Text(
-                                    text = if (agent.isFollowed) "已关注" else "关注",
-                                    fontSize = 12.sp,
-                                    color = Color.White
-                                )
-                            }
-                        } else {
-                            Image(
-                                modifier = Modifier
-                                    .padding(horizontal = 12.dp)
-                                    .noRippleClickable {
+                        Image(
+                            modifier = Modifier
+                                .padding(horizontal = 12.dp)
+                                .noRippleClickable {
 
-                                    }
-                                ,
-                                painter = painterResource(R.drawable.icon_more2),
-                                contentDescription = null,
-                            )
-                        }
+                                }
+                            ,
+                            painter = painterResource(R.drawable.icon_more2),
+                            contentDescription = null,
+                        )
                     }
                 )
 

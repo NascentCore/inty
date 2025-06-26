@@ -636,6 +636,7 @@ fun TopBar(
 
             IntyImage(
                 modifier = Modifier.size(20.dp).noRippleClickable {
+                    EasyLog.log("Follow button clicked - agentId: ${agentInfo.id}, current follow state: ${agentInfo.isFollowed}")
                     onFollowAgent?.invoke(agentInfo.id)
                 },
                 model = if (agentInfo.isFollowed) R.drawable.checked else R.drawable.btn_add

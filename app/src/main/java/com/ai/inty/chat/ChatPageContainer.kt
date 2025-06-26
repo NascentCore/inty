@@ -35,7 +35,7 @@ fun ChatPageContainer(
             factory = viewModelFactory
         )
 
-        LaunchedEffect(key1 = agent.id) {
+        LaunchedEffect(key1 = agent.id, key2 = agent.isFollowed) {
             chatViewModel.setAgentInfo(agent)
             chatViewModel.setUserProfile(userProfile)
         }

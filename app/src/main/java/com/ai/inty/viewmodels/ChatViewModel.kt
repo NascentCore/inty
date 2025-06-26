@@ -55,11 +55,16 @@ class ChatViewModel: BaseActivityViewModel() {
     }
     
     fun updateAgentFollowState(agentId: String, isFollowed: Boolean) {
+        EasyLog.log("ChatViewModel updateAgentFollowState - agentId: $agentId, isFollowed: $isFollowed")
         _agentInfo.value?.let { currentAgent ->
             if (currentAgent.id == agentId) {
-                _agentInfo.value = currentAgent.copy(isFollowed = isFollowed)
+                val updatedAgent = currentAgent.copy(isFollowed = isFollowed)
+                _agentInfo.value = updatedAgent
+                EasyLog.log("Updated agent follow state - ${updatedAgent.name} isFollowed: ${updatedAgent.isFollowed}")
+            } else {
+                EasyLog.log("Agent ID mismatch - current: ${currentAgent.id}, target: $agentId")
             }
-        }
+        } ?: EasyLog.log("No current agent info available")
     }
 
     fun queryMsgs() {
@@ -140,7 +145,7 @@ class ChatViewModel: BaseActivityViewModel() {
 
     fun sendKeepTalkingMessage() {
         viewModelScope.launch(Dispatchers.IO) {
-            val keepTalkingMsg = "keep talking"
+            val keepTalkingMsg = "continue"
             EasyLog.log("send keep talking msg")
 
             val msgInfo = MsgInfo(

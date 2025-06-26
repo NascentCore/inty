@@ -69,9 +69,13 @@ class ChatActivity : BaseActivity() {
         val currentAgent = chatViewModel.agentInfo.value
         val isCurrentlyFollowed = currentAgent?.isFollowed ?: false
         
+        EasyLog.log("toggleFollowAgent - agentId: $agentId, current state: $isCurrentlyFollowed")
+        
         if (isCurrentlyFollowed) {
+            EasyLog.log("Agent is currently followed, will unfollow")
             unfollowAgent(agentId)
         } else {
+            EasyLog.log("Agent is not followed, will follow")
             followAgent(agentId)
         }
     }

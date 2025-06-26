@@ -40,7 +40,18 @@ class MainActivity : BaseActivity() {
     private val followStateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action == "FOLLOW_STATE_CHANGED") {
+                EasyLog.log("MainActivity received FOLLOW_STATE_CHANGED broadcast")
+                val agentId = intent.getStringExtra("agentId")
+                val isFollowed = intent.getBooleanExtra("isFollowed", false)
+                EasyLog.log("Follow state changed - agentId: $agentId, isFollowed: $isFollowed")
+                
+                // 强制刷新关注列表
                 mainViewModel.refreshFollowingListIfOnTab()
+                
+                // 同时更新主列表中的agent状态
+                agentId?.let { id ->
+                    mainViewModel.updateAgentFollowStateInList(id, isFollowed)
+                }
             }
         }
     }

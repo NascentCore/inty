@@ -99,7 +99,15 @@ fun HomeScreen(
                     agentList = agentList,
                     userProfile = userProfile.value,
                     onFollowAgent = { agentId ->
-                        mainViewModel.followAgent(agentId)
+                        // 使用与个人聊天页面一致的逻辑
+                        val agent = mainViewModel.agentList.find { it.id == agentId }
+                        val isCurrentlyFollowed = agent?.isFollowed ?: false
+                        
+                        if (isCurrentlyFollowed) {
+                            mainViewModel.unfollowAgent(agentId)
+                        } else {
+                            mainViewModel.followAgent(agentId)
+                        }
                     }
                 )
             }

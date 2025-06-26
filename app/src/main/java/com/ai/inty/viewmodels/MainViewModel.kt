@@ -37,6 +37,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
+import com.ai.inty.base.ToastUtils
+import kotlinx.coroutines.launch
 
 
 enum class HomeTabIndex {
@@ -167,6 +169,11 @@ class MainViewModel: BaseActivityViewModel() {
             HomeTabIndex.Conversions -> {
                 chatViewModel?.getConversions()
                 getSysMsgs()
+                // 如果切换到对话页面且当前选中关注列表，则刷新关注列表
+                if (_selectedConversionsTab.value == ConversionsPageTab.TabFollowing) {
+                    EasyLog.log("Switching to Conversions tab while following tab is selected - refreshing following agents")
+                    getFollowingAgents()
+                }
             }
             HomeTabIndex.My -> {
                 getUserCreatedAgents()
@@ -305,15 +312,26 @@ class MainViewModel: BaseActivityViewModel() {
                             agentList[index] = agent.copy(isFollowed = true)
                         }
                     }
-                    // Send broadcast to update UI
+                    // Show success toast
+                    viewModelScope.launch(Dispatchers.Main) {
+                        ToastUtils.showToast("关注成功")
+                    }
+                    // Update agent state in list
+                    updateAgentFollowStateInList(agentId, true)
+                    // Send broadcast to update UI with required parameters
                     val intent = Intent("FOLLOW_STATE_CHANGED")
+                    intent.putExtra("agentId", agentId)
+                    intent.putExtra("isFollowed", true)
                     LocalBroadcastManager.getInstance(AppEnv.context).sendBroadcast(intent)
+                    EasyLog.log("Sent FOLLOW_STATE_CHANGED broadcast - followed: $agentId")
                     // Refresh following list if on conversions tab
                     refreshFollowingListIfOnTab()
                 }
                 is HttpResult.Failure -> {
                     EasyLog.log("followAgent error: $result", priority = EasyLog.ERROR)
-                    showSnackbar(result.message)
+                    viewModelScope.launch(Dispatchers.Main) {
+                        ToastUtils.showToast("关注失败: ${result.message}")
+                    }
                 }
             }
         }
@@ -337,13 +355,24 @@ class MainViewModel: BaseActivityViewModel() {
                     }
                     // Remove from following list
                     followingAgents.removeAll { it.id == agentId }
-                    // Send broadcast to update UI
+                    // Show success toast
+                    viewModelScope.launch(Dispatchers.Main) {
+                        ToastUtils.showToast("取消关注成功")
+                    }
+                    // Update agent state in list
+                    updateAgentFollowStateInList(agentId, false)
+                    // Send broadcast to update UI with required parameters
                     val intent = Intent("FOLLOW_STATE_CHANGED")
+                    intent.putExtra("agentId", agentId)
+                    intent.putExtra("isFollowed", false)
                     LocalBroadcastManager.getInstance(AppEnv.context).sendBroadcast(intent)
+                    EasyLog.log("Sent FOLLOW_STATE_CHANGED broadcast - unfollowed: $agentId")
                 }
                 is HttpResult.Failure -> {
                     EasyLog.log("unfollowAgent error: $result", priority = EasyLog.ERROR)
-                    showSnackbar(result.message)
+                    viewModelScope.launch(Dispatchers.Main) {
+                        ToastUtils.showToast("取消关注失败: ${result.message}")
+                    }
                 }
             }
         }
@@ -357,6 +386,24 @@ class MainViewModel: BaseActivityViewModel() {
             getFollowingAgents()
         } else {
             EasyLog.log("Not refreshing - not on following tab")
+        }
+    }
+    
+    fun updateAgentFollowStateInList(agentId: String, isFollowed: Boolean) {
+        EasyLog.log("Updating agent follow state in list - agentId: $agentId, isFollowed: $isFollowed")
+        
+        // 更新主列表中的agent状态
+        val index = agentList.indexOfFirst { it.id == agentId }
+        if (index != -1) {
+            val updatedAgent = agentList[index].copy(isFollowed = isFollowed)
+            agentList[index] = updatedAgent
+            EasyLog.log("Updated agent in main list: ${updatedAgent.name}")
+        }
+        
+        // 如果是取消关注，从关注列表中移除
+        if (!isFollowed) {
+            followingAgents.removeAll { it.id == agentId }
+            EasyLog.log("Removed agent from following list")
         }
     }
     
