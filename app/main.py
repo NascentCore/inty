@@ -17,6 +17,7 @@ from app.middleware.error_handler import (
 from app.core.logging import init_logger
 from app.core.agent.agent import agent_manager
 from app.api.deps import get_async_db
+from app.services.keep_talking_service import keep_talking_service
 from loguru import logger
 from app.core.firebase import init_firebase
 
@@ -73,18 +74,27 @@ async def startup_event():
             await agent_manager.initialize_popular_agents(db_session)
             break  # 只需要一次初始化
         logger.info("Agent初始化完成")
+        
+        # 启动Keep Talking服务
+        logger.info("正在启动Keep Talking服务...")
+        await keep_talking_service.start()
+        logger.info("Keep Talking服务已启动")
     except Exception as e:
-        logger.error(f"Agent初始化失败: {str(e)}")
+        logger.error(f"应用启动过程中出错: {str(e)}")
 
 @app.on_event("shutdown")
 async def shutdown_event():
     """应用关闭事件"""
     try:
+        logger.info("正在停止Keep Talking服务...")
+        await keep_talking_service.stop()
+        logger.info("Keep Talking服务已停止")
+        
         logger.info("正在停止Agent管理器...")
         agent_manager.stop()
         logger.info("Agent管理器已停止")
     except Exception as e:
-        logger.error(f"停止Agent管理器失败: {str(e)}")
+        logger.error(f"应用关闭过程中出错: {str(e)}")
 
 def custom_openapi():
     if app.openapi_schema:

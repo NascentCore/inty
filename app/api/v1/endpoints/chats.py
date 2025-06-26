@@ -11,6 +11,7 @@ from app import schemas
 from app.api import deps
 from app.services import chat_service, agent_service, chat_history_service
 from app.services.chat_service import generate_session_id
+from app.services.keep_talking_service import keep_talking_service
 from app.core.agent.agent import agent_manager
 from langchain_core.messages import HumanMessage
 import logging
@@ -87,6 +88,41 @@ async def get_agent_status(
         "cleanup_interval": agent_manager.cleanup_interval,
         "max_idle_time": agent_manager.max_idle_time
     }
+
+
+@router.get("/keep-talking/status")
+async def get_keep_talking_status(
+    current_user: schemas.User = Depends(deps.get_current_active_user),
+):
+    """
+    获取Keep Talking服务状态
+    """
+    return {
+        "running": keep_talking_service._running,
+        "check_interval": keep_talking_service.check_interval,
+        "max_idle_time": keep_talking_service.max_idle_time,
+        "max_keep_talking_messages": keep_talking_service.max_keep_talking_messages,
+        "active_sessions_count": len(keep_talking_service._keep_talking_counts),
+        "keep_talking_counts": keep_talking_service._keep_talking_counts
+    }
+
+
+@router.post("/keep-talking/check")
+async def trigger_keep_talking_check(
+    current_user: schemas.User = Depends(deps.get_current_active_user),
+):
+    """
+    手动触发Keep Talking检查（用于测试和调试）
+    """
+    try:
+        await keep_talking_service._check_idle_chats()
+        return {
+            "status": "success",
+            "message": "Keep Talking检查已完成",
+            "timestamp": time.time()
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"检查失败: {str(e)}")
 
 
 @router.post("/agents/initialize")
@@ -364,6 +400,10 @@ async def agent_chat_completions(
         
         # 使用统一的session_id生成规则
         session_id = generate_session_id(chat.id)
+        
+        # 用户发送新消息时，重置keep_talking计数
+        keep_talking_service.reset_keep_talking_count(chat.id)
+        logger.debug(f"重置会话 {chat.id} 的keep_talking计数")
         
         if request.stream:
             return StreamingResponse(

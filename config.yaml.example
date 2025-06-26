@@ -29,4 +29,9 @@ google_oauth:
   redirect_uri: "http://localhost:8000/api/v1/auth/google/callback"
 
 verification:
-  code_expire_minutes: 5 
+  code_expire_minutes: 5
+
+keep_talking:
+  check_interval: 300  # 检查间隔（秒），默认5分钟
+  max_idle_time: 1800  # 最大空闲时间（秒），默认30分钟
+  max_keep_talking_messages: 3  # 单次会话最多发送的keep_talking消息数量 
