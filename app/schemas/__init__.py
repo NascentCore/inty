@@ -1,7 +1,7 @@
 from app.schemas.user import User, UserCreate, UserUpdate, UserInDB
 from app.schemas.token import Token, TokenPayload
 from app.schemas.verification_code import VerificationCodeCreate, VerificationCodeVerify
-from app.schemas.agent import Agent, AgentCreate, AgentUpdate, AgentInDB
+from app.schemas.agent import Agent, AgentCreate, AgentUpdate, AgentInDB, BackgroundGenerateRequest
 from app.schemas.chat import (
     Chat, ChatCreate, ChatUpdate, ChatInDB,
     Message, MessageCreate, MessageUpdate, MessageList,

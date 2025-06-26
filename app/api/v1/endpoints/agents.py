@@ -182,7 +182,7 @@ async def delete_agent(
 
 @router.post("/generate_background", response_model=APIResponse[dict])
 async def generate_background(
-    prompt: str,
+    request: schemas.BackgroundGenerateRequest,
     db: AsyncSession = Depends(deps.get_async_db),
     current_user: schemas.User = Depends(deps.get_current_active_user)
 ):
@@ -195,7 +195,7 @@ async def generate_background(
         gcs_uri = f"gs://{settings.gcs.bucket}/{gcs_path}"
         
         # 生成图片并获取实际的GCS路径
-        actual_gcs_uri = generate_background_image_to_gcs(prompt, gcs_uri, aspect_ratio="16:9")
+        actual_gcs_uri = generate_background_image_to_gcs(request.prompt, gcs_uri, aspect_ratio="16:9")
         
         # 将gs://bucket/path格式转换为https://storage.googleapis.com/bucket/path格式
         if actual_gcs_uri.startswith("gs://"):

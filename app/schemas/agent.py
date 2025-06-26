@@ -53,4 +53,8 @@ class AgentList(BaseModel):
     total: int
     page: int
     page_size: int
-    items: List[Agent] 
+    items: List[Agent]
+
+class BackgroundGenerateRequest(BaseModel):
+    """背景生成请求"""
+    prompt: str 
