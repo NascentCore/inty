@@ -54,6 +54,9 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.foundation.text.ClickableText
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalFocusManager
 import com.ai.inty.Constant
 import com.ai.inty.MySettingItem
 import com.ai.inty.R
@@ -83,6 +86,7 @@ fun ChatPage(
 ) {
     val context = LocalContext.current
     val agentInfo = chatViewModel.agentInfo.collectAsState().value
+    val focusManager = LocalFocusManager.current
 
     var isAutoPlayAudio by remember { mutableStateOf(IntySetting.isAutoPlayAudio()) }
     var agentKeepTalking by remember(agentInfo?.id) { 
@@ -104,6 +108,13 @@ fun ChatPage(
 
     Box(
         modifier = modifier
+            .pointerInput(Unit) {
+                detectTapGestures(
+                    onTap = {
+                        focusManager.clearFocus()
+                    }
+                )
+            }
     ) {
         val configuration = LocalConfiguration.current
 
