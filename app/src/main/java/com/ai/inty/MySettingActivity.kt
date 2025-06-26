@@ -50,6 +50,7 @@ import androidx.lifecycle.lifecycleScope
 import com.ai.inty.base.BaseActivity
 import com.ai.inty.base.IntyCircleImage
 import com.ai.inty.base.IntySmallTextField
+import com.ai.inty.base.IntySmallTextField2
 import com.ai.inty.base.noRippleClickable
 import com.ai.inty.beans.GENDER
 import com.ai.inty.beans.UserProfile
@@ -62,6 +63,9 @@ import com.therouter.router.Autowired
 import com.therouter.router.Route
 import com.yalantis.ucrop.UCrop
 import kotlinx.coroutines.launch
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.foundation.clickable
 
 
 enum class EditKey {
@@ -237,6 +241,7 @@ class MySettingActivity: BaseActivity() {
                                     }
 
                                     EditKey.Persona -> {
+                                        val focusRequester = remember { FocusRequester() }
                                         Box(
                                             modifier = Modifier
                                                 .padding(horizontal = 16.dp, vertical = 0.dp)
@@ -249,18 +254,18 @@ class MySettingActivity: BaseActivity() {
                                                     width = 0.5.dp,
                                                     color = Color.White.copy(0.2f),
                                                     shape = RoundedCornerShape(8.dp)
-                                                ),
+                                                )
+                                                .clickable { focusRequester.requestFocus() }
                                         ) {
-                                            IntySmallTextField(
-                                                modifier = Modifier.fillMaxSize(),
+                                            IntySmallTextField2(
+                                                modifier = Modifier.fillMaxSize().focusRequester(focusRequester),
                                                 value = editValue,
                                                 onValueChange = {
                                                     editValue = it
                                                 },
+                                                singleLine = false,
                                                 placeholder = {
                                                     Text(
-                                                        modifier = Modifier
-                                                            .padding(16.dp, 12.dp),
                                                         text = "Please enter your character...",
                                                         color = Color.White.copy(0.55f),
                                                         fontSize = 12.sp,
