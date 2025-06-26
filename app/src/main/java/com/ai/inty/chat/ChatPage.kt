@@ -49,6 +49,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.foundation.text.ClickableText
 import com.ai.inty.Constant
 import com.ai.inty.MySettingItem
 import com.ai.inty.R
@@ -581,11 +586,12 @@ fun ChatItemAI(
                 .padding(12.dp, 13.dp)
                 .widthIn(1.dp, 300.dp)
         ) {
-            Text(
+            StyledMessageText(
                 text = item.content,
-                fontWeight = FontWeight.Normal,
                 fontSize = 14.sp,
-                color = Color.White.copy(0.55f)
+                fontWeight = FontWeight.Normal,
+                normalColor = Color.White.copy(0.55f),
+                actionColor = Color.White.copy(0.35f)
             )
         }
         Spacer(modifier = Modifier.widthIn(80.dp).weight(1f))
@@ -606,15 +612,78 @@ fun ChatItemUser(
                 .padding(12.dp, 13.dp)
                 .widthIn(1.dp, 300.dp)
         ) {
-            Text(
+            StyledMessageText(
                 text = item.content,
-                fontWeight = FontWeight.Normal,
                 fontSize = 14.sp,
-                color = Color(0xff090909)
+                fontWeight = FontWeight.Normal,
+                normalColor = Color(0xff090909),
+                actionColor = Color(0xff090909).copy(0.6f)
             )
         }
     }
 
+}
+
+@Composable
+fun StyledMessageText(
+    text: String,
+    fontSize: androidx.compose.ui.unit.TextUnit,
+    fontWeight: FontWeight,
+    normalColor: Color,
+    actionColor: Color
+) {
+    val annotatedText = buildAnnotatedString {
+        var currentIndex = 0
+        val regex = Regex("\\*([^*]+)\\*")
+        
+        regex.findAll(text).forEach { matchResult ->
+            // Add text before the match
+            if (matchResult.range.first > currentIndex) {
+                withStyle(
+                    style = SpanStyle(
+                        color = normalColor,
+                        fontSize = fontSize,
+                        fontWeight = fontWeight
+                    )
+                ) {
+                    append(text.substring(currentIndex, matchResult.range.first))
+                }
+            }
+            
+            // Add the action/thought text (content between asterisks)
+            withStyle(
+                style = SpanStyle(
+                    color = actionColor,
+                    fontSize = fontSize,
+                    fontWeight = fontWeight,
+                    fontStyle = FontStyle.Italic
+                )
+            ) {
+                append(matchResult.groupValues[1])
+            }
+            
+            currentIndex = matchResult.range.last + 1
+        }
+        
+        // Add remaining text after last match
+        if (currentIndex < text.length) {
+            withStyle(
+                style = SpanStyle(
+                    color = normalColor,
+                    fontSize = fontSize,
+                    fontWeight = fontWeight
+                )
+            ) {
+                append(text.substring(currentIndex))
+            }
+        }
+    }
+    
+    Text(
+        text = annotatedText,
+        fontSize = fontSize,
+        fontWeight = fontWeight
+    )
 }
 
 
