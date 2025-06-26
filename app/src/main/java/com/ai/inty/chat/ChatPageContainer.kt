@@ -47,12 +47,21 @@ fun ChatPageContainer(
     viewModelFactory: ViewModelProvider.Factory,
     agentList: List<AgentInfo>,
     userProfile: UserProfile,
+    currentPageIndex: Int = 0,
+    onPageChanged: (Int) -> Unit = {},
     onFollowAgent: ((String) -> Unit)? = null,
 ) {
-    val pageState = rememberPagerState {
+    val pageState = rememberPagerState(
+        initialPage = currentPageIndex
+    ) {
         agentList.size
     }
     val scope = rememberCoroutineScope()
+    
+    // 监听页面变化
+    LaunchedEffect(pageState.currentPage) {
+        onPageChanged(pageState.currentPage)
+    }
 
     Box {
         HorizontalPager(

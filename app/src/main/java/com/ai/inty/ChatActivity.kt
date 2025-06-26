@@ -59,6 +59,8 @@ class ChatActivity : BaseActivity() {
                         .imePadding()
                     ,
                     chatViewModel = chatViewModel,
+                    showBackButton = true,
+                    onBack = { finish() },
                     onFollowAgent = { agentId ->
                         toggleFollowAgent(agentId)
                     }

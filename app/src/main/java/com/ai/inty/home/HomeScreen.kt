@@ -99,12 +99,17 @@ fun HomeScreen(
         when (selectedTab.value) {
             HomeTabIndex.Chat -> {
                 val userProfile = mainViewModel.userProfile.collectAsState()
+                val currentChatPageIndex = mainViewModel.currentChatPageIndex.collectAsState()
 
                 ChatPageContainer(
                     modifier = Modifier.padding(0.dp, 0.dp, 0.dp, innerPadding.calculateBottomPadding()),
                     viewModelFactory = viewModelFactory,
                     agentList = agentList,
                     userProfile = userProfile.value,
+                    currentPageIndex = currentChatPageIndex.value,
+                    onPageChanged = { index ->
+                        mainViewModel.updateCurrentChatPageIndex(index)
+                    },
                     onFollowAgent = { agentId ->
                         // 使用与个人聊天页面一致的逻辑
                         val agent = mainViewModel.agentList.find { it.id == agentId }

@@ -70,6 +70,9 @@ class MainViewModel: BaseActivityViewModel() {
     private val _selectedConversionsTab = MutableStateFlow(ConversionsPageTab.TabMessage)
     val selectedConversionsTab = _selectedConversionsTab.asStateFlow()
 
+    private val _currentChatPageIndex = MutableStateFlow(0)
+    val currentChatPageIndex = _currentChatPageIndex.asStateFlow()
+
     private var chatViewModel: ChatViewModel? = null
 
     private val _userProfile = MutableStateFlow<UserProfile>(UserProfile())
@@ -200,6 +203,11 @@ class MainViewModel: BaseActivityViewModel() {
             }
             else -> {}
         }
+    }
+
+    fun updateCurrentChatPageIndex(index: Int) {
+        _currentChatPageIndex.value = index
+        EasyLog.log("Updated current chat page index to: $index")
     }
 
 

@@ -82,6 +82,8 @@ fun ChatPage(
     modifier: Modifier,
     chatViewModel: ChatViewModel,
     onFollowAgent: ((String) -> Unit)? = null,
+    showBackButton: Boolean = false,
+    onBack: (() -> Unit)? = null,
 
 ) {
     val context = LocalContext.current
@@ -199,6 +201,8 @@ fun ChatPage(
                             .height(36.dp)
                             .padding(horizontal = 18.dp, vertical = 0.dp),
                         agentInfo = agentInfo,
+                        showBackButton = showBackButton,
+                        onBack = onBack,
                         onClickMore = {
                             scope.launch {
                                 if (drawerState.value == DrawerValue.Closed) {
@@ -702,6 +706,8 @@ fun StyledMessageText(
 fun TopBar(
     modifier: Modifier,
     agentInfo: AgentInfo,
+    showBackButton: Boolean = false,
+    onBack: (() -> Unit)? = null,
     onClickMore: () -> Unit,
     onFollowAgent: ((String) -> Unit)? = null,
 ) {
@@ -710,6 +716,19 @@ fun TopBar(
         modifier = modifier,
         verticalAlignment = Alignment.CenterVertically
     ) {
+        // 返回按钮
+        if (showBackButton) {
+            IntyImage(
+                modifier = Modifier
+                    .size(24.dp)
+                    .noRippleClickable {
+                        onBack?.invoke()
+                    },
+                model = R.drawable.back
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+        }
+        
         Row(
             modifier = Modifier.background(color = Color(33, 0, 0, 77), shape = RoundedCornerShape(10.dp)),
             verticalAlignment = Alignment.CenterVertically
