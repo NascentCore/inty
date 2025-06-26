@@ -2,7 +2,8 @@ package com.ai.inty.beans
 import android.os.Parcelable
 import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
-import kotlinx.android.parcel.Parcelize
+import kotlinx.parcelize.Parcelize
+import kotlinx.parcelize.RawValue
 
 
 @Parcelize
@@ -27,7 +28,15 @@ data class AgentInfo(
     @Json(name = "created_at")
     val createdAt: String = "",
     @Json(name = "creator")
-    val creator: CreatorInfo? = null
+    val creator: CreatorInfo? = null,
+    @Json(name = "intro")
+    val intro: String = "",
+    @Json(name = "settings")
+    val settings: @RawValue Map<String, Any>? = null,
+    @Json(name = "visibility")
+    val visibility: String = "",
+    @Json(name = "prompt")
+    val prompt: String = ""
 ): Parcelable
 
 @Parcelize

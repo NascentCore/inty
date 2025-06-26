@@ -507,6 +507,100 @@ class MainViewModel: BaseActivityViewModel() {
         EasyLog.log("User logged out successfully - switched to guest mode")
     }
     
+    fun deleteAgent(
+        agentId: String,
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
+        EasyLog.log("deleteAgent: $agentId")
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val result = agentApi.deleteAgent(agentId)
+                EasyLog.log("deleteAgent = $result")
+                
+                withContext(Dispatchers.Main) {
+                    when (result) {
+                        is HttpResult.Success -> {
+                            EasyLog.log("deleteAgent success: ${result.data}")
+                            // 从用户创建的角色列表中移除
+                            userCreatedAgents.removeAll { it.id == agentId }
+                            // 从主列表中移除（如果存在）
+                            agentList.removeAll { it.id == agentId }
+                            // 从关注列表中移除（如果存在）
+                            followingAgents.removeAll { it.id == agentId }
+                            
+                            ToastUtils.showToast("角色删除成功")
+                            onSuccess()
+                        }
+                        is HttpResult.Failure -> {
+                            EasyLog.log("deleteAgent error: $result", priority = EasyLog.ERROR)
+                            val errorMessage = if (result.message.isBlank()) "删除失败，请检查网络连接" else result.message
+                            ToastUtils.showToast("删除失败: $errorMessage")
+                            onError(errorMessage)
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                EasyLog.log("deleteAgent exception: ${e.message}", priority = EasyLog.ERROR)
+                EasyLog.log(e)
+                val errorMessage = when {
+                    e.message?.contains("timeout", ignoreCase = true) == true -> "网络超时，请稍后重试"
+                    e.message?.contains("network", ignoreCase = true) == true -> "网络连接失败，请检查网络"
+                    else -> "删除失败：${e.message ?: "未知错误"}"
+                }
+                withContext(Dispatchers.Main) {
+                    ToastUtils.showToast(errorMessage)
+                    onError(errorMessage)
+                }
+            }
+        }
+    }
+    
+    fun updateAgent(
+        agentId: String,
+        request: CreateAgentRequest,
+        onSuccess: (AgentInfo) -> Unit,
+        onError: (String) -> Unit
+    ) {
+        EasyLog.log("updateAgent: $agentId")
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val result = agentApi.updateAgent(agentId, request)
+                EasyLog.log("updateAgent = $result")
+                
+                withContext(Dispatchers.Main) {
+                    when (result) {
+                        is HttpResult.Success -> {
+                            EasyLog.log("updateAgent success: ${result.data}")
+                            // 刷新用户创建的角色列表
+                            refreshCreatedAgentsListIfOnTab()
+                            ToastUtils.showToast("角色更新成功")
+                            onSuccess(result.data)
+                        }
+                        is HttpResult.Failure -> {
+                            EasyLog.log("updateAgent error: $result", priority = EasyLog.ERROR)
+                            val errorMessage = if (result.message.isBlank()) "更新失败，请检查网络连接" else result.message
+                            ToastUtils.showToast("更新失败: $errorMessage")
+                            onError(errorMessage)
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                EasyLog.log("updateAgent exception: ${e.message}", priority = EasyLog.ERROR)
+                EasyLog.log(e)
+                val errorMessage = when {
+                    e.message?.contains("timeout", ignoreCase = true) == true -> "网络超时，请稍后重试"
+                    e.message?.contains("network", ignoreCase = true) == true -> "网络连接失败，请检查网络"
+                    else -> "更新失败：${e.message ?: "未知错误"}"
+                }
+                withContext(Dispatchers.Main) {
+                    ToastUtils.showToast(errorMessage)
+                    onError(errorMessage)
+                }
+            }
+        }
+    }
+    
     fun generateBackground(
         request: GenerateBackgroundRequest,
         onSuccess: (GenerateBackgroundResponse) -> Unit,

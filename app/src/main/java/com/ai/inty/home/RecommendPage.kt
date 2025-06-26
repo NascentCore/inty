@@ -194,7 +194,7 @@ fun RecommendPage(
 
                 LazyVerticalGrid(
                     state = gridState,
-                    modifier = Modifier.padding(bottom = innerPadding.calculateBottomPadding(), start = 16.dp, end = 16.dp),
+                    modifier = Modifier.padding(bottom = innerPadding.calculateBottomPadding() + 80.dp, start = 16.dp, end = 16.dp),
                     columns = GridCells.Fixed(2),
                     horizontalArrangement = Arrangement.spacedBy(13.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -230,7 +230,7 @@ fun RecommendPage(
                     }
                     
                     item {
-                        Spacer(Modifier.height(100.dp))
+                        Spacer(Modifier.height(16.dp))
                     }
                 }
             }

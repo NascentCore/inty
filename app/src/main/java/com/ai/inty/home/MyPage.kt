@@ -11,6 +11,18 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -22,6 +34,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -45,6 +58,8 @@ fun MyPage(
     userProfile: UserProfile,
     agents: List<AgentInfo>,
     onClickAgent: (AgentInfo) -> Unit,
+    onEditAgent: ((AgentInfo) -> Unit)? = null,
+    onDeleteAgent: ((AgentInfo) -> Unit)? = null,
 ) {
     val context = LocalContext.current
     Box(
@@ -235,22 +250,175 @@ fun MyPage(
                     Spacer(Modifier.height(10.dp))
 
                     LazyVerticalGrid(
-                        modifier = Modifier.padding(horizontal = 16.dp),
+                        modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 100.dp),
                         columns = GridCells.Fixed(2),
                         horizontalArrangement = Arrangement.spacedBy(13.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         items(agents) { agent ->
-                            RecommendPageItem(
+                            MyAgentCard(
                                 modifier = Modifier.noRippleClickable {
                                     onClickAgent(agent)
                                 },
-                                agentInfo = agent
+                                agentInfo = agent,
+                                onEditAgent = onEditAgent,
+                                onDeleteAgent = onDeleteAgent
                             )
+                        }
+                        
+                        item {
+                            Spacer(Modifier.height(16.dp))
                         }
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun MyAgentCard(
+    modifier: Modifier,
+    agentInfo: AgentInfo,
+    onEditAgent: ((AgentInfo) -> Unit)? = null,
+    onDeleteAgent: ((AgentInfo) -> Unit)? = null
+) {
+    var showMenu by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    
+    Box(
+        modifier = modifier.size(165.dp, 220.dp)
+    ) {
+        IntyImage(
+            modifier = Modifier.fillMaxSize(),
+            model = agentInfo.avatar,
+            placeholder = painterResource(R.drawable.app_2),
+            error = painterResource(R.drawable.app_2),
+        )
+        
+        Text(
+            modifier = Modifier.align(Alignment.BottomStart).padding(12.dp),
+            text = agentInfo.name,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = Color.White,
+        )
+        
+        // 右下角的菜单按钮
+        if (onEditAgent != null || onDeleteAgent != null) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(8.dp)
+            ) {
+                IconButton(
+                    onClick = { showMenu = true },
+                    modifier = Modifier
+                        .size(24.dp)
+                        .background(
+                            Color.Black.copy(alpha = 0.5f),
+                            RoundedCornerShape(12.dp)
+                        )
+                ) {
+                    IntyImage(
+                        modifier = Modifier.size(16.dp),
+                        model = R.drawable.icon_more2
+                    )
+                }
+                
+                DropdownMenu(
+                    expanded = showMenu,
+                    onDismissRequest = { showMenu = false }
+                ) {
+                    onEditAgent?.let { editCallback ->
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    text = "Edit",
+                                    color = Color.White,
+                                    fontSize = 14.sp
+                                )
+                            },
+                            onClick = {
+                                showMenu = false
+                                editCallback(agentInfo)
+                            }
+                        )
+                    }
+                    
+                    onDeleteAgent?.let { deleteCallback ->
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    text = "Delete",
+                                    color = Color.Red,
+                                    fontSize = 14.sp
+                                )
+                            },
+                            onClick = {
+                                showMenu = false
+                                showDeleteDialog = true
+                            }
+                        )
+                    }
+                }
+            }
+        }
+        
+        // Delete confirmation dialog
+        if (showDeleteDialog) {
+            AlertDialog(
+                onDismissRequest = { showDeleteDialog = false },
+                title = {
+                    Text(
+                        text = "Delete Character",
+                        color = Color.White,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                },
+                text = {
+                    Text(
+                        text = "Are you sure you want to delete \"${agentInfo.name}\"? This action cannot be undone.",
+                        color = Color.White,
+                        fontSize = 14.sp
+                    )
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            showDeleteDialog = false
+                            onDeleteAgent?.invoke(agentInfo)
+                        },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color.Red
+                        )
+                    ) {
+                        Text(
+                            text = "Delete",
+                            color = Color.White,
+                            fontSize = 14.sp
+                        )
+                    }
+                },
+                dismissButton = {
+                    Button(
+                        onClick = { showDeleteDialog = false },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color.Gray
+                        )
+                    ) {
+                        Text(
+                            text = "Cancel",
+                            color = Color.White,
+                            fontSize = 14.sp
+                        )
+                    }
+                },
+                containerColor = Color(0xFF2A2A2A),
+                titleContentColor = Color.White,
+                textContentColor = Color.White
+            )
         }
     }
 }

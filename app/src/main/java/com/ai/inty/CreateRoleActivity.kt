@@ -69,9 +69,14 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.ai.inty.beans.AgentInfo
+import com.therouter.router.Autowired
 
 @Route(path = Constant.ROUTE_CREATE_ROLE)
 class CreateRoleActivity : BaseActivity() {
+
+    @Autowired
+    var agent: AgentInfo? = null
 
     private val mainViewModel: MainViewModel by lazy {
         ViewModelProvider(this)[MainViewModel::class.java]
@@ -91,7 +96,8 @@ class CreateRoleActivity : BaseActivity() {
                     onAvatarGenerateClick = {
                         TheRouter.build(Constant.ROUTE_AVATAR_GENERATE)
                             .navigation(this@CreateRoleActivity)
-                    }
+                    },
+                    editAgent = agent
                 )
             }
         }
@@ -106,16 +112,19 @@ fun CreateRolePage(
     mainViewModel: MainViewModel,
     onBack: () -> Unit,
     onCreateSuccess: () -> Unit,
-    onAvatarGenerateClick: () -> Unit
+    onAvatarGenerateClick: () -> Unit,
+    editAgent: AgentInfo? = null
 ) {
-    var name by remember { mutableStateOf("") }
-    var gender by remember { mutableStateOf("FEMALE") }
-    var settings by remember { mutableStateOf("") }
-    var intro by remember { mutableStateOf("") }
-    var opening by remember { mutableStateOf("") }
-    var visibility by remember { mutableStateOf("PUBLIC") }
+    val isEditMode = editAgent != null
+    
+    var name by remember { mutableStateOf(editAgent?.name ?: "") }
+    var gender by remember { mutableStateOf(editAgent?.gender ?: "FEMALE") }
+    var settings by remember { mutableStateOf(editAgent?.settings?.get("description") as? String ?: editAgent?.prompt ?: "") }
+    var intro by remember { mutableStateOf(editAgent?.intro ?: "") }
+    var opening by remember { mutableStateOf(editAgent?.opening ?: "") }
+    var visibility by remember { mutableStateOf(editAgent?.visibility ?: "PUBLIC") }
     var isLoading by remember { mutableStateOf(false) }
-    var avatarUrl by remember { mutableStateOf<String?>(null) }
+    var avatarUrl by remember { mutableStateOf<String?>(editAgent?.avatar?.takeIf { it.isNotBlank() }) }
     
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -185,7 +194,7 @@ fun CreateRolePage(
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors().copy(containerColor = Color.Transparent),
                 title = {
                     Text(
-                        text = "InTy",
+                        text = if (isEditMode) "Edit InTy" else "Create InTy",
                         fontSize = 18.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = Color.White
@@ -290,6 +299,7 @@ fun CreateRolePage(
             // Create Button
             CreateButton(
                 isLoading = isLoading,
+                isEditMode = isEditMode,
                 onClick = {
                     // Validate required fields
                     if (name.isBlank() || intro.isBlank() || opening.isBlank() || settings.isBlank()) {
@@ -313,7 +323,7 @@ fun CreateRolePage(
                     
                     try {
                         // Create API request
-                        EasyLog.log("Creating agent with avatar URL: $avatarUrl")
+                        EasyLog.log("${if (isEditMode) "Updating" else "Creating"} agent with avatar URL: $avatarUrl")
                         val request = CreateAgentRequest(
                             name = name,
                             gender = gender,
@@ -324,28 +334,45 @@ fun CreateRolePage(
                             visibility = visibility,
                             prompt = settings
                         )
-                        EasyLog.log("Create agent request: $request")
-                        EasyLog.log("Create agent request avatar field: ${request.avatar}")
+                        EasyLog.log("${if (isEditMode) "Update" else "Create"} agent request: $request")
+                        EasyLog.log("${if (isEditMode) "Update" else "Create"} agent request avatar field: ${request.avatar}")
                         
                         // Call API through ViewModel
-                        mainViewModel.createAgent(
-                            request = request,
-                            onSuccess = { agentInfo ->
-                                isLoading = false
-                                Toast.makeText(context, "角色创建成功！", Toast.LENGTH_SHORT).show()
-                                onCreateSuccess()
-                            },
-                            onError = { error ->
-                                isLoading = false
-                                val errorMessage = if (error.isBlank()) "创建失败，请稍后重试" else "创建失败：$error"
-                                Toast.makeText(context, errorMessage, Toast.LENGTH_LONG).show()
-                            }
-                        )
+                        if (isEditMode && editAgent != null) {
+                            mainViewModel.updateAgent(
+                                agentId = editAgent.id,
+                                request = request,
+                                onSuccess = { agentInfo ->
+                                    isLoading = false
+                                    Toast.makeText(context, "角色更新成功！", Toast.LENGTH_SHORT).show()
+                                    onCreateSuccess()
+                                },
+                                onError = { error ->
+                                    isLoading = false
+                                    val errorMessage = if (error.isBlank()) "更新失败，请稍后重试" else "更新失败：$error"
+                                    Toast.makeText(context, errorMessage, Toast.LENGTH_LONG).show()
+                                }
+                            )
+                        } else {
+                            mainViewModel.createAgent(
+                                request = request,
+                                onSuccess = { agentInfo ->
+                                    isLoading = false
+                                    Toast.makeText(context, "角色创建成功！", Toast.LENGTH_SHORT).show()
+                                    onCreateSuccess()
+                                },
+                                onError = { error ->
+                                    isLoading = false
+                                    val errorMessage = if (error.isBlank()) "创建失败，请稍后重试" else "创建失败：$error"
+                                    Toast.makeText(context, errorMessage, Toast.LENGTH_LONG).show()
+                                }
+                            )
+                        }
                     } catch (e: Exception) {
                         isLoading = false
-                        val errorMessage = "创建出错：${e.message ?: "未知错误"}"
+                        val errorMessage = "${if (isEditMode) "更新" else "创建"}出错：${e.message ?: "未知错误"}"
                         Toast.makeText(context, errorMessage, Toast.LENGTH_LONG).show()
-                        EasyLog.log("CreateRole error: ${e.message}", EasyLog.ERROR)
+                        EasyLog.log("${if (isEditMode) "UpdateRole" else "CreateRole"} error: ${e.message}", EasyLog.ERROR)
                         EasyLog.log(e)
                     }
                 }
@@ -670,6 +697,7 @@ fun GenderButton(
 @Composable
 fun CreateButton(
     isLoading: Boolean,
+    isEditMode: Boolean = false,
     onClick: () -> Unit
 ) {
     Button(
@@ -699,7 +727,7 @@ fun CreateButton(
             )
         } else {
             Text(
-                text = "Creat My InTy",
+                text = if (isEditMode) "Update My InTy" else "Create My InTy",
                 fontSize = 18.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = Color.White

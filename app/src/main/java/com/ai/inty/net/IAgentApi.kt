@@ -14,6 +14,7 @@ import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.POST
+import retrofit2.http.PUT
 import retrofit2.http.Path
 import retrofit2.http.Query
 
@@ -43,4 +44,13 @@ interface IAgentApi {
     
     @POST("/api/v1/ai/agents/generate_background")
     suspend fun generateBackground(@Body request: GenerateBackgroundRequest): HttpResult<GenerateBackgroundResponse>
+    
+    @GET("/api/v1/ai/agents/{agentId}")
+    suspend fun getAgentDetail(@Path("agentId") agentId: String): HttpResult<AgentInfo>
+    
+    @PUT("/api/v1/ai/agents/{agentId}")
+    suspend fun updateAgent(@Path("agentId") agentId: String, @Body request: CreateAgentRequest): HttpResult<AgentInfo>
+    
+    @DELETE("/api/v1/ai/agents/{agentId}")
+    suspend fun deleteAgent(@Path("agentId") agentId: String): HttpResult<AgentInfo>
 }

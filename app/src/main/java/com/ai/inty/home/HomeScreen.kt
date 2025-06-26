@@ -192,6 +192,23 @@ fun HomeScreen(
                         TheRouter.build(Constant.ROUTE_CHAT)
                             .withObject("agent", agent)
                             .navigation(context)
+                    },
+                    onEditAgent = { agent ->
+                        // 导航到编辑角色页面 
+                        TheRouter.build(Constant.ROUTE_CREATE_ROLE)
+                            .withObject("agent", agent)
+                            .navigation(context)
+                    },
+                    onDeleteAgent = { agent ->
+                        mainViewModel.deleteAgent(
+                            agentId = agent.id,
+                            onSuccess = {
+                                // 删除成功，列表会自动更新
+                            },
+                            onError = { errorMessage ->
+                                // 错误处理已在ViewModel中完成
+                            }
+                        )
                     }
                 )
                 
