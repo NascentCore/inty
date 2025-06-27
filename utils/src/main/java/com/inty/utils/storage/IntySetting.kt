@@ -30,7 +30,6 @@ object IntySetting {
     }
 
     fun isGuestUser(): Boolean {
-        return false
         return getCurUserID() == geGuestUserID()
     }
 
