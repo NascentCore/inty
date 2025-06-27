@@ -36,7 +36,9 @@ data class AgentInfo(
     @Json(name = "visibility")
     val visibility: String = "",
     @Json(name = "prompt")
-    val prompt: String = ""
+    val prompt: String = "",
+    @Json(name = "follower_count")
+    val followerCount: Int = 0
 ): Parcelable
 
 @Parcelize
@@ -69,7 +71,11 @@ data class CreatorInfo(
     @Json(name = "system_language")
     val systemLanguage: String = "",
     @Json(name = "updated_at")
-    val updatedAt: String? = null
+    val updatedAt: String? = null,
+    @Json(name = "public_agents_count")
+    val publicAgentsCount: Int = 0,
+    @Json(name = "total_public_agents_follows")
+    val totalPublicAgentsFollows: Int = 0
 ): Parcelable
 
 

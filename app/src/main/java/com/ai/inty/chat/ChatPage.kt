@@ -407,7 +407,7 @@ fun ChatPage(
                         )
                 ) {
                     Text(
-                        text ="Following",
+                        text ="My Chat Persona",
                         modifier = Modifier.padding(top = 58.dp, start = 16.dp),
                         fontSize = 20.sp,
                         fontWeight = FontWeight.SemiBold,

@@ -30,7 +30,17 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.material3.BottomSheetDefaults
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.LocalContext
+import com.therouter.TheRouter
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
@@ -80,6 +90,7 @@ class AgentInfoActivity : BaseActivity() {
                 agentInfo.value?.let {
                     AgentInfoScreen(
                         agent = it,
+                        viewModel = viewModel,
                         onBack = {
                             finish()
                         }
@@ -95,8 +106,12 @@ class AgentInfoActivity : BaseActivity() {
 @Composable
 fun AgentInfoScreen(
     agent: AgentInfo,
+    viewModel: AgentInfoViewModel,
     onBack: () -> Unit,
 ) {
+    val context = LocalContext.current
+    var showBottomSheet by remember { mutableStateOf(false) }
+    val bottomSheetState = rememberModalBottomSheetState()
 
     Box(
         modifier = Modifier.fillMaxSize()
@@ -159,7 +174,7 @@ fun AgentInfoScreen(
                             modifier = Modifier
                                 .padding(horizontal = 12.dp)
                                 .noRippleClickable {
-
+                                    showBottomSheet = true
                                 }
                             ,
                             painter = painterResource(R.drawable.icon_more2),
@@ -192,7 +207,9 @@ fun AgentInfoScreen(
                         text = stringResource(R.string.ID, agent.id),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Light,
-                        color = Color.White.copy(0.55f)
+                        color = Color.White.copy(0.55f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                     Spacer(Modifier.width(32.dp))
                     Text(
@@ -219,6 +236,19 @@ fun AgentInfoScreen(
                     )
                     Spacer(Modifier.width(16.dp))
                 }
+                Spacer(Modifier.height(24.dp))
+                
+                // 统计行
+                StatsRow(
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    connectorsCount = 0, // 暂时设为0
+                    followersCount = agent.followerCount,
+                    isFollowing = agent.isFollowed,
+                    onFollowClick = {
+                        viewModel.followAgent(agent.id, context)
+                    }
+                )
+                
                 Spacer(Modifier.height(24.dp))
                 Text(
                     modifier = Modifier.padding(horizontal = 16.dp),
@@ -264,7 +294,7 @@ fun AgentInfoScreen(
                         TagItem(text = "#${agent.gender}")
                     }
                     Spacer(Modifier.height(21.dp))
-                    SpacerLine()
+                    AgentSpacerLine()
                     Spacer(Modifier.height(13.dp))
                     Text(
                         modifier = Modifier.padding(horizontal = 12.dp),
@@ -351,7 +381,7 @@ fun AgentInfoScreen(
                             )
                             Text(
                                 modifier = Modifier.padding(horizontal = 0.dp),
-                                text = "5 InTy  |  20 Subscibers",
+                                text = "${agent.creator?.publicAgentsCount ?: 0} InTy  |  ${agent.creator?.totalPublicAgentsFollows ?: 0} Subscribers",
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Normal,
                                 color = Color.White
@@ -379,6 +409,28 @@ fun AgentInfoScreen(
                 }
 
                 Spacer(Modifier.height(100.dp))
+            }
+        }
+        
+        // 底部菜单
+        if (showBottomSheet) {
+            ModalBottomSheet(
+                onDismissRequest = { showBottomSheet = false },
+                sheetState = bottomSheetState,
+                containerColor = BackGround,
+                contentColor = Color.White
+            ) {
+                BottomSheetContent(
+                    onReportClick = {
+                        showBottomSheet = false
+                        TheRouter.build(Constant.ROUTE_REPORT)
+                            .withString("targetID", agent.id)
+                            .navigation(context)
+                    },
+                    onCancelClick = {
+                        showBottomSheet = false
+                    }
+                )
             }
         }
     }
@@ -410,5 +462,181 @@ fun TagItem(
             fontWeight = FontWeight.Light,
             color = Color.White.copy(0.55f)
         )
+    }
+}
+
+@Composable
+fun StatsRow(
+    modifier: Modifier = Modifier,
+    connectorsCount: Int,
+    followersCount: Int,
+    isFollowing: Boolean,
+    onFollowClick: () -> Unit
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        // 左侧统计信息
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(32.dp)
+        ) {
+            // Connectors
+            StatItem(
+                count = connectorsCount,
+                label = "Connectors"
+            )
+            
+            // Followers
+            StatItem(
+                count = followersCount,
+                label = "Followers"
+            )
+        }
+        
+        // 右侧关注按钮
+        FollowButton(
+            isFollowing = isFollowing,
+            onClick = onFollowClick
+        )
+    }
+}
+
+@Composable
+fun StatItem(
+    count: Int,
+    label: String
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = formatCount(count),
+            fontSize = 16.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = Color.White
+        )
+        Text(
+            text = label,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Normal,
+            color = Color.White
+        )
+    }
+}
+
+@Composable
+fun FollowButton(
+    isFollowing: Boolean,
+    onClick: () -> Unit
+) {
+    Button(
+        onClick = onClick,
+        colors = ButtonDefaults.buttonColors(
+            containerColor = if (isFollowing) Color(0x3378599A) else Color.Transparent
+        ),
+        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier
+            .height(35.dp)
+            .width(105.dp)
+            .let {
+                if (!isFollowing) {
+                    it.background(
+                        brush = Brush.horizontalGradient(
+                            colors = listOf(
+                                Color(0xFFE91E63),
+                                Color(0xFFFF9800)
+                            )
+                        ),
+                        shape = RoundedCornerShape(16.dp)
+                    )
+                } else it
+            }
+    ) {
+        Text(
+            text = if (isFollowing) "Following" else "Follow",
+            color = Color.White,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Medium
+        )
+    }
+}
+
+@Composable
+fun BottomSheetContent(
+    onReportClick: () -> Unit,
+    onCancelClick: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 24.dp)
+    ) {
+        // Report按钮
+        Button(
+            onClick = onReportClick,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(60.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color(0x3378599A)
+            ),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Text(
+                text = "Report",
+                color = Color.White,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Normal
+            )
+        }
+        
+        Spacer(modifier = Modifier.height(20.dp))
+        
+        // Cancel按钮
+        Button(
+            onClick = onCancelClick,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(60.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color(0x3378599A)
+            ),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Text(
+                text = "Cancel",
+                color = Color.White,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Normal
+            )
+        }
+        
+        Spacer(modifier = Modifier.height(16.dp))
+    }
+}
+
+@Composable
+fun AgentSpacerLine() {
+    Spacer(Modifier.height(4.dp))
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(1.dp)
+            .background(
+                brush = Brush.horizontalGradient(
+                    colors = listOf(Color.Transparent, Color.White.copy(0.2f), Color.Transparent)
+                )
+            )
+    ) {}
+    Spacer(Modifier.height(4.dp))
+}
+
+fun formatCount(count: Int): String {
+    return when {
+        count >= 1000000 -> "${count / 1000000}.${(count % 1000000) / 100000}M"
+        count >= 1000 -> "${count / 1000}.${(count % 1000) / 100}K"
+        else -> count.toString()
     }
 }

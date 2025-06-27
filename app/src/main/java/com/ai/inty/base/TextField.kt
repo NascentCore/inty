@@ -83,7 +83,7 @@ fun IntySmallTextField(
         Box(
             modifier = Modifier
                 .weight(1f),
-            contentAlignment = Alignment.CenterStart,
+            contentAlignment = if (singleLine) Alignment.CenterStart else Alignment.TopStart,
         ) {
             BasicTextField(
                 modifier = Modifier
