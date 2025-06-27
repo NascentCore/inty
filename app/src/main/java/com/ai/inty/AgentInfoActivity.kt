@@ -60,6 +60,7 @@ import com.ai.inty.ui.theme.BackGround
 import com.ai.inty.ui.theme.IntyTheme
 import com.ai.inty.viewmodels.AgentInfoViewModel
 import com.inty.utils.convertUtcToLocalFull
+import com.inty.utils.storage.IntySetting
 import com.therouter.router.Autowired
 import com.therouter.router.Route
 
@@ -423,9 +424,16 @@ fun AgentInfoScreen(
                 BottomSheetContent(
                     onReportClick = {
                         showBottomSheet = false
-                        TheRouter.build(Constant.ROUTE_REPORT)
-                            .withString("targetID", agent.id)
-                            .navigation(context)
+                        // 检查是否正式登录（非游客且已登录）
+                        if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
+                            TheRouter.build(Constant.ROUTE_REPORT)
+                                .withString("targetID", agent.id)
+                                .navigation(context)
+                        } else {
+                            // 未登录或游客时跳转到登录页面
+                            TheRouter.build(Constant.ROUTE_LOGIN)
+                                .navigation(context)
+                        }
                     },
                     onCancelClick = {
                         showBottomSheet = false

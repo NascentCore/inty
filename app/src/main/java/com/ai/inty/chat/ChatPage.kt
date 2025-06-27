@@ -58,7 +58,6 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.ai.inty.Constant
-import com.ai.inty.MySettingItem
 import com.ai.inty.R
 import com.ai.inty.base.IntyCircleImage
 import com.ai.inty.base.IntyImage
@@ -77,7 +76,6 @@ import github.leavesczy.composebottomsheetdialog.BottomSheetDialog
 import github.leavesczy.composebottomsheetdialog.DiaAmountLayout
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
-import com.ai.inty.utils.AuthClickable
 
 @Composable
 fun ChatPage(
@@ -376,9 +374,16 @@ fun ChatPage(
                                 icon = R.drawable.icon_report,
                                 text = "Report",
                                 onClick = {
-                                    TheRouter.build(Constant.ROUTE_REPORT)
-                                        .withString("targetID", agentInfo?.id)
-                                        .navigation(context)
+                                    // 检查是否正式登录（非游客且已登录）
+                                    if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
+                                        TheRouter.build(Constant.ROUTE_REPORT)
+                                            .withString("targetID", agentInfo?.id)
+                                            .navigation(context)
+                                    } else {
+                                        // 未登录或游客时跳转到登录页面
+                                        TheRouter.build(Constant.ROUTE_LOGIN)
+                                            .navigation(context)
+                                    }
                                 }
                             )
                             Spacer(Modifier.width(16.dp))
@@ -433,52 +438,58 @@ fun ChatPage(
                             )
                     ) {
                         val userProfile = chatViewModel.userProfile.collectAsState()
-                        AuthClickable(
+                        com.ai.inty.MySettingItem(
+                            key = "Name",
+                            value = userProfile.value.nickname,
                             onClick = {
-                                TheRouter.build(Constant.ROUTE_SETTING_MY)
-                                    .withObject("userProfile", userProfile.value)
-                                    .navigation(context)
+                                // 检查是否正式登录（非游客且已登录）
+                                if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
+                                    TheRouter.build(Constant.ROUTE_SETTING_MY)
+                                        .withObject("userProfile", userProfile.value)
+                                        .navigation(context)
+                                } else {
+                                    // 未登录或游客时跳转到登录页面
+                                    TheRouter.build(Constant.ROUTE_LOGIN)
+                                        .navigation(context)
+                                }
                             }
-                        ) { authModifier ->
-                            MySettingItem(
-                                key = "Name",
-                                value = userProfile.value.nickname,
-                                onClick = {},
-                                modifier = authModifier
-                            )
-                        }
-                        AuthClickable(
+                        )
+                        com.ai.inty.MySettingItem(
+                            key = "My Pronoun",
+                            value = when(userProfile.value.gender) {
+                                GENDER.MALE.value -> "He/Him"
+                                GENDER.FEMALE.value -> "She/Her"
+                                else -> "They/Them"
+                            },
                             onClick = {
-                                TheRouter.build(Constant.ROUTE_SETTING_MY)
-                                    .withObject("userProfile", userProfile.value)
-                                    .navigation(context)
+                                // 检查是否正式登录（非游客且已登录）
+                                if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
+                                    TheRouter.build(Constant.ROUTE_SETTING_MY)
+                                        .withObject("userProfile", userProfile.value)
+                                        .navigation(context)
+                                } else {
+                                    // 未登录或游客时跳转到登录页面
+                                    TheRouter.build(Constant.ROUTE_LOGIN)
+                                        .navigation(context)
+                                }
                             }
-                        ) { authModifier ->
-                            MySettingItem(
-                                key = "My Pronoun",
-                                value = when(userProfile.value.gender) {
-                                    GENDER.MALE.value -> "He/Him"
-                                    GENDER.FEMALE.value -> "She/Her"
-                                    else -> "They/Them"
-                                },
-                                onClick = {},
-                                modifier = authModifier
-                            )
-                        }
-                        AuthClickable(
+                        )
+                        com.ai.inty.MySettingItem(
+                            key = "My Persona",
+                            value = "Edit",
                             onClick = {
-                                TheRouter.build(Constant.ROUTE_SETTING_MY)
-                                    .withObject("userProfile", userProfile.value)
-                                    .navigation(context)
+                                // 检查是否正式登录（非游客且已登录）
+                                if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
+                                    TheRouter.build(Constant.ROUTE_SETTING_MY)
+                                        .withObject("userProfile", userProfile.value)
+                                        .navigation(context)
+                                } else {
+                                    // 未登录或游客时跳转到登录页面
+                                    TheRouter.build(Constant.ROUTE_LOGIN)
+                                        .navigation(context)
+                                }
                             }
-                        ) { authModifier ->
-                            MySettingItem(
-                                key = "My Persona",
-                                value = "Edit",
-                                onClick = {},
-                                modifier = authModifier
-                            )
-                        }
+                        )
                     }
 
 
@@ -510,84 +521,92 @@ fun ChatPage(
                                 shape = RoundedCornerShape(8.dp)
                             )
                     ) {
-                        AuthClickable(
-                            onClick = {
-                                isAutoPlayAudio = !isAutoPlayAudio
-                                IntySetting.setAutoPlayAudio(isAutoPlayAudio)
-                            }
-                        ) { authModifier ->
-                            Row(
-                                modifier = authModifier.fillMaxWidth().height(56.dp).padding(horizontal = 16.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = stringResource(R.string.settings_auto_play_audio),
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Normal,
-                                    color = Color.White
+                        Row(
+                            modifier = Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 16.dp)
+                                .noRippleClickable {
+                                    // 检查是否正式登录（非游客且已登录）
+                                    if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
+                                        isAutoPlayAudio = !isAutoPlayAudio
+                                        IntySetting.setAutoPlayAudio(isAutoPlayAudio)
+                                    } else {
+                                        // 未登录或游客时跳转到登录页面
+                                        TheRouter.build(Constant.ROUTE_LOGIN)
+                                            .navigation(context)
+                                    }
+                                },
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = stringResource(R.string.settings_auto_play_audio),
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Normal,
+                                color = Color.White
 
-                                )
-                                Spacer(Modifier.weight(1f))
-                                Image(
-                                    painter = if (isAutoPlayAudio) painterResource(R.drawable.opened) else painterResource(R.drawable.closed),
-                                    contentDescription = null,
-                                )
-                            }
+                            )
+                            Spacer(Modifier.weight(1f))
+                            Image(
+                                painter = if (isAutoPlayAudio) painterResource(R.drawable.opened) else painterResource(R.drawable.closed),
+                                contentDescription = null,
+                            )
                         }
                         // 角色专用的keep talking设置（三状态）
                         agentInfo?.let { agent ->
-                            AuthClickable(
-                                onClick = {
-                                    val newValue = when (agentKeepTalking) {
-                                        null -> true    // 跟随全局 -> 开启
-                                        true -> false   // 开启 -> 关闭
-                                        false -> null   // 关闭 -> 跟随全局
-                                    }
-                                    agentKeepTalking = newValue
-                                    IntySetting.setAgentKeepTalking(agent.id, newValue)
-                                    // 更新按钮显示状态
-                                    shouldShowButton = IntySetting.shouldShowKeepTalking(agent.id)
+                            Row(
+                                modifier = Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 16.dp)
+                                    .noRippleClickable {
+                                        // 检查是否正式登录（非游客且已登录）
+                                        if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
+                                            val newValue = when (agentKeepTalking) {
+                                                null -> true    // 跟随全局 -> 开启
+                                                true -> false   // 开启 -> 关闭
+                                                false -> null   // 关闭 -> 跟随全局
+                                            }
+                                            agentKeepTalking = newValue
+                                            IntySetting.setAgentKeepTalking(agent.id, newValue)
+                                            // 更新按钮显示状态
+                                            shouldShowButton = IntySetting.shouldShowKeepTalking(agent.id)
+                                        } else {
+                                            // 未登录或游客时跳转到登录页面
+                                            TheRouter.build(Constant.ROUTE_LOGIN)
+                                                .navigation(context)
+                                        }
+                                    },
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column {
+                                    Text(
+                                        text = "Keep Talking for ${agent.name}",
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Normal,
+                                        color = Color.White
+                                    )
+                                    Text(
+                                        text = when (agentKeepTalking) {
+                                            true -> "On"
+                                            false -> "Off"
+                                            null -> "Follow global setting"
+                                        },
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Normal,
+                                        color = Color.White.copy(0.6f)
+                                    )
                                 }
-                            ) { authModifier ->
-                                Row(
-                                    modifier = authModifier.fillMaxWidth().height(56.dp).padding(horizontal = 16.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Column {
-                                        Text(
-                                            text = "Keep Talking for ${agent.name}",
-                                            fontSize = 14.sp,
-                                            fontWeight = FontWeight.Normal,
-                                            color = Color.White
-                                        )
-                                        Text(
-                                            text = when (agentKeepTalking) {
-                                                true -> "On"
-                                                false -> "Off"
-                                                null -> "Follow global setting"
-                                            },
-                                            fontSize = 12.sp,
-                                            fontWeight = FontWeight.Normal,
-                                            color = Color.White.copy(0.6f)
-                                        )
-                                    }
-                                    Spacer(Modifier.weight(1f))
-                                    // 三状态图标显示
-                                    when (agentKeepTalking) {
-                                        true -> Image(
-                                            painter = painterResource(R.drawable.opened),
-                                            contentDescription = null,
-                                        )
-                                        false -> Image(
-                                            painter = painterResource(R.drawable.closed),
-                                            contentDescription = null,
-                                        )
-                                        null -> Text(
-                                            text = "Auto",
-                                            fontSize = 12.sp,
-                                            color = Color.White.copy(0.7f)
-                                        )
-                                    }
+                                Spacer(Modifier.weight(1f))
+                                // 三状态图标显示
+                                when (agentKeepTalking) {
+                                    true -> Image(
+                                        painter = painterResource(R.drawable.opened),
+                                        contentDescription = null,
+                                    )
+                                    false -> Image(
+                                        painter = painterResource(R.drawable.closed),
+                                        contentDescription = null,
+                                    )
+                                    null -> Text(
+                                        text = "Auto",
+                                        fontSize = 12.sp,
+                                        color = Color.White.copy(0.7f)
+                                    )
                                 }
                             }
                         }

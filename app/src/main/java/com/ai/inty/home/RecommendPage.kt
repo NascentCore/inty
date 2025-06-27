@@ -47,7 +47,6 @@ import com.ai.inty.R
 import com.ai.inty.base.IntyImage
 import com.ai.inty.base.noRippleClickable
 import com.ai.inty.beans.AgentInfo
-import com.ai.inty.utils.AuthClickable
 
 @Composable
 fun RecommendPage(
@@ -200,16 +199,12 @@ fun RecommendPage(
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
                     items(agents) { agent ->
-                        AuthClickable(
-                            onClick = {
+                        RecommendPageItem(
+                            modifier = Modifier.size(165.dp, 220.dp).noRippleClickable {
                                 onClickAgent(agent)
-                            }
-                        ) { authModifier ->
-                            RecommendPageItem(
-                                modifier = authModifier.size(165.dp, 220.dp),
-                                agentInfo = agent
-                            )
-                        }
+                            },
+                            agentInfo = agent
+                        )
                     }
 
                     // 加载更多指示器
