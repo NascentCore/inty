@@ -38,7 +38,8 @@ class UserInDBBase(UserBase):
 
 class User(UserInDBBase):
     """返回给客户端的用户信息"""
-    pass
+    public_agents_count: Optional[int] = None
+    total_public_agents_follows: Optional[int] = None
 
 class UserInDB(UserInDBBase):
     """数据库中的完整用户信息"""

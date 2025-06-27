@@ -64,13 +64,10 @@ async def get_agent(db: AsyncSession, agent_id: str, current_user_id: Optional[s
             agent.is_followed = False
             
         # 获取创作者的统计信息
-        if agent.creator_id:
+        if agent.creator_id and agent.creator:
             creator_stats = await get_creator_agent_stats(db, agent.creator_id)
-            agent.creator_public_agents_count = creator_stats.public_agents_count
-            agent.creator_total_public_agents_follows = creator_stats.total_public_agents_follows
-        else:
-            agent.creator_public_agents_count = 0
-            agent.creator_total_public_agents_follows = 0
+            agent.creator.public_agents_count = creator_stats.public_agents_count
+            agent.creator.total_public_agents_follows = creator_stats.total_public_agents_follows
             
         return agent
     except SQLAlchemyError as e:

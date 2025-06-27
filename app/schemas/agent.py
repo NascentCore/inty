@@ -48,8 +48,6 @@ class Agent(AgentInDB):
     is_followed: bool = False
     follower_count: int = 0
     creator: Optional[User] = None
-    creator_public_agents_count: Optional[int] = None
-    creator_total_public_agents_follows: Optional[int] = None
 
 class AgentList(BaseModel):
     total: int
