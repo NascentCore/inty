@@ -8,6 +8,7 @@ import androidx.activity.viewModels
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.lifecycleScope
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
@@ -57,6 +58,7 @@ class ChatActivity : BaseActivity() {
                         .fillMaxSize()
                         .background(BackGround)
                         .imePadding()
+                        .navigationBarsPadding()
                     ,
                     chatViewModel = chatViewModel,
                     showBackButton = true,

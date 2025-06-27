@@ -3,6 +3,7 @@ package com.ai.inty.chat
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -16,7 +17,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
@@ -38,25 +38,25 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.withStyle
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.font.FontStyle
-import androidx.compose.foundation.text.ClickableText
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalFocusManager
 import com.ai.inty.Constant
 import com.ai.inty.MySettingItem
 import com.ai.inty.R
@@ -76,6 +76,7 @@ import com.therouter.TheRouter
 import github.leavesczy.composebottomsheetdialog.BottomSheetDialog
 import github.leavesczy.composebottomsheetdialog.DiaAmountLayout
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
 @Composable
 fun ChatPage(
@@ -87,6 +88,7 @@ fun ChatPage(
 
 ) {
     val context = LocalContext.current
+    val density = LocalDensity.current
     val agentInfo = chatViewModel.agentInfo.collectAsState().value
     val focusManager = LocalFocusManager.current
 
@@ -133,7 +135,15 @@ fun ChatPage(
             imageHeightDp = configuration.screenHeightDp
         }
         Column(
-            modifier = Modifier.fillMaxWidth().wrapContentHeight().verticalScroll(rememberScrollState(), false)
+            modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState(), false)
+                .onSizeChanged {
+                    val newHeight = with(density) {
+                        it.height.toDp().value.roundToInt()
+                    }
+                    if (newHeight > imageHeightDp) {
+                        imageHeightDp = newHeight
+                    }
+                }
         ) {
             IntyImage(
                 modifier = Modifier
