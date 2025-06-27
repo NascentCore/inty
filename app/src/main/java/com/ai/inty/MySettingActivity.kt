@@ -504,15 +504,14 @@ fun MySettingItem(
     key: String,
     value: String,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .height(48.dp)
             .padding(horizontal = 12.dp)
-            .noRippleClickable {
-                onClick()
-            },
+        ,
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
