@@ -317,4 +317,24 @@ async def upload_agent_background(
     except Exception as e:
         logger.error(f"背景图上传失败: {str(e)}")
         logger.error(f"错误堆栈: {traceback.format_exc()}")
-        return APIResponse.error(message="背景图上传失败") 
+        return APIResponse.error(message="背景图上传失败")
+
+@router.get("/creator/{creator_id}/stats", response_model=schemas.APIResponse[schemas.CreatorAgentStats])
+async def get_creator_agent_stats(
+    *,
+    db: AsyncSession = Depends(deps.get_async_db),
+    creator_id: str,
+    current_user: schemas.User = Depends(deps.get_current_active_user),
+) -> Any:
+    """
+    获取创建者的公共角色统计信息
+    返回创建者创建的公共角色数量和所有公共角色的总关注数
+    """
+    try:
+        stats = await agent_service.get_creator_agent_stats(db, creator_id=creator_id)
+        return schemas.APIResponse.success(data=stats)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"获取创建者角色统计失败: {str(e)}")
+        return schemas.APIResponse.error(message="获取统计信息失败") 

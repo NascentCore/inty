@@ -48,6 +48,8 @@ class Agent(AgentInDB):
     is_followed: bool = False
     follower_count: int = 0
     creator: Optional[User] = None
+    creator_public_agents_count: Optional[int] = None
+    creator_total_public_agents_follows: Optional[int] = None
 
 class AgentList(BaseModel):
     total: int
@@ -58,3 +60,12 @@ class AgentList(BaseModel):
 class BackgroundGenerateRequest(BaseModel):
     """背景生成请求"""
     prompt: str 
+
+class CreatorAgentStats(BaseModel):
+    """创建者的公共角色统计信息"""
+    creator_id: str
+    public_agents_count: int
+    total_public_agents_follows: int
+    
+    class Config:
+        from_attributes = True 

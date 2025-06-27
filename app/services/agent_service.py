@@ -63,6 +63,15 @@ async def get_agent(db: AsyncSession, agent_id: str, current_user_id: Optional[s
         else:
             agent.is_followed = False
             
+        # 获取创作者的统计信息
+        if agent.creator_id:
+            creator_stats = await get_creator_agent_stats(db, agent.creator_id)
+            agent.creator_public_agents_count = creator_stats.public_agents_count
+            agent.creator_total_public_agents_follows = creator_stats.total_public_agents_follows
+        else:
+            agent.creator_public_agents_count = 0
+            agent.creator_total_public_agents_follows = 0
+            
         return agent
     except SQLAlchemyError as e:
         logger.error(f"数据库查询错误 - 获取角色 {agent_id}: {str(e)}")
@@ -912,4 +921,55 @@ async def search_agents(db: AsyncSession, keyword: str, page: int = 1, page_size
         raise HTTPException(status_code=500, detail="数据库查询失败")
     except Exception as e:
         logger.error(f"未知错误 - 搜索角色: {str(e)}")
+        raise HTTPException(status_code=500, detail="服务器内部错误")
+
+async def get_creator_agent_stats(db: AsyncSession, creator_id: str) -> schemas.CreatorAgentStats:
+    """
+    获取创建者的公共角色统计信息
+    """
+    try:
+        # 获取创建者创建的公共角色数量
+        public_agents_count_query = select(func.count(models.Agent.id)).where(
+            and_(
+                models.Agent.creator_id == creator_id,
+                models.Agent.visibility == AgentVisibility.PUBLIC,
+                models.Agent.deleted_at.is_(None)
+            )
+        )
+        
+        public_agents_count_result = await db.execute(public_agents_count_query)
+        public_agents_count = public_agents_count_result.scalar() or 0
+        
+        # 获取创建者的所有公共角色的总关注数
+        total_follows_query = (
+            select(func.count(agent_followers.c.user_id))
+            .select_from(
+                agent_followers.join(
+                    models.Agent, 
+                    agent_followers.c.agent_id == models.Agent.id
+                )
+            )
+            .where(
+                and_(
+                    models.Agent.creator_id == creator_id,
+                    models.Agent.visibility == AgentVisibility.PUBLIC,
+                    models.Agent.deleted_at.is_(None)
+                )
+            )
+        )
+        
+        total_follows_result = await db.execute(total_follows_query)
+        total_follows = total_follows_result.scalar() or 0
+        
+        return schemas.CreatorAgentStats(
+            creator_id=creator_id,
+            public_agents_count=public_agents_count,
+            total_public_agents_follows=total_follows
+        )
+        
+    except SQLAlchemyError as e:
+        logger.error(f"数据库查询错误 - 获取创建者角色统计: {str(e)}")
+        raise HTTPException(status_code=500, detail="数据库查询失败")
+    except Exception as e:
+        logger.error(f"未知错误 - 获取创建者角色统计: {str(e)}")
         raise HTTPException(status_code=500, detail="服务器内部错误") 
