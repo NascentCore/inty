@@ -123,7 +123,4 @@ dependencies {
     implementation("com.google.android.gms:play-services-auth:21.2.0")
 
     api(libs.ucrop)
-
-    implementation("com.android.billingclient:billing-ktx:6.1.0")
-
 }

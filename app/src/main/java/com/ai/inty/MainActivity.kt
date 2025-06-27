@@ -19,7 +19,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.content.ContextCompat
 import com.ai.inty.base.BaseActivity
-import com.ai.inty.billing.BillingManager
 import com.ai.inty.home.HomeScreen
 import com.ai.inty.ui.theme.IntyTheme
 import com.ai.inty.viewmodels.ChatViewModel
@@ -59,9 +58,6 @@ class MainActivity : BaseActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-
-        // 初始化 BillingManager
-        BillingManager.initialize(this)
 
         mainViewModel.setChatViewModel(chatViewModel)
         
@@ -134,8 +130,6 @@ class MainActivity : BaseActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        // 释放 BillingManager 资源
-        BillingManager.release()
         
         // Unregister broadcast receiver
         LocalBroadcastManager.getInstance(this).unregisterReceiver(followStateReceiver)
