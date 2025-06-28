@@ -65,7 +65,6 @@ fun HomeScreen(
         modifier = modifier
             .fillMaxSize()
             .background(BackGround)
-            .imePadding()
             .navigationBarsPadding()
         ,
         containerColor = Color.Transparent,
@@ -102,7 +101,7 @@ fun HomeScreen(
                 val currentChatPageIndex = mainViewModel.currentChatPageIndex.collectAsState()
 
                 ChatPageContainer(
-                    modifier = Modifier.padding(0.dp, 0.dp, 0.dp, innerPadding.calculateBottomPadding()),
+                    modifier = Modifier,
                     viewModelFactory = viewModelFactory,
                     agentList = agentList,
                     userProfile = userProfile.value,

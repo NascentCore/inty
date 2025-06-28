@@ -13,11 +13,17 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.ui.platform.LocalWindowInfo
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -90,6 +96,17 @@ fun ChatPage(
     val density = LocalDensity.current
     val agentInfo = chatViewModel.agentInfo.collectAsState().value
     val focusManager = LocalFocusManager.current
+    
+    // 检测键盘状态
+    val imeHeight = WindowInsets.ime.getBottom(density)
+    val isKeyboardVisible = imeHeight > 0
+    
+    // 动态计算底部间距
+    val bottomPadding = when {
+        showBackButton -> 10.dp // 独立聊天页面：固定10dp
+        isKeyboardVisible -> 10.dp // 首页聊天页面，键盘呼出时：10dp
+        else -> 90.dp // 首页聊天页面，无键盘时：90dp（给底部tab留出更多间隔）
+    }
 
     var isAutoPlayAudio by remember { mutableStateOf(IntySetting.isAutoPlayAudio()) }
     var agentKeepTalking by remember(agentInfo?.id) { 
@@ -200,6 +217,7 @@ fun ChatPage(
             Column(
                 modifier = Modifier
                     .padding(innerPadding)
+                    .imePadding()
             ) {
                 Spacer(Modifier.height(48.dp))
                 
@@ -253,7 +271,7 @@ fun ChatPage(
                 }
                 
 
-                // 输入框区域 - 受键盘影响会向上推
+                // 输入框区域 - 受键盘影响会向上推，但可以动态向下偏移
                 Column {
                     // Keep talking 按钮 - 放在输入框左上方
                     if (shouldShowButton) {
@@ -285,7 +303,7 @@ fun ChatPage(
                                             color = Color.White,
                                             fontSize = 12.sp
                                         )
-                                        Spacer(modifier = Modifier.width(1.dp))
+                                        Spacer(modifier = Modifier.width(0.dp))
                                         Text(
                                             text = "▶",
                                             color = Color.White,
@@ -294,13 +312,13 @@ fun ChatPage(
                                     }
                                 }
                             }
-                            Spacer(modifier = Modifier.height(8.dp))
+                            Spacer(modifier = Modifier.height(0.dp))
                     }
                     
-                    // 输入框
+                    // 输入框 - 动态底部间距
                     Row(
                         modifier = Modifier
-                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                            .padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = bottomPadding)
                             .fillMaxWidth()
                             .height(64.dp)
                             .background(Color(0x9937303D), RoundedCornerShape(24.dp)),
