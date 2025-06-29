@@ -328,16 +328,12 @@ fun ChatPage(
                     IntySmallTextField(
                         modifier = Modifier.weight(1f).padding(horizontal = 16.dp),
                         value = inputData.value,
-                        singleLine = true,
+                        singleLine = false,
                         onValueChange = {
                             chatViewModel.inputData.value = it
                         },
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
-                        keyboardActions = KeyboardActions(
-                            onSend = {
-                                chatViewModel.sendMsg()
-                            }
-                        )
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Default),
+                        keyboardActions = KeyboardActions()
                     )
 
                     if (inputData.value.isNotEmpty()) {
