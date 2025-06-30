@@ -511,6 +511,7 @@ fun MySettingItem(
             .fillMaxWidth()
             .height(48.dp)
             .padding(horizontal = 12.dp)
+            .noRippleClickable { onClick() }
         ,
         verticalAlignment = Alignment.CenterVertically
     ) {
