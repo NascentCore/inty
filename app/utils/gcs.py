@@ -118,4 +118,25 @@ def is_temp_gcs_path(url: str, user_id: str) -> bool:
         if path.startswith(pattern):
             return True
     
-    return False 
+    return False
+
+def check_gcs_file_exists(bucket_name: str, path: str) -> bool:
+    """检查GCS文件是否存在"""
+    try:
+        client = storage.Client.from_service_account_json(settings.gcs.credentials)
+        bucket = client.bucket(bucket_name)
+        blob = bucket.blob(path)
+        return blob.exists()
+    except Exception:
+        return False
+
+def is_user_gcs_file(url: str, bucket_name: str) -> bool:
+    """检查URL是否是用户GCS bucket中的有效文件"""
+    if not is_valid_gcs_url(url):
+        return False
+    
+    path = get_path_from_gcs_url(url)
+    if not path:
+        return False
+    
+    return check_gcs_file_exists(bucket_name, path) 

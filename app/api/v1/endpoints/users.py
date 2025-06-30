@@ -9,7 +9,7 @@ from app.schemas.user import User, UserUpdate, DeviceTokenRegister
 from app.api import deps
 from app.db.session import get_async_db
 from app.services import user_service
-from app.utils.gcs import upload_to_gcs, delete_from_gcs
+from app.utils.gcs import upload_to_gcs, delete_from_gcs, is_user_gcs_file
 from app.core.config import settings
 
 router = APIRouter()
@@ -51,12 +51,17 @@ async def upload_avatar(
         file_data = await file.read()
         avatar_path = user_service.generate_avatar_path(current_user.id, file.filename)
         url = upload_to_gcs(file_data, file.content_type, settings.gcs.bucket, avatar_path)
-        # 删除旧头像
+        
+        # 删除旧头像，但只有当它确实是存储在用户GCS bucket中的文件时才删除
         old_avatar = current_user.avatar
-        if old_avatar:
+        if old_avatar and is_user_gcs_file(old_avatar, settings.gcs.bucket):
             old_path = user_service.get_path_from_gcs_url(old_avatar)
             if old_path:
                 delete_from_gcs(settings.gcs.bucket, old_path)
+                logger.info(f"已删除旧头像: {old_avatar}")
+        elif old_avatar:
+            logger.info(f"跳过删除非GCS头像: {old_avatar}")
+            
         user = await user_service.update_user(db, current_user.id, UserUpdate(avatar=url))
         return APIResponse.success(data=user)
     except Exception as e:

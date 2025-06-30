@@ -9,7 +9,7 @@ import vertexai
 from app import schemas
 from app.api import deps
 from app.services import agent_service
-from app.utils.gcs import upload_to_gcs, delete_from_gcs
+from app.utils.gcs import upload_to_gcs, delete_from_gcs, is_user_gcs_file
 from app.core.config import settings
 from app.schemas.response import APIResponse
 from app.core.agent.avater import generate_background_image_to_gcs
@@ -240,11 +240,14 @@ async def upload_agent_avatar(
         # 上传到GCS
         url = upload_to_gcs(file_data, file.content_type, settings.gcs.bucket, avatar_path)
         
-        # 删除旧头像
-        if agent.avatar:
+        # 删除旧头像，但只有当它确实是存储在用户GCS bucket中的文件时才删除
+        if agent.avatar and is_user_gcs_file(agent.avatar, settings.gcs.bucket):
             old_path = agent_service.get_path_from_gcs_url(agent.avatar)
             if old_path:
                 delete_from_gcs(settings.gcs.bucket, old_path)
+                logger.info(f"已删除旧头像: {agent.avatar}")
+        elif agent.avatar:
+            logger.info(f"跳过删除非GCS头像: {agent.avatar}")
         
         # 更新数据库
         updated_agent = await agent_service.update_agent(
@@ -294,11 +297,14 @@ async def upload_agent_background(
         # 上传到GCS
         url = upload_to_gcs(file_data, file.content_type, settings.gcs.bucket, background_path)
         
-        # 删除旧背景图
-        if agent.background:
+        # 删除旧背景图，但只有当它确实是存储在用户GCS bucket中的文件时才删除
+        if agent.background and is_user_gcs_file(agent.background, settings.gcs.bucket):
             old_path = agent_service.get_path_from_gcs_url(agent.background)
             if old_path:
                 delete_from_gcs(settings.gcs.bucket, old_path)
+                logger.info(f"已删除旧背景图: {agent.background}")
+        elif agent.background:
+            logger.info(f"跳过删除非GCS背景图: {agent.background}")
         
         # 更新数据库
         updated_agent = await agent_service.update_agent(
