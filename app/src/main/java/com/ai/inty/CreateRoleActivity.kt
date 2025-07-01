@@ -124,7 +124,7 @@ fun CreateRolePage(
     var settings by remember { mutableStateOf(editAgent?.settings?.get("description") as? String ?: editAgent?.prompt ?: "") }
     var intro by remember { mutableStateOf(editAgent?.intro ?: "") }
     var opening by remember { mutableStateOf(editAgent?.opening ?: "") }
-    var visibility by remember { mutableStateOf(editAgent?.visibility ?: "PUBLIC") }
+    var visibility by remember { mutableStateOf(editAgent?.visibility ?: "PRIVATE") }
     var isLoading by remember { mutableStateOf(false) }
     var avatarUrl by remember { mutableStateOf<String?>(editAgent?.avatar?.takeIf { it.isNotBlank() }) }
     
@@ -283,18 +283,18 @@ fun CreateRolePage(
                 minLines = 3
             )
             
-            Spacer(modifier = Modifier.height(24.dp))
+            // Spacer(modifier = Modifier.height(24.dp))
             
             // Sound Section
-            SoundSelectionSection()
+            // SoundSelectionSection()
             
-            Spacer(modifier = Modifier.height(24.dp))
+            // Spacer(modifier = Modifier.height(24.dp))
             
             // Visibility Section
-            VisibilitySelectionSection(
-                selectedVisibility = visibility,
-                onVisibilityChange = { visibility = it }
-            )
+            // VisibilitySelectionSection(
+            //     selectedVisibility = visibility,
+            //     onVisibilityChange = { visibility = it }
+            // )
             
             Spacer(modifier = Modifier.height(40.dp))
             
