@@ -5,6 +5,7 @@ from loguru import logger
 import traceback
 import uuid
 import vertexai
+from datetime import datetime
 
 from app import schemas
 from app.api import deps
@@ -220,6 +221,57 @@ async def generate_background(
         import traceback
         logger.error(f"Traceback: {traceback.format_exc()}")
         return APIResponse.error(message=f"Background image generation failed: {str(e)}")
+
+@router.post("/upload-avatar", response_model=APIResponse[dict])
+async def upload_avatar_preview(
+    file: UploadFile = File(...),
+    current_user: schemas.User = Depends(deps.get_current_active_user)
+):
+    """
+    上传头像文件，返回URL供创建agent时使用
+    """
+    try:
+        # 验证文件类型
+        if not file.content_type or not file.content_type.startswith('image/'):
+            return APIResponse.error(message="只允许上传图片文件")
+        
+        # 验证文件大小 (最大 10MB)
+        max_size = 10 * 1024 * 1024  # 10MB
+        file_data = await file.read()
+        if len(file_data) > max_size:
+            return APIResponse.error(message="文件大小超过10MB限制")
+        
+        # 验证文件扩展名
+        if not file.filename or '.' not in file.filename:
+            return APIResponse.error(message="文件名无效")
+            
+        file_ext = file.filename.split('.')[-1].lower()
+        if file_ext not in ['jpg', 'jpeg', 'png', 'webp']:
+            return APIResponse.error(message="不支持的文件类型，只支持jpg、jpeg、png、webp格式")
+        
+        # 生成存储路径
+        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+        unique_id = uuid.uuid4().hex[:8]
+        avatar_path = f"avatars/tmp/{current_user.id}/{timestamp}-{unique_id}.{file_ext}"
+        
+        # 上传到GCS
+        url = upload_to_gcs(file_data, file.content_type, settings.gcs.bucket, avatar_path)
+        
+        logger.info(f"头像上传成功: {url}")
+        return APIResponse.success(data={
+            "url": url,
+            "filename": file.filename,
+            "size": len(file_data),
+            "content_type": file.content_type
+        })
+        
+    except ValueError as e:
+        logger.error(f"文件验证错误: {str(e)}")
+        return APIResponse.error(message=str(e))
+    except Exception as e:
+        logger.error(f"头像上传失败: {str(e)}")
+        logger.error(f"错误堆栈: {traceback.format_exc()}")
+        return APIResponse.error(message="头像上传失败")
 
 @router.post("/{agent_id}/avatar", response_model=APIResponse[schemas.Agent])
 async def upload_agent_avatar(
