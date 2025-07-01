@@ -30,3 +30,13 @@ data class ReportReq(
     @Json(name = "target_type")
     val targetType: String = "USER"
 )
+
+@JsonClass(generateAdapter = true)
+data class ReportResponse(
+    @Json(name = "code")
+    val code: Int = 0,
+    @Json(name = "message")
+    val message: String = "",
+    @Json(name = "data")
+    val data: String? = null
+)

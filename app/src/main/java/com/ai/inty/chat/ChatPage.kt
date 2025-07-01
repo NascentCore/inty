@@ -392,6 +392,7 @@ fun ChatPage(
                                     if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
                                         TheRouter.build(Constant.ROUTE_REPORT)
                                             .withString("targetID", agentInfo?.id)
+                                            .withString("targetType", "AGENT")
                                             .navigation(context)
                                     } else {
                                         // 未登录或游客时跳转到登录页面

@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.ai.inty.base.BaseActivityViewModel
 import com.ai.inty.beans.ReportItem
 import com.ai.inty.beans.ReportReq
+import com.ai.inty.beans.ReportResponse
 import com.ai.inty.net.IReportApi
 import com.architecture.httplib.core.HttpResult
 import com.inty.utils.log.EasyLog
@@ -18,6 +19,7 @@ import kotlinx.coroutines.launch
 class ReportViewModel : BaseActivityViewModel() {
 
     var targetID: String = ""
+    var targetType: String = "USER"
 
     val reportApi = TheRouter.get(IReportApi::class.java)!!
 
@@ -66,11 +68,17 @@ class ReportViewModel : BaseActivityViewModel() {
                     reasonIds = selectIDS.toList(),
                     description = description.value,
                     targetId = targetID,
+                    targetType = targetType,
                 )
             )
             EasyLog.log(result)
-
-            closeActivity()
+            if (result.code == 200) {
+                showSnackbar("Report Successfully")
+                closeActivity()
+            } else {
+                EasyLog.log("submit report failed", EasyLog.ERROR)
+                showSnackbar(result.message)
+            }
         }
     }
 

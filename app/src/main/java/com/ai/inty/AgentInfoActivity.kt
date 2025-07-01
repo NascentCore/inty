@@ -427,6 +427,7 @@ fun AgentInfoScreen(
                         if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
                             TheRouter.build(Constant.ROUTE_REPORT)
                                 .withString("targetID", agent.id)
+                                .withString("targetType", "AGENT")
                                 .navigation(context)
                         } else {
                             // 未登录或游客时跳转到登录页面

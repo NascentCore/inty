@@ -60,11 +60,15 @@ class ReportActivity : BaseActivity() {
 
     @Autowired
     var targetID: String = ""
+    
+    @Autowired
+    var targetType: String = "USER"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         viewModel.targetID = targetID
+        viewModel.targetType = targetType
 
         lifecycleScope.launch {
             viewModel.finishActivity.collect {
