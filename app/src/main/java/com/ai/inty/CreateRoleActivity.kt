@@ -36,6 +36,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -51,6 +53,7 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.ai.inty.base.BaseActivity
 import com.ai.inty.base.noRippleClickable
+import com.ai.inty.base.AntiClick
 import com.ai.inty.ui.theme.BackGround
 import com.ai.inty.ui.theme.IntyTheme
 import com.ai.inty.viewmodels.MainViewModel
@@ -670,8 +673,16 @@ fun GenderButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var lastClickTime by remember { mutableLongStateOf(0L) }
+    
     Button(
-        onClick = onClick,
+        onClick = {
+            val currentTime = System.currentTimeMillis()
+            if (AntiClick.isValidClick(lastClickTime)) {
+                lastClickTime = currentTime
+                onClick()
+            }
+        },
         colors = ButtonDefaults.buttonColors(
             containerColor = Color(0x1A78599A)
         ),
@@ -699,8 +710,16 @@ fun CreateButton(
     isEditMode: Boolean = false,
     onClick: () -> Unit
 ) {
+    var lastClickTime by remember { mutableLongStateOf(0L) }
+    
     Button(
-        onClick = onClick,
+        onClick = {
+            val currentTime = System.currentTimeMillis()
+            if (AntiClick.isValidClick(lastClickTime)) {
+                lastClickTime = currentTime
+                onClick()
+            }
+        },
         enabled = !isLoading,
         colors = ButtonDefaults.buttonColors(
             containerColor = Color.Transparent

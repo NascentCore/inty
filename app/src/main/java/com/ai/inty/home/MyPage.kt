@@ -23,6 +23,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -46,6 +47,7 @@ import com.ai.inty.R
 import com.ai.inty.base.IntyCircleImage
 import com.ai.inty.base.IntyImage
 import com.ai.inty.base.noRippleClickable
+import com.ai.inty.base.AntiClick
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.beans.UserProfile
 import com.ai.inty.utils.AuthClickable
@@ -62,6 +64,7 @@ fun MyPage(
     onDeleteAgent: ((AgentInfo) -> Unit)? = null,
 ) {
     val context = LocalContext.current
+    var lastClickTime by remember { mutableLongStateOf(0L) }
     Box(
         modifier = modifier
     ) {
@@ -285,6 +288,7 @@ fun MyAgentCard(
 ) {
     var showMenu by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
+    var lastClickTime by remember { mutableLongStateOf(0L) }
     
     Box(
         modifier = modifier.size(165.dp, 220.dp)
@@ -312,7 +316,13 @@ fun MyAgentCard(
                     .padding(8.dp)
             ) {
                 IconButton(
-                    onClick = { showMenu = true },
+                    onClick = {
+                        val currentTime = System.currentTimeMillis()
+                        if (AntiClick.isValidClick(lastClickTime)) {
+                            lastClickTime = currentTime
+                            showMenu = true
+                        }
+                    },
                     modifier = Modifier
                         .size(24.dp)
                         .background(

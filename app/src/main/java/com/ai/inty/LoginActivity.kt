@@ -32,6 +32,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -51,6 +52,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.lifecycleScope
 import com.ai.inty.base.BaseActivity
 import com.ai.inty.base.noRippleClickable
+import com.ai.inty.base.AntiClick
 import com.ai.inty.beans.GENDER
 import com.ai.inty.ui.theme.IntyTheme
 import com.ai.inty.viewmodels.LoginActivityViewModel
@@ -120,6 +122,7 @@ fun LoginScreen(
     onGoogleLoginSuccess: (idToken: String) -> Unit
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
+    var lastClickTime by remember { mutableLongStateOf(0L) }
 
     val googleSignInLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult(),
@@ -216,8 +219,12 @@ fun LoginScreen(
 
             Button(
                 onClick = {
-                    val signInIntent = googleSignInClient.signInIntent
-                    googleSignInLauncher.launch(signInIntent)
+                    val currentTime = System.currentTimeMillis()
+                    if (AntiClick.isValidClick(lastClickTime)) {
+                        lastClickTime = currentTime
+                        val signInIntent = googleSignInClient.signInIntent
+                        googleSignInLauncher.launch(signInIntent)
+                    }
                 },
                 modifier = Modifier
                     .size(width = 300.dp, height = 56.dp),
