@@ -1,64 +1,70 @@
 import vertexai
 from vertexai.preview.vision_models import ImageGenerationModel
+from app.core.config import settings
+from app.utils.gcs import upload_to_gcs
+import uuid
+import os
+from datetime import datetime
 
-# TODO(developer): Update and un-comment below lines
-# PROJECT_ID = "your-project-id"
-# output_file = "input-image.png"
-# prompt = "" # The text prompt describing what you want to see.
+# Initialize Vertex AI
+vertexai.init()  # 使用你的Google Cloud项目ID
 
-vertexai.init()
-
-def generate_background_image_to_gcs(prompt: str, gcs_uri: str, aspect_ratio="16:9"):
+def generate_background_image_to_gcs(prompt: str, gcs_uri_base: str, count=1, aspect_ratio="16:9"):
     """
-    直接将生成的背景图保存到GCS，返回实际生成的图片GCS路径
-    注意：Vertex AI Imagen模型会在指定的基础路径后自动添加时间戳目录和实际文件名
+    使用output_gcs_uri参数直接将生成的背景图保存到GCS，返回实际生成的图片GCS路径列表
     """
-    model = ImageGenerationModel.from_pretrained("imagen-4.0-fast-generate-preview-06-06")
-    images = model.generate_images(
-        prompt=prompt,
-        number_of_images=1,
-        aspect_ratio=aspect_ratio,
-        safety_filter_level="block_some",
-        person_generation="allow_adult",
-        output_gcs_uri=gcs_uri
-    )
-    
-    # 获取实际生成的图片GCS路径
-    # Vertex AI会在提供的基础路径后添加时间戳和文件名
-    if images:
-        # ImageGenerationResponse对象不支持len()，直接访问images属性
-        if hasattr(images, 'images') and images.images:
-            image = images.images[0]
-        else:
-            # 如果images对象本身就是图片列表
-            image = images[0] if hasattr(images, '__getitem__') else images
+    try:
+        print(f"Starting image generation with prompt: {prompt}, count: {count}")
+        print(f"Target GCS URI base: {gcs_uri_base}")
         
-        # 方法1: 检查gcs_uri属性
-        if hasattr(image, 'gcs_uri') and image.gcs_uri:
-            return image.gcs_uri
+        model = ImageGenerationModel.from_pretrained("imagen-4.0-fast-generate-preview-06-06")
         
-        # 方法2: 检查_gcs_uri属性
-        if hasattr(image, '_gcs_uri') and image._gcs_uri:
-            return image._gcs_uri
-            
-        # 方法3: 检查是否有storage_uri属性
-        if hasattr(image, 'storage_uri') and image.storage_uri:
-            return image.storage_uri
-            
-        # 方法4: 尝试从image对象的其他属性获取
-        # 打印可用属性以便调试
-        print(f"Available attributes: {[attr for attr in dir(image) if not attr.startswith('__')]}")
+        # 使用output_gcs_uri直接上传到GCS
+        images = model.generate_images(
+            prompt=prompt,
+            number_of_images=count,
+            aspect_ratio=aspect_ratio,
+            safety_filter_level="block_some",
+            person_generation="allow_adult",
+            output_gcs_uri=gcs_uri_base
+        )
         
-        # 如果所有方法都失败，检查是否有其他包含'uri'的属性
-        for attr in dir(image):
-            if 'uri' in attr.lower() and not attr.startswith('_'):
-                uri_value = getattr(image, attr, None)
-                if uri_value and isinstance(uri_value, str) and uri_value.startswith('gs://'):
-                    return uri_value
-    
-    # 如果无法获取实际路径，返回原始路径（作为备用）
-    print(f"Warning: Could not get actual GCS URI, returning base path: {gcs_uri}")
-    return gcs_uri
+        print(f"Generated images type: {type(images)}")
+        print(f"Images object attributes: {[attr for attr in dir(images) if not attr.startswith('__')]}")
+        
+        generated_uris = []
+        
+        # 直接通过images.images获取图片列表
+        for i, image in enumerate(images.images):
+            try:
+                # 直接获取_gcs_uri属性
+                gcs_uri = image._gcs_uri
+                
+                # 转换为HTTPS URL
+                if gcs_uri.startswith("gs://"):
+                    gcs_path = gcs_uri[5:]  # 移除"gs://"前缀
+                    https_url = f"https://storage.googleapis.com/{gcs_path}"
+                    generated_uris.append(https_url)
+                    print(f"Image {i}: {gcs_uri} -> {https_url}")
+                else:
+                    generated_uris.append(gcs_uri)
+                    print(f"Image {i}: {gcs_uri}")
+                    
+            except Exception as e:
+                print(f"Error processing image {i}: {e}")
+                continue
+        
+        if not generated_uris:
+            raise Exception("No images were successfully generated")
+        
+        print(f"Successfully generated {len(generated_uris)} images")
+        return generated_uris
+        
+    except Exception as e:
+        print(f"Error in generate_background_image_to_gcs: {e}")
+        import traceback
+        traceback.print_exc()
+        raise e
 
 
 if __name__ == "__main__":

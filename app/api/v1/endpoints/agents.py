@@ -187,29 +187,39 @@ async def generate_background(
     current_user: schemas.User = Depends(deps.get_current_active_user)
 ):
     """
-    Generate background image based on prompt, save directly to GCS, return image URL
+    Generate background images based on prompt, save directly to GCS, return image URLs
     """
     try:
-        # Construct GCS path
-        gcs_path = f"backgrounds/tmp/{current_user.id}/{uuid.uuid4().hex}.png"
-        gcs_uri = f"gs://{settings.gcs.bucket}/{gcs_path}"
+        # Validate count parameter
+        if request.count < 1 or request.count > 4:
+            return APIResponse.error(message="Count must be between 1 and 4")
+               # Construct GCS base path
+        gcs_base_path = f"backgrounds/tmp/{current_user.id}/{uuid.uuid4().hex}"
+        gcs_uri_base = f"gs://{settings.gcs.bucket}/{gcs_base_path}"
         
-        # Generate image and get actual GCS path
-        actual_gcs_uri = generate_background_image_to_gcs(request.prompt, gcs_uri, aspect_ratio="16:9")
+        logger.info(f"Starting background generation for user {current_user.id}, prompt: {request.prompt}, count: {request.count}")
         
-        # Convert gs://bucket/path format to https://storage.googleapis.com/bucket/path format
-        if actual_gcs_uri.startswith("gs://"):
-            # Remove gs:// prefix, build HTTPS URL
-            gcs_path_actual = actual_gcs_uri[5:]  # Remove "gs://"
-            url = f"https://storage.googleapis.com/{gcs_path_actual}"
-        else:
-            # Fallback: use original path
-            url = f"https://storage.googleapis.com/{settings.gcs.bucket}/{gcs_path}"
+        # Generate images and get actual GCS URLs
+        gcs_urls = generate_background_image_to_gcs(
+            request.prompt, 
+            gcs_uri_base, 
+            count=request.count,
+            aspect_ratio="16:9"
+        )
         
-        return APIResponse.success(data={"url": url, "format": "png"})
+        logger.info(f"Successfully generated {len(gcs_urls)} background images")
+        
+        return APIResponse.success(data={
+            "urls": gcs_urls, 
+            "count": len(gcs_urls),
+            "format": "png"
+        })
+        
     except Exception as e:
         logger.error(f"Background image generation failed: {str(e)}")
-        return APIResponse.error(message="Background image generation failed")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        return APIResponse.error(message=f"Background image generation failed: {str(e)}")
 
 @router.post("/{agent_id}/avatar", response_model=APIResponse[schemas.Agent])
 async def upload_agent_avatar(
@@ -324,6 +334,84 @@ async def upload_agent_background(
         logger.error(f"背景图上传失败: {str(e)}")
         logger.error(f"错误堆栈: {traceback.format_exc()}")
         return APIResponse.error(message="背景图上传失败")
+
+@router.post("/{agent_id}/set-background", response_model=APIResponse[schemas.Agent])
+async def set_current_background(
+    agent_id: str,
+    background_url: str = Query(..., description="Background image URL to set as current"),
+    db: AsyncSession = Depends(deps.get_async_db),
+    current_user: schemas.User = Depends(deps.get_current_active_user)
+):
+    """
+    Set current background image from background images list
+    """
+    try:
+        # 验证agent是否存在且用户有权限修改
+        agent = await agent_service.get_agent(db, agent_id=agent_id)
+        if not agent:
+            raise HTTPException(status_code=404, detail="Agent not found")
+        
+        # 检查用户是否是该agent的创建者
+        if agent.creator_id != current_user.id:
+            raise HTTPException(status_code=403, detail="Permission denied")
+        
+        # 检查背景图URL是否在background_images列表中
+        if not agent.background_images or background_url not in agent.background_images:
+            return APIResponse.error(message="Background image not found in agent's background images list")
+        
+        # 更新当前背景图
+        updated_agent = await agent_service.update_agent(
+            db, 
+            db_agent=agent, 
+            agent_in=schemas.AgentUpdate(background=background_url)
+        )
+        
+        return APIResponse.success(data=updated_agent)
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Set current background failed: {str(e)}")
+        return APIResponse.error(message="Failed to set current background")
+
+@router.post("/{agent_id}/save-backgrounds", response_model=APIResponse[schemas.Agent])
+async def save_background_images(
+    agent_id: str,
+    background_urls: List[str] = Query(..., description="List of background image URLs to save"),
+    db: AsyncSession = Depends(deps.get_async_db),
+    current_user: schemas.User = Depends(deps.get_current_active_user)
+):
+    """
+    Save generated background images to agent's background images list
+    """
+    try:
+        # 验证agent是否存在且用户有权限修改
+        agent = await agent_service.get_agent(db, agent_id=agent_id)
+        if not agent:
+            raise HTTPException(status_code=404, detail="Agent not found")
+        
+        # 检查用户是否是该agent的创建者
+        if agent.creator_id != current_user.id:
+            raise HTTPException(status_code=403, detail="Permission denied")
+        
+        # 合并现有背景图和新的背景图
+        existing_backgrounds = agent.background_images or []
+        updated_backgrounds = list(set(existing_backgrounds + background_urls))  # 去重
+        
+        # 更新背景图列表
+        updated_agent = await agent_service.update_agent(
+            db, 
+            db_agent=agent, 
+            agent_in=schemas.AgentUpdate(background_images=updated_backgrounds)
+        )
+        
+        return APIResponse.success(data=updated_agent)
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Save background images failed: {str(e)}")
+        return APIResponse.error(message="Failed to save background images")
 
 @router.get("/creator/{creator_id}/stats", response_model=schemas.APIResponse[schemas.CreatorAgentStats])
 async def get_creator_agent_stats(

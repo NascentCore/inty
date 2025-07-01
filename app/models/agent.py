@@ -32,6 +32,7 @@ class Agent(Base):
     gender = Column(Enum(Gender, name="gender"), nullable=False)
     avatar = Column(String)
     background = Column(String)
+    background_images = Column(JSON)  # 存储背景图列表
     voice_id = Column(String)
     settings = Column(JSON)
     intro = Column(String)

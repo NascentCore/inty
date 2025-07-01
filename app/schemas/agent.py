@@ -1,5 +1,5 @@
 from typing import Optional, List, Dict, Any
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from datetime import datetime
 
 from app.models.agent import AgentVisibility, AgentStatus
@@ -12,6 +12,7 @@ class AgentBase(BaseModel):
     gender: str
     avatar: Optional[str] = None
     background: Optional[str] = None
+    background_images: Optional[List[str]] = None
     voice_id: Optional[str] = None
     settings: Optional[Dict[str, Any]] = None
     intro: Optional[str] = None
@@ -59,6 +60,15 @@ class AgentList(BaseModel):
 class BackgroundGenerateRequest(BaseModel):
     """背景生成请求"""
     prompt: str 
+    count: int = Field(default=4, ge=1, le=4, description="Number of images to generate (1-4)")
+    
+    class Config:
+        schema_extra = {
+            "example": {
+                "prompt": "A beautiful mountain landscape with sunset",
+                "count": 6
+            }
+        } 
 
 class CreatorAgentStats(BaseModel):
     """创建者的公共角色统计信息"""
