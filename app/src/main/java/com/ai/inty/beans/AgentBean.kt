@@ -11,6 +11,10 @@ import kotlinx.parcelize.RawValue
 data class AgentInfo(
     @Json(name = "avatar")
     val avatar: String = "",
+    @Json(name = "background")
+    val background: String = "",
+    @Json(name = "background_images")
+    val backgroundImages: List<String> = emptyList(),
     @Json(name = "category")
     val category: String = "",
     @Json(name = "gender")
@@ -105,6 +109,8 @@ data class CreateAgentRequest(
     val avatar: String? = null,
     @Json(name = "background")
     val background: String? = null,
+    @Json(name = "background_images")
+    val backgroundImages: List<String> = emptyList(),
     @Json(name = "voice_id")
     val voiceId: String = "",
     @Json(name = "settings")

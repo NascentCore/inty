@@ -8,6 +8,7 @@ object AvatarManager {
     private var generationPrompt: String = ""
     private var isGenerating: Boolean = false
     private var generationError: String? = null
+    private var chatBackgroundUrl: String? = null
     
     fun setGeneratedAvatarUrl(url: String) {
         generatedAvatarUrl = url
@@ -51,7 +52,13 @@ object AvatarManager {
         isGenerating = false
         generationError = null
         generationPrompt = ""
+        chatBackgroundUrl = null
         com.inty.utils.log.EasyLog.log("AvatarManager: Cleared all avatar data")
+    }
+    
+    fun clearAllAvatarData() {
+        clearGeneratedAvatarUrl()
+        com.inty.utils.log.EasyLog.log("AvatarManager: Cleared all avatar and background data")
     }
     
     fun getCurrentAvatarUrl(): String? {
@@ -95,5 +102,30 @@ object AvatarManager {
         val error = generationError
         generationError = null // Clear error after reading
         return error
+    }
+    
+    fun setChatBackgroundUrl(url: String) {
+        chatBackgroundUrl = url
+        com.inty.utils.log.EasyLog.log("AvatarManager: Set chat background URL: $url")
+    }
+    
+    fun getChatBackgroundUrl(): String? {
+        return chatBackgroundUrl
+    }
+    
+    fun clearChatBackground() {
+        chatBackgroundUrl = null
+        com.inty.utils.log.EasyLog.log("AvatarManager: Cleared chat background URL")
+    }
+    
+    // Helper functions for chat and avatar display logic
+    fun getChatBackgroundForAgent(agent: com.ai.inty.beans.AgentInfo): String? {
+        // Priority: background -> avatar
+        return agent.background.takeIf { it.isNotBlank() } ?: agent.avatar.takeIf { it.isNotBlank() }
+    }
+    
+    fun getAvatarForAgent(agent: com.ai.inty.beans.AgentInfo): String? {
+        // Priority: avatar -> background
+        return agent.avatar.takeIf { it.isNotBlank() } ?: agent.background.takeIf { it.isNotBlank() }
     }
 }

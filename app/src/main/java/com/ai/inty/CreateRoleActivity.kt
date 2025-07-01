@@ -86,6 +86,13 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.ai.inty.R
 import com.ai.inty.beans.AgentInfo
 import com.therouter.router.Autowired
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.compose.rememberLauncherForActivityResult
+import com.yalantis.ucrop.UCrop
+import android.net.Uri
+import java.io.File
+import java.util.UUID
+import android.graphics.Color as AndroidColor
 
 @Route(path = Constant.ROUTE_CREATE_ROLE)
 class CreateRoleActivity : BaseActivity() {
@@ -138,13 +145,71 @@ fun CreateRolePage(
     var opening by remember { mutableStateOf(editAgent?.opening ?: "") }
     var visibility by remember { mutableStateOf(editAgent?.visibility ?: "PRIVATE") }
     var isLoading by remember { mutableStateOf(false) }
-    var avatarUrl by remember { mutableStateOf<String?>(editAgent?.avatar?.takeIf { it.isNotBlank() }) }
-    var avatarUrls by remember { mutableStateOf<List<String>>(emptyList()) }
-    var selectedImageIndex by remember { mutableStateOf(0) }
+    // Initialize image states based on edit mode
+    var avatarUrl by remember { 
+        mutableStateOf<String?>(
+            if (isEditMode) editAgent?.background?.takeIf { it.isNotBlank() } else null
+        ) 
+    }
+    var avatarUrls by remember { 
+        mutableStateOf<List<String>>(
+            if (isEditMode) editAgent?.backgroundImages ?: emptyList() else emptyList()
+        ) 
+    }
+    var selectedImageIndex by remember { 
+        mutableStateOf(
+            if (isEditMode && editAgent?.backgroundImages?.isNotEmpty() == true) {
+                // Find the index of the background image in the background_images list
+                editAgent.backgroundImages.indexOf(editAgent.background).takeIf { it >= 0 } ?: 0
+            } else {
+                0
+            }
+        ) 
+    }
     var isGeneratingAvatar by remember { mutableStateOf(false) }
+    var croppedAvatarUrl by remember { 
+        mutableStateOf<String?>(
+            if (isEditMode) editAgent?.avatar?.takeIf { it.isNotBlank() && it != editAgent?.background } else null
+        ) 
+    }
     
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
+    
+    // Clear avatar data when creating new character
+    LaunchedEffect(isEditMode) {
+        if (!isEditMode) {
+            AvatarManager.clearAllAvatarData()
+            EasyLog.log("Cleared avatar data for new character creation")
+        }
+    }
+    
+    // UCrop launcher for avatar cropping
+    val cropLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == android.app.Activity.RESULT_OK) {
+            result.data?.let { data ->
+                val resultUri = UCrop.getOutput(data)
+                if (resultUri != null) {
+                    // Save the cropped image as a separate avatar (not affecting preview images)
+                    val croppedPath = resultUri.toString()
+                    EasyLog.log("Avatar cropped successfully: $croppedPath")
+                    
+                    // Save cropped avatar separately - this will be used as the character avatar
+                    croppedAvatarUrl = croppedPath
+                    
+                    Toast.makeText(context, "Avatar cropped and saved", Toast.LENGTH_SHORT).show()
+                }
+            }
+        } else if (result.resultCode == UCrop.RESULT_ERROR) {
+            result.data?.let { data ->
+                val cropError = UCrop.getError(data)
+                EasyLog.log("UCrop error: ${cropError?.message}", EasyLog.ERROR)
+                Toast.makeText(context, "Crop failed: ${cropError?.message}", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
     
     // 检查是否有生成的头像URL - 使用DisposableEffect来监听生命周期
     DisposableEffect(Unit) {
@@ -326,6 +391,7 @@ fun CreateRolePage(
                 avatarUrls = avatarUrls,
                 selectedIndex = selectedImageIndex,
                 isGenerating = isGeneratingAvatar,
+                croppedAvatarUrl = croppedAvatarUrl,
                 onGenerateClick = {
                     onAvatarGenerateClick()
                     // 当点击生成头像时，不清除当前URL，让用户返回时检查新的URL
@@ -339,8 +405,49 @@ fun CreateRolePage(
                     onAvatarGenerateClick()
                 },
                 onFaceEdit = {
-                    // TODO: Navigate to face editing page
-                    // This would typically open a face editing activity or dialog
+                    // Get the current avatar URL to crop
+                    val sourceUri = if (avatarUrls.isNotEmpty()) {
+                        Uri.parse(avatarUrls.getOrNull(selectedImageIndex) ?: avatarUrls.first())
+                    } else {
+                        avatarUrl?.let { Uri.parse(it) }
+                    }
+                    
+                    if (sourceUri != null) {
+                        try {
+                            // Create destination file for cropped image
+                            val destinationFile = File(context.cacheDir, "cropped_avatar_${UUID.randomUUID()}.jpg")
+                            val destinationUri = Uri.fromFile(destinationFile)
+                            
+                            // Configure UCrop
+                            val cropIntent = UCrop.of(sourceUri, destinationUri)
+                                .withAspectRatio(1f, 1f) // Square aspect ratio for avatar
+                                .withMaxResultSize(512, 512) // Reasonable size for avatars
+                                .withOptions(UCrop.Options().apply {
+                                    setCompressionQuality(90)
+                                    setHideBottomControls(false)
+                                    setFreeStyleCropEnabled(false)
+                                    setToolbarTitle("Crop Avatar")
+                                    setStatusBarColor(AndroidColor.parseColor("#1C1523"))
+                                    setToolbarColor(AndroidColor.parseColor("#1C1523"))
+                                    setActiveControlsWidgetColor(AndroidColor.parseColor("#E91E63"))
+                                    setToolbarWidgetColor(AndroidColor.WHITE)
+                                    setCropFrameColor(AndroidColor.WHITE)
+                                    setCropGridColor(AndroidColor.WHITE)
+                                    setCircleDimmedLayer(true) // Enable circular cropping
+                                    setShowCropFrame(false) // Hide square frame for circular crop
+                                    setShowCropGrid(false) // Hide grid for cleaner circular crop
+                                })
+                                .getIntent(context)
+                            
+                            EasyLog.log("Starting UCrop with source: $sourceUri")
+                            cropLauncher.launch(cropIntent)
+                        } catch (e: Exception) {
+                            EasyLog.log("Failed to start UCrop: ${e.message}", EasyLog.ERROR)
+                            Toast.makeText(context, "Failed to open crop editor", Toast.LENGTH_SHORT).show()
+                        }
+                    } else {
+                        Toast.makeText(context, "No avatar image to crop", Toast.LENGTH_SHORT).show()
+                    }
                 }
             )
             
@@ -421,19 +528,41 @@ fun CreateRolePage(
                         return@CreateButton
                     }
                     
-                    // Get the selected avatar URL
-                    val selectedAvatarUrl = AvatarManager.getSelectedAvatarUrl() ?: avatarUrl
-                    EasyLog.log("Create button clicked - Selected Avatar URL: $selectedAvatarUrl")
+                    // Prepare avatar and background fields according to new logic
+                    val backgroundUrl = if (avatarUrls.isNotEmpty()) {
+                        // Use selected image from generated grid as background
+                        avatarUrls.getOrNull(selectedImageIndex) ?: avatarUrls.first()
+                    } else {
+                        // Use single generated image as background
+                        avatarUrl
+                    }
+                    
+                    // Determine final avatar URL - if no cropped avatar, use background as avatar
+                    val finalAvatarUrl = croppedAvatarUrl ?: backgroundUrl
+                    val backgroundImagesList = if (avatarUrls.isNotEmpty()) avatarUrls else listOfNotNull(avatarUrl)
+                    
+                    EasyLog.log("Create button clicked - Final Avatar URL: $finalAvatarUrl")
+                    EasyLog.log("Create button clicked - Background URL: $backgroundUrl")
+                    EasyLog.log("Create button clicked - Background Images List: $backgroundImagesList")
+                    EasyLog.log("Create button clicked - Cropped Avatar URL: $croppedAvatarUrl")
+                    EasyLog.log("Create button clicked - Avatar equals background: ${finalAvatarUrl == backgroundUrl}")
+                    
+                    // Save background for chat usage
+                    if (backgroundUrl != null) {
+                        AvatarManager.setChatBackgroundUrl(backgroundUrl)
+                    }
                     
                     isLoading = true
                     
                     try {
                         // Create API request
-                        EasyLog.log("${if (isEditMode) "Updating" else "Creating"} agent with avatar URL: $selectedAvatarUrl")
+                        EasyLog.log("${if (isEditMode) "Updating" else "Creating"} agent with avatar URL: $finalAvatarUrl")
                         val request = CreateAgentRequest(
                             name = name,
                             gender = gender,
-                            avatar = selectedAvatarUrl,
+                            avatar = finalAvatarUrl,
+                            background = backgroundUrl,
+                            backgroundImages = backgroundImagesList,
                             settings = mapOf("description" to settings),
                             intro = intro,
                             opening = opening,
@@ -495,6 +624,7 @@ fun AvatarUploadSection(
     avatarUrls: List<String> = emptyList(),
     selectedIndex: Int = 0,
     isGenerating: Boolean = false,
+    croppedAvatarUrl: String? = null,
     onGenerateClick: () -> Unit,
     onImageSelected: (Int) -> Unit = {},
     onRegenerate: (String) -> Unit = {},
@@ -598,7 +728,7 @@ fun AvatarUploadSection(
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         Image(
-                            painter = painterResource(R.drawable.icon_edit),
+                            painter = painterResource(R.drawable.ic_crop),
                             contentDescription = "Face edit",
                             modifier = Modifier.size(16.dp)
                         )
@@ -611,6 +741,17 @@ fun AvatarUploadSection(
                     }
                 }
             }
+        }
+        
+        // Show cropped avatar indicator
+        if (croppedAvatarUrl != null) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "✓ Cropped avatar saved",
+                fontSize = 12.sp,
+                color = Color(0xFF4CAF50),
+                fontWeight = FontWeight.Medium
+            )
         }
         
         // Show grid of multiple avatars below the main preview
