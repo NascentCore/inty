@@ -24,22 +24,22 @@ async def list_agents(
     current_user: schemas.User = Depends(deps.get_current_active_user),
 ) -> Any:
     """
-    获取当前用户创建的AI角色列表
+    Get current user's created AI agents list
     """
     agents = await agent_service.get_user_agents(db, user_id=current_user.id, skip=skip, limit=limit, current_user_id=current_user.id)
     return schemas.APIResponse.success(data=agents)
 
 @router.get("/search", response_model=schemas.APIResponse[schemas.PaginationData[schemas.Agent]])
 async def search_agents(
-    q: str = Query(..., description="搜索关键字"),
-    page: int = Query(1, ge=1, description="页码，从1开始"),
-    page_size: int = Query(10, ge=1, le=100, description="每页数量，最大100"),
+    q: str = Query(..., description="Search keyword"),
+    page: int = Query(1, ge=1, description="Page number, starting from 1"),
+    page_size: int = Query(10, ge=1, le=100, description="Items per page, maximum 100"),
     db: AsyncSession = Depends(deps.get_async_db),
     current_user: schemas.User = Depends(deps.get_current_active_user),
 ) -> Any:
     """
-    搜索公开的AI角色
-    支持按名称、介绍、分类进行模糊查询
+    Search public AI agents
+    Support fuzzy search by name, description, category
     """
     pagination_data = await agent_service.search_agents(
         db, 
@@ -53,12 +53,12 @@ async def search_agents(
 @router.get("/recommend", response_model=schemas.APIResponse[schemas.PaginationData[schemas.Agent]])
 async def recommend_agents(
     db: AsyncSession = Depends(deps.get_async_db),
-    page: int = Query(1, ge=1, description="页码，从1开始"),
-    page_size: int = Query(10, ge=1, le=100, description="每页数量，最大100"),
+    page: int = Query(1, ge=1, description="Page number, starting from 1"),
+    page_size: int = Query(10, ge=1, le=100, description="Items per page, maximum 100"),
     current_user: schemas.User = Depends(deps.get_current_active_user),
 ) -> Any:
     """
-    获取推荐的AI角色列表（公开且已审核的角色，按创建时间倒序）
+    Get recommended AI agents list (public and approved agents, ordered by creation time desc)
     """
     pagination_data = await agent_service.get_recommended_agents_paginated(db, page=page, page_size=page_size, current_user_id=current_user.id)
     return schemas.APIResponse.success(data=pagination_data)
@@ -66,12 +66,12 @@ async def recommend_agents(
 @router.get("/following", response_model=schemas.APIResponse[schemas.PaginationData[schemas.Agent]])
 async def get_following_agents(
     db: AsyncSession = Depends(deps.get_async_db),
-    page: int = Query(1, ge=1, description="页码，从1开始"),
-    page_size: int = Query(10, ge=1, le=100, description="每页数量，最大100"),
+    page: int = Query(1, ge=1, description="Page number, starting from 1"),
+    page_size: int = Query(10, ge=1, le=100, description="Items per page, maximum 100"),
     current_user: schemas.User = Depends(deps.get_current_active_user),
 ) -> Any:
     """
-    获取当前用户关注的AI角色列表
+    Get current user's followed AI agents list
     """
     pagination_data = await agent_service.get_user_followed_agents(db, user_id=current_user.id, page=page, page_size=page_size)
     return schemas.APIResponse.success(data=pagination_data)
@@ -84,7 +84,7 @@ async def create_agent(
     current_user: schemas.User = Depends(deps.get_current_active_user),
 ) -> Any:
     """
-    创建新的AI角色
+    Create new AI agent
     """
     agent = await agent_service.create_agent(db, agent_in=agent_in, user_id=current_user.id)
     return schemas.APIResponse.success(data=agent)
@@ -97,7 +97,7 @@ async def get_agent(
     current_user: schemas.User = Depends(deps.get_current_active_user),
 ) -> Any:
     """
-    通过ID获取AI角色
+    Get AI agent by ID
     """
     agent = await agent_service.get_agent(db, agent_id=agent_id, current_user_id=current_user.id)
     if not agent:
@@ -112,16 +112,16 @@ async def follow_agent(
     current_user: schemas.User = Depends(deps.get_current_active_user),
 ) -> Any:
     """
-    关注AI角色
+    Follow AI agent
     """
     try:
         await agent_service.follow_agent(db, agent_id=agent_id, user_id=current_user.id)
-        return schemas.APIResponse.success(data={"message": "关注成功"})
+        return schemas.APIResponse.success(data={"message": "Successfully followed"})
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"关注AI角色失败: {str(e)}")
-        return schemas.APIResponse.error(message="关注失败")
+        logger.error(f"Failed to follow AI agent: {str(e)}")
+        return schemas.APIResponse.error(message="Failed to follow")
 
 @router.delete("/{agent_id}/follow", response_model=schemas.APIResponse[dict])
 async def unfollow_agent(
@@ -131,16 +131,16 @@ async def unfollow_agent(
     current_user: schemas.User = Depends(deps.get_current_active_user),
 ) -> Any:
     """
-    取消关注AI角色
+    Unfollow AI agent
     """
     try:
         await agent_service.unfollow_agent(db, agent_id=agent_id, user_id=current_user.id)
-        return schemas.APIResponse.success(data={"message": "取消关注成功"})
+        return schemas.APIResponse.success(data={"message": "Successfully unfollowed"})
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"取消关注AI角色失败: {str(e)}")
-        return schemas.APIResponse.error(message="取消关注失败")
+        logger.error(f"Failed to unfollow AI agent: {str(e)}")
+        return schemas.APIResponse.error(message="Failed to unfollow")
 
 @router.put("/{agent_id}", response_model=schemas.Agent)
 async def update_agent(
@@ -151,7 +151,7 @@ async def update_agent(
     current_user: schemas.User = Depends(deps.get_current_active_user),
 ) -> Any:
     """
-    更新AI角色
+    Update AI agent
     """
     agent = await agent_service.get_agent(db, agent_id=agent_id)
     if not agent:
@@ -167,13 +167,13 @@ async def delete_agent(
     current_user: schemas.User = Depends(deps.get_current_active_user),
 ) -> Any:
     """
-    删除AI角色
+    Delete AI agent
     """
     agent = await agent_service.get_agent(db, agent_id=agent_id)
     if not agent:
         raise HTTPException(status_code=404, detail="Agent not found")
     
-    # 检查权限：只有创建者可以删除
+    # Check permission: only creator can delete
     if agent.creator_id != current_user.id:
         raise HTTPException(status_code=403, detail="Permission denied")
     
@@ -187,29 +187,29 @@ async def generate_background(
     current_user: schemas.User = Depends(deps.get_current_active_user)
 ):
     """
-    根据prompt生成背景图片，直接保存到GCS，返回图片URL
+    Generate background image based on prompt, save directly to GCS, return image URL
     """
     try:
-        # 构造GCS路径
+        # Construct GCS path
         gcs_path = f"backgrounds/tmp/{current_user.id}/{uuid.uuid4().hex}.png"
         gcs_uri = f"gs://{settings.gcs.bucket}/{gcs_path}"
         
-        # 生成图片并获取实际的GCS路径
+        # Generate image and get actual GCS path
         actual_gcs_uri = generate_background_image_to_gcs(request.prompt, gcs_uri, aspect_ratio="16:9")
         
-        # 将gs://bucket/path格式转换为https://storage.googleapis.com/bucket/path格式
+        # Convert gs://bucket/path format to https://storage.googleapis.com/bucket/path format
         if actual_gcs_uri.startswith("gs://"):
-            # 去掉gs://前缀，构建HTTPS URL
-            gcs_path_actual = actual_gcs_uri[5:]  # 去掉"gs://"
+            # Remove gs:// prefix, build HTTPS URL
+            gcs_path_actual = actual_gcs_uri[5:]  # Remove "gs://"
             url = f"https://storage.googleapis.com/{gcs_path_actual}"
         else:
-            # 备用方案：使用原始路径
+            # Fallback: use original path
             url = f"https://storage.googleapis.com/{settings.gcs.bucket}/{gcs_path}"
         
         return APIResponse.success(data={"url": url, "format": "png"})
     except Exception as e:
-        logger.error(f"背景图生成失败: {str(e)}")
-        return APIResponse.error(message="背景图生成失败")
+        logger.error(f"Background image generation failed: {str(e)}")
+        return APIResponse.error(message="Background image generation failed")
 
 @router.post("/{agent_id}/avatar", response_model=APIResponse[schemas.Agent])
 async def upload_agent_avatar(

@@ -28,7 +28,7 @@ async def list_chats(
     current_user: schemas.User = Depends(deps.get_current_active_user),
 ) -> Any:
     """
-    获取当前用户的聊天列表
+    Get current user's chat list
     """
     chats = await chat_service.get_chats(db, user_id=current_user.id, skip=skip, limit=limit)
     return chats
@@ -41,7 +41,7 @@ async def create_chat(
     current_user: schemas.User = Depends(deps.get_current_active_user),
 ) -> Any:
     """
-    创建新的聊天
+    Create new chat
     """
     chat = await chat_service.create_chat(db, chat_in=chat_in, user_id=current_user.id)
     return chat
@@ -54,7 +54,7 @@ async def delete_chat(
     current_user: schemas.User = Depends(deps.get_current_active_user),
 ) -> Any:
     """
-    删除聊天
+    Delete chat
     """
     chat = await chat_service.get_chat(db, chat_id=chat_id)
     if not chat:
@@ -63,9 +63,9 @@ async def delete_chat(
     return chat
 
 
-# OpenAI风格的消息模型
+# OpenAI style message model
 class ChatMessage(BaseModel):
-    role: str  # "user" 或 "assistant"
+    role: str  # "user" or "assistant"
     content: str
 
 
@@ -80,7 +80,7 @@ async def get_agent_status(
     current_user: schemas.User = Depends(deps.get_current_active_user),
 ):
     """
-    获取Agent管理器状态
+    Get Agent manager status
     """
     return {
         "active_agents": agent_manager.get_agent_count(),
@@ -95,7 +95,7 @@ async def get_keep_talking_status(
     current_user: schemas.User = Depends(deps.get_current_active_user),
 ):
     """
-    获取Keep Talking服务状态
+    Get Keep Talking service status
     """
     return {
         "running": keep_talking_service._running,
@@ -112,17 +112,17 @@ async def trigger_keep_talking_check(
     current_user: schemas.User = Depends(deps.get_current_active_user),
 ):
     """
-    手动触发Keep Talking检查（用于测试和调试）
+    Manually trigger Keep Talking check (for testing and debugging)
     """
     try:
         await keep_talking_service._check_idle_chats()
         return {
             "status": "success",
-            "message": "Keep Talking检查已完成",
+            "message": "Keep Talking check completed",
             "timestamp": time.time()
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"检查失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Check failed: {str(e)}")
 
 
 @router.post("/agents/initialize")
@@ -132,17 +132,17 @@ async def initialize_agents(
     current_user: schemas.User = Depends(deps.get_current_active_user),
 ):
     """
-    手动初始化常用Agent（管理员功能）
+    Manually initialize commonly used Agents (admin function)
     """
     try:
         await agent_manager.initialize_popular_agents(db)
         return {
             "status": "success",
-            "message": "常用Agent初始化完成",
+            "message": "Common Agents initialization completed",
             "active_agents": agent_manager.get_agent_count()
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"初始化失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Initialization failed: {str(e)}")
 
 
 @router.delete("/agents/cleanup")
@@ -150,7 +150,7 @@ async def cleanup_idle_agents(
     current_user: schemas.User = Depends(deps.get_current_active_user),
 ):
     """
-    手动清理空闲Agent（管理员功能）
+    Manually cleanup idle Agents (admin function)
     """
     try:
         old_count = agent_manager.get_agent_count()
@@ -158,12 +158,12 @@ async def cleanup_idle_agents(
         new_count = agent_manager.get_agent_count()
         return {
             "status": "success",
-            "message": "空闲Agent清理完成",
+            "message": "Idle Agents cleanup completed",
             "cleaned_count": old_count - new_count,
             "remaining_agents": new_count
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"清理失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Cleanup failed: {str(e)}")
 
 
 @router.get("/{chat_id}/detail")
@@ -172,34 +172,34 @@ async def get_chat_detail(
     db: AsyncSession = Depends(deps.get_async_db),
     chat_id: str,
     current_user: schemas.User = Depends(deps.get_current_active_user),
-    limit: int = Query(20, ge=1, le=100, description="每页消息数量"),
-    offset: int = Query(0, ge=0, description="偏移量（跳过的消息数量）"),
+    limit: int = Query(20, ge=1, le=100, description="Number of messages per page"),
+    offset: int = Query(0, ge=0, description="Offset (number of messages to skip)"),
 ) -> Any:
     """
-    获取对话详情，包含分页的消息记录
-    支持滚屏加载更早的对话
+    Get chat details with paginated message records
+    Support scrolling to load earlier conversations
     """
-    # 验证聊天是否存在
+    # Verify if chat exists
     chat = await chat_service.get_chat(db, chat_id=chat_id)
     if not chat:
         raise HTTPException(status_code=404, detail="Chat not found")
     
-    # 验证聊天是否属于当前用户
+    # Verify if chat belongs to current user
     if chat.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="Not enough permissions")
     
     try:
-        # 使用统一的session_id生成规则
+        # Use unified session_id generation rule
         session_id = generate_session_id(chat_id)
         
-        # 获取分页消息
+        # Get paginated messages
         messages_data = chat_history_service.get_messages_paginated(
             session_id=session_id,
             limit=limit,
             offset=offset
         )
         
-        # 组装返回数据
+        # Assemble return data
         return {
             "chat_info": {
                 "id": chat.id,
@@ -222,7 +222,7 @@ async def get_chat_detail(
         }
         
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"获取对话详情失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to get chat details: {str(e)}")
 
 
 @router.get("/agents/{agent_id}/detail")
@@ -231,40 +231,40 @@ async def get_agent_chat_detail(
     db: AsyncSession = Depends(deps.get_async_db),
     agent_id: str,
     current_user: schemas.User = Depends(deps.get_current_active_user),
-    limit: int = Query(20, ge=1, le=100, description="每页消息数量"),
-    offset: int = Query(0, ge=0, description="偏移量（跳过的消息数量）"),
+    limit: int = Query(20, ge=1, le=100, description="Number of messages per page"),
+    offset: int = Query(0, ge=0, description="Offset (number of messages to skip)"),
 ) -> Any:
     """
-    根据Agent ID获取对话详情，包含分页的消息记录
-    如果用户还没有和该Agent创建会话，则自动创建
-    支持滚屏加载更早的对话
+    Get chat details by Agent ID with paginated message records
+    If user hasn't created a session with this Agent, automatically create one
+    Support scrolling to load earlier conversations
     """
     try:
-        logger.info(f"获取Agent聊天详情 - Agent ID: {agent_id}")
+        logger.info(f"Getting Agent chat details - Agent ID: {agent_id}")
         
-        # 获取或创建与该Agent的唯一会话
+        # Get or create unique session with this Agent
         chat = await chat_service.get_or_create_chat_by_agent(
             db=db,
             user_id=current_user.id,
             agent_id=agent_id
         )
         
-        # 验证返回的chat中的agent_id是否与传入的一致
+        # Verify if the agent_id in returned chat matches the input
         if chat.agent_id != agent_id:
-            logger.error(f"Agent ID不匹配: 传入={agent_id}, 实际={chat.agent_id}")
-            raise HTTPException(status_code=500, detail=f"Agent ID不匹配: 传入={agent_id}, 实际={chat.agent_id}")
+            logger.error(f"Agent ID mismatch: input={agent_id}, actual={chat.agent_id}")
+            raise HTTPException(status_code=500, detail=f"Agent ID mismatch: input={agent_id}, actual={chat.agent_id}")
         
-        # 使用统一的session_id生成规则
+        # Use unified session_id generation rule
         session_id = generate_session_id(chat.id)
         
-        # 获取分页消息
+        # Get paginated messages
         messages_data = chat_history_service.get_messages_paginated(
             session_id=session_id,
             limit=limit,
             offset=offset
         )
         
-        # 组装返回数据
+        # Assemble return data
         return {
             "chat_info": {
                 "id": chat.id,
@@ -287,7 +287,7 @@ async def get_agent_chat_detail(
         }
         
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"获取对话详情失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to get chat details: {str(e)}")
 
 
 @router.get("/agents/{agent_id}/messages")
@@ -296,31 +296,31 @@ async def get_agent_chat_messages(
     db: AsyncSession = Depends(deps.get_async_db),
     agent_id: str,
     current_user: schemas.User = Depends(deps.get_current_active_user),
-    limit: int = Query(20, ge=1, le=100, description="每页消息数量"),
-    offset: int = Query(0, ge=0, description="偏移量"),
-    order: str = Query("desc", regex="^(asc|desc)$", description="排序方式：asc=旧消息在前，desc=新消息在前"),
+    limit: int = Query(20, ge=1, le=100, description="Number of messages per page"),
+    offset: int = Query(0, ge=0, description="Offset"),
+    order: str = Query("desc", regex="^(asc|desc)$", description="Sort order: asc=old messages first, desc=new messages first"),
 ) -> Any:
     """
-    根据Agent ID仅获取聊天消息记录（更轻量级的接口）
-    如果用户还没有和该Agent创建会话，则自动创建
-    专门用于滚动加载
+    Get only chat message records by Agent ID (lighter interface)
+    If user hasn't created a session with this Agent, automatically create one
+    Specifically for scrolling load
     """
     try:
-        logger.info(f"获取Agent聊天消息 - Agent ID: {agent_id}")
+        logger.info(f"Getting Agent chat messages - Agent ID: {agent_id}")
         
-        # 获取或创建与该Agent的唯一会话
+        # Get or create unique session with this Agent
         chat = await chat_service.get_or_create_chat_by_agent(
             db=db,
             user_id=current_user.id,
             agent_id=agent_id
         )
         
-        # 验证返回的chat中的agent_id是否与传入的一致
+        # Verify if the agent_id in returned chat matches the input
         if chat.agent_id != agent_id:
-            logger.error(f"Agent ID不匹配: 传入={agent_id}, 实际={chat.agent_id}")
-            raise HTTPException(status_code=500, detail=f"Agent ID不匹配: 传入={agent_id}, 实际={chat.agent_id}")
+            logger.error(f"Agent ID mismatch: input={agent_id}, actual={chat.agent_id}")
+            raise HTTPException(status_code=500, detail=f"Agent ID mismatch: input={agent_id}, actual={chat.agent_id}")
         
-        # 使用统一的session_id生成规则
+        # Use unified session_id generation rule
         session_id = generate_session_id(chat.id)
         
         # 获取分页消息
@@ -338,7 +338,7 @@ async def get_agent_chat_messages(
         return messages_data
         
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"获取消息记录失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to get message records: {str(e)}")
 
 
 @router.post("/agents/{agent_id}/chat/completions")
@@ -452,7 +452,7 @@ async def agent_chat_completions(
             }
             
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"聊天失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Chat failed: {str(e)}")
 
 
 @router.put("/agents/{agent_id}/settings", response_model=schemas.ChatSettings)
@@ -464,32 +464,32 @@ async def update_agent_chat_settings(
     current_user: schemas.User = Depends(deps.get_current_active_user),
 ) -> Any:
     """
-    根据Agent ID更新聊天设置
-    传入agent_id，找到用户与该Agent的唯一聊天会话，更新聊天设置
-    如果聊天会话不存在，则自动创建
+    Update chat settings by Agent ID
+    Input agent_id, find user's unique chat session with that Agent, update chat settings
+    If chat session doesn't exist, automatically create one
     """
     try:
-        logger.info(f"更新Agent聊天设置 - Agent ID: {agent_id}, User ID: {current_user.id}")
+        logger.info(f"Updating Agent chat settings - Agent ID: {agent_id}, User ID: {current_user.id}")
         
-        # 首先验证Agent是否存在
+        # First verify if Agent exists
         agent_db = await agent_service.get_agent(db, agent_id=agent_id)
         if not agent_db:
-            raise HTTPException(status_code=404, detail="Agent不存在")
+            raise HTTPException(status_code=404, detail="Agent not found")
         
-        # 获取或创建与该Agent的唯一会话
+        # Get or create unique session with this Agent
         chat = await chat_service.get_or_create_chat_by_agent(
             db=db,
             user_id=current_user.id,
             agent_id=agent_id
         )
         
-        # 验证返回的chat中的agent_id是否与传入的一致
+        # Verify if the agent_id in returned chat matches the input
         if chat.agent_id != agent_id:
-            logger.error(f"Agent ID不匹配: 传入={agent_id}, 实际={chat.agent_id}")
-            raise HTTPException(status_code=500, detail=f"Agent ID不匹配")
+            logger.error(f"Agent ID mismatch: input={agent_id}, actual={chat.agent_id}")
+            raise HTTPException(status_code=500, detail=f"Agent ID mismatch")
         
-        # 获取或创建聊天设置，然后更新
-        # 首先确保设置存在
+        # Get or create chat settings, then update
+        # First ensure settings exist
         settings = await chat_service.get_or_create_chat_settings(
             db=db,
             chat_id=chat.id,
@@ -497,22 +497,22 @@ async def update_agent_chat_settings(
             agent_id=agent_id
         )
         
-        # 然后更新设置
+        # Then update settings
         settings = await chat_service.update_chat_settings(
             db=db,
             chat_id=chat.id,
             settings_update=settings_update
         )
         
-        logger.info(f"成功更新Agent聊天设置 - Agent ID: {agent_id}, Settings ID: {settings.id}")
+        logger.info(f"Successfully updated Agent chat settings - Agent ID: {agent_id}, Settings ID: {settings.id}")
         
         return settings
         
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"更新Agent聊天设置失败 - Agent ID: {agent_id}, Error: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"更新聊天设置失败: {str(e)}")
+        logger.error(f"Failed to update Agent chat settings - Agent ID: {agent_id}, Error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to update chat settings: {str(e)}")
 
 
 @router.get("/agents/{agent_id}/settings", response_model=schemas.ChatSettings)
@@ -523,25 +523,25 @@ async def get_agent_chat_settings(
     current_user: schemas.User = Depends(deps.get_current_active_user),
 ) -> Any:
     """
-    根据Agent ID获取聊天设置
-    如果聊天会话或设置不存在，则自动创建
+    Get chat settings by Agent ID
+    If chat session or settings don't exist, automatically create them
     """
     try:
-        logger.info(f"获取Agent聊天设置 - Agent ID: {agent_id}, User ID: {current_user.id}")
+        logger.info(f"Getting Agent chat settings - Agent ID: {agent_id}, User ID: {current_user.id}")
         
-        # 首先验证Agent是否存在
+        # First verify if Agent exists
         agent_db = await agent_service.get_agent(db, agent_id=agent_id)
         if not agent_db:
-            raise HTTPException(status_code=404, detail="Agent不存在")
+            raise HTTPException(status_code=404, detail="Agent not found")
         
-        # 获取或创建与该Agent的唯一会话
+        # Get or create unique session with this Agent
         chat = await chat_service.get_or_create_chat_by_agent(
             db=db,
             user_id=current_user.id,
             agent_id=agent_id
         )
         
-        # 获取或创建聊天设置
+        # Get or create chat settings
         settings = await chat_service.get_or_create_chat_settings(
             db=db,
             chat_id=chat.id,
@@ -549,15 +549,15 @@ async def get_agent_chat_settings(
             agent_id=agent_id
         )
         
-        logger.info(f"成功获取Agent聊天设置 - Agent ID: {agent_id}, Settings ID: {settings.id}")
+        logger.info(f"Successfully got Agent chat settings - Agent ID: {agent_id}, Settings ID: {settings.id}")
         
         return settings
         
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"获取Agent聊天设置失败 - Agent ID: {agent_id}, Error: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"获取聊天设置失败: {str(e)}")
+        logger.error(f"Failed to get Agent chat settings - Agent ID: {agent_id}, Error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to get chat settings: {str(e)}")
 
 
 async def generate_chat_stream(
@@ -569,16 +569,16 @@ async def generate_chat_stream(
     model_name: str
 ):
     """
-    生成流式聊天响应（异步版本）
+    Generate streaming chat response (async version)
     """
     try:
-        # 使用Agent的异步chat_stream方法
+        # Use Agent's async chat_stream method
         async for message_chunk, metadata in agent.chat_stream(
             user_id=user_id,
             session_id=session_id,
             messages=messages
         ):
-            # 检查消息块类型，只发送AI消息
+            # Check message chunk type, only send AI messages
             if hasattr(message_chunk, 'content') and message_chunk.content:
                 chunk_data = {
                     "id": f"chatcmpl-{uuid.uuid4().hex[:12]}",
@@ -598,7 +598,7 @@ async def generate_chat_stream(
                 }
                 yield f"data: {json.dumps(chunk_data, ensure_ascii=False)}\n\n"
         
-        # 发送结束标记
+        # Send end marker
         end_chunk = {
             "id": f"chatcmpl-{uuid.uuid4().hex[:12]}",
             "object": "chat.completion.chunk",
@@ -616,10 +616,10 @@ async def generate_chat_stream(
         yield "data: [DONE]\n\n"
         
     except Exception as e:
-        logger.error(f"流式聊天失败: {str(e)}")
+        logger.error(f"Streaming chat failed: {str(e)}")
         error_chunk = {
             "error": {
-                "message": f"聊天失败: {str(e)}",
+                "message": f"Chat failed: {str(e)}",
                 "type": "server_error"
             }
         }

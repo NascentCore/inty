@@ -14,14 +14,14 @@ logger = logging.getLogger(__name__)
 
 def generate_session_id(chat_id: str) -> str:
     """
-    根据chat_id生成一致的session_id
-    确保在创建chat和聊天时使用相同的session_id
+    Generate consistent session_id based on chat_id
+    Ensure the same session_id is used when creating chat and chatting
     """
     return str(uuid.uuid5(uuid.NAMESPACE_DNS, chat_id))
 
 async def get_chat(db: AsyncSession, chat_id: str) -> Optional[models.Chat]:
     """
-    通过ID获取聊天
+    Get chat by ID
     """
     try:
         result = await db.execute(
@@ -34,7 +34,7 @@ async def get_chat(db: AsyncSession, chat_id: str) -> Optional[models.Chat]:
         )
         chat = result.scalar_one_or_none()
         if chat:
-            # 获取最近消息和时间戳，使用统一的session_id生成规则
+            # Get recent message and timestamp, use unified session_id generation rule
             try:
                 session_id = generate_session_id(chat.id)
                 last_message_data = chat_history_service.get_last_message_with_timestamp(session_id)
@@ -46,32 +46,32 @@ async def get_chat(db: AsyncSession, chat_id: str) -> Optional[models.Chat]:
                     chat.last_message = None
                     chat.last_message_time = None
             except Exception as e:
-                logger.error(f"获取最近消息失败: {str(e)}")
+                logger.error(f"Failed to get recent message: {str(e)}")
                 chat.last_message = None
                 chat.last_message_time = None
-            # 设置agent名称和头像
+            # Set agent name and avatar
             chat.agent_name = chat.agent.name if chat.agent else None
             chat.agent_avatar = chat.agent.avatar if chat.agent else None
         return chat
     except SQLAlchemyError as e:
-        logger.error(f"数据库查询错误 - 获取聊天 {chat_id}: {str(e)}")
-        raise HTTPException(status_code=500, detail="数据库查询失败")
+        logger.error(f"Database query error - get chat {chat_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Database query failed")
     except Exception as e:
-        logger.error(f"未知错误 - 获取聊天 {chat_id}: {str(e)}")
-        raise HTTPException(status_code=500, detail="服务器内部错误")
+        logger.error(f"Unknown error - get chat {chat_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 async def get_chats(
     db: AsyncSession, user_id: str, skip: int = 0, limit: int = 100
 ) -> List[models.Chat]:
     """
-    获取用户的聊天列表，按最近消息时间降序排列
+    Get user's chat list, sorted by recent message time in descending order
     """
     try:
-        # 验证参数
+        # Validate parameters
         if skip < 0:
-            raise HTTPException(status_code=400, detail="skip参数不能为负数")
+            raise HTTPException(status_code=400, detail="Skip parameter cannot be negative")
         if limit <= 0 or limit > 1000:
-            raise HTTPException(status_code=400, detail="limit参数必须在1-1000之间")
+            raise HTTPException(status_code=400, detail="Limit parameter must be between 1-1000")
             
         result = await db.execute(
             select(models.Chat)
@@ -83,11 +83,11 @@ async def get_chats(
         )
         all_chats = result.scalars().all()
         
-        # 为每个chat获取最近消息和时间戳
+        # Get recent message and timestamp for each chat
         chats_with_message_time = []
         for chat in all_chats:
             try:
-                # 使用统一的session_id生成规则
+                # Use unified session_id generation rule
                 session_id = generate_session_id(chat.id)
                 last_message_data = chat_history_service.get_last_message_with_timestamp(session_id)
                 
@@ -99,7 +99,7 @@ async def get_chats(
                     chat.last_message_time = None
                     
             except Exception as e:
-                logger.error(f"获取最近消息失败: {str(e)}")
+                logger.error(f"Failed to get recent message: {str(e)}")
                 chat.last_message = None
                 chat.last_message_time = None
                 
@@ -107,41 +107,41 @@ async def get_chats(
             chat.agent_avatar = chat.agent.avatar if chat.agent else None
             chats_with_message_time.append(chat)
         
-        # 根据最近消息时间排序（没有消息的聊天放在最后，按创建时间排列）
+        # Sort by recent message time (chats without messages go last, sorted by creation time)
         chats_with_message_time.sort(
             key=lambda x: x.last_message_time if x.last_message_time else x.created_at,
             reverse=True
         )
         
-        # 应用分页
+        # Apply pagination
         return chats_with_message_time[skip:skip + limit]
     except HTTPException:
         raise
     except SQLAlchemyError as e:
-        logger.error(f"数据库查询错误 - 获取用户聊天列表: {str(e)}")
-        raise HTTPException(status_code=500, detail="数据库查询失败")
+        logger.error(f"Database query error - get user chat list: {str(e)}")
+        raise HTTPException(status_code=500, detail="Database query failed")
     except Exception as e:
-        logger.error(f"未知错误 - 获取用户聊天列表: {str(e)}")
-        raise HTTPException(status_code=500, detail="服务器内部错误")
+        logger.error(f"Unknown error - get user chat list: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 async def create_chat(
     db: AsyncSession, chat_in: schemas.ChatCreate, user_id: str
 ) -> models.Chat:
     """
-    创建新的聊天
+    Create new chat
     """
     try:
-        # 生成唯一ID
+        # Generate unique ID
         chat_id = str(uuid.uuid4())
         
-        # 首先获取Agent的开场白
+        # First get Agent's opening message
         agent_result = await db.execute(
             select(models.Agent)
             .where(models.Agent.id == chat_in.agent_id)
         )
         agent = agent_result.scalar_one_or_none()
         if not agent:
-            raise HTTPException(status_code=404, detail="Agent不存在")
+            raise HTTPException(status_code=404, detail="Agent not found")
         
         db_chat = models.Chat(
             id=chat_id,
@@ -153,16 +153,16 @@ async def create_chat(
         await db.commit()
         await db.refresh(db_chat)
         
-        # 添加Agent开场白到chat_history，使用统一的session_id生成规则
+        # Add Agent opening message to chat_history, use unified session_id generation rule
         if agent.opening:
             try:
                 session_id = generate_session_id(chat_id)
                 chat_history_service.add_agent_opening_message(session_id, agent.opening)
             except Exception as e:
-                logger.error(f"添加开场白失败: {str(e)}")
-                # 继续执行，不影响chat创建
+                logger.error(f"Failed to add opening message: {str(e)}")
+                # Continue execution, don't affect chat creation
         
-        # 重新查询以加载关系数据
+        # Re-query to load relational data
         result = await db.execute(
             select(models.Chat)
             .options(
@@ -173,7 +173,7 @@ async def create_chat(
         )
         chat = result.scalar_one()
         
-        # 获取最近消息和时间戳 (应该是刚添加的开场白) 和agent名称
+        # Get recent message and timestamp (should be the opening message just added) and agent name
         try:
             session_id = generate_session_id(chat.id)
             last_message_data = chat_history_service.get_last_message_with_timestamp(session_id)
@@ -185,7 +185,7 @@ async def create_chat(
                 chat.last_message = None
                 chat.last_message_time = None
         except Exception as e:
-            logger.error(f"获取最近消息失败: {str(e)}")
+            logger.error(f"Failed to get recent message: {str(e)}")
             chat.last_message = None
             chat.last_message_time = None
         chat.agent_name = chat.agent.name if chat.agent else None
@@ -195,21 +195,21 @@ async def create_chat(
         
     except IntegrityError as e:
         await db.rollback()
-        logger.error(f"数据完整性错误 - 创建聊天: {str(e)}")
+        logger.error(f"Data integrity error - create chat: {str(e)}")
         if "user_id" in str(e):
-            raise HTTPException(status_code=400, detail="无效的用户ID")
+            raise HTTPException(status_code=400, detail="Invalid user ID")
         elif "agent_id" in str(e):
-            raise HTTPException(status_code=400, detail="无效的Agent ID")
+            raise HTTPException(status_code=400, detail="Invalid Agent ID")
         else:
-            raise HTTPException(status_code=400, detail="数据完整性约束违反")
+            raise HTTPException(status_code=400, detail="Data integrity constraint violation")
     except SQLAlchemyError as e:
         await db.rollback()
-        logger.error(f"数据库错误 - 创建聊天: {str(e)}")
-        raise HTTPException(status_code=500, detail="数据库操作失败")
+        logger.error(f"Database error - create chat: {str(e)}")
+        raise HTTPException(status_code=500, detail="Database operation failed")
     except Exception as e:
         await db.rollback()
-        logger.error(f"未知错误 - 创建聊天: {str(e)}")
-        raise HTTPException(status_code=500, detail="服务器内部错误")
+        logger.error(f"Unknown error - create chat: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 async def update_chat(
     db: AsyncSession,

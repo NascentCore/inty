@@ -16,12 +16,12 @@ router = APIRouter()
 async def get_report_reasons(
     db: AsyncSession = Depends(get_async_db)
 ):
-    """举报原因列表"""
+    """Get report reasons list"""
     try:
         reasons = await report_service.list_report_reasons(db)
         return APIResponse.success(data=reasons)
     except Exception as e:
-        logger.error(f"获取举报原因失败: {str(e)}")
+        logger.error(f"Failed to get report reasons: {str(e)}")
         return APIResponse.error(message=str(e))
 
 @router.post("/", response_model=APIResponse)
@@ -30,12 +30,12 @@ async def create_report(
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(deps.get_current_active_user)
 ):
-    """提交举报"""
+    """Submit report"""
     try:
         report = await report_service.create_report(db, report_in, current_user.id)
         return APIResponse.success()
     except Exception as e:
-        logger.error(f"创建举报失败: {str(e)}")
+        logger.error(f"Failed to create report: {str(e)}")
         return APIResponse.error(message=str(e))
 
 @router.get("/", response_model=APIResponse[PaginationData[ReportOut]])
@@ -50,7 +50,7 @@ async def list_reports(
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(deps.get_current_active_user)
 ):
-    """举报记录查询（需管理员权限）"""
+    """Query report records (requires admin permission)"""
     if not current_user.is_superuser:
         return APIResponse.error(message="Unauthorized access")
     try:
@@ -76,5 +76,5 @@ async def list_reports(
         )
         return APIResponse.success(data=pagination)
     except Exception as e:
-        logger.error(f"举报查询失败: {str(e)}")
+        logger.error(f"Failed to query reports: {str(e)}")
         return APIResponse.error(message=str(e)) 

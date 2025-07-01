@@ -18,10 +18,10 @@ logger = logging.getLogger(__name__)
 
 async def get_agent(db: AsyncSession, agent_id: str, current_user_id: Optional[str] = None) -> Optional[models.Agent]:
     """
-    通过ID获取AI角色
+    Get AI agent by ID
     """
     try:
-        # 获取agent的基本信息和关注者数量
+        # Get agent's basic information and follower count
         query = (
             select(
                 models.Agent,
@@ -47,10 +47,10 @@ async def get_agent(db: AsyncSession, agent_id: str, current_user_id: Optional[s
         agent = row[0]
         follower_count = row[1] or 0
         
-        # 设置follower_count属性
+        # Set follower_count attribute
         agent.follower_count = follower_count
         
-        # 检查当前用户是否关注了这个agent
+        # Check if current user follows this agent
         if current_user_id:
             follow_query = select(agent_followers).where(
                 and_(
@@ -63,7 +63,7 @@ async def get_agent(db: AsyncSession, agent_id: str, current_user_id: Optional[s
         else:
             agent.is_followed = False
             
-        # 获取创作者的统计信息
+        # Get creator's statistics
         if agent.creator_id and agent.creator:
             creator_stats = await get_creator_agent_stats(db, agent.creator_id)
             agent.creator.public_agents_count = creator_stats.public_agents_count
@@ -71,22 +71,22 @@ async def get_agent(db: AsyncSession, agent_id: str, current_user_id: Optional[s
             
         return agent
     except SQLAlchemyError as e:
-        logger.error(f"数据库查询错误 - 获取角色 {agent_id}: {str(e)}")
-        raise HTTPException(status_code=500, detail="数据库查询失败")
+        logger.error(f"Database query error - get agent {agent_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Database query failed")
     except Exception as e:
-        logger.error(f"未知错误 - 获取角色 {agent_id}: {str(e)}")
-        raise HTTPException(status_code=500, detail="服务器内部错误")
+        logger.error(f"Unknown error - get agent {agent_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 async def get_user_agents(db: AsyncSession, user_id: str, skip: int = 0, limit: int = 100, current_user_id: Optional[str] = None) -> List[models.Agent]:
     """
-    获取用户创建的AI角色列表
+    Get user's created AI agents list
     """
     try:
-        # 验证参数
+        # Validate parameters
         if skip < 0:
-            raise HTTPException(status_code=400, detail="skip参数不能为负数")
+            raise HTTPException(status_code=400, detail="Skip parameter cannot be negative")
         if limit <= 0 or limit > 1000:
-            raise HTTPException(status_code=400, detail="limit参数必须在1-1000之间")
+            raise HTTPException(status_code=400, detail="Limit parameter must be between 1-1000")
             
         # 获取agents和关注者数量
         query = (
@@ -140,22 +140,22 @@ async def get_user_agents(db: AsyncSession, user_id: str, skip: int = 0, limit: 
     except HTTPException:
         raise
     except SQLAlchemyError as e:
-        logger.error(f"数据库查询错误 - 获取用户角色列表: {str(e)}")
-        raise HTTPException(status_code=500, detail="数据库查询失败")
+        logger.error(f"Database query error - get user agents list: {str(e)}")
+        raise HTTPException(status_code=500, detail="Database query failed")
     except Exception as e:
-        logger.error(f"未知错误 - 获取用户角色列表: {str(e)}")
-        raise HTTPException(status_code=500, detail="服务器内部错误")
+        logger.error(f"Unknown error - get user agents list: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 async def get_recommended_agents(db: AsyncSession, skip: int = 0, limit: int = 100, current_user_id: Optional[str] = None) -> List[models.Agent]:
     """
-    获取推荐的AI角色列表（公开且已审核的角色，按创建时间倒序）
+    Get recommended AI agents list (public and approved agents, ordered by creation time desc)
     """
     try:
-        # 验证参数
+        # Validate parameters
         if skip < 0:
-            raise HTTPException(status_code=400, detail="skip参数不能为负数")
+            raise HTTPException(status_code=400, detail="Skip parameter cannot be negative")
         if limit <= 0 or limit > 1000:
-            raise HTTPException(status_code=400, detail="limit参数必须在1-1000之间")
+            raise HTTPException(status_code=400, detail="Limit parameter must be between 1-1000")
             
         # 获取agents和关注者数量
         query = (
@@ -210,11 +210,11 @@ async def get_recommended_agents(db: AsyncSession, skip: int = 0, limit: int = 1
     except HTTPException:
         raise
     except SQLAlchemyError as e:
-        logger.error(f"数据库查询错误 - 获取推荐角色列表: {str(e)}")
-        raise HTTPException(status_code=500, detail="数据库查询失败")
+        logger.error(f"Database query error - get recommended agents list: {str(e)}")
+        raise HTTPException(status_code=500, detail="Database query failed")
     except Exception as e:
-        logger.error(f"未知错误 - 获取推荐角色列表: {str(e)}")
-        raise HTTPException(status_code=500, detail="服务器内部错误")
+        logger.error(f"Unknown error - get recommended agents list: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 async def get_recommended_agents_paginated(db: AsyncSession, page: int = 1, page_size: int = 10, current_user_id: Optional[str] = None) -> schemas.PaginationData[schemas.Agent]:
     """
@@ -223,9 +223,9 @@ async def get_recommended_agents_paginated(db: AsyncSession, page: int = 1, page
     try:
         # 验证参数
         if page <= 0:
-            raise HTTPException(status_code=400, detail="page参数必须大于0")
+            raise HTTPException(status_code=400, detail="Page parameter must be greater than 0")
         if page_size <= 0 or page_size > 100:
-            raise HTTPException(status_code=400, detail="page_size参数必须在1-100之间")
+            raise HTTPException(status_code=400, detail="Page size parameter must be between 1-100")
             
         # 计算偏移量
         skip = (page - 1) * page_size
@@ -322,7 +322,7 @@ async def create_agent(db: AsyncSession, agent_in: schemas.AgentCreate, user_id:
     try:
         # 验证必填字段
         if not agent_in.name or not agent_in.name.strip():
-            raise HTTPException(status_code=400, detail="角色名称不能为空")
+            raise HTTPException(status_code=400, detail="Agent name cannot be empty")
         
         # 生成唯一ID
         agent_id = str(uuid.uuid4())
@@ -386,11 +386,11 @@ async def update_agent(db: AsyncSession, db_agent: models.Agent, agent_in: schem
         # 验证更新数据
         update_data = agent_in.dict(exclude_unset=True)
         if not update_data:
-            raise HTTPException(status_code=400, detail="没有提供要更新的数据")
+            raise HTTPException(status_code=400, detail="No data provided for update")
             
         # 验证名称不为空（如果提供了名称）
         if 'name' in update_data and (not update_data['name'] or not update_data['name'].strip()):
-            raise HTTPException(status_code=400, detail="角色名称不能为空")
+            raise HTTPException(status_code=400, detail="Agent name cannot be empty")
         
         for field, value in update_data.items():
             setattr(db_agent, field, value)
@@ -627,7 +627,7 @@ async def follow_agent(db: AsyncSession, agent_id: str, user_id: str) -> bool:
         # 检查agent是否存在
         agent = await get_agent(db, agent_id)
         if not agent:
-            raise HTTPException(status_code=404, detail="AI角色不存在")
+            raise HTTPException(status_code=404, detail="AI agent not found")
         
         # 检查是否已经关注
         follow_query = select(agent_followers).where(
@@ -681,7 +681,7 @@ async def unfollow_agent(db: AsyncSession, agent_id: str, user_id: str) -> bool:
         )
         result = await db.execute(follow_query)
         if not result.first():
-            raise HTTPException(status_code=400, detail="尚未关注这个AI角色")
+            raise HTTPException(status_code=400, detail="Not following this AI agent yet")
         
         # 删除关注记录
         delete_query = agent_followers.delete().where(
@@ -820,7 +820,7 @@ async def search_agents(db: AsyncSession, keyword: str, page: int = 1, page_size
         if page_size <= 0 or page_size > 100:
             raise HTTPException(status_code=400, detail="page_size参数必须在1-100之间")
         if not keyword or not keyword.strip():
-            raise HTTPException(status_code=400, detail="搜索关键字不能为空")
+            raise HTTPException(status_code=400, detail="Search keyword cannot be empty")
             
         # 计算偏移量
         skip = (page - 1) * page_size

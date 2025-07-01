@@ -16,7 +16,7 @@ def list_resources(
     current_user: schemas.User = Depends(deps.get_current_active_user),
 ) -> Any:
     """
-    获取资源列表
+    Get resources list
     """
     resources = resource_service.get_resources(db, skip=skip, limit=limit)
     return resources
@@ -29,7 +29,7 @@ def create_resource(
     current_user: schemas.User = Depends(deps.get_current_active_user),
 ) -> Any:
     """
-    创建新的资源
+    Create new resource
     """
     resource = resource_service.create_resource(db, resource_in=resource_in, user_id=current_user.id)
     return resource
@@ -42,7 +42,7 @@ def get_resource(
     current_user: schemas.User = Depends(deps.get_current_active_user),
 ) -> Any:
     """
-    通过ID获取资源
+    Get resource by ID
     """
     resource = resource_service.get_resource(db, resource_id=resource_id)
     if not resource:
@@ -58,7 +58,7 @@ def update_resource(
     current_user: schemas.User = Depends(deps.get_current_active_user),
 ) -> Any:
     """
-    更新资源
+    Update resource
     """
     resource = resource_service.get_resource(db, resource_id=resource_id)
     if not resource:
@@ -74,7 +74,7 @@ def delete_resource(
     current_user: schemas.User = Depends(deps.get_current_active_user),
 ) -> Any:
     """
-    删除资源
+    Delete resource
     """
     resource = resource_service.get_resource(db, resource_id=resource_id)
     if not resource:

@@ -119,46 +119,46 @@ async def send_notification(
     request: NotificationSendRequest
 ) -> None:
     """
-    发送通知
+    Send notification
     """
     try:
-        # 1. 获取模板
+        # 1. Get template
         template = await db.get(NotificationTemplate, request.template_id)
         if not template:
-            raise ValueError(f"通知模板不存在: {request.template_id}")
+            raise ValueError(f"Notification template does not exist: {request.template_id}")
         if not template.is_active:
-            raise ValueError(f"通知模板已禁用: {request.template_id}")
+            raise ValueError(f"Notification template is disabled: {request.template_id}")
 
-        # 2. 获取接收用户列表
+        # 2. Get recipient user list
         if request.all_users:
-            # 全员发送，这里需要根据实际情况查询所有用户
+            # Send to all users, need to query all users based on actual situation
             stmt = select(User.id).where(User.is_active == True)
             result = await db.execute(stmt)
             user_ids = [row[0] for row in result.all()]
         else:
             if not request.user_ids:
-                raise ValueError("接收用户列表为空")
-            # 指定用户发送
+                raise ValueError("Recipient user list is empty")
+            # Send to specified users
             user_ids = request.user_ids
 
-        # 3. 渲染模板内容
+        # 3. Render template content
         try:
-            # 渲染标题
+            # Render title
             title_template = Template(template.title)
             rendered_title = title_template.render(**request.params)
             
-            # 渲染内容
+            # Render content
             content_template = Template(template.content)
             rendered_content = content_template.render(**request.params)
             
-            # 渲染图片URL
+            # Render image URLs
             rendered_image_urls = []
             if template.image_urls:
                 for image_url in template.image_urls:
                     rendered_image_url = Template(image_url).render(**request.params)
                     rendered_image_urls.append(rendered_image_url)
             
-            # 渲染链接URL
+            # Render link URLs
             rendered_link_urls = []
             if template.link_urls:
                 for link_url in template.link_urls:
@@ -166,41 +166,41 @@ async def send_notification(
                     rendered_link_urls.append(rendered_link_url)
                     
         except Exception as e:
-            logger.error(f"模板渲染失败: {str(e)}")
-            raise ValueError(f"模板渲染失败: {str(e)}")
+            logger.error(f"Template rendering failed: {str(e)}")
+            raise ValueError(f"Template rendering failed: {str(e)}")
 
-        # 4. 生成通知
+        # 4. Generate notifications
         notifications = []
 
         for user_id in user_ids:
             try:
-                # 生成通知ID
+                # Generate notification ID
                 notification_id = uid("notify")
                 
-                # 创建通知记录
+                # Create notification record
                 notification = UserNotification(
                     id=notification_id,
                     user_id=user_id,
                     template_id=template.id,
-                    type=int(template.type),  # 确保 type 是整数类型
+                    type=int(template.type),  # Ensure type is integer
                     dynamic_params=request.params,
                     title=rendered_title,
                     content=rendered_content,
                     image_urls=rendered_image_urls,
                     link_urls=rendered_link_urls,
-                    is_read=True, # 默认已读
+                    is_read=True, # Default read
                     read_at=datetime.now()
                 )
                 notifications.append(notification)
             except Exception as e:
-                logger.error(f"为用户 {user_id} 创建通知失败: {str(e)}")
+                logger.error(f"Failed to create notification for user {user_id}: {str(e)}")
 
-        # 5. 批量保存通知
+        # 5. Batch save notifications
         if notifications:
             db.add_all(notifications)
             await db.commit()
 
-        # 6. 异步发送FCM消息（后台任务）
+        # 6. Send FCM messages asynchronously (background task)
         background_tasks.add_task(
             send_fcm_multicast,
             db,
@@ -212,7 +212,7 @@ async def send_notification(
         )
 
     except Exception as e:
-        logger.error(f"发送通知失败: {str(e)}")
+        logger.error(f"Failed to send notification: {str(e)}")
         raise 
 
 INVALID_EXCEPTIONS = (
@@ -229,30 +229,30 @@ async def send_fcm_multicast(
     data: Optional[dict] = None,
     image_url: Optional[str] = None
 ) -> bool:
-    """发送FCM多播消息推送
+    """Send FCM multicast message push
     
-    适用于多用户同一条通知
+    Suitable for same notification to multiple users
     
     Args:
-        db: 数据库会话
-        user_ids: 用户ID列表
-        title: 通知标题
-        body: 通知内容
-        data: 额外数据（可选）
-        image_url: 图片URL（可选）
+        db: Database session
+        user_ids: List of user IDs
+        title: Notification title
+        body: Notification content
+        data: Additional data (optional)
+        image_url: Image URL (optional)
         
     Returns:
-        bool: 是否发送成功
+        bool: Whether sending was successful
     """
     try:
-        # 1. 获取多个用户的所有设备token
+        # 1. Get all device tokens for multiple users
         tokens = await user_service.get_users_device_tokens(db, user_ids)
         
         if not tokens:
-            logger.warning(f"用户 {user_ids} 没有注册任何设备token")
+            logger.warning(f"Users {user_ids} have no registered device tokens")
             return False
         
-        # 2. 发送消息
+        # 2. Send messages
         success_count = 0
         fail_count = 0
         invalid_tokens = []
@@ -274,33 +274,33 @@ async def send_fcm_multicast(
                 invalid_tokens.append(token)
                 fail_count += 1
             except Exception as e:
-                logger.error(f"发送到设备 {token} 失败: {str(e)}")
+                logger.error(f"Failed to send to device {token}: {str(e)}")
                 fail_count += 1
                 
-        # 3. 处理结果
+        # 3. Process results
         if fail_count > 0:
-            logger.error(f"FCM消息发送失败: {fail_count} 个设备失败")
+            logger.error(f"FCM message sending failed: {fail_count} devices failed")
             
 
-        # 4. 清理失效的token
+        # 4. Clean up invalid tokens
         if invalid_tokens:
             try:
                 await db.execute(
                     delete(DeviceToken).where(DeviceToken.token.in_(invalid_tokens))
                 )
                 await db.commit()
-                logger.info(f"已清理 {len(invalid_tokens)} 个失效的token")
+                logger.info(f"Cleaned up {len(invalid_tokens)} invalid tokens")
             except Exception as e:
-                logger.error(f"清理失效token失败: {str(e)}")
-                logger.error(f"错误堆栈: {traceback.format_exc()}")
+                logger.error(f"Failed to clean up invalid tokens: {str(e)}")
+                logger.error(f"Error stack: {traceback.format_exc()}")
             
             return False
             
-        logger.info(f"FCM消息发送成功: {success_count} 个设备")
+        logger.info(f"FCM message sent successfully: {success_count} devices")
         return True
         
     except Exception as e:
-        logger.error(f"发送FCM消息失败: {str(e)}")
-        logger.error(f"错误堆栈: {traceback.format_exc()}")
+        logger.error(f"Failed to send FCM message: {str(e)}")
+        logger.error(f"Error stack: {traceback.format_exc()}")
         return False 
 

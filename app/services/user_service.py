@@ -16,7 +16,7 @@ from app.core.config import settings
 logger = logging.getLogger(__name__)
 
 def register_user(db: Session, user_in) -> User:
-    """注册用户（手机号等）"""
+    """Register user (phone number etc.)"""
     try:
         user_id = str(uuid.uuid4())
         user = User(
@@ -33,12 +33,12 @@ def register_user(db: Session, user_in) -> User:
         db.refresh(user)
         return user
     except Exception as e:
-        logger.error(f"注册用户失败: {str(e)}")
-        logger.error(f"错误堆栈: {traceback.format_exc()}")
+        logger.error(f"Failed to register user: {str(e)}")
+        logger.error(f"Error stack: {traceback.format_exc()}")
         raise e
 
 def get_user_by_phone(db: Session, phone: str) -> Optional[User]:
-    """通过手机号获取用户"""
+    """Get user by phone number"""
     return db.query(User).filter(User.phone == phone).first()
 
 async def create_guest_user(
@@ -46,7 +46,7 @@ async def create_guest_user(
     device_id: Optional[str] = None,
     system_language: Optional[str] = None
 ) -> User:
-    """创建游客用户"""
+    """Create guest user"""
     try:
         if device_id:
             stmt = select(User).where(
@@ -71,8 +71,8 @@ async def create_guest_user(
         await db.refresh(user)
         return user
     except Exception as e:
-        logger.error(f"创建游客用户失败: {str(e)}")
-        logger.error(f"错误堆栈: {traceback.format_exc()}")
+        logger.error(f"Failed to create guest user: {str(e)}")
+        logger.error(f"Error stack: {traceback.format_exc()}")
         raise e 
 
 async def update_user(
@@ -80,14 +80,14 @@ async def update_user(
     user_id: str,
     user_in: UserUpdate
 ) -> User:
-    """更新用户信息"""
+    """Update user information"""
     try:
         stmt = select(User).where(User.id == user_id)
         result = await db.execute(stmt)
         user = result.scalars().first()
         
         if not user:
-            raise ValueError(f"用户不存在: {user_id}")
+            raise ValueError(f"User does not exist: {user_id}")
             
         update_data = user_in.dict(exclude_unset=True)
         for field, value in update_data.items():
@@ -97,8 +97,8 @@ async def update_user(
         await db.refresh(user)
         return user
     except Exception as e:
-        logger.error(f"更新用户信息失败: {str(e)}")
-        logger.error(f"错误堆栈: {traceback.format_exc()}")
+        logger.error(f"Failed to update user information: {str(e)}")
+        logger.error(f"Error stack: {traceback.format_exc()}")
         raise e 
 
 def generate_avatar_path(user_id: str, filename: str) -> str:
@@ -117,7 +117,7 @@ def get_path_from_gcs_url(url: str) -> str:
     if len(parts) < 2:
         return ""
     path = parts[1]
-    # 去掉bucket名前缀
+    # Remove bucket name prefix
     bucket = settings.gcs.bucket
     if path.startswith(bucket + "/"):
         path = path[len(bucket) + 1 :]
@@ -129,19 +129,19 @@ async def register_device_token(
     user_id: str
 ) -> DeviceToken:
     """
-    注册或更新设备token
+    Register or update device token
     """
     try:
-        # 查找是否已存在该token
+        # Check if token already exists
         stmt = select(DeviceToken).where(DeviceToken.token == token)
         result = await db.execute(stmt)
         device_token = result.scalars().first()
         
         if device_token:
-            # 如果存在，更新user_id
+            # If exists, update user_id
             device_token.user_id = user_id
         else:
-            # 如果不存在，创建新记录
+            # If not exists, create new record
             device_token = DeviceToken(
                 token=token,
                 user_id=user_id
@@ -159,14 +159,14 @@ async def get_users_device_tokens(
     db: AsyncSession,
     user_ids: list[str]
 ) -> list[str]:
-    """获取多个用户的所有设备token
+    """Get all device tokens for multiple users
     
     Args:
-        db: 数据库会话
-        user_ids: 用户ID列表
+        db: Database session
+        user_ids: List of user IDs
         
     Returns:
-        list[str]: 设备token列表，如果没有记录则返回空列表
+        list[str]: List of device tokens, returns empty list if no records found
     """
     try:
         stmt = select(DeviceToken.token).where(DeviceToken.user_id.in_(user_ids))
@@ -174,6 +174,6 @@ async def get_users_device_tokens(
         tokens = result.scalars().all()
         return tokens
     except Exception as e:
-        logger.error(f"获取用户设备token失败: {str(e)}")
-        logger.error(f"错误堆栈: {traceback.format_exc()}")
+        logger.error(f"Failed to get user device tokens: {str(e)}")
+        logger.error(f"Error stack: {traceback.format_exc()}")
         raise e
