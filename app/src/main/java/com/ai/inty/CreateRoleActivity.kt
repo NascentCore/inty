@@ -8,10 +8,16 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -22,6 +28,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -128,25 +139,57 @@ fun CreateRolePage(
     var visibility by remember { mutableStateOf(editAgent?.visibility ?: "PRIVATE") }
     var isLoading by remember { mutableStateOf(false) }
     var avatarUrl by remember { mutableStateOf<String?>(editAgent?.avatar?.takeIf { it.isNotBlank() }) }
+    var avatarUrls by remember { mutableStateOf<List<String>>(emptyList()) }
+    var selectedImageIndex by remember { mutableStateOf(0) }
+    var isGeneratingAvatar by remember { mutableStateOf(false) }
     
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     
     // 检查是否有生成的头像URL - 使用DisposableEffect来监听生命周期
     DisposableEffect(Unit) {
-        val checkAvatarUrl = {
-            EasyLog.log("Checking for generated avatar URL...")
-            val generatedUrl = AvatarManager.getAndClearGeneratedAvatarUrl()
-            if (generatedUrl != null && generatedUrl.isNotBlank()) {
-                avatarUrl = generatedUrl
-                EasyLog.log("Retrieved generated avatar URL: $generatedUrl")
+        val checkAvatarStatus = {
+            EasyLog.log("Initial avatar generation status check...")
+            
+            // Check if generation is in progress
+            val generatingStatus = AvatarManager.isGenerating()
+            isGeneratingAvatar = generatingStatus
+            EasyLog.log("Generation status: $generatingStatus")
+            
+            // Check for multiple generated URLs
+            val currentUrls = AvatarManager.getCurrentAvatarUrls()
+            if (currentUrls.isNotEmpty()) {
+                avatarUrls = currentUrls
+                selectedImageIndex = AvatarManager.getSelectedImageIndex()
+                avatarUrl = null // Clear single URL when we have multiple
+                EasyLog.log("Retrieved generated avatar URLs: $currentUrls")
             } else {
-                EasyLog.log("No generated avatar URL found")
+                // Check for single generated URL
+                val generatedUrl = AvatarManager.getCurrentAvatarUrl()
+                if (generatedUrl != null && generatedUrl.isNotBlank()) {
+                    avatarUrl = generatedUrl
+                    avatarUrls = emptyList()
+                    EasyLog.log("Retrieved generated avatar URL: $generatedUrl")
+                }
+            }
+            
+            // Check for generation errors
+            val error = AvatarManager.getGenerationError()
+            if (error != null) {
+                EasyLog.log("Generation error found: $error")
+                Toast.makeText(context, error, Toast.LENGTH_LONG).show()
+                isGeneratingAvatar = false
+            }
+            
+            // Show current generation prompt if generating
+            if (generatingStatus) {
+                val prompt = AvatarManager.getGenerationPrompt()
+                EasyLog.log("Currently generating with prompt: '$prompt'")
             }
         }
         
         // 初始检查
-        checkAvatarUrl()
+        checkAvatarStatus()
         
         onDispose { }
     }
@@ -155,11 +198,33 @@ fun CreateRolePage(
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
-                EasyLog.log("Activity resumed - checking for new avatar URL")
-                val currentUrl = AvatarManager.getCurrentAvatarUrl()
-                if (currentUrl != null && currentUrl != avatarUrl) {
-                    EasyLog.log("Detected new avatar URL on resume: $currentUrl")
-                    avatarUrl = AvatarManager.getAndClearGeneratedAvatarUrl()
+                EasyLog.log("Activity resumed - checking for new avatar status")
+                
+                // Check generation status
+                isGeneratingAvatar = AvatarManager.isGenerating()
+                
+                // Check for multiple URLs
+                val currentUrls = AvatarManager.getCurrentAvatarUrls()
+                if (currentUrls.isNotEmpty() && currentUrls != avatarUrls) {
+                    EasyLog.log("Detected new avatar URLs on resume: $currentUrls")
+                    avatarUrls = currentUrls
+                    selectedImageIndex = AvatarManager.getSelectedImageIndex()
+                    avatarUrl = null
+                } else {
+                    // Check for single URL
+                    val currentUrl = AvatarManager.getCurrentAvatarUrl()
+                    if (currentUrl != null && currentUrl != avatarUrl) {
+                        EasyLog.log("Detected new avatar URL on resume: $currentUrl")
+                        avatarUrl = currentUrl
+                        avatarUrls = emptyList()
+                    }
+                }
+                
+                // Check for errors
+                val error = AvatarManager.getGenerationError()
+                if (error != null) {
+                    Toast.makeText(context, error, Toast.LENGTH_LONG).show()
+                    isGeneratingAvatar = false
                 }
             }
         }
@@ -171,15 +236,45 @@ fun CreateRolePage(
         }
     }
     
-    // 添加LaunchedEffect来监听activity的resume状态，以便在从AvatarGenerateActivity返回时检查
+    // 添加LaunchedEffect来监听avatar生成状态
     LaunchedEffect(Unit) {
-        // 定期检查是否有新的头像URL (作为备用机制)
+        // 定期检查生成状态 (作为备用机制)
         while (true) {
-            kotlinx.coroutines.delay(1000) // 每1秒检查一次
-            val currentUrl = AvatarManager.getCurrentAvatarUrl()
-            if (currentUrl != null && currentUrl != avatarUrl) {
-                EasyLog.log("Detected new avatar URL via polling: $currentUrl")
-                avatarUrl = AvatarManager.getAndClearGeneratedAvatarUrl()
+            kotlinx.coroutines.delay(2000) // 每2秒检查一次
+            
+            val currentGenerationStatus = AvatarManager.isGenerating()
+            if (currentGenerationStatus != isGeneratingAvatar) {
+                EasyLog.log("Generation status changed: $isGeneratingAvatar -> $currentGenerationStatus")
+                isGeneratingAvatar = currentGenerationStatus
+            }
+            
+            // 只在状态发生变化时记录，减少日志噪音
+            val currentUrls = AvatarManager.getCurrentAvatarUrls()
+            if (currentUrls.isNotEmpty() && currentUrls != avatarUrls) {
+                EasyLog.log("Detected new avatar URLs via polling: $currentUrls")
+                avatarUrls = currentUrls
+                selectedImageIndex = AvatarManager.getSelectedImageIndex()
+                avatarUrl = null
+                EasyLog.log("Updated UI with ${currentUrls.size} generated avatars")
+            } else {
+                val currentUrl = AvatarManager.getCurrentAvatarUrl()
+                if (currentUrl != null && currentUrl != avatarUrl) {
+                    EasyLog.log("Detected new avatar URL via polling: $currentUrl")
+                    avatarUrl = currentUrl
+                    avatarUrls = emptyList()
+                }
+            }
+            
+            val error = AvatarManager.getGenerationError()
+            if (error != null) {
+                EasyLog.log("Generation error detected via polling: $error")
+                Toast.makeText(context, error, Toast.LENGTH_LONG).show()
+                isGeneratingAvatar = false
+            }
+            
+            // 每10秒输出一次当前状态（减少日志频率）
+            if (System.currentTimeMillis() % 10000 < 2000) {
+                EasyLog.log("Polling status - Generating: $isGeneratingAvatar, URLs: ${avatarUrls.size}, Single URL: ${avatarUrl != null}")
             }
         }
     }
@@ -220,16 +315,28 @@ fun CreateRolePage(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp)
+                .padding(horizontal = 20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Spacer(modifier = Modifier.height(24.dp))
             
             // Avatar Upload Section
             AvatarUploadSection(
                 avatarUrl = avatarUrl,
+                avatarUrls = avatarUrls,
+                selectedIndex = selectedImageIndex,
+                isGenerating = isGeneratingAvatar,
                 onGenerateClick = {
                     onAvatarGenerateClick()
                     // 当点击生成头像时，不清除当前URL，让用户返回时检查新的URL
+                },
+                onImageSelected = { index ->
+                    selectedImageIndex = index
+                    AvatarManager.setSelectedImageIndex(index)
+                },
+                onRegenerate = { prompt ->
+                    // Navigate to avatar generation page with existing prompt
+                    onAvatarGenerateClick()
                 }
             )
             
@@ -310,27 +417,19 @@ fun CreateRolePage(
                         return@CreateButton
                     }
                     
-                    // Log avatar URL status
-                    EasyLog.log("Create button clicked - Avatar URL: $avatarUrl")
-                    if (avatarUrl == null) {
-                        EasyLog.log("Warning: Avatar URL is null when creating agent", EasyLog.WARN)
-                        // Check if there's an avatar URL in AvatarManager that wasn't picked up
-                        val currentAvatarUrl = AvatarManager.getCurrentAvatarUrl()
-                        if (currentAvatarUrl != null) {
-                            EasyLog.log("Found avatar URL in AvatarManager: $currentAvatarUrl")
-                            avatarUrl = AvatarManager.getAndClearGeneratedAvatarUrl()
-                        }
-                    }
+                    // Get the selected avatar URL
+                    val selectedAvatarUrl = AvatarManager.getSelectedAvatarUrl() ?: avatarUrl
+                    EasyLog.log("Create button clicked - Selected Avatar URL: $selectedAvatarUrl")
                     
                     isLoading = true
                     
                     try {
                         // Create API request
-                        EasyLog.log("${if (isEditMode) "Updating" else "Creating"} agent with avatar URL: $avatarUrl")
+                        EasyLog.log("${if (isEditMode) "Updating" else "Creating"} agent with avatar URL: $selectedAvatarUrl")
                         val request = CreateAgentRequest(
                             name = name,
                             gender = gender,
-                            avatar = avatarUrl,
+                            avatar = selectedAvatarUrl,
                             settings = mapOf("description" to settings),
                             intro = intro,
                             opening = opening,
@@ -389,58 +488,143 @@ fun CreateRolePage(
 @Composable
 fun AvatarUploadSection(
     avatarUrl: String?,
-    onGenerateClick: () -> Unit
+    avatarUrls: List<String> = emptyList(),
+    selectedIndex: Int = 0,
+    isGenerating: Boolean = false,
+    onGenerateClick: () -> Unit,
+    onImageSelected: (Int) -> Unit = {},
+    onRegenerate: (String) -> Unit = {}
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Box(
             modifier = Modifier
-                .size(120.dp)
-                .border(
-                    width = 2.dp,
-                    color = Color(0xFFE91E63),
-                    shape = RoundedCornerShape(12.dp)
-                )
+                .size(200.dp)
                 .background(
                     color = Color(0x1A78599A),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(16.dp)
                 )
                 .noRippleClickable { onGenerateClick() },
             contentAlignment = Alignment.Center
         ) {
-            if (avatarUrl != null) {
-                EasyLog.log("AvatarUploadSection: Displaying avatar with URL: $avatarUrl")
-                AsyncImage(
-                    model = avatarUrl,
-                    contentDescription = "Generated Avatar",
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(4.dp),
-                    contentScale = ContentScale.Crop,
-                    onSuccess = { 
-                        EasyLog.log("AvatarUploadSection: Avatar image loaded successfully: $avatarUrl") 
-                    },
-                    onError = { 
-                        EasyLog.log("AvatarUploadSection: Failed to load avatar image: $avatarUrl", EasyLog.ERROR) 
-                    }
+            // 虚线边框
+            Canvas(
+                modifier = Modifier.fillMaxSize()
+            ) {
+                val pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)
+                val strokeWidth = 4.dp.toPx()
+                val cornerRadius = 16.dp.toPx()
+                
+                drawRoundRect(
+                    color = androidx.compose.ui.graphics.Color(0xFFE91E63),
+                    style = Stroke(width = strokeWidth, pathEffect = pathEffect),
+                    cornerRadius = CornerRadius(cornerRadius)
                 )
-            } else {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Image(
-                        painter = painterResource(R.drawable.btn_add),
-                        contentDescription = null,
-                        modifier = Modifier.size(32.dp)
+            }
+            when {
+                isGenerating -> {
+                    com.ai.inty.ThreeDotLoadingAnimation()
+                }
+                avatarUrls.isNotEmpty() -> {
+                    val displayUrl = avatarUrls.getOrNull(selectedIndex) ?: avatarUrls.first()
+                    EasyLog.log("AvatarUploadSection: Displaying selected avatar with URL: $displayUrl")
+                    AsyncImage(
+                        model = displayUrl,
+                        contentDescription = "Selected Avatar",
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(4.dp),
+                        contentScale = ContentScale.Crop,
+                        onSuccess = { 
+                            EasyLog.log("AvatarUploadSection: Selected avatar image loaded successfully: $displayUrl") 
+                        },
+                        onError = { 
+                            EasyLog.log("AvatarUploadSection: Failed to load selected avatar image: $displayUrl", EasyLog.ERROR) 
+                        }
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "Generate\nAvatar",
-                        fontSize = 12.sp,
-                        color = Color.White.copy(0.7f),
-                        textAlign = TextAlign.Center
+                }
+                avatarUrl != null -> {
+                    EasyLog.log("AvatarUploadSection: Displaying avatar with URL: $avatarUrl")
+                    AsyncImage(
+                        model = avatarUrl,
+                        contentDescription = "Generated Avatar",
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(4.dp),
+                        contentScale = ContentScale.Crop,
+                        onSuccess = { 
+                            EasyLog.log("AvatarUploadSection: Avatar image loaded successfully: $avatarUrl") 
+                        },
+                        onError = { 
+                            EasyLog.log("AvatarUploadSection: Failed to load avatar image: $avatarUrl", EasyLog.ERROR) 
+                        }
                     )
+                }
+                else -> {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Image(
+                            painter = painterResource(R.drawable.btn_add),
+                            contentDescription = null,
+                            modifier = Modifier.size(48.dp)
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            text = "Generate\nAvatar",
+                            fontSize = 14.sp,
+                            color = Color.White.copy(0.7f),
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
+            }
+        }
+        
+        // Show grid of multiple avatars below the main preview
+        if (avatarUrls.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            // Regen button
+            com.ai.inty.RegenButton(
+                onClick = { onRegenerate(AvatarManager.getGenerationPrompt()) },
+                enabled = !isGenerating
+            )
+            
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            // 4张图片的网格布局
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                avatarUrls.take(4).forEachIndexed { index, imageUrl ->
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .aspectRatio(1f)
+                            .background(
+                                color = Color(0x1A78599A),
+                                shape = RoundedCornerShape(8.dp)
+                            )
+                            .border(
+                                width = if (index == selectedIndex) 3.dp else 1.dp,
+                                color = if (index == selectedIndex) Color(0xFFE91E63) else Color.Transparent,
+                                shape = RoundedCornerShape(8.dp)
+                            )
+                            .noRippleClickable { onImageSelected(index) },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        AsyncImage(
+                            model = imageUrl,
+                            contentDescription = "Generated Avatar $index",
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(4.dp),
+                            contentScale = ContentScale.Crop
+                        )
+                    }
                 }
             }
         }
@@ -754,3 +938,4 @@ fun CreateButton(
         }
     }
 }
+

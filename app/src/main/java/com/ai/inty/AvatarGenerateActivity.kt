@@ -11,7 +11,18 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import coil3.compose.AsyncImage
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -33,9 +44,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -53,22 +62,18 @@ import com.ai.inty.base.BaseActivity
 import com.ai.inty.base.noRippleClickable
 import com.ai.inty.ui.theme.BackGround
 import com.ai.inty.ui.theme.IntyTheme
-import com.ai.inty.viewmodels.MainViewModel
+import com.ai.inty.viewmodels.AvatarGenerateViewModel
 import com.therouter.TheRouter
 import com.therouter.router.Route
-import androidx.lifecycle.ViewModelProvider
 import android.widget.Toast
-import com.inty.utils.log.EasyLog
-import com.ai.inty.beans.GenerateBackgroundRequest
 import com.ai.inty.Constant
 import com.ai.inty.utils.AvatarManager
+import com.inty.utils.log.EasyLog
 
 @Route(path = Constant.ROUTE_AVATAR_GENERATE)
 class AvatarGenerateActivity : BaseActivity() {
 
-    private val mainViewModel: MainViewModel by lazy {
-        ViewModelProvider(this)[MainViewModel::class.java]
-    }
+    private val viewModel: AvatarGenerateViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -77,15 +82,8 @@ class AvatarGenerateActivity : BaseActivity() {
             IntyTheme {
                 AvatarGeneratePage(
                     modifier = Modifier.fillMaxSize(),
-                    mainViewModel = mainViewModel,
-                    onBack = { finish() },
-                    onGenerateSuccess = { imageUrl ->
-                        // Store the generated image URL in AvatarManager
-                        EasyLog.log("AvatarGenerateActivity: onGenerateSuccess called with URL: $imageUrl")
-                        AvatarManager.setGeneratedAvatarUrl(imageUrl)
-                        EasyLog.log("AvatarGenerateActivity: Avatar URL stored, finishing activity")
-                        finish()
-                    }
+                    viewModel = viewModel,
+                    onBack = { finish() }
                 )
             }
         }
@@ -96,15 +94,25 @@ class AvatarGenerateActivity : BaseActivity() {
 @Composable
 fun AvatarGeneratePage(
     modifier: Modifier = Modifier,
-    mainViewModel: MainViewModel,
-    onBack: () -> Unit,
-    onGenerateSuccess: (String) -> Unit
+    viewModel: AvatarGenerateViewModel,
+    onBack: () -> Unit
 ) {
-    var prompt by remember { mutableStateOf("") }
-    var isLoading by remember { mutableStateOf(false) }
-    var generatedImageUrl by remember { mutableStateOf<String?>(null) }
+    val prompt by viewModel.prompt.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+    val generatedImageUrl by viewModel.generatedImageUrl.collectAsState()
+    val generatedImageUrls by viewModel.generatedImageUrls.collectAsState()
+    val selectedImageIndex by viewModel.selectedImageIndex.collectAsState()
+    val errorMessage by viewModel.errorMessage.collectAsState()
     
     val context = LocalContext.current
+    
+    // Handle error messages
+    LaunchedEffect(errorMessage) {
+        errorMessage?.let { error ->
+            Toast.makeText(context, error, Toast.LENGTH_LONG).show()
+            viewModel.clearError()
+        }
+    }
 
     Scaffold(
         modifier = modifier.background(BackGround),
@@ -143,17 +151,30 @@ fun AvatarGeneratePage(
             Spacer(modifier = Modifier.height(24.dp))
             
             // Image Preview Section
-            AvatarPreviewSection(
-                imageUrl = generatedImageUrl,
-                isLoading = isLoading
-            )
+            if (generatedImageUrls.isEmpty()) {
+                AvatarPreviewSection(
+                    imageUrl = generatedImageUrl,
+                    isLoading = isLoading
+                )
+            } else {
+                AvatarGridSection(
+                    imageUrls = generatedImageUrls,
+                    selectedIndex = selectedImageIndex,
+                    onImageSelected = viewModel::selectImage,
+                    prompt = prompt,
+                    isLoading = isLoading,
+                    onRegenerate = { _ ->
+                        viewModel.regenerateAvatar()
+                    }
+                )
+            }
             
             Spacer(modifier = Modifier.height(32.dp))
             
             // Prompt Input Field
             PromptInputField(
                 value = prompt,
-                onValueChange = { prompt = it }
+                onValueChange = viewModel::updatePrompt
             )
             
             Spacer(modifier = Modifier.height(32.dp))
@@ -163,53 +184,21 @@ fun AvatarGeneratePage(
                 isLoading = isLoading,
                 enabled = prompt.isNotBlank(),
                 onClick = {
-                    if (prompt.isBlank()) {
-                        Toast.makeText(context, "Please enter a prompt", Toast.LENGTH_SHORT).show()
-                        return@GenerateButton
-                    }
-                    
-                    isLoading = true
-                    
-                    try {
-                        val request = GenerateBackgroundRequest(prompt = prompt)
-                        
-                        mainViewModel.generateBackground(
-                            request = request,
-                            onSuccess = { response ->
-                                isLoading = false
-                                EasyLog.log("Generated image URL: ${response.imageUrl}")
-                                if (response.imageUrl.isNotBlank()) {
-                                    generatedImageUrl = response.imageUrl
-                                    EasyLog.log("Setting generatedImageUrl to: $generatedImageUrl")
-                                    Toast.makeText(context, "Avatar generated successfully!", Toast.LENGTH_SHORT).show()
-                                } else {
-                                    EasyLog.log("Empty image URL received from server", EasyLog.ERROR)
-                                    Toast.makeText(context, "Generated image URL is empty", Toast.LENGTH_SHORT).show()
-                                }
-                            },
-                            onError = { error ->
-                                isLoading = false
-                                val errorMessage = if (error.isBlank()) "Generation failed, please try again later" else "Generation failed: $error"
-                                Toast.makeText(context, errorMessage, Toast.LENGTH_LONG).show()
-                            }
-                        )
-                    } catch (e: Exception) {
-                        isLoading = false
-                        val errorMessage = "Generation error: ${e.message ?: "Unknown error"}"
-                        Toast.makeText(context, errorMessage, Toast.LENGTH_LONG).show()
-                        EasyLog.log("Generate avatar error: ${e.message}", EasyLog.ERROR)
-                        EasyLog.log(e)
-                    }
+                    viewModel.generateAvatar(onNavigateBack = onBack)
                 }
             )
             
             Spacer(modifier = Modifier.height(24.dp))
             
             // Use Generated Avatar Button
-            if (generatedImageUrl != null) {
+            if (generatedImageUrls.isNotEmpty() || generatedImageUrl != null) {
                 UseAvatarButton(
                     onClick = {
-                        onGenerateSuccess(generatedImageUrl!!)
+                        val selectedUrl = viewModel.getSelectedAvatarUrl()
+                        if (selectedUrl != null) {
+                            AvatarManager.setGeneratedAvatarUrl(selectedUrl)
+                        }
+                        onBack()
                     }
                 )
             }
@@ -227,23 +216,29 @@ fun AvatarPreviewSection(
     Box(
         modifier = Modifier
             .size(200.dp)
-            .border(
-                width = 2.dp,
-                color = Color(0xFFE91E63),
-                shape = RoundedCornerShape(16.dp)
-            )
             .background(
                 color = Color(0x1A78599A),
                 shape = RoundedCornerShape(16.dp)
             ),
         contentAlignment = Alignment.Center
     ) {
+        // 虚线边框
+        Canvas(
+            modifier = Modifier.fillMaxSize()
+        ) {
+            val pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)
+            val strokeWidth = 4.dp.toPx()
+            val cornerRadius = 16.dp.toPx()
+            
+            drawRoundRect(
+                color = androidx.compose.ui.graphics.Color(0xFFE91E63),
+                style = Stroke(width = strokeWidth, pathEffect = pathEffect),
+                cornerRadius = CornerRadius(cornerRadius)
+            )
+        }
         when {
             isLoading -> {
-                CircularProgressIndicator(
-                    color = Color(0xFFE91E63),
-                    modifier = Modifier.size(48.dp)
-                )
+                ThreeDotLoadingAnimation()
             }
             imageUrl != null -> {
                 EasyLog.log("Displaying image with URL: $imageUrl")
@@ -404,6 +399,124 @@ fun UseAvatarButton(
             fontSize = 16.sp,
             fontWeight = FontWeight.Medium,
             color = Color.White
+        )
+    }
+}
+
+@Composable
+fun ThreeDotLoadingAnimation() {
+    val infiniteTransition = rememberInfiniteTransition(label = "dots_loading")
+    
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        repeat(3) { index ->
+            val delay = index * 200
+            val alpha by infiniteTransition.animateFloat(
+                initialValue = 0.3f,
+                targetValue = 1.0f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(600, delayMillis = delay)
+                ), label = "dot_alpha_$index"
+            )
+            
+            Box(
+                modifier = Modifier
+                    .size(12.dp)
+                    .background(
+                        color = Color(0xFFE91E63).copy(alpha = alpha),
+                        shape = CircleShape
+                    )
+            )
+        }
+    }
+}
+
+@Composable
+fun AvatarGridSection(
+    imageUrls: List<String>,
+    selectedIndex: Int,
+    onImageSelected: (Int) -> Unit,
+    prompt: String,
+    isLoading: Boolean,
+    onRegenerate: (String) -> Unit
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        // Regen 按钮
+        RegenButton(
+            onClick = {
+                onRegenerate(prompt)
+            },
+            enabled = !isLoading
+        )
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        // 4张图片的网格布局
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            imageUrls.take(4).forEachIndexed { index, imageUrl ->
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .aspectRatio(1f)
+                        .background(
+                            color = Color(0x1A78599A),
+                            shape = RoundedCornerShape(8.dp)
+                        )
+                        .border(
+                            width = if (index == selectedIndex) 3.dp else 1.dp,
+                            color = if (index == selectedIndex) Color(0xFFE91E63) else Color.Transparent,
+                            shape = RoundedCornerShape(8.dp)
+                        )
+                        .noRippleClickable { onImageSelected(index) },
+                    contentAlignment = Alignment.Center
+                ) {
+                    AsyncImage(
+                        model = imageUrl,
+                        contentDescription = "Generated Avatar $index",
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(4.dp),
+                        contentScale = ContentScale.Crop
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun RegenButton(
+    onClick: () -> Unit,
+    enabled: Boolean = true
+) {
+    Row(
+        modifier = Modifier
+            .background(
+                color = if (enabled) Color(0x3378599A) else Color(0x1A78599A),
+                shape = RoundedCornerShape(20.dp)
+            )
+            .border(
+                width = 1.dp,
+                color = if (enabled) Color.White.copy(0.3f) else Color.White.copy(0.1f),
+                shape = RoundedCornerShape(20.dp)
+            )
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .noRippleClickable { if (enabled) onClick() },
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Text(
+            text = "Regen.",
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Medium,
+            color = if (enabled) Color.White else Color.White.copy(0.5f)
         )
     }
 }

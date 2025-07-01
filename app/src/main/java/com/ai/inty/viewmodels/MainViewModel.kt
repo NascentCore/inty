@@ -496,10 +496,6 @@ class MainViewModel: BaseActivityViewModel() {
     fun logout() {
         EasyLog.log("User logout - clearing all data")
         
-        // 清理本地存储
-        IntySetting.logout()
-        UserProfileManager.clearUserProfile()
-        
         // 清理内存数据
         agentList.clear()
         followingAgents.clear()
@@ -510,9 +506,30 @@ class MainViewModel: BaseActivityViewModel() {
             chat.clearAllData()
         }
         
-        // 切换到游客模式，不重启应用
-        loadBusinessData()
+        // 清理本地存储（这会切换到游客模式）
+        IntySetting.logout()
+        UserProfileManager.clearUserProfile()
+        
+        // 切换到游客模式后，只加载本地数据，不进行网络请求
+        loadGuestModeData()
         EasyLog.log("User logged out successfully - switched to guest mode")
+    }
+    
+    // 游客模式数据加载，不涉及需要认证的API调用
+    private fun loadGuestModeData() {
+        EasyLog.log("Loading guest mode data")
+        
+        // 只加载不需要认证的数据
+        viewModelScope.launch {
+            try {
+                // 可以在这里加载一些公开的推荐数据等
+                // 但暂时保持简单，只更新UI状态
+                _userProfile.value = UserProfile()
+                EasyLog.log("Guest mode data loaded successfully")
+            } catch (e: Exception) {
+                EasyLog.log("Failed to load guest mode data: ${e.message}", EasyLog.ERROR)
+            }
+        }
     }
     
     fun deleteAgent(

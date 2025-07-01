@@ -98,7 +98,7 @@
         <activity
             android:name=".LoginActivity"
             android:exported="false"
-            android:theme="@style/Theme.Inty.Popup"></activity>
+            android:theme="@style/Theme.Inty.Login"></activity>
 
     </application>
 

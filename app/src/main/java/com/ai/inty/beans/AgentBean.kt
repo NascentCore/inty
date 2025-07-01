@@ -176,5 +176,7 @@ data class GenerateBackgroundRequest(
 @JsonClass(generateAdapter = true)
 data class GenerateBackgroundResponse(
     @Json(name = "url")
-    val imageUrl: String = ""
+    val imageUrl: String = "",
+    @Json(name = "urls")
+    val imageUrls: List<String> = listOf()
 )

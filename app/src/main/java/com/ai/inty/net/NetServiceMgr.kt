@@ -37,8 +37,14 @@ class AuthInterceptor : Interceptor {
         when (response.code) {
             401 -> {
                 EasyLog.log("http 401 for ${request.url}", EasyLog.ERROR)
-                IntySetting.logout()
-                restartAppProcess(context = AppEnv.context)
+                // 检查是否正在退出登录过程中，避免重复重启
+                if (IntySetting.isLoggingOut()) {
+                    EasyLog.log("Ignoring 401 during logout process")
+                } else {
+                    EasyLog.log("401 unauthorized - switching to guest mode")
+                    IntySetting.logout()
+                    restartAppProcess(context = AppEnv.context)
+                }
             }
         }
 

@@ -140,12 +140,24 @@ object IntySetting {
         }
     }
 
+    private var isLoggingOut = false
+    
     fun logout() {
+        isLoggingOut = true
         setToken("")
         if (isGuestUser()) {
+            isLoggingOut = false
             return
         }
         changeUser(geGuestUserID())
+        // 延迟重置标志，确保401处理器有时间识别
+        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+            isLoggingOut = false
+        }, 2000)
+    }
+    
+    fun isLoggingOut(): Boolean {
+        return isLoggingOut
     }
 
     // 通用的用户信息存储方法（不依赖具体的 UserProfile 类）
