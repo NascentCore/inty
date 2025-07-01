@@ -1,9 +1,13 @@
 package com.ai.inty
 
 import android.os.Bundle
+import android.os.Build
+import android.view.View
+import android.view.WindowManager
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -18,6 +22,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -77,6 +82,9 @@ class AgentInfoActivity : BaseActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        // 强制设置状态栏为白色图标 - 多重保险
+        setupStatusBar()
 
         if (agent == null) {
             viewModel.setAgentID(agent_id!!)
@@ -647,4 +655,32 @@ fun formatCount(count: Int): String {
         count >= 1000 -> "${count / 1000}.${(count % 1000) / 100}K"
         else -> count.toString()
     }
+}
+
+private fun AgentInfoActivity.setupStatusBar() {
+    // 方法1: 通过Window直接设置
+    window.statusBarColor = android.graphics.Color.parseColor("#1C1523")
+    window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
+    
+    // 方法2: 兼容旧版API
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+        var flags = window.decorView.systemUiVisibility
+        // 移除亮色状态栏标志
+        flags = flags and View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR.inv()
+        window.decorView.systemUiVisibility = flags
+    }
+    
+    // 方法3: 使用新的WindowInsetsController (API 30+)
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+        val controller = window.insetsController
+        controller?.setSystemBarsAppearance(
+            0, // 清除亮色图标
+            android.view.WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS
+        )
+    }
+    
+    // 方法4: 使用WindowCompat (兼容库)
+    WindowCompat.setDecorFitsSystemWindows(window, false)
+    val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
+    windowInsetsController.isAppearanceLightStatusBars = false
 }

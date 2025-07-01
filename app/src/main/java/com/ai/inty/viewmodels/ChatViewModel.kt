@@ -30,6 +30,10 @@ class ChatViewModel: BaseActivityViewModel() {
 
     val inputData = MutableStateFlow<String>("")
 
+    // 用于标识当前是否在等待AI回复
+    private val _isWaitingForReply = MutableStateFlow<Boolean>(false)
+    val isWaitingForReply = _isWaitingForReply.asStateFlow()
+
     private val _userProfile = MutableStateFlow<UserProfile>(UserProfile())
     val userProfile = _userProfile.asStateFlow()
 
@@ -107,12 +111,17 @@ class ChatViewModel: BaseActivityViewModel() {
                 role = "user"
             )
 
+            // 添加临时的加载消息
+            val loadingMsg = MsgInfo(
+                content = "loading_animation", // 特殊标识符
+                role = "assistant"
+            )
+
             withContext(Dispatchers.Main) {
                 EasyLog.log("msgs count = ${msgs.size}")
-                msgs.add(
-                    0,
-                    msgInfo
-                )
+                msgs.add(0, msgInfo) // 添加用户消息
+                msgs.add(0, loadingMsg) // 添加加载动画消息
+                _isWaitingForReply.value = true
                 EasyLog.log("msgs count = ${msgs.size}")
             }
 
@@ -126,10 +135,21 @@ class ChatViewModel: BaseActivityViewModel() {
 
                 EasyLog.log("sendMsg($agent, $req) -> $result")
 
+                withContext(Dispatchers.Main) {
+                    // 移除加载消息
+                    val loadingIndex = msgs.indexOfFirst { it.content == "loading_animation" && it.role == "assistant" }
+                    if (loadingIndex >= 0) {
+                        msgs.removeAt(loadingIndex)
+                    }
+                    _isWaitingForReply.value = false
+                }
+
                 when (result) {
                     is HttpResult.Success -> {
-                        for (choice in result.data.choices) {
-                            msgs.add(0, choice.message)
+                        withContext(Dispatchers.Main) {
+                            for (choice in result.data.choices) {
+                                msgs.add(0, choice.message)
+                            }
                         }
                         IntySetting.setConversationReaded(agent.id, result.data.choices.last()?.message?.content ?: "")
                     }
@@ -153,8 +173,16 @@ class ChatViewModel: BaseActivityViewModel() {
                 role = "user"
             )
 
+            // 添加临时的加载消息 (keep talking不显示用户消息，只显示加载动画)
+            val loadingMsg = MsgInfo(
+                content = "loading_animation", // 特殊标识符
+                role = "assistant"
+            )
+
             withContext(Dispatchers.Main) {
-                msgs.add(0, msgInfo)
+                msgs.add(0, msgInfo) // 添加用户continue消息(会被过滤不显示)
+                msgs.add(0, loadingMsg) // 添加加载动画消息
+                _isWaitingForReply.value = true
             }
 
             val req = SendMsgReq(listOf(msgInfo))
@@ -167,10 +195,21 @@ class ChatViewModel: BaseActivityViewModel() {
 
                 EasyLog.log("sendKeepTalkingMessage($agent, $req) -> $result")
 
+                withContext(Dispatchers.Main) {
+                    // 移除加载消息
+                    val loadingIndex = msgs.indexOfFirst { it.content == "loading_animation" && it.role == "assistant" }
+                    if (loadingIndex >= 0) {
+                        msgs.removeAt(loadingIndex)
+                    }
+                    _isWaitingForReply.value = false
+                }
+
                 when (result) {
                     is HttpResult.Success -> {
-                        for (choice in result.data.choices) {
-                            msgs.add(0, choice.message)
+                        withContext(Dispatchers.Main) {
+                            for (choice in result.data.choices) {
+                                msgs.add(0, choice.message)
+                            }
                         }
                         IntySetting.setConversationReaded(agent.id, result.data.choices.last()?.message?.content ?: "")
                     }

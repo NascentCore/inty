@@ -15,12 +15,13 @@
     </style>
     
     <!-- Dark theme for popup activities -->
-    <style name="Theme.Inty.Popup" parent="android:Theme.Material.Light.NoActionBar" >
-        <item name="android:windowIsTranslucent">true</item>
+    <style name="Theme.Inty.Popup" parent="android:Theme.Material.NoActionBar" >
         <item name="android:windowNoTitle">true</item>
-        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowBackground">#1C1523</item>
         <item name="android:windowDisablePreview">true</item>
         <item name="android:statusBarColor">#1C1523</item>
         <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+        <item name="android:windowTranslucentStatus">false</item>
     </style>
 </resources>

@@ -25,6 +25,11 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -109,17 +114,19 @@ fun ChatPage(
     }
 
     var isAutoPlayAudio by remember { mutableStateOf(IntySetting.isAutoPlayAudio()) }
+    // Keep talking二状态设置：默认跟随全局设置
     var agentKeepTalking by remember(agentInfo?.id) { 
         mutableStateOf(
-            agentInfo?.let { IntySetting.getAgentKeepTalking(it.id) }
+            agentInfo?.let { 
+                // 获取角色专用设置，如果不存在则使用全局设置
+                IntySetting.getAgentKeepTalking(it.id) ?: IntySetting.isShowKeepTalking()
+            } ?: false
         ) 
     }
     
     // 用于实时更新按钮显示状态
     var shouldShowButton by remember(agentInfo?.id) {
-        mutableStateOf(
-            agentInfo?.let { IntySetting.shouldShowKeepTalking(it.id) } ?: false
-        )
+        mutableStateOf(agentKeepTalking)
     }
 
     var showMorePanel by remember { mutableStateOf(false) }
@@ -259,7 +266,7 @@ fun ChatPage(
 
                         )
                     }
-                    itemsIndexed(msgs) { index, item ->
+                    itemsIndexed(msgs.filter { !(it.role == "user" && it.content == "continue") }) { index, item ->
                         ChatItem(item)
                         Spacer(
                             modifier = Modifier
@@ -536,6 +543,41 @@ fun ChatPage(
                                 shape = RoundedCornerShape(8.dp)
                             )
                     ) {
+                        // Keep talking设置（二状态，与全局设置同步）
+                        agentInfo?.let { agent ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 16.dp)
+                                    .noRippleClickable {
+                                        // 检查是否正式登录（非游客且已登录）
+                                        if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
+                                            agentKeepTalking = !agentKeepTalking
+                                            IntySetting.setAgentKeepTalking(agent.id, agentKeepTalking)
+                                            // 更新按钮显示状态
+                                            shouldShowButton = agentKeepTalking
+                                        } else {
+                                            // 未登录或游客时跳转到登录页面
+                                            TheRouter.build(Constant.ROUTE_LOGIN)
+                                                .navigation(context)
+                                        }
+                                    },
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.settings_keep_talking),
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Normal,
+                                    color = Color.White
+                                )
+                                Spacer(Modifier.weight(1f))
+                                Image(
+                                    painter = if (agentKeepTalking) painterResource(R.drawable.opened) else painterResource(R.drawable.closed),
+                                    contentDescription = null,
+                                )
+                            }
+                        }
+                        
+                        // 暂时隐藏 Auto-play语音消息设置
+                        /*
                         Row(
                             modifier = Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 16.dp)
                                 .noRippleClickable {
@@ -564,67 +606,7 @@ fun ChatPage(
                                 contentDescription = null,
                             )
                         }
-                        // 角色专用的keep talking设置（三状态）
-                        agentInfo?.let { agent ->
-                            Row(
-                                modifier = Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 16.dp)
-                                    .noRippleClickable {
-                                        // 检查是否正式登录（非游客且已登录）
-                                        if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
-                                            val newValue = when (agentKeepTalking) {
-                                                null -> true    // 跟随全局 -> 开启
-                                                true -> false   // 开启 -> 关闭
-                                                false -> null   // 关闭 -> 跟随全局
-                                            }
-                                            agentKeepTalking = newValue
-                                            IntySetting.setAgentKeepTalking(agent.id, newValue)
-                                            // 更新按钮显示状态
-                                            shouldShowButton = IntySetting.shouldShowKeepTalking(agent.id)
-                                        } else {
-                                            // 未登录或游客时跳转到登录页面
-                                            TheRouter.build(Constant.ROUTE_LOGIN)
-                                                .navigation(context)
-                                        }
-                                    },
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Column {
-                                    Text(
-                                        text = "Keep Talking for ${agent.name}",
-                                        fontSize = 14.sp,
-                                        fontWeight = FontWeight.Normal,
-                                        color = Color.White
-                                    )
-                                    Text(
-                                        text = when (agentKeepTalking) {
-                                            true -> "On"
-                                            false -> "Off"
-                                            null -> "Follow global setting"
-                                        },
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Normal,
-                                        color = Color.White.copy(0.6f)
-                                    )
-                                }
-                                Spacer(Modifier.weight(1f))
-                                // 三状态图标显示
-                                when (agentKeepTalking) {
-                                    true -> Image(
-                                        painter = painterResource(R.drawable.opened),
-                                        contentDescription = null,
-                                    )
-                                    false -> Image(
-                                        painter = painterResource(R.drawable.closed),
-                                        contentDescription = null,
-                                    )
-                                    null -> Text(
-                                        text = "Auto",
-                                        fontSize = 12.sp,
-                                        color = Color.White.copy(0.7f)
-                                    )
-                                }
-                            }
-                        }
+                        */
                     }
 
                 }
@@ -665,13 +647,17 @@ fun ChatItemAI(
                 .padding(12.dp, 13.dp)
                 .widthIn(1.dp, 300.dp)
         ) {
-            StyledMessageText(
-                text = item.content,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Normal,
-                normalColor = Color.White.copy(0.55f),
-                actionColor = Color.White.copy(0.35f)
-            )
+            if (item.content == "loading_animation") {
+                LoadingAnimation()
+            } else {
+                StyledMessageText(
+                    text = item.content,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Normal,
+                    normalColor = Color.White.copy(0.55f),
+                    actionColor = Color.White.copy(0.35f)
+                )
+            }
         }
         Spacer(modifier = Modifier.widthIn(80.dp).weight(1f))
     }
@@ -846,6 +832,43 @@ fun TopBar(
 
 }
 
+
+@Composable
+fun LoadingAnimation() {
+    val infiniteTransition = rememberInfiniteTransition(label = "loading")
+    val alpha by infiniteTransition.animateFloat(
+        initialValue = 0.3f,
+        targetValue = 1.0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(800)
+        ), label = "alpha"
+    )
+    
+    Row(
+        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        repeat(3) { index ->
+            val delay = index * 200
+            val dotAlpha by infiniteTransition.animateFloat(
+                initialValue = 0.3f,
+                targetValue = 1.0f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(600, delayMillis = delay)
+                ), label = "dot_alpha_$index"
+            )
+            
+            Box(
+                modifier = Modifier
+                    .size(6.dp)
+                    .background(
+                        color = Color.White.copy(dotAlpha * 0.7f),
+                        shape = CircleShape
+                    )
+            )
+        }
+    }
+}
 
 @Composable
 fun MorePanelItem(

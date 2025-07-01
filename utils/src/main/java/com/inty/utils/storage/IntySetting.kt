@@ -94,6 +94,8 @@ object IntySetting {
 
     fun setShowKeepTalking(show: Boolean) {
         curUserSetting.putBoolean("show_keep_talking", show)
+        // 当全局设置改变时，重置所有角色的keep talking设置为与全局一致
+        resetAllAgentKeepTalkingToGlobal(show)
     }
 
     fun isShowKeepTalking(): Boolean {
@@ -108,27 +110,34 @@ object IntySetting {
         return curUserSetting.decodeBool("auto_play_audio", false)
     }
 
-    // 角色专用的keep talking设置 (三状态: true/false/null)
-    fun setAgentKeepTalking(agentId: String, show: Boolean?) {
-        if (show == null) {
-            curUserSetting.removeValueForKey("agent_keep_talking_$agentId")
-        } else {
-            curUserSetting.putBoolean("agent_keep_talking_$agentId", show)
-        }
+    // 角色专用的keep talking设置 (二状态: true/false)
+    fun setAgentKeepTalking(agentId: String, show: Boolean) {
+        curUserSetting.putBoolean("agent_keep_talking_$agentId", show)
     }
 
     fun getAgentKeepTalking(agentId: String): Boolean? {
         return if (curUserSetting.containsKey("agent_keep_talking_$agentId")) {
             curUserSetting.decodeBool("agent_keep_talking_$agentId", false)
         } else {
-            null // 默认状态：跟随全局配置
+            null // 没有专门设置时返回null，使用全局设置
         }
     }
 
-    // 获取最终的keep talking显示状态（角色设置优先于全局设置）
+    // 获取最终的keep talking显示状态（有专门设置时使用专门设置，否则使用全局设置）
     fun shouldShowKeepTalking(agentId: String): Boolean {
         val agentSetting = getAgentKeepTalking(agentId)
         return agentSetting ?: isShowKeepTalking()
+    }
+
+    // 重置所有角色的keep talking设置为与全局设置一致
+    private fun resetAllAgentKeepTalkingToGlobal(globalSetting: Boolean) {
+        // 获取所有以"agent_keep_talking_"开头的key
+        val allKeys = curUserSetting.allKeys()
+        allKeys?.forEach { key ->
+            if (key.startsWith("agent_keep_talking_")) {
+                curUserSetting.putBoolean(key, globalSetting)
+            }
+        }
     }
 
     fun logout() {

@@ -165,6 +165,8 @@ fun SettingScreen(
                         contentDescription = null,
                     )
                 }
+                // 暂时隐藏 auto-play voice messages 开关和分隔线
+                /*
                 Spacer(Modifier.height(4.dp))
                 Box(
                     modifier = Modifier
@@ -198,6 +200,7 @@ fun SettingScreen(
                         contentDescription = null,
                     )
                 }
+                */
                 Spacer(Modifier.height(8.dp))
             }
 
