@@ -1,6 +1,8 @@
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, File, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
+import uuid
+from datetime import datetime
 from app.api import deps
 from app.models.report import ReportStatus
 from app.schemas.report import ReportReason, ReportCreate, ReportQuery, ReportOut, TargetType
@@ -8,6 +10,8 @@ from app.services import report_service
 from app.db.session import get_async_db
 from app.models.user import User
 from app.schemas.response import APIResponse, PaginationData
+from app.utils.gcs import upload_to_gcs
+from app.core.config import settings
 from loguru import logger
 
 router = APIRouter()
@@ -23,6 +27,41 @@ async def get_report_reasons(
     except Exception as e:
         logger.error(f"Failed to get report reasons: {str(e)}")
         return APIResponse.error(message=str(e))
+
+@router.post("/upload-image", response_model=APIResponse[dict])
+async def upload_report_image(
+    file: UploadFile = File(...),
+    current_user: User = Depends(deps.get_current_active_user)
+):
+    """Upload image for report"""
+    try:
+        # Validate file type
+        if not file.content_type or not file.content_type.startswith('image/'):
+            return APIResponse.error(message="Only image files are allowed")
+        
+        # Validate file size (e.g., max 10MB)
+        max_size = 10 * 1024 * 1024  # 10MB
+        file_data = await file.read()
+        if len(file_data) > max_size:
+            return APIResponse.error(message="File size exceeds 10MB limit")
+        
+        # Generate unique filename
+        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+        unique_id = uuid.uuid4().hex[:8]
+        file_extension = file.filename.split('.')[-1].lower() if file.filename and '.' in file.filename else 'jpg'
+        
+        # Generate storage path
+        report_image_path = f"reports/images/{current_user.id}/{timestamp}-{unique_id}.{file_extension}"
+        
+        # Upload to GCS
+        url = upload_to_gcs(file_data, file.content_type, settings.gcs.bucket, report_image_path)
+        
+        logger.info(f"Report image uploaded successfully: {url}")
+        return APIResponse.success(data={"url": url})
+        
+    except Exception as e:
+        logger.error(f"Failed to upload report image: {str(e)}")
+        return APIResponse.error(message="Image upload failed")
 
 @router.post("/", response_model=APIResponse)
 async def create_report(
