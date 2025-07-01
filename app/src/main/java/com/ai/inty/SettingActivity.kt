@@ -74,6 +74,8 @@ class SettingActivity : BaseActivity() {
                     onLogout = {
                         // 使用MainViewModel的logout方法，不重启应用
                         mainViewModel.logout()
+                        // 显示退出成功提示
+                        Toast.makeText(this@SettingActivity, getString(R.string.logout_successfully), Toast.LENGTH_SHORT).show()
                         // 返回到主页面
                         TheRouter.build(Constant.ROUTE_MAIN).navigation(this@SettingActivity)
                         finish()
