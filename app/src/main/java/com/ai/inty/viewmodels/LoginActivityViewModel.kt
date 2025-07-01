@@ -3,6 +3,7 @@ package com.ai.inty.viewmodels
 import android.content.Intent
 import androidx.lifecycle.viewModelScope
 import com.ai.inty.MainActivity
+import com.ai.inty.R
 import com.ai.inty.base.BaseActivityViewModel
 import com.ai.inty.beans.GENDER
 import com.ai.inty.beans.GoogleLoginRequest
@@ -18,6 +19,7 @@ import com.therouter.TheRouter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import android.widget.Toast
 
 class LoginActivityViewModel: BaseActivityViewModel() {
 
@@ -40,6 +42,9 @@ class LoginActivityViewModel: BaseActivityViewModel() {
                     UserProfileManager.saveUserProfile(userProfile)
                     
                     withContext(Dispatchers.Main) {
+                        // 显示登录成功提示
+                        Toast.makeText(AppEnv.context, AppEnv.context.getString(R.string.login_successfully), Toast.LENGTH_SHORT).show()
+                        
                         // 关闭当前登录页面
                         closeActivity()
                         

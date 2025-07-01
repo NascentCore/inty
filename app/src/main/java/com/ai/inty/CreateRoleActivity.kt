@@ -72,6 +72,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.ai.inty.R
 import com.ai.inty.beans.AgentInfo
 import com.therouter.router.Autowired
 
@@ -360,7 +361,7 @@ fun CreateRolePage(
                                 request = request,
                                 onSuccess = { agentInfo ->
                                     isLoading = false
-                                    Toast.makeText(context, "角色创建成功！", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, context.getString(R.string.create_ai_successfully), Toast.LENGTH_SHORT).show()
                                     onCreateSuccess()
                                 },
                                 onError = { error ->
