@@ -5,13 +5,16 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
+import android.graphics.Rect
 import android.os.Build
 import android.os.Bundle
+import android.view.View
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.activity.OnBackPressedCallback
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -66,6 +69,15 @@ class MainActivity : BaseActivity() {
         val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
         windowInsetsController.isAppearanceLightStatusBars = false
 
+        // Custom back gesture handling - move app to background instead of killing
+        val onBackPressedCallback = object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                // Move app to background, don't kill the process
+                moveTaskToBack(true)
+            }
+        }
+        onBackPressedDispatcher.addCallback(this, onBackPressedCallback)
+
         mainViewModel.setChatViewModel(chatViewModel)
         
         // Load user created agents
@@ -117,6 +129,25 @@ class MainActivity : BaseActivity() {
             }
         }
 
+        // Disable right-to-left swipe gesture by excluding right edge from system gestures
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            window.decorView.post {
+                val displayMetrics = resources.displayMetrics
+                val screenWidth = displayMetrics.widthPixels
+                val screenHeight = displayMetrics.heightPixels
+                val gestureEdgeSize = (20 * displayMetrics.density).toInt() // 20dp edge
+                
+                // Exclude only the right edge from back gestures
+                val rightEdgeRect = Rect(
+                    screenWidth - gestureEdgeSize, // Right edge start
+                    0, // Top
+                    screenWidth, // Right edge end (screen width)
+                    screenHeight // Bottom
+                )
+                
+                window.decorView.systemGestureExclusionRects = listOf(rightEdgeRect)
+            }
+        }
 
         requestNotifyPermission()
         
