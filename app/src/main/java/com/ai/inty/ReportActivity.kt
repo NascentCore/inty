@@ -63,7 +63,6 @@ class ReportActivity : BaseActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
 
         viewModel.targetID = targetID
 

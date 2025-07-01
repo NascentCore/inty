@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import androidx.core.view.WindowCompat
 import androidx.lifecycle.viewModelScope
 import com.ai.inty.ui.theme.IntyTheme
 import com.ai.inty.viewmodels.SplashViewModel
@@ -31,7 +32,11 @@ class SplashActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        enableEdgeToEdge()
+        
+        // Set status bar icons to white for dark theme
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
+        windowInsetsController.isAppearanceLightStatusBars = false
         setContent {
             IntyTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->

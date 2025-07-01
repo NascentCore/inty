@@ -77,7 +77,6 @@ class AgentInfoActivity : BaseActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
 
         if (agent == null) {
             viewModel.setAgentID(agent_id!!)
