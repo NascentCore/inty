@@ -35,6 +35,7 @@ class AgentUpdate(AgentBase):
 class AgentInDB(AgentBase):
     """数据库中的AI角色"""
     id: str
+    readable_id: str
     status: AgentStatus
     creator_id: Optional[str] = None
     created_at: datetime

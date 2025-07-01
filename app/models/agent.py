@@ -27,6 +27,7 @@ class Agent(Base):
     __tablename__ = "agents"
 
     id = Column(String, primary_key=True, index=True)
+    readable_id = Column(String(8), unique=True, index=True, nullable=False)
     name = Column(String(30), index=True, nullable=False)
     gender = Column(Enum(Gender, name="gender"), nullable=False)
     avatar = Column(String)

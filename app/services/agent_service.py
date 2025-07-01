@@ -1,5 +1,5 @@
 from typing import List, Optional
-from sqlalchemy import select, desc, func, and_, or_
+from sqlalchemy import select, desc, func, and_, or_, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 from sqlalchemy.orm import selectinload
@@ -15,6 +15,29 @@ from app.models.associations import agent_followers
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
+
+async def generate_next_readable_id(db: AsyncSession) -> str:
+    """
+    Generate next readable ID for agent, starting from 10000000
+    """
+    try:
+        # Get the maximum readable_id from the database
+        result = await db.execute(
+            text("SELECT MAX(CAST(readable_id AS INTEGER)) FROM agents WHERE readable_id ~ '^[0-9]+$'")
+        )
+        max_id = result.scalar()
+        
+        if max_id is None or max_id < 10000000:
+            next_id = 10000000
+        else:
+            next_id = max_id + 1
+            
+        return str(next_id).zfill(8)
+    except Exception as e:
+        logger.error(f"Error generating readable ID: {str(e)}")
+        # Fallback to a random 8-digit number starting from 10000000
+        import random
+        return str(random.randint(10000000, 99999999))
 
 async def get_agent(db: AsyncSession, agent_id: str, current_user_id: Optional[str] = None) -> Optional[models.Agent]:
     """
@@ -327,6 +350,9 @@ async def create_agent(db: AsyncSession, agent_in: schemas.AgentCreate, user_id:
         # 生成唯一ID
         agent_id = str(uuid.uuid4())
         
+        # 生成可读ID
+        readable_id = await generate_next_readable_id(db)
+        
         # 获取Agent数据
         agent_data = agent_in.dict()
         
@@ -341,6 +367,7 @@ async def create_agent(db: AsyncSession, agent_in: schemas.AgentCreate, user_id:
         
         db_agent = models.Agent(
             id=agent_id,
+            readable_id=readable_id,
             **processed_agent_data,
             creator_id=user_id
         )
