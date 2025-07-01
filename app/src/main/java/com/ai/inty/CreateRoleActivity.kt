@@ -292,7 +292,7 @@ fun CreateRolePage(
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors().copy(containerColor = Color.Transparent),
                 title = {
                     Text(
-                        text = if (isEditMode) "Edit InTy" else "Create InTy",
+                        text = if (isEditMode) "Edit HeartMate" else "Create HeartMate",
                         fontSize = 18.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = Color.White
@@ -337,6 +337,10 @@ fun CreateRolePage(
                 onRegenerate = { prompt ->
                     // Navigate to avatar generation page with existing prompt
                     onAvatarGenerateClick()
+                },
+                onFaceEdit = {
+                    // TODO: Navigate to face editing page
+                    // This would typically open a face editing activity or dialog
                 }
             )
             
@@ -347,7 +351,7 @@ fun CreateRolePage(
                 label = "Name *",
                 value = name,
                 onValueChange = { name = it },
-                placeholder = "Name your InTy"
+                placeholder = "Name your HeartMate"
             )
             
             Spacer(modifier = Modifier.height(24.dp))
@@ -493,7 +497,8 @@ fun AvatarUploadSection(
     isGenerating: Boolean = false,
     onGenerateClick: () -> Unit,
     onImageSelected: (Int) -> Unit = {},
-    onRegenerate: (String) -> Unit = {}
+    onRegenerate: (String) -> Unit = {},
+    onFaceEdit: () -> Unit = {}
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally
@@ -501,27 +506,25 @@ fun AvatarUploadSection(
         Box(
             modifier = Modifier
                 .size(200.dp)
-                .background(
-                    color = Color(0x1A78599A),
-                    shape = RoundedCornerShape(16.dp)
-                )
+                .let { modifier ->
+                    if (avatarUrls.isEmpty() && avatarUrl == null) {
+                        modifier
+                            .background(
+                                color = Color(0x1A78599A),
+                                shape = RoundedCornerShape(16.dp)
+                            )
+                            .border(
+                                width = 4.dp,
+                                color = Color(0xFFE91E63),
+                                shape = RoundedCornerShape(16.dp)
+                            )
+                    } else {
+                        modifier
+                    }
+                }
                 .noRippleClickable { onGenerateClick() },
             contentAlignment = Alignment.Center
         ) {
-            // 虚线边框
-            Canvas(
-                modifier = Modifier.fillMaxSize()
-            ) {
-                val pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)
-                val strokeWidth = 4.dp.toPx()
-                val cornerRadius = 16.dp.toPx()
-                
-                drawRoundRect(
-                    color = androidx.compose.ui.graphics.Color(0xFFE91E63),
-                    style = Stroke(width = strokeWidth, pathEffect = pathEffect),
-                    cornerRadius = CornerRadius(cornerRadius)
-                )
-            }
             when {
                 isGenerating -> {
                     com.ai.inty.ThreeDotLoadingAnimation()
@@ -532,9 +535,7 @@ fun AvatarUploadSection(
                     AsyncImage(
                         model = displayUrl,
                         contentDescription = "Selected Avatar",
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(4.dp),
+                        modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop,
                         onSuccess = { 
                             EasyLog.log("AvatarUploadSection: Selected avatar image loaded successfully: $displayUrl") 
@@ -549,9 +550,7 @@ fun AvatarUploadSection(
                     AsyncImage(
                         model = avatarUrl,
                         contentDescription = "Generated Avatar",
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(4.dp),
+                        modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop,
                         onSuccess = { 
                             EasyLog.log("AvatarUploadSection: Avatar image loaded successfully: $avatarUrl") 
@@ -580,25 +579,59 @@ fun AvatarUploadSection(
                     }
                 }
             }
+            
+            // Face edit button - show only when there's an avatar
+            if (avatarUrls.isNotEmpty() || avatarUrl != null) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(8.dp)
+                        .background(
+                            color = Color.Black.copy(alpha = 0.5f),
+                            shape = RoundedCornerShape(16.dp)
+                        )
+                        .noRippleClickable { onFaceEdit() }
+                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Image(
+                            painter = painterResource(R.drawable.icon_edit),
+                            contentDescription = "Face edit",
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Text(
+                            text = "Face edit",
+                            color = Color.White,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+            }
         }
         
         // Show grid of multiple avatars below the main preview
         if (avatarUrls.isNotEmpty()) {
             Spacer(modifier = Modifier.height(16.dp))
             
-            // Regen button
-            com.ai.inty.RegenButton(
-                onClick = { onRegenerate(AvatarManager.getGenerationPrompt()) },
-                enabled = !isGenerating
-            )
-            
-            Spacer(modifier = Modifier.height(12.dp))
-            
-            // 4张图片的网格布局
+            // Row containing Regen button on left and image grid on right
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
+                // Regen button on the left - same weight as one thumbnail
+                Box(modifier = Modifier.weight(1f)) {
+                    com.ai.inty.RegenButton(
+                        onClick = { onRegenerate(AvatarManager.getGenerationPrompt()) },
+                        enabled = !isGenerating
+                    )
+                }
+                
+                // 4张图片的网格布局 on the right
                 avatarUrls.take(4).forEachIndexed { index, imageUrl ->
                     Box(
                         modifier = Modifier
@@ -653,19 +686,19 @@ fun GenderSelectionSection(
                 text = "Male",
                 isSelected = selectedGender == "MALE",
                 onClick = { onGenderChange("MALE") },
-                modifier = Modifier.weight(0.8f)
+                modifier = Modifier.weight(0.75f)
             )
             GenderButton(
                 text = "Female",
                 isSelected = selectedGender == "FEMALE",
                 onClick = { onGenderChange("FEMALE") },
-                modifier = Modifier.weight(0.8f)
+                modifier = Modifier.weight(0.95f)
             )
             GenderButton(
                 text = "Non-Binary",
                 isSelected = selectedGender == "NON_BINARY",
                 onClick = { onGenderChange("NON_BINARY") },
-                modifier = Modifier.weight(1.4f)
+                modifier = Modifier.weight(1.3f)
             )
         }
     }
@@ -930,7 +963,7 @@ fun CreateButton(
             )
         } else {
             Text(
-                text = if (isEditMode) "Update My InTy" else "Create My InTy",
+                text = if (isEditMode) "Update My HeartMate" else "Create My HeartMate",
                 fontSize = 18.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = Color.White

@@ -496,21 +496,20 @@ fun RegenButton(
     onClick: () -> Unit,
     enabled: Boolean = true
 ) {
-    Row(
+    Box(
         modifier = Modifier
+            .aspectRatio(1f)
             .background(
-                color = if (enabled) Color(0x3378599A) else Color(0x1A78599A),
-                shape = RoundedCornerShape(20.dp)
+                color = Color(0x1A78599A),
+                shape = RoundedCornerShape(8.dp)
             )
             .border(
                 width = 1.dp,
-                color = if (enabled) Color.White.copy(0.3f) else Color.White.copy(0.1f),
-                shape = RoundedCornerShape(20.dp)
+                color = if (enabled) Color(0xFFE91E63) else Color.White.copy(0.2f),
+                shape = RoundedCornerShape(8.dp)
             )
-            .padding(horizontal = 16.dp, vertical = 8.dp)
             .noRippleClickable { if (enabled) onClick() },
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        contentAlignment = Alignment.Center
     ) {
         Text(
             text = "Regen.",

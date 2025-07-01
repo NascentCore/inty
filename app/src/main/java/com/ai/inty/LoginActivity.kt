@@ -287,7 +287,7 @@ private fun PolicyText() {
         verticalArrangement = Arrangement.Center
     ) {
         Text(
-            text = "By continuing, you agree to InTy's",
+            text = "By continuing, you agree to HeartMate's",
             style = baseTextStyle
         )
         TextButton(
