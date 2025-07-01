@@ -827,19 +827,19 @@ fun GenderSelectionSection(
                 text = "Male",
                 isSelected = selectedGender == "MALE",
                 onClick = { onGenderChange("MALE") },
-                modifier = Modifier.weight(0.75f)
+                modifier = Modifier.weight(0.8f)
             )
             GenderButton(
                 text = "Female",
                 isSelected = selectedGender == "FEMALE",
                 onClick = { onGenderChange("FEMALE") },
-                modifier = Modifier.weight(0.95f)
+                modifier = Modifier.weight(0.9f)
             )
             GenderButton(
                 text = "Non-Binary",
                 isSelected = selectedGender == "NON_BINARY",
                 onClick = { onGenderChange("NON_BINARY") },
-                modifier = Modifier.weight(1.3f)
+                modifier = Modifier.weight(1.1f)
             )
         }
     }
