@@ -219,30 +219,30 @@ fun AgentInfoScreen(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-                    Spacer(Modifier.width(32.dp))
-                    Text(
-                        text = stringResource(R.string.creator),
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Light,
-                        color = Color.White.copy(0.55f),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Spacer(Modifier.width(3.dp))
-                    IntyCircleImage(
-                        modifier = Modifier.size(16.dp),
-                        url = agent.creator?.avatar,
-                        placeholderResID = R.drawable.app_2
-                    )
-                    Text(
-                        text = agent.creator?.nickname ?: "",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Light,
-                        color = Color.White.copy(0.55f),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Spacer(Modifier.width(16.dp))
+//                    Spacer(Modifier.width(32.dp))
+//                    Text(
+//                        text = stringResource(R.string.creator),
+//                        fontSize = 12.sp,
+//                        fontWeight = FontWeight.Light,
+//                        color = Color.White.copy(0.55f),
+//                        maxLines = 1,
+//                        overflow = TextOverflow.Ellipsis
+//                    )
+//                    Spacer(Modifier.width(3.dp))
+//                    IntyCircleImage(
+//                        modifier = Modifier.size(16.dp),
+//                        url = agent.creator?.avatar,
+//                        placeholderResID = R.drawable.app_2
+//                    )
+//                    Text(
+//                        text = agent.creator?.nickname ?: "",
+//                        fontSize = 12.sp,
+//                        fontWeight = FontWeight.Light,
+//                        color = Color.White.copy(0.55f),
+//                        maxLines = 1,
+//                        overflow = TextOverflow.Ellipsis
+//                    )
+//                    Spacer(Modifier.width(16.dp))
                 }
                 Spacer(Modifier.height(24.dp))
                 
@@ -327,94 +327,94 @@ fun AgentInfoScreen(
 
                 Spacer(Modifier.height(16.dp))
 
-                Column(
-                    modifier = Modifier
-                        .padding(horizontal = 16.dp)
-                        .fillMaxWidth()
-                        .border(
-                            brush = Brush.linearGradient(
-                                colors = listOf(
-                                    Color.Transparent,
-                                    Color.White.copy(0.2f),
-                                    Color.Transparent
-                                )
-                            ),
-                            width = 1.dp,
-                            shape = RoundedCornerShape(8.dp)
-                        )
-                        .background(
-                            color = Color(0x3378599A),
-                            shape = RoundedCornerShape(8.dp)
-                        )
-                ) {
-                    Spacer(Modifier.height(16.dp))
-
-                    Text(
-                        modifier = Modifier.padding(horizontal = 12.dp),
-                        text = stringResource(R.string.creation_info),
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color.White
-                    )
-                    Spacer(Modifier.height(12.dp))
-                    Row(
-                        modifier = Modifier
-                            .padding(horizontal = 12.dp)
-                            .fillMaxWidth()
-                            .height(56.dp)
-                            .background(color = Color.White.copy(0.1f), shape = RoundedCornerShape(8.dp))
-                            .border(width = 1.dp, color = Color.White.copy(0.2f), shape = RoundedCornerShape(8.dp))
-                        ,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Spacer(Modifier.width(8.dp))
-
-                        IntyImage(
-                            modifier = Modifier.size(36.dp)
-                                .clip(RoundedCornerShape(8.dp))
-                            ,
-                            model = agent.creator?.avatar,
-                            placeholder = painterResource(R.drawable.app_2)
-                        )
-                        Spacer(Modifier.width(6.dp))
-                        Column(
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text(
-                                modifier = Modifier.padding(horizontal = 0.dp),
-                                text = stringResource(R.string.inspiration),
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = Color.White
-                            )
-                            Text(
-                                modifier = Modifier.padding(horizontal = 0.dp),
-                                text = "${agent.creator?.publicAgentsCount ?: 0} InTy  |  ${agent.creator?.totalPublicAgentsFollows ?: 0} Subscribers",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Normal,
-                                color = Color.White
-                            )
-                        }
-                        Spacer(Modifier.width(8.dp))
-
-                        IntyImage(
-                            modifier = Modifier.size(16.dp),
-                            model = R.drawable.icon_next
-                        )
-
-                        Spacer(Modifier.width(8.dp))
-                    }
-
-                    Spacer(Modifier.height(12.dp))
-                    Text(
-                        modifier = Modifier.padding(horizontal = 12.dp),
-                        text = stringResource(R.string.create_time, convertUtcToLocalFull(agent.createdAt)),
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Light,
-                        color = Color.White.copy(0.55f)
-                    )
-                    Spacer(Modifier.height(16.dp))
-                }
+//                Column(
+//                    modifier = Modifier
+//                        .padding(horizontal = 16.dp)
+//                        .fillMaxWidth()
+//                        .border(
+//                            brush = Brush.linearGradient(
+//                                colors = listOf(
+//                                    Color.Transparent,
+//                                    Color.White.copy(0.2f),
+//                                    Color.Transparent
+//                                )
+//                            ),
+//                            width = 1.dp,
+//                            shape = RoundedCornerShape(8.dp)
+//                        )
+//                        .background(
+//                            color = Color(0x3378599A),
+//                            shape = RoundedCornerShape(8.dp)
+//                        )
+//                ) {
+//                    Spacer(Modifier.height(16.dp))
+//
+//                    Text(
+//                        modifier = Modifier.padding(horizontal = 12.dp),
+//                        text = stringResource(R.string.creation_info),
+//                        fontSize = 14.sp,
+//                        fontWeight = FontWeight.SemiBold,
+//                        color = Color.White
+//                    )
+//                    Spacer(Modifier.height(12.dp))
+//                    Row(
+//                        modifier = Modifier
+//                            .padding(horizontal = 12.dp)
+//                            .fillMaxWidth()
+//                            .height(56.dp)
+//                            .background(color = Color.White.copy(0.1f), shape = RoundedCornerShape(8.dp))
+//                            .border(width = 1.dp, color = Color.White.copy(0.2f), shape = RoundedCornerShape(8.dp))
+//                        ,
+//                        verticalAlignment = Alignment.CenterVertically,
+//                    ) {
+//                        Spacer(Modifier.width(8.dp))
+//
+//                        IntyImage(
+//                            modifier = Modifier.size(36.dp)
+//                                .clip(RoundedCornerShape(8.dp))
+//                            ,
+//                            model = agent.creator?.avatar,
+//                            placeholder = painterResource(R.drawable.app_2)
+//                        )
+//                        Spacer(Modifier.width(6.dp))
+//                        Column(
+//                            modifier = Modifier.weight(1f)
+//                        ) {
+//                            Text(
+//                                modifier = Modifier.padding(horizontal = 0.dp),
+//                                text = stringResource(R.string.inspiration),
+//                                fontSize = 14.sp,
+//                                fontWeight = FontWeight.Medium,
+//                                color = Color.White
+//                            )
+//                            Text(
+//                                modifier = Modifier.padding(horizontal = 0.dp),
+//                                text = "${agent.creator?.publicAgentsCount ?: 0} InTy  |  ${agent.creator?.totalPublicAgentsFollows ?: 0} Subscribers",
+//                                fontSize = 12.sp,
+//                                fontWeight = FontWeight.Normal,
+//                                color = Color.White
+//                            )
+//                        }
+//                        Spacer(Modifier.width(8.dp))
+//
+//                        IntyImage(
+//                            modifier = Modifier.size(16.dp),
+//                            model = R.drawable.icon_next
+//                        )
+//
+//                        Spacer(Modifier.width(8.dp))
+//                    }
+//
+//                    Spacer(Modifier.height(12.dp))
+//                    Text(
+//                        modifier = Modifier.padding(horizontal = 12.dp),
+//                        text = stringResource(R.string.create_time, convertUtcToLocalFull(agent.createdAt)),
+//                        fontSize = 12.sp,
+//                        fontWeight = FontWeight.Light,
+//                        color = Color.White.copy(0.55f)
+//                    )
+//                    Spacer(Modifier.height(16.dp))
+//                }
 
                 Spacer(Modifier.height(100.dp))
             }
