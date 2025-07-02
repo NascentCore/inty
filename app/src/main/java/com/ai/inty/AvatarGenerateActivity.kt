@@ -215,27 +215,14 @@ fun AvatarPreviewSection(
 ) {
     Box(
         modifier = Modifier
-            .size(200.dp)
+            .fillMaxWidth()
+            .height(320.dp)
             .background(
                 color = Color(0x1A78599A),
                 shape = RoundedCornerShape(16.dp)
             ),
         contentAlignment = Alignment.Center
     ) {
-        // 虚线边框
-        Canvas(
-            modifier = Modifier.fillMaxSize()
-        ) {
-            val pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)
-            val strokeWidth = 4.dp.toPx()
-            val cornerRadius = 16.dp.toPx()
-            
-            drawRoundRect(
-                color = androidx.compose.ui.graphics.Color(0xFFE91E63),
-                style = Stroke(width = strokeWidth, pathEffect = pathEffect),
-                cornerRadius = CornerRadius(cornerRadius)
-            )
-        }
         when {
             isLoading -> {
                 ThreeDotLoadingAnimation()
@@ -274,6 +261,30 @@ fun AvatarPreviewSection(
                         textAlign = TextAlign.Center
                     )
                 }
+            }
+        }
+        
+        // Dashed border for empty state (matching CreateRoleActivity style)
+        if (imageUrl == null && !isLoading) {
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                val strokeWidth = 1.dp.toPx()
+                val cornerRadius = 16.dp.toPx()
+                val dashLength = 10.dp.toPx()
+                val gapLength = 5.dp.toPx()
+                
+                drawRoundRect(
+                    color = androidx.compose.ui.graphics.Color.Gray,
+                    topLeft = androidx.compose.ui.geometry.Offset(strokeWidth / 2, strokeWidth / 2),
+                    size = androidx.compose.ui.geometry.Size(
+                        size.width - strokeWidth,
+                        size.height - strokeWidth
+                    ),
+                    cornerRadius = CornerRadius(cornerRadius),
+                    style = Stroke(
+                        width = strokeWidth,
+                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(dashLength, gapLength))
+                    )
+                )
             }
         }
     }

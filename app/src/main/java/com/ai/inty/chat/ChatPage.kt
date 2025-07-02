@@ -79,6 +79,7 @@ import com.ai.inty.beans.AgentInfo
 import com.ai.inty.beans.GENDER
 import com.ai.inty.beans.MsgInfo
 import com.ai.inty.ui.theme.BackGround
+import com.ai.inty.utils.getChatBackground
 import com.ai.inty.viewmodels.ChatViewModel
 import com.inty.utils.log.EasyLog
 import com.inty.utils.storage.IntySetting
@@ -171,7 +172,7 @@ fun ChatPage(
             IntyImage(
                 modifier = Modifier
                     .size(imageWidthDp.dp, imageHeightDp.dp),
-                model = agentInfo?.avatar,
+                model = agentInfo?.getChatBackground(),
                 alignment = Alignment.TopCenter,
                 contentScale = ContentScale.Crop,
             )

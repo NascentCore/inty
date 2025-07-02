@@ -155,7 +155,10 @@ fun CreateRolePage(
     // Initialize image states based on edit mode
     var avatarUrl by remember { 
         mutableStateOf<String?>(
-            if (isEditMode) editAgent?.background?.takeIf { it.isNotBlank() } else null
+            if (isEditMode && editAgent?.backgroundImages?.isEmpty() == true) {
+                // If no background images array, use single background field
+                editAgent?.background?.takeIf { it.isNotBlank() }
+            } else null
         ) 
     }
     var avatarUrls by remember { 
@@ -167,7 +170,13 @@ fun CreateRolePage(
         mutableStateOf(
             if (isEditMode && editAgent?.backgroundImages?.isNotEmpty() == true) {
                 // Find the index of the background image in the background_images list
-                editAgent.backgroundImages.indexOf(editAgent.background).takeIf { it >= 0 } ?: 0
+                val backgroundUrl = editAgent.background?.takeIf { it.isNotBlank() }
+                if (backgroundUrl != null) {
+                    val index = editAgent.backgroundImages.indexOf(backgroundUrl)
+                    if (index >= 0) index else 0
+                } else {
+                    0
+                }
             } else {
                 0
             }
@@ -686,11 +695,6 @@ fun AvatarUploadSection(
                                 color = Color(0x1A78599A),
                                 shape = RoundedCornerShape(16.dp)
                             )
-                            .border(
-                                width = 4.dp,
-                                color = Color(0xFFE91E63),
-                                shape = RoundedCornerShape(16.dp)
-                            )
                             .noRippleClickable { onGenerateClick() }
                     } else {
                         modifier
@@ -757,6 +761,30 @@ fun AvatarUploadSection(
                 }
             }
             
+            // Dashed border for empty state
+            if (avatarUrls.isEmpty() && avatarUrl == null) {
+                Canvas(modifier = Modifier.fillMaxSize()) {
+                    val strokeWidth = 1.dp.toPx()
+                    val cornerRadius = 16.dp.toPx()
+                    val dashLength = 10.dp.toPx()
+                    val gapLength = 5.dp.toPx()
+                    
+                    drawRoundRect(
+                        color = androidx.compose.ui.graphics.Color.Gray,
+                        topLeft = androidx.compose.ui.geometry.Offset(strokeWidth / 2, strokeWidth / 2),
+                        size = androidx.compose.ui.geometry.Size(
+                            size.width - strokeWidth,
+                            size.height - strokeWidth
+                        ),
+                        cornerRadius = CornerRadius(cornerRadius),
+                        style = Stroke(
+                            width = strokeWidth,
+                            pathEffect = PathEffect.dashPathEffect(floatArrayOf(dashLength, gapLength))
+                        )
+                    )
+                }
+            }
+            
             // Face edit button - show only when there's an avatar
             if (avatarUrls.isNotEmpty() || avatarUrl != null) {
                 Box(
@@ -788,17 +816,6 @@ fun AvatarUploadSection(
                     }
                 }
             }
-        }
-        
-        // Show cropped avatar indicator
-        if (croppedAvatarUrl != null) {
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "✓ Cropped avatar saved",
-                fontSize = 12.sp,
-                color = Color(0xFF4CAF50),
-                fontWeight = FontWeight.Medium
-            )
         }
         
         // Show grid of multiple avatars below the main preview
