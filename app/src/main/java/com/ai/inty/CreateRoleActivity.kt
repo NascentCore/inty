@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -966,11 +967,11 @@ fun AvatarUploadSection(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Regen button on the left - same weight as one thumbnail
+                    // Fixed Regen button on the left
                     Box(
                         modifier = Modifier
-                            .weight(1f)
-                            .height(72.dp)
+                            .width(72.dp)
+                            .height(90.dp)
                     ) {
                         com.ai.inty.RegenButton(
                             onClick = { onRegenerate(AvatarManager.getGenerationPrompt()) },
@@ -978,32 +979,39 @@ fun AvatarUploadSection(
                         )
                     }
                     
-                    // 4张图片的网格布局 on the right
-                    avatarUrls.take(4).forEachIndexed { index, imageUrl ->
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(72.dp)
-                                .background(
-                                    color = Color(0x1A78599A),
-                                    shape = RoundedCornerShape(8.dp)
-                                )
-                                .border(
-                                    width = if (index == selectedIndex) 3.dp else 1.dp,
-                                    color = if (index == selectedIndex) Color(0xFFE91E63) else Color.Transparent,
-                                    shape = RoundedCornerShape(8.dp)
-                                )
-                                .noRippleClickable { onImageSelected(index) },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            AsyncImage(
-                                model = imageUrl,
-                                contentDescription = "Generated Avatar $index",
+                    // Scrollable thumbnail row
+                    LazyRow(
+                        modifier = Modifier.weight(1f),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        items(avatarUrls.size) { index ->
+                            val imageUrl = avatarUrls[index]
+                            Box(
                                 modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(4.dp),
-                                contentScale = ContentScale.Crop
-                            )
+                                    .width(72.dp)
+                                    .height(90.dp)
+                                    .background(
+                                        color = Color(0x1A78599A),
+                                        shape = RoundedCornerShape(8.dp)
+                                    )
+                                    .border(
+                                        width = if (index == selectedIndex) 3.dp else 1.dp,
+                                        color = if (index == selectedIndex) Color(0xFFE91E63) else Color.Transparent,
+                                        shape = RoundedCornerShape(8.dp)
+                                    )
+                                    .noRippleClickable { onImageSelected(index) },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                AsyncImage(
+                                    model = imageUrl,
+                                    contentDescription = "Generated Avatar $index",
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .padding(4.dp),
+                                    contentScale = ContentScale.Crop
+                                )
+                            }
                         }
                     }
                 }
