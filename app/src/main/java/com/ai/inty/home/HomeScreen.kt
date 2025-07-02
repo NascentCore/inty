@@ -180,6 +180,7 @@ fun HomeScreen(
             HomeTabIndex.My -> {
                 val userProfile = mainViewModel.userProfile.collectAsState()
                 val userCreatedAgents = mainViewModel.userCreatedAgents
+                val isLoadingUserAgents = mainViewModel.isLoadingUserAgents.collectAsState()
                 
                 // 确保用户信息有效，避免崩溃
                 val safeUserProfile = userProfile.value.let { profile ->
@@ -199,6 +200,7 @@ fun HomeScreen(
                     modifier = Modifier,
                     userProfile = safeUserProfile,
                     agents = userCreatedAgents,
+                    isLoading = isLoadingUserAgents.value,
                     onClickAgent = { agent ->
                         TheRouter.build(Constant.ROUTE_CHAT)
                             .withObject("agent", agent)
@@ -220,6 +222,9 @@ fun HomeScreen(
                                 // 错误处理已在ViewModel中完成
                             }
                         )
+                    },
+                    onLoadMore = {
+                        mainViewModel.loadMoreUserCreatedAgents()
                     }
                 )
                 

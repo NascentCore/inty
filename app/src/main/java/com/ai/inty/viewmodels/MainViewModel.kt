@@ -64,6 +64,12 @@ class MainViewModel: BaseActivityViewModel() {
     private var _isLoading = MutableStateFlow(false)
     val isLoading = _isLoading.asStateFlow()
     private var hasMoreData = true
+    
+    // Pagination state for user created agents
+    private var currentUserAgentsPage = 0
+    private var _isLoadingUserAgents = MutableStateFlow(false)
+    val isLoadingUserAgents = _isLoadingUserAgents.asStateFlow()
+    private var hasMoreUserAgents = true
 
     private val _selectedTab = MutableStateFlow(HomeTabIndex.Chat)
     val selectedTab = _selectedTab.asStateFlow()
@@ -417,29 +423,61 @@ class MainViewModel: BaseActivityViewModel() {
     }
     
     fun getUserCreatedAgents() {
-        EasyLog.log("getUserCreatedAgents - Starting API call")
+        EasyLog.log("getUserCreatedAgents - Loading first page")
+        currentUserAgentsPage = 0
+        userCreatedAgents.clear()
+        hasMoreUserAgents = true
+        loadUserCreatedAgents()
+    }
+    
+    fun loadMoreUserCreatedAgents() {
+        if (!_isLoadingUserAgents.value && hasMoreUserAgents) {
+            currentUserAgentsPage++
+            loadUserCreatedAgents()
+        }
+    }
+    
+    private fun loadUserCreatedAgents() {
+        if (_isLoadingUserAgents.value) return
+        
+        _isLoadingUserAgents.value = true
+        val skip = currentUserAgentsPage * 10
+        EasyLog.log("loadUserCreatedAgents - page: $currentUserAgentsPage, skip: $skip")
+        
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val result = agentApi.getUserCreatedAgents(0, 10)
-                EasyLog.log("getUserCreatedAgents API result = $result")
+                val result = agentApi.getUserCreatedAgents(skip, 10)
+                EasyLog.log("loadUserCreatedAgents API result = $result")
                 
                 when (result) {
                     is HttpResult.Success -> {
-                        EasyLog.log("getUserCreatedAgents - Success: Found ${result.data.size} agents")
-                        userCreatedAgents.clear()
-                        userCreatedAgents.addAll(result.data)
-                        EasyLog.log("getUserCreatedAgents - Updated userCreatedAgents list with ${userCreatedAgents.size} items")
+                        if (result.data.isEmpty()) {
+                            hasMoreUserAgents = false
+                            EasyLog.log("No more user created agents to load")
+                        } else {
+                            userCreatedAgents.addAll(result.data)
+                            EasyLog.log("Added ${result.data.size} user agents, total: ${userCreatedAgents.size}")
+                        }
                     }
                     is HttpResult.Failure -> {
-                        EasyLog.log("getUserCreatedAgents - API failure: ${result.message}", priority = EasyLog.ERROR)
+                        EasyLog.log("loadUserCreatedAgents - API failure: ${result.message}", priority = EasyLog.ERROR)
                         showSnackbar(result.message)
+                        // If loading failed, rollback page counter
+                        if (currentUserAgentsPage > 0) {
+                            currentUserAgentsPage--
+                        }
                     }
                 }
             } catch (e: Exception) {
-                EasyLog.log("getUserCreatedAgents - Exception occurred: ${e.message}", priority = EasyLog.ERROR)
+                EasyLog.log("loadUserCreatedAgents - Exception occurred: ${e.message}", priority = EasyLog.ERROR)
                 EasyLog.log(e)
                 showSnackbar("Failed to load created agents: ${e.message}")
+                // If loading failed, rollback page counter
+                if (currentUserAgentsPage > 0) {
+                    currentUserAgentsPage--
+                }
             }
+            _isLoadingUserAgents.value = false
         }
     }
     

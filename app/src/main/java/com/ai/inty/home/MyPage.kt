@@ -27,6 +27,11 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -62,6 +67,8 @@ fun MyPage(
     onClickAgent: (AgentInfo) -> Unit,
     onEditAgent: ((AgentInfo) -> Unit)? = null,
     onDeleteAgent: ((AgentInfo) -> Unit)? = null,
+    isLoading: Boolean = false,
+    onLoadMore: () -> Unit = {},
 ) {
     val context = LocalContext.current
     var lastClickTime by remember { mutableLongStateOf(0L) }
@@ -252,7 +259,26 @@ fun MyPage(
                 } else {
                     Spacer(Modifier.height(10.dp))
 
+                    val listState = rememberLazyGridState()
+                    
+                    // Detect when user scrolls to bottom
+                    LaunchedEffect(listState) {
+                        snapshotFlow { listState.layoutInfo.visibleItemsInfo }
+                            .collect { visibleItems ->
+                                val lastVisibleItem = visibleItems.lastOrNull()
+                                val totalItems = listState.layoutInfo.totalItemsCount
+                                
+                                if (lastVisibleItem != null && 
+                                    lastVisibleItem.index >= totalItems - 3 && // Trigger 3 items before end
+                                    !isLoading &&
+                                    agents.isNotEmpty()) {
+                                    onLoadMore()
+                                }
+                            }
+                    }
+
                     LazyVerticalGrid(
+                        state = listState,
                         modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 100.dp),
                         columns = GridCells.Fixed(2),
                         horizontalArrangement = Arrangement.spacedBy(13.dp),
@@ -267,6 +293,22 @@ fun MyPage(
                                 onEditAgent = onEditAgent,
                                 onDeleteAgent = onDeleteAgent
                             )
+                        }
+                        
+                        // Loading indicator when loading more
+                        if (isLoading) {
+                            item {
+                                Box(
+                                    modifier = Modifier
+                                        .padding(16.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    CircularProgressIndicator(
+                                        color = Color.White,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
+                            }
                         }
                         
                         item {
