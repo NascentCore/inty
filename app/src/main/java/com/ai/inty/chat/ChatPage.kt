@@ -324,40 +324,104 @@ fun ChatPage(
                     }
                     
                     // 输入框 - 动态底部间距
-                    Row(
+                    val inputData = chatViewModel.inputData.collectAsState()
+                    val isInputFocused = remember { mutableStateOf(false) }
+                    
+                    Column(
                         modifier = Modifier
                             .padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = bottomPadding)
                             .fillMaxWidth()
-                            .height(64.dp)
-                            .background(Color(0x9937303D), RoundedCornerShape(24.dp)),
-                        verticalAlignment = Alignment.CenterVertically
+                            .background(Color(0x9937303D), RoundedCornerShape(24.dp))
                     ) {
-                    val inputData = chatViewModel.inputData.collectAsState()
-                    IntySmallTextField(
-                        modifier = Modifier.weight(1f).padding(horizontal = 16.dp),
-                        value = inputData.value,
-                        singleLine = false,
-                        onValueChange = {
-                            chatViewModel.inputData.value = it
-                        },
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Default),
-                        keyboardActions = KeyboardActions()
-                    )
+                        // 主输入区域
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(if (isInputFocused.value) 80.dp else 64.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            val inputSelection = chatViewModel.inputSelection.collectAsState()
+                            IntySmallTextField(
+                                modifier = Modifier.weight(1f).padding(horizontal = 16.dp),
+                                value = inputData.value,
+                                singleLine = false,
+                                onValueChange = {
+                                    chatViewModel.inputData.value = it
+                                },
+                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Default),
+                                keyboardActions = KeyboardActions(),
+                                onFocusChanged = { focused ->
+                                    isInputFocused.value = focused
+                                },
+                                onSelectionChanged = { selection ->
+                                    chatViewModel.inputSelection.value = selection
+                                },
+                                selection = inputSelection.value
+                            )
 
-                    if (inputData.value.isNotEmpty()) {
-                        IntyImage(
-                            modifier = Modifier.padding(16.dp, 0.dp).size(24.dp).noRippleClickable {
-                                chatViewModel.sendMsg()
-                            },
-                            model = R.drawable.btn_send
-                        )
-                    } else {
-                        IntyImage(
-                            modifier = Modifier.padding(16.dp, 0.dp).size(24.dp).noRippleClickable {
-                                showMorePanel = !showMorePanel
-                            },
-                            model = if (showMorePanel) R.drawable.btn_down else R.drawable.btn_add2
-                        )
+                            if (inputData.value.isNotEmpty()) {
+                                IntyImage(
+                                    modifier = Modifier.padding(16.dp, 0.dp).size(24.dp).noRippleClickable {
+                                        chatViewModel.sendMsg()
+                                    },
+                                    model = R.drawable.btn_send
+                                )
+                            } else {
+                                IntyImage(
+                                    modifier = Modifier.padding(16.dp, 0.dp).size(24.dp).noRippleClickable {
+                                        showMorePanel = !showMorePanel
+                                    },
+                                    model = if (showMorePanel) R.drawable.btn_down else R.drawable.btn_add2
+                                )
+                            }
+                        }
+                        
+                        // 括号按钮区域 - 仅在输入框获得焦点时显示
+                        if (isInputFocused.value) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                                horizontalArrangement = androidx.compose.foundation.layout.Arrangement.Start
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .width(40.dp)
+                                        .height(32.dp)
+                                        .background(
+                                            Color.White.copy(alpha = 0.1f),
+                                            RoundedCornerShape(16.dp)
+                                        )
+                                        .noRippleClickable {
+                                            // 获取当前光标位置
+                                            val currentText = inputData.value
+                                            val currentSelection = chatViewModel.inputSelection.value
+                                            
+                                            // 确保光标位置在有效范围内
+                                            val safeSelection = currentSelection.coerceIn(0, currentText.length)
+                                            
+                                            // 在光标位置插入一对括号
+                                            val beforeCursor = currentText.substring(0, safeSelection)
+                                            val afterCursor = currentText.substring(safeSelection)
+                                            val newText = beforeCursor + " ** " + afterCursor
+                                            
+                                            // 更新文本
+                                            chatViewModel.inputData.value = newText
+                                            
+                                            // 设置光标位置到括号中间
+                                            val newCursorPosition = safeSelection + 2
+                                            chatViewModel.inputSelection.value = newCursorPosition
+                                        },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = "**",
+                                        color = Color.White,
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                }
+                            }
                         }
                     }
                 }
