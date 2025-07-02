@@ -20,6 +20,7 @@ from langchain_core.tools import Tool
 from langchain_google_community import GoogleSearchAPIWrapper
 import logging
 
+
 logger = logging.getLogger(__name__)
 
 # 初始化自定义的embedding服务
@@ -93,6 +94,7 @@ class Agent:
         self.last_used = time.time()
         self.system_prompt = system_prompt
         self._last_used_lock = RLock()  # 仅保护last_used更新
+        self._user_info_cache = {}  # 缓存已初始化的用户信息，避免重复查询
         
         # 线程池用于异步执行聊天任务
         self._executor = ThreadPoolExecutor(
@@ -132,9 +134,74 @@ class Agent:
         with self._last_used_lock:
             self.last_used = time.time()
 
+    def _get_user_info_context_sync(self, user_id: str) -> str:
+        """
+        同步获取用户基本信息的上下文文本
+        用于在聊天时注入用户信息
+        """
+        # 检查缓存
+        if user_id in self._user_info_cache:
+            return self._user_info_cache[user_id]
+        
+        try:
+            # 使用同步数据库连接查询用户信息
+            from sqlalchemy import create_engine, text
+            from app.core.config import settings
+            
+            # 创建同步数据库引擎
+            sync_engine = create_engine(settings.database.url)
+            
+            with sync_engine.connect() as conn:
+                # 查询用户基本信息
+                query = text("""
+                    SELECT nickname, gender, age_group, description, system_language 
+                    FROM users 
+                    WHERE id = :user_id
+                """)
+                result = conn.execute(query, {"user_id": user_id})
+                row = result.fetchone()
+                
+                if not row:
+                    logger.debug(f"用户 {user_id} 不存在")
+                    self._user_info_cache[user_id] = ""
+                    return ""
+                
+                # 构建用户信息字符串
+                user_info_parts = []
+                nickname, gender, age_group, description, system_language = row
+                
+                if nickname:
+                    user_info_parts.append(f"用户昵称：{nickname}")
+                if gender:
+                    gender_map = {"MALE": "男性", "FEMALE": "女性", "OTHER": "其他"}
+                    user_info_parts.append(f"性别：{gender_map.get(gender, gender)}")
+                if age_group:
+                    user_info_parts.append(f"年龄段：{age_group}")
+                if description:
+                    user_info_parts.append(f"个人简介：{description}")
+                if system_language:
+                    user_info_parts.append(f"首选语言：{system_language}")
+                
+                if user_info_parts:
+                    user_info_text = "[用户基本信息]\n" + "\n".join(user_info_parts) + "\n[请基于以上信息提供个性化服务]"
+                    self._user_info_cache[user_id] = user_info_text
+                    logger.info(f"成功获取用户 {user_id} 的基本信息")
+                    return user_info_text
+                else:
+                    self._user_info_cache[user_id] = ""
+                    return ""
+            
+        except Exception as e:
+            logger.error(f"获取用户 {user_id} 基本信息失败: {str(e)}")
+            self._user_info_cache[user_id] = ""
+            return ""
+
     def _chat_sync(self, user_id: str, session_id: str, messages: dict[str, Any]) -> str:
         """同步聊天方法，在线程池中执行"""
         self._update_last_used()
+        
+        # 获取用户信息上下文（同步方法）
+        user_info_context = self._get_user_info_context_sync(user_id)
         
         # 从连接池获取连接
         pool = get_connection_pool()
@@ -146,12 +213,23 @@ class Agent:
                     sync_connection=conn_local
                 )
 
-                history.add_messages(messages["messages"])
+                # 如果有用户信息上下文，将其添加到消息中
+                enhanced_messages = messages["messages"].copy()
+                if user_info_context:
+                    # 在用户消息前添加用户信息上下文
+                    from langchain_core.messages import SystemMessage
+                    context_message = SystemMessage(content=user_info_context)
+                    enhanced_messages.insert(0, context_message)
+
+                history.add_messages(messages["messages"])  # 只保存原始用户消息到历史记录
 
                 # 使用更精确的thread_id，包含agent_id避免混淆
                 thread_id = f"{user_id}_{self.agent_id}"
                 config = {'configurable':{'user_id':user_id,'thread_id':thread_id}}
-                response = self.agent.invoke(messages, config)
+                
+                # 使用增强的消息（包含用户信息）进行对话
+                enhanced_messages_dict = {"messages": enhanced_messages}
+                response = self.agent.invoke(enhanced_messages_dict, config)
 
                 ai_messages = [message for message in response.get("messages",[]) if isinstance(message, AIMessage)]
                 response = ai_messages[-1].content if ai_messages else "抱歉，我无法理解您的消息。请再试一次。"
@@ -162,7 +240,7 @@ class Agent:
                 logger.error(f"聊天处理失败 - Agent: {self.agent_id}, Session: {session_id}, Error: {str(e)}")
                 raise
 
-    async def chat(self, user_id: str, session_id: str, messages: dict[str, Any]) -> str:
+    async def chat(self, user_id: str, session_id: str, messages: dict[str, Any], db_session = None) -> str:
         """异步聊天方法"""
         loop = asyncio.get_event_loop()
         try:
@@ -179,11 +257,14 @@ class Agent:
             logger.error(f"异步聊天失败 - Agent: {self.agent_id}, Error: {str(e)}")
             raise
 
-    async def chat_stream(self, user_id: str, session_id: str, messages: dict[str, Any]):
+    async def chat_stream(self, user_id: str, session_id: str, messages: dict[str, Any], db_session = None):
         """异步流式聊天方法"""
         self._update_last_used()
         
         def _stream_generator():
+            # 获取用户信息上下文（同步方法）
+            user_info_context = self._get_user_info_context_sync(user_id)
+            
             # 从连接池获取连接
             pool = get_connection_pool()
             with pool.connection() as conn_local:
@@ -194,11 +275,21 @@ class Agent:
                         sync_connection=conn_local
                     )
 
+                    # 如果有用户信息上下文，将其添加到消息中
+                    enhanced_messages = messages["messages"].copy()
+                    if user_info_context:
+                        # 在用户消息前添加用户信息上下文
+                        from langchain_core.messages import SystemMessage
+                        context_message = SystemMessage(content=user_info_context)
+                        enhanced_messages.insert(0, context_message)
+
                     # 使用更精确的thread_id，包含agent_id避免混淆
                     thread_id = f"{user_id}_{self.agent_id}"
                     config = {'configurable':{'user_id':user_id,'thread_id':thread_id}}
 
-                    for message_chunk, metadata in self.agent.stream(messages, config, stream_mode="messages"):
+                    # 使用增强的消息（包含用户信息）进行流式对话
+                    enhanced_messages_dict = {"messages": enhanced_messages}
+                    for message_chunk, metadata in self.agent.stream(enhanced_messages_dict, config, stream_mode="messages"):
                         yield message_chunk, metadata
                 except Exception as e:
                     logger.error(f"流式聊天处理失败 - Agent: {self.agent_id}, Session: {session_id}, Error: {str(e)}")

@@ -213,6 +213,8 @@ class KeepTalkingService:
                 user_id=chat.user_id,
                 session_id=session_id,
                 messages=messages
+                # 注意：Keep Talking服务中暂不传递db_session，避免复杂性
+                # 用户信息在正常聊天中已经被缓存，keep_talking可以使用缓存的信息
             )
             
             # 更新keep_talking计数

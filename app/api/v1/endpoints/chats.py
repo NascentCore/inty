@@ -413,7 +413,8 @@ async def agent_chat_completions(
                     user_id=current_user.id,
                     session_id=session_id,
                     chat_id=chat.id,
-                    model_name=request.model
+                    model_name=request.model,
+                    db_session=db
                 ),
                 media_type="text/event-stream",
                 headers={
@@ -426,7 +427,8 @@ async def agent_chat_completions(
             response_content = await agent.chat(
                 user_id=current_user.id,
                 session_id=session_id,
-                messages=messages
+                messages=messages,
+                db_session=db
             )
             
             return {
@@ -566,7 +568,8 @@ async def generate_chat_stream(
     user_id: str,
     session_id: str,
     chat_id: str,
-    model_name: str
+    model_name: str,
+    db_session: AsyncSession = None
 ):
     """
     Generate streaming chat response (async version)
@@ -576,7 +579,8 @@ async def generate_chat_stream(
         async for message_chunk, metadata in agent.chat_stream(
             user_id=user_id,
             session_id=session_id,
-            messages=messages
+            messages=messages,
+            db_session=db_session
         ):
             # Check message chunk type, only send AI messages
             if hasattr(message_chunk, 'content') and message_chunk.content:
