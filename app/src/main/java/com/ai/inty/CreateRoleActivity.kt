@@ -798,7 +798,7 @@ fun AvatarUploadSection(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(320.dp)
+                .height(480.dp)
                 .let { modifier ->
                     if (avatarUrls.isEmpty() && avatarUrl == null) {
                         modifier
@@ -927,52 +927,61 @@ fun AvatarUploadSection(
                     }
                 }
             }
-        }
-        
-        // Show grid of multiple avatars below the main preview
-        if (avatarUrls.isNotEmpty()) {
-            Spacer(modifier = Modifier.height(16.dp))
             
-            // Row containing Regen button on left and image grid on right
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Regen button on the left - same weight as one thumbnail
-                Box(modifier = Modifier.weight(1f)) {
-                    com.ai.inty.RegenButton(
-                        onClick = { onRegenerate(AvatarManager.getGenerationPrompt()) },
-                        enabled = !isGenerating
-                    )
-                }
-                
-                // 4张图片的网格布局 on the right
-                avatarUrls.take(4).forEachIndexed { index, imageUrl ->
+            // Floating thumbnail row at the bottom of preview
+            if (avatarUrls.isNotEmpty()) {
+                Row(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                        .background(
+                            color = Color.Black.copy(alpha = 0.5f),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                        .padding(12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Regen button on the left - same weight as one thumbnail
                     Box(
                         modifier = Modifier
                             .weight(1f)
-                            .aspectRatio(1f)
-                            .background(
-                                color = Color(0x1A78599A),
-                                shape = RoundedCornerShape(8.dp)
-                            )
-                            .border(
-                                width = if (index == selectedIndex) 3.dp else 1.dp,
-                                color = if (index == selectedIndex) Color(0xFFE91E63) else Color.Transparent,
-                                shape = RoundedCornerShape(8.dp)
-                            )
-                            .noRippleClickable { onImageSelected(index) },
-                        contentAlignment = Alignment.Center
+                            .height(72.dp)
                     ) {
-                        AsyncImage(
-                            model = imageUrl,
-                            contentDescription = "Generated Avatar $index",
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(4.dp),
-                            contentScale = ContentScale.Crop
+                        com.ai.inty.RegenButton(
+                            onClick = { onRegenerate(AvatarManager.getGenerationPrompt()) },
+                            enabled = !isGenerating
                         )
+                    }
+                    
+                    // 4张图片的网格布局 on the right
+                    avatarUrls.take(4).forEachIndexed { index, imageUrl ->
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(72.dp)
+                                .background(
+                                    color = Color(0x1A78599A),
+                                    shape = RoundedCornerShape(8.dp)
+                                )
+                                .border(
+                                    width = if (index == selectedIndex) 3.dp else 1.dp,
+                                    color = if (index == selectedIndex) Color(0xFFE91E63) else Color.Transparent,
+                                    shape = RoundedCornerShape(8.dp)
+                                )
+                                .noRippleClickable { onImageSelected(index) },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            AsyncImage(
+                                model = imageUrl,
+                                contentDescription = "Generated Avatar $index",
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(4.dp),
+                                contentScale = ContentScale.Crop
+                            )
+                        }
                     }
                 }
             }

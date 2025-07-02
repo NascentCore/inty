@@ -509,7 +509,7 @@ fun RegenButton(
 ) {
     Box(
         modifier = Modifier
-            .aspectRatio(1f)
+            .fillMaxSize()
             .background(
                 color = Color(0x1A78599A),
                 shape = RoundedCornerShape(8.dp)
