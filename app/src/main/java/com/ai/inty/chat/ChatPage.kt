@@ -403,7 +403,7 @@ fun ChatPage(
                                             // 在光标位置插入一对括号
                                             val beforeCursor = currentText.substring(0, safeSelection)
                                             val afterCursor = currentText.substring(safeSelection)
-                                            val newText = beforeCursor + "()" + afterCursor
+                                            val newText = beforeCursor + "（）" + afterCursor
                                             
                                             // 更新文本
                                             chatViewModel.inputData.value = newText
@@ -415,7 +415,7 @@ fun ChatPage(
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Text(
-                                        text = "( )",
+                                        text = "（）",
                                         color = Color.White,
                                         fontSize = 14.sp,
                                         fontWeight = FontWeight.Medium

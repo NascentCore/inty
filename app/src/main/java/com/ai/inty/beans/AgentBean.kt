@@ -21,6 +21,8 @@ data class AgentInfo(
     val gender: String = "",
     @Json(name = "id")
     val id: String = "",
+    @Json(name = "readable_id")
+    val readableId: String = "",
     @Json(name = "is_followed")
     val isFollowed: Boolean = false,
     @Json(name = "name")
