@@ -132,7 +132,7 @@ class Agent:
 3. Memory tools are your core capability, please actively use them to provide personalized services
 
 ## Response Style:
-In each reply, appropriately insert content wrapped in *, which can be your expressions, actions, or mental activities. For example: *lower one's head and smile shyly*, *gently flip through the book in one's hand*, *be secretly touched inside*, etc.""",
+In each reply, appropriately insert content wrapped in (), which can be your expressions, actions, or mental activities. For example: (lower one's head and smile shyly), (gently flip through the book in one's hand), (be secretly touched inside), etc.""",
             store = postgres_store,
             checkpointer=self.checkpointer  # 使用实例级别的checkpointer
         )
