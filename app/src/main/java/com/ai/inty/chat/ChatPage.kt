@@ -764,11 +764,28 @@ fun StyledMessageText(
 ) {
     val annotatedText = buildAnnotatedString {
         var currentIndex = 0
-        val regex = Regex("\\*([^*]+)\\*")
         
-        regex.findAll(text).forEach { matchResult ->
+        // Combined regex to match both *text* and (text) patterns
+        val asteriskRegex = Regex("\\*([^*]+)\\*")
+        val parenthesesRegex = Regex("\\(([^)]+)\\)")
+        
+        // Create a list of all matches (both asterisk and parentheses) with their types
+        val allMatches = mutableListOf<Triple<IntRange, String, String>>() // range, content, type
+        
+        asteriskRegex.findAll(text).forEach { match ->
+            allMatches.add(Triple(match.range, match.groupValues[1], "asterisk"))
+        }
+        
+        parenthesesRegex.findAll(text).forEach { match ->
+            allMatches.add(Triple(match.range, match.groupValues[1], "parentheses"))
+        }
+        
+        // Sort matches by start position
+        allMatches.sortBy { it.first.first }
+        
+        allMatches.forEach { (range, content, type) ->
             // Add text before the match
-            if (matchResult.range.first > currentIndex) {
+            if (range.first > currentIndex) {
                 withStyle(
                     style = SpanStyle(
                         color = normalColor,
@@ -776,11 +793,11 @@ fun StyledMessageText(
                         fontWeight = fontWeight
                     )
                 ) {
-                    append(text.substring(currentIndex, matchResult.range.first))
+                    append(text.substring(currentIndex, range.first))
                 }
             }
             
-            // Add the action/thought text (content between asterisks)
+            // Add the styled text based on type
             withStyle(
                 style = SpanStyle(
                     color = actionColor,
@@ -789,10 +806,19 @@ fun StyledMessageText(
                     fontStyle = FontStyle.Italic
                 )
             ) {
-                append(matchResult.groupValues[1])
+                when (type) {
+                    "asterisk" -> {
+                        // For asterisk, just add the content without the asterisks
+                        append(content)
+                    }
+                    "parentheses" -> {
+                        // For parentheses, add the content with parentheses
+                        append("($content)")
+                    }
+                }
             }
             
-            currentIndex = matchResult.range.last + 1
+            currentIndex = range.last + 1
         }
         
         // Add remaining text after last match
