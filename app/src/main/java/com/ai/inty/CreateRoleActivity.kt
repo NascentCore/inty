@@ -203,6 +203,29 @@ fun CreateRolePage(
         }
     }
     
+    // Clean up AvatarManager when leaving the activity
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_STOP -> {
+                    // Clear AvatarManager when activity is stopped (user navigates away)
+                    EasyLog.log("Activity stopped - clearing AvatarManager data")
+                    AvatarManager.clearAllAvatarData()
+                }
+                Lifecycle.Event.ON_DESTROY -> {
+                    // Also clear when activity is destroyed
+                    EasyLog.log("Activity destroyed - clearing AvatarManager data")
+                    AvatarManager.clearAllAvatarData()
+                }
+                else -> {}
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+    
     // UCrop launcher for avatar cropping
     val cropLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
