@@ -6,6 +6,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.lifecycle.viewModelScope
 import com.ai.inty.Constant
 import com.ai.inty.MainActivity
+import com.ai.inty.R
 import com.ai.inty.base.BaseActivityViewModel
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.beans.CreateAgentRequest
@@ -599,13 +600,19 @@ class MainViewModel: BaseActivityViewModel() {
                             EasyLog.log("updateAgent success: ${result.data}")
                             // 刷新用户创建的角色列表
                             refreshCreatedAgentsListIfOnTab()
-                            ToastUtils.showToast("角色更新成功")
+                            // Toast removed to avoid duplicate - handled by calling activity
                             onSuccess(result.data)
                         }
                         is HttpResult.Failure -> {
                             EasyLog.log("updateAgent error: $result", priority = EasyLog.ERROR)
-                            val errorMessage = if (result.message.isBlank()) "更新失败，请检查网络连接" else result.message
-                            ToastUtils.showToast("更新失败: $errorMessage")
+                            val errorMessage = if (result.message.isBlank()) {
+                                AppEnv.context.getString(R.string.operation_failed_check_network, 
+                                    AppEnv.context.getString(R.string.update_failed), 
+                                    AppEnv.context.getString(R.string.check_network_connection))
+                            } else {
+                                result.message
+                            }
+                            ToastUtils.showToast(R.string.update_failed_with_reason, errorMessage)
                             onError(errorMessage)
                         }
                     }

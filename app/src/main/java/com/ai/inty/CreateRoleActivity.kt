@@ -82,9 +82,12 @@ import com.ai.inty.net.IAgentApi
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
+import okhttp3.OkHttpClient
+import okhttp3.Request
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.lifecycle.Lifecycle
@@ -457,44 +460,93 @@ fun CreateRolePage(
                 },
                 onFaceEdit = {
                     // Get the current avatar URL to crop
-                    val sourceUri = if (avatarUrls.isNotEmpty()) {
-                        Uri.parse(avatarUrls.getOrNull(selectedImageIndex) ?: avatarUrls.first())
+                    val imageUrl = if (avatarUrls.isNotEmpty()) {
+                        // Defensive bounds checking
+                        val safeIndex = if (selectedImageIndex >= 0 && selectedImageIndex < avatarUrls.size) {
+                            selectedImageIndex
+                        } else {
+                            EasyLog.log("Face edit - Index out of bounds! selectedImageIndex: $selectedImageIndex, avatarUrls.size: ${avatarUrls.size}", EasyLog.ERROR)
+                            0 // Fall back to first image
+                        }
+                        
+                        val selectedUrl = avatarUrls.getOrNull(safeIndex)
+                        EasyLog.log("Face edit - selectedImageIndex: $selectedImageIndex, safeIndex: $safeIndex, avatarUrls.size: ${avatarUrls.size}")
+                        EasyLog.log("Face edit - selectedUrl: $selectedUrl")
+                        EasyLog.log("Face edit - all avatarUrls: $avatarUrls")
+                        selectedUrl ?: avatarUrls.first()
                     } else {
-                        avatarUrl?.let { Uri.parse(it) }
+                        avatarUrl
                     }
                     
-                    if (sourceUri != null) {
-                        try {
-                            // Create destination file for cropped image
-                            val destinationFile = File(context.cacheDir, "cropped_avatar_${UUID.randomUUID()}.jpg")
-                            val destinationUri = Uri.fromFile(destinationFile)
+                    EasyLog.log("Face edit - final imageUrl to crop: $imageUrl")
+                    
+                    if (imageUrl != null) {
+                        // Check if it's a web URL or local file
+                        if (imageUrl.startsWith("http")) {
+                            // Validate URL format
+                            val isValidUrl = try {
+                                java.net.URL(imageUrl) // Test if URL is valid
+                                EasyLog.log("Face edit - Valid URL format: $imageUrl")
+                                true
+                            } catch (e: Exception) {
+                                EasyLog.log("Face edit - Invalid URL format: $imageUrl", EasyLog.ERROR)
+                                EasyLog.log("URL validation error: ${e.message}", EasyLog.ERROR)
+                                false
+                            }
                             
-                            // Configure UCrop
-                            val cropIntent = UCrop.of(sourceUri, destinationUri)
-                                .withAspectRatio(1f, 1f) // Square aspect ratio for avatar
-                                .withMaxResultSize(512, 512) // Reasonable size for avatars
-                                .withOptions(UCrop.Options().apply {
-                                    setCompressionQuality(90)
-                                    setHideBottomControls(false)
-                                    setFreeStyleCropEnabled(false)
-                                    setToolbarTitle("Crop Avatar")
-                                    setStatusBarColor(AndroidColor.parseColor("#1C1523"))
-                                    setToolbarColor(AndroidColor.parseColor("#1C1523"))
-                                    setActiveControlsWidgetColor(AndroidColor.parseColor("#E91E63"))
-                                    setToolbarWidgetColor(AndroidColor.WHITE)
-                                    setCropFrameColor(AndroidColor.WHITE)
-                                    setCropGridColor(AndroidColor.WHITE)
-                                    setCircleDimmedLayer(true) // Enable circular cropping
-                                    setShowCropFrame(false) // Hide square frame for circular crop
-                                    setShowCropGrid(false) // Hide grid for cleaner circular crop
-                                })
-                                .getIntent(context)
-                            
-                            EasyLog.log("Starting UCrop with source: $sourceUri")
-                            cropLauncher.launch(cropIntent)
-                        } catch (e: Exception) {
-                            EasyLog.log("Failed to start UCrop: ${e.message}", EasyLog.ERROR)
-                            Toast.makeText(context, "Failed to open crop editor", Toast.LENGTH_SHORT).show()
+                            if (isValidUrl) {
+                                // Download image from web URL first using OkHttp
+                            mainViewModel.viewModelScope.launch(Dispatchers.IO) {
+                                try {
+                                    // Download image to local cache using OkHttp
+                                    val tempFile = File(context.cacheDir, "temp_crop_source_${UUID.randomUUID()}.jpg")
+                                    val client = OkHttpClient()
+                                    val request = Request.Builder()
+                                        .url(imageUrl)
+                                        .build()
+                                    
+                                    val response = client.newCall(request).execute()
+                                    EasyLog.log("Face edit download - HTTP response code: ${response.code}")
+                                    EasyLog.log("Face edit download - HTTP response message: ${response.message}")
+                                    
+                                    if (response.isSuccessful) {
+                                        response.body?.let { body ->
+                                            EasyLog.log("Face edit download - Content length: ${body.contentLength()}")
+                                            body.byteStream().use { inputStream ->
+                                                tempFile.outputStream().use { outputStream ->
+                                                    val bytesWritten = inputStream.copyTo(outputStream)
+                                                    EasyLog.log("Face edit download - Bytes written: $bytesWritten")
+                                                }
+                                            }
+                                            
+                                            withContext(Dispatchers.Main) {
+                                                startUCropWithLocalFile(tempFile, context, cropLauncher)
+                                            }
+                                        } ?: run {
+                                            throw Exception("Response body is null")
+                                        }
+                                    } else {
+                                        throw Exception("HTTP ${response.code}: ${response.message}")
+                                    }
+                                } catch (e: Exception) {
+                                    EasyLog.log("Failed to download image for cropping: $imageUrl", EasyLog.ERROR)
+                                    EasyLog.log("Error details: ${e.message}", EasyLog.ERROR)
+                                    withContext(Dispatchers.Main) {
+                                        Toast.makeText(context, "Failed to download image for editing", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            }
+                            } else {
+                                Toast.makeText(context, "Invalid image URL", Toast.LENGTH_SHORT).show()
+                            }
+                        } else {
+                            // Local file URI
+                            val sourceFile = if (imageUrl.startsWith("file://")) {
+                                File(Uri.parse(imageUrl).path!!)
+                            } else {
+                                File(imageUrl)
+                            }
+                            startUCropWithLocalFile(sourceFile, context, cropLauncher)
                         }
                     } else {
                         Toast.makeText(context, "No avatar image to crop", Toast.LENGTH_SHORT).show()
@@ -575,7 +627,7 @@ fun CreateRolePage(
                 onClick = {
                     // Validate required fields
                     if (name.isBlank() || intro.isBlank() || opening.isBlank() || settings.isBlank()) {
-                        Toast.makeText(context, "请填写所有必填字段", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, context.getString(R.string.please_fill_required_fields), Toast.LENGTH_SHORT).show()
                         return@CreateButton
                     }
                     
@@ -630,12 +682,18 @@ fun CreateRolePage(
                                 request = request,
                                 onSuccess = { agentInfo ->
                                     isLoading = false
-                                    Toast.makeText(context, "角色更新成功！", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, context.getString(R.string.character_updated_successfully), Toast.LENGTH_SHORT).show()
                                     onCreateSuccess()
                                 },
                                 onError = { error ->
                                     isLoading = false
-                                    val errorMessage = if (error.isBlank()) "更新失败，请稍后重试" else "更新失败：$error"
+                                    val errorMessage = if (error.isBlank()) {
+                                        context.getString(R.string.operation_failed_try_later, 
+                                            context.getString(R.string.update_failed), 
+                                            context.getString(R.string.please_try_again_later))
+                                    } else {
+                                        context.getString(R.string.update_failed_with_reason, error)
+                                    }
                                     Toast.makeText(context, errorMessage, Toast.LENGTH_LONG).show()
                                 }
                             )
@@ -649,14 +707,21 @@ fun CreateRolePage(
                                 },
                                 onError = { error ->
                                     isLoading = false
-                                    val errorMessage = if (error.isBlank()) "创建失败，请稍后重试" else "创建失败：$error"
+                                    val errorMessage = if (error.isBlank()) {
+                                        context.getString(R.string.operation_failed_try_later, 
+                                            context.getString(R.string.creation_failed), 
+                                            context.getString(R.string.please_try_again_later))
+                                    } else {
+                                        context.getString(R.string.creation_failed_with_reason, error)
+                                    }
                                     Toast.makeText(context, errorMessage, Toast.LENGTH_LONG).show()
                                 }
                             )
                         }
                     } catch (e: Exception) {
                         isLoading = false
-                        val errorMessage = "${if (isEditMode) "更新" else "创建"}出错：${e.message ?: "未知错误"}"
+                        val operation = if (isEditMode) context.getString(R.string.update_failed) else context.getString(R.string.creation_failed)
+                        val errorMessage = context.getString(R.string.operation_error_with_reason, operation, e.message ?: context.getString(R.string.unknown_error))
                         Toast.makeText(context, errorMessage, Toast.LENGTH_LONG).show()
                         EasyLog.log("${if (isEditMode) "UpdateRole" else "CreateRole"} error: ${e.message}", EasyLog.ERROR)
                         EasyLog.log(e)
@@ -666,6 +731,52 @@ fun CreateRolePage(
             
             Spacer(modifier = Modifier.height(32.dp))
         }
+    }
+}
+
+// Helper function to start UCrop with a local file
+private fun startUCropWithLocalFile(
+    sourceFile: File,
+    context: android.content.Context,
+    cropLauncher: androidx.activity.result.ActivityResultLauncher<android.content.Intent>
+) {
+    try {
+        if (!sourceFile.exists() || sourceFile.length() == 0L) {
+            EasyLog.log("Source file does not exist or is empty: ${sourceFile.absolutePath}", EasyLog.ERROR)
+            Toast.makeText(context, "Image file not found", Toast.LENGTH_SHORT).show()
+            return
+        }
+        
+        val sourceUri = Uri.fromFile(sourceFile)
+        val destinationFile = File(context.cacheDir, "cropped_avatar_${UUID.randomUUID()}.jpg")
+        val destinationUri = Uri.fromFile(destinationFile)
+        
+        // Configure UCrop
+        val cropIntent = UCrop.of(sourceUri, destinationUri)
+            .withAspectRatio(1f, 1f) // Square aspect ratio for avatar
+            .withMaxResultSize(512, 512) // Reasonable size for avatars
+            .withOptions(UCrop.Options().apply {
+                setCompressionQuality(90)
+                setHideBottomControls(false)
+                setFreeStyleCropEnabled(false)
+                setToolbarTitle("Crop Avatar")
+                setStatusBarColor(AndroidColor.parseColor("#1C1523"))
+                setToolbarColor(AndroidColor.parseColor("#1C1523"))
+                setActiveControlsWidgetColor(AndroidColor.parseColor("#E91E63"))
+                setToolbarWidgetColor(AndroidColor.WHITE)
+                setCropFrameColor(AndroidColor.WHITE)
+                setCropGridColor(AndroidColor.WHITE)
+                setCircleDimmedLayer(true) // Enable circular cropping
+                setShowCropFrame(false) // Hide square frame for circular crop
+                setShowCropGrid(false) // Hide grid for cleaner circular crop
+            })
+            .getIntent(context)
+        
+        EasyLog.log("Starting UCrop with local file: ${sourceFile.absolutePath}")
+        cropLauncher.launch(cropIntent)
+    } catch (e: Exception) {
+        EasyLog.log("Failed to start UCrop with local file: ${e.message}", EasyLog.ERROR)
+        Toast.makeText(context, "Failed to open crop editor", Toast.LENGTH_SHORT).show()
     }
 }
 

@@ -516,7 +516,7 @@ fun RegenButton(
             )
             .border(
                 width = 1.dp,
-                color = if (enabled) Color(0xFFE91E63) else Color.White.copy(0.2f),
+                color = if (enabled) Color.Gray else Color.White.copy(0.2f),
                 shape = RoundedCornerShape(8.dp)
             )
             .noRippleClickable { if (enabled) onClick() },

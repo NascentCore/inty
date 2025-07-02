@@ -33,11 +33,11 @@
     <string name="female">Female</string>
     <string name="non_binary">Non-Binary</string>
     <string name="settings_required">Settings (Determines dialogue effect) *</string>
-    <string name="settings_placeholder">输入角色设定...</string>
+    <string name="settings_placeholder">Enter character settings...</string>
     <string name="intro_required">Intro (No impact on dialogue effect) *</string>
-    <string name="intro_placeholder">输入角色介绍...</string>
+    <string name="intro_placeholder">Enter character introduction...</string>
     <string name="opening_required">Opening *</string>
-    <string name="opening_placeholder">输入开场白...</string>
+    <string name="opening_placeholder">Enter opening message...</string>
     <string name="visibility_required">Visibility *</string>
     <string name="public_visibility">Public</string>
     <string name="private_visibility">Private</string>
@@ -48,4 +48,51 @@
     <string name="login_successfully">Login successfully</string>
     <string name="create_ai_successfully">Create AI successfully</string>
     <string name="logout_successfully">Logout successfully</string>
+    
+    <!-- Form validation messages -->
+    <string name="please_fill_required_fields">Please fill in all required fields</string>
+    
+    <!-- Success messages -->
+    <string name="character_updated_successfully">Character updated successfully!</string>
+    <string name="character_deleted_successfully">Character deleted successfully</string>
+    <string name="followed_successfully">Followed successfully</string>
+    <string name="unfollowed_successfully">Unfollowed successfully</string>
+    
+    <!-- Error messages -->
+    <string name="follow_failed">Follow failed</string>
+    <string name="unfollow_failed">Unfollow failed</string>
+    <string name="update_failed">Update failed</string>
+    <string name="delete_failed">Delete failed</string>
+    <string name="creation_failed">Creation failed</string>
+    <string name="generation_failed">Generation failed</string>
+    <string name="get_user_info_failed">Failed to get user information</string>
+    
+    <!-- Network error messages -->
+    <string name="network_timeout">Network timeout, please try again later</string>
+    <string name="network_connection_failed">Network connection failed, please check network</string>
+    <string name="data_format_error">Data format error, please try again later</string>
+    <string name="unknown_error">Unknown error</string>
+    <string name="check_network_connection">please check network connection</string>
+    <string name="please_try_again_later">please try again later</string>
+    
+    <!-- Loading messages -->
+    <string name="loading">Loading...</string>
+    <string name="loading_user_info">Loading user information...</string>
+    
+    <!-- Content descriptions -->
+    <string name="unfollow">Unfollow</string>
+    
+    <!-- Error message formats -->
+    <string name="update_failed_with_reason">Update failed: %s</string>
+    <string name="delete_failed_with_reason">Delete failed: %s</string>
+    <string name="creation_failed_with_reason">Creation failed: %s</string>
+    <string name="generation_failed_with_reason">Generation failed: %s</string>
+    <string name="follow_failed_with_reason">Follow failed: %s</string>
+    <string name="unfollow_failed_with_reason">Unfollow failed: %s</string>
+    <string name="get_user_info_failed_with_reason">Failed to get user information: %s</string>
+    
+    <!-- Generic error patterns -->
+    <string name="operation_error_with_reason" formatted="false">%s error: %s</string>
+    <string name="operation_failed_check_network" formatted="false">%s failed, %s</string>
+    <string name="operation_failed_try_later" formatted="false">%s failed, %s</string>
 </resources>

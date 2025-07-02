@@ -12,5 +12,15 @@ object ToastUtils {
         toast.show()
     }
 
+    suspend fun showToast(stringResId: Int) = withContext(Dispatchers.Main) {
+        val toast: Toast = Toast.makeText(AppEnv.context, AppEnv.context.getString(stringResId), Toast.LENGTH_SHORT)
+        toast.show()
+    }
+
+    suspend fun showToast(stringResId: Int, vararg formatArgs: Any) = withContext(Dispatchers.Main) {
+        val message = AppEnv.context.getString(stringResId, *formatArgs)
+        val toast: Toast = Toast.makeText(AppEnv.context, message, Toast.LENGTH_SHORT)
+        toast.show()
+    }
 
 }
