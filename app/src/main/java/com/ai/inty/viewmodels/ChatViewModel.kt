@@ -29,6 +29,7 @@ class ChatViewModel: BaseActivityViewModel() {
     val conversions = mutableStateListOf<ConversationItem>()
 
     val inputData = MutableStateFlow<String>("")
+    val inputSelection = MutableStateFlow<Int>(0)
 
     // 用于标识当前是否在等待AI回复
     private val _isWaitingForReply = MutableStateFlow<Boolean>(false)

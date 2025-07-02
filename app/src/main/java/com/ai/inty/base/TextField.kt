@@ -10,13 +10,21 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ai.inty.ui.theme.TextFieldColor
@@ -35,6 +43,9 @@ fun IntySmallTextField(
     keyboardOptions: KeyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
     keyboardActions: KeyboardActions = KeyboardActions.Default,
     onValueChange: (String) -> Unit,
+    onFocusChanged: ((Boolean) -> Unit)? = null,
+    onSelectionChanged: ((Int) -> Unit)? = null,
+    selection: Int = 0,
 ) {
 
     Row(
@@ -85,24 +96,47 @@ fun IntySmallTextField(
                 .weight(1f),
             contentAlignment = if (singleLine) Alignment.CenterStart else Alignment.TopStart,
         ) {
-            BasicTextField(
+            var textFieldValue by remember { mutableStateOf(TextFieldValue(value, selection = androidx.compose.ui.text.TextRange(selection))) }
+            
+            // 当外部value或selection变化时，更新TextFieldValue
+            if (textFieldValue.text != value || textFieldValue.selection.start != selection) {
+                textFieldValue = textFieldValue.copy(
+                    text = value,
+                    selection = androidx.compose.ui.text.TextRange(selection)
+                )
+            }
+            
+            TextField(
                 modifier = Modifier
-                    .fillMaxWidth(),
+                    .fillMaxWidth()
+                    .onFocusChanged { focusState ->
+                        onFocusChanged?.invoke(focusState.isFocused)
+                    },
                 enabled = enabled,
                 singleLine = singleLine,
-                value = value,
+                value = textFieldValue,
+                onValueChange = { newValue ->
+                    textFieldValue = newValue
+                    onValueChange(newValue.text)
+                    onSelectionChanged?.invoke(newValue.selection.start)
+                },
+                keyboardOptions = keyboardOptions,
+                keyboardActions = newActions,
                 textStyle = TextStyle.Default.copy(
                     fontSize = 14.sp,
                     color = TextFieldColor.Text
                 ),
-                onValueChange = onValueChange,
-                keyboardOptions = keyboardOptions,
-                keyboardActions = newActions,
-                cursorBrush = SolidColor(TextFieldColor.Text)
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = androidx.compose.ui.graphics.Color.Transparent,
+                    unfocusedContainerColor = androidx.compose.ui.graphics.Color.Transparent,
+                    disabledContainerColor = androidx.compose.ui.graphics.Color.Transparent,
+                    focusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent,
+                    unfocusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent,
+                    disabledIndicatorColor = androidx.compose.ui.graphics.Color.Transparent,
+                    cursorColor = TextFieldColor.Text
+                ),
+                placeholder = placeholder
             )
-            if (value.isEmpty()) {
-                placeholder?.let { it() }
-            }
         }
 
 
