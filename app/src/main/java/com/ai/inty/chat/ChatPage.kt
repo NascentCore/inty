@@ -765,11 +765,12 @@ fun StyledMessageText(
     val annotatedText = buildAnnotatedString {
         var currentIndex = 0
         
-        // Combined regex to match both *text* and (text) patterns
+        // Combined regex to match *text*, (text), and （text） patterns
         val asteriskRegex = Regex("\\*([^*]+)\\*")
         val parenthesesRegex = Regex("\\(([^)]+)\\)")
+        val chineseParenthesesRegex = Regex("（([^）]+)）")
         
-        // Create a list of all matches (both asterisk and parentheses) with their types
+        // Create a list of all matches (asterisk, parentheses, and chinese parentheses) with their types
         val allMatches = mutableListOf<Triple<IntRange, String, String>>() // range, content, type
         
         asteriskRegex.findAll(text).forEach { match ->
@@ -778,6 +779,10 @@ fun StyledMessageText(
         
         parenthesesRegex.findAll(text).forEach { match ->
             allMatches.add(Triple(match.range, match.groupValues[1], "parentheses"))
+        }
+        
+        chineseParenthesesRegex.findAll(text).forEach { match ->
+            allMatches.add(Triple(match.range, match.groupValues[1], "chinese_parentheses"))
         }
         
         // Sort matches by start position
@@ -814,6 +819,10 @@ fun StyledMessageText(
                     "parentheses" -> {
                         // For parentheses, add the content with parentheses
                         append("($content)")
+                    }
+                    "chinese_parentheses" -> {
+                        // For Chinese parentheses, add the content with Chinese parentheses
+                        append("（$content）")
                     }
                 }
             }
