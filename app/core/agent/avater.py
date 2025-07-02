@@ -9,7 +9,7 @@ from datetime import datetime
 # Initialize Vertex AI
 vertexai.init()  # 使用你的Google Cloud项目ID
 
-def generate_background_image_to_gcs(prompt: str, gcs_uri_base: str, count=1, aspect_ratio="16:9"):
+def generate_background_image_to_gcs(prompt: str, gcs_uri_base: str, count=1, aspect_ratio="9:16"):
     """
     使用output_gcs_uri参数直接将生成的背景图保存到GCS，返回实际生成的图片GCS路径列表
     """
