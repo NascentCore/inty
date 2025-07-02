@@ -9,17 +9,28 @@ import android.graphics.Rect
 import android.os.Build
 import android.os.Bundle
 import android.view.View
+import android.widget.Toast
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.activity.OnBackPressedCallback
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -85,12 +96,16 @@ class MainActivity : BaseActivity() {
         
         setContent {
             IntyTheme {
-                HomeScreen(
-                    modifier = Modifier.fillMaxSize(),
-                    mainViewModel = mainViewModel,
-                    chatViewModel = chatViewModel,
-                    viewModelFactory = defaultViewModelProviderFactory
-                )
+                SwipeToExitWrapper(
+                    onDoubleSwipeExit = { moveTaskToBack(true) }
+                ) {
+                    HomeScreen(
+                        modifier = Modifier.fillMaxSize(),
+                        mainViewModel = mainViewModel,
+                        chatViewModel = chatViewModel,
+                        viewModelFactory = defaultViewModelProviderFactory
+                    )
+                }
 //                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
 //                    var msg by remember { mutableStateOf("${IntySetting.getCurUserID()} = ${IntySetting.getCurToken()}") }
 //                    Column {
@@ -129,7 +144,7 @@ class MainActivity : BaseActivity() {
             }
         }
 
-        // Disable right-to-left swipe gesture by excluding right edge from system gestures
+        // Disable both left and right edge system back gestures
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             window.decorView.post {
                 val displayMetrics = resources.displayMetrics
@@ -137,7 +152,14 @@ class MainActivity : BaseActivity() {
                 val screenHeight = displayMetrics.heightPixels
                 val gestureEdgeSize = (20 * displayMetrics.density).toInt() // 20dp edge
                 
-                // Exclude only the right edge from back gestures
+                // Exclude both left and right edges from system back gestures
+                val leftEdgeRect = Rect(
+                    0, // Left edge start
+                    0, // Top
+                    gestureEdgeSize, // Left edge end
+                    screenHeight // Bottom
+                )
+                
                 val rightEdgeRect = Rect(
                     screenWidth - gestureEdgeSize, // Right edge start
                     0, // Top
@@ -145,7 +167,7 @@ class MainActivity : BaseActivity() {
                     screenHeight // Bottom
                 )
                 
-                window.decorView.systemGestureExclusionRects = listOf(rightEdgeRect)
+                window.decorView.systemGestureExclusionRects = listOf(leftEdgeRect, rightEdgeRect)
             }
         }
 
@@ -192,6 +214,69 @@ class MainActivity : BaseActivity() {
             EasyLog.log("POST_NOTIFICATIONS granted=$granted")
         }
         requestPermissionLauncher.launch(permission)
+    }
+}
+
+@Composable
+fun SwipeToExitWrapper(
+    onDoubleSwipeExit: () -> Unit,
+    content: @Composable () -> Unit
+) {
+    val context = LocalContext.current
+    val density = LocalDensity.current
+    
+    // Use rememberSaveable to survive configuration changes
+    var swipeCount by remember { mutableStateOf(0) }
+    var lastSwipeTime by remember { mutableStateOf(0L) }
+    val exitSwipeTimeThreshold = 2000L // 2 seconds
+    
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .pointerInput(Unit) {
+                var dragStartX = 0f
+                var hasDraggedEnough = false
+                
+                detectHorizontalDragGestures(
+                    onDragStart = { offset ->
+                        dragStartX = offset.x
+                        hasDraggedEnough = false
+                    },
+                    onDragEnd = {
+                        if (hasDraggedEnough) {
+                            val currentTime = System.currentTimeMillis()
+                            
+                            // Check if this is within the time threshold of the last swipe
+                            if (swipeCount > 0 && (currentTime - lastSwipeTime) <= exitSwipeTimeThreshold) {
+                                // Second swipe - exit app
+                                onDoubleSwipeExit()
+                            } else {
+                                // First swipe - show toast
+                                swipeCount = 1
+                                lastSwipeTime = currentTime
+                                Toast.makeText(
+                                    context,
+                                    "Swipe again to exit HeartMate",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                        }
+                    }
+                ) { change, dragAmount ->
+                    val leftEdgeThreshold = with(density) { 20.dp.toPx() }
+                    val minSwipeDistance = with(density) { 100.dp.toPx() }
+                    
+                    // Only consider left edge swipes moving right
+                    if (dragStartX <= leftEdgeThreshold && dragAmount > 0) {
+                        val totalDistance = change.position.x - dragStartX
+                        if (totalDistance >= minSwipeDistance && !hasDraggedEnough) {
+                            hasDraggedEnough = true
+                        }
+                    }
+                }
+            }
+    ) {
+        content()
     }
 }
 
