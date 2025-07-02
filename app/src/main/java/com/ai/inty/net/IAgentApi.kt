@@ -8,15 +8,19 @@ import com.ai.inty.beans.CreateGuestResult
 import com.ai.inty.beans.FollowResponse
 import com.ai.inty.beans.GenerateBackgroundRequest
 import com.ai.inty.beans.GenerateBackgroundResponse
+import com.ai.inty.beans.UploadAvatarResponse
 import com.architecture.httplib.core.HttpResult
 import com.therouter.inject.Singleton
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
+import retrofit2.http.Multipart
 import retrofit2.http.POST
 import retrofit2.http.PUT
+import retrofit2.http.Part
 import retrofit2.http.Path
 import retrofit2.http.Query
+import okhttp3.MultipartBody
 
 @Singleton
 interface IAgentApi {
@@ -53,4 +57,8 @@ interface IAgentApi {
     
     @DELETE("/api/v1/ai/agents/{agentId}")
     suspend fun deleteAgent(@Path("agentId") agentId: String): HttpResult<AgentInfo>
+    
+    @Multipart
+    @POST("/api/v1/ai/agents/upload-avatar")
+    suspend fun uploadAvatar(@Part file: MultipartBody.Part): HttpResult<UploadAvatarResponse>
 }

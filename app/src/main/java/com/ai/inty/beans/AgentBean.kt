@@ -186,3 +186,15 @@ data class GenerateBackgroundResponse(
     @Json(name = "urls")
     val imageUrls: List<String> = listOf()
 )
+
+@JsonClass(generateAdapter = true)
+data class UploadAvatarResponse(
+    @Json(name = "url")
+    val url: String = "",
+    @Json(name = "filename")
+    val filename: String = "",
+    @Json(name = "size")
+    val size: Long = 0,
+    @Json(name = "content_type")
+    val contentType: String = ""
+)

@@ -78,6 +78,13 @@ import android.widget.Toast
 import com.inty.utils.log.EasyLog
 import com.ai.inty.Constant
 import com.ai.inty.utils.AvatarManager
+import com.ai.inty.net.IAgentApi
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
+import okhttp3.RequestBody.Companion.asRequestBody
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.lifecycle.Lifecycle
@@ -192,14 +199,49 @@ fun CreateRolePage(
             result.data?.let { data ->
                 val resultUri = UCrop.getOutput(data)
                 if (resultUri != null) {
-                    // Save the cropped image as a separate avatar (not affecting preview images)
-                    val croppedPath = resultUri.toString()
-                    EasyLog.log("Avatar cropped successfully: $croppedPath")
+                    EasyLog.log("Avatar cropped successfully: $resultUri")
                     
-                    // Save cropped avatar separately - this will be used as the character avatar
-                    croppedAvatarUrl = croppedPath
-                    
-                    Toast.makeText(context, "Avatar cropped and saved", Toast.LENGTH_SHORT).show()
+                    // Upload the cropped image to server
+                    try {
+                        val file = File(resultUri.path!!)
+                        val requestFile = file.asRequestBody("image/*".toMediaTypeOrNull())
+                        val body = MultipartBody.Part.createFormData("file", file.name, requestFile)
+                        
+                        val agentApi = TheRouter.get(IAgentApi::class.java)
+                        
+                        // Use the mainViewModel's scope to launch the coroutine
+                        mainViewModel.viewModelScope.launch(Dispatchers.IO) {
+                            try {
+                                val response = agentApi!!.uploadAvatar(body)
+                                when (response) {
+                                    is com.architecture.httplib.core.HttpResult.Success -> {
+                                        val uploadedUrl = response.data.url
+                                        EasyLog.log("Avatar uploaded successfully: $uploadedUrl")
+                                        
+                                        // Update UI on main thread
+                                        kotlinx.coroutines.withContext(Dispatchers.Main) {
+                                            croppedAvatarUrl = uploadedUrl
+                                            Toast.makeText(context, "Avatar cropped and uploaded", Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
+                                    is com.architecture.httplib.core.HttpResult.Failure -> {
+                                        EasyLog.log("Upload failed: ${response.message}", EasyLog.ERROR)
+                                        kotlinx.coroutines.withContext(Dispatchers.Main) {
+                                            Toast.makeText(context, "Upload failed: ${response.message}", Toast.LENGTH_LONG).show()
+                                        }
+                                    }
+                                }
+                            } catch (e: Exception) {
+                                EasyLog.log("Upload exception: ${e.message}", EasyLog.ERROR)
+                                kotlinx.coroutines.withContext(Dispatchers.Main) {
+                                    Toast.makeText(context, "Upload failed: ${e.message}", Toast.LENGTH_LONG).show()
+                                }
+                            }
+                        }
+                    } catch (e: Exception) {
+                        EasyLog.log("Failed to prepare upload: ${e.message}", EasyLog.ERROR)
+                        Toast.makeText(context, "Failed to prepare upload: ${e.message}", Toast.LENGTH_SHORT).show()
+                    }
                 }
             }
         } else if (result.resultCode == UCrop.RESULT_ERROR) {
@@ -635,7 +677,8 @@ fun AvatarUploadSection(
     ) {
         Box(
             modifier = Modifier
-                .size(200.dp)
+                .fillMaxWidth()
+                .height(320.dp)
                 .let { modifier ->
                     if (avatarUrls.isEmpty() && avatarUrl == null) {
                         modifier
@@ -648,11 +691,15 @@ fun AvatarUploadSection(
                                 color = Color(0xFFE91E63),
                                 shape = RoundedCornerShape(16.dp)
                             )
+                            .noRippleClickable { onGenerateClick() }
                     } else {
                         modifier
+                            .background(
+                                color = Color.Black,
+                                shape = RoundedCornerShape(16.dp)
+                            )
                     }
-                }
-                .noRippleClickable { onGenerateClick() },
+                },
             contentAlignment = Alignment.Center
         ) {
             when {
