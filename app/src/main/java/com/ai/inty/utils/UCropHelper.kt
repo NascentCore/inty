@@ -22,6 +22,9 @@ object UCropHelper {
             setAllowedGestures(UCropActivity.SCALE, UCropActivity.NONE, UCropActivity.NONE)
             setHideBottomControls(true)
             setToolbarTitle(title)
+            setShowCropFrame(false)
+            setShowCropGrid(false)
+            setFreeStyleCropEnabled(false)
         }
 
         val intentCrop = UCrop.of(srcUri, Uri.fromFile(avatarTempFile))

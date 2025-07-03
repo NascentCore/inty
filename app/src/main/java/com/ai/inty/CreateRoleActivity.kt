@@ -100,6 +100,7 @@ import com.therouter.router.Autowired
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.rememberLauncherForActivityResult
 import com.yalantis.ucrop.UCrop
+import com.yalantis.ucrop.UCropActivity
 import android.net.Uri
 import java.io.File
 import java.util.UUID
@@ -781,9 +782,9 @@ private fun startUCropWithLocalFile(
             .withMaxResultSize(512, 512) // Reasonable size for avatars
             .withOptions(UCrop.Options().apply {
                 setCompressionQuality(90)
-                setHideBottomControls(false)
+                setHideBottomControls(true) // Hide bottom controls (rotate/scale buttons)
                 setFreeStyleCropEnabled(false)
-                setToolbarTitle("Crop Avatar")
+                setToolbarTitle(context.getString(R.string.crop_image))
                 setStatusBarColor(AndroidColor.parseColor("#1C1523"))
                 setToolbarColor(AndroidColor.parseColor("#1C1523"))
                 setActiveControlsWidgetColor(AndroidColor.parseColor("#E91E63"))
@@ -793,6 +794,7 @@ private fun startUCropWithLocalFile(
                 setCircleDimmedLayer(true) // Enable circular cropping
                 setShowCropFrame(false) // Hide square frame for circular crop
                 setShowCropGrid(false) // Hide grid for cleaner circular crop
+                setAllowedGestures(UCropActivity.SCALE, UCropActivity.NONE, UCropActivity.NONE) // Only allow scaling gestures
             })
             .getIntent(context)
         
