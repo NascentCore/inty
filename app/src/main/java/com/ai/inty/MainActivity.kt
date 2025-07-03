@@ -5,33 +5,23 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
-import android.graphics.Rect
 import android.os.Build
 import android.os.Bundle
-import android.view.View
+import android.view.GestureDetector
+import android.view.MotionEvent
 import android.widget.Toast
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
-import androidx.activity.OnBackPressedCallback
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.core.view.GestureDetectorCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import com.ai.inty.base.BaseActivity
@@ -42,6 +32,7 @@ import com.ai.inty.viewmodels.MainViewModel
 import com.inty.utils.log.EasyLog
 import com.therouter.router.Autowired
 import com.therouter.router.Route
+import kotlinx.coroutines.*
 
 @Route(path = Constant.ROUTE_MAIN)
 class MainActivity : BaseActivity() {
@@ -51,6 +42,13 @@ class MainActivity : BaseActivity() {
 
     val mainViewModel: MainViewModel by viewModels()
     val chatViewModel: ChatViewModel by viewModels()
+
+    // 边缘滑动退出相关变量
+    private var gestureDetector: GestureDetectorCompat? = null
+    private var isFirstSwipe = true
+    private var lastSwipeTime = 0L
+    private val swipeTimeout = 2000L // 2秒内需要第二次滑动
+    private var exitJob: Job? = null
 
     private val followStateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -80,14 +78,8 @@ class MainActivity : BaseActivity() {
         val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
         windowInsetsController.isAppearanceLightStatusBars = false
 
-        // Custom back gesture handling - move app to background instead of killing
-        val onBackPressedCallback = object : OnBackPressedCallback(true) {
-            override fun handleOnBackPressed() {
-                // Move app to background, don't kill the process
-                moveTaskToBack(true)
-            }
-        }
-        onBackPressedDispatcher.addCallback(this, onBackPressedCallback)
+        // 设置边缘滑动退出功能
+        setupEdgeSwipeToExit()
 
         mainViewModel.setChatViewModel(chatViewModel)
         
@@ -96,16 +88,12 @@ class MainActivity : BaseActivity() {
         
         setContent {
             IntyTheme {
-                SwipeToExitWrapper(
-                    onDoubleSwipeExit = { moveTaskToBack(true) }
-                ) {
-                    HomeScreen(
-                        modifier = Modifier.fillMaxSize(),
-                        mainViewModel = mainViewModel,
-                        chatViewModel = chatViewModel,
-                        viewModelFactory = defaultViewModelProviderFactory
-                    )
-                }
+                HomeScreen(
+                    modifier = Modifier.fillMaxSize(),
+                    mainViewModel = mainViewModel,
+                    chatViewModel = chatViewModel,
+                    viewModelFactory = defaultViewModelProviderFactory
+                )
 //                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
 //                    var msg by remember { mutableStateOf("${IntySetting.getCurUserID()} = ${IntySetting.getCurToken()}") }
 //                    Column {
@@ -144,32 +132,7 @@ class MainActivity : BaseActivity() {
             }
         }
 
-        // Disable both left and right edge system back gestures
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            window.decorView.post {
-                val displayMetrics = resources.displayMetrics
-                val screenWidth = displayMetrics.widthPixels
-                val screenHeight = displayMetrics.heightPixels
-                val gestureEdgeSize = (20 * displayMetrics.density).toInt() // 20dp edge
-                
-                // Exclude both left and right edges from system back gestures
-                val leftEdgeRect = Rect(
-                    0, // Left edge start
-                    0, // Top
-                    gestureEdgeSize, // Left edge end
-                    screenHeight // Bottom
-                )
-                
-                val rightEdgeRect = Rect(
-                    screenWidth - gestureEdgeSize, // Right edge start
-                    0, // Top
-                    screenWidth, // Right edge end (screen width)
-                    screenHeight // Bottom
-                )
-                
-                window.decorView.systemGestureExclusionRects = listOf(leftEdgeRect, rightEdgeRect)
-            }
-        }
+
 
         requestNotifyPermission()
         
@@ -178,6 +141,121 @@ class MainActivity : BaseActivity() {
             followStateReceiver,
             IntentFilter("FOLLOW_STATE_CHANGED")
         )
+    }
+
+    /**
+     * 设置边缘滑动退出功能
+     */
+    private fun setupEdgeSwipeToExit() {
+        gestureDetector = GestureDetectorCompat(this, object : GestureDetector.SimpleOnGestureListener() {
+            override fun onFling(
+                e1: MotionEvent?,
+                e2: MotionEvent,
+                velocityX: Float,
+                velocityY: Float
+            ): Boolean {
+                EasyLog.log("MainActivity Fling detected: e1=${e1?.x}, e2=${e2.x}, velocityX=$velocityX, velocityY=$velocityY")
+                
+                // 检测从左边缘向右滑动
+                if (e1 != null && isEdgeSwipe(e1, e2, velocityX, velocityY)) {
+                    EasyLog.log("MainActivity Edge swipe confirmed, calling handleEdgeSwipe")
+                    handleEdgeSwipe()
+                    return true
+                }
+                return false
+            }
+        })
+
+        // 为根视图设置触摸监听
+        window.decorView.setOnTouchListener { _, event ->
+            val result = gestureDetector?.onTouchEvent(event) ?: false
+            if (event.action == MotionEvent.ACTION_DOWN || event.action == MotionEvent.ACTION_MOVE || event.action == MotionEvent.ACTION_UP) {
+                EasyLog.log("MainActivity Touch event: ${event.action}, x=${event.x}, y=${event.y}, result: $result")
+            }
+            result
+        }
+    }
+
+    /**
+     * 判断是否为边缘滑动
+     */
+    private fun isEdgeSwipe(e1: MotionEvent, e2: MotionEvent, velocityX: Float, velocityY: Float): Boolean {
+        val edgeThreshold = 30 // 边缘检测阈值（像素）
+        val minVelocity = 800 // 最小滑动速度
+        val minDistance = 80 // 最小滑动距离
+        
+        // 检查是否从左边缘开始滑动
+        val isFromLeftEdge = e1.x <= edgeThreshold
+        
+        // 检查滑动距离和速度
+        val deltaX = e2.x - e1.x
+        val deltaY = e2.y - e1.y
+        val isRightSwipe = deltaX > minDistance && velocityX > minVelocity
+        
+        // 确保是水平滑动（垂直速度不能太大）
+        val isHorizontalSwipe = Math.abs(velocityX) > Math.abs(velocityY) * 2
+        
+        EasyLog.log("MainActivity Edge check: isFromLeftEdge=$isFromLeftEdge, deltaX=$deltaX, deltaY=$deltaY, velocityX=$velocityX, velocityY=$velocityY, isRightSwipe=$isRightSwipe, isHorizontalSwipe=$isHorizontalSwipe")
+        
+        return isFromLeftEdge && isRightSwipe && isHorizontalSwipe
+    }
+
+    /**
+     * 处理边缘滑动事件
+     */
+    private fun handleEdgeSwipe() {
+        val currentTime = System.currentTimeMillis()
+        EasyLog.log("MainActivity Handling edge swipe: isFirstSwipe=$isFirstSwipe, currentTime=$currentTime")
+        
+        if (isFirstSwipe) {
+            // 第一次滑动，显示提示
+            showExitHint()
+            isFirstSwipe = false
+            lastSwipeTime = currentTime
+            
+            // 2秒后重置状态
+            exitJob?.cancel()
+            exitJob = CoroutineScope(Dispatchers.Main).launch {
+                delay(swipeTimeout)
+                isFirstSwipe = true
+                EasyLog.log("MainActivity Edge swipe timeout, reset to first swipe")
+            }
+        } else {
+            // 第二次滑动，检查时间间隔
+            if (currentTime - lastSwipeTime <= swipeTimeout) {
+                // 在2秒内，执行退出
+                EasyLog.log("MainActivity Edge swipe confirmed, exiting activity")
+                finish()
+            } else {
+                // 超过2秒，重新开始
+                showExitHint()
+                isFirstSwipe = false
+                lastSwipeTime = currentTime
+                
+                exitJob?.cancel()
+                exitJob = CoroutineScope(Dispatchers.Main).launch {
+                    delay(swipeTimeout)
+                    isFirstSwipe = true
+                    EasyLog.log("MainActivity Edge swipe timeout, reset to first swipe")
+                }
+            }
+        }
+    }
+
+    /**
+     * 显示退出提示
+     */
+    private fun showExitHint() {
+        EasyLog.log("MainActivity Showing exit hint toast")
+        Toast.makeText(this, getString(R.string.edge_swipe_exit_hint), Toast.LENGTH_SHORT).show()
+        EasyLog.log("MainActivity Edge swipe detected, showing exit hint")
+    }
+
+    override fun onBackPressed() {
+        EasyLog.log("MainActivity onBackPressed")
+        
+        // 使用边缘滑动防误触逻辑
+        handleEdgeSwipe()
     }
 
     override fun onResume() {
@@ -190,6 +268,9 @@ class MainActivity : BaseActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        
+        // 取消协程
+        exitJob?.cancel()
         
         // Unregister broadcast receiver
         LocalBroadcastManager.getInstance(this).unregisterReceiver(followStateReceiver)
@@ -214,69 +295,6 @@ class MainActivity : BaseActivity() {
             EasyLog.log("POST_NOTIFICATIONS granted=$granted")
         }
         requestPermissionLauncher.launch(permission)
-    }
-}
-
-@Composable
-fun SwipeToExitWrapper(
-    onDoubleSwipeExit: () -> Unit,
-    content: @Composable () -> Unit
-) {
-    val context = LocalContext.current
-    val density = LocalDensity.current
-    
-    // Use rememberSaveable to survive configuration changes
-    var swipeCount by remember { mutableStateOf(0) }
-    var lastSwipeTime by remember { mutableStateOf(0L) }
-    val exitSwipeTimeThreshold = 2000L // 2 seconds
-    
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .pointerInput(Unit) {
-                var dragStartX = 0f
-                var hasDraggedEnough = false
-                
-                detectHorizontalDragGestures(
-                    onDragStart = { offset ->
-                        dragStartX = offset.x
-                        hasDraggedEnough = false
-                    },
-                    onDragEnd = {
-                        if (hasDraggedEnough) {
-                            val currentTime = System.currentTimeMillis()
-                            
-                            // Check if this is within the time threshold of the last swipe
-                            if (swipeCount > 0 && (currentTime - lastSwipeTime) <= exitSwipeTimeThreshold) {
-                                // Second swipe - exit app
-                                onDoubleSwipeExit()
-                            } else {
-                                // First swipe - show toast
-                                swipeCount = 1
-                                lastSwipeTime = currentTime
-                                Toast.makeText(
-                                    context,
-                                    "Swipe again to exit HeartMate",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                            }
-                        }
-                    }
-                ) { change, dragAmount ->
-                    val leftEdgeThreshold = with(density) { 20.dp.toPx() }
-                    val minSwipeDistance = with(density) { 100.dp.toPx() }
-                    
-                    // Only consider left edge swipes moving right
-                    if (dragStartX <= leftEdgeThreshold && dragAmount > 0) {
-                        val totalDistance = change.position.x - dragStartX
-                        if (totalDistance >= minSwipeDistance && !hasDraggedEnough) {
-                            hasDraggedEnough = true
-                        }
-                    }
-                }
-            }
-    ) {
-        content()
     }
 }
 

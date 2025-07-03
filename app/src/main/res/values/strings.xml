@@ -95,4 +95,7 @@
     <string name="operation_error_with_reason" formatted="false">%s error: %s</string>
     <string name="operation_failed_check_network" formatted="false">%s failed, %s</string>
     <string name="operation_failed_try_later" formatted="false">%s failed, %s</string>
+    
+    <!-- Edge swipe exit -->
+    <string name="edge_swipe_exit_hint">Swipe again to exit</string>
 </resources>
