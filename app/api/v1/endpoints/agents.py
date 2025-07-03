@@ -87,6 +87,18 @@ async def create_agent(
     """
     Create new AI agent
     """
+    # 检查数量限制：系统管理员不限制，普通用户限制6个
+    if not current_user.is_superuser:
+        # 查询用户已创建的agent数量（不包括已删除的）
+        user_agents = await agent_service.get_user_agents(
+            db, user_id=current_user.id, skip=0, limit=1000
+        )
+        if len(user_agents) >= 6:
+            raise HTTPException(
+                status_code=400, 
+                detail="普通用户最多只能创建6个Agent，如需创建更多请联系管理员"
+            )
+    
     agent = await agent_service.create_agent(db, agent_in=agent_in, user_id=current_user.id)
     return schemas.APIResponse.success(data=agent)
 
