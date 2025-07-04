@@ -62,11 +62,22 @@ class ReportViewModel : BaseActivityViewModel() {
     }
 
     fun submit() {
+        // 必填项检查
+        if (selectIDS.isEmpty()) {
+            showSnackbar("Please select at least one reason")
+            return
+        }
+        
+        if (description.value.trim().isEmpty()) {
+            showSnackbar("Please fill in the report description")
+            return
+        }
+        
         viewModelScope.launch(Dispatchers.IO) {
             val result = reportApi.report(
                 ReportReq(
                     reasonIds = selectIDS.toList(),
-                    description = description.value,
+                    description = description.value.trim(),
                     targetId = targetID,
                     targetType = targetType,
                 )
