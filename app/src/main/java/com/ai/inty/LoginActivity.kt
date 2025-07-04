@@ -267,6 +267,7 @@ fun LoginScreen(
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun PolicyText() {
+    val context = androidx.compose.ui.platform.LocalContext.current
     val baseTextStyle = TextStyle(
         color = Color.White.copy(alpha = 0.35f),
         fontSize = 12.sp,
@@ -291,17 +292,25 @@ private fun PolicyText() {
             style = baseTextStyle
         )
         TextButton(
-            onClick = { /* TODO: 打开用户协议页面 */ },
+            onClick = { 
+                val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, 
+                    android.net.Uri.parse("https://app.termly.io/policy-viewer/policy.html?policyUUID=97416d63-aebb-4ea5-b990-eccc5aa6cff1"))
+                context.startActivity(intent)
+            },
             contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
         ) {
             Text(
-                text = "User Agreement",
+                text = "Terms of Use",
                 style = linkTextStyle
             )
         }
         Text(text = "and", style = baseTextStyle)
         TextButton(
-            onClick = { /* TODO: 打开隐私政策页面 */ },
+            onClick = { 
+                val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, 
+                    android.net.Uri.parse("https://app.termly.io/policy-viewer/policy.html?policyUUID=c82c3bfa-10a0-4075-a7f1-a98d5146d71c"))
+                context.startActivity(intent)
+            },
             contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
         ) {
             Text(
