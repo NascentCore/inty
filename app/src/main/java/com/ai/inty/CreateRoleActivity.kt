@@ -827,201 +827,203 @@ fun AvatarUploadSection(
     onRegenerate: (String) -> Unit = {},
     onFaceEdit: () -> Unit = {}
 ) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Box(
-            modifier = Modifier
-                .size(200.dp)
-                .let { modifier ->
-                    if (avatarUrls.isEmpty() && avatarUrl == null) {
-                        modifier
-                            .background(
-                                color = Color(0x1A78599A),
-                                shape = RoundedCornerShape(16.dp)
-                            )
-                            .noRippleClickable { onGenerateClick() }
-                    } else {
-                        modifier
-                            .background(
-                                color = Color.Black,
-                                shape = RoundedCornerShape(16.dp)
-                            )
-                    }
-                },
-            contentAlignment = Alignment.Center
-        ) {
-            when {
-                isGenerating -> {
-                    com.ai.inty.ThreeDotLoadingAnimation()
-                }
-                avatarUrls.isNotEmpty() -> {
-                    val displayUrl = avatarUrls.getOrNull(selectedIndex) ?: avatarUrls.first()
-                    EasyLog.log("AvatarUploadSection: Displaying selected avatar with URL: $displayUrl")
-                    AsyncImage(
-                        model = displayUrl,
-                        contentDescription = "Selected Avatar",
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop,
-                        onSuccess = { 
-                            EasyLog.log("AvatarUploadSection: Selected avatar image loaded successfully: $displayUrl") 
-                        },
-                        onError = { 
-                            EasyLog.log("AvatarUploadSection: Failed to load selected avatar image: $displayUrl", EasyLog.ERROR) 
-                        }
-                    )
-                }
-                avatarUrl != null -> {
-                    EasyLog.log("AvatarUploadSection: Displaying avatar with URL: $avatarUrl")
-                    AsyncImage(
-                        model = avatarUrl,
-                        contentDescription = "Generated Avatar",
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop,
-                        onSuccess = { 
-                            EasyLog.log("AvatarUploadSection: Avatar image loaded successfully: $avatarUrl") 
-                        },
-                        onError = { 
-                            EasyLog.log("AvatarUploadSection: Failed to load avatar image: $avatarUrl", EasyLog.ERROR) 
-                        }
-                    )
-                }
-                else -> {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Image(
-                            painter = painterResource(R.drawable.btn_add),
-                            contentDescription = null,
-                            modifier = Modifier.size(48.dp)
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Text(
-                            text = "Generate\nAvatar",
-                            fontSize = 14.sp,
-                            color = Color.White.copy(0.7f),
-                            textAlign = TextAlign.Center
-                        )
-                    }
-                }
-            }
-            
-            // Dashed border for empty state
-            if (avatarUrls.isEmpty() && avatarUrl == null) {
-                Canvas(modifier = Modifier.fillMaxSize()) {
-                    val strokeWidth = 1.dp.toPx()
-                    val cornerRadius = 16.dp.toPx()
-                    val dashLength = 10.dp.toPx()
-                    val gapLength = 5.dp.toPx()
-                    
-                    drawRoundRect(
-                        color = androidx.compose.ui.graphics.Color.Gray,
-                        topLeft = androidx.compose.ui.geometry.Offset(strokeWidth / 2, strokeWidth / 2),
-                        size = androidx.compose.ui.geometry.Size(
-                            size.width - strokeWidth,
-                            size.height - strokeWidth
-                        ),
-                        cornerRadius = CornerRadius(cornerRadius),
-                        style = Stroke(
-                            width = strokeWidth,
-                            pathEffect = PathEffect.dashPathEffect(floatArrayOf(dashLength, gapLength))
-                        )
-                    )
-                }
-            }
-            
-            // Face edit button - show only when there's an avatar
-            if (avatarUrls.isNotEmpty() || avatarUrl != null) {
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(8.dp)
+    val isEmpty = avatarUrls.isEmpty() && avatarUrl == null
+    Box(
+        modifier = Modifier
+            .then(
+                if (isEmpty) Modifier.size(200.dp)
+                else Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(1f)
+            )
+            .let { modifier ->
+                if (isEmpty) {
+                    modifier
                         .background(
-                            color = Color.Black.copy(alpha = 0.5f),
+                            color = Color(0x1A78599A),
                             shape = RoundedCornerShape(16.dp)
                         )
-                        .noRippleClickable { onFaceEdit() }
-                        .padding(horizontal = 12.dp, vertical = 6.dp)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Image(
-                            painter = painterResource(R.drawable.ic_crop),
-                            contentDescription = "Face edit",
-                            modifier = Modifier.size(16.dp)
+                        .noRippleClickable { onGenerateClick() }
+                } else {
+                    modifier
+                        .background(
+                            color = Color.Black,
+                            shape = RoundedCornerShape(16.dp)
                         )
-                        Text(
-                            text = "Face edit",
-                            color = Color.White,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Medium
-                        )
+                }
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        when {
+            isGenerating -> {
+                com.ai.inty.ThreeDotLoadingAnimation()
+            }
+            avatarUrls.isNotEmpty() -> {
+                val displayUrl = avatarUrls.getOrNull(selectedIndex) ?: avatarUrls.first()
+                EasyLog.log("AvatarUploadSection: Displaying selected avatar with URL: $displayUrl")
+                AsyncImage(
+                    model = displayUrl,
+                    contentDescription = "Selected Avatar",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop,
+                    onSuccess = { 
+                        EasyLog.log("AvatarUploadSection: Selected avatar image loaded successfully: $displayUrl") 
+                    },
+                    onError = { 
+                        EasyLog.log("AvatarUploadSection: Failed to load selected avatar image: $displayUrl", EasyLog.ERROR) 
                     }
+                )
+            }
+            avatarUrl != null -> {
+                EasyLog.log("AvatarUploadSection: Displaying avatar with URL: $avatarUrl")
+                AsyncImage(
+                    model = avatarUrl,
+                    contentDescription = "Generated Avatar",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop,
+                    onSuccess = { 
+                        EasyLog.log("AvatarUploadSection: Avatar image loaded successfully: $avatarUrl") 
+                    },
+                    onError = { 
+                        EasyLog.log("AvatarUploadSection: Failed to load avatar image: $avatarUrl", EasyLog.ERROR) 
+                    }
+                )
+            }
+            else -> {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Image(
+                        painter = painterResource(R.drawable.btn_add),
+                        contentDescription = null,
+                        modifier = Modifier.size(48.dp)
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = "Generate\nAvatar",
+                        fontSize = 14.sp,
+                        color = Color.White.copy(0.7f),
+                        textAlign = TextAlign.Center
+                    )
                 }
             }
-            
-            // Floating thumbnail row at the bottom of preview
-            if (avatarUrls.isNotEmpty()) {
+        }
+        
+        // Dashed border for empty state
+        if (avatarUrls.isEmpty() && avatarUrl == null) {
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                val strokeWidth = 1.dp.toPx()
+                val cornerRadius = 16.dp.toPx()
+                val dashLength = 10.dp.toPx()
+                val gapLength = 5.dp.toPx()
+                
+                drawRoundRect(
+                    color = androidx.compose.ui.graphics.Color.Gray,
+                    topLeft = androidx.compose.ui.geometry.Offset(strokeWidth / 2, strokeWidth / 2),
+                    size = androidx.compose.ui.geometry.Size(
+                        size.width - strokeWidth,
+                        size.height - strokeWidth
+                    ),
+                    cornerRadius = CornerRadius(cornerRadius),
+                    style = Stroke(
+                        width = strokeWidth,
+                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(dashLength, gapLength))
+                    )
+                )
+            }
+        }
+        
+        // Face edit button - show only when there's an avatar
+        if (avatarUrls.isNotEmpty() || avatarUrl != null) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(8.dp)
+                    .background(
+                        color = Color.Black.copy(alpha = 0.5f),
+                        shape = RoundedCornerShape(16.dp)
+                    )
+                    .noRippleClickable { onFaceEdit() }
+                    .padding(horizontal = 12.dp, vertical = 6.dp)
+            ) {
                 Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Image(
+                        painter = painterResource(R.drawable.ic_crop),
+                        contentDescription = "Face edit",
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(
+                        text = "Face edit",
+                        color = Color.White,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+        }
+        
+        // Floating thumbnail row at the bottom of preview
+        if (avatarUrls.isNotEmpty()) {
+            Row(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .padding(16.dp)
+                    .background(
+                        color = Color.Black.copy(alpha = 0.5f),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                    .padding(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Fixed Regen button on the left
+                Box(
                     modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .fillMaxWidth()
-                        .padding(16.dp)
-                        .background(
-                            color = Color.Black.copy(alpha = 0.5f),
-                            shape = RoundedCornerShape(12.dp)
-                        )
-                        .padding(12.dp),
+                        .width(72.dp)
+                        .height(90.dp)
+                ) {
+                    com.ai.inty.RegenButton(
+                        onClick = { onRegenerate(AvatarManager.getGenerationPrompt()) },
+                        enabled = !isGenerating
+                    )
+                }
+                
+                // Scrollable thumbnail row
+                LazyRow(
+                    modifier = Modifier.weight(1f),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Fixed Regen button on the left
-                    Box(
-                        modifier = Modifier
-                            .width(72.dp)
-                            .height(90.dp)
-                    ) {
-                        com.ai.inty.RegenButton(
-                            onClick = { onRegenerate(AvatarManager.getGenerationPrompt()) },
-                            enabled = !isGenerating
-                        )
-                    }
-                    
-                    // Scrollable thumbnail row
-                    LazyRow(
-                        modifier = Modifier.weight(1f),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        items(avatarUrls.size) { index ->
-                            val imageUrl = avatarUrls[index]
-                            Box(
-                                modifier = Modifier
-                                    .width(72.dp)
-                                    .height(90.dp)
-                                    .background(
-                                        color = Color(0x1A78599A),
-                                        shape = RoundedCornerShape(8.dp)
-                                    )
-                                    .border(
-                                        width = if (index == selectedIndex) 3.dp else 1.dp,
-                                        color = if (index == selectedIndex) Color(0xFFE91E63) else Color.Transparent,
-                                        shape = RoundedCornerShape(8.dp)
-                                    )
-                                    .noRippleClickable { onImageSelected(index) },
-                                contentAlignment = Alignment.Center
-                            ) {
-                                AsyncImage(
-                                    model = imageUrl,
-                                    contentDescription = "Generated Avatar $index",
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .padding(4.dp),
-                                    contentScale = ContentScale.Crop
+                    items(avatarUrls.size) { index ->
+                        val imageUrl = avatarUrls[index]
+                        Box(
+                            modifier = Modifier
+                                .width(72.dp)
+                                .height(90.dp)
+                                .background(
+                                    color = Color(0x1A78599A),
+                                    shape = RoundedCornerShape(8.dp)
                                 )
-                            }
+                                .border(
+                                    width = if (index == selectedIndex) 3.dp else 1.dp,
+                                    color = if (index == selectedIndex) Color(0xFFE91E63) else Color.Transparent,
+                                    shape = RoundedCornerShape(8.dp)
+                                )
+                                .noRippleClickable { onImageSelected(index) },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            AsyncImage(
+                                model = imageUrl,
+                                contentDescription = "Generated Avatar $index",
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(4.dp),
+                                contentScale = ContentScale.Crop
+                            )
                         }
                     }
                 }

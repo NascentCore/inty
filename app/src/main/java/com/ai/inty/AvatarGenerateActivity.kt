@@ -258,7 +258,7 @@ fun AvatarPreviewSection(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Image(
-                        painter = painterResource(R.drawable.btn_add),
+                        painter = painterResource(R.drawable.frame2085655912),
                         contentDescription = null,
                         modifier = Modifier.size(48.dp)
                     )
