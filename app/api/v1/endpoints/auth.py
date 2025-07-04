@@ -19,7 +19,7 @@ from app.models import User
 from app.models.user import AuthType
 from app.schemas.auth import LoginResponse, LoginUserResponse, GuestResponse
 from app.schemas.response import APIResponse
-from app.services.user_service import create_guest_user
+from app.services.user_service import create_guest_user, generate_next_readable_id
 
 router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.app.api_v1_prefix}/auth/login")
@@ -158,8 +158,10 @@ async def google_login(
         
         # 创建新用户
         user_id = uid(prefix="user")
+        readable_id = await generate_next_readable_id(db)
         new_user = User(
             id=user_id,
+            readable_id=readable_id,
             auth_type=AuthType.GOOGLE,
             google_id=idinfo["sub"],
             nickname=idinfo.get("name", f"User_{user_id[:8]}"),
