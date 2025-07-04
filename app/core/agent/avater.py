@@ -55,7 +55,7 @@ def generate_background_image_to_gcs(prompt: str, gcs_uri_base: str, count=1, as
                 continue
         
         if not generated_uris:
-            raise Exception("No images were successfully generated")
+            raise Exception("No images were successfully generated，Please check whether the prompt contains any prohibited content")
         
         print(f"Successfully generated {len(generated_uris)} images")
         return generated_uris
