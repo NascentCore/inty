@@ -3,6 +3,8 @@ from typing import Optional
 from sqlalchemy.orm import Session
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy import text
 import logging
 import traceback
 import uuid
@@ -15,12 +17,61 @@ from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
+async def generate_next_readable_id(db: AsyncSession) -> str:
+    """
+    Generate next readable ID for user, starting from 10000000
+    """
+    try:
+        # Get the maximum readable_id from the database
+        result = await db.execute(
+            text("SELECT MAX(CAST(readable_id AS INTEGER)) FROM users WHERE readable_id ~ '^[0-9]+$'")
+        )
+        max_id = result.scalar()
+        
+        if max_id is None or max_id < 10000000:
+            next_id = 10000000
+        else:
+            next_id = max_id + 1
+            
+        return str(next_id).zfill(8)
+    except Exception as e:
+        logger.error(f"Error generating readable ID: {str(e)}")
+        # Fallback to a random 8-digit number starting from 10000000
+        import random
+        return str(random.randint(10000000, 99999999))
+
+def generate_next_readable_id_sync(db: Session) -> str:
+    """
+    Generate next readable ID for user, starting from 10000000 (sync version)
+    """
+    try:
+        # Get the maximum readable_id from the database
+        result = db.execute(
+            text("SELECT MAX(CAST(readable_id AS INTEGER)) FROM users WHERE readable_id ~ '^[0-9]+$'")
+        )
+        max_id = result.scalar()
+        
+        if max_id is None or max_id < 10000000:
+            next_id = 10000000
+        else:
+            next_id = max_id + 1
+            
+        return str(next_id).zfill(8)
+    except Exception as e:
+        logger.error(f"Error generating readable ID: {str(e)}")
+        # Fallback to a random 8-digit number starting from 10000000
+        import random
+        return str(random.randint(10000000, 99999999))
+
 def register_user(db: Session, user_in) -> User:
     """Register user (phone number etc.)"""
     try:
         user_id = str(uuid.uuid4())
+        readable_id = generate_next_readable_id_sync(db)
+        
         user = User(
             id=user_id,
+            readable_id=readable_id,
             auth_type=user_in.auth_type,
             system_language=user_in.user_info.system_language if user_in.user_info else "en",
             is_active=True
@@ -32,7 +83,15 @@ def register_user(db: Session, user_in) -> User:
         db.commit()
         db.refresh(user)
         return user
+    except IntegrityError as e:
+        db.rollback()
+        logger.error(f"Integrity error registering user: {str(e)}")
+        # If readable_id conflicts, try again with a new one
+        if "readable_id" in str(e):
+            return register_user(db, user_in)
+        raise e
     except Exception as e:
+        db.rollback()
         logger.error(f"Failed to register user: {str(e)}")
         logger.error(f"Error stack: {traceback.format_exc()}")
         raise e
@@ -57,9 +116,13 @@ async def create_guest_user(
             existing_user = result.scalars().first()
             if existing_user:
                 return existing_user
+        
         user_id = uid(prefix="user")
+        readable_id = await generate_next_readable_id(db)
+        
         user = User(
             id=user_id,
+            readable_id=readable_id,
             auth_type=AuthType.GUEST,
             device_id=device_id,
             nickname=f"Guest_{user_id[-8:]}",
@@ -70,10 +133,18 @@ async def create_guest_user(
         await db.commit()
         await db.refresh(user)
         return user
+    except IntegrityError as e:
+        await db.rollback()
+        logger.error(f"Integrity error creating guest user: {str(e)}")
+        # If readable_id conflicts, try again with a new one
+        if "readable_id" in str(e):
+            return await create_guest_user(db, device_id, system_language)
+        raise e
     except Exception as e:
+        await db.rollback()
         logger.error(f"Failed to create guest user: {str(e)}")
         logger.error(f"Error stack: {traceback.format_exc()}")
-        raise e 
+        raise e
 
 async def update_user(
     db: AsyncSession,

@@ -6,6 +6,7 @@ from app.models.user import Gender, AuthType
 
 class UserBase(BaseModel):
     """用户基础信息"""
+    readable_id: Optional[str] = None
     nickname: Optional[str] = None
     avatar: Optional[str] = None
     email: Optional[EmailStr] = None
@@ -27,6 +28,7 @@ class UserUpdate(UserBase):
 class UserInDBBase(UserBase):
     """数据库中的用户信息"""
     id: str
+    readable_id: str
     auth_type: str
     is_active: bool
     created_at: datetime

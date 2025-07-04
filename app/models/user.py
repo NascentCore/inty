@@ -28,6 +28,7 @@ class User(Base):
     __tablename__ = "users"
 
     id = Column(String, primary_key=True, comment="用户唯一标识符")
+    readable_id = Column(String(8), unique=True, index=True, nullable=False, comment="用户可读ID")
     nickname = Column(String, index=True, comment="用户昵称，可搜索")
     avatar = Column(String, comment="用户头像URL")
     email = Column(String, unique=True, comment="邮箱地址，唯一，用于登录")
