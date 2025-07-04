@@ -8,6 +8,18 @@ plugins {
     id("com.google.gms.google-services")
 }
 
+val gitCommitId = try {
+    val process = Runtime.getRuntime().exec("git rev-parse --short HEAD")
+    process.waitFor()
+    if (process.exitValue() == 0) {
+        process.inputStream.bufferedReader().readText().trim()
+    } else {
+        "2fbffaf"  // 当前commit ID作为fallback
+    }
+} catch (e: Exception) {
+    "2fbffaf"  // 当前commit ID作为fallback
+}
+
 android {
     namespace = "com.ai.inty"
     compileSdk = 35
@@ -20,6 +32,10 @@ android {
         versionName = "1.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        
+        // 添加BuildConfig字段用于调试
+        buildConfigField("String", "GIT_COMMIT_ID", "\"$gitCommitId\"")
+        buildConfigField("boolean", "IS_DEBUG_BUILD", "false")
         vectorDrawables {
             useSupportLibrary = true
         }
@@ -49,6 +65,8 @@ android {
         }
         debug {
             signingConfig = signingConfigs.getByName("inty")
+            versionNameSuffix = " ($gitCommitId)"
+            buildConfigField("boolean", "IS_DEBUG_BUILD", "true")
         }
     }
     compileOptions {

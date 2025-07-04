@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### Environment Setup
 ```bash
 # Set Java 17 environment (required for builds)
-export JAVA_HOME=/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home
+export JAVA_HOME=/Applications/Android\ Studio.app/Contents/jbr/Contents/Home
 
 # Build debug APK
 ./gradlew assembleDebug
