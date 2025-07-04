@@ -18,6 +18,13 @@ def generate_background_image_to_gcs(prompt: str, gcs_uri_base: str, count=1, as
         print(f"Target GCS URI base: {gcs_uri_base}")
         
         model = ImageGenerationModel.from_pretrained("imagen-4.0-fast-generate-preview-06-06")
+
+        prompt = f"""
+        {prompt}
+        
+        重要要求：必须是人物形象，不能是风景、物品或其他非人物内容。
+       
+        """
         
         # 使用output_gcs_uri直接上传到GCS
         images = model.generate_images(
