@@ -69,6 +69,9 @@ import android.widget.Toast
 import com.ai.inty.Constant
 import com.ai.inty.utils.AvatarManager
 import com.inty.utils.log.EasyLog
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
 
 @Route(path = Constant.ROUTE_AVATAR_GENERATE)
 class AvatarGenerateActivity : BaseActivity() {
@@ -105,6 +108,7 @@ fun AvatarGeneratePage(
     val errorMessage by viewModel.errorMessage.collectAsState()
     
     val context = LocalContext.current
+    val focusManager = LocalFocusManager.current
     
     // Handle error messages
     LaunchedEffect(errorMessage) {
@@ -145,7 +149,12 @@ fun AvatarGeneratePage(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp),
+                .padding(horizontal = 20.dp)
+                .pointerInput(Unit) {
+                    detectTapGestures(onTap = {
+                        focusManager.clearFocus()
+                    })
+                },
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Spacer(modifier = Modifier.height(24.dp))

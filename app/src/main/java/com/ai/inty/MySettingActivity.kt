@@ -232,6 +232,7 @@ class MySettingActivity: BaseActivity() {
                                             IntySmallTextField(
                                                 modifier = Modifier.weight(1f),
                                                 value = editValue,
+                                                selection = editValue.length, // 让光标默认定位到文本末尾
                                                 onValueChange = {
                                                     editValue = it
                                                 },

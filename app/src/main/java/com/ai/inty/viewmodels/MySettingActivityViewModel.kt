@@ -5,7 +5,9 @@ import android.net.Uri
 import androidx.lifecycle.viewModelScope
 import com.ai.inty.Constant
 import com.ai.inty.EditKey
+import com.ai.inty.R
 import com.ai.inty.base.BaseActivityViewModel
+import com.ai.inty.base.ToastUtils
 import com.ai.inty.beans.UserProfile
 import com.ai.inty.net.IUserApi
 import com.ai.inty.net.IUserApi2
@@ -63,6 +65,10 @@ class MySettingActivityViewModel: BaseActivityViewModel() {
                         _userProfile.value = _userProfile.value.copy(
                             avatar = result.data.avatar
                         )
+                        // Show success toast for avatar upload
+                        viewModelScope.launch(Dispatchers.Main) {
+                            ToastUtils.showToast(R.string.saved_successfully)
+                        }
                     }
                     is HttpResult.Failure -> {
                         showSnackbar(result.message)
@@ -75,7 +81,10 @@ class MySettingActivityViewModel: BaseActivityViewModel() {
             EasyLog.log("set user profile = $result2")
             when (result2) {
                 is HttpResult.Success -> {
-
+                    // Show success toast for profile update
+                    viewModelScope.launch(Dispatchers.Main) {
+                        ToastUtils.showToast(R.string.saved_successfully)
+                    }
                 }
                 is HttpResult.Failure -> {
                     showSnackbar(result2.message)

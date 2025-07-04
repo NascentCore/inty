@@ -54,9 +54,10 @@
     
     <!-- Success messages -->
     <string name="character_updated_successfully">Character updated successfully!</string>
-    <string name="character_deleted_successfully">Character deleted successfully</string>
-    <string name="followed_successfully">Followed successfully</string>
+    <string name="character_deleted_successfully">Delete Successfully</string>
+    <string name="followed_successfully">Followed</string>
     <string name="unfollowed_successfully">Unfollowed successfully</string>
+    <string name="saved_successfully">Saved Successfully</string>
     
     <!-- Error messages -->
     <string name="follow_failed">Follow failed</string>

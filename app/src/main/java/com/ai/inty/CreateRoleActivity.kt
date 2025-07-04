@@ -105,6 +105,9 @@ import android.net.Uri
 import java.io.File
 import java.util.UUID
 import android.graphics.Color as AndroidColor
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
 
 @Route(path = Constant.ROUTE_CREATE_ROLE)
 class CreateRoleActivity : BaseActivity() {
@@ -196,6 +199,7 @@ fun CreateRolePage(
     
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
+    val focusManager = LocalFocusManager.current
     
     // Clear avatar data when creating new character
     LaunchedEffect(isEditMode) {
@@ -459,7 +463,12 @@ fun CreateRolePage(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp),
+                .padding(horizontal = 20.dp)
+                .pointerInput(Unit) {
+                    detectTapGestures(onTap = {
+                        focusManager.clearFocus()
+                    })
+                },
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Spacer(modifier = Modifier.height(24.dp))
@@ -823,8 +832,7 @@ fun AvatarUploadSection(
     ) {
         Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .height(480.dp)
+                .size(200.dp)
                 .let { modifier ->
                     if (avatarUrls.isEmpty() && avatarUrl == null) {
                         modifier

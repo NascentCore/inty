@@ -329,7 +329,7 @@ class MainViewModel: BaseActivityViewModel() {
                     }
                     // Show success toast
                     viewModelScope.launch(Dispatchers.Main) {
-                        ToastUtils.showToast("关注成功")
+                        ToastUtils.showToast(R.string.followed_successfully)
                     }
                     // Update agent state in list
                     updateAgentFollowStateInList(agentId, true)
@@ -345,7 +345,7 @@ class MainViewModel: BaseActivityViewModel() {
                 is HttpResult.Failure -> {
                     EasyLog.log("followAgent error: $result", priority = EasyLog.ERROR)
                     viewModelScope.launch(Dispatchers.Main) {
-                        ToastUtils.showToast("关注失败: ${result.message}")
+                        ToastUtils.showToast(R.string.follow_failed_with_reason, result.message)
                     }
                 }
             }
@@ -372,7 +372,7 @@ class MainViewModel: BaseActivityViewModel() {
                     followingAgents.removeAll { it.id == agentId }
                     // Show success toast
                     viewModelScope.launch(Dispatchers.Main) {
-                        ToastUtils.showToast("取消关注成功")
+                        ToastUtils.showToast(R.string.unfollowed_successfully)
                     }
                     // Update agent state in list
                     updateAgentFollowStateInList(agentId, false)
@@ -386,7 +386,7 @@ class MainViewModel: BaseActivityViewModel() {
                 is HttpResult.Failure -> {
                     EasyLog.log("unfollowAgent error: $result", priority = EasyLog.ERROR)
                     viewModelScope.launch(Dispatchers.Main) {
-                        ToastUtils.showToast("取消关注失败: ${result.message}")
+                        ToastUtils.showToast(R.string.unfollow_failed_with_reason, result.message)
                     }
                 }
             }
@@ -593,13 +593,19 @@ class MainViewModel: BaseActivityViewModel() {
                             // 从关注列表中移除（如果存在）
                             followingAgents.removeAll { it.id == agentId }
                             
-                            ToastUtils.showToast("角色删除成功")
+                            ToastUtils.showToast(R.string.character_deleted_successfully)
                             onSuccess()
                         }
                         is HttpResult.Failure -> {
                             EasyLog.log("deleteAgent error: $result", priority = EasyLog.ERROR)
-                            val errorMessage = if (result.message.isBlank()) "删除失败，请检查网络连接" else result.message
-                            ToastUtils.showToast("删除失败: $errorMessage")
+                            val errorMessage = if (result.message.isBlank()) {
+                                AppEnv.context.getString(R.string.operation_failed_check_network, 
+                                    AppEnv.context.getString(R.string.delete_failed), 
+                                    AppEnv.context.getString(R.string.check_network_connection))
+                            } else {
+                                result.message
+                            }
+                            ToastUtils.showToast(R.string.delete_failed_with_reason, errorMessage)
                             onError(errorMessage)
                         }
                     }
@@ -610,7 +616,9 @@ class MainViewModel: BaseActivityViewModel() {
                 val errorMessage = when {
                     e.message?.contains("timeout", ignoreCase = true) == true -> "网络超时，请稍后重试"
                     e.message?.contains("network", ignoreCase = true) == true -> "网络连接失败，请检查网络"
-                    else -> "删除失败：${e.message ?: "未知错误"}"
+                    else -> AppEnv.context.getString(R.string.operation_error_with_reason, 
+                        AppEnv.context.getString(R.string.delete_failed), 
+                        e.message ?: AppEnv.context.getString(R.string.unknown_error))
                 }
                 withContext(Dispatchers.Main) {
                     ToastUtils.showToast(errorMessage)

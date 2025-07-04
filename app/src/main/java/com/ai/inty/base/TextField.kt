@@ -98,8 +98,8 @@ fun IntySmallTextField(
         ) {
             var textFieldValue by remember { mutableStateOf(TextFieldValue(value, selection = androidx.compose.ui.text.TextRange(selection))) }
             
-            // 当外部value或selection变化时，更新TextFieldValue
-            if (textFieldValue.text != value || textFieldValue.selection.start != selection) {
+            // 使用LaunchedEffect来监听外部value和selection的变化
+            androidx.compose.runtime.LaunchedEffect(value, selection) {
                 textFieldValue = textFieldValue.copy(
                     text = value,
                     selection = androidx.compose.ui.text.TextRange(selection)
