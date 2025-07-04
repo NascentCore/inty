@@ -17,3 +17,6 @@ local.properties
 /.vscode/
 /.kotlin/
 .claude
+keystore.properties
+bundletool.jar
+*.apks

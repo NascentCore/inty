@@ -22,9 +22,15 @@ export JAVA_HOME=/Applications/Android\ Studio.app/Contents/jbr/Contents/Home
 ./gradlew clean
 ```
 
+### Keystore Configuration
+- Signing configurations are now stored in `keystore.properties` (excluded from version control)
+- Copy `keystore.properties.template` to `keystore.properties` and fill in actual values
+- Debug signing uses keystore defined in `debug.*` properties
+- Release signing uses keystore defined in `release.*` properties
+
 ### Debugging
 - Use `EasyLog.log()` for logging throughout the application
-- Debug APKs are signed with the development certificate in `sign/key.jks`
+- Debug APKs are signed with the development certificate configured in keystore.properties
 - Build outputs are in `app/build/outputs/apk/`
 
 ## Architecture Overview

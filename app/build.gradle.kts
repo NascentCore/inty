@@ -1,3 +1,6 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -6,6 +9,18 @@ plugins {
     id("therouter")
     id("kotlin-parcelize")
     id("com.google.gms.google-services")
+}
+
+// 安全加载 keystore.properties
+val keystorePropertiesFile = rootProject.file("keystore.properties")
+if (!keystorePropertiesFile.exists()) {
+    throw GradleException("Missing keystore.properties file in project root")
+}
+val keystoreProperties = Properties()
+keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+
+fun requireProperty(props: Properties, key: String): String {
+    return props.getProperty(key) ?: throw GradleException("Missing property: $key")
 }
 
 val gitCommitId = try {
@@ -46,16 +61,22 @@ android {
     }
     signingConfigs {
         create("inty") {
-            storeFile = file("../sign/key.jks")
-            storePassword = "inty.sxwl.ai"
-            keyAlias = "key0"
-            keyPassword = "inty.sxwl.ai"
+            storeFile = rootProject.file(requireProperty(keystoreProperties, "debug.storeFile"))
+            storePassword = requireProperty(keystoreProperties, "debug.storePassword")
+            keyAlias = requireProperty(keystoreProperties, "debug.keyAlias")
+            keyPassword = requireProperty(keystoreProperties, "debug.keyPassword")
+        }
+        create("release") {
+            storeFile = rootProject.file(requireProperty(keystoreProperties, "release.storeFile"))
+            storePassword = requireProperty(keystoreProperties, "release.storePassword")
+            keyAlias = requireProperty(keystoreProperties, "release.keyAlias")
+            keyPassword = requireProperty(keystoreProperties, "release.keyPassword")
         }
     }
 
     buildTypes {
         release {
-            signingConfig = signingConfigs.getByName("inty")
+            signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
