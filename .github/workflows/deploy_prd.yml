@@ -50,7 +50,7 @@ jobs:
           sudo docker run -d \
             --name inty-backend-prd \
             --restart unless-stopped \
-            -p 8000:8000 \
+            -p 8100:8000 \
             -v /opt/inty-prd/config.yaml:/app/config.yaml \
             -v /opt/inty-prd/inty-backend-key.json:/app/inty-backend-key.json \
             -v /opt/inty-prd/inty-firebase-key.json:/app/inty-firebase-key.json \
