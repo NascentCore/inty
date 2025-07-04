@@ -136,7 +136,7 @@ fun MyPage(
                         )
                         Spacer(Modifier.height(6.dp))
                         Text(
-                            text = stringResource(R.string.ID, userProfile.id),
+                            text = stringResource(R.string.ID, userProfile.readableId),
                             color = Color.White.copy(0.55f),
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Light,

@@ -40,6 +40,8 @@ data class UserProfile(
     val gender: String? = null,
     @Json(name = "id")
     val id: String = "",
+    @Json(name = "readable_id")
+    val readableId: String = "",
     @Json(name = "is_active")
     val isActive: Boolean = false,
     @Json(name = "is_superuser")
