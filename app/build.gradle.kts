@@ -43,7 +43,7 @@ android {
         applicationId = "com.ai.inty"
         minSdk = 29
         targetSdk = 34
-        versionCode = 1
+        versionCode = 2
         versionName = "1.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -83,6 +83,9 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            ndk {
+                debugSymbolLevel = "FULL" // 或者 'SYMBOL_TABLE'
+            }
         }
         debug {
             signingConfig = signingConfigs.getByName("inty")
