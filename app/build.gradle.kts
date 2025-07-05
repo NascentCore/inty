@@ -43,7 +43,7 @@ android {
         applicationId = "com.ai.inty"
         minSdk = 29
         targetSdk = 34
-        versionCode = 2
+        versionCode = 3
         versionName = "1.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -51,6 +51,9 @@ android {
         // 添加BuildConfig字段用于调试
         buildConfigField("String", "GIT_COMMIT_ID", "\"$gitCommitId\"")
         buildConfigField("boolean", "IS_DEBUG_BUILD", "false")
+        
+        // 数据安全声明 - 不使用广告ID
+        manifestPlaceholders["uses_ads"] = "false"
         vectorDrawables {
             useSupportLibrary = true
         }
