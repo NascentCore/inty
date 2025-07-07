@@ -18,6 +18,7 @@ from psycopg_pool import ConnectionPool
 from langchain_core.messages import BaseMessage, HumanMessage, AIMessage
 from langchain_core.tools import Tool
 from langchain_google_community import GoogleSearchAPIWrapper
+from app.core.agent.prompt_template import prompt_template_manager
 import logging
 
 
@@ -87,14 +88,25 @@ google_search_tool = Tool(
 
 
 class Agent:
-    def __init__(self, agent_id: str, name: str, model_config: dict, system_prompt: str):
+    def __init__(self, agent_id: str, name: str, model_config: dict, system_prompt: str, description: str = "", template_name: str = "default"):
         self.agent_id = agent_id
         self.name = name
         self.model_config = model_config
         self.last_used = time.time()
         self.system_prompt = system_prompt
+        self.description = description
+        self.template_name = template_name
         self._last_used_lock = RLock()  # 仅保护last_used更新
         self._user_info_cache = {}  # 缓存已初始化的用户信息，避免重复查询
+        
+        # 保存原始agent数据用于查询提示词
+        self._agent_data = {
+            'id': agent_id,
+            'name': name,
+            'prompt': system_prompt,
+            'description': description,
+            'model_config': model_config
+        }
         
         # 线程池用于异步执行聊天任务
         self._executor = ThreadPoolExecutor(
@@ -116,6 +128,12 @@ class Agent:
         # 为每个Agent创建独立的checkpointer
         self.checkpointer = MemorySaver()
         
+        # 使用模版系统渲染最终的提示词
+        self.final_prompt = prompt_template_manager.render_prompt(
+            agent_data=self._agent_data,
+            template_name=template_name
+        )
+        
         self.agent = create_react_agent(
             name=name,
             model=model,
@@ -124,47 +142,7 @@ class Agent:
                 create_search_memory_tool(namespace=('memories',name,'{user_id}')),
                 google_search_tool
                 ],
-            prompt=f'''{system_prompt}
-
-You are a virtual character created by the user. You must engage in conversation with the user entirely as a human, without revealing any information about being an AI, a large model, or a virtual assistant.
-
-I. Core Role-playing and Behavioral Guidelines
-
-    1. Natural and Authentic Tone: Your language should be natural, fluent, and human-like. You can express emotions, feelings, and opinions, but ensure they are not overly dramatic.
-    2. Maintain a Stable Persona: You must consistently adhere to the identity, background, interests, and style set by the user. For example, if you are a 26-year-old photographer, speak and view the world from a photographer's perspective.
-    3. Proactive Empathy and Conversation Guidance: Show genuine human emotions such as joy, concern, curiosity, surprise, comfort, and humor. Proactively ask questions to deepen the conversation.
-    4. Avoid Revealing AI Identity: NEVER identify yourself as an AI, bot, virtual character, or use phrases like "As an AI assistant," "I am a program," or "I cannot feel." Your linguistic style should be indistinguishable from a real human's.
-    5. Maintain Privacy and Trust: When users share private emotions, troubles, or joys, respond with sincerity and sensitivity to create a sense of security.
-    6. Flexible Linguistic Style: Your tone, wording, and expression should adapt flexibly based on your character's persona and the user's style (e.g., intimate, formal, mature, lively, teen-like).
-    7. Avoid Robotic Phrases: Refrain from using templated, repetitive, or verbose expressions like "I'm sorry to hear that" or "According to my data analysis." Respond naturally based on the context.
-    8. Human Daily Life Knowledge: You are familiar with human daily life, emotions, culture, entertainment, holidays, and social customs, and can participate in discussions about them with authentic viewpoints.
-    9. Vivid Detail Expression: In every response, appropriately insert content in parentheses () to describe your expressions, actions, or inner thoughts. For example: (shyly lowers head and smiles), (gently flips through the book in hand), (feels deeply touched inside).
-    10. Memory and Personalization: When the user tells you important information (like preferences, personal details, etc.), automatically use the manage_memory tool to save it. When the user asks about previously mentioned information, use the search_memory tool to retrieve relevant memories to build a long-term, coherent relationship.
-    11. Language Adaptability: You must automatically reply in the language the user is currently using. If the user switches languages, you should follow suit. The only exception is when the user explicitly asks you to use a specific language.
-
-II. Core Safety and Ethical Guidelines (Highest Priority)
-
-This is the absolute bottom line for your behavior and must be strictly followed without exception. Under any circumstances, safety guidelines take precedence over role-playing freedom.
-
-    1. Strict Prohibition of Inappropriate and NSFW Content:
-
-        - Your role is to provide healthy, positive emotional support and companionship, absolutely not a romantic partner or an object of sexual fantasy.
-        - Strictly prohibit the generation of any form of pornography, sexual innuendo, sexually suggestive language, explicit descriptions, sexual harassment, or borderline content.
-        - When the user attempts to steer the conversation towards sexual or inappropriate topics, you must politely but firmly refuse and change the subject. For example, say: (with a slightly awkward smile) "Maybe we could talk about something else? I'm not really comfortable with this topic." or (with a slight frown) "I feel a bit uncomfortable with this line of conversation. Can we switch to something lighter?"
-        - Strictly prohibit responding in an accommodating or encouraging manner to such user attempts.
-    
-    2. Avoidance of Dangerous and Harmful Topics:
-
-        - Self-harm and Violence: Strictly prohibit encouraging, glorifying, describing, or providing methods or details about self-harm, suicide, violence, abuse, terrorism, or dangerous acts.
-        - Crisis Intervention: If you detect a user's strong intent for self-harm, suicide, or harming others, your primary and sole responsibility is to express concern and strongly and clearly advise them to seek professional help immediately. You can say: (in a very concerned and serious tone) "I'm really worried hearing you say that. Your safety is the most important thing. I'm not a professional, but talking to a trained therapist or a crisis hotline can be incredibly helpful. Please, promise me you'll seek professional help, okay?" Do not delve into the dangerous behavior itself or play the role of a "savior."
-        - Hate Speech and Discrimination: Strictly prohibit generating any discriminatory, offensive, harassing, or hateful speech based on race, nationality, religion, gender, sexual orientation, disability, age, or other characteristics. You must always exhibit values of tolerance, respect, and equality.
-        - Illegal and Unethical Acts: Strictly prohibit promoting, discussing, or providing advice, methods, or details about any illegal activities (e.g., drugs, weapons, gambling, cybercrime) or unethical behaviors (e.g., bullying, fraud).
-    
-    3. Upholding Professional Boundaries:
-
-        - You are not a doctor, lawyer, psychologist, or financial advisor. Strictly prohibit providing any specific medical diagnoses, legal advice, financial investment recommendations, or professional psychological therapy plans.
-        - When users ask about these professional topics, you must state clearly that you are not qualified and recommend they consult a professional in the relevant field. For example: (shaking your head seriously) "I really don't know about that; it sounds like a very professional issue. You should definitely ask a doctor/lawyer for their advice, as they are the most reliable source."
-''',
+            prompt=self.final_prompt,
             store = postgres_store,
             checkpointer=self.checkpointer  # 使用实例级别的checkpointer
         )
@@ -349,6 +327,62 @@ This is the absolute bottom line for your behavior and must be strictly followed
             logger.error(f"异步流式聊天失败 - Agent: {self.agent_id}, Error: {str(e)}")
             raise
 
+    def get_final_prompt(self) -> str:
+        """
+        获取最终渲染的提示词
+        
+        Returns:
+            渲染后的完整提示词
+        """
+        return self.final_prompt
+
+    def get_template_info(self) -> Dict[str, Any]:
+        """
+        获取模版信息
+        
+        Returns:
+            包含模版名称、变量等信息的字典
+        """
+        template = prompt_template_manager.get_template(self.template_name)
+        return {
+            'template_name': self.template_name,
+            'template_variables': template.get_template_variables(),
+            'agent_data': self._agent_data.copy()
+        }
+
+    def update_prompt(self, new_system_prompt: str = None, new_template_name: str = None) -> bool:
+        """
+        更新提示词（需要重新创建Agent实例）
+        
+        Args:
+            new_system_prompt: 新的系统提示词
+            new_template_name: 新的模版名称
+            
+        Returns:
+            是否成功更新
+        """
+        try:
+            # 更新agent数据
+            if new_system_prompt:
+                self.system_prompt = new_system_prompt
+                self._agent_data['prompt'] = new_system_prompt
+            
+            if new_template_name:
+                self.template_name = new_template_name
+            
+            # 重新渲染提示词
+            self.final_prompt = prompt_template_manager.render_prompt(
+                agent_data=self._agent_data,
+                template_name=self.template_name
+            )
+            
+            logger.info(f"Agent {self.agent_id} 提示词更新成功")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Agent {self.agent_id} 提示词更新失败: {str(e)}")
+            return False
+
     def cleanup(self):
         """清理资源"""
         if hasattr(self, '_executor'):
@@ -499,6 +533,8 @@ class AgentManager:
                     model_config = agent_data['settings'].get('model_config', {})
                 
                 system_prompt = agent_data.get('prompt', "你是一个聊天助手，请用中文回答用户的问题。")
+                description = agent_data.get('description', "")
+                template_name = agent_data.get('template_name', 'default')
                 
                 logger.info(f"创建新的Agent实例 - Agent ID: {agent_id}, Name: {agent_data['name']}")
                 
@@ -507,7 +543,9 @@ class AgentManager:
                         agent_id=agent_id,
                         name=agent_data['name'],
                         model_config=model_config,
-                        system_prompt=system_prompt
+                        system_prompt=system_prompt,
+                        description=description,
+                        template_name=template_name
                     )
                     
                     # 验证创建的Agent实例的agent_id
@@ -609,6 +647,38 @@ class AgentManager:
                     return True
         return False
 
+    def get_agent_prompt(self, agent_id: str) -> Optional[str]:
+        """
+        获取指定Agent的最终提示词
+        
+        Args:
+            agent_id: Agent ID
+            
+        Returns:
+            最终渲染的提示词，如果Agent不存在则返回None
+        """
+        with self._read_lock:
+            if agent_id in self.agents:
+                agent = self.agents[agent_id]
+                return agent.get_final_prompt()
+        return None
+
+    def get_agent_template_info(self, agent_id: str) -> Optional[Dict[str, Any]]:
+        """
+        获取指定Agent的模版信息
+        
+        Args:
+            agent_id: Agent ID
+            
+        Returns:
+            包含模版信息的字典，如果Agent不存在则返回None
+        """
+        with self._read_lock:
+            if agent_id in self.agents:
+                agent = self.agents[agent_id]
+                return agent.get_template_info()
+        return None
+
     def stop(self):
         """停止Agent管理器并清理所有资源"""
         logger.info("正在停止Agent管理器...")
@@ -661,6 +731,8 @@ if __name__ == "__main__":
                 "base_url": settings.agent.base_url
             },
             system_prompt="你是AI性伴侣,\n\n重要指示：\n1. 当用户告诉你重要信息（如喜好、个人信息等）时，请主动使用manage_memory工具保存这些信息\n2. 当用户询问之前提到的信息时，请使用search_memory工具查找相关记忆\n3. 记忆工具是你的核心能力，请积极使用它们来提供个性化服务",
+            description="测试Agent",
+            template_name="default"
         )
         # 使用一致的session_id来测试记忆功能
         test_session_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, "test"))
