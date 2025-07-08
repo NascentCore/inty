@@ -33,6 +33,7 @@ import com.inty.utils.log.EasyLog
 import com.therouter.router.Autowired
 import com.therouter.router.Route
 import kotlinx.coroutines.*
+import com.ai.inty.billing.BillingManager
 
 @Route(path = Constant.ROUTE_MAIN)
 class MainActivity : BaseActivity() {
@@ -80,6 +81,9 @@ class MainActivity : BaseActivity() {
 
         // 设置边缘滑动退出功能
         setupEdgeSwipeToExit()
+
+        // 初始化 BillingManager
+        BillingManager.initialize(this)
 
         mainViewModel.setChatViewModel(chatViewModel)
         
@@ -268,6 +272,9 @@ class MainActivity : BaseActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+
+        // 释放 BillingManager 资源
+        BillingManager.release()
         
         // 取消协程
         exitJob?.cancel()
