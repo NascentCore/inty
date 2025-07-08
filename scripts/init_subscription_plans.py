@@ -33,9 +33,64 @@ async def init_subscription_plans():
             "currency": "USD",
             "google_play_product_id": "com.ai.inty.premium.monthly",
             "features": {
-                "unlimited_chat": True,
-                "priority_support": True,
-                "advanced_features": True
+                "features": [
+                    {
+                        "key": "unlimited_messages",
+                        "name": "聊天无限制",
+                        "description": "无限制聊天消息数量",
+                        "type": "real",
+                        "icon": "💬",
+                        "order": 1
+                    },
+                    {
+                        "key": "premium_model_usage",
+                        "name": "高级模型使用",
+                        "description": "使用更先进的AI模型",
+                        "type": "fake",
+                        "icon": "🧠",
+                        "order": 2
+                    },
+                    {
+                        "key": "extra_chat_inspiration",
+                        "name": "更多聊天灵感",
+                        "description": "获得更多聊天话题建议",
+                        "type": "fake",
+                        "icon": "💡",
+                        "order": 3
+                    },
+                    {
+                        "key": "customize_ai_responses",
+                        "name": "自定义更好的ai回复",
+                        "description": "个性化AI回复风格",
+                        "type": "fake",
+                        "icon": "🎨",
+                        "order": 4
+                    },
+                    {
+                        "key": "chat_memory",
+                        "name": "聊天记忆",
+                        "description": "AI记住聊天历史上下文",
+                        "type": "fake",
+                        "icon": "🧠",
+                        "order": 5
+                    },
+                    {
+                        "key": "new_features_privilege",
+                        "name": "体验新功能特权",
+                        "description": "优先体验最新功能",
+                        "type": "fake",
+                        "icon": "🚀",
+                        "order": 6
+                    }
+                ],
+                "real_features": ["unlimited_messages"],
+                "fake_features": [
+                    "premium_model_usage",
+                    "extra_chat_inspiration", 
+                    "customize_ai_responses",
+                    "chat_memory",
+                    "new_features_privilege"
+                ]
             },
             "chat_limit_per_day": -1,  # 无限制
             "agent_creation_limit": 50,
@@ -51,10 +106,64 @@ async def init_subscription_plans():
             "currency": "USD",
             "google_play_product_id": "com.ai.inty.premium.quarterly",
             "features": {
-                "unlimited_chat": True,
-                "priority_support": True,
-                "advanced_features": True,
-                "quarterly_discount": True
+                "features": [
+                    {
+                        "key": "unlimited_messages",
+                        "name": "聊天无限制",
+                        "description": "无限制聊天消息数量",
+                        "type": "real",
+                        "icon": "💬",
+                        "order": 1
+                    },
+                    {
+                        "key": "premium_model_usage",
+                        "name": "高级模型使用",
+                        "description": "使用更先进的AI模型",
+                        "type": "fake",
+                        "icon": "🧠",
+                        "order": 2
+                    },
+                    {
+                        "key": "extra_chat_inspiration",
+                        "name": "更多聊天灵感",
+                        "description": "获得更多聊天话题建议",
+                        "type": "fake",
+                        "icon": "💡",
+                        "order": 3
+                    },
+                    {
+                        "key": "customize_ai_responses",
+                        "name": "自定义更好的ai回复",
+                        "description": "个性化AI回复风格",
+                        "type": "fake",
+                        "icon": "🎨",
+                        "order": 4
+                    },
+                    {
+                        "key": "chat_memory",
+                        "name": "聊天记忆",
+                        "description": "AI记住聊天历史上下文",
+                        "type": "fake",
+                        "icon": "🧠",
+                        "order": 5
+                    },
+                    {
+                        "key": "new_features_privilege",
+                        "name": "体验新功能特权",
+                        "description": "优先体验最新功能",
+                        "type": "fake",
+                        "icon": "🚀",
+                        "order": 6
+                    }
+                ],
+                "real_features": ["unlimited_messages"],
+                "fake_features": [
+                    "premium_model_usage",
+                    "extra_chat_inspiration", 
+                    "customize_ai_responses",
+                    "chat_memory",
+                    "new_features_privilege"
+                ]
             },
             "chat_limit_per_day": -1,  # 无限制
             "agent_creation_limit": 75,
@@ -70,11 +179,64 @@ async def init_subscription_plans():
             "currency": "USD",
             "google_play_product_id": "com.ai.inty.premium.annual",
             "features": {
-                "unlimited_chat": True,
-                "priority_support": True,
-                "advanced_features": True,
-                "yearly_discount": True,
-                "exclusive_features": True
+                "features": [
+                    {
+                        "key": "unlimited_messages",
+                        "name": "聊天无限制",
+                        "description": "无限制聊天消息数量",
+                        "type": "real",
+                        "icon": "💬",
+                        "order": 1
+                    },
+                    {
+                        "key": "premium_model_usage",
+                        "name": "高级模型使用",
+                        "description": "使用更先进的AI模型",
+                        "type": "fake",
+                        "icon": "🧠",
+                        "order": 2
+                    },
+                    {
+                        "key": "extra_chat_inspiration",
+                        "name": "更多聊天灵感",
+                        "description": "获得更多聊天话题建议",
+                        "type": "fake",
+                        "icon": "💡",
+                        "order": 3
+                    },
+                    {
+                        "key": "customize_ai_responses",
+                        "name": "自定义更好的ai回复",
+                        "description": "个性化AI回复风格",
+                        "type": "fake",
+                        "icon": "🎨",
+                        "order": 4
+                    },
+                    {
+                        "key": "chat_memory",
+                        "name": "聊天记忆",
+                        "description": "AI记住聊天历史上下文",
+                        "type": "fake",
+                        "icon": "🧠",
+                        "order": 5
+                    },
+                    {
+                        "key": "new_features_privilege",
+                        "name": "体验新功能特权",
+                        "description": "优先体验最新功能",
+                        "type": "fake",
+                        "icon": "🚀",
+                        "order": 6
+                    }
+                ],
+                "real_features": ["unlimited_messages"],
+                "fake_features": [
+                    "premium_model_usage",
+                    "extra_chat_inspiration", 
+                    "customize_ai_responses",
+                    "chat_memory",
+                    "new_features_privilege"
+                ]
             },
             "chat_limit_per_day": -1,  # 无限制
             "agent_creation_limit": 100,

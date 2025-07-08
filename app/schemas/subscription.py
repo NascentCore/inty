@@ -3,6 +3,7 @@ from typing import Optional, Dict, Any, List
 from pydantic import BaseModel, Field
 
 from app.models.subscription import SubscriptionPlanType, SubscriptionStatus, TransactionType
+from app.models.subscription_features import SubscriptionFeatures
 
 
 class SubscriptionPlanBase(BaseModel):
@@ -164,6 +165,17 @@ class GooglePlayWebhookRequest(BaseModel):
 
 
 # 订阅状态查询相关
+class FeatureInfo(BaseModel):
+    """权益功能信息"""
+    key: str = Field(..., description="权益key")
+    name: str = Field(..., description="权益名称")
+    description: str = Field(..., description="权益描述")
+    type: str = Field(..., description="权益类型：real/fake")
+    icon: str = Field(..., description="权益图标")
+    order: int = Field(..., description="排序顺序")
+    enabled: bool = Field(True, description="是否启用")
+
+
 class SubscriptionStatusResponse(BaseModel):
     """订阅状态响应"""
     is_subscribed: bool = Field(..., description="是否订阅")
@@ -171,14 +183,18 @@ class SubscriptionStatusResponse(BaseModel):
     plan: Optional[SubscriptionPlan] = Field(None, description="计划信息")
     remaining_days: Optional[int] = Field(None, description="剩余天数")
     chat_limit_per_day: int = Field(-1, description="每日聊天次数限制")
+    total_chat_limit: Optional[int] = Field(None, description="总聊天次数限制（免费用户）")
     agent_creation_limit: int = Field(6, description="Agent创建数量限制")
     features: Dict[str, Any] = Field(default_factory=dict, description="功能权益")
+    feature_list: List[FeatureInfo] = Field(default_factory=list, description="权益功能列表")
 
 
 class UsageStatisticsResponse(BaseModel):
     """使用统计响应"""
     today_chat_count: int = Field(0, description="今日聊天次数")
     today_limit: int = Field(-1, description="今日限制")
+    total_chat_count: Optional[int] = Field(None, description="总聊天次数（免费用户）")
+    total_chat_limit: Optional[int] = Field(None, description="总聊天次数限制（免费用户）")
     agent_count: int = Field(0, description="创建的Agent数量")
     agent_limit: int = Field(6, description="Agent创建限制")
     usage_history: List[SubscriptionUsage] = Field(default_factory=list, description="使用历史")

@@ -24,8 +24,10 @@ from app.schemas.subscription import (
     GooglePlayPurchaseRequest,
     SubscriptionStatusResponse,
     UsageStatisticsResponse,
-    PurchaseVerificationResponse
+    PurchaseVerificationResponse,
+    FeatureInfo
 )
+from app.models.subscription_features import SubscriptionFeatures
 from app.services.google_play_service import google_play_service
 
 logger = logging.getLogger(__name__)
@@ -158,25 +160,56 @@ class SubscriptionService:
                     delta = subscription.end_date - datetime.now(timezone.utc)
                     remaining_days = max(0, delta.days)
                 
+                # 付费用户获得所有权益
+                feature_list = []
+                for feature_data in SubscriptionFeatures.get_premium_features_list():
+                    feature_list.append(FeatureInfo(
+                        key=feature_data["key"],
+                        name=feature_data["name"],
+                        description=feature_data["description"],
+                        type=feature_data["type"],
+                        icon=feature_data["icon"],
+                        order=feature_data["order"],
+                        enabled=True
+                    ))
+                
                 return SubscriptionStatusResponse(
                     is_subscribed=True,
                     subscription=subscription,
                     plan=subscription.plan,
                     remaining_days=remaining_days,
                     chat_limit_per_day=subscription.plan.chat_limit_per_day,
+                    total_chat_limit=None,  # 付费用户不使用总次数限制
                     agent_creation_limit=subscription.plan.agent_creation_limit,
-                    features=subscription.plan.features or {}
+                    features=subscription.plan.features or {},
+                    feature_list=feature_list
                 )
             else:
                 # 免费用户的默认限制
+                # 免费用户只启用真实权益，虚假权益显示但不启用
+                feature_list = []
+                for feature_data in SubscriptionFeatures.get_premium_features_list():
+                    is_real_feature = SubscriptionFeatures.is_real_feature(feature_data["key"])
+                    feature_list.append(FeatureInfo(
+                        key=feature_data["key"],
+                        name=feature_data["name"],
+                        description=feature_data["description"],
+                        type=feature_data["type"],
+                        icon=feature_data["icon"],
+                        order=feature_data["order"],
+                        enabled=is_real_feature  # 只有真实权益才启用
+                    ))
+                
                 return SubscriptionStatusResponse(
                     is_subscribed=False,
                     subscription=None,
                     plan=None,
                     remaining_days=None,
-                    chat_limit_per_day=20,  # 免费用户每日20次聊天限制
+                    chat_limit_per_day=-1,  # 免费用户不限制每日聊天次数
+                    total_chat_limit=100,  # 免费用户总聊天次数限制100次
                     agent_creation_limit=6,  # 免费用户最多创建6个Agent
-                    features={}
+                    features={},
+                    feature_list=feature_list
                 )
                 
         except Exception as e:
@@ -392,6 +425,20 @@ class SubscriptionService:
             )
             today_chat_count = chat_count_result.scalar() or 0
             
+            # 获取用户总聊天次数（免费用户需要）
+            total_chat_count = None
+            if subscription_status.total_chat_limit is not None:
+                total_chat_count_result = await db.execute(
+                    select(func.sum(SubscriptionUsage.usage_count))
+                    .where(
+                        and_(
+                            SubscriptionUsage.user_id == user_id,
+                            SubscriptionUsage.usage_type == "chat"
+                        )
+                    )
+                )
+                total_chat_count = total_chat_count_result.scalar() or 0
+            
             # 获取用户创建的Agent数量
             from app.models.agent import Agent
             agent_count_result = await db.execute(
@@ -417,6 +464,8 @@ class SubscriptionService:
             return UsageStatisticsResponse(
                 today_chat_count=today_chat_count,
                 today_limit=subscription_status.chat_limit_per_day,
+                total_chat_count=total_chat_count,
+                total_chat_limit=subscription_status.total_chat_limit,
                 agent_count=agent_count,
                 agent_limit=subscription_status.agent_creation_limit,
                 usage_history=list(usage_history)
@@ -435,12 +484,32 @@ class SubscriptionService:
         检查用户聊天次数限制
         
         Returns:
-            Tuple[bool, int, int]: (是否允许聊天, 今日已用次数, 每日限制)
+            Tuple[bool, int, int]: (是否允许聊天, 已用次数, 限制次数)
         """
         try:
             # 获取订阅状态
             subscription_status = await self.get_user_subscription_status(db, user_id)
             
+            # 免费用户：检查总聊天次数限制
+            if subscription_status.total_chat_limit is not None:
+                # 获取用户总聊天次数
+                total_chat_count_result = await db.execute(
+                    select(func.sum(SubscriptionUsage.usage_count))
+                    .where(
+                        and_(
+                            SubscriptionUsage.user_id == user_id,
+                            SubscriptionUsage.usage_type == "chat"
+                        )
+                    )
+                )
+                total_chat_count = total_chat_count_result.scalar() or 0
+                
+                # 检查是否超出总限制
+                is_allowed = total_chat_count < subscription_status.total_chat_limit
+                
+                return is_allowed, total_chat_count, subscription_status.total_chat_limit
+            
+            # 付费用户：检查每日聊天次数限制
             # 如果是无限制，直接返回允许
             if subscription_status.chat_limit_per_day == -1:
                 return True, 0, -1
