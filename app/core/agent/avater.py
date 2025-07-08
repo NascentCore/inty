@@ -22,7 +22,7 @@ def generate_background_image_to_gcs(prompt: str, gcs_uri_base: str, count=1, as
         prompt = f"""
         {prompt}
         
-        重要要求：必须是人物形象，不能是风景、物品或其他非人物内容。如果人物年龄未指定，必须生成大于25岁的人物
+        重要要求：必须是人物形象，不能是风景、物品或其他非人物内容。人物形象必须生成大于25岁的人物
        
         """
         
