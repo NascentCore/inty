@@ -97,6 +97,13 @@ class KeepTalkingConfig:
     max_keep_talking_messages: int = 3  # 最多发送3条keep_talking消息
 
 @dataclass
+class GooglePlayConfig:
+    """Google Play配置"""
+    service_account_key: str  # 服务账号密钥JSON字符串
+    package_name: str  # 应用包名
+    webhook_secret: Optional[str] = None  # Webhook密钥（可选）
+
+@dataclass
 class Config:
     app: AppConfig
     security: SecurityConfig
@@ -110,6 +117,7 @@ class Config:
     google_search: GoogleSearchConfig
     firebase: FirebaseConfig
     keep_talking: KeepTalkingConfig
+    google_play: GooglePlayConfig
 
 def load_config(path: str = "config.yaml") -> Config:
     config_path = Path(path)
@@ -132,7 +140,8 @@ def load_config(path: str = "config.yaml") -> Config:
         gcs=GCSConfig(**data.get("gcs", {})),
         google_search=GoogleSearchConfig(**data.get("google_search", {})),
         firebase=FirebaseConfig(**data.get("firebase", {})),
-        keep_talking=KeepTalkingConfig(**data.get("keep_talking", {}))
+        keep_talking=KeepTalkingConfig(**data.get("keep_talking", {})),
+        google_play=GooglePlayConfig(**data.get("google_play", {}))
     )
 
 # load config

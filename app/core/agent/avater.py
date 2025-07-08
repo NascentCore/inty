@@ -76,7 +76,7 @@ def generate_background_image_to_gcs(prompt: str, gcs_uri_base: str, count=1, as
 
 if __name__ == "__main__":
 
-    prompt = "生成孔子的头像"
+    prompt = "生成一个小女孩"
 
     model = ImageGenerationModel.from_pretrained("imagen-4.0-fast-generate-preview-06-06")
     images = model.generate_images(
@@ -85,13 +85,14 @@ if __name__ == "__main__":
         aspect_ratio="1:1",
         safety_filter_level="block_some",
         person_generation="allow_adult",
-        output_gcs_uri="gs://inty-static/tmp/output-image.png"
+        # output_gcs_uri="gs://inty-static/tmp/output-image.png"
     )
 
     images[0].save(location="./output-image.png", include_generation_parameters=False)
 
     # Optional. View the generated image in a notebook.
     # images[0].show()
+
 
     print(f"Created output image using {len(images[0]._image_bytes)} bytes")
     # Example response:

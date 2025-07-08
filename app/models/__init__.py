@@ -12,4 +12,13 @@ from app.models.associations import agent_followers
 from app.models.resource import Resource
 from app.models.settings import Settings
 from app.models.report import Report
-from app.models.notification import UserNotification, NotificationTemplate 
+from app.models.notification import UserNotification, NotificationTemplate
+from app.models.subscription import (
+    SubscriptionPlan,
+    UserSubscription,
+    SubscriptionTransaction,
+    SubscriptionUsage,
+    SubscriptionPlanType,
+    SubscriptionStatus,
+    TransactionType
+) 
