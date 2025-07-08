@@ -60,6 +60,11 @@ class User(Base):
     reports = relationship("Report", back_populates="reporter")
     notifications = relationship("UserNotification", back_populates="user")
     device_tokens = relationship("DeviceToken", back_populates="user")
+    
+    # 订阅相关关系
+    subscriptions = relationship("UserSubscription", back_populates="user")
+    subscription_transactions = relationship("SubscriptionTransaction", back_populates="user")
+    subscription_usage = relationship("SubscriptionUsage", back_populates="user")
 
 class DeviceToken(Base):
     __tablename__ = 'device_tokens'

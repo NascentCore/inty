@@ -354,6 +354,23 @@ async def agent_chat_completions(
     如果用户还没有和该Agent创建会话，则自动创建
     """
     try:
+        # 检查用户聊天次数限制
+        from app.services.subscription_service import subscription_service
+        is_allowed, used_count, daily_limit = await subscription_service.check_chat_limit(
+            db, current_user.id
+        )
+        
+        if not is_allowed:
+            raise HTTPException(
+                status_code=429,  # Too Many Requests
+                detail={
+                    "message": "今日聊天次数已达上限",
+                    "used_count": used_count,
+                    "daily_limit": daily_limit,
+                    "error_code": "CHAT_LIMIT_EXCEEDED"
+                }
+            )
+        
         # 首先验证Agent是否存在
         agent_db = await agent_service.get_agent(db, agent_id=agent_id)
         if not agent_db:
@@ -414,7 +431,9 @@ async def agent_chat_completions(
                     session_id=session_id,
                     chat_id=chat.id,
                     model_name=request.model,
-                    db_session=db
+                    db_session=db,
+                    agent_id=agent_id,
+                    last_user_message=last_user_message
                 ),
                 media_type="text/event-stream",
                 headers={
@@ -430,6 +449,18 @@ async def agent_chat_completions(
                 messages=messages,
                 db_session=db
             )
+            
+            # 记录聊天使用情况
+            try:
+                await subscription_service.record_usage(
+                    db, 
+                    current_user.id, 
+                    "chat", 
+                    1,
+                    extra_data={"agent_id": agent_id, "message_length": len(last_user_message)}
+                )
+            except Exception as e:
+                logger.warning(f"记录聊天使用情况失败: {str(e)}")
             
             return {
                 "id": f"chatcmpl-{uuid.uuid4().hex[:12]}",
@@ -569,7 +600,9 @@ async def generate_chat_stream(
     session_id: str,
     chat_id: str,
     model_name: str,
-    db_session: AsyncSession = None
+    db_session: AsyncSession = None,
+    agent_id: str = None,
+    last_user_message: str = None
 ):
     """
     Generate streaming chat response (async version)
