@@ -1,5 +1,7 @@
 # ATProto (Account Portability Protocol)
 
+**This is experimental, ask Yaxiong for details**
+
 ## AT Protocol example
 
 See https://stackoverflow.com/a/77633012, AT Protocol's SDK uses a pydantic model
