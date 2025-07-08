@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 """
-初始化订阅计划脚本
-创建月付、季付、年付三种订阅计划
+简化版订阅计划初始化脚本
+直接操作数据库，不依赖Google Play服务
 """
 
 import asyncio
 import sys
 import os
 from pathlib import Path
+from datetime import datetime, UTC
+import uuid
 
 # 添加项目根目录到Python路径
 project_root = Path(__file__).parent.parent
@@ -15,9 +17,47 @@ sys.path.insert(0, str(project_root))
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import AsyncSessionLocal
-from app.services.subscription_service import subscription_service
-from app.schemas.subscription import SubscriptionPlanCreate
-from app.models.subscription import SubscriptionPlanType
+from app.models.subscription import SubscriptionPlan, SubscriptionPlanType
+from app.core.config import settings
+
+
+async def create_subscription_plan_direct(db: AsyncSession, plan_data: dict):
+    """直接创建订阅计划到数据库"""
+    try:
+        # 检查是否已存在
+        existing_plan = await db.get(SubscriptionPlan, plan_data["id"])
+        if existing_plan:
+            print(f"订阅计划 {plan_data['name']} 已存在，跳过...")
+            return existing_plan
+        
+        # 创建新的订阅计划
+        plan = SubscriptionPlan(
+            id=plan_data["id"],
+            name=plan_data["name"],
+            description=plan_data["description"],
+            plan_type=plan_data["plan_type"],
+            price=plan_data["price"],
+            currency=plan_data["currency"],
+            google_play_product_id=plan_data["google_play_product_id"],
+            features=plan_data["features"],
+            chat_limit_per_day=plan_data["chat_limit_per_day"],
+            agent_creation_limit=plan_data["agent_creation_limit"],
+            is_active=plan_data["is_active"],
+            sort_order=plan_data["sort_order"],
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC)
+        )
+        
+        db.add(plan)
+        await db.commit()
+        await db.refresh(plan)
+        
+        return plan
+        
+    except Exception as e:
+        await db.rollback()
+        print(f"创建订阅计划失败: {str(e)}")
+        raise
 
 
 async def init_subscription_plans():
@@ -86,25 +126,13 @@ async def init_subscription_plans():
     async with AsyncSessionLocal() as db:
         try:
             print("开始初始化订阅计划...")
+            print("=" * 50)
             
             for plan_data in subscription_plans:
                 try:
-                    # 检查计划是否已存在
-                    existing_plan = await subscription_service.get_subscription_plan_by_id(
-                        db, plan_data["id"]
-                    )
+                    created_plan = await create_subscription_plan_direct(db, plan_data)
                     
-                    if existing_plan:
-                        print(f"订阅计划 {plan_data['name']} 已存在，跳过...")
-                        continue
-                    
-                    # 创建订阅计划
-                    plan_create = SubscriptionPlanCreate(**plan_data)
-                    created_plan = await subscription_service.create_subscription_plan(
-                        db, plan_create
-                    )
-                    
-                    print(f"✅ 成功创建订阅计划: {created_plan.name}")
+                    print(f"✅ 订阅计划: {created_plan.name}")
                     print(f"   - ID: {created_plan.id}")
                     print(f"   - 类型: {created_plan.plan_type}")
                     print(f"   - 价格: {created_plan.price} {created_plan.currency}")
@@ -118,6 +146,7 @@ async def init_subscription_plans():
                     continue
             
             print("订阅计划初始化完成！")
+            print("=" * 50)
             
         except Exception as e:
             print(f"❌ 初始化订阅计划失败: {str(e)}")
@@ -128,22 +157,29 @@ async def list_subscription_plans():
     """列出所有订阅计划"""
     async with AsyncSessionLocal() as db:
         try:
-            plans = await subscription_service.get_subscription_plans(db, include_inactive=True)
+            from sqlalchemy import select
+            
+            # 查询所有订阅计划
+            result = await db.execute(select(SubscriptionPlan))
+            plans = result.scalars().all()
             
             print("当前所有订阅计划:")
-            print("=" * 50)
+            print("=" * 80)
             
             for plan in plans:
                 print(f"ID: {plan.id}")
                 print(f"名称: {plan.name}")
+                print(f"描述: {plan.description}")
                 print(f"类型: {plan.plan_type}")
                 print(f"价格: {plan.price} {plan.currency}")
                 print(f"Google Play Product ID: {plan.google_play_product_id}")
                 print(f"聊天限制: {plan.chat_limit_per_day}")
                 print(f"Agent创建限制: {plan.agent_creation_limit}")
                 print(f"是否激活: {plan.is_active}")
+                print(f"排序: {plan.sort_order}")
                 print(f"创建时间: {plan.created_at}")
-                print("-" * 30)
+                print(f"功能特性: {plan.features}")
+                print("-" * 80)
                 
         except Exception as e:
             print(f"❌ 获取订阅计划失败: {str(e)}")
@@ -152,7 +188,7 @@ async def list_subscription_plans():
 if __name__ == "__main__":
     import argparse
     
-    parser = argparse.ArgumentParser(description="订阅计划管理脚本")
+    parser = argparse.ArgumentParser(description="订阅计划管理脚本（简化版）")
     parser.add_argument("--action", choices=["init", "list"], default="init", 
                        help="执行的操作: init=初始化计划, list=列出计划")
     

@@ -23,8 +23,23 @@ class GooglePlayService:
     def _initialize_service(self):
         """初始化Google Play Developer API服务"""
         try:
-            # 从配置文件或环境变量中获取服务账号凭据
-            service_account_info = json.loads(settings.google_play.service_account_key)
+            # 获取服务账号凭据
+            service_account_key = settings.google_play.service_account_key
+            
+            # 检查是否为文件路径还是JSON字符串
+            if service_account_key.endswith('.json'):
+                # 如果是文件路径，读取文件内容
+                from pathlib import Path
+                key_path = Path(service_account_key)
+                if not key_path.exists():
+                    raise FileNotFoundError(f"服务账号密钥文件不存在: {service_account_key}")
+                    
+                with open(key_path, 'r') as f:
+                    service_account_info = json.load(f)
+            else:
+                # 如果是JSON字符串，直接解析
+                service_account_info = json.loads(service_account_key)
+            
             credentials = service_account.Credentials.from_service_account_info(
                 service_account_info,
                 scopes=['https://www.googleapis.com/auth/androidpublisher']
@@ -32,6 +47,7 @@ class GooglePlayService:
             
             self.service = build('androidpublisher', 'v3', credentials=credentials)
             logger.info("Google Play Developer API服务初始化成功")
+            
         except Exception as e:
             logger.error(f"Google Play Developer API服务初始化失败: {str(e)}")
             raise
