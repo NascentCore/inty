@@ -1,4 +1,4 @@
-# ATProto (Account Portability Protocol)
+# ATProto (Account Portability Protocol) Demo
 
 **This is experimental, ask Yaxiong for details**
 
