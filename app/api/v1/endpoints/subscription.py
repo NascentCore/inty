@@ -140,7 +140,7 @@ async def google_play_webhook(
         # 验证webhook签名（如果配置了webhook密钥）
         if settings.google_play.webhook_secret:
             signature = request.headers.get("X-Goog-Message-Signature")
-            if not signature or not verify_webhook_signature(body, signature):
+            if not signature or not _verify_webhook_signature(body, signature):
                 raise HTTPException(status_code=400, detail="Invalid webhook signature")
         
         # 解析请求数据
@@ -149,6 +149,9 @@ async def google_play_webhook(
         except json.JSONDecodeError:
             raise HTTPException(status_code=400, detail="Invalid JSON data")
         
+        # 日志记录 data 数据
+        logger.info(f"Google Play Webhook收到数据: {data}")
+
         # 在后台处理通知
         background_tasks.add_task(
             _process_google_play_notification,
