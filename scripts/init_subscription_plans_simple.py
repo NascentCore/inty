@@ -39,6 +39,7 @@ async def create_subscription_plan_direct(db: AsyncSession, plan_data: dict):
             price=plan_data["price"],
             currency=plan_data["currency"],
             google_play_product_id=plan_data["google_play_product_id"],
+            discount_rate=plan_data.get("discount_rate", 1.0),
             features=plan_data["features"],
             chat_limit_per_day=plan_data["chat_limit_per_day"],
             agent_creation_limit=plan_data["agent_creation_limit"],
@@ -72,6 +73,7 @@ async def init_subscription_plans():
             "price": 9.99,
             "currency": "USD",
             "google_play_product_id": "com.ai.inty.premium.monthly",
+            "discount_rate": 1.0,  # 无折扣
             "features": {
                 "features": [
                     {
@@ -145,6 +147,7 @@ async def init_subscription_plans():
             "price": 24.99,  # 相比月付每月8.33，节省17%
             "currency": "USD",
             "google_play_product_id": "com.ai.inty.premium.quarterly",
+            "discount_rate": 0.9,  # 9折优惠
             "features": {
                 "features": [
                     {
@@ -218,6 +221,7 @@ async def init_subscription_plans():
             "price": 79.99,  # 相比月付每月6.67，节省33%
             "currency": "USD",
             "google_play_product_id": "com.ai.inty.premium.annual",
+            "discount_rate": 0.8,  # 8折优惠
             "features": {
                 "features": [
                     {

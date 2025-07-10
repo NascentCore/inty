@@ -46,6 +46,7 @@ class SubscriptionPlan(Base):
     price = Column(Float, nullable=False, comment="价格")
     currency = Column(String, default="USD", comment="货币")
     google_play_product_id = Column(String, unique=True, nullable=False, comment="Google Play产品ID")
+    discount_rate = Column(Float, default=1.0, nullable=False, comment="价格折扣率，范围0-1，1表示无折扣")
     
     # 权益配置
     features = Column(JSON, default=dict, comment="功能权益配置")

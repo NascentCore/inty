@@ -14,6 +14,7 @@ class SubscriptionPlanBase(BaseModel):
     price: float = Field(..., description="价格")
     currency: str = Field("USD", description="货币")
     google_play_product_id: str = Field(..., description="Google Play产品ID")
+    discount_rate: float = Field(1.0, description="价格折扣率，范围0-1，1表示无折扣")
     features: Optional[Dict[str, Any]] = Field(default_factory=dict, description="功能权益配置")
     chat_limit_per_day: int = Field(-1, description="每日聊天次数限制，-1为无限制")
     agent_creation_limit: int = Field(6, description="Agent创建数量限制")
@@ -31,6 +32,7 @@ class SubscriptionPlanUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
     price: Optional[float] = None
+    discount_rate: Optional[float] = None
     features: Optional[Dict[str, Any]] = None
     chat_limit_per_day: Optional[int] = None
     agent_creation_limit: Optional[int] = None
