@@ -19,6 +19,7 @@ class Constant {
         const val ROUTE_REG_INFO = "${ROUTE_HOME_URL}reg/info"
         const val ROUTE_LOGIN = "${ROUTE_HOME_URL}login"
         const val ROUTE_REPORT = "${ROUTE_HOME_URL}report"
+        const val ROUTE_VIP_CENTER = "http://inty.ai/vip_center"
 
 
         const val ACTION_USER_PROFILE_CHANGED = "ACTION_USER_PROFILE_CHANGED"

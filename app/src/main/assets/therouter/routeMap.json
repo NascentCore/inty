@@ -1,5 +1,12 @@
 [
   {
+    "path": "http://inty.ai/vip_center",
+    "className": "com.ai.inty.VipCenterActivity",
+    "action": "",
+    "description": "",
+    "params": {}
+  },
+  {
     "path": "http://inty.ai/sys_msgs",
     "className": "com.ai.inty.SysMsgsActivity",
     "action": "",

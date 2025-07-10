@@ -108,6 +108,8 @@
             android:exported="true"
             android:theme="@style/Theme.Inty.Popup"/>
         <activity
+            android:name=".VipCenterActivity" />
+        <activity
             android:name="com.yalantis.ucrop.UCropActivity"
             android:screenOrientation="portrait"
             android:theme="@style/Theme.AppCompat.Light.NoActionBar" />

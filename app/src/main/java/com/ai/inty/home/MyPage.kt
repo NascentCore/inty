@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -226,6 +227,35 @@ fun MyPage(
                 }
 
                 Spacer(Modifier.height(24.dp))
+
+                // HeartMate Premium 会员入口按钮
+                AuthClickable(
+                    modifier = Modifier
+                        .padding(horizontal = 16.dp)
+                        .fillMaxWidth(),
+                    onClick = {
+                        TheRouter.build(Constant.ROUTE_VIP_CENTER).navigation(context)
+                    }
+                ) { authModifier ->
+                    Box(
+                        modifier = authModifier
+                            .height(48.dp)
+                            .background(
+                                color = Color(0xFFE0D7F7), // 柔和浅紫色，风格统一
+                                shape = RoundedCornerShape(16.dp)
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "HeartMate Premium",
+                            color = Color(0xFF7C4DFF), // 品牌主色/高亮色
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(16.dp))
 
                 Text(
                     modifier = Modifier.padding(horizontal = 16.dp),
