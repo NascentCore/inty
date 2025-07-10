@@ -6,7 +6,6 @@
   [![Android](https://img.shields.io/badge/Android-API%2029+-brightgreen.svg?style=flat)](https://android-arsenal.com/api?level=29)
   [![Kotlin](https://img.shields.io/badge/Kotlin-100%-blue.svg?style=flat)](https://kotlinlang.org)
   [![Jetpack Compose](https://img.shields.io/badge/Jetpack%20Compose-1.6.0+-green.svg?style=flat)](https://developer.android.com/jetpack/compose)
-  [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 </div>
 
 ## 📱 关于项目
