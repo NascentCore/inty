@@ -93,16 +93,16 @@ fun ChatPage(
     showBackButton: Boolean = false,
     onBack: (() -> Unit)? = null,
 
-) {
+    ) {
     val context = LocalContext.current
     val density = LocalDensity.current
     val agentInfo = chatViewModel.agentInfo.collectAsState().value
     val focusManager = LocalFocusManager.current
-    
+
     // 检测键盘状态
     val imeHeight = WindowInsets.ime.getBottom(density)
     val isKeyboardVisible = imeHeight > 0
-    
+
     // 动态计算底部间距
     val bottomPadding = when {
         showBackButton -> 10.dp // 独立聊天页面：固定10dp
@@ -111,15 +111,15 @@ fun ChatPage(
     }
 
     // Keep talking二状态设置：默认跟随全局设置
-    var agentKeepTalking by remember(agentInfo?.id) { 
+    var agentKeepTalking by remember(agentInfo?.id) {
         mutableStateOf(
-            agentInfo?.let { 
+            agentInfo?.let {
                 // 获取角色专用设置，如果不存在则使用全局设置
                 IntySetting.getAgentKeepTalking(it.id) ?: IntySetting.isShowKeepTalking()
             } ?: false
-        ) 
+        )
     }
-    
+
     // 用于实时更新按钮显示状态
     var shouldShowButton by remember(agentInfo?.id) {
         mutableStateOf(agentKeepTalking)
@@ -180,12 +180,13 @@ fun ChatPage(
             Color(0xFF000000),
             Color(0x00000000)
         )
-        Box(modifier = Modifier
-            .fillMaxWidth()
-            .height(120.dp)
-            .background(
-                brush = Brush.verticalGradient(colors),
-            )
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(120.dp)
+                .background(
+                    brush = Brush.verticalGradient(colors),
+                )
         ) {
         }
 
@@ -194,13 +195,14 @@ fun ChatPage(
             Color(0x001C1523),
             Color(0xFF1C1523)
         )
-        Box(modifier = Modifier
-            .fillMaxWidth()
-            .height(300.dp)
-            .background(
-                brush = Brush.verticalGradient(bottomColors),
-            )
-            .align(Alignment.BottomCenter)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(300.dp)
+                .background(
+                    brush = Brush.verticalGradient(bottomColors),
+                )
+                .align(Alignment.BottomCenter)
         ) {
         }
 
@@ -218,7 +220,7 @@ fun ChatPage(
             topBar = {
             },
 
-        ) { innerPadding ->
+            ) { innerPadding ->
 
 
             Column(
@@ -227,7 +229,7 @@ fun ChatPage(
                     .imePadding()
             ) {
                 Spacer(Modifier.height(48.dp))
-                
+
                 if (agentInfo != null) {
                     TopBar(
                         modifier = Modifier
@@ -278,56 +280,56 @@ fun ChatPage(
                         )
                     }
                 }
-                
+
 
                 // 输入框区域 - 受键盘影响会向上推，但可以动态向下偏移
                 Column {
                     // Keep talking 按钮 - 放在输入框左上方
                     if (shouldShowButton) {
-                            Row(
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp),
+                            horizontalArrangement = androidx.compose.foundation.layout.Arrangement.Start
+                        ) {
+                            Box(
                                 modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp),
-                                horizontalArrangement = androidx.compose.foundation.layout.Arrangement.Start
+                                    .width(80.dp)
+                                    .height(32.dp)
+                                    .background(
+                                        Color.Transparent,
+                                        RoundedCornerShape(16.dp)
+                                    )
+                                    .noRippleClickable {
+                                        chatViewModel.sendKeepTalkingMessage()
+                                    },
+                                contentAlignment = Alignment.Center
                             ) {
-                                Box(
-                                    modifier = Modifier
-                                        .width(80.dp)
-                                        .height(32.dp)
-                                        .background(
-                                            Color.Transparent,
-                                            RoundedCornerShape(16.dp)
-                                        )
-                                        .noRippleClickable {
-                                            chatViewModel.sendKeepTalkingMessage()
-                                        },
-                                    contentAlignment = Alignment.Center
+                                // 播放按钮图标 (>>)
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    // 播放按钮图标 (>>)
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Text(
-                                            text = "▶",
-                                            color = Color.White,
-                                            fontSize = 12.sp
-                                        )
-                                        Spacer(modifier = Modifier.width(0.dp))
-                                        Text(
-                                            text = "▶",
-                                            color = Color.White,
-                                            fontSize = 12.sp
-                                        )
-                                    }
+                                    Text(
+                                        text = "▶",
+                                        color = Color.White,
+                                        fontSize = 12.sp
+                                    )
+                                    Spacer(modifier = Modifier.width(0.dp))
+                                    Text(
+                                        text = "▶",
+                                        color = Color.White,
+                                        fontSize = 12.sp
+                                    )
                                 }
                             }
-                            Spacer(modifier = Modifier.height(0.dp))
+                        }
+                        Spacer(modifier = Modifier.height(0.dp))
                     }
-                    
+
                     // 输入框 - 动态底部间距
                     val inputData = chatViewModel.inputData.collectAsState()
                     val isInputFocused = remember { mutableStateOf(false) }
-                    
+
                     Column(
                         modifier = Modifier
                             .padding(
@@ -389,7 +391,7 @@ fun ChatPage(
                                 )
                             }
                         }
-                        
+
                         // 括号按钮区域 - 仅在输入框获得焦点时显示
                         if (isInputFocused.value) {
                             Row(
@@ -498,8 +500,7 @@ fun ChatPage(
         }
 
         MyModalNavigationDrawer(
-            modifier = Modifier
-            ,
+            modifier = Modifier,
             drawerState = drawerState,
             drawerContent = {
                 Column(
@@ -516,7 +517,7 @@ fun ChatPage(
                         )
                 ) {
                     Text(
-                        text ="My Chat Persona",
+                        text = "My Chat Persona",
                         modifier = Modifier.padding(top = 58.dp, start = 16.dp),
                         fontSize = 20.sp,
                         fontWeight = FontWeight.SemiBold,
@@ -564,7 +565,7 @@ fun ChatPage(
                         )
                         com.ai.inty.MySettingItem(
                             key = "My Pronoun",
-                            value = when(userProfile.value.gender) {
+                            value = when (userProfile.value.gender) {
                                 GENDER.MALE.value -> "He/Him"
                                 GENDER.FEMALE.value -> "She/Her"
                                 else -> "They/Them"
@@ -604,7 +605,7 @@ fun ChatPage(
                     Spacer(Modifier.height(30.dp))
 
                     Text(
-                        text ="Chat Settings",
+                        text = "Chat Settings",
                         modifier = Modifier.padding(start = 16.dp),
                         fontSize = 20.sp,
                         fontWeight = FontWeight.SemiBold,
@@ -666,12 +667,51 @@ fun ChatPage(
                                 )
                                 Spacer(Modifier.weight(1f))
                                 Image(
-                                    painter = if (agentKeepTalking) painterResource(R.drawable.opened) else painterResource(R.drawable.closed),
+                                    painter = if (agentKeepTalking) painterResource(R.drawable.opened) else painterResource(
+                                        R.drawable.closed
+                                    ),
                                     contentDescription = null,
                                 )
                             }
+
+
+                            // 举报入口
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(56.dp)
+                                    .padding(horizontal = 16.dp)
+                                    .noRippleClickable {
+                                        // 检查是否正式登录（非游客且已登录）
+                                        if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
+                                            TheRouter.build(Constant.ROUTE_REPORT)
+                                                .withString("targetID", agent.id)
+                                                .withString("targetType", "AGENT")
+                                                .navigation(context)
+                                        } else {
+                                            // 未登录或游客时跳转到登录页面
+                                            TheRouter.build(Constant.ROUTE_LOGIN)
+                                                .navigation(context)
+                                        }
+                                    },
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.report),
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Normal,
+                                    color = Color.White
+                                )
+                                Spacer(Modifier.weight(1f))
+                                Image(
+                                    painter = painterResource(R.drawable.icon_next),
+                                    contentDescription = null,
+                                )
+                            }
+
                         }
-                        
+
+
                         // 暂时隐藏 Auto-play语音消息设置
                         /*
                         Row(
@@ -723,9 +763,11 @@ fun ChatItem(
         "assistant" -> {
             ChatItemAI(item)
         }
+
         "user" -> {
             ChatItemUser(item)
         }
+
         else -> {
             EasyLog.log("unknown role: $item")
         }
@@ -803,25 +845,25 @@ fun StyledMessageText(
 ) {
     val annotatedText = buildAnnotatedString {
         var currentIndex = 0
-        
+
         // Regex to match (text) and （text） patterns only
         val parenthesesRegex = Regex("\\(([^)]+)\\)")
         val chineseParenthesesRegex = Regex("（([^）]+)）")
-        
+
         // Create a list of all matches (parentheses and chinese parentheses) with their types
         val allMatches = mutableListOf<Triple<IntRange, String, String>>() // range, content, type
-        
+
         parenthesesRegex.findAll(text).forEach { match ->
             allMatches.add(Triple(match.range, match.groupValues[1], "parentheses"))
         }
-        
+
         chineseParenthesesRegex.findAll(text).forEach { match ->
             allMatches.add(Triple(match.range, match.groupValues[1], "chinese_parentheses"))
         }
-        
+
         // Sort matches by start position
         allMatches.sortBy { it.first.first }
-        
+
         allMatches.forEach { (range, content, type) ->
             // Add text before the match
             if (range.first > currentIndex) {
@@ -835,7 +877,7 @@ fun StyledMessageText(
                     append(text.substring(currentIndex, range.first))
                 }
             }
-            
+
             // Add the styled text based on type
             withStyle(
                 style = SpanStyle(
@@ -850,16 +892,17 @@ fun StyledMessageText(
                         // For parentheses, add the content with parentheses
                         append("($content)")
                     }
+
                     "chinese_parentheses" -> {
                         // For Chinese parentheses, add the content with Chinese parentheses
                         append("（$content）")
                     }
                 }
             }
-            
+
             currentIndex = range.last + 1
         }
-        
+
         // Add remaining text after last match
         if (currentIndex < text.length) {
             withStyle(
@@ -873,7 +916,7 @@ fun StyledMessageText(
             }
         }
     }
-    
+
     Text(
         text = annotatedText,
         fontSize = fontSize,
@@ -908,9 +951,12 @@ fun TopBar(
             )
             Spacer(modifier = Modifier.width(8.dp))
         }
-        
+
         Row(
-            modifier = Modifier.background(color = Color(33, 0, 0, 77), shape = RoundedCornerShape(10.dp)),
+            modifier = Modifier.background(
+                color = Color(33, 0, 0, 77),
+                shape = RoundedCornerShape(10.dp)
+            ),
             verticalAlignment = Alignment.CenterVertically
         ) {
             IntyCircleImage(
@@ -921,8 +967,7 @@ fun TopBar(
                         TheRouter.build(Constant.ROUTE_AGENT_INFO)
                             .withObject("agent", agentInfo)
                             .navigation(context)
-                    }
-                ,
+                    },
                 url = agentInfo.avatar,
                 placeholderResID = R.drawable.app_icon
             )
@@ -986,7 +1031,7 @@ fun LoadingAnimation() {
                     animation = tween(600, delayMillis = delay)
                 ), label = "dot_alpha_$index"
             )
-            
+
             Box(
                 modifier = Modifier
                     .size(6.dp)
