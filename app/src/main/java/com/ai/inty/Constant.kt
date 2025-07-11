@@ -2,7 +2,7 @@ package com.ai.inty
 
 class Constant {
     companion object {
-        const val USER_HOST = "app.inty.cc"
+        const val USER_HOST = "dev.inty.sxwl.ai"
         const val USER_HOST_DEV = "dev.inty.sxwl.ai"
 
         const val SYS_NOTIFICATION_ID = "SYS_NOTIFICATION_ID_888"

@@ -27,6 +27,8 @@ data class SubscriptionPlan(
     val currency: String,
     @Json(name = "google_play_product_id")
     val googlePlayProductId: String,
+    @Json(name = "discount_rate")
+    val discountRate: Double,
     val features: PlanFeatures,
     @Json(name = "chat_limit_per_day")
     val chatLimitPerDay: Int,

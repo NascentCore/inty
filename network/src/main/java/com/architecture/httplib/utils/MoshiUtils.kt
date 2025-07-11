@@ -10,7 +10,8 @@ import java.lang.reflect.Type
  *
  */
 object MoshiUtils {
-    val moshiBuild: Moshi = Moshi.Builder().addLast(KotlinJsonAdapterFactory())
+    val moshiBuild: Moshi = Moshi.Builder()
+        .addLast(KotlinJsonAdapterFactory())
         .build()
 
     fun <T> fromJson(json: String, type: Type): T? {

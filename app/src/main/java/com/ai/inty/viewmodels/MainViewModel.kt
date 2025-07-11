@@ -17,6 +17,7 @@ import com.ai.inty.beans.GenerateBackgroundResponse
 import com.ai.inty.beans.SysMsgItem
 import com.ai.inty.beans.TokenBean
 import com.ai.inty.beans.UserProfile
+import com.ai.inty.billing.BillingRepository
 import com.ai.inty.home.ConversionsPageTab
 import com.ai.inty.net.IAgentApi
 import com.ai.inty.net.IUserApi
@@ -287,6 +288,25 @@ class MainViewModel: BaseActivityViewModel() {
                 is HttpResult.Failure -> {
 
                 }
+            }
+        }
+    }
+    
+    /**
+     * 异步更新订阅计划列表和会员状态
+     */
+    fun updatePlans() {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                EasyLog.log("开始更新会员状态...")
+                BillingRepository.fetchRemote()
+                EasyLog.log("会员状态更新完成")
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                EasyLog.log("会员状态更新被取消: ${e.message}")
+                // 协程被取消是正常情况，不需要特殊处理
+            } catch (e: Exception) {
+                EasyLog.log("会员状态更新失败: ${e.message}", EasyLog.ERROR)
+                // 不影响主流程，静默处理
             }
         }
     }

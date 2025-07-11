@@ -43,8 +43,8 @@ android {
         applicationId = "com.ai.inty"
         minSdk = 29
         targetSdk = 34
-        versionCode = 3
-        versionName = "1.0.0"
+        versionCode = 6
+        versionName = "1.0.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         

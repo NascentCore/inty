@@ -23,10 +23,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.therouter.router.Route
-import com.ai.inty.billing.SubscriptionStatus
+import com.ai.inty.billing.VipStatus
 import androidx.compose.foundation.clickable
 import com.ai.inty.viewmodels.VipCenterViewModel
-import com.ai.inty.beans.Product
+import com.ai.inty.billing.VipPlan
 
 /**
  * 会员中心页面，展示会员权益与订阅选项。
@@ -41,7 +41,8 @@ class VipCenterActivity : BaseActivity() {
             IntyTheme {
                 VipCenterScreen(
                     onClose = { finish() },
-                    viewModel = viewModel
+                    viewModel = viewModel,
+                    onPurchase = { viewModel.purchaseSelectedPlan(this) }
                 )
             }
         }
@@ -54,11 +55,12 @@ class VipCenterActivity : BaseActivity() {
 @Composable
 fun VipCenterScreen(
     onClose: (() -> Unit)? = null,
-    viewModel: VipCenterViewModel
+    viewModel: VipCenterViewModel,
+    onPurchase: (() -> Unit)? = null
 ) {
-    val products by viewModel.products.collectAsState()
-    val subscriptionStatus by viewModel.subscriptionStatus.collectAsState()
-    val selectedSkuIndex by viewModel.selectedSkuIndex.collectAsState()
+    val plans by viewModel.plansFlow.collectAsState()
+    val selectedPlanIndex by viewModel.selectedPlanIndex.collectAsState()
+    val vipStatus by viewModel.vipStatusFlow.collectAsState()
     
     Box(
         modifier = Modifier
@@ -121,17 +123,18 @@ fun VipCenterScreen(
                 }
                 Spacer(Modifier.height(20.dp))
                 
-                // 动态显示商品列表
-                if (products.isNotEmpty()) {
-                    PremiumProductList(
-                        products = products,
-                        selectedIndex = selectedSkuIndex,
-                        isSubscribed = subscriptionStatus is SubscriptionStatus.Subscribed,
-                        onProductSelected = { index -> viewModel.selectSku(index) }
+                // 动态显示订阅计划列表
+                if (plans.isNotEmpty()) {
+                    PremiumPlanList(
+                        plans = plans,
+                        selectedIndex = selectedPlanIndex,
+                        isSubscribed = vipStatus.isSubscribed,
+                        onPlanSelected = { index -> viewModel.selectPlan(index) }
                     )
                     Spacer(Modifier.height(12.dp))
+
                     Button(
-                        onClick = { viewModel.purchaseSelectedSku() },
+                        onClick = { onPurchase?.invoke() },
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(48.dp),
@@ -139,10 +142,10 @@ fun VipCenterScreen(
                         colors = ButtonDefaults.buttonColors(
                             containerColor = Color(0xFF7C4DFF)
                         ),
-                        enabled = subscriptionStatus !is SubscriptionStatus.Subscribed
+                        enabled = !vipStatus.isSubscribed && viewModel.hasSelectedPlan()
                     ) {
                         Text(
-                            text = if (subscriptionStatus is SubscriptionStatus.Subscribed) {
+                            text = if (vipStatus.isSubscribed) {
                                 stringResource(R.string.premium_subscribed)
                             } else {
                                 stringResource(R.string.premium_continue)
@@ -153,9 +156,9 @@ fun VipCenterScreen(
                         )
                     }
                 } else {
-                    // 无商品数据时显示空状态
+                    // 无订阅计划数据时显示空状态
                     Text(
-                        text = "暂无商品信息",
+                        text = "暂无订阅计划信息",
                         color = Color.White.copy(alpha = 0.6f),
                         fontSize = 14.sp,
                         textAlign = TextAlign.Center,
@@ -218,21 +221,21 @@ fun PremiumBenefitItem(text: String) {
 }
 
 /**
- * 商品列表动态UI。
- * @param products 商品列表
- * @param selectedIndex 选中的商品索引
+ * 订阅计划列表动态UI。
+ * @param plans 订阅计划列表
+ * @param selectedIndex 选中的计划索引
  * @param isSubscribed 是否已订阅
- * @param onProductSelected 选择商品回调
+ * @param onPlanSelected 选择计划回调
  */
 @Composable
-fun PremiumProductList(
-    products: List<Product>,
+fun PremiumPlanList(
+    plans: List<VipPlan>,
     selectedIndex: Int,
     isSubscribed: Boolean,
-    onProductSelected: (Int) -> Unit
+    onPlanSelected: (Int) -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        products.forEachIndexed { idx, product ->
+        plans.forEachIndexed { idx, plan ->
             val isSelected = idx == selectedIndex
             
             Box(
@@ -244,7 +247,7 @@ fun PremiumProductList(
                         shape = RoundedCornerShape(12.dp)
                     )
                     .padding(horizontal = 12.dp)
-                    .clickable { onProductSelected(idx) },
+                    .clickable(enabled = !isSubscribed) { onPlanSelected(idx) },
                 contentAlignment = Alignment.CenterStart
             ) {
                 Row(
@@ -252,15 +255,23 @@ fun PremiumProductList(
                     modifier = Modifier.fillMaxSize()
                 ) {
                     Text(
-                        text = product.name, // 显示商品名称
-                        color = if (isSelected) Color(0xFF7C4DFF) else Color.White,
+                        text = plan.name, // 显示计划名称
+                        color = when {
+                            isSubscribed -> Color.White.copy(alpha = 0.5f) // 已订阅用户显示灰色
+                            isSelected -> Color(0xFF7C4DFF) // 选中状态
+                            else -> Color.White // 正常状态
+                        },
                         fontWeight = FontWeight.Bold,
                         fontSize = 16.sp,
                         modifier = Modifier.weight(1f)
                     )
                     Text(
-                        text = product.price, // 显示商品价格
-                        color = if (isSelected) Color(0xFF7C4DFF) else Color.White,
+                        text = plan.price, // 显示计划价格
+                        color = when {
+                            isSubscribed -> Color.White.copy(alpha = 0.5f) // 已订阅用户显示灰色
+                            isSelected -> Color(0xFF7C4DFF) // 选中状态
+                            else -> Color.White // 正常状态
+                        },
                         fontWeight = FontWeight.Bold,
                         fontSize = 16.sp
                     )
@@ -279,6 +290,7 @@ fun VipCenterScreenPreview() {
     // 预览时使用模拟数据
     VipCenterScreen(
         onClose = {},
-        viewModel = VipCenterViewModel()
+        viewModel = VipCenterViewModel(),
+        onPurchase = {}
     )
 } 
