@@ -161,6 +161,11 @@ async def update_user(
             raise ValueError(f"User does not exist: {user_id}")
             
         update_data = user_in.dict(exclude_unset=True)
+        
+        # 过滤掉不应该被用户更新的字段
+        excluded_fields = {'readable_id', 'id', 'auth_type', 'is_active', 'is_superuser', 'created_at', 'updated_at'}
+        update_data = {k: v for k, v in update_data.items() if k not in excluded_fields}
+        
         for field, value in update_data.items():
             setattr(user, field, value)
             

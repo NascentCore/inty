@@ -21,9 +21,16 @@ class UserCreate(UserBase):
     auth_type: str
     user_info: Optional[dict] = None
 
-class UserUpdate(UserBase):
+class UserUpdate(BaseModel):
     """更新用户信息"""
-    pass
+    nickname: Optional[str] = None
+    avatar: Optional[str] = None
+    email: Optional[EmailStr] = None
+    phone: Optional[str] = None
+    gender: Optional[Gender] = None
+    age_group: Optional[str] = None
+    description: Optional[str] = None
+    system_language: Optional[str] = None
 
 class UserInDBBase(UserBase):
     """数据库中的用户信息"""
