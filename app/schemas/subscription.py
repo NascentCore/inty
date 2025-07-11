@@ -222,4 +222,20 @@ class PurchaseVerificationResponse(BaseModel):
     is_valid: bool = Field(..., description="是否有效")
     subscription: Optional[UserSubscription] = Field(None, description="订阅信息")
     message: str = Field(..., description="验证消息")
-    error_code: Optional[str] = Field(None, description="错误代码") 
+    error_code: Optional[str] = Field(None, description="错误代码")
+
+
+class RefundRequest(BaseModel):
+    """退款请求"""
+    subscription_id: str = Field(..., description="订阅ID")
+    refund_amount: Optional[float] = Field(None, description="退款金额，不填写则退全款")
+    reason: str = Field("manual_refund", description="退款原因")
+
+
+class RefundResponse(BaseModel):
+    """退款响应"""
+    success: bool = Field(..., description="是否成功")
+    subscription_id: str = Field(..., description="订阅ID")
+    refund_amount: float = Field(..., description="退款金额")
+    message: str = Field(..., description="处理消息")
+    refunded_at: Optional[datetime] = Field(None, description="退款时间") 

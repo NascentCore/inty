@@ -587,6 +587,11 @@ class SubscriptionService:
     ) -> bool:
         """处理Google Play订阅状态变化通知"""
         try:
+            # 首先检查是否是退款通知
+            refund_handled = await self.process_google_play_refund_notification(db, notification_data)
+            if refund_handled:
+                return True
+                
             subscription_notification = notification_data.get("subscriptionNotification")
             if not subscription_notification:
                 return False
@@ -643,6 +648,7 @@ class SubscriptionService:
             # 11: SUBSCRIPTION_PAUSE_SCHEDULE_CHANGED (暂停计划变更)
             # 12: SUBSCRIPTION_REVOKED (订阅撤销)
             # 13: SUBSCRIPTION_EXPIRED (订阅过期)
+            # 14: SUBSCRIPTION_REFUNDED (订阅退款)
             
             if notification_type in [1, 2, 4, 7]:  # 恢复、续费、购买、重启
                 subscription.status = SubscriptionStatus.ACTIVE
@@ -663,6 +669,10 @@ class SubscriptionService:
                 
             elif notification_type in [12, 13]:  # 撤销、过期
                 subscription.status = SubscriptionStatus.EXPIRED
+                
+            elif notification_type == 14:  # 退款
+                await self.handle_refund(db, subscription, notification_data)
+                return  # 退款处理包含了commit，直接返回
                 
             # 获取最新的订阅信息
             latest_info = google_play_service.get_subscription_details(
@@ -719,6 +729,144 @@ class SubscriptionService:
         except Exception as e:
             logger.error(f"创建续费交易记录失败: {str(e)}")
             raise
+
+    async def handle_refund(
+        self,
+        db: AsyncSession,
+        subscription: UserSubscription,
+        refund_data: Dict[str, Any]
+    ) -> None:
+        """处理退款逻辑"""
+        try:
+            # 更新订阅状态为退款
+            subscription.status = SubscriptionStatus.REFUNDED
+            subscription.auto_renew = False
+            
+            # 设置结束时间为当前时间（立即生效）
+            subscription.end_date = datetime.now(timezone.utc)
+            
+            # 创建退款交易记录
+            refund_amount = refund_data.get("amount") or subscription.plan.price
+            
+            transaction = SubscriptionTransaction(
+                id=str(uuid.uuid4()),
+                subscription_id=subscription.id,
+                user_id=subscription.user_id,
+                transaction_type=TransactionType.REFUND,
+                amount=-abs(refund_amount),  # 退款金额为负数
+                currency=subscription.plan.currency,
+                google_play_purchase_token=subscription.google_play_purchase_token,
+                google_play_order_id=subscription.google_play_order_id,
+                status="COMPLETED",
+                transaction_time=datetime.now(timezone.utc),
+                extra_data={"refund_data": refund_data}
+            )
+            
+            db.add(transaction)
+            
+            # 更新订阅的元数据
+            extra_data = subscription.extra_data or {}
+            extra_data["refund_info"] = {
+                "refunded_at": datetime.now(timezone.utc).isoformat(),
+                "refund_amount": refund_amount,
+                "refund_data": refund_data
+            }
+            subscription.extra_data = extra_data
+            
+            await db.commit()
+            
+            logger.info(f"退款处理成功 - 订阅: {subscription.id}, 金额: {refund_amount}")
+            
+        except Exception as e:
+            await db.rollback()
+            logger.error(f"退款处理失败: {str(e)}")
+            raise
+
+    async def process_google_play_refund_notification(
+        self,
+        db: AsyncSession,
+        notification_data: Dict[str, Any]
+    ) -> bool:
+        """处理Google Play退款通知"""
+        try:
+            # 解析退款通知数据
+            one_time_product_notification = notification_data.get("oneTimeProductNotification")
+            subscription_notification = notification_data.get("subscriptionNotification")
+            
+            if subscription_notification:
+                purchase_token = subscription_notification.get("purchaseToken")
+                notification_type = subscription_notification.get("notificationType")
+                
+                # Google Play通知类型14通常表示退款
+                if notification_type == 14:  # SUBSCRIPTION_REFUNDED
+                    # 查找对应的订阅记录
+                    result = await db.execute(
+                        select(UserSubscription)
+                        .options(selectinload(UserSubscription.plan))
+                        .where(UserSubscription.google_play_purchase_token == purchase_token)
+                    )
+                    subscription = result.scalar_one_or_none()
+                    
+                    if subscription:
+                        await self.handle_refund(db, subscription, notification_data)
+                        return True
+                    else:
+                        logger.warning(f"未找到对应的订阅记录用于退款: {purchase_token}")
+                        
+            elif one_time_product_notification:
+                # 处理一次性产品退款
+                purchase_token = one_time_product_notification.get("purchaseToken")
+                notification_type = one_time_product_notification.get("notificationType")
+                
+                if notification_type == 3:  # ONE_TIME_PRODUCT_CANCELED (可能包含退款)
+                    logger.info(f"收到一次性产品退款通知: {purchase_token}")
+                    # 这里可以添加一次性产品退款处理逻辑
+                    
+            return False
+            
+        except Exception as e:
+            logger.error(f"处理Google Play退款通知失败: {str(e)}")
+            return False
+
+    async def manual_refund(
+        self,
+        db: AsyncSession,
+        subscription_id: str,
+        refund_amount: Optional[float] = None,
+        reason: str = "manual_refund"
+    ) -> bool:
+        """手动处理退款（管理员功能）"""
+        try:
+            # 查找订阅记录
+            result = await db.execute(
+                select(UserSubscription)
+                .options(selectinload(UserSubscription.plan))
+                .where(UserSubscription.id == subscription_id)
+            )
+            subscription = result.scalar_one_or_none()
+            
+            if not subscription:
+                logger.error(f"未找到订阅记录: {subscription_id}")
+                return False
+                
+            if subscription.status == SubscriptionStatus.REFUNDED:
+                logger.warning(f"订阅已经是退款状态: {subscription_id}")
+                return False
+                
+            # 准备退款数据
+            refund_data = {
+                "amount": refund_amount or subscription.plan.price,
+                "reason": reason,
+                "type": "manual",
+                "processed_by": "admin"
+            }
+            
+            await self.handle_refund(db, subscription, refund_data)
+            return True
+            
+        except Exception as e:
+            logger.error(f"手动退款处理失败: {str(e)}")
+            return False
 
 
 # 全局实例

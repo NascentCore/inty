@@ -5,6 +5,8 @@ import logging
 import json
 import hmac
 import hashlib
+from datetime import datetime
+from sqlalchemy import select
 
 from app import schemas
 from app.api import deps
@@ -17,10 +19,13 @@ from app.schemas.subscription import (
     GooglePlayPurchaseRequest,
     GooglePlayWebhookRequest,
     PurchaseVerificationRequest,
-    PurchaseVerificationResponse
+    PurchaseVerificationResponse,
+    RefundRequest,
+    RefundResponse
 )
 from app.schemas.response import APIResponse
 from app.core.config import settings
+from app.models.subscription import UserSubscription
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -299,4 +304,53 @@ async def get_user_usage_statistics_admin(
         
     except Exception as e:
         logger.error(f"获取用户使用统计失败: {str(e)}")
-        return APIResponse.error(message="获取使用统计失败") 
+        return APIResponse.error(message="获取使用统计失败")
+
+
+@router.post("/admin/refund", response_model=APIResponse[RefundResponse])
+async def process_manual_refund(
+    *,
+    db: AsyncSession = Depends(deps.get_async_db),
+    refund_request: RefundRequest,
+    current_user: schemas.User = Depends(deps.get_current_active_user),
+) -> Any:
+    """
+    手动处理退款（管理员接口）
+    """
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="权限不足")
+    
+    try:
+        success = await subscription_service.manual_refund(
+            db,
+            refund_request.subscription_id,
+            refund_request.refund_amount,
+            refund_request.reason
+        )
+        
+        if success:
+            # 获取更新后的订阅信息
+            result = await db.execute(
+                select(UserSubscription).where(
+                    UserSubscription.id == refund_request.subscription_id
+                )
+            )
+            subscription = result.scalar_one_or_none()
+            
+            refund_info = subscription.extra_data.get("refund_info", {}) if subscription else {}
+            
+            response = RefundResponse(
+                success=True,
+                subscription_id=refund_request.subscription_id,
+                refund_amount=refund_info.get("refund_amount", 0),
+                message="退款处理成功",
+                refunded_at=datetime.fromisoformat(refund_info.get("refunded_at")) if refund_info.get("refunded_at") else None
+            )
+            
+            return APIResponse.success(data=response, message="退款处理成功")
+        else:
+            return APIResponse.error(message="退款处理失败")
+            
+    except Exception as e:
+        logger.error(f"手动退款处理失败: {str(e)}")
+        return APIResponse.error(message="退款处理失败") 
