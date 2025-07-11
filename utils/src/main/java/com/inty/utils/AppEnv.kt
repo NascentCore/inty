@@ -42,7 +42,7 @@ object AppEnv {
         var id = IntySetting.getDeviceID()
         if (id.isNullOrEmpty()) {
             id = Settings.Secure.getString(
-                context.getContentResolver(), Settings.Secure.ANDROID_ID
+                context.contentResolver, Settings.Secure.ANDROID_ID
             )
             IntySetting.setDeviceID(id)
         }

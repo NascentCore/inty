@@ -25,7 +25,7 @@ import com.inty.utils.AppEnv
 
 fun initImageLoader() {
     val context = AppEnv.context
-    val imageLoader = ImageLoader.Builder(context)
+    ImageLoader.Builder(context)
         .memoryCache {
             MemoryCache.Builder()
                 .maxSizePercent(context, 0.25)

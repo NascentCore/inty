@@ -14,19 +14,19 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberSwipeToDismissBoxState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.ui.draw.scale
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -187,7 +187,7 @@ fun ConversionsPageContent(
     onClickSysMsg: () -> Unit,
 
     ) {
-    val context = LocalContext.current
+    LocalContext.current
     LazyColumn(
         modifier = modifier,
     ) {
@@ -235,7 +235,7 @@ fun ConversionsPageContent(
 fun ConversationItem(
     modifier: Modifier,
     conversation: ConversationItem,
-    placeholderID: Int = R.drawable.app_2
+    placeholderID: Int = R.drawable.app_icon
 ) {
     Row(
         modifier = modifier.height(88.dp),
@@ -318,9 +318,11 @@ fun FollowingPage(
                 )
             } else {
                 FollowingAgentItem(
-                    modifier = Modifier.fillMaxWidth().noRippleClickable {
-                        onClickAgent(agent)
-                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .noRippleClickable {
+                            onClickAgent(agent)
+                        },
                     agent = agent
                 )
             }
@@ -342,7 +344,7 @@ fun FollowingAgentItem(
         IntyImage(
             modifier = Modifier.size(56.dp),
             model = agent.avatar,
-            placeholder = painterResource(R.drawable.app_2)
+            placeholder = painterResource(R.drawable.app_icon)
         )
 
         Spacer(Modifier.width(14.dp))
@@ -433,9 +435,11 @@ fun SwipeToUnfollowItem(
         }
     ) {
         FollowingAgentItem(
-            modifier = Modifier.fillMaxWidth().noRippleClickable {
-                onClickAgent(agent)
-            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .noRippleClickable {
+                    onClickAgent(agent)
+                },
             agent = agent
         )
     }

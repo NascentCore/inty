@@ -13,7 +13,7 @@ import okhttp3.Response;
  *
  */
 public class CommonRequestInterceptor implements Interceptor {
-    private IHttpRequestBaseInfo requiredInfo;
+    private final IHttpRequestBaseInfo requiredInfo;
 
     public CommonRequestInterceptor(IHttpRequestBaseInfo requiredInfo){
         this.requiredInfo = requiredInfo;

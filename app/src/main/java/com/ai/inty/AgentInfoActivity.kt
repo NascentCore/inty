@@ -1,16 +1,15 @@
 package com.ai.inty
 
-import android.os.Bundle
 import android.os.Build
+import android.os.Bundle
 import android.view.View
 import android.view.WindowManager
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
-import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsControllerCompat
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -19,10 +18,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -30,42 +27,38 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.material3.BottomSheetDefaults
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.platform.LocalContext
-import com.therouter.TheRouter
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.view.WindowCompat
 import com.ai.inty.base.BaseActivity
-import com.ai.inty.base.IntyCircleImage
 import com.ai.inty.base.IntyImage
 import com.ai.inty.base.noRippleClickable
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.ui.theme.BackGround
 import com.ai.inty.ui.theme.IntyTheme
 import com.ai.inty.viewmodels.AgentInfoViewModel
-import com.inty.utils.convertUtcToLocalFull
 import com.inty.utils.storage.IntySetting
+import com.therouter.TheRouter
 import com.therouter.router.Autowired
 import com.therouter.router.Route
 
@@ -82,7 +75,7 @@ class AgentInfoActivity : BaseActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        
+
         // 强制设置状态栏为白色图标 - 多重保险
         setupStatusBar()
 
@@ -130,7 +123,9 @@ fun AgentInfoScreen(
         )
         Column {
             Box(
-                modifier = Modifier.fillMaxWidth().height(120.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(120.dp)
                     .background(
                         brush = Brush.verticalGradient(
                             listOf(
@@ -142,7 +137,9 @@ fun AgentInfoScreen(
             ) {}
 //            Spacer(Modifier.height(120.dp))
             Box(
-                modifier = Modifier.fillMaxWidth().height(240.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(240.dp)
                     .background(
                         brush = Brush.verticalGradient(
                             listOf(
@@ -153,7 +150,9 @@ fun AgentInfoScreen(
                     )
             ) {}
             Box(
-                modifier = Modifier.fillMaxWidth().weight(1f)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
                     .background(color = BackGround)
             ) {}
         }
@@ -195,7 +194,9 @@ fun AgentInfoScreen(
         ) { innerPadding ->
 
             Column(
-                modifier = Modifier.padding(innerPadding).verticalScroll(rememberScrollState()),
+                modifier = Modifier
+                    .padding(innerPadding)
+                    .verticalScroll(rememberScrollState()),
             ) {
                 Spacer(Modifier.height(149.dp))
                 Text(
@@ -232,7 +233,7 @@ fun AgentInfoScreen(
 //                    IntyCircleImage(
 //                        modifier = Modifier.size(16.dp),
 //                        url = agent.creator?.avatar,
-//                        placeholderResID = R.drawable.app_2
+//                        placeholderResID = R.mipmap.ic_launcher
 //                    )
 //                    Text(
 //                        text = agent.creator?.nickname ?: "",
@@ -245,7 +246,7 @@ fun AgentInfoScreen(
 //                    Spacer(Modifier.width(16.dp))
                 }
                 Spacer(Modifier.height(24.dp))
-                
+
                 // 统计行
                 StatsRow(
                     modifier = Modifier.padding(horizontal = 16.dp),
@@ -256,7 +257,7 @@ fun AgentInfoScreen(
                         viewModel.followAgent(agent.id, context)
                     }
                 )
-                
+
                 Spacer(Modifier.height(24.dp))
                 Text(
                     modifier = Modifier.padding(horizontal = 16.dp),
@@ -374,7 +375,7 @@ fun AgentInfoScreen(
 //                                .clip(RoundedCornerShape(8.dp))
 //                            ,
 //                            model = agent.creator?.avatar,
-//                            placeholder = painterResource(R.drawable.app_2)
+//                            placeholder = painterResource(R.mipmap.ic_launcher)
 //                        )
 //                        Spacer(Modifier.width(6.dp))
 //                        Column(
@@ -419,7 +420,7 @@ fun AgentInfoScreen(
                 Spacer(Modifier.height(100.dp))
             }
         }
-        
+
         // 底部菜单
         if (showBottomSheet) {
             ModalBottomSheet(
@@ -503,14 +504,14 @@ fun StatsRow(
                 count = connectorsCount,
                 label = "Connectors"
             )
-            
+
             // Followers
             StatItem(
                 count = followersCount,
                 label = "Followers"
             )
         }
-        
+
         // 右侧关注按钮
         FollowButton(
             isFollowing = isFollowing,
@@ -607,9 +608,9 @@ fun BottomSheetContent(
                 fontWeight = FontWeight.Normal
             )
         }
-        
+
         Spacer(modifier = Modifier.height(20.dp))
-        
+
         // Cancel按钮
         Button(
             onClick = onCancelClick,
@@ -628,7 +629,7 @@ fun BottomSheetContent(
                 fontWeight = FontWeight.Normal
             )
         }
-        
+
         Spacer(modifier = Modifier.height(16.dp))
     }
 }
@@ -661,7 +662,7 @@ private fun AgentInfoActivity.setupStatusBar() {
     // 方法1: 通过Window直接设置
     window.statusBarColor = android.graphics.Color.parseColor("#1C1523")
     window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
-    
+
     // 方法2: 兼容旧版API
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
         var flags = window.decorView.systemUiVisibility
@@ -669,7 +670,7 @@ private fun AgentInfoActivity.setupStatusBar() {
         flags = flags and View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR.inv()
         window.decorView.systemUiVisibility = flags
     }
-    
+
     // 方法3: 使用新的WindowInsetsController (API 30+)
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
         val controller = window.insetsController
@@ -678,7 +679,7 @@ private fun AgentInfoActivity.setupStatusBar() {
             android.view.WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS
         )
     }
-    
+
     // 方法4: 使用WindowCompat (兼容库)
     WindowCompat.setDecorFitsSystemWindows(window, false)
     val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)

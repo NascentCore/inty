@@ -1,14 +1,13 @@
 package com.ai.inty
 
-import android.app.Activity
 import android.os.Bundle
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -37,6 +36,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -63,9 +64,6 @@ import com.therouter.router.Autowired
 import com.therouter.router.Route
 import com.yalantis.ucrop.UCrop
 import kotlinx.coroutines.launch
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.foundation.clickable
 
 
 enum class EditKey {
@@ -117,7 +115,7 @@ class MySettingActivity: BaseActivity() {
                 val activityCropResultLauncher = rememberLauncherForActivityResult(
                     ActivityResultContracts.StartActivityForResult()
                 ) {
-                    if (it.resultCode == Activity.RESULT_OK) {
+                    if (it.resultCode == RESULT_OK) {
                         it.data?.let { intentResult ->
                             val imageUri = UCrop.getOutput(intentResult) // 图片uri
                             imageUri?.let { imageUriReal ->
@@ -217,7 +215,8 @@ class MySettingActivity: BaseActivity() {
                                         Row(
                                             modifier = Modifier
                                                 .padding(horizontal = 16.dp, vertical = 0.dp)
-                                                .fillMaxWidth().height(48.dp)
+                                                .fillMaxWidth()
+                                                .height(48.dp)
                                                 .background(
                                                     Color.White.copy(0.1f),
                                                     RoundedCornerShape(8.dp)
@@ -245,7 +244,8 @@ class MySettingActivity: BaseActivity() {
                                         Box(
                                             modifier = Modifier
                                                 .padding(horizontal = 16.dp, vertical = 0.dp)
-                                                .fillMaxWidth().height(112.dp)
+                                                .fillMaxWidth()
+                                                .height(112.dp)
                                                 .background(
                                                     Color.White.copy(0.1f),
                                                     RoundedCornerShape(8.dp)
@@ -258,7 +258,9 @@ class MySettingActivity: BaseActivity() {
                                                 .clickable { focusRequester.requestFocus() }
                                         ) {
                                             IntySmallTextField2(
-                                                modifier = Modifier.fillMaxSize().focusRequester(focusRequester),
+                                                modifier = Modifier
+                                                    .fillMaxSize()
+                                                    .focusRequester(focusRequester),
                                                 value = editValue,
                                                 onValueChange = {
                                                     editValue = it
@@ -274,7 +276,8 @@ class MySettingActivity: BaseActivity() {
                                                 }
                                             )
                                             Text(
-                                                modifier = Modifier.align(Alignment.BottomEnd)
+                                                modifier = Modifier
+                                                    .align(Alignment.BottomEnd)
                                                     .padding(12.dp, 8.dp),
                                                 text = "${editValue.length}/400",
                                                 color = Color.White.copy(0.55f),
@@ -288,7 +291,8 @@ class MySettingActivity: BaseActivity() {
                                         Row(
                                             modifier = Modifier
                                                 .padding(horizontal = 16.dp, vertical = 0.dp)
-                                                .fillMaxWidth().height(48.dp)
+                                                .fillMaxWidth()
+                                                .height(48.dp)
 //                                                .background(
 //                                                    Color.White.copy(0.1f),
 //                                                    RoundedCornerShape(8.dp)
@@ -404,7 +408,7 @@ fun MySettingScreen(
                 IntyCircleImage(
                     modifier = Modifier.fillMaxSize(),
                     url = userProfile.avatar,
-                    placeholderResID = R.drawable.app_2
+                    placeholderResID = R.drawable.app_icon
                 )
                 Image(
                     modifier = Modifier

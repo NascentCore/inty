@@ -1,5 +1,9 @@
 package com.ai.inty.chat
 
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -14,23 +18,15 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.runtime.derivedStateOf
-import androidx.compose.ui.platform.LocalWindowInfo
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.systemBarsPadding
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -114,7 +110,6 @@ fun ChatPage(
         else -> 90.dp // 首页聊天页面，无键盘时：90dp（给底部tab留出更多间隔）
     }
 
-    var isAutoPlayAudio by remember { mutableStateOf(IntySetting.isAutoPlayAudio()) }
     // Keep talking二状态设置：默认跟随全局设置
     var agentKeepTalking by remember(agentInfo?.id) { 
         mutableStateOf(
@@ -159,7 +154,9 @@ fun ChatPage(
             imageHeightDp = configuration.screenHeightDp
         }
         Column(
-            modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState(), false)
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState(), false)
                 .onSizeChanged {
                     val newHeight = with(density) {
                         it.height.toDp().value.roundToInt()
@@ -213,7 +210,9 @@ fun ChatPage(
         val scope = rememberCoroutineScope()
 
         Scaffold(
-            modifier = Modifier.fillMaxSize().background(Color.Transparent),
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Transparent),
             containerColor = Color.Transparent,
             contentWindowInsets = WindowInsets(0),
             topBar = {
@@ -254,7 +253,9 @@ fun ChatPage(
                 Spacer(Modifier.height(16.dp))
 
                 LazyColumn(
-                    modifier = Modifier.weight(1f).padding(horizontal = 16.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(horizontal = 16.dp),
                     reverseLayout = true,
                 ) {
                     val msgs = chatViewModel.msgs
@@ -329,7 +330,12 @@ fun ChatPage(
                     
                     Column(
                         modifier = Modifier
-                            .padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = bottomPadding)
+                            .padding(
+                                start = 16.dp,
+                                top = 16.dp,
+                                end = 16.dp,
+                                bottom = bottomPadding
+                            )
                             .fillMaxWidth()
                             .background(Color(0x9937303D), RoundedCornerShape(24.dp))
                     ) {
@@ -342,7 +348,9 @@ fun ChatPage(
                         ) {
                             val inputSelection = chatViewModel.inputSelection.collectAsState()
                             IntySmallTextField(
-                                modifier = Modifier.weight(1f).padding(horizontal = 16.dp),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .padding(horizontal = 16.dp),
                                 value = inputData.value,
                                 singleLine = false,
                                 onValueChange = {
@@ -361,16 +369,22 @@ fun ChatPage(
 
                             if (inputData.value.isNotEmpty()) {
                                 IntyImage(
-                                    modifier = Modifier.padding(16.dp, 0.dp).size(24.dp).noRippleClickable {
-                                        chatViewModel.sendMsg()
-                                    },
+                                    modifier = Modifier
+                                        .padding(16.dp, 0.dp)
+                                        .size(24.dp)
+                                        .noRippleClickable {
+                                            chatViewModel.sendMsg()
+                                        },
                                     model = R.drawable.btn_send
                                 )
                             } else {
                                 IntyImage(
-                                    modifier = Modifier.padding(16.dp, 0.dp).size(24.dp).noRippleClickable {
-                                        showMorePanel = !showMorePanel
-                                    },
+                                    modifier = Modifier
+                                        .padding(16.dp, 0.dp)
+                                        .size(24.dp)
+                                        .noRippleClickable {
+                                            showMorePanel = !showMorePanel
+                                        },
                                     model = if (showMorePanel) R.drawable.btn_down else R.drawable.btn_add2
                                 )
                             }
@@ -395,19 +409,22 @@ fun ChatPage(
                                         .noRippleClickable {
                                             // 获取当前光标位置
                                             val currentText = inputData.value
-                                            val currentSelection = chatViewModel.inputSelection.value
-                                            
+                                            val currentSelection =
+                                                chatViewModel.inputSelection.value
+
                                             // 确保光标位置在有效范围内
-                                            val safeSelection = currentSelection.coerceIn(0, currentText.length)
-                                            
+                                            val safeSelection =
+                                                currentSelection.coerceIn(0, currentText.length)
+
                                             // 在光标位置插入一对括号
-                                            val beforeCursor = currentText.substring(0, safeSelection)
+                                            val beforeCursor =
+                                                currentText.substring(0, safeSelection)
                                             val afterCursor = currentText.substring(safeSelection)
                                             val newText = beforeCursor + "（）" + afterCursor
-                                            
+
                                             // 更新文本
                                             chatViewModel.inputData.value = newText
-                                            
+
                                             // 设置光标位置到括号中间
                                             val newCursorPosition = safeSelection + 1
                                             chatViewModel.inputSelection.value = newCursorPosition
@@ -514,7 +531,11 @@ fun ChatPage(
                             .fillMaxWidth()
                             .border(
                                 brush = Brush.linearGradient(
-                                    colors = listOf(Color.Transparent, Color.White.copy(0.2f), Color.Transparent)
+                                    colors = listOf(
+                                        Color.Transparent,
+                                        Color.White.copy(0.2f),
+                                        Color.Transparent
+                                    )
                                 ),
                                 width = 1.dp,
                                 shape = RoundedCornerShape(8.dp)
@@ -598,7 +619,11 @@ fun ChatPage(
                             .fillMaxWidth()
                             .border(
                                 brush = Brush.linearGradient(
-                                    colors = listOf(Color.Transparent, Color.White.copy(0.2f), Color.Transparent)
+                                    colors = listOf(
+                                        Color.Transparent,
+                                        Color.White.copy(0.2f),
+                                        Color.Transparent
+                                    )
                                 ),
                                 width = 1.dp,
                                 shape = RoundedCornerShape(8.dp)
@@ -611,12 +636,18 @@ fun ChatPage(
                         // Keep talking设置（二状态，与全局设置同步）
                         agentInfo?.let { agent ->
                             Row(
-                                modifier = Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 16.dp)
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(56.dp)
+                                    .padding(horizontal = 16.dp)
                                     .noRippleClickable {
                                         // 检查是否正式登录（非游客且已登录）
                                         if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
                                             agentKeepTalking = !agentKeepTalking
-                                            IntySetting.setAgentKeepTalking(agent.id, agentKeepTalking)
+                                            IntySetting.setAgentKeepTalking(
+                                                agent.id,
+                                                agentKeepTalking
+                                            )
                                             // 更新按钮显示状态
                                             shouldShowButton = agentKeepTalking
                                         } else {
@@ -724,7 +755,11 @@ fun ChatItemAI(
                 )
             }
         }
-        Spacer(modifier = Modifier.widthIn(80.dp).weight(1f))
+        Spacer(
+            modifier = Modifier
+                .widthIn(80.dp)
+                .weight(1f)
+        )
     }
 
 }
@@ -735,7 +770,11 @@ fun ChatItemUser(
     item: MsgInfo
 ) {
     Row {
-        Spacer(modifier = Modifier.widthIn(80.dp).weight(1f))
+        Spacer(
+            modifier = Modifier
+                .widthIn(80.dp)
+                .weight(1f)
+        )
         Box(
             modifier = Modifier
                 .background(Color.White.copy(alpha = 0.6f), RoundedCornerShape(12.dp))
@@ -875,7 +914,9 @@ fun TopBar(
             verticalAlignment = Alignment.CenterVertically
         ) {
             IntyCircleImage(
-                modifier = Modifier.padding(2.dp).size(36.dp)
+                modifier = Modifier
+                    .padding(2.dp)
+                    .size(36.dp)
                     .noRippleClickable {
                         TheRouter.build(Constant.ROUTE_AGENT_INFO)
                             .withObject("agent", agentInfo)
@@ -883,7 +924,7 @@ fun TopBar(
                     }
                 ,
                 url = agentInfo.avatar,
-                placeholderResID = R.drawable.app_2
+                placeholderResID = R.drawable.app_icon
             )
 
             Spacer(modifier = Modifier.width(6.dp))
@@ -899,10 +940,12 @@ fun TopBar(
 
             if (!agentInfo.isFollowed) {
                 IntyImage(
-                    modifier = Modifier.size(20.dp).noRippleClickable {
-                        EasyLog.log("Follow button clicked - agentId: ${agentInfo.id}, current follow state: ${agentInfo.isFollowed}")
-                        onFollowAgent?.invoke(agentInfo.id)
-                    },
+                    modifier = Modifier
+                        .size(20.dp)
+                        .noRippleClickable {
+                            EasyLog.log("Follow button clicked - agentId: ${agentInfo.id}, current follow state: ${agentInfo.isFollowed}")
+                            onFollowAgent?.invoke(agentInfo.id)
+                        },
                     model = R.drawable.btn_add
                 )
             }
@@ -914,9 +957,11 @@ fun TopBar(
         Spacer(modifier = Modifier.weight(1f))
 
         IntyImage(
-            modifier = Modifier.size(20.dp).noRippleClickable {
-                onClickMore()
-            },
+            modifier = Modifier
+                .size(20.dp)
+                .noRippleClickable {
+                    onClickMore()
+                },
             model = R.drawable.icon_more
         )
     }
@@ -927,14 +972,7 @@ fun TopBar(
 @Composable
 fun LoadingAnimation() {
     val infiniteTransition = rememberInfiniteTransition(label = "loading")
-    val alpha by infiniteTransition.animateFloat(
-        initialValue = 0.3f,
-        targetValue = 1.0f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(800)
-        ), label = "alpha"
-    )
-    
+
     Row(
         horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(4.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -979,7 +1017,9 @@ fun MorePanelItem(
                 .background(color = Color.White.copy(0.05f), shape = RoundedCornerShape(8.dp))
         ) {
             Image(
-                modifier = Modifier.size(36.dp).align(Alignment.Center),
+                modifier = Modifier
+                    .size(36.dp)
+                    .align(Alignment.Center),
                 painter = painterResource(id = icon),
                 contentDescription = null
             )

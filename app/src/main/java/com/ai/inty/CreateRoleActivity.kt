@@ -1,18 +1,17 @@
 package com.ai.inty
 
+import android.net.Uri
 import android.os.Bundle
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
-import androidx.activity.viewModels
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.clickable
-import androidx.compose.ui.graphics.PathEffect
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -29,11 +28,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -43,71 +37,63 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil3.compose.AsyncImage
-import com.ai.inty.base.BaseActivity
-import com.ai.inty.base.noRippleClickable
-import com.ai.inty.base.AntiClick
-import com.ai.inty.ui.theme.BackGround
-import com.ai.inty.ui.theme.IntyTheme
-import com.ai.inty.viewmodels.MainViewModel
-import com.ai.inty.beans.CreateAgentRequest
-import com.ai.inty.viewmodels.HomeTabIndex
-import com.therouter.TheRouter
-import com.therouter.router.Route
-import androidx.lifecycle.ViewModelProvider
-import androidx.compose.ui.platform.LocalContext
-import android.widget.Toast
-import com.inty.utils.log.EasyLog
-import com.ai.inty.Constant
-import com.ai.inty.utils.AvatarManager
-import com.ai.inty.net.IAgentApi
-import okhttp3.MediaType.Companion.toMediaTypeOrNull
-import okhttp3.MultipartBody
-import okhttp3.RequestBody.Companion.asRequestBody
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import com.ai.inty.R
+import androidx.lifecycle.viewModelScope
+import coil3.compose.AsyncImage
+import com.ai.inty.base.AntiClick
+import com.ai.inty.base.BaseActivity
+import com.ai.inty.base.noRippleClickable
 import com.ai.inty.beans.AgentInfo
+import com.ai.inty.beans.CreateAgentRequest
+import com.ai.inty.net.IAgentApi
+import com.ai.inty.ui.theme.BackGround
+import com.ai.inty.ui.theme.IntyTheme
+import com.ai.inty.utils.AvatarManager
+import com.ai.inty.viewmodels.MainViewModel
+import com.inty.utils.log.EasyLog
+import com.therouter.TheRouter
 import com.therouter.router.Autowired
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.activity.compose.rememberLauncherForActivityResult
+import com.therouter.router.Route
 import com.yalantis.ucrop.UCrop
 import com.yalantis.ucrop.UCropActivity
-import android.net.Uri
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.asRequestBody
 import java.io.File
 import java.util.UUID
 import android.graphics.Color as AndroidColor
-import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.ui.input.pointer.pointerInput
 
 @Route(path = Constant.ROUTE_CREATE_ROLE)
 class CreateRoleActivity : BaseActivity() {
@@ -138,7 +124,7 @@ class CreateRoleActivity : BaseActivity() {
             }
         }
     }
-    
+
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -152,7 +138,7 @@ fun CreateRolePage(
     editAgent: AgentInfo? = null
 ) {
     val isEditMode = editAgent != null
-    
+
     var name by remember { mutableStateOf(editAgent?.name ?: "") }
     var gender by remember { mutableStateOf(editAgent?.gender ?: "FEMALE") }
     var settings by remember { mutableStateOf(editAgent?.settings?.get("description") as? String ?: editAgent?.prompt ?: "") }
@@ -161,20 +147,20 @@ fun CreateRolePage(
     var visibility by remember { mutableStateOf(editAgent?.visibility ?: "PRIVATE") }
     var isLoading by remember { mutableStateOf(false) }
     // Initialize image states based on edit mode
-    var avatarUrl by remember { 
+    var avatarUrl by remember {
         mutableStateOf<String?>(
             if (isEditMode && editAgent?.backgroundImages?.isEmpty() == true) {
                 // If no background images array, use single background field
                 editAgent?.background?.takeIf { it.isNotBlank() }
             } else null
-        ) 
+        )
     }
-    var avatarUrls by remember { 
+    var avatarUrls by remember {
         mutableStateOf<List<String>>(
             if (isEditMode) editAgent?.backgroundImages ?: emptyList() else emptyList()
-        ) 
+        )
     }
-    var selectedImageIndex by remember { 
+    var selectedImageIndex by remember {
         mutableStateOf(
             if (isEditMode && editAgent?.backgroundImages?.isNotEmpty() == true) {
                 // Find the index of the background image in the background_images list
@@ -188,19 +174,19 @@ fun CreateRolePage(
             } else {
                 0
             }
-        ) 
+        )
     }
     var isGeneratingAvatar by remember { mutableStateOf(false) }
-    var croppedAvatarUrl by remember { 
+    var croppedAvatarUrl by remember {
         mutableStateOf<String?>(
             if (isEditMode) editAgent?.avatar?.takeIf { it.isNotBlank() && it != editAgent?.background } else null
-        ) 
+        )
     }
-    
+
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val focusManager = LocalFocusManager.current
-    
+
     // Clear avatar data when creating new character
     LaunchedEffect(isEditMode) {
         if (!isEditMode) {
@@ -208,7 +194,7 @@ fun CreateRolePage(
             EasyLog.log("Cleared avatar data for new character creation")
         }
     }
-    
+
     // Clean up AvatarManager when leaving the activity
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -231,7 +217,7 @@ fun CreateRolePage(
             lifecycleOwner.lifecycle.removeObserver(observer)
         }
     }
-    
+
     // UCrop launcher for avatar cropping
     val cropLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
@@ -241,15 +227,15 @@ fun CreateRolePage(
                 val resultUri = UCrop.getOutput(data)
                 if (resultUri != null) {
                     EasyLog.log("Avatar cropped successfully: $resultUri")
-                    
+
                     // Upload the cropped image to server
                     try {
                         val file = File(resultUri.path!!)
                         val requestFile = file.asRequestBody("image/*".toMediaTypeOrNull())
                         val body = MultipartBody.Part.createFormData("file", file.name, requestFile)
-                        
+
                         val agentApi = TheRouter.get(IAgentApi::class.java)
-                        
+
                         // Use the mainViewModel's scope to launch the coroutine
                         mainViewModel.viewModelScope.launch(Dispatchers.IO) {
                             try {
@@ -258,23 +244,23 @@ fun CreateRolePage(
                                     is com.architecture.httplib.core.HttpResult.Success -> {
                                         val uploadedUrl = response.data.url
                                         EasyLog.log("Avatar uploaded successfully: $uploadedUrl")
-                                        
+
                                         // Update UI on main thread
-                                        kotlinx.coroutines.withContext(Dispatchers.Main) {
+                                        withContext(Dispatchers.Main) {
                                             croppedAvatarUrl = uploadedUrl
                                             Toast.makeText(context, "Avatar cropped and uploaded", Toast.LENGTH_SHORT).show()
                                         }
                                     }
                                     is com.architecture.httplib.core.HttpResult.Failure -> {
                                         EasyLog.log("Upload failed: ${response.message}", EasyLog.ERROR)
-                                        kotlinx.coroutines.withContext(Dispatchers.Main) {
+                                        withContext(Dispatchers.Main) {
                                             Toast.makeText(context, "Upload failed: ${response.message}", Toast.LENGTH_LONG).show()
                                         }
                                     }
                                 }
                             } catch (e: Exception) {
                                 EasyLog.log("Upload exception: ${e.message}", EasyLog.ERROR)
-                                kotlinx.coroutines.withContext(Dispatchers.Main) {
+                                withContext(Dispatchers.Main) {
                                     Toast.makeText(context, "Upload failed: ${e.message}", Toast.LENGTH_LONG).show()
                                 }
                             }
@@ -293,17 +279,17 @@ fun CreateRolePage(
             }
         }
     }
-    
+
     // 检查是否有生成的头像URL - 使用DisposableEffect来监听生命周期
     DisposableEffect(Unit) {
         val checkAvatarStatus = {
             EasyLog.log("Initial avatar generation status check...")
-            
+
             // Check if generation is in progress
             val generatingStatus = AvatarManager.isGenerating()
             isGeneratingAvatar = generatingStatus
             EasyLog.log("Generation status: $generatingStatus")
-            
+
             // Check for multiple generated URLs
             val currentUrls = AvatarManager.getCurrentAvatarUrls()
             if (currentUrls.isNotEmpty()) {
@@ -320,7 +306,7 @@ fun CreateRolePage(
                     EasyLog.log("Retrieved generated avatar URL: $generatedUrl")
                 }
             }
-            
+
             // Check for generation errors
             val error = AvatarManager.getGenerationError()
             if (error != null) {
@@ -328,29 +314,29 @@ fun CreateRolePage(
                 Toast.makeText(context, error, Toast.LENGTH_LONG).show()
                 isGeneratingAvatar = false
             }
-            
+
             // Show current generation prompt if generating
             if (generatingStatus) {
                 val prompt = AvatarManager.getGenerationPrompt()
                 EasyLog.log("Currently generating with prompt: '$prompt'")
             }
         }
-        
+
         // 初始检查
         checkAvatarStatus()
-        
+
         onDispose { }
     }
-    
+
     // 监听Activity生命周期，特别是onResume事件
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 EasyLog.log("Activity resumed - checking for new avatar status")
-                
+
                 // Check generation status
                 isGeneratingAvatar = AvatarManager.isGenerating()
-                
+
                 // Check for multiple URLs
                 val currentUrls = AvatarManager.getCurrentAvatarUrls()
                 if (currentUrls.isNotEmpty() && currentUrls != avatarUrls) {
@@ -367,7 +353,7 @@ fun CreateRolePage(
                         avatarUrls = emptyList()
                     }
                 }
-                
+
                 // Check for errors
                 val error = AvatarManager.getGenerationError()
                 if (error != null) {
@@ -376,26 +362,26 @@ fun CreateRolePage(
                 }
             }
         }
-        
+
         lifecycleOwner.lifecycle.addObserver(observer)
-        
+
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
         }
     }
-    
+
     // 添加LaunchedEffect来监听avatar生成状态
     LaunchedEffect(Unit) {
         // 定期检查生成状态 (作为备用机制)
         while (true) {
             kotlinx.coroutines.delay(2000) // 每2秒检查一次
-            
+
             val currentGenerationStatus = AvatarManager.isGenerating()
             if (currentGenerationStatus != isGeneratingAvatar) {
                 EasyLog.log("Generation status changed: $isGeneratingAvatar -> $currentGenerationStatus")
                 isGeneratingAvatar = currentGenerationStatus
             }
-            
+
             // 只在状态发生变化时记录，减少日志噪音
             val currentUrls = AvatarManager.getCurrentAvatarUrls()
             if (currentUrls.isNotEmpty() && currentUrls != avatarUrls) {
@@ -412,21 +398,21 @@ fun CreateRolePage(
                     avatarUrls = emptyList()
                 }
             }
-            
+
             val error = AvatarManager.getGenerationError()
             if (error != null) {
                 EasyLog.log("Generation error detected via polling: $error")
                 Toast.makeText(context, error, Toast.LENGTH_LONG).show()
                 isGeneratingAvatar = false
             }
-            
+
             // 每10秒输出一次当前状态（减少日志频率）
             if (System.currentTimeMillis() % 10000 < 2000) {
                 EasyLog.log("Polling status - Generating: $isGeneratingAvatar, URLs: ${avatarUrls.size}, Single URL: ${avatarUrl != null}")
             }
         }
     }
-    
+
     // 监听avatarUrl变化
     LaunchedEffect(avatarUrl) {
         EasyLog.log("Avatar URL updated: $avatarUrl")
@@ -472,7 +458,7 @@ fun CreateRolePage(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Spacer(modifier = Modifier.height(24.dp))
-            
+
             // Avatar Upload Section
             AvatarUploadSection(
                 avatarUrl = avatarUrl,
@@ -502,7 +488,7 @@ fun CreateRolePage(
                             EasyLog.log("Face edit - Index out of bounds! selectedImageIndex: $selectedImageIndex, avatarUrls.size: ${avatarUrls.size}", EasyLog.ERROR)
                             0 // Fall back to first image
                         }
-                        
+
                         val selectedUrl = avatarUrls.getOrNull(safeIndex)
                         EasyLog.log("Face edit - selectedImageIndex: $selectedImageIndex, safeIndex: $safeIndex, avatarUrls.size: ${avatarUrls.size}")
                         EasyLog.log("Face edit - selectedUrl: $selectedUrl")
@@ -511,9 +497,9 @@ fun CreateRolePage(
                     } else {
                         avatarUrl
                     }
-                    
+
                     EasyLog.log("Face edit - final imageUrl to crop: $imageUrl")
-                    
+
                     if (imageUrl != null) {
                         // Check if it's a web URL or local file
                         if (imageUrl.startsWith("http")) {
@@ -527,49 +513,64 @@ fun CreateRolePage(
                                 EasyLog.log("URL validation error: ${e.message}", EasyLog.ERROR)
                                 false
                             }
-                            
+
                             if (isValidUrl) {
                                 // Download image from web URL first using OkHttp
-                            mainViewModel.viewModelScope.launch(Dispatchers.IO) {
-                                try {
-                                    // Download image to local cache using OkHttp
-                                    val tempFile = File(context.cacheDir, "temp_crop_source_${UUID.randomUUID()}.jpg")
-                                    val client = OkHttpClient()
-                                    val request = Request.Builder()
-                                        .url(imageUrl)
-                                        .build()
-                                    
-                                    val response = client.newCall(request).execute()
-                                    EasyLog.log("Face edit download - HTTP response code: ${response.code}")
-                                    EasyLog.log("Face edit download - HTTP response message: ${response.message}")
-                                    
-                                    if (response.isSuccessful) {
-                                        response.body?.let { body ->
-                                            EasyLog.log("Face edit download - Content length: ${body.contentLength()}")
-                                            body.byteStream().use { inputStream ->
-                                                tempFile.outputStream().use { outputStream ->
-                                                    val bytesWritten = inputStream.copyTo(outputStream)
-                                                    EasyLog.log("Face edit download - Bytes written: $bytesWritten")
+                                mainViewModel.viewModelScope.launch(Dispatchers.IO) {
+                                    try {
+                                        // Download image to local cache using OkHttp
+                                        val tempFile = File(
+                                            context.cacheDir,
+                                            "temp_crop_source_${UUID.randomUUID()}.jpg"
+                                        )
+                                        val client = OkHttpClient()
+                                        val request = Request.Builder()
+                                            .url(imageUrl)
+                                            .build()
+
+                                        val response = client.newCall(request).execute()
+                                        EasyLog.log("Face edit download - HTTP response code: ${response.code}")
+                                        EasyLog.log("Face edit download - HTTP response message: ${response.message}")
+
+                                        if (response.isSuccessful) {
+                                            response.body?.let { body ->
+                                                EasyLog.log("Face edit download - Content length: ${body.contentLength()}")
+                                                body.byteStream().use { inputStream ->
+                                                    tempFile.outputStream().use { outputStream ->
+                                                        val bytesWritten =
+                                                            inputStream.copyTo(outputStream)
+                                                        EasyLog.log("Face edit download - Bytes written: $bytesWritten")
+                                                    }
                                                 }
+
+                                                withContext(Dispatchers.Main) {
+                                                    startUCropWithLocalFile(
+                                                        tempFile,
+                                                        context,
+                                                        cropLauncher
+                                                    )
+                                                }
+                                            } ?: run {
+                                                throw Exception("Response body is null")
                                             }
-                                            
-                                            withContext(Dispatchers.Main) {
-                                                startUCropWithLocalFile(tempFile, context, cropLauncher)
-                                            }
-                                        } ?: run {
-                                            throw Exception("Response body is null")
+                                        } else {
+                                            throw Exception("HTTP ${response.code}: ${response.message}")
                                         }
-                                    } else {
-                                        throw Exception("HTTP ${response.code}: ${response.message}")
-                                    }
-                                } catch (e: Exception) {
-                                    EasyLog.log("Failed to download image for cropping: $imageUrl", EasyLog.ERROR)
-                                    EasyLog.log("Error details: ${e.message}", EasyLog.ERROR)
-                                    withContext(Dispatchers.Main) {
-                                        Toast.makeText(context, "Failed to download image for editing", Toast.LENGTH_SHORT).show()
+                                    } catch (e: Exception) {
+                                        EasyLog.log(
+                                            "Failed to download image for cropping: $imageUrl",
+                                            EasyLog.ERROR
+                                        )
+                                        EasyLog.log("Error details: ${e.message}", EasyLog.ERROR)
+                                        withContext(Dispatchers.Main) {
+                                            Toast.makeText(
+                                                context,
+                                                "Failed to download image for editing",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                        }
                                     }
                                 }
-                            }
                             } else {
                                 Toast.makeText(context, "Invalid image URL", Toast.LENGTH_SHORT).show()
                             }
@@ -587,9 +588,9 @@ fun CreateRolePage(
                     }
                 }
             )
-            
+
             Spacer(modifier = Modifier.height(32.dp))
-            
+
             // Name Field
             CustomTextField(
                 label = "Name *",
@@ -597,17 +598,17 @@ fun CreateRolePage(
                 onValueChange = { name = it },
                 placeholder = "Name your HeartMate"
             )
-            
+
             Spacer(modifier = Modifier.height(24.dp))
-            
+
             // Gender Selection
             GenderSelectionSection(
                 selectedGender = gender,
                 onGenderChange = { gender = it }
             )
-            
+
             Spacer(modifier = Modifier.height(24.dp))
-            
+
             // Settings Field
             CustomTextField(
                 label = "Settings (Determines dialogue effect) *",
@@ -616,9 +617,9 @@ fun CreateRolePage(
                 placeholder = "Please fill in the dialogue effect...",
                 minLines = 4
             )
-            
+
             Spacer(modifier = Modifier.height(24.dp))
-            
+
             // Intro Field
             CustomTextField(
                 label = "Intro (No impact on dialogue effect) *",
@@ -627,9 +628,9 @@ fun CreateRolePage(
                 placeholder = "Please fill in the character introduction...",
                 minLines = 3
             )
-            
+
             Spacer(modifier = Modifier.height(24.dp))
-            
+
             // Opening Field
             CustomTextField(
                 label = "Opening *",
@@ -638,22 +639,22 @@ fun CreateRolePage(
                 placeholder = "Please fill in the character's opening remarks...",
                 minLines = 3
             )
-            
+
             // Spacer(modifier = Modifier.height(24.dp))
-            
+
             // Sound Section
             // SoundSelectionSection()
-            
+
             // Spacer(modifier = Modifier.height(24.dp))
-            
+
             // Visibility Section
             // VisibilitySelectionSection(
             //     selectedVisibility = visibility,
             //     onVisibilityChange = { visibility = it }
             // )
-            
+
             Spacer(modifier = Modifier.height(40.dp))
-            
+
             // Create Button
             CreateButton(
                 isLoading = isLoading,
@@ -664,7 +665,7 @@ fun CreateRolePage(
                         Toast.makeText(context, context.getString(R.string.please_fill_required_fields), Toast.LENGTH_SHORT).show()
                         return@CreateButton
                     }
-                    
+
                     // Prepare avatar and background fields according to new logic
                     val backgroundUrl = if (avatarUrls.isNotEmpty()) {
                         // Use selected image from generated grid as background
@@ -673,24 +674,24 @@ fun CreateRolePage(
                         // Use single generated image as background
                         avatarUrl
                     }
-                    
+
                     // Determine final avatar URL - if no cropped avatar, use background as avatar
                     val finalAvatarUrl = croppedAvatarUrl ?: backgroundUrl
                     val backgroundImagesList = if (avatarUrls.isNotEmpty()) avatarUrls else listOfNotNull(avatarUrl)
-                    
+
                     EasyLog.log("Create button clicked - Final Avatar URL: $finalAvatarUrl")
                     EasyLog.log("Create button clicked - Background URL: $backgroundUrl")
                     EasyLog.log("Create button clicked - Background Images List: $backgroundImagesList")
                     EasyLog.log("Create button clicked - Cropped Avatar URL: $croppedAvatarUrl")
                     EasyLog.log("Create button clicked - Avatar equals background: ${finalAvatarUrl == backgroundUrl}")
-                    
+
                     // Save background for chat usage
                     if (backgroundUrl != null) {
                         AvatarManager.setChatBackgroundUrl(backgroundUrl)
                     }
-                    
+
                     isLoading = true
-                    
+
                     try {
                         // Create API request
                         EasyLog.log("${if (isEditMode) "Updating" else "Creating"} agent with avatar URL: $finalAvatarUrl")
@@ -708,7 +709,7 @@ fun CreateRolePage(
                         )
                         EasyLog.log("${if (isEditMode) "Update" else "Create"} agent request: $request")
                         EasyLog.log("${if (isEditMode) "Update" else "Create"} agent request avatar field: ${request.avatar}")
-                        
+
                         // Call API through ViewModel
                         if (isEditMode && editAgent != null) {
                             mainViewModel.updateAgent(
@@ -722,8 +723,9 @@ fun CreateRolePage(
                                 onError = { error ->
                                     isLoading = false
                                     val errorMessage = if (error.isBlank()) {
-                                        context.getString(R.string.operation_failed_try_later, 
-                                            context.getString(R.string.update_failed), 
+                                        context.getString(
+                                            R.string.operation_failed_try_later,
+                                            context.getString(R.string.update_failed),
                                             context.getString(R.string.please_try_again_later))
                                     } else {
                                         context.getString(R.string.update_failed_with_reason, error)
@@ -742,8 +744,9 @@ fun CreateRolePage(
                                 onError = { error ->
                                     isLoading = false
                                     val errorMessage = if (error.isBlank()) {
-                                        context.getString(R.string.operation_failed_try_later, 
-                                            context.getString(R.string.creation_failed), 
+                                        context.getString(
+                                            R.string.operation_failed_try_later,
+                                            context.getString(R.string.creation_failed),
                                             context.getString(R.string.please_try_again_later))
                                     } else {
                                         context.getString(R.string.creation_failed_with_reason, error)
@@ -762,7 +765,7 @@ fun CreateRolePage(
                     }
                 }
             )
-            
+
             Spacer(modifier = Modifier.height(32.dp))
         }
     }
@@ -780,11 +783,11 @@ private fun startUCropWithLocalFile(
             Toast.makeText(context, "Image file not found", Toast.LENGTH_SHORT).show()
             return
         }
-        
+
         val sourceUri = Uri.fromFile(sourceFile)
         val destinationFile = File(context.cacheDir, "cropped_avatar_${UUID.randomUUID()}.jpg")
         val destinationUri = Uri.fromFile(destinationFile)
-        
+
         // Configure UCrop
         val cropIntent = UCrop.of(sourceUri, destinationUri)
             .withAspectRatio(1f, 1f) // Square aspect ratio for avatar
@@ -806,7 +809,7 @@ private fun startUCropWithLocalFile(
                 setAllowedGestures(UCropActivity.SCALE, UCropActivity.NONE, UCropActivity.NONE) // Only allow scaling gestures
             })
             .getIntent(context)
-        
+
         EasyLog.log("Starting UCrop with local file: ${sourceFile.absolutePath}")
         cropLauncher.launch(cropIntent)
     } catch (e: Exception) {
@@ -856,7 +859,7 @@ fun AvatarUploadSection(
     ) {
         when {
             isGenerating -> {
-                com.ai.inty.ThreeDotLoadingAnimation()
+                ThreeDotLoadingAnimation()
             }
             avatarUrls.isNotEmpty() -> {
                 val displayUrl = avatarUrls.getOrNull(selectedIndex) ?: avatarUrls.first()
@@ -866,11 +869,14 @@ fun AvatarUploadSection(
                     contentDescription = "Selected Avatar",
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop,
-                    onSuccess = { 
-                        EasyLog.log("AvatarUploadSection: Selected avatar image loaded successfully: $displayUrl") 
+                    onSuccess = {
+                        EasyLog.log("AvatarUploadSection: Selected avatar image loaded successfully: $displayUrl")
                     },
-                    onError = { 
-                        EasyLog.log("AvatarUploadSection: Failed to load selected avatar image: $displayUrl", EasyLog.ERROR) 
+                    onError = {
+                        EasyLog.log(
+                            "AvatarUploadSection: Failed to load selected avatar image: $displayUrl",
+                            EasyLog.ERROR
+                        )
                     }
                 )
             }
@@ -881,11 +887,14 @@ fun AvatarUploadSection(
                     contentDescription = "Generated Avatar",
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop,
-                    onSuccess = { 
-                        EasyLog.log("AvatarUploadSection: Avatar image loaded successfully: $avatarUrl") 
+                    onSuccess = {
+                        EasyLog.log("AvatarUploadSection: Avatar image loaded successfully: $avatarUrl")
                     },
-                    onError = { 
-                        EasyLog.log("AvatarUploadSection: Failed to load avatar image: $avatarUrl", EasyLog.ERROR) 
+                    onError = {
+                        EasyLog.log(
+                            "AvatarUploadSection: Failed to load avatar image: $avatarUrl",
+                            EasyLog.ERROR
+                        )
                     }
                 )
             }
@@ -908,7 +917,7 @@ fun AvatarUploadSection(
                 }
             }
         }
-        
+
         // Dashed border for empty state
         if (avatarUrls.isEmpty() && avatarUrl == null) {
             Canvas(modifier = Modifier.fillMaxSize()) {
@@ -916,9 +925,9 @@ fun AvatarUploadSection(
                 val cornerRadius = 16.dp.toPx()
                 val dashLength = 10.dp.toPx()
                 val gapLength = 5.dp.toPx()
-                
+
                 drawRoundRect(
-                    color = androidx.compose.ui.graphics.Color.Gray,
+                    color = Color.Gray,
                     topLeft = androidx.compose.ui.geometry.Offset(strokeWidth / 2, strokeWidth / 2),
                     size = androidx.compose.ui.geometry.Size(
                         size.width - strokeWidth,
@@ -932,7 +941,7 @@ fun AvatarUploadSection(
                 )
             }
         }
-        
+
         // Face edit button - show only when there's an avatar
         if (avatarUrls.isNotEmpty() || avatarUrl != null) {
             Box(
@@ -964,7 +973,7 @@ fun AvatarUploadSection(
                 }
             }
         }
-        
+
         // Floating thumbnail row at the bottom of preview
         if (avatarUrls.isNotEmpty()) {
             Row(
@@ -986,12 +995,12 @@ fun AvatarUploadSection(
                         .width(72.dp)
                         .height(90.dp)
                 ) {
-                    com.ai.inty.RegenButton(
+                    RegenButton(
                         onClick = { onRegenerate(AvatarManager.getGenerationPrompt()) },
                         enabled = !isGenerating
                     )
                 }
-                
+
                 // Scrollable thumbnail row
                 LazyRow(
                     modifier = Modifier.weight(1f),
@@ -1045,7 +1054,7 @@ fun GenderSelectionSection(
             fontWeight = FontWeight.Medium
         )
         Spacer(modifier = Modifier.height(12.dp))
-        
+
         Row(
             horizontalArrangement = Arrangement.spacedBy(4.dp),
             modifier = Modifier.fillMaxWidth()
@@ -1104,9 +1113,9 @@ fun SoundSelectionSection() {
                 fontSize = 16.sp
             )
         }
-        
+
         Spacer(modifier = Modifier.width(12.dp))
-        
+
         Text(
             text = "Sound *",
             fontSize = 16.sp,
@@ -1114,15 +1123,15 @@ fun SoundSelectionSection() {
             fontWeight = FontWeight.Medium,
             modifier = Modifier.weight(1f)
         )
-        
+
         Text(
             text = "Inty Voice",
             fontSize = 14.sp,
             color = Color.White.copy(0.7f)
         )
-        
+
         Spacer(modifier = Modifier.width(8.dp))
-        
+
         Text(
             text = ">",
             fontSize = 16.sp,
@@ -1170,9 +1179,9 @@ fun VisibilitySelectionSection(
                 color = Color.White
             )
         }
-        
+
         Spacer(modifier = Modifier.width(12.dp))
-        
+
         Text(
             text = "Visibility *",
             fontSize = 16.sp,
@@ -1180,15 +1189,15 @@ fun VisibilitySelectionSection(
             fontWeight = FontWeight.Medium,
             modifier = Modifier.weight(1f)
         )
-        
+
         Text(
             text = selectedVisibility.lowercase().replaceFirstChar { it.uppercase() },
             fontSize = 14.sp,
             color = Color.White.copy(0.7f)
         )
-        
+
         Spacer(modifier = Modifier.width(8.dp))
-        
+
         Text(
             text = ">",
             fontSize = 16.sp,
@@ -1214,7 +1223,7 @@ fun CustomTextField(
             fontWeight = FontWeight.Medium
         )
         Spacer(modifier = Modifier.height(12.dp))
-        
+
         BasicTextField(
             value = value,
             onValueChange = onValueChange,
@@ -1260,7 +1269,7 @@ fun GenderButton(
     modifier: Modifier = Modifier
 ) {
     var lastClickTime by remember { mutableLongStateOf(0L) }
-    
+
     Button(
         onClick = {
             val currentTime = System.currentTimeMillis()
@@ -1297,7 +1306,7 @@ fun CreateButton(
     onClick: () -> Unit
 ) {
     var lastClickTime by remember { mutableLongStateOf(0L) }
-    
+
     Button(
         onClick = {
             val currentTime = System.currentTimeMillis()

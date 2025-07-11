@@ -1,50 +1,55 @@
 [versions]
-agp = "8.7.3"
+# Android & Kotlin 核心版本
+agp = "8.11.1"
+kotlin = "2.2.0"
+ksp = "2.2.0-2.0.2"
 
-firebaseBom = "33.15.0"
-hiltAndroidCompiler = "2.56.2"
-kotlin = "2.0.0"
+# AndroidX 核心库
 coreKtx = "1.16.0"
+lifecycleRuntimeKtx = "2.9.1"
+activityCompose = "1.10.1"
+activity = "1.10.1"
+appcompat = "1.7.1"
+constraintlayout = "2.2.1"
+navigationCompose = "2.9.1"
+
+# Compose 相关
+composeBom = "2025.06.01"
+
+# Google 服务
+firebaseBom = "33.16.0"
+playServicesAuth = "21.3.0"
+billingKtx = "6.1.0"
+
+# 测试相关
 junit = "4.13.2"
 junitVersion = "1.2.1"
 espressoCore = "3.6.1"
-library = "4.1.0"
-lifecycleRuntimeKtx = "2.9.0"
-activityCompose = "1.10.1"
-composeBom = "2025.05.01"
-appcompat = "1.7.0"
-material = "1.12.0"
-activity = "1.10.1"
-constraintlayout = "2.2.1"
-navigationCompose = "2.9.0"
-theRouter="1.2.4"
-mmkv="1.2.16"
-mars="1.2.5"
-retrofit = "2.9.0"
+
+# 第三方库
+chucker = "4.1.0"
+theRouter = "1.2.4"
+mmkv = "2.2.2"
+mars = "1.2.6"
+retrofit = "3.0.0"
 retrofitKotlinxSerializationJson = "1.0.0"
-retrofit2-kotlin-coroutines-adapter="0.9.2"
-coil = "2.4.0"
-moshi="1.15.0"
-ucrop = "2.2.8-native"
+retrofit2-kotlin-coroutines-adapter = "0.9.2"
+coil = "3.2.0"
+moshi = "1.15.2"
+ucrop = "2.2.10"
+material = "1.12.0"
 
 [libraries]
+# ===== AndroidX 核心库 =====
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
-androidx-navigation-compose = { module = "androidx.navigation:navigation-compose", version.ref = "navigationCompose" }
-firebase-analytics = { module = "com.google.firebase:firebase-analytics" }
-firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebaseBom" }
-firebase-messaging = { module = "com.google.firebase:firebase-messaging" }
-firebase-messaging-directboot = { module = "com.google.firebase:firebase-messaging-directboot" }
-library = { module = "com.github.chuckerteam.chucker:library", version.ref = "library" }
-library-no-op = { module = "com.github.chuckerteam.chucker:library-no-op", version.ref = "library" }
-router = { module = "cn.therouter:router", version.ref = "theRouter" }
-therouter-apt = { module = "cn.therouter:apt", version.ref = "theRouter" }
-hilt-android = { module = "com.google.dagger:hilt-android", version.ref = "hiltAndroidCompiler" }
-hilt-android-compiler = { module = "com.google.dagger:hilt-android-compiler", version.ref = "hiltAndroidCompiler" }
-junit = { group = "junit", name = "junit", version.ref = "junit" }
-androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
-androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
 androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycleRuntimeKtx" }
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
+androidx-activity = { group = "androidx.activity", name = "activity", version.ref = "activity" }
+androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
+androidx-constraintlayout = { group = "androidx.constraintlayout", name = "constraintlayout", version.ref = "constraintlayout" }
+androidx-navigation-compose = { module = "androidx.navigation:navigation-compose", version.ref = "navigationCompose" }
+
+# ===== Compose UI 库 =====
 androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
 androidx-ui = { group = "androidx.compose.ui", name = "ui" }
 androidx-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics" }
@@ -53,31 +58,71 @@ androidx-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-toolin
 androidx-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
 androidx-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
 androidx-material3 = { group = "androidx.compose.material3", name = "material3" }
-androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
-material = { group = "com.google.android.material", name = "material", version.ref = "material" }
-androidx-activity = { group = "androidx.activity", name = "activity", version.ref = "activity" }
-androidx-constraintlayout = { group = "androidx.constraintlayout", name = "constraintlayout", version.ref = "constraintlayout" }
+
+# ===== Google 服务 =====
+firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebaseBom" }
+firebase-analytics = { module = "com.google.firebase:firebase-analytics" }
+firebase-messaging = { module = "com.google.firebase:firebase-messaging" }
+firebase-messaging-directboot = { module = "com.google.firebase:firebase-messaging-directboot" }
+firebase-crashlytics = { module = "com.google.firebase:firebase-crashlytics" }
+firebase-perf = { module = "com.google.firebase:firebase-perf" }
+play-services-auth = { group = "com.google.android.gms", name = "play-services-auth", version.ref = "playServicesAuth" }
+billing-ktx = { group = "com.android.billingclient", name = "billing-ktx", version.ref = "billingKtx" }
+
+# ===== 测试库 =====
+junit = { group = "junit", name = "junit", version.ref = "junit" }
+androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
+androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
+
+# ===== 腾讯系库 =====
 mmkv = { group = "com.tencent", name = "mmkv", version.ref = "mmkv" }
 mars-xlog = { group = "com.tencent.mars", name = "mars-xlog", version.ref = "mars" }
+
+# ===== Square 网络库 =====
 retrofit-core = { group = "com.squareup.retrofit2", name = "retrofit", version.ref = "retrofit" }
 retrofit-kotlin-serialization = { group = "com.jakewharton.retrofit", name = "retrofit2-kotlinx-serialization-converter", version.ref = "retrofitKotlinxSerializationJson" }
 retrofit2-kotlin-coroutines-adapter = { group = "com.jakewharton.retrofit", name = "retrofit2-kotlin-coroutines-adapter", version.ref = "retrofit2-kotlin-coroutines-adapter" }
 retrofit-moshi = { group = "com.squareup.retrofit2", name = "converter-moshi", version.ref = "retrofit" }
-coil-kt = { group = "io.coil-kt", name = "coil", version.ref = "coil" }
-coil-kt-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coil" }
 moshi = { group = "com.squareup.moshi", name = "moshi", version.ref = "moshi" }
 moshi-kotlin = { group = "com.squareup.moshi", name = "moshi-kotlin", version.ref = "moshi" }
 moshi-kotlin-codegen = { group = "com.squareup.moshi", name = "moshi-kotlin-codegen", version.ref = "moshi" }
+
+# ===== 图片处理库 =====
+coil-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil" }
+coil-network-okhttp = { group = "io.coil-kt.coil3", name = "coil-network-okhttp", version.ref = "coil" }
 ucrop = { module = "com.github.yalantis:ucrop", version.ref = "ucrop" }
 
+# ===== 路由库 =====
+router = { module = "cn.therouter:router", version.ref = "theRouter" }
+therouter-apt = { module = "cn.therouter:apt", version.ref = "theRouter" }
+
+# ===== 调试工具 =====
+chucker-library = { module = "com.github.chuckerteam.chucker:library", version.ref = "chucker" }
+chucker-library-no-op = { module = "com.github.chuckerteam.chucker:library-no-op", version.ref = "chucker" }
+
+# ===== Material Design =====
+material = { group = "com.google.android.material", name = "material", version.ref = "material" }
+
+# ===== 向后兼容的别名 =====
+# 保持原有名称以兼容现有代码
+coil-kt-compose3 = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil" }
+coil-kt-network-okhttp3 = { group = "io.coil-kt.coil3", name = "coil-network-okhttp", version.ref = "coil" }
+
 [plugins]
+# ===== 核心插件 =====
 android-application = { id = "com.android.application", version.ref = "agp" }
+android-library = { id = "com.android.library", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
-the-router = {id = "cn.therouter.agp8", version.ref="theRouter"}
-android-library = { id = "com.android.library", version.ref = "agp" }
+
+# ===== 第三方插件 =====
+the-router = { id = "cn.therouter.agp8", version.ref = "theRouter" }
 
 [bundles]
-coils=["coil-kt", "coil-kt-compose"]
-moshi=["moshi", "moshi-kotlin", "retrofit-moshi"]
+# ===== 图片加载 =====
+coil = ["coil-compose", "coil-network-okhttp"]
+coils3 = ["coil-kt-compose3", "coil-kt-network-okhttp3"]
+
+# ===== JSON 序列化 =====
+moshi = ["moshi", "moshi-kotlin", "retrofit-moshi"]
 

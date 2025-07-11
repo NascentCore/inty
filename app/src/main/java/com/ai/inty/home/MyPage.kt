@@ -12,31 +12,29 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -50,10 +48,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ai.inty.Constant
 import com.ai.inty.R
+import com.ai.inty.base.AntiClick
 import com.ai.inty.base.IntyCircleImage
 import com.ai.inty.base.IntyImage
 import com.ai.inty.base.noRippleClickable
-import com.ai.inty.base.AntiClick
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.beans.UserProfile
 import com.ai.inty.utils.AuthClickable
@@ -81,7 +79,9 @@ fun MyPage(
             model = R.drawable.notify_header_bg
         )
         Scaffold(
-            modifier = Modifier.fillMaxSize().background(Color.Transparent),
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Transparent),
             containerColor = Color.Transparent
         ) { innerPadding ->
 
@@ -119,7 +119,7 @@ fun MyPage(
                         IntyCircleImage(
                             modifier = Modifier.fillMaxSize(),
                             url = userProfile.avatar,
-                            placeholderResID = R.drawable.app_2
+                            placeholderResID = R.drawable.app_icon
                         )
                     }
                     Spacer(Modifier.width(19.dp))
@@ -278,7 +278,9 @@ fun MyPage(
                     Spacer(Modifier.height(16.dp))
 
                     Text(
-                        modifier = Modifier.padding(horizontal = 16.dp).align(Alignment.CenterHorizontally),
+                        modifier = Modifier
+                            .padding(horizontal = 16.dp)
+                            .align(Alignment.CenterHorizontally),
                         text = stringResource(R.string.no_agent),
                         color = Color.White.copy(0.55f),
                         fontSize = 14.sp,
@@ -368,12 +370,14 @@ fun MyAgentCard(
         IntyImage(
             modifier = Modifier.fillMaxSize(),
             model = agentInfo.avatar,
-            placeholder = painterResource(R.drawable.app_2),
-            error = painterResource(R.drawable.app_2),
+            placeholder = painterResource(R.drawable.app_icon),
+            error = painterResource(R.drawable.app_icon),
         )
         
         Text(
-            modifier = Modifier.align(Alignment.BottomStart).padding(12.dp),
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .padding(12.dp),
             text = agentInfo.name,
             fontSize = 14.sp,
             fontWeight = FontWeight.SemiBold,

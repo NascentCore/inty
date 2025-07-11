@@ -1,13 +1,13 @@
 plugins {
     id("com.android.library")
     id("org.jetbrains.kotlin.android")
-    id("com.google.devtools.ksp") version "2.0.0-1.0.22"
+    id("com.google.devtools.ksp") version "2.2.0-2.0.2"
 }
 
 android {
 
     namespace = "com.architecture.httplib"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         minSdk = 29
@@ -26,11 +26,8 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
-    }
-    kotlinOptions {
-        jvmTarget = "11"
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
     }
 
 }
@@ -39,10 +36,11 @@ android {
 dependencies {
 
     //http log viewer
-    debugImplementation (libs.library)
-    releaseImplementation (libs.library.no.op)
+    debugImplementation(libs.chucker.library)
+    releaseImplementation(libs.chucker.library.no.op)
 
     ksp(libs.moshi.kotlin.codegen)
+
     api(project(":utils"))
     api(libs.bundles.moshi)
 }

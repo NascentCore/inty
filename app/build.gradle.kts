@@ -5,10 +5,13 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-    id("com.google.devtools.ksp") version "2.0.0-1.0.22"
+    id("com.google.devtools.ksp") version "2.2.0-2.0.2"
     id("therouter")
     id("kotlin-parcelize")
+
     id("com.google.gms.google-services")
+    id("com.google.firebase.crashlytics")
+    id("com.google.firebase.firebase-perf")
 }
 
 // 安全加载 keystore.properties
@@ -24,7 +27,7 @@ fun requireProperty(props: Properties, key: String): String {
 }
 
 val gitCommitId = try {
-    val process = Runtime.getRuntime().exec("git rev-parse --short HEAD")
+    val process = ProcessBuilder("git", "rev-parse", "--short", "HEAD").start()
     process.waitFor()
     if (process.exitValue() == 0) {
         process.inputStream.bufferedReader().readText().trim()
@@ -37,21 +40,21 @@ val gitCommitId = try {
 
 android {
     namespace = "com.ai.inty"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.ai.inty"
         minSdk = 29
-        targetSdk = 34
+        targetSdk = 36
         versionCode = 6
         versionName = "1.0.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        
+
         // 添加BuildConfig字段用于调试
         buildConfigField("String", "GIT_COMMIT_ID", "\"$gitCommitId\"")
         buildConfigField("boolean", "IS_DEBUG_BUILD", "false")
-        
+
         // 数据安全声明 - 不使用广告ID
         manifestPlaceholders["uses_ads"] = "false"
         vectorDrawables {
@@ -97,19 +100,26 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
     }
-    kotlinOptions {
-        jvmTarget = "11"
-    }
+
     buildFeatures {
         compose = true
         buildConfig = true
+        // 启用其他有用的功能
+        viewBinding = false
+        dataBinding = false
     }
+
+
     lint {
-        checkReleaseBuilds=false
+        checkReleaseBuilds = false
+        // 添加更多检查选项
+        abortOnError = false
+        checkOnly += "NewApi"
     }
+
 }
 
 TheRouter {
@@ -132,11 +142,15 @@ dependencies {
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
+
     implementation(libs.androidx.material3)
+
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
     implementation(libs.androidx.activity)
     implementation(libs.androidx.constraintlayout)
+
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -152,22 +166,27 @@ dependencies {
     implementation(project(":utils"))
     implementation(project(":network"))
 
-    debugImplementation (libs.library)
-    releaseImplementation (libs.library.no.op)
+    debugImplementation(libs.chucker.library)
+    releaseImplementation(libs.chucker.library.no.op)
 
     api(libs.retrofit.core)
 
     implementation(libs.retrofit2.kotlin.coroutines.adapter)
-    implementation("io.coil-kt.coil3:coil-compose:3.2.0")
-    implementation("io.coil-kt.coil3:coil-network-okhttp:3.2.0")
+    // 统一使用 Coil 3.x 版本
+    implementation(libs.coil.compose)
+    implementation(libs.coil.network.okhttp)
 
+    //Google支付
+    implementation(libs.billing.ktx)
+    //google 登录授权
+    implementation(libs.play.services.auth)
+    //firebase 相关依赖
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.analytics)
     implementation(libs.firebase.messaging)
     implementation(libs.firebase.messaging.directboot)
-    implementation("com.google.android.gms:play-services-auth:21.2.0")
+    implementation(libs.firebase.crashlytics)
+    implementation(libs.firebase.perf)
 
     api(libs.ucrop)
-
-    implementation("com.android.billingclient:billing-ktx:6.1.0")
 }

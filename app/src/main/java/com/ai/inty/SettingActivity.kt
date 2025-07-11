@@ -6,7 +6,6 @@ import android.net.Uri
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -24,7 +23,6 @@ import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -40,16 +38,15 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.content.ContextCompat.startActivity
+import androidx.lifecycle.ViewModelProvider
 import com.ai.inty.base.BaseActivity
 import com.ai.inty.base.noRippleClickable
 import com.ai.inty.ui.theme.BackGround
 import com.ai.inty.ui.theme.IntyTheme
-import com.inty.utils.storage.IntySetting
-import com.therouter.router.Route
-import androidx.lifecycle.ViewModelProvider
 import com.ai.inty.viewmodels.MainViewModel
+import com.inty.utils.storage.IntySetting
 import com.therouter.TheRouter
+import com.therouter.router.Route
 
 @Route(path = Constant.ROUTE_SETTING)
 class SettingActivity : BaseActivity() {
@@ -98,7 +95,6 @@ fun SettingScreen(
     val context = LocalContext.current
 
     var showKeepTalking by remember { mutableStateOf(IntySetting.isShowKeepTalking()) }
-    var isAutoPlayAudio by remember { mutableStateOf(IntySetting.isAutoPlayAudio()) }
 
     Scaffold(
         modifier = modifier,
@@ -137,7 +133,11 @@ fun SettingScreen(
                     .fillMaxWidth()
                     .border(
                         brush = Brush.linearGradient(
-                            colors = listOf(Color.Transparent, Color.White.copy(0.2f), Color.Transparent)
+                            colors = listOf(
+                                Color.Transparent,
+                                Color.White.copy(0.2f),
+                                Color.Transparent
+                            )
                         ),
                         width = 1.dp,
                         shape = RoundedCornerShape(8.dp)
@@ -149,10 +149,14 @@ fun SettingScreen(
             ) {
                 Spacer(Modifier.height(8.dp))
                 Row(
-                    modifier = Modifier.fillMaxWidth().height(48.dp).padding(horizontal = 12.dp).noRippleClickable {
-                        showKeepTalking = !showKeepTalking
-                        IntySetting.setShowKeepTalking(showKeepTalking)
-                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp)
+                        .padding(horizontal = 12.dp)
+                        .noRippleClickable {
+                            showKeepTalking = !showKeepTalking
+                            IntySetting.setShowKeepTalking(showKeepTalking)
+                        },
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
@@ -214,7 +218,11 @@ fun SettingScreen(
                     .fillMaxWidth()
                     .border(
                         brush = Brush.linearGradient(
-                            colors = listOf(Color.Transparent, Color.White.copy(0.2f), Color.Transparent)
+                            colors = listOf(
+                                Color.Transparent,
+                                Color.White.copy(0.2f),
+                                Color.Transparent
+                            )
                         ),
                         width = 1.dp,
                         shape = RoundedCornerShape(8.dp)
@@ -227,9 +235,13 @@ fun SettingScreen(
                 val email = stringResource(R.string.settings_email_inty)
                 Spacer(Modifier.height(8.dp))
                 Row(
-                    modifier = Modifier.fillMaxWidth().height(48.dp).padding(horizontal = 12.dp).noRippleClickable {
-                        mailTo(context, email)
-                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp)
+                        .padding(horizontal = 12.dp)
+                        .noRippleClickable {
+                            mailTo(context, email)
+                        },
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
@@ -259,10 +271,15 @@ fun SettingScreen(
                 Spacer(Modifier.height(4.dp))
                 Box(
                     modifier = Modifier
-                        .fillMaxWidth().height(1.dp)
+                        .fillMaxWidth()
+                        .height(1.dp)
                         .background(
                             brush = Brush.horizontalGradient(
-                                colors = listOf(Color.Transparent, Color.White.copy(0.2f), Color.Transparent)
+                                colors = listOf(
+                                    Color.Transparent,
+                                    Color.White.copy(0.2f),
+                                    Color.Transparent
+                                )
                             )
                         )
                 ) {
@@ -270,7 +287,10 @@ fun SettingScreen(
                 }
                 Spacer(Modifier.height(4.dp))
                 Row(
-                    modifier = Modifier.fillMaxWidth().height(48.dp).padding(horizontal = 12.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp)
+                        .padding(horizontal = 12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
@@ -299,7 +319,11 @@ fun SettingScreen(
                     .fillMaxWidth()
                     .border(
                         brush = Brush.linearGradient(
-                            colors = listOf(Color.Transparent, Color.White.copy(0.2f), Color.Transparent)
+                            colors = listOf(
+                                Color.Transparent,
+                                Color.White.copy(0.2f),
+                                Color.Transparent
+                            )
                         ),
                         width = 1.dp,
                         shape = RoundedCornerShape(8.dp)
@@ -314,7 +338,10 @@ fun SettingScreen(
             ) {
                 Spacer(Modifier.height(21.dp))
                 Row(
-                    modifier = Modifier.fillMaxWidth().height(48.dp).padding(horizontal = 12.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp)
+                        .padding(horizontal = 12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Spacer(Modifier.weight(1f))

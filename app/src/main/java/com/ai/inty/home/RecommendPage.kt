@@ -1,5 +1,7 @@
 package com.ai.inty.home
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -8,6 +10,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -15,38 +18,34 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.foundation.layout.offset
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
-import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
-import androidx.compose.ui.input.nestedscroll.NestedScrollSource
-import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.unit.Velocity
-import kotlin.math.roundToInt
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ai.inty.R
 import com.ai.inty.base.IntyImage
 import com.ai.inty.base.noRippleClickable
 import com.ai.inty.beans.AgentInfo
+import kotlin.math.roundToInt
 
 @Composable
 fun RecommendPage(
@@ -61,14 +60,14 @@ fun RecommendPage(
     var pullOffset by remember { mutableStateOf(0f) }
     var isRefreshing by remember { mutableStateOf(false) }
     val pullThreshold = 120f // 触发刷新的阈值
-    
+
     // 动画化偏移
     val animatedOffset by animateFloatAsState(
         targetValue = if (isRefreshing) 80f else pullOffset,
         animationSpec = tween(if (isRefreshing) 300 else 0),
         label = "pullOffset"
     )
-    
+
     // 监听加载状态变化，刷新完成时重置状态
     LaunchedEffect(isLoading) {
         if (!isLoading && isRefreshing) {
@@ -76,7 +75,7 @@ fun RecommendPage(
             pullOffset = 0f
         }
     }
-    
+
     // NestedScroll连接，处理下拉刷新
     val nestedScrollConnection = remember {
         object : NestedScrollConnection {
@@ -90,7 +89,7 @@ fun RecommendPage(
                     Offset.Zero
                 }
             }
-            
+
             override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
                 // 当向下滚动且已经滚动到顶部时，开始下拉
                 return if (available.y > 0 && source == NestedScrollSource.Drag) {
@@ -100,7 +99,7 @@ fun RecommendPage(
                     Offset.Zero
                 }
             }
-            
+
             override suspend fun onPreFling(available: Velocity): Velocity {
                 // 处理下拉刷新触发
                 return if (pullOffset >= pullThreshold && !isLoading) {
@@ -140,7 +139,7 @@ fun RecommendPage(
                 )
             }
         }
-        
+
         Scaffold(
             modifier = Modifier
                 .fillMaxSize()
@@ -168,14 +167,14 @@ fun RecommendPage(
                 Spacer(Modifier.height(30.dp))
 
                 val gridState = rememberLazyGridState()
-                
+
                 // 检测是否在顶部
-                val isAtTop = remember {
+                remember {
                     derivedStateOf {
                         gridState.firstVisibleItemIndex == 0 && gridState.firstVisibleItemScrollOffset == 0
                     }
                 }
-                
+
                 // 检测是否滚动到底部
                 val reachedBottom = remember {
                     derivedStateOf {
@@ -183,7 +182,7 @@ fun RecommendPage(
                         lastVisibleItem?.index != null && lastVisibleItem.index >= agents.size - 3
                     }
                 }
-                
+
                 // 触发加载更多
                 LaunchedEffect(reachedBottom.value) {
                     if (reachedBottom.value && agents.isNotEmpty() && !isLoading) {
@@ -200,9 +199,11 @@ fun RecommendPage(
                 ) {
                     items(agents) { agent ->
                         RecommendPageItem(
-                            modifier = Modifier.size(165.dp, 220.dp).noRippleClickable {
-                                onClickAgent(agent)
-                            },
+                            modifier = Modifier
+                                .size(165.dp, 220.dp)
+                                .noRippleClickable {
+                                    onClickAgent(agent)
+                                },
                             agentInfo = agent
                         )
                     }
@@ -223,7 +224,7 @@ fun RecommendPage(
                             }
                         }
                     }
-                    
+
                     item {
                         Spacer(Modifier.height(16.dp))
                     }
@@ -244,11 +245,13 @@ fun RecommendPageItem(
         IntyImage(
             modifier = Modifier.fillMaxSize(),
             model = agentInfo.avatar,
-            placeholder = painterResource(R.drawable.app_2),
-            error = painterResource(R.drawable.app_2),
+            placeholder = painterResource(R.drawable.app_icon),
+            error = painterResource(R.drawable.app_icon),
         )
         Text(
-            modifier = Modifier.align(Alignment.BottomStart).padding(12.dp),
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .padding(12.dp),
             text = agentInfo.name,
             fontSize = 14.sp,
             fontWeight = FontWeight.SemiBold,

@@ -39,7 +39,7 @@ object EncryptXlog {
         logConfig.cachedir = cachePath
         logConfig.cachedays = 0
 
-        xlog = Xlog();
+        xlog = Xlog()
         logInstancePtr = xlog.newXlogInstance(logConfig)
 
         xlog.setMaxAliveTime(logInstancePtr, 60 * 60 * 24 * 30)

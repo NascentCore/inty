@@ -34,7 +34,7 @@ object IntySetting {
     }
 
     fun changeUser(uid: String) {
-        val last = curUserSetting
+        curUserSetting
 
         curUid = uid
         curUserSetting = MMKV.mmkvWithID("user_$curUid", MMKV.MULTI_PROCESS_MODE)

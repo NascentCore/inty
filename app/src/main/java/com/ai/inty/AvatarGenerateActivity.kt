@@ -1,35 +1,31 @@
 package com.ai.inty
 
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.Canvas
-import androidx.compose.ui.graphics.PathEffect
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
-import coil3.compose.AsyncImage
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
@@ -42,15 +38,20 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -62,16 +63,10 @@ import com.ai.inty.base.BaseActivity
 import com.ai.inty.base.noRippleClickable
 import com.ai.inty.ui.theme.BackGround
 import com.ai.inty.ui.theme.IntyTheme
-import com.ai.inty.viewmodels.AvatarGenerateViewModel
-import com.therouter.TheRouter
-import com.therouter.router.Route
-import android.widget.Toast
-import com.ai.inty.Constant
 import com.ai.inty.utils.AvatarManager
+import com.ai.inty.viewmodels.AvatarGenerateViewModel
 import com.inty.utils.log.EasyLog
-import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.ui.input.pointer.pointerInput
+import com.therouter.router.Route
 
 @Route(path = Constant.ROUTE_AVATAR_GENERATE)
 class AvatarGenerateActivity : BaseActivity() {
@@ -106,10 +101,10 @@ fun AvatarGeneratePage(
     val generatedImageUrls by viewModel.generatedImageUrls.collectAsState()
     val selectedImageIndex by viewModel.selectedImageIndex.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
-    
+
     val context = LocalContext.current
     val focusManager = LocalFocusManager.current
-    
+
     // Handle error messages
     LaunchedEffect(errorMessage) {
         errorMessage?.let { error ->
@@ -158,7 +153,7 @@ fun AvatarGeneratePage(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Spacer(modifier = Modifier.height(24.dp))
-            
+
             // Image Preview Section
             if (generatedImageUrls.isEmpty()) {
                 AvatarPreviewSection(
@@ -177,17 +172,17 @@ fun AvatarGeneratePage(
                     }
                 )
             }
-            
+
             Spacer(modifier = Modifier.height(32.dp))
-            
+
             // Prompt Input Field
             PromptInputField(
                 value = prompt,
                 onValueChange = viewModel::updatePrompt
             )
-            
+
             Spacer(modifier = Modifier.height(32.dp))
-            
+
             // Generate Button
             GenerateButton(
                 isLoading = isLoading,
@@ -196,9 +191,9 @@ fun AvatarGeneratePage(
                     viewModel.generateAvatar(onNavigateBack = onBack)
                 }
             )
-            
+
             Spacer(modifier = Modifier.height(24.dp))
-            
+
             // Use Generated Avatar Button
             if (generatedImageUrls.isNotEmpty() || generatedImageUrl != null) {
                 UseAvatarButton(
@@ -211,7 +206,7 @@ fun AvatarGeneratePage(
                     }
                 )
             }
-            
+
             Spacer(modifier = Modifier.height(32.dp))
         }
     }
@@ -245,11 +240,11 @@ fun AvatarPreviewSection(
                         .fillMaxSize()
                         .padding(4.dp),
                     contentScale = ContentScale.Crop,
-                    onSuccess = { 
-                        EasyLog.log("Image loaded successfully: $imageUrl") 
+                    onSuccess = {
+                        EasyLog.log("Image loaded successfully: $imageUrl")
                     },
-                    onError = { 
-                        EasyLog.log("Failed to load image: $imageUrl", EasyLog.ERROR) 
+                    onError = {
+                        EasyLog.log("Failed to load image: $imageUrl", EasyLog.ERROR)
                     }
                 )
             }
@@ -272,7 +267,7 @@ fun AvatarPreviewSection(
                 }
             }
         }
-        
+
         // Dashed border for empty state (matching CreateRoleActivity style)
         if (imageUrl == null && !isLoading) {
             Canvas(modifier = Modifier.fillMaxSize()) {
@@ -280,9 +275,9 @@ fun AvatarPreviewSection(
                 val cornerRadius = 16.dp.toPx()
                 val dashLength = 10.dp.toPx()
                 val gapLength = 5.dp.toPx()
-                
+
                 drawRoundRect(
-                    color = androidx.compose.ui.graphics.Color.Gray,
+                    color = Color.Gray,
                     topLeft = androidx.compose.ui.geometry.Offset(strokeWidth / 2, strokeWidth / 2),
                     size = androidx.compose.ui.geometry.Size(
                         size.width - strokeWidth,
@@ -312,7 +307,7 @@ fun PromptInputField(
             fontWeight = FontWeight.Medium
         )
         Spacer(modifier = Modifier.height(12.dp))
-        
+
         BasicTextField(
             value = value,
             onValueChange = onValueChange,
@@ -426,7 +421,7 @@ fun UseAvatarButton(
 @Composable
 fun ThreeDotLoadingAnimation() {
     val infiniteTransition = rememberInfiniteTransition(label = "dots_loading")
-    
+
     Row(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -440,7 +435,7 @@ fun ThreeDotLoadingAnimation() {
                     animation = tween(600, delayMillis = delay)
                 ), label = "dot_alpha_$index"
             )
-            
+
             Box(
                 modifier = Modifier
                     .size(12.dp)
@@ -472,9 +467,9 @@ fun AvatarGridSection(
             },
             enabled = !isLoading
         )
-        
+
         Spacer(modifier = Modifier.height(16.dp))
-        
+
         // 4张图片的网格布局
         Row(
             modifier = Modifier.fillMaxWidth(),

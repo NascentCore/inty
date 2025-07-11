@@ -141,8 +141,7 @@ private fun BoxScope.InnerDialog(
                 offsetY = 0f
             }
         }
-        Box(
-        ) {
+        Box {
             content()
         }
     }

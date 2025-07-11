@@ -2,7 +2,6 @@ package com.ai.inty
 
 import android.os.Bundle
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -190,7 +189,9 @@ fun RegInfoScreen(
             Spacer(Modifier.height(12.dp))
 
             Row(
-                modifier = Modifier.fillMaxWidth().height(48.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp),
             ) {
                 Spacer(Modifier.width(24.dp))
                 AgeItem(
@@ -214,7 +215,9 @@ fun RegInfoScreen(
             Spacer(Modifier.height(12.dp))
 
             Row(
-                modifier = Modifier.fillMaxWidth().height(48.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp),
             ) {
                 Spacer(Modifier.width(24.dp))
                 AgeItem(
@@ -280,7 +283,7 @@ fun GenderItem(
     selected: Boolean,
     onClick: () -> Unit,
 ) {
-    val gender_bg = when (gender) {
+    when (gender) {
         GENDER.MALE -> R.drawable.gender_bg_male
         GENDER.FEMALE -> R.drawable.gender_bg_female
         GENDER.OTHER -> R.drawable.gender_bg_other
