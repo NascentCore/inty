@@ -19,7 +19,7 @@ composeBom = "2025.06.01"
 # Google 服务
 firebaseBom = "33.16.0"
 playServicesAuth = "21.3.0"
-billingKtx = "6.1.0"
+billingKtx = "8.0.0"
 
 # 测试相关
 junit = "4.13.2"

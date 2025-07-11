@@ -1,26 +1,34 @@
 package com.ai.inty.billing
 
 import android.content.Context
-import com.android.billingclient.api.*
-import com.ai.inty.beans.SubscriptionPlansResponse
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.cancel
 import com.ai.inty.net.ISubscriptionApi
+import com.android.billingclient.api.AcknowledgePurchaseParams
+import com.android.billingclient.api.BillingClient
+import com.android.billingclient.api.BillingClientStateListener
+import com.android.billingclient.api.BillingFlowParams
+import com.android.billingclient.api.BillingResult
+import com.android.billingclient.api.PendingPurchasesParams
+import com.android.billingclient.api.ProductDetails
+import com.android.billingclient.api.Purchase
+import com.android.billingclient.api.PurchasesUpdatedListener
+import com.android.billingclient.api.QueryProductDetailsParams
+import com.android.billingclient.api.SkuDetails
 import com.architecture.httplib.core.HttpResult
 import com.architecture.httplib.utils.MoshiUtils
 import com.inty.utils.log.EasyLog
 import com.inty.utils.storage.IntySetting
-import com.squareup.moshi.Json
 import com.therouter.TheRouter
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 /**
  * 订阅状态数据类
@@ -105,7 +113,10 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
 
         billingClient = BillingClient.newBuilder(context.applicationContext)
             .setListener(this)
-            .enablePendingPurchases()
+            .enablePendingPurchases(
+                PendingPurchasesParams.newBuilder().enableOneTimeProducts().build()
+            )
+            .enableAutoServiceReconnection()
             .build()
 
         connectToPlayBilling()
@@ -138,7 +149,15 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
     }
     
     private fun connectToPlayBilling() {
-        billingClient.startConnection(this)
+        billingClient.startConnection(object : BillingClientStateListener {
+            override fun onBillingSetupFinished(billingResult: BillingResult) {
+                this@BillingRepository.onBillingSetupFinished(billingResult)
+            }
+
+            override fun onBillingServiceDisconnected() {
+                this@BillingRepository.onBillingServiceDisconnected()
+            }
+        })
     }
 
     override fun onPurchasesUpdated(billingResult: BillingResult, purchases: MutableList<Purchase>?) {
@@ -242,12 +261,27 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
             eventScope.launch {
                 _eventFlow.emit(BillingEvent.Connected)
             }
-            
-            // 连接成功后查询商品信息
-            querySkuDetails()
+
+            // 连接成功后，如果 plansFlow 有数据则查询价格，否则等待 fetchRemote 完成
+            val currentPlans = _plansFlow.value
+            if (currentPlans.isNotEmpty()) {
+                EasyLog.log("BillingRepository - plansFlow 已有数据，立即查询价格")
+                querySkuDetails()
+            } else {
+                EasyLog.log("BillingRepository - plansFlow 为空，等待 fetchRemote 完成后再查询价格")
+            }
         } else {
             EasyLog.log("BillingRepository - BillingClient 连接失败: ${billingResult.debugMessage}")
             EasyLog.log("BillingRepository - 连接失败响应码: ${billingResult.responseCode}")
+
+            // 连接失败时，尝试重新连接（自动重连机制）
+            eventScope.launch {
+                kotlinx.coroutines.delay(5000) // 等待5秒后重连
+                if (!isConnected) {
+                    EasyLog.log("BillingRepository - 尝试重新连接 BillingClient")
+                    connectToPlayBilling()
+                }
+            }
         }
     }
 
@@ -258,6 +292,15 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
         // 发送断开连接事件
         eventScope.launch {
             _eventFlow.emit(BillingEvent.Disconnected)
+        }
+
+        // 自动重连机制
+        eventScope.launch {
+            kotlinx.coroutines.delay(1000) // 等待1秒后重连
+            if (!isConnected) {
+                EasyLog.log("BillingRepository - 自动重连 BillingClient")
+                connectToPlayBilling()
+            }
         }
     }    
   
@@ -310,16 +353,22 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
                 EasyLog.log("检测到计划数据变化，更新 plansFlow")
                 saveLocalPlans(vipPlans)
                 _plansFlow.value = vipPlans
-                
-//                // 如果 BillingClient 已连接，立即查询价格
-//                if (isConnected) {
-//                    EasyLog.log("BillingClient 已连接，立即查询价格信息")
-//                    querySkuDetails()
-//                } else {
-//                    EasyLog.log("BillingClient 未连接，等待连接成功后查询价格")
-//                }
+
+                  // 如果 BillingClient 已连接，立即查询价格
+                  if (isConnected) {
+                      EasyLog.log("BillingClient 已连接，立即查询价格信息")
+                      querySkuDetails()
+                  } else {
+                      EasyLog.log("BillingClient 未连接，等待连接成功后查询价格")
+                  }
               } else {
                 EasyLog.log("计划数据无变化，跳过更新")
+
+                  // 即使数据无变化，如果 BillingClient 已连接且 plansFlow 为空，也要查询价格
+                  if (isConnected && _plansFlow.value.isEmpty()) {
+                      EasyLog.log("plansFlow 为空但 BillingClient 已连接，查询价格信息")
+                      querySkuDetails()
+                  }
               }
             }
             is HttpResult.Failure -> {
@@ -377,13 +426,13 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
 
         EasyLog.log("BillingRepository - 发送查询请求到Google Play (新API)")
         EasyLog.log("BillingRepository - 查询参数: $subscriptionIds")
-        billingClient.queryProductDetailsAsync(params) { billingResult, productDetailsList ->
+        billingClient.queryProductDetailsAsync(params) { billingResult, productDetailsResult ->
             EasyLog.log("BillingRepository - Google Play 查询结果: 响应码=${billingResult.responseCode}")
             EasyLog.log("BillingRepository - 查询结果详情: ${billingResult.debugMessage}")
             
             when (billingResult.responseCode) {
                 BillingClient.BillingResponseCode.OK -> {
-                    productDetailsList?.let { detailsList ->
+                    productDetailsResult?.productDetailsList?.let { detailsList ->
                         if (detailsList.isNotEmpty()) {
                             EasyLog.log("BillingRepository - 查询成功，获取到 ${detailsList.size} 个商品信息")
                             // 使用新的 ProductDetails 更新计划价格
@@ -537,12 +586,12 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
             .setProductList(products)
             .build()
 
-        billingClient.queryProductDetailsAsync(params) { billingResult, productDetailsList ->
+        billingClient.queryProductDetailsAsync(params) { billingResult, productDetailsResult ->
             EasyLog.log("Google Play 价格查询结果: 响应码=${billingResult.responseCode}")
             
             when (billingResult.responseCode) {
                 BillingClient.BillingResponseCode.OK -> {
-                    productDetailsList?.let { detailsList ->
+                    productDetailsResult?.productDetailsList?.let { detailsList ->
                         if (detailsList.isNotEmpty()) {
                             // 5. 比较并更新价格
                             updatePlansWithProductDetails(currentPlans, detailsList)
@@ -787,6 +836,34 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
      * 检查是否已连接
      */
     fun isConnected(): Boolean = isConnected
+
+    /**
+     * 手动触发价格更新
+     */
+    fun refreshPrices() {
+        EasyLog.log("手动触发价格更新")
+        if (isConnected) {
+            querySkuDetails()
+        } else {
+            EasyLog.log("BillingClient 未连接，无法更新价格")
+        }
+    }
+
+    /**
+     * 初始化并获取数据
+     */
+    suspend fun initializeAndFetch(context: Context) {
+        // 1. 初始化 BillingClient
+        initialize(context)
+
+        // 2. 获取远程数据
+        fetchRemote()
+
+        // 3. 如果 BillingClient 已连接，查询价格
+        if (isConnected) {
+            querySkuDetails()
+        }
+    }
     
     /**
      * 启动购买流程
@@ -826,13 +903,13 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
         val params = QueryProductDetailsParams.newBuilder()
             .setProductList(listOf(product))
             .build()
-            
-        billingClient.queryProductDetailsAsync(params) { billingResult, productDetailsList ->
+
+        billingClient.queryProductDetailsAsync(params) { billingResult, productDetailsResult ->
             EasyLog.log("BillingRepository - 查询商品详情结果: 响应码=${billingResult.responseCode}")
             
             when (billingResult.responseCode) {
                 BillingClient.BillingResponseCode.OK -> {
-                    productDetailsList?.firstOrNull()?.let { productDetails ->
+                    productDetailsResult?.productDetailsList?.firstOrNull()?.let { productDetails ->
                         EasyLog.log("✅ 找到商品详情: ${productDetails.productId}")
                         EasyLog.log("   商品标题: ${productDetails.title}")
                         EasyLog.log("   商品描述: ${productDetails.description}")

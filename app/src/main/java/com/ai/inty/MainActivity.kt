@@ -10,7 +10,6 @@ import android.os.Bundle
 import android.view.GestureDetector
 import android.view.MotionEvent
 import android.widget.Toast
-import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
@@ -23,8 +22,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.content.ContextCompat
 import androidx.core.view.GestureDetectorCompat
 import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsControllerCompat
+import androidx.lifecycle.lifecycleScope
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.ai.inty.base.BaseActivity
+import com.ai.inty.billing.BillingRepository
 import com.ai.inty.home.HomeScreen
 import com.ai.inty.ui.theme.IntyTheme
 import com.ai.inty.viewmodels.ChatViewModel
@@ -32,8 +33,11 @@ import com.ai.inty.viewmodels.MainViewModel
 import com.inty.utils.log.EasyLog
 import com.therouter.router.Autowired
 import com.therouter.router.Route
-import kotlinx.coroutines.*
-import com.ai.inty.billing.BillingRepository
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @Route(path = Constant.ROUTE_MAIN)
 class MainActivity : BaseActivity() {
@@ -90,8 +94,10 @@ class MainActivity : BaseActivity() {
         // 异步更新会员状态
         mainViewModel.updatePlans()
 
-        // 初始化 BillingRepository
-        BillingRepository.initialize(this)
+        // 初始化 BillingRepository 并获取数据
+        lifecycleScope.launch {
+            BillingRepository.initializeAndFetch(this@MainActivity)
+        }
         
         setContent {
             IntyTheme {
