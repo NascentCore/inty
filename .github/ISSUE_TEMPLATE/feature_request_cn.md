@@ -1,8 +1,8 @@
 ---
 name: 功能请求
 about: 为此项目建议一个想法
-title: '[功能] '
-labels: 'enhancement'
+title: "[功能] "
+labels: enhancement
 assignees: ''
 
 ---

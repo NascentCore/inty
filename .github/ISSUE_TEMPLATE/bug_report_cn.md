@@ -1,8 +1,8 @@
 ---
 name: 错误报告
 about: 创建报告帮助我们改进
-title: '[错误] '
-labels: 'bug'
+title: "[错误] "
+labels: bug
 assignees: ''
 
 ---
