@@ -593,6 +593,59 @@ async def get_agent_chat_settings(
         raise HTTPException(status_code=500, detail=f"Failed to get chat settings: {str(e)}")
 
 
+@router.get("/agents/{agent_id}/debug-messages")
+async def get_agent_debug_messages(
+    *,
+    db: AsyncSession = Depends(deps.get_async_db),
+    agent_id: str,
+    current_user: schemas.User = Depends(deps.get_current_active_user),
+) -> Any:
+    """
+    获取Agent对话的调试信息
+    根据Agent ID获取用户与该Agent的聊天会话中的debug_messages字段
+    """
+    try:
+        logger.info(f"获取Agent调试信息 - Agent ID: {agent_id}, User ID: {current_user.id}")
+        
+        # 首先验证Agent是否存在
+        agent_db = await agent_service.get_agent(db, agent_id=agent_id)
+        if not agent_db:
+            raise HTTPException(status_code=404, detail="Agent not found")
+        
+        # 获取用户与该Agent的聊天会话
+        chat = await chat_service.get_chat_by_agent_and_user(
+            db=db,
+            agent_id=agent_id,
+            user_id=current_user.id
+        )
+        
+        if not chat:
+            # 如果没有聊天会话，返回空的调试信息
+            return {
+                "chat_id": None,
+                "agent_id": agent_id,
+                "agent_name": agent_db.name,
+                "debug_messages": None,
+                "message": "No chat session found with this agent"
+            }
+        
+        # 返回调试信息
+        return {
+            "chat_id": chat.id,
+            "agent_id": chat.agent_id,
+            "agent_name": chat.agent_name or agent_db.name,
+            "debug_messages": chat.debug_messages,
+            "last_updated": chat.updated_at.isoformat() if chat.updated_at else None,
+            "message": "Debug messages retrieved successfully" if chat.debug_messages else "No debug messages available"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"获取Agent调试信息失败 - Agent ID: {agent_id}, Error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to get debug messages: {str(e)}")
+
+
 async def generate_chat_stream(
     agent,
     messages: dict,

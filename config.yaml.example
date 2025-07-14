@@ -1,6 +1,7 @@
 app:
   name: "InTy"
   debug: false
+  debug_messages: false  # 是否启用调试消息记录功能（保存发送给大模型的完整messages）
   api_v1_prefix: "/api/v1"
   backend_cors_origins: ["http://localhost:3000","http://localhost:8000"]
 
@@ -35,3 +36,32 @@ keep_talking:
   check_interval: 300  # 检查间隔（秒），默认5分钟
   max_idle_time: 1800  # 最大空闲时间（秒），默认30分钟
   max_keep_talking_messages: 3  # 单次会话最多发送的keep_talking消息数量 
+
+agent:
+  model: "ep-20250210154211-js9rc"
+  base_url: "https://ark.cn-beijing.volces.com/api/v3"
+  api_key: "ff9ed2dd-cdf0-40d4-b4ec-d3aa19e2bd0b"
+  temperature: 0.5
+  max_tokens: 1000
+  enable_debug_logging: false  # 是否启用调试日志记录功能，保存最新一次发送给大模型的完整messages列表
+
+embedding:
+  base_url: "http://localhost:8001/v1"
+  api_key: "sk-proj-1234567890"
+  model: "DMetaSoul/Dmeta-embedding-zh-small"
+
+google_search:
+  api_key: "your-google-search-api-key"
+  cse_id: "your-google-search-cse-id"
+
+gcs:
+  bucket: "your-gcs-bucket"
+  credentials: "path/to/your/service-account-key.json"
+
+firebase:
+  service_account_path: "path/to/your/firebase-service-account-key.json"
+
+google_play:
+  service_account_key: "your-google-play-service-account-key-json"
+  package_name: "your.app.package.name"
+  webhook_secret: "your-webhook-secret" 

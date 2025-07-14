@@ -54,6 +54,7 @@ class VerificationConfig:
 class AppConfig:
     name: str = "InTy"
     debug: bool = False
+    debug_messages: bool = False  # 是否启用调试消息记录功能
     api_v1_prefix: str = "/api/v1"
     backend_cors_origins: List[AnyHttpUrl] = None
 
@@ -80,6 +81,7 @@ class AgentConfig:
     api_key: str = "ff9ed2dd-cdf0-40d4-b4ec-d3aa19e2bd0b"
     temperature: float = 0.5
     max_tokens: int = 1000
+    enable_debug_logging: bool = False  # 是否启用调试日志记录功能
 
 @dataclass
 class GCSConfig:

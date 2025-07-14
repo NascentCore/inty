@@ -2,6 +2,7 @@ from sqlalchemy import Column, String, DateTime, ForeignKey, Boolean, UniqueCons
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.hybrid import hybrid_property
+from sqlalchemy.dialects.postgresql import JSON
 import sqlalchemy as sa
 
 from app.db.base_class import Base
@@ -15,6 +16,9 @@ class Chat(Base):
     user_id = Column(String, ForeignKey("users.id"), nullable=False)
     agent_id = Column(String, ForeignKey("agents.id"), nullable=False)
     is_active = Column(Boolean, default=True)
+    
+    # 调试功能字段（通过全局配置控制是否启用）
+    debug_messages = Column(JSON, nullable=True, comment="最新一次发送给大模型的完整messages列表（JSON格式）")
     
     # 关系
     user = relationship("User", back_populates="chats")

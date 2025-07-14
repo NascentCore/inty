@@ -15,7 +15,9 @@ from openai import OpenAI
 from app.core.config import settings
 from psycopg import Connection
 from psycopg_pool import ConnectionPool
-from langchain_core.messages import BaseMessage, HumanMessage, AIMessage
+from langchain_core.messages import BaseMessage, HumanMessage, AIMessage, SystemMessage
+import json
+from psycopg import sql
 from langchain_core.tools import Tool
 from langchain_google_community import GoogleSearchAPIWrapper
 from app.core.agent.prompt_template import prompt_template_manager
@@ -234,8 +236,6 @@ class Agent:
                 # 如果有用户信息上下文，将其添加到消息中
                 enhanced_messages = messages["messages"].copy()
                 if user_info_context:
-                    # 在用户消息前添加用户信息上下文
-                    from langchain_core.messages import SystemMessage
                     context_message = SystemMessage(content=user_info_context)
                     enhanced_messages.insert(0, context_message)
 
@@ -248,6 +248,10 @@ class Agent:
                 # 使用增强的消息（包含用户信息）进行对话
                 enhanced_messages_dict = {"messages": enhanced_messages}
                 response = self.agent.invoke(enhanced_messages_dict, config)
+                
+                # 如果启用调试日志记录，保存 response.get("messages",[]) 到数据库
+                if settings.agent.enable_debug_logging:
+                    self._save_debug_messages(user_id, session_id, response, conn_local)
 
                 ai_messages = [message for message in response.get("messages",[]) if isinstance(message, AIMessage)]
                 response = ai_messages[-1].content if ai_messages else "抱歉，我无法理解您的消息。请再试一次。"
@@ -257,6 +261,48 @@ class Agent:
             except Exception as e:
                 logger.error(f"聊天处理失败 - Agent: {self.agent_id}, Session: {session_id}, Error: {str(e)}")
                 raise
+
+    def _save_debug_messages(self, user_id: str, session_id: str, response: dict, conn):
+        """保存调试信息到数据库"""
+        try:
+            # 将 LangChain 消息对象转换为可序列化的字典
+            serializable_messages = [{
+                "type": "system",
+                "content": self.final_prompt
+            }]
+            for msg in response.get("messages", []):
+                if hasattr(msg, 'type') and hasattr(msg, 'content'):
+                    serializable_messages.append({
+                        "type": msg.type,
+                        "content": msg.content
+                    })
+                else:
+                    # 处理可能的其他消息格式
+                    serializable_messages.append(str(msg))
+            
+            debug_data = {
+                "messages": serializable_messages,
+                "timestamp": time.time(),
+                "agent_id": self.agent_id,
+                "user_id": user_id,
+                "session_id": session_id
+            }
+            
+            # 更新 chat 表的 debug_messages 字段
+            # 查找对应的 chat 记录
+            query = sql.SQL("""
+                UPDATE chats 
+                SET debug_messages = %s, updated_at = now()
+                WHERE user_id = %s AND agent_id = %s AND is_active = true
+            """)
+            
+            conn.execute(query, (json.dumps(debug_data), user_id, self.agent_id))
+            logger.debug(f"保存调试信息成功 - Agent: {self.agent_id}, Session: {session_id}")
+            
+        except Exception as e:
+            logger.error(f"保存调试信息失败 - Agent: {self.agent_id}, Session: {session_id}, Error: {str(e)}")
+            # 不应该因为调试信息保存失败而中断正常的聊天流程
+            pass
 
     async def chat(self, user_id: str, session_id: str, messages: dict[str, Any], db_session = None) -> str:
         """异步聊天方法"""
@@ -307,8 +353,17 @@ class Agent:
 
                     # 使用增强的消息（包含用户信息）进行流式对话
                     enhanced_messages_dict = {"messages": enhanced_messages}
+                    
+                    # 收集完整的流式响应用于调试
+                    all_messages = []
                     for message_chunk, metadata in self.agent.stream(enhanced_messages_dict, config, stream_mode="messages"):
+                        all_messages.append(message_chunk)
                         yield message_chunk, metadata
+                    
+                    # 如果启用调试日志记录，保存完整的流式响应
+                    if settings.agent.enable_debug_logging:
+                        stream_response = {"messages": all_messages}
+                        self._save_debug_messages(user_id, session_id, stream_response, conn_local)
                 except Exception as e:
                     logger.error(f"流式聊天处理失败 - Agent: {self.agent_id}, Session: {session_id}, Error: {str(e)}")
                     raise
@@ -738,16 +793,16 @@ if __name__ == "__main__":
         test_session_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, "test"))
         test_user_id = "123"
         
-        # print("=== 测试记忆功能 ===")
-        # print("第一次对话：告诉Agent信息")
-        # response1 = await agent.chat(
-        #     user_id=test_user_id, 
-        #     session_id=test_session_id, 
-        #     messages={"messages": [HumanMessage(content="我最喜欢NBA的球星是科比，他是我的偶像")]}
-        # )
-        # print("用户:", "我最喜欢NBA的球星是科比，他是我的偶像")
-        # print("Agent:", response1)
-        # print("\n" + "="*50 + "\n")
+        print("=== 测试记忆功能 ===")
+        print("第一次对话：告诉Agent信息")
+        response1 = await agent.chat(
+            user_id=test_user_id, 
+            session_id=test_session_id, 
+            messages={"messages": [HumanMessage(content="我最喜欢NBA的球星是科比，他是我的偶像")]}
+        )
+        print("用户:", "我最喜欢NBA的球星是科比，他是我的偶像")
+        print("Agent:", response1)
+        print("\n" + "="*50 + "\n")
         
         print("第二次对话：测试记忆是否有效")
         response2 = await agent.chat(

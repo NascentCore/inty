@@ -6,6 +6,7 @@ from sqlalchemy.orm import selectinload
 from fastapi import HTTPException
 import logging
 import uuid
+import json
 
 from app import models, schemas
 from app.services import chat_history_service
@@ -584,3 +585,65 @@ async def get_chat_by_agent_and_user(
     except Exception as e:
         logger.error(f"未知错误 - 获取聊天会话 agent_id={agent_id}, user_id={user_id}: {str(e)}")
         raise HTTPException(status_code=500, detail="服务器内部错误") 
+
+async def save_debug_messages(
+    db: AsyncSession,
+    session_id: str,
+    messages: List[dict]
+) -> None:
+    """
+    保存调试信息到数据库
+    
+    Args:
+        db: 数据库会话
+        session_id: 会话ID
+        messages: 要保存的消息列表
+    """
+    try:
+        # 根据 session_id 推算出 chat_id
+        # session_id 是通过 generate_session_id(chat_id) 生成的
+        # 需要通过查询数据库找到对应的 chat 记录
+        from app.core.config import settings
+        
+        # 如果调试功能未启用，直接返回
+        if not settings.app.debug_messages:
+            return
+            
+        # 查找对应的 chat 记录
+        # 这里需要通过遍历来找到对应的 chat（因为 session_id 是基于 chat_id 生成的）
+        result = await db.execute(select(models.Chat))
+        chats = result.scalars().all()
+        
+        target_chat = None
+        for chat in chats:
+            if generate_session_id(chat.id) == session_id:
+                target_chat = chat
+                break
+                
+        if not target_chat:
+            logger.warning(f"未找到对应的 chat 记录，session_id: {session_id}")
+            return
+            
+        # 将消息列表转换为 JSON 格式并保存
+        # 需要处理消息对象，确保它们可以被序列化
+        serializable_messages = []
+        for msg in messages:
+            if hasattr(msg, 'dict'):
+                # 如果是 Pydantic 模型或类似对象
+                serializable_messages.append(msg.dict())
+            elif hasattr(msg, '__dict__'):
+                # 如果是普通对象
+                serializable_messages.append(msg.__dict__)
+            else:
+                # 如果已经是字典
+                serializable_messages.append(msg)
+                
+        target_chat.debug_messages = serializable_messages
+        
+        await db.commit()
+        logger.debug(f"成功保存调试信息，session_id: {session_id}, 消息数量: {len(messages)}")
+        
+    except Exception as e:
+        logger.error(f"保存调试信息失败，session_id: {session_id}, 错误: {str(e)}")
+        await db.rollback()
+        # 不抛出异常，避免影响正常的聊天流程 
