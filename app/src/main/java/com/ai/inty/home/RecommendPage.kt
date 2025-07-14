@@ -47,6 +47,9 @@ import com.ai.inty.base.noRippleClickable
 import com.ai.inty.beans.AgentInfo
 import kotlin.math.roundToInt
 
+/**
+ * 推荐的ai伴侣
+ */
 @Composable
 fun RecommendPage(
     modifier: Modifier,

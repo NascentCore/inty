@@ -57,7 +57,9 @@ import com.ai.inty.beans.UserProfile
 import com.ai.inty.utils.AuthClickable
 import com.therouter.TheRouter
 
-
+/**
+ * “我的”页面
+ */
 @Composable
 fun MyPage(
     modifier: Modifier,

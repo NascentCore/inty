@@ -44,6 +44,9 @@ import com.ai.inty.viewmodels.RegInfoActivityViewModel
 import com.therouter.router.Route
 import kotlinx.coroutines.launch
 
+/**
+ * 注册信息完善页面，性别和年龄
+ */
 @Route(path = Constant.ROUTE_REG_INFO)
 class RegInfoActivity : BaseActivity() {
 

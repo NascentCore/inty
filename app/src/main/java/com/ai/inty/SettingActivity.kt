@@ -48,6 +48,9 @@ import com.inty.utils.storage.IntySetting
 import com.therouter.TheRouter
 import com.therouter.router.Route
 
+/**
+ * 设置页面
+ */
 @Route(path = Constant.ROUTE_SETTING)
 class SettingActivity : BaseActivity() {
 

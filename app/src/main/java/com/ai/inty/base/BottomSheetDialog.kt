@@ -1,4 +1,4 @@
-package github.leavesczy.composebottomsheetdialog
+package com.ai.inty.base
 
 import android.app.Activity
 import android.content.Context

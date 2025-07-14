@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -45,7 +44,9 @@ val MAIN_TAB_LIST = listOf(
     TabInfo(R.drawable.tab_my, R.drawable.tab_my_selected),
 )
 
-
+/**
+ * 主页面的，包含五个tab
+ */
 @Composable
 fun HomeScreen(
     modifier: Modifier = Modifier,
@@ -246,9 +247,12 @@ fun BottomBar(
     ) {
         MAIN_TAB_LIST.forEachIndexed { index, tab ->
             BottomBarItem(
-                modifier = Modifier.fillMaxHeight().weight(1f).noRippleClickable {
-                    onSelectTab(index)
-                },
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .weight(1f)
+                    .noRippleClickable {
+                        onSelectTab(index)
+                    },
                 tabInfo = tab,
                 selected = (index == selectedTab),
             )
@@ -264,7 +268,9 @@ fun BottomBarItem(
 ) {
     Box(modifier = modifier) {
         IntyImage(
-            modifier = Modifier.size(42.dp).align(Alignment.Center),
+            modifier = Modifier
+                .size(42.dp)
+                .align(Alignment.Center),
             model = if (selected) tabInfo.selectedImage else tabInfo.normalImage
         )
     }

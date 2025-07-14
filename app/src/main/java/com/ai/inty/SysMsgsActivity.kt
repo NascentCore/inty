@@ -56,6 +56,9 @@ enum class SysMsgTemplateId(val id: Int) {
     IMAGE_TEXT_LINK(5),
 }
 
+/**
+ * 消息同步页面
+ */
 @Route(path = Constant.ROUTE_SYS_MSGS)
 class SysMsgsActivity : ComponentActivity() {
 
@@ -63,7 +66,6 @@ class SysMsgsActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
         enableEdgeToEdge()
         setContent {
             IntyTheme {
@@ -202,7 +204,8 @@ fun SysMsgItemContainer(
             if (showClick) {
                 Box(
                     modifier = Modifier
-                        .fillMaxWidth().height(1.dp)
+                        .fillMaxWidth()
+                        .height(1.dp)
                         .background(
                             brush = Brush.horizontalGradient(
                                 colors = listOf(Color.Transparent, Color.White, Color.Transparent)
@@ -244,11 +247,15 @@ fun SysMsgItemImageTextLink(msg: SysMsgItem) {
         showClick = true,
     ) {
         IntyImage(
-            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp, 8.dp, 0.dp, 0.dp)),
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(8.dp, 8.dp, 0.dp, 0.dp)),
             model = msg.imageUrls.firstOrNull()
         )
         Text(
-            modifier = Modifier.padding(16.dp).fillMaxWidth(),
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth(),
             text = msg.content,
             fontSize = 14.sp,
             color = Color.White
@@ -264,7 +271,9 @@ fun SysMsgItemImage(msg: SysMsgItem) {
         showClick = false,
     ) {
         IntyImage(
-            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)),
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(8.dp)),
             model = msg.imageUrls.firstOrNull()
         )
     }
@@ -278,7 +287,9 @@ fun SysMsgItemImageLink(msg: SysMsgItem) {
         showClick = true,
     ) {
         IntyImage(
-            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp, 8.dp, 0.dp, 0.dp)),
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(8.dp, 8.dp, 0.dp, 0.dp)),
             model = msg.imageUrls.firstOrNull()
         )
     }
@@ -301,7 +312,9 @@ fun SysMsgItemTextLink(
         showClick = showClick,
     ) {
         Text(
-            modifier = Modifier.padding(16.dp).fillMaxWidth(),
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth(),
             text = msg.content,
             fontSize = 14.sp,
             color = Color.White

@@ -1,5 +1,8 @@
 package com.ai.inty
 
+/**
+ * 项目内的常量 定义
+ */
 class Constant {
     companion object {
         const val USER_HOST = "dev.inty.sxwl.ai"

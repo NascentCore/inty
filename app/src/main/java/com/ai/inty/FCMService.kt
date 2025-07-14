@@ -11,12 +11,14 @@ import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import com.inty.utils.log.EasyLog
 
-
+/**
+ * Firebase 消息推送服务
+ */
 class FCMService : FirebaseMessagingService() {
 
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
         // 1. 处理数据消息（应用前后台均触发）
-        if (remoteMessage.data.size > 0) {
+        if (remoteMessage.data.isNotEmpty()) {
             EasyLog.log( "Data: " + remoteMessage.data)
         }
 

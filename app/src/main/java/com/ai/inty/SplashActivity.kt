@@ -27,6 +27,9 @@ import com.inty.utils.log.EasyLog
 import com.therouter.TheRouter
 import kotlinx.coroutines.launch
 
+/**
+ * splash 启动页
+ */
 class SplashActivity : ComponentActivity() {
 
     private val viewModel: SplashViewModel by viewModels()

@@ -82,6 +82,9 @@ fun EditKey.toDisplayName(): String {
     }
 }
 
+/**
+ * 个人设置页面
+ */
 @Route(path = Constant.ROUTE_SETTING_MY)
 class MySettingActivity: BaseActivity() {
 

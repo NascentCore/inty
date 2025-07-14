@@ -95,6 +95,9 @@ import java.io.File
 import java.util.UUID
 import android.graphics.Color as AndroidColor
 
+/**
+ * 创建角色的页面
+ */
 @Route(path = Constant.ROUTE_CREATE_ROLE)
 class CreateRoleActivity : BaseActivity() {
 

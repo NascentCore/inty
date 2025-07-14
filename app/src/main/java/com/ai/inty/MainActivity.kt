@@ -39,6 +39,9 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+/**
+ * 主页面，包含聊天、消息与关注、创建模型、模型列表、“我的”
+ */
 @Route(path = Constant.ROUTE_MAIN)
 class MainActivity : BaseActivity() {
 

@@ -68,6 +68,9 @@ import com.ai.inty.viewmodels.AvatarGenerateViewModel
 import com.inty.utils.log.EasyLog
 import com.therouter.router.Route
 
+/**
+ * 头像生成页面
+ */
 @Route(path = Constant.ROUTE_AVATAR_GENERATE)
 class AvatarGenerateActivity : BaseActivity() {
 

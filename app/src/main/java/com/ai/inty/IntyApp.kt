@@ -8,6 +8,9 @@ import com.inty.utils.log.EasyLog
 import com.inty.utils.log.defaultInit
 import com.therouter.TheRouter
 
+/**
+ * 应用Application的实现类
+ */
 class IntyApp : Application() {
 
 

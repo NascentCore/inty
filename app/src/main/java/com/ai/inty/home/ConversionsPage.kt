@@ -53,6 +53,9 @@ enum class ConversionsPageTab {
     TabFollowing
 }
 
+/**
+ * 主页面第二个tab，会话列表页面，包含关注和聊天列表
+ */
 @Composable
 fun ConversionsPage(
     modifier: Modifier,

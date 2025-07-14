@@ -29,6 +29,9 @@ import com.therouter.router.Route
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
+/**
+ * 私聊的 聊天页面
+ */
 @Route(path = Constant.ROUTE_CHAT)
 class ChatActivity : BaseActivity() {
 

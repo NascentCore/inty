@@ -3,7 +3,6 @@ package com.ai.inty
 import android.os.Bundle
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.Image
@@ -52,6 +51,9 @@ import com.therouter.router.Autowired
 import com.therouter.router.Route
 import kotlinx.coroutines.launch
 
+/**
+ * 举报页面
+ */
 @Route(path = Constant.ROUTE_REPORT)
 class ReportActivity : BaseActivity() {
 
@@ -139,7 +141,9 @@ fun ReportScreen(
 ) {
 
     Scaffold(
-        modifier = Modifier.fillMaxSize().background(BackGround),
+        modifier = Modifier
+            .fillMaxSize()
+            .background(BackGround),
         containerColor = BackGround,
         topBar = {
             CenterAlignedTopAppBar(
@@ -273,7 +277,9 @@ fun ReportScreen(
                 Spacer(Modifier.height(12.dp))
 
                 Box(
-                    modifier = Modifier.fillMaxWidth().height(112.dp)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(112.dp)
                         .background(
                             color = Color.White.copy(0.1f),
                             shape = RoundedCornerShape(8.dp)
@@ -281,7 +287,9 @@ fun ReportScreen(
                         .padding(vertical = 10.dp)
                 ) {
                     IntySmallTextField2(
-                        modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 16.dp),
                         value = description,
                         placeholder = {
                             Text(
@@ -299,7 +307,9 @@ fun ReportScreen(
                     )
 
                     Text(
-                        modifier = Modifier.align(Alignment.BottomEnd).padding(horizontal = 12.dp),
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(horizontal = 12.dp),
                         text = "${description.length}/400",
                         fontSize = 12.sp,
                         color = Color.White.copy(0.55f),
@@ -346,7 +356,8 @@ fun ReportScreen(
                 Spacer(Modifier.height(12.dp))
 
                 Box(
-                    modifier = Modifier.size(88.dp)
+                    modifier = Modifier
+                        .size(88.dp)
                         .align(Alignment.Start)
                         .background(
                             color = Color.White.copy(0.1f),
@@ -362,9 +373,12 @@ fun ReportScreen(
                         )
                     } else {
                         Image(
-                            modifier = Modifier.size(26.dp).align(Alignment.Center).noRippleClickable {
-                                onClickAddImage()
-                            },
+                            modifier = Modifier
+                                .size(26.dp)
+                                .align(Alignment.Center)
+                                .noRippleClickable {
+                                    onClickAddImage()
+                                },
                             painter = painterResource(R.drawable.btn_add6),
                             contentDescription = null,
                         )

@@ -66,6 +66,8 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.ai.inty.Constant
 import com.ai.inty.R
+import com.ai.inty.base.BottomSheetDialog
+import com.ai.inty.base.DiaAmountLayout
 import com.ai.inty.base.IntyCircleImage
 import com.ai.inty.base.IntyImage
 import com.ai.inty.base.IntySmallTextField
@@ -80,8 +82,6 @@ import com.ai.inty.viewmodels.ChatViewModel
 import com.inty.utils.log.EasyLog
 import com.inty.utils.storage.IntySetting
 import com.therouter.TheRouter
-import github.leavesczy.composebottomsheetdialog.BottomSheetDialog
-import github.leavesczy.composebottomsheetdialog.DiaAmountLayout
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 

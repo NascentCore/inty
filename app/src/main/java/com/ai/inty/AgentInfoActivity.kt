@@ -62,6 +62,9 @@ import com.therouter.TheRouter
 import com.therouter.router.Autowired
 import com.therouter.router.Route
 
+/**
+ * Ai模型的信息介绍页面
+ */
 @Route(path = Constant.ROUTE_AGENT_INFO)
 class AgentInfoActivity : BaseActivity() {
 
