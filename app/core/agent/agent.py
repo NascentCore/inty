@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, List, Union
 import uuid
 import time
 import asyncio
@@ -16,6 +16,8 @@ from app.core.config import settings
 from psycopg import Connection
 from psycopg_pool import ConnectionPool
 from langchain_core.messages import BaseMessage, HumanMessage, AIMessage, SystemMessage
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_core.runnables import Runnable, RunnableLambda, RunnablePassthrough
 import json
 from psycopg import sql
 from langchain_core.tools import Tool
@@ -90,7 +92,24 @@ google_search_tool = Tool(
 
 
 class Agent:
-    def __init__(self, agent_id: str, name: str, model_config: dict, system_prompt: str, description: str = "", template_name: str = "default"):
+    def __init__(self, 
+                 agent_id: str, 
+                 name: str, 
+                 model_config: dict, 
+                 system_prompt: str, 
+                 description: str = "", 
+                 template_name: str = "default",
+                 # 角色卡相关参数
+                 personality: str = "",
+                 scenario: str = "",
+                 first_message: str = "",
+                 message_example: str = "",
+                 creator_notes: str = "",
+                 tags: List[str] = None,
+                 character_version: str = "1.0",
+                 extensions: Dict[str, Any] = None):
+        
+        # 基础属性
         self.agent_id = agent_id
         self.name = name
         self.model_config = model_config
@@ -98,16 +117,34 @@ class Agent:
         self.system_prompt = system_prompt
         self.description = description
         self.template_name = template_name
-        self._last_used_lock = RLock()  # 仅保护last_used更新
-        self._user_info_cache = {}  # 缓存已初始化的用户信息，避免重复查询
+        self._last_used_lock = RLock()
+        self._user_info_cache = {}
         
-        # 保存原始agent数据用于查询提示词
+        # 角色卡相关属性
+        self.personality = personality
+        self.scenario = scenario
+        self.first_message = first_message
+        self.message_example = message_example
+        self.creator_notes = creator_notes
+        self.tags = tags or []
+        self.character_version = character_version
+        self.extensions = extensions or {}
+        
+        # 更新agent数据以包含角色卡信息
         self._agent_data = {
             'id': agent_id,
             'name': name,
             'prompt': system_prompt,
             'description': description,
-            'model_config': model_config
+            'model_config': model_config,
+            'personality': personality,
+            'scenario': scenario,
+            'first_message': first_message,
+            'message_example': message_example,
+            'creator_notes': creator_notes,
+            'tags': tags,
+            'character_version': character_version,
+            'extensions': extensions
         }
         
         # 线程池用于异步执行聊天任务
@@ -116,7 +153,7 @@ class Agent:
             thread_name_prefix=f"agent-{agent_id}"
         )
 
-        # 使用配置中的模型设置，如果没有则使用默认设置
+        # 使用配置中的模型设置
         model_name = model_config.get('model', settings.agent.model)
         api_key = model_config.get('api_key', settings.agent.api_key)
         base_url = model_config.get('base_url', settings.agent.base_url)
@@ -130,11 +167,8 @@ class Agent:
         # 为每个Agent创建独立的checkpointer
         self.checkpointer = MemorySaver()
         
-        # 使用模版系统渲染最终的提示词
-        self.final_prompt = prompt_template_manager.render_prompt(
-            agent_data=self._agent_data,
-            template_name=template_name
-        )
+        # 构建动态提示词Runnable
+        self.prompt_runnable = self._create_dynamic_prompt_runnable()
         
         self.agent = create_react_agent(
             name=name,
@@ -144,20 +178,99 @@ class Agent:
                 create_search_memory_tool(namespace=('memories',name,'{user_id}')),
                 google_search_tool
                 ],
-            prompt=self.final_prompt,
-            store = postgres_store,
-            checkpointer=self.checkpointer  # 使用实例级别的checkpointer
+            prompt=self.prompt_runnable,
+            store=postgres_store,
+            checkpointer=self.checkpointer
         )
 
+    def _create_dynamic_prompt_runnable(self) -> Runnable:
+        """
+        创建动态提示词Runnable，支持角色卡信息和用户profile信息
+        """
+        def build_system_messages(inputs: Dict[str, Any]) -> List[SystemMessage]:
+            """构建系统消息列表"""
+            system_messages = []
+            
+            # 1. 基础系统提示词
+            base_prompt = prompt_template_manager.render_prompt(
+                agent_data=self._agent_data,
+                template_name=self.template_name
+            )
+            if base_prompt:
+                system_messages.append(SystemMessage(content=base_prompt))
+            
+            # 2. 角色卡信息
+            character_context = self._build_character_context()
+            if character_context:
+                system_messages.append(SystemMessage(content=character_context))
+            
+            # 3. 用户profile信息（从inputs中获取）
+            user_profile = inputs.get('user_profile', '')
+            if user_profile:
+                system_messages.append(SystemMessage(content=user_profile))
+            
+            # 4. 首次对话开场白处理
+            if inputs.get('is_first_message', False) and self.first_message:
+                greeting_context = f"[对话开始指引]\n{self.first_message}\n请以自然的方式开始对话，体现角色特征。"
+                system_messages.append(SystemMessage(content=greeting_context))
+            
+            return system_messages
+        
+        # 创建动态prompt模板
+        prompt_template = ChatPromptTemplate.from_messages([
+            # 动态生成的系统消息
+            ("system", "{system_messages}"),
+            # 对话历史
+            MessagesPlaceholder(variable_name="messages")
+        ])
+        
+        # 创建Runnable链
+        return (
+            RunnablePassthrough.assign(
+                system_messages=RunnableLambda(build_system_messages)
+            )
+            | RunnableLambda(lambda x: {
+                "system_messages": "\n\n".join([msg.content for msg in x["system_messages"]]),
+                "messages": x["messages"]
+            })
+            | prompt_template
+        )
+    
+    def _build_character_context(self) -> str:
+        """
+        构建角色卡上下文信息
+        """
+        context_parts = []
+        
+        # 性格特征
+        if self.personality:
+            context_parts.append(f"[角色性格]\n{self.personality}")
+        
+        # 场景设定
+        if self.scenario:
+            context_parts.append(f"[场景背景]\n{self.scenario}")
+        
+        # 对话示例
+        if self.message_example:
+            context_parts.append(f"[对话风格参考]\n{self.message_example}")
+        
+        # 标签信息（用于角色行为指导）
+        if self.tags:
+            context_parts.append(f"[角色标签]\n{', '.join(self.tags)}")
+        
+        if context_parts:
+            return "\n\n".join(context_parts)
+        
+        return ""
+    
     def _update_last_used(self):
         """线程安全地更新最后使用时间"""
         with self._last_used_lock:
             self.last_used = time.time()
 
-    def _get_user_info_context_sync(self, user_id: str) -> str:
+    def _get_user_profile_sync(self, user_id: str) -> str:
         """
-        同步获取用户基本信息的上下文文本
-        用于在聊天时注入用户信息
+        同步获取用户profile信息
         """
         # 检查缓存
         if user_id in self._user_info_cache:
@@ -215,13 +328,36 @@ class Agent:
             logger.error(f"获取用户 {user_id} 基本信息失败: {str(e)}")
             self._user_info_cache[user_id] = ""
             return ""
+    
+    def _is_first_message_in_session(self, session_id: str) -> bool:
+        """
+        检查是否是会话中的第一条消息
+        """
+        try:
+            pool = get_connection_pool()
+            with pool.connection() as conn:
+                # 检查session_id对应的历史记录数量
+                query = sql.SQL("""
+                    SELECT COUNT(*) 
+                    FROM chat_history 
+                    WHERE session_id = %s
+                """)
+                result = conn.execute(query, (session_id,))
+                count = result.fetchone()[0]
+                return count == 0
+        except Exception as e:
+            logger.error(f"检查首次消息失败: {str(e)}")
+            return False
 
     def _chat_sync(self, user_id: str, session_id: str, messages: dict[str, Any]) -> str:
-        """同步聊天方法，在线程池中执行"""
+        """同步聊天方法，支持角色卡功能"""
         self._update_last_used()
         
-        # 获取用户信息上下文（同步方法）
-        user_info_context = self._get_user_info_context_sync(user_id)
+        # 获取用户profile信息
+        user_profile = self._get_user_profile_sync(user_id)
+        
+        # 检查是否是首次对话
+        is_first_message = self._is_first_message_in_session(session_id)
         
         # 从连接池获取连接
         pool = get_connection_pool()
@@ -233,31 +369,32 @@ class Agent:
                     sync_connection=conn_local
                 )
 
-                # 如果有用户信息上下文，将其添加到消息中
-                enhanced_messages = messages["messages"].copy()
-                if user_info_context:
-                    context_message = SystemMessage(content=user_info_context)
-                    enhanced_messages.insert(0, context_message)
+                # 保存原始用户消息到历史记录
+                history.add_messages(messages["messages"])
 
-                history.add_messages(messages["messages"])  # 只保存原始用户消息到历史记录
-
+                # 构建输入数据，包含用户profile和首次消息标志
+                input_data = {
+                    "messages": messages["messages"],
+                    "user_profile": user_profile,
+                    "is_first_message": is_first_message
+                }
+                
                 # 使用更精确的thread_id，包含agent_id避免混淆
                 thread_id = f"{user_id}_{self.agent_id}"
                 config = {'configurable':{'user_id':user_id,'thread_id':thread_id}}
                 
-                # 使用增强的消息（包含用户信息）进行对话
-                enhanced_messages_dict = {"messages": enhanced_messages}
-                response = self.agent.invoke(enhanced_messages_dict, config)
+                # 调用agent进行对话
+                response = self.agent.invoke(input_data, config)
                 
                 # 如果启用调试日志记录，保存 response.get("messages",[]) 到数据库
                 if settings.agent.enable_debug_logging:
                     self._save_debug_messages(user_id, session_id, response, conn_local)
 
                 ai_messages = [message for message in response.get("messages",[]) if isinstance(message, AIMessage)]
-                response = ai_messages[-1].content if ai_messages else "抱歉，我无法理解您的消息。请再试一次。"
+                response_text = ai_messages[-1].content if ai_messages else "抱歉，我无法理解您的消息。请再试一次。"
 
-                history.add_messages([AIMessage(content=response)])
-                return response
+                history.add_messages([AIMessage(content=response_text)])
+                return response_text
             except Exception as e:
                 logger.error(f"聊天处理失败 - Agent: {self.agent_id}, Session: {session_id}, Error: {str(e)}")
                 raise
@@ -266,9 +403,14 @@ class Agent:
         """保存调试信息到数据库"""
         try:
             # 将 LangChain 消息对象转换为可序列化的字典
+            try:
+                final_prompt = self.get_final_prompt()
+            except:
+                final_prompt = self.system_prompt
+            
             serializable_messages = [{
                 "type": "system",
-                "content": self.final_prompt
+                "content": final_prompt
             }]
             for msg in response.get("messages", []):
                 if hasattr(msg, 'type') and hasattr(msg, 'content'):
@@ -326,8 +468,11 @@ class Agent:
         self._update_last_used()
         
         def _stream_generator():
-            # 获取用户信息上下文（同步方法）
-            user_info_context = self._get_user_info_context_sync(user_id)
+            # 获取用户profile信息
+            user_profile = self._get_user_profile_sync(user_id)
+            
+            # 检查是否是首次对话
+            is_first_message = self._is_first_message_in_session(session_id)
             
             # 从连接池获取连接
             pool = get_connection_pool()
@@ -339,24 +484,20 @@ class Agent:
                         sync_connection=conn_local
                     )
 
-                    # 如果有用户信息上下文，将其添加到消息中
-                    enhanced_messages = messages["messages"].copy()
-                    if user_info_context:
-                        # 在用户消息前添加用户信息上下文
-                        from langchain_core.messages import SystemMessage
-                        context_message = SystemMessage(content=user_info_context)
-                        enhanced_messages.insert(0, context_message)
+                    # 构建输入数据，包含用户profile和首次消息标志
+                    input_data = {
+                        "messages": messages["messages"],
+                        "user_profile": user_profile,
+                        "is_first_message": is_first_message
+                    }
 
                     # 使用更精确的thread_id，包含agent_id避免混淆
                     thread_id = f"{user_id}_{self.agent_id}"
                     config = {'configurable':{'user_id':user_id,'thread_id':thread_id}}
-
-                    # 使用增强的消息（包含用户信息）进行流式对话
-                    enhanced_messages_dict = {"messages": enhanced_messages}
                     
                     # 收集完整的流式响应用于调试
                     all_messages = []
-                    for message_chunk, metadata in self.agent.stream(enhanced_messages_dict, config, stream_mode="messages"):
+                    for message_chunk, metadata in self.agent.stream(input_data, config, stream_mode="messages"):
                         all_messages.append(message_chunk)
                         yield message_chunk, metadata
                     
@@ -389,7 +530,45 @@ class Agent:
         Returns:
             渲染后的完整提示词
         """
-        return self.final_prompt
+        # 构建示例输入来展示完整提示词
+        example_input = {
+            "messages": [HumanMessage(content="示例消息")],
+            "user_profile": "[示例用户信息]",
+            "is_first_message": False
+        }
+        
+        try:
+            # 通过Runnable生成示例提示词
+            formatted_prompt = self.prompt_runnable.invoke(example_input)
+            if hasattr(formatted_prompt, 'messages'):
+                return "\n\n".join([msg.content for msg in formatted_prompt.messages if hasattr(msg, 'content')])
+            else:
+                return str(formatted_prompt)
+        except Exception as e:
+            logger.error(f"生成提示词示例失败: {str(e)}")
+            # 回退到基础提示词
+            return prompt_template_manager.render_prompt(
+                agent_data=self._agent_data,
+                template_name=self.template_name
+            )
+    
+    def get_character_info(self) -> Dict[str, Any]:
+        """
+        获取角色卡信息
+        
+        Returns:
+            包含角色卡信息的字典
+        """
+        return {
+            'personality': self.personality,
+            'scenario': self.scenario,
+            'first_message': self.first_message,
+            'message_example': self.message_example,
+            'creator_notes': self.creator_notes,
+            'tags': self.tags,
+            'character_version': self.character_version,
+            'extensions': self.extensions
+        }
 
     def get_template_info(self) -> Dict[str, Any]:
         """
@@ -600,7 +779,16 @@ class AgentManager:
                         model_config=model_config,
                         system_prompt=system_prompt,
                         description=description,
-                        template_name=template_name
+                        template_name=template_name,
+                        # 角色卡相关参数
+                        personality=agent_data.get('personality', ''),
+                        scenario=agent_data.get('scenario', ''),
+                        first_message=agent_data.get('first_message', ''),
+                        message_example=agent_data.get('message_example', ''),
+                        creator_notes=agent_data.get('creator_notes', ''),
+                        tags=agent_data.get('tags', []),
+                        character_version=agent_data.get('character_version', '1.0'),
+                        extensions=agent_data.get('extensions', {})
                     )
                     
                     # 验证创建的Agent实例的agent_id
@@ -633,7 +821,16 @@ class AgentManager:
                     'id': agent_db.id,
                     'name': agent_db.name,
                     'prompt': agent_db.prompt,
-                    'settings': agent_db.settings
+                    'settings': agent_db.settings,
+                    # 角色卡相关字段
+                    'personality': getattr(agent_db, 'personality', ''),
+                    'scenario': getattr(agent_db, 'scenario', ''),
+                    'first_message': getattr(agent_db, 'first_message', ''),
+                    'message_example': getattr(agent_db, 'message_example', ''),
+                    'creator_notes': getattr(agent_db, 'creator_notes', ''),
+                    'tags': getattr(agent_db, 'tags', []),
+                    'character_version': getattr(agent_db, 'character_version', '1.0'),
+                    'extensions': getattr(agent_db, 'extensions', {})
                 }
                 await self.get_agent(agent_data)
                 

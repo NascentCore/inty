@@ -94,6 +94,7 @@ class FirebaseConfig:
 
 @dataclass
 class KeepTalkingConfig:
+    enabled: bool = False  # 默认不启用keep_talking服务
     check_interval: int = 300  # 5分钟检查一次
     max_idle_time: int = 1800  # 30分钟没有回复则发送keep_talking消息
     max_keep_talking_messages: int = 3  # 最多发送3条keep_talking消息

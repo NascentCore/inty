@@ -14,6 +14,7 @@ from app.services.chat_service import generate_session_id
 from app.services.subscription_service import subscription_service
 from app.services.keep_talking_service import keep_talking_service
 from app.core.agent.agent import agent_manager
+from app.core.config import settings
 from langchain_core.messages import HumanMessage
 import logging
 
@@ -99,6 +100,7 @@ async def get_keep_talking_status(
     Get Keep Talking service status
     """
     return {
+        "enabled": settings.keep_talking.enabled,
         "running": keep_talking_service._running,
         "check_interval": keep_talking_service.check_interval,
         "max_idle_time": keep_talking_service.max_idle_time,
@@ -106,6 +108,56 @@ async def get_keep_talking_status(
         "active_sessions_count": len(keep_talking_service._keep_talking_counts),
         "keep_talking_counts": keep_talking_service._keep_talking_counts
     }
+
+
+@router.post("/keep-talking/start")
+async def start_keep_talking_service(
+    current_user: schemas.User = Depends(deps.get_current_active_user),
+):
+    """
+    Start the Keep Talking service
+    """
+    try:
+        if keep_talking_service._running:
+            return {
+                "status": "info",
+                "message": "Keep Talking service is already running",
+                "running": True
+            }
+        
+        await keep_talking_service.start()
+        return {
+            "status": "success",
+            "message": "Keep Talking service started",
+            "running": keep_talking_service._running
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to start service: {str(e)}")
+
+
+@router.post("/keep-talking/stop")
+async def stop_keep_talking_service(
+    current_user: schemas.User = Depends(deps.get_current_active_user),
+):
+    """
+    Stop the Keep Talking service
+    """
+    try:
+        if not keep_talking_service._running:
+            return {
+                "status": "info",
+                "message": "Keep Talking service is not running",
+                "running": False
+            }
+        
+        await keep_talking_service.stop()
+        return {
+            "status": "success",
+            "message": "Keep Talking service stopped",
+            "running": keep_talking_service._running
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to stop service: {str(e)}")
 
 
 @router.post("/keep-talking/check")
@@ -116,6 +168,9 @@ async def trigger_keep_talking_check(
     Manually trigger Keep Talking check (for testing and debugging)
     """
     try:
+        if not keep_talking_service._running:
+            raise HTTPException(status_code=400, detail="Keep Talking service is not running")
+        
         await keep_talking_service._check_idle_chats()
         return {
             "status": "success",

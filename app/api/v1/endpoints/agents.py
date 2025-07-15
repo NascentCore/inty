@@ -15,6 +15,13 @@ from app.core.config import settings
 from app.schemas.response import APIResponse
 from app.core.agent.avater import generate_background_image_to_gcs
 from app.core.agent.agent import agent_manager
+from app.services.character_card_service import character_card_service
+from app.schemas.character_card import (
+    CharacterCardImportRequest,
+    CharacterCardImportResponse,
+    CharacterCardExportRequest,
+    CharacterCardValidationResponse
+)
 
 router = APIRouter()
 
@@ -642,4 +649,168 @@ async def list_prompt_templates(
         
     except Exception as e:
         logger.error(f"获取提示词模版列表失败: {str(e)}")
-        return schemas.APIResponse.error(message="获取模版列表失败") 
+        return schemas.APIResponse.error(message="获取模版列表失败")
+
+
+# ==================== 角色卡相关API端点 ====================
+
+@router.post("/import-character-card", response_model=APIResponse[CharacterCardImportResponse])
+async def import_character_card(
+    request: CharacterCardImportRequest,
+    current_user: schemas.User = Depends(deps.get_current_active_user),
+    db: AsyncSession = Depends(deps.get_async_db)
+):
+    """
+    从JSON数据导入角色卡
+    """
+    try:
+        result = await character_card_service.import_character_card(
+            request=request,
+            user_id=current_user.id,
+            db=db
+        )
+        
+        if result.success:
+            return APIResponse.success(data=result)
+        else:
+            return APIResponse.error(message=result.message, data=result)
+            
+    except Exception as e:
+        logger.error(f"导入角色卡失败: {str(e)}")
+        return APIResponse.error(message=f"导入角色卡失败: {str(e)}")
+
+
+@router.post("/import-character-card-file", response_model=APIResponse[CharacterCardImportResponse])
+async def import_character_card_file(
+    file: UploadFile = File(...),
+    override_existing: bool = Query(False, description="是否覆盖现有同名角色"),
+    import_character_book: bool = Query(True, description="是否导入角色书"),
+    import_alternate_greetings: bool = Query(True, description="是否导入替代问候语"),
+    current_user: schemas.User = Depends(deps.get_current_active_user),
+    db: AsyncSession = Depends(deps.get_async_db)
+):
+    """
+    从文件导入角色卡（支持JSON和PNG文件）
+    """
+    try:
+        # 验证文件大小 (最大10MB)
+        if file.size and file.size > 10 * 1024 * 1024:
+            return APIResponse.error(message="文件大小不能超过10MB")
+        
+        result = await character_card_service.import_character_card_from_file(
+            file=file,
+            user_id=current_user.id,
+            db=db,
+            override_existing=override_existing,
+            import_character_book=import_character_book,
+            import_alternate_greetings=import_alternate_greetings
+        )
+        
+        if result.success:
+            return APIResponse.success(data=result)
+        else:
+            return APIResponse.error(message=result.message, data=result)
+            
+    except Exception as e:
+        logger.error(f"从文件导入角色卡失败: {str(e)}")
+        return APIResponse.error(message=f"从文件导入角色卡失败: {str(e)}")
+
+
+@router.post("/export-character-card", response_model=APIResponse[dict])
+async def export_character_card(
+    request: CharacterCardExportRequest,
+    current_user: schemas.User = Depends(deps.get_current_active_user),
+    db: AsyncSession = Depends(deps.get_async_db)
+):
+    """
+    导出Agent为角色卡格式
+    """
+    try:
+        card_data = await character_card_service.export_agent_to_character_card(
+            agent_id=request.agent_id,
+            user_id=current_user.id,
+            db=db,
+            include_character_book=request.include_character_book,
+            include_alternate_greetings=request.include_alternate_greetings,
+            include_extensions=request.include_extensions
+        )
+        
+        return APIResponse.success(data=card_data.dict())
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"导出角色卡失败: {str(e)}")
+        return APIResponse.error(message=f"导出角色卡失败: {str(e)}")
+
+
+@router.get("/{agent_id}/character-card", response_model=APIResponse[dict])
+async def get_agent_character_card(
+    agent_id: str,
+    include_character_book: bool = Query(True, description="是否包含角色书"),
+    include_alternate_greetings: bool = Query(True, description="是否包含替代问候语"),
+    include_extensions: bool = Query(True, description="是否包含扩展数据"),
+    current_user: schemas.User = Depends(deps.get_current_active_user),
+    db: AsyncSession = Depends(deps.get_async_db)
+):
+    """
+    获取Agent的角色卡数据
+    """
+    try:
+        card_data = await character_card_service.export_agent_to_character_card(
+            agent_id=agent_id,
+            user_id=current_user.id,
+            db=db,
+            include_character_book=include_character_book,
+            include_alternate_greetings=include_alternate_greetings,
+            include_extensions=include_extensions
+        )
+        
+        return APIResponse.success(data=card_data.dict())
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"获取角色卡数据失败: {str(e)}")
+        return APIResponse.error(message=f"获取角色卡数据失败: {str(e)}")
+
+
+@router.post("/validate-character-card", response_model=APIResponse[CharacterCardValidationResponse])
+async def validate_character_card(
+    card_data: dict,
+    current_user: schemas.User = Depends(deps.get_current_active_user)
+):
+    """
+    验证角色卡数据格式
+    """
+    try:
+        result = await character_card_service.validate_character_card(card_data)
+        return APIResponse.success(data=result)
+        
+    except Exception as e:
+        logger.error(f"验证角色卡失败: {str(e)}")
+        return APIResponse.error(message=f"验证角色卡失败: {str(e)}")
+
+
+@router.get("/character-card/features", response_model=APIResponse[dict])
+async def get_character_card_features(
+    current_user: schemas.User = Depends(deps.get_current_active_user)
+):
+    """
+    获取支持的角色卡功能列表
+    """
+    try:
+        from app.services.character_card_mapper import CharacterCardMapper
+        
+        mapper = CharacterCardMapper()
+        features = mapper.get_supported_features()
+        
+        return APIResponse.success(data={
+            'supported_features': features,
+            'spec_version': 'chara_card_v2',
+            'spec_version_number': '2.0'
+        })
+        
+    except Exception as e:
+        logger.error(f"获取角色卡功能列表失败: {str(e)}")
+        return APIResponse.error(message=f"获取角色卡功能列表失败: {str(e)}") 

@@ -21,6 +21,20 @@ class AgentBase(BaseModel):
     photos: Optional[List[str]] = None
     category: Optional[str] = None
     prompt: Optional[str] = None
+    
+    # 角色卡相关字段
+    character_card_spec: Optional[str] = None
+    personality: Optional[str] = None
+    scenario: Optional[str] = None
+    first_message: Optional[str] = None
+    message_example: Optional[str] = None
+    creator_notes: Optional[str] = None
+    post_history_instructions: Optional[str] = None
+    alternate_greetings: Optional[List[str]] = None
+    character_book: Optional[Dict[str, Any]] = None
+    tags: Optional[List[str]] = None
+    character_version: Optional[str] = None
+    extensions: Optional[Dict[str, Any]] = None
 
 class AgentCreate(AgentBase):
     """创建AI角色"""
@@ -32,6 +46,19 @@ class AgentUpdate(AgentBase):
     gender: Optional[str] = None
     visibility: Optional[AgentVisibility] = None
     prompt: Optional[str] = None
+    
+    # 角色卡相关字段
+    personality: Optional[str] = None
+    scenario: Optional[str] = None
+    first_message: Optional[str] = None
+    message_example: Optional[str] = None
+    creator_notes: Optional[str] = None
+    post_history_instructions: Optional[str] = None
+    alternate_greetings: Optional[List[str]] = None
+    character_book: Optional[Dict[str, Any]] = None
+    tags: Optional[List[str]] = None
+    character_version: Optional[str] = None
+    extensions: Optional[Dict[str, Any]] = None
 
 class AgentInDB(AgentBase):
     """数据库中的AI角色"""

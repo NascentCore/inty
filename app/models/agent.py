@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, Column, String, DateTime, Enum, ForeignKey, JSON
+from sqlalchemy import Boolean, Column, String, DateTime, Enum, ForeignKey, JSON, Text
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 import enum
@@ -45,6 +45,21 @@ class Agent(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=sa.text('now()'))
     deleted_at = Column(DateTime(timezone=True), nullable=True)
     prompt = Column(String)
+
+    # 角色卡相关字段
+    character_card_spec = Column(String, nullable=True)  # 角色卡规范版本
+    character_card_data = Column(JSON, nullable=True)  # 原始角色卡数据
+    personality = Column(Text, nullable=True)  # 性格特征
+    scenario = Column(Text, nullable=True)  # 场景设定
+    first_message = Column(Text, nullable=True)  # 第一条消息
+    message_example = Column(Text, nullable=True)  # 对话示例
+    creator_notes = Column(Text, nullable=True)  # 创建者备注
+    post_history_instructions = Column(Text, nullable=True)  # 历史后指令
+    alternate_greetings = Column(JSON, nullable=True)  # 替代问候语
+    character_book = Column(JSON, nullable=True)  # 角色书
+    tags = Column(JSON, nullable=True)  # 标签
+    character_version = Column(String, nullable=True)  # 版本号
+    extensions = Column(JSON, nullable=True)  # 扩展数据
 
     # 外键
     creator_id = Column(String, ForeignKey("users.id"))
