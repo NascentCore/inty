@@ -20,4 +20,22 @@
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
 
+# Moshi 混淆规则 - 确保Kotlin类型能够正确序列化
+-keep class com.squareup.moshi.** { *; }
+-keep class * extends com.squareup.moshi.JsonAdapter {
+    public static com.squareup.moshi.JsonAdapter create();
+}
+
+# 保留Kotlin反射相关类
+-keep class kotlin.reflect.** { *; }
+-keep class kotlin.Metadata { *; }
+
+# 保留数据类
+-keepclassmembers class * {
+    @com.squareup.moshi.* <methods>;
+}
+
+# 保留Moshi注解
+-keep @com.squareup.moshi.JsonQualifier interface * { *; }
+
 

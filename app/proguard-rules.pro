@@ -26,6 +26,14 @@
     public *;
 }
 
+# 保留计费相关类
+-keep class com.ai.inty.billing.** {
+    public *;
+}
+-keep class com.ai.inty.billing.VipStatus { *; }
+-keep class com.ai.inty.billing.VipPlan { *; }
+-keep class com.ai.inty.billing.BillingEvent { *; }
+
 # 保留日志库
 -keep class com.tencent.mars.xlog.** { *; }
 
@@ -42,6 +50,15 @@
 -keep class com.squareup.moshi.** { *; }
 -keep class * extends com.squareup.moshi.JsonAdapter {
     public static com.squareup.moshi.JsonAdapter create();
+}
+
+# 保留Kotlin反射相关类
+-keep class kotlin.reflect.** { *; }
+-keep class kotlin.Metadata { *; }
+
+# 保留数据类
+-keepclassmembers class * {
+    @com.squareup.moshi.* <methods>;
 }
 
 # TheRouter 混淆规则
