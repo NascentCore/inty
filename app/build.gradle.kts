@@ -43,7 +43,7 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.ai.inty"
+        applicationId = "com.ai.heartmate"
         minSdk = 29
         targetSdk = 36
         versionCode = 6
