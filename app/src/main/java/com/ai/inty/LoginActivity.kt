@@ -304,7 +304,6 @@ private fun PolicyText() {
                 style = linkTextStyle
             )
         }
-        Text(text = "and", style = baseTextStyle)
         TextButton(
             onClick = { 
                 val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, 
