@@ -11,6 +11,7 @@ from app import schemas
 from app.api import deps
 from app.services import chat_service, agent_service, chat_history_service
 from app.services.chat_service import generate_session_id
+from app.services.subscription_service import subscription_service
 from app.services.keep_talking_service import keep_talking_service
 from app.core.agent.agent import agent_manager
 from langchain_core.messages import HumanMessage
@@ -355,21 +356,20 @@ async def agent_chat_completions(
     """
     try:
         # 检查用户聊天次数限制
-        from app.services.subscription_service import subscription_service
-        is_allowed, used_count, daily_limit = await subscription_service.check_chat_limit(
-            db, current_user.id
-        )
+        # is_allowed, used_count, daily_limit = await subscription_service.check_chat_limit(
+        #     db, current_user.id
+        # )
         
-        if not is_allowed:
-            raise HTTPException(
-                status_code=429,  # Too Many Requests
-                detail={
-                    "message": "今日聊天次数已达上限",
-                    "used_count": used_count,
-                    "daily_limit": daily_limit,
-                    "error_code": "CHAT_LIMIT_EXCEEDED"
-                }
-            )
+        # if not is_allowed:
+        #     raise HTTPException(
+        #         status_code=429,  # Too Many Requests
+        #         detail={
+        #             "message": "今日聊天次数已达上限",
+        #             "used_count": used_count,
+        #             "daily_limit": daily_limit,
+        #             "error_code": "CHAT_LIMIT_EXCEEDED"
+        #         }
+        #     )
         
         # 首先验证Agent是否存在
         agent_db = await agent_service.get_agent(db, agent_id=agent_id)
