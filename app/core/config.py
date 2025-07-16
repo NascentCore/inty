@@ -81,6 +81,10 @@ class AgentConfig:
     api_key: str = "ff9ed2dd-cdf0-40d4-b4ec-d3aa19e2bd0b"
     temperature: float = 0.5
     max_tokens: int = 1000
+    top_p: float = 1.0
+    top_k: int = 50
+    frequency_penalty: float = 0.0
+    presence_penalty: float = 0.0
     enable_debug_logging: bool = False  # 是否启用调试日志记录功能
 
 @dataclass

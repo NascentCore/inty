@@ -13,6 +13,7 @@ from app import models, schemas
 from app.models.agent import AgentVisibility, AgentStatus
 from app.models.associations import agent_followers
 from app.core.config import settings
+from app.core.agent.agent import agent_manager
 
 logger = logging.getLogger(__name__)
 
@@ -431,7 +432,40 @@ async def update_agent(db: AsyncSession, db_agent: models.Agent, agent_in: schem
             .options(selectinload(models.Agent.creator))
             .where(models.Agent.id == db_agent.id)
         )
-        return result.scalar_one()
+        updated_agent = result.scalar_one()
+        
+        # 重新加载Agent实例到AgentManager缓存中
+        try:
+            agent_data = {
+                'id': updated_agent.id,
+                'name': updated_agent.name,
+                'prompt': updated_agent.prompt or "你是一个聊天助手，请用中文回答用户的问题。",
+                'description': '',
+                'settings': updated_agent.settings or {},
+                'personality': updated_agent.personality or '',
+                'scenario': updated_agent.scenario or '',
+                'first_message': updated_agent.first_message or '',
+                'message_example': updated_agent.message_example or '',
+                'creator_notes': updated_agent.creator_notes or '',
+                'post_history_instructions': updated_agent.post_history_instructions or '',
+                'alternate_greetings': updated_agent.alternate_greetings or [],
+                'character_book': updated_agent.character_book or {},
+                'tags': updated_agent.tags or [],
+                'character_version': updated_agent.character_version or '',
+                'extensions': updated_agent.extensions or {}
+            }
+            
+            reload_success = await agent_manager.reload_agent(updated_agent.id, agent_data)
+            if reload_success:
+                logger.info(f"Agent {updated_agent.id} 缓存重载成功")
+            else:
+                logger.warning(f"Agent {updated_agent.id} 缓存重载失败")
+                
+        except Exception as e:
+            logger.error(f"重载Agent缓存时发生错误 {updated_agent.id}: {str(e)}")
+            # 注意：这里不抛出异常，因为数据库更新已经成功了
+        
+        return updated_agent
         
     except HTTPException:
         raise
