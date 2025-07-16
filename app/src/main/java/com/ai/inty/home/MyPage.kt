@@ -1,5 +1,6 @@
 package com.ai.inty.home
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -61,7 +62,7 @@ import com.therouter.TheRouter
  * “我的”页面
  */
 @Composable
-fun MyPage(
+internal fun MyPage(
     modifier: Modifier,
     userProfile: UserProfile,
     agents: List<AgentInfo>,
@@ -72,7 +73,6 @@ fun MyPage(
     onLoadMore: () -> Unit = {},
 ) {
     val context = LocalContext.current
-    var lastClickTime by remember { mutableLongStateOf(0L) }
     Box(
         modifier = modifier
     ) {
@@ -228,7 +228,7 @@ fun MyPage(
                     }
                 }
 
-                Spacer(Modifier.height(24.dp))
+                Spacer(Modifier.height(8.dp))
 
                 // HeartMate Premium 会员入口按钮
                 AuthClickable(
@@ -239,25 +239,14 @@ fun MyPage(
                         TheRouter.build(Constant.ROUTE_VIP_CENTER).navigation(context)
                     }
                 ) { authModifier ->
-                    Box(
-                        modifier = authModifier
-                            .height(48.dp)
-                            .background(
-                                color = Color(0xFFE0D7F7), // 柔和浅紫色，风格统一
-                                shape = RoundedCornerShape(16.dp)
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "HeartMate Premium",
-                            color = Color(0xFF7C4DFF), // 品牌主色/高亮色
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
+                    Image(
+                        painter = painterResource(R.drawable.img_vip_banner),
+                        contentDescription = "vip banner",
+                        modifier = authModifier.fillMaxWidth()
+                    )
                 }
 
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(8.dp))
 
                 Text(
                     modifier = Modifier.padding(horizontal = 16.dp),
@@ -294,18 +283,19 @@ fun MyPage(
                     Spacer(Modifier.height(10.dp))
 
                     val listState = rememberLazyGridState()
-                    
+
                     // Detect when user scrolls to bottom
                     LaunchedEffect(listState) {
                         snapshotFlow { listState.layoutInfo.visibleItemsInfo }
                             .collect { visibleItems ->
                                 val lastVisibleItem = visibleItems.lastOrNull()
                                 val totalItems = listState.layoutInfo.totalItemsCount
-                                
-                                if (lastVisibleItem != null && 
+
+                                if (lastVisibleItem != null &&
                                     lastVisibleItem.index >= totalItems - 3 && // Trigger 3 items before end
                                     !isLoading &&
-                                    agents.isNotEmpty()) {
+                                    agents.isNotEmpty()
+                                ) {
                                     onLoadMore()
                                 }
                             }
@@ -328,7 +318,7 @@ fun MyPage(
                                 onDeleteAgent = onDeleteAgent
                             )
                         }
-                        
+
                         // Loading indicator when loading more
                         if (isLoading) {
                             item {
@@ -344,7 +334,7 @@ fun MyPage(
                                 }
                             }
                         }
-                        
+
                         item {
                             Spacer(Modifier.height(16.dp))
                         }
@@ -356,7 +346,7 @@ fun MyPage(
 }
 
 @Composable
-fun MyAgentCard(
+private fun MyAgentCard(
     modifier: Modifier,
     agentInfo: AgentInfo,
     onEditAgent: ((AgentInfo) -> Unit)? = null,
@@ -365,7 +355,7 @@ fun MyAgentCard(
     var showMenu by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
     var lastClickTime by remember { mutableLongStateOf(0L) }
-    
+
     Box(
         modifier = modifier.size(165.dp, 220.dp)
     ) {
@@ -375,7 +365,7 @@ fun MyAgentCard(
             placeholder = painterResource(R.drawable.app_icon),
             error = painterResource(R.drawable.app_icon),
         )
-        
+
         Text(
             modifier = Modifier
                 .align(Alignment.BottomStart)
@@ -385,7 +375,7 @@ fun MyAgentCard(
             fontWeight = FontWeight.SemiBold,
             color = Color.White,
         )
-        
+
         // 右下角的菜单按钮
         if (onEditAgent != null || onDeleteAgent != null) {
             Box(
@@ -413,7 +403,7 @@ fun MyAgentCard(
                         model = R.drawable.icon_more2
                     )
                 }
-                
+
                 DropdownMenu(
                     expanded = showMenu,
                     onDismissRequest = { showMenu = false }
@@ -433,7 +423,7 @@ fun MyAgentCard(
                             }
                         )
                     }
-                    
+
                     onDeleteAgent?.let { deleteCallback ->
                         DropdownMenuItem(
                             text = {
@@ -452,7 +442,7 @@ fun MyAgentCard(
                 }
             }
         }
-        
+
         // Delete confirmation dialog
         if (showDeleteDialog) {
             AlertDialog(
@@ -514,7 +504,7 @@ fun MyAgentCard(
 
 @Preview(showBackground = true, backgroundColor = 0xff000000)
 @Composable
-fun MyPagePreview() {
+private fun MyPagePreview() {
     MyPage(
         modifier = Modifier.fillMaxSize(),
         userProfile = UserProfile(

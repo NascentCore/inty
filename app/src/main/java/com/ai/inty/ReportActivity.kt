@@ -128,7 +128,7 @@ class ReportActivity : BaseActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ReportScreen(
+private fun ReportScreen(
     onBack: () -> Unit = {},
     reasons: List<ReportItem>,
     selectIDs: Set<Int>,
@@ -398,7 +398,7 @@ fun ReportScreen(
 
 
 @Composable
-fun ReportItem(
+private fun ReportItem(
     text: String,
     selected: Boolean,
     onClick: () -> Unit = {},
