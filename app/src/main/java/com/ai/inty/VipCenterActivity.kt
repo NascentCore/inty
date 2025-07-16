@@ -37,6 +37,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -124,7 +125,7 @@ private fun VipCenterScreen(
                 colors = TopAppBarDefaults.topAppBarColors()
                     .copy(containerColor = Color.Transparent)
             )
-            Spacer(Modifier.height(80.dp))
+            Spacer(Modifier.height(120.dp))
 
             Column(modifier = Modifier.padding(start = 20.dp)) {
 
@@ -158,7 +159,7 @@ private fun VipCenterScreen(
 
             }
 
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(40.dp))
 
             // 动态显示订阅计划列表
             if (plans.isNotEmpty()) {
@@ -169,8 +170,9 @@ private fun VipCenterScreen(
                     onPlanSelected = { index -> viewModel.selectPlan(index) }
                 )
 
-                Spacer(Modifier.height(30.dp))
+                Spacer(Modifier.height(60.dp))
 
+                //按钮
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -185,7 +187,12 @@ private fun VipCenterScreen(
                                 )
                             )
                         )
-                        .noRippleClickable(onClick = onPurchase),
+                        .alpha(if (vipStatus.isSubscribed) .7f else 1f)
+                        .noRippleClickable(onClick = {
+                            if (!vipStatus.isSubscribed && viewModel.hasSelectedPlan()) {
+                                onPurchase()
+                            }
+                        }),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
@@ -196,7 +203,8 @@ private fun VipCenterScreen(
                         },
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color.White
+                        color = Color.White,
+                        modifier = Modifier.alpha(if (vipStatus.isSubscribed) .7f else 1f)
                     )
                 }
 
@@ -350,6 +358,7 @@ private fun PremiumBenefitItem(text: String) {
         Spacer(Modifier.width(8.dp))
         Text(text = text, color = Color.White, fontSize = 14.sp)
     }
+    Spacer(Modifier.height(4.dp))
 }
 
 /**
@@ -366,10 +375,12 @@ private fun PremiumPlanList(
     isSubscribed: Boolean,
     onPlanSelected: (Int) -> Unit
 ) {
+    val subModifier = if (isSubscribed) Modifier.alpha(.7f) else Modifier
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(150.dp),
+            .height(150.dp)
+            .padding(horizontal = 15.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
 
@@ -377,7 +388,7 @@ private fun PremiumPlanList(
 
             val isSelected = idx == selectedIndex
 
-            Column(
+            Box(
                 modifier = Modifier
                     .fillMaxHeight()
                     .weight(1f)
@@ -390,9 +401,10 @@ private fun PremiumPlanList(
                         color = if (isSelected) Color.White else Color.Transparent,
                         shape = RoundedCornerShape(12.dp)
                     )
-                    .padding(horizontal = 12.dp)
-                    .clickable(enabled = !isSubscribed) { onPlanSelected(idx) },
-                horizontalAlignment = Alignment.CenterHorizontally
+                    .then(subModifier)
+                    .clickable(enabled = !isSubscribed) { onPlanSelected(idx) }
+                    .padding(vertical = 8.dp),
+                contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = plan.name, // 显示计划名称
@@ -402,24 +414,32 @@ private fun PremiumPlanList(
                     },
                     fontWeight = FontWeight.Bold,
                     fontSize = 16.sp,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .then(subModifier)
                 )
-
+                val priceStr = buildAnnotatedString {
+                    append(plan.price.substringBefore('$'))
+                    append("$")
+                    withStyle(style = SpanStyle(fontSize = 24.sp, fontWeight = FontWeight.Bold)) {
+                        append(plan.price.substringAfterLast('$'))
+                    }
+                }
                 Text(
-                    text = plan.price, // 显示计划价格
+                    text = priceStr, // 显示计划价格
                     color = when {
                         isSubscribed -> Color.White.copy(alpha = 0.5f) // 已订阅用户显示灰色
                         else -> Color.White // 正常状态
                     },
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp
+                    fontSize = 12.sp,
+                    modifier = subModifier
                 )
                 //折扣
                 if (plan.discountRate < 1) {
                     Box(
                         Modifier
-                            .size(80.dp, 36.dp)
-                            .clip(RoundedCornerShape(20.dp))
+                            .size(96.dp, 32.dp)
+                            .clip(RoundedCornerShape(16.dp))
                             .background(
                                 brush = Brush.horizontalGradient(
                                     colors = listOf(
@@ -427,13 +447,17 @@ private fun PremiumPlanList(
                                         Color.Cyan
                                     )
                                 )
-                            ),
+                            )
+                            .then(subModifier)
+                            .align(Alignment.BottomEnd),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "Save ${plan.discountRate * 100}/%", // 显示计划价格
+                            text = "Save ${((1 - plan.discountRate) * 100).toInt()}/%", // 显示计划价格
                             color = Color.Black,
-                            fontSize = 14.sp
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = subModifier
                         )
                     }
                 }
