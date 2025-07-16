@@ -17,6 +17,7 @@ from app.services.keep_talking_service import keep_talking_service
 from app.services.voice_service import voice_service
 from app.services.voice_cleanup_service import voice_cleanup_service
 from app.services.voice_cache_service import voice_cache_service
+from app.services.async_voice_service import async_voice_service
 from app.core.agent.agent import agent_manager
 from app.core.config import settings
 from langchain_core.messages import HumanMessage
@@ -521,14 +522,28 @@ async def agent_chat_completions(
         else:
             # 非流式聊天（异步）
             logger.debug(f"开始Agent聊天处理: session_id={session_id}")
+            
+            # 并行获取聊天设置和AI回复
             try:
-                response_content = await agent.chat(
+                # 同时启动AI回复和聊天设置获取
+                import asyncio
+                
+                ai_task = asyncio.create_task(agent.chat(
                     user_id=current_user.id,
                     session_id=session_id,
                     messages=messages,
                     db_session=db
-                )
+                ))
+                
+                settings_task = asyncio.create_task(chat_service.get_or_create_chat_settings(
+                    db, chat.id, current_user.id, agent_id
+                ))
+                
+                # 等待两个任务完成
+                response_content, chat_settings = await asyncio.gather(ai_task, settings_task)
                 logger.info(f"Agent聊天响应成功: {response_content[:100]}...")
+                logger.debug(f"聊天设置获取成功: voice_enabled={chat_settings.voice_enabled}")
+                
             except Exception as e:
                 logger.error(f"Agent聊天处理失败: {str(e)}")
                 raise
@@ -536,13 +551,6 @@ async def agent_chat_completions(
             # 语音生成逻辑 - 根据chat_settings.voice_enabled决定是否自动播放
             audio_url = None
             try:
-                logger.debug(f"开始语音生成逻辑检查: chat_id={chat.id}")
-                # 获取或创建聊天设置
-                chat_settings = await chat_service.get_or_create_chat_settings(
-                    db, chat.id, current_user.id, agent_id
-                )
-                logger.debug(f"聊天设置获取成功: voice_enabled={chat_settings.voice_enabled}")
-                
                 # 语音自动播放逻辑：chat_settings.voice_enabled = true 时自动生成语音
                 if chat_settings.voice_enabled:
                     # 使用Agent的voice_id字段
@@ -614,6 +622,188 @@ async def agent_chat_completions(
         logger.error(f"聊天请求处理失败: {str(e)}")
         logger.exception("聊天请求异常详细信息:")
         raise HTTPException(status_code=500, detail=f"Chat failed: {str(e)}")
+
+
+@router.post("/agents/{agent_id}/chat/fast", response_model=dict)
+async def agent_chat_fast_response(
+    *,
+    db: AsyncSession = Depends(deps.get_async_db),
+    agent_id: str,
+    request: ChatCompletionRequest,
+    current_user: schemas.User = Depends(deps.get_current_active_user),
+):
+    """
+    极速聊天响应接口
+    立即返回AI文本回复，语音异步生成
+    """
+    try:
+        logger.info(f"开始处理极速聊天请求 - Agent ID: {agent_id}, User ID: {current_user.id}")
+        
+        # 验证Agent是否存在
+        agent_db = await agent_service.get_agent(db, agent_id=agent_id)
+        if not agent_db:
+            raise HTTPException(status_code=404, detail="Agent not found")
+        
+        # 获取或创建与该Agent的唯一会话
+        chat = await chat_service.get_or_create_chat_by_agent(
+            db=db,
+            user_id=current_user.id,
+            agent_id=agent_id
+        )
+        
+        # 获取最后一条用户消息
+        user_messages = [msg for msg in request.messages if msg.role == "user"]
+        if not user_messages:
+            raise HTTPException(status_code=400, detail="No user message found")
+        
+        last_user_message = user_messages[-1].content
+        
+        # 构建消息
+        messages = {
+            "messages": [{"role": "user", "content": last_user_message}]
+        }
+        
+        # 创建Agent实例
+        agent_data = {
+            'id': chat.agent_id,
+            'name': agent_db.name,
+            'prompt': agent_db.prompt,
+            'settings': agent_db.settings
+        }
+        agent = await agent_manager.get_agent(agent_data)
+        
+        # 使用session_id
+        session_id = generate_session_id(chat.id)
+        
+        # 并行处理：AI回复 + 聊天设置 + 语音缓存检查
+        import asyncio
+        
+        ai_task = asyncio.create_task(agent.chat(
+            user_id=current_user.id,
+            session_id=session_id,
+            messages=messages,
+            db_session=db
+        ))
+        
+        settings_task = asyncio.create_task(chat_service.get_or_create_chat_settings(
+            db, chat.id, current_user.id, agent_id
+        ))
+        
+        # 预检查语音缓存
+        voice_cache_task = asyncio.create_task(async_voice_service.check_cache_first(
+            text=last_user_message,  # 临时使用用户消息检查，实际应该用AI回复
+            voice_id=agent_db.voice_id,
+            language=request.language,
+            db=db
+        ))
+        
+        # 等待AI回复和设置完成
+        response_content, chat_settings = await asyncio.gather(ai_task, settings_task)
+        
+        # 构建基础响应
+        message = {
+            "role": "assistant",
+            "content": response_content
+        }
+        
+        # 语音处理逻辑
+        if chat_settings.voice_enabled:
+            # 立即检查AI回复内容的缓存
+            cached_audio_url = await async_voice_service.check_cache_first(
+                text=response_content,
+                voice_id=agent_db.voice_id,
+                language=request.language,
+                db=db
+            )
+            
+            if cached_audio_url:
+                # 缓存命中，立即返回
+                message["audio_url"] = cached_audio_url
+                message["audio_cached"] = True
+                logger.info(f"极速响应-缓存命中: {cached_audio_url}")
+            else:
+                # 缓存未命中，启动异步生成
+                task_id = await async_voice_service.generate_voice_async(
+                    message_id=f"msg_{uuid.uuid4().hex[:8]}",
+                    text=response_content,
+                    voice_id=agent_db.voice_id,
+                    language=request.language,
+                    db=db
+                )
+                
+                message["audio_task_id"] = task_id
+                message["audio_cached"] = False
+                logger.info(f"极速响应-异步生成: {task_id}")
+        
+        # 异步记录使用情况
+        asyncio.create_task(subscription_service.record_usage(
+            db, current_user.id, "chat", 1,
+            extra_data={"agent_id": agent_id, "message_length": len(last_user_message)}
+        ))
+        
+        logger.info(f"极速聊天响应完成: agent_id={agent_id}, response_length={len(response_content)}")
+        
+        return {
+            "id": f"chatcmpl-{uuid.uuid4().hex[:12]}",
+            "object": "chat.completion",
+            "created": int(time.time()),
+            "model": request.model,
+            "choices": [
+                {
+                    "index": 0,
+                    "message": message,
+                    "finish_reason": "stop"
+                }
+            ],
+            "usage": {
+                "prompt_tokens": len(last_user_message),
+                "completion_tokens": len(response_content),
+                "total_tokens": len(last_user_message) + len(response_content)
+            },
+            "response_type": "fast",
+            "voice_enabled": chat_settings.voice_enabled
+        }
+        
+    except Exception as e:
+        logger.error(f"极速聊天请求失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Fast chat failed: {str(e)}")
+
+
+@router.get("/voice/tasks/{task_id}")
+async def get_voice_task_status(
+    task_id: str,
+    current_user: schemas.User = Depends(deps.get_current_active_user),
+):
+    """
+    获取异步语音任务状态
+    """
+    try:
+        task_status = await async_voice_service.get_task_status(task_id)
+        
+        if task_status["status"] == "not_found":
+            raise HTTPException(status_code=404, detail="Task not found")
+        
+        return task_status
+        
+    except Exception as e:
+        logger.error(f"获取语音任务状态失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to get task status: {str(e)}")
+
+
+@router.get("/voice/tasks/stats")
+async def get_voice_task_stats(
+    current_user: schemas.User = Depends(deps.get_current_active_user),
+):
+    """
+    获取语音任务统计信息
+    """
+    try:
+        stats = async_voice_service.get_task_stats()
+        return stats
+        
+    except Exception as e:
+        logger.error(f"获取语音任务统计失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to get task stats: {str(e)}")
 
 
 @router.post("/agents/{agent_id}/messages/{message_id}/voice")

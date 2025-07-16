@@ -7,7 +7,7 @@ import json
 from datetime import datetime, timedelta
 from typing import Optional, List, Dict, Any
 from loguru import logger
-from sqlalchemy import Column, String, DateTime, Integer, Text, Boolean, select, delete
+from sqlalchemy import Column, String, DateTime, Integer, Text, Boolean, select, delete, update
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import func
@@ -171,6 +171,37 @@ class VoiceCacheService:
             logger.error(f"保存语音缓存失败: {str(e)}")
             await db.rollback()
             return False
+    
+    async def update_access_stats(
+        self,
+        db: AsyncSession,
+        text: str,
+        voice_id: str,
+        model: str,
+        language: str
+    ) -> None:
+        """
+        异步更新缓存访问统计，不阻塞主流程
+        """
+        try:
+            content_hash = self._generate_content_hash(text, voice_id, model, language)
+            
+            # 更新访问统计
+            stmt = update(VoiceCache).where(
+                VoiceCache.content_hash == content_hash
+            ).values(
+                last_accessed=datetime.now(),
+                hit_count=VoiceCache.hit_count + 1
+            )
+            
+            await db.execute(stmt)
+            await db.commit()
+            
+            logger.debug(f"更新缓存访问统计: {content_hash}")
+            
+        except Exception as e:
+            logger.error(f"更新缓存访问统计失败: {str(e)}")
+            await db.rollback()
     
     async def get_cache_stats(self, db: AsyncSession) -> Dict[str, Any]:
         """

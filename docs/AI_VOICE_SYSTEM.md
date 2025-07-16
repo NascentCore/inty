@@ -17,6 +17,12 @@ InTy 后端集成了先进的 AI 语音回复系统，使用 ElevenLabs API 为�
 - **手动播放模式**：用户点击播放按钮触发语音生成
 - **个性化设置**：用户级别和聊天级别的语音偏好设置
 
+### 🚀 极速响应优化
+- **并行处理**：AI回复与聊天设置同时获取
+- **缓存优先**：优先检查语音缓存，秒级返回
+- **异步生成**：文本立即返回，语音后台生成
+- **智能任务管理**：语音生成任务状态跟踪
+
 ### 💰 成本优化策略
 - **智能缓存系统**：基于内容哈希的语音文件缓存
 - **文件压缩**：优化的音频格式减少存储和传输成本
@@ -100,9 +106,27 @@ elevenlabs:
 
 ## API 接口
 
-### 聊天接口 (带语音)
+### 标准聊天接口 (带语音)
 ```http
 POST /api/v1/chats/agents/{agent_id}/chat/completions
+Content-Type: application/json
+
+{
+  "messages": [
+    {
+      "role": "user",
+      "content": "Hello"
+    }
+  ],
+  "stream": false,
+  "model": "chatbot",
+  "language": "zh"
+}
+```
+
+### 极速聊天接口 (推荐)
+```http
+POST /api/v1/chats/agents/{agent_id}/chat/fast
 Content-Type: application/json
 
 {

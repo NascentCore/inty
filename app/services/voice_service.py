@@ -63,7 +63,8 @@ class VoiceService:
             
             logger.info(f"开始语音生成: voice_id={voice_id}, model={model}, language={language}, text_length={len(text)}")
             
-            # 检查缓存
+            # 并行检查缓存和预准备其他资源
+            cached_url = None
             if db:
                 logger.debug("检查语音缓存")
                 from app.services.voice_cache_service import voice_cache_service
@@ -72,6 +73,10 @@ class VoiceService:
                 )
                 if cached_url:
                     logger.info(f"使用缓存的语音文件: {cached_url}")
+                    # 异步更新访问统计，不阻塞返回
+                    asyncio.create_task(voice_cache_service.update_access_stats(
+                        db, text, voice_id, model, language
+                    ))
                     return cached_url
                 logger.debug("未找到缓存，开始新的语音生成")
             
@@ -88,13 +93,18 @@ class VoiceService:
             file_name = self._generate_file_name(text, voice_id, model)
             logger.debug(f"生成文件名: {file_name}")
             
-            # 上传到GCS
+            # 并行上传到GCS和准备缓存保存
             logger.debug("开始上传到GCS")
-            audio_url = await self.gcs_service.upload_voice_file(
+            
+            # 创建上传任务
+            upload_task = asyncio.create_task(self.gcs_service.upload_voice_file(
                 file_name, 
                 audio_data, 
                 content_type="audio/mpeg"
-            )
+            ))
+            
+            # 等待上传完成
+            audio_url = await upload_task
             
             if not audio_url:
                 logger.error("GCS上传失败")
@@ -102,14 +112,14 @@ class VoiceService:
                 
             logger.info(f"GCS上传成功: {audio_url}")
             
-            # 保存到缓存
+            # 异步保存到缓存，不阻塞返回
             if db and audio_url:
-                logger.debug("保存到语音缓存")
+                logger.debug("异步保存到语音缓存")
                 from app.services.voice_cache_service import voice_cache_service
-                await voice_cache_service.save_voice_cache(
+                asyncio.create_task(voice_cache_service.save_voice_cache(
                     db, text, voice_id, model, language, audio_url, len(audio_data)
-                )
-                logger.debug("语音缓存保存成功")
+                ))
+                logger.debug("语音缓存保存任务已启动")
             
             logger.info(f"语音生成成功: {file_name}")
             return audio_url
