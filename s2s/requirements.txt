@@ -1,0 +1,9 @@
+openai
+openai[realtime]
+sounddevice
+numpy
+textual
+pydub
+pyaudio
+textual
+certifi
