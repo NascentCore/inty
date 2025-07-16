@@ -110,3 +110,29 @@ data class CurrentSubscription(
     val userId: String,
     val plan: SubscriptionPlan
 )
+
+/**
+ * 订阅验证请求
+ */
+@JsonClass(generateAdapter = true)
+data class SubscriptionVerifyRequest(
+    @Json(name = "product_id")
+    val productId: String,
+    @Json(name = "purchase_token")
+    val purchaseToken: String,
+    @Json(name = "order_id")
+    val orderId: String
+)
+
+/**
+ * 订阅验证响应
+ */
+@JsonClass(generateAdapter = true)
+data class SubscriptionVerifyResponse(
+    @Json(name = "is_valid")
+    val isValid: Boolean,
+    val subscription: CurrentSubscription?,
+    val message: String?,
+    @Json(name = "error_code")
+    val errorCode: String?
+)

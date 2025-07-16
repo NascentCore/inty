@@ -1,8 +1,12 @@
 package com.ai.inty.net
 
 import com.ai.inty.beans.SubscriptionPlansResponse
+import com.ai.inty.beans.SubscriptionVerifyRequest
+import com.ai.inty.beans.SubscriptionVerifyResponse
 import com.architecture.httplib.core.HttpResult
+import retrofit2.http.Body
 import retrofit2.http.GET
+import retrofit2.http.POST
 
 /**
  * 订阅计划相关API接口
@@ -17,4 +21,14 @@ interface ISubscriptionApi {
      */
     @GET("api/v1/subscription/plans")
     suspend fun getSubscriptionPlans(): HttpResult<SubscriptionPlansResponse>
+    
+    /**
+     * 验证订阅信息
+     * POST /api/v1/subscription/verify
+     * 
+     * @param request 订阅验证请求，包含 product_id、purchase_token 和 order_id
+     * @return 订阅验证响应
+     */
+    @POST("api/v1/subscription/verify")
+    suspend fun verifySubscription(@Body request: SubscriptionVerifyRequest): HttpResult<SubscriptionVerifyResponse>
 } 

@@ -1,6 +1,7 @@
 package com.ai.inty.billing
 
 import android.content.Context
+import com.ai.inty.beans.SubscriptionVerifyRequest
 import com.ai.inty.net.ISubscriptionApi
 import com.android.billingclient.api.AcknowledgePurchaseParams
 import com.android.billingclient.api.BillingClient
@@ -481,12 +482,6 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
 
         val subscriptionIds = currentPlans.map { it.googleProductId }
         EasyLog.log("BillingRepository - 从 plansFlow 获取商品ID: $subscriptionIds")
-        EasyLog.log("BillingRepository - 当前设备信息:")
-        EasyLog.log("  制造商: ${android.os.Build.MANUFACTURER}")
-        EasyLog.log("  型号: ${android.os.Build.MODEL}")
-        EasyLog.log("  Android 版本: ${android.os.Build.VERSION.RELEASE}")
-        EasyLog.log("  API 级别: ${android.os.Build.VERSION.SDK_INT}")
-        EasyLog.log("  是否模拟器: ${isEmulator()}")
 
         // 使用新的 ProductDetails API
         val products = subscriptionIds.map { productId ->
@@ -500,10 +495,8 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
             .setProductList(products)
             .build()
 
-        EasyLog.log("BillingRepository - 发送查询请求到Google Play (新API)")
-        EasyLog.log("BillingRepository - 查询参数: $subscriptionIds")
         billingClient.queryProductDetailsAsync(params) { billingResult, productDetailsResult ->
-            EasyLog.log("BillingRepository - Google Play 查询结果: 响应码=${billingResult.responseCode}")
+            EasyLog.log("BillingRepository - Google Play 价格查询结果: 响应码=${billingResult.responseCode}")
             EasyLog.log("BillingRepository - 查询结果详情: ${billingResult.debugMessage}")
 
             when (billingResult.responseCode) {
@@ -512,7 +505,7 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
                         if (detailsList.isNotEmpty()) {
                             EasyLog.log("BillingRepository - 查询成功，获取到 ${detailsList.size} 个商品信息")
                             // 使用新的 ProductDetails 更新计划价格
-                            updatePlansWithProductDetails(currentPlans, detailsList)
+                            updateLocalPlans(currentPlans, detailsList)
                         } else {
                             EasyLog.log("BillingRepository - 查询成功但返回空商品列表，可能原因: 商品ID不存在或未在Google Play Console中激活")
                         }
@@ -617,6 +610,10 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
             if (!purchase.isAcknowledged) {
                 acknowledgePurchase(purchase)
             }
+            
+            // 调用后端验证订阅信息
+            verifySubscriptionWithServer(purchase)
+            
             // 更新会员状态为已订阅
             val newStatus = VipStatus(
                 isSubscribed = true,
@@ -641,71 +638,111 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
     }
 
     /**
-     * 主动更新计划价格
+     * 调用后端验证订阅信息
      */
-    fun updatePlansPrices() {
-        EasyLog.log("=== 主动更新计划价格开始 ===")
-
-        // 1. 检查连接状态
-        if (!isConnected) {
-            EasyLog.log("❌ BillingClient 未连接，无法查询价格")
-            EasyLog.log("=== 主动更新计划价格结束 ===")
-            return
-        }
-
-        // 2. 获取当前计划列表
-        val currentPlans = _plansFlow.value
-        if (currentPlans.isEmpty()) {
-            EasyLog.log("⚠️ 本地计划列表为空，跳过价格更新")
-            EasyLog.log("=== 主动更新计划价格结束 ===")
-            return
-        }
-
-        // 3. 提取商品ID列表
-        val productIds = currentPlans.map { it.googleProductId }
-        EasyLog.log("准备查询商品价格，商品ID: $productIds")
-
-        // 4. 使用新的 ProductDetails API 查询Google Play获取最新价格
-        val products = productIds.map { productId ->
-            QueryProductDetailsParams.Product.newBuilder()
-                .setProductId(productId)
-                .setProductType(BillingClient.ProductType.SUBS)
-                .build()
-        }
-
-        val params = QueryProductDetailsParams.newBuilder()
-            .setProductList(products)
-            .build()
-
-        billingClient.queryProductDetailsAsync(params) { billingResult, productDetailsResult ->
-            EasyLog.log("Google Play 价格查询结果: 响应码=${billingResult.responseCode}")
-
-            when (billingResult.responseCode) {
-                BillingClient.BillingResponseCode.OK -> {
-                    productDetailsResult?.productDetailsList?.let { detailsList ->
-                        if (detailsList.isNotEmpty()) {
-                            // 5. 比较并更新价格
-                            updatePlansWithProductDetails(currentPlans, detailsList)
+    private fun verifySubscriptionWithServer(purchase: Purchase) {
+        eventScope.launch {
+            try {
+                
+                // 构建验证请求
+                val verifyRequest = SubscriptionVerifyRequest(
+                    productId = purchase.products.firstOrNull() ?: "",
+                    purchaseToken = purchase.purchaseToken,
+                    orderId = purchase.orderId ?: ""
+                )
+                
+                EasyLog.log("验证订阅: productId=${verifyRequest.productId}, purchaseToken=${verifyRequest.purchaseToken}, orderId=${verifyRequest.orderId}")
+                
+                // 调用验证接口
+                val result = api.verifySubscription(verifyRequest)
+                
+                when (result) {
+                    is HttpResult.Success -> {
+                        val response = result.data
+                        if (response.isValid) {
+                            EasyLog.log("✅ 订阅验证成功")
                         } else {
-                            EasyLog.log("Google Play返回空的价格列表")
+                            EasyLog.log("⚠️ 订阅验证失败: ${response.message}")
                         }
-                    } ?: run {
-                        EasyLog.log("Google Play返回的价格列表为null")
+                    }
+                    
+                    is HttpResult.Failure -> {
+                        EasyLog.log("❌ 订阅验证失败: ${result.message}")
                     }
                 }
-
-                else -> {
-                    EasyLog.log("Google Play价格查询失败: ${billingResult.debugMessage}")
-                }
+                
+            } catch (e: Exception) {
+                EasyLog.log("❌ 订阅验证异常: ${e.message}")
             }
-            EasyLog.log("=== 主动更新计划价格结束 ===")
         }
     }
 
     /**
+     * 主动更新计划价格
+     */
+//    fun updatePlansPrices() {
+//        EasyLog.log("=== 主动更新计划价格开始 ===")
+//
+//        // 1. 检查连接状态
+//        if (!isConnected) {
+//            EasyLog.log("❌ BillingClient 未连接，无法查询价格")
+//            EasyLog.log("=== 主动更新计划价格结束 ===")
+//            return
+//        }
+//
+//        // 2. 获取当前计划列表
+//        val currentPlans = _plansFlow.value
+//        if (currentPlans.isEmpty()) {
+//            EasyLog.log("⚠️ 本地计划列表为空，跳过价格更新")
+//            EasyLog.log("=== 主动更新计划价格结束 ===")
+//            return
+//        }
+//
+//        // 3. 提取商品ID列表
+//        val productIds = currentPlans.map { it.googleProductId }
+//        EasyLog.log("准备查询商品价格，商品ID: $productIds")
+//
+//        // 4. 使用新的 ProductDetails API 查询Google Play获取最新价格
+//        val products = productIds.map { productId ->
+//            QueryProductDetailsParams.Product.newBuilder()
+//                .setProductId(productId)
+//                .setProductType(BillingClient.ProductType.SUBS)
+//                .build()
+//        }
+//
+//        val params = QueryProductDetailsParams.newBuilder()
+//            .setProductList(products)
+//            .build()
+//
+//        billingClient.queryProductDetailsAsync(params) { billingResult, productDetailsResult ->
+//            EasyLog.log("Google Play 价格查询结果: 响应码=${billingResult.responseCode}")
+//
+//            when (billingResult.responseCode) {
+//                BillingClient.BillingResponseCode.OK -> {
+//                    productDetailsResult?.productDetailsList?.let { detailsList ->
+//                        if (detailsList.isNotEmpty()) {
+//                            // 5. 比较并更新价格
+//                            updateLocalPlans(currentPlans, detailsList)
+//                        } else {
+//                            EasyLog.log("Google Play返回空的价格列表")
+//                        }
+//                    } ?: run {
+//                        EasyLog.log("Google Play返回的价格列表为null")
+//                    }
+//                }
+//
+//                else -> {
+//                    EasyLog.log("Google Play价格查询失败: ${billingResult.debugMessage}")
+//                }
+//            }
+//            EasyLog.log("=== 主动更新计划价格结束 ===")
+//        }
+//    }
+
+    /**
      * 根据ProductDetails更新计划价格（新API方法）
      */
-    private fun updatePlansWithProductDetails(
+    private fun updateLocalPlans(
         currentPlans: List<VipPlan>,
         productDetailsList: List<ProductDetails>
     ) {
@@ -773,60 +810,60 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
         }
     }
 
-    /**
-     * 根据SkuDetails更新计划价格（旧API方法，保留兼容性）
-     */
-    private fun updatePlansWithSkuDetails(
-        currentPlans: List<VipPlan>,
-        skuDetails: List<SkuDetails>
-    ) {
-        val updatedPlans = currentPlans.toMutableList()
-        var updatedCount = 0
-
-        EasyLog.log("开始比较价格信息...")
-
-        skuDetails.forEach { sku ->
-            val index = updatedPlans.indexOfFirst { it.googleProductId == sku.sku }
-            if (index >= 0) {
-                val currentPlan = updatedPlans[index]
-                val correctedPrice = correctCurrencySymbol(sku.price, sku.priceCurrencyCode)
-
-                // 检查价格是否有变化
-                if (currentPlan.price != correctedPrice ||
-                    currentPlan.currencyCode != sku.priceCurrencyCode ||
-                    currentPlan.priceAmountMicros != sku.priceAmountMicros
-                ) {
-
-                    val oldPrice = currentPlan.price
-                    updatedPlans[index] = currentPlan.copy(
-                        price = correctedPrice,
-                        originalPrice = correctedPrice,
-                        currencyCode = sku.priceCurrencyCode,
-                        priceAmountMicros = sku.priceAmountMicros
-                    )
-                    updatedCount++
-
-                    EasyLog.log("✅ 价格有变化，更新计划: ${sku.sku}")
-                    EasyLog.log("   计划名称: ${currentPlan.name}")
-                    EasyLog.log("   价格变化: $oldPrice -> $correctedPrice")
-                    EasyLog.log("   货币代码: ${currentPlan.currencyCode} -> ${sku.priceCurrencyCode}")
-                } else {
-                    EasyLog.log("ℹ️ 价格无变化，跳过: ${sku.sku} (${currentPlan.name})")
-                }
-            } else {
-                EasyLog.log("⚠️ 未找到匹配的计划ID: ${sku.sku}")
-            }
-        }
-
-        // 6. 如果有变化，更新并通知
-        if (updatedCount > 0) {
-            EasyLog.log("✅ 检测到 $updatedCount 个计划价格变化，更新 plansFlow")
-            _plansFlow.value = updatedPlans
-            saveLocalPlans(updatedPlans) // 保存到本地缓存
-        } else {
-            EasyLog.log("ℹ️ 所有计划价格都无变化，无需更新")
-        }
-    }
+//    /**
+//     * 根据SkuDetails更新计划价格（旧API方法，保留兼容性）
+//     */
+//    private fun updatePlansWithSkuDetails(
+//        currentPlans: List<VipPlan>,
+//        skuDetails: List<SkuDetails>
+//    ) {
+//        val updatedPlans = currentPlans.toMutableList()
+//        var updatedCount = 0
+//
+//        EasyLog.log("开始比较价格信息...")
+//
+//        skuDetails.forEach { sku ->
+//            val index = updatedPlans.indexOfFirst { it.googleProductId == sku.sku }
+//            if (index >= 0) {
+//                val currentPlan = updatedPlans[index]
+//                val correctedPrice = correctCurrencySymbol(sku.price, sku.priceCurrencyCode)
+//
+//                // 检查价格是否有变化
+//                if (currentPlan.price != correctedPrice ||
+//                    currentPlan.currencyCode != sku.priceCurrencyCode ||
+//                    currentPlan.priceAmountMicros != sku.priceAmountMicros
+//                ) {
+//
+//                    val oldPrice = currentPlan.price
+//                    updatedPlans[index] = currentPlan.copy(
+//                        price = correctedPrice,
+//                        originalPrice = correctedPrice,
+//                        currencyCode = sku.priceCurrencyCode,
+//                        priceAmountMicros = sku.priceAmountMicros
+//                    )
+//                    updatedCount++
+//
+//                    EasyLog.log("✅ 价格有变化，更新计划: ${sku.sku}")
+//                    EasyLog.log("   计划名称: ${currentPlan.name}")
+//                    EasyLog.log("   价格变化: $oldPrice -> $correctedPrice")
+//                    EasyLog.log("   货币代码: ${currentPlan.currencyCode} -> ${sku.priceCurrencyCode}")
+//                } else {
+//                    EasyLog.log("ℹ️ 价格无变化，跳过: ${sku.sku} (${currentPlan.name})")
+//                }
+//            } else {
+//                EasyLog.log("⚠️ 未找到匹配的计划ID: ${sku.sku}")
+//            }
+//        }
+//
+//        // 6. 如果有变化，更新并通知
+//        if (updatedCount > 0) {
+//            EasyLog.log("✅ 检测到 $updatedCount 个计划价格变化，更新 plansFlow")
+//            _plansFlow.value = updatedPlans
+//            saveLocalPlans(updatedPlans) // 保存到本地缓存
+//        } else {
+//            EasyLog.log("ℹ️ 所有计划价格都无变化，无需更新")
+//        }
+//    }
 
     /**
      * 检查计划列表是否有关键字段变化
@@ -984,15 +1021,15 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
 
         EasyLog.log("开始启动购买流程，商品ID: $productId")
 
-        // 检查连接状态
-        if (!isConnected) {
-            EasyLog.log("⚠️ BillingClient 未连接，无法启动购买流程")
-            // 发送购买失败事件，让 UI 层处理重试逻辑
-            eventScope.launch {
-                _eventFlow.emit(BillingEvent.PurchaseFailed(-1, "BillingClient 未连接"))
-            }
-            return
-        }
+        // // 检查连接状态
+        // if (!isConnected) {
+        //     EasyLog.log("⚠️ BillingClient 未连接，无法启动购买流程")
+        //     // 发送购买失败事件，让 UI 层处理重试逻辑
+        //     eventScope.launch {
+        //         _eventFlow.emit(BillingEvent.PurchaseFailed(-1, "BillingClient 未连接"))
+        //     }
+        //     return
+        // }
 
         // 执行购买流程
         launchBillingFlowInternal(activity, productId)
