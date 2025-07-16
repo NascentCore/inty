@@ -178,25 +178,52 @@ async def _process_google_play_notification(
     notification_data: Dict[str, Any]
 ) -> None:
     """处理Google Play通知的后台任务"""
-    try:
-        # 解码base64数据
-        if "message" in notification_data and "data" in notification_data["message"]:
-            import base64
-            decoded_data = base64.b64decode(notification_data["message"]["data"])
-            notification_json = json.loads(decoded_data.decode('utf-8'))
-            
-            # 处理订阅通知
-            success = await subscription_service.handle_subscription_notification(
-                db, notification_json
-            )
-            
-            if success:
-                logger.info("Google Play订阅通知处理成功")
-            else:
-                logger.warning("Google Play订阅通知处理失败")
+    max_retries = 3
+    retry_delay = 5  # 秒
+    
+    for attempt in range(max_retries):
+        try:
+            # 解码base64数据
+            if "message" in notification_data and "data" in notification_data["message"]:
+                import base64
+                decoded_data = base64.b64decode(notification_data["message"]["data"])
+                notification_json = json.loads(decoded_data.decode('utf-8'))
                 
-    except Exception as e:
-        logger.error(f"处理Google Play订阅通知失败: {str(e)}")
+                # 记录详细的通知信息
+                subscription_notification = notification_json.get("subscriptionNotification", {})
+                purchase_token = subscription_notification.get("purchaseToken", "unknown")
+                notification_type = subscription_notification.get("notificationType", "unknown")
+                
+                logger.info(f"处理Google Play通知 - 尝试 {attempt + 1}/{max_retries}, "
+                           f"令牌: {purchase_token[:10]}..., 类型: {notification_type}")
+                
+                # 处理订阅通知
+                success = await subscription_service.handle_subscription_notification(
+                    db, notification_json
+                )
+                
+                if success:
+                    logger.info(f"Google Play订阅通知处理成功 - 令牌: {purchase_token[:10]}...")
+                    return
+                else:
+                    logger.warning(f"Google Play订阅通知处理失败 - 令牌: {purchase_token[:10]}..., "
+                                  f"尝试 {attempt + 1}/{max_retries}")
+                    
+                    if attempt < max_retries - 1:
+                        # 等待后重试
+                        import asyncio
+                        await asyncio.sleep(retry_delay)
+                        retry_delay *= 2  # 指数退避
+                    else:
+                        logger.error(f"Google Play订阅通知处理最终失败 - 令牌: {purchase_token[:10]}...")
+                        
+        except Exception as e:
+            logger.error(f"处理Google Play订阅通知失败: {str(e)}, 尝试 {attempt + 1}/{max_retries}")
+            if attempt < max_retries - 1:
+                import asyncio
+                await asyncio.sleep(retry_delay)
+            else:
+                logger.error(f"Google Play订阅通知处理最终异常失败: {str(e)}")
 
 
 def _verify_webhook_signature(body: bytes, signature: str) -> bool:

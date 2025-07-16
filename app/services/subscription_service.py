@@ -611,8 +611,18 @@ class SubscriptionService:
             subscription = result.scalar_one_or_none()
             
             if not subscription:
-                logger.warning(f"未找到对应的订阅记录: {purchase_token}")
-                return False
+                logger.warning(f"未找到对应的订阅记录: {purchase_token}, 通知类型: {notification_type}")
+                
+                # 尝试自动创建订阅记录
+                subscription = await self._try_create_subscription_from_notification(
+                    db, purchase_token, notification_type, notification_data
+                )
+                
+                if not subscription:
+                    logger.error(f"无法为购买令牌创建订阅记录: {purchase_token}")
+                    return False
+                    
+                logger.info(f"成功从RTDN通知创建订阅记录: {subscription.id}")
             
             # 根据通知类型更新订阅状态
             await self._update_subscription_by_notification_type(
@@ -624,6 +634,239 @@ class SubscriptionService:
         except Exception as e:
             logger.error(f"处理订阅通知失败: {str(e)}")
             return False
+    
+    async def _try_create_subscription_from_notification(
+        self,
+        db: AsyncSession,
+        purchase_token: str,
+        notification_type: int,
+        notification_data: Dict[str, Any]
+    ) -> Optional[UserSubscription]:
+        """
+        尝试从RTDN通知创建订阅记录
+        
+        Args:
+            db: 数据库会话
+            purchase_token: 购买令牌
+            notification_type: 通知类型
+            notification_data: 通知数据
+            
+        Returns:
+            Optional[UserSubscription]: 创建的订阅记录或None
+        """
+        try:
+            # 只在特定通知类型下尝试创建订阅记录
+            # 1: SUBSCRIPTION_RECOVERED, 2: SUBSCRIPTION_RENEWED, 4: SUBSCRIPTION_PURCHASED
+            if notification_type not in [1, 2, 4]:
+                logger.info(f"通知类型 {notification_type} 不适合创建订阅记录")
+                return None
+            
+            # 从通知数据中尝试提取产品ID（用于日志记录）
+            subscription_notification = notification_data.get("subscriptionNotification", {})
+            logger.debug(f"处理订阅通知: {subscription_notification}")
+            
+            # 获取所有订阅计划以匹配产品ID
+            plans = await self.get_subscription_plans(db, include_inactive=True)
+            
+            subscription_created = None
+            
+            # 遍历所有订阅计划，尝试验证购买
+            for plan in plans:
+                try:
+                    # 使用Google Play API验证购买
+                    is_valid, purchase_info = google_play_service.verify_subscription_purchase(
+                        plan.google_play_product_id, purchase_token
+                    )
+                    
+                    if is_valid and "error" not in purchase_info:
+                        logger.info(f"找到匹配的订阅计划: {plan.id}, 产品ID: {plan.google_play_product_id}")
+                        
+                        # 尝试从购买信息中推断用户ID
+                        user_id = await self._infer_user_id_from_purchase_info(db, purchase_info)
+                        
+                        if not user_id:
+                            logger.warning(f"无法从购买信息中推断用户ID: {purchase_token}")
+                            continue
+                        
+                        # 创建订阅记录
+                        subscription_created = await self._create_subscription_from_purchase_info(
+                            db, user_id, plan, purchase_token, purchase_info, notification_data
+                        )
+                        
+                        if subscription_created:
+                            logger.info(f"成功创建订阅记录: {subscription_created.id}")
+                            break
+                        
+                except Exception as e:
+                    logger.debug(f"验证计划 {plan.id} 失败: {str(e)}")
+                    continue
+            
+            return subscription_created
+            
+        except Exception as e:
+            logger.error(f"从通知创建订阅记录失败: {str(e)}")
+            return None
+    
+    async def _infer_user_id_from_purchase_info(
+        self,
+        db: AsyncSession,
+        purchase_info: Dict[str, Any]
+    ) -> Optional[str]:
+        """
+        从购买信息中推断用户ID
+        
+        Args:
+            db: 数据库会话
+            purchase_info: 购买信息
+            
+        Returns:
+            Optional[str]: 用户ID或None
+        """
+        try:
+            # 尝试从购买信息中获取用户标识
+            email_address = purchase_info.get("email_address")
+            profile_id = purchase_info.get("profile_id")
+            order_id = purchase_info.get("order_id")
+            
+            # 首先尝试通过邮箱查找用户
+            if email_address:
+                result = await db.execute(
+                    select(User).where(User.email == email_address)
+                )
+                user = result.scalar_one_or_none()
+                if user:
+                    return user.id
+            
+            # 尝试通过Google用户ID查找
+            if profile_id:
+                result = await db.execute(
+                    select(User).where(User.google_user_id == profile_id)
+                )
+                user = result.scalar_one_or_none()
+                if user:
+                    return user.id
+            
+            # 尝试通过已有的订阅交易记录查找
+            if order_id:
+                result = await db.execute(
+                    select(SubscriptionTransaction).where(
+                        SubscriptionTransaction.google_play_order_id == order_id
+                    )
+                )
+                transaction = result.scalar_one_or_none()
+                if transaction:
+                    return transaction.user_id
+            
+            logger.warning(f"无法从购买信息中推断用户ID: email={email_address}, profile_id={profile_id}, order_id={order_id}")
+            return None
+            
+        except Exception as e:
+            logger.error(f"推断用户ID失败: {str(e)}")
+            return None
+    
+    async def _create_subscription_from_purchase_info(
+        self,
+        db: AsyncSession,
+        user_id: str,
+        plan: SubscriptionPlan,
+        purchase_token: str,
+        purchase_info: Dict[str, Any],
+        notification_data: Dict[str, Any]
+    ) -> Optional[UserSubscription]:
+        """
+        从购买信息创建订阅记录
+        
+        Args:
+            db: 数据库会话
+            user_id: 用户ID
+            plan: 订阅计划
+            purchase_token: 购买令牌
+            purchase_info: 购买信息
+            notification_data: 通知数据
+            
+        Returns:
+            Optional[UserSubscription]: 创建的订阅记录或None
+        """
+        try:
+            # 检查是否已经存在相同的购买令牌
+            existing_subscription = await db.execute(
+                select(UserSubscription).where(
+                    UserSubscription.google_play_purchase_token == purchase_token
+                )
+            )
+            
+            if existing_subscription.scalar_one_or_none():
+                logger.warning(f"购买令牌已存在: {purchase_token}")
+                return None
+            
+            # 取消用户当前的其他活跃订阅
+            await self._cancel_user_active_subscriptions(db, user_id)
+            
+            # 创建新的订阅记录
+            start_date = purchase_info.get("start_time") or datetime.now(timezone.utc)
+            end_date = purchase_info.get("expiry_time")
+            order_id = purchase_info.get("order_id")
+            
+            subscription = UserSubscription(
+                id=str(uuid.uuid4()),
+                user_id=user_id,
+                plan_id=plan.id,
+                google_play_purchase_token=purchase_token,
+                google_play_order_id=order_id,
+                google_play_subscription_id=plan.google_play_product_id,
+                status=SubscriptionStatus.ACTIVE,
+                start_date=start_date,
+                end_date=end_date,
+                auto_renew=purchase_info.get("auto_renewing", True),
+                extra_data={
+                    "google_play_info": purchase_info,
+                    "created_from_rtdn": True,
+                    "rtdn_notification_data": notification_data
+                }
+            )
+            
+            db.add(subscription)
+            
+            # 创建交易记录
+            transaction = SubscriptionTransaction(
+                id=str(uuid.uuid4()),
+                subscription_id=subscription.id,
+                user_id=user_id,
+                transaction_type=TransactionType.PURCHASE,
+                amount=purchase_info.get("price_amount_micros", 0) / 1_000_000,
+                currency=purchase_info.get("price_currency_code", "USD"),
+                google_play_purchase_token=purchase_token,
+                google_play_order_id=order_id,
+                status="COMPLETED",
+                transaction_time=start_date,
+                extra_data={
+                    "google_play_info": purchase_info,
+                    "created_from_rtdn": True,
+                    "rtdn_notification_data": notification_data
+                }
+            )
+            
+            db.add(transaction)
+            
+            await db.commit()
+            await db.refresh(subscription)
+            
+            # 确认购买（向Google Play发送确认）
+            try:
+                google_play_service.acknowledge_subscription(
+                    plan.google_play_product_id, purchase_token
+                )
+            except Exception as e:
+                logger.warning(f"确认购买失败，但订阅记录已创建: {str(e)}")
+            
+            logger.info(f"从RTDN通知创建订阅成功 - 用户: {user_id}, 订阅: {subscription.id}")
+            
+            return subscription
+            
+        except Exception as e:
+            await db.rollback()
+            logger.error(f"从购买信息创建订阅记录失败: {str(e)}")
+            return None
     
     async def _update_subscription_by_notification_type(
         self, 
