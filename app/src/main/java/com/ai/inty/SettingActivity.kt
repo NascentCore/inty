@@ -24,6 +24,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -43,6 +44,7 @@ import com.ai.inty.base.BaseActivity
 import com.ai.inty.base.noRippleClickable
 import com.ai.inty.ui.theme.BackGround
 import com.ai.inty.ui.theme.IntyTheme
+import com.ai.inty.billing.BillingRepository
 import com.ai.inty.viewmodels.MainViewModel
 import com.inty.utils.storage.IntySetting
 import com.therouter.TheRouter
@@ -98,6 +100,9 @@ fun SettingScreen(
     val context = LocalContext.current
 
     var showKeepTalking by remember { mutableStateOf(IntySetting.isShowKeepTalking()) }
+    
+    // 获取订阅状态
+    val vipStatus by BillingRepository.vipStatusFlow.collectAsState()
 
     Scaffold(
         modifier = modifier,
@@ -267,6 +272,57 @@ fun SettingScreen(
                         modifier = Modifier.noRippleClickable {
 
                         },
+                        painter = painterResource(R.drawable.icon_next),
+                        contentDescription = null,
+                    )
+                }
+                Spacer(Modifier.height(4.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(1.dp)
+                        .background(
+                            brush = Brush.horizontalGradient(
+                                colors = listOf(
+                                    Color.Transparent,
+                                    Color.White.copy(0.2f),
+                                    Color.Transparent
+                                )
+                            )
+                        )
+                ) {
+
+                }
+                Spacer(Modifier.height(4.dp))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp)
+                        .padding(horizontal = 12.dp)
+                        .noRippleClickable {
+                            TheRouter.build(Constant.ROUTE_SUBSCRIPTION_MANAGEMENT).navigation(context)
+                        },
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = stringResource(R.string.settings_subscription_management),
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color.White
+                    )
+                    Spacer(Modifier.weight(1f))
+                    Text(
+                        text = if (vipStatus.isSubscribed) {
+                            stringResource(R.string.subscribed)
+                        } else {
+                            stringResource(R.string.unsubscribed)
+                        },
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Normal,
+                        color = Color.White.copy(0.55f)
+                    )
+                    Spacer(Modifier.width(10.dp))
+                    Image(
                         painter = painterResource(R.drawable.icon_next),
                         contentDescription = null,
                     )
