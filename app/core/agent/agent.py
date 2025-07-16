@@ -8,7 +8,6 @@ from langgraph.prebuilt import create_react_agent
 from langchain_openai import ChatOpenAI
 from langmem import create_manage_memory_tool,create_search_memory_tool
 from langchain_postgres import PostgresChatMessageHistory
-from langgraph.checkpoint.memory import MemorySaver
 from langgraph.store.postgres import PostgresStore
 from langchain_postgres import PostgresChatMessageHistory
 from openai import OpenAI
@@ -75,8 +74,6 @@ postgres_store = PostgresStore(
     }
 )
 postgres_store.setup()
-
-checkpointer = MemorySaver()
 
 # 初始化Google搜索工具
 search = GoogleSearchAPIWrapper(
@@ -164,12 +161,11 @@ class Agent:
             openai_api_base=base_url,
         )
         
-        # 为每个Agent创建独立的checkpointer
-        self.checkpointer = MemorySaver()
-        
         # 构建动态提示词Runnable
         self.prompt_runnable = self._create_dynamic_prompt_runnable()
         
+        # 创建无状态的LangGraph Agent
+        # 移除了checkpointer，对话历史通过PostgresChatMessageHistory管理
         self.agent = create_react_agent(
             name=name,
             model=model,
@@ -179,8 +175,7 @@ class Agent:
                 google_search_tool
                 ],
             prompt=self.prompt_runnable,
-            store=postgres_store,
-            checkpointer=self.checkpointer
+            store=postgres_store
         )
 
     def _create_dynamic_prompt_runnable(self) -> Runnable:
@@ -349,8 +344,44 @@ class Agent:
             logger.error(f"检查首次消息失败: {str(e)}")
             return False
 
+    def _get_relevant_history(self, history_messages: List[BaseMessage], max_messages: int = 10) -> List[BaseMessage]:
+        """
+        获取相关的历史消息，进行智能截取和优化
+        
+        Args:
+            history_messages: 所有历史消息
+            max_messages: 最大消息数量
+            
+        Returns:
+            经过优化的历史消息列表
+        """
+        if not history_messages:
+            return []
+        
+        # 如果消息数量不超过限制，直接返回
+        if len(history_messages) <= max_messages:
+            return history_messages
+        
+        # 取最近的消息
+        recent_messages = history_messages[-max_messages:]
+        
+        # 确保对话完整性：如果第一条是AI消息，尝试包含前一条用户消息
+        if recent_messages and isinstance(recent_messages[0], AIMessage):
+            # 查找前面是否有用户消息
+            start_index = len(history_messages) - max_messages - 1
+            if start_index >= 0 and isinstance(history_messages[start_index], HumanMessage):
+                # 包含这条用户消息，但移除最后一条消息以保持总数
+                recent_messages = [history_messages[start_index]] + recent_messages[:-1]
+        
+        return recent_messages
+
     def _chat_sync(self, user_id: str, session_id: str, messages: dict[str, Any]) -> str:
-        """同步聊天方法，支持角色卡功能"""
+        """
+        同步聊天方法，支持角色卡功能
+        
+        移除了LangGraph checkpointer，改为通过PostgresChatMessageHistory管理对话历史。
+        历史消息会被智能截取并注入到当前对话上下文中。
+        """
         self._update_last_used()
         
         # 获取用户profile信息
@@ -369,19 +400,24 @@ class Agent:
                     sync_connection=conn_local
                 )
 
+                # 获取相关的历史消息
+                recent_history = self._get_relevant_history(history.messages, max_messages=10)
+                
+                # 构建包含历史的完整消息列表
+                all_messages = recent_history + messages["messages"]
+                
                 # 保存原始用户消息到历史记录
                 history.add_messages(messages["messages"])
 
-                # 构建输入数据，包含用户profile和首次消息标志
+                # 构建输入数据，包含历史消息、用户profile和首次消息标志
                 input_data = {
-                    "messages": messages["messages"],
+                    "messages": all_messages,
                     "user_profile": user_profile,
                     "is_first_message": is_first_message
                 }
                 
-                # 使用更精确的thread_id，包含agent_id避免混淆
-                thread_id = f"{user_id}_{self.agent_id}"
-                config = {'configurable':{'user_id':user_id,'thread_id':thread_id}}
+                # 移除checkpointer后，不需要thread_id配置
+                config = {'configurable': {'user_id': user_id}}
                 
                 # 调用agent进行对话
                 response = self.agent.invoke(input_data, config)
@@ -464,7 +500,12 @@ class Agent:
             raise
 
     async def chat_stream(self, user_id: str, session_id: str, messages: dict[str, Any], db_session = None):
-        """异步流式聊天方法"""
+        """
+        异步流式聊天方法
+        
+        移除了LangGraph checkpointer，改为通过PostgresChatMessageHistory管理对话历史。
+        支持流式响应输出，历史消息会被智能截取并注入到当前对话上下文中。
+        """
         self._update_last_used()
         
         def _stream_generator():
@@ -484,26 +525,31 @@ class Agent:
                         sync_connection=conn_local
                     )
 
-                    # 构建输入数据，包含用户profile和首次消息标志
+                    # 获取相关的历史消息
+                    recent_history = self._get_relevant_history(history.messages, max_messages=10)
+                    
+                    # 构建包含历史的完整消息列表
+                    all_messages = recent_history + messages["messages"]
+
+                    # 构建输入数据，包含历史消息、用户profile和首次消息标志
                     input_data = {
-                        "messages": messages["messages"],
+                        "messages": all_messages,
                         "user_profile": user_profile,
                         "is_first_message": is_first_message
                     }
 
-                    # 使用更精确的thread_id，包含agent_id避免混淆
-                    thread_id = f"{user_id}_{self.agent_id}"
-                    config = {'configurable':{'user_id':user_id,'thread_id':thread_id}}
+                    # 移除checkpointer后，不需要thread_id配置
+                    config = {'configurable': {'user_id': user_id}}
                     
                     # 收集完整的流式响应用于调试
-                    all_messages = []
+                    stream_messages = []
                     for message_chunk, metadata in self.agent.stream(input_data, config, stream_mode="messages"):
-                        all_messages.append(message_chunk)
+                        stream_messages.append(message_chunk)
                         yield message_chunk, metadata
                     
                     # 如果启用调试日志记录，保存完整的流式响应
                     if settings.agent.enable_debug_logging:
-                        stream_response = {"messages": all_messages}
+                        stream_response = {"messages": stream_messages}
                         self._save_debug_messages(user_id, session_id, stream_response, conn_local)
                 except Exception as e:
                     logger.error(f"流式聊天处理失败 - Agent: {self.agent_id}, Session: {session_id}, Error: {str(e)}")
