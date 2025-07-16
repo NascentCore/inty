@@ -652,15 +652,28 @@ async def agent_chat_fast_response(
         )
         
         # 获取最后一条用户消息
-        user_messages = [msg for msg in request.messages if msg.role == "user"]
-        if not user_messages:
-            raise HTTPException(status_code=400, detail="No user message found")
+        try:
+            logger.debug(f"处理messages: {[f'{getattr(msg, 'role', 'unknown')}: {getattr(msg, 'content', 'no content')[:50]}...' for msg in request.messages]}")
+            user_messages = [msg for msg in request.messages if getattr(msg, 'role', None) == "user"]
+            logger.debug(f"找到的用户消息数量: {len(user_messages)}")
+            if not user_messages:
+                logger.error("请求中没有用户消息")
+                logger.error(f"所有消息的role: {[getattr(msg, 'role', 'unknown') for msg in request.messages]}")
+                raise HTTPException(status_code=400, detail="No user message found")
+            
+            last_user_message = user_messages[-1].content
+            logger.debug(f"用户消息: {last_user_message[:100]}...")
+        except Exception as e:
+            logger.error(f"消息处理失败: {str(e)}")
+            logger.error(f"消息类型: {type(request.messages)}")
+            if request.messages:
+                logger.error(f"第一个消息类型: {type(request.messages[0])}")
+                logger.error(f"第一个消息内容: {request.messages[0]}")
+            raise HTTPException(status_code=400, detail=f"Message processing failed: {str(e)}")
         
-        last_user_message = user_messages[-1].content
-        
-        # 构建消息
+        # 构建LangChain消息格式
         messages = {
-            "messages": [{"role": "user", "content": last_user_message}]
+            "messages": [HumanMessage(content=last_user_message)]
         }
         
         # 创建Agent实例

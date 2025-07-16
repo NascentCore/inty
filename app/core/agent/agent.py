@@ -470,13 +470,23 @@ class Agent:
             }]
             for msg in response.get("messages", []):
                 if hasattr(msg, 'type') and hasattr(msg, 'content'):
+                    # 对象类型的消息
                     serializable_messages.append({
                         "type": msg.type,
                         "content": msg.content
                     })
+                elif isinstance(msg, dict):
+                    # 字典类型的消息
+                    serializable_messages.append({
+                        "type": msg.get("type", "unknown"),
+                        "content": msg.get("content", str(msg))
+                    })
                 else:
                     # 处理可能的其他消息格式
-                    serializable_messages.append(str(msg))
+                    serializable_messages.append({
+                        "type": "unknown",
+                        "content": str(msg)
+                    })
             
             debug_data = {
                 "messages": serializable_messages,
