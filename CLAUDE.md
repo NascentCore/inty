@@ -32,6 +32,16 @@ export JAVA_HOME=/Applications/Android\ Studio.app/Contents/jbr/Contents/Home
 - Use `EasyLog.log()` for logging throughout the application
 - Debug APKs are signed with the development certificate configured in keystore.properties
 - Build outputs are in `app/build/outputs/apk/`
+- Debug builds include git commit hash in version name (e.g., "1.0.0 (d799932)")
+- Chucker network inspection available in debug builds
+
+### Documentation
+- **README.md**: Comprehensive project overview and setup guide
+- **CONTRIBUTING.md**: Development guidelines and contribution process
+- **CHANGELOG.md**: Version history and release notes
+- **LICENSE**: MIT License terms
+- **data_safety_declaration.md**: Google Play Store data safety compliance
+- **play_app_signing_guide.md**: Google Play App Signing configuration
 
 ## Architecture Overview
 

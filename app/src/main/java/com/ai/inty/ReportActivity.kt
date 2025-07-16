@@ -269,7 +269,7 @@ fun ReportScreen(
                 Spacer(Modifier.height(16.dp))
                 Text(
                     modifier = Modifier.fillMaxWidth(),
-                    text = "Report description*",
+                    text = "Report description *",
                     fontSize = 14.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = Color.White,
