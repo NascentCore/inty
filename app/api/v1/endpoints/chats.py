@@ -653,7 +653,6 @@ async def agent_chat_fast_response(
         
         # 获取最后一条用户消息
         try:
-            logger.debug(f"处理messages: {[f'{getattr(msg, 'role', 'unknown')}: {getattr(msg, 'content', 'no content')[:50]}...' for msg in request.messages]}")
             user_messages = [msg for msg in request.messages if getattr(msg, 'role', None) == "user"]
             logger.debug(f"找到的用户消息数量: {len(user_messages)}")
             if not user_messages:
