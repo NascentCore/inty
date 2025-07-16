@@ -86,7 +86,7 @@ import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 @Composable
-fun ChatPage(
+internal fun ChatPage(
     modifier: Modifier,
     chatViewModel: ChatViewModel,
     onFollowAgent: ((String) -> Unit)? = null,
@@ -756,7 +756,7 @@ fun ChatPage(
 }
 
 @Composable
-fun ChatItem(
+private fun ChatItem(
     item: MsgInfo
 ) {
     when (item.role) {
@@ -775,7 +775,7 @@ fun ChatItem(
 }
 
 @Composable
-fun ChatItemAI(
+private fun ChatItemAI(
     item: MsgInfo
 ) {
     Row {
@@ -808,7 +808,7 @@ fun ChatItemAI(
 
 
 @Composable
-fun ChatItemUser(
+private fun ChatItemUser(
     item: MsgInfo
 ) {
     Row {
@@ -836,7 +836,7 @@ fun ChatItemUser(
 }
 
 @Composable
-fun StyledMessageText(
+private fun StyledMessageText(
     text: String,
     fontSize: androidx.compose.ui.unit.TextUnit,
     fontWeight: FontWeight,
@@ -926,7 +926,7 @@ fun StyledMessageText(
 
 
 @Composable
-fun TopBar(
+private fun TopBar(
     modifier: Modifier,
     agentInfo: AgentInfo,
     showBackButton: Boolean = false,
@@ -1015,7 +1015,7 @@ fun TopBar(
 
 
 @Composable
-fun LoadingAnimation() {
+private fun LoadingAnimation() {
     val infiniteTransition = rememberInfiniteTransition(label = "loading")
 
     Row(
@@ -1045,7 +1045,7 @@ fun LoadingAnimation() {
 }
 
 @Composable
-fun MorePanelItem(
+private fun MorePanelItem(
     icon: Int,
     text: String,
     onClick: () -> Unit

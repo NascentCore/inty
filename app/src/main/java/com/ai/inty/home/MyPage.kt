@@ -39,6 +39,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -233,8 +234,8 @@ internal fun MyPage(
                 // HeartMate Premium 会员入口按钮
                 AuthClickable(
                     modifier = Modifier
-                        .padding(horizontal = 16.dp)
-                        .fillMaxWidth(),
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp),
                     onClick = {
                         TheRouter.build(Constant.ROUTE_VIP_CENTER).navigation(context)
                     }
@@ -242,7 +243,8 @@ internal fun MyPage(
                     Image(
                         painter = painterResource(R.drawable.img_vip_banner),
                         contentDescription = "vip banner",
-                        modifier = authModifier.fillMaxWidth()
+                        modifier = authModifier,
+                        contentScale = ContentScale.Crop
                     )
                 }
 
