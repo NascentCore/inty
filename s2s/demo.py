@@ -6,7 +6,6 @@ from typing import Any, cast
 
 from audio_util import CHANNELS, SAMPLE_RATE, AudioPlayerAsync
 from openai import AsyncOpenAI
-from openai.types.beta.realtime.session import Session
 from openai.resources.beta.realtime.realtime import AsyncRealtimeConnection
 
 
