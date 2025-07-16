@@ -154,12 +154,32 @@ class Agent:
         model_name = model_config.get('model', settings.agent.model)
         api_key = model_config.get('api_key', settings.agent.api_key)
         base_url = model_config.get('base_url', settings.agent.base_url)
+        
+        # 提取模型参数
+        temperature = model_config.get('temperature', getattr(settings.agent, 'temperature', 0.5))
+        max_tokens = model_config.get('max_tokens', getattr(settings.agent, 'max_tokens', 1000))
+        top_p = model_config.get('top_p')
+        frequency_penalty = model_config.get('frequency_penalty')
+        presence_penalty = model_config.get('presence_penalty')
+        
+        # 构建ChatOpenAI参数
+        chat_params = {
+            'model': model_name,
+            'openai_api_key': api_key,
+            'openai_api_base': base_url,
+            'temperature': temperature,
+            'max_tokens': max_tokens,
+        }
+        
+        # 只有当参数不为None时才添加
+        if top_p is not None:
+            chat_params['top_p'] = top_p
+        if frequency_penalty is not None:
+            chat_params['frequency_penalty'] = frequency_penalty
+        if presence_penalty is not None:
+            chat_params['presence_penalty'] = presence_penalty
 
-        model = ChatOpenAI(
-            model=model_name,
-            openai_api_key=api_key,
-            openai_api_base=base_url,
-        )
+        model = ChatOpenAI(**chat_params)
         
         # 构建动态提示词Runnable
         self.prompt_runnable = self._create_dynamic_prompt_runnable()
@@ -810,7 +830,10 @@ class AgentManager:
                 # 创建新的Agent实例
                 model_config = {}
                 if agent_data.get('settings'):
-                    model_config = agent_data['settings'].get('model_config', {})
+                    model_config = agent_data['settings'].get('llm_config', {})
+                    # 向后兼容：也检查旧的model_config字段
+                    if not model_config and 'model_config' in agent_data['settings']:
+                        model_config = agent_data['settings']['model_config']
                 
                 system_prompt = agent_data.get('prompt', "你是一个聊天助手，请用中文回答用户的问题。")
                 description = agent_data.get('description', "")
@@ -944,6 +967,73 @@ class AgentManager:
                     
                     return True
         return False
+
+    async def reload_agent(self, agent_id: str, agent_data: dict) -> bool:
+        """
+        重新加载指定Agent实例，强制刷新配置
+        
+        Args:
+            agent_id: Agent ID
+            agent_data: 新的Agent配置数据
+            
+        Returns:
+            重载是否成功
+        """
+        agent_lock = self._get_agent_lock(agent_id)
+        with agent_lock:
+            with self._write_lock:
+                # 如果Agent存在，先清理旧实例
+                if agent_id in self.agents:
+                    old_agent = self.agents[agent_id]
+                    try:
+                        old_agent.cleanup()
+                        logger.info(f"已清理旧Agent实例: {agent_id}")
+                    except Exception as e:
+                        logger.error(f"清理旧Agent实例失败 {agent_id}: {str(e)}")
+                    
+                    del self.agents[agent_id]
+                
+                try:
+                    # 创建新的Agent实例
+                    model_config = {}
+                    if agent_data.get('settings'):
+                        model_config = agent_data['settings'].get('llm_config', {})
+                        # 向后兼容：也检查旧的model_config字段
+                        if not model_config and 'model_config' in agent_data['settings']:
+                            model_config = agent_data['settings']['model_config']
+                    
+                    system_prompt = agent_data.get('prompt', "你是一个聊天助手，请用中文回答用户的问题。")
+                    description = agent_data.get('description', "")
+                    template_name = agent_data.get('template_name', 'default')
+                    
+                    agent = Agent(
+                        agent_id=agent_id,
+                        name=agent_data['name'],
+                        model_config=model_config,
+                        system_prompt=system_prompt,
+                        description=description,
+                        template_name=template_name,
+                        # 角色卡相关参数
+                        personality=agent_data.get('personality', ''),
+                        scenario=agent_data.get('scenario', ''),
+                        first_message=agent_data.get('first_message', ''),
+                        message_example=agent_data.get('message_example', ''),
+                        creator_notes=agent_data.get('creator_notes', ''),
+                        post_history_instructions=agent_data.get('post_history_instructions', ''),
+                        alternate_greetings=agent_data.get('alternate_greetings', []),
+                        character_book=agent_data.get('character_book', {}),
+                        tags=agent_data.get('tags', []),
+                        character_version=agent_data.get('character_version', ''),
+                        extensions=agent_data.get('extensions', {})
+                    )
+                    
+                    self.agents[agent_id] = agent
+                    logger.info(f"Agent重新加载成功: {agent_id}")
+                    return True
+                    
+                except Exception as e:
+                    logger.error(f"重新加载Agent失败 {agent_id}: {str(e)}")
+                    return False
 
     def get_agent_prompt(self, agent_id: str) -> Optional[str]:
         """
