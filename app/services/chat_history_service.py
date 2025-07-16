@@ -284,4 +284,41 @@ def get_all_messages(session_id: str) -> List[Dict[str, Any]]:
         
     except Exception as e:
         logger.error(f"获取所有消息失败 {session_id}: {str(e)}")
-        return [] 
+        return []
+
+async def get_message_content(session_id: str, message_id: str) -> Optional[str]:
+    """
+    根据消息ID获取消息内容
+    
+    Args:
+        session_id: 会话ID
+        message_id: 消息ID（这里使用消息索引作为ID）
+    
+    Returns:
+        消息内容，如果找不到则返回None
+    """
+    try:
+        # 获取所有消息
+        messages = get_all_messages(session_id)
+        
+        # 尝试将message_id转换为索引
+        try:
+            index = int(message_id)
+            # 只返回AI消息（assistant角色）
+            ai_messages = [msg for msg in messages if msg['role'] == 'assistant']
+            
+            if 0 <= index < len(ai_messages):
+                return ai_messages[index]['content']
+            else:
+                logger.warning(f"消息索引超出范围: {index}, 总AI消息数: {len(ai_messages)}")
+                return None
+                
+        except ValueError:
+            # 如果message_id不是数字，尝试其他方法
+            # 这里可以根据实际的消息ID结构进行调整
+            logger.warning(f"无法解析消息ID: {message_id}")
+            return None
+            
+    except Exception as e:
+        logger.error(f"获取消息内容失败 {session_id}, {message_id}: {str(e)}")
+        return None 

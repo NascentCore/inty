@@ -12,7 +12,7 @@ class ChatSettings(Base):
 
     id = Column(String, primary_key=True, index=True)
     language = Column(String, default="en")
-    voice_enabled = Column(Boolean, default=True)
+    voice_enabled = Column(Boolean, default=True)  # 个性化语音自动播放开关
     keep_talking = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=sa.text('now()'))
     updated_at = Column(DateTime(timezone=True), onupdate=sa.text('now()'))

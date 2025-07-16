@@ -111,6 +111,16 @@ class GooglePlayConfig:
     webhook_secret: Optional[str] = None  # Webhook密钥（可选）
 
 @dataclass
+class ElevenLabsConfig:
+    """ElevenLabs语音生成配置"""
+    api_key: str
+    model: str = "eleven_multilingual_v2"
+    voice_id: str = "JBFqnCBsd6RMkjVDRZzb"  # 默认语音ID
+    output_format: str = "mp3_44100_128"
+    enabled: bool = True
+    max_text_length: int = 5000  # 最大文本长度限制
+
+@dataclass
 class Config:
     app: AppConfig
     security: SecurityConfig
@@ -125,6 +135,7 @@ class Config:
     firebase: FirebaseConfig
     keep_talking: KeepTalkingConfig
     google_play: GooglePlayConfig
+    elevenlabs: ElevenLabsConfig
 
 def load_config(path: str = "config.yaml") -> Config:
     config_path = Path(path)
@@ -148,7 +159,8 @@ def load_config(path: str = "config.yaml") -> Config:
         google_search=GoogleSearchConfig(**data.get("google_search", {})),
         firebase=FirebaseConfig(**data.get("firebase", {})),
         keep_talking=KeepTalkingConfig(**data.get("keep_talking", {})),
-        google_play=GooglePlayConfig(**data.get("google_play", {}))
+        google_play=GooglePlayConfig(**data.get("google_play", {})),
+        elevenlabs=ElevenLabsConfig(**data.get("elevenlabs", {}))
     )
 
 # load config

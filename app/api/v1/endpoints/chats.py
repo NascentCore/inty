@@ -9,10 +9,14 @@ from pydantic import BaseModel
 
 from app import schemas
 from app.api import deps
+from app.schemas.chat import ChatCompletionRequest
 from app.services import chat_service, agent_service, chat_history_service
 from app.services.chat_service import generate_session_id
 from app.services.subscription_service import subscription_service
 from app.services.keep_talking_service import keep_talking_service
+from app.services.voice_service import voice_service
+from app.services.voice_cleanup_service import voice_cleanup_service
+from app.services.voice_cache_service import voice_cache_service
 from app.core.agent.agent import agent_manager
 from app.core.config import settings
 from langchain_core.messages import HumanMessage
@@ -75,6 +79,7 @@ class ChatCompletionRequest(BaseModel):
     messages: List[ChatMessage]
     stream: bool = False
     model: str = "chatbot"
+    language: str = "zh"  # 添加语言字段，默认中文
 
 
 @router.get("/agents/status")
@@ -410,6 +415,11 @@ async def agent_chat_completions(
     如果用户还没有和该Agent创建会话，则自动创建
     """
     try:
+        logger.info(f"开始处理聊天请求 - Agent ID: {agent_id}, User ID: {current_user.id}")
+        logger.debug(f"请求参数: {request.dict()}")
+        logger.debug(f"request.messages详情: {request.messages}")
+        logger.debug(f"request.messages数量: {len(request.messages) if request.messages else 0}")
+        
         # 检查用户聊天次数限制
         # is_allowed, used_count, daily_limit = await subscription_service.check_chat_limit(
         #     db, current_user.id
@@ -427,19 +437,24 @@ async def agent_chat_completions(
         #     )
         
         # 首先验证Agent是否存在
+        logger.debug(f"查询Agent数据库记录: {agent_id}")
         agent_db = await agent_service.get_agent(db, agent_id=agent_id)
         if not agent_db:
+            logger.error(f"Agent未找到: {agent_id}")
             raise HTTPException(status_code=404, detail="Agent not found")
         
+        logger.info(f"Agent查询成功: {agent_db.name}, Voice ID: {agent_db.voice_id}")
         # 添加日志记录传入的agent_id
         logger.info(f"请求的Agent ID: {agent_id}")
         
         # 获取或创建与该Agent的唯一会话
+        logger.debug(f"获取或创建聊天会话: user_id={current_user.id}, agent_id={agent_id}")
         chat = await chat_service.get_or_create_chat_by_agent(
             db=db,
             user_id=current_user.id,
             agent_id=agent_id
         )
+        logger.info(f"聊天会话获取成功: chat_id={chat.id}, agent_id={chat.agent_id}")
         
         # 验证返回的chat中的agent_id是否与传入的一致
         if chat.agent_id != agent_id:
@@ -450,11 +465,16 @@ async def agent_chat_completions(
         logger.info(f"实际聊天的Agent ID: {chat.agent_id}")
         
         # 获取最后一条用户消息
+        logger.debug(f"处理messages: {[f'{msg.role}: {msg.content[:50]}...' for msg in request.messages]}")
         user_messages = [msg for msg in request.messages if msg.role == "user"]
+        logger.debug(f"找到的用户消息数量: {len(user_messages)}")
         if not user_messages:
+            logger.error("请求中没有用户消息")
+            logger.error(f"所有消息的role: {[msg.role for msg in request.messages]}")
             raise HTTPException(status_code=400, detail="No user message found")
         
         last_user_message = user_messages[-1].content
+        logger.debug(f"用户消息: {last_user_message[:100]}...")
         
         # 构建LangChain消息格式
         messages = {
@@ -462,6 +482,7 @@ async def agent_chat_completions(
         }
         
         # 获取或创建Agent实例 - 使用chat中的agent_id确保一致性
+        logger.debug(f"准备创建Agent实例: {chat.agent_id}")
         agent_data = {
             'id': chat.agent_id,  # 使用chat中的agent_id而不是传入的agent_id
             'name': agent_db.name,
@@ -469,6 +490,7 @@ async def agent_chat_completions(
             'settings': agent_db.settings
         }
         agent = await agent_manager.get_agent(agent_data)
+        logger.info(f"Agent实例创建成功: {agent_data['name']}")
         
         # 使用统一的session_id生成规则
         session_id = generate_session_id(chat.id)
@@ -498,15 +520,53 @@ async def agent_chat_completions(
             )
         else:
             # 非流式聊天（异步）
-            response_content = await agent.chat(
-                user_id=current_user.id,
-                session_id=session_id,
-                messages=messages,
-                db_session=db
-            )
+            logger.debug(f"开始Agent聊天处理: session_id={session_id}")
+            try:
+                response_content = await agent.chat(
+                    user_id=current_user.id,
+                    session_id=session_id,
+                    messages=messages,
+                    db_session=db
+                )
+                logger.info(f"Agent聊天响应成功: {response_content[:100]}...")
+            except Exception as e:
+                logger.error(f"Agent聊天处理失败: {str(e)}")
+                raise
+            
+            # 语音生成逻辑 - 根据chat_settings.voice_enabled决定是否自动播放
+            audio_url = None
+            try:
+                logger.debug(f"开始语音生成逻辑检查: chat_id={chat.id}")
+                # 获取或创建聊天设置
+                chat_settings = await chat_service.get_or_create_chat_settings(
+                    db, chat.id, current_user.id, agent_id
+                )
+                logger.debug(f"聊天设置获取成功: voice_enabled={chat_settings.voice_enabled}")
+                
+                # 语音自动播放逻辑：chat_settings.voice_enabled = true 时自动生成语音
+                if chat_settings.voice_enabled:
+                    # 使用Agent的voice_id字段
+                    agent_voice_id = agent_db.voice_id
+                    logger.info(f"开始语音生成: voice_id={agent_voice_id}, text_length={len(response_content)}, language={request.language}")
+                    
+                    audio_url = await voice_service.generate_voice(
+                        text=response_content,
+                        voice_id=agent_voice_id,
+                        language=request.language,
+                        db=db
+                    )
+                    logger.info(f"语音自动生成成功: {audio_url}")
+                else:
+                    logger.debug("语音未启用，跳过语音生成")
+                    
+            except Exception as e:
+                logger.error(f"语音生成失败: {str(e)}")
+                logger.exception("语音生成异常详细信息:")
+                # 语音生成失败不影响聊天功能
             
             # 记录聊天使用情况
             try:
+                logger.debug(f"记录聊天使用情况: user_id={current_user.id}")
                 await subscription_service.record_usage(
                     db, 
                     current_user.id, 
@@ -514,9 +574,23 @@ async def agent_chat_completions(
                     1,
                     extra_data={"agent_id": agent_id, "message_length": len(last_user_message)}
                 )
+                logger.debug("聊天使用情况记录成功")
             except Exception as e:
                 logger.warning(f"记录聊天使用情况失败: {str(e)}")
             
+            # 构建响应消息
+            logger.debug("构建聊天响应消息")
+            message = {
+                "role": "assistant",
+                "content": response_content
+            }
+            
+            # 如果生成了语音，添加到响应中
+            if audio_url:
+                message["audio_url"] = audio_url
+                logger.info(f"响应包含语音URL: {audio_url}")
+            
+            logger.info(f"聊天请求处理成功: agent_id={agent_id}, response_length={len(response_content)}")
             return {
                 "id": f"chatcmpl-{uuid.uuid4().hex[:12]}",
                 "object": "chat.completion",
@@ -525,10 +599,7 @@ async def agent_chat_completions(
                 "choices": [
                     {
                         "index": 0,
-                        "message": {
-                            "role": "assistant",
-                            "content": response_content
-                        },
+                        "message": message,
                         "finish_reason": "stop"
                     }
                 ],
@@ -540,7 +611,166 @@ async def agent_chat_completions(
             }
             
     except Exception as e:
+        logger.error(f"聊天请求处理失败: {str(e)}")
+        logger.exception("聊天请求异常详细信息:")
         raise HTTPException(status_code=500, detail=f"Chat failed: {str(e)}")
+
+
+@router.post("/agents/{agent_id}/messages/{message_id}/voice")
+async def generate_message_voice(
+    *,
+    db: AsyncSession = Depends(deps.get_async_db),
+    agent_id: str,
+    message_id: str,
+    language: str = Query("zh", description="语言代码"),
+    current_user: schemas.User = Depends(deps.get_current_active_user),
+):
+    """
+    为指定消息生成语音
+    用于用户点击播放按钮时的按需语音生成
+    """
+    try:
+        # 验证Agent是否存在
+        agent_db = await agent_service.get_agent(db, agent_id=agent_id)
+        if not agent_db:
+            raise HTTPException(status_code=404, detail="Agent not found")
+        
+        # 获取用户与该Agent的会话
+        chat = await chat_service.get_chat_by_user_and_agent(
+            db=db,
+            user_id=current_user.id,
+            agent_id=agent_id
+        )
+        if not chat:
+            raise HTTPException(status_code=404, detail="Chat not found")
+        
+        # 从聊天历史中获取消息内容
+        session_id = generate_session_id(chat.id)
+        message_content = await chat_history_service.get_message_content(
+            session_id=session_id,
+            message_id=message_id
+        )
+        
+        if not message_content:
+            raise HTTPException(status_code=404, detail="Message not found")
+        
+        # 使用Agent的voice_id生成语音
+        agent_voice_id = agent_db.voice_id
+        audio_url = await voice_service.generate_voice(
+            text=message_content,
+            voice_id=agent_voice_id,
+            language=language,
+            db=db
+        )
+        
+        if not audio_url:
+            raise HTTPException(status_code=500, detail="Voice generation failed")
+        
+        logger.info(f"按需语音生成成功: {audio_url}")
+        
+        return {
+            "audio_url": audio_url,
+            "message_id": message_id,
+            "voice_id": agent_voice_id or settings.elevenlabs.voice_id,
+            "language": language,
+            "cached": False,  # 这里可以后续实现缓存检测
+            "generation_time": None  # 可以记录生成时间
+        }
+        
+    except Exception as e:
+        logger.error(f"按需语音生成失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Voice generation failed: {str(e)}")
+
+
+@router.get("/voices")
+async def get_available_voices(
+    current_user: schemas.User = Depends(deps.get_current_active_user),
+):
+    """
+    获取可用的语音列表
+    """
+    try:
+        voices = await voice_service.get_available_voices()
+        return {
+            "voices": voices,
+            "default_voice_id": settings.elevenlabs.voice_id
+        }
+    except Exception as e:
+        logger.error(f"获取语音列表失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to get voices: {str(e)}")
+
+
+@router.get("/voices/{voice_id}")
+async def get_voice_info(
+    voice_id: str,
+    current_user: schemas.User = Depends(deps.get_current_active_user),
+):
+    """
+    获取特定语音的信息
+    """
+    try:
+        voice_info = await voice_service.get_voice_info(voice_id)
+        if not voice_info:
+            raise HTTPException(status_code=404, detail="Voice not found")
+        
+        return voice_info
+    except Exception as e:
+        logger.error(f"获取语音信息失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to get voice info: {str(e)}")
+
+
+@router.post("/voice/cleanup")
+async def manual_voice_cleanup(
+    cleanup_type: str = Query("all", description="清理类型: expired, invalid, all"),
+    current_user: schemas.User = Depends(deps.get_current_active_user),
+):
+    """
+    手动执行语音文件清理
+    """
+    try:
+        # 这里可以添加权限检查，只允许管理员执行
+        # if not current_user.is_admin:
+        #     raise HTTPException(status_code=403, detail="权限不足")
+        
+        result = await voice_cleanup_service.manual_cleanup(cleanup_type)
+        return result
+        
+    except Exception as e:
+        logger.error(f"手动清理失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Manual cleanup failed: {str(e)}")
+
+
+@router.get("/voice/stats")
+async def get_voice_stats(
+    current_user: schemas.User = Depends(deps.get_current_active_user),
+):
+    """
+    获取语音缓存统计信息
+    """
+    try:
+        cleanup_stats = await voice_cleanup_service.get_cleanup_stats()
+        return cleanup_stats
+        
+    except Exception as e:
+        logger.error(f"获取语音统计失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to get voice stats: {str(e)}")
+
+
+@router.get("/voice/cache/stats")
+async def get_voice_cache_stats(
+    db: AsyncSession = Depends(deps.get_async_db),
+    current_user: schemas.User = Depends(deps.get_current_active_user),
+):
+    """
+    获取语音缓存详细统计信息
+    """
+    try:
+        cache_stats = await voice_cache_service.get_cache_stats(db)
+        return cache_stats
+        
+    except Exception as e:
+        logger.error(f"获取缓存统计失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to get cache stats: {str(e)}")
 
 
 @router.put("/agents/{agent_id}/settings", response_model=schemas.ChatSettings)

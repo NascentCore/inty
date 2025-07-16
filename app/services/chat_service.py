@@ -477,7 +477,7 @@ async def get_or_create_chat_settings(
             agent_id=agent_id,
             chat_id=chat_id,
             language="zh",  # 默认中文
-            voice_enabled=True,
+            voice_enabled=True,  # 默认启用语音自动播放
             keep_talking=True
         )
         
@@ -584,7 +584,15 @@ async def get_chat_by_agent_and_user(
         raise HTTPException(status_code=500, detail="数据库查询失败")
     except Exception as e:
         logger.error(f"未知错误 - 获取聊天会话 agent_id={agent_id}, user_id={user_id}: {str(e)}")
-        raise HTTPException(status_code=500, detail="服务器内部错误") 
+        raise HTTPException(status_code=500, detail="服务器内部错误")
+
+async def get_chat_by_user_and_agent(
+    db: AsyncSession, user_id: str, agent_id: str
+) -> Optional[models.Chat]:
+    """
+    根据user_id和agent_id获取唯一的聊天会话
+    """
+    return await get_chat_by_agent_and_user(db, agent_id, user_id) 
 
 async def save_debug_messages(
     db: AsyncSession,

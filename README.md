@@ -27,6 +27,9 @@ InTy 是一个基于 FastAPI 和 PostgreSQL 的 AI 聊天应用后端，集成�
 
 ### 💬 聊天功能
 - **实时消息传输**：高性能的异步消息处理
+- **AI 语音回复**：集成 ElevenLabs API 的智能语音合成
+- **语音自动播放**：可配置的语音自动播放和手动播放
+- **语音缓存优化**：智能缓存机制，降低API调用成本
 - **多媒体支持**：文本、语音、图片消息
 - **聊天设置管理**：个性化的对话配置
 - **多语言支持**：国际化的用户界面
@@ -65,10 +68,11 @@ InTy 是一个基于 FastAPI 和 PostgreSQL 的 AI 聊天应用后端，集成�
 - **bcrypt** - 密码哈希
 
 ### ☁️ 云服务
-- **Google Cloud Storage** - 文件存储
+- **Google Cloud Storage** - 文件存储和语音文件管理
 - **Google Search API** - 搜索功能
 - **Google Play Developer API** - 订阅管理
 - **Firebase Cloud Messaging** - 消息推送
+- **ElevenLabs API** - 高质量语音合成服务
 
 ### 🛠 开发工具
 - **Pydantic** - 数据验证
@@ -99,6 +103,7 @@ InTy 是一个基于 FastAPI 和 PostgreSQL 的 AI 聊天应用后端，集成�
 - **report** - 举报记录
 - **resources** - 资源管理
 - **settings** - 用户设置
+- **voice_cache** - 语音文件缓存记录
 
 ## 开发环境设置
 
@@ -131,6 +136,7 @@ cp config.yaml.example config.yaml
 # - AI 模型 API 密钥
 # - Google Cloud Storage 配置
 # - Google Play 订阅配置
+# - ElevenLabs API 密钥和语音配置
 ```
 
 ### 5. 初始化数据库
@@ -198,6 +204,10 @@ inty-backend/
 │   │   ├── subscription_service.py # 订阅服务
 │   │   ├── google_play_service.py  # Google Play 服务
 │   │   ├── keep_talking_service.py # Keep Talking 服务
+│   │   ├── voice_service.py       # 语音生成服务
+│   │   ├── voice_cache_service.py # 语音缓存服务
+│   │   ├── voice_cleanup_service.py # 语音清理服务
+│   │   ├── gcs_service.py         # GCS 文件管理服务
 │   │   └── ...
 │   ├── middleware/            # 中间件
 │   ├── utils/                 # 工具函数
@@ -205,7 +215,8 @@ inty-backend/
 ├── docs/                      # 文档
 │   ├── Google_Play_Subscription_Setup.md
 │   ├── KEEP_TALKING_功能说明.md
-│   └── PROMPT_TEMPLATE_SYSTEM.md
+│   ├── PROMPT_TEMPLATE_SYSTEM.md
+│   └── AI_VOICE_SYSTEM.md      # AI语音系统文档
 ├── scripts/                   # 脚本
 ├── testing/                   # 测试相关
 ├── config.yaml.example        # 配置文件模板
@@ -232,6 +243,14 @@ inty-backend/
 - **收据验证**：安全的购买验证机制
 - **权益管理**：基于订阅的功能权限控制
 - **使用统计**：详细的功能使用监控
+
+### AI 语音系统
+- **ElevenLabs 集成**：使用最新的 Flash v2.5 模型进行语音合成
+- **智能缓存机制**：基于内容哈希的语音文件缓存，有效降低API成本
+- **自动播放控制**：支持基于用户设置的语音自动播放和手动播放
+- **多语音支持**：支持多种语音角色，可为不同Agent配置专属语音
+- **文件管理**：自动上传语音文件到GCS，支持CDN加速
+- **成本优化**：缓存复用、文件压缩、定期清理等多重成本控制措施
 
 ## 测试
 
@@ -271,10 +290,11 @@ docker run -p 8000:8000 -v $(pwd)/config.yaml:/app/config.yaml inty-backend
 
 ### 环境要求
 - Python 3.8+
-- PostgreSQL 12+
+- PostgreSQL 12+ (需要 pgvector 扩展)
 - Redis（可选，用于缓存）
 - Google Cloud Storage 账户
-- 相关 AI 模型 API 密钥
+- 相关 AI 模型 API 密钥 (OpenAI/Anthropic/Google AI)
+- ElevenLabs API 账户（用于语音功能）
 
 ## 开发指南
 
@@ -299,9 +319,22 @@ isort app/
 项目使用 YAML 配置文件，包含：
 - 应用基础配置
 - 数据库连接信息
-- AI 模型配置
-- 第三方服务密钥
+- AI 模型配置（支持 OpenAI、Anthropic、Google AI）
+- ElevenLabs 语音服务配置
+- 第三方服务密钥（Google OAuth、Google Play、Firebase）
+- Google Cloud Storage 配置
 - 日志配置
+
+#### ElevenLabs 语音配置示例：
+```yaml
+elevenlabs:
+  api_key: "your_elevenlabs_api_key"
+  model: "eleven_flash_v2_5"  # 推荐使用 Flash v2.5 模型
+  voice_id: "EXAVITQu4vr4xnSDxMaL"  # 默认语音 ID
+  output_format: "mp3_22050_32"  # 移动端优化格式
+  enabled: true
+  max_text_length: 5000
+```
 
 **重要**: 请确保复制 `config.yaml.example` 并配置实际的数据库连接和 API 密钥。
 

@@ -68,4 +68,12 @@ firebase:
 google_play:
   service_account_key: "your-google-play-service-account-key-json"
   package_name: "your.app.package.name"
-  webhook_secret: "your-webhook-secret" 
+  webhook_secret: "your-webhook-secret"
+
+elevenlabs:
+  api_key: "your-elevenlabs-api-key"
+  model: "eleven_multilingual_v2"
+  voice_id: "JBFqnCBsd6RMkjVDRZzb"  # 默认语音ID
+  output_format: "mp3_44100_128"
+  enabled: true
+  max_text_length: 5000  # 最大文本长度限制 

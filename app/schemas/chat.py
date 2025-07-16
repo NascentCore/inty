@@ -52,7 +52,7 @@ class MessageList(BaseModel):
 class ChatSettingsBase(BaseModel):
     """聊天设置基础模型"""
     language: str = "en"
-    voice_enabled: bool = True
+    voice_enabled: bool = True  # 个性化语音自动播放开关
     keep_talking: bool = True
 
 
@@ -64,7 +64,7 @@ class ChatSettingsCreate(ChatSettingsBase):
 class ChatSettingsUpdate(ChatSettingsBase):
     """更新聊天设置"""
     language: Optional[str] = None
-    voice_enabled: Optional[bool] = None
+    voice_enabled: Optional[bool] = None  # 个性化语音自动播放开关
     keep_talking: Optional[bool] = None
 
 
@@ -119,4 +119,21 @@ class Chat(ChatInDB):
     last_message_time: Optional[datetime] = None
     agent_name: Optional[str] = None
     agent_avatar: Optional[str] = None
-    settings: Optional[ChatSettings] = None 
+    settings: Optional[ChatSettings] = None
+
+
+class ChatCompletionRequest(BaseModel):
+    """聊天完成请求模型"""
+    messages: List[dict]
+    stream: bool = False
+    language: str = "zh"  # 语言
+
+
+class ChatCompletionResponse(BaseModel):
+    """聊天完成响应模型"""
+    id: str
+    object: str = "chat.completion"
+    created: int
+    model: str
+    choices: List[dict]
+    usage: dict 
