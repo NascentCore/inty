@@ -118,4 +118,10 @@
     <string name="privacy_policy">Privacy Policy</string>
     <string name="terms_of_use">Terms of Use</string>
     <string name="premium_subscribed">Subscribed</string>
+    <string name="settings_subscription_management">Subscription Management</string>
+    <string name="subscribed">Subscribed</string>
+    <string name="unsubscribed">Unsubscribed</string>
+    <string name="restore_subscription">Restore Subscription</string>
+    <string name="redemption_code">Redemption Code</string>
+    <string name="cancel_subscription">Cancel Subscription</string>
 </resources>
