@@ -357,6 +357,13 @@ async def create_agent(db: AsyncSession, agent_in: schemas.AgentCreate, user_id:
         # 获取Agent数据
         agent_data = agent_in.dict()
         
+        # 处理 llm_config 字段
+        if 'llm_config' in agent_data:
+            # 将 llm_config 移动到 settings 中
+            if 'settings' not in agent_data:
+                agent_data['settings'] = {}
+            agent_data['settings']['llm_config'] = agent_data.pop('llm_config')
+        
         # 处理图片URL：验证、复制临时文件到永久路径、删除临时文件
         try:
             processed_agent_data = process_agent_image_urls(agent_data, agent_id, user_id)

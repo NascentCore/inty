@@ -88,6 +88,13 @@ class CharacterCardService:
             else:
                 imported_features.append('alternate_greetings')
             
+            # 处理 llm_config 字段
+            if 'llm_config' in agent_data:
+                # 将 llm_config 移动到 settings 中
+                if 'settings' not in agent_data:
+                    agent_data['settings'] = {}
+                agent_data['settings']['llm_config'] = agent_data.pop('llm_config')
+            
             # 创建Agent
             agent = Agent(**agent_data)
             
