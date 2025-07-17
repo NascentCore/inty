@@ -82,7 +82,7 @@ class GooglePlayService:
             return is_valid, purchase_info
             
         except HttpError as e:
-            logger.error(f"Google Play API调用失败: {e}")
+            logger.error(f"Google Play API调用失败: {e}, product_id: {product_id}, purchase_token: {purchase_token}")
             return False, {"error": str(e)}
         except Exception as e:
             logger.error(f"订阅验证失败: {str(e)}")
