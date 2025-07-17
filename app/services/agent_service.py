@@ -427,6 +427,20 @@ async def update_agent(db: AsyncSession, db_agent: models.Agent, agent_in: schem
         if 'name' in update_data and (not update_data['name'] or not update_data['name'].strip()):
             raise HTTPException(status_code=400, detail="Agent name cannot be empty")
         
+        # 处理 llm_config 字段 - 将其移动到 settings 中
+        if 'llm_config' in update_data:
+            llm_config = update_data.pop('llm_config')
+            if llm_config is not None:
+                # 确保 settings 字段存在
+                if db_agent.settings is None:
+                    db_agent.settings = {}
+                elif not isinstance(db_agent.settings, dict):
+                    db_agent.settings = {}
+                
+                # 更新 settings 中的 llm_config
+                db_agent.settings = {**db_agent.settings, 'llm_config': llm_config}
+        
+        # 更新其他字段
         for field, value in update_data.items():
             setattr(db_agent, field, value)
             
@@ -454,9 +468,6 @@ async def update_agent(db: AsyncSession, db_agent: models.Agent, agent_in: schem
                 'first_message': updated_agent.first_message or '',
                 'message_example': updated_agent.message_example or '',
                 'creator_notes': updated_agent.creator_notes or '',
-                'post_history_instructions': updated_agent.post_history_instructions or '',
-                'alternate_greetings': updated_agent.alternate_greetings or [],
-                'character_book': updated_agent.character_book or {},
                 'tags': updated_agent.tags or [],
                 'character_version': updated_agent.character_version or '',
                 'extensions': updated_agent.extensions or {}

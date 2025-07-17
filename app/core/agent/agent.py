@@ -27,6 +27,50 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+def get_agent_model_config(agent_data: dict) -> dict:
+    """
+    获取Agent的模型配置，按优先级：
+    1. settings.llm_config（如果存在）
+    2. 配置文件中的默认agent配置
+    
+    Args:
+        agent_data: Agent数据，包含settings等信息
+        
+    Returns:
+        模型配置字典
+    """
+    model_config = {}
+    
+    # 首先尝试从settings.llm_config获取
+    if agent_data.get('settings'):
+        model_config = agent_data['settings'].get('llm_config', {})
+        # 向后兼容：也检查旧的model_config字段
+        if not model_config and 'model_config' in agent_data['settings']:
+            model_config = agent_data['settings']['model_config']
+    
+    # 如果没有自定义配置，使用默认配置
+    if not model_config:
+        model_config = {
+            'model': settings.agent.model,
+            'api_key': settings.agent.api_key,
+            'base_url': settings.agent.base_url,
+            'temperature': getattr(settings.agent, 'temperature', 0.5),
+            'max_tokens': getattr(settings.agent, 'max_tokens', 1000),
+            'top_p': getattr(settings.agent, 'top_p', 1.0),
+            'frequency_penalty': getattr(settings.agent, 'frequency_penalty', 0.0),
+            'presence_penalty': getattr(settings.agent, 'presence_penalty', 0.0)
+        }
+    else:
+        # 如果有自定义配置，但某些字段为空，则使用默认配置补充
+        if not model_config.get('base_url'):
+            model_config['base_url'] = settings.agent.base_url
+        if not model_config.get('api_key'):
+            model_config['api_key'] = settings.agent.api_key
+        if not model_config.get('model'):
+            model_config['model'] = settings.agent.model
+    
+    return model_config
+
 # 初始化自定义的embedding服务
 client = OpenAI(
     base_url=settings.embedding.base_url,
@@ -838,12 +882,7 @@ class AgentManager:
                         self._agent_locks.pop(oldest_agent_id, None)
                 
                 # 创建新的Agent实例
-                model_config = {}
-                if agent_data.get('settings'):
-                    model_config = agent_data['settings'].get('llm_config', {})
-                    # 向后兼容：也检查旧的model_config字段
-                    if not model_config and 'model_config' in agent_data['settings']:
-                        model_config = agent_data['settings']['model_config']
+                model_config = get_agent_model_config(agent_data)
                 
                 system_prompt = agent_data.get('prompt', "你是一个聊天助手，请用中文回答用户的问题。")
                 description = agent_data.get('description', "")
@@ -1005,12 +1044,7 @@ class AgentManager:
                 
                 try:
                     # 创建新的Agent实例
-                    model_config = {}
-                    if agent_data.get('settings'):
-                        model_config = agent_data['settings'].get('llm_config', {})
-                        # 向后兼容：也检查旧的model_config字段
-                        if not model_config and 'model_config' in agent_data['settings']:
-                            model_config = agent_data['settings']['model_config']
+                    model_config = get_agent_model_config(agent_data)
                     
                     system_prompt = agent_data.get('prompt', "你是一个聊天助手，请用中文回答用户的问题。")
                     description = agent_data.get('description', "")
@@ -1029,9 +1063,6 @@ class AgentManager:
                         first_message=agent_data.get('first_message', ''),
                         message_example=agent_data.get('message_example', ''),
                         creator_notes=agent_data.get('creator_notes', ''),
-                        post_history_instructions=agent_data.get('post_history_instructions', ''),
-                        alternate_greetings=agent_data.get('alternate_greetings', []),
-                        character_book=agent_data.get('character_book', {}),
                         tags=agent_data.get('tags', []),
                         character_version=agent_data.get('character_version', ''),
                         extensions=agent_data.get('extensions', {})
