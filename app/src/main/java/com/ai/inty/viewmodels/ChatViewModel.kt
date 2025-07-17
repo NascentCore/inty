@@ -42,7 +42,6 @@ class ChatViewModel: BaseActivityViewModel() {
     val chatApi = TheRouter.get(IChatApi::class.java)!!
 
     init {
-
         EasyLog.log("ChatViewModel = ${hashCode()}")
     }
 

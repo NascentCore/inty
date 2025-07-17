@@ -55,7 +55,6 @@ class RegInfoActivity : BaseActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-
         setContent {
             IntyTheme {
                 RegInfoScreen(
@@ -90,8 +89,7 @@ fun RegInfoScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(0.6f))
-        ,
+            .background(Color.Black.copy(0.6f)),
     ) {
         Column(
             modifier = Modifier
@@ -114,8 +112,7 @@ fun RegInfoScreen(
                     .size(18.dp, 18.dp)
                     .noRippleClickable {
                         onClose()
-                    }
-                ,
+                    },
                 painter = painterResource(R.drawable.close),
                 contentDescription = null,
             )
@@ -198,20 +195,21 @@ fun RegInfoScreen(
             ) {
                 Spacer(Modifier.width(24.dp))
                 AgeItem(
+                    text = "<18",
+                    isSelected = (selectAge == "<18"),
+                    onSelected = {
+                        selectAge = "<18"
+                    }
+                )
+                Spacer(Modifier.width(24.dp))
+                AgeItem(
                     text = "18-20",
                     isSelected = (selectAge == "18-20"),
                     onSelected = {
                         selectAge = "18-20"
                     }
                 )
-                Spacer(Modifier.width(13.dp))
-                AgeItem(
-                    text = "21-23",
-                    isSelected = (selectAge == "21-23"),
-                    onSelected = {
-                        selectAge = "21-23"
-                    }
-                )
+
                 Spacer(Modifier.width(24.dp))
             }
 
@@ -222,6 +220,14 @@ fun RegInfoScreen(
                     .fillMaxWidth()
                     .height(48.dp),
             ) {
+                Spacer(Modifier.width(13.dp))
+                AgeItem(
+                    text = "21-23",
+                    isSelected = (selectAge == "21-23"),
+                    onSelected = {
+                        selectAge = "21-23"
+                    }
+                )
                 Spacer(Modifier.width(24.dp))
                 AgeItem(
                     text = "30-36",
@@ -230,6 +236,14 @@ fun RegInfoScreen(
                         selectAge = "30-36"
                     }
                 )
+
+                Spacer(Modifier.width(24.dp))
+            }
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
+            ) {
                 Spacer(Modifier.width(13.dp))
                 AgeItem(
                     text = "Above 36",
@@ -238,7 +252,6 @@ fun RegInfoScreen(
                         selectAge = "Above 36"
                     }
                 )
-                Spacer(Modifier.width(24.dp))
             }
             Spacer(Modifier.height(64.dp))
             SaveBtn(
@@ -328,8 +341,7 @@ fun GenderItem(
                             shape = CircleShape
                         )
                     }
-                )
-            ,
+                ),
             contentAlignment = Alignment.Center,
         ) {
 //            Image(
@@ -364,8 +376,8 @@ fun RowScope.AgeItem(
 ) {
     Box(
         modifier = Modifier
-            .weight(1f)
             .fillMaxHeight()
+            .weight(1f)
             .background(
                 color = Color(0x3378599A),
                 shape = RoundedCornerShape(24.dp)
@@ -392,8 +404,7 @@ fun RowScope.AgeItem(
             )
             .noRippleClickable {
                 onSelected()
-            }
-        ,
+            },
         contentAlignment = Alignment.Center,
     ) {
         if (isSelected) {

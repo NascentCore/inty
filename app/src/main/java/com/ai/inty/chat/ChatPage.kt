@@ -1,5 +1,6 @@
 package com.ai.inty.chat
 
+import android.widget.Toast
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
@@ -7,6 +8,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -44,6 +46,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
@@ -55,7 +58,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import android.widget.Toast
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontStyle
@@ -423,7 +425,14 @@ internal fun ChatPage(
                                 bottom = bottomPadding
                             )
                             .fillMaxWidth()
-                            .background(Color(0x9937303D), RoundedCornerShape(24.dp))
+                            .clip(RoundedCornerShape(24.dp))
+                            .background(Color(0x9937303D))
+                            .clickable {
+                                //游客 未登录的用户，需要弹出年龄段选择，18岁以下的，不让输入。
+                                if (IntySetting.isGuestUser()) {
+                                    TheRouter.build(Constant.ROUTE_REG_INFO).navigation(context)
+                                }
+                            }
                     ) {
                         // 主输入区域
                         Row(
@@ -437,6 +446,7 @@ internal fun ChatPage(
                                 modifier = Modifier
                                     .weight(1f)
                                     .padding(horizontal = 16.dp),
+                                enabled = false,
                                 value = inputData.value,
                                 singleLine = false,
                                 onValueChange = {
@@ -506,7 +516,7 @@ internal fun ChatPage(
                                             val beforeCursor =
                                                 currentText.substring(0, safeSelection)
                                             val afterCursor = currentText.substring(safeSelection)
-                                            val newText = beforeCursor + "（）" + afterCursor
+                                            val newText = "$beforeCursor（）$afterCursor"
 
                                             // 更新文本
                                             chatViewModel.inputData.value = newText
@@ -582,7 +592,7 @@ internal fun ChatPage(
                 }
             }
         }
-
+        //聊天设置 右侧菜单
         MyModalNavigationDrawer(
             modifier = Modifier,
             drawerState = drawerState,
@@ -770,7 +780,11 @@ internal fun ChatPage(
                                             // 检查VIP状态
                                             if (!vipStatus.isSubscribed) {
                                                 // 如果不是VIP，显示提示
-                                                Toast.makeText(context, youAreNotVipText, Toast.LENGTH_SHORT).show()
+                                                Toast.makeText(
+                                                    context,
+                                                    youAreNotVipText,
+                                                    Toast.LENGTH_SHORT
+                                                ).show()
                                             } else {
                                                 // 如果是VIP，允许切换
                                                 agentPremiumModel = !agentPremiumModel

@@ -11,7 +11,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.HorizontalPager
@@ -89,15 +88,14 @@ fun ChatPageContainer(
             )
         }
 
+        //新用户 聊天滑动引导
         var hasShowGuest by remember {
             mutableStateOf(IntySetting.hasShowGuest())
         }
         if ( !hasShowGuest && (agentList.size > 1) ) {
 
             val density = LocalDensity.current
-            val pageScrollPx = with(density) {
-                80.dp.toPx()
-            }
+            val pageScrollPx = with(density) { 80.dp.toPx() }
 
             val showHand = MutableTransitionState(false)
 
@@ -105,9 +103,7 @@ fun ChatPageContainer(
                     delay(3000)
 
                     showHand.targetState = true
-                    pageState.animateScrollBy(
-                        pageScrollPx
-                    )
+                pageState.animateScrollBy(pageScrollPx)
 
                     IntySetting.setShowGuested()
 
@@ -127,13 +123,15 @@ fun ChatPageContainer(
                     targetOffsetX = { it }
                 )
             ) {
-                Box(modifier = Modifier.fillMaxSize().noRippleClickable {
-                    scope.launch {
-                        showHand.targetState = false
-                        pageState.animateScrollToPage(pageState.currentPage)
-                        hasShowGuest = true
-                    }
-                }) {
+                Box(modifier = Modifier
+                    .fillMaxSize()
+                    .noRippleClickable {
+                        scope.launch {
+                            showHand.targetState = false
+                            pageState.animateScrollToPage(pageState.currentPage)
+                            hasShowGuest = true
+                        }
+                    }) {
                     Box(
                         modifier = Modifier
                             .align(Alignment.TopEnd)
