@@ -106,7 +106,7 @@ class VoiceCacheService:
     
     async def save_voice_cache(
         self,
-        db: AsyncSession,
+        db: Optional[AsyncSession],
         text: str,
         voice_id: str,
         model: str,
@@ -118,7 +118,7 @@ class VoiceCacheService:
         保存语音缓存
         
         Args:
-            db: 数据库会话
+            db: 数据库会话（可选，如果为空则创建新会话）
             text: 文本内容
             voice_id: 语音ID
             model: 模型名称
@@ -128,6 +128,31 @@ class VoiceCacheService:
             
         Returns:
             是否保存成功
+        """
+        # 如果没有提供数据库会话，创建新的会话
+        if db is None:
+            from app.api.deps import get_async_db
+            async for db_session in get_async_db():
+                return await self._save_voice_cache_impl(
+                    db_session, text, voice_id, model, language, audio_url, file_size
+                )
+        else:
+            return await self._save_voice_cache_impl(
+                db, text, voice_id, model, language, audio_url, file_size
+            )
+    
+    async def _save_voice_cache_impl(
+        self,
+        db: AsyncSession,
+        text: str,
+        voice_id: str,
+        model: str,
+        language: str,
+        audio_url: str,
+        file_size: int = 0
+    ) -> bool:
+        """
+        实际的保存语音缓存实现
         """
         try:
             import uuid
@@ -169,12 +194,15 @@ class VoiceCacheService:
             
         except Exception as e:
             logger.error(f"保存语音缓存失败: {str(e)}")
-            await db.rollback()
+            try:
+                await db.rollback()
+            except Exception:
+                pass  # 如果rollback也失败，忽略
             return False
     
     async def update_access_stats(
         self,
-        db: AsyncSession,
+        db: Optional[AsyncSession],
         text: str,
         voice_id: str,
         model: str,
@@ -183,6 +211,28 @@ class VoiceCacheService:
         """
         异步更新缓存访问统计，不阻塞主流程
         """
+        # 如果没有提供数据库会话，创建新的会话
+        if db is None:
+            from app.api.deps import get_async_db
+            async for db_session in get_async_db():
+                await self._update_access_stats_impl(
+                    db_session, text, voice_id, model, language
+                )
+                return
+        else:
+            await self._update_access_stats_impl(
+                db, text, voice_id, model, language
+            )
+    
+    async def _update_access_stats_impl(
+        self,
+        db: AsyncSession,
+        text: str,
+        voice_id: str,
+        model: str,
+        language: str
+    ) -> None:
+        """实际的更新访问统计实现"""
         try:
             content_hash = self._generate_content_hash(text, voice_id, model, language)
             
@@ -201,7 +251,10 @@ class VoiceCacheService:
             
         except Exception as e:
             logger.error(f"更新缓存访问统计失败: {str(e)}")
-            await db.rollback()
+            try:
+                await db.rollback()
+            except Exception:
+                pass  # 如果rollback也失败，忽略
     
     async def get_cache_stats(self, db: AsyncSession) -> Dict[str, Any]:
         """

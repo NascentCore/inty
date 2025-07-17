@@ -113,11 +113,11 @@ class VoiceService:
             logger.info(f"GCS上传成功: {audio_url}")
             
             # 异步保存到缓存，不阻塞返回
-            if db and audio_url:
+            if audio_url:
                 logger.debug("异步保存到语音缓存")
                 from app.services.voice_cache_service import voice_cache_service
                 asyncio.create_task(voice_cache_service.save_voice_cache(
-                    db, text, voice_id, model, language, audio_url, len(audio_data)
+                    None, text, voice_id, model, language, audio_url, len(audio_data)
                 ))
                 logger.debug("语音缓存保存任务已启动")
             

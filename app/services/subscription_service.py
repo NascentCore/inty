@@ -366,13 +366,34 @@ class SubscriptionService:
     
     async def record_usage(
         self, 
+        db: Optional[AsyncSession], 
+        user_id: str, 
+        usage_type: str, 
+        usage_count: int = 1,
+        extra_data: Optional[Dict[str, Any]] = None
+    ) -> Optional[SubscriptionUsage]:
+        """记录用户使用情况"""
+        # 如果没有提供数据库会话，创建新的会话
+        if db is None:
+            from app.api.deps import get_async_db
+            async for db_session in get_async_db():
+                return await self._record_usage_impl(
+                    db_session, user_id, usage_type, usage_count, extra_data
+                )
+        else:
+            return await self._record_usage_impl(
+                db, user_id, usage_type, usage_count, extra_data
+            )
+    
+    async def _record_usage_impl(
+        self, 
         db: AsyncSession, 
         user_id: str, 
         usage_type: str, 
         usage_count: int = 1,
         extra_data: Optional[Dict[str, Any]] = None
-    ) -> SubscriptionUsage:
-        """记录用户使用情况"""
+    ) -> Optional[SubscriptionUsage]:
+        """实际的记录使用情况实现"""
         try:
             # 获取用户当前订阅
             subscription = await self.get_user_current_subscription(db, user_id)
@@ -394,9 +415,12 @@ class SubscriptionService:
             return usage
             
         except Exception as e:
-            await db.rollback()
+            try:
+                await db.rollback()
+            except Exception:
+                pass  # 如果rollback也失败，忽略
             logger.error(f"记录用户使用情况失败: {str(e)}")
-            raise
+            return None  # 返回None而不是抛异常，避免影响主流程
     
     async def get_user_usage_statistics(
         self, 

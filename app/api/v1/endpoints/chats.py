@@ -2,6 +2,7 @@ from typing import Any, List
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
+import asyncio
 import json
 import uuid
 import time
@@ -687,30 +688,18 @@ async def agent_chat_fast_response(
         # 使用session_id
         session_id = generate_session_id(chat.id)
         
-        # 并行处理：AI回复 + 聊天设置 + 语音缓存检查
-        import asyncio
-        
-        ai_task = asyncio.create_task(agent.chat(
+        # 先获取AI回复
+        response_content = await agent.chat(
             user_id=current_user.id,
             session_id=session_id,
             messages=messages,
-            db_session=db
-        ))
+            db_session=None  # Agent内部使用自己的连接池
+        )
         
-        settings_task = asyncio.create_task(chat_service.get_or_create_chat_settings(
+        # 然后获取聊天设置
+        chat_settings = await chat_service.get_or_create_chat_settings(
             db, chat.id, current_user.id, agent_id
-        ))
-        
-        # 预检查语音缓存
-        voice_cache_task = asyncio.create_task(async_voice_service.check_cache_first(
-            text=last_user_message,  # 临时使用用户消息检查，实际应该用AI回复
-            voice_id=agent_db.voice_id,
-            language=request.language,
-            db=db
-        ))
-        
-        # 等待AI回复和设置完成
-        response_content, chat_settings = await asyncio.gather(ai_task, settings_task)
+        )
         
         # 构建基础响应
         message = {
@@ -720,12 +709,12 @@ async def agent_chat_fast_response(
         
         # 语音处理逻辑
         if chat_settings.voice_enabled:
-            # 立即检查AI回复内容的缓存
+            # 立即检查AI回复内容的缓存，使用独立的数据库会话
             cached_audio_url = await async_voice_service.check_cache_first(
                 text=response_content,
                 voice_id=agent_db.voice_id,
                 language=request.language,
-                db=db
+                db=None  # 使用独立的数据库会话
             )
             
             if cached_audio_url:
@@ -740,16 +729,16 @@ async def agent_chat_fast_response(
                     text=response_content,
                     voice_id=agent_db.voice_id,
                     language=request.language,
-                    db=db
+                    db=None  # 使用独立的数据库会话
                 )
                 
                 message["audio_task_id"] = task_id
                 message["audio_cached"] = False
                 logger.info(f"极速响应-异步生成: {task_id}")
         
-        # 异步记录使用情况
+        # 异步记录使用情况，使用独立的数据库会话
         asyncio.create_task(subscription_service.record_usage(
-            db, current_user.id, "chat", 1,
+            None, current_user.id, "chat", 1,
             extra_data={"agent_id": agent_id, "message_length": len(last_user_message)}
         ))
         
@@ -793,10 +782,14 @@ async def get_voice_task_status(
         task_status = await async_voice_service.get_task_status(task_id)
         
         if task_status["status"] == "not_found":
-            raise HTTPException(status_code=404, detail="Task not found")
+            detail = task_status.get("message", "Task not found")
+            raise HTTPException(status_code=404, detail=detail)
         
         return task_status
         
+    except HTTPException:
+        # 重新抛出HTTP异常
+        raise
     except Exception as e:
         logger.error(f"获取语音任务状态失败: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to get task status: {str(e)}")

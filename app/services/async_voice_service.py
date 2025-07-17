@@ -116,10 +116,11 @@ class AsyncVoiceService:
                 self.pending_tasks[task_id]["error"] = str(e)
         
         finally:
-            # 清理任务（可选，也可以保留一段时间供查询）
-            await asyncio.sleep(300)  # 5分钟后清理
+            # 清理任务（保留10分钟供查询）
+            await asyncio.sleep(600)  # 10分钟后清理
             if task_id in self.pending_tasks:
                 del self.pending_tasks[task_id]
+                logger.debug(f"清理语音任务: {task_id}")
     
     async def get_task_status(self, task_id: str) -> Dict[str, Any]:
         """
@@ -132,7 +133,11 @@ class AsyncVoiceService:
             任务状态信息
         """
         if task_id not in self.pending_tasks:
-            return {"status": "not_found"}
+            # 任务可能已经完成并被清理，或者任务ID无效
+            return {
+                "status": "not_found",
+                "message": "任务不存在或已过期。可能任务已完成超过5分钟被自动清理，或任务ID无效。"
+            }
         
         task_info = self.pending_tasks[task_id].copy()
         # 移除不需要序列化的任务对象
@@ -191,9 +196,26 @@ class AsyncVoiceService:
         Returns:
             缓存的语音URL，如果不存在则返回None
         """
-        if not db:
-            return None
-        
+        # 如果没有提供数据库会话，创建新的会话
+        if db is None:
+            from app.api.deps import get_async_db
+            async for db_session in get_async_db():
+                return await self._check_cache_first_impl(
+                    db_session, text, voice_id, language
+                )
+        else:
+            return await self._check_cache_first_impl(
+                db, text, voice_id, language
+            )
+    
+    async def _check_cache_first_impl(
+        self,
+        db: AsyncSession,
+        text: str,
+        voice_id: Optional[str] = None,
+        language: str = "zh"
+    ) -> Optional[str]:
+        """实际的缓存检查实现"""
         try:
             # 使用默认语音ID
             voice_id = voice_id or settings.elevenlabs.voice_id
@@ -206,10 +228,10 @@ class AsyncVoiceService:
             
             if cached_url:
                 logger.info(f"快速缓存命中: {cached_url}")
-                # 异步更新访问统计
+                # 异步更新访问统计，使用独立的数据库会话
                 asyncio.create_task(
                     self.cache_service.update_access_stats(
-                        db, text, voice_id, model, language
+                        None, text, voice_id, model, language
                     )
                 )
                 return cached_url
