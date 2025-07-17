@@ -104,14 +104,29 @@ private fun VipCenterScreen(
         // 半透明遮罩层，确保内容可读性
         Box(
             modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.7f))
+                .fillMaxWidth()
+                .fillMaxHeight(.77f)
+                .align(Alignment.BottomCenter)
+                .background(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            Color(0x001C1523),
+                            Color(0xA81C1523),
+                            Color(0xE31C1523),
+                            Color(0xFF1C1523),
+                        )
+                    )
+                )
         )
 
         Column(modifier = Modifier.fillMaxSize()) {
             CenterAlignedTopAppBar(
                 title = {
-                    Text(text = stringResource(R.string.premium_title))
+                    Text(
+                        text = stringResource(R.string.premium_title),
+                        fontWeight = FontWeight(600),
+                        color = Color.White
+                    )
                 },
                 modifier = Modifier.fillMaxWidth(),
                 navigationIcon = {
@@ -125,29 +140,20 @@ private fun VipCenterScreen(
                 colors = TopAppBarDefaults.topAppBarColors()
                     .copy(containerColor = Color.Transparent)
             )
-            Spacer(Modifier.height(120.dp))
+            Spacer(Modifier.height(110.dp))
 
-            Column(modifier = Modifier.padding(start = 20.dp)) {
+            Column(modifier = Modifier.padding(start = 16.dp)) {
 
-                Text(
-                    text = stringResource(R.string.premium_title),
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White,
-                    modifier = Modifier
-                        .padding(bottom = 6.dp)
-                        .fillMaxWidth(),
-                    textAlign = TextAlign.Start
+                Image(
+                    painter = painterResource(R.drawable.img_heartmate_premium),
+                    contentDescription = null,
+                    modifier = Modifier.size(278.dp, 32.dp)
                 )
-
                 Text(
                     text = stringResource(R.string.premium_subtitle),
-                    fontSize = 14.sp,
-                    color = Color.White.copy(alpha = 0.8f),
-                    textAlign = TextAlign.Start,
-                    modifier = Modifier
-                        .padding(bottom = 16.dp)
-                        .fillMaxWidth()
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = Color.White,
                 )
 
                 PremiumBenefitItem(stringResource(R.string.premium_benefit_unlimited))
@@ -159,7 +165,7 @@ private fun VipCenterScreen(
 
             }
 
-            Spacer(Modifier.height(40.dp))
+            Spacer(Modifier.height(32.dp))
 
             // 动态显示订阅计划列表
             if (plans.isNotEmpty()) {
@@ -170,29 +176,28 @@ private fun VipCenterScreen(
                     onPlanSelected = { index -> viewModel.selectPlan(index) }
                 )
 
-                Spacer(Modifier.height(60.dp))
+                Spacer(Modifier.height(32.dp))
 
                 //按钮
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 20.dp)
-                        .height(48.dp)
-                        .clip(RoundedCornerShape(24.dp))
+                        .padding(horizontal = 15.dp)
+                        .height(56.dp)
+                        .clip(RoundedCornerShape(28.dp))
                         .background(
                             brush = Brush.horizontalGradient(
                                 colors = listOf(
-                                    Color(0xFF7C4DFF),
-                                    Color(0x357C4DFF)
+                                    Color(0xFF9756FF),
+                                    Color(0xFFEF56FF)
                                 )
                             )
                         )
-                        .alpha(if (vipStatus.isSubscribed) .7f else 1f)
-                        .noRippleClickable(onClick = {
-                            if (!vipStatus.isSubscribed && viewModel.hasSelectedPlan()) {
-                                onPurchase()
-                            }
-                        }),
+                        .alpha(if (vipStatus.isSubscribed) .4f else 1f)
+                        .clickable(
+                            enabled = !vipStatus.isSubscribed && viewModel.hasSelectedPlan(),
+                            onClick = onPurchase
+                        ),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
@@ -201,7 +206,7 @@ private fun VipCenterScreen(
                         } else {
                             stringResource(R.string.premium_continue)
                         },
-                        fontSize = 16.sp,
+                        fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.White,
                         modifier = Modifier.alpha(if (vipStatus.isSubscribed) .7f else 1f)
@@ -219,7 +224,7 @@ private fun VipCenterScreen(
                 )
             }
 
-            Spacer(Modifier.weight(1f))
+            Spacer(Modifier.height(16.dp))
 
             Text(
                 text = stringResource(R.string.premium_autorenew),
@@ -351,12 +356,12 @@ private fun PremiumBenefitItem(text: String) {
         modifier = Modifier.padding(vertical = 2.dp)
     ) {
         Image(
-            painter = painterResource(id = R.drawable.checked),
+            painter = painterResource(id = R.drawable.ic_checked_premium),
             contentDescription = null,
-            modifier = Modifier.size(18.dp)
+            modifier = Modifier.size(16.dp)
         )
         Spacer(Modifier.width(8.dp))
-        Text(text = text, color = Color.White, fontSize = 14.sp)
+        Text(text = text, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Light)
     }
     Spacer(Modifier.height(4.dp))
 }
@@ -375,13 +380,13 @@ private fun PremiumPlanList(
     isSubscribed: Boolean,
     onPlanSelected: (Int) -> Unit
 ) {
-    val subModifier = if (isSubscribed) Modifier.alpha(.7f) else Modifier
+    val subModifier = if (isSubscribed) Modifier.alpha(.4f) else Modifier
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(150.dp)
-            .padding(horizontal = 15.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
+            .height(132.dp)
+            .padding(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
     ) {
 
         plans.forEachIndexed { idx, plan ->
@@ -393,13 +398,13 @@ private fun PremiumPlanList(
                     .fillMaxHeight()
                     .weight(1f)
                     .background(
-                        color = if (isSelected) Color(0x6623232B) else Color(0xFF23232B),
-                        shape = RoundedCornerShape(12.dp)
+                        color = if (isSelected) Color(0x99350D5D) else Color(0x991C1523),
+                        shape = RoundedCornerShape(8.dp)
                     )
                     .border(
                         width = 1.dp,
                         color = if (isSelected) Color.White else Color.Transparent,
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(8.dp)
                     )
                     .then(subModifier)
                     .clickable(enabled = !isSubscribed) { onPlanSelected(idx) }
@@ -432,30 +437,32 @@ private fun PremiumPlanList(
                         else -> Color.White // 正常状态
                     },
                     fontSize = 12.sp,
+                    fontWeight = FontWeight.Normal,
                     modifier = subModifier
                 )
                 //折扣
                 if (plan.discountRate < 1) {
                     Box(
                         Modifier
-                            .size(96.dp, 32.dp)
-                            .clip(RoundedCornerShape(16.dp))
+                            .size(64.dp, 22.dp)
+                            .clip(RoundedCornerShape(12.dp))
                             .background(
                                 brush = Brush.horizontalGradient(
                                     colors = listOf(
-                                        Color.Yellow,
-                                        Color.Cyan
+                                        Color(0xFFC1F9FD),
+                                        Color(0xFFD4AEFD),
+                                        Color(0xFF7B96FB),
                                     )
                                 )
                             )
                             .then(subModifier)
-                            .align(Alignment.BottomEnd),
+                            .align(Alignment.BottomCenter),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
                             text = "Save ${((1 - plan.discountRate) * 100).toInt()}/%", // 显示计划价格
                             color = Color.Black,
-                            fontSize = 14.sp,
+                            fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
                             modifier = subModifier
                         )
