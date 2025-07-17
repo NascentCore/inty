@@ -12,7 +12,7 @@ class ReportReason(BaseModel):
     is_active: bool
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class TargetType(str, Enum):
     user = "USER"
@@ -47,4 +47,4 @@ class ReportOut(BaseModel):
     created_at: datetime
 
     class Config:
-        orm_mode = True 
+        from_attributes = True 

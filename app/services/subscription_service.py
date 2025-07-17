@@ -310,6 +310,14 @@ class SubscriptionService:
             await db.commit()
             await db.refresh(subscription)
             
+            # 重新查询订阅记录以确保关联对象被正确加载
+            result = await db.execute(
+                select(UserSubscription)
+                .options(selectinload(UserSubscription.plan))
+                .where(UserSubscription.id == subscription.id)
+            )
+            subscription = result.scalar_one()
+            
             # 确认购买（向Google Play发送确认）
             google_play_service.acknowledge_subscription(
                 purchase_request.product_id, 

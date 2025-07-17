@@ -87,7 +87,7 @@ class CharacterCardImportRequest(BaseModel):
     import_alternate_greetings: bool = Field(True, description="是否导入替代问候语")
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "card_data": {
                     "spec": "chara_card_v2",
@@ -130,7 +130,7 @@ class CharacterCardExportRequest(BaseModel):
     include_extensions: bool = Field(True, description="是否包含扩展数据")
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "agent_id": "agent_123",
                 "include_character_book": True,
