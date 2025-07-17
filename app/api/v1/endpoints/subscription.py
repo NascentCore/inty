@@ -126,6 +126,7 @@ async def verify_purchase(
         if result.is_valid:
             return APIResponse.success(data=result, message="购买验证成功")
         else:
+            logger.error(f"购买验证失败: {result}")
             return APIResponse.error(message=result.message, data=result)
             
     except Exception as e:
