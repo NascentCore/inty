@@ -49,9 +49,14 @@ async def get_subscription_plans(
             db, current_user.id
         )
         
+        # 将 SQLAlchemy 模型转换为 Pydantic 模型
+        current_subscription_schema = None
+        if current_subscription:
+            current_subscription_schema = UserSubscription.model_validate(current_subscription)
+        
         response = SubscriptionPlansResponse(
             plans=plans,
-            current_subscription=current_subscription
+            current_subscription=current_subscription_schema
         )
         
         return APIResponse.success(data=response)
@@ -261,7 +266,9 @@ async def create_subscription_plan(
     
     try:
         plan = await subscription_service.create_subscription_plan(db, plan_data)
-        return APIResponse.success(data=plan, message="订阅计划创建成功")
+        # 将 SQLAlchemy 模型转换为 Pydantic 模型
+        plan_schema = SubscriptionPlan.model_validate(plan)
+        return APIResponse.success(data=plan_schema, message="订阅计划创建成功")
         
     except Exception as e:
         logger.error(f"创建订阅计划失败: {str(e)}")

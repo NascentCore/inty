@@ -26,7 +26,9 @@ from app.schemas.subscription import (
     SubscriptionStatusResponse,
     UsageStatisticsResponse,
     PurchaseVerificationResponse,
-    FeatureInfo
+    FeatureInfo,
+    UserSubscription as UserSubscriptionSchema,
+    SubscriptionPlan as SubscriptionPlanSchema
 )
 from app.models.subscription_features import SubscriptionFeatures
 from app.services.google_play_service import google_play_service
@@ -41,7 +43,7 @@ class SubscriptionService:
         self, 
         db: AsyncSession, 
         include_inactive: bool = False
-    ) -> List[SubscriptionPlan]:
+    ) -> List[SubscriptionPlanSchema]:
         """获取订阅计划列表"""
         try:
             query = select(SubscriptionPlan)
@@ -52,7 +54,10 @@ class SubscriptionService:
             query = query.order_by(SubscriptionPlan.sort_order, SubscriptionPlan.created_at)
             
             result = await db.execute(query)
-            return result.scalars().all()
+            plans = result.scalars().all()
+            
+            # 将 SQLAlchemy 模型转换为 Pydantic 模型
+            return [SubscriptionPlanSchema.model_validate(plan) for plan in plans]
             
         except Exception as e:
             logger.error(f"获取订阅计划列表失败: {str(e)}")
@@ -62,13 +67,17 @@ class SubscriptionService:
         self, 
         db: AsyncSession, 
         plan_id: str
-    ) -> Optional[SubscriptionPlan]:
+    ) -> Optional[SubscriptionPlanSchema]:
         """根据ID获取订阅计划"""
         try:
             result = await db.execute(
                 select(SubscriptionPlan).where(SubscriptionPlan.id == plan_id)
             )
-            return result.scalar_one_or_none()
+            plan = result.scalar_one_or_none()
+            
+            if plan:
+                return SubscriptionPlanSchema.model_validate(plan)
+            return None
             
         except Exception as e:
             logger.error(f"获取订阅计划失败: {str(e)}")
@@ -78,7 +87,7 @@ class SubscriptionService:
         self, 
         db: AsyncSession, 
         product_id: str
-    ) -> Optional[SubscriptionPlan]:
+    ) -> Optional[SubscriptionPlanSchema]:
         """根据Google Play产品ID获取订阅计划"""
         try:
             result = await db.execute(
@@ -86,7 +95,11 @@ class SubscriptionService:
                     SubscriptionPlan.google_play_product_id == product_id
                 )
             )
-            return result.scalar_one_or_none()
+            plan = result.scalar_one_or_none()
+            
+            if plan:
+                return SubscriptionPlanSchema.model_validate(plan)
+            return None
             
         except Exception as e:
             logger.error(f"根据产品ID获取订阅计划失败: {str(e)}")
@@ -174,10 +187,14 @@ class SubscriptionService:
                         enabled=True
                     ))
                 
+                # 将 SQLAlchemy 模型转换为 Pydantic 模型
+                subscription_schema = UserSubscriptionSchema.model_validate(subscription)
+                plan_schema = SubscriptionPlanSchema.model_validate(subscription.plan) if subscription.plan else None
+                
                 return SubscriptionStatusResponse(
                     is_subscribed=True,
-                    subscription=subscription,
-                    plan=subscription.plan,
+                    subscription=subscription_schema,
+                    plan=plan_schema,
                     remaining_days=remaining_days,
                     chat_limit_per_day=subscription.plan.chat_limit_per_day,
                     total_chat_limit=None,  # 付费用户不使用总次数限制
@@ -326,9 +343,12 @@ class SubscriptionService:
             
             logger.info(f"订阅创建成功 - 用户: {user_id}, 订阅: {subscription.id}")
             
+            # 将 SQLAlchemy 模型转换为 Pydantic 模型
+            subscription_schema = UserSubscriptionSchema.model_validate(subscription)
+            
             return PurchaseVerificationResponse(
                 is_valid=True,
-                subscription=subscription,
+                subscription=subscription_schema,
                 message="订阅创建成功"
             )
             
@@ -494,6 +514,10 @@ class SubscriptionService:
             )
             usage_history = usage_result.scalars().all()
             
+            # 将 SQLAlchemy 模型转换为 Pydantic 模型
+            from app.schemas.subscription import SubscriptionUsage as SubscriptionUsageSchema
+            usage_history_schemas = [SubscriptionUsageSchema.model_validate(usage) for usage in usage_history]
+            
             return UsageStatisticsResponse(
                 today_chat_count=today_chat_count,
                 today_limit=subscription_status.chat_limit_per_day,
@@ -501,7 +525,7 @@ class SubscriptionService:
                 total_chat_limit=subscription_status.total_chat_limit,
                 agent_count=agent_count,
                 agent_limit=subscription_status.agent_creation_limit,
-                usage_history=list(usage_history)
+                usage_history=usage_history_schemas
             )
             
         except Exception as e:
