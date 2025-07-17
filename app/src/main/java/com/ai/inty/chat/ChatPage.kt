@@ -8,6 +8,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -54,6 +55,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import android.widget.Toast
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontStyle
@@ -76,6 +78,7 @@ import com.ai.inty.base.noRippleClickable
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.beans.GENDER
 import com.ai.inty.beans.MsgInfo
+import com.ai.inty.billing.BillingRepository
 import com.ai.inty.ui.theme.BackGround
 import com.ai.inty.utils.getChatBackground
 import com.ai.inty.viewmodels.ChatViewModel
@@ -98,6 +101,10 @@ internal fun ChatPage(
     val density = LocalDensity.current
     val agentInfo = chatViewModel.agentInfo.collectAsState().value
     val focusManager = LocalFocusManager.current
+    
+    // 获取字符串资源
+    val youAreNotVipText = stringResource(R.string.you_are_not_vip)
+    val premiumModelText = stringResource(R.string.settings_premium_model)
 
     // 检测键盘状态
     val imeHeight = WindowInsets.ime.getBottom(density)
@@ -123,6 +130,24 @@ internal fun ChatPage(
     // 用于实时更新按钮显示状态
     var shouldShowButton by remember(agentInfo?.id) {
         mutableStateOf(agentKeepTalking)
+    }
+
+    // VIP状态
+    val vipStatus = BillingRepository.vipStatusFlow.collectAsState().value
+    
+    // Premium model二状态设置：默认跟随全局设置，但受VIP状态限制
+    var agentPremiumModel by remember(agentInfo?.id, vipStatus.isSubscribed) {
+        mutableStateOf(
+            if (!vipStatus.isSubscribed) {
+                // 如果不是VIP，强制关闭Premium model
+                false
+            } else {
+                agentInfo?.let {
+                    // 获取角色专用设置，如果不存在则使用全局设置
+                    IntySetting.getAgentPremiumModel(it.id) ?: IntySetting.isShowPremiumModel()
+                } ?: false
+            }
+        )
     }
 
     var showMorePanel by remember { mutableStateOf(false) }
@@ -253,6 +278,65 @@ internal fun ChatPage(
                 }
 
                 Spacer(Modifier.height(16.dp))
+
+                // Premium model标签 - 左上角
+                if (agentInfo != null) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 18.dp),
+                        horizontalArrangement = Arrangement.Start
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .height(32.dp)
+                                .background(
+                                    brush = if (agentPremiumModel) {
+                                        // 激活状态：渐变背景
+                                        Brush.horizontalGradient(
+                                            colors = listOf(
+                                                Color(0xFF2196F3), // 更鲜艳的蓝色
+                                                Color(0xFFE91E63)  // 粉色
+                                            )
+                                        )
+                                    } else {
+                                        // 置灰状态：半透明灰色
+                                        Brush.verticalGradient(
+                                            colors = listOf(
+                                                Color.Gray.copy(alpha = 0.4f),
+                                                Color.Gray.copy(alpha = 0.4f)
+                                            )
+                                        )
+                                    },
+                                    shape = RoundedCornerShape(16.dp)
+                                )
+                                .padding(horizontal = 12.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                // V图标
+                                Text(
+                                    text = "V",
+                                    color = if (agentPremiumModel) Color.White else Color.Gray.copy(alpha = 0.5f),
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                
+                                // Premium model文本
+                                Text(
+                                    text = premiumModelText,
+                                    color = if (agentPremiumModel) Color.White else Color.Gray.copy(alpha = 0.5f),
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+                        }
+                    }
+                    Spacer(Modifier.height(8.dp))
+                }
 
                 LazyColumn(
                     modifier = Modifier
@@ -674,6 +758,49 @@ internal fun ChatPage(
                                 )
                             }
 
+                            // Premium model设置（二状态，与全局设置同步）
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(56.dp)
+                                    .padding(horizontal = 16.dp)
+                                    .noRippleClickable {
+                                        // 检查是否正式登录（非游客且已登录）
+                                        if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
+                                            // 检查VIP状态
+                                            if (!vipStatus.isSubscribed) {
+                                                // 如果不是VIP，显示提示
+                                                Toast.makeText(context, youAreNotVipText, Toast.LENGTH_SHORT).show()
+                                            } else {
+                                                // 如果是VIP，允许切换
+                                                agentPremiumModel = !agentPremiumModel
+                                                IntySetting.setAgentPremiumModel(
+                                                    agent.id,
+                                                    agentPremiumModel
+                                                )
+                                            }
+                                        } else {
+                                            // 未登录或游客时跳转到登录页面
+                                            TheRouter.build(Constant.ROUTE_LOGIN)
+                                                .navigation(context)
+                                        }
+                                    },
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = premiumModelText,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Normal,
+                                    color = Color.White
+                                )
+                                Spacer(Modifier.weight(1f))
+                                Image(
+                                    painter = if (agentPremiumModel) painterResource(R.drawable.opened) else painterResource(
+                                        R.drawable.closed
+                                    ),
+                                    contentDescription = null,
+                                )
+                            }
 
                             // 举报入口
                             Row(

@@ -191,16 +191,16 @@ fun SubscriptionManagementScreen(
                             )
                         )
                 )
-                Spacer(Modifier.height(4.dp))
-                
-                // 兑换码（两种状态都显示）
-                SubscriptionManagementItem(
-                    icon = R.drawable.icon_list_row_2,
-                    title = stringResource(R.string.redemption_code),
-                    onClick = {
-                        viewModel.navigateToGooglePlaySubscription()
-                    }
-                )
+                // Spacer(Modifier.height(4.dp))
+                // 
+                // // 兑换码（两种状态都显示）
+                // SubscriptionManagementItem(
+                //     icon = R.drawable.icon_list_row_2,
+                //     title = stringResource(R.string.redemption_code),
+                //     onClick = {
+                //         viewModel.navigateToGooglePlaySubscription()
+                //     }
+                // )
                 
                 Spacer(Modifier.height(8.dp))
             }

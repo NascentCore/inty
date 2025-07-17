@@ -18,30 +18,30 @@ data class SubscriptionPlansResponse(
  */
 @JsonClass(generateAdapter = true)
 data class SubscriptionPlan(
-    val id: String,
-    val name: String,
-    val description: String,
+    val id: String? = null,
+    val name: String? = null,
+    val description: String? = null,
     @Json(name = "plan_type")
-    val planType: String,
-    val price: Double,
-    val currency: String,
+    val planType: String? = null,
+    val price: Double? = null,
+    val currency: String? = null,
     @Json(name = "google_play_product_id")
-    val googlePlayProductId: String,
+    val googlePlayProductId: String? = null,
     @Json(name = "discount_rate")
-    val discountRate: Double,
-    val features: PlanFeatures,
+    val discountRate: Double? = null,
+    val features: Map<String, Any>? = null, // 简化为Map，因为实际结构可能复杂
     @Json(name = "chat_limit_per_day")
-    val chatLimitPerDay: Int,
+    val chatLimitPerDay: Int? = null,
     @Json(name = "agent_creation_limit")
-    val agentCreationLimit: Int,
+    val agentCreationLimit: Int? = null,
     @Json(name = "is_active")
-    val isActive: Boolean,
+    val isActive: Boolean? = null,
     @Json(name = "sort_order")
-    val sortOrder: Int,
+    val sortOrder: Int? = null,
     @Json(name = "created_at")
-    val createdAt: String,
+    val createdAt: String? = null,
     @Json(name = "updated_at")
-    val updatedAt: String
+    val updatedAt: String? = null
 )
 
 /**
@@ -87,28 +87,32 @@ data class Product(
 @JsonClass(generateAdapter = true)
 data class CurrentSubscription(
     @Json(name = "plan_id")
-    val planId: String,
+    val planId: String? = null,
     @Json(name = "google_play_purchase_token")
-    val googlePlayPurchaseToken: String,
+    val googlePlayPurchaseToken: String? = null,
     @Json(name = "google_play_order_id")
-    val googlePlayOrderId: String,
+    val googlePlayOrderId: String? = null,
     @Json(name = "google_play_subscription_id")
-    val googlePlaySubscriptionId: String,
-    val status: String, // "PENDING" 等状态
+    val googlePlaySubscriptionId: String? = null,
+    val status: String? = null, // "PENDING" 等状态
     @Json(name = "start_date")
-    val startDate: String,
+    val startDate: String? = null,
     @Json(name = "end_date")
-    val endDate: String,
+    val endDate: String? = null,
     @Json(name = "trial_end_date")
-    val trialEndDate: String,
+    val trialEndDate: String? = null,
     @Json(name = "auto_renew")
-    val autoRenew: Boolean,
+    val autoRenew: Boolean? = null,
     @Json(name = "extra_data")
-    val extraData: Map<String, Any>,
-    val id: String,
+    val extraData: Map<String, Any>? = null,
+    val id: String? = null,
     @Json(name = "user_id")
-    val userId: String,
-    val plan: SubscriptionPlan
+    val userId: String? = null,
+    val plan: SubscriptionPlan? = null,
+    @Json(name = "created_at")
+    val createdAt: String? = null,
+    @Json(name = "updated_at")
+    val updatedAt: String? = null
 )
 
 /**

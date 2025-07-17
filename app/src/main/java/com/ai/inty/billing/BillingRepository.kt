@@ -409,14 +409,17 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
                         _vipStatusFlow.value = vipStatus
 
                         // 更新订阅计划列表
-                        val vipPlans = response.plans.map { plan ->
-                            VipPlan(
-                                googleProductId = plan.googlePlayProductId,
-                                discountRate = plan.discountRate,
-                                name = plan.name,
-                                planType = plan.planType,
-                                description = plan.description
-                            )
+                        val vipPlans = response.plans.mapNotNull { plan ->
+                            // 过滤掉没有googlePlayProductId的计划
+                            plan.googlePlayProductId?.let { productId ->
+                                VipPlan(
+                                    googleProductId = productId,
+                                    discountRate = plan.discountRate ?: 1.0,
+                                    name = plan.name ?: "",
+                                    planType = plan.planType ?: "",
+                                    description = plan.description ?: ""
+                                )
+                            }
                         }
                         EasyLog.log("订阅计划更新: 获取到 ${vipPlans.size} 个计划")
 
