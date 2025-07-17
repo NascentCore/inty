@@ -295,7 +295,7 @@ class SubscriptionService:
                 subscription_id=subscription.id,
                 user_id=user_id,
                 transaction_type=TransactionType.PURCHASE,
-                amount=purchase_info.get("price_amount_micros", 0) / 1_000_000,  # 转换为实际金额
+                amount=self._safe_convert_price_micros(purchase_info.get("price_amount_micros", 0)),  # 转换为实际金额
                 currency=purchase_info.get("price_currency_code", "USD"),
                 google_play_purchase_token=purchase_request.purchase_token,
                 google_play_order_id=purchase_request.order_id,
@@ -758,6 +758,7 @@ class SubscriptionService:
                     return transaction.user_id
             
             logger.warning(f"无法从购买信息中推断用户ID: email={email_address}, profile_id={profile_id}, order_id={order_id}")
+            logger.debug(f"完整购买信息: {purchase_info}")
             return None
             
         except Exception as e:
@@ -833,7 +834,7 @@ class SubscriptionService:
                 subscription_id=subscription.id,
                 user_id=user_id,
                 transaction_type=TransactionType.PURCHASE,
-                amount=purchase_info.get("price_amount_micros", 0) / 1_000_000,
+                amount=self._safe_convert_price_micros(purchase_info.get("price_amount_micros", 0)),
                 currency=purchase_info.get("price_currency_code", "USD"),
                 google_play_purchase_token=purchase_token,
                 google_play_order_id=order_id,
@@ -1110,6 +1111,36 @@ class SubscriptionService:
         except Exception as e:
             logger.error(f"手动退款处理失败: {str(e)}")
             return False
+
+    def _safe_convert_price_micros(self, price_micros: Any) -> float:
+        """
+        安全转换Google Play价格（微单位）为实际金额
+        
+        Args:
+            price_micros: 价格微单位（可能是字符串或整数）
+            
+        Returns:
+            float: 实际金额
+        """
+        try:
+            if price_micros is None:
+                return 0.0
+            
+            # 转换为整数
+            if isinstance(price_micros, str):
+                price_int = int(price_micros)
+            elif isinstance(price_micros, (int, float)):
+                price_int = int(price_micros)
+            else:
+                logger.warning(f"无法识别的价格格式: {price_micros}, 类型: {type(price_micros)}")
+                return 0.0
+            
+            # 转换为实际金额（微单位除以1,000,000）
+            return price_int / 1_000_000
+            
+        except (ValueError, TypeError) as e:
+            logger.error(f"价格转换失败: {price_micros}, 错误: {str(e)}")
+            return 0.0
 
 
 # 全局实例
