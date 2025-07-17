@@ -71,6 +71,7 @@ class GuestRequest(BaseModel):
     """游客请求"""
     device_id: Optional[str] = None
     system_language: Optional[str] = None
+    age_group: Optional[str] = None
 
 
 class UserCreate(BaseModel):

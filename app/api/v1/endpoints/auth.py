@@ -98,7 +98,8 @@ async def create_guest(
         user = await create_guest_user(
             db,
             device_id=guest_in.device_id,
-            system_language=guest_in.system_language
+            system_language=guest_in.system_language,
+            age_group=guest_in.age_group
         )
         access_token = create_access_token(user.id)
         return APIResponse.success(data=GuestResponse(

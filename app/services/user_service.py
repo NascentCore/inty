@@ -103,9 +103,10 @@ def get_user_by_phone(db: Session, phone: str) -> Optional[User]:
 async def create_guest_user(
     db: AsyncSession,
     device_id: Optional[str] = None,
-    system_language: Optional[str] = None
+    system_language: Optional[str] = None,
+    age_group: Optional[str] = None
 ) -> User:
-    """Create guest user"""
+    """Create guest user - can create anonymous users without device_id association"""
     try:
         if device_id:
             stmt = select(User).where(
@@ -127,6 +128,7 @@ async def create_guest_user(
             device_id=device_id,
             nickname=f"Guest_{user_id[-8:]}",
             system_language=system_language or "en",
+            age_group=age_group,
             is_active=True
         )
         db.add(user)
@@ -138,7 +140,7 @@ async def create_guest_user(
         logger.error(f"Integrity error creating guest user: {str(e)}")
         # If readable_id conflicts, try again with a new one
         if "readable_id" in str(e):
-            return await create_guest_user(db, device_id, system_language)
+            return await create_guest_user(db, device_id, system_language, age_group)
         raise e
     except Exception as e:
         await db.rollback()
@@ -160,7 +162,7 @@ async def update_user(
         if not user:
             raise ValueError(f"User does not exist: {user_id}")
             
-        update_data = user_in.dict(exclude_unset=True)
+        update_data = user_in.model_dump(exclude_unset=True)
         
         # 过滤掉不应该被用户更新的字段
         excluded_fields = {'readable_id', 'id', 'auth_type', 'is_active', 'is_superuser', 'created_at', 'updated_at'}
