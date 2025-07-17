@@ -2,6 +2,7 @@ import logging
 import uuid
 from datetime import datetime, timezone, timedelta
 from typing import List, Optional, Dict, Any, Tuple
+import json
 from sqlalchemy import select, func, and_, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -284,7 +285,7 @@ class SubscriptionService:
                 start_date=start_date,
                 end_date=end_date,
                 auto_renew=purchase_info.get("auto_renewing", True),
-                extra_data={"google_play_info": purchase_info}
+                extra_data={"google_play_info": self._make_json_serializable(purchase_info)}
             )
             
             db.add(subscription)
@@ -301,7 +302,7 @@ class SubscriptionService:
                 google_play_order_id=purchase_request.order_id,
                 status="COMPLETED",
                 transaction_time=start_date,
-                extra_data={"google_play_info": purchase_info}
+                extra_data={"google_play_info": self._make_json_serializable(purchase_info)}
             )
             
             db.add(transaction)
@@ -819,11 +820,11 @@ class SubscriptionService:
                 start_date=start_date,
                 end_date=end_date,
                 auto_renew=purchase_info.get("auto_renewing", True),
-                extra_data={
+                extra_data=self._make_json_serializable({
                     "google_play_info": purchase_info,
                     "created_from_rtdn": True,
                     "rtdn_notification_data": notification_data
-                }
+                })
             )
             
             db.add(subscription)
@@ -840,11 +841,11 @@ class SubscriptionService:
                 google_play_order_id=order_id,
                 status="COMPLETED",
                 transaction_time=start_date,
-                extra_data={
+                extra_data=self._make_json_serializable({
                     "google_play_info": purchase_info,
                     "created_from_rtdn": True,
                     "rtdn_notification_data": notification_data
-                }
+                })
             )
             
             db.add(transaction)
@@ -935,7 +936,7 @@ class SubscriptionService:
                     "timestamp": datetime.now(timezone.utc).isoformat(),
                     "data": notification_data
                 }
-                subscription.extra_data = extra_data
+                subscription.extra_data = self._make_json_serializable(extra_data)
             
             await db.commit()
             
@@ -1015,7 +1016,7 @@ class SubscriptionService:
                 "refund_amount": refund_amount,
                 "refund_data": refund_data
             }
-            subscription.extra_data = extra_data
+            subscription.extra_data = self._make_json_serializable(extra_data)
             
             await db.commit()
             
@@ -1141,6 +1142,31 @@ class SubscriptionService:
         except (ValueError, TypeError) as e:
             logger.error(f"价格转换失败: {price_micros}, 错误: {str(e)}")
             return 0.0
+
+    def _make_json_serializable(self, data: Any) -> Any:
+        """
+        将数据转换为JSON可序列化的格式
+        
+        Args:
+            data: 需要转换的数据
+            
+        Returns:
+            JSON可序列化的数据
+        """
+        if isinstance(data, datetime):
+            return data.isoformat()
+        elif isinstance(data, dict):
+            return {key: self._make_json_serializable(value) for key, value in data.items()}
+        elif isinstance(data, list):
+            return [self._make_json_serializable(item) for item in data]
+        elif isinstance(data, tuple):
+            return [self._make_json_serializable(item) for item in data]
+        elif hasattr(data, '__dict__'):
+            # 处理自定义对象
+            return self._make_json_serializable(data.__dict__)
+        else:
+            # 基本数据类型（str, int, float, bool, None）
+            return data
 
 
 # 全局实例
