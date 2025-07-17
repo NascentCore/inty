@@ -123,10 +123,11 @@ async def verify_purchase(
             db, current_user.id, google_play_request
         )
         
+        logger.error(f"购买验证结果: {result}")
+
         if result.is_valid:
             return APIResponse.success(data=result, message="购买验证成功")
         else:
-            logger.error(f"购买验证失败: {result}")
             return APIResponse.error(message=result.message, data=result)
             
     except Exception as e:
