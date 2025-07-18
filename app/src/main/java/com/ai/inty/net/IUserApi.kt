@@ -6,6 +6,8 @@ import com.ai.inty.beans.GoogleLoginRequest
 import com.ai.inty.beans.GoogleLoginResponse
 import com.ai.inty.beans.SysMsgResponse
 import com.ai.inty.beans.TokenBean
+import com.ai.inty.beans.UserDeleteResponse
+import com.ai.inty.beans.UserDeletionCheckResponse
 import com.ai.inty.beans.UserProfile
 import com.architecture.httplib.core.HttpResult
 import com.therouter.inject.Singleton
@@ -33,7 +35,17 @@ interface IUserApi {
     suspend fun regFCM(@Body reqq: TokenBean): HttpResult<Any>
 
     @GET("/api/v1/notifications/")
-    suspend fun getSysMsgs(@Query("page")page: Int, @Query("page_size")pageSize: Int): HttpResult<SysMsgResponse>
+    suspend fun getSysMsgs(
+        @Query("page") page: Int,
+        @Query("page_size") pageSize: Int
+    ): HttpResult<SysMsgResponse>
+
+
+    @GET("/api/v1/users/deletion/check")
+    suspend fun userDeletionCheck(): HttpResult<UserDeletionCheckResponse>
+
+    @POST("/api/v1/users/delete-account")
+    suspend fun userDeleteAccount(): HttpResult<UserDeleteResponse>
 
 }
 

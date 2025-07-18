@@ -249,7 +249,7 @@ private fun VipCenterScreen(
                     modifier = Modifier.noRippleClickable(onClick = {
                         val intent = Intent(
                             Intent.ACTION_VIEW,
-                            Uri.parse("https://app.termly.io/policy-viewer/policy.html?policyUUID=c82c3bfa-10a0-4075-a7f1-a98d5146d71c")
+                            Uri.parse(context.getString(R.string.settings_str_privacy_policy))
                         )
                         context.startActivity(intent)
                     })
@@ -268,7 +268,7 @@ private fun VipCenterScreen(
                     modifier = Modifier.noRippleClickable(onClick = {
                         val intent = Intent(
                             Intent.ACTION_VIEW,
-                            Uri.parse("https://app.termly.io/policy-viewer/policy.html?policyUUID=97416d63-aebb-4ea5-b990-eccc5aa6cff1")
+                            Uri.parse(context.getString(R.string.settings_str_user_agreement))
                         )
                         context.startActivity(intent)
                     })

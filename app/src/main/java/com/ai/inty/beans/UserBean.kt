@@ -2,12 +2,6 @@ package com.ai.inty.beans
 
 import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
-import android.os.Parcelable
-
-data class UserBean(
-    var uid: String = "",
-    var token: String = ""
-)
 
 @JsonClass(generateAdapter = true)
 data class CreateGuestReq(
@@ -81,3 +75,24 @@ data class GoogleLoginResponse(
     @Json(name = "user")
     val user: UserProfile
 )
+
+/**
+ * 检查账号删除的接口返回
+ */
+@JsonClass(generateAdapter = true)
+data class UserDeletionCheckResponse(
+    val active_subscription: Boolean,
+    val can_delete: Boolean,
+    val error_message: String?
+)
+
+/**
+ * 删除账号的结果返回
+ */
+@JsonClass(generateAdapter = true)
+data class UserDeleteResponse(
+    val message: String?,
+    val success: Boolean,
+    val user_id: String?
+)
+

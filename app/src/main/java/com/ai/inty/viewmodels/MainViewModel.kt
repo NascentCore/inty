@@ -4,14 +4,13 @@ import android.content.Context
 import android.content.Intent
 import androidx.compose.runtime.mutableStateListOf
 import androidx.lifecycle.viewModelScope
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.ai.inty.Constant
-import com.ai.inty.MainActivity
 import com.ai.inty.R
 import com.ai.inty.base.BaseActivityViewModel
+import com.ai.inty.base.ToastUtils
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.beans.CreateAgentRequest
-import com.ai.inty.beans.CreateAgentResponse
-import com.ai.inty.beans.CreateGuestReq
 import com.ai.inty.beans.GenerateBackgroundRequest
 import com.ai.inty.beans.GenerateBackgroundResponse
 import com.ai.inty.beans.SysMsgItem
@@ -36,11 +35,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
-import androidx.localbroadcastmanager.content.LocalBroadcastManager
-import com.ai.inty.base.ToastUtils
-import kotlinx.coroutines.launch
 
 
 enum class HomeTabIndex {
@@ -51,7 +46,7 @@ enum class HomeTabIndex {
     My
 }
 
-class MainViewModel: BaseActivityViewModel() {
+class MainViewModel : BaseActivityViewModel() {
 
     val userApi: IUserApi = TheRouter.get(IUserApi::class.java)!!
     val agentApi: IAgentApi = TheRouter.get(IAgentApi::class.java)!!
@@ -60,12 +55,12 @@ class MainViewModel: BaseActivityViewModel() {
     val agentList = mutableStateListOf<AgentInfo>()
     val followingAgents = mutableStateListOf<AgentInfo>()
     val userCreatedAgents = mutableStateListOf<AgentInfo>()
-    
+
     private var currentPage = 0
     private var _isLoading = MutableStateFlow(false)
     val isLoading = _isLoading.asStateFlow()
     private var hasMoreData = true
-    
+
     // Pagination state for user created agents
     private var currentUserAgentsPage = 0
     private var _isLoadingUserAgents = MutableStateFlow(false)
@@ -99,7 +94,7 @@ class MainViewModel: BaseActivityViewModel() {
 
     init {
         EasyLog.log("MainViewModel init - current user: ${IntySetting.getCurUserID()}")
-        
+
         // 直接加载业务数据，登录状态已在 SplashActivity 中处理
         loadBusinessData()
 
@@ -112,7 +107,7 @@ class MainViewModel: BaseActivityViewModel() {
             _userProfile.value = UserProfileManager.getUserProfile()
             EasyLog.log("Loaded user profile from cache: ${_userProfile.value.nickname}")
         }
-        
+
         // 加载业务数据
         getAgents()
         getUserProfile() // 从服务器获取最新信息并更新本地缓存
@@ -127,17 +122,17 @@ class MainViewModel: BaseActivityViewModel() {
         hasMoreData = true
         loadAgents()
     }
-    
+
     fun loadMoreAgents() {
         if (!_isLoading.value && hasMoreData) {
             currentPage++
             loadAgents()
         }
     }
-    
+
     private fun loadAgents() {
         if (_isLoading.value) return
-        
+
         _isLoading.value = true
         EasyLog.log("loadAgents - page: $currentPage")
         viewModelScope.launch(Dispatchers.IO) {
@@ -160,6 +155,7 @@ class MainViewModel: BaseActivityViewModel() {
                         }
                     }
                 }
+
                 is HttpResult.Failure -> {
                     showSnackbar(result.message)
                     // 如果加载失败，回退页码
@@ -186,9 +182,11 @@ class MainViewModel: BaseActivityViewModel() {
                     getFollowingAgents()
                 }
             }
+
             HomeTabIndex.My -> {
                 getUserCreatedAgents()
             }
+
             else -> {
 
             }
@@ -209,6 +207,7 @@ class MainViewModel: BaseActivityViewModel() {
                 EasyLog.log("Switching to following tab - refreshing following agents")
                 getFollowingAgents()
             }
+
             else -> {}
         }
     }
@@ -234,7 +233,10 @@ class MainViewModel: BaseActivityViewModel() {
                     }
 
                     is HttpResult.Failure -> {
-                        EasyLog.log("getUserProfile failure: ${result.message}", priority = EasyLog.ERROR)
+                        EasyLog.log(
+                            "getUserProfile failure: ${result.message}",
+                            priority = EasyLog.ERROR
+                        )
                         withContext(Dispatchers.Main) {
                             showSnackbar(result.message)
                         }
@@ -260,7 +262,10 @@ class MainViewModel: BaseActivityViewModel() {
         viewModelScope.launch {
             FirebaseMessaging.getInstance().token.addOnCompleteListener(OnCompleteListener { task ->
                 if (!task.isSuccessful) {
-                    EasyLog.log("Fetching FCM registration token failed, ${task.exception}", EasyLog.ERROR)
+                    EasyLog.log(
+                        "Fetching FCM registration token failed, ${task.exception}",
+                        EasyLog.ERROR
+                    )
                     task.exception?.let { EasyLog.log(it) }
                     return@OnCompleteListener
                 }
@@ -285,13 +290,14 @@ class MainViewModel: BaseActivityViewModel() {
                 is HttpResult.Success -> {
                     sysMsgs.addAll(result.data.list)
                 }
+
                 is HttpResult.Failure -> {
 
                 }
             }
         }
     }
-    
+
     /**
      * 异步更新订阅计划列表和会员状态
      */
@@ -310,13 +316,13 @@ class MainViewModel: BaseActivityViewModel() {
             }
         }
     }
-    
+
     fun getFollowingAgents() {
         EasyLog.log("getFollowingAgents")
         viewModelScope.launch(Dispatchers.IO) {
             val result = agentApi.getFollowingAgents(1, 10)
             EasyLog.log("getFollowingAgents = $result")
-            
+
             when (result) {
                 is HttpResult.Success -> {
                     followingAgents.clear()
@@ -324,19 +330,20 @@ class MainViewModel: BaseActivityViewModel() {
                         followingAgents.addAll(agents)
                     }
                 }
+
                 is HttpResult.Failure -> {
                     showSnackbar(result.message)
                 }
             }
         }
     }
-    
+
     fun followAgent(agentId: String) {
         EasyLog.log("followAgent: $agentId")
         viewModelScope.launch(Dispatchers.IO) {
             val result = agentApi.followAgent(agentId)
             EasyLog.log("followAgent = $result")
-            
+
             when (result) {
                 is HttpResult.Success -> {
                     EasyLog.log("followAgent success")
@@ -362,6 +369,7 @@ class MainViewModel: BaseActivityViewModel() {
                     // Refresh following list if on conversions tab
                     refreshFollowingListIfOnTab()
                 }
+
                 is HttpResult.Failure -> {
                     EasyLog.log("followAgent error: $result", priority = EasyLog.ERROR)
                     viewModelScope.launch(Dispatchers.Main) {
@@ -371,13 +379,13 @@ class MainViewModel: BaseActivityViewModel() {
             }
         }
     }
-    
+
     fun unfollowAgent(agentId: String) {
         EasyLog.log("unfollowAgent: $agentId")
         viewModelScope.launch(Dispatchers.IO) {
             val result = agentApi.unfollowAgent(agentId)
             EasyLog.log("unfollowAgent = $result")
-            
+
             when (result) {
                 is HttpResult.Success -> {
                     EasyLog.log("unfollowAgent success")
@@ -403,6 +411,7 @@ class MainViewModel: BaseActivityViewModel() {
                     LocalBroadcastManager.getInstance(AppEnv.context).sendBroadcast(intent)
                     EasyLog.log("Sent FOLLOW_STATE_CHANGED broadcast - unfollowed: $agentId")
                 }
+
                 is HttpResult.Failure -> {
                     EasyLog.log("unfollowAgent error: $result", priority = EasyLog.ERROR)
                     viewModelScope.launch(Dispatchers.Main) {
@@ -412,21 +421,22 @@ class MainViewModel: BaseActivityViewModel() {
             }
         }
     }
-    
+
     fun refreshFollowingListIfOnTab() {
         EasyLog.log("refreshFollowingListIfOnTab - selectedTab: ${_selectedTab.value}, selectedConversionsTab: ${_selectedConversionsTab.value}")
-        if (_selectedTab.value == HomeTabIndex.Conversions && 
-            _selectedConversionsTab.value == ConversionsPageTab.TabFollowing) {
+        if (_selectedTab.value == HomeTabIndex.Conversions &&
+            _selectedConversionsTab.value == ConversionsPageTab.TabFollowing
+        ) {
             EasyLog.log("Refreshing following agents due to follow state change")
             getFollowingAgents()
         } else {
             EasyLog.log("Not refreshing - not on following tab")
         }
     }
-    
+
     fun updateAgentFollowStateInList(agentId: String, isFollowed: Boolean) {
         EasyLog.log("Updating agent follow state in list - agentId: $agentId, isFollowed: $isFollowed")
-        
+
         // 更新主列表中的agent状态
         val index = agentList.indexOfFirst { it.id == agentId }
         if (index != -1) {
@@ -434,14 +444,14 @@ class MainViewModel: BaseActivityViewModel() {
             agentList[index] = updatedAgent
             EasyLog.log("Updated agent in main list: ${updatedAgent.name}")
         }
-        
+
         // 如果是取消关注，从关注列表中移除
         if (!isFollowed) {
             followingAgents.removeAll { it.id == agentId }
             EasyLog.log("Removed agent from following list")
         }
     }
-    
+
     fun getUserCreatedAgents() {
         EasyLog.log("getUserCreatedAgents - Loading first page")
         currentUserAgentsPage = 0
@@ -449,26 +459,26 @@ class MainViewModel: BaseActivityViewModel() {
         hasMoreUserAgents = true
         loadUserCreatedAgents()
     }
-    
+
     fun loadMoreUserCreatedAgents() {
         if (!_isLoadingUserAgents.value && hasMoreUserAgents) {
             currentUserAgentsPage++
             loadUserCreatedAgents()
         }
     }
-    
+
     private fun loadUserCreatedAgents() {
         if (_isLoadingUserAgents.value) return
-        
+
         _isLoadingUserAgents.value = true
         val skip = currentUserAgentsPage * 10
         EasyLog.log("loadUserCreatedAgents - page: $currentUserAgentsPage, skip: $skip")
-        
+
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val result = agentApi.getUserCreatedAgents(skip, 10)
                 EasyLog.log("loadUserCreatedAgents API result = $result")
-                
+
                 when (result) {
                     is HttpResult.Success -> {
                         if (result.data.isEmpty()) {
@@ -479,8 +489,12 @@ class MainViewModel: BaseActivityViewModel() {
                             EasyLog.log("Added ${result.data.size} user agents, total: ${userCreatedAgents.size}")
                         }
                     }
+
                     is HttpResult.Failure -> {
-                        EasyLog.log("loadUserCreatedAgents - API failure: ${result.message}", priority = EasyLog.ERROR)
+                        EasyLog.log(
+                            "loadUserCreatedAgents - API failure: ${result.message}",
+                            priority = EasyLog.ERROR
+                        )
                         showSnackbar(result.message)
                         // If loading failed, rollback page counter
                         if (currentUserAgentsPage > 0) {
@@ -489,7 +503,10 @@ class MainViewModel: BaseActivityViewModel() {
                     }
                 }
             } catch (e: Exception) {
-                EasyLog.log("loadUserCreatedAgents - Exception occurred: ${e.message}", priority = EasyLog.ERROR)
+                EasyLog.log(
+                    "loadUserCreatedAgents - Exception occurred: ${e.message}",
+                    priority = EasyLog.ERROR
+                )
                 EasyLog.log(e)
                 showSnackbar("Failed to load created agents: ${e.message}")
                 // If loading failed, rollback page counter
@@ -500,13 +517,13 @@ class MainViewModel: BaseActivityViewModel() {
             _isLoadingUserAgents.value = false
         }
     }
-    
+
     fun refreshCreatedAgentsListIfOnTab() {
         if (_selectedTab.value == HomeTabIndex.My) {
             getUserCreatedAgents()
         }
     }
-    
+
     fun createAgent(
         request: CreateAgentRequest,
         onSuccess: (AgentInfo) -> Unit,
@@ -519,7 +536,7 @@ class MainViewModel: BaseActivityViewModel() {
             try {
                 val result = agentApi.createAgent(request)
                 EasyLog.log("createAgent = $result")
-                
+
                 withContext(Dispatchers.Main) {
                     when (result) {
                         is HttpResult.Success -> {
@@ -528,9 +545,10 @@ class MainViewModel: BaseActivityViewModel() {
                             refreshCreatedAgentsListIfOnTab()
                             onSuccess(result.data)
                         }
+
                         is HttpResult.Failure -> {
                             EasyLog.log("createAgent error: $result", priority = EasyLog.ERROR)
-                            val errorMessage = if (result.message.isBlank()) "创建失败，请检查网络连接" else result.message
+                            val errorMessage = result.message.ifBlank { "创建失败，请检查网络连接" }
                             onError(errorMessage)
                         }
                     }
@@ -539,9 +557,21 @@ class MainViewModel: BaseActivityViewModel() {
                 EasyLog.log("createAgent exception: ${e.message}", priority = EasyLog.ERROR)
                 EasyLog.log(e)
                 val errorMessage = when {
-                    e.message?.contains("timeout", ignoreCase = true) == true -> "网络超时，请稍后重试"
-                    e.message?.contains("network", ignoreCase = true) == true -> "网络连接失败，请检查网络"
-                    e.message?.contains("json", ignoreCase = true) == true -> "数据格式错误，请稍后重试"
+                    e.message?.contains(
+                        "timeout",
+                        ignoreCase = true
+                    ) == true -> "网络超时，请稍后重试"
+
+                    e.message?.contains(
+                        "network",
+                        ignoreCase = true
+                    ) == true -> "网络连接失败，请检查网络"
+
+                    e.message?.contains(
+                        "json",
+                        ignoreCase = true
+                    ) == true -> "数据格式错误，请稍后重试"
+
                     else -> "创建失败：${e.message ?: "未知错误"}"
                 }
                 withContext(Dispatchers.Main) {
@@ -554,30 +584,28 @@ class MainViewModel: BaseActivityViewModel() {
     // 新增：用户登出方法
     fun logout() {
         EasyLog.log("User logout - clearing all data")
-        
+
         // 清理内存数据
         agentList.clear()
         followingAgents.clear()
         userCreatedAgents.clear()
         sysMsgs.clear()
         _userProfile.value = UserProfile()
-        chatViewModel?.let { chat ->
-            chat.clearAllData()
-        }
-        
+        chatViewModel?.clearAllData()
+
         // 清理本地存储（这会切换到游客模式）
         IntySetting.logout()
         UserProfileManager.clearUserProfile()
-        
+
         // 切换到游客模式后，只加载本地数据，不进行网络请求
         loadGuestModeData()
         EasyLog.log("User logged out successfully - switched to guest mode")
     }
-    
+
     // 游客模式数据加载，不涉及需要认证的API调用
     private fun loadGuestModeData() {
         EasyLog.log("Loading guest mode data")
-        
+
         // 只加载不需要认证的数据
         viewModelScope.launch {
             try {
@@ -590,7 +618,7 @@ class MainViewModel: BaseActivityViewModel() {
             }
         }
     }
-    
+
     fun deleteAgent(
         agentId: String,
         onSuccess: () -> Unit,
@@ -601,7 +629,7 @@ class MainViewModel: BaseActivityViewModel() {
             try {
                 val result = agentApi.deleteAgent(agentId)
                 EasyLog.log("deleteAgent = $result")
-                
+
                 withContext(Dispatchers.Main) {
                     when (result) {
                         is HttpResult.Success -> {
@@ -612,18 +640,19 @@ class MainViewModel: BaseActivityViewModel() {
                             agentList.removeAll { it.id == agentId }
                             // 从关注列表中移除（如果存在）
                             followingAgents.removeAll { it.id == agentId }
-                            
+
                             ToastUtils.showToast(R.string.character_deleted_successfully)
                             onSuccess()
                         }
+
                         is HttpResult.Failure -> {
                             EasyLog.log("deleteAgent error: $result", priority = EasyLog.ERROR)
-                            val errorMessage = if (result.message.isBlank()) {
-                                AppEnv.context.getString(R.string.operation_failed_check_network, 
-                                    AppEnv.context.getString(R.string.delete_failed), 
-                                    AppEnv.context.getString(R.string.check_network_connection))
-                            } else {
-                                result.message
+                            val errorMessage = result.message.ifBlank {
+                                AppEnv.context.getString(
+                                    R.string.operation_failed_check_network,
+                                    AppEnv.context.getString(R.string.delete_failed),
+                                    AppEnv.context.getString(R.string.check_network_connection)
+                                )
                             }
                             ToastUtils.showToast(R.string.delete_failed_with_reason, errorMessage)
                             onError(errorMessage)
@@ -634,11 +663,21 @@ class MainViewModel: BaseActivityViewModel() {
                 EasyLog.log("deleteAgent exception: ${e.message}", priority = EasyLog.ERROR)
                 EasyLog.log(e)
                 val errorMessage = when {
-                    e.message?.contains("timeout", ignoreCase = true) == true -> "网络超时，请稍后重试"
-                    e.message?.contains("network", ignoreCase = true) == true -> "网络连接失败，请检查网络"
-                    else -> AppEnv.context.getString(R.string.operation_error_with_reason, 
-                        AppEnv.context.getString(R.string.delete_failed), 
-                        e.message ?: AppEnv.context.getString(R.string.unknown_error))
+                    e.message?.contains(
+                        "timeout",
+                        ignoreCase = true
+                    ) == true -> "网络超时，请稍后重试"
+
+                    e.message?.contains(
+                        "network",
+                        ignoreCase = true
+                    ) == true -> "网络连接失败，请检查网络"
+
+                    else -> AppEnv.context.getString(
+                        R.string.operation_error_with_reason,
+                        AppEnv.context.getString(R.string.delete_failed),
+                        e.message ?: AppEnv.context.getString(R.string.unknown_error)
+                    )
                 }
                 withContext(Dispatchers.Main) {
                     ToastUtils.showToast(errorMessage)
@@ -647,7 +686,7 @@ class MainViewModel: BaseActivityViewModel() {
             }
         }
     }
-    
+
     fun updateAgent(
         agentId: String,
         request: CreateAgentRequest,
@@ -659,7 +698,7 @@ class MainViewModel: BaseActivityViewModel() {
             try {
                 val result = agentApi.updateAgent(agentId, request)
                 EasyLog.log("updateAgent = $result")
-                
+
                 withContext(Dispatchers.Main) {
                     when (result) {
                         is HttpResult.Success -> {
@@ -669,14 +708,15 @@ class MainViewModel: BaseActivityViewModel() {
                             // Toast removed to avoid duplicate - handled by calling activity
                             onSuccess(result.data)
                         }
+
                         is HttpResult.Failure -> {
                             EasyLog.log("updateAgent error: $result", priority = EasyLog.ERROR)
-                            val errorMessage = if (result.message.isBlank()) {
-                                AppEnv.context.getString(R.string.operation_failed_check_network, 
-                                    AppEnv.context.getString(R.string.update_failed), 
-                                    AppEnv.context.getString(R.string.check_network_connection))
-                            } else {
-                                result.message
+                            val errorMessage = result.message.ifBlank {
+                                AppEnv.context.getString(
+                                    R.string.operation_failed_check_network,
+                                    AppEnv.context.getString(R.string.update_failed),
+                                    AppEnv.context.getString(R.string.check_network_connection)
+                                )
                             }
                             ToastUtils.showToast(R.string.update_failed_with_reason, errorMessage)
                             onError(errorMessage)
@@ -687,8 +727,16 @@ class MainViewModel: BaseActivityViewModel() {
                 EasyLog.log("updateAgent exception: ${e.message}", priority = EasyLog.ERROR)
                 EasyLog.log(e)
                 val errorMessage = when {
-                    e.message?.contains("timeout", ignoreCase = true) == true -> "网络超时，请稍后重试"
-                    e.message?.contains("network", ignoreCase = true) == true -> "网络连接失败，请检查网络"
+                    e.message?.contains(
+                        "timeout",
+                        ignoreCase = true
+                    ) == true -> "网络超时，请稍后重试"
+
+                    e.message?.contains(
+                        "network",
+                        ignoreCase = true
+                    ) == true -> "网络连接失败，请检查网络"
+
                     else -> "更新失败：${e.message ?: "未知错误"}"
                 }
                 withContext(Dispatchers.Main) {
@@ -698,7 +746,7 @@ class MainViewModel: BaseActivityViewModel() {
             }
         }
     }
-    
+
     fun generateBackground(
         request: GenerateBackgroundRequest,
         onSuccess: (GenerateBackgroundResponse) -> Unit,
@@ -709,16 +757,20 @@ class MainViewModel: BaseActivityViewModel() {
             try {
                 val result = agentApi.generateBackground(request)
                 EasyLog.log("generateBackground = $result")
-                
+
                 withContext(Dispatchers.Main) {
                     when (result) {
                         is HttpResult.Success -> {
                             EasyLog.log("generateBackground success: ${result.data}")
                             onSuccess(result.data)
                         }
+
                         is HttpResult.Failure -> {
-                            EasyLog.log("generateBackground error: $result", priority = EasyLog.ERROR)
-                            val errorMessage = if (result.message.isBlank()) "生成失败，请检查网络连接" else result.message
+                            EasyLog.log(
+                                "generateBackground error: $result",
+                                priority = EasyLog.ERROR
+                            )
+                            val errorMessage = result.message.ifBlank { "生成失败，请检查网络连接" }
                             onError(errorMessage)
                         }
                     }
@@ -727,13 +779,135 @@ class MainViewModel: BaseActivityViewModel() {
                 EasyLog.log("generateBackground exception: ${e.message}", priority = EasyLog.ERROR)
                 EasyLog.log(e)
                 val errorMessage = when {
-                    e.message?.contains("timeout", ignoreCase = true) == true -> "网络超时，请稍后重试"
-                    e.message?.contains("network", ignoreCase = true) == true -> "网络连接失败，请检查网络"
-                    e.message?.contains("json", ignoreCase = true) == true -> "数据格式错误，请稍后重试"
+                    e.message?.contains(
+                        "timeout",
+                        ignoreCase = true
+                    ) == true -> "网络超时，请稍后重试"
+
+                    e.message?.contains(
+                        "network",
+                        ignoreCase = true
+                    ) == true -> "网络连接失败，请检查网络"
+
+                    e.message?.contains(
+                        "json",
+                        ignoreCase = true
+                    ) == true -> "数据格式错误，请稍后重试"
+
                     else -> "生成失败：${e.message ?: "未知错误"}"
                 }
                 withContext(Dispatchers.Main) {
                     onError(errorMessage)
+                }
+            }
+        }
+    }
+
+    /**
+     * 检查账号是否有订阅需要取消，才能用来删除账号
+     */
+    fun checkAccountSubscribe() {
+        EasyLog.log("检查账号需要取消订阅 ---> ")
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val result = userApi.userDeletionCheck()
+
+                EasyLog.log("检查账号需要取消订阅的结果 = $result")
+
+                withContext(Dispatchers.Main) {
+                    when (result) {
+                        is HttpResult.Success -> {
+                            EasyLog.log("检查账号需要取消订阅的结果 success: ${result.data}")
+                            if (result.data.can_delete && !result.data.active_subscription) {
+                                deleteUserAccount()
+                            } else {
+                                ToastUtils.showToast("Please cancel the subscription before proceeding")
+                            }
+                        }
+
+                        is HttpResult.Failure -> {
+                            EasyLog.log(
+                                "检查账号需要取消订阅的结果 error: $result",
+                                priority = EasyLog.ERROR
+                            )
+                            ToastUtils.showToast("Check Account Deletion Server Error !")
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                EasyLog.log(
+                    "检查账号需要取消订阅 exception: ${e.message}",
+                    priority = EasyLog.ERROR
+                )
+                EasyLog.log(e)
+                val errorMessage = when {
+                    e.message?.contains(
+                        "timeout",
+                        ignoreCase = true
+                    ) == true -> "网络超时，请稍后重试"
+
+                    e.message?.contains(
+                        "network",
+                        ignoreCase = true
+                    ) == true -> "网络连接失败，请检查网络"
+
+                    else -> "更新失败：${e.message ?: "未知错误"}"
+                }
+                withContext(Dispatchers.Main) {
+                    ToastUtils.showToast(errorMessage)
+                }
+            }
+        }
+    }
+
+    //删除账号的结果
+    val deleteAccountResultFlow = MutableStateFlow(false)
+
+    /**
+     * 删除账号的接口
+     */
+    private fun deleteUserAccount() {
+        EasyLog.log("删除用户账号 ---> ")
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val result = userApi.userDeleteAccount()
+
+                EasyLog.log("删除用户账号的结果 = $result")
+
+                withContext(Dispatchers.Main) {
+                    when (result) {
+                        is HttpResult.Success -> {
+                            EasyLog.log("删除用户账号的结果 success: ${result.data}")
+                            deleteAccountResultFlow.emit(true)
+                        }
+
+                        is HttpResult.Failure -> {
+                            EasyLog.log(
+                                "删除用户账号的结果 error: $result",
+                                priority = EasyLog.ERROR
+                            )
+                            ToastUtils.showToast("Account Deletion Server Error !")
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                EasyLog.log("删除用户账号 exception: ${e.message}", priority = EasyLog.ERROR)
+                EasyLog.log(e)
+                val errorMessage = when {
+                    e.message?.contains(
+                        "timeout",
+                        ignoreCase = true
+                    ) == true -> "网络超时，请稍后重试"
+
+                    e.message?.contains(
+                        "network",
+                        ignoreCase = true
+                    ) == true -> "网络连接失败，请检查网络"
+
+                    else -> "更新失败：${e.message ?: "未知错误"}"
+                }
+                withContext(Dispatchers.Main) {
+                    ToastUtils.showToast(errorMessage)
                 }
             }
         }

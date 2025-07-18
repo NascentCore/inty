@@ -19,11 +19,16 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -31,24 +36,29 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ai.inty.base.BaseActivity
 import com.ai.inty.base.noRippleClickable
+import com.ai.inty.billing.BillingRepository
 import com.ai.inty.ui.theme.BackGround
 import com.ai.inty.ui.theme.IntyTheme
-import com.ai.inty.billing.BillingRepository
 import com.ai.inty.viewmodels.MainViewModel
 import com.inty.utils.storage.IntySetting
 import com.therouter.TheRouter
 import com.therouter.router.Route
+import kotlinx.coroutines.flow.collectLatest
 
 /**
  * 设置页面
@@ -63,7 +73,6 @@ class SettingActivity : BaseActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-
         setContent {
             IntyTheme {
                 SettingScreen(
@@ -77,7 +86,11 @@ class SettingActivity : BaseActivity() {
                         // 使用MainViewModel的logout方法，不重启应用
                         mainViewModel.logout()
                         // 显示退出成功提示
-                        Toast.makeText(this@SettingActivity, getString(R.string.logout_successfully), Toast.LENGTH_SHORT).show()
+                        Toast.makeText(
+                            this@SettingActivity,
+                            getString(R.string.logout_successfully),
+                            Toast.LENGTH_SHORT
+                        ).show()
                         // 返回到主页面
                         TheRouter.build(Constant.ROUTE_MAIN).navigation(this@SettingActivity)
                         finish()
@@ -91,7 +104,7 @@ class SettingActivity : BaseActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingScreen(
+private fun SettingScreen(
     modifier: Modifier,
     onBack: () -> Unit,
     onLogout: () -> Unit,
@@ -100,7 +113,7 @@ fun SettingScreen(
     val context = LocalContext.current
 
     var showKeepTalking by remember { mutableStateOf(IntySetting.isShowKeepTalking()) }
-    
+
     // 获取订阅状态
     val vipStatus by BillingRepository.vipStatusFlow.collectAsState()
 
@@ -131,9 +144,7 @@ fun SettingScreen(
             )
         }
     ) { innerPadding ->
-        Column(
-            modifier = Modifier.padding(innerPadding)
-        ) {
+        Column(modifier = Modifier.padding(innerPadding)) {
 
             Column(
                 modifier = Modifier
@@ -175,7 +186,9 @@ fun SettingScreen(
                     )
                     Spacer(Modifier.weight(1f))
                     Image(
-                        painter = if (showKeepTalking) painterResource(R.drawable.opened) else painterResource(R.drawable.closed),
+                        painter = if (showKeepTalking) painterResource(R.drawable.opened) else painterResource(
+                            R.drawable.closed
+                        ),
                         contentDescription = null,
                     )
                 }
@@ -219,6 +232,8 @@ fun SettingScreen(
             }
 
             Spacer(Modifier.height(16.dp))
+            //是否触发删除账号的弹窗
+            var showDeleteAccountDialog by remember { mutableStateOf(false) }
 
             Column(
                 modifier = Modifier
@@ -240,6 +255,7 @@ fun SettingScreen(
                         shape = RoundedCornerShape(8.dp)
                     )
             ) {
+                //邮件联系
                 val email = stringResource(R.string.settings_email_inty)
                 Spacer(Modifier.height(8.dp))
                 Row(
@@ -290,9 +306,8 @@ fun SettingScreen(
                                 )
                             )
                         )
-                ) {
-
-                }
+                )
+                //举报
                 Spacer(Modifier.height(4.dp))
                 Row(
                     modifier = Modifier
@@ -300,7 +315,172 @@ fun SettingScreen(
                         .height(48.dp)
                         .padding(horizontal = 12.dp)
                         .noRippleClickable {
-                            TheRouter.build(Constant.ROUTE_SUBSCRIPTION_MANAGEMENT).navigation(context)
+                            TheRouter.build(Constant.ROUTE_REPORT).navigation(context)
+                        },
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = stringResource(R.string.report),
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color.White
+                    )
+                    Spacer(Modifier.weight(1f))
+                    Image(
+                        painter = painterResource(R.drawable.icon_next),
+                        contentDescription = null,
+                    )
+                }
+                Spacer(Modifier.height(4.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(1.dp)
+                        .background(
+                            brush = Brush.horizontalGradient(
+                                colors = listOf(
+                                    Color.Transparent,
+                                    Color.White.copy(0.2f),
+                                    Color.Transparent
+                                )
+                            )
+                        )
+                )
+                //用户协议
+                Spacer(Modifier.height(4.dp))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp)
+                        .padding(horizontal = 12.dp)
+                        .noRippleClickable {
+                            val intent = Intent(
+                                Intent.ACTION_VIEW,
+                                Uri.parse(context.getString(R.string.settings_str_user_agreement))
+                            )
+                            context.startActivity(intent)
+                        },
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = stringResource(R.string.terms_of_use),
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color.White
+                    )
+                    Spacer(Modifier.weight(1f))
+                    Image(
+                        painter = painterResource(R.drawable.icon_next),
+                        contentDescription = null,
+                    )
+                }
+                Spacer(Modifier.height(4.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(1.dp)
+                        .background(
+                            brush = Brush.horizontalGradient(
+                                colors = listOf(
+                                    Color.Transparent,
+                                    Color.White.copy(0.2f),
+                                    Color.Transparent
+                                )
+                            )
+                        )
+                )
+                //隐私政策
+                Spacer(Modifier.height(4.dp))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp)
+                        .padding(horizontal = 12.dp)
+                        .noRippleClickable {
+                            val intent = Intent(
+                                Intent.ACTION_VIEW,
+                                Uri.parse(context.getString(R.string.settings_str_privacy_policy))
+                            )
+                            context.startActivity(intent)
+                        },
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = stringResource(R.string.privacy_policy),
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color.White
+                    )
+                    Spacer(Modifier.weight(1f))
+                    Image(
+                        painter = painterResource(R.drawable.icon_next),
+                        contentDescription = null,
+                    )
+                }
+                Spacer(Modifier.height(4.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(1.dp)
+                        .background(
+                            brush = Brush.horizontalGradient(
+                                colors = listOf(
+                                    Color.Transparent,
+                                    Color.White.copy(0.2f),
+                                    Color.Transparent
+                                )
+                            )
+                        )
+                )
+                //删除账号
+                Spacer(Modifier.height(4.dp))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp)
+                        .padding(horizontal = 12.dp)
+                        .noRippleClickable {
+                            showDeleteAccountDialog = true
+                        },
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = stringResource(R.string.settings_str_delete_account),
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color.White
+                    )
+                    Spacer(Modifier.weight(1f))
+                    Image(
+                        painter = painterResource(R.drawable.icon_next),
+                        contentDescription = null,
+                    )
+                }
+                Spacer(Modifier.height(4.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(1.dp)
+                        .background(
+                            brush = Brush.horizontalGradient(
+                                colors = listOf(
+                                    Color.Transparent,
+                                    Color.White.copy(0.2f),
+                                    Color.Transparent
+                                )
+                            )
+                        )
+                )
+                //订阅管理
+                Spacer(Modifier.height(4.dp))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp)
+                        .padding(horizontal = 12.dp)
+                        .noRippleClickable {
+                            TheRouter.build(Constant.ROUTE_SUBSCRIPTION_MANAGEMENT)
+                                .navigation(context)
                         },
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -341,9 +521,8 @@ fun SettingScreen(
                                 )
                             )
                         )
-                ) {
-
-                }
+                )
+                //版本号
                 Spacer(Modifier.height(4.dp))
                 Row(
                     modifier = Modifier
@@ -369,9 +548,8 @@ fun SettingScreen(
                 Spacer(Modifier.height(8.dp))
             }
 
-
             Spacer(Modifier.height(16.dp))
-
+            //退出登录
             Column(
                 modifier = Modifier
                     .padding(horizontal = 16.dp)
@@ -416,23 +594,97 @@ fun SettingScreen(
                 Spacer(Modifier.height(17.dp))
             }
 
+            val viewmodel = viewModel<MainViewModel>()
+            LaunchedEffect(viewmodel) {
+                viewmodel.deleteAccountResultFlow.collectLatest { deleted ->
+                    if (deleted) {
+                        //账号删除成功
+                        onLogout()
+                    }
+                }
+            }
+            //删除账号的弹窗
+            if (showDeleteAccountDialog) {
+                DeleteDialog(
+                    { showDeleteAccountDialog = false },
+                    onSubmit = { viewmodel.checkAccountSubscribe() })
+            }
 
         }
     }
 }
 
-fun restartAppProcess(context: Context) {
-    val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)
-    intent?.apply {
-        addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP) // 清除历史栈
-        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)  // 新任务栈
-        context.startActivity(this)
+@Composable
+private fun DeleteDialog(onDismiss: () -> Unit, onSubmit: () -> Unit) {
+
+    Dialog(onDismissRequest = onDismiss) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(12.dp))
+                .background(color = Color(0xFF1B0130))
+                .padding(12.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Delete your account",
+                    fontSize = 22.sp,
+                    color = Color.White
+                )
+                Spacer(Modifier.weight(1f))
+                IconButton(onClick = onDismiss) {
+                    Icon(
+                        painter = painterResource(R.drawable.close),
+                        contentDescription = ""
+                    )
+                }
+            }
+            Text(
+                text = "Account deactivation risk warning",
+                fontSize = 16.sp,
+                color = Color.White
+            )
+            Text(
+                text = """
+                                1、After the account is deactivated, the premium version will no longer be available. It is recommended to cancel the subscription before performing the operation
+                                2、After the account is deactivated, all chat records and content under your account will be deleted
+                                3、After the account is successfully deleted, it will be terminated immediately. Even if you re-register with the same account, it cannot be restored
+                            """.trimIndent(),
+                fontSize = 14.sp,
+                color = Color.White
+            )
+            Spacer(Modifier.height(8.dp))
+
+            Text(
+                text = "Please read the warning carefully and operate with caution",
+                fontSize = 16.sp,
+                color = Color.White
+            )
+            Spacer(Modifier.height(8.dp))
+            //按钮
+            Button(
+                onClick = onDismiss,
+                modifier = Modifier
+                    .fillMaxWidth(.85f)
+                    .align(Alignment.CenterHorizontally)
+            ) {
+                Text("Cancel", fontSize = 18.sp, color = Color.White)
+            }
+            TextButton(
+                onClick = onSubmit,
+                modifier = Modifier.align(Alignment.CenterHorizontally)
+            ) {
+                Text("Enter", fontSize = 14.sp, color = Color.White)
+            }
+        }
     }
-    // 终止当前进程
-    android.os.Process.killProcess(android.os.Process.myPid())
 }
 
-fun mailTo(context: Context, email: String) {
+
+private fun mailTo(context: Context, email: String) {
     val intent = Intent(Intent.ACTION_SENDTO).apply {
         data = Uri.parse("mailto:$email")
     }
@@ -441,4 +693,10 @@ fun mailTo(context: Context, email: String) {
     } catch (e: Exception) {
         Toast.makeText(context, "email error", Toast.LENGTH_SHORT).show()
     }
+}
+
+@Preview
+@Composable
+private fun PreviewSettingsScreen() {
+    SettingScreen(Modifier.fillMaxSize(), {}) { }
 }

@@ -1,7 +1,8 @@
 package com.ai.inty.net
 
+import android.content.Context
+import android.content.Intent
 import com.ai.inty.Constant
-import com.ai.inty.restartAppProcess
 import com.architecture.httplib.core.HttpResponseCallAdapterFactory
 import com.architecture.httplib.core.MoshiResultTypeAdapterFactory
 import com.architecture.httplib.error.GlobalErrorHandler
@@ -53,6 +54,18 @@ class AuthInterceptor : Interceptor {
 
 }
 
+
+private fun restartAppProcess(context: Context) {
+    val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)
+    intent?.apply {
+        addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP) // 清除历史栈
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)  // 新任务栈
+        context.startActivity(this)
+    }
+    // 终止当前进程
+    android.os.Process.killProcess(android.os.Process.myPid())
+}
+
 object NetServiceMgr {
 
     val authInterceptor = AuthInterceptor()
@@ -87,7 +100,7 @@ object NetServiceMgr {
 
     private val globalErrorHandler = GlobalErrorHandler()
 
-    private fun getHttpWrapperHandler(): MoshiResultTypeAdapterFactory.HttpWrapper{
+    private fun getHttpWrapperHandler(): MoshiResultTypeAdapterFactory.HttpWrapper {
 
         return object : MoshiResultTypeAdapterFactory.HttpWrapper {
             override fun getStatusCodeKey(): String {
