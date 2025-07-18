@@ -3,6 +3,7 @@
 ## Gemini
 
 `uv run --no-project gemini.py` You might need to install additional deps.
+This will write out a `.wav` file that can be played.
 
 ## ElevenLabs Demo
 
