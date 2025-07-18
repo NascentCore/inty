@@ -178,8 +178,13 @@ class PromptTemplateManager:
         """
         template = self.get_template(template_name)
         
-        # 从agent_data中提取相关信息
-        system_prompt = agent_data.get('prompt', '你是一个聊天助手，请用中文回答用户的问题。')
+        # 优先使用角色卡字段构建系统提示词
+        system_prompt = self._build_system_prompt_from_character_card(agent_data)
+        
+        # 如果角色卡字段为空，回退到原始prompt字段
+        if not system_prompt:
+            system_prompt = agent_data.get('prompt', '你是一个聊天助手，请用中文回答用户的问题。')
+        
         agent_name = agent_data.get('name', '')
         agent_description = agent_data.get('description', '')
         
@@ -189,6 +194,38 @@ class PromptTemplateManager:
             agent_name=agent_name,
             agent_description=agent_description
         )
+    
+    def _build_system_prompt_from_character_card(self, agent_data: Dict[str, Any]) -> str:
+        """
+        从角色卡字段构建系统提示词
+        
+        Args:
+            agent_data: Agent数据字典
+            
+        Returns:
+            构建的系统提示词，如果角色卡字段为空则返回空字符串
+        """
+        personality = agent_data.get('personality', '').strip()
+        scenario = agent_data.get('scenario', '').strip()
+        
+        # 如果没有角色卡信息，返回空字符串
+        if not personality and not scenario:
+            return ''
+        
+        # 构建系统提示词
+        prompt_parts = []
+        
+        if personality:
+            prompt_parts.append(f"角色性格: {personality}")
+        
+        if scenario:
+            prompt_parts.append(f"背景设定: {scenario}")
+        
+        # 添加基础行为指令
+        base_instruction = "你是一个虚拟角色，请完全按照上述设定与用户对话，不要透露你是AI的身份。"
+        prompt_parts.append(base_instruction)
+        
+        return '\n\n'.join(prompt_parts)
 
 
 # 全局提示词模版管理器实例

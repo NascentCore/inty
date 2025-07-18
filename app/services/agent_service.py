@@ -348,6 +348,9 @@ async def create_agent(db: AsyncSession, agent_in: schemas.AgentCreate, user_id:
         if not agent_in.name or not agent_in.name.strip():
             raise HTTPException(status_code=400, detail="Agent name cannot be empty")
         
+        # 角色卡字段优先级验证和建议
+        _validate_character_card_fields(agent_in)
+        
         # 生成唯一ID
         agent_id = str(uuid.uuid4())
         
@@ -356,29 +359,48 @@ async def create_agent(db: AsyncSession, agent_in: schemas.AgentCreate, user_id:
         
         # 获取Agent数据
         agent_data = agent_in.dict()
+        logger.debug(f"原始Agent数据: {agent_data}")
         
         # 处理 llm_config 字段
         if 'llm_config' in agent_data:
             # 将 llm_config 移动到 settings 中
-            if 'settings' not in agent_data:
+            if 'settings' not in agent_data or agent_data['settings'] is None:
                 agent_data['settings'] = {}
             agent_data['settings']['llm_config'] = agent_data.pop('llm_config')
+            logger.debug(f"处理llm_config后的数据: {agent_data}")
         
         # 处理图片URL：验证、复制临时文件到永久路径、删除临时文件
         try:
             processed_agent_data = process_agent_image_urls(agent_data, agent_id, user_id)
-            logger.info(f"成功处理Agent图片URL - Agent ID: {agent_id}")
+            # 确保返回值不为空
+            if processed_agent_data is None:
+                logger.warning(f"图片处理返回None，使用原始数据 - Agent ID: {agent_id}")
+                processed_agent_data = agent_data
+            else:
+                logger.info(f"成功处理Agent图片URL - Agent ID: {agent_id}")
         except Exception as e:
             logger.error(f"处理Agent图片URL失败 - Agent ID: {agent_id}, Error: {str(e)}")
             # 图片处理失败不应该阻止Agent创建，使用原始数据
             processed_agent_data = agent_data
         
-        db_agent = models.Agent(
-            id=agent_id,
-            readable_id=readable_id,
-            **processed_agent_data,
-            creator_id=user_id
-        )
+        # 确保processed_agent_data是有效的字典
+        if not isinstance(processed_agent_data, dict):
+            logger.error(f"processed_agent_data不是字典类型: {type(processed_agent_data)}, 值: {processed_agent_data}")
+            processed_agent_data = agent_data
+        
+        logger.debug(f"最终处理后的Agent数据: {processed_agent_data}")
+        
+        try:
+            db_agent = models.Agent(
+                id=agent_id,
+                readable_id=readable_id,
+                **processed_agent_data,
+                creator_id=user_id
+            )
+        except Exception as e:
+            logger.error(f"创建Agent模型实例失败: {str(e)}")
+            logger.error(f"Agent数据: {processed_agent_data}")
+            raise
         
         db.add(db_agent)
         await db.commit()
@@ -409,6 +431,37 @@ async def create_agent(db: AsyncSession, agent_in: schemas.AgentCreate, user_id:
         await db.rollback()
         logger.error(f"未知错误 - 创建角色: {str(e)}")
         raise HTTPException(status_code=500, detail="服务器内部错误")
+
+def _validate_character_card_fields(agent_in: schemas.AgentCreate):
+    """
+    验证并建议使用角色卡字段
+    
+    Args:
+        agent_in: Agent创建数据
+    """
+    # 检查是否同时提供了prompt和角色卡字段
+    has_prompt = bool(agent_in.prompt and agent_in.prompt.strip())
+    has_character_card = bool(
+        (agent_in.personality and agent_in.personality.strip()) or 
+        (agent_in.scenario and agent_in.scenario.strip())
+    )
+    
+    logger.info(f"创建Agent字段使用情况 - prompt: {has_prompt}, character_card: {has_character_card}")
+    
+    # 如果既没有prompt也没有角色卡信息，抛出错误
+    if not has_prompt and not has_character_card:
+        raise HTTPException(
+            status_code=400, 
+            detail="请提供角色设定信息：建议使用personality(性格)和scenario(背景)字段，或提供prompt字段"
+        )
+    
+    # 如果同时提供了prompt和角色卡，记录警告但允许创建
+    if has_prompt and has_character_card:
+        logger.warning(f"Agent同时提供了prompt和角色卡字段，将优先使用角色卡字段构建提示词")
+    
+    # 如果只有prompt，建议使用角色卡字段
+    if has_prompt and not has_character_card:
+        logger.info(f"Agent只提供了prompt字段，建议后续迁移到角色卡字段(personality, scenario)以获得更好的效果")
 
 async def update_agent(db: AsyncSession, db_agent: models.Agent, agent_in: schemas.AgentUpdate) -> models.Agent:
     """

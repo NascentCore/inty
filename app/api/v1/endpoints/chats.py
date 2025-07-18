@@ -499,14 +499,37 @@ async def agent_chat_completions(
         msg_process_time = time.time() - msg_process_start
         logger.info(f"消息处理耗时: {msg_process_time:.3f}秒")
         
-        # 获取或创建Agent实例 - 延迟加载完整数据
+        # 获取或创建Agent实例 - 需要加载完整数据
         agent_get_start = time.time()
         logger.debug(f"准备获取Agent实例: {chat.agent_id}")
         
-        # 从AgentManager缓存获取完整Agent数据
-        agent = await agent_manager.get_agent({'id': chat.agent_id})
+        # 获取完整的Agent数据（包含name等必需字段）
+        agent_db = await agent_service.get_agent(db, agent_id=chat.agent_id)
+        if not agent_db:
+            logger.error(f"Agent数据库记录未找到: {chat.agent_id}")
+            raise HTTPException(status_code=404, detail="Agent not found in database")
+        
+        # 构建完整的agent_data用于AgentManager
+        agent_data = {
+            'id': agent_db.id,
+            'name': agent_db.name or f'Agent_{agent_db.id[:8]}',  # 防护性检查
+            'prompt': agent_db.prompt,
+            'settings': agent_db.settings,
+            # 角色卡相关字段
+            'personality': getattr(agent_db, 'personality', ''),
+            'scenario': getattr(agent_db, 'scenario', ''),
+            'first_message': getattr(agent_db, 'first_message', ''),
+            'message_example': getattr(agent_db, 'message_example', ''),
+            'creator_notes': getattr(agent_db, 'creator_notes', ''),
+            'tags': getattr(agent_db, 'tags', []),
+            'character_version': getattr(agent_db, 'character_version', '1.0'),
+            'extensions': getattr(agent_db, 'extensions', {})
+        }
+        
+        # 从AgentManager缓存获取Agent实例
+        agent = await agent_manager.get_agent(agent_data)
         agent_get_time = time.time() - agent_get_start
-        logger.info(f"Agent实例获取成功: {agent_basic[1]}, 耗时: {agent_get_time:.3f}秒")
+        logger.info(f"Agent实例获取成功: {agent_db.name}, 耗时: {agent_get_time:.3f}秒")
         
         # 使用统一的session_id生成规则
         session_id_start = time.time()
@@ -699,9 +722,18 @@ async def agent_chat_fast_response(
         # 创建Agent实例
         agent_data = {
             'id': chat.agent_id,
-            'name': agent_db.name,
+            'name': agent_db.name or f'Agent_{chat.agent_id[:8]}',  # 防护性检查
             'prompt': agent_db.prompt,
-            'settings': agent_db.settings
+            'settings': agent_db.settings,
+            # 添加角色卡字段支持
+            'personality': getattr(agent_db, 'personality', ''),
+            'scenario': getattr(agent_db, 'scenario', ''),
+            'first_message': getattr(agent_db, 'first_message', ''),
+            'message_example': getattr(agent_db, 'message_example', ''),
+            'creator_notes': getattr(agent_db, 'creator_notes', ''),
+            'tags': getattr(agent_db, 'tags', []),
+            'character_version': getattr(agent_db, 'character_version', '1.0'),
+            'extensions': getattr(agent_db, 'extensions', {})
         }
         agent = await agent_manager.get_agent(agent_data)
         

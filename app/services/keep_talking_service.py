@@ -182,9 +182,18 @@ class KeepTalkingService:
             # 获取agent实例
             agent_data = {
                 'id': chat.agent.id,
-                'name': chat.agent.name,
+                'name': chat.agent.name or f'Agent_{chat.agent.id[:8]}',  # 防护性检查
                 'prompt': chat.agent.prompt,
-                'settings': chat.agent.settings
+                'settings': chat.agent.settings,
+                # 添加角色卡字段支持
+                'personality': getattr(chat.agent, 'personality', ''),
+                'scenario': getattr(chat.agent, 'scenario', ''),
+                'first_message': getattr(chat.agent, 'first_message', ''),
+                'message_example': getattr(chat.agent, 'message_example', ''),
+                'creator_notes': getattr(chat.agent, 'creator_notes', ''),
+                'tags': getattr(chat.agent, 'tags', []),
+                'character_version': getattr(chat.agent, 'character_version', '1.0'),
+                'extensions': getattr(chat.agent, 'extensions', {})
             }
             agent = await agent_manager.get_agent(agent_data)
             

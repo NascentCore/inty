@@ -94,6 +94,17 @@ async def create_agent(
 ) -> Any:
     """
     Create new AI agent
+    
+    推荐使用角色卡字段构建AI角色：
+    - personality: 角色性格特点 (推荐)
+    - scenario: 背景设定 (推荐) 
+    - first_message: 开场白
+    - message_example: 对话示例
+    
+    兼容性说明：
+    - 仍支持legacy的prompt字段
+    - 如果同时提供prompt和角色卡字段，将优先使用角色卡字段
+    - 建议新创建的角色使用角色卡字段以获得更好的效果
     """
     # 检查数量限制：系统管理员不限制，普通用户限制6个
     if not current_user.is_superuser:

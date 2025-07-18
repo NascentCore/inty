@@ -46,15 +46,17 @@ class AgentBase(BaseModel):
     visibility: AgentVisibility = AgentVisibility.PUBLIC
     photos: Optional[List[str]] = None
     category: Optional[str] = None
-    prompt: Optional[str] = None
     
-    # 角色卡相关字段
+    # Legacy字段 (向后兼容)
+    prompt: Optional[str] = Field(None, description="传统提示词字段(已弃用，建议使用角色卡字段)")
+    
+    # 角色卡相关字段 (推荐使用)
     character_card_spec: Optional[str] = None
-    personality: Optional[str] = None
-    scenario: Optional[str] = None
-    first_message: Optional[str] = None
-    message_example: Optional[str] = None
-    creator_notes: Optional[str] = None
+    personality: Optional[str] = Field(None, description="角色性格特点 (推荐)")
+    scenario: Optional[str] = Field(None, description="背景设定 (推荐)")
+    first_message: Optional[str] = Field(None, description="开场白")
+    message_example: Optional[str] = Field(None, description="对话示例")
+    creator_notes: Optional[str] = Field(None, description="创作者备注")
     post_history_instructions: Optional[str] = None
     alternate_greetings: Optional[List[str]] = None
     character_book: Optional[Dict[str, Any]] = None
@@ -66,7 +68,17 @@ class AgentBase(BaseModel):
     llm_config: Optional[ModelConfig] = None
 
 class AgentCreate(AgentBase):
-    """创建AI角色"""
+    """创建AI角色
+    
+    推荐使用方式：
+    1. 使用personality + scenario字段构建角色
+    2. 添加first_message作为开场白
+    3. 可选添加message_example展示对话风格
+    
+    兼容性说明：
+    - 仍支持使用prompt字段 (legacy模式)
+    - 优先级：角色卡字段 > prompt字段
+    """
     pass
 
 class AgentUpdate(AgentBase):
