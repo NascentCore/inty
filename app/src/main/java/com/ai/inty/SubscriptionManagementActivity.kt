@@ -176,21 +176,21 @@ fun SubscriptionManagementScreen(
                 }
                 
                 // 分隔线
-                Spacer(Modifier.height(4.dp))
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(1.dp)
-                        .background(
-                            brush = Brush.horizontalGradient(
-                                colors = listOf(
-                                    Color.Transparent,
-                                    Color.White.copy(0.2f),
-                                    Color.Transparent
-                                )
-                            )
-                        )
-                )
+                // Spacer(Modifier.height(4.dp))
+                // Box(
+                //     modifier = Modifier
+                //         .fillMaxWidth()
+                //         .height(1.dp)
+                //         .background(
+                //             brush = Brush.horizontalGradient(
+                //                 colors = listOf(
+                //                     Color.Transparent,
+                //                     Color.White.copy(0.2f),
+                //                     Color.Transparent
+                //                 )
+                //             )
+                //         )
+                // )
                 // Spacer(Modifier.height(4.dp))
                 // 
                 // // 兑换码（两种状态都显示）

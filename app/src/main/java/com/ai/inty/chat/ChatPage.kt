@@ -305,14 +305,34 @@ internal fun ChatPage(
                                         // 置灰状态：半透明灰色
                                         Brush.verticalGradient(
                                             colors = listOf(
-                                                Color.Gray.copy(alpha = 0.4f),
-                                                Color.Gray.copy(alpha = 0.4f)
+                                                Color.Gray.copy(alpha = 0.7f),
+                                                Color.Gray.copy(alpha = 0.7f)
                                             )
                                         )
                                     },
                                     shape = RoundedCornerShape(16.dp)
                                 )
-                                .padding(horizontal = 12.dp),
+                                .padding(horizontal = 12.dp)
+                                .noRippleClickable {
+                                    // 检查VIP状态
+                                    if (!vipStatus.isSubscribed) {
+                                        // 如果不是VIP，显示提示
+                                        Toast.makeText(
+                                            context,
+                                            youAreNotVipText,
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    } else {
+                                        // 如果是VIP，打开聊天设置抽屉
+                                        scope.launch {
+                                            if (drawerState.value == DrawerValue.Closed) {
+                                                drawerState.value = DrawerValue.Open
+                                            } else {
+                                                drawerState.value = DrawerValue.Closed
+                                            }
+                                        }
+                                    }
+                                },
                             contentAlignment = Alignment.Center
                         ) {
                             Row(
@@ -322,9 +342,7 @@ internal fun ChatPage(
                                 // V图标
                                 Text(
                                     text = "V",
-                                    color = if (agentPremiumModel) Color.White else Color.Gray.copy(
-                                        alpha = 0.5f
-                                    ),
+                                    color = Color.White,
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.Bold
                                 )
@@ -332,9 +350,7 @@ internal fun ChatPage(
                                 // Premium model文本
                                 Text(
                                     text = premiumModelText,
-                                    color = if (agentPremiumModel) Color.White else Color.Gray.copy(
-                                        alpha = 0.5f
-                                    ),
+                                    color = Color.White,
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Medium
                                 )
