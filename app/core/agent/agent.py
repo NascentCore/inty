@@ -86,6 +86,23 @@ def embed_texts(texts: list[str]) -> list[list[float]]:
 
 # 全局连接池
 _connection_pool = None
+_sync_engine = None
+
+def get_sync_engine():
+    """获取全局同步数据库引擎（避免重复创建）"""
+    global _sync_engine
+    if _sync_engine is None:
+        from sqlalchemy import create_engine
+        _sync_engine = create_engine(
+            settings.database.url,
+            pool_size=10,
+            max_overflow=20,
+            pool_pre_ping=True,
+            pool_recycle=3600,
+            echo=False  # 禁用SQL日志
+        )
+        logger.info("全局同步数据库引擎已初始化")
+    return _sync_engine
 
 def get_connection_pool():
     """获取数据库连接池"""
@@ -160,6 +177,8 @@ class Agent:
         self.template_name = template_name
         self._last_used_lock = RLock()
         self._user_info_cache = {}
+        # 会话首次消息缓存（避免重复查询）
+        self._session_first_message_cache = {}
         
         # 角色卡相关属性
         self.personality = personality
@@ -329,19 +348,16 @@ class Agent:
 
     def _get_user_profile_sync(self, user_id: str) -> str:
         """
-        同步获取用户profile信息
+        同步获取用户profile信息（优化版本 - 使用全局引擎）
         """
         # 检查缓存
         if user_id in self._user_info_cache:
             return self._user_info_cache[user_id]
         
         try:
-            # 使用同步数据库连接查询用户信息
-            from sqlalchemy import create_engine, text
-            from app.core.config import settings
-            
-            # 创建同步数据库引擎
-            sync_engine = create_engine(settings.database.url)
+            # 使用全局同步数据库引擎（避免重复创建）
+            from sqlalchemy import text
+            sync_engine = get_sync_engine()
             
             with sync_engine.connect() as conn:
                 # 查询用户基本信息
@@ -388,9 +404,51 @@ class Agent:
             self._user_info_cache[user_id] = ""
             return ""
     
+    async def _is_first_message_in_session_async(self, session_id: str) -> bool:
+        """
+        异步检查是否是会话中的第一条消息（优化版本，带缓存）
+        """
+        # 检查缓存
+        if session_id in self._session_first_message_cache:
+            logger.debug(f"从缓存返回首次消息状态: {session_id}")
+            return self._session_first_message_cache[session_id]
+        
+        try:
+            # 使用已有的同步连接池，避免异步数据库创建开销
+            import asyncio
+            
+            def _sync_check():
+                try:
+                    pool = get_connection_pool()
+                    with pool.connection() as conn:
+                        query = sql.SQL("""
+                            SELECT COUNT(*) 
+                            FROM chat_history 
+                            WHERE session_id = %s
+                        """)
+                        result = conn.execute(query, (session_id,))
+                        count = result.fetchone()[0]
+                        return count == 0
+                except Exception as e:
+                    logger.error(f"检查首次消息失败: {str(e)}")
+                    return False
+            
+            # 在线程池中快速执行
+            loop = asyncio.get_event_loop()
+            is_first = await loop.run_in_executor(None, _sync_check)
+            
+            # 缓存结果（首次消息状态不会改变）
+            self._session_first_message_cache[session_id] = is_first
+            logger.debug(f"缓存首次消息状态: {session_id} -> {is_first}")
+            
+            return is_first
+        except Exception as e:
+            logger.error(f"异步检查首次消息失败: {str(e)}")
+            return False
+
     def _is_first_message_in_session(self, session_id: str) -> bool:
         """
-        检查是否是会话中的第一条消息
+        检查是否是会话中的第一条消息（同步版本，保留兼容性）
         """
         try:
             pool = get_connection_pool()
@@ -439,6 +497,94 @@ class Agent:
         
         return recent_messages
 
+    def _chat_sync_optimized(self, user_id: str, session_id: str, messages: dict[str, Any], 
+                           user_profile: str = None, is_first_message: bool = False) -> str:
+        """
+        优化版同步聊天方法，接受预计算的参数
+        
+        跳过用户信息获取和首次消息检查，使用传入的预计算值
+        """
+        chat_start_time = time.time()
+        
+        # 从连接池获取连接
+        pool_start = time.time()
+        pool = get_connection_pool()
+        pool_time = time.time() - pool_start
+        logger.info(f"连接池获取耗时: {pool_time:.3f}秒 - Agent: {self.agent_id}")
+        
+        with pool.connection() as conn_local:
+            try:
+                # 创建历史记录对象
+                history_start = time.time()
+                history = PostgresChatMessageHistory(
+                    table_name,
+                    session_id,
+                    sync_connection=conn_local
+                )
+                history_init_time = time.time() - history_start
+                logger.info(f"历史记录初始化耗时: {history_init_time:.3f}秒 - Agent: {self.agent_id}")
+
+                # 获取相关的历史消息
+                get_history_start = time.time()
+                recent_history = self._get_relevant_history(history.messages, max_messages=10)
+                get_history_time = time.time() - get_history_start
+                logger.info(f"历史消息获取耗时: {get_history_time:.3f}秒 - Agent: {self.agent_id}")
+                
+                # 构建包含历史的完整消息列表
+                build_msg_start = time.time()
+                all_messages = recent_history + messages["messages"]
+                build_msg_time = time.time() - build_msg_start
+                logger.info(f"消息构建耗时: {build_msg_time:.3f}秒 - Agent: {self.agent_id}")
+                
+                # 保存原始用户消息到历史记录
+                save_msg_start = time.time()
+                history.add_messages(messages["messages"])
+                save_msg_time = time.time() - save_msg_start
+                logger.info(f"用户消息保存耗时: {save_msg_time:.3f}秒 - Agent: {self.agent_id}")
+
+                # 构建输入数据，使用预传入的参数
+                input_build_start = time.time()
+                input_data = {
+                    "messages": all_messages,
+                    "user_profile": user_profile or "",
+                    "is_first_message": is_first_message
+                }
+                config = {'configurable': {'user_id': user_id}}
+                input_build_time = time.time() - input_build_start
+                logger.info(f"输入数据构建耗时: {input_build_time:.3f}秒 - Agent: {self.agent_id}")
+                
+                # 调用agent进行对话
+                agent_invoke_start = time.time()
+                logger.info(f"开始Agent推理 - Agent: {self.agent_id}")
+                response = self.agent.invoke(input_data, config)
+                agent_invoke_time = time.time() - agent_invoke_start
+                logger.info(f"Agent推理耗时: {agent_invoke_time:.3f}秒 - Agent: {self.agent_id}")
+                
+                # 处理响应
+                response_process_start = time.time()
+                ai_messages = [message for message in response.get("messages",[]) if isinstance(message, AIMessage)]
+                response_text = ai_messages[-1].content if ai_messages else "抱歉，我无法理解您的消息。请再试一次。"
+                response_process_time = time.time() - response_process_start
+                logger.info(f"响应处理耗时: {response_process_time:.3f}秒 - Agent: {self.agent_id}")
+                
+                # 保存AI响应到历史记录
+                save_response_start = time.time()
+                history.add_messages([AIMessage(content=response_text)])
+                save_response_time = time.time() - save_response_start
+                logger.info(f"AI响应保存耗时: {save_response_time:.3f}秒 - Agent: {self.agent_id}")
+                
+                # 调试日志记录（优化版本跳过调试信息保存以提升性能）
+                if settings.agent.enable_debug_logging:
+                    logger.debug(f"调试模式开启，但优化版本跳过调试信息保存 - Agent: {self.agent_id}")
+                
+                total_time = time.time() - chat_start_time
+                logger.info(f"聊天处理总耗时（优化版）: {total_time:.3f}秒 - Agent: {self.agent_id}")
+                
+                return response_text
+            except Exception as e:
+                logger.error(f"聊天处理失败（优化版） - Agent: {self.agent_id}, Session: {session_id}, Error: {str(e)}")
+                raise
+
     def _chat_sync(self, user_id: str, session_id: str, messages: dict[str, Any]) -> str:
         """
         同步聊天方法，支持角色卡功能
@@ -446,54 +592,100 @@ class Agent:
         移除了LangGraph checkpointer，改为通过PostgresChatMessageHistory管理对话历史。
         历史消息会被智能截取并注入到当前对话上下文中。
         """
+        chat_start_time = time.time()
+        logger.info(f"开始聊天处理 - Agent: {self.agent_id}, Session: {session_id}")
+        
         self._update_last_used()
         
         # 获取用户profile信息
+        profile_start = time.time()
         user_profile = self._get_user_profile_sync(user_id)
+        profile_time = time.time() - profile_start
+        logger.info(f"用户信息获取耗时: {profile_time:.3f}秒 - Agent: {self.agent_id}")
         
         # 检查是否是首次对话
+        first_msg_start = time.time()
         is_first_message = self._is_first_message_in_session(session_id)
+        first_msg_time = time.time() - first_msg_start
+        logger.info(f"首次消息检查耗时: {first_msg_time:.3f}秒 - Agent: {self.agent_id}")
         
         # 从连接池获取连接
+        pool_start = time.time()
         pool = get_connection_pool()
+        pool_time = time.time() - pool_start
+        logger.info(f"连接池获取耗时: {pool_time:.3f}秒 - Agent: {self.agent_id}")
+        
         with pool.connection() as conn_local:
             try:
+                # 创建历史记录对象
+                history_start = time.time()
                 history = PostgresChatMessageHistory(
                     table_name,
                     session_id,
                     sync_connection=conn_local
                 )
+                history_init_time = time.time() - history_start
+                logger.info(f"历史记录初始化耗时: {history_init_time:.3f}秒 - Agent: {self.agent_id}")
 
                 # 获取相关的历史消息
+                get_history_start = time.time()
                 recent_history = self._get_relevant_history(history.messages, max_messages=10)
+                get_history_time = time.time() - get_history_start
+                logger.info(f"历史消息获取耗时: {get_history_time:.3f}秒 - Agent: {self.agent_id}")
                 
                 # 构建包含历史的完整消息列表
+                build_msg_start = time.time()
                 all_messages = recent_history + messages["messages"]
+                build_msg_time = time.time() - build_msg_start
+                logger.info(f"消息构建耗时: {build_msg_time:.3f}秒 - Agent: {self.agent_id}")
                 
                 # 保存原始用户消息到历史记录
+                save_msg_start = time.time()
                 history.add_messages(messages["messages"])
+                save_msg_time = time.time() - save_msg_start
+                logger.info(f"用户消息保存耗时: {save_msg_time:.3f}秒 - Agent: {self.agent_id}")
 
                 # 构建输入数据，包含历史消息、用户profile和首次消息标志
+                input_build_start = time.time()
                 input_data = {
                     "messages": all_messages,
                     "user_profile": user_profile,
                     "is_first_message": is_first_message
                 }
-                
-                # 移除checkpointer后，不需要thread_id配置
                 config = {'configurable': {'user_id': user_id}}
+                input_build_time = time.time() - input_build_start
+                logger.info(f"输入数据构建耗时: {input_build_time:.3f}秒 - Agent: {self.agent_id}")
                 
                 # 调用agent进行对话
+                agent_invoke_start = time.time()
+                logger.info(f"开始Agent推理 - Agent: {self.agent_id}")
                 response = self.agent.invoke(input_data, config)
+                agent_invoke_time = time.time() - agent_invoke_start
+                logger.info(f"Agent推理耗时: {agent_invoke_time:.3f}秒 - Agent: {self.agent_id}")
                 
-                # 如果启用调试日志记录，保存 response.get("messages",[]) 到数据库
-                if settings.agent.enable_debug_logging:
-                    self._save_debug_messages(user_id, session_id, response, conn_local)
-
+                # 处理响应
+                response_process_start = time.time()
                 ai_messages = [message for message in response.get("messages",[]) if isinstance(message, AIMessage)]
                 response_text = ai_messages[-1].content if ai_messages else "抱歉，我无法理解您的消息。请再试一次。"
-
+                response_process_time = time.time() - response_process_start
+                logger.info(f"响应处理耗时: {response_process_time:.3f}秒 - Agent: {self.agent_id}")
+                
+                # 保存AI响应到历史记录
+                save_response_start = time.time()
                 history.add_messages([AIMessage(content=response_text)])
+                save_response_time = time.time() - save_response_start
+                logger.info(f"AI响应保存耗时: {save_response_time:.3f}秒 - Agent: {self.agent_id}")
+                
+                # 调试日志记录
+                if settings.agent.enable_debug_logging:
+                    debug_start = time.time()
+                    self._save_debug_messages(user_id, session_id, response, conn_local)
+                    debug_time = time.time() - debug_start
+                    logger.info(f"调试信息保存耗时: {debug_time:.3f}秒 - Agent: {self.agent_id}")
+                
+                total_time = time.time() - chat_start_time
+                logger.info(f"聊天处理总耗时: {total_time:.3f}秒 - Agent: {self.agent_id}")
+                
                 return response_text
             except Exception as e:
                 logger.error(f"聊天处理失败 - Agent: {self.agent_id}, Session: {session_id}, Error: {str(e)}")
@@ -557,16 +749,35 @@ class Agent:
             pass
 
     async def chat(self, user_id: str, session_id: str, messages: dict[str, Any], db_session = None) -> str:
-        """异步聊天方法"""
+        """异步聊天方法（优化版本）"""
+        chat_start_time = time.time()
+        logger.info(f"开始聊天处理 - Agent: {self.agent_id}, Session: {session_id}")
+        
+        self._update_last_used()
+        
+        # 异步获取用户profile信息
+        profile_start = time.time()
+        user_profile = self._get_user_profile_sync(user_id)
+        profile_time = time.time() - profile_start
+        logger.info(f"用户信息获取耗时: {profile_time:.3f}秒 - Agent: {self.agent_id}")
+        
+        # 异步检查是否是首次对话
+        first_msg_start = time.time()
+        is_first_message = await self._is_first_message_in_session_async(session_id)
+        first_msg_time = time.time() - first_msg_start
+        logger.info(f"首次消息检查耗时（异步优化）: {first_msg_time:.3f}秒 - Agent: {self.agent_id}")
+        
+        # 在线程池中执行同步聊天逻辑（跳过首次消息检查）
         loop = asyncio.get_event_loop()
         try:
-            # 在线程池中执行同步聊天逻辑
             result = await loop.run_in_executor(
                 self._executor,
-                self._chat_sync,
+                self._chat_sync_optimized,
                 user_id,
                 session_id,
-                messages
+                messages,
+                user_profile,
+                is_first_message
             )
             return result
         except Exception as e:
@@ -846,7 +1057,7 @@ class AgentManager:
                 if existing_agent.agent_id == agent_id:
                     # 更新最后使用时间（线程安全）
                     existing_agent._update_last_used()
-                    logger.debug(f"返回已存在的Agent实例 - Agent ID: {agent_id}")
+                    logger.info(f"从缓存返回Agent实例 - Agent ID: {agent_id}")
                     return existing_agent
         
         # 需要创建或替换Agent实例，使用Agent专用锁

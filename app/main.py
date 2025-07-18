@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
 from fastapi.openapi.utils import get_openapi
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.ext.asyncio import AsyncSession
 from jose.exceptions import JWTError
 from pydantic import ValidationError
 
@@ -68,9 +69,13 @@ init_firebase()
 async def startup_event():
     """应用启动事件"""
     try:
-        logger.info("正在初始化常用Agent...")
+        logger.info("正在初始化应用...")
         # 获取数据库会话
         async for db_session in get_async_db():
+            # 1. 预初始化数据库表结构（提升性能）
+            await _preload_database_tables(db_session)
+            
+            # 2. 初始化常用Agent
             await agent_manager.initialize_popular_agents(db_session)
             break  # 只需要一次初始化
         logger.info("Agent初始化完成")
@@ -84,6 +89,28 @@ async def startup_event():
             logger.info("Keep Talking服务已禁用，跳过启动")
     except Exception as e:
         logger.error(f"应用启动过程中出错: {str(e)}")
+
+async def _preload_database_tables(db: AsyncSession):
+    """预加载数据库表结构以提升查询性能"""
+    try:
+        logger.info("开始预初始化数据库表结构...")
+        
+        # 预热聊天表查询，确保表结构已加载
+        from app import models
+        from sqlalchemy import select
+        
+        # 执行一个简单的查询来预热表结构
+        await db.execute(select(models.Chat).limit(1))
+        await db.execute(select(models.Agent).limit(1))
+        await db.execute(select(models.User).limit(1))
+        
+        # 预热chat_history表（PostgreSQL）
+        from sqlalchemy import text
+        await db.execute(text("SELECT 1 FROM chat_history LIMIT 1"))
+        
+        logger.info("数据库表结构预初始化完成")
+    except Exception as e:
+        logger.warning(f"数据库表预初始化失败（可忽略）: {str(e)}")
 
 @app.on_event("shutdown")
 async def shutdown_event():

@@ -286,19 +286,15 @@ async def get_or_create_chat_by_agent(
     db: AsyncSession, user_id: str, agent_id: str
 ) -> models.Chat:
     """
-    根据用户ID和Agent ID获取或创建唯一的聊天会话
+    根据用户ID和Agent ID获取或创建唯一的聊天会话（优化版）
     每个用户和每个Agent只能有一个会话
     """
     try:
         logger.info(f"获取或创建聊天会话 - 用户ID: {user_id}, Agent ID: {agent_id}")
         
-        # 首先查找是否已存在会话
+        # 优化：使用简单查询，减少预加载
         result = await db.execute(
             select(models.Chat)
-            .options(
-                selectinload(models.Chat.settings),
-                selectinload(models.Chat.agent)
-            )
             .where(
                 models.Chat.user_id == user_id,
                 models.Chat.agent_id == agent_id,
@@ -315,23 +311,25 @@ async def get_or_create_chat_by_agent(
                 logger.error(f"聊天会话中的Agent ID不匹配！期望: {agent_id}, 实际: {existing_chat.agent_id}")
                 raise HTTPException(status_code=500, detail=f"聊天会话数据不一致: 期望Agent ID {agent_id}, 实际 {existing_chat.agent_id}")
             
-            # 获取最近消息和时间戳
-            try:
-                session_id = generate_session_id(existing_chat.id)
-                last_message_data = chat_history_service.get_last_message_with_timestamp(session_id)
-                
-                if last_message_data:
-                    existing_chat.last_message = last_message_data['content']
-                    existing_chat.last_message_time = last_message_data['timestamp']
+            # 优化：延迟加载Agent信息，仅在需要时查询
+            if not hasattr(existing_chat, '_agent_loaded'):
+                agent_result = await db.execute(
+                    select(models.Agent.name, models.Agent.avatar)
+                    .where(models.Agent.id == agent_id)
+                )
+                agent_info = agent_result.first()
+                if agent_info:
+                    existing_chat.agent_name = agent_info[0]
+                    existing_chat.agent_avatar = agent_info[1]
                 else:
-                    existing_chat.last_message = None
-                    existing_chat.last_message_time = None
-            except Exception as e:
-                logger.error(f"获取最近消息失败: {str(e)}")
-                existing_chat.last_message = None
-                existing_chat.last_message_time = None
-            existing_chat.agent_name = existing_chat.agent.name if existing_chat.agent else None
-            existing_chat.agent_avatar = existing_chat.agent.avatar if existing_chat.agent else None
+                    existing_chat.agent_name = None
+                    existing_chat.agent_avatar = None
+                existing_chat._agent_loaded = True
+            
+            # 跳过last_message查询以提升性能（可在需要时单独查询）
+            existing_chat.last_message = None
+            existing_chat.last_message_time = None
+            
             return existing_chat
         
         # 如果不存在，则创建新的会话

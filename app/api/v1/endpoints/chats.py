@@ -8,7 +8,7 @@ import uuid
 import time
 from pydantic import BaseModel
 
-from app import schemas
+from app import schemas, models
 from app.api import deps
 from app.schemas.chat import ChatCompletionRequest
 from app.services import chat_service, agent_service, chat_history_service
@@ -417,6 +417,8 @@ async def agent_chat_completions(
     如果用户还没有和该Agent创建会话，则自动创建
     """
     try:
+        import time
+        request_start_time = time.time()
         logger.info(f"开始处理聊天请求 - Agent ID: {agent_id}, User ID: {current_user.id}")
         logger.debug(f"请求参数: {request.dict()}")
         logger.debug(f"request.messages详情: {request.messages}")
@@ -438,25 +440,36 @@ async def agent_chat_completions(
         #         }
         #     )
         
-        # 首先验证Agent是否存在
-        logger.debug(f"查询Agent数据库记录: {agent_id}")
-        agent_db = await agent_service.get_agent(db, agent_id=agent_id)
-        if not agent_db:
+        # 优化：简化Agent验证，在创建Agent实例时验证
+        agent_query_start = time.time()
+        logger.debug(f"简化Agent验证: {agent_id}")
+        
+        # 简化查询，只获取基本字段
+        from sqlalchemy import select
+        result = await db.execute(
+            select(models.Agent.id, models.Agent.name)
+            .where(models.Agent.id == agent_id)
+        )
+        agent_basic = result.first()
+        if not agent_basic:
             logger.error(f"Agent未找到: {agent_id}")
             raise HTTPException(status_code=404, detail="Agent not found")
         
-        logger.info(f"Agent查询成功: {agent_db.name}, Voice ID: {agent_db.voice_id}")
+        agent_query_time = time.time() - agent_query_start
+        logger.info(f"Agent验证成功: {agent_basic[1]}, 耗时: {agent_query_time:.3f}秒")
         # 添加日志记录传入的agent_id
         logger.info(f"请求的Agent ID: {agent_id}")
         
         # 获取或创建与该Agent的唯一会话
+        chat_session_start = time.time()
         logger.debug(f"获取或创建聊天会话: user_id={current_user.id}, agent_id={agent_id}")
         chat = await chat_service.get_or_create_chat_by_agent(
             db=db,
             user_id=current_user.id,
             agent_id=agent_id
         )
-        logger.info(f"聊天会话获取成功: chat_id={chat.id}, agent_id={chat.agent_id}")
+        chat_session_time = time.time() - chat_session_start
+        logger.info(f"聊天会话获取成功: chat_id={chat.id}, agent_id={chat.agent_id}, 耗时: {chat_session_time:.3f}秒")
         
         # 验证返回的chat中的agent_id是否与传入的一致
         if chat.agent_id != agent_id:
@@ -467,6 +480,7 @@ async def agent_chat_completions(
         logger.info(f"实际聊天的Agent ID: {chat.agent_id}")
         
         # 获取最后一条用户消息
+        msg_process_start = time.time()
         logger.debug(f"处理messages: {[f'{msg.role}: {msg.content[:50]}...' for msg in request.messages]}")
         user_messages = [msg for msg in request.messages if msg.role == "user"]
         logger.debug(f"找到的用户消息数量: {len(user_messages)}")
@@ -482,20 +496,23 @@ async def agent_chat_completions(
         messages = {
             "messages": [HumanMessage(content=last_user_message)]
         }
+        msg_process_time = time.time() - msg_process_start
+        logger.info(f"消息处理耗时: {msg_process_time:.3f}秒")
         
-        # 获取或创建Agent实例 - 使用chat中的agent_id确保一致性
-        logger.debug(f"准备创建Agent实例: {chat.agent_id}")
-        agent_data = {
-            'id': chat.agent_id,  # 使用chat中的agent_id而不是传入的agent_id
-            'name': agent_db.name,
-            'prompt': agent_db.prompt,
-            'settings': agent_db.settings
-        }
-        agent = await agent_manager.get_agent(agent_data)
-        logger.info(f"Agent实例创建成功: {agent_data['name']}")
+        # 获取或创建Agent实例 - 延迟加载完整数据
+        agent_get_start = time.time()
+        logger.debug(f"准备获取Agent实例: {chat.agent_id}")
+        
+        # 从AgentManager缓存获取完整Agent数据
+        agent = await agent_manager.get_agent({'id': chat.agent_id})
+        agent_get_time = time.time() - agent_get_start
+        logger.info(f"Agent实例获取成功: {agent_basic[1]}, 耗时: {agent_get_time:.3f}秒")
         
         # 使用统一的session_id生成规则
+        session_id_start = time.time()
         session_id = generate_session_id(chat.id)
+        session_id_time = time.time() - session_id_start
+        logger.info(f"Session ID生成耗时: {session_id_time:.3f}秒")
         
         # 用户发送新消息时，重置keep_talking计数
         keep_talking_service.reset_keep_talking_count(chat.id)
@@ -522,6 +539,7 @@ async def agent_chat_completions(
             )
         else:
             # 非流式聊天（异步）
+            chat_processing_start = time.time()
             logger.debug(f"开始Agent聊天处理: session_id={session_id}")
             
             # 并行获取聊天设置和AI回复
@@ -542,7 +560,8 @@ async def agent_chat_completions(
                 
                 # 等待两个任务完成
                 response_content, chat_settings = await asyncio.gather(ai_task, settings_task)
-                logger.info(f"Agent聊天响应成功: {response_content[:100]}...")
+                chat_processing_time = time.time() - chat_processing_start
+                logger.info(f"Agent聊天响应成功: {response_content[:100]}..., 耗时: {chat_processing_time:.3f}秒")
                 logger.debug(f"聊天设置获取成功: voice_enabled={chat_settings.voice_enabled}")
                 
             except Exception as e:
@@ -599,7 +618,8 @@ async def agent_chat_completions(
                 message["audio_url"] = audio_url
                 logger.info(f"响应包含语音URL: {audio_url}")
             
-            logger.info(f"聊天请求处理成功: agent_id={agent_id}, response_length={len(response_content)}")
+            total_request_time = time.time() - request_start_time
+            logger.info(f"聊天请求处理成功: agent_id={agent_id}, response_length={len(response_content)}, 总耗时: {total_request_time:.3f}秒")
             return {
                 "id": f"chatcmpl-{uuid.uuid4().hex[:12]}",
                 "object": "chat.completion",
