@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Optional
 import traceback
 from fastapi import APIRouter, Depends, HTTPException, File, UploadFile, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -124,20 +124,24 @@ async def check_deletion_eligibility(
 
 @router.post("/delete-account", response_model=APIResponse[AccountDeletionResponse])
 async def delete_user_account(
-    request: AccountDeletionRequest,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(deps.get_current_active_user),
+    request: Optional[AccountDeletionRequest] = None,
 ) -> Any:
     """
     删除用户账户
     """
     try:
         # 执行账户删除
+        deletion_reason = "用户主动删除"
+        if request and request.reason:
+            deletion_reason = request.reason
+            
         deletion_result = await user_service.delete_user_account(
             db=db,
             user_id=current_user.id,
-            deletion_reason=request.reason or "用户主动删除",
+            deletion_reason=deletion_reason,
             processor_id=current_user.id
         )
         
