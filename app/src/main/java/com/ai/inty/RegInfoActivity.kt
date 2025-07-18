@@ -6,12 +6,12 @@ import androidx.activity.viewModels
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -25,6 +25,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,6 +38,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.lifecycleScope
 import com.ai.inty.base.BaseActivity
+import com.ai.inty.base.ToastUtils
 import com.ai.inty.base.noRippleClickable
 import com.ai.inty.beans.GENDER
 import com.ai.inty.ui.theme.IntyTheme
@@ -91,6 +93,7 @@ fun RegInfoScreen(
             .fillMaxSize()
             .background(Color.Black.copy(0.6f)),
     ) {
+
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -187,65 +190,59 @@ fun RegInfoScreen(
                 color = Color.White,
             )
             Spacer(Modifier.height(12.dp))
-
-            Row(
+            FlowRow(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(48.dp),
+                    .padding(horizontal = 24.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                maxItemsInEachRow = 2
             ) {
-                Spacer(Modifier.width(24.dp))
+                val itemModifier = Modifier
+                    .weight(1f)
+                    .height(48.dp)
                 AgeItem(
+                    itemModifier,
                     text = "<18",
                     isSelected = (selectAge == "<18"),
                     onSelected = {
                         selectAge = "<18"
                     }
                 )
-                Spacer(Modifier.width(24.dp))
                 AgeItem(
+                    itemModifier,
                     text = "18-20",
                     isSelected = (selectAge == "18-20"),
                     onSelected = {
                         selectAge = "18-20"
                     }
                 )
-
-                Spacer(Modifier.width(24.dp))
-            }
-
-            Spacer(Modifier.height(12.dp))
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(48.dp),
-            ) {
-                Spacer(Modifier.width(13.dp))
                 AgeItem(
+                    itemModifier,
                     text = "21-23",
                     isSelected = (selectAge == "21-23"),
                     onSelected = {
                         selectAge = "21-23"
                     }
                 )
-                Spacer(Modifier.width(24.dp))
                 AgeItem(
+                    itemModifier,
+                    text = "24-29",
+                    isSelected = (selectAge == "24-29"),
+                    onSelected = {
+                        selectAge = "24-29"
+                    }
+                )
+                AgeItem(
+                    itemModifier,
                     text = "30-36",
                     isSelected = (selectAge == "30-36"),
                     onSelected = {
                         selectAge = "30-36"
                     }
                 )
-
-                Spacer(Modifier.width(24.dp))
-            }
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(48.dp)
-            ) {
-                Spacer(Modifier.width(13.dp))
                 AgeItem(
+                    itemModifier,
                     text = "Above 36",
                     isSelected = (selectAge == "Above 36"),
                     onSelected = {
@@ -253,10 +250,19 @@ fun RegInfoScreen(
                     }
                 )
             }
+
             Spacer(Modifier.height(64.dp))
+            val coroutineScope = rememberCoroutineScope()
             SaveBtn(
                 onSave = {
-                    onSave(selectGender, selectAge)
+                    if (selectAge == "<18") {
+                        coroutineScope.launch {
+                            ToastUtils.showToast("Please fill in the form according to your real age")
+                        }
+                    } else {
+                        onSave(selectGender, selectAge)
+                    }
+
                 }
             )
 
@@ -294,7 +300,7 @@ private fun SaveBtn(onSave: () -> Unit) {
 }
 
 @Composable
-fun GenderItem(
+private fun GenderItem(
     gender: GENDER,
     selected: Boolean,
     onClick: () -> Unit,
@@ -369,15 +375,14 @@ fun GenderItem(
 }
 
 @Composable
-fun RowScope.AgeItem(
+private fun AgeItem(
+    modifier: Modifier,
     text: String,
     isSelected: Boolean = false,
     onSelected: () -> Unit = {}
 ) {
     Box(
-        modifier = Modifier
-            .fillMaxHeight()
-            .weight(1f)
+        modifier = modifier
             .background(
                 color = Color(0x3378599A),
                 shape = RoundedCornerShape(24.dp)
@@ -427,6 +432,6 @@ fun RowScope.AgeItem(
 
 @Preview(backgroundColor = 0xFFffffff, showBackground = true)
 @Composable
-fun RegInfoScreenPreview() {
+private fun RegInfoScreenPreview() {
     RegInfoScreen()
 }
