@@ -205,8 +205,13 @@ class PromptTemplateManager:
         Returns:
             构建的系统提示词，如果角色卡字段为空则返回空字符串
         """
-        personality = agent_data.get('personality', '').strip()
-        scenario = agent_data.get('scenario', '').strip()
+        # 安全地获取并处理personality字段，防止None值调用strip()
+        personality_raw = agent_data.get('personality', '')
+        personality = (personality_raw or '').strip()
+        
+        # 安全地获取并处理scenario字段，防止None值调用strip()
+        scenario_raw = agent_data.get('scenario', '')
+        scenario = (scenario_raw or '').strip()
         
         # 如果没有角色卡信息，返回空字符串
         if not personality and not scenario:
