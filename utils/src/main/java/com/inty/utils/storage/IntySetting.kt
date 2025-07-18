@@ -29,8 +29,26 @@ object IntySetting {
         return allUserSetting.decodeString("guest_uid") ?: ""
     }
 
+    /**
+     * 判断当前用户是否是 游客
+     */
     fun isGuestUser(): Boolean {
         return getCurUserID() == geGuestUserID()
+    }
+
+    /**
+     * 判断是否有年龄，当前业务逻辑，>18岁的选择，age_group就不会null，<18岁，无法进行选择交互，也不会存储到服务端
+     */
+    private fun userAgeYoung(): Boolean {
+        val ageGroup = getUserProfileData("age_group")
+        return ageGroup == null || ageGroup.trim() == "<18"
+    }
+
+    /**
+     * 游客状态，且年龄未设置（<18岁也不让设置，所以设置必然>18岁），则不能使用聊天
+     */
+    fun needBlockInput(): Boolean {
+        return isGuestUser() && userAgeYoung()
     }
 
     fun changeUser(uid: String) {
@@ -81,12 +99,12 @@ object IntySetting {
         EasyLog.log("$agentID = $lastMessage")
         curUserSetting.putString("conversation_last_$agentID", lastMessage)
     }
-    
+
     // 标记用户主动发起的对话
     fun setUserInitiatedConversation(agentID: String) {
         curUserSetting.putBoolean("user_initiated_$agentID", true)
     }
-    
+
     // 检查对话是否为用户主动发起
     fun isUserInitiatedConversation(agentID: String): Boolean {
         return curUserSetting.decodeBool("user_initiated_$agentID", false)
@@ -182,7 +200,7 @@ object IntySetting {
     }
 
     private var isLoggingOut = false
-    
+
     fun logout() {
         isLoggingOut = true
         setToken("")
@@ -196,7 +214,7 @@ object IntySetting {
             isLoggingOut = false
         }, 2000)
     }
-    
+
     fun isLoggingOut(): Boolean {
         return isLoggingOut
     }

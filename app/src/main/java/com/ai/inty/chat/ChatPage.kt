@@ -103,7 +103,7 @@ internal fun ChatPage(
     val density = LocalDensity.current
     val agentInfo = chatViewModel.agentInfo.collectAsState().value
     val focusManager = LocalFocusManager.current
-    
+
     // 获取字符串资源
     val youAreNotVipText = stringResource(R.string.you_are_not_vip)
     val premiumModelText = stringResource(R.string.settings_premium_model)
@@ -136,7 +136,7 @@ internal fun ChatPage(
 
     // VIP状态
     val vipStatus = BillingRepository.vipStatusFlow.collectAsState().value
-    
+
     // Premium model二状态设置：默认跟随全局设置，但受VIP状态限制
     var agentPremiumModel by remember(agentInfo?.id, vipStatus.isSubscribed) {
         mutableStateOf(
@@ -322,15 +322,19 @@ internal fun ChatPage(
                                 // V图标
                                 Text(
                                     text = "V",
-                                    color = if (agentPremiumModel) Color.White else Color.Gray.copy(alpha = 0.5f),
+                                    color = if (agentPremiumModel) Color.White else Color.Gray.copy(
+                                        alpha = 0.5f
+                                    ),
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.Bold
                                 )
-                                
+
                                 // Premium model文本
                                 Text(
                                     text = premiumModelText,
-                                    color = if (agentPremiumModel) Color.White else Color.Gray.copy(alpha = 0.5f),
+                                    color = if (agentPremiumModel) Color.White else Color.Gray.copy(
+                                        alpha = 0.5f
+                                    ),
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Medium
                                 )
@@ -427,11 +431,9 @@ internal fun ChatPage(
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(24.dp))
                             .background(Color(0x9937303D))
-                            .clickable {
+                            .clickable(enabled = IntySetting.needBlockInput()) {
                                 //游客 未登录的用户，需要弹出年龄段选择，18岁以下的，不让输入。
-                                if (IntySetting.isGuestUser()) {
-                                    TheRouter.build(Constant.ROUTE_REG_INFO).navigation(context)
-                                }
+                                TheRouter.build(Constant.ROUTE_REG_INFO).navigation(context)
                             }
                     ) {
                         // 主输入区域
@@ -446,7 +448,7 @@ internal fun ChatPage(
                                 modifier = Modifier
                                     .weight(1f)
                                     .padding(horizontal = 16.dp),
-                                enabled = false,
+                                enabled = IntySetting.needBlockInput().not(),
                                 value = inputData.value,
                                 singleLine = false,
                                 onValueChange = {
@@ -463,6 +465,7 @@ internal fun ChatPage(
                                 selection = inputSelection.value
                             )
 
+                            //有输入内容时，发送按钮显示
                             if (inputData.value.isNotEmpty()) {
                                 IntyImage(
                                     modifier = Modifier

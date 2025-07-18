@@ -4,6 +4,9 @@ import com.ai.inty.beans.UserProfile
 import com.inty.utils.log.EasyLog
 import com.inty.utils.storage.IntySetting
 
+/**
+ * 用户信息的数据管理类
+ */
 object UserProfileManager {
 
     fun saveUserProfile(userProfile: UserProfile) {

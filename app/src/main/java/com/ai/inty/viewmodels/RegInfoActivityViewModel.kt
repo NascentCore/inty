@@ -21,6 +21,8 @@ class RegInfoActivityViewModel: BaseActivityViewModel() {
 
     fun onSave(gender: GENDER, age: String) {
         viewModelScope.launch(Dispatchers.IO) {
+
+            //调用接口，需要让服务端存储游客的性别和年龄数据
             val result = userApi2.setUserProfile(
                 userProfile = UserProfile(
                     gender = gender.value,
@@ -31,6 +33,7 @@ class RegInfoActivityViewModel: BaseActivityViewModel() {
 
             when (result) {
                 is HttpResult.Success -> {
+                    //用户信息更新成功
                     withContext(Dispatchers.Main) {
                         // 关闭当前设置页面
                         closeActivity()
