@@ -1,5 +1,7 @@
 package com.ai.inty
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -9,12 +11,13 @@ import androidx.activity.viewModels
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -26,11 +29,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -38,15 +42,21 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.lifecycleScope
 import com.ai.inty.base.AntiClick
 import com.ai.inty.base.BaseActivity
+import com.ai.inty.base.ToastUtils
 import com.ai.inty.base.noRippleClickable
 import com.ai.inty.ui.theme.IntyTheme
 import com.ai.inty.utils.UserProfileManager
@@ -152,8 +162,7 @@ fun LoginScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(0.6f))
-        ,
+            .background(Color.Black.copy(0.6f)),
     ) {
         Column(
             modifier = Modifier
@@ -213,22 +222,34 @@ fun LoginScreen(
 
             Spacer(modifier = Modifier.height(40.dp))
 
+            //是否勾选
+            var selected by remember { mutableStateOf(false) }
+            val coroutineScope = rememberCoroutineScope()
             Button(
                 onClick = {
-                    val currentTime = System.currentTimeMillis()
-                    if (AntiClick.isValidClick(lastClickTime)) {
-                        lastClickTime = currentTime
-                        val signInIntent = googleSignInClient.signInIntent
-                        googleSignInLauncher.launch(signInIntent)
+                    if (selected) {
+                        val currentTime = System.currentTimeMillis()
+                        if (AntiClick.isValidClick(lastClickTime)) {
+                            lastClickTime = currentTime
+                            val signInIntent = googleSignInClient.signInIntent
+                            googleSignInLauncher.launch(signInIntent)
+                        }
+                    } else {
+                        coroutineScope.launch {
+                            ToastUtils.showToast("Please check the User Policy and Privacy Policy before logging in")
+                        }
                     }
                 },
-                modifier = Modifier
-                    .size(width = 300.dp, height = 56.dp),
+                modifier = Modifier.size(width = 300.dp, height = 56.dp),
                 shape = RoundedCornerShape(30.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color.White),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color.White,
+                    disabledContainerColor = Color.White.copy(.7f)
+                ),
                 border = BorderStroke(1.dp, Color(0xFFEEEEEE)),
                 contentPadding = PaddingValues(0.dp)
             ) {
+
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
@@ -252,7 +273,7 @@ fun LoginScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            PolicyText()
+            PolicyText(selected, { selected = it })
 
             Spacer(modifier = Modifier.height(60.dp))
         }
@@ -261,7 +282,7 @@ fun LoginScreen(
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun PolicyText() {
+private fun PolicyText(checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val baseTextStyle = TextStyle(
         color = Color.White.copy(alpha = 0.35f),
@@ -270,49 +291,73 @@ private fun PolicyText() {
         textAlign = TextAlign.Center
     )
 
-    val linkTextStyle = TextStyle(
-        color = Color.White,
-        fontSize = 12.sp,
-        fontWeight = FontWeight.Normal,
-        textAlign = TextAlign.Center
-    )
+    Row(verticalAlignment = Alignment.CenterVertically) {
 
-    FlowRow(
-        modifier = Modifier.width(259.dp),
-        horizontalArrangement = Arrangement.Center,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Text(
-            text = "By continuing, you agree to HeartMate's",
-            style = baseTextStyle
+        Image(
+            painter = painterResource(
+                if (checked) R.drawable.checked else R.drawable.check_no
+            ),
+            contentDescription = null,
+            modifier = Modifier.clickable { onCheckedChange(!checked) }
         )
-        TextButton(
-            onClick = { 
-                val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, 
-                    android.net.Uri.parse("https://app.termly.io/policy-viewer/policy.html?policyUUID=97416d63-aebb-4ea5-b990-eccc5aa6cff1"))
-                context.startActivity(intent)
-            },
-            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
+        Spacer(Modifier.width(8.dp))
+        Column(
+            modifier = Modifier,
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "Terms of Use",
-                style = linkTextStyle
+                text = "By continuing, you agree to HeartMate's",
+                style = baseTextStyle
             )
-        }
-        TextButton(
-            onClick = { 
-                val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, 
-                    android.net.Uri.parse("https://app.termly.io/policy-viewer/policy.html?policyUUID=c82c3bfa-10a0-4075-a7f1-a98d5146d71c"))
-                context.startActivity(intent)
-            },
-            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
-        ) {
-            Text(
-                text = "Privacy Policy",
-                style = linkTextStyle
-            )
+
+            Spacer(Modifier.height(4.dp))
+
+            Row {
+                val termsOfUse = buildAnnotatedString {
+                    withStyle(SpanStyle(textDecoration = TextDecoration.Underline)) {
+                        append(stringResource(R.string.terms_of_use))
+                    }
+                }
+
+                Text(
+                    text = termsOfUse,
+                    fontSize = 12.sp,
+                    color = Color.White,
+                    modifier = Modifier.noRippleClickable(onClick = {
+                        val intent = Intent(
+                            Intent.ACTION_VIEW,
+                            Uri.parse("https://app.termly.io/policy-viewer/policy.html?policyUUID=97416d63-aebb-4ea5-b990-eccc5aa6cff1")
+                        )
+                        context.startActivity(intent)
+                    })
+                )
+
+                Text(text = " & ", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp)
+
+                val policyStr = buildAnnotatedString {
+                    withStyle(SpanStyle(textDecoration = TextDecoration.Underline)) {
+                        append(stringResource(R.string.privacy_policy))
+                    }
+                }
+                Text(
+                    text = policyStr,
+                    fontSize = 12.sp,
+                    color = Color.White,
+                    modifier = Modifier.noRippleClickable(onClick = {
+                        val intent = Intent(
+                            Intent.ACTION_VIEW,
+                            Uri.parse("https://app.termly.io/policy-viewer/policy.html?policyUUID=c82c3bfa-10a0-4075-a7f1-a98d5146d71c")
+                        )
+                        context.startActivity(intent)
+                    })
+                )
+
+            }
+
         }
     }
+
 }
 
 @Preview(backgroundColor = 0xFFffffff, showBackground = true)

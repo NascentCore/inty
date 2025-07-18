@@ -111,8 +111,6 @@
     <string name="premium_sku_monthly">Monthly</string>
     <string name="premium_sku_quarterly">Quarterly</string>
     <string name="premium_sku_annually">Annually</string>
-    <string name="premium_sku_save50">Save 50%</string>
-    <string name="premium_sku_save80">Save 80%</string>
     <string name="premium_continue">Continue</string>
     <string name="premium_autorenew">Auto-renews, cancel anytime</string>
     <string name="privacy_policy">Privacy Policy</string>
