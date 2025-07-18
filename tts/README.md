@@ -1,4 +1,10 @@
-# TTS (Text to Speech) Demo
+# TTS (Text to Speech) Demos
+
+## Gemini
+
+`uv run --no-project gemini.py` You might need to install additional deps.
+
+## ElevenLabs Demo
 
 Using ElevenLabs API to turn text into speech.
 
@@ -8,7 +14,7 @@ cp .env.example .env
 brew install ffmpeg
 python -m venv .venv
 pip install -r requirements.txt
-python tts_example.py
+python tts/elevenlabs.py
 ```
 
 The delay is about 1 second. Not too bad.
