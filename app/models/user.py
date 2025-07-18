@@ -44,6 +44,11 @@ class User(Base):
     is_superuser = Column(Boolean, default=False, comment="是否为超级管理员")
     created_at = Column(DateTime(timezone=True), server_default=sa.text('now()'), comment="创建时间")
     updated_at = Column(DateTime(timezone=True), onupdate=sa.text('now()'), comment="更新时间")
+    
+    # 账户删除相关字段
+    deleted_at = Column(DateTime(timezone=True), comment="账户删除时间")
+    anonymized_at = Column(DateTime(timezone=True), comment="数据匿名化时间")
+    deletion_reason = Column(String(255), comment="删除原因")
 
     # 关系
     agents = relationship("Agent", back_populates="creator")

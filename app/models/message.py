@@ -38,5 +38,6 @@ class Message(Base):
     sender = relationship("User", back_populates="messages")
     agent = relationship("Agent", back_populates="messages")
 
+    # 聊天关联
     chat_id = Column(String, ForeignKey("chats.id"))
     chat = relationship("Chat") 

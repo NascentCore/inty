@@ -1,17 +1,21 @@
 from datetime import datetime, UTC
-from typing import Optional
+from typing import Optional, List, Dict, Any
 from sqlalchemy.orm import Session
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy import text
+from sqlalchemy import text, and_
 import logging
 import traceback
 import uuid
+import hashlib
+import json
 
 from app.core.uuid import uid
 from app.models import User
 from app.models.user import AuthType, DeviceToken
+from app.models.user_deletion_log import UserDeletionLog
+from app.models.subscription import UserSubscription, SubscriptionStatus
 from app.schemas import UserUpdate
 from app.core.config import settings
 
@@ -111,7 +115,8 @@ async def create_guest_user(
         if device_id:
             stmt = select(User).where(
                 User.device_id == device_id,
-                User.auth_type == AuthType.GUEST
+                User.auth_type == AuthType.GUEST,
+                User.deleted_at.is_(None)  # 只查找未删除的用户
             )
             result = await db.execute(stmt)
             existing_user = result.scalars().first()
@@ -254,4 +259,285 @@ async def get_users_device_tokens(
     except Exception as e:
         logger.error(f"Failed to get user device tokens: {str(e)}")
         logger.error(f"Error stack: {traceback.format_exc()}")
+        raise e
+
+
+async def check_user_can_delete_account(db: AsyncSession, user_id: str) -> tuple[bool, str]:
+    """
+    检查用户是否可以删除账户
+    
+    Returns:
+        tuple[bool, str]: (是否可以删除, 错误信息)
+    """
+    try:
+        # 检查用户是否存在
+        stmt = select(User).where(User.id == user_id)
+        result = await db.execute(stmt)
+        user = result.scalars().first()
+        
+        if not user:
+            return False, "用户不存在"
+        
+        if user.deleted_at:
+            return False, "账户已被删除"
+        
+        # 检查是否有活跃订阅
+        active_subscription_stmt = select(UserSubscription).where(
+            and_(
+                UserSubscription.user_id == user_id,
+                UserSubscription.status == SubscriptionStatus.ACTIVE,
+                UserSubscription.end_date > datetime.now(UTC)
+            )
+        )
+        active_subscription_result = await db.execute(active_subscription_stmt)
+        active_subscription = active_subscription_result.scalars().first()
+        
+        if active_subscription:
+            return False, "存在活跃订阅，请先取消订阅后再删除账户"
+        
+        return True, ""
+        
+    except Exception as e:
+        logger.error(f"检查用户删除权限失败: {str(e)}")
+        raise e
+
+
+async def anonymize_user_data(db: AsyncSession, user: User) -> List[str]:
+    """
+    匿名化用户数据
+    
+    Returns:
+        List[str]: 已匿名化的字段列表
+    """
+    anonymized_fields = []
+    
+    # 生成唯一的匿名标识符
+    anonymous_suffix = hashlib.md5(f"{user.id}{datetime.now(UTC)}".encode()).hexdigest()[:8]
+    
+    # 匿名化个人信息
+    if user.email:
+        user.email = None  # 设置为空值，避免邮箱验证问题
+        anonymized_fields.append("email")
+    
+    if user.phone:
+        user.phone = f"deleted_{anonymous_suffix}"
+        anonymized_fields.append("phone")
+    
+    if user.nickname:
+        user.nickname = f"已删除用户_{anonymous_suffix}"
+        anonymized_fields.append("nickname")
+    
+    if user.google_id:
+        user.google_id = f"deleted_google_{anonymous_suffix}"
+        anonymized_fields.append("google_id")
+    
+    # 清除其他个人信息
+    if user.avatar:
+        user.avatar = None
+        anonymized_fields.append("avatar")
+    
+    if user.description:
+        user.description = None
+        anonymized_fields.append("description")
+    
+    # 设置匿名化时间戳
+    user.anonymized_at = datetime.now(UTC)
+    
+    return anonymized_fields
+
+
+async def create_deletion_audit_log(
+    db: AsyncSession,
+    user: User,
+    deletion_reason: str,
+    anonymized_fields: List[str],
+    processor_id: str,
+    subscription_status: str = None
+) -> UserDeletionLog:
+    """创建删除审计日志"""
+    
+    # 创建原始用户数据快照（移除敏感信息）
+    user_data_snapshot = {
+        "id": user.id,
+        "readable_id": user.readable_id,
+        "auth_type": user.auth_type.value if user.auth_type else None,
+        "system_language": user.system_language,
+        "gender": user.gender.value if user.gender else None,
+        "age_group": user.age_group,
+        "is_active": user.is_active,
+        "created_at": user.created_at.isoformat() if user.created_at else None,
+        "deleted_at": user.deleted_at.isoformat() if user.deleted_at else None
+    }
+    
+    deletion_log = UserDeletionLog(
+        id=uid(prefix="del_log"),
+        user_id=user.id,
+        original_user_data=user_data_snapshot,
+        deletion_reason=deletion_reason,
+        deletion_type="user_requested",
+        anonymized_fields=anonymized_fields,
+        subscription_status_at_deletion=subscription_status,
+        related_data_action="anonymized",
+        processor_id=processor_id,
+        created_at=datetime.now(UTC)
+    )
+    
+    db.add(deletion_log)
+    await db.commit()
+    await db.refresh(deletion_log)
+    
+    return deletion_log
+
+
+async def delete_user_account(
+    db: AsyncSession,
+    user_id: str,
+    deletion_reason: str = "用户主动删除",
+    processor_id: str = None
+) -> dict:
+    """
+    删除用户账户
+    
+    Args:
+        db: 数据库会话
+        user_id: 用户ID
+        deletion_reason: 删除原因
+        processor_id: 处理者ID（通常是用户本人）
+        
+    Returns:
+        dict: 删除结果信息
+    """
+    try:
+        # 检查用户是否可以删除
+        can_delete, error_msg = await check_user_can_delete_account(db, user_id)
+        if not can_delete:
+            return {
+                "success": False,
+                "message": error_msg,
+                "user_id": user_id
+            }
+        
+        # 获取用户信息
+        stmt = select(User).where(User.id == user_id)
+        result = await db.execute(stmt)
+        user = result.scalars().first()
+        
+        if not user:
+            return {
+                "success": False,
+                "message": "用户不存在",
+                "user_id": user_id
+            }
+        
+        # 获取用户当前订阅状态
+        from app.services.subscription_service import subscription_service
+        subscription_status_response = await subscription_service.get_user_subscription_status(db, user_id)
+        subscription_status = "active" if subscription_status_response.is_subscribed else "inactive"
+        
+        # 如果用户有活跃订阅，先取消订阅
+        cancellation_stats = None
+        if subscription_status_response.is_subscribed:
+            try:
+                cancellation_stats = await subscription_service.cancel_user_subscriptions_for_deletion(db, user_id)
+                logger.info(f"用户 {user_id} 订阅取消统计: {cancellation_stats}")
+            except Exception as e:
+                logger.warning(f"取消用户订阅失败，继续删除流程: {str(e)}")
+        
+        # 设置删除时间戳
+        user.deleted_at = datetime.now(UTC)
+        user.deletion_reason = deletion_reason
+        user.is_active = False
+        
+        # 匿名化用户数据
+        anonymized_fields = await anonymize_user_data(db, user)
+        
+        # 创建删除审计日志
+        deletion_log = await create_deletion_audit_log(
+            db, user, deletion_reason, anonymized_fields,
+            processor_id or user_id, subscription_status
+        )
+        
+        # 提交用户数据更改
+        await db.commit()
+        await db.refresh(user)
+        
+        # 标记审计日志为已处理
+        deletion_log.processed_at = datetime.now(UTC)
+        await db.commit()
+        
+        logger.info(f"用户账户删除成功: {user_id}, 日志ID: {deletion_log.id}")
+        
+        return {
+            "success": True,
+            "message": "账户删除成功",
+            "user_id": user_id,
+            "deletion_log_id": deletion_log.id,
+            "anonymized_fields": anonymized_fields
+        }
+        
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"删除用户账户失败: {str(e)}")
+        logger.error(f"Error stack: {traceback.format_exc()}")
+        raise e
+
+
+async def anonymize_related_data(db: AsyncSession, user_id: str) -> dict:
+    """
+    匿名化用户相关数据（Agent、聊天记录等）
+    
+    Args:
+        db: 数据库会话
+        user_id: 用户ID
+        
+    Returns:
+        dict: 匿名化结果统计
+    """
+    try:
+        anonymization_stats = {
+            "agents_anonymized": 0,
+            "messages_anonymized": 0,
+            "chats_updated": 0
+        }
+        
+        # 匿名化用户创建的Agent
+        from app.models.agent import Agent
+        agent_stmt = select(Agent).where(Agent.creator_id == user_id)
+        agent_result = await db.execute(agent_stmt)
+        user_agents = agent_result.scalars().all()
+        
+        for agent in user_agents:
+            # 将Agent标记为系统拥有，而不是删除
+            agent.creator_id = None  # 设为系统Agent
+            anonymization_stats["agents_anonymized"] += 1
+        
+        # 匿名化用户的消息记录
+        from app.models.message import Message
+        message_stmt = select(Message).where(Message.sender_id == user_id)
+        message_result = await db.execute(message_stmt)
+        user_messages = message_result.scalars().all()
+        
+        for message in user_messages:
+            message.sender_id = None  # 匿名化发送者
+            anonymization_stats["messages_anonymized"] += 1
+        
+        # 更新聊天记录 - 保留聊天但匿名化用户信息
+        from app.models.chat import Chat
+        chat_stmt = select(Chat).where(Chat.user_id == user_id)
+        chat_result = await db.execute(chat_stmt)
+        user_chats = chat_result.scalars().all()
+        
+        for chat in user_chats:
+            chat.is_active = False  # 标记为非活跃
+            anonymization_stats["chats_updated"] += 1
+        
+        await db.commit()
+        
+        logger.info(f"用户相关数据匿名化完成: {user_id}, 统计: {anonymization_stats}")
+        
+        return anonymization_stats
+        
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"匿名化相关数据失败: {str(e)}")
         raise e

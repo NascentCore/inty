@@ -371,7 +371,9 @@ class SubscriptionService:
         try:
             # 查询用户的所有活跃订阅
             result = await db.execute(
-                select(UserSubscription).where(
+                select(UserSubscription)
+                .options(selectinload(UserSubscription.plan))
+                .where(
                     and_(
                         UserSubscription.user_id == user_id,
                         UserSubscription.status == SubscriptionStatus.ACTIVE
@@ -385,11 +387,137 @@ class SubscriptionService:
                 subscription.status = SubscriptionStatus.CANCELLED
                 subscription.auto_renew = False
                 
+                # 尝试在Google Play端取消订阅
+                try:
+                    if subscription.google_play_purchase_token and subscription.plan:
+                        google_play_service.cancel_subscription(
+                            subscription.plan.google_play_product_id,
+                            subscription.google_play_purchase_token
+                        )
+                        logger.info(f"已在Google Play端取消订阅: {subscription.id}")
+                except Exception as e:
+                    logger.warning(f"Google Play端取消订阅失败: {subscription.id}, 错误: {str(e)}")
+                    # 即使Google Play端取消失败，也继续本地取消
+                
             if active_subscriptions:
                 logger.info(f"取消用户 {user_id} 的 {len(active_subscriptions)} 个活跃订阅")
                 
         except Exception as e:
             logger.error(f"取消用户活跃订阅失败: {str(e)}")
+            raise
+    
+    async def cancel_user_subscriptions_for_deletion(
+        self,
+        db: AsyncSession,
+        user_id: str
+    ) -> dict:
+        """
+        为账户删除取消用户订阅
+        
+        Args:
+            db: 数据库会话
+            user_id: 用户ID
+            
+        Returns:
+            dict: 取消结果统计
+        """
+        try:
+            # 查询用户的所有活跃订阅
+            result = await db.execute(
+                select(UserSubscription)
+                .options(selectinload(UserSubscription.plan))
+                .where(
+                    and_(
+                        UserSubscription.user_id == user_id,
+                        UserSubscription.status == SubscriptionStatus.ACTIVE
+                    )
+                )
+            )
+            
+            active_subscriptions = result.scalars().all()
+            
+            cancellation_stats = {
+                "subscriptions_cancelled": 0,
+                "google_play_cancelled": 0,
+                "local_only_cancelled": 0
+            }
+            
+            for subscription in active_subscriptions:
+                # 更新本地订阅状态
+                subscription.status = SubscriptionStatus.CANCELLED
+                subscription.auto_renew = False
+                
+                # 在额外数据中标记为用户删除导致的取消
+                extra_data = subscription.extra_data or {}
+                extra_data["cancelled_for_account_deletion"] = {
+                    "cancelled_at": datetime.now(timezone.utc).isoformat(),
+                    "reason": "user_account_deletion"
+                }
+                subscription.extra_data = self._make_json_serializable(extra_data)
+                
+                cancellation_stats["subscriptions_cancelled"] += 1
+                
+                # 尝试在Google Play端取消订阅
+                google_play_success = False
+                try:
+                    if subscription.google_play_purchase_token and subscription.plan:
+                        google_play_service.cancel_subscription(
+                            subscription.plan.google_play_product_id,
+                            subscription.google_play_purchase_token
+                        )
+                        google_play_success = True
+                        cancellation_stats["google_play_cancelled"] += 1
+                        logger.info(f"Google Play端取消订阅成功: {subscription.id}")
+                except Exception as e:
+                    logger.warning(f"Google Play端取消订阅失败: {subscription.id}, 错误: {str(e)}")
+                
+                if not google_play_success:
+                    cancellation_stats["local_only_cancelled"] += 1
+                
+                # 创建取消交易记录
+                try:
+                    await self._create_cancellation_transaction(db, subscription, "account_deletion")
+                except Exception as e:
+                    logger.warning(f"创建取消交易记录失败: {subscription.id}, 错误: {str(e)}")
+            
+            await db.commit()
+            
+            logger.info(f"用户 {user_id} 订阅取消完成，统计: {cancellation_stats}")
+            
+            return cancellation_stats
+            
+        except Exception as e:
+            await db.rollback()
+            logger.error(f"为账户删除取消用户订阅失败: {str(e)}")
+            raise
+    
+    async def _create_cancellation_transaction(
+        self,
+        db: AsyncSession,
+        subscription: UserSubscription,
+        reason: str = "user_requested"
+    ) -> None:
+        """创建取消交易记录"""
+        try:
+            transaction = SubscriptionTransaction(
+                id=str(uuid.uuid4()),
+                subscription_id=subscription.id,
+                user_id=subscription.user_id,
+                transaction_type=TransactionType.CANCEL,
+                amount=0.0,  # 取消不涉及金额
+                currency=subscription.plan.currency if subscription.plan else "USD",
+                google_play_purchase_token=subscription.google_play_purchase_token,
+                google_play_order_id=subscription.google_play_order_id,
+                status="COMPLETED",
+                transaction_time=datetime.now(timezone.utc),
+                extra_data={"cancellation_reason": reason}
+            )
+            
+            db.add(transaction)
+            logger.info(f"创建取消交易记录成功 - 订阅: {subscription.id}, 原因: {reason}")
+            
+        except Exception as e:
+            logger.error(f"创建取消交易记录失败: {str(e)}")
             raise
     
     async def record_usage(

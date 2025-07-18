@@ -65,4 +65,15 @@ async def get_current_active_user(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Inactive user"
         )
-    return current_user 
+    
+    # 检查用户是否已被删除
+    if current_user.deleted_at:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Account has been deleted",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    return current_user
+
+

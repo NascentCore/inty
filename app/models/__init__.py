@@ -21,4 +21,5 @@ from app.models.subscription import (
     SubscriptionPlanType,
     SubscriptionStatus,
     TransactionType
-) 
+)
+from app.models.user_deletion_log import UserDeletionLog 

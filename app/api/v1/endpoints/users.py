@@ -1,11 +1,17 @@
 from typing import Any
 import traceback
-from fastapi import APIRouter, Depends, HTTPException, File, UploadFile
+from fastapi import APIRouter, Depends, HTTPException, File, UploadFile, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 from loguru import logger
 
 from app.schemas.response import APIResponse
 from app.schemas.user import User, UserUpdate, DeviceTokenRegister
+from app.schemas.user_deletion import (
+    AccountDeletionRequest,
+    AccountDeletionResponse,
+    DeletionCheckResponse,
+    AnonymizationStatsResponse
+)
 from app.api import deps
 from app.db.session import get_async_db
 from app.services import user_service
@@ -88,6 +94,85 @@ async def register_device_token(
         logger.error(f"注册设备token失败: {str(e)}")
         logger.error(f"错误堆栈: {traceback.format_exc()}")
         return APIResponse.error(message=str(e))
+
+@router.get("/deletion/check", response_model=APIResponse[DeletionCheckResponse])
+async def check_deletion_eligibility(
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(deps.get_current_active_user),
+) -> Any:
+    """
+    检查用户是否可以删除账户
+    """
+    try:
+        can_delete, error_message = await user_service.check_user_can_delete_account(
+            db, current_user.id
+        )
+        
+        response_data = DeletionCheckResponse(
+            can_delete=can_delete,
+            error_message=error_message if not can_delete else None,
+            active_subscription=not can_delete and "订阅" in (error_message or "")
+        )
+        
+        return APIResponse.success(data=response_data)
+        
+    except Exception as e:
+        logger.error(f"检查删除权限失败: {str(e)}")
+        logger.error(f"错误堆栈: {traceback.format_exc()}")
+        return APIResponse.error(message="检查删除权限失败")
+
+
+@router.post("/delete-account", response_model=APIResponse[AccountDeletionResponse])
+async def delete_user_account(
+    request: AccountDeletionRequest,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(deps.get_current_active_user),
+) -> Any:
+    """
+    删除用户账户
+    """
+    try:
+        # 验证确认文本
+        if request.confirmation != "DELETE_MY_ACCOUNT":
+            return APIResponse.error(
+                message="确认文本不正确，请输入 'DELETE_MY_ACCOUNT'",
+                code="INVALID_CONFIRMATION"
+            )
+        
+        # 执行账户删除
+        deletion_result = await user_service.delete_user_account(
+            db=db,
+            user_id=current_user.id,
+            deletion_reason=request.reason or "用户主动删除",
+            processor_id=current_user.id
+        )
+        
+        if not deletion_result["success"]:
+            return APIResponse.error(message=deletion_result["message"])
+        
+        # 异步执行相关数据匿名化
+        background_tasks.add_task(
+            user_service.anonymize_related_data,
+            db,
+            current_user.id
+        )
+        
+        response_data = AccountDeletionResponse(
+            success=deletion_result["success"],
+            message=deletion_result["message"],
+            user_id=deletion_result["user_id"],
+            deletion_log_id=deletion_result.get("deletion_log_id"),
+            anonymized_fields=deletion_result.get("anonymized_fields")
+        )
+        
+        return APIResponse.success(data=response_data)
+        
+    except Exception as e:
+        logger.error(f"删除用户账户失败: {str(e)}")
+        logger.error(f"错误堆栈: {traceback.format_exc()}")
+        return APIResponse.error(message="账户删除失败，请稍后重试")
+
 
 # @router.get("/{user_id}/profile", response_model=schemas.User)
 # def get_user_profile(

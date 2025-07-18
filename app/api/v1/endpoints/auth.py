@@ -138,8 +138,8 @@ async def google_login(
         result = await db.execute(stmt)
         existing_user = result.scalar_one_or_none()
         
-        if existing_user:
-            # 如果用户已存在，直接返回 token
+        if existing_user and not existing_user.deleted_at:
+            # 如果用户已存在且未被删除，直接返回 token
             access_token = create_access_token(existing_user.id)
             return APIResponse.success(data=LoginResponse(
                 token=access_token,
@@ -156,6 +156,9 @@ async def google_login(
                     is_new_user=False
                 )
             ))
+        
+        # 如果用户不存在或者已被删除，创建新用户
+        # 删除的用户重新登录时会创建新的账户
         
         # 创建新用户
         user_id = uid(prefix="user")
