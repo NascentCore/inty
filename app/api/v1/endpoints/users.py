@@ -133,13 +133,6 @@ async def delete_user_account(
     删除用户账户
     """
     try:
-        # 验证确认文本
-        if request.confirmation != "DELETE_MY_ACCOUNT":
-            return APIResponse.error(
-                message="确认文本不正确，请输入 'DELETE_MY_ACCOUNT'",
-                code="INVALID_CONFIRMATION"
-            )
-        
         # 执行账户删除
         deletion_result = await user_service.delete_user_account(
             db=db,

@@ -1,24 +1,15 @@
 from datetime import datetime
 from typing import Optional, List, Dict, Any
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field
 
 
 class AccountDeletionRequest(BaseModel):
     """账户删除请求"""
-    confirmation: str = Field(..., description="确认删除的文本，必须为 'DELETE_MY_ACCOUNT'")
     reason: Optional[str] = Field(None, max_length=255, description="删除原因")
-    
-    @field_validator('confirmation')
-    @classmethod
-    def validate_confirmation(cls, v):
-        if v != "DELETE_MY_ACCOUNT":
-            raise ValueError("确认文本必须为 'DELETE_MY_ACCOUNT'")
-        return v
     
     class Config:
         json_schema_extra = {
             "example": {
-                "confirmation": "DELETE_MY_ACCOUNT",
                 "reason": "隐私关注"
             }
         }
