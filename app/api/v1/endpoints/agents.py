@@ -236,7 +236,7 @@ async def generate_background(
             request.prompt, 
             gcs_uri_base, 
             count=request.count,
-            aspect_ratio="16:9"
+            aspect_ratio="9:16"
         )
         
         logger.info(f"Successfully generated {len(gcs_urls)} background images")

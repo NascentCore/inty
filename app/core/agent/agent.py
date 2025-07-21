@@ -18,7 +18,6 @@ from langchain_core.messages import BaseMessage, HumanMessage, AIMessage, System
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.runnables import Runnable, RunnableLambda, RunnablePassthrough
 import json
-from psycopg import sql
 from langchain_core.tools import Tool
 from langchain_google_community import GoogleSearchAPIWrapper
 from app.core.agent.prompt_template import prompt_template_manager
@@ -160,7 +159,6 @@ class Agent:
                  # 角色卡相关参数
                  personality: str = "",
                  scenario: str = "",
-                 first_message: str = "",
                  message_example: str = "",
                  creator_notes: str = "",
                  tags: List[str] = None,
@@ -177,13 +175,10 @@ class Agent:
         self.template_name = template_name
         self._last_used_lock = RLock()
         self._user_info_cache = {}
-        # 会话首次消息缓存（避免重复查询）
-        self._session_first_message_cache = {}
         
         # 角色卡相关属性
         self.personality = personality
         self.scenario = scenario
-        self.first_message = first_message
         self.message_example = message_example
         self.creator_notes = creator_notes
         self.tags = tags or []
@@ -199,7 +194,6 @@ class Agent:
             'model_config': model_config,
             'personality': personality,
             'scenario': scenario,
-            'first_message': first_message,
             'message_example': message_example,
             'creator_notes': creator_notes,
             'tags': tags,
@@ -289,10 +283,6 @@ class Agent:
                 system_messages.append(SystemMessage(content=user_profile))
                 logger.info(f"已添加用户信息到系统消息中")
             
-            # 4. 首次对话开场白处理
-            if inputs.get('is_first_message', False) and self.first_message:
-                greeting_context = f"[对话开始指引]\n{self.first_message}\n请以自然的方式开始对话，体现角色特征。"
-                system_messages.append(SystemMessage(content=greeting_context))
             
             return system_messages
         
@@ -418,67 +408,6 @@ class Agent:
             self._user_info_cache[user_id] = ""
             return ""
     
-    async def _is_first_message_in_session_async(self, session_id: str) -> bool:
-        """
-        异步检查是否是会话中的第一条消息（优化版本，带缓存）
-        """
-        # 检查缓存
-        if session_id in self._session_first_message_cache:
-            logger.debug(f"从缓存返回首次消息状态: {session_id}")
-            return self._session_first_message_cache[session_id]
-        
-        try:
-            # 使用已有的同步连接池，避免异步数据库创建开销
-            import asyncio
-            
-            def _sync_check():
-                try:
-                    pool = get_connection_pool()
-                    with pool.connection() as conn:
-                        query = sql.SQL("""
-                            SELECT COUNT(*) 
-                            FROM chat_history 
-                            WHERE session_id = %s
-                        """)
-                        result = conn.execute(query, (session_id,))
-                        count = result.fetchone()[0]
-                        return count == 0
-                except Exception as e:
-                    logger.error(f"检查首次消息失败: {str(e)}")
-                    return False
-            
-            # 在线程池中快速执行
-            loop = asyncio.get_event_loop()
-            is_first = await loop.run_in_executor(None, _sync_check)
-            
-            # 缓存结果（首次消息状态不会改变）
-            self._session_first_message_cache[session_id] = is_first
-            logger.debug(f"缓存首次消息状态: {session_id} -> {is_first}")
-            
-            return is_first
-        except Exception as e:
-            logger.error(f"异步检查首次消息失败: {str(e)}")
-            return False
-
-    def _is_first_message_in_session(self, session_id: str) -> bool:
-        """
-        检查是否是会话中的第一条消息（同步版本，保留兼容性）
-        """
-        try:
-            pool = get_connection_pool()
-            with pool.connection() as conn:
-                # 检查session_id对应的历史记录数量
-                query = sql.SQL("""
-                    SELECT COUNT(*) 
-                    FROM chat_history 
-                    WHERE session_id = %s
-                """)
-                result = conn.execute(query, (session_id,))
-                count = result.fetchone()[0]
-                return count == 0
-        except Exception as e:
-            logger.error(f"检查首次消息失败: {str(e)}")
-            return False
 
     def _get_relevant_history(self, history_messages: List[BaseMessage], max_messages: int = 10) -> List[BaseMessage]:
         """
@@ -512,11 +441,11 @@ class Agent:
         return recent_messages
 
     def _chat_sync_optimized(self, user_id: str, session_id: str, messages: dict[str, Any], 
-                           user_profile: str = None, is_first_message: bool = False) -> str:
+                           user_profile: str = None) -> str:
         """
         优化版同步聊天方法，接受预计算的参数
         
-        跳过用户信息获取和首次消息检查，使用传入的预计算值
+        跳过用户信息获取，使用传入的预计算值
         """
         chat_start_time = time.time()
         
@@ -560,10 +489,9 @@ class Agent:
                 input_build_start = time.time()
                 input_data = {
                     "messages": all_messages,
-                    "user_profile": user_profile or "",
-                    "is_first_message": is_first_message
+                    "user_profile": user_profile or ""
                 }
-                logger.info(f"优化版构建input_data - user_profile长度: {len(user_profile or '')}, is_first_message: {is_first_message}")
+                logger.info(f"优化版构建input_data - user_profile长度: {len(user_profile or '')}")
                 config = {'configurable': {'user_id': user_id}}
                 input_build_time = time.time() - input_build_start
                 logger.info(f"输入数据构建耗时: {input_build_time:.3f}秒 - Agent: {self.agent_id}")
@@ -630,11 +558,6 @@ class Agent:
         profile_time = time.time() - profile_start
         logger.info(f"用户信息获取耗时: {profile_time:.3f}秒 - Agent: {self.agent_id}")
         
-        # 检查是否是首次对话
-        first_msg_start = time.time()
-        is_first_message = self._is_first_message_in_session(session_id)
-        first_msg_time = time.time() - first_msg_start
-        logger.info(f"首次消息检查耗时: {first_msg_time:.3f}秒 - Agent: {self.agent_id}")
         
         # 从连接池获取连接
         pool_start = time.time()
@@ -672,14 +595,13 @@ class Agent:
                 save_msg_time = time.time() - save_msg_start
                 logger.info(f"用户消息保存耗时: {save_msg_time:.3f}秒 - Agent: {self.agent_id}")
 
-                # 构建输入数据，包含历史消息、用户profile和首次消息标志
+                # 构建输入数据，包含历史消息和用户profile
                 input_build_start = time.time()
                 input_data = {
                     "messages": all_messages,
-                    "user_profile": user_profile,
-                    "is_first_message": is_first_message
+                    "user_profile": user_profile
                 }
-                logger.info(f"普通版构建input_data - user_profile长度: {len(user_profile or '')}, is_first_message: {is_first_message}")
+                logger.info(f"普通版构建input_data - user_profile长度: {len(user_profile or '')}")
                 config = {'configurable': {'user_id': user_id}}
                 input_build_time = time.time() - input_build_start
                 logger.info(f"输入数据构建耗时: {input_build_time:.3f}秒 - Agent: {self.agent_id}")
@@ -756,8 +678,22 @@ class Agent:
                                     "content": msg.content
                                 })
                         
-                        # 添加AI的响应
-                        if response_text:
+                        # 添加完整的AI响应消息
+                        for msg in response.get("messages", []):
+                            if hasattr(msg, 'type') and hasattr(msg, 'content'):
+                                if msg.type in ['ai', 'assistant']:  # 只添加AI消息
+                                    serializable_messages.append({
+                                        "type": msg.type,
+                                        "content": msg.content
+                                    })
+                            elif isinstance(msg, dict) and msg.get("type") in ['ai', 'assistant']:
+                                serializable_messages.append({
+                                    "type": msg.get("type", "ai"),
+                                    "content": msg.get("content", str(msg))
+                                })
+                        
+                        # 如果没有找到AI消息但有response_text，则添加汇总响应
+                        if not any(msg.get("type") in ['ai', 'assistant'] for msg in serializable_messages) and response_text:
                             serializable_messages.append({
                                 "type": "ai",
                                 "content": response_text
@@ -788,7 +724,22 @@ class Agent:
                         "type": "system",
                         "content": final_prompt
                     }]
-                    if response_text:
+                    # 添加完整的AI响应消息
+                    for msg in response.get("messages", []):
+                        if hasattr(msg, 'type') and hasattr(msg, 'content'):
+                            if msg.type in ['ai', 'assistant']:
+                                serializable_messages.append({
+                                    "type": msg.type,
+                                    "content": msg.content
+                                })
+                        elif isinstance(msg, dict) and msg.get("type") in ['ai', 'assistant']:
+                            serializable_messages.append({
+                                "type": msg.get("type", "ai"),
+                                "content": msg.get("content", str(msg))
+                            })
+                    
+                    # 如果没有找到AI消息但有response_text，则添加汇总响应
+                    if not any(msg.get("type") in ['ai', 'assistant'] for msg in serializable_messages) and response_text:
                         serializable_messages.append({
                             "type": "ai",
                             "content": response_text
@@ -808,29 +759,20 @@ class Agent:
                     "content": final_prompt
                 }]
                 
-                # 处理response中的消息（如果有的话）
-                response = debug_data if isinstance(debug_data, dict) else {}
-            
-            # 继续处理response中的其他消息（旧格式兼容）
-            for msg in response.get("messages", []):
-                if hasattr(msg, 'type') and hasattr(msg, 'content'):
-                    # 对象类型的消息
-                    serializable_messages.append({
-                        "type": msg.type,
-                        "content": msg.content
-                    })
-                elif isinstance(msg, dict):
-                    # 字典类型的消息
-                    serializable_messages.append({
-                        "type": msg.get("type", "unknown"),
-                        "content": msg.get("content", str(msg))
-                    })
-                else:
-                    # 处理可能的其他消息格式
-                    serializable_messages.append({
-                        "type": "unknown",
-                        "content": str(msg)
-                    })
+                # 添加完整的AI响应消息
+                for msg in response.get("messages", []):
+                    if hasattr(msg, 'type') and hasattr(msg, 'content'):
+                        if msg.type in ['ai', 'assistant']:
+                            serializable_messages.append({
+                                "type": msg.type,
+                                "content": msg.content
+                            })
+                    elif isinstance(msg, dict) and msg.get("type") in ['ai', 'assistant']:
+                        serializable_messages.append({
+                            "type": msg.get("type", "ai"),
+                            "content": msg.get("content", str(msg))
+                        })
+                
             
             debug_data = {
                 "messages": serializable_messages,
@@ -880,13 +822,7 @@ class Agent:
         profile_time = time.time() - profile_start
         logger.info(f"用户信息获取耗时: {profile_time:.3f}秒 - Agent: {self.agent_id}")
         
-        # 异步检查是否是首次对话
-        first_msg_start = time.time()
-        is_first_message = await self._is_first_message_in_session_async(session_id)
-        first_msg_time = time.time() - first_msg_start
-        logger.info(f"首次消息检查耗时（异步优化）: {first_msg_time:.3f}秒 - Agent: {self.agent_id}")
-        
-        # 在线程池中执行同步聊天逻辑（跳过首次消息检查）
+        # 在线程池中执行同步聊天逻辑
         loop = asyncio.get_event_loop()
         try:
             result = await loop.run_in_executor(
@@ -895,8 +831,7 @@ class Agent:
                 user_id,
                 session_id,
                 messages,
-                user_profile,
-                is_first_message
+                user_profile
             )
             return result
         except Exception as e:
@@ -916,9 +851,6 @@ class Agent:
             # 获取用户profile信息
             user_profile = self._get_user_profile_sync(user_id)
             
-            # 检查是否是首次对话
-            is_first_message = self._is_first_message_in_session(session_id)
-            
             # 从连接池获取连接
             pool = get_connection_pool()
             with pool.connection() as conn_local:
@@ -935,13 +867,12 @@ class Agent:
                     # 构建包含历史的完整消息列表
                     all_messages = recent_history + messages["messages"]
 
-                    # 构建输入数据，包含历史消息、用户profile和首次消息标志
+                    # 构建输入数据，包含历史消息和用户profile
                     input_data = {
                         "messages": all_messages,
-                        "user_profile": user_profile,
-                        "is_first_message": is_first_message
+                        "user_profile": user_profile
                     }
-                    logger.info(f"流式聊天构建input_data - user_profile长度: {len(user_profile or '')}, is_first_message: {is_first_message}")
+                    logger.info(f"流式聊天构建input_data - user_profile长度: {len(user_profile or '')}")
 
                     # 移除checkpointer后，不需要thread_id配置
                     config = {'configurable': {'user_id': user_id}}
@@ -992,8 +923,7 @@ class Agent:
         # 构建示例输入来展示完整提示词
         example_input = {
             "messages": [HumanMessage(content="示例消息")],
-            "user_profile": "[示例用户信息]",
-            "is_first_message": False
+            "user_profile": "[示例用户信息]"
         }
         
         try:
@@ -1021,7 +951,6 @@ class Agent:
         return {
             'personality': self.personality,
             'scenario': self.scenario,
-            'first_message': self.first_message,
             'message_example': self.message_example,
             'creator_notes': self.creator_notes,
             'tags': self.tags,
@@ -1243,7 +1172,6 @@ class AgentManager:
                         # 角色卡相关参数
                         personality=agent_data.get('personality', ''),
                         scenario=agent_data.get('scenario', ''),
-                        first_message=agent_data.get('first_message', ''),
                         message_example=agent_data.get('message_example', ''),
                         creator_notes=agent_data.get('creator_notes', ''),
                         tags=agent_data.get('tags', []),
@@ -1285,7 +1213,6 @@ class AgentManager:
                     # 角色卡相关字段
                     'personality': getattr(agent_db, 'personality', ''),
                     'scenario': getattr(agent_db, 'scenario', ''),
-                    'first_message': getattr(agent_db, 'first_message', ''),
                     'message_example': getattr(agent_db, 'message_example', ''),
                     'creator_notes': getattr(agent_db, 'creator_notes', ''),
                     'tags': getattr(agent_db, 'tags', []),
@@ -1403,7 +1330,6 @@ class AgentManager:
                         # 角色卡相关参数
                         personality=agent_data.get('personality', ''),
                         scenario=agent_data.get('scenario', ''),
-                        first_message=agent_data.get('first_message', ''),
                         message_example=agent_data.get('message_example', ''),
                         creator_notes=agent_data.get('creator_notes', ''),
                         tags=agent_data.get('tags', []),
