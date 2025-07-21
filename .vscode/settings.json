@@ -1,0 +1,16 @@
+{
+    "editor.rulers": [
+        // Show a vertical line at column 80 to indicate the line length limit.
+        80
+    ],
+    "editor.formatOnSave": true,
+    // Native VS Code functionality, does not require black formatter.
+    "files.trimTrailingWhitespace": true,
+    // Requires source control
+    "editor.formatOnSaveMode": "modifications",
+    // Black formatter does not work in Cursor, see:
+    // https://forum.cursor.com/t/ms-python-black-formatter-not-working/2720/9
+    // "[python]": {
+    //     "editor.defaultFormatter": "ms-python.black-formatter"
+    // },
+}

@@ -149,7 +149,6 @@ yarn.lock
 
 # IDE相关
 .idea/
-.vscode/
 *.swp
 *.swo
 .DS_Store
