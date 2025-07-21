@@ -26,4 +26,4 @@ class ChatSettings(Base):
     agent = relationship("Agent", back_populates="chat_settings")
 
     chat_id = Column(String, ForeignKey("chats.id"))
-    chat = relationship("Chat", back_populates="settings") 
+    chat = relationship("Chat", back_populates="settings")
