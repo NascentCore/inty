@@ -21,7 +21,6 @@ from langchain_core.runnables import Runnable, RunnableLambda
 import json
 from langchain_core.tools import Tool
 from langchain_google_community import GoogleSearchAPIWrapper
-from app.core.agent.prompt_template import prompt_template_manager
 import logging
 
 
@@ -162,7 +161,6 @@ class Agent:
                  model_config: dict, 
                  system_prompt: str, 
                  description: str = "", 
-                 template_name: str = "default",
                  # 角色卡相关参数
                  personality: str = "",
                  scenario: str = "",
@@ -179,7 +177,6 @@ class Agent:
         self.last_used = time.time()
         self.system_prompt = system_prompt
         self.description = description
-        self.template_name = template_name
         self._last_used_lock = RLock()
         self._user_info_cache = {}
         
@@ -263,6 +260,11 @@ class Agent:
             state_schema=CustomAgentState
         )
 
+    def _build_base_system_message(self) -> str:
+        """构建基础系统提示词，仅返回最基础的提示词内容"""
+        # 直接使用原始的system_prompt字段作为基础提示词
+        return self.system_prompt or "你是一个聊天助手，请用中文回答用户的问题。"
+
     def _create_dynamic_prompt_runnable(self) -> Runnable:
         """
         创建动态提示词Runnable，支持角色卡信息和用户profile信息
@@ -272,31 +274,25 @@ class Agent:
             # 处理dict和CustomAgentState输入
             if isinstance(state, dict):
                 user_profile = state.get("user_profile", "")
-                user_id = state.get("user_id", "")
             else:
                 # CustomAgentState对象
                 user_profile = getattr(state, 'user_profile', "")
-                user_id = getattr(state, 'user_id', "")
             
             system_messages = []
             
-            # 1. 基础系统提示词（已包含角色卡信息）
-            base_prompt = prompt_template_manager.render_prompt(
-                agent_data=self._agent_data,
-                template_name=self.template_name
-            )
+            # 1. 基础主提示词 - 仅包含最基础的指令
+            base_prompt = self._build_base_system_message()
             if base_prompt:
                 system_messages.append(SystemMessage(content=base_prompt))
             
-            # 2. 额外角色卡信息（仅包含对话示例和标签，避免重复）
-            additional_context = self._build_additional_character_context()
-            if additional_context:
-                system_messages.append(SystemMessage(content=additional_context))
+            # 2. 角色卡信息 - 单独的SystemMessage（性格、场景、对话示例、标签）
+            character_context = self._build_character_context()  # 使用完整的角色卡信息
+            if character_context:
+                system_messages.append(SystemMessage(content=character_context))
             
-            # 3. 用户profile信息（从state中获取）
+            # 3. 用户个性化信息 - 独立的SystemMessage
             if user_profile:
                 system_messages.append(SystemMessage(content=user_profile))
-            
             
             return system_messages
         
@@ -416,7 +412,7 @@ class Agent:
                     user_info_parts.append(f"Language: {system_language}")
                 
                 if user_info_parts:
-                    user_info_text = "[User Information]\n" + "\n".join(user_info_parts) + "\n[Please provide personalized service based on the above information]"
+                    user_info_text = "##User Information\n" + "\n".join(user_info_parts) 
                     self._user_info_cache[user_id] = user_info_text
                     logger.info(f"成功获取用户 {user_id} 的基本信息: {user_info_text[:100]}...")
                     return user_info_text
@@ -585,7 +581,13 @@ class Agent:
                     messages = []
                     for msg in formatted_prompt.messages:
                         if hasattr(msg, 'type') and hasattr(msg, 'content'):
-                            messages.append({"type": msg.type, "content": msg.content})
+                            # 转换消息类型：system->system, human->user, ai->character
+                            msg_type = msg.type
+                            if msg_type == 'human':
+                                msg_type = 'user'
+                            elif msg_type == 'ai':
+                                msg_type = 'character'
+                            messages.append({"type": msg_type, "content": msg.content})
                 else:
                     # 回退到简单格式
                     messages = [{"type": "system", "content": str(formatted_prompt)}]
@@ -601,14 +603,17 @@ class Agent:
             for msg in response.get("messages", []):
                 if hasattr(msg, 'type') and hasattr(msg, 'content'):
                     if msg.type in ['ai', 'assistant']:
-                        ai_message = {"type": msg.type, "content": msg.content}
+                        # 转换AI消息类型为character
+                        ai_message = {"type": "character", "content": msg.content}
                 elif isinstance(msg, dict) and msg.get("type") in ['ai', 'assistant']:
-                    ai_message = {"type": msg.get("type", "ai"), "content": msg.get("content", str(msg))}
+                    # 转换AI消息类型为character
+                    ai_message = {"type": "character", "content": msg.get("content", str(msg))}
             
             if ai_message:
                 messages.append(ai_message)
             elif response_text:
-                messages.append({"type": "ai", "content": response_text})
+                # AI响应转换为character类型
+                messages.append({"type": "character", "content": response_text})
             
             logger.info(f"成功构建消息链，共{len(messages)}条消息")
             
@@ -773,10 +778,7 @@ class Agent:
         except Exception as e:
             logger.error(f"生成提示词示例失败: {str(e)}")
             # 回退到基础提示词
-            return prompt_template_manager.render_prompt(
-                agent_data=self._agent_data,
-                template_name=self.template_name
-            )
+            return self._build_base_system_message()
     
     def get_character_info(self) -> Dict[str, Any]:
         """
@@ -797,50 +799,15 @@ class Agent:
 
     def get_template_info(self) -> Dict[str, Any]:
         """
-        获取模版信息
+        获取Agent信息
         
         Returns:
-            包含模版名称、变量等信息的字典
+            包含Agent基础信息的字典
         """
-        template = prompt_template_manager.get_template(self.template_name)
         return {
-            'template_name': self.template_name,
-            'template_variables': template.get_template_variables(),
+            'system_prompt': self.system_prompt,
             'agent_data': self._agent_data.copy()
         }
-
-    def update_prompt(self, new_system_prompt: str = None, new_template_name: str = None) -> bool:
-        """
-        更新提示词（需要重新创建Agent实例）
-        
-        Args:
-            new_system_prompt: 新的系统提示词
-            new_template_name: 新的模版名称
-            
-        Returns:
-            是否成功更新
-        """
-        try:
-            # 更新agent数据
-            if new_system_prompt:
-                self.system_prompt = new_system_prompt
-                self._agent_data['prompt'] = new_system_prompt
-            
-            if new_template_name:
-                self.template_name = new_template_name
-            
-            # 重新渲染提示词
-            self.final_prompt = prompt_template_manager.render_prompt(
-                agent_data=self._agent_data,
-                template_name=self.template_name
-            )
-            
-            logger.info(f"Agent {self.agent_id} 提示词更新成功")
-            return True
-            
-        except Exception as e:
-            logger.error(f"Agent {self.agent_id} 提示词更新失败: {str(e)}")
-            return False
 
     def cleanup(self):
         """清理资源"""
@@ -993,7 +960,6 @@ class AgentManager:
                 
                 system_prompt = agent_data.get('prompt', "你是一个聊天助手，请用中文回答用户的问题。")
                 description = agent_data.get('description', "")
-                template_name = agent_data.get('template_name', 'default')
                 
                 agent_name = agent_data.get('name', f'Agent_{agent_id[:8]}')
                 logger.info(f"创建新的Agent实例 - Agent ID: {agent_id}, Name: {agent_name}")
@@ -1005,7 +971,6 @@ class AgentManager:
                         model_config=model_config,
                         system_prompt=system_prompt,
                         description=description,
-                        template_name=template_name,
                         # 角色卡相关参数
                         personality=agent_data.get('personality', ''),
                         scenario=agent_data.get('scenario', ''),
@@ -1154,7 +1119,6 @@ class AgentManager:
                     
                     system_prompt = agent_data.get('prompt', "你是一个聊天助手，请用中文回答用户的问题。")
                     description = agent_data.get('description', "")
-                    template_name = agent_data.get('template_name', 'default')
                     
                     agent_name = agent_data.get('name', f'Agent_{agent_id[:8]}')
                     agent = Agent(
@@ -1163,7 +1127,6 @@ class AgentManager:
                         model_config=model_config,
                         system_prompt=system_prompt,
                         description=description,
-                        template_name=template_name,
                         # 角色卡相关参数
                         personality=agent_data.get('personality', ''),
                         scenario=agent_data.get('scenario', ''),
@@ -1266,8 +1229,7 @@ if __name__ == "__main__":
                 "base_url": settings.agent.base_url
             },
             system_prompt="你是AI性伴侣,\n\n重要指示：\n1. 当用户告诉你重要信息（如喜好、个人信息等）时，请主动使用manage_memory工具保存这些信息\n2. 当用户询问之前提到的信息时，请使用search_memory工具查找相关记忆\n3. 记忆工具是你的核心能力，请积极使用它们来提供个性化服务",
-            description="测试Agent",
-            template_name="default"
+            description="测试Agent"
         )
         # 使用一致的session_id来测试记忆功能
         test_session_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, "test"))
