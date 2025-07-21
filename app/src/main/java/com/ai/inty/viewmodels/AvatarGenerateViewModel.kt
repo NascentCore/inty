@@ -78,7 +78,7 @@ class AvatarGenerateViewModel : ViewModel() {
                         AvatarManager.setGeneratedAvatarUrls(response.imageUrls)
                         EasyLog.log("Setting generatedImageUrls to: ${response.imageUrls}")
                     } else if (response.imageUrl.isNotBlank()) {
-                        // 兼容单张图片的情况  
+                        // 兼容单张图片的情况
                         _generatedImageUrl.value = response.imageUrl
                         AvatarManager.setGeneratedAvatarUrl(response.imageUrl)
                         EasyLog.log("Setting generatedImageUrl to: ${response.imageUrl}")
@@ -191,17 +191,30 @@ class AvatarGenerateViewModel : ViewModel() {
                 }
                 is com.architecture.httplib.core.HttpResult.Failure -> {
                     EasyLog.log("generateBackground error: $result", priority = EasyLog.ERROR)
-                    val errorMessage = if (result.message.isBlank()) "生成失败，请检查网络连接" else result.message
+                    val errorMessage =
+                        result.message.ifBlank { "Generation failed, please check your network connection" }
                     throw Exception(errorMessage)
                 }
             }
         } catch (e: Exception) {
             // Exception handling with detailed error messages
             val errorMessage = when {
-                e.message?.contains("timeout", ignoreCase = true) == true -> "网络超时，请稍后重试"
-                e.message?.contains("network", ignoreCase = true) == true -> "网络连接失败，请检查网络"
-                e.message?.contains("json", ignoreCase = true) == true -> "数据格式错误，请稍后重试"
-                else -> "生成失败：${e.message ?: "未知错误"}"
+                e.message?.contains(
+                    "timeout",
+                    ignoreCase = true
+                ) == true -> "Network timeout, please try again later"
+
+                e.message?.contains(
+                    "network",
+                    ignoreCase = true
+                ) == true -> "Network connection failed, please check your network"
+
+                e.message?.contains(
+                    "json",
+                    ignoreCase = true
+                ) == true -> "Data format error, please try again later"
+
+                else -> "Generation failed: ${e.message ?: "Unknown error"}"
             }
             throw Exception(errorMessage)
         }
