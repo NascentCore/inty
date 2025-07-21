@@ -1,7 +1,6 @@
 package com.ai.inty
 
 import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -53,6 +52,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.net.toUri
 import androidx.lifecycle.lifecycleScope
 import com.ai.inty.base.AntiClick
 import com.ai.inty.base.BaseActivity
@@ -125,7 +125,7 @@ class LoginActivity : BaseActivity() {
 @Composable
 fun LoginScreen(
     onClose: () -> Unit = {},
-    onGoogleLoginSuccess: (idToken: String) -> Unit
+    onGoogleLoginSuccess: (idToken: String) -> Unit,
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     var lastClickTime by remember { mutableLongStateOf(0L) }
@@ -327,7 +327,7 @@ private fun PolicyText(checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
                     modifier = Modifier.noRippleClickable(onClick = {
                         val intent = Intent(
                             Intent.ACTION_VIEW,
-                            Uri.parse(context.getString(R.string.settings_str_user_agreement))
+                            context.getString(R.string.settings_str_user_agreement).toUri()
                         )
                         context.startActivity(intent)
                     })
@@ -347,7 +347,7 @@ private fun PolicyText(checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
                     modifier = Modifier.noRippleClickable(onClick = {
                         val intent = Intent(
                             Intent.ACTION_VIEW,
-                            Uri.parse(context.getString(R.string.settings_str_privacy_policy))
+                            context.getString(R.string.settings_str_privacy_policy).toUri()
                         )
                         context.startActivity(intent)
                     })

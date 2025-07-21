@@ -1,6 +1,6 @@
 package com.ai.inty.chat
 
-import android.widget.Toast
+//import com.ai.inty.billing.BillingRepository
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
@@ -10,7 +10,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -80,7 +79,6 @@ import com.ai.inty.base.noRippleClickable
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.beans.GENDER
 import com.ai.inty.beans.MsgInfo
-import com.ai.inty.billing.BillingRepository
 import com.ai.inty.ui.theme.BackGround
 import com.ai.inty.utils.getChatBackground
 import com.ai.inty.viewmodels.ChatViewModel
@@ -133,24 +131,24 @@ internal fun ChatPage(
     var shouldShowButton by remember(agentInfo?.id) {
         mutableStateOf(agentKeepTalking)
     }
+    /*
+        // VIP状态
+        val vipStatus = BillingRepository.vipStatusFlow.collectAsState().value
 
-    // VIP状态
-    val vipStatus = BillingRepository.vipStatusFlow.collectAsState().value
-
-    // Premium model二状态设置：默认跟随全局设置，但受VIP状态限制
-    var agentPremiumModel by remember(agentInfo?.id, vipStatus.isSubscribed) {
-        mutableStateOf(
-            if (!vipStatus.isSubscribed) {
-                // 如果不是VIP，强制关闭Premium model
-                false
-            } else {
-                agentInfo?.let {
-                    // 获取角色专用设置，如果不存在则使用全局设置
-                    IntySetting.getAgentPremiumModel(it.id) ?: IntySetting.isShowPremiumModel()
-                } ?: false
-            }
-        )
-    }
+        // Premium model二状态设置：默认跟随全局设置，但受VIP状态限制
+        var agentPremiumModel by remember(agentInfo?.id, vipStatus.isSubscribed) {
+            mutableStateOf(
+                if (!vipStatus.isSubscribed) {
+                    // 如果不是VIP，强制关闭Premium model
+                    false
+                } else {
+                    agentInfo?.let {
+                        // 获取角色专用设置，如果不存在则使用全局设置
+                        IntySetting.getAgentPremiumModel(it.id) ?: IntySetting.isShowPremiumModel()
+                    } ?: false
+                }
+            )
+        }*/
 
     var showMorePanel by remember { mutableStateOf(false) }
 
@@ -282,7 +280,7 @@ internal fun ChatPage(
                 Spacer(Modifier.height(16.dp))
 
                 // Premium model标签 - 左上角
-                if (agentInfo != null) {
+                /*if (agentInfo != null) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -358,7 +356,7 @@ internal fun ChatPage(
                         }
                     }
                     Spacer(Modifier.height(8.dp))
-                }
+                }*/
 
                 LazyColumn(
                     modifier = Modifier
@@ -786,54 +784,54 @@ internal fun ChatPage(
                                     contentDescription = null,
                                 )
                             }
-
-                            // Premium model设置（二状态，与全局设置同步）
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(56.dp)
-                                    .padding(horizontal = 16.dp)
-                                    .noRippleClickable {
-                                        // 检查是否正式登录（非游客且已登录）
-                                        if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
-                                            // 检查VIP状态
-                                            if (!vipStatus.isSubscribed) {
-                                                // 如果不是VIP，显示提示
-                                                Toast.makeText(
-                                                    context,
-                                                    youAreNotVipText,
-                                                    Toast.LENGTH_SHORT
-                                                ).show()
-                                            } else {
-                                                // 如果是VIP，允许切换
-                                                agentPremiumModel = !agentPremiumModel
-                                                IntySetting.setAgentPremiumModel(
-                                                    agent.id,
-                                                    agentPremiumModel
-                                                )
-                                            }
-                                        } else {
-                                            // 未登录或游客时跳转到登录页面
-                                            TheRouter.build(Constant.ROUTE_LOGIN)
-                                                .navigation(context)
-                                        }
-                                    },
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = premiumModelText,
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Normal,
-                                    color = Color.White
-                                )
-                                Spacer(Modifier.weight(1f))
-                                Image(
-                                    painter = if (agentPremiumModel) painterResource(R.drawable.opened) else painterResource(
-                                        R.drawable.closed
-                                    ),
-                                    contentDescription = null,
-                                )
-                            }
+                            /*
+                                                        // Premium model设置（二状态，与全局设置同步）
+                                                        Row(
+                                                            modifier = Modifier
+                                                                .fillMaxWidth()
+                                                                .height(56.dp)
+                                                                .padding(horizontal = 16.dp)
+                                                                .noRippleClickable {
+                                                                    // 检查是否正式登录（非游客且已登录）
+                                                                    if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
+                                                                        // 检查VIP状态
+                                                                        if (!vipStatus.isSubscribed) {
+                                                                            // 如果不是VIP，显示提示
+                                                                            Toast.makeText(
+                                                                                context,
+                                                                                youAreNotVipText,
+                                                                                Toast.LENGTH_SHORT
+                                                                            ).show()
+                                                                        } else {
+                                                                            // 如果是VIP，允许切换
+                                                                            agentPremiumModel = !agentPremiumModel
+                                                                            IntySetting.setAgentPremiumModel(
+                                                                                agent.id,
+                                                                                agentPremiumModel
+                                                                            )
+                                                                        }
+                                                                    } else {
+                                                                        // 未登录或游客时跳转到登录页面
+                                                                        TheRouter.build(Constant.ROUTE_LOGIN)
+                                                                            .navigation(context)
+                                                                    }
+                                                                },
+                                                            verticalAlignment = Alignment.CenterVertically
+                                                        ) {
+                                                            Text(
+                                                                text = premiumModelText,
+                                                                fontSize = 14.sp,
+                                                                fontWeight = FontWeight.Normal,
+                                                                color = Color.White
+                                                            )
+                                                            Spacer(Modifier.weight(1f))
+                                                            Image(
+                                                                painter = if (agentPremiumModel) painterResource(R.drawable.opened) else painterResource(
+                                                                    R.drawable.closed
+                                                                ),
+                                                                contentDescription = null,
+                                                            )
+                                                        }*/
 
                             // 举报入口
                             Row(

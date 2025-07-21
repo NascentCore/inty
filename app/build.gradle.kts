@@ -107,18 +107,8 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
-        // 启用其他有用的功能
-        viewBinding = false
-        dataBinding = false
     }
 
-
-    lint {
-        checkReleaseBuilds = false
-        // 添加更多检查选项
-        abortOnError = false
-        checkOnly += "NewApi"
-    }
 
 }
 
@@ -177,7 +167,7 @@ dependencies {
     implementation(libs.coil.network.okhttp)
 
     //Google支付
-    implementation(libs.billing.ktx)
+//    implementation(libs.billing.ktx)
     //google 登录授权
     implementation(libs.play.services.auth)
     //firebase 相关依赖

@@ -124,11 +124,11 @@
             android:exported="false"
             android:theme="@style/Theme.Inty.Login" />
 
-        <activity android:name=".VipCenterActivity" />
-        <activity
-            android:name=".SubscriptionManagementActivity"
-            android:exported="true"
-            android:theme="@style/Theme.Inty.Popup" />
+        <!--        <activity android:name=".VipCenterActivity" />-->
+        <!--        <activity-->
+        <!--            android:name=".SubscriptionManagementActivity"-->
+        <!--            android:exported="true"-->
+        <!--            android:theme="@style/Theme.Inty.Popup" />-->
 
     </application>
 

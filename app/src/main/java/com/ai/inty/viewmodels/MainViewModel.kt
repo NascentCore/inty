@@ -16,7 +16,7 @@ import com.ai.inty.beans.GenerateBackgroundResponse
 import com.ai.inty.beans.SysMsgItem
 import com.ai.inty.beans.TokenBean
 import com.ai.inty.beans.UserProfile
-import com.ai.inty.billing.BillingRepository
+//import com.ai.inty.billing.BillingRepository
 import com.ai.inty.home.ConversionsPageTab
 import com.ai.inty.net.IAgentApi
 import com.ai.inty.net.IUserApi
@@ -305,7 +305,7 @@ class MainViewModel : BaseActivityViewModel() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 EasyLog.log("开始更新会员状态...")
-                BillingRepository.fetchRemote()
+//                BillingRepository.fetchRemote()
                 EasyLog.log("会员状态更新完成")
             } catch (e: kotlinx.coroutines.CancellationException) {
                 EasyLog.log("会员状态更新被取消: ${e.message}")
