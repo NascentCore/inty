@@ -5,18 +5,19 @@ import asyncio
 from threading import Lock, RLock
 from concurrent.futures import ThreadPoolExecutor
 from langgraph.prebuilt import create_react_agent
+from langgraph.graph import MessagesState
+from langgraph.managed import RemainingSteps
 from langchain_openai import ChatOpenAI
 from langmem import create_manage_memory_tool,create_search_memory_tool
 from langchain_postgres import PostgresChatMessageHistory
 from langgraph.store.postgres import PostgresStore
-from langchain_postgres import PostgresChatMessageHistory
 from openai import OpenAI
 from app.core.config import settings
 from psycopg import Connection
 from psycopg_pool import ConnectionPool
 from langchain_core.messages import BaseMessage, HumanMessage, AIMessage, SystemMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_core.runnables import Runnable, RunnableLambda, RunnablePassthrough
+from langchain_core.runnables import Runnable, RunnableLambda
 import json
 from langchain_core.tools import Tool
 from langchain_google_community import GoogleSearchAPIWrapper
@@ -25,6 +26,12 @@ import logging
 
 
 logger = logging.getLogger(__name__)
+
+# 自定义Agent状态，继承MessagesState并添加用户信息
+class CustomAgentState(MessagesState):
+    user_profile: str = ""
+    user_id: str = ""
+    remaining_steps: RemainingSteps
 
 def get_agent_model_config(agent_data: dict) -> dict:
     """
@@ -241,7 +248,7 @@ class Agent:
         # 构建动态提示词Runnable
         self.prompt_runnable = self._create_dynamic_prompt_runnable()
         
-        # 创建无状态的LangGraph Agent
+        # 创建无状态的LangGraph Agent，使用自定义状态模式
         # 移除了checkpointer，对话历史通过PostgresChatMessageHistory管理
         self.agent = create_react_agent(
             name=name,
@@ -252,15 +259,25 @@ class Agent:
                 google_search_tool
                 ],
             prompt=self.prompt_runnable,
-            store=postgres_store
+            store=postgres_store,
+            state_schema=CustomAgentState
         )
 
     def _create_dynamic_prompt_runnable(self) -> Runnable:
         """
         创建动态提示词Runnable，支持角色卡信息和用户profile信息
         """
-        def build_system_messages(inputs: Dict[str, Any]) -> List[SystemMessage]:
-            """构建系统消息列表"""
+        def build_system_messages(state) -> List[SystemMessage]:
+            """构建系统消息列表，从state中获取用户信息"""
+            # 处理dict和CustomAgentState输入
+            if isinstance(state, dict):
+                user_profile = state.get("user_profile", "")
+                user_id = state.get("user_id", "")
+            else:
+                # CustomAgentState对象
+                user_profile = getattr(state, 'user_profile', "")
+                user_id = getattr(state, 'user_id', "")
+            
             system_messages = []
             
             # 1. 基础系统提示词（已包含角色卡信息）
@@ -276,25 +293,29 @@ class Agent:
             if additional_context:
                 system_messages.append(SystemMessage(content=additional_context))
             
-            # 3. 用户profile信息（从inputs中获取）
-            user_profile = inputs.get('user_profile', '')
-            logger.info(f"提示词构建 - 获取到user_profile: {bool(user_profile)}, 长度: {len(user_profile) if user_profile else 0}")
+            # 3. 用户profile信息（从state中获取）
             if user_profile:
                 system_messages.append(SystemMessage(content=user_profile))
-                logger.info(f"已添加用户信息到系统消息中")
             
             
             return system_messages
         
         # 创建一个返回完整消息列表的函数
-        def create_full_message_list(inputs: Dict[str, Any]) -> List[BaseMessage]:
+        def create_full_message_list(state) -> List[BaseMessage]:
             """创建包含所有系统消息和对话消息的完整消息列表"""
-            system_messages = build_system_messages(inputs)
-            full_messages = system_messages + inputs["messages"]
+            system_messages = build_system_messages(state)
+            
+            # 处理both dict和CustomAgentState输入
+            if isinstance(state, dict):
+                messages = state.get("messages", [])
+            else:
+                messages = getattr(state, 'messages', [])
+            
+            full_messages = system_messages + messages
             return full_messages
         
         # 创建动态prompt模板，直接返回分开的消息列表
-        return RunnableLambda(lambda x: {"messages": create_full_message_list(x)}) | ChatPromptTemplate.from_messages([
+        return RunnableLambda(lambda state: {"messages": create_full_message_list(state)}) | ChatPromptTemplate.from_messages([
             MessagesPlaceholder(variable_name="messages")
         ])
     
@@ -383,19 +404,19 @@ class Agent:
                 nickname, gender, age_group, description, system_language = row
                 
                 if nickname:
-                    user_info_parts.append(f"用户昵称：{nickname}")
+                    user_info_parts.append(f"Name: {nickname}")
                 if gender:
-                    gender_map = {"MALE": "男性", "FEMALE": "女性", "OTHER": "其他"}
-                    user_info_parts.append(f"性别：{gender_map.get(gender, gender)}")
+                    gender_map = {"MALE": "Male", "FEMALE": "Female", "OTHER": "Other"}
+                    user_info_parts.append(f"Gender: {gender_map.get(gender, gender)}")
                 if age_group:
-                    user_info_parts.append(f"年龄段：{age_group}")
+                    user_info_parts.append(f"Age: {age_group}")
                 if description:
-                    user_info_parts.append(f"个人简介：{description}")
+                    user_info_parts.append(f"Description: {description}")
                 if system_language:
-                    user_info_parts.append(f"首选语言：{system_language}")
+                    user_info_parts.append(f"Language: {system_language}")
                 
                 if user_info_parts:
-                    user_info_text = "[用户基本信息]\n" + "\n".join(user_info_parts) + "\n[请基于以上信息提供个性化服务]"
+                    user_info_text = "[User Information]\n" + "\n".join(user_info_parts) + "\n[Please provide personalized service based on the above information]"
                     self._user_info_cache[user_id] = user_info_text
                     logger.info(f"成功获取用户 {user_id} 的基本信息: {user_info_text[:100]}...")
                     return user_info_text
@@ -485,13 +506,13 @@ class Agent:
                 save_msg_time = time.time() - save_msg_start
                 logger.info(f"用户消息保存耗时: {save_msg_time:.3f}秒 - Agent: {self.agent_id}")
 
-                # 构建输入数据，使用预传入的参数
+                # 构建自定义状态数据
                 input_build_start = time.time()
-                input_data = {
-                    "messages": all_messages,
-                    "user_profile": user_profile or ""
-                }
-                logger.info(f"优化版构建input_data - user_profile长度: {len(user_profile or '')}")
+                state_data = CustomAgentState(
+                    messages=all_messages,
+                    user_profile=user_profile or "",
+                    user_id=user_id
+                )
                 config = {'configurable': {'user_id': user_id}}
                 input_build_time = time.time() - input_build_start
                 logger.info(f"输入数据构建耗时: {input_build_time:.3f}秒 - Agent: {self.agent_id}")
@@ -499,7 +520,7 @@ class Agent:
                 # 调用agent进行对话
                 agent_invoke_start = time.time()
                 logger.info(f"开始Agent推理 - Agent: {self.agent_id}")
-                response = self.agent.invoke(input_data, config)
+                response = self.agent.invoke(state_data, config)
                 agent_invoke_time = time.time() - agent_invoke_start
                 logger.info(f"Agent推理耗时: {agent_invoke_time:.3f}秒 - Agent: {self.agent_id}")
                 
@@ -522,7 +543,11 @@ class Agent:
                     debug_start = time.time()
                     # 传递完整的输入和输出数据
                     debug_data = {
-                        "input_data": input_data,
+                        "input_data": {
+                            "messages": state_data.get('messages', []),
+                            "user_profile": state_data.get('user_profile', ''),
+                            "user_id": state_data.get('user_id', '')
+                        },
                         "response": response,
                         "response_text": response_text
                     }
@@ -540,274 +565,84 @@ class Agent:
                 logger.error(f"聊天处理失败（优化版） - Agent: {self.agent_id}, Session: {session_id}, Error: {str(e)}")
                 raise
 
-    def _chat_sync(self, user_id: str, session_id: str, messages: dict[str, Any]) -> str:
-        """
-        同步聊天方法，支持角色卡功能
-        
-        移除了LangGraph checkpointer，改为通过PostgresChatMessageHistory管理对话历史。
-        历史消息会被智能截取并注入到当前对话上下文中。
-        """
-        chat_start_time = time.time()
-        logger.info(f"开始聊天处理 - Agent: {self.agent_id}, Session: {session_id}")
-        
-        self._update_last_used()
-        
-        # 获取用户profile信息
-        profile_start = time.time()
-        user_profile = self._get_user_profile_sync(user_id)
-        profile_time = time.time() - profile_start
-        logger.info(f"用户信息获取耗时: {profile_time:.3f}秒 - Agent: {self.agent_id}")
-        
-        
-        # 从连接池获取连接
-        pool_start = time.time()
-        pool = get_connection_pool()
-        pool_time = time.time() - pool_start
-        logger.info(f"连接池获取耗时: {pool_time:.3f}秒 - Agent: {self.agent_id}")
-        
-        with pool.connection() as conn_local:
-            try:
-                # 创建历史记录对象
-                history_start = time.time()
-                history = PostgresChatMessageHistory(
-                    table_name,
-                    session_id,
-                    sync_connection=conn_local
-                )
-                history_init_time = time.time() - history_start
-                logger.info(f"历史记录初始化耗时: {history_init_time:.3f}秒 - Agent: {self.agent_id}")
-
-                # 获取相关的历史消息
-                get_history_start = time.time()
-                recent_history = self._get_relevant_history(history.messages, max_messages=10)
-                get_history_time = time.time() - get_history_start
-                logger.info(f"历史消息获取耗时: {get_history_time:.3f}秒 - Agent: {self.agent_id}")
-                
-                # 构建包含历史的完整消息列表
-                build_msg_start = time.time()
-                all_messages = recent_history + messages["messages"]
-                build_msg_time = time.time() - build_msg_start
-                logger.info(f"消息构建耗时: {build_msg_time:.3f}秒 - Agent: {self.agent_id}")
-                
-                # 保存原始用户消息到历史记录
-                save_msg_start = time.time()
-                history.add_messages(messages["messages"])
-                save_msg_time = time.time() - save_msg_start
-                logger.info(f"用户消息保存耗时: {save_msg_time:.3f}秒 - Agent: {self.agent_id}")
-
-                # 构建输入数据，包含历史消息和用户profile
-                input_build_start = time.time()
-                input_data = {
-                    "messages": all_messages,
-                    "user_profile": user_profile
-                }
-                logger.info(f"普通版构建input_data - user_profile长度: {len(user_profile or '')}")
-                config = {'configurable': {'user_id': user_id}}
-                input_build_time = time.time() - input_build_start
-                logger.info(f"输入数据构建耗时: {input_build_time:.3f}秒 - Agent: {self.agent_id}")
-                
-                # 调用agent进行对话
-                agent_invoke_start = time.time()
-                logger.info(f"开始Agent推理 - Agent: {self.agent_id}")
-                response = self.agent.invoke(input_data, config)
-                agent_invoke_time = time.time() - agent_invoke_start
-                logger.info(f"Agent推理耗时: {agent_invoke_time:.3f}秒 - Agent: {self.agent_id}")
-                
-                # 处理响应
-                response_process_start = time.time()
-                ai_messages = [message for message in response.get("messages",[]) if isinstance(message, AIMessage)]
-                response_text = ai_messages[-1].content if ai_messages else "抱歉，我无法理解您的消息。请再试一次。"
-                response_process_time = time.time() - response_process_start
-                logger.info(f"响应处理耗时: {response_process_time:.3f}秒 - Agent: {self.agent_id}")
-                
-                # 保存AI响应到历史记录
-                save_response_start = time.time()
-                history.add_messages([AIMessage(content=response_text)])
-                save_response_time = time.time() - save_response_start
-                logger.info(f"AI响应保存耗时: {save_response_time:.3f}秒 - Agent: {self.agent_id}")
-                
-                # 调试日志记录
-                logger.info(f"检查debug_logging配置: {settings.agent.enable_debug_logging}")
-                if settings.agent.enable_debug_logging:
-                    debug_start = time.time()
-                    # 传递完整的输入和输出数据
-                    debug_data = {
-                        "input_data": input_data,
-                        "response": response,
-                        "response_text": response_text
-                    }
-                    self._save_debug_messages(user_id, session_id, debug_data, conn_local)
-                    debug_time = time.time() - debug_start
-                    logger.info(f"调试信息保存耗时: {debug_time:.3f}秒 - Agent: {self.agent_id}")
-                else:
-                    logger.info(f"debug_logging未启用，跳过保存 - Agent: {self.agent_id}")
-                
-                total_time = time.time() - chat_start_time
-                logger.info(f"聊天处理总耗时: {total_time:.3f}秒 - Agent: {self.agent_id}")
-                
-                return response_text
-            except Exception as e:
-                logger.error(f"聊天处理失败 - Agent: {self.agent_id}, Session: {session_id}, Error: {str(e)}")
-                raise
-
     def _save_debug_messages(self, user_id: str, session_id: str, debug_data: dict, conn):
         """保存调试信息到数据库 - 包含发送给LLM的完整提示词"""
         logger.info(f"开始保存调试信息 - Agent: {self.agent_id}, User: {user_id}, Session: {session_id}")
+        
         try:
-            # 检查传入的数据结构
-            if isinstance(debug_data, dict) and "input_data" in debug_data:
-                # 新的格式：包含input_data和response
-                input_data = debug_data.get("input_data", {})
-                response = debug_data.get("response", {})
-                response_text = debug_data.get("response_text", "")
-                
-                logger.info(f"Debug - 使用新格式保存，包含input_data")
-                
-                # 重新构建发送给LLM的完整消息链
-                try:
-                    # 调用提示词构建逻辑，获取真实的系统消息
-                    formatted_prompt = self.prompt_runnable.invoke(input_data)
-                    
-                    if hasattr(formatted_prompt, 'messages'):
-                        # 如果返回的是ChatPromptValue，提取所有消息
-                        serializable_messages = []
-                        for msg in formatted_prompt.messages:
-                            if hasattr(msg, 'type') and hasattr(msg, 'content'):
-                                serializable_messages.append({
-                                    "type": msg.type,
-                                    "content": msg.content
-                                })
-                        
-                        # 添加完整的AI响应消息
-                        for msg in response.get("messages", []):
-                            if hasattr(msg, 'type') and hasattr(msg, 'content'):
-                                if msg.type in ['ai', 'assistant']:  # 只添加AI消息
-                                    serializable_messages.append({
-                                        "type": msg.type,
-                                        "content": msg.content
-                                    })
-                            elif isinstance(msg, dict) and msg.get("type") in ['ai', 'assistant']:
-                                serializable_messages.append({
-                                    "type": msg.get("type", "ai"),
-                                    "content": msg.get("content", str(msg))
-                                })
-                        
-                        # 如果没有找到AI消息但有response_text，则添加汇总响应
-                        if not any(msg.get("type") in ['ai', 'assistant'] for msg in serializable_messages) and response_text:
-                            serializable_messages.append({
-                                "type": "ai",
-                                "content": response_text
-                            })
-                        
-                        logger.info(f"Debug - 成功提取完整消息链，共{len(serializable_messages)}条消息")
-                    else:
-                        # 回退到简单格式
-                        serializable_messages = [{
-                            "type": "system",
-                            "content": str(formatted_prompt)
-                        }]
-                        if response_text:
-                            serializable_messages.append({
-                                "type": "ai", 
-                                "content": response_text
-                            })
-                        
-                except Exception as e:
-                    logger.error(f"Debug - 提取完整消息链失败: {str(e)}, 使用fallback")
-                    # Fallback到基础的提示词
-                    try:
-                        final_prompt = self.get_final_prompt()
-                    except:
-                        final_prompt = self.system_prompt
-                    
-                    serializable_messages = [{
-                        "type": "system",
-                        "content": final_prompt
-                    }]
-                    # 添加完整的AI响应消息
-                    for msg in response.get("messages", []):
-                        if hasattr(msg, 'type') and hasattr(msg, 'content'):
-                            if msg.type in ['ai', 'assistant']:
-                                serializable_messages.append({
-                                    "type": msg.type,
-                                    "content": msg.content
-                                })
-                        elif isinstance(msg, dict) and msg.get("type") in ['ai', 'assistant']:
-                            serializable_messages.append({
-                                "type": msg.get("type", "ai"),
-                                "content": msg.get("content", str(msg))
-                            })
-                    
-                    # 如果没有找到AI消息但有response_text，则添加汇总响应
-                    if not any(msg.get("type") in ['ai', 'assistant'] for msg in serializable_messages) and response_text:
-                        serializable_messages.append({
-                            "type": "ai",
-                            "content": response_text
-                        })
-            else:
-                # 旧的格式：只有response
-                logger.info(f"Debug - 使用旧格式保存")
-                response = debug_data if isinstance(debug_data, dict) else {}
-                
-                try:
-                    final_prompt = self.get_final_prompt()
-                except:
-                    final_prompt = self.system_prompt
-                
-                serializable_messages = [{
-                    "type": "system",
-                    "content": final_prompt
-                }]
-                
-                # 添加完整的AI响应消息
-                for msg in response.get("messages", []):
-                    if hasattr(msg, 'type') and hasattr(msg, 'content'):
-                        if msg.type in ['ai', 'assistant']:
-                            serializable_messages.append({
-                                "type": msg.type,
-                                "content": msg.content
-                            })
-                    elif isinstance(msg, dict) and msg.get("type") in ['ai', 'assistant']:
-                        serializable_messages.append({
-                            "type": msg.get("type", "ai"),
-                            "content": msg.get("content", str(msg))
-                        })
-                
+            # 提取数据
+            input_data = debug_data.get("input_data", {})
+            response = debug_data.get("response", {})
+            response_text = debug_data.get("response_text", "")
             
+            # 构建消息链
+            try:
+                # 获取格式化的提示词
+                formatted_prompt = self.prompt_runnable.invoke(input_data)
+                
+                if hasattr(formatted_prompt, 'messages'):
+                    # 提取所有系统和用户消息
+                    messages = []
+                    for msg in formatted_prompt.messages:
+                        if hasattr(msg, 'type') and hasattr(msg, 'content'):
+                            messages.append({"type": msg.type, "content": msg.content})
+                else:
+                    # 回退到简单格式
+                    messages = [{"type": "system", "content": str(formatted_prompt)}]
+                    
+            except Exception as e:
+                logger.error(f"构建消息链失败: {str(e)}, 使用fallback")
+                # 使用基础提示词作为fallback
+                final_prompt = getattr(self, 'get_final_prompt', lambda: self.system_prompt)()
+                messages = [{"type": "system", "content": final_prompt}]
+            
+            # 添加AI响应消息
+            ai_message = None
+            for msg in response.get("messages", []):
+                if hasattr(msg, 'type') and hasattr(msg, 'content'):
+                    if msg.type in ['ai', 'assistant']:
+                        ai_message = {"type": msg.type, "content": msg.content}
+                elif isinstance(msg, dict) and msg.get("type") in ['ai', 'assistant']:
+                    ai_message = {"type": msg.get("type", "ai"), "content": msg.get("content", str(msg))}
+            
+            if ai_message:
+                messages.append(ai_message)
+            elif response_text:
+                messages.append({"type": "ai", "content": response_text})
+            
+            logger.info(f"成功构建消息链，共{len(messages)}条消息")
+            
+            # 保存到数据库
             debug_data = {
-                "messages": serializable_messages,
+                "messages": messages,
                 "timestamp": time.time(),
                 "agent_id": self.agent_id,
                 "user_id": user_id,
                 "session_id": session_id
             }
             
-            # 更新 chat 表的 debug_messages 字段
-            # 查找对应的 chat 记录
             query = """
                 UPDATE chats 
                 SET debug_messages = %s, updated_at = now()
                 WHERE user_id = %s AND agent_id = %s AND is_active = true
             """
             
-            # 使用cursor执行SQL
             with conn.cursor() as cursor:
-                # 先检查目标记录是否存在
-                check_query = "SELECT id, is_active FROM chats WHERE user_id = %s AND agent_id = %s AND is_active = true"
+                # 检查目标记录
+                check_query = "SELECT id FROM chats WHERE user_id = %s AND agent_id = %s AND is_active = true"
                 cursor.execute(check_query, (user_id, self.agent_id))
-                existing_records = cursor.fetchall()
-                logger.info(f"找到匹配的chat记录数量: {len(existing_records)} - User: {user_id}, Agent: {self.agent_id}")
+                record_count = len(cursor.fetchall())
                 
                 # 执行更新
                 cursor.execute(query, (json.dumps(debug_data), user_id, self.agent_id))
                 rows_affected = cursor.rowcount
                 conn.commit()
-            logger.info(f"保存调试信息成功 - Agent: {self.agent_id}, Session: {session_id}, 影响行数: {rows_affected}")
+                
+            logger.info(f"保存调试信息成功 - Agent: {self.agent_id}, 找到记录: {record_count}, 影响行数: {rows_affected}")
             
         except Exception as e:
             logger.error(f"保存调试信息失败 - Agent: {self.agent_id}, Session: {session_id}, Error: {str(e)}")
-            # 不应该因为调试信息保存失败而中断正常的聊天流程
-            pass
+            # 不中断正常聊天流程
 
     async def chat(self, user_id: str, session_id: str, messages: dict[str, Any], db_session = None) -> str:
         """异步聊天方法（优化版本）"""
@@ -867,19 +702,17 @@ class Agent:
                     # 构建包含历史的完整消息列表
                     all_messages = recent_history + messages["messages"]
 
-                    # 构建输入数据，包含历史消息和用户profile
-                    input_data = {
-                        "messages": all_messages,
-                        "user_profile": user_profile
-                    }
-                    logger.info(f"流式聊天构建input_data - user_profile长度: {len(user_profile or '')}")
-
-                    # 移除checkpointer后，不需要thread_id配置
+                    # 构建自定义状态数据，包含历史消息和用户profile
+                    state_data = CustomAgentState(
+                        messages=all_messages,
+                        user_profile=user_profile or "",
+                        user_id=user_id
+                    )
                     config = {'configurable': {'user_id': user_id}}
                     
                     # 收集完整的流式响应用于调试
                     stream_messages = []
-                    for message_chunk, metadata in self.agent.stream(input_data, config, stream_mode="messages"):
+                    for message_chunk, metadata in self.agent.stream(state_data, config, stream_mode="messages"):
                         stream_messages.append(message_chunk)
                         yield message_chunk, metadata
                     
@@ -888,7 +721,11 @@ class Agent:
                     if settings.agent.enable_debug_logging:
                         # 构建完整的调试数据，包含用户输入
                         debug_data = {
-                            "input_data": input_data,
+                            "input_data": {
+                                "messages": state_data.get('messages', []),
+                                "user_profile": state_data.get('user_profile', ''),
+                                "user_id": state_data.get('user_id', '')
+                            },
                             "response": {"messages": stream_messages},
                             "response_text": "".join([getattr(msg, 'content', str(msg)) for msg in stream_messages if hasattr(msg, 'content')])
                         }
