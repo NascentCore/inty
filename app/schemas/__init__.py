@@ -5,7 +5,8 @@ from app.schemas.agent import Agent, AgentCreate, AgentUpdate, AgentInDB, Backgr
 from app.schemas.chat import (
     Chat, ChatCreate, ChatUpdate, ChatInDB,
     Message, MessageCreate, MessageUpdate, MessageList,
-    ChatSettings, ChatSettingsCreate, ChatSettingsUpdate
+    ChatSettings, ChatSettingsCreate, ChatSettingsUpdate,
+    ChatDeletionResponse, ChatDeletionSummary
 )
 from app.schemas.resource import Resource, ResourceCreate, ResourceUpdate, ResourceInDB
 from app.schemas.settings import Settings, SettingsCreate, SettingsUpdate, SettingsInDB

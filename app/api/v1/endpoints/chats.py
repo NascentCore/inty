@@ -1125,6 +1125,48 @@ async def get_agent_chat_settings(
         raise HTTPException(status_code=500, detail=f"Failed to get chat settings: {str(e)}")
 
 
+@router.delete("/agents/{agent_id}/chats", response_model=schemas.ChatDeletionResponse)
+async def delete_agent_chats(
+    *,
+    db: AsyncSession = Depends(deps.get_async_db),
+    agent_id: str,
+    current_user: schemas.User = Depends(deps.get_current_active_user),
+) -> Any:
+    """
+    删除用户与指定Agent的所有聊天记录
+    包括聊天会话、聊天设置和聊天历史
+    """
+    try:
+        logger.info(f"删除Agent聊天记录 - Agent ID: {agent_id}, User ID: {current_user.id}")
+        
+        # 首先验证Agent是否存在
+        agent_db = await agent_service.get_agent(db, agent_id=agent_id)
+        if not agent_db:
+            raise HTTPException(status_code=404, detail="Agent not found")
+        
+        # 调用service层删除聊天记录
+        result = await chat_service.delete_chats_by_agent_id(
+            db=db,
+            agent_id=agent_id,
+            user_id=current_user.id
+        )
+        
+        logger.info(f"Agent聊天记录删除完成 - Agent ID: {agent_id}, User ID: {current_user.id}, "
+                   f"删除结果: {result}")
+        
+        return {
+            "success": True,
+            "message": "聊天记录删除成功",
+            "data": result
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"删除Agent聊天记录失败 - Agent ID: {agent_id}, User ID: {current_user.id}, Error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"删除聊天记录失败: {str(e)}")
+
+
 @router.get("/agents/{agent_id}/debug-messages")
 async def get_agent_debug_messages(
     *,

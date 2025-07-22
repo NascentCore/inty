@@ -592,6 +592,100 @@ async def get_chat_by_user_and_agent(
     """
     return await get_chat_by_agent_and_user(db, agent_id, user_id) 
 
+async def delete_chats_by_agent_id(
+    db: AsyncSession,
+    agent_id: str,
+    user_id: str
+) -> dict:
+    """
+    删除用户与指定agent的所有聊天记录
+    
+    Args:
+        db: 数据库会话
+        agent_id: Agent ID
+        user_id: 用户ID
+        
+    Returns:
+        dict: 删除结果摘要
+    """
+    try:
+        logger.info(f"开始删除聊天记录 - Agent ID: {agent_id}, User ID: {user_id}")
+        
+        # 查找所有匹配的聊天记录
+        result = await db.execute(
+            select(models.Chat)
+            .where(
+                models.Chat.agent_id == agent_id,
+                models.Chat.user_id == user_id
+            )
+        )
+        chats = result.scalars().all()
+        
+        if not chats:
+            logger.info(f"未找到聊天记录 - Agent ID: {agent_id}, User ID: {user_id}")
+            return {
+                "chats_deleted": 0,
+                "messages_deleted": 0,
+                "agent_id": agent_id,
+                "user_id": user_id,
+                "status": "no_chats_found"
+            }
+        
+        deleted_chats_count = len(chats)
+        total_messages_deleted = 0
+        
+        # 开始事务删除
+        for chat in chats:
+            try:
+                # 生成session_id并删除聊天历史
+                session_id = generate_session_id(chat.id)
+                
+                # 统计消息数量（在删除前）
+                try:
+                    messages_data = chat_history_service.get_messages_paginated(
+                        session_id=session_id,
+                        limit=1000,  # 获取所有消息进行计数
+                        offset=0
+                    )
+                    message_count = messages_data.get("total", 0)
+                    total_messages_deleted += message_count
+                    
+                    # 删除聊天历史
+                    chat_history_service.clear_session(session_id)
+                    logger.debug(f"已删除聊天历史 - Chat ID: {chat.id}, Session ID: {session_id}, 消息数: {message_count}")
+                    
+                except Exception as e:
+                    logger.warning(f"删除聊天历史失败 - Chat ID: {chat.id}, Error: {str(e)}")
+                    # 继续删除数据库记录，即使聊天历史删除失败
+                
+                # 删除数据库中的聊天记录（会级联删除chat_settings）
+                await db.delete(chat)
+                logger.debug(f"已删除聊天记录 - Chat ID: {chat.id}")
+                
+            except Exception as e:
+                logger.error(f"删除单个聊天记录失败 - Chat ID: {chat.id}, Error: {str(e)}")
+                # 继续处理其他聊天记录
+                continue
+        
+        # 提交事务
+        await db.commit()
+        
+        logger.info(f"聊天记录删除完成 - Agent ID: {agent_id}, User ID: {user_id}, "
+                   f"删除聊天数: {deleted_chats_count}, 删除消息数: {total_messages_deleted}")
+        
+        return {
+            "chats_deleted": deleted_chats_count,
+            "messages_deleted": total_messages_deleted,
+            "agent_id": agent_id,
+            "user_id": user_id,
+            "status": "success"
+        }
+        
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"删除聊天记录失败 - Agent ID: {agent_id}, User ID: {user_id}, Error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"删除聊天记录失败: {str(e)}")
+
 async def save_debug_messages(
     db: AsyncSession,
     session_id: str,

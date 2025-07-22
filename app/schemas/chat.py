@@ -136,4 +136,20 @@ class ChatCompletionResponse(BaseModel):
     created: int
     model: str
     choices: List[dict]
-    usage: dict 
+    usage: dict
+
+
+class ChatDeletionSummary(BaseModel):
+    """聊天删除结果摘要"""
+    chats_deleted: int
+    messages_deleted: int
+    agent_id: str
+    user_id: str
+    status: str
+
+
+class ChatDeletionResponse(BaseModel):
+    """聊天删除响应"""
+    success: bool
+    message: str
+    data: ChatDeletionSummary 
