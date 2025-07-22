@@ -252,8 +252,8 @@ class Agent:
             model=model,
             tools=[
                 create_manage_memory_tool(namespace=('memories',name,'{user_id}')),
-                create_search_memory_tool(namespace=('memories',name,'{user_id}')),
-                google_search_tool
+                create_search_memory_tool(namespace=('memories',name,'{user_id}'))
+                # google_search_tool
                 ],
             prompt=self.prompt_runnable,
             store=postgres_store,
