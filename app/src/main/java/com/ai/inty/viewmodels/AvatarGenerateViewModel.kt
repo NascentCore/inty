@@ -16,61 +16,61 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class AvatarGenerateViewModel : ViewModel() {
-    
+
     private val agentApi: IAgentApi = TheRouter.get(IAgentApi::class.java)!!
-    
+
     // UI States
     private val _prompt = MutableStateFlow("")
     val prompt: StateFlow<String> = _prompt.asStateFlow()
-    
+
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
-    
+
     private val _generatedImageUrl = MutableStateFlow<String?>(null)
     val generatedImageUrl: StateFlow<String?> = _generatedImageUrl.asStateFlow()
-    
+
     private val _generatedImageUrls = MutableStateFlow<List<String>>(emptyList())
     val generatedImageUrls: StateFlow<List<String>> = _generatedImageUrls.asStateFlow()
-    
+
     private val _selectedImageIndex = MutableStateFlow(0)
     val selectedImageIndex: StateFlow<Int> = _selectedImageIndex.asStateFlow()
-    
+
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
-    
+
     fun updatePrompt(newPrompt: String) {
         _prompt.value = newPrompt
     }
-    
+
     fun selectImage(index: Int) {
         _selectedImageIndex.value = index
         AvatarManager.setSelectedImageIndex(index)
     }
-    
+
     fun generateAvatar(onNavigateBack: () -> Unit) {
         val currentPrompt = _prompt.value
         if (currentPrompt.isBlank()) {
             _errorMessage.value = "Please enter a prompt"
             return
         }
-        
+
         // Store the prompt and start generation in background
         AvatarManager.setGenerationPrompt(currentPrompt)
         EasyLog.log("Starting background generation with prompt: $currentPrompt")
-        
+
         _isLoading.value = true
         _errorMessage.value = null
-        
+
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val request = GenerateBackgroundRequest(prompt = currentPrompt)
-                
+
                 // Start generation in background - this will continue even after navigation
                 val response = generateBackground(request = request)
                 withContext(Dispatchers.Main) {
                     EasyLog.log("Background generation completed successfully")
                     EasyLog.log("Generated image URLs: ${response.imageUrls}")
-                    
+
                     if (response.imageUrls.isNotEmpty()) {
                         // Store the generated URLs for CreateRoleActivity
                         _generatedImageUrls.value = response.imageUrls
@@ -86,16 +86,16 @@ class AvatarGenerateViewModel : ViewModel() {
                         EasyLog.log("Empty image URLs received from server", EasyLog.ERROR)
                         AvatarManager.setGenerationError("Generated image URLs are empty")
                     }
-                    
+
                     _isLoading.value = false
                 }
-                
-                // Immediately navigate back to CreateRoleActivity
+
+                // 生成成功后，返回到Ai形象创建页面 Immediately navigate back to CreateRoleActivity
                 withContext(Dispatchers.Main) {
                     EasyLog.log("Generation request submitted, navigating back to CreateRoleActivity")
                     onNavigateBack()
                 }
-                
+
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
                     EasyLog.log("Exception during generation request submission")
@@ -105,33 +105,31 @@ class AvatarGenerateViewModel : ViewModel() {
                     EasyLog.log("Generate avatar error: ${e.message}", EasyLog.ERROR)
                     EasyLog.log(e)
                     _isLoading.value = false
-                    
-                    // Still navigate back even on error
-                    onNavigateBack()
+                    //生成ai的头像异常，则停留在当前页面
                 }
             }
         }
     }
-    
+
     fun regenerateAvatar() {
         val currentPrompt = _prompt.value
         if (currentPrompt.isBlank()) {
             _errorMessage.value = "Please enter a prompt"
             return
         }
-        
+
         // Clear current images and regenerate
         _generatedImageUrls.value = emptyList()
         _generatedImageUrl.value = null
         _selectedImageIndex.value = 0
-        
+
         _isLoading.value = true
         _errorMessage.value = null
-        
+
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val request = GenerateBackgroundRequest(prompt = currentPrompt)
-                
+
                 val response = generateBackground(request = request)
                 withContext(Dispatchers.Main) {
                     EasyLog.log("Regenerated image URLs: ${response.imageUrls}")
@@ -146,7 +144,10 @@ class AvatarGenerateViewModel : ViewModel() {
                         AvatarManager.setGeneratedAvatarUrl(response.imageUrl)
                         EasyLog.log("Setting regenerated imageUrl to: ${response.imageUrl}")
                     } else {
-                        EasyLog.log("Empty image URLs received from server during regeneration", EasyLog.ERROR)
+                        EasyLog.log(
+                            "Empty image URLs received from server during regeneration",
+                            EasyLog.ERROR
+                        )
                         _errorMessage.value = "Regenerated image URLs are empty"
                     }
                     _isLoading.value = false
@@ -162,33 +163,35 @@ class AvatarGenerateViewModel : ViewModel() {
             }
         }
     }
-    
+
     fun getSelectedAvatarUrl(): String? {
         return when {
             _generatedImageUrls.value.isNotEmpty() && _selectedImageIndex.value < _generatedImageUrls.value.size -> {
                 _generatedImageUrls.value[_selectedImageIndex.value]
             }
+
             _generatedImageUrl.value != null -> _generatedImageUrl.value
             else -> null
         }
     }
-    
+
     fun clearError() {
         _errorMessage.value = null
     }
-    
+
     private suspend fun generateBackground(
-        request: GenerateBackgroundRequest
+        request: GenerateBackgroundRequest,
     ): GenerateBackgroundResponse {
         try {
             val result = agentApi.generateBackground(request)
             EasyLog.log("generateBackground = $result")
-            
+
             when (result) {
                 is com.architecture.httplib.core.HttpResult.Success -> {
                     EasyLog.log("generateBackground success: ${result.data}")
                     return result.data
                 }
+
                 is com.architecture.httplib.core.HttpResult.Failure -> {
                     EasyLog.log("generateBackground error: $result", priority = EasyLog.ERROR)
                     val errorMessage =
