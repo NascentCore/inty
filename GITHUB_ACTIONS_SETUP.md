@@ -74,15 +74,22 @@ Google Play Console 服务账号的 JSON 密钥文件内容
 **🚨 如果完全找不到这些选项**：
 可能你的 Google Play 开发者账号还没有完全激活，或者需要先创建一个应用。
 
-### 第四步：首次上传应用（重要！）
-⚠️ **必须手动上传第一个版本到 Google Play Console，之后才能使用 API 自动上传**
+### 第四步：应用发布状态说明
 
-1. 手动构建一个 AAB 文件：
-   ```bash
-   ./gradlew bundleRelease
-   ```
-2. 在 Google Play Console 中手动创建应用并上传这个 AAB 到内测轨道
-3. 完成应用的基本信息填写
+**重要理解**：
+- 🔄 **自动上传**：GitHub Actions 自动构建并上传 AAB 文件
+- 📝 **草稿状态**：上传后创建为草稿状态（status: draft）
+- 👤 **手动发布**：需要在 Google Play Console 中手动点击发布
+
+**工作流程**：
+1. **自动构建**：GitHub Actions 构建 AAB 文件
+2. **自动上传**：上传到 Google Play Console 内测轨道（草稿状态）
+3. **手动发布**：登录 Google Play Console，审查并发布到测试用户
+
+**为什么是草稿状态？**
+- 新应用或首次发布必须先创建为草稿
+- 允许你在 Google Play Console 中审查发布内容
+- 确保发布说明、截图等信息完整
 
 ## 使用方法
 
