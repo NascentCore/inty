@@ -46,7 +46,7 @@ android {
         applicationId = "com.ai.rondify"
         minSdk = 29
         targetSdk = 36
-        versionCode = 8
+        versionCode = 1
         versionName = "1.0.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"

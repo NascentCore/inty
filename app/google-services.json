@@ -7,28 +7,9 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:53991309802:android:33ef7a38414c2967913293",
+        "mobilesdk_app_id": "1:53991309802:android:aeb9d7d9faf5c025913293",
         "android_client_info": {
-          "package_name": "com.ai.heartmate"
-        }
-      },
-      "oauth_client": [],
-      "api_key": [
-        {
-          "current_key": "AIzaSyAPIKlQbLfPPQ3gW4H7n5rFa10kgUZ4BEU"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": []
-        }
-      }
-    },
-    {
-      "client_info": {
-        "mobilesdk_app_id": "1:53991309802:android:44f13e44c1a1582b913293",
-        "android_client_info": {
-          "package_name": "com.ai.inty"
+          "package_name": "com.ai.rondify"
         }
       },
       "oauth_client": [],
