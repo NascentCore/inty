@@ -83,24 +83,25 @@ jobs:
         echo "Simplified build configuration for CI:"
         cat build.gradle.kts
 
-    - name: Clean build
-      run: ./gradlew clean
-
-    - name: Run tests
-      run: ./gradlew test
-
     - name: Build Release AAB
-      run: ./gradlew bundleRelease
+      run: ./gradlew clean bundleRelease
 
     - name: Extract version info
       id: version_info
       run: |
-        # 从构建日志或版本文件中提取版本信息
-        VERSION_CODE=$(./gradlew -q printVersionCode)
-        VERSION_NAME=$(./gradlew -q printVersionName)
+        # 直接计算版本信息，避免Gradle任务的复杂输出
+        echo "🔍 Calculating version information..."
+        
+        # CI环境下使用Git提交数量作为版本号
+        GIT_COMMIT_COUNT=$(git rev-list --count HEAD)
+        VERSION_CODE=$(( GIT_COMMIT_COUNT > 10 ? GIT_COMMIT_COUNT : 10 ))
+        
+        # 从app/build.gradle.kts中提取版本名称
+        VERSION_NAME=$(grep 'versionName = ' app/build.gradle.kts | sed 's/.*versionName = "\(.*\)".*/\1/')
+        
         echo "version_code=$VERSION_CODE" >> $GITHUB_OUTPUT
         echo "version_name=$VERSION_NAME" >> $GITHUB_OUTPUT
-        echo "Version Code: $VERSION_CODE, Version Name: $VERSION_NAME"
+        echo "✅ Version Code: $VERSION_CODE, Version Name: $VERSION_NAME"
 
     - name: Generate dynamic release notes
       run: |

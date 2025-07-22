@@ -248,15 +248,4 @@ dependencies {
     api(libs.ucrop)
 }
 
-// 添加任务来输出版本信息，供GitHub Actions使用
-tasks.register("printVersionCode") {
-    doLast {
-        println(android.defaultConfig.versionCode)
-    }
-}
-
-tasks.register("printVersionName") {
-    doLast {
-        println(android.defaultConfig.versionName)
-    }
-}
+// GitHub Actions直接从构建文件和Git历史中提取版本信息，不再需要专门的Gradle任务
