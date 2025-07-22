@@ -26,11 +26,13 @@ class DatabaseSettings:
     user: str
     password: str
     db: str
-    pool_size: int = 20
-    max_overflow: int = 30
-    pool_timeout: int = 30
-    pool_recycle: int = 1800
+    pool_size: int = 50
+    max_overflow: int = 20
+    pool_timeout: int = 10
+    pool_recycle: int = 3600
     pool_pre_ping: bool = True
+    connect_timeout: int = 5
+    command_timeout: int = 30
 
     @property
     def url(self) -> str:

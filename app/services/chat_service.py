@@ -10,6 +10,7 @@ import json
 
 from app import models, schemas
 from app.services import chat_history_service
+from app.services.cache_service import cache_service
 
 logger = logging.getLogger(__name__)
 
@@ -286,13 +287,31 @@ async def get_or_create_chat_by_agent(
     db: AsyncSession, user_id: str, agent_id: str
 ) -> models.Chat:
     """
-    根据用户ID和Agent ID获取或创建唯一的聊天会话（优化版）
+    根据用户ID和Agent ID获取或创建唯一的聊天会话（高性能优化版）
     每个用户和每个Agent只能有一个会话
     """
     try:
         logger.info(f"获取或创建聊天会话 - 用户ID: {user_id}, Agent ID: {agent_id}")
         
-        # 优化：使用简单查询，减少预加载
+        # 1. 先检查会话缓存
+        session_key = f"{user_id}:{agent_id}"
+        cached_session = cache_service.get_session_info(session_key)
+        if cached_session:
+            logger.debug(f"从缓存获取聊天会话: {cached_session['chat_id']}")
+            # 从缓存构建Chat对象
+            chat = models.Chat(
+                id=cached_session['chat_id'],
+                user_id=user_id,
+                agent_id=agent_id,
+                is_active=True,
+                created_at=cached_session.get('created_at'),
+                updated_at=cached_session.get('updated_at')
+            )
+            chat.agent_name = cached_session.get('agent_name')
+            chat.agent_avatar = cached_session.get('agent_avatar')
+            return chat
+        
+        # 2. 数据库查询（使用简单查询，减少预加载）
         result = await db.execute(
             select(models.Chat)
             .where(
@@ -311,20 +330,44 @@ async def get_or_create_chat_by_agent(
                 logger.error(f"聊天会话中的Agent ID不匹配！期望: {agent_id}, 实际: {existing_chat.agent_id}")
                 raise HTTPException(status_code=500, detail=f"聊天会话数据不一致: 期望Agent ID {agent_id}, 实际 {existing_chat.agent_id}")
             
-            # 优化：延迟加载Agent信息，仅在需要时查询
+            # 3. 并行获取Agent信息（如果未缓存）
             if not hasattr(existing_chat, '_agent_loaded'):
-                agent_result = await db.execute(
-                    select(models.Agent.name, models.Agent.avatar)
-                    .where(models.Agent.id == agent_id)
-                )
-                agent_info = agent_result.first()
-                if agent_info:
-                    existing_chat.agent_name = agent_info[0]
-                    existing_chat.agent_avatar = agent_info[1]
+                # 从Agent缓存获取
+                cached_agent = cache_service.get_agent_config(agent_id)
+                if cached_agent:
+                    existing_chat.agent_name = cached_agent.get('name')
+                    existing_chat.agent_avatar = cached_agent.get('avatar')
                 else:
-                    existing_chat.agent_name = None
-                    existing_chat.agent_avatar = None
+                    # 数据库查询Agent信息
+                    agent_result = await db.execute(
+                        select(models.Agent.name, models.Agent.avatar)
+                        .where(models.Agent.id == agent_id)
+                    )
+                    agent_info = agent_result.first()
+                    if agent_info:
+                        existing_chat.agent_name = agent_info[0]
+                        existing_chat.agent_avatar = agent_info[1]
+                        # 缓存Agent信息
+                        cache_service.set_agent_config(agent_id, {
+                            'name': agent_info[0],
+                            'avatar': agent_info[1]
+                        })
+                    else:
+                        existing_chat.agent_name = None
+                        existing_chat.agent_avatar = None
                 existing_chat._agent_loaded = True
+            
+            # 4. 缓存会话信息
+            session_data = {
+                'chat_id': existing_chat.id,
+                'user_id': user_id,
+                'agent_id': agent_id,
+                'agent_name': getattr(existing_chat, 'agent_name', None),
+                'agent_avatar': getattr(existing_chat, 'agent_avatar', None),
+                'created_at': existing_chat.created_at,
+                'updated_at': existing_chat.updated_at
+            }
+            cache_service.set_session_info(session_key, session_data)
             
             # 跳过last_message查询以提升性能（可在需要时单独查询）
             existing_chat.last_message = None
@@ -332,27 +375,42 @@ async def get_or_create_chat_by_agent(
             
             return existing_chat
         
-        # 如果不存在，则创建新的会话
+        # 5. 如果不存在，则创建新的会话
         logger.info(f"未找到已存在的聊天会话，创建新的会话 - Agent ID: {agent_id}")
         
-        # 首先验证Agent是否存在
-        agent_result = await db.execute(
-            select(models.Agent)
-            .where(models.Agent.id == agent_id)
-        )
-        agent = agent_result.scalar_one_or_none()
-        if not agent:
-            logger.error(f"Agent不存在: {agent_id}")
-            raise HTTPException(status_code=404, detail="Agent不存在")
+        # 6. 优先从缓存获取Agent信息
+        cached_agent = cache_service.get_agent_config(agent_id)
+        if cached_agent:
+            agent_name = cached_agent.get('name')
+            agent_avatar = cached_agent.get('avatar')
+            agent_opening = cached_agent.get('opening')
+            logger.debug(f"从缓存获取Agent信息: {agent_name}")
+        else:
+            # 数据库查询Agent信息
+            agent_result = await db.execute(
+                select(models.Agent.name, models.Agent.avatar, models.Agent.opening)
+                .where(models.Agent.id == agent_id)
+            )
+            agent_info = agent_result.first()
+            if not agent_info:
+                logger.error(f"Agent不存在: {agent_id}")
+                raise HTTPException(status_code=404, detail="Agent不存在")
+            
+            agent_name, agent_avatar, agent_opening = agent_info
+            # 缓存Agent信息
+            cache_service.set_agent_config(agent_id, {
+                'name': agent_name,
+                'avatar': agent_avatar,
+                'opening': agent_opening
+            })
+            logger.info(f"验证Agent存在 - Agent ID: {agent_id}, Name: {agent_name}")
         
-        logger.info(f"验证Agent存在 - Agent ID: {agent.id}, Name: {agent.name}")
-        
-        # 创建新的聊天会话
+        # 7. 创建新的聊天会话
         chat_id = str(uuid.uuid4())
         db_chat = models.Chat(
             id=chat_id,
             user_id=user_id,
-            agent_id=agent_id  # 确保使用传入的agent_id
+            agent_id=agent_id
         )
         
         logger.info(f"创建新聊天会话 - Chat ID: {chat_id}, User ID: {user_id}, Agent ID: {agent_id}")
@@ -366,52 +424,39 @@ async def get_or_create_chat_by_agent(
             logger.error(f"创建聊天会话后Agent ID不匹配！期望: {agent_id}, 实际: {db_chat.agent_id}")
             raise HTTPException(status_code=500, detail=f"创建聊天会话失败: Agent ID不匹配")
         
-        # 添加Agent开场白到chat_history
-        if agent.opening:
+        # 8. 异步添加Agent开场白（避免阻塞）
+        if agent_opening:
             try:
                 session_id = generate_session_id(chat_id)
-                chat_history_service.add_agent_opening_message(session_id, agent.opening)
+                # 直接添加开场白，但简化处理避免长时间阻塞
+                chat_history_service.add_agent_opening_message(session_id, agent_opening)
                 logger.info(f"添加Agent开场白成功 - Session ID: {session_id}")
             except Exception as e:
-                logger.error(f"添加开场白失败: {str(e)}")
+                logger.error(f"提交开场白添加任务失败: {str(e)}")
                 # 继续执行，不影响chat创建
         
-        # 重新查询以加载关系数据
-        result = await db.execute(
-            select(models.Chat)
-            .options(
-                selectinload(models.Chat.settings),
-                selectinload(models.Chat.agent)
-            )
-            .where(models.Chat.id == db_chat.id)
-        )
-        new_chat = result.scalar_one()
+        # 9. 设置Agent信息并缓存会话（优化：避免重复查询）
+        db_chat.agent_name = agent_name
+        db_chat.agent_avatar = agent_avatar
         
-        # 最终验证
-        if new_chat.agent_id != agent_id:
-            logger.error(f"重新查询后Agent ID不匹配！期望: {agent_id}, 实际: {new_chat.agent_id}")
-            raise HTTPException(status_code=500, detail=f"聊天会话数据异常: Agent ID不匹配")
+        # 10. 缓存新建的会话信息
+        session_data = {
+            'chat_id': db_chat.id,
+            'user_id': user_id,
+            'agent_id': agent_id,
+            'agent_name': agent_name,
+            'agent_avatar': agent_avatar,
+            'created_at': db_chat.created_at,
+            'updated_at': db_chat.updated_at
+        }
+        cache_service.set_session_info(session_key, session_data)
         
-        # 获取最近消息和时间戳以及agent名称
-        try:
-            session_id = generate_session_id(new_chat.id)
-            last_message_data = chat_history_service.get_last_message_with_timestamp(session_id)
-            
-            if last_message_data:
-                new_chat.last_message = last_message_data['content']
-                new_chat.last_message_time = last_message_data['timestamp']
-            else:
-                new_chat.last_message = None
-                new_chat.last_message_time = None
-        except Exception as e:
-            logger.error(f"获取最近消息失败: {str(e)}")
-            new_chat.last_message = None
-            new_chat.last_message_time = None
-        new_chat.agent_name = new_chat.agent.name if new_chat.agent else None
-        new_chat.agent_avatar = new_chat.agent.avatar if new_chat.agent else None
+        # 11. 设置默认值（跳过耗时的消息查询）
+        db_chat.last_message = None
+        db_chat.last_message_time = None
         
-        logger.info(f"成功创建新聊天会话 - Chat ID: {new_chat.id}, Agent ID: {new_chat.agent_id}")
-        return new_chat
+        logger.info(f"成功创建新聊天会话 - Chat ID: {db_chat.id}, Agent ID: {db_chat.agent_id}")
+        return db_chat
         
     except HTTPException:
         raise

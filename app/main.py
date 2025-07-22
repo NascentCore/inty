@@ -70,12 +70,19 @@ async def startup_event():
     """应用启动事件"""
     try:
         logger.info("正在初始化应用...")
+        
+        # 0. 预初始化数据库连接池和chat_history表
+        await _preload_database_connections()
+        
         # 获取数据库会话
         async for db_session in get_async_db():
             # 1. 预初始化数据库表结构（提升性能）
             await _preload_database_tables(db_session)
             
-            # 2. 初始化常用Agent
+            # 2. 预加载热门Agent数据到缓存
+            await _preload_popular_agent_data(db_session)
+            
+            # 3. 初始化常用Agent实例
             await agent_manager.initialize_popular_agents(db_session)
             break  # 只需要一次初始化
         logger.info("Agent初始化完成")
@@ -89,6 +96,78 @@ async def startup_event():
             logger.info("Keep Talking服务已禁用，跳过启动")
     except Exception as e:
         logger.error(f"应用启动过程中出错: {str(e)}")
+
+async def _preload_database_connections():
+    """预初始化数据库连接池和chat_history表"""
+    try:
+        logger.info("开始预初始化数据库连接池...")
+        
+        # 1. 预初始化Agent系统的连接池
+        from app.core.agent.agent import get_connection_pool, get_sync_engine
+        
+        # 预初始化连接池（这会创建min_size数量的连接）
+        pool = get_connection_pool()
+        logger.info(f"连接池预初始化完成: {pool.name}")
+        
+        # 预初始化同步引擎
+        sync_engine = get_sync_engine()
+        logger.info("同步数据库引擎预初始化完成")
+        
+        # 2. 预初始化chat_history表结构
+        from app.services.chat_history_service import init_chat_history_table
+        init_chat_history_table()
+        logger.info("chat_history表预初始化完成")
+        
+        # 3. 预热连接池 - 执行一些轻量级查询来预热连接
+        with pool.connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT 1")
+                cur.fetchone()
+        logger.info("连接池预热完成")
+        
+        # 4. 启动缓存清理任务
+        from app.services.cache_service import cache_service
+        await cache_service.start_cleanup_task()
+        logger.info("缓存服务启动完成")
+        
+        # 5. 启动后台任务服务
+        from app.services.background_task_service import background_task_service
+        background_task_service.start()
+        logger.info("后台任务服务启动完成")
+        
+        logger.info("数据库连接池初始化完成")
+        
+    except Exception as e:
+        logger.error(f"数据库连接池初始化失败: {str(e)}")
+        # 不抛出异常，让应用继续启动
+
+async def _preload_popular_agent_data(db: AsyncSession):
+    """预加载热门Agent数据到缓存"""
+    try:
+        logger.info("开始预加载热门Agent数据到缓存...")
+        
+        from app.services import agent_service
+        
+        # 获取推荐的Agent作为热门Agent进行预加载
+        popular_agents = await agent_service.get_recommended_agents(db, skip=0, limit=20)
+        
+        # 为每个热门Agent预加载聊天数据到缓存
+        preloaded_count = 0
+        for agent_db in popular_agents:
+            try:
+                # 使用轻量级方法预加载数据（这会自动缓存）
+                agent_data = await agent_service.get_agent_for_chat(db, agent_db.id)
+                if agent_data:
+                    preloaded_count += 1
+                    logger.debug(f"预加载Agent数据: {agent_data['name']}")
+            except Exception as e:
+                logger.warning(f"预加载Agent数据失败 {agent_db.id}: {str(e)}")
+        
+        logger.info(f"热门Agent数据预加载完成: {preloaded_count}/{len(popular_agents)}")
+        
+    except Exception as e:
+        logger.error(f"预加载热门Agent数据失败: {str(e)}")
+        # 不抛出异常，让应用继续启动
 
 async def _preload_database_tables(db: AsyncSession):
     """预加载数据库表结构以提升查询性能"""
@@ -127,6 +206,16 @@ async def shutdown_event():
         logger.info("正在停止Agent管理器...")
         agent_manager.stop()
         logger.info("Agent管理器已停止")
+        
+        # 停止缓存服务
+        from app.services.cache_service import cache_service
+        cache_service.stop_cleanup_task()
+        logger.info("缓存服务已停止")
+        
+        # 停止后台任务服务
+        from app.services.background_task_service import background_task_service
+        background_task_service.stop()
+        logger.info("后台任务服务已停止")
     except Exception as e:
         logger.error(f"应用关闭过程中出错: {str(e)}")
 

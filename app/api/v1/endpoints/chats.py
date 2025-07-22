@@ -503,33 +503,16 @@ async def agent_chat_completions(
         agent_get_start = time.time()
         logger.debug(f"准备获取Agent实例: {chat.agent_id}")
         
-        # 获取完整的Agent数据（包含name等必需字段）
-        agent_db = await agent_service.get_agent(db, agent_id=chat.agent_id)
-        if not agent_db:
-            logger.error(f"Agent数据库记录未找到: {chat.agent_id}")
-            raise HTTPException(status_code=404, detail="Agent not found in database")
-        
-        # 构建完整的agent_data用于AgentManager
-        agent_data = {
-            'id': agent_db.id,
-            'name': agent_db.name or f'Agent_{agent_db.id[:8]}',  # 防护性检查
-            'prompt': agent_db.prompt,
-            'settings': agent_db.settings,
-            # 角色卡相关字段
-            'personality': getattr(agent_db, 'personality', ''),
-            'scenario': getattr(agent_db, 'scenario', ''),
-            'first_message': getattr(agent_db, 'first_message', ''),
-            'message_example': getattr(agent_db, 'message_example', ''),
-            'creator_notes': getattr(agent_db, 'creator_notes', ''),
-            'tags': getattr(agent_db, 'tags', []),
-            'character_version': getattr(agent_db, 'character_version', '1.0'),
-            'extensions': getattr(agent_db, 'extensions', {})
-        }
+        # 使用高性能的聊天专用Agent获取方法
+        agent_data = await agent_service.get_agent_for_chat(db, agent_id=chat.agent_id)
+        if not agent_data:
+            logger.error(f"Agent数据未找到: {chat.agent_id}")
+            raise HTTPException(status_code=404, detail="Agent not found")
         
         # 从AgentManager缓存获取Agent实例
         agent = await agent_manager.get_agent(agent_data)
         agent_get_time = time.time() - agent_get_start
-        logger.info(f"Agent实例获取成功: {agent_db.name}, 耗时: {agent_get_time:.3f}秒")
+        logger.info(f"Agent实例获取成功: {agent_data['name']}, 耗时: {agent_get_time:.3f}秒")
         
         # 使用统一的session_id生成规则
         session_id_start = time.time()
@@ -683,9 +666,9 @@ async def agent_chat_fast_response(
     try:
         logger.info(f"开始处理极速聊天请求 - Agent ID: {agent_id}, User ID: {current_user.id}")
         
-        # 验证Agent是否存在
-        agent_db = await agent_service.get_agent(db, agent_id=agent_id)
-        if not agent_db:
+        # 使用高性能的聊天专用Agent获取方法
+        agent_data = await agent_service.get_agent_for_chat(db, agent_id=agent_id)
+        if not agent_data:
             raise HTTPException(status_code=404, detail="Agent not found")
         
         # 获取或创建与该Agent的唯一会话
@@ -719,22 +702,7 @@ async def agent_chat_fast_response(
             "messages": [HumanMessage(content=last_user_message)]
         }
         
-        # 创建Agent实例
-        agent_data = {
-            'id': chat.agent_id,
-            'name': agent_db.name or f'Agent_{chat.agent_id[:8]}',  # 防护性检查
-            'prompt': agent_db.prompt,
-            'settings': agent_db.settings,
-            # 添加角色卡字段支持
-            'personality': getattr(agent_db, 'personality', ''),
-            'scenario': getattr(agent_db, 'scenario', ''),
-            'first_message': getattr(agent_db, 'first_message', ''),
-            'message_example': getattr(agent_db, 'message_example', ''),
-            'creator_notes': getattr(agent_db, 'creator_notes', ''),
-            'tags': getattr(agent_db, 'tags', []),
-            'character_version': getattr(agent_db, 'character_version', '1.0'),
-            'extensions': getattr(agent_db, 'extensions', {})
-        }
+        # 创建Agent实例（agent_data已从缓存获取）
         agent = await agent_manager.get_agent(agent_data)
         
         # 使用session_id
@@ -764,7 +732,7 @@ async def agent_chat_fast_response(
             # 立即检查AI回复内容的缓存，使用独立的数据库会话
             cached_audio_url = await async_voice_service.check_cache_first(
                 text=response_content,
-                voice_id=agent_db.voice_id,
+                voice_id=agent_data.get('voice_id'),
                 language=request.language,
                 db=None  # 使用独立的数据库会话
             )
@@ -779,7 +747,7 @@ async def agent_chat_fast_response(
                 task_id = await async_voice_service.generate_voice_async(
                     message_id=f"msg_{uuid.uuid4().hex[:8]}",
                     text=response_content,
-                    voice_id=agent_db.voice_id,
+                    voice_id=agent_data.get('voice_id'),
                     language=request.language,
                     db=None  # 使用独立的数据库会话
                 )
@@ -877,9 +845,9 @@ async def generate_message_voice(
     用于用户点击播放按钮时的按需语音生成
     """
     try:
-        # 验证Agent是否存在
-        agent_db = await agent_service.get_agent(db, agent_id=agent_id)
-        if not agent_db:
+        # 使用高性能的聊天专用Agent获取方法
+        agent_data = await agent_service.get_agent_for_chat(db, agent_id=agent_id)
+        if not agent_data:
             raise HTTPException(status_code=404, detail="Agent not found")
         
         # 获取用户与该Agent的会话
@@ -902,7 +870,7 @@ async def generate_message_voice(
             raise HTTPException(status_code=404, detail="Message not found")
         
         # 使用Agent的voice_id生成语音
-        agent_voice_id = agent_db.voice_id
+        agent_voice_id = agent_data.get('voice_id')
         audio_url = await voice_service.generate_voice(
             text=message_content,
             voice_id=agent_voice_id,

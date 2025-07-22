@@ -23,6 +23,8 @@ from langchain_core.tools import Tool
 from langchain_google_community import GoogleSearchAPIWrapper
 import logging
 from app.core.agent.prompt_template import prompt_template_manager
+from app.services.cache_service import cache_service
+from app.services.background_task_service import background_task_service
 
 
 logger = logging.getLogger(__name__)
@@ -101,13 +103,18 @@ def get_sync_engine():
         from sqlalchemy import create_engine
         _sync_engine = create_engine(
             settings.database.url,
-            pool_size=10,
-            max_overflow=20,
-            pool_pre_ping=True,
-            pool_recycle=3600,
+            pool_size=settings.database.pool_size // 2,  # 同步引擎使用一半的连接池
+            max_overflow=settings.database.max_overflow,
+            pool_timeout=settings.database.pool_timeout,
+            pool_recycle=settings.database.pool_recycle,
+            pool_pre_ping=settings.database.pool_pre_ping,
+            connect_args={
+                "connect_timeout": settings.database.connect_timeout,
+                "options": "-c jit=off -c application_name=inty_sync",
+            },
             echo=False  # 禁用SQL日志
         )
-        logger.info("全局同步数据库引擎已初始化")
+        logger.info(f"全局同步数据库引擎已初始化 - pool_size: {settings.database.pool_size // 2}")
     return _sync_engine
 
 def get_connection_pool():
@@ -449,11 +456,20 @@ class Agent:
 
     def _get_user_profile_sync(self, user_id: str) -> str:
         """
-        同步获取用户profile信息（优化版本 - 使用全局引擎）
+        同步获取用户profile信息（优化版本 - 使用全局缓存）
         """
-        # 检查缓存
+        # 先检查全局缓存
+        cached_user_info = cache_service.get_user_info(user_id)
+        if cached_user_info is not None:
+            logger.debug(f"从全局缓存获取用户信息: {user_id}")
+            return cached_user_info
+        
+        # 然后检查本地缓存（保留兼容性）
         if user_id in self._user_info_cache:
-            return self._user_info_cache[user_id]
+            user_info = self._user_info_cache[user_id]
+            # 同时更新到全局缓存
+            cache_service.set_user_info(user_id, user_info)
+            return user_info
         
         try:
             # 使用全局同步数据库引擎（避免重复创建）
@@ -472,8 +488,11 @@ class Agent:
                 
                 if not row:
                     logger.debug(f"用户 {user_id} 不存在")
-                    self._user_info_cache[user_id] = ""
-                    return ""
+                    user_info_text = ""
+                    # 缓存空结果，避免重复查询
+                    self._user_info_cache[user_id] = user_info_text
+                    cache_service.set_user_info(user_id, user_info_text, ttl=60)  # 空结果缓存时间短
+                    return user_info_text
                 
                 # 构建用户信息字符串
                 user_info_parts = []
@@ -492,18 +511,25 @@ class Agent:
                     user_info_parts.append(f"Language: {system_language}")
                 
                 if user_info_parts:
-                    user_info_text = "##User Information\n" + "\n".join(user_info_parts) 
-                    self._user_info_cache[user_id] = user_info_text
-                    logger.info(f"成功获取用户 {user_id} 的基本信息: {user_info_text[:100]}...")
-                    return user_info_text
+                    user_info_text = "##User Information\n" + "\n".join(user_info_parts)
                 else:
-                    self._user_info_cache[user_id] = ""
-                    return ""
+                    user_info_text = ""
+                
+                # 同时更新本地和全局缓存
+                self._user_info_cache[user_id] = user_info_text
+                cache_service.set_user_info(user_id, user_info_text)
+                
+                if user_info_text:
+                    logger.debug(f"成功获取用户 {user_id} 的基本信息: {user_info_text[:100]}...")
+                
+                return user_info_text
             
         except Exception as e:
             logger.error(f"获取用户 {user_id} 基本信息失败: {str(e)}")
-            self._user_info_cache[user_id] = ""
-            return ""
+            user_info_text = ""
+            self._user_info_cache[user_id] = user_info_text
+            cache_service.set_user_info(user_id, user_info_text, ttl=30)  # 失败结果缓存时间很短
+            return user_info_text
     
 
     def _get_relevant_history(self, history_messages: List[BaseMessage], max_messages: int = 10) -> List[BaseMessage]:
@@ -613,11 +639,10 @@ class Agent:
                 save_response_time = time.time() - save_response_start
                 logger.info(f"AI响应保存耗时: {save_response_time:.3f}秒 - Agent: {self.agent_id}")
                 
-                # 调试日志记录
-                logger.info(f"优化版检查debug_logging配置: {settings.agent.enable_debug_logging}")
+                # 调试日志记录（异步后台处理）
+                logger.debug(f"优化版检查debug_logging配置: {settings.agent.enable_debug_logging}")
                 if settings.agent.enable_debug_logging:
-                    debug_start = time.time()
-                    # 传递完整的输入和输出数据
+                    # 准备调试数据
                     debug_data = {
                         "input_data": {
                             "messages": state_data.get('messages', []),
@@ -627,11 +652,14 @@ class Agent:
                         "response": response,
                         "response_text": response_text
                     }
-                    self._save_debug_messages(user_id, session_id, debug_data, conn_local)
-                    debug_time = time.time() - debug_start
-                    logger.info(f"优化版调试信息保存耗时: {debug_time:.3f}秒 - Agent: {self.agent_id}")
+                    
+                    # 提交到后台任务队列（非阻塞）
+                    background_task_service.submit_debug_save_task(
+                        user_id, session_id, self.agent_id, debug_data
+                    )
+                    logger.debug(f"优化版调试信息已提交到后台队列 - Agent: {self.agent_id}")
                 else:
-                    logger.info(f"优化版debug_logging未启用，跳过保存 - Agent: {self.agent_id}")
+                    logger.debug(f"优化版debug_logging未启用，跳过保存 - Agent: {self.agent_id}")
                 
                 total_time = time.time() - chat_start_time
                 logger.info(f"聊天处理总耗时（优化版）: {total_time:.3f}秒 - Agent: {self.agent_id}")
@@ -801,8 +829,8 @@ class Agent:
                         stream_messages.append(message_chunk)
                         yield message_chunk, metadata
                     
-                    # 如果启用调试日志记录，保存完整的流式响应
-                    logger.info(f"流式聊天检查debug_logging配置: {settings.agent.enable_debug_logging}")
+                    # 如果启用调试日志记录，保存完整的流式响应（异步后台处理）
+                    logger.debug(f"流式聊天检查debug_logging配置: {settings.agent.enable_debug_logging}")
                     if settings.agent.enable_debug_logging:
                         # 构建完整的调试数据，包含用户输入
                         debug_data = {
@@ -814,9 +842,14 @@ class Agent:
                             "response": {"messages": stream_messages},
                             "response_text": "".join([getattr(msg, 'content', str(msg)) for msg in stream_messages if hasattr(msg, 'content')])
                         }
-                        self._save_debug_messages(user_id, session_id, debug_data, conn_local)
+                        
+                        # 提交到后台任务队列（非阻塞）
+                        background_task_service.submit_debug_save_task(
+                            user_id, session_id, self.agent_id, debug_data
+                        )
+                        logger.debug(f"流式聊天调试信息已提交到后台队列 - Agent: {self.agent_id}")
                     else:
-                        logger.info(f"流式聊天debug_logging未启用，跳过保存 - Agent: {self.agent_id}")
+                        logger.debug(f"流式聊天debug_logging未启用，跳过保存 - Agent: {self.agent_id}")
                 except Exception as e:
                     logger.error(f"流式聊天处理失败 - Agent: {self.agent_id}, Session: {session_id}, Error: {str(e)}")
                     raise

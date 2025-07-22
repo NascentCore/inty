@@ -13,6 +13,7 @@ from app import models, schemas
 from app.models.agent import AgentVisibility, AgentStatus
 from app.models.associations import agent_followers
 from app.core.config import settings
+from app.services.cache_service import cache_service
 from app.core.agent.agent import agent_manager
 
 logger = logging.getLogger(__name__)
@@ -100,6 +101,89 @@ async def get_agent(db: AsyncSession, agent_id: str, current_user_id: Optional[s
     except Exception as e:
         logger.error(f"Unknown error - get agent {agent_id}: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error")
+
+async def get_agent_for_chat(db: AsyncSession, agent_id: str) -> Optional[dict]:
+    """
+    获取聊天专用的轻量级Agent数据（高性能版本）
+    只查询聊天必需的字段，避免复杂的联表查询
+    
+    Returns:
+        包含聊天所需Agent信息的字典，如果不存在则返回None
+    """
+    try:
+        # 1. 优先从缓存获取完整Agent数据
+        cached_agent_data = cache_service.get_agent_config(agent_id)
+        if cached_agent_data and cached_agent_data.get('_complete_data'):
+            logger.debug(f"从缓存获取完整Agent数据: {agent_id}")
+            return cached_agent_data
+        
+        # 2. 缓存未命中，执行轻量级数据库查询（仅查询聊天必需字段）
+        query = select(
+            models.Agent.id,
+            models.Agent.name,
+            models.Agent.prompt,
+            models.Agent.settings,
+            models.Agent.personality,
+            models.Agent.scenario,
+            models.Agent.first_message,
+            models.Agent.message_example,
+            models.Agent.creator_notes,
+            models.Agent.tags,
+            models.Agent.character_version,
+            models.Agent.extensions,
+            models.Agent.avatar,
+            models.Agent.opening,
+            models.Agent.voice_id,
+            models.Agent.created_at,
+            models.Agent.updated_at
+        ).where(
+            and_(
+                models.Agent.id == agent_id,
+                models.Agent.deleted_at.is_(None)
+            )
+        )
+        
+        result = await db.execute(query)
+        row = result.first()
+        
+        if not row:
+            logger.debug(f"Agent不存在: {agent_id}")
+            return None
+        
+        # 3. 构建agent_data字典
+        agent_data = {
+            'id': row[0],
+            'name': row[1] or f'Agent_{row[0][:8]}',
+            'prompt': row[2],
+            'settings': row[3],
+            'personality': row[4] or '',
+            'scenario': row[5] or '',
+            'first_message': row[6] or '',
+            'message_example': row[7] or '',
+            'creator_notes': row[8] or '',
+            'tags': row[9] or [],
+            'character_version': row[10] or '1.0',
+            'extensions': row[11] or {},
+            'avatar': row[12],
+            'opening': row[13],
+            'voice_id': row[14],
+            'created_at': row[15],
+            'updated_at': row[16],
+            '_complete_data': True  # 标记为完整数据
+        }
+        
+        # 4. 缓存完整的Agent数据（30分钟过期）
+        cache_service.set_agent_config(agent_id, agent_data, ttl=1800)
+        
+        logger.debug(f"获取并缓存Agent聊天数据: {agent_data['name']}")
+        return agent_data
+        
+    except SQLAlchemyError as e:
+        logger.error(f"数据库查询错误 - 获取聊天Agent数据 {agent_id}: {str(e)}")
+        return None
+    except Exception as e:
+        logger.error(f"未知错误 - 获取聊天Agent数据 {agent_id}: {str(e)}")
+        return None
 
 async def get_user_agents(db: AsyncSession, user_id: str, skip: int = 0, limit: int = 100, current_user_id: Optional[str] = None) -> List[models.Agent]:
     """

@@ -31,6 +31,13 @@ async_engine = create_async_engine(
     pool_timeout=settings.database.pool_timeout,   # 获取连接的超时时间
     pool_recycle=settings.database.pool_recycle,   # 连接多长时间后自动回收
     pool_pre_ping=settings.database.pool_pre_ping, # 检查连接可用性
+    connect_args={
+        "command_timeout": settings.database.command_timeout,
+        "server_settings": {
+            "jit": "off",  # 关闭JIT以减少查询延迟
+            "application_name": "inty_backend",
+        },
+    }
 )
 AsyncSessionLocal = sessionmaker(
     bind=async_engine,
