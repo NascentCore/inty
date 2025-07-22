@@ -286,6 +286,33 @@ def get_all_messages(session_id: str) -> List[Dict[str, Any]]:
         logger.error(f"获取所有消息失败 {session_id}: {str(e)}")
         return []
 
+def clear_session(session_id: str) -> None:
+    """
+    清除指定会话的所有聊天历史记录
+    
+    Args:
+        session_id: 会话ID
+    """
+    try:
+        ensure_table_initialized()
+        conn = get_chat_history_connection()
+        
+        # 删除指定会话的所有消息
+        delete_query = """
+            DELETE FROM chat_history 
+            WHERE session_id = %s
+        """
+        
+        with conn.cursor() as cur:
+            cur.execute(delete_query, (session_id,))
+            deleted_count = cur.rowcount
+            
+        logger.info(f"已清除会话 {session_id} 的聊天历史，删除消息数: {deleted_count}")
+        
+    except Exception as e:
+        logger.error(f"清除会话聊天历史失败 {session_id}: {str(e)}")
+        raise
+
 async def get_message_content(session_id: str, message_id: str) -> Optional[str]:
     """
     根据消息ID获取消息内容

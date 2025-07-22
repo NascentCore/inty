@@ -22,6 +22,7 @@ import json
 from langchain_core.tools import Tool
 from langchain_google_community import GoogleSearchAPIWrapper
 import logging
+from app.core.agent.prompt_template import prompt_template_manager
 
 
 logger = logging.getLogger(__name__)
@@ -260,10 +261,26 @@ class Agent:
             state_schema=CustomAgentState
         )
 
-    def _build_base_system_message(self) -> str:
-        """构建基础系统提示词，仅返回最基础的提示词内容"""
-        # 直接使用原始的system_prompt字段作为基础提示词
-        return self.system_prompt or "你是一个聊天助手，请用中文回答用户的问题。"
+    def _build_base_system_message(self, agent_name: str = None, user_name: str = None) -> str:
+        """构建基础系统提示词，支持模板渲染和字符替换"""
+        base_prompt = self.system_prompt or "你是一个聊天助手，请用中文回答用户的问题。"
+        
+        # 如果系统提示词包含模板变量，进行渲染
+        if '{{' in base_prompt and '}}' in base_prompt:
+            try:
+                # 使用模板管理器进行渲染，但使用basic模板避免重复包装
+                rendered_prompt = prompt_template_manager.render_system_prompt(
+                    system_prompt=base_prompt,
+                    agent_name=agent_name or self.name,
+                    user_name=user_name,
+                    template_name='basic'  # 只做字符替换，不添加额外模板内容
+                )
+                return rendered_prompt
+            except Exception as e:
+                logger.error(f"模板渲染失败: {str(e)}，使用原始提示词")
+                return base_prompt
+        
+        return base_prompt
 
     def _create_dynamic_prompt_runnable(self) -> Runnable:
         """
@@ -274,19 +291,27 @@ class Agent:
             # 处理dict和CustomAgentState输入
             if isinstance(state, dict):
                 user_profile = state.get("user_profile", "")
+                user_id = state.get("user_id", "")
             else:
                 # CustomAgentState对象
                 user_profile = getattr(state, 'user_profile', "")
+                user_id = getattr(state, 'user_id', "")
+            
+            # 从用户profile中提取用户名
+            user_name = self._extract_user_name_from_profile(user_profile)
             
             system_messages = []
             
-            # 1. 基础主提示词 - 仅包含最基础的指令
-            base_prompt = self._build_base_system_message()
+            # 1. 基础主提示词 - 支持模板渲染和字符替换
+            base_prompt = self._build_base_system_message(
+                agent_name=self.name,
+                user_name=user_name
+            )
             if base_prompt:
                 system_messages.append(SystemMessage(content=base_prompt))
             
             # 2. 角色卡信息 - 单独的SystemMessage（性格、场景、对话示例、标签）
-            character_context = self._build_character_context()  # 使用完整的角色卡信息
+            character_context = self._build_character_context(user_name=user_name)
             if character_context:
                 system_messages.append(SystemMessage(content=character_context))
             
@@ -315,7 +340,7 @@ class Agent:
             MessagesPlaceholder(variable_name="messages")
         ])
     
-    def _build_character_context(self) -> str:
+    def _build_character_context(self, user_name: str = None) -> str:
         """
         构建角色卡上下文信息（完整版本，用于兼容性）
         """
@@ -341,6 +366,61 @@ class Agent:
             return "\n\n".join(context_parts)
         
         return ""
+    
+    def _apply_character_substitution(self, text: str, agent_name: str = None, user_name: str = None) -> str:
+        """
+        应用字符/用户名替换
+        
+        Args:
+            text: 要处理的文本
+            agent_name: 智能体/角色名
+            user_name: 用户名
+            
+        Returns:
+            应用替换后的文本
+        """
+        if not text:
+            return text
+            
+        try:
+            return prompt_template_manager._perform_character_substitution(
+                text, 
+                agent_name or self.name, 
+                user_name or '[User]'
+            )
+        except Exception as e:
+            logger.error(f"字符替换失败: {str(e)}，返回原文本")
+            return text
+    
+    def _extract_user_name_from_profile(self, user_profile: str) -> str:
+        """
+        从用户profile中提取用户名
+        
+        Args:
+            user_profile: 用户个人资料字符串
+            
+        Returns:
+            用户名，如果未找到则返回默认值
+        """
+        if not user_profile:
+            return None
+            
+        try:
+            # 尝试从用户profile中提取Name字段
+            import re
+            name_match = re.search(r'Name:\s*([^\n]+)', user_profile)
+            if name_match:
+                return name_match.group(1).strip()
+            
+            # 如果没找到，尝试查找中文的"名字"或"姓名"
+            chinese_name_match = re.search(r'[名字|姓名]\s*[:=：]\s*([^\n]+)', user_profile)
+            if chinese_name_match:
+                return chinese_name_match.group(1).strip()
+                
+        except Exception as e:
+            logger.error(f"提取用户名失败: {str(e)}")
+            
+        return None
     
     def _build_additional_character_context(self) -> str:
         """
@@ -595,7 +675,7 @@ class Agent:
             except Exception as e:
                 logger.error(f"构建消息链失败: {str(e)}, 使用fallback")
                 # 使用基础提示词作为fallback
-                final_prompt = getattr(self, 'get_final_prompt', lambda: self.system_prompt)()
+                final_prompt = self._build_base_system_message(agent_name=self.name)
                 messages = [{"type": "system", "content": final_prompt}]
             
             # 添加AI响应消息
@@ -765,7 +845,8 @@ class Agent:
         # 构建示例输入来展示完整提示词
         example_input = {
             "messages": [HumanMessage(content="示例消息")],
-            "user_profile": "[示例用户信息]"
+            "user_profile": "Name: 示例用户\nGender: Other\n[示例用户信息]",
+            "user_id": "example_user_id"
         }
         
         try:
@@ -778,7 +859,7 @@ class Agent:
         except Exception as e:
             logger.error(f"生成提示词示例失败: {str(e)}")
             # 回退到基础提示词
-            return self._build_base_system_message()
+            return self._build_base_system_message(agent_name=self.name, user_name="示例用户")
     
     def get_character_info(self) -> Dict[str, Any]:
         """
@@ -806,7 +887,12 @@ class Agent:
         """
         return {
             'system_prompt': self.system_prompt,
-            'agent_data': self._agent_data.copy()
+            'agent_data': self._agent_data.copy(),
+            'template_system': {
+                'available_templates': prompt_template_manager.list_templates(),
+                'supports_character_substitution': True,
+                'substitution_variables': ['char', 'user', 'agent_name', 'user_name']
+            }
         }
 
     def cleanup(self):
