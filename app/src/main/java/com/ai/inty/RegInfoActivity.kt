@@ -130,7 +130,7 @@ fun RegInfoScreen(
             Spacer(Modifier.height(13.dp))
             Text(
                 modifier = Modifier.padding(horizontal = 24.dp),
-                text = "Welcome to Rondify",
+                text = "Welcome to IntelliMate",
                 fontSize = 26.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.White,

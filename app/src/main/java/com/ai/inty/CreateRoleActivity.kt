@@ -429,7 +429,7 @@ fun CreateRolePage(
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors().copy(containerColor = Color.Transparent),
                 title = {
                     Text(
-                        text = if (isEditMode) "Edit Rondify" else "Create Rondify",
+                        text = if (isEditMode) "Edit IntelliMate" else "Create IntelliMate",
                         fontSize = 18.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = Color.White
@@ -599,7 +599,7 @@ fun CreateRolePage(
                 label = "Name *",
                 value = name,
                 onValueChange = { name = it },
-                placeholder = "Name your Rondify"
+                placeholder = "Name your IntelliMate"
             )
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -1343,7 +1343,7 @@ fun CreateButton(
             )
         } else {
             Text(
-                text = if (isEditMode) "Update My Rondify" else "Create My Rondify",
+                text = if (isEditMode) "Update My IntelliMate" else "Create My IntelliMate",
                 fontSize = 18.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = Color.White

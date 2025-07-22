@@ -122,10 +122,10 @@ object NetServiceMgr {
     }
 
     fun baseUrl(): String {
-        if (AppEnv.testEnv) {
-            return "https://${Constant.USER_HOST_DEV}/"
+        return if (AppEnv.testEnv) {
+            "https://${Constant.USER_HOST_DEV}/"
         } else {
-            return "https://${Constant.USER_HOST}/"
+            "https://${Constant.USER_HOST}/"
         }
     }
 

@@ -83,7 +83,7 @@
 //}
 //
 ///**
-// * Rondify Premium 会员中心静态UI。
+// * IntelliMate Premium 会员中心静态UI。
 // */
 //@OptIn(ExperimentalMaterial3Api::class)
 //@Composable
@@ -145,7 +145,7 @@
 //            Column(modifier = Modifier.padding(start = 16.dp)) {
 //
 //                Image(
-//                    painter = painterResource(R.drawable.img_Rondify_premium),
+//                    painter = painterResource(R.drawable.img_IntelliMate_premium),
 //                    contentDescription = null,
 //                    modifier = Modifier.size(278.dp, 32.dp)
 //                )
