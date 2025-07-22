@@ -228,7 +228,7 @@ internal fun MyPage(
 
                 Spacer(Modifier.height(8.dp))
 
-                // Rodify Premium 会员入口按钮
+                // Rondify Premium 会员入口按钮
                 /*AuthClickable(
                     modifier = Modifier
                         .fillMaxWidth()
