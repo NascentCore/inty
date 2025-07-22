@@ -38,6 +38,46 @@ val gitCommitId = try {
     "2fbffaf"  // 当前commit ID作为fallback
 }
 
+// 自动递增 versionCode 的函数
+fun getVersionCode(): Int {
+    val versionFile = rootProject.file("version.properties")
+    val versionProperties = Properties()
+    
+    // 如果文件不存在，创建初始版本
+    if (!versionFile.exists()) {
+        versionProperties.setProperty("versionCode", "1")
+        versionFile.outputStream().use { 
+            versionProperties.store(it, "Version Code Auto Increment") 
+        }
+        return 1
+    }
+    
+    // 读取当前版本号
+    versionFile.inputStream().use { 
+        versionProperties.load(it) 
+    }
+    
+    val currentVersionCode = versionProperties.getProperty("versionCode", "1").toInt()
+    
+    // 检查是否是 release 构建任务
+    val isReleaseBuild = gradle.startParameter.taskNames.any { 
+        it.contains("bundle") && it.contains("Release") 
+    }
+    
+    if (isReleaseBuild) {
+        // 如果是 release 构建，递增版本号并保存
+        val newVersionCode = currentVersionCode + 1
+        versionProperties.setProperty("versionCode", newVersionCode.toString())
+        versionFile.outputStream().use { 
+            versionProperties.store(it, "Version Code Auto Increment - Updated on Release Build") 
+        }
+        println("🚀 Release build detected! Version code incremented: $currentVersionCode -> $newVersionCode")
+        return newVersionCode
+    }
+    
+    return currentVersionCode
+}
+
 android {
     namespace = "com.ai.inty"
     compileSdk = 36
@@ -46,7 +86,7 @@ android {
         applicationId = "com.ai.intellimate"
         minSdk = 29
         targetSdk = 36
-        versionCode = 1
+        versionCode = getVersionCode()
         versionName = "1.0.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
