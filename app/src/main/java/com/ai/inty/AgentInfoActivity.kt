@@ -662,28 +662,13 @@ fun formatCount(count: Int): String {
 }
 
 private fun AgentInfoActivity.setupStatusBar() {
-    // 方法1: 通过Window直接设置
-    window.statusBarColor = android.graphics.Color.parseColor("#1C1523")
-    window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
-
-    // 方法2: 兼容旧版API
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-        var flags = window.decorView.systemUiVisibility
-        // 移除亮色状态栏标志
-        flags = flags and View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR.inv()
-        window.decorView.systemUiVisibility = flags
+    // 使用现代API设置状态栏颜色
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+        window.statusBarColor = android.graphics.Color.parseColor("#1C1523")
+        window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
     }
 
-    // 方法3: 使用新的WindowInsetsController (API 30+)
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-        val controller = window.insetsController
-        controller?.setSystemBarsAppearance(
-            0, // 清除亮色图标
-            android.view.WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS
-        )
-    }
-
-    // 方法4: 使用WindowCompat (兼容库)
+    // 使用WindowCompat兼容库统一处理状态栏样式
     WindowCompat.setDecorFitsSystemWindows(window, false)
     val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
     windowInsetsController.isAppearanceLightStatusBars = false

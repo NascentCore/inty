@@ -95,7 +95,7 @@ fun RecommendPage(
 
             override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
                 // 当向下滚动且已经滚动到顶部时，开始下拉
-                return if (available.y > 0 && source == NestedScrollSource.Drag) {
+                return if (available.y > 0 && source == NestedScrollSource.UserInput) {
                     pullOffset = (pullOffset + available.y).coerceAtMost(pullThreshold * 1.5f)
                     Offset(0f, available.y)
                 } else {

@@ -714,9 +714,9 @@ fun CreateRolePage(
                         EasyLog.log("${if (isEditMode) "Update" else "Create"} agent request avatar field: ${request.avatar}")
 
                         // Call API through ViewModel
-                        if (isEditMode && editAgent != null) {
+                        if (isEditMode) {
                             mainViewModel.updateAgent(
-                                agentId = editAgent.id,
+                                agentId = editAgent!!.id,
                                 request = request,
                                 onSuccess = { agentInfo ->
                                     isLoading = false

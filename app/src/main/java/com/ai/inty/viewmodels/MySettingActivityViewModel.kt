@@ -56,7 +56,7 @@ class MySettingActivityViewModel: BaseActivityViewModel() {
         viewModelScope.launch(Dispatchers.IO) {
             if (_avatarChanged.value) {
                 val fileUri = Uri.parse(_userProfile.value.avatar)
-                val requestBody = File(fileUri.path).asRequestBody(contentType = "image/jpg".toMediaTypeOrNull())
+                val requestBody = File(fileUri.path ?: return@launch).asRequestBody(contentType = "image/jpg".toMediaTypeOrNull())
                 val result = userApi.uploadAvatar(MultipartBody.Part.createFormData("file", "file.png", requestBody))
                 EasyLog.log("upload avatar = $result")
 

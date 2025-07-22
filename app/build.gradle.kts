@@ -170,6 +170,13 @@ android {
         sourceCompatibility = JavaVersion.VERSION_21
         targetCompatibility = JavaVersion.VERSION_21
     }
+    
+    kotlinOptions {
+        jvmTarget = "21"
+        freeCompilerArgs += listOf(
+            "-Xannotation-default-target=param-property"
+        )
+    }
 
     buildFeatures {
         compose = true

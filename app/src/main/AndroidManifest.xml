@@ -28,7 +28,6 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.Inty"
-        tools:replace="android:icon, android:roundIcon"
         tools:targetApi="31">
 
         <meta-data
