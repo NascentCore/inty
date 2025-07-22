@@ -20,6 +20,9 @@ composeBom = "2025.06.01"
 firebaseBom = "33.16.0"
 playServicesAuth = "21.3.0"
 billingKtx = "8.0.0"
+googleServices = "4.4.3"
+firebaseCrashlytics = "3.0.4"
+firebasePerf = "1.4.2"
 
 # 测试相关
 junit = "4.13.2"
@@ -117,6 +120,11 @@ kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "ko
 
 # ===== 第三方插件 =====
 the-router = { id = "cn.therouter.agp8", version.ref = "theRouter" }
+
+# ===== Google 服务插件 =====
+google-services = { id = "com.google.gms.google-services", version.ref = "googleServices" }
+firebase-crashlytics = { id = "com.google.firebase.crashlytics", version.ref = "firebaseCrashlytics" }
+firebase-perf = { id = "com.google.firebase.firebase-perf", version.ref = "firebasePerf" }
 
 [bundles]
 # ===== 图片加载 =====

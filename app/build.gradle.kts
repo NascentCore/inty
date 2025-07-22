@@ -9,9 +9,9 @@ plugins {
     id("therouter")
     id("kotlin-parcelize")
 
-    id("com.google.gms.google-services")
-    id("com.google.firebase.crashlytics")
-    id("com.google.firebase.firebase-perf")
+    alias(libs.plugins.google.services)
+    alias(libs.plugins.firebase.crashlytics)
+    alias(libs.plugins.firebase.perf)
 }
 
 // 安全加载 keystore.properties
