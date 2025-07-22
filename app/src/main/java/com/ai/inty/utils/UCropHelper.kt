@@ -3,7 +3,9 @@ package com.ai.inty.utils
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
+import android.graphics.Color
 import android.net.Uri
+import androidx.core.graphics.toColorInt
 import com.inty.utils.AppEnv
 import com.yalantis.ucrop.UCrop
 import com.yalantis.ucrop.UCropActivity
@@ -22,6 +24,8 @@ object UCropHelper {
             setAllowedGestures(UCropActivity.SCALE, UCropActivity.NONE, UCropActivity.NONE)
             setHideBottomControls(true)
             setToolbarTitle(title)
+            setToolbarColor("#1C1523".toColorInt())
+            setToolbarWidgetColor(Color.WHITE)
             setShowCropFrame(false)
             setShowCropGrid(false)
             setFreeStyleCropEnabled(false)

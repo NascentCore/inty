@@ -36,4 +36,15 @@
         <item name="android:windowDrawsSystemBarBackgrounds">true</item>
         <item name="android:windowTranslucentStatus">true</item>
     </style>
+
+    <!-- 图片裁剪界面的主题配置 不侵入状态栏 UCrop theme with proper status bar handling -->
+    <style name="Theme.Inty.UCrop" parent="Theme.AppCompat.Light.NoActionBar">
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowBackground">#1C1523</item>
+        <item name="android:statusBarColor">#1C1523</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+        <item name="android:windowTranslucentStatus">false</item>
+        <item name="android:fitsSystemWindows">true</item>
+    </style>
 </resources>
