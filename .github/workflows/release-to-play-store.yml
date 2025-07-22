@@ -176,7 +176,6 @@ jobs:
         track: ${{ github.event.inputs.track || 'internal' }}
         status: completed
         inAppUpdatePriority: 2
-        userFraction: 1.0
         whatsNewDirectory: distribution/whatsnew-dynamic
 
     - name: Upload AAB artifact
