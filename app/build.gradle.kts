@@ -43,7 +43,7 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.ai.rondify"
+        applicationId = "com.ai.intellimate"
         minSdk = 29
         targetSdk = 36
         versionCode = 1

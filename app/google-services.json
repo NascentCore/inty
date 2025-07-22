@@ -7,9 +7,9 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:53991309802:android:aeb9d7d9faf5c025913293",
+        "mobilesdk_app_id": "1:53991309802:android:c9f257f49e2cabc1913293",
         "android_client_info": {
-          "package_name": "com.ai.rondify"
+          "package_name": "com.ai.intellimate"
         }
       },
       "oauth_client": [],
