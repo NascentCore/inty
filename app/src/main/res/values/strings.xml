@@ -8,8 +8,8 @@
     <string name="settings_keep_talking">Show “Keep Talking” button</string>
     <string name="settings_auto_play_audio">Auto-play voice messages</string>
     <string name="settings_email_support">Email Support</string>
-    <string name="settings_email_inty">Rodify@inty.cc</string>
-    <string name="settings_about">About Rodify</string>
+    <string name="settings_email_inty">Rondify@inty.cc</string>
+    <string name="settings_about">About Rondify</string>
     <string name="logout">Log out</string>
     <string name="crop_image">Face Recognition</string>
     <string name="sys_notify_title">System Notification</string>
@@ -22,12 +22,12 @@
     <string name="create_time">Create time %s</string>
     <string name="report">Report</string>
     <string name="create_role">Create Role</string>
-    <string name="create_my_inty">Create My Rodify</string>
+    <string name="create_my_inty">Create My Rondify</string>
     <string name="click_to_set_appearance">Click to Set\nAppearance</string>
     <string name="sound">Sound</string>
-    <string name="inty">Rodify</string>
+    <string name="inty">Rondify</string>
     <string name="name_required">Name *</string>
-    <string name="name_placeholder">Name your Rodify</string>
+    <string name="name_placeholder">Name your Rondify</string>
     <string name="gender_required">Gender (Unmodified after Creation) *</string>
     <string name="male">Male</string>
     <string name="female">Female</string>
@@ -41,7 +41,7 @@
     <string name="visibility_required">Visibility *</string>
     <string name="public_visibility">Public</string>
     <string name="private_visibility">Private</string>
-    <string name="inty_voice">Rodify Voice</string>
+    <string name="inty_voice">Rondify Voice</string>
     <string name="add_voice">Add Voice ></string>
 
     <string name="web_client_id">1034291688895-0e5hq72pghd4nihhpmf989ptv0ag1542.apps.googleusercontent.com</string>
@@ -100,7 +100,7 @@
     <!-- Edge swipe exit -->
     <string name="edge_swipe_exit_hint">Swipe again to exit</string>
 
-    <string name="premium_title">Rodify Premium</string>
+    <string name="premium_title">Rondify Premium</string>
     <string name="premium_subtitle">Enjoy a comfortable experience!</string>
     <string name="premium_benefit_unlimited">Unlimited messages</string>
     <string name="premium_benefit_model">Premium model usage</string>
