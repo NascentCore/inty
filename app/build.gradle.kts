@@ -40,6 +40,32 @@ val gitCommitId = try {
 
 // 自动递增 versionCode 的函数
 fun getVersionCode(): Int {
+    // 检查是否在 CI 环境中
+    val isCIBuild = System.getenv("CI") != null || System.getenv("GITHUB_ACTIONS") != null
+    
+    if (isCIBuild) {
+        // CI 环境：基于时间戳或提交历史生成版本号
+        val gitCommitCount = try {
+            val process = ProcessBuilder("git", "rev-list", "--count", "HEAD").start()
+            process.waitFor()
+            if (process.exitValue() == 0) {
+                process.inputStream.bufferedReader().readText().trim().toInt()
+            } else {
+                // fallback：使用时间戳生成版本号
+                (System.currentTimeMillis() / 1000 / 3600).toInt() // 每小时递增
+            }
+        } catch (e: Exception) {
+            println("⚠️ Git commit count failed, using timestamp fallback")
+            (System.currentTimeMillis() / 1000 / 3600).toInt()
+        }
+        
+        // 确保 CI 版本号不会太小（至少从10开始）
+        val ciVersionCode = maxOf(gitCommitCount, 10)
+        println("🤖 CI Build detected! Using version code: $ciVersionCode (based on git commits: $gitCommitCount)")
+        return ciVersionCode
+    }
+    
+    // 本地构建：使用原有逻辑
     val versionFile = rootProject.file("version.properties")
     val versionProperties = Properties()
     
@@ -125,6 +151,7 @@ android {
             signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = true
             isShrinkResources = true
+            versionNameSuffix = " ($gitCommitId)"
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -219,4 +246,17 @@ dependencies {
     implementation(libs.firebase.perf)
 
     api(libs.ucrop)
+}
+
+// 添加任务来输出版本信息，供GitHub Actions使用
+tasks.register("printVersionCode") {
+    doLast {
+        println(android.defaultConfig.versionCode)
+    }
+}
+
+tasks.register("printVersionName") {
+    doLast {
+        println(android.defaultConfig.versionName)
+    }
 }
