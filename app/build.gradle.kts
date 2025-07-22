@@ -43,7 +43,7 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.ai.heartmate"
+        applicationId = "com.ai.rondify"
         minSdk = 29
         targetSdk = 36
         versionCode = 8

@@ -205,7 +205,7 @@ fun LoginScreen(
             Spacer(modifier = Modifier.height(40.dp))
 
             Text(
-                text = "Welcome to HeartMate",
+                text = "Welcome to Rodify",
                 color = Color.White,
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold
@@ -307,7 +307,7 @@ private fun PolicyText(checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "By continuing, you agree to HeartMate's",
+                text = "By continuing, you agree to Rodify's",
                 style = baseTextStyle
             )
 

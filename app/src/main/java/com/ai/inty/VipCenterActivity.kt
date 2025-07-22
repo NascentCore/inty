@@ -83,7 +83,7 @@
 //}
 //
 ///**
-// * HeartMate Premium 会员中心静态UI。
+// * Rodify Premium 会员中心静态UI。
 // */
 //@OptIn(ExperimentalMaterial3Api::class)
 //@Composable
@@ -145,7 +145,7 @@
 //            Column(modifier = Modifier.padding(start = 16.dp)) {
 //
 //                Image(
-//                    painter = painterResource(R.drawable.img_heartmate_premium),
+//                    painter = painterResource(R.drawable.img_Rodify_premium),
 //                    contentDescription = null,
 //                    modifier = Modifier.size(278.dp, 32.dp)
 //                )
