@@ -157,7 +157,7 @@ private fun Modifier.clickableNoRipple(onClick: () -> Unit): Modifier =
     }
 
 
-
+//目前仅在chat page中使用
 @Composable
 fun DiaAmountLayout(
     content: @Composable DiaAmountWindowScope.() -> Unit
