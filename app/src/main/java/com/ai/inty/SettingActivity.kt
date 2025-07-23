@@ -631,7 +631,7 @@ private fun DeleteDialog(onDismiss: () -> Unit, onSubmit: () -> Unit) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Delete your account",
+                    text = "Delete my account",
                     fontSize = 22.sp,
                     color = Color.White
                 )
