@@ -7,27 +7,19 @@ import com.squareup.moshi.JsonClass
 
 @JsonClass(generateAdapter = true)
 data class SendMsgReq(
-    @Json(name = "messages")
     val messages: List<MsgInfo> = listOf(),
-    @Json(name = "model")
     val model: String = "chatbot",
-    @Json(name = "stream")
     val stream: Boolean = false
 )
 
 @JsonClass(generateAdapter = true)
 data class SendMsgResponse(
-    @Json(name = "choices")
     val choices: List<Choice> = listOf(),
-    @Json(name = "created")
     val created: Int = 0,
-    @Json(name = "id")
     val id: String = "",
-    @Json(name = "model")
     val model: String = "",
     @Json(name = "object")
     val objectX: String = "",
-    @Json(name = "usage")
     val usage: Usage = Usage()
 )
 
@@ -35,9 +27,7 @@ data class SendMsgResponse(
 data class Choice(
     @Json(name = "finish_reason")
     val finishReason: String = "",
-    @Json(name = "index")
     val index: Int = 0,
-    @Json(name = "message")
     val message: MsgInfo = MsgInfo()
 )
 
@@ -54,7 +44,6 @@ data class Usage(
 
 @JsonClass(generateAdapter = true)
 data class QueryMsgReq(
-    @Json(name = "page")
     val page: String = "",
     @Json(name = "page_size")
     val pageSize: String = ""
@@ -64,15 +53,10 @@ data class QueryMsgReq(
 data class QueryMsgsResponse(
     @Json(name = "has_more")
     val hasMore: Boolean = false,
-    @Json(name = "limit")
     val limit: Int = 0,
-    @Json(name = "messages")
     val messages: List<MsgInfo> = listOf(),
-    @Json(name = "offset")
     val offset: Int = 0,
-    @Json(name = "page")
     val page: Int = 0,
-    @Json(name = "total")
     val total: Int = 0
 )
 
@@ -93,11 +77,9 @@ data class ConversationItem(
     val agentAvatar: String = "",
     @Json(name = "created_at")
     val createdAt: String = "",
-    @Json(name = "id")
     val id: String = "",
     @Json(name = "last_message")
     val lastMessage: String = "",
-    @Json(name = "settings")
     val settings: Any? = null,
     @Json(name = "updated_at")
     val updatedAt: Any? = null,

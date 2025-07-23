@@ -22,17 +22,12 @@ data class UserProfile(
     val ageGroup: Any? = null,
     @Json(name = "auth_type")
     val authType: String = "",
-    @Json(name = "avatar")
     val avatar: String? = null,
     @Json(name = "created_at")
     val createdAt: String = "",
-    @Json(name = "description")
     val description: String? = null,
-    @Json(name = "email")
     val email: String? = null,
-    @Json(name = "gender")
     val gender: String? = null,
-    @Json(name = "id")
     val id: String = "",
     @Json(name = "readable_id")
     val readableId: String = "",
@@ -40,9 +35,7 @@ data class UserProfile(
     val isActive: Boolean = false,
     @Json(name = "is_superuser")
     val isSuperuser: Boolean = false,
-    @Json(name = "nickname")
     val nickname: String = "",
-    @Json(name = "phone")
     val phone: String? = null,
     @Json(name = "system_language")
     val systemLanguage: String = "",
@@ -58,7 +51,6 @@ enum class GENDER(val value: String) {
 
 @JsonClass(generateAdapter = true)
 data class TokenBean(
-    @Json(name = "token")
     val token: String
 )
 
@@ -70,9 +62,7 @@ data class GoogleLoginRequest(
 
 @JsonClass(generateAdapter = true)
 data class GoogleLoginResponse(
-    @Json(name = "token")
     val token: String,
-    @Json(name = "user")
     val user: UserProfile
 )
 
