@@ -8,6 +8,8 @@ import androidx.activity.viewModels
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -27,11 +29,13 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -62,7 +66,7 @@ class ReportActivity : BaseActivity() {
 
     @Autowired
     var targetID: String = ""
-    
+
     @Autowired
     var targetType: String = "USER"
 
@@ -88,7 +92,8 @@ class ReportActivity : BaseActivity() {
                 val localImages = viewModel.localImages
 
                 val galleryLauncher = rememberLauncherForActivityResult(
-                    ActivityResultContracts.GetContent()) { imageUri ->
+                    ActivityResultContracts.GetContent()
+                ) { imageUri ->
                     imageUri?.let {
                         viewModel.onAddImage(imageUri)
                     }
@@ -139,15 +144,23 @@ private fun ReportScreen(
     onClickAddImage: () -> Unit,
     onSave: () -> Unit,
 ) {
+    val focusManager = LocalFocusManager.current
 
     Scaffold(
         modifier = Modifier
             .fillMaxSize()
-            .background(BackGround),
+            .background(BackGround)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) {
+                focusManager.clearFocus()
+            },
         containerColor = BackGround,
         topBar = {
             CenterAlignedTopAppBar(
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors().copy(containerColor = Color.Transparent),
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors()
+                    .copy(containerColor = Color.Transparent),
                 title = {
                     Text(
                         text = stringResource(R.string.report),
@@ -169,7 +182,7 @@ private fun ReportScreen(
 
                 },
 
-            )
+                )
         },
         bottomBar = {
             Column {
@@ -188,8 +201,7 @@ private fun ReportScreen(
                     start = 16.dp,
                     end = 16.dp,
                 )
-                .verticalScroll(rememberScrollState())
-            ,
+                .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
 
@@ -212,8 +224,7 @@ private fun ReportScreen(
                         width = 1.dp,
                         shape = RoundedCornerShape(8.dp)
                     )
-                    .padding(horizontal = 12.dp)
-                ,
+                    .padding(horizontal = 12.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Spacer(Modifier.height(16.dp))
@@ -262,8 +273,7 @@ private fun ReportScreen(
                         width = 1.dp,
                         shape = RoundedCornerShape(8.dp)
                     )
-                    .padding(horizontal = 12.dp)
-                ,
+                    .padding(horizontal = 12.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Spacer(Modifier.height(16.dp))
@@ -293,7 +303,9 @@ private fun ReportScreen(
                         value = description,
                         placeholder = {
                             Text(
-                                modifier = Modifier.align(Alignment.TopStart),
+                                modifier = Modifier
+                                    .matchParentSize()
+                                    .align(Alignment.TopStart),
                                 text = "Please fill in the feedback content...",
                                 fontWeight = FontWeight.Normal,
                                 color = Color.White.copy(0.55f),
@@ -302,8 +314,7 @@ private fun ReportScreen(
                         },
                         onValueChange = {
                             onDescriptionChange(it)
-                        },
-
+                        }
                     )
 
                     Text(
@@ -313,7 +324,6 @@ private fun ReportScreen(
                         text = "${description.length}/400",
                         fontSize = 12.sp,
                         color = Color.White.copy(0.55f),
-
                     )
                 }
                 Spacer(Modifier.height(16.dp))
@@ -341,8 +351,7 @@ private fun ReportScreen(
                         width = 1.dp,
                         shape = RoundedCornerShape(8.dp)
                     )
-                    .padding(horizontal = 12.dp)
-                ,
+                    .padding(horizontal = 12.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Spacer(Modifier.height(16.dp))
@@ -363,8 +372,7 @@ private fun ReportScreen(
                             color = Color.White.copy(0.1f),
                             shape = RoundedCornerShape(8.dp)
                         )
-                        .clip(RoundedCornerShape(8.dp))
-                    ,
+                        .clip(RoundedCornerShape(8.dp)),
                 ) {
                     if (images.isNotEmpty()) {
                         IntyImage(
@@ -391,7 +399,6 @@ private fun ReportScreen(
             Spacer(Modifier.height(60.dp))
 
 
-
         }
     }
 }
@@ -409,8 +416,7 @@ private fun ReportItem(
             .height(48.dp)
             .noRippleClickable {
                 onClick()
-            }
-        ,
+            },
         verticalAlignment = Alignment.CenterVertically,
     ) {
 
