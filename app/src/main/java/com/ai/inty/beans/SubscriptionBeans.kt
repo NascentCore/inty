@@ -103,10 +103,10 @@ data class CurrentSubscription(
     val trialEndDate: String? = null,
     @Json(name = "auto_renew")
     val autoRenew: Boolean? = null,
-    @Json(name = "extra_data")
+    @param:Json(name = "extra_data")
     val extraData: Map<String, Any>? = null,
     val id: String? = null,
-    @Json(name = "user_id")
+    @param:Json(name = "user_id")
     val userId: String? = null,
     val plan: SubscriptionPlan? = null,
     @Json(name = "created_at")

@@ -266,6 +266,7 @@ class MainActivity : BaseActivity() {
         EasyLog.log("MainActivity Edge swipe detected, showing exit hint")
     }
 
+    @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
         EasyLog.log("MainActivity onBackPressed")
         
