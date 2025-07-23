@@ -58,33 +58,12 @@ jobs:
     - name: Make gradlew executable
       run: chmod +x ./gradlew
 
-    - name: Use working build configuration for CI
-      run: |
-        # 直接使用不依赖Google Services的简化版本进行构建
-        cat > build.gradle.kts << 'EOF'
-        // Top-level build file where you can add configuration options common to all sub-projects/modules.
-        plugins {
-            alias(libs.plugins.android.application) apply false
-            alias(libs.plugins.kotlin.android) apply false
-            alias(libs.plugins.kotlin.compose) apply false
-            alias(libs.plugins.the.router) apply false
-            alias(libs.plugins.android.library) apply false
-        }
-        EOF
-        
-        # 同样简化app/build.gradle.kts中的Google Services引用
-        sed -i '/alias(libs.plugins.google.services)/d' app/build.gradle.kts
-        sed -i '/alias(libs.plugins.firebase.crashlytics)/d' app/build.gradle.kts  
-        sed -i '/alias(libs.plugins.firebase.perf)/d' app/build.gradle.kts
-        sed -i '/id("com.google.gms.google-services")/d' app/build.gradle.kts
-        sed -i '/id("com.google.firebase.crashlytics")/d' app/build.gradle.kts
-        sed -i '/id("com.google.firebase.firebase-perf")/d' app/build.gradle.kts
-        
-        echo "Simplified build configuration for CI:"
-        cat build.gradle.kts
-
     - name: Build Release AAB
-      run: ./gradlew clean bundleRelease
+      run: |
+        echo "🔧 Starting AAB build..."
+        ./gradlew clean bundleRelease --stacktrace --info
+        echo "✅ AAB build completed!"
+        ls -la app/build/outputs/bundle/release/
 
     - name: Extract version info
       id: version_info
