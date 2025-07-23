@@ -12,10 +12,27 @@ def upload_to_gcs(file_data, content_type, bucket_name, path):
 
 # 新增删除方法
 def delete_from_gcs(bucket_name, path):
-    client = storage.Client.from_service_account_json(settings.gcs.credentials)
-    bucket = client.bucket(bucket_name)
-    blob = bucket.blob(path)
-    blob.delete()
+    """删除GCS文件，如果文件不存在则忽略"""
+    try:
+        client = storage.Client.from_service_account_json(settings.gcs.credentials)
+        bucket = client.bucket(bucket_name)
+        blob = bucket.blob(path)
+        
+        # 检查文件是否存在
+        if blob.exists():
+            blob.delete()
+            return True
+        else:
+            # 文件不存在，忽略删除操作
+            return False
+    except Exception as e:
+        # 如果是404错误或其他删除相关错误，记录但不抛出异常
+        from google.api_core import exceptions
+        if isinstance(e, exceptions.NotFound):
+            return False  # 文件不存在，正常情况
+        else:
+            # 其他错误重新抛出
+            raise e
 
 def copy_gcs_file(source_url: str, destination_path: str, bucket_name: str) -> str:
     """

@@ -46,12 +46,15 @@ class Agent(Base):
     deleted_at = Column(DateTime(timezone=True), nullable=True)
     prompt = Column(String)
 
+    # 主提示词和模式提示词字段
+    main_prompt = Column(Text, nullable=True)  # 主提示词 - 作为第一个system message
+    mode_prompt = Column(Text, nullable=True)  # 模式提示词 - 放在角色卡提示词后面
+
     # 角色卡相关字段
     character_card_spec = Column(String, nullable=True)  # 角色卡规范版本
     character_card_data = Column(JSON, nullable=True)  # 原始角色卡数据
     personality = Column(Text, nullable=True)  # 性格特征
     scenario = Column(Text, nullable=True)  # 场景设定
-    first_message = Column(Text, nullable=True)  # 第一条消息
     message_example = Column(Text, nullable=True)  # 对话示例
     creator_notes = Column(Text, nullable=True)  # 创建者备注
     post_history_instructions = Column(Text, nullable=True)  # 历史后指令

@@ -47,14 +47,17 @@ class AgentBase(BaseModel):
     photos: Optional[List[str]] = None
     category: Optional[str] = None
     
-    # Legacy字段 (向后兼容)
-    prompt: Optional[str] = Field(None, description="传统提示词字段(已弃用，建议使用角色卡字段)")
+    # Legacy字段 (已废弃)
+    prompt: Optional[str] = Field(None, description="已废弃 - 请使用personality字段代替", deprecated=True)
+    
+    # 主提示词和模式提示词字段
+    main_prompt: Optional[str] = Field(None, description="主提示词 - 作为第一个system message，覆盖全局默认主提示词")
+    mode_prompt: Optional[str] = Field(None, description="模式提示词 - 放在角色卡提示词后面，覆盖全局默认模式提示词")
     
     # 角色卡相关字段 (推荐使用)
     character_card_spec: Optional[str] = None
     personality: Optional[str] = Field(None, description="角色性格特点 (推荐)")
     scenario: Optional[str] = Field(None, description="背景设定 (推荐)")
-    first_message: Optional[str] = Field(None, description="开场白")
     message_example: Optional[str] = Field(None, description="对话示例")
     creator_notes: Optional[str] = Field(None, description="创作者备注")
     post_history_instructions: Optional[str] = None
@@ -86,12 +89,15 @@ class AgentUpdate(AgentBase):
     name: Optional[str] = None
     gender: Optional[str] = None
     visibility: Optional[AgentVisibility] = None
-    prompt: Optional[str] = None
+    prompt: Optional[str] = Field(None, description="已废弃 - 请使用personality字段代替", deprecated=True)
+    
+    # 主提示词和模式提示词字段
+    main_prompt: Optional[str] = None
+    mode_prompt: Optional[str] = None
     
     # 角色卡相关字段
     personality: Optional[str] = None
     scenario: Optional[str] = None
-    first_message: Optional[str] = None
     message_example: Optional[str] = None
     creator_notes: Optional[str] = None
     post_history_instructions: Optional[str] = None

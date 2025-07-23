@@ -121,11 +121,11 @@ async def get_agent_for_chat(db: AsyncSession, agent_id: str) -> Optional[dict]:
         query = select(
             models.Agent.id,
             models.Agent.name,
-            models.Agent.prompt,
             models.Agent.settings,
+            models.Agent.main_prompt,
+            models.Agent.mode_prompt,
             models.Agent.personality,
             models.Agent.scenario,
-            models.Agent.first_message,
             models.Agent.message_example,
             models.Agent.creator_notes,
             models.Agent.tags,
@@ -154,11 +154,11 @@ async def get_agent_for_chat(db: AsyncSession, agent_id: str) -> Optional[dict]:
         agent_data = {
             'id': row[0],
             'name': row[1] or f'Agent_{row[0][:8]}',
-            'prompt': row[2],
-            'settings': row[3],
-            'personality': row[4] or '',
-            'scenario': row[5] or '',
-            'first_message': row[6] or '',
+            'settings': row[2],
+            'main_prompt': row[3] or '',
+            'mode_prompt': row[4] or '',
+            'personality': row[5] or '',
+            'scenario': row[6] or '',
             'message_example': row[7] or '',
             'creator_notes': row[8] or '',
             'tags': row[9] or [],
@@ -432,6 +432,11 @@ async def create_agent(db: AsyncSession, agent_in: schemas.AgentCreate, user_id:
         if not agent_in.name or not agent_in.name.strip():
             raise HTTPException(status_code=400, detail="Agent name cannot be empty")
         
+        # 处理prompt到personality的转换（向后兼容）
+        if agent_in.prompt and agent_in.prompt.strip() and not (agent_in.personality and agent_in.personality.strip()):
+            logger.info(f"将prompt转换为personality以保持向后兼容")
+            agent_in.personality = agent_in.prompt
+        
         # 角色卡字段优先级验证和建议
         _validate_character_card_fields(agent_in)
         
@@ -523,29 +528,21 @@ def _validate_character_card_fields(agent_in: schemas.AgentCreate):
     Args:
         agent_in: Agent创建数据
     """
-    # 检查是否同时提供了prompt和角色卡字段
-    has_prompt = bool(agent_in.prompt and agent_in.prompt.strip())
+    # 检查是否提供了角色卡字段或prompt字段
     has_character_card = bool(
         (agent_in.personality and agent_in.personality.strip()) or 
         (agent_in.scenario and agent_in.scenario.strip())
     )
+    has_prompt = bool(agent_in.prompt and agent_in.prompt.strip())
     
-    logger.info(f"创建Agent字段使用情况 - prompt: {has_prompt}, character_card: {has_character_card}")
+    logger.info(f"创建Agent字段使用情况 - character_card: {has_character_card}, prompt: {has_prompt}")
     
-    # 如果既没有prompt也没有角色卡信息，抛出错误
-    if not has_prompt and not has_character_card:
+    # 如果既没有角色卡信息也没有prompt，抛出错误
+    if not has_character_card and not has_prompt:
         raise HTTPException(
             status_code=400, 
-            detail="请提供角色设定信息：建议使用personality(性格)和scenario(背景)字段，或提供prompt字段"
+            detail="请提供角色设定信息：建议使用personality(性格)和scenario(背景)字段，或使用prompt字段"
         )
-    
-    # 如果同时提供了prompt和角色卡，记录警告但允许创建
-    if has_prompt and has_character_card:
-        logger.warning(f"Agent同时提供了prompt和角色卡字段，将优先使用角色卡字段构建提示词")
-    
-    # 如果只有prompt，建议使用角色卡字段
-    if has_prompt and not has_character_card:
-        logger.info(f"Agent只提供了prompt字段，建议后续迁移到角色卡字段(personality, scenario)以获得更好的效果")
 
 async def update_agent(db: AsyncSession, db_agent: models.Agent, agent_in: schemas.AgentUpdate) -> models.Agent:
     """
@@ -563,6 +560,13 @@ async def update_agent(db: AsyncSession, db_agent: models.Agent, agent_in: schem
         # 验证名称不为空（如果提供了名称）
         if 'name' in update_data and (not update_data['name'] or not update_data['name'].strip()):
             raise HTTPException(status_code=400, detail="Agent name cannot be empty")
+        
+        # 处理prompt到personality的转换（向后兼容）
+        if 'prompt' in update_data and update_data['prompt'] and update_data['prompt'].strip():
+            # 如果没有提供personality或personality为空，则使用prompt的值
+            if 'personality' not in update_data or not (update_data.get('personality') and update_data['personality'].strip()):
+                logger.info(f"将prompt转换为personality以保持向后兼容")
+                update_data['personality'] = update_data['prompt']
         
         # 处理 llm_config 字段 - 将其移动到 settings 中
         if 'llm_config' in update_data:
@@ -597,12 +601,12 @@ async def update_agent(db: AsyncSession, db_agent: models.Agent, agent_in: schem
             agent_data = {
                 'id': updated_agent.id,
                 'name': updated_agent.name,
-                'prompt': updated_agent.prompt or "你是一个聊天助手，请用中文回答用户的问题。",
                 'description': '',
                 'settings': updated_agent.settings or {},
+                'main_prompt': updated_agent.main_prompt or '',
+                'mode_prompt': updated_agent.mode_prompt or '',
                 'personality': updated_agent.personality or '',
                 'scenario': updated_agent.scenario or '',
-                'first_message': updated_agent.first_message or '',
                 'message_example': updated_agent.message_example or '',
                 'creator_notes': updated_agent.creator_notes or '',
                 'tags': updated_agent.tags or [],
@@ -746,9 +750,12 @@ def process_agent_image_urls(agent_data: dict, agent_id: str, user_id: str) -> d
                     temp_files_to_delete.append(avatar_url)
                     
                     logger.info(f"复制头像从临时路径到永久路径: {avatar_url} -> {new_avatar_url}")
+                except FileNotFoundError as e:
+                    logger.warning(f"临时头像文件不存在，跳过复制: {avatar_url}")
+                    processed_data['avatar'] = None
                 except Exception as e:
                     logger.error(f"复制头像失败: {str(e)}")
-                    # 如果复制失败，保持原URL
+                    processed_data['avatar'] = None
         else:
             logger.warning(f"无效的头像URL: {avatar_url}")
             processed_data['avatar'] = None
@@ -772,9 +779,12 @@ def process_agent_image_urls(agent_data: dict, agent_id: str, user_id: str) -> d
                     temp_files_to_delete.append(background_url)
                     
                     logger.info(f"复制背景图从临时路径到永久路径: {background_url} -> {new_background_url}")
+                except FileNotFoundError as e:
+                    logger.warning(f"临时背景图文件不存在，跳过复制: {background_url}")
+                    processed_data['background'] = None
                 except Exception as e:
                     logger.error(f"复制背景图失败: {str(e)}")
-                    # 如果复制失败，保持原URL
+                    processed_data['background'] = None
         else:
             logger.warning(f"无效的背景图URL: {background_url}")
             processed_data['background'] = None
@@ -801,6 +811,9 @@ def process_agent_image_urls(agent_data: dict, agent_id: str, user_id: str) -> d
                         temp_files_to_delete.append(photo_url)
                         
                         logger.info(f"复制相册图片从临时路径到永久路径: {photo_url} -> {new_photo_url}")
+                    except FileNotFoundError as e:
+                        logger.warning(f"临时相册图片文件不存在，跳过: {photo_url}")
+                        continue
                     except Exception as e:
                         logger.error(f"复制相册图片失败: {str(e)}")
                         # 如果复制失败，跳过这张图片
@@ -822,8 +835,13 @@ def process_agent_image_urls(agent_data: dict, agent_id: str, user_id: str) -> d
                 try:
                     temp_path = get_path_from_gcs_url(temp_url)
                     if temp_path:
-                        delete_from_gcs(settings.gcs.bucket, temp_path)
-                        logger.info(f"删除临时文件: {temp_url}")
+                        deleted = delete_from_gcs(settings.gcs.bucket, temp_path)
+                        if deleted:
+                            logger.info(f"删除临时文件: {temp_url}")
+                        else:
+                            logger.debug(f"临时文件不存在，跳过删除: {temp_url}")
+                    else:
+                        logger.warning(f"无法解析临时文件路径: {temp_url}")
                 except Exception as e:
                     logger.error(f"删除临时文件失败 {temp_url}: {str(e)}")
         

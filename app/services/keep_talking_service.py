@@ -183,12 +183,13 @@ class KeepTalkingService:
             agent_data = {
                 'id': chat.agent.id,
                 'name': chat.agent.name or f'Agent_{chat.agent.id[:8]}',  # 防护性检查
-                'prompt': chat.agent.prompt,
                 'settings': chat.agent.settings,
+                # 主提示词和模式提示词字段
+                'main_prompt': getattr(chat.agent, 'main_prompt', ''),
+                'mode_prompt': getattr(chat.agent, 'mode_prompt', ''),
                 # 添加角色卡字段支持
                 'personality': getattr(chat.agent, 'personality', ''),
                 'scenario': getattr(chat.agent, 'scenario', ''),
-                'first_message': getattr(chat.agent, 'first_message', ''),
                 'message_example': getattr(chat.agent, 'message_example', ''),
                 'creator_notes': getattr(chat.agent, 'creator_notes', ''),
                 'tags': getattr(chat.agent, 'tags', []),
