@@ -167,8 +167,10 @@ class Agent:
                  agent_id: str, 
                  name: str, 
                  model_config: dict, 
-                 system_prompt: str, 
                  description: str = "", 
+                 # 主提示词和模式提示词参数
+                 main_prompt: str = "",
+                 mode_prompt: str = "",
                  # 角色卡相关参数
                  personality: str = "",
                  scenario: str = "",
@@ -183,10 +185,13 @@ class Agent:
         self.name = name
         self.model_config = model_config
         self.last_used = time.time()
-        self.system_prompt = system_prompt
         self.description = description
         self._last_used_lock = RLock()
         self._user_info_cache = {}
+        
+        # 主提示词和模式提示词属性
+        self.main_prompt = main_prompt
+        self.mode_prompt = mode_prompt
         
         # 角色卡相关属性
         self.personality = personality
@@ -197,11 +202,12 @@ class Agent:
         self.character_version = character_version
         self.extensions = extensions or {}
         
-        # 更新agent数据以包含角色卡信息
+        # 更新agent数据以包含所有信息
         self._agent_data = {
             'id': agent_id,
             'name': name,
-            'prompt': system_prompt,
+            'main_prompt': main_prompt,
+            'mode_prompt': mode_prompt,
             'description': description,
             'model_config': model_config,
             'personality': personality,
@@ -268,26 +274,14 @@ class Agent:
             state_schema=CustomAgentState
         )
 
-    def _build_base_system_message(self, agent_name: str = None, user_name: str = None) -> str:
-        """构建基础系统提示词，支持模板渲染和字符替换"""
-        base_prompt = self.system_prompt or "你是一个聊天助手，请用中文回答用户的问题。"
-        
-        # 如果系统提示词包含模板变量，进行渲染
-        if '{{' in base_prompt and '}}' in base_prompt:
-            try:
-                # 使用模板管理器进行渲染，但使用basic模板避免重复包装
-                rendered_prompt = prompt_template_manager.render_system_prompt(
-                    system_prompt=base_prompt,
-                    agent_name=agent_name or self.name,
-                    user_name=user_name,
-                    template_name='basic'  # 只做字符替换，不添加额外模板内容
-                )
-                return rendered_prompt
-            except Exception as e:
-                logger.error(f"模板渲染失败: {str(e)}，使用原始提示词")
-                return base_prompt
-        
-        return base_prompt
+
+    def _get_effective_main_prompt(self) -> str:
+        """获取有效的主提示词，优先级：agent自定义 > 全局默认"""
+        return self.main_prompt or settings.agent.default_main_prompt
+
+    def _get_effective_mode_prompt(self) -> str:
+        """获取有效的模式提示词，优先级：agent自定义 > 全局默认"""
+        return self.mode_prompt or settings.agent.default_mode_prompt
 
     def _create_dynamic_prompt_runnable(self) -> Runnable:
         """
@@ -309,20 +303,49 @@ class Agent:
             
             system_messages = []
             
-            # 1. 基础主提示词 - 支持模板渲染和字符替换
-            base_prompt = self._build_base_system_message(
-                agent_name=self.name,
-                user_name=user_name
-            )
-            if base_prompt:
-                system_messages.append(SystemMessage(content=base_prompt))
+            # 1. 主提示词（第一优先级）- 使用全局默认或agent自定义
+            main_prompt = self._get_effective_main_prompt()
+            if main_prompt:
+                # 支持模板渲染和字符替换
+                if '{{' in main_prompt and '}}' in main_prompt:
+                    try:
+                        rendered_prompt = prompt_template_manager.render_system_prompt(
+                            system_prompt=main_prompt,
+                            agent_name=self.name,
+                            user_name=user_name,
+                            template_name='basic'
+                        )
+                        system_messages.append(SystemMessage(content=rendered_prompt))
+                    except Exception as e:
+                        logger.error(f"主提示词模板渲染失败: {str(e)}，使用原始提示词")
+                        system_messages.append(SystemMessage(content=main_prompt))
+                else:
+                    system_messages.append(SystemMessage(content=main_prompt))
             
-            # 2. 角色卡信息 - 单独的SystemMessage（性格、场景、对话示例、标签）
-            character_context = self._build_character_context(user_name=user_name)
-            if character_context:
-                system_messages.append(SystemMessage(content=character_context))
+            # 2. 角色卡信息 - 每个字段作为独立的SystemMessage
+            character_messages = self._build_character_context(user_name=user_name)
+            system_messages.extend(character_messages)
             
-            # 3. 用户个性化信息 - 独立的SystemMessage
+            # 3. 模式提示词（在角色卡后面）- 使用全局默认或agent自定义
+            mode_prompt = self._get_effective_mode_prompt()
+            if mode_prompt:
+                # 支持模板渲染和字符替换
+                if '{{' in mode_prompt and '}}' in mode_prompt:
+                    try:
+                        rendered_prompt = prompt_template_manager.render_system_prompt(
+                            system_prompt=mode_prompt,
+                            agent_name=self.name,
+                            user_name=user_name,
+                            template_name='basic'
+                        )
+                        system_messages.append(SystemMessage(content=rendered_prompt))
+                    except Exception as e:
+                        logger.error(f"模式提示词模板渲染失败: {str(e)}，使用原始提示词")
+                        system_messages.append(SystemMessage(content=mode_prompt))
+                else:
+                    system_messages.append(SystemMessage(content=mode_prompt))
+            
+            # 4. 用户个性化信息 - 独立的SystemMessage
             if user_profile:
                 system_messages.append(SystemMessage(content=user_profile))
             
@@ -347,32 +370,52 @@ class Agent:
             MessagesPlaceholder(variable_name="messages")
         ])
     
-    def _build_character_context(self, user_name: str = None) -> str:
+    def _render_character_field_template(self, content: str, user_name: str = None) -> str:
+        """渲染角色字段模板"""
+        if '{{' in content and '}}' in content:
+            try:
+                from app.core.agent.prompt_template import prompt_template_manager
+                rendered_content = prompt_template_manager.render_system_prompt(
+                    system_prompt=content,
+                    agent_name=self.name,
+                    user_name=user_name,
+                    template_name='basic'
+                )
+                return rendered_content
+            except Exception as e:
+                logger.error(f"角色字段模板渲染失败: {str(e)}，使用原始内容")
+                return content
+        else:
+            return content
+
+    def _build_character_context(self, user_name: str = None) -> List[SystemMessage]:
         """
-        构建角色卡上下文信息（完整版本，用于兼容性）
+        构建角色卡上下文信息，每个字段作为独立的system message，支持模板渲染
         """
-        context_parts = []
+        context_messages = []
         
-        # 性格特征
+        # 性格特征 - 独立的SystemMessage
         if self.personality:
-            context_parts.append(f"[角色性格]\n{self.personality}")
+            content = self._render_character_field_template(self.personality, user_name)
+            context_messages.append(SystemMessage(content=content))
         
-        # 场景设定
+        # 场景设定 - 独立的SystemMessage
         if self.scenario:
-            context_parts.append(f"[场景背景]\n{self.scenario}")
+            content = self._render_character_field_template(self.scenario, user_name)
+            context_messages.append(SystemMessage(content=content))
         
-        # 对话示例
+        # 对话示例 - 独立的SystemMessage
         if self.message_example:
-            context_parts.append(f"[对话风格参考]\n{self.message_example}")
+            content = self._render_character_field_template(self.message_example, user_name)
+            context_messages.append(SystemMessage(content=content))
         
-        # 标签信息（用于角色行为指导）
+        # 标签信息 - 独立的SystemMessage
         if self.tags:
-            context_parts.append(f"[角色标签]\n{', '.join(self.tags)}")
+            tags_str = ', '.join(self.tags)
+            content = self._render_character_field_template(tags_str, user_name)
+            context_messages.append(SystemMessage(content=content))
         
-        if context_parts:
-            return "\n\n".join(context_parts)
-        
-        return ""
+        return context_messages
     
     def _apply_character_substitution(self, text: str, agent_name: str = None, user_name: str = None) -> str:
         """
@@ -891,8 +934,17 @@ class Agent:
                 return str(formatted_prompt)
         except Exception as e:
             logger.error(f"生成提示词示例失败: {str(e)}")
-            # 回退到基础提示词
-            return self._build_base_system_message(agent_name=self.name, user_name="示例用户")
+            # 回退到简单的组合提示词
+            fallback_parts = []
+            main_prompt = self._get_effective_main_prompt()
+            if main_prompt:
+                fallback_parts.append(main_prompt)
+            if self.personality:
+                fallback_parts.append(f"[角色性格]\n{self.personality}")
+            mode_prompt = self._get_effective_mode_prompt()
+            if mode_prompt:
+                fallback_parts.append(mode_prompt)
+            return "\n\n".join(fallback_parts) if fallback_parts else "AI助手"
     
     def get_character_info(self) -> Dict[str, Any]:
         """
@@ -919,7 +971,8 @@ class Agent:
             包含Agent基础信息的字典
         """
         return {
-            'system_prompt': self.system_prompt,
+            'main_prompt': self.main_prompt,
+            'mode_prompt': self.mode_prompt,
             'agent_data': self._agent_data.copy(),
             'template_system': {
                 'available_templates': prompt_template_manager.list_templates(),
@@ -1077,7 +1130,6 @@ class AgentManager:
                 # 创建新的Agent实例
                 model_config = get_agent_model_config(agent_data)
                 
-                system_prompt = agent_data.get('prompt', "你是一个聊天助手，请用中文回答用户的问题。")
                 description = agent_data.get('description', "")
                 
                 agent_name = agent_data.get('name', f'Agent_{agent_id[:8]}')
@@ -1088,8 +1140,10 @@ class AgentManager:
                         agent_id=agent_id,
                         name=agent_name,
                         model_config=model_config,
-                        system_prompt=system_prompt,
                         description=description,
+                        # 主提示词和模式提示词参数
+                        main_prompt=agent_data.get('main_prompt', ''),
+                        mode_prompt=agent_data.get('mode_prompt', ''),
                         # 角色卡相关参数
                         personality=agent_data.get('personality', ''),
                         scenario=agent_data.get('scenario', ''),
@@ -1129,8 +1183,10 @@ class AgentManager:
                 agent_data = {
                     'id': agent_db.id,
                     'name': agent_db.name,
-                    'prompt': agent_db.prompt,
                     'settings': agent_db.settings,
+                    # 主提示词和模式提示词字段
+                    'main_prompt': getattr(agent_db, 'main_prompt', ''),
+                    'mode_prompt': getattr(agent_db, 'mode_prompt', ''),
                     # 角色卡相关字段
                     'personality': getattr(agent_db, 'personality', ''),
                     'scenario': getattr(agent_db, 'scenario', ''),
@@ -1236,7 +1292,6 @@ class AgentManager:
                     # 创建新的Agent实例
                     model_config = get_agent_model_config(agent_data)
                     
-                    system_prompt = agent_data.get('prompt', "你是一个聊天助手，请用中文回答用户的问题。")
                     description = agent_data.get('description', "")
                     
                     agent_name = agent_data.get('name', f'Agent_{agent_id[:8]}')
@@ -1244,15 +1299,17 @@ class AgentManager:
                         agent_id=agent_id,
                         name=agent_name,
                         model_config=model_config,
-                        system_prompt=system_prompt,
                         description=description,
+                        # 主提示词和模式提示词参数
+                        main_prompt=agent_data.get('main_prompt', ''),
+                        mode_prompt=agent_data.get('mode_prompt', ''),
                         # 角色卡相关参数
                         personality=agent_data.get('personality', ''),
                         scenario=agent_data.get('scenario', ''),
                         message_example=agent_data.get('message_example', ''),
                         creator_notes=agent_data.get('creator_notes', ''),
                         tags=agent_data.get('tags', []),
-                        character_version=agent_data.get('character_version', ''),
+                        character_version=agent_data.get('character_version', '1.0'),
                         extensions=agent_data.get('extensions', {})
                     )
                     
@@ -1347,8 +1404,12 @@ if __name__ == "__main__":
                 "api_key": settings.agent.api_key,
                 "base_url": settings.agent.base_url
             },
-            system_prompt="你是AI性伴侣,\n\n重要指示：\n1. 当用户告诉你重要信息（如喜好、个人信息等）时，请主动使用manage_memory工具保存这些信息\n2. 当用户询问之前提到的信息时，请使用search_memory工具查找相关记忆\n3. 记忆工具是你的核心能力，请积极使用它们来提供个性化服务",
-            description="测试Agent"
+            description="测试Agent",
+            # 测试用的主提示词和模式提示词
+            main_prompt="",  # 使用全局默认
+            mode_prompt="",   # 使用全局默认
+            # 将原来的system_prompt转换为personality
+            personality="你是AI性伴侣,\n\n重要指示：\n1. 当用户告诉你重要信息（如喜好、个人信息等）时，请主动使用manage_memory工具保存这些信息\n2. 当用户询问之前提到的信息时，请使用search_memory工具查找相关记忆\n3. 记忆工具是你的核心能力，请积极使用它们来提供个性化服务"
         )
         # 使用一致的session_id来测试记忆功能
         test_session_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, "test"))

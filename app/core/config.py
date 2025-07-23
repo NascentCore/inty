@@ -88,6 +88,9 @@ class AgentConfig:
     frequency_penalty: float = 0.0
     presence_penalty: float = 0.0
     enable_debug_logging: bool = False  # 是否启用调试日志记录功能
+    # 默认提示词配置
+    default_main_prompt: str = "你是一个AI助手，请根据你的角色设定与用户进行对话。"
+    default_mode_prompt: str = "请保持友好、耐心的对话风格，根据角色特点进行回应。"
 
 @dataclass
 class GCSConfig:
