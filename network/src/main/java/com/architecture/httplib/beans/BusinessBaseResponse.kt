@@ -1,7 +1,5 @@
 package com.architecture.httplib.beans
 
-import com.squareup.moshi.Json
-
 /**
  * 仅仅用来处理数据转换
  *
@@ -16,10 +14,8 @@ import com.squareup.moshi.Json
 open class BusinessBaseResponse {
 
     //0 代表成功 ，其他代表错误。这个Code 是我们业务定义的和HTTP定义的200，300，400 是不一样的处理方式
-    @Json(name = "code")
     val code: Int = 0
 
-    @Json(name = "message")
     val message: String = ""
 
 }

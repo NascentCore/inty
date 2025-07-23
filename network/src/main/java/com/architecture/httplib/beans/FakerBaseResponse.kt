@@ -1,6 +1,5 @@
 package com.architecture.httplib.beans
 
-import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 
 
@@ -11,12 +10,8 @@ import com.squareup.moshi.JsonClass
  */
 @JsonClass(generateAdapter = true)
 data class FakerBaseResponse(
-    @Json(name = "code")
     val code: Int,
-    @Json(name = "data")
     val `data`: List<Any>,
-    @Json(name = "status")
     val status: String,
-    @Json(name = "total")
     val total: Int
 )

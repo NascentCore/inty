@@ -78,9 +78,7 @@ data class QueryMsgsResponse(
 
 @JsonClass(generateAdapter = true)
 data class MsgInfo(
-    @Json(name = "content")
     val content: String = "",
-    @Json(name = "role")
     val role: String = "",
 )
 
@@ -115,13 +113,10 @@ data class ConversationItem(
 
 @JsonClass(generateAdapter = true)
 data class SysMsgResponse(
-    @Json(name = "list")
     val list: List<SysMsgItem> = listOf(),
-    @Json(name = "page")
     val page: Int = 0,
     @Json(name = "page_size")
     val pageSize: Int = 0,
-    @Json(name = "total")
     val total: Int = 0,
     @Json(name = "total_pages")
     val totalPages: Int = 0
@@ -129,11 +124,9 @@ data class SysMsgResponse(
 
 @JsonClass(generateAdapter = true)
 data class SysMsgItem(
-    @Json(name = "content")
     val content: String = "",
     @Json(name = "created_at")
     val createdAt: String = "",
-    @Json(name = "id")
     val id: String = "",
     @Json(name = "image_urls")
     val imageUrls: List<Any?> = listOf(),
@@ -145,8 +138,6 @@ data class SysMsgItem(
     val readAt: String = "",
     @Json(name = "template_id")
     val templateId: Int = 0,
-    @Json(name = "title")
     val title: String = "",
-    @Json(name = "type")
     val type: Int = 0
 )

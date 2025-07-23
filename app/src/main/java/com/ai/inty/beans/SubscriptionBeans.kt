@@ -72,6 +72,7 @@ data class PlanFeature(
 /**
  * 商品数据类，包含商品的所有信息
  */
+@JsonClass(generateAdapter = true)
 data class Product(
     val id: String,
     val name: String,
@@ -103,16 +104,16 @@ data class CurrentSubscription(
     val trialEndDate: String? = null,
     @Json(name = "auto_renew")
     val autoRenew: Boolean? = null,
-    @param:Json(name = "extra_data")
+    @Json(name = "extra_data")
     val extraData: Map<String, Any>? = null,
     val id: String? = null,
-    @param:Json(name = "user_id")
+    @Json(name = "user_id")
     val userId: String? = null,
     val plan: SubscriptionPlan? = null,
     @Json(name = "created_at")
     val createdAt: String? = null,
     @Json(name = "updated_at")
-    val updatedAt: String? = null
+    val updatedAt: String? = null,
 )
 
 /**
