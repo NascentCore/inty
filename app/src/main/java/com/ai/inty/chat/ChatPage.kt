@@ -39,6 +39,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -167,10 +168,10 @@ internal fun ChatPage(
         val configuration = LocalConfiguration.current
 
         var imageWidthDp by remember {
-            mutableStateOf(configuration.screenWidthDp)
+            mutableIntStateOf(configuration.screenWidthDp)
         }
         var imageHeightDp by remember {
-            mutableStateOf(configuration.screenHeightDp)
+            mutableIntStateOf(configuration.screenHeightDp)
         }
         if (configuration.screenWidthDp > imageWidthDp) {
             imageWidthDp = configuration.screenWidthDp
@@ -915,7 +916,7 @@ internal fun ChatPage(
 
 @Composable
 private fun ChatItem(
-    item: MsgInfo
+    item: MsgInfo,
 ) {
     when (item.role) {
         "assistant" -> {
@@ -934,7 +935,7 @@ private fun ChatItem(
 
 @Composable
 private fun ChatItemAI(
-    item: MsgInfo
+    item: MsgInfo,
 ) {
     Row {
         Box(
@@ -950,8 +951,8 @@ private fun ChatItemAI(
                     text = item.content,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Normal,
-                    normalColor = Color.White.copy(0.55f),
-                    actionColor = Color.White.copy(0.35f)
+                    normalColor = Color.White,
+                    actionColor = Color.White.copy(0.75f)
                 )
             }
         }
@@ -967,7 +968,7 @@ private fun ChatItemAI(
 
 @Composable
 private fun ChatItemUser(
-    item: MsgInfo
+    item: MsgInfo,
 ) {
     Row {
         Spacer(
@@ -999,7 +1000,7 @@ private fun StyledMessageText(
     fontSize: androidx.compose.ui.unit.TextUnit,
     fontWeight: FontWeight,
     normalColor: Color,
-    actionColor: Color
+    actionColor: Color,
 ) {
     val annotatedText = buildAnnotatedString {
         var currentIndex = 0
@@ -1206,7 +1207,7 @@ private fun LoadingAnimation() {
 private fun MorePanelItem(
     icon: Int,
     text: String,
-    onClick: () -> Unit
+    onClick: () -> Unit,
 ) {
 
     Column(
