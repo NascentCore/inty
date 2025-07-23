@@ -84,7 +84,13 @@ class AgentInfoActivity : BaseActivity() {
         setupStatusBar()
 
         if (agent == null) {
-            viewModel.setAgentID(agent_id!!)
+            if (agent_id != null) {
+                viewModel.setAgentID(agent_id!!)
+            } else {
+                // 既没有 agent 对象也没有 agent_id，说明参数传递有问题
+                finish()
+                return
+            }
         } else {
             viewModel.setAgentInfo(agent)
         }
