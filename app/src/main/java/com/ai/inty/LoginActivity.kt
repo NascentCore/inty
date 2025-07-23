@@ -236,7 +236,7 @@ fun LoginScreen(
                         }
                     } else {
                         coroutineScope.launch {
-                            ToastUtils.showToast("Please check the User Policy and Privacy Policy before logging in")
+                            ToastUtils.showToast("Please check Terms of Use & Privacy Policy")
                         }
                     }
                 },

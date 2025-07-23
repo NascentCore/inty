@@ -124,7 +124,7 @@ class ChatActivity : BaseActivity() {
                 is HttpResult.Success -> {
                     runOnUiThread {
                         lifecycleScope.launch {
-                            ToastUtils.showToast("关注成功")
+                            ToastUtils.showToast("Successfully Followed")
                         }
                     }
                     // Update agent state in ChatViewModel
@@ -141,7 +141,7 @@ class ChatActivity : BaseActivity() {
                 is HttpResult.Failure -> {
                     runOnUiThread {
                         lifecycleScope.launch {
-                            ToastUtils.showToast("关注失败: ${result.message}")
+                            ToastUtils.showToast("Follow Failed: ${result.message}")
                         }
                     }
                 }
@@ -159,7 +159,7 @@ class ChatActivity : BaseActivity() {
                 is HttpResult.Success -> {
                     runOnUiThread {
                         lifecycleScope.launch {
-                            ToastUtils.showToast("取消关注成功")
+                            ToastUtils.showToast("Unfollowed")
                         }
                     }
                     // Update agent state in ChatViewModel
@@ -176,7 +176,7 @@ class ChatActivity : BaseActivity() {
                 is HttpResult.Failure -> {
                     runOnUiThread {
                         lifecycleScope.launch {
-                            ToastUtils.showToast("取消关注失败: ${result.message}")
+                            ToastUtils.showToast("Unfollow request failed: ${result.message}")
                         }
                     }
                 }
