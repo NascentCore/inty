@@ -40,6 +40,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -61,6 +62,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.net.toUri
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.ViewModelProvider
@@ -132,19 +134,23 @@ class CreateRoleActivity : BaseActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CreateRolePage(
+private fun CreateRolePage(
     modifier: Modifier = Modifier,
     mainViewModel: MainViewModel,
     onBack: () -> Unit,
     onCreateSuccess: () -> Unit,
     onAvatarGenerateClick: () -> Unit,
-    editAgent: AgentInfo? = null
+    editAgent: AgentInfo? = null,
 ) {
     val isEditMode = editAgent != null
 
     var name by remember { mutableStateOf(editAgent?.name ?: "") }
     var gender by remember { mutableStateOf(editAgent?.gender ?: "FEMALE") }
-    var settings by remember { mutableStateOf(editAgent?.settings?.get("description") as? String ?: editAgent?.prompt ?: "") }
+    var settings by remember {
+        mutableStateOf(
+            editAgent?.settings?.get("description") as? String ?: editAgent?.prompt ?: ""
+        )
+    }
     var intro by remember { mutableStateOf(editAgent?.intro ?: "") }
     var opening by remember { mutableStateOf(editAgent?.opening ?: "") }
     var visibility by remember { mutableStateOf(editAgent?.visibility ?: "PRIVATE") }
@@ -152,22 +158,22 @@ fun CreateRolePage(
     // Initialize image states based on edit mode
     var avatarUrl by remember {
         mutableStateOf<String?>(
-            if (isEditMode && editAgent?.backgroundImages?.isEmpty() == true) {
+            if (isEditMode && editAgent.backgroundImages.isEmpty()) {
                 // If no background images array, use single background field
-                editAgent?.background?.takeIf { it.isNotBlank() }
+                editAgent.background.takeIf { it.isNotBlank() }
             } else null
         )
     }
     var avatarUrls by remember {
         mutableStateOf<List<String>>(
-            if (isEditMode) editAgent?.backgroundImages ?: emptyList() else emptyList()
+            if (isEditMode) editAgent.backgroundImages else emptyList()
         )
     }
     var selectedImageIndex by remember {
-        mutableStateOf(
-            if (isEditMode && editAgent?.backgroundImages?.isNotEmpty() == true) {
+        mutableIntStateOf(
+            if (isEditMode && editAgent.backgroundImages.isNotEmpty()) {
                 // Find the index of the background image in the background_images list
-                val backgroundUrl = editAgent.background?.takeIf { it.isNotBlank() }
+                val backgroundUrl = editAgent.background.takeIf { it.isNotBlank() }
                 if (backgroundUrl != null) {
                     val index = editAgent.backgroundImages.indexOf(backgroundUrl)
                     if (index >= 0) index else 0
@@ -182,7 +188,7 @@ fun CreateRolePage(
     var isGeneratingAvatar by remember { mutableStateOf(false) }
     var croppedAvatarUrl by remember {
         mutableStateOf<String?>(
-            if (isEditMode) editAgent?.avatar?.takeIf { it.isNotBlank() && it != editAgent?.background } else null
+            if (isEditMode) editAgent.avatar.takeIf { it.isNotBlank() && it != editAgent.background } else null
         )
     }
 
@@ -207,11 +213,13 @@ fun CreateRolePage(
                     EasyLog.log("Activity stopped - clearing AvatarManager data")
                     AvatarManager.clearAllAvatarData()
                 }
+
                 Lifecycle.Event.ON_DESTROY -> {
                     // Also clear when activity is destroyed
                     EasyLog.log("Activity destroyed - clearing AvatarManager data")
                     AvatarManager.clearAllAvatarData()
                 }
+
                 else -> {}
             }
         }
@@ -251,26 +259,46 @@ fun CreateRolePage(
                                         // Update UI on main thread
                                         withContext(Dispatchers.Main) {
                                             croppedAvatarUrl = uploadedUrl
-                                            Toast.makeText(context, "Avatar cropped and uploaded", Toast.LENGTH_SHORT).show()
+                                            Toast.makeText(
+                                                context,
+                                                "Avatar cropped and uploaded",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
                                         }
                                     }
+
                                     is com.architecture.httplib.core.HttpResult.Failure -> {
-                                        EasyLog.log("Upload failed: ${response.message}", EasyLog.ERROR)
+                                        EasyLog.log(
+                                            "Upload failed: ${response.message}",
+                                            EasyLog.ERROR
+                                        )
                                         withContext(Dispatchers.Main) {
-                                            Toast.makeText(context, "Upload failed: ${response.message}", Toast.LENGTH_LONG).show()
+                                            Toast.makeText(
+                                                context,
+                                                "Upload failed: ${response.message}",
+                                                Toast.LENGTH_LONG
+                                            ).show()
                                         }
                                     }
                                 }
                             } catch (e: Exception) {
                                 EasyLog.log("Upload exception: ${e.message}", EasyLog.ERROR)
                                 withContext(Dispatchers.Main) {
-                                    Toast.makeText(context, "Upload failed: ${e.message}", Toast.LENGTH_LONG).show()
+                                    Toast.makeText(
+                                        context,
+                                        "Upload failed: ${e.message}",
+                                        Toast.LENGTH_LONG
+                                    ).show()
                                 }
                             }
                         }
                     } catch (e: Exception) {
                         EasyLog.log("Failed to prepare upload: ${e.message}", EasyLog.ERROR)
-                        Toast.makeText(context, "Failed to prepare upload: ${e.message}", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(
+                            context,
+                            "Failed to prepare upload: ${e.message}",
+                            Toast.LENGTH_SHORT
+                        ).show()
                     }
                 }
             }
@@ -278,7 +306,8 @@ fun CreateRolePage(
             result.data?.let { data ->
                 val cropError = UCrop.getError(data)
                 EasyLog.log("UCrop error: ${cropError?.message}", EasyLog.ERROR)
-                Toast.makeText(context, "Crop failed: ${cropError?.message}", Toast.LENGTH_LONG).show()
+                Toast.makeText(context, "Crop failed: ${cropError?.message}", Toast.LENGTH_LONG)
+                    .show()
             }
         }
     }
@@ -426,7 +455,8 @@ fun CreateRolePage(
         containerColor = BackGround,
         topBar = {
             CenterAlignedTopAppBar(
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors().copy(containerColor = Color.Transparent),
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors()
+                    .copy(containerColor = Color.Transparent),
                 title = {
                     Text(
                         text = if (isEditMode) "Edit IntelliMate" else "Create IntelliMate",
@@ -485,12 +515,16 @@ fun CreateRolePage(
                     // Get the current avatar URL to crop
                     val imageUrl = if (avatarUrls.isNotEmpty()) {
                         // Defensive bounds checking
-                        val safeIndex = if (selectedImageIndex >= 0 && selectedImageIndex < avatarUrls.size) {
-                            selectedImageIndex
-                        } else {
-                            EasyLog.log("Face edit - Index out of bounds! selectedImageIndex: $selectedImageIndex, avatarUrls.size: ${avatarUrls.size}", EasyLog.ERROR)
-                            0 // Fall back to first image
-                        }
+                        val safeIndex =
+                            if (selectedImageIndex >= 0 && selectedImageIndex < avatarUrls.size) {
+                                selectedImageIndex
+                            } else {
+                                EasyLog.log(
+                                    "Face edit - Index out of bounds! selectedImageIndex: $selectedImageIndex, avatarUrls.size: ${avatarUrls.size}",
+                                    EasyLog.ERROR
+                                )
+                                0 // Fall back to first image
+                            }
 
                         val selectedUrl = avatarUrls.getOrNull(safeIndex)
                         EasyLog.log("Face edit - selectedImageIndex: $selectedImageIndex, safeIndex: $safeIndex, avatarUrls.size: ${avatarUrls.size}")
@@ -512,7 +546,10 @@ fun CreateRolePage(
                                 EasyLog.log("Face edit - Valid URL format: $imageUrl")
                                 true
                             } catch (e: Exception) {
-                                EasyLog.log("Face edit - Invalid URL format: $imageUrl", EasyLog.ERROR)
+                                EasyLog.log(
+                                    "Face edit - Invalid URL format: $imageUrl",
+                                    EasyLog.ERROR
+                                )
                                 EasyLog.log("URL validation error: ${e.message}", EasyLog.ERROR)
                                 false
                             }
@@ -575,19 +612,21 @@ fun CreateRolePage(
                                     }
                                 }
                             } else {
-                                Toast.makeText(context, "Invalid image URL", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "Invalid image URL", Toast.LENGTH_SHORT)
+                                    .show()
                             }
                         } else {
                             // Local file URI
                             val sourceFile = if (imageUrl.startsWith("file://")) {
-                                File(Uri.parse(imageUrl).path!!)
+                                File(imageUrl.toUri().path!!)
                             } else {
                                 File(imageUrl)
                             }
                             startUCropWithLocalFile(sourceFile, context, cropLauncher)
                         }
                     } else {
-                        Toast.makeText(context, "No avatar image to crop", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "No avatar image to crop", Toast.LENGTH_SHORT)
+                            .show()
                     }
                 }
             )
@@ -602,13 +641,14 @@ fun CreateRolePage(
                 placeholder = "Name your IntelliMate"
             )
 
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Gender Selection
-            GenderSelectionSection(
-                selectedGender = gender,
-                onGenderChange = { gender = it }
-            )
+            // Gender Selection已经创建后的，也就是在修改模式下，性别选项则不显示
+            if (!isEditMode) {
+                Spacer(modifier = Modifier.height(24.dp))
+                GenderSelectionSection(
+                    selectedGender = gender,
+                    onGenderChange = { gender = it }
+                )
+            }
 
             Spacer(modifier = Modifier.height(24.dp))
 
@@ -665,7 +705,11 @@ fun CreateRolePage(
                 onClick = {
                     // Validate required fields
                     if (name.isBlank() || intro.isBlank() || opening.isBlank() || settings.isBlank()) {
-                        Toast.makeText(context, context.getString(R.string.please_fill_required_fields), Toast.LENGTH_SHORT).show()
+                        Toast.makeText(
+                            context,
+                            context.getString(R.string.please_fill_required_fields),
+                            Toast.LENGTH_SHORT
+                        ).show()
                         return@CreateButton
                     }
 
@@ -680,7 +724,8 @@ fun CreateRolePage(
 
                     // Determine final avatar URL - if no cropped avatar, use background as avatar
                     val finalAvatarUrl = croppedAvatarUrl ?: backgroundUrl
-                    val backgroundImagesList = if (avatarUrls.isNotEmpty()) avatarUrls else listOfNotNull(avatarUrl)
+                    val backgroundImagesList =
+                        avatarUrls.ifEmpty { listOfNotNull(avatarUrl) }
 
                     EasyLog.log("Create button clicked - Final Avatar URL: $finalAvatarUrl")
                     EasyLog.log("Create button clicked - Background URL: $backgroundUrl")
@@ -720,7 +765,11 @@ fun CreateRolePage(
                                 request = request,
                                 onSuccess = { agentInfo ->
                                     isLoading = false
-                                    Toast.makeText(context, context.getString(R.string.character_updated_successfully), Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(
+                                        context,
+                                        context.getString(R.string.character_updated_successfully),
+                                        Toast.LENGTH_SHORT
+                                    ).show()
                                     onCreateSuccess()
                                 },
                                 onError = { error ->
@@ -729,7 +778,8 @@ fun CreateRolePage(
                                         context.getString(
                                             R.string.operation_failed_try_later,
                                             context.getString(R.string.update_failed),
-                                            context.getString(R.string.please_try_again_later))
+                                            context.getString(R.string.please_try_again_later)
+                                        )
                                     } else {
                                         context.getString(R.string.update_failed_with_reason, error)
                                     }
@@ -741,7 +791,11 @@ fun CreateRolePage(
                                 request = request,
                                 onSuccess = { agentInfo ->
                                     isLoading = false
-                                    Toast.makeText(context, context.getString(R.string.create_ai_successfully), Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(
+                                        context,
+                                        context.getString(R.string.create_ai_successfully),
+                                        Toast.LENGTH_SHORT
+                                    ).show()
                                     onCreateSuccess()
                                 },
                                 onError = { error ->
@@ -750,9 +804,13 @@ fun CreateRolePage(
                                         context.getString(
                                             R.string.operation_failed_try_later,
                                             context.getString(R.string.creation_failed),
-                                            context.getString(R.string.please_try_again_later))
+                                            context.getString(R.string.please_try_again_later)
+                                        )
                                     } else {
-                                        context.getString(R.string.creation_failed_with_reason, error)
+                                        context.getString(
+                                            R.string.creation_failed_with_reason,
+                                            error
+                                        )
                                     }
                                     Toast.makeText(context, errorMessage, Toast.LENGTH_LONG).show()
                                 }
@@ -760,10 +818,20 @@ fun CreateRolePage(
                         }
                     } catch (e: Exception) {
                         isLoading = false
-                        val operation = if (isEditMode) context.getString(R.string.update_failed) else context.getString(R.string.creation_failed)
-                        val errorMessage = context.getString(R.string.operation_error_with_reason, operation, e.message ?: context.getString(R.string.unknown_error))
+                        val operation =
+                            if (isEditMode) context.getString(R.string.update_failed) else context.getString(
+                                R.string.creation_failed
+                            )
+                        val errorMessage = context.getString(
+                            R.string.operation_error_with_reason,
+                            operation,
+                            e.message ?: context.getString(R.string.unknown_error)
+                        )
                         Toast.makeText(context, errorMessage, Toast.LENGTH_LONG).show()
-                        EasyLog.log("${if (isEditMode) "UpdateRole" else "CreateRole"} error: ${e.message}", EasyLog.ERROR)
+                        EasyLog.log(
+                            "${if (isEditMode) "UpdateRole" else "CreateRole"} error: ${e.message}",
+                            EasyLog.ERROR
+                        )
                         EasyLog.log(e)
                     }
                 }
@@ -778,11 +846,14 @@ fun CreateRolePage(
 private fun startUCropWithLocalFile(
     sourceFile: File,
     context: android.content.Context,
-    cropLauncher: androidx.activity.result.ActivityResultLauncher<android.content.Intent>
+    cropLauncher: androidx.activity.result.ActivityResultLauncher<android.content.Intent>,
 ) {
     try {
         if (!sourceFile.exists() || sourceFile.length() == 0L) {
-            EasyLog.log("Source file does not exist or is empty: ${sourceFile.absolutePath}", EasyLog.ERROR)
+            EasyLog.log(
+                "Source file does not exist or is empty: ${sourceFile.absolutePath}",
+                EasyLog.ERROR
+            )
             Toast.makeText(context, "Image file not found", Toast.LENGTH_SHORT).show()
             return
         }
@@ -809,7 +880,11 @@ private fun startUCropWithLocalFile(
                 setCircleDimmedLayer(true) // Enable circular cropping
                 setShowCropFrame(false) // Hide square frame for circular crop
                 setShowCropGrid(false) // Hide grid for cleaner circular crop
-                setAllowedGestures(UCropActivity.SCALE, UCropActivity.NONE, UCropActivity.NONE) // Only allow scaling gestures
+                setAllowedGestures(
+                    UCropActivity.SCALE,
+                    UCropActivity.NONE,
+                    UCropActivity.NONE
+                ) // Only allow scaling gestures
             })
             .getIntent(context)
 
@@ -822,7 +897,7 @@ private fun startUCropWithLocalFile(
 }
 
 @Composable
-fun AvatarUploadSection(
+private fun AvatarUploadSection(
     avatarUrl: String?,
     avatarUrls: List<String> = emptyList(),
     selectedIndex: Int = 0,
@@ -831,7 +906,7 @@ fun AvatarUploadSection(
     onGenerateClick: () -> Unit,
     onImageSelected: (Int) -> Unit = {},
     onRegenerate: (String) -> Unit = {},
-    onFaceEdit: () -> Unit = {}
+    onFaceEdit: () -> Unit = {},
 ) {
     val isEmpty = avatarUrls.isEmpty() && avatarUrl == null
     Box(
@@ -864,6 +939,7 @@ fun AvatarUploadSection(
             isGenerating -> {
                 ThreeDotLoadingAnimation()
             }
+
             avatarUrls.isNotEmpty() -> {
                 val displayUrl = avatarUrls.getOrNull(selectedIndex) ?: avatarUrls.first()
                 EasyLog.log("AvatarUploadSection: Displaying selected avatar with URL: $displayUrl")
@@ -883,6 +959,7 @@ fun AvatarUploadSection(
                     }
                 )
             }
+
             avatarUrl != null -> {
                 EasyLog.log("AvatarUploadSection: Displaying avatar with URL: $avatarUrl")
                 AsyncImage(
@@ -901,6 +978,7 @@ fun AvatarUploadSection(
                     }
                 )
             }
+
             else -> {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally
@@ -1045,9 +1123,9 @@ fun AvatarUploadSection(
 }
 
 @Composable
-fun GenderSelectionSection(
+private fun GenderSelectionSection(
     selectedGender: String,
-    onGenderChange: (String) -> Unit
+    onGenderChange: (String) -> Unit,
 ) {
     Column {
         Text(
@@ -1085,7 +1163,7 @@ fun GenderSelectionSection(
 }
 
 @Composable
-fun SoundSelectionSection() {
+private fun SoundSelectionSection() {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -1144,9 +1222,9 @@ fun SoundSelectionSection() {
 }
 
 @Composable
-fun VisibilitySelectionSection(
+private fun VisibilitySelectionSection(
     selectedVisibility: String,
-    onVisibilityChange: (String) -> Unit
+    onVisibilityChange: (String) -> Unit,
 ) {
     Row(
         modifier = Modifier
@@ -1211,12 +1289,12 @@ fun VisibilitySelectionSection(
 
 
 @Composable
-fun CustomTextField(
+private fun CustomTextField(
     label: String,
     value: String,
     onValueChange: (String) -> Unit,
     placeholder: String,
-    minLines: Int = 1
+    minLines: Int = 1,
 ) {
     Column {
         Text(
@@ -1265,11 +1343,11 @@ fun CustomTextField(
 }
 
 @Composable
-fun GenderButton(
+private fun GenderButton(
     text: String,
     isSelected: Boolean,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     var lastClickTime by remember { mutableLongStateOf(0L) }
 
@@ -1303,10 +1381,10 @@ fun GenderButton(
 
 
 @Composable
-fun CreateButton(
+private fun CreateButton(
     isLoading: Boolean,
     isEditMode: Boolean = false,
-    onClick: () -> Unit
+    onClick: () -> Unit,
 ) {
     var lastClickTime by remember { mutableLongStateOf(0L) }
 
