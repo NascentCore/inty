@@ -2,7 +2,6 @@ package com.ai.inty
 
 import android.os.Build
 import android.os.Bundle
-import android.view.View
 import android.view.WindowManager
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
@@ -35,6 +34,7 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -50,6 +50,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
+import com.ai.inty.base.AntiClick
 import com.ai.inty.base.BaseActivity
 import com.ai.inty.base.IntyImage
 import com.ai.inty.base.noRippleClickable
@@ -108,7 +109,7 @@ class AgentInfoActivity : BaseActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AgentInfoScreen(
+private fun AgentInfoScreen(
     agent: AgentInfo,
     viewModel: AgentInfoViewModel,
     onBack: () -> Unit,
@@ -137,8 +138,7 @@ fun AgentInfoScreen(
                             )
                         )
                     )
-            ) {}
-//            Spacer(Modifier.height(120.dp))
+            )
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -151,20 +151,21 @@ fun AgentInfoScreen(
                             )
                         )
                     )
-            ) {}
+            )
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
                     .background(color = BackGround)
-            ) {}
+            )
         }
         Scaffold(
             modifier = Modifier.fillMaxSize(),
             containerColor = Color.Transparent,
             topBar = {
                 CenterAlignedTopAppBar(
-                    colors = TopAppBarDefaults.centerAlignedTopAppBarColors().copy(containerColor = Color.Transparent),
+                    colors = TopAppBarDefaults.centerAlignedTopAppBarColors()
+                        .copy(containerColor = Color.Transparent),
                     title = {
                     },
                     navigationIcon = {
@@ -185,8 +186,7 @@ fun AgentInfoScreen(
                                 .padding(horizontal = 12.dp)
                                 .noRippleClickable {
                                     showBottomSheet = true
-                                }
-                            ,
+                                },
                             painter = painterResource(R.drawable.icon_more2),
                             contentDescription = null,
                         )
@@ -216,44 +216,23 @@ fun AgentInfoScreen(
                     Spacer(Modifier.width(16.dp))
                     Text(
                         modifier = Modifier.widthIn(0.dp, 100.dp),
-                        text = stringResource(R.string.ID, agent.readableId.takeIf { it.isNotEmpty() } ?: agent.id),
+                        text = stringResource(
+                            R.string.ID,
+                            agent.readableId.takeIf { it.isNotEmpty() } ?: agent.id),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Light,
                         color = Color.White.copy(0.55f),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-//                    Spacer(Modifier.width(32.dp))
-//                    Text(
-//                        text = stringResource(R.string.creator),
-//                        fontSize = 12.sp,
-//                        fontWeight = FontWeight.Light,
-//                        color = Color.White.copy(0.55f),
-//                        maxLines = 1,
-//                        overflow = TextOverflow.Ellipsis
-//                    )
-//                    Spacer(Modifier.width(3.dp))
-//                    IntyCircleImage(
-//                        modifier = Modifier.size(16.dp),
-//                        url = agent.creator?.avatar,
-//                        placeholderResID = R.mipmap.ic_launcher
-//                    )
-//                    Text(
-//                        text = agent.creator?.nickname ?: "",
-//                        fontSize = 12.sp,
-//                        fontWeight = FontWeight.Light,
-//                        color = Color.White.copy(0.55f),
-//                        maxLines = 1,
-//                        overflow = TextOverflow.Ellipsis
-//                    )
-//                    Spacer(Modifier.width(16.dp))
+
                 }
                 Spacer(Modifier.height(24.dp))
 
                 // 统计行
                 StatsRow(
                     modifier = Modifier.padding(horizontal = 16.dp),
-                    connectorsCount = 0, // 暂时设为0
+                    connectorsCount = agent.followerCount, //todo 需要修改为connector字段
                     followersCount = agent.followerCount,
                     isFollowing = agent.isFollowed,
                     onFollowClick = {
@@ -331,95 +310,6 @@ fun AgentInfoScreen(
 
                 Spacer(Modifier.height(16.dp))
 
-//                Column(
-//                    modifier = Modifier
-//                        .padding(horizontal = 16.dp)
-//                        .fillMaxWidth()
-//                        .border(
-//                            brush = Brush.linearGradient(
-//                                colors = listOf(
-//                                    Color.Transparent,
-//                                    Color.White.copy(0.2f),
-//                                    Color.Transparent
-//                                )
-//                            ),
-//                            width = 1.dp,
-//                            shape = RoundedCornerShape(8.dp)
-//                        )
-//                        .background(
-//                            color = Color(0x3378599A),
-//                            shape = RoundedCornerShape(8.dp)
-//                        )
-//                ) {
-//                    Spacer(Modifier.height(16.dp))
-//
-//                    Text(
-//                        modifier = Modifier.padding(horizontal = 12.dp),
-//                        text = stringResource(R.string.creation_info),
-//                        fontSize = 14.sp,
-//                        fontWeight = FontWeight.SemiBold,
-//                        color = Color.White
-//                    )
-//                    Spacer(Modifier.height(12.dp))
-//                    Row(
-//                        modifier = Modifier
-//                            .padding(horizontal = 12.dp)
-//                            .fillMaxWidth()
-//                            .height(56.dp)
-//                            .background(color = Color.White.copy(0.1f), shape = RoundedCornerShape(8.dp))
-//                            .border(width = 1.dp, color = Color.White.copy(0.2f), shape = RoundedCornerShape(8.dp))
-//                        ,
-//                        verticalAlignment = Alignment.CenterVertically,
-//                    ) {
-//                        Spacer(Modifier.width(8.dp))
-//
-//                        IntyImage(
-//                            modifier = Modifier.size(36.dp)
-//                                .clip(RoundedCornerShape(8.dp))
-//                            ,
-//                            model = agent.creator?.avatar,
-//                            placeholder = painterResource(R.mipmap.ic_launcher)
-//                        )
-//                        Spacer(Modifier.width(6.dp))
-//                        Column(
-//                            modifier = Modifier.weight(1f)
-//                        ) {
-//                            Text(
-//                                modifier = Modifier.padding(horizontal = 0.dp),
-//                                text = stringResource(R.string.inspiration),
-//                                fontSize = 14.sp,
-//                                fontWeight = FontWeight.Medium,
-//                                color = Color.White
-//                            )
-//                            Text(
-//                                modifier = Modifier.padding(horizontal = 0.dp),
-//                                text = "${agent.creator?.publicAgentsCount ?: 0} InTy  |  ${agent.creator?.totalPublicAgentsFollows ?: 0} Subscribers",
-//                                fontSize = 12.sp,
-//                                fontWeight = FontWeight.Normal,
-//                                color = Color.White
-//                            )
-//                        }
-//                        Spacer(Modifier.width(8.dp))
-//
-//                        IntyImage(
-//                            modifier = Modifier.size(16.dp),
-//                            model = R.drawable.icon_next
-//                        )
-//
-//                        Spacer(Modifier.width(8.dp))
-//                    }
-//
-//                    Spacer(Modifier.height(12.dp))
-//                    Text(
-//                        modifier = Modifier.padding(horizontal = 12.dp),
-//                        text = stringResource(R.string.create_time, convertUtcToLocalFull(agent.createdAt)),
-//                        fontSize = 12.sp,
-//                        fontWeight = FontWeight.Light,
-//                        color = Color.White.copy(0.55f)
-//                    )
-//                    Spacer(Modifier.height(16.dp))
-//                }
-
                 Spacer(Modifier.height(100.dp))
             }
         }
@@ -457,9 +347,7 @@ fun AgentInfoScreen(
 }
 
 @Composable
-fun TagItem(
-    text: String
-) {
+private fun TagItem(text: String) {
     Box(
         modifier = Modifier
             .background(color = Color(0xff1C1523), shape = RoundedCornerShape(4.dp))
@@ -486,12 +374,12 @@ fun TagItem(
 }
 
 @Composable
-fun StatsRow(
+private fun StatsRow(
     modifier: Modifier = Modifier,
     connectorsCount: Int,
     followersCount: Int,
     isFollowing: Boolean,
-    onFollowClick: () -> Unit
+    onFollowClick: () -> Unit,
 ) {
     Row(
         modifier = modifier.fillMaxWidth(),
@@ -524,9 +412,9 @@ fun StatsRow(
 }
 
 @Composable
-fun StatItem(
+private fun StatItem(
     count: Int,
-    label: String
+    label: String,
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally
@@ -547,12 +435,20 @@ fun StatItem(
 }
 
 @Composable
-fun FollowButton(
+private fun FollowButton(
     isFollowing: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
 ) {
+    var lastClickTime by remember { mutableLongStateOf(0L) }
+
     Button(
-        onClick = onClick,
+        onClick = {
+            val currentTime = System.currentTimeMillis()
+            if (AntiClick.isValidClick(lastClickTime)) {
+                lastClickTime = currentTime
+                onClick()
+            }
+        },
         colors = ButtonDefaults.buttonColors(
             containerColor = if (isFollowing) Color(0x3378599A) else Color.Transparent
         ),
@@ -584,9 +480,9 @@ fun FollowButton(
 }
 
 @Composable
-fun BottomSheetContent(
+private fun BottomSheetContent(
     onReportClick: () -> Unit,
-    onCancelClick: () -> Unit
+    onCancelClick: () -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -638,7 +534,7 @@ fun BottomSheetContent(
 }
 
 @Composable
-fun AgentSpacerLine() {
+private fun AgentSpacerLine() {
     Spacer(Modifier.height(4.dp))
     Box(
         modifier = Modifier
@@ -653,7 +549,7 @@ fun AgentSpacerLine() {
     Spacer(Modifier.height(4.dp))
 }
 
-fun formatCount(count: Int): String {
+private fun formatCount(count: Int): String {
     return when {
         count >= 1000000 -> "${count / 1000000}.${(count % 1000000) / 100000}M"
         count >= 1000 -> "${count / 1000}.${(count % 1000) / 100}K"
