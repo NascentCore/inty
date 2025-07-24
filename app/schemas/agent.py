@@ -1,5 +1,5 @@
 from typing import Optional, List, Dict, Any
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, field_serializer
 from datetime import datetime
 
 from app.models.agent import AgentVisibility, AgentStatus
@@ -118,6 +118,18 @@ class AgentInDB(AgentBase):
     creator_id: Optional[str] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
+
+    @field_serializer('created_at')
+    def serialize_created_at(self, created_at: datetime) -> str:
+        """格式化创建时间为 yy-mm-dd hh:mm"""
+        return created_at.strftime('%y-%m-%d %H:%M')
+    
+    @field_serializer('updated_at')
+    def serialize_updated_at(self, updated_at: Optional[datetime]) -> Optional[str]:
+        """格式化更新时间为 yy-mm-dd hh:mm"""
+        if updated_at is None:
+            return None
+        return updated_at.strftime('%y-%m-%d %H:%M')
 
     class Config:
         from_attributes = True
