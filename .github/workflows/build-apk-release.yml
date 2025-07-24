@@ -1,0 +1,114 @@
+name: Build APK Release and Upload to GitHub Release
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-apk:
+    name: Build APK and Upload
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Set up JDK 21
+      uses: actions/setup-java@v4
+      with:
+        java-version: '21'
+        distribution: 'temurin'
+
+    - name: Cache Gradle dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.gradle/caches
+          ~/.gradle/wrapper
+        key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+        restore-keys: |
+          ${{ runner.os }}-gradle-
+
+    - name: Create keystore.properties
+      env:
+        KEYSTORE_PROPERTIES: ${{ secrets.KEYSTORE_PROPERTIES }}
+      run: |
+        echo "$KEYSTORE_PROPERTIES" > keystore.properties
+
+    - name: Make gradlew executable
+      run: chmod +x ./gradlew
+
+    - name: Build APK
+      run: |
+        ./gradlew clean assembleRelease --stacktrace --info
+        echo "✅ APK build completed!"
+        ls -la app/build/outputs/apk/release/
+
+    - name: Get version name and code
+      id: version
+      run: |
+        VERSION_NAME=$(grep 'versionName = ' app/build.gradle.kts | sed 's/.*versionName = "\(.*\)".*/\1/')
+        GIT_COMMIT_COUNT=$(git rev-list --count HEAD)
+        VERSION_CODE=$(( GIT_COMMIT_COUNT > 10 ? GIT_COMMIT_COUNT : 10 ))
+        echo "version_name=$VERSION_NAME" >> $GITHUB_OUTPUT
+        echo "version_code=$VERSION_CODE" >> $GITHUB_OUTPUT
+
+    - name: Create GitHub Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: v${{ steps.version.outputs.version_code }}
+        release_name: APK Release v${{ steps.version.outputs.version_name }} (Build ${{ steps.version.outputs.version_code }})
+        body: |
+          🔧 APK Release Build
+
+          - Version Name: ${{ steps.version.outputs.version_name }}
+          - Version Code: ${{ steps.version.outputs.version_code }}
+          - Built from commit: ${{ github.sha }}
+        draft: false
+        prerelease: false
+
+    - name: Upload APK to GitHub Release
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: app/build/outputs/apk/release/app-release.apk
+        asset_name: app-release.apk
+        asset_content_type: application/vnd.android.package-archive
+
+    - name: Notify Feishu group via webhook
+      run: |
+        VERSION_NAME=${{ steps.version.outputs.version_name }}
+        VERSION_CODE=${{ steps.version.outputs.version_code }}
+        RELEASE_URL="https://github.com/${{ github.repository }}/releases/tag/v${VERSION_CODE}"
+
+        curl -X POST ${{ secrets.FEISHU_WEBHOOK_URL }} \
+          -H 'Content-Type: application/json' \
+          -d '{
+                "msg_type": "post",
+                "content": {
+                  "post": {
+                    "zh_cn": {
+                      "title": "📦 新版本 APK 发布",
+                      "content": [
+                        [
+                          {
+                            "tag": "text",
+                            "text": "版本名称：'"${VERSION_NAME}"'\n版本号（Build）：'"${VERSION_CODE}"'\n\n✅ APK 构建完成并上传至 GitHub Release："
+                          },
+                          {
+                            "tag": "a",
+                            "text": "点击查看",
+                            "href": "'"${RELEASE_URL}"'"
+                          }
+                        ]
+                      ]
+                    }
+                  }
+                }
+              }'
