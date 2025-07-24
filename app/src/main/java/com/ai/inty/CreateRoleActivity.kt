@@ -62,6 +62,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.graphics.toColorInt
 import androidx.core.net.toUri
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -95,6 +96,7 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.asRequestBody
 import java.io.File
 import java.util.UUID
+import java.util.concurrent.TimeUnit
 import android.graphics.Color as AndroidColor
 
 /**
@@ -563,7 +565,12 @@ private fun CreateRolePage(
                                             context.cacheDir,
                                             "temp_crop_source_${UUID.randomUUID()}.jpg"
                                         )
-                                        val client = OkHttpClient()
+                                        val client = OkHttpClient.Builder()
+                                            .callTimeout(10 * 1000, TimeUnit.MILLISECONDS)
+                                            .connectTimeout(15 * 1000, TimeUnit.MILLISECONDS)
+                                            .readTimeout(15 * 1000, TimeUnit.MILLISECONDS)
+                                            .writeTimeout(15 * 1000, TimeUnit.MILLISECONDS)
+                                            .build()
                                         val request = Request.Builder()
                                             .url(imageUrl)
                                             .build()
@@ -761,7 +768,7 @@ private fun CreateRolePage(
                         // Call API through ViewModel
                         if (isEditMode) {
                             mainViewModel.updateAgent(
-                                agentId = editAgent!!.id,
+                                agentId = editAgent.id,
                                 request = request,
                                 onSuccess = { agentInfo ->
                                     isLoading = false
@@ -871,9 +878,9 @@ private fun startUCropWithLocalFile(
                 setHideBottomControls(true) // Hide bottom controls (rotate/scale buttons)
                 setFreeStyleCropEnabled(false)
                 setToolbarTitle(context.getString(R.string.crop_image))
-                setStatusBarColor(AndroidColor.parseColor("#1C1523"))
-                setToolbarColor(AndroidColor.parseColor("#1C1523"))
-                setActiveControlsWidgetColor(AndroidColor.parseColor("#E91E63"))
+                setStatusBarColor("#1C1523".toColorInt())
+                setToolbarColor("#1C1523".toColorInt())
+                setActiveControlsWidgetColor("#E91E63".toColorInt())
                 setToolbarWidgetColor(AndroidColor.WHITE)
                 setCropFrameColor(AndroidColor.WHITE)
                 setCropGridColor(AndroidColor.WHITE)
