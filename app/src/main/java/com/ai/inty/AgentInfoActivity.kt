@@ -238,7 +238,7 @@ private fun AgentInfoScreen(
                 // 统计行
                 StatsRow(
                     modifier = Modifier.padding(horizontal = 16.dp),
-                    connectorsCount = agent.followerCount, //todo 需要修改为connector字段
+                    connectorsCount = agent.connectorCount,
                     followersCount = agent.followerCount,
                     isFollowing = agent.isFollowed,
                     onFollowClick = {

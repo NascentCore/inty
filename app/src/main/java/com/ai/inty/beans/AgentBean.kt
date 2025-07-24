@@ -1,4 +1,5 @@
 package com.ai.inty.beans
+
 import android.os.Parcelable
 import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
@@ -44,8 +45,10 @@ data class AgentInfo(
     @Json(name = "prompt")
     val prompt: String = "",
     @Json(name = "follower_count")
-    val followerCount: Int = 0
-): Parcelable
+    val followerCount: Int = 0,
+    @Json(name = "connector_count")
+    val connectorCount: Int = 0,
+) : Parcelable
 
 @Parcelize
 @JsonClass(generateAdapter = true)
@@ -81,8 +84,8 @@ data class CreatorInfo(
     @Json(name = "public_agents_count")
     val publicAgentsCount: Int = 0,
     @Json(name = "total_public_agents_follows")
-    val totalPublicAgentsFollows: Int = 0
-): Parcelable
+    val totalPublicAgentsFollows: Int = 0,
+) : Parcelable
 
 
 @JsonClass(generateAdapter = true)
@@ -93,12 +96,12 @@ data class AgentInfoResponse(
     @Json(name = "page_size")
     val pageSize: Int = 10,
     @Json(name = "total_pages")
-    val totalPages: Int = 1
+    val totalPages: Int = 1,
 )
 
 @JsonClass(generateAdapter = true)
 data class FollowResponse(
-    val message: String = ""
+    val message: String = "",
 )
 
 @JsonClass(generateAdapter = true)
@@ -128,7 +131,7 @@ data class CreateAgentRequest(
     @Json(name = "category")
     val category: String = "",
     @Json(name = "prompt")
-    val prompt: String
+    val prompt: String,
 )
 
 @JsonClass(generateAdapter = true)
@@ -172,13 +175,13 @@ data class CreateAgentResponse(
     @Json(name = "follower_count")
     val followerCount: Int = 0,
     @Json(name = "creator")
-    val creator: CreatorInfo? = null
+    val creator: CreatorInfo? = null,
 )
 
 @JsonClass(generateAdapter = true)
 data class GenerateBackgroundRequest(
     @Json(name = "prompt")
-    val prompt: String
+    val prompt: String,
 )
 
 @JsonClass(generateAdapter = true)
@@ -186,7 +189,7 @@ data class GenerateBackgroundResponse(
     @Json(name = "url")
     val imageUrl: String = "",
     @Json(name = "urls")
-    val imageUrls: List<String> = listOf()
+    val imageUrls: List<String> = listOf(),
 )
 
 @JsonClass(generateAdapter = true)
@@ -198,5 +201,5 @@ data class UploadAvatarResponse(
     @Json(name = "size")
     val size: Long = 0,
     @Json(name = "content_type")
-    val contentType: String = ""
+    val contentType: String = "",
 )
