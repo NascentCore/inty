@@ -148,16 +148,7 @@ jobs:
                 "tag": "div",
                 "text": {
                   "tag": "plain_text",
-                  "content": "📲 手机扫码下载："
-                }
-              },
-              {
-                "tag": "img",
-                "img_key": "",
-                "img_url": "${QR_CODE_URL}",
-                "alt": {
-                  "tag": "plain_text",
-                  "content": "扫码下载 APK"
+                  "content": "📲 手机扫码下载：\\n${QR_CODE_URL}"
                 }
               }
             ]
