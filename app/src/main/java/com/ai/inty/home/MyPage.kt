@@ -171,7 +171,7 @@ internal fun MyPage(
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
                         Text(
-                            text = "1232",
+                            text = "${userProfile.connectorCount}",
                             color = Color.White,
                             fontSize = 16.sp,
                             fontWeight = FontWeight.SemiBold,
@@ -193,7 +193,7 @@ internal fun MyPage(
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
                         Text(
-                            text = "8.4K",
+                            text = "${userProfile.followerCount}",
                             color = Color.White,
                             fontSize = 16.sp,
                             fontWeight = FontWeight.SemiBold,
