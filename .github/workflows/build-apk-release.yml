@@ -80,3 +80,35 @@ jobs:
         asset_path: app/build/outputs/apk/release/app-release.apk
         asset_name: app-release.apk
         asset_content_type: application/vnd.android.package-archive
+
+    - name: Notify Feishu group via webhook
+      run: |
+        VERSION_NAME=${{ steps.version.outputs.version_name }}
+        VERSION_CODE=${{ steps.version.outputs.version_code }}
+        RELEASE_URL="https://github.com/${{ github.repository }}/releases/tag/v${VERSION_CODE}"
+
+        curl -X POST ${{ secrets.FEISHU_WEBHOOK_URL }} \
+          -H 'Content-Type: application/json' \
+          -d '{
+                "msg_type": "post",
+                "content": {
+                  "post": {
+                    "zh_cn": {
+                      "title": "📦 新版本 APK 发布",
+                      "content": [
+                        [
+                          {
+                            "tag": "text",
+                            "text": "版本名称：'"${VERSION_NAME}"'\n版本号（Build）：'"${VERSION_CODE}"'\n\n✅ APK 构建完成并上传至 GitHub Release："
+                          },
+                          {
+                            "tag": "a",
+                            "text": "点击查看",
+                            "href": "'"${RELEASE_URL}"'"
+                          }
+                        ]
+                      ]
+                    }
+                  }
+                }
+              }'
