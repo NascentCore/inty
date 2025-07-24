@@ -159,41 +159,48 @@ class BackgroundTaskService:
     def _save_debug_messages_to_db(self, user_id: str, session_id: str, agent_id: str, debug_data: dict, conn):
         """保存调试信息到数据库（在后台线程中执行）"""
         try:
-            # 构建消息链
-            messages = []
-            
-            # 处理输入数据
-            input_data = debug_data.get("input_data", {})
-            
-            try:
-                # 简化的消息构建逻辑，避免复杂的提示词处理
-                system_messages = input_data.get("messages", [])
+            # 优先使用预格式化的消息，确保与同步版本一致
+            if "formatted_messages" in debug_data:
+                # 使用agent.py中预处理的完整消息链（包含动态提示词）
+                messages = debug_data["formatted_messages"]
+                logger.debug(f"使用预格式化消息，共{len(messages)}条消息")
+            else:
+                # 回退到旧的逻辑（向后兼容）
+                logger.warning(f"未找到预格式化消息，使用回退逻辑 - Agent: {agent_id}")
+                messages = []
                 
-                for msg in system_messages:
-                    if hasattr(msg, 'type') and hasattr(msg, 'content'):
-                        msg_type = msg.type
-                        if msg_type == 'human':
-                            msg_type = 'user'
-                        elif msg_type == 'ai':
-                            msg_type = 'character'
-                        messages.append({"type": msg_type, "content": msg.content})
-                    elif isinstance(msg, dict):
-                        msg_type = msg.get('type', 'system')
-                        if msg_type == 'human':
-                            msg_type = 'user'
-                        elif msg_type == 'ai':
-                            msg_type = 'character'
-                        messages.append({"type": msg_type, "content": msg.get('content', '')})
-                        
-            except Exception as e:
-                logger.error(f"构建调试消息链失败: {str(e)}")
-                # 使用fallback消息
-                messages = [{"type": "system", "content": "调试消息构建失败"}]
-            
-            # 添加AI响应消息
-            response_text = debug_data.get("response_text", "")
-            if response_text:
-                messages.append({"type": "character", "content": response_text})
+                # 处理输入数据
+                input_data = debug_data.get("input_data", {})
+                
+                try:
+                    # 简化的消息构建逻辑，避免复杂的提示词处理
+                    system_messages = input_data.get("messages", [])
+                    
+                    for msg in system_messages:
+                        if hasattr(msg, 'type') and hasattr(msg, 'content'):
+                            msg_type = msg.type
+                            if msg_type == 'human':
+                                msg_type = 'user'
+                            elif msg_type == 'ai':
+                                msg_type = 'character'
+                            messages.append({"type": msg_type, "content": msg.content})
+                        elif isinstance(msg, dict):
+                            msg_type = msg.get('type', 'system')
+                            if msg_type == 'human':
+                                msg_type = 'user'
+                            elif msg_type == 'ai':
+                                msg_type = 'character'
+                            messages.append({"type": msg_type, "content": msg.get('content', '')})
+                            
+                except Exception as e:
+                    logger.error(f"构建调试消息链失败: {str(e)}")
+                    # 使用fallback消息
+                    messages = [{"type": "system", "content": "调试消息构建失败"}]
+                
+                # 添加AI响应消息（只在回退逻辑中需要，预格式化消息已包含）
+                response_text = debug_data.get("response_text", "")
+                if response_text:
+                    messages.append({"type": "character", "content": response_text})
             
             # 保存到数据库
             debug_data_to_save = {
@@ -215,7 +222,7 @@ class BackgroundTaskService:
                 rows_affected = cursor.rowcount
                 conn.commit()
             
-            logger.debug(f"后台调试信息保存成功: Agent={agent_id}, 影响行数={rows_affected}")
+            logger.debug(f"后台调试信息保存成功: Agent={agent_id}, 消息数={len(messages)}, 影响行数={rows_affected}")
             
         except Exception as e:
             logger.error(f"后台调试信息保存到数据库失败: Agent={agent_id}, Error={str(e)}")

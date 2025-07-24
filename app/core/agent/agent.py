@@ -265,8 +265,8 @@ class Agent:
             name=name,
             model=model,
             tools=[
-                create_manage_memory_tool(namespace=('memories',name,'{user_id}')),
-                create_search_memory_tool(namespace=('memories',name,'{user_id}'))
+                # create_manage_memory_tool(namespace=('memories',name,'{user_id}')),
+                # create_search_memory_tool(namespace=('memories',name,'{user_id}'))
                 # google_search_tool
                 ],
             prompt=self.prompt_runnable,
@@ -685,8 +685,52 @@ class Agent:
                 # 调试日志记录（异步后台处理）
                 logger.debug(f"优化版检查debug_logging配置: {settings.agent.enable_debug_logging}")
                 if settings.agent.enable_debug_logging:
-                    # 准备调试数据
+                    # 预处理格式化消息（保持与_save_debug_messages一致）
+                    try:
+                        # 获取格式化的提示词
+                        formatted_prompt = self.prompt_runnable.invoke(state_data)
+                        
+                        if hasattr(formatted_prompt, 'messages'):
+                            # 提取所有系统和用户消息
+                            formatted_messages = []
+                            for msg in formatted_prompt.messages:
+                                if hasattr(msg, 'type') and hasattr(msg, 'content'):
+                                    # 转换消息类型：system->system, human->user, ai->character
+                                    msg_type = msg.type
+                                    if msg_type == 'human':
+                                        msg_type = 'user'
+                                    elif msg_type == 'ai':
+                                        msg_type = 'character'
+                                    formatted_messages.append({"type": msg_type, "content": msg.content})
+                        else:
+                            # 回退到简单格式
+                            formatted_messages = [{"type": "system", "content": str(formatted_prompt)}]
+                            
+                    except Exception as e:
+                        logger.error(f"预处理格式化消息失败: {str(e)}, 使用fallback")
+                        # 使用基础系统消息作为fallback
+                        formatted_messages = [{"type": "system", "content": "消息格式化失败"}]
+                    
+                    # 添加AI响应消息
+                    ai_message = None
+                    for msg in response.get("messages", []):
+                        if hasattr(msg, 'type') and hasattr(msg, 'content'):
+                            if msg.type in ['ai', 'assistant']:
+                                # 转换AI消息类型为character
+                                ai_message = {"type": "character", "content": msg.content}
+                        elif isinstance(msg, dict) and msg.get("type") in ['ai', 'assistant']:
+                            # 转换AI消息类型为character
+                            ai_message = {"type": "character", "content": msg.get("content", str(msg))}
+                    
+                    if ai_message:
+                        formatted_messages.append(ai_message)
+                    elif response_text:
+                        # AI响应转换为character类型
+                        formatted_messages.append({"type": "character", "content": response_text})
+                    
+                    # 准备调试数据（包含预格式化的完整消息）
                     debug_data = {
+                        "formatted_messages": formatted_messages,  # 新增预格式化消息
                         "input_data": {
                             "messages": state_data.get('messages', []),
                             "user_profile": state_data.get('user_profile', ''),
@@ -713,7 +757,13 @@ class Agent:
                 raise
 
     def _save_debug_messages(self, user_id: str, session_id: str, debug_data: dict, conn):
-        """保存调试信息到数据库 - 包含发送给LLM的完整提示词"""
+        """
+        保存调试信息到数据库 - 包含发送给LLM的完整提示词
+        
+        @deprecated: 此方法已弃用，现在使用 background_task_service.submit_debug_save_task() 
+        进行异步后台保存，提高性能并避免阻塞主聊天流程。
+        新的实现确保了完整的动态提示词内容被保存。
+        """
         logger.info(f"开始保存调试信息 - Agent: {self.agent_id}, User: {user_id}, Session: {session_id}")
         
         try:
@@ -875,15 +925,49 @@ class Agent:
                     # 如果启用调试日志记录，保存完整的流式响应（异步后台处理）
                     logger.debug(f"流式聊天检查debug_logging配置: {settings.agent.enable_debug_logging}")
                     if settings.agent.enable_debug_logging:
-                        # 构建完整的调试数据，包含用户输入
+                        # 预处理格式化消息（保持与_save_debug_messages一致）
+                        try:
+                            # 获取格式化的提示词
+                            formatted_prompt = self.prompt_runnable.invoke(state_data)
+                            
+                            if hasattr(formatted_prompt, 'messages'):
+                                # 提取所有系统和用户消息
+                                formatted_messages = []
+                                for msg in formatted_prompt.messages:
+                                    if hasattr(msg, 'type') and hasattr(msg, 'content'):
+                                        # 转换消息类型：system->system, human->user, ai->character
+                                        msg_type = msg.type
+                                        if msg_type == 'human':
+                                            msg_type = 'user'
+                                        elif msg_type == 'ai':
+                                            msg_type = 'character'
+                                        formatted_messages.append({"type": msg_type, "content": msg.content})
+                            else:
+                                # 回退到简单格式
+                                formatted_messages = [{"type": "system", "content": str(formatted_prompt)}]
+                                
+                        except Exception as e:
+                            logger.error(f"流式聊天预处理格式化消息失败: {str(e)}, 使用fallback")
+                            # 使用基础系统消息作为fallback
+                            formatted_messages = [{"type": "system", "content": "流式消息格式化失败"}]
+                        
+                        # 处理流式响应文本
+                        response_text = "".join([getattr(msg, 'content', str(msg)) for msg in stream_messages if hasattr(msg, 'content')])
+                        
+                        # 添加AI响应消息
+                        if response_text:
+                            formatted_messages.append({"type": "character", "content": response_text})
+                        
+                        # 构建完整的调试数据，包含预格式化消息
                         debug_data = {
+                            "formatted_messages": formatted_messages,  # 新增预格式化消息
                             "input_data": {
                                 "messages": state_data.get('messages', []),
                                 "user_profile": state_data.get('user_profile', ''),
                                 "user_id": state_data.get('user_id', '')
                             },
                             "response": {"messages": stream_messages},
-                            "response_text": "".join([getattr(msg, 'content', str(msg)) for msg in stream_messages if hasattr(msg, 'content')])
+                            "response_text": response_text
                         }
                         
                         # 提交到后台任务队列（非阻塞）
