@@ -147,7 +147,7 @@ jobs:
               {
                 "tag": "div",
                 "text": {
-                  "tag": "plain_text",
+                  "tag": "lark_md",
                   "content": "📲 手机扫码下载：[点击查看](${QR_CODE_URL})"
                 }
               }
