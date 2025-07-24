@@ -148,7 +148,7 @@ jobs:
                 "tag": "div",
                 "text": {
                   "tag": "plain_text",
-                  "content": "📲 手机扫码下载：\\n${QR_CODE_URL}"
+                  "content": "📲 手机扫码下载：[点击查看](${QR_CODE_URL})"
                 }
               }
             ]
