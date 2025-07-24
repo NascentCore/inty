@@ -81,34 +81,89 @@ jobs:
         asset_name: app-release.apk
         asset_content_type: application/vnd.android.package-archive
 
-    - name: Notify Feishu group via webhook
+    - name: Notify Feishu group with card and QR
       run: |
         VERSION_NAME=${{ steps.version.outputs.version_name }}
         VERSION_CODE=${{ steps.version.outputs.version_code }}
-        RELEASE_URL="https://github.com/${{ github.repository }}/releases/tag/v${VERSION_CODE}"
+        REPO=${{ github.repository }}
+        RELEASE_TAG="v${VERSION_CODE}"
+        APK_NAME="app-release.apk"
+        RELEASE_URL="https://github.com/${REPO}/releases/download/${RELEASE_TAG}/${APK_NAME}"
 
-        curl -X POST ${{ secrets.FEISHU_WEBHOOK_URL }} \
-          -H 'Content-Type: application/json' \
-          -d '{
-                "msg_type": "post",
-                "content": {
-                  "post": {
-                    "zh_cn": {
-                      "title": "📦 新版本 APK 发布",
-                      "content": [
-                        [
-                          {
-                            "tag": "text",
-                            "text": "版本名称：'"${VERSION_NAME}"'\n版本号（Build）：'"${VERSION_CODE}"'\n\n✅ APK 构建完成并上传至 GitHub Release："
-                          },
-                          {
-                            "tag": "a",
-                            "text": "点击查看",
-                            "href": "'"${RELEASE_URL}"'"
-                          }
-                        ]
-                      ]
+        # 获取最近提交（格式化并转义换行）
+        COMMITS=$(git log -n 5 --pretty=format:"- %s" | sed ':a;N;$!ba;s/\n/\\n/g')
+
+        # 生成二维码链接
+        QR_CODE_URL="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${RELEASE_URL}"
+
+        # 构建 JSON
+        cat <<EOF > feishu_card.json
+        {
+          "msg_type": "interactive",
+          "card": {
+            "config": {
+              "wide_screen_mode": true
+            },
+            "header": {
+              "title": {
+                "tag": "plain_text",
+                "content": "📦 新版本 APK 发布"
+              }
+            },
+            "elements": [
+              {
+                "tag": "div",
+                "fields": [
+                  {
+                    "is_short": true,
+                    "text": {
+                      "tag": "lark_md",
+                      "content": "**版本名称：** ${VERSION_NAME}"
+                    }
+                  },
+                  {
+                    "is_short": true,
+                    "text": {
+                      "tag": "lark_md",
+                      "content": "**版本号（Build）：** ${VERSION_CODE}"
                     }
                   }
+                ]
+              },
+              {
+                "tag": "div",
+                "text": {
+                  "tag": "lark_md",
+                  "content": "**更新内容：**\\n${COMMITS}"
                 }
-              }'
+              },
+              {
+                "tag": "div",
+                "text": {
+                  "tag": "lark_md",
+                  "content": "✅ APK 构建完成并上传至 GitHub Release：[点击查看](${RELEASE_URL})"
+                }
+              },
+              {
+                "tag": "div",
+                "text": {
+                  "tag": "plain_text",
+                  "content": "📲 手机扫码下载："
+                }
+              },
+              {
+                "tag": "img",
+                "img_url": "${QR_CODE_URL}",
+                "alt": {
+                  "tag": "plain_text",
+                  "content": "扫码下载 APK"
+                }
+              }
+            ]
+          }
+        }
+        EOF
+
+        curl -X POST ${{ secrets.FEISHU_WEBHOOK_URL }} \
+          -H "Content-Type: application/json" \
+          -d @feishu_card.json
