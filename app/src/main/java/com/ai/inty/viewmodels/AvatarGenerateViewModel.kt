@@ -59,7 +59,7 @@ class AvatarGenerateViewModel : ViewModel() {
         EasyLog.log("Starting background generation with prompt: $currentPrompt")
 
         _isLoading.value = true
-        _errorMessage.value = null
+        clearError()
 
         viewModelScope.launch(Dispatchers.IO) {
             try {
@@ -98,14 +98,12 @@ class AvatarGenerateViewModel : ViewModel() {
 
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    EasyLog.log("Exception during generation request submission")
-                    val errorMessage = "Generation error: ${e.message ?: "Unknown error"}"
+                    val errorMessage = e.message ?: "Unknown error"
                     AvatarManager.setGenerationError(errorMessage)
                     _errorMessage.value = errorMessage
-                    EasyLog.log("Generate avatar error: ${e.message}", EasyLog.ERROR)
-                    EasyLog.log(e)
+                    EasyLog.log("Ai头像生成异常: ${e.message}", EasyLog.ERROR)
                     _isLoading.value = false
-                    //生成ai的头像异常，则停留在当前页面
+                    clearError()
                 }
             }
         }
@@ -217,7 +215,7 @@ class AvatarGenerateViewModel : ViewModel() {
                     ignoreCase = true
                 ) == true -> "Data format error, please try again later"
 
-                else -> "Generation failed: ${e.message ?: "Unknown error"}"
+                else -> e.message ?: "Unknown error"
             }
             throw Exception(errorMessage)
         }
