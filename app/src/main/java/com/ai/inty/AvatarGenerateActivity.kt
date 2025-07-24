@@ -336,7 +336,7 @@ fun PromptInputField(
                 Box {
                     if (value.isEmpty()) {
                         Text(
-                            text = "e.g.: A cute anime girl with long hair, big eyes, wearing a white dress...",
+                            text = "Your avatar and background image will be created based on the input prompt word.",
                             fontSize = 16.sp,
                             color = Color.White.copy(0.5f)
                         )
