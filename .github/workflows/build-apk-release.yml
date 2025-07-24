@@ -153,6 +153,7 @@ jobs:
               },
               {
                 "tag": "img",
+                "img_key": "",
                 "img_url": "${QR_CODE_URL}",
                 "alt": {
                   "tag": "plain_text",
