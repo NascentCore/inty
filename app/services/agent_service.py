@@ -46,13 +46,18 @@ async def get_agent(db: AsyncSession, agent_id: str, current_user_id: Optional[s
     Get AI agent by ID
     """
     try:
-        # Get agent's basic information and follower count
+        # Get agent's basic information, follower count and connector count
         query = (
             select(
                 models.Agent,
-                func.count(agent_followers.c.user_id).label('follower_count')
+                func.count(agent_followers.c.user_id).label('follower_count'),
+                func.count(func.distinct(models.Chat.user_id)).label('connector_count')
             )
             .outerjoin(agent_followers, models.Agent.id == agent_followers.c.agent_id)
+            .outerjoin(models.Chat, and_(
+                models.Agent.id == models.Chat.agent_id,
+                models.Chat.is_active == True
+            ))
             .options(selectinload(models.Agent.creator))
             .where(
                 and_(
@@ -71,9 +76,11 @@ async def get_agent(db: AsyncSession, agent_id: str, current_user_id: Optional[s
             
         agent = row[0]
         follower_count = row[1] or 0
+        connector_count = row[2] or 0
         
-        # Set follower_count attribute
+        # Set follower_count and connector_count attributes
         agent.follower_count = follower_count
+        agent.connector_count = connector_count
         
         # Check if current user follows this agent
         if current_user_id:
