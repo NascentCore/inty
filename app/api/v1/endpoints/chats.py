@@ -1255,4 +1255,84 @@ async def generate_chat_stream(
                 "type": "server_error"
             }
         }
-        yield f"data: {json.dumps(error_chunk, ensure_ascii=False)}\n\n" 
+        yield f"data: {json.dumps(error_chunk, ensure_ascii=False)}\n\n"
+
+
+@router.post("/agents/{agent_id}/clear-messages", response_model=schemas.ClearMessagesResponse)
+async def clear_agent_chat_messages(
+    *,
+    db: AsyncSession = Depends(deps.get_async_db),
+    agent_id: str,
+    request: schemas.ClearMessagesRequest,
+    current_user: schemas.User = Depends(deps.get_current_active_user),
+) -> Any:
+    """
+    清除指定Agent聊天会话中的部分消息记录
+    支持两种方式：
+    1. 通过消息ID清除该ID之后的所有消息
+    2. 通过时间戳清除该时间之后的所有消息
+    """
+    try:
+        logger.info(f"清除Agent聊天消息 - Agent ID: {agent_id}, User ID: {current_user.id}")
+        
+        # 验证请求参数
+        if not request.message_id and not request.timestamp:
+            raise HTTPException(
+                status_code=400, 
+                detail="必须提供 message_id 或 timestamp 中的一个参数"
+            )
+        
+        if request.message_id and request.timestamp:
+            raise HTTPException(
+                status_code=400, 
+                detail="只能提供 message_id 或 timestamp 中的一个参数，不能同时提供"
+            )
+        
+        # 验证Agent是否存在
+        agent_db = await agent_service.get_agent(db, agent_id=agent_id)
+        if not agent_db:
+            raise HTTPException(status_code=404, detail="Agent not found")
+        
+        # 获取用户与该Agent的聊天会话
+        chat = await chat_service.get_chat_by_user_and_agent(
+            db=db,
+            user_id=current_user.id,
+            agent_id=agent_id
+        )
+        
+        if not chat:
+            raise HTTPException(
+                status_code=404, 
+                detail="未找到与该Agent的聊天会话"
+            )
+        
+        # 生成session_id
+        session_id = generate_session_id(chat.id)
+        
+        # 执行清除操作
+        if request.message_id is not None:
+            # 按消息ID清除
+            result = chat_history_service.clear_messages_after_id(
+                session_id=session_id,
+                message_id=request.message_id
+            )
+        else:
+            # 按时间戳清除
+            result = chat_history_service.clear_messages_after_timestamp(
+                session_id=session_id,
+                timestamp=request.timestamp
+            )
+        
+        logger.info(f"消息清除操作完成 - Agent ID: {agent_id}, 结果: {result}")
+        
+        return schemas.ClearMessagesResponse(**result)
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"清除Agent聊天消息失败 - Agent ID: {agent_id}, Error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"清除消息失败: {str(e)}")
+
+
+
+ 

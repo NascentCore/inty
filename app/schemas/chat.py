@@ -152,4 +152,32 @@ class ChatDeletionResponse(BaseModel):
     """聊天删除响应"""
     success: bool
     message: str
-    data: ChatDeletionSummary 
+    data: ChatDeletionSummary
+
+
+class ClearMessagesRequest(BaseModel):
+    """清除消息请求"""
+    message_id: Optional[int] = None  # 消息ID，清除该ID之后的所有消息
+    timestamp: Optional[str] = None   # 时间戳，清除该时间之后的所有消息（ISO格式）
+    
+    class Config:
+        # 确保至少有一个字段被提供
+        json_schema_extra = {
+            "example": {
+                "message_id": 123,
+                "timestamp": "2024-01-01T10:00:00Z"
+            }
+        }
+
+
+class ClearMessagesResponse(BaseModel):
+    """清除消息响应"""
+    success: bool
+    message: str
+    deleted_count: int
+    target_message: Optional[dict] = None  # 目标消息信息（当使用message_id时）
+    deleted_time_range: Optional[dict] = None  # 删除的时间范围
+    cutoff_timestamp: Optional[str] = None  # 截止时间戳（当使用timestamp时）
+
+
+ 

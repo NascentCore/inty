@@ -6,7 +6,8 @@ from app.schemas.chat import (
     Chat, ChatCreate, ChatUpdate, ChatInDB,
     Message, MessageCreate, MessageUpdate, MessageList,
     ChatSettings, ChatSettingsCreate, ChatSettingsUpdate,
-    ChatDeletionResponse, ChatDeletionSummary
+    ChatDeletionResponse, ChatDeletionSummary,
+    ClearMessagesRequest, ClearMessagesResponse
 )
 from app.schemas.resource import Resource, ResourceCreate, ResourceUpdate, ResourceInDB
 from app.schemas.settings import Settings, SettingsCreate, SettingsUpdate, SettingsInDB

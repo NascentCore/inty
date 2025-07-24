@@ -9,6 +9,49 @@ from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
+def _parse_message_content(message_raw) -> Dict[str, str]:
+    """
+    解析消息内容，提取文本内容和角色
+    
+    Args:
+        message_raw: 原始消息数据
+    
+    Returns:
+        包含content和role的字典
+    """
+    try:
+        # 处理消息数据
+        if isinstance(message_raw, str):
+            message_data = json.loads(message_raw)
+        elif isinstance(message_raw, dict):
+            message_data = message_raw
+        else:
+            message_data = json.loads(str(message_raw))
+        
+        # 解析消息类型和内容
+        message_type = message_data.get('type', 'human')
+        content = ''
+        
+        if 'data' in message_data and 'content' in message_data['data']:
+            content = message_data['data']['content']
+        elif 'content' in message_data:
+            content = message_data['content']
+        
+        # 确定角色
+        role = 'user' if message_type in ['human', 'HumanMessage'] else 'assistant'
+        
+        return {
+            'content': content,
+            'role': role
+        }
+        
+    except Exception as e:
+        logger.warning(f"解析消息内容失败: {str(e)}")
+        return {
+            'content': str(message_raw) if message_raw else '',
+            'role': 'unknown'
+        }
+
 # 全局连接，避免重复创建
 _connection = None
 
@@ -183,9 +226,9 @@ def get_messages_paginated(session_id: str, limit: int = 20, offset: int = 0) ->
             cur.execute(count_query, (session_id,))
             total_count = cur.fetchone()[0]
         
-        # 分页查询消息（按时间倒序，最新的在前）
+        # 分页查询消息（按时间倒序，最新的在前）- 包括消息ID
         messages_query = """
-            SELECT message, created_at
+            SELECT id, message, created_at
             FROM chat_history 
             WHERE session_id = %s 
             ORDER BY created_at DESC 
@@ -199,8 +242,12 @@ def get_messages_paginated(session_id: str, limit: int = 20, offset: int = 0) ->
             
             for row in rows:
                 try:
+                    # 提取消息ID、消息数据和创建时间
+                    message_id = row[0]
+                    message_raw = row[1]
+                    created_at = row[2]
+                    
                     # 处理消息数据，可能是字符串或已经是字典
-                    message_raw = row[0]
                     if isinstance(message_raw, str):
                         message_data = json.loads(message_raw)
                     elif isinstance(message_raw, dict):
@@ -208,8 +255,6 @@ def get_messages_paginated(session_id: str, limit: int = 20, offset: int = 0) ->
                     else:
                         # 尝试转换为字符串再解析
                         message_data = json.loads(str(message_raw))
-                    
-                    created_at = row[1]
                     
                     # 解析消息类型和内容
                     message_type = message_data.get('type', 'human')
@@ -224,6 +269,7 @@ def get_messages_paginated(session_id: str, limit: int = 20, offset: int = 0) ->
                     role = 'user' if message_type in ['human', 'HumanMessage'] else 'assistant'
                     
                     messages.append({
+                        'id': message_id,  # 添加消息ID
                         'role': role,
                         'content': content,
                         'timestamp': created_at.isoformat() if created_at else None
@@ -348,4 +394,174 @@ async def get_message_content(session_id: str, message_id: str) -> Optional[str]
             
     except Exception as e:
         logger.error(f"获取消息内容失败 {session_id}, {message_id}: {str(e)}")
-        return None 
+        return None
+
+def clear_messages_after_id(session_id: str, message_id: int) -> Dict[str, Any]:
+    """
+    清除包括指定消息ID在内的后续所有聊天记录
+    
+    Args:
+        session_id: 会话ID
+        message_id: 消息ID（数据库自增ID）
+    
+    Returns:
+        包含删除结果的字典
+    """
+    try:
+        ensure_table_initialized()
+        conn = get_chat_history_connection()
+        
+        # 首先验证指定的消息是否存在
+        check_query = """
+            SELECT id, message, created_at
+            FROM chat_history 
+            WHERE session_id = %s AND id = %s
+        """
+        
+        with conn.cursor() as cur:
+            cur.execute(check_query, (session_id, message_id))
+            target_message = cur.fetchone()
+            
+            if not target_message:
+                return {
+                    'success': False,
+                    'message': f'指定的消息ID {message_id} 不存在',
+                    'deleted_count': 0,
+                    'target_message': None
+                }
+            
+            # 查询将要删除的消息数量和详情（包括指定ID）
+            count_query = """
+                SELECT COUNT(*), MIN(created_at), MAX(created_at)
+                FROM chat_history 
+                WHERE session_id = %s AND id >= %s
+            """
+            
+            cur.execute(count_query, (session_id, message_id))
+            count_result = cur.fetchone()
+            messages_to_delete = count_result[0] if count_result else 0
+            
+            if messages_to_delete == 0:
+                # 解析目标消息内容
+                parsed_target = _parse_message_content(target_message[1])
+                return {
+                    'success': True,
+                    'message': f'指定消息ID {message_id} 包括其后续消息，没有需要删除的记录',
+                    'deleted_count': 0,
+                    'target_message': {
+                        'id': target_message[0],
+                        'content': parsed_target['content'],
+                        'role': parsed_target['role'],
+                        'timestamp': target_message[2].isoformat() if target_message[2] else None
+                    }
+                }
+            
+            # 执行删除操作（包括指定ID）
+            delete_query = """
+                DELETE FROM chat_history 
+                WHERE session_id = %s AND id >= %s
+            """
+            
+            cur.execute(delete_query, (session_id, message_id))
+            actual_deleted = cur.rowcount
+            
+            logger.info(f"已清除会话 {session_id} 中包括消息ID {message_id} 在内的 {actual_deleted} 条记录")
+            
+            # 解析目标消息内容
+            parsed_target = _parse_message_content(target_message[1])
+            return {
+                'success': True,
+                'message': f'成功删除包括消息ID {message_id} 在内的 {actual_deleted} 条记录',
+                'deleted_count': actual_deleted,
+                'target_message': {
+                    'id': target_message[0],
+                    'content': parsed_target['content'],
+                    'role': parsed_target['role'],
+                    'timestamp': target_message[2].isoformat() if target_message[2] else None
+                },
+                'deleted_time_range': {
+                    'from': count_result[1].isoformat() if count_result[1] else None,
+                    'to': count_result[2].isoformat() if count_result[2] else None
+                } if count_result[1] else None
+            }
+            
+    except Exception as e:
+        logger.error(f"清除指定消息后记录失败 {session_id}, message_id {message_id}: {str(e)}")
+        return {
+            'success': False,
+            'message': f'清除操作失败: {str(e)}',
+            'deleted_count': 0,
+            'target_message': None
+        }
+
+def clear_messages_after_timestamp(session_id: str, timestamp: str) -> Dict[str, Any]:
+    """
+    清除指定时间戳之后的所有聊天记录
+    
+    Args:
+        session_id: 会话ID
+        timestamp: 时间戳（ISO格式字符串）
+    
+    Returns:
+        包含删除结果的字典
+    """
+    try:
+        ensure_table_initialized()
+        conn = get_chat_history_connection()
+        from datetime import datetime
+        
+        # 解析时间戳
+        try:
+            target_time = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
+        except ValueError as e:
+            return {
+                'success': False,
+                'message': f'时间戳格式错误: {str(e)}',
+                'deleted_count': 0
+            }
+        
+        # 查询将要删除的消息数量
+        count_query = """
+            SELECT COUNT(*)
+            FROM chat_history 
+            WHERE session_id = %s AND created_at > %s
+        """
+        
+        with conn.cursor() as cur:
+            cur.execute(count_query, (session_id, target_time))
+            messages_to_delete = cur.fetchone()[0]
+            
+            if messages_to_delete == 0:
+                return {
+                    'success': True,
+                    'message': f'指定时间 {timestamp} 之后没有消息需要删除',
+                    'deleted_count': 0
+                }
+            
+            # 执行删除操作
+            delete_query = """
+                DELETE FROM chat_history 
+                WHERE session_id = %s AND created_at > %s
+            """
+            
+            cur.execute(delete_query, (session_id, target_time))
+            actual_deleted = cur.rowcount
+            
+            logger.info(f"已清除会话 {session_id} 中时间 {timestamp} 之后的 {actual_deleted} 条记录")
+            
+            return {
+                'success': True,
+                'message': f'成功删除时间 {timestamp} 之后的 {actual_deleted} 条记录',
+                'deleted_count': actual_deleted,
+                'cutoff_timestamp': timestamp
+            }
+            
+    except Exception as e:
+        logger.error(f"按时间戳清除消息失败 {session_id}, timestamp {timestamp}: {str(e)}")
+        return {
+            'success': False,
+            'message': f'清除操作失败: {str(e)}',
+            'deleted_count': 0
+        }
+
+ 
