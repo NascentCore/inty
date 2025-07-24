@@ -31,7 +31,6 @@ jobs:
           ${{ runner.os }}-gradle-
 
     - name: Create keystore.properties
-      if: ${{ secrets.KEYSTORE_PROPERTIES != '' }}
       env:
         KEYSTORE_PROPERTIES: ${{ secrets.KEYSTORE_PROPERTIES }}
       run: |
