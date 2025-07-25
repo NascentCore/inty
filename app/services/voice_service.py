@@ -5,6 +5,7 @@
 import asyncio
 import hashlib
 import uuid
+import re
 from typing import Optional, Dict, Any, List
 from io import BytesIO
 import aiohttp
@@ -22,6 +23,43 @@ class VoiceService:
         self.config = settings.elevenlabs
         self.gcs_service = GCSService()
         self.base_url = "https://api.elevenlabs.io/v1"
+        
+    def _clean_text_for_voice(self, text: str) -> str:
+        """
+        清理文本内容，移除不需要语音化的部分
+        
+        移除规则：
+        1. *号包裹的心理描写，如 *心想：这是什么情况*
+        2. 中文括号包裹的动作描写，如 （轻声说道）、（微笑着）
+        3. 英文括号包裹的动作描写，如 (slowly) 、(whispers)
+        
+        Args:
+            text: 原始文本
+            
+        Returns:
+            清理后的文本
+        """
+        if not text:
+            return text
+            
+        cleaned_text = text
+        
+        # 移除 *号包裹的内容（心理描写）
+        # 匹配 *...* 格式的内容
+        cleaned_text = re.sub(r'\*[^*]*\*', '', cleaned_text)
+        
+        # 移除中文括号包裹的内容（动作描写）
+        # 匹配 （...） 格式的内容
+        cleaned_text = re.sub(r'（[^）]*）', '', cleaned_text)
+        
+        # 移除英文括号包裹的内容（动作描写）
+        # 匹配 (...) 格式的内容
+        cleaned_text = re.sub(r'\([^)]*\)', '', cleaned_text)
+        
+        # 清理多余的空白字符
+        cleaned_text = re.sub(r'\s+', ' ', cleaned_text).strip()
+        
+        return cleaned_text
         
     async def generate_voice(
         self, 
@@ -51,6 +89,17 @@ class VoiceService:
         if not text.strip():
             logger.warning("文本内容为空，跳过语音生成")
             return None
+            
+        # 清理文本内容，移除心理和动作描写
+        original_text = text
+        text = self._clean_text_for_voice(text)
+        
+        if not text.strip():
+            logger.warning("文本清理后为空（可能全部是心理/动作描写），跳过语音生成")
+            return None
+            
+        if text != original_text:
+            logger.debug(f"文本已清理，原长度: {len(original_text)}, 清理后长度: {len(text)}")
             
         if len(text) > self.config.max_text_length:
             logger.warning(f"文本长度超过限制 {self.config.max_text_length}，截断处理")

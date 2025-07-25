@@ -365,33 +365,41 @@ async def get_message_content(session_id: str, message_id: str) -> Optional[str]
     
     Args:
         session_id: 会话ID
-        message_id: 消息ID（这里使用消息索引作为ID）
+        message_id: 消息ID（数据库的真实ID）
     
     Returns:
         消息内容，如果找不到则返回None
     """
     try:
-        # 获取所有消息
-        messages = get_all_messages(session_id)
+        ensure_table_initialized()
+        conn = get_chat_history_connection()
         
-        # 尝试将message_id转换为索引
+        # 尝试将message_id转换为整数
         try:
-            index = int(message_id)
-            # 只返回AI消息（assistant角色）
-            ai_messages = [msg for msg in messages if msg['role'] == 'assistant']
+            db_message_id = int(message_id)
+        except ValueError:
+            logger.warning(f"无法解析消息ID为整数: {message_id}")
+            return None
+        
+        # 根据数据库ID直接查询消息
+        query = """
+            SELECT id, message, created_at
+            FROM chat_history 
+            WHERE session_id = %s AND id = %s
+        """
+        
+        with conn.cursor() as cur:
+            cur.execute(query, (session_id, db_message_id))
+            row = cur.fetchone()
             
-            if 0 <= index < len(ai_messages):
-                return ai_messages[index]['content']
+            if row:
+                # 解析消息内容
+                parsed = _parse_message_content(row[1])
+                return parsed['content']
             else:
-                logger.warning(f"消息索引超出范围: {index}, 总AI消息数: {len(ai_messages)}")
+                logger.warning(f"消息未找到: session_id={session_id}, message_id={db_message_id}")
                 return None
                 
-        except ValueError:
-            # 如果message_id不是数字，尝试其他方法
-            # 这里可以根据实际的消息ID结构进行调整
-            logger.warning(f"无法解析消息ID: {message_id}")
-            return None
-            
     except Exception as e:
         logger.error(f"获取消息内容失败 {session_id}, {message_id}: {str(e)}")
         return None

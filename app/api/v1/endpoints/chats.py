@@ -580,7 +580,7 @@ async def agent_chat_completions(
                 # 语音自动播放逻辑：chat_settings.voice_enabled = true 时自动生成语音
                 if chat_settings.voice_enabled:
                     # 使用Agent的voice_id字段
-                    agent_voice_id = agent_db.voice_id
+                    agent_voice_id = agent_data.get('voice_id')
                     logger.info(f"开始语音生成: voice_id={agent_voice_id}, text_length={len(response_content)}, language={request.language}")
                     
                     audio_url = await voice_service.generate_voice(
