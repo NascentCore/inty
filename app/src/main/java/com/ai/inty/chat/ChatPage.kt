@@ -213,9 +213,7 @@ internal fun ChatPage(
                 .background(
                     brush = Brush.verticalGradient(colors),
                 )
-        ) {
-        }
-
+        )
         // 底部渐变遮罩 - 固定位置
         val bottomColors = listOf(
             Color(0x001C1523),
@@ -229,8 +227,7 @@ internal fun ChatPage(
                     brush = Brush.verticalGradient(bottomColors),
                 )
                 .align(Alignment.BottomCenter)
-        ) {
-        }
+        )
 
         val drawerState = remember {
             mutableStateOf(DrawerValue.Closed)
@@ -243,11 +240,7 @@ internal fun ChatPage(
                 .background(Color.Transparent),
             containerColor = Color.Transparent,
             contentWindowInsets = WindowInsets(0),
-            topBar = {
-            },
-
-            ) { innerPadding ->
-
+        ) { innerPadding ->
 
             Column(
                 modifier = Modifier
@@ -368,24 +361,13 @@ internal fun ChatPage(
                     val msgs = chatViewModel.msgs
                     EasyLog.log("msgs count = ${msgs.size}")
                     item {
-                        Spacer(
-                            modifier = Modifier
-                                .height(16.dp)
-                                .fillMaxWidth()
-
-                        )
+                        Spacer(Modifier.height(16.dp))
                     }
                     itemsIndexed(msgs.filter { !(it.role == "user" && it.content == "continue") }) { index, item ->
                         ChatItem(item)
-                        Spacer(
-                            modifier = Modifier
-                                .height(16.dp)
-                                .fillMaxWidth()
-
-                        )
+                        Spacer(Modifier.height(16.dp))
                     }
                 }
-
 
                 // 输入框区域 - 受键盘影响会向上推，但可以动态向下偏移
                 Column {
@@ -460,9 +442,7 @@ internal fun ChatPage(
                         ) {
                             val inputSelection = chatViewModel.inputSelection.collectAsState()
                             IntySmallTextField(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .padding(horizontal = 16.dp),
+                                modifier = Modifier.weight(1f),
                                 enabled = IntySetting.needBlockInput().not(),
                                 value = inputData.value,
                                 singleLine = false,
@@ -480,38 +460,8 @@ internal fun ChatPage(
                                 selection = inputSelection.value
                             )
 
-                            //有输入内容时，发送按钮显示
-                            if (inputData.value.isNotEmpty()) {
-                                IntyImage(
-                                    modifier = Modifier
-                                        .padding(16.dp, 0.dp)
-                                        .size(24.dp)
-                                        .noRippleClickable {
-                                            chatViewModel.sendMsg()
-                                        },
-                                    model = R.drawable.btn_send
-                                )
-                            } else {
-                                IntyImage(
-                                    modifier = Modifier
-                                        .padding(16.dp, 0.dp)
-                                        .size(24.dp)
-                                        .noRippleClickable {
-                                            showMorePanel = !showMorePanel
-                                        },
-                                    model = if (showMorePanel) R.drawable.btn_down else R.drawable.btn_add2
-                                )
-                            }
-                        }
-
-                        // 括号按钮区域 - 仅在输入框获得焦点时显示
-                        if (isInputFocused.value) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                                horizontalArrangement = androidx.compose.foundation.layout.Arrangement.Start
-                            ) {
+                            // 括号按钮区域 - 仅在输入框获得焦点时显示
+                            if (isInputFocused.value) {
                                 Box(
                                     modifier = Modifier
                                         .width(40.dp)
@@ -552,6 +502,28 @@ internal fun ChatPage(
                                         fontWeight = FontWeight.Medium
                                     )
                                 }
+                            }
+                            //有输入内容时，发送按钮显示
+                            if (inputData.value.isNotEmpty()) {
+                                IntyImage(
+                                    modifier = Modifier
+                                        .padding(horizontal = 16.dp)
+                                        .size(24.dp)
+                                        .noRippleClickable {
+                                            chatViewModel.sendMsg()
+                                        },
+                                    model = R.drawable.btn_send
+                                )
+                            } else {
+                                IntyImage(
+                                    modifier = Modifier
+                                        .padding(horizontal = 16.dp)
+                                        .size(24.dp)
+                                        .noRippleClickable {
+                                            showMorePanel = !showMorePanel
+                                        },
+                                    model = if (showMorePanel) R.drawable.btn_down else R.drawable.btn_add2
+                                )
                             }
                         }
                     }

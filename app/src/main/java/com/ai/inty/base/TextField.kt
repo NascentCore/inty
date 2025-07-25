@@ -2,17 +2,16 @@ package com.ai.inty.base
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -20,8 +19,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
@@ -49,18 +50,11 @@ fun IntySmallTextField(
 ) {
 
     Row(
-        modifier = modifier
-            .fillMaxHeight()
-        ,
+        modifier = modifier.fillMaxHeight(),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+
         leadingIcon?.let { it() }
-        Spacer(modifier = Modifier.width(19.dp))
-//        DividerRow(
-//            modifier = Modifier.height(19.dp),
-//            color = Color(0xff9f9f9f), thickness = 1.dp
-//        )
-        Spacer(modifier = Modifier.width(7.dp))
 
         val focusManager = LocalFocusManager.current
 
@@ -92,20 +86,24 @@ fun IntySmallTextField(
         )
 
         Box(
-            modifier = Modifier
-                .weight(1f),
+            modifier = Modifier.weight(1f),
             contentAlignment = if (singleLine) Alignment.CenterStart else Alignment.TopStart,
         ) {
-            var textFieldValue by remember { mutableStateOf(TextFieldValue(value, selection = androidx.compose.ui.text.TextRange(selection))) }
-            
-            // 使用LaunchedEffect来监听外部value和selection的变化
-            androidx.compose.runtime.LaunchedEffect(value, selection) {
-                textFieldValue = textFieldValue.copy(
-                    text = value,
-                    selection = androidx.compose.ui.text.TextRange(selection)
+            var textFieldValue by remember {
+                mutableStateOf(
+                    TextFieldValue(
+                        value, selection = TextRange(selection)
+                    )
                 )
             }
-            
+
+            // 使用LaunchedEffect来监听外部value和selection的变化
+            LaunchedEffect(value, selection) {
+                textFieldValue = textFieldValue.copy(
+                    text = value, selection = TextRange(selection)
+                )
+            }
+
             TextField(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -123,26 +121,22 @@ fun IntySmallTextField(
                 keyboardOptions = keyboardOptions,
                 keyboardActions = newActions,
                 textStyle = TextStyle.Default.copy(
-                    fontSize = 14.sp,
-                    color = TextFieldColor.Text
+                    fontSize = 14.sp, color = TextFieldColor.Text
                 ),
                 colors = TextFieldDefaults.colors(
-                    focusedContainerColor = androidx.compose.ui.graphics.Color.Transparent,
-                    unfocusedContainerColor = androidx.compose.ui.graphics.Color.Transparent,
-                    disabledContainerColor = androidx.compose.ui.graphics.Color.Transparent,
-                    focusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent,
-                    unfocusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent,
-                    disabledIndicatorColor = androidx.compose.ui.graphics.Color.Transparent,
+                    focusedContainerColor = Color.Transparent,
+                    unfocusedContainerColor = Color.Transparent,
+                    disabledContainerColor = Color.Transparent,
+                    focusedIndicatorColor = Color.Transparent,
+                    unfocusedIndicatorColor = Color.Transparent,
+                    disabledIndicatorColor = Color.Transparent,
                     cursorColor = TextFieldColor.Text
                 ),
                 placeholder = placeholder
             )
         }
 
-
         trailingIcon?.let { it() }
-
-        Spacer(modifier = Modifier.width(10.dp))
 
     }
 }
@@ -163,18 +157,10 @@ fun IntySmallTextField2(
 ) {
 
     Row(
-        modifier = modifier
-            .fillMaxHeight()
-        ,
+        modifier = modifier.fillMaxHeight(),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         leadingIcon?.let { it() }
-//        Spacer(modifier = Modifier.width(19.dp))
-//        DividerRow(
-//            modifier = Modifier.height(19.dp),
-//            color = Color(0xff9f9f9f), thickness = 1.dp
-//        )
-//        Spacer(modifier = Modifier.width(7.dp))
 
         val focusManager = LocalFocusManager.current
 
@@ -213,14 +199,12 @@ fun IntySmallTextField2(
             contentAlignment = if (singleLine) Alignment.CenterStart else Alignment.TopStart,
         ) {
             BasicTextField(
-                modifier = Modifier
-                    .fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth(),
                 enabled = enabled,
                 singleLine = singleLine,
                 value = value,
                 textStyle = TextStyle.Default.copy(
-                    fontSize = 14.sp,
-                    color = TextFieldColor.Text
+                    fontSize = 14.sp, color = TextFieldColor.Text
                 ),
                 onValueChange = onValueChange,
                 keyboardOptions = keyboardOptions,
@@ -235,7 +219,6 @@ fun IntySmallTextField2(
 
         trailingIcon?.let { it() }
 
-//        Spacer(modifier = Modifier.width(10.dp))
 
     }
 }
