@@ -229,14 +229,26 @@ async def generate_background(
         gcs_base_path = f"backgrounds/tmp/{current_user.id}/{uuid.uuid4().hex}"
         gcs_uri_base = f"gs://{settings.gcs.bucket}/{gcs_base_path}"
         
-        logger.info(f"Starting background generation for user {current_user.id}, prompt: {request.prompt}, count: {request.count}")
+        # 获取用户性别信息并转换为相应格式
+        user_gender = None
+        if current_user.gender:
+            # 将数据库中的Gender枚举转换为字符串格式
+            gender_mapping = {
+                "MALE": "male",
+                "FEMALE": "female", 
+                "OTHER": "non-binary"
+            }
+            user_gender = gender_mapping.get(current_user.gender.value, "non-binary")
+        
+        logger.info(f"Starting background generation for user {current_user.id}, prompt: {request.prompt}, count: {request.count}, gender: {user_gender}")
         
         # Generate images and get actual GCS URLs
         gcs_urls = generate_background_image_to_gcs(
             request.prompt, 
             gcs_uri_base, 
             count=request.count,
-            aspect_ratio="9:16"
+            aspect_ratio="9:16",
+            gender=user_gender
         )
         
         logger.info(f"Successfully generated {len(gcs_urls)} background images")

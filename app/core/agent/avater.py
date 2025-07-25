@@ -1,3 +1,4 @@
+from loguru import logger
 import vertexai
 from vertexai.preview.vision_models import ImageGenerationModel
 from app.core.config import settings
@@ -9,26 +10,67 @@ from datetime import datetime
 # Initialize Vertex AI
 vertexai.init()  # 使用你的Google Cloud项目ID
 
-def generate_background_image_to_gcs(prompt: str, gcs_uri_base: str, count=1, aspect_ratio="9:16"):
+def get_opposite_gender(user_gender: str) -> str:
+    """
+    获取用户性别的相反性别
+    用于生成与用户性别相反的图片
+    """
+    if not user_gender:
+        return ""
+    
+    gender_mapping = {
+        "male": "female",
+        "female": "male", 
+        "non-binary": "",
+        "they/them": "",
+        "nb": "",  # non-binary 的简写
+        "other": ""
+    }
+    
+    # 转换为小写进行匹配
+    normalized_gender = user_gender.lower().strip()
+    opposite = gender_mapping.get(normalized_gender, "")
+    
+    print(f"User gender: {user_gender} -> Opposite gender for prompt: '{opposite}'")
+    return opposite
+
+def generate_background_image_to_gcs(prompt: str, gcs_uri_base: str, count=1, aspect_ratio="9:16", gender: str = None):
     """
     使用output_gcs_uri参数直接将生成的背景图保存到GCS，返回实际生成的图片GCS路径列表
+    
+    Args:
+        prompt (str): 生成图片的描述提示词
+        gcs_uri_base (str): GCS 存储基础URI
+        count (int): 生成图片数量，默认为1
+        aspect_ratio (str): 图片尺寸比例，默认为"9:16"
+        gender (str): 用户性别，支持 "male", "female", "non-binary", "they/them" 等
+    
+    Returns:
+        list: 生成图片的HTTPS URL列表
     """
     try:
-        print(f"Starting image generation with prompt: {prompt}, count: {count}")
-        print(f"Target GCS URI base: {gcs_uri_base}")
+        logger.info(f"Starting image generation with prompt: {prompt}, count: {count}")
+        logger.info(f"Target GCS URI base: {gcs_uri_base}")
+        logger.info(f"User gender: {gender}")
         
         model = ImageGenerationModel.from_pretrained("imagen-4.0-fast-generate-preview-06-06")
-
-        prompt = f"""
+        
+        # 获取反向性别
+        opposite_gender = get_opposite_gender(gender)
+        
+        # 构建增强提示词
+        enhanced_prompt = f"""
+        The person's description:
         {prompt}
         
-        重要要求：必须是人物形象，不能是风景、物品或其他非人物内容。如果人物年龄未指定，必须生成大于25岁的人物
-       
+        The person's information:
+        age: 22 - 35
+        gender: {opposite_gender}
         """
         
         # 使用output_gcs_uri直接上传到GCS
         images = model.generate_images(
-            prompt=prompt,
+            prompt=enhanced_prompt,
             number_of_images=count,
             aspect_ratio=aspect_ratio,
             safety_filter_level="block_some",
