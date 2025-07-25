@@ -192,18 +192,20 @@ async def get_all_users(
     db: AsyncSession = Depends(get_async_db),
     skip: int = Query(0, ge=0, description="跳过记录数"),
     limit: int = Query(50, ge=1, le=100, description="每页记录数"),
+    search: Optional[str] = Query(None, description="搜索关键字，可匹配昵称和readable_id"),
 ) -> Any:
     """
-    获取所有用户信息，支持分页
+    获取所有用户信息，支持分页和关键字搜索
     """
     try:
-        logger.info(f"获取所有用户 - skip: {skip}, limit: {limit}")
+        logger.info(f"获取所有用户 - skip: {skip}, limit: {limit}, search: {search}")
         
         # 调用service层方法获取所有用户
         result = await user_service.get_all_users(
             db=db,
             skip=skip,
-            limit=limit
+            limit=limit,
+            search=search
         )
         
         logger.info(f"用户列表查询完成 - 总记录数: {result['total']}, "

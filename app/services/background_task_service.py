@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 class BackgroundTaskService:
     """后台任务服务"""
     
-    def __init__(self, max_workers: int = 4):
+    def __init__(self, max_workers: int = 20):
         self.max_workers = max_workers
         self.executor = None
         self.task_queue = Queue()

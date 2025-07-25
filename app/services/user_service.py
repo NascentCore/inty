@@ -546,31 +546,44 @@ async def anonymize_related_data(db: AsyncSession, user_id: str) -> dict:
 async def get_all_users(
     db: AsyncSession,
     skip: int = 0,
-    limit: int = 50
+    limit: int = 50,
+    search: Optional[str] = None
 ) -> dict:
     """
-    获取所有用户信息，支持分页
+    获取所有用户信息，支持分页和关键字搜索
     
     Args:
         db: 数据库会话
         skip: 跳过记录数
         limit: 限制记录数
+        search: 搜索关键字，可匹配昵称和readable_id
         
     Returns:
         dict: 包含总数和分页数据的字典
     """
     try:
-        from sqlalchemy import func
+        from sqlalchemy import func, or_
+        
+        # 构建基础查询
+        base_query = select(User)
+        count_query = select(func.count()).select_from(User)
+        
+        # 如果有搜索关键字，添加搜索条件
+        if search:
+            search_condition = or_(
+                User.nickname.ilike(f'%{search}%'),
+                User.readable_id.ilike(f'%{search}%')
+            )
+            base_query = base_query.where(search_condition)
+            count_query = count_query.where(search_condition)
         
         # 获取总数
-        count_result = await db.execute(
-            select(func.count()).select_from(User)
-        )
+        count_result = await db.execute(count_query)
         total = count_result.scalar()
         
         # 获取分页数据
         result = await db.execute(
-            select(User)
+            base_query
             .order_by(User.created_at.desc())
             .offset(skip)
             .limit(limit)
