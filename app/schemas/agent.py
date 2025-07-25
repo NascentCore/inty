@@ -120,16 +120,16 @@ class AgentInDB(AgentBase):
     updated_at: Optional[datetime] = None
 
     @field_serializer('created_at')
-    def serialize_created_at(self, created_at: datetime) -> str:
-        """格式化创建时间为 yy-mm-dd hh:mm"""
-        return created_at.strftime('%y-%m-%d %H:%M')
+    def serialize_created_at(self, created_at: datetime) -> int:
+        """序列化创建时间为时间戳"""
+        return int(created_at.timestamp())
     
     @field_serializer('updated_at')
-    def serialize_updated_at(self, updated_at: Optional[datetime]) -> Optional[str]:
-        """格式化更新时间为 yy-mm-dd hh:mm"""
+    def serialize_updated_at(self, updated_at: Optional[datetime]) -> Optional[int]:
+        """序列化更新时间为时间戳"""
         if updated_at is None:
             return None
-        return updated_at.strftime('%y-%m-%d %H:%M')
+        return int(updated_at.timestamp())
 
     class Config:
         from_attributes = True

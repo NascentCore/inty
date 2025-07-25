@@ -635,7 +635,7 @@ class Agent:
 
                 # 获取相关的历史消息
                 get_history_start = time.time()
-                recent_history = self._get_relevant_history(history.messages, max_messages=10)
+                recent_history = self._get_relevant_history(history.messages, max_messages=15)
                 get_history_time = time.time() - get_history_start
                 logger.info(f"历史消息获取耗时: {get_history_time:.3f}秒 - Agent: {self.agent_id}")
                 
