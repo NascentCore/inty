@@ -29,38 +29,32 @@ class ReportViewModel : BaseActivityViewModel() {
             ReportItem(
                 id = 1,
                 description = "Sensitive or sexual content",
-                code = "SENSITIVE_CONTENT",
-                isActive = true
+                code = "SENSITIVE_CONTENT"
             ),
             ReportItem(
                 id = 2,
                 description = "Misinformation",
-                code = "MISINFORMATION",
-                isActive = true
+                code = "MISINFORMATION"
             ),
             ReportItem(
                 id = 3,
                 description = "Fraud or scams",
-                code = "FRAUD_SCAMS",
-                isActive = true
+                code = "FRAUD_SCAMS"
             ),
             ReportItem(
                 id = 4,
                 description = "Violation of privacy",
-                code = "PRIVACY_VIOLATION",
-                isActive = true
+                code = "PRIVACY_VIOLATION"
             ),
             ReportItem(
                 id = 5,
                 description = "Harmful to minors",
-                code = "HARMFUL_MINORS",
-                isActive = true
+                code = "HARMFUL_MINORS"
             ),
             ReportItem(
                 id = 6,
                 description = "Violations of my intellectual property",
-                code = "IP_VIOLATION",
-                isActive = true
+                code = "IP_VIOLATION"
             )
         )
     )
