@@ -925,24 +925,23 @@ private fun AvatarUploadSection(
                 if (isEmpty) Modifier.size(200.dp)
                 else Modifier
                     .fillMaxWidth()
-                    .aspectRatio(1f)
-            )
-                .let { modifier ->
-                    if (isEmpty) {
-                        modifier
-                            .background(
-                                color = Color(0x1A78599A),
-                                shape = RoundedCornerShape(16.dp)
-                            )
-                            .noRippleClickable { onGenerateClick() }
-                    } else {
-                        modifier
-                            .background(
-                                color = Color.Black,
-                                shape = RoundedCornerShape(16.dp)
-                            )
-                    }
-                },
+                    .aspectRatio(9.div(16f))
+            ).let { modifier ->
+                if (isEmpty) {
+                    modifier
+                        .background(
+                            color = Color(0x1A78599A),
+                            shape = RoundedCornerShape(16.dp)
+                        )
+                        .noRippleClickable { onGenerateClick() }
+                } else {
+                    modifier
+                        .background(
+                            color = Color.Black,
+                            shape = RoundedCornerShape(16.dp)
+                        )
+                }
+            },
             contentAlignment = Alignment.Center
         ) {
             when {
