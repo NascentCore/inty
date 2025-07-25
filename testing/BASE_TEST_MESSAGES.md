@@ -1,5 +1,9 @@
 # Base Testing Messages for manual tesitng
 
-* Who's your name
+* Who's your name?
 * Who are you?
-
+* What are you?
+* Are you an AI?
+* What's your gender?
+* Who am I?
+* What's my name?
