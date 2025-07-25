@@ -644,16 +644,12 @@ private fun DeleteDialog(onDismiss: () -> Unit, onSubmit: () -> Unit) {
                 }
             }
             Text(
-                text = "Account deactivation risk warning",
+                text = "Are you sure?",
                 fontSize = 16.sp,
                 color = Color.White
             )
             Text(
-                text = """
-                                1、After the account is deactivated, the premium version will no longer be available. It is recommended to cancel the subscription before performing the operation
-                                2、After the account is deactivated, all chat records and content under your account will be deleted
-                                3、After the account is successfully deleted, it will be terminated immediately. Even if you re-register with the same account, it cannot be restored
-                            """.trimIndent(),
+                text = "All your data including chats history and created AI characters will be lost, and cannot be restored.",
                 fontSize = 14.sp,
                 color = Color.White
             )
@@ -678,7 +674,7 @@ private fun DeleteDialog(onDismiss: () -> Unit, onSubmit: () -> Unit) {
                 onClick = onSubmit,
                 modifier = Modifier.align(Alignment.CenterHorizontally)
             ) {
-                Text("Enter", fontSize = 14.sp, color = Color.White)
+                Text("Delete", fontSize = 14.sp, color = Color.White)
             }
         }
     }
