@@ -12,9 +12,6 @@ import retrofit2.http.POST
 
 @Singleton
 interface IReportApi {
-    @GET("/api/v1/report/reasons")
-    suspend fun getReasons(): HttpResult<List<ReportItem>>
-
     @POST("/api/v1/report/")
     suspend fun report(@Body req: ReportReq): ReportResponse
 }
