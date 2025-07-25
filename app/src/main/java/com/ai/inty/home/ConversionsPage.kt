@@ -46,6 +46,7 @@ import com.ai.inty.beans.AgentInfo
 import com.ai.inty.beans.ConversationItem
 import com.ai.inty.beans.SysMsgItem
 import com.ai.inty.utils.AuthClickable
+import com.inty.utils.formatTimestampToDateTime
 
 
 enum class ConversionsPageTab {
@@ -377,8 +378,9 @@ fun FollowingAgentItem(
         Column(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+
             Text(
-                text = agent.createdAt,
+                text = formatTimestampToDateTime(agent.createdAt),
                 fontSize = 12.sp,
                 color = Color.White.copy(0.55f),
             )
