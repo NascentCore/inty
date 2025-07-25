@@ -96,7 +96,8 @@
             android:theme="@style/Theme.Inty.Popup" />
         <activity
             android:name=".ReportActivity"
-            android:theme="@style/Theme.Inty.Popup" />
+            android:theme="@style/Theme.Inty.Popup"
+            android:windowSoftInputMode="adjustResize" />
         <activity
             android:name=".CreateRoleActivity"
             android:theme="@style/Theme.Inty.Popup" />

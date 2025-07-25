@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -149,7 +150,6 @@ private fun ReportScreen(
     Scaffold(
         modifier = Modifier
             .fillMaxSize()
-            .background(BackGround)
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null
@@ -195,17 +195,15 @@ private fun ReportScreen(
 
         Column(
             modifier = Modifier
-                .padding(
-                    top = paddingValues.calculateTopPadding(),
-                    bottom = paddingValues.calculateBottomPadding(),
-                    start = 16.dp,
-                    end = 16.dp,
-                )
+                .fillMaxSize()
+                .padding(paddingValues)
+                .imePadding()
+                .background(Color.Cyan)
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
 
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(8.dp))
 
             Column(
                 modifier = Modifier
@@ -396,8 +394,7 @@ private fun ReportScreen(
                 Spacer(Modifier.height(16.dp))
             }
 
-            Spacer(Modifier.height(60.dp))
-
+//            Spacer(Modifier.height(60.dp))
 
         }
     }
