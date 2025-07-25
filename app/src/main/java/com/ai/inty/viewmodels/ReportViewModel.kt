@@ -55,7 +55,12 @@ class ReportViewModel : BaseActivityViewModel() {
                 id = 6,
                 description = "Violations of my intellectual property",
                 code = "IP_VIOLATION"
-            )
+            ),
+            ReportItem(
+                id = 0,
+                description = "Other, details in report description",
+                code = "OTHER"
+            ),
         )
     )
     val reasons = _reasons.asStateFlow()
