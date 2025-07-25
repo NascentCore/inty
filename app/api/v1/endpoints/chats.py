@@ -1,4 +1,4 @@
-from typing import Any, List
+from typing import Any, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -1332,6 +1332,44 @@ async def clear_agent_chat_messages(
     except Exception as e:
         logger.error(f"清除Agent聊天消息失败 - Agent ID: {agent_id}, Error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"清除消息失败: {str(e)}")
+
+
+@router.get("/debug-messages", response_model=schemas.DebugMessageList)
+async def get_debug_messages(
+    *,
+    db: AsyncSession = Depends(deps.get_async_db),
+    user_id: Optional[str] = Query(None, description="用户ID"),
+    agent_id: Optional[str] = Query(None, description="Agent ID"),
+    skip: int = Query(0, ge=0, description="跳过记录数"),
+    limit: int = Query(50, ge=1, le=100, description="每页记录数"),
+) -> Any:
+    """
+    查询debug messages
+    支持按user_id和agent_id过滤，并支持分页
+    如果两个参数都为空，则返回所有记录
+    """
+    try:
+        logger.info(f"查询debug messages - user_id: {user_id}, agent_id: {agent_id}")
+        
+        # 调用service层方法查询debug messages
+        result = await chat_service.get_debug_messages(
+            db=db,
+            user_id=user_id,
+            agent_id=agent_id,
+            skip=skip,
+            limit=limit
+        )
+        
+        logger.info(f"debug messages查询完成 - 总记录数: {result['total']}, "
+                   f"当前页记录数: {len(result['items'])}")
+        
+        return schemas.DebugMessageList(**result)
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"查询debug messages失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"查询debug messages失败: {str(e)}")
 
 
 

@@ -1,11 +1,11 @@
 from typing import Any, Optional
 import traceback
-from fastapi import APIRouter, Depends, HTTPException, File, UploadFile, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, File, UploadFile, BackgroundTasks, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from loguru import logger
 
 from app.schemas.response import APIResponse
-from app.schemas.user import User, UserUpdate, DeviceTokenRegister
+from app.schemas.user import User, UserUpdate, DeviceTokenRegister, UserList
 from app.schemas.user_deletion import (
     AccountDeletionRequest,
     AccountDeletionResponse,
@@ -184,4 +184,35 @@ async def delete_user_account(
 #     if not user:
 #         raise HTTPException(status_code=404, detail="User not found")
 #     return user 
+
+
+@router.get("/", response_model=UserList)
+async def get_all_users(
+    *,
+    db: AsyncSession = Depends(get_async_db),
+    skip: int = Query(0, ge=0, description="跳过记录数"),
+    limit: int = Query(50, ge=1, le=100, description="每页记录数"),
+) -> Any:
+    """
+    获取所有用户信息，支持分页
+    """
+    try:
+        logger.info(f"获取所有用户 - skip: {skip}, limit: {limit}")
+        
+        # 调用service层方法获取所有用户
+        result = await user_service.get_all_users(
+            db=db,
+            skip=skip,
+            limit=limit
+        )
+        
+        logger.info(f"用户列表查询完成 - 总记录数: {result['total']}, "
+                   f"当前页记录数: {len(result['items'])}")
+        
+        return UserList(**result)
+        
+    except Exception as e:
+        logger.error(f"获取所有用户失败: {str(e)}")
+        logger.error(f"错误堆栈: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"获取用户列表失败: {str(e)}")
 

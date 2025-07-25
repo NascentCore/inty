@@ -541,3 +541,78 @@ async def anonymize_related_data(db: AsyncSession, user_id: str) -> dict:
         await db.rollback()
         logger.error(f"匿名化相关数据失败: {str(e)}")
         raise e
+
+
+async def get_all_users(
+    db: AsyncSession,
+    skip: int = 0,
+    limit: int = 50
+) -> dict:
+    """
+    获取所有用户信息，支持分页
+    
+    Args:
+        db: 数据库会话
+        skip: 跳过记录数
+        limit: 限制记录数
+        
+    Returns:
+        dict: 包含总数和分页数据的字典
+    """
+    try:
+        from sqlalchemy import func
+        
+        # 获取总数
+        count_result = await db.execute(
+            select(func.count()).select_from(User)
+        )
+        total = count_result.scalar()
+        
+        # 获取分页数据
+        result = await db.execute(
+            select(User)
+            .order_by(User.created_at.desc())
+            .offset(skip)
+            .limit(limit)
+        )
+        users = result.scalars().all()
+        
+        # 转换为字典格式
+        items = []
+        for user in users:
+            items.append({
+                'id': user.id,
+                'readable_id': user.readable_id,
+                'nickname': user.nickname,
+                'avatar': user.avatar,
+                'email': user.email,
+                'phone': user.phone,
+                'gender': user.gender,
+                'age_group': user.age_group,
+                'description': user.description,
+                'auth_type': user.auth_type,
+                'google_id': user.google_id,
+                'device_id': user.device_id,
+                'system_language': user.system_language,
+                'is_active': user.is_active,
+                'is_superuser': user.is_superuser,
+                'created_at': user.created_at,
+                'updated_at': user.updated_at,
+                'deleted_at': user.deleted_at,
+                'anonymized_at': user.anonymized_at,
+                'deletion_reason': user.deletion_reason
+            })
+        
+        has_more = total > skip + len(items)
+        
+        return {
+            'total': total,
+            'skip': skip,
+            'limit': limit,
+            'items': items,
+            'has_more': has_more
+        }
+        
+    except Exception as e:
+        logger.error(f"获取所有用户失败: {str(e)}")
+        raise e

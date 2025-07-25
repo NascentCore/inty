@@ -180,4 +180,28 @@ class ClearMessagesResponse(BaseModel):
     cutoff_timestamp: Optional[str] = None  # 截止时间戳（当使用timestamp时）
 
 
+class DebugMessageItem(BaseModel):
+    """调试消息项"""
+    chat_id: str
+    user_id: str
+    user_nickname: Optional[str] = None
+    agent_id: str
+    agent_name: str
+    debug_messages: Optional[dict] = None
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    
+    class Config:
+        from_attributes = True
+
+
+class DebugMessageList(BaseModel):
+    """调试消息列表响应"""
+    total: int
+    skip: int
+    limit: int
+    items: List[DebugMessageItem]
+    has_more: bool
+
+
  

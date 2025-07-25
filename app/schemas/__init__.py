@@ -1,4 +1,4 @@
-from app.schemas.user import User, UserCreate, UserUpdate, UserInDB
+from app.schemas.user import User, UserCreate, UserUpdate, UserInDB, UserList, UserListItem
 from app.schemas.token import Token, TokenPayload
 from app.schemas.verification_code import VerificationCodeCreate, VerificationCodeVerify
 from app.schemas.agent import Agent, AgentCreate, AgentUpdate, AgentInDB, BackgroundGenerateRequest, CreatorAgentStats
@@ -7,7 +7,8 @@ from app.schemas.chat import (
     Message, MessageCreate, MessageUpdate, MessageList,
     ChatSettings, ChatSettingsCreate, ChatSettingsUpdate,
     ChatDeletionResponse, ChatDeletionSummary,
-    ClearMessagesRequest, ClearMessagesResponse
+    ClearMessagesRequest, ClearMessagesResponse,
+    DebugMessageItem, DebugMessageList
 )
 from app.schemas.resource import Resource, ResourceCreate, ResourceUpdate, ResourceInDB
 from app.schemas.settings import Settings, SettingsCreate, SettingsUpdate, SettingsInDB

@@ -791,4 +791,110 @@ async def save_debug_messages(
     except Exception as e:
         logger.error(f"保存调试信息失败，session_id: {session_id}, 错误: {str(e)}")
         await db.rollback()
-        # 不抛出异常，避免影响正常的聊天流程 
+        # 不抛出异常，避免影响正常的聊天流程
+
+
+async def get_debug_messages(
+    db: AsyncSession,
+    user_id: Optional[str] = None,
+    agent_id: Optional[str] = None,
+    skip: int = 0,
+    limit: int = 50
+) -> dict:
+    """
+    查询debug messages
+    
+    Args:
+        db: 数据库会话
+        user_id: 用户ID过滤（可选）
+        agent_id: Agent ID过滤（可选）
+        skip: 跳过记录数
+        limit: 限制记录数
+        
+    Returns:
+        dict: 包含总数和分页数据的字典
+    """
+    try:
+        from sqlalchemy import func, and_
+        
+        # 构建基础查询
+        query = select(
+            models.Chat.id.label('chat_id'),
+            models.Chat.user_id,
+            models.Chat.agent_id,
+            models.Chat.debug_messages,
+            models.Chat.created_at,
+            models.Chat.updated_at,
+            models.User.nickname.label('user_nickname'),
+            models.Agent.name.label('agent_name')
+        ).select_from(
+            models.Chat.__table__.join(
+                models.User.__table__, models.Chat.user_id == models.User.id
+            ).join(
+                models.Agent.__table__, models.Chat.agent_id == models.Agent.id
+            )
+        ).where(
+            models.Chat.debug_messages.isnot(None)  # 只查询有debug_messages的记录
+        )
+        
+        # 添加过滤条件
+        conditions = []
+        if user_id:
+            conditions.append(models.Chat.user_id == user_id)
+        if agent_id:
+            conditions.append(models.Chat.agent_id == agent_id)
+            
+        if conditions:
+            query = query.where(and_(*conditions))
+        
+        # 获取总数
+        count_query = select(func.count()).select_from(
+            models.Chat.__table__.join(
+                models.User.__table__, models.Chat.user_id == models.User.id
+            ).join(
+                models.Agent.__table__, models.Chat.agent_id == models.Agent.id
+            )
+        ).where(
+            models.Chat.debug_messages.isnot(None)
+        )
+        
+        if conditions:
+            count_query = count_query.where(and_(*conditions))
+            
+        count_result = await db.execute(count_query)
+        total = count_result.scalar()
+        
+        # 添加排序和分页
+        query = query.order_by(models.Chat.updated_at.desc()).offset(skip).limit(limit)
+        
+        # 执行查询
+        result = await db.execute(query)
+        rows = result.fetchall()
+        
+        # 转换为响应格式
+        items = []
+        for row in rows:
+            items.append({
+                'chat_id': row.chat_id,
+                'user_id': row.user_id,
+                'user_nickname': row.user_nickname,
+                'agent_id': row.agent_id,
+                'agent_name': row.agent_name,
+                'debug_messages': row.debug_messages,
+                'created_at': row.created_at,
+                'updated_at': row.updated_at
+            })
+        
+        has_more = total > skip + len(items)
+        
+        return {
+            'total': total,
+            'skip': skip,
+            'limit': limit,
+            'items': items,
+            'has_more': has_more
+        }
+        
+    except Exception as e:
+        logger.error(f"查询debug messages失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"查询debug messages失败: {str(e)}") 

@@ -92,3 +92,39 @@ class AvatarUploadResponse(BaseModel):
 class DeviceTokenRegister(BaseModel):
     """设备token注册请求"""
     token: str
+
+
+class UserListItem(BaseModel):
+    """用户列表项"""
+    id: str
+    readable_id: str
+    nickname: Optional[str] = None
+    avatar: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    gender: Optional[Gender] = None
+    age_group: Optional[str] = None
+    description: Optional[str] = None
+    auth_type: AuthType
+    google_id: Optional[str] = None
+    device_id: Optional[str] = None
+    system_language: Optional[str] = None
+    is_active: bool
+    is_superuser: bool
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    deleted_at: Optional[datetime] = None
+    anonymized_at: Optional[datetime] = None
+    deletion_reason: Optional[str] = None
+    
+    class Config:
+        from_attributes = True
+
+
+class UserList(BaseModel):
+    """用户列表响应"""
+    total: int
+    skip: int
+    limit: int
+    items: list[UserListItem]
+    has_more: bool
