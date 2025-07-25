@@ -73,12 +73,12 @@ enum class EditKey {
     Persona
 }
 
-fun EditKey.toDisplayName(): String {
-    when (this) {
-        EditKey.None -> return ""
-        EditKey.Name -> return "Name"
-        EditKey.Pronouns -> return "My Pronouns"
-        EditKey.Persona -> return "My Persona"
+private fun EditKey.toDisplayName(): String {
+    return when (this) {
+        EditKey.None -> ""
+        EditKey.Name -> "Name"
+        EditKey.Pronouns -> "My Pronouns"
+        EditKey.Persona -> "My Persona"
     }
 }
 
@@ -360,14 +360,14 @@ class MySettingActivity: BaseActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MySettingScreen(
+private fun MySettingScreen(
     userProfile: UserProfile,
     onBack: () -> Unit = {},
     onSelectAvatar: () -> Unit = {},
     onClickName: () -> Unit = {},
     onClickPronouns: () -> Unit = {},
     onClickPersona: () -> Unit = {},
-    onSave: () -> Unit = {}
+    onSave: () -> Unit = {},
 ) {
     Scaffold(
         modifier = Modifier.background(BackGround),
@@ -511,7 +511,7 @@ fun MySettingItem(
     key: String,
     value: String,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     Row(
         modifier = modifier
@@ -546,7 +546,7 @@ fun MySettingItem(
 }
 
 @Composable
-fun SpacerLine() {
+private fun SpacerLine() {
     Spacer(Modifier.height(4.dp))
     Box(
         modifier = Modifier
@@ -564,9 +564,7 @@ fun SpacerLine() {
 
 @Composable
 @Preview(showBackground = true, backgroundColor = 0xff000000)
-fun MySettingScreenPreview(
-
-) {
+private fun MySettingScreenPreview() {
     MySettingScreen(
         userProfile = UserProfile(
             nickname = "nick",
@@ -577,10 +575,10 @@ fun MySettingScreenPreview(
 }
 
 @Composable
-fun RowScope.PronounsItem(
+private fun RowScope.PronounsItem(
     text: String,
     isSelected: Boolean = false,
-    onSelected: () -> Unit = {}
+    onSelected: () -> Unit = {},
 ) {
     Box(
         modifier = Modifier
