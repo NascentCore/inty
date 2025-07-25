@@ -8,9 +8,7 @@ import com.squareup.moshi.JsonClass
 data class ReportItem(
     val code: String = "",
     val description: String = "",
-    val id: Int = 0,
-    @Json(name = "is_active")
-    val isActive: Boolean = false
+    val id: Int = 0
 )
 
 
