@@ -550,8 +550,8 @@ class Agent:
                     user_info_parts.append(f"Age: {age_group}")
                 if description:
                     user_info_parts.append(f"Description: {description}")
-                if system_language:
-                    user_info_parts.append(f"Language: {system_language}")
+                # if system_language:
+                #     user_info_parts.append(f"Language: {system_language}")
                 
                 if user_info_parts:
                     user_info_text = "##User Information\n" + "\n".join(user_info_parts)
