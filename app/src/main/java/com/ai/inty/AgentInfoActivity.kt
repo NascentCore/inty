@@ -8,6 +8,7 @@ import androidx.activity.viewModels
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,6 +18,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
@@ -40,6 +42,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -47,6 +50,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
@@ -447,24 +451,14 @@ private fun FollowButton(
 ) {
     var lastClickTime by remember { mutableLongStateOf(0L) }
 
-    Button(
-        onClick = {
-            val currentTime = System.currentTimeMillis()
-            if (AntiClick.isValidClick(lastClickTime)) {
-                lastClickTime = currentTime
-                onClick()
-            }
-        },
-        colors = ButtonDefaults.buttonColors(
-            containerColor = if (isFollowing) Color(0x3378599A) else Color.Transparent
-        ),
-        shape = RoundedCornerShape(16.dp),
+    Box(
         modifier = Modifier
-            .height(35.dp)
-            .width(105.dp)
-            .let {
+            .height(40.dp)
+            .width(98.dp)
+            .clip(RoundedCornerShape(20.dp))
+            .let { md ->
                 if (!isFollowing) {
-                    it.background(
+                    md.background(
                         brush = Brush.horizontalGradient(
                             colors = listOf(
                                 Color(0xFFE91E63),
@@ -473,15 +467,39 @@ private fun FollowButton(
                         ),
                         shape = RoundedCornerShape(16.dp)
                     )
-                } else it
+                } else {
+                    md.background(Color(0xFF2D213A))
+                }
             }
+            .clickable {
+                val currentTime = System.currentTimeMillis()
+                if (AntiClick.isValidClick(lastClickTime)) {
+                    lastClickTime = currentTime
+                    onClick()
+                }
+            },
+        contentAlignment = Alignment.Center
     ) {
         Text(
             text = if (isFollowing) "Following" else "Follow",
             color = Color.White,
-            fontSize = 12.sp,
+            fontSize = 14.sp,
             fontWeight = FontWeight.Medium
         )
+    }
+}
+
+@Preview
+@Composable
+private fun PreviewFollowButton() {
+    Row(
+        Modifier.size(300.dp),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        FollowButton(false) { }
+        Spacer(Modifier.width(20.dp))
+        FollowButton(true) { }
     }
 }
 

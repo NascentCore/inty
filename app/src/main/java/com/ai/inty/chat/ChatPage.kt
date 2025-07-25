@@ -915,9 +915,7 @@ internal fun ChatPage(
 }
 
 @Composable
-private fun ChatItem(
-    item: MsgInfo,
-) {
+private fun ChatItem(item: MsgInfo) {
     when (item.role) {
         "assistant" -> {
             ChatItemAI(item)
@@ -934,9 +932,7 @@ private fun ChatItem(
 }
 
 @Composable
-private fun ChatItemAI(
-    item: MsgInfo,
-) {
+private fun ChatItemAI(item: MsgInfo) {
     Row {
         Box(
             modifier = Modifier
@@ -952,7 +948,7 @@ private fun ChatItemAI(
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Normal,
                     normalColor = Color.White,
-                    actionColor = Color.White.copy(0.75f)
+                    actionColor = Color.White.copy(0.55f)
                 )
             }
         }
@@ -967,9 +963,7 @@ private fun ChatItemAI(
 
 
 @Composable
-private fun ChatItemUser(
-    item: MsgInfo,
-) {
+private fun ChatItemUser(item: MsgInfo) {
     Row {
         Spacer(
             modifier = Modifier
