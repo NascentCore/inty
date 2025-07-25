@@ -631,7 +631,7 @@ private fun DeleteDialog(onDismiss: () -> Unit, onSubmit: () -> Unit) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Delete my account",
+                    text = "Are you sure?",
                     fontSize = 22.sp,
                     color = Color.White
                 )
@@ -644,11 +644,6 @@ private fun DeleteDialog(onDismiss: () -> Unit, onSubmit: () -> Unit) {
                 }
             }
             Text(
-                text = "Are you sure?",
-                fontSize = 16.sp,
-                color = Color.White
-            )
-            Text(
                 text = "All your data including chats history and created AI characters will be lost, and cannot be restored.",
                 fontSize = 14.sp,
                 color = Color.White
@@ -656,7 +651,7 @@ private fun DeleteDialog(onDismiss: () -> Unit, onSubmit: () -> Unit) {
             Spacer(Modifier.height(8.dp))
 
             Text(
-                text = "Please read the warning carefully and operate with caution",
+                text = "Please read the warning carefully and proceed with caution.",
                 fontSize = 16.sp,
                 color = Color.White
             )
@@ -674,7 +669,7 @@ private fun DeleteDialog(onDismiss: () -> Unit, onSubmit: () -> Unit) {
                 onClick = onSubmit,
                 modifier = Modifier.align(Alignment.CenterHorizontally)
             ) {
-                Text("Delete", fontSize = 14.sp, color = Color.White)
+                Text("Delete", fontSize = 14.sp, color = Color.Red)
             }
         }
     }
