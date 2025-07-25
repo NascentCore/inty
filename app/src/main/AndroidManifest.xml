@@ -100,11 +100,13 @@
             android:windowSoftInputMode="adjustResize" />
         <activity
             android:name=".CreateRoleActivity"
-            android:theme="@style/Theme.Inty.Popup" />
+            android:theme="@style/Theme.Inty.Popup"
+            android:windowSoftInputMode="adjustResize" />
         <activity
             android:name=".AvatarGenerateActivity"
             android:exported="true"
-            android:theme="@style/Theme.Inty.Popup" />
+            android:theme="@style/Theme.Inty.Popup"
+            android:windowSoftInputMode="adjustResize" />
         <activity
             android:name="com.yalantis.ucrop.UCropActivity"
             android:screenOrientation="portrait"

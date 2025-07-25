@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -93,10 +94,10 @@ class AvatarGenerateActivity : BaseActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AvatarGeneratePage(
+private fun AvatarGeneratePage(
     modifier: Modifier = Modifier,
     viewModel: AvatarGenerateViewModel,
-    onBack: () -> Unit
+    onBack: () -> Unit,
 ) {
     val prompt by viewModel.prompt.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
@@ -121,7 +122,8 @@ fun AvatarGeneratePage(
         containerColor = BackGround,
         topBar = {
             CenterAlignedTopAppBar(
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors().copy(containerColor = Color.Transparent),
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors()
+                    .copy(containerColor = Color.Transparent),
                 title = {
                     Text(
                         text = "Generate Avatar",
@@ -146,6 +148,7 @@ fun AvatarGeneratePage(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
+                .imePadding()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp)
                 .pointerInput(Unit) {
@@ -155,6 +158,7 @@ fun AvatarGeneratePage(
                 },
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+
             Spacer(modifier = Modifier.height(24.dp))
 
             // Image Preview Section
@@ -211,14 +215,15 @@ fun AvatarGeneratePage(
             }
 
             Spacer(modifier = Modifier.height(32.dp))
+
         }
     }
 }
 
 @Composable
-fun AvatarPreviewSection(
+private fun AvatarPreviewSection(
     imageUrl: String?,
-    isLoading: Boolean
+    isLoading: Boolean,
 ) {
     Box(
         modifier = Modifier
@@ -234,6 +239,7 @@ fun AvatarPreviewSection(
             isLoading -> {
                 ThreeDotLoadingAnimation()
             }
+
             imageUrl != null -> {
                 EasyLog.log("Displaying image with URL: $imageUrl")
                 AsyncImage(
@@ -251,6 +257,7 @@ fun AvatarPreviewSection(
                     }
                 )
             }
+
             else -> {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally
@@ -298,9 +305,9 @@ fun AvatarPreviewSection(
 }
 
 @Composable
-fun PromptInputField(
+private fun PromptInputField(
     value: String,
-    onValueChange: (String) -> Unit
+    onValueChange: (String) -> Unit,
 ) {
     Column {
         Text(
@@ -349,10 +356,10 @@ fun PromptInputField(
 }
 
 @Composable
-fun GenerateButton(
+private fun GenerateButton(
     isLoading: Boolean,
     enabled: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
 ) {
     Button(
         onClick = onClick,
@@ -399,8 +406,8 @@ fun GenerateButton(
 }
 
 @Composable
-fun UseAvatarButton(
-    onClick: () -> Unit
+private fun UseAvatarButton(
+    onClick: () -> Unit,
 ) {
     Button(
         onClick = onClick,
@@ -452,13 +459,13 @@ fun ThreeDotLoadingAnimation() {
 }
 
 @Composable
-fun AvatarGridSection(
+private fun AvatarGridSection(
     imageUrls: List<String>,
     selectedIndex: Int,
     onImageSelected: (Int) -> Unit,
     prompt: String,
     isLoading: Boolean,
-    onRegenerate: (String) -> Unit
+    onRegenerate: (String) -> Unit,
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally
@@ -512,7 +519,7 @@ fun AvatarGridSection(
 @Composable
 fun RegenButton(
     onClick: () -> Unit,
-    enabled: Boolean = true
+    enabled: Boolean = true,
 ) {
     Box(
         modifier = Modifier
