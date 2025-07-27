@@ -1,6 +1,6 @@
 # Base Testing Messages for manual tesitng
 
-* Who's your name?
+* What's your name?
 * Who are you?
 * What are you?
 * What's my pronoun?
