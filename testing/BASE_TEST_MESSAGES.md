@@ -3,9 +3,8 @@
 * What's your name?
 * Who are you?
 * What are you?
-* What's my pronoun?
-* Are you an AI?
 * What's your gender?
+* Are you an AI?
 * Who am I?
 * What's my name?
 * What's my gender?
