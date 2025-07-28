@@ -18,6 +18,7 @@ class SubscriptionPlanBase(BaseModel):
     features: Optional[Dict[str, Any]] = Field(default_factory=dict, description="功能权益配置")
     chat_limit_per_day: int = Field(-1, description="每日聊天次数限制，-1为无限制")
     agent_creation_limit: int = Field(6, description="Agent创建数量限制")
+    background_generation_limit_per_day: int = Field(3, description="每日背景图生成次数限制，-1为无限制")
     is_active: bool = Field(True, description="是否激活")
     sort_order: int = Field(0, description="排序顺序")
 
@@ -36,6 +37,7 @@ class SubscriptionPlanUpdate(BaseModel):
     features: Optional[Dict[str, Any]] = None
     chat_limit_per_day: Optional[int] = None
     agent_creation_limit: Optional[int] = None
+    background_generation_limit_per_day: Optional[int] = None
     is_active: Optional[bool] = None
     sort_order: Optional[int] = None
 
@@ -187,6 +189,7 @@ class SubscriptionStatusResponse(BaseModel):
     chat_limit_per_day: int = Field(-1, description="每日聊天次数限制")
     total_chat_limit: Optional[int] = Field(None, description="总聊天次数限制（免费用户）")
     agent_creation_limit: int = Field(6, description="Agent创建数量限制")
+    background_generation_limit_per_day: int = Field(3, description="每日背景图生成次数限制")
     features: Dict[str, Any] = Field(default_factory=dict, description="功能权益")
     feature_list: List[FeatureInfo] = Field(default_factory=list, description="权益功能列表")
 

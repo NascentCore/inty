@@ -10,6 +10,7 @@ from datetime import datetime
 from app import schemas
 from app.api import deps
 from app.services import agent_service
+from app.services.subscription_service import SubscriptionService
 from app.utils.gcs import upload_to_gcs, delete_from_gcs, is_user_gcs_file
 from app.core.config import settings
 from app.schemas.response import APIResponse
@@ -24,6 +25,9 @@ from app.schemas.character_card import (
 )
 
 router = APIRouter()
+
+# 创建订阅服务实例
+subscription_service = SubscriptionService()
 
 @router.get("/", response_model=schemas.APIResponse[List[schemas.Agent]])
 async def list_agents(
@@ -225,7 +229,32 @@ async def generate_background(
         # Validate count parameter
         if request.count < 1 or request.count > 4:
             return APIResponse.error(message="Count must be between 1 and 4")
-               # Construct GCS base path
+        
+        # 检查背景图生成限制
+        is_allowed, used_count, limit = await subscription_service.check_background_generation_limit(
+            db, current_user.id
+        )
+        
+        if not is_allowed:
+            # 超级管理员不受限制
+            if not current_user.is_superuser:
+                if limit == -1:
+                    error_message = f"背景图生成失败，今日已达上限"
+                else:
+                    error_message = f"今日背景图生成次数已达限制（{used_count}/{limit}）"
+                    if limit <= 3:  # 免费用户每日限制
+                        error_message += "，请考虑升级订阅以获得更多每日生成次数"
+                
+                return APIResponse.error(
+                    message=error_message,
+                    data={
+                        "used_count": used_count,
+                        "limit": limit,
+                        "error_code": "BACKGROUND_GENERATION_LIMIT_EXCEEDED"
+                    }
+                )
+        
+        # Construct GCS base path
         gcs_base_path = f"backgrounds/tmp/{current_user.id}/{uuid.uuid4().hex}"
         gcs_uri_base = f"gs://{settings.gcs.bucket}/{gcs_base_path}"
         
@@ -253,10 +282,27 @@ async def generate_background(
         
         logger.info(f"Successfully generated {len(gcs_urls)} background images")
         
+        # 记录背景图生成使用次数
+        try:
+            await subscription_service.record_usage(
+                db, 
+                current_user.id, 
+                "background_generation", 
+                request.count
+            )
+            logger.info(f"Recorded background generation usage for user {current_user.id}: {request.count} images")
+        except Exception as usage_error:
+            logger.error(f"Failed to record usage: {str(usage_error)}")
+            # 使用记录失败不影响主要功能，继续返回结果
+        
         return APIResponse.success(data={
             "urls": gcs_urls, 
             "count": len(gcs_urls),
-            "format": "png"
+            "format": "png",
+            "remaining_usage": {
+                "used_count": used_count + request.count,
+                "limit": limit
+            }
         })
         
     except Exception as e:

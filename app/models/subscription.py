@@ -52,6 +52,7 @@ class SubscriptionPlan(Base):
     features = Column(JSON, default=dict, comment="功能权益配置")
     chat_limit_per_day = Column(Integer, default=-1, comment="每日聊天次数限制，-1为无限制")
     agent_creation_limit = Column(Integer, default=6, comment="Agent创建数量限制")
+    background_generation_limit_per_day = Column(Integer, default=3, comment="每日背景图生成次数限制，-1为无限制")
     
     # 状态
     is_active = Column(Boolean, default=True, comment="是否激活")

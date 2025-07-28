@@ -32,6 +32,7 @@ from app.schemas.subscription import (
 )
 from app.models.subscription_features import SubscriptionFeatures
 from app.services.google_play_service import google_play_service
+from app.services.system_settings_service import system_settings_service
 
 logger = logging.getLogger(__name__)
 
@@ -199,6 +200,7 @@ class SubscriptionService:
                     chat_limit_per_day=subscription.plan.chat_limit_per_day,
                     total_chat_limit=None,  # 付费用户不使用总次数限制
                     agent_creation_limit=subscription.plan.agent_creation_limit,
+                    background_generation_limit_per_day=getattr(subscription.plan, 'background_generation_limit_per_day', -1),
                     features=subscription.plan.features or {},
                     feature_list=feature_list
                 )
@@ -218,14 +220,18 @@ class SubscriptionService:
                         enabled=is_real_feature  # 只有真实权益才启用
                     ))
                 
+                # 从动态配置获取免费用户限制
+                free_limits = await system_settings_service.get_free_user_limits(db)
+                
                 return SubscriptionStatusResponse(
                     is_subscribed=False,
                     subscription=None,
                     plan=None,
                     remaining_days=None,
                     chat_limit_per_day=-1,  # 免费用户不限制每日聊天次数
-                    total_chat_limit=100,  # 免费用户总聊天次数限制100次
-                    agent_creation_limit=6,  # 免费用户最多创建6个Agent
+                    total_chat_limit=free_limits['chat_total_limit'],
+                    agent_creation_limit=free_limits['agent_creation_limit'],
+                    background_generation_limit_per_day=free_limits['background_generation_limit'],
                     features={},
                     feature_list=feature_list
                 )
@@ -764,6 +770,63 @@ class SubscriptionService:
             logger.error(f"检查Agent创建数量限制失败: {str(e)}")
             # 出错时默认允许，避免影响用户体验
             return True, 0, 6
+    
+    async def check_background_generation_limit(
+        self, 
+        db: AsyncSession, 
+        user_id: str
+    ) -> Tuple[bool, int, int]:
+        """
+        检查用户背景图生成次数限制
+        
+        Returns:
+            Tuple[bool, int, int]: (是否允许生成, 已用次数, 限制次数)
+        """
+        try:
+            # 获取订阅状态
+            subscription_status = await self.get_user_subscription_status(db, user_id)
+            
+            # 获取今日背景图生成次数（免费和付费用户都使用每日限制）
+            today = datetime.now(timezone.utc).date()
+            today_start = datetime.combine(today, datetime.min.time()).replace(tzinfo=timezone.utc)
+            today_end = today_start + timedelta(days=1)
+            
+            generation_count_result = await db.execute(
+                select(func.sum(SubscriptionUsage.usage_count))
+                .where(
+                    and_(
+                        SubscriptionUsage.user_id == user_id,
+                        SubscriptionUsage.usage_type == "background_generation",
+                        SubscriptionUsage.usage_date >= today_start,
+                        SubscriptionUsage.usage_date < today_end
+                    )
+                )
+            )
+            today_generation_count = generation_count_result.scalar() or 0
+            
+            # 获取用户的具体限制
+            if subscription_status.is_subscribed:
+                # 付费用户：使用订阅计划中的限制
+                background_limit = getattr(subscription_status, 'background_generation_limit_per_day', -1)
+                
+                # 如果是无限制，直接返回允许
+                if background_limit == -1:
+                    return True, today_generation_count, -1
+            else:
+                # 免费用户：从动态配置中读取每日限制
+                background_limit = await system_settings_service.get_setting(
+                    db, 'free_user_background_generation_limit', 3
+                )
+            
+            # 检查是否超出限制
+            is_allowed = today_generation_count < background_limit
+            
+            return is_allowed, today_generation_count, background_limit
+            
+        except Exception as e:
+            logger.error(f"检查背景图生成次数限制失败: {str(e)}")
+            # 出错时默认允许，避免影响用户体验
+            return True, 0, -1
     
     async def handle_subscription_notification(
         self, 
