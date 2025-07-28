@@ -1,6 +1,6 @@
 # Cursor
 
-## Enable black formatter
+## Enable format on save with black formatter
 
 Goal: install and enable black formatter to format file on save, use the default black format style.
 
