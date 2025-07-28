@@ -736,16 +736,19 @@ private fun CreateRolePage(
                         avatarUrl
                     }
 
-                    // Determine final avatar URL - if no cropped avatar, use background as avatar
+                    // 头像数据更新
+                    if (isEditMode) {
+                        //更新ai 形象的背景选择
+                        if (backgroundUrl != editAgent.background) {
+                            //此时如果头像数据还是旧的，则手动更新为最新背景的
+                            if (croppedAvatarUrl == editAgent.avatar) {
+                                croppedAvatarUrl = backgroundUrl
+                            }
+                        }
+                    }
                     val finalAvatarUrl = croppedAvatarUrl ?: backgroundUrl
                     val backgroundImagesList =
                         avatarUrls.ifEmpty { listOfNotNull(avatarUrl) }
-
-                    EasyLog.log("Create button clicked - Final Avatar URL: $finalAvatarUrl")
-                    EasyLog.log("Create button clicked - Background URL: $backgroundUrl")
-                    EasyLog.log("Create button clicked - Background Images List: $backgroundImagesList")
-                    EasyLog.log("Create button clicked - Cropped Avatar URL: $croppedAvatarUrl")
-                    EasyLog.log("Create button clicked - Avatar equals background: ${finalAvatarUrl == backgroundUrl}")
 
                     // Save background for chat usage
                     if (backgroundUrl != null) {
@@ -770,8 +773,6 @@ private fun CreateRolePage(
                             prompt = settings
                         )
                         EasyLog.log("${if (isEditMode) "Update" else "Create"} agent request: $request")
-                        EasyLog.log("${if (isEditMode) "Update" else "Create"} agent request avatar field: ${request.avatar}")
-
                         // Call API through ViewModel
                         if (isEditMode) {
                             mainViewModel.updateAgent(
