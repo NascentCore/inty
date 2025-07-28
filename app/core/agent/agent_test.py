@@ -1,7 +1,5 @@
-import asyncio
-import unittest
 import uuid
-from unittest import TestCase
+import pytest
 from unittest.mock import patch, MagicMock
 
 from langchain_core.messages import HumanMessage
@@ -10,10 +8,11 @@ from app.core.agent.agent import Agent
 from app.core.config import settings
 
 
-class TestAgentChat(TestCase):
+class TestAgentChat:
     """Test class for Agent.chat() method - Happy Path"""
 
-    def setUp(self):
+    @pytest.fixture(autouse=True)
+    def setup(self):
         """Set up test fixtures before each test method"""
         # Test agent configuration
         self.agent_id = "test-agent-123"
@@ -41,15 +40,17 @@ class TestAgentChat(TestCase):
 
         self.agent = None
 
-    def tearDown(self):
-        """Clean up after each test method"""
+        yield
+
+        # Cleanup after test
         if self.agent:
             try:
                 self.agent.cleanup()
             except Exception as e:
                 print(f"Warning: Failed to cleanup agent: {e}")
 
-    def test_agent_chat_happy_path(self):
+    @pytest.mark.asyncio
+    async def test_agent_chat_happy_path(self):
         """
         Test the happy path of Agent.chat() method
 
@@ -60,6 +61,7 @@ class TestAgentChat(TestCase):
         4. All dependencies are properly mocked to avoid external calls
         """
 
+        print("Starting test_agent_chat_happy_path")
         # Create agent instance
         self.agent = Agent(
             agent_id=self.agent_id,
@@ -72,38 +74,24 @@ class TestAgentChat(TestCase):
         )
 
         # Verify agent was created successfully
-        self.assertIsNotNone(self.agent)
-        self.assertEqual(self.agent.agent_id, self.agent_id)
-        self.assertEqual(self.agent.name, self.agent_name)
-        self.assertEqual(self.agent.personality, self.test_personality)
+        assert self.agent is not None
+        assert self.agent.agent_id == self.agent_id
+        assert self.agent.name == self.agent_name
+        assert self.agent.personality == self.test_personality
 
-        # Test the chat method
-        async def run_chat_test():
-            try:
-                response = await self.agent.chat(
-                    user_id=self.user_id,
-                    session_id=self.session_id,
-                    messages=self.test_messages,
-                )
+        response = await self.agent.chat(
+            user_id=self.user_id,
+            session_id=self.session_id,
+            messages=self.test_messages,
+        )
 
-                # Verify response is a string
-                self.assertIsInstance(response, str)
-                self.assertGreater(len(response), 0)
+        # Verify response is a string
+        assert isinstance(response, str)
+        assert len(response) > 0
 
-                print(f"✅ Chat test passed! Response: {response[:100]}...")
-                return response
-
-            except Exception as e:
-                self.fail(f"Chat test failed with exception: {str(e)}")
-
-        # Run the async test
-        response = asyncio.run(run_chat_test())
+        print(f"✅ Chat test passed! Response: {response[:100]}...")
 
         # Additional assertions
-        self.assertIsNotNone(response)
-        self.assertIsInstance(response, str)
-
-
-if __name__ == "__main__":
-    # Run the test
-    unittest.main(verbosity=2)
+        assert response is not None
+        assert isinstance(response, str)
+        assert response == "Hello, how are you today?!"
