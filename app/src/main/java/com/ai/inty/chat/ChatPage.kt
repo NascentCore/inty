@@ -496,7 +496,7 @@ internal fun ChatPage(
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Text(
-                                        text = "（）",
+                                        text = "()",
                                         color = Color.White,
                                         fontSize = 14.sp,
                                         fontWeight = FontWeight.Medium
