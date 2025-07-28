@@ -6,23 +6,23 @@ ksp = "2.2.0-2.0.2"
 
 # AndroidX 核心库
 coreKtx = "1.16.0"
-lifecycleRuntimeKtx = "2.9.1"
+lifecycleRuntimeKtx = "2.9.2"
 activityCompose = "1.10.1"
 activity = "1.10.1"
 appcompat = "1.7.1"
 constraintlayout = "2.2.1"
-navigationCompose = "2.9.1"
+navigationCompose = "2.9.2"
 
 # Compose 相关
-composeBom = "2025.06.01"
+composeBom = "2025.07.00"
 
 # Google 服务
-firebaseBom = "33.16.0"
-playServicesAuth = "21.3.0"
+firebaseBom = "34.0.0"
+playServicesAuth = "21.4.0"
 billingKtx = "8.0.0"
 googleServices = "4.4.3"
-firebaseCrashlytics = "3.0.4"
-firebasePerf = "1.4.2"
+firebaseCrashlytics = "3.0.5"
+firebasePerf = "2.0.0"
 
 # 测试相关
 junit = "4.13.2"
@@ -30,14 +30,14 @@ junitVersion = "1.2.1"
 espressoCore = "3.6.1"
 
 # 第三方库
-chucker = "4.1.0"
+chucker = "4.2.0"
 theRouter = "1.2.4"
 mmkv = "2.2.2"
 mars = "1.2.6"
 retrofit = "3.0.0"
 retrofitKotlinxSerializationJson = "1.0.0"
 retrofit2-kotlin-coroutines-adapter = "0.9.2"
-coil = "3.2.0"
+coil = "3.3.0"
 moshi = "1.15.2"
 ucrop = "2.2.10"
 material = "1.12.0"
@@ -91,9 +91,10 @@ moshi-kotlin = { group = "com.squareup.moshi", name = "moshi-kotlin", version.re
 moshi-kotlin-codegen = { group = "com.squareup.moshi", name = "moshi-kotlin-codegen", version.ref = "moshi" }
 
 # ===== 图片处理库 =====
-coil-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil" }
-coil-network-okhttp = { group = "io.coil-kt.coil3", name = "coil-network-okhttp", version.ref = "coil" }
 ucrop = { module = "com.github.yalantis:ucrop", version.ref = "ucrop" }
+
+coil-kt-compose3 = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil" }
+coil-kt-network-okhttp3 = { group = "io.coil-kt.coil3", name = "coil-network-okhttp", version.ref = "coil" }
 
 # ===== 路由库 =====
 router = { module = "cn.therouter:router", version.ref = "theRouter" }
@@ -106,10 +107,6 @@ chucker-library-no-op = { module = "com.github.chuckerteam.chucker:library-no-op
 # ===== Material Design =====
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
 
-# ===== 向后兼容的别名 =====
-# 保持原有名称以兼容现有代码
-coil-kt-compose3 = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil" }
-coil-kt-network-okhttp3 = { group = "io.coil-kt.coil3", name = "coil-network-okhttp", version.ref = "coil" }
 
 [plugins]
 # ===== 核心插件 =====
@@ -128,7 +125,6 @@ firebase-perf = { id = "com.google.firebase.firebase-perf", version.ref = "fireb
 
 [bundles]
 # ===== 图片加载 =====
-coil = ["coil-compose", "coil-network-okhttp"]
 coils3 = ["coil-kt-compose3", "coil-kt-network-okhttp3"]
 
 # ===== JSON 序列化 =====

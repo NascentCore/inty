@@ -237,8 +237,7 @@ dependencies {
 
     implementation(libs.retrofit2.kotlin.coroutines.adapter)
     // 统一使用 Coil 3.x 版本
-    implementation(libs.coil.compose)
-    implementation(libs.coil.network.okhttp)
+    implementation(libs.bundles.coils3)
 
     //Google支付
 //    implementation(libs.billing.ktx)
