@@ -1,5 +1,6 @@
 package com.ai.inty.viewmodels
 
+import android.util.Log
 import androidx.compose.runtime.mutableStateListOf
 import androidx.lifecycle.viewModelScope
 import com.ai.inty.base.BaseActivityViewModel
@@ -20,7 +21,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class ChatViewModel: BaseActivityViewModel() {
+class ChatViewModel : BaseActivityViewModel() {
 
     private val _agentInfo = MutableStateFlow<AgentInfo?>(null)
     val agentInfo = _agentInfo.asStateFlow()
@@ -53,11 +54,9 @@ class ChatViewModel: BaseActivityViewModel() {
             return
         }
         _agentInfo.value = agentInfo
-        msgs.clear()
-
         queryMsgs()
     }
-    
+
     fun updateAgentFollowState(agentId: String, isFollowed: Boolean) {
         EasyLog.log("ChatViewModel updateAgentFollowState - agentId: $agentId, isFollowed: $isFollowed")
         _agentInfo.value?.let { currentAgent ->
@@ -73,28 +72,32 @@ class ChatViewModel: BaseActivityViewModel() {
 
     fun queryMsgs() {
         viewModelScope.launch(Dispatchers.IO) {
-//            for (i in 0 .. 100) {
-//                msgs.add(
-//                    0,
-//                    MsgInfo(
-//                        content = "msgmsgmsgmsgmsgmsgmsgmsgmsgmsgmsgmsgmsgmsgmsgmsgmsgmsgmsgmsgmsgmsgmsgmsgmsgmsgmsgmsgmsg $i",
-//                        senderType = if (i % 2 == 0) "AI" else "USER"
-//                    )
-//                )
-//            }
 
             agentInfo.value?.let { agent ->
                 val result = chatApi.getMsgs(agent.id, 100, 0)
-                EasyLog.log("get msgs($agent) = $result")
-
+                EasyLog.log("queryMsgs ($agent) = $result")
                 when (result) {
                     is HttpResult.Success -> {
+                        msgs.clear()
                         msgs.addAll(result.data.messages)
+                        Log.d(
+                            "测试",
+                            "queryMsgs Size ${result.data.messages.size} , msgSize:${msgs.size}",
+                        )
                     }
+
                     is HttpResult.Failure -> {
                         showSnackbar(result.message)
+                        Log.e(
+                            "测试",
+                            "queryMsgs msgSize:${msgs.size}",
+                        )
                     }
                 }
+                Log.w(
+                    "测试",
+                    "queryMsgs msgSize:${msgs.size}",
+                )
 
             }
         }
@@ -104,7 +107,7 @@ class ChatViewModel: BaseActivityViewModel() {
         viewModelScope.launch(Dispatchers.IO) {
             val inputMsg = inputData.value
             inputData.value = ""
-            EasyLog.log("send msg ${inputMsg}")
+            EasyLog.log("send msg $inputMsg")
 
             val msgInfo = MsgInfo(
                 content = inputMsg,
@@ -130,14 +133,15 @@ class ChatViewModel: BaseActivityViewModel() {
             agentInfo.value?.let { agent ->
                 // 标记为用户主动发起的对话
                 IntySetting.setUserInitiatedConversation(agent.id)
-                
+
                 val result = chatApi.sendMsg(agent.id, req)
 
                 EasyLog.log("sendMsg($agent, $req) -> $result")
 
                 withContext(Dispatchers.Main) {
                     // 移除加载消息
-                    val loadingIndex = msgs.indexOfFirst { it.content == "loading_animation" && it.role == "assistant" }
+                    val loadingIndex =
+                        msgs.indexOfFirst { it.content == "loading_animation" && it.role == "assistant" }
                     if (loadingIndex >= 0) {
                         msgs.removeAt(loadingIndex)
                     }
@@ -151,8 +155,12 @@ class ChatViewModel: BaseActivityViewModel() {
                                 msgs.add(0, choice.message)
                             }
                         }
-                        IntySetting.setConversationReaded(agent.id, result.data.choices.last()?.message?.content ?: "")
+                        IntySetting.setConversationReaded(
+                            agent.id,
+                            result.data.choices.last()?.message?.content ?: ""
+                        )
                     }
+
                     is HttpResult.Failure -> {
                         showSnackbar(result.message)
                     }
@@ -190,14 +198,15 @@ class ChatViewModel: BaseActivityViewModel() {
             agentInfo.value?.let { agent ->
                 // 标记为用户主动发起的对话
                 IntySetting.setUserInitiatedConversation(agent.id)
-                
+
                 val result = chatApi.sendMsg(agent.id, req)
 
                 EasyLog.log("sendKeepTalkingMessage($agent, $req) -> $result")
 
                 withContext(Dispatchers.Main) {
                     // 移除加载消息
-                    val loadingIndex = msgs.indexOfFirst { it.content == "loading_animation" && it.role == "assistant" }
+                    val loadingIndex =
+                        msgs.indexOfFirst { it.content == "loading_animation" && it.role == "assistant" }
                     if (loadingIndex >= 0) {
                         msgs.removeAt(loadingIndex)
                     }
@@ -211,8 +220,12 @@ class ChatViewModel: BaseActivityViewModel() {
                                 msgs.add(0, choice.message)
                             }
                         }
-                        IntySetting.setConversationReaded(agent.id, result.data.choices.last()?.message?.content ?: "")
+                        IntySetting.setConversationReaded(
+                            agent.id,
+                            result.data.choices.last()?.message?.content ?: ""
+                        )
                     }
+
                     is HttpResult.Failure -> {
                         showSnackbar(result.message)
                     }
@@ -224,7 +237,7 @@ class ChatViewModel: BaseActivityViewModel() {
     fun getConversions() {
         viewModelScope.launch(Dispatchers.IO) {
             val result = chatApi.getConversions(0, 100)
-            EasyLog.log("get msgs = $result")
+            EasyLog.log("getConversions = $result")
             conversions.clear()
             when (result) {
                 is HttpResult.Success -> {
@@ -235,6 +248,7 @@ class ChatViewModel: BaseActivityViewModel() {
                     conversions.addAll(userInitiatedConversations)
                     EasyLog.log("Filtered conversations: ${userInitiatedConversations.size} out of ${result.data.size}")
                 }
+
                 is HttpResult.Failure -> {
                     showSnackbar(result.message)
                 }
@@ -252,6 +266,7 @@ class ChatViewModel: BaseActivityViewModel() {
                     setAgentInfo(result.data)
 
                 }
+
                 is HttpResult.Failure -> {
                     showSnackbar(result.message)
                 }

@@ -96,8 +96,12 @@ internal fun ChatPage(
     onFollowAgent: ((String) -> Unit)? = null,
     showBackButton: Boolean = false,
     onBack: (() -> Unit)? = null,
+) {
+    LifecycleResumeEffect(chatViewModel) {
+        chatViewModel.queryMsgs()
+        onPauseOrDispose { }
+    }
 
-    ) {
     val context = LocalContext.current
     val density = LocalDensity.current
     val agentInfo = chatViewModel.agentInfo.collectAsState().value
@@ -359,7 +363,7 @@ internal fun ChatPage(
                     reverseLayout = true,
                 ) {
                     val msgs = chatViewModel.msgs
-                    EasyLog.log("msgs count = ${msgs.size}")
+                    EasyLog.log(" 测试，， msgs count = ${msgs.size}", 4)
                     item {
                         Spacer(Modifier.height(16.dp))
                     }
