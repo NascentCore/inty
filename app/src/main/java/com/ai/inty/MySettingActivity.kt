@@ -457,7 +457,7 @@ private fun MySettingScreen(
                 SpacerLine()
                 MySettingItem(
                     key = "My Pronouns",
-                    value = userProfile.gender ?: "",
+                    value = userProfile.pronouns(),
                     onClick = onClickPronouns
                 )
                 SpacerLine()

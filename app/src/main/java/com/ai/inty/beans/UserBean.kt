@@ -69,7 +69,18 @@ data class UserProfile(
     val connectorCount: Int = 0,
     @Json(name = "followers_count")
     val followerCount: Int = 0,
-)
+) {
+    /**
+     * 性别代指
+     */
+    fun pronouns(): String {
+        return when (gender) {
+            GENDER.MALE.value -> "He/Him"
+            GENDER.FEMALE.value -> "She/Her"
+            else -> "They/Them"
+        }
+    }
+}
 
 enum class GENDER(val value: String) {
     MALE("MALE"),

@@ -68,6 +68,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.ai.inty.Constant
 import com.ai.inty.R
 import com.ai.inty.base.BottomSheetDialog
@@ -78,7 +79,6 @@ import com.ai.inty.base.IntySmallTextField
 import com.ai.inty.base.MyModalNavigationDrawer
 import com.ai.inty.base.noRippleClickable
 import com.ai.inty.beans.AgentInfo
-import com.ai.inty.beans.GENDER
 import com.ai.inty.beans.MsgInfo
 import com.ai.inty.ui.theme.BackGround
 import com.ai.inty.utils.getChatBackground
@@ -583,6 +583,10 @@ internal fun ChatPage(
             }
         }
         //聊天设置 右侧菜单
+        LifecycleResumeEffect(chatViewModel) {
+            chatViewModel.updateUserInfo()
+            onPauseOrDispose { }
+        }
         MyModalNavigationDrawer(
             modifier = Modifier,
             drawerState = drawerState,
@@ -649,11 +653,7 @@ internal fun ChatPage(
                         )
                         com.ai.inty.MySettingItem(
                             key = "My Pronoun",
-                            value = when (userProfile.value.gender) {
-                                GENDER.MALE.value -> "He/Him"
-                                GENDER.FEMALE.value -> "She/Her"
-                                else -> "They/Them"
-                            },
+                            value = userProfile.value.pronouns(),
                             onClick = {
                                 // 检查是否正式登录（非游客且已登录）
                                 if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {

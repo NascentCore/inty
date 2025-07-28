@@ -1,7 +1,7 @@
 package com.ai.inty.viewmodels
 
-import android.graphics.Bitmap
 import android.net.Uri
+import androidx.core.net.toUri
 import androidx.lifecycle.viewModelScope
 import com.ai.inty.Constant
 import com.ai.inty.EditKey
@@ -11,6 +11,7 @@ import com.ai.inty.base.ToastUtils
 import com.ai.inty.beans.UserProfile
 import com.ai.inty.net.IUserApi
 import com.ai.inty.net.IUserApi2
+import com.ai.inty.utils.UserProfileManager
 import com.architecture.httplib.core.HttpResult
 import com.inty.utils.log.EasyLog
 import com.therouter.TheRouter
@@ -21,7 +22,6 @@ import kotlinx.coroutines.launch
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
-import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.File
 
 class MySettingActivityViewModel: BaseActivityViewModel() {
@@ -55,8 +55,10 @@ class MySettingActivityViewModel: BaseActivityViewModel() {
     fun onSave() {
         viewModelScope.launch(Dispatchers.IO) {
             if (_avatarChanged.value) {
-                val fileUri = Uri.parse(_userProfile.value.avatar)
-                val requestBody = File(fileUri.path ?: return@launch).asRequestBody(contentType = "image/jpg".toMediaTypeOrNull())
+                val fileUri = _userProfile.value.avatar?.toUri()
+                val requestBody = File(
+                    fileUri?.path ?: return@launch
+                ).asRequestBody(contentType = "image/jpg".toMediaTypeOrNull())
                 val result = userApi.uploadAvatar(MultipartBody.Part.createFormData("file", "file.png", requestBody))
                 EasyLog.log("upload avatar = $result")
 
@@ -84,6 +86,7 @@ class MySettingActivityViewModel: BaseActivityViewModel() {
                     // Show success toast for profile update
                     viewModelScope.launch(Dispatchers.Main) {
                         ToastUtils.showToast(R.string.saved_successfully)
+                        UserProfileManager.saveUserProfile(_userProfile.value)
                     }
                 }
                 is HttpResult.Failure -> {
