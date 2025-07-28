@@ -262,6 +262,7 @@ private fun ReportScreen(
                             .fillMaxSize()
                             .padding(horizontal = 16.dp),
                         value = description,
+                        maxLength = 400,
                         placeholder = {
                             Text(
                                 modifier = Modifier
