@@ -57,6 +57,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
@@ -143,12 +144,16 @@ private fun AvatarGeneratePage(
                 }
             )
         }
-    ) { innerPadding ->
+    ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
                 .imePadding()
+                .padding(
+                    top = padding.calculateTopPadding(),
+                    start = padding.calculateLeftPadding(LayoutDirection.Ltr),
+                    end = padding.calculateRightPadding(LayoutDirection.Ltr)
+                )
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp)
                 .pointerInput(Unit) {
