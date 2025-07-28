@@ -1,26 +1,24 @@
 from fastapi import FastAPI, Request
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
+from jose.exceptions import JWTError
+from loguru import logger
+from pydantic import ValidationError
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
-from jose.exceptions import JWTError
-from pydantic import ValidationError
 
-from app.core.config import settings
-from app.api.v1.api import api_router
-from app.middleware.error_handler import (
-    validation_exception_handler,
-    jwt_exception_handler,
-    sqlalchemy_exception_handler,
-    validation_error_handler
-)
-from app.core.logging import init_logger
-from app.core.agent.agent import agent_manager
 from app.api.deps import get_async_db
-from app.services.keep_talking_service import keep_talking_service
-from loguru import logger
+from app.api.v1.api import api_router
+from app.core.agent.agent import agent_manager
+from app.core.config import settings
 from app.core.firebase import init_firebase
+from app.core.logging import init_logger
+from app.middleware.error_handler import (jwt_exception_handler,
+                                          sqlalchemy_exception_handler,
+                                          validation_error_handler,
+                                          validation_exception_handler)
+from app.services.keep_talking_service import keep_talking_service
 
 init_logger()
 
@@ -104,7 +102,7 @@ async def _preload_database_connections():
         
         # 1. 预初始化Agent系统的连接池
         from app.core.agent.agent import get_connection_pool, get_sync_engine
-        
+
         # 预初始化连接池（这会创建min_size数量的连接）
         pool = get_connection_pool()
         logger.info(f"连接池预初始化完成: {pool.name}")
@@ -131,7 +129,8 @@ async def _preload_database_connections():
         logger.info("缓存服务启动完成")
         
         # 5. 启动后台任务服务
-        from app.services.background_task_service import background_task_service
+        from app.services.background_task_service import \
+            background_task_service
         background_task_service.start()
         logger.info("后台任务服务启动完成")
         
@@ -147,7 +146,7 @@ async def _preload_popular_agent_data(db: AsyncSession):
         logger.info("开始预加载热门Agent数据到缓存...")
         
         from app.services import agent_service
-        
+
         # 获取推荐的Agent作为热门Agent进行预加载
         popular_agents = await agent_service.get_recommended_agents(db, skip=0, limit=20)
         
@@ -175,9 +174,10 @@ async def _preload_database_tables(db: AsyncSession):
         logger.info("开始预初始化数据库表结构...")
         
         # 预热聊天表查询，确保表结构已加载
-        from app import models
         from sqlalchemy import select
-        
+
+        from app import models
+
         # 执行一个简单的查询来预热表结构
         await db.execute(select(models.Chat).limit(1))
         await db.execute(select(models.Agent).limit(1))
@@ -213,7 +213,8 @@ async def shutdown_event():
         logger.info("缓存服务已停止")
         
         # 停止后台任务服务
-        from app.services.background_task_service import background_task_service
+        from app.services.background_task_service import \
+            background_task_service
         background_task_service.stop()
         logger.info("后台任务服务已停止")
     except Exception as e:

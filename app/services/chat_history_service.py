@@ -1,11 +1,13 @@
-from typing import Optional, Dict, Any, List
-from langchain_postgres import PostgresChatMessageHistory
-from langchain_core.messages import AIMessage, HumanMessage, BaseMessage
-import psycopg
-from app.core.config import settings
 import json
 import logging
 from datetime import datetime
+from typing import Any, Dict, List, Optional
+
+import psycopg
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
+from langchain_postgres import PostgresChatMessageHistory
+
+from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -517,7 +519,7 @@ def clear_messages_after_timestamp(session_id: str, timestamp: str) -> Dict[str,
         ensure_table_initialized()
         conn = get_chat_history_connection()
         from datetime import datetime
-        
+
         # 解析时间戳
         try:
             target_time = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))

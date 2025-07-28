@@ -1,10 +1,13 @@
 from typing import List
+
+from sqlalchemy import and_, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from app.models.report import ReportReason, Report
-from app.schemas.report import ReportCreate, ReportQuery
+
 from app.core.uuid import uid
-from sqlalchemy import and_, func
+from app.models.report import Report, ReportReason
+from app.schemas.report import ReportCreate, ReportQuery
+
 
 async def list_report_reasons(db: AsyncSession) -> List[ReportReason]:
     stmt = select(ReportReason).where(ReportReason.is_active == True)

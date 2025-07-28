@@ -1,36 +1,30 @@
+import json
 import logging
 import uuid
-from datetime import datetime, timezone, timedelta
-from typing import List, Optional, Dict, Any, Tuple
-import json
-from sqlalchemy import select, func, and_, or_
+from datetime import datetime, timedelta, timezone
+from typing import Any, Dict, List, Optional, Tuple
+
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models.subscription import (
-    SubscriptionPlan,
-    UserSubscription,
-    SubscriptionTransaction,
-    SubscriptionUsage,
-    SubscriptionStatus,
-    TransactionType,
-    SubscriptionPlanType
-)
-from app.models.user import User
-from app.schemas.subscription import (
-    SubscriptionPlanCreate,
-    UserSubscriptionCreate,
-    SubscriptionTransactionCreate,
-    SubscriptionUsageCreate,
-    GooglePlayPurchaseRequest,
-    SubscriptionStatusResponse,
-    UsageStatisticsResponse,
-    PurchaseVerificationResponse,
-    FeatureInfo,
-    UserSubscription as UserSubscriptionSchema,
-    SubscriptionPlan as SubscriptionPlanSchema
-)
+from app.models.subscription import (SubscriptionPlan, SubscriptionPlanType,
+                                     SubscriptionStatus,
+                                     SubscriptionTransaction,
+                                     SubscriptionUsage, TransactionType,
+                                     UserSubscription)
 from app.models.subscription_features import SubscriptionFeatures
+from app.models.user import User
+from app.schemas.subscription import (FeatureInfo, GooglePlayPurchaseRequest,
+                                      PurchaseVerificationResponse)
+from app.schemas.subscription import SubscriptionPlan as SubscriptionPlanSchema
+from app.schemas.subscription import (SubscriptionPlanCreate,
+                                      SubscriptionStatusResponse,
+                                      SubscriptionTransactionCreate,
+                                      SubscriptionUsageCreate,
+                                      UsageStatisticsResponse)
+from app.schemas.subscription import UserSubscription as UserSubscriptionSchema
+from app.schemas.subscription import UserSubscriptionCreate
 from app.services.google_play_service import google_play_service
 from app.services.system_settings_service import system_settings_service
 
@@ -649,7 +643,8 @@ class SubscriptionService:
             usage_history = usage_result.scalars().all()
             
             # 将 SQLAlchemy 模型转换为 Pydantic 模型
-            from app.schemas.subscription import SubscriptionUsage as SubscriptionUsageSchema
+            from app.schemas.subscription import \
+                SubscriptionUsage as SubscriptionUsageSchema
             usage_history_schemas = [SubscriptionUsageSchema.model_validate(usage) for usage in usage_history]
             
             return UsageStatisticsResponse(

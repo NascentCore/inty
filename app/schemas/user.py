@@ -1,8 +1,10 @@
-from typing import Optional
-from pydantic import BaseModel, EmailStr, validator
 from datetime import datetime
+from typing import Optional
 
-from app.models.user import Gender, AuthType
+from pydantic import BaseModel, EmailStr, validator
+
+from app.models.user import AuthType, Gender
+
 
 class UserBase(BaseModel):
     """用户基础信息"""

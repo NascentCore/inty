@@ -1,7 +1,9 @@
 from typing import List, Optional
+
 from sqlalchemy.orm import Session
 
 from app import models, schemas
+
 
 def get_message(db: Session, message_id: str) -> Optional[models.Message]:
     """

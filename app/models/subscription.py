@@ -1,8 +1,10 @@
-from datetime import datetime, UTC
-from sqlalchemy import Column, String, DateTime, Boolean, Integer, Float, ForeignKey, JSON, Text, Enum
-from sqlalchemy.orm import relationship
 import enum
+from datetime import UTC, datetime
+
 import sqlalchemy as sa
+from sqlalchemy import (JSON, Boolean, Column, DateTime, Enum, Float,
+                        ForeignKey, Integer, String, Text)
+from sqlalchemy.orm import relationship
 
 from app.db.base_class import Base
 

@@ -1,9 +1,12 @@
-from loguru import logger
-import sys
-import os
 import logging
-from app.core.config import settings
+import os
+import sys
 from pathlib import Path
+
+from loguru import logger
+
+from app.core.config import settings
+
 
 class InterceptHandler(logging.Handler):
     def emit(self, record):

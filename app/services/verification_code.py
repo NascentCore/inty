@@ -1,12 +1,12 @@
-from datetime import datetime, timedelta
 import random
 import string
+from datetime import datetime, timedelta
 from typing import Optional
 
 from sqlalchemy.orm import Session
 
-from app.models.verification_code import VerificationCode
 from app.core.config import settings
+from app.models.verification_code import VerificationCode
 
 
 def generate_code(length: int = 6) -> str:

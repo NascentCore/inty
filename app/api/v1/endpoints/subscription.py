@@ -1,31 +1,29 @@
-from typing import Any, List, Dict
-from fastapi import APIRouter, Depends, HTTPException, Request, BackgroundTasks
-from sqlalchemy.ext.asyncio import AsyncSession
-import logging
-import json
-import hmac
 import hashlib
+import hmac
+import json
+import logging
 from datetime import datetime
+from typing import Any, Dict, List
+
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import schemas
 from app.api import deps
-from app.services.subscription_service import subscription_service
-from app.schemas.subscription import (
-    SubscriptionPlan,
-    SubscriptionPlansResponse,
-    SubscriptionStatusResponse,
-    UsageStatisticsResponse,
-    GooglePlayPurchaseRequest,
-    GooglePlayWebhookRequest,
-    PurchaseVerificationRequest,
-    PurchaseVerificationResponse,
-    RefundRequest,
-    RefundResponse
-)
-from app.schemas.response import APIResponse
 from app.core.config import settings
 from app.models.subscription import UserSubscription
+from app.schemas.response import APIResponse
+from app.schemas.subscription import (GooglePlayPurchaseRequest,
+                                      GooglePlayWebhookRequest,
+                                      PurchaseVerificationRequest,
+                                      PurchaseVerificationResponse,
+                                      RefundRequest, RefundResponse,
+                                      SubscriptionPlan,
+                                      SubscriptionPlansResponse,
+                                      SubscriptionStatusResponse,
+                                      UsageStatisticsResponse)
+from app.services.subscription_service import subscription_service
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -63,7 +61,7 @@ async def get_subscription_plans(
         
     except Exception as e:
         logger.error(f"获取订阅计划列表失败: {str(e)}")
-        return APIResponse.error(message="获取订阅计划失败")
+        return APIResponse.error(message="Failed to get subscription plans")
 
 
 @router.get("/status", response_model=APIResponse[SubscriptionStatusResponse])
@@ -81,7 +79,7 @@ async def get_subscription_status(
         
     except Exception as e:
         logger.error(f"获取用户订阅状态失败: {str(e)}")
-        return APIResponse.error(message="获取订阅状态失败")
+        return APIResponse.error(message="Failed to get subscription status")
 
 
 @router.get("/usage", response_model=APIResponse[UsageStatisticsResponse])
@@ -99,7 +97,7 @@ async def get_usage_statistics(
         
     except Exception as e:
         logger.error(f"获取用户使用统计失败: {str(e)}")
-        return APIResponse.error(message="获取使用统计失败")
+        return APIResponse.error(message="Failed to get usage statistics")
 
 
 @router.post("/verify", response_model=APIResponse[PurchaseVerificationResponse])
@@ -126,13 +124,13 @@ async def verify_purchase(
         logger.error(f"购买验证结果: {result}")
 
         if result.is_valid:
-            return APIResponse.success(data=result, message="购买验证成功")
+            return APIResponse.success(data=result, message="Purchase verification successful")
         else:
             return APIResponse.error(message=result.message, data=result)
             
     except Exception as e:
         logger.error(f"验证购买失败: {str(e)}")
-        return APIResponse.error(message="购买验证失败")
+        return APIResponse.error(message="Purchase verification failed")
 
 
 @router.post("/webhook")
@@ -264,17 +262,17 @@ async def create_subscription_plan(
     创建订阅计划（管理员接口）
     """
     if not current_user.is_superuser:
-        raise HTTPException(status_code=403, detail="权限不足")
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
     
     try:
         plan = await subscription_service.create_subscription_plan(db, plan_data)
         # 将 SQLAlchemy 模型转换为 Pydantic 模型
         plan_schema = SubscriptionPlan.model_validate(plan)
-        return APIResponse.success(data=plan_schema, message="订阅计划创建成功")
+        return APIResponse.success(data=plan_schema, message="Subscription plan created successfully")
         
     except Exception as e:
         logger.error(f"创建订阅计划失败: {str(e)}")
-        return APIResponse.error(message="创建订阅计划失败")
+        return APIResponse.error(message="Failed to create subscription plan")
 
 
 @router.get("/admin/plans", response_model=APIResponse[List[SubscriptionPlan]])
@@ -288,7 +286,7 @@ async def get_all_subscription_plans(
     获取所有订阅计划（管理员接口）
     """
     if not current_user.is_superuser:
-        raise HTTPException(status_code=403, detail="权限不足")
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
     
     try:
         plans = await subscription_service.get_subscription_plans(db, include_inactive)
@@ -296,7 +294,7 @@ async def get_all_subscription_plans(
         
     except Exception as e:
         logger.error(f"获取订阅计划列表失败: {str(e)}")
-        return APIResponse.error(message="获取订阅计划失败")
+        return APIResponse.error(message="Failed to get subscription plans")
 
 
 @router.get("/admin/users/{user_id}/subscription", response_model=APIResponse[SubscriptionStatusResponse])
@@ -310,7 +308,7 @@ async def get_user_subscription_status_admin(
     获取指定用户的订阅状态（管理员接口）
     """
     if not current_user.is_superuser:
-        raise HTTPException(status_code=403, detail="权限不足")
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
     
     try:
         status = await subscription_service.get_user_subscription_status(db, user_id)
@@ -318,7 +316,7 @@ async def get_user_subscription_status_admin(
         
     except Exception as e:
         logger.error(f"获取用户订阅状态失败: {str(e)}")
-        return APIResponse.error(message="获取订阅状态失败")
+        return APIResponse.error(message="Failed to get subscription status")
 
 
 @router.get("/admin/users/{user_id}/usage", response_model=APIResponse[UsageStatisticsResponse])
@@ -332,7 +330,7 @@ async def get_user_usage_statistics_admin(
     获取指定用户的使用统计（管理员接口）
     """
     if not current_user.is_superuser:
-        raise HTTPException(status_code=403, detail="权限不足")
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
     
     try:
         usage_stats = await subscription_service.get_user_usage_statistics(db, user_id)
@@ -340,7 +338,7 @@ async def get_user_usage_statistics_admin(
         
     except Exception as e:
         logger.error(f"获取用户使用统计失败: {str(e)}")
-        return APIResponse.error(message="获取使用统计失败")
+        return APIResponse.error(message="Failed to get usage statistics")
 
 
 @router.post("/admin/refund", response_model=APIResponse[RefundResponse])
@@ -354,7 +352,7 @@ async def process_manual_refund(
     手动处理退款（管理员接口）
     """
     if not current_user.is_superuser:
-        raise HTTPException(status_code=403, detail="权限不足")
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
     
     try:
         success = await subscription_service.manual_refund(
@@ -379,14 +377,14 @@ async def process_manual_refund(
                 success=True,
                 subscription_id=refund_request.subscription_id,
                 refund_amount=refund_info.get("refund_amount", 0),
-                message="退款处理成功",
+                message="Refund processed successfully",
                 refunded_at=datetime.fromisoformat(refund_info.get("refunded_at")) if refund_info.get("refunded_at") else None
             )
             
-            return APIResponse.success(data=response, message="退款处理成功")
+            return APIResponse.success(data=response, message="Refund processed successfully")
         else:
-            return APIResponse.error(message="退款处理失败")
+            return APIResponse.error(message="Refund processing failed")
             
     except Exception as e:
         logger.error(f"手动退款处理失败: {str(e)}")
-        return APIResponse.error(message="退款处理失败") 
+        return APIResponse.error(message="Refund processing failed") 

@@ -1,31 +1,33 @@
-from typing import Any, Dict, Optional, List, Union
-import uuid
-import time
 import asyncio
-from threading import Lock, RLock
+import json
+import logging
+import time
+import uuid
 from concurrent.futures import ThreadPoolExecutor
-from langgraph.prebuilt import create_react_agent
-from langgraph.graph import MessagesState
-from langgraph.managed import RemainingSteps
-from langchain_openai import ChatOpenAI
-from langmem import create_manage_memory_tool,create_search_memory_tool
-from langchain_postgres import PostgresChatMessageHistory
-from langgraph.store.postgres import PostgresStore
-from openai import OpenAI
-from app.core.config import settings
-from psycopg import Connection
-from psycopg_pool import ConnectionPool
-from langchain_core.messages import BaseMessage, HumanMessage, AIMessage, SystemMessage
+from threading import Lock, RLock
+from typing import Any, Dict, List, Optional, Union
+
+from langchain_core.messages import (AIMessage, BaseMessage, HumanMessage,
+                                     SystemMessage)
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.runnables import Runnable, RunnableLambda
-import json
 from langchain_core.tools import Tool
 from langchain_google_community import GoogleSearchAPIWrapper
-import logging
-from app.core.agent.prompt_template import prompt_template_manager
-from app.services.cache_service import cache_service
-from app.services.background_task_service import background_task_service
+from langchain_openai import ChatOpenAI
+from langchain_postgres import PostgresChatMessageHistory
+from langgraph.graph import MessagesState
+from langgraph.managed import RemainingSteps
+from langgraph.prebuilt import create_react_agent
+from langgraph.store.postgres import PostgresStore
+from langmem import create_manage_memory_tool, create_search_memory_tool
+from openai import OpenAI
+from psycopg import Connection
+from psycopg_pool import ConnectionPool
 
+from app.core.agent.prompt_template import prompt_template_manager
+from app.core.config import settings
+from app.services.background_task_service import background_task_service
+from app.services.cache_service import cache_service
 
 logger = logging.getLogger(__name__)
 
@@ -206,8 +208,8 @@ class Agent:
         self._agent_data = {
             'id': agent_id,
             'name': name,
-            'main_prompt': main_prompt,
-            'mode_prompt': mode_prompt,
+            'main_prompt': main_prompt, # 主提示词
+            'mode_prompt': mode_prompt, # 模式提示词
             'description': description,
             'model_config': model_config,
             'personality': personality,
@@ -374,7 +376,8 @@ class Agent:
         """渲染角色字段模板"""
         if '{{' in content and '}}' in content:
             try:
-                from app.core.agent.prompt_template import prompt_template_manager
+                from app.core.agent.prompt_template import \
+                    prompt_template_manager
                 rendered_content = prompt_template_manager.render_system_prompt(
                     system_prompt=content,
                     agent_name=self.name,

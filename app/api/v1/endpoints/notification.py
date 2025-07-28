@@ -1,18 +1,17 @@
-from typing import List, Optional, Dict
-from fastapi import APIRouter, Depends, Query, BackgroundTasks
+from typing import Dict, List, Optional
+
+from fastapi import APIRouter, BackgroundTasks, Depends, Query
+from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.api import deps
 from app.models.notification import TEMPLATE_TYPE_MAP
-from app.schemas.notification import (
-    NotificationItem, 
-    NotificationQuery,
-    NotificationTemplateCreate,
-    NotificationTemplateItem,
-    NotificationSendRequest
-)
+from app.schemas.notification import (NotificationItem, NotificationQuery,
+                                      NotificationSendRequest,
+                                      NotificationTemplateCreate,
+                                      NotificationTemplateItem)
 from app.schemas.response import APIResponse, PaginationData
 from app.services import notification_service
-from loguru import logger
 
 router = APIRouter()
 
@@ -31,16 +30,16 @@ async def send_notification(
     try:
         if not current_user.is_superuser:
             logger.error("非超级管理员不能发送通知")
-            return APIResponse.error(message="非超级管理员不能发送通知")
+            return APIResponse.error(message="Only superusers can send notifications")
             
         await notification_service.send_notification(db, background_tasks, request)
-        return APIResponse.success(message="通知发送成功")
+        return APIResponse.success(message="Notification sent successfully")
     except ValueError as e:
         logger.error(f"发送通知参数错误: {str(e)}")
         return APIResponse.error(message=str(e))
     except Exception as e:
         logger.error(f"发送通知失败: {str(e)}")
-        return APIResponse.error(message="发送通知失败，请稍后重试")
+        return APIResponse.error(message="Failed to send notification, please try again later")
 
 
 @router.get("/", response_model=APIResponse[PaginationData[NotificationItem]])
@@ -96,7 +95,7 @@ async def get_template_types() -> APIResponse[Dict[str, int]]:
         return APIResponse.success(data=TEMPLATE_TYPE_MAP)
     except Exception as e:
         logger.error(f"获取通知模板类型映射失败: {str(e)}")
-        return APIResponse.error(message="获取通知模板类型映射失败")
+        return APIResponse.error(message="Failed to get notification template type mapping")
 
 
 @router.post("/templates", response_model=APIResponse[NotificationTemplateItem])
@@ -111,7 +110,7 @@ async def create_notification_template(
     try:
         if not current_user.is_superuser:
             logger.error("非超级管理员不能创建通知模板")
-            return APIResponse.error(message="非超级管理员不能创建通知模板")
+            return APIResponse.error(message="Only superusers can create notification templates")
             
         template = await notification_service.create_notification_template(db, template_data)
         return APIResponse.success(data=NotificationTemplateItem.model_validate(template, from_attributes=True))
@@ -120,7 +119,7 @@ async def create_notification_template(
         return APIResponse.error(message=str(e))
     except Exception as e:
         logger.error(f"创建通知模板失败: {str(e)}")
-        return APIResponse.error(message="创建通知模板失败，请稍后重试")
+        return APIResponse.error(message="Failed to create notification template, please try again later")
 
 
 @router.get("/templates", response_model=APIResponse[PaginationData[NotificationTemplateItem]])
@@ -161,6 +160,6 @@ async def list_templates(
         return APIResponse.success(data=pagination)
     except Exception as e:
         logger.error(f"查询通知模板列表失败: {str(e)}")
-        return APIResponse.error(message="查询通知模板列表失败")
+        return APIResponse.error(message="Failed to query notification template list")
 
 

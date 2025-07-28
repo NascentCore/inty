@@ -1,13 +1,14 @@
-from typing import Any
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
 import logging
-from sqlalchemy.exc import SQLAlchemyError
 import traceback
+from typing import Any
+
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import Session
 
 from app import schemas
 from app.api import deps
-from app.services import get_settings, create_settings, update_settings
+from app.services import create_settings, get_settings, update_settings
 
 logger = logging.getLogger(__name__)
 router = APIRouter()

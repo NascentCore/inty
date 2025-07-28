@@ -2,7 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.api import deps
-from app.schemas.verification_code import VerificationCodeCreate, VerificationCodeVerify
+from app.schemas.verification_code import (VerificationCodeCreate,
+                                           VerificationCodeVerify)
 from app.services import verification_code as verification_code_service
 
 router = APIRouter()

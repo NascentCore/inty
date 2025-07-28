@@ -1,22 +1,22 @@
-from typing import Any, Optional
 import traceback
-from fastapi import APIRouter, Depends, HTTPException, File, UploadFile, BackgroundTasks, Query
-from sqlalchemy.ext.asyncio import AsyncSession
-from loguru import logger
+from typing import Any, Optional
 
-from app.schemas.response import APIResponse
-from app.schemas.user import User, UserUpdate, DeviceTokenRegister, UserList
-from app.schemas.user_deletion import (
-    AccountDeletionRequest,
-    AccountDeletionResponse,
-    DeletionCheckResponse,
-    AnonymizationStatsResponse
-)
+from fastapi import (APIRouter, BackgroundTasks, Depends, File, HTTPException,
+                     Query, UploadFile)
+from loguru import logger
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.api import deps
-from app.db.session import get_async_db
-from app.services import user_service
-from app.utils.gcs import upload_to_gcs, delete_from_gcs, is_user_gcs_file
 from app.core.config import settings
+from app.db.session import get_async_db
+from app.schemas.response import APIResponse
+from app.schemas.user import DeviceTokenRegister, User, UserList, UserUpdate
+from app.schemas.user_deletion import (AccountDeletionRequest,
+                                       AccountDeletionResponse,
+                                       AnonymizationStatsResponse,
+                                       DeletionCheckResponse)
+from app.services import user_service
+from app.utils.gcs import delete_from_gcs, is_user_gcs_file, upload_to_gcs
 
 router = APIRouter()
 
@@ -116,7 +116,7 @@ async def register_device_token(
             token=device_in.token,
             user_id=current_user.id
         )
-        return APIResponse.success(message="设备token注册成功")
+        return APIResponse.success(message="Device token registered successfully")
     except Exception as e:
         logger.error(f"注册设备token失败: {str(e)}")
         logger.error(f"错误堆栈: {traceback.format_exc()}")
@@ -146,7 +146,7 @@ async def check_deletion_eligibility(
     except Exception as e:
         logger.error(f"检查删除权限失败: {str(e)}")
         logger.error(f"错误堆栈: {traceback.format_exc()}")
-        return APIResponse.error(message="检查删除权限失败")
+        return APIResponse.error(message="Failed to check deletion permissions")
 
 
 @router.post("/delete-account", response_model=APIResponse[AccountDeletionResponse])
@@ -195,7 +195,7 @@ async def delete_user_account(
     except Exception as e:
         logger.error(f"删除用户账户失败: {str(e)}")
         logger.error(f"错误堆栈: {traceback.format_exc()}")
-        return APIResponse.error(message="账户删除失败，请稍后重试")
+        return APIResponse.error(message="Account deletion failed, please try again later")
 
 
 # @router.get("/{user_id}/profile", response_model=schemas.User)
@@ -243,5 +243,5 @@ async def get_all_users(
     except Exception as e:
         logger.error(f"获取所有用户失败: {str(e)}")
         logger.error(f"错误堆栈: {traceback.format_exc()}")
-        raise HTTPException(status_code=500, detail=f"获取用户列表失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to get user list: {str(e)}")
 

@@ -1,11 +1,12 @@
 from typing import Generator, Optional
-from typing_extensions import deprecated
+
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
-from jose import jwt, JWTError
+from jose import JWTError, jwt
 from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from typing_extensions import deprecated
 
 from app import models, schemas
 from app.core import security

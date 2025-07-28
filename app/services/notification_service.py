@@ -1,20 +1,25 @@
-from typing import Optional, List, Tuple
-from app.models.user import User
-from sqlalchemy import select, func, delete
-from sqlalchemy.ext.asyncio import AsyncSession
-from app.models.notification import UserNotification, NotificationTemplate, NotificationTemplateType
-from app.schemas.notification import NotificationQuery, NotificationTemplateCreate, NotificationSendRequest
-from loguru import logger
-from datetime import datetime, UTC
-from app.core.uuid import uid
+import traceback
+from datetime import UTC, datetime
+from typing import List, Optional, Tuple
+
+from fastapi import BackgroundTasks
+from firebase_admin import messaging
+from firebase_admin.exceptions import InvalidArgumentError
 from jinja2 import Template
 from jinja2.exceptions import TemplateError
-from firebase_admin import messaging
+from loguru import logger
+from sqlalchemy import delete, func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.uuid import uid
+from app.models.notification import (NotificationTemplate,
+                                     NotificationTemplateType,
+                                     UserNotification)
+from app.models.user import DeviceToken, User
+from app.schemas.notification import (NotificationQuery,
+                                      NotificationSendRequest,
+                                      NotificationTemplateCreate)
 from app.services import user_service
-from app.models.user import DeviceToken
-import traceback
-from fastapi import BackgroundTasks
-from firebase_admin.exceptions import InvalidArgumentError
 
 # 类型映射字典
 TEMPLATE_TYPE_MAP = {

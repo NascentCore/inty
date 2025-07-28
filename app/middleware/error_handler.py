@@ -1,9 +1,9 @@
 from fastapi import Request, status
-from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
-from sqlalchemy.exc import SQLAlchemyError
+from fastapi.responses import JSONResponse
 from jose.exceptions import JWTError
 from pydantic import ValidationError
+from sqlalchemy.exc import SQLAlchemyError
 
 
 async def validation_exception_handler(request: Request, exc: RequestValidationError):

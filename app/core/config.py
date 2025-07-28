@@ -1,9 +1,11 @@
-from typing import Any, Dict, Optional, List, Union
+import sys
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any, Dict, List, Optional, Union
+
 import yaml
-import sys
 from pydantic import AnyHttpUrl
+
 
 @dataclass
 class LoggingConfig:

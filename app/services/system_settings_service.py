@@ -1,9 +1,11 @@
 import logging
-from typing import Optional, Dict, Any, List
-from sqlalchemy import select, and_
+from typing import Any, Dict, List, Optional
+
+from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.system_settings import SystemSettings, SettingType, SettingCategory
+from app.models.system_settings import (SettingCategory, SettingType,
+                                        SystemSettings)
 from app.services.cache_service import InMemoryCache
 
 logger = logging.getLogger(__name__)

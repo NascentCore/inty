@@ -1,28 +1,29 @@
-from typing import Any, List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query
-from fastapi.responses import StreamingResponse
-from sqlalchemy.ext.asyncio import AsyncSession
 import asyncio
 import json
-import uuid
+import logging
 import time
-from pydantic import BaseModel
+import uuid
+from typing import Any, List, Optional
 
-from app import schemas, models
+from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import StreamingResponse
+from langchain_core.messages import HumanMessage
+from pydantic import BaseModel
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app import models, schemas
 from app.api import deps
-from app.schemas.chat import ChatCompletionRequest
-from app.services import chat_service, agent_service, chat_history_service
-from app.services.chat_service import generate_session_id
-from app.services.subscription_service import subscription_service
-from app.services.keep_talking_service import keep_talking_service
-from app.services.voice_service import voice_service
-from app.services.voice_cleanup_service import voice_cleanup_service
-from app.services.voice_cache_service import voice_cache_service
-from app.services.async_voice_service import async_voice_service
 from app.core.agent.agent import agent_manager
 from app.core.config import settings
-from langchain_core.messages import HumanMessage
-import logging
+from app.schemas.chat import ChatCompletionRequest
+from app.services import agent_service, chat_history_service, chat_service
+from app.services.async_voice_service import async_voice_service
+from app.services.chat_service import generate_session_id
+from app.services.keep_talking_service import keep_talking_service
+from app.services.subscription_service import subscription_service
+from app.services.voice_cache_service import voice_cache_service
+from app.services.voice_cleanup_service import voice_cleanup_service
+from app.services.voice_service import voice_service
 
 router = APIRouter()
 
@@ -474,7 +475,7 @@ async def agent_chat_completions(
         # 验证返回的chat中的agent_id是否与传入的一致
         if chat.agent_id != agent_id:
             logger.error(f"Agent ID不匹配: 传入={agent_id}, 实际={chat.agent_id}")
-            raise HTTPException(status_code=500, detail=f"Agent ID不匹配: 传入={agent_id}, 实际={chat.agent_id}")
+            raise HTTPException(status_code=500, detail=f"Agent ID mismatch: expected={agent_id}, actual={chat.agent_id}")
         
         # 记录实际使用的agent_id
         logger.info(f"实际聊天的Agent ID: {chat.agent_id}")
@@ -1132,7 +1133,7 @@ async def delete_agent_chats(
         raise
     except Exception as e:
         logger.error(f"删除Agent聊天记录失败 - Agent ID: {agent_id}, User ID: {current_user.id}, Error: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"删除聊天记录失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to delete chat record: {str(e)}")
 
 
 @router.get("/agents/{agent_id}/debug-messages")
@@ -1331,7 +1332,7 @@ async def clear_agent_chat_messages(
         raise
     except Exception as e:
         logger.error(f"清除Agent聊天消息失败 - Agent ID: {agent_id}, Error: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"清除消息失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to clear messages: {str(e)}")
 
 
 @router.get("/debug-messages", response_model=schemas.DebugMessageList)
@@ -1369,7 +1370,7 @@ async def get_debug_messages(
         raise
     except Exception as e:
         logger.error(f"查询debug messages失败: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"查询debug messages失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to query debug messages: {str(e)}")
 
 
 

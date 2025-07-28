@@ -1,9 +1,9 @@
-from typing import Dict, Any, Optional
-import time
-import json
-from threading import RLock
 import asyncio
+import json
 import logging
+import time
+from threading import RLock
+from typing import Any, Dict, Optional
 
 logger = logging.getLogger(__name__)
 

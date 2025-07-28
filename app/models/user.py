@@ -1,8 +1,10 @@
-from datetime import datetime, UTC
-from sqlalchemy import Boolean, Column, String, DateTime, Enum, ForeignKey, JSON, Index, Text, Integer
-from sqlalchemy.orm import relationship
 import enum
+from datetime import UTC, datetime
+
 import sqlalchemy as sa
+from sqlalchemy import (JSON, Boolean, Column, DateTime, Enum, ForeignKey,
+                        Index, Integer, String, Text)
+from sqlalchemy.orm import relationship
 
 from app.db.base_class import Base
 from app.models.associations import agent_followers

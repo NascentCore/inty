@@ -1,5 +1,7 @@
-from ulid import ULID
 from typing import Optional
+
+from ulid import ULID
+
 
 def uid(prefix: Optional[str] = None) -> str:
     """

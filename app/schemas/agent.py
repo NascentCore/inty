@@ -1,10 +1,12 @@
-from typing import Optional, List, Dict, Any
-from pydantic import BaseModel, Field, field_validator, field_serializer
 from datetime import datetime
+from typing import Any, Dict, List, Optional
 
-from app.models.agent import AgentVisibility, AgentStatus
+from pydantic import BaseModel, Field, field_serializer, field_validator
+
+from app.models.agent import AgentStatus, AgentVisibility
 from app.models.user import Gender
 from app.schemas.user import User
+
 
 class ModelConfig(BaseModel):
     """AI模型配置"""

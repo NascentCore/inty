@@ -1,8 +1,9 @@
-from typing import Optional
-from sqlalchemy.orm import Session
-import uuid
 import logging
+import uuid
+from typing import Optional
+
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import Session
 
 from app import models, schemas
 

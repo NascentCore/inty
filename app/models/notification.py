@@ -1,10 +1,14 @@
-from datetime import datetime, UTC
-from typing import List, Optional
-from sqlalchemy import Column, Integer, String, Text, Boolean, DateTime, ForeignKey, ARRAY, JSON, Index, text, Enum
-from sqlalchemy.orm import relationship
-from app.db.base_class import Base
 import enum
+from datetime import UTC, datetime
+from typing import List, Optional
+
 from loguru import logger
+from sqlalchemy import (ARRAY, JSON, Boolean, Column, DateTime, Enum,
+                        ForeignKey, Index, Integer, String, Text, text)
+from sqlalchemy.orm import relationship
+
+from app.db.base_class import Base
+
 
 class NotificationTemplateType(str, enum.Enum):
     """通知模板类型"""

@@ -4,10 +4,11 @@
 """
 import asyncio
 import hashlib
-import uuid
 import re
-from typing import Optional, Dict, Any, List
+import uuid
 from io import BytesIO
+from typing import Any, Dict, List, Optional
+
 import aiohttp
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -116,7 +117,8 @@ class VoiceService:
             cached_url = None
             if db:
                 logger.debug("检查语音缓存")
-                from app.services.voice_cache_service import voice_cache_service
+                from app.services.voice_cache_service import \
+                    voice_cache_service
                 cached_url = await voice_cache_service.get_cached_voice(
                     db, text, voice_id, model, language
                 )
@@ -164,7 +166,8 @@ class VoiceService:
             # 异步保存到缓存，不阻塞返回
             if audio_url:
                 logger.debug("异步保存到语音缓存")
-                from app.services.voice_cache_service import voice_cache_service
+                from app.services.voice_cache_service import \
+                    voice_cache_service
                 asyncio.create_task(voice_cache_service.save_voice_cache(
                     None, text, voice_id, model, language, audio_url, len(audio_data)
                 ))

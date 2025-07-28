@@ -1,8 +1,11 @@
-from sqlalchemy import Boolean, Column, String, DateTime, Integer, ARRAY, ForeignKey, Text, Enum as SAEnum
-from sqlalchemy.sql import func
-from sqlalchemy.orm import relationship
-import sqlalchemy as sa
 import enum
+
+import sqlalchemy as sa
+from sqlalchemy import ARRAY, Boolean, Column, DateTime
+from sqlalchemy import Enum as SAEnum
+from sqlalchemy import ForeignKey, Integer, String, Text
+from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
 
 from app.db.base_class import Base
 

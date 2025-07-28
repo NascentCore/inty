@@ -1,11 +1,13 @@
-from loguru import logger
+import os
+import uuid
+from datetime import datetime
+
 import vertexai
+from loguru import logger
 from vertexai.preview.vision_models import ImageGenerationModel
+
 from app.core.config import settings
 from app.utils.gcs import upload_to_gcs
-import uuid
-import os
-from datetime import datetime
 
 # Initialize Vertex AI
 vertexai.init()  # 使用你的Google Cloud项目ID

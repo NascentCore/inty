@@ -1,7 +1,9 @@
 from fastapi import APIRouter
 
-from app.api.v1.endpoints import auth, notification, users, agents, chats, settings, resources, report, subscription, admin
 from app.api.v1 import verification_code
+from app.api.v1.endpoints import (admin, agents, auth, chats, notification,
+                                  report, resources, settings, subscription,
+                                  users)
 
 api_router = APIRouter()
 api_router.include_router(auth.router, prefix="/auth", tags=["auth"])

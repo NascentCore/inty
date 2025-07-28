@@ -1,12 +1,13 @@
-from typing import List, Optional
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.exc import SQLAlchemyError, IntegrityError
-from sqlalchemy.orm import selectinload
-from fastapi import HTTPException
+import json
 import logging
 import uuid
-import json
+from typing import List, Optional
+
+from fastapi import HTTPException
+from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app import models, schemas
 from app.services import chat_history_service
@@ -749,7 +750,7 @@ async def save_debug_messages(
         # session_id 是通过 generate_session_id(chat_id) 生成的
         # 需要通过查询数据库找到对应的 chat 记录
         from app.core.config import settings
-        
+
         # 如果调试功能未启用，直接返回
         if not settings.app.debug_messages:
             return
@@ -815,8 +816,8 @@ async def get_debug_messages(
         dict: 包含总数和分页数据的字典
     """
     try:
-        from sqlalchemy import func, and_
-        
+        from sqlalchemy import and_, func
+
         # 构建基础查询
         query = select(
             models.Chat.id.label('chat_id'),

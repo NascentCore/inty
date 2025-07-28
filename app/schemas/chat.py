@@ -1,6 +1,7 @@
-from typing import Optional, List
-from pydantic import BaseModel
 from datetime import datetime
+from typing import List, Optional
+
+from pydantic import BaseModel
 
 from app.models.message import MessageType, SenderType
 

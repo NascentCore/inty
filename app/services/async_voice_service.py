@@ -5,12 +5,13 @@
 
 import asyncio
 import logging
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.services.voice_service import voice_service
-from app.services.voice_cache_service import voice_cache_service
 from app.core.config import settings
+from app.services.voice_cache_service import voice_cache_service
+from app.services.voice_service import voice_service
 
 logger = logging.getLogger(__name__)
 

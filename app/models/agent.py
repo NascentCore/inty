@@ -1,8 +1,10 @@
-from sqlalchemy import Boolean, Column, String, DateTime, Enum, ForeignKey, JSON, Text
-from sqlalchemy.sql import func
-from sqlalchemy.orm import relationship
 import enum
+
 import sqlalchemy as sa
+from sqlalchemy import (JSON, Boolean, Column, DateTime, Enum, ForeignKey,
+                        String, Text)
+from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
 
 from app.db.base_class import Base
 from app.models.associations import agent_followers

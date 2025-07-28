@@ -1,24 +1,25 @@
-from datetime import datetime, UTC
-from typing import Optional, List, Dict, Any
-from sqlalchemy.orm import Session
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
-from sqlalchemy.exc import IntegrityError
-from sqlalchemy import text, and_
+import hashlib
+import json
 import logging
 import traceback
 import uuid
-import hashlib
-import json
+from datetime import UTC, datetime
+from typing import Any, Dict, List, Optional
 
+from sqlalchemy import and_, text
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
+from sqlalchemy.orm import Session
+
+from app.core.config import settings
 from app.core.uuid import uid
 from app.models import User
+from app.models.chat import Chat
+from app.models.subscription import SubscriptionStatus, UserSubscription
 from app.models.user import AuthType, DeviceToken
 from app.models.user_deletion_log import UserDeletionLog
-from app.models.subscription import UserSubscription, SubscriptionStatus
-from app.models.chat import Chat
 from app.schemas import UserUpdate
-from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -564,7 +565,7 @@ async def get_all_users(
     """
     try:
         from sqlalchemy import func, or_
-        
+
         # 构建基础查询
         base_query = select(User)
         count_query = select(func.count()).select_from(User)
@@ -644,8 +645,8 @@ async def get_user_connector_count(db: AsyncSession, user_id: str) -> int:
         int: 对话数量
     """
     try:
-        from sqlalchemy import func, distinct
-        
+        from sqlalchemy import distinct, func
+
         # 查询用户与多少个不同的agent有过聊天
         stmt = select(func.count(distinct(Chat.agent_id))).where(Chat.user_id == user_id)
         result = await db.execute(stmt)

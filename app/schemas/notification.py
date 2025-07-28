@@ -1,7 +1,10 @@
-from typing import List, Optional
 from datetime import datetime
+from typing import List, Optional
+
 from pydantic import BaseModel, ConfigDict
+
 from app.models.notification import NotificationTemplateType
+
 
 class NotificationItem(BaseModel):
     """通知项"""

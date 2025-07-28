@@ -1,8 +1,9 @@
 from datetime import datetime
-from typing import Optional, List, Any
+from typing import Any, List, Optional
+
 from pydantic import BaseModel, Field
 
-from app.models.system_settings import SettingType, SettingCategory
+from app.models.system_settings import SettingCategory, SettingType
 
 
 class SystemSettingBase(BaseModel):

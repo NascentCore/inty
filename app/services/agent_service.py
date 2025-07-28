@@ -1,20 +1,21 @@
-from typing import List, Optional
-from sqlalchemy import select, desc, func, and_, or_, text
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.exc import SQLAlchemyError, IntegrityError
-from sqlalchemy.orm import selectinload
-from fastapi import HTTPException
 import logging
-import uuid
 import math
+import uuid
 from datetime import datetime
+from typing import List, Optional
+
+from fastapi import HTTPException
+from sqlalchemy import and_, desc, func, or_, select, text
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app import models, schemas
-from app.models.agent import AgentVisibility, AgentStatus
-from app.models.associations import agent_followers
-from app.core.config import settings
-from app.services.cache_service import cache_service
 from app.core.agent.agent import agent_manager
+from app.core.config import settings
+from app.models.agent import AgentStatus, AgentVisibility
+from app.models.associations import agent_followers
+from app.services.cache_service import cache_service
 
 logger = logging.getLogger(__name__)
 
@@ -732,7 +733,8 @@ def process_agent_image_urls(agent_data: dict, agent_id: str, user_id: str) -> d
     Returns:
         处理后的agent_data，包含更新的图片URL
     """
-    from app.utils.gcs import is_valid_gcs_url, is_temp_gcs_path, copy_gcs_file, delete_from_gcs
+    from app.utils.gcs import (copy_gcs_file, delete_from_gcs,
+                               is_temp_gcs_path, is_valid_gcs_url)
     
     processed_data = agent_data.copy()
     temp_files_to_delete = []

@@ -2,19 +2,20 @@ import asyncio
 import logging
 from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional
-from sqlalchemy import select, and_
+
+from langchain_core.messages import HumanMessage
+from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models.chat import Chat
-from app.models.chat_settings import ChatSettings
-from app.models.agent import Agent
-from app.services import chat_history_service
-from app.services.chat_service import generate_session_id
+from app.api.deps import get_async_db
 from app.core.agent.agent import agent_manager
 from app.core.config import settings
-from app.api.deps import get_async_db
-from langchain_core.messages import HumanMessage
+from app.models.agent import Agent
+from app.models.chat import Chat
+from app.models.chat_settings import ChatSettings
+from app.services import chat_history_service
+from app.services.chat_service import generate_session_id
 
 logger = logging.getLogger(__name__)
 

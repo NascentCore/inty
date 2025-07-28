@@ -1,7 +1,9 @@
 import firebase_admin
 from firebase_admin import credentials
 from loguru import logger
+
 from app.core.config import settings
+
 
 def init_firebase() -> None:
     """初始化 Firebase Admin SDK

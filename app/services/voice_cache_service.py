@@ -5,16 +5,18 @@
 import hashlib
 import json
 from datetime import datetime, timedelta
-from typing import Optional, List, Dict, Any
-from loguru import logger
-from sqlalchemy import Column, String, DateTime, Integer, Text, Boolean, select, delete, update
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.sql import func
-import sqlalchemy as sa
+from typing import Any, Dict, List, Optional
 
-from app.db.base_class import Base
+import sqlalchemy as sa
+from loguru import logger
+from sqlalchemy import (Boolean, Column, DateTime, Integer, String, Text,
+                        delete, select, update)
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.sql import func
+
 from app.core.config import settings
+from app.db.base_class import Base
 from app.services.gcs_service import GCSService
 
 

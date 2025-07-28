@@ -1,8 +1,9 @@
 """
 订阅权益功能常量定义
 """
-from typing import Dict, Any, List
 from enum import Enum
+from typing import Any, Dict, List
+
 
 class FeatureType(str, Enum):
     """权益类型"""

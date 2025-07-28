@@ -1,6 +1,7 @@
-from datetime import datetime, UTC
-from sqlalchemy import Column, String, DateTime, JSON, ARRAY, Index
+from datetime import UTC, datetime
+
 import sqlalchemy as sa
+from sqlalchemy import ARRAY, JSON, Column, DateTime, Index, String
 
 from app.db.base_class import Base
 

@@ -1,14 +1,14 @@
 import logging
-from typing import Any
 import traceback
+from typing import Any
 
 from fastapi import APIRouter, Depends
 from fastapi.security import OAuth2PasswordBearer
 from google.auth.transport import requests as google_requests
 from google.oauth2 import id_token
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
 from loguru import logger
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import schemas
 from app.core.config import settings
@@ -17,9 +17,10 @@ from app.core.uuid import uid
 from app.db.session import get_async_db
 from app.models import User
 from app.models.user import AuthType
-from app.schemas.auth import LoginResponse, LoginUserResponse, GuestResponse
+from app.schemas.auth import GuestResponse, LoginResponse, LoginUserResponse
 from app.schemas.response import APIResponse
-from app.services.user_service import create_guest_user, generate_next_readable_id
+from app.services.user_service import (create_guest_user,
+                                       generate_next_readable_id)
 
 router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.app.api_v1_prefix}/auth/login")

@@ -1,7 +1,8 @@
 import json
 import logging
-from typing import Dict, Any, Optional, Tuple
 from datetime import datetime, timezone
+from typing import Any, Dict, Optional, Tuple
+
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError

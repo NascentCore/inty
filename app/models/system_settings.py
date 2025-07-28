@@ -1,8 +1,9 @@
-from datetime import datetime, timezone
-from sqlalchemy import Column, String, DateTime, Text, Enum, Index
-from sqlalchemy.sql import func
 import enum
+from datetime import datetime, timezone
+
 import sqlalchemy as sa
+from sqlalchemy import Column, DateTime, Enum, Index, String, Text
+from sqlalchemy.sql import func
 
 from app.db.base_class import Base
 

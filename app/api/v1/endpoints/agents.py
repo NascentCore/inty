@@ -1,28 +1,27 @@
-from typing import Any, List
-from fastapi import APIRouter, Depends, HTTPException, Query, File, UploadFile
-from sqlalchemy.ext.asyncio import AsyncSession
-from loguru import logger
 import traceback
 import uuid
-import vertexai
 from datetime import datetime
+from typing import Any, List
+
+import vertexai
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
+from loguru import logger
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import schemas
 from app.api import deps
-from app.services import agent_service
-from app.services.subscription_service import SubscriptionService
-from app.utils.gcs import upload_to_gcs, delete_from_gcs, is_user_gcs_file
-from app.core.config import settings
-from app.schemas.response import APIResponse
-from app.core.agent.avater import generate_background_image_to_gcs
 from app.core.agent.agent import agent_manager
+from app.core.agent.avater import generate_background_image_to_gcs
+from app.core.config import settings
+from app.schemas.character_card import (CharacterCardExportRequest,
+                                        CharacterCardImportRequest,
+                                        CharacterCardImportResponse,
+                                        CharacterCardValidationResponse)
+from app.schemas.response import APIResponse
+from app.services import agent_service
 from app.services.character_card_service import character_card_service
-from app.schemas.character_card import (
-    CharacterCardImportRequest,
-    CharacterCardImportResponse,
-    CharacterCardExportRequest,
-    CharacterCardValidationResponse
-)
+from app.services.subscription_service import SubscriptionService
+from app.utils.gcs import delete_from_gcs, is_user_gcs_file, upload_to_gcs
 
 router = APIRouter()
 
@@ -239,11 +238,11 @@ async def generate_background(
             # 超级管理员不受限制
             if not current_user.is_superuser:
                 if limit == -1:
-                    error_message = f"背景图生成失败，今日已达上限"
+                    error_message = f"Background image generation failed, daily limit reached"
                 else:
-                    error_message = f"今日背景图生成次数已达限制（{used_count}/{limit}）"
+                    error_message = f"Daily background image generation limit reached ({used_count}/{limit})"
                     if limit <= 3:  # 免费用户每日限制
-                        error_message += "，请考虑升级订阅以获得更多每日生成次数"
+                        error_message += ", please consider upgrading your subscription for more daily generations"
                 
                 return APIResponse.error(
                     message=error_message,
@@ -322,21 +321,21 @@ async def upload_avatar_preview(
     try:
         # 验证文件类型
         if not file.content_type or not file.content_type.startswith('image/'):
-            return APIResponse.error(message="只允许上传图片文件")
+            return APIResponse.error(message="Only image files are allowed")
         
         # 验证文件大小 (最大 10MB)
         max_size = 10 * 1024 * 1024  # 10MB
         file_data = await file.read()
         if len(file_data) > max_size:
-            return APIResponse.error(message="文件大小超过10MB限制")
+            return APIResponse.error(message="File size exceeds 10MB limit")
         
         # 验证文件扩展名
         if not file.filename or '.' not in file.filename:
-            return APIResponse.error(message="文件名无效")
+            return APIResponse.error(message="Invalid filename")
             
         file_ext = file.filename.split('.')[-1].lower()
         if file_ext not in ['jpg', 'jpeg', 'png', 'webp']:
-            return APIResponse.error(message="不支持的文件类型，只支持jpg、jpeg、png、webp格式")
+            return APIResponse.error(message="Unsupported file type, only jpg, jpeg, png, webp formats are supported")
         
         # 生成存储路径
         timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
@@ -360,7 +359,7 @@ async def upload_avatar_preview(
     except Exception as e:
         logger.error(f"头像上传失败: {str(e)}")
         logger.error(f"错误堆栈: {traceback.format_exc()}")
-        return APIResponse.error(message="头像上传失败")
+        return APIResponse.error(message="Avatar upload failed")
 
 @router.post("/{agent_id}/avatar", response_model=APIResponse[schemas.Agent])
 async def upload_agent_avatar(
@@ -417,7 +416,7 @@ async def upload_agent_avatar(
     except Exception as e:
         logger.error(f"头像上传失败: {str(e)}")
         logger.error(f"错误堆栈: {traceback.format_exc()}")
-        return APIResponse.error(message="头像上传失败")
+        return APIResponse.error(message="Avatar upload failed")
 
 @router.post("/{agent_id}/background", response_model=APIResponse[schemas.Agent])
 async def upload_agent_background(
@@ -474,7 +473,7 @@ async def upload_agent_background(
     except Exception as e:
         logger.error(f"背景图上传失败: {str(e)}")
         logger.error(f"错误堆栈: {traceback.format_exc()}")
-        return APIResponse.error(message="背景图上传失败")
+        return APIResponse.error(message="Background image upload failed")
 
 @router.post("/{agent_id}/set-background", response_model=APIResponse[schemas.Agent])
 async def set_current_background(
@@ -572,7 +571,7 @@ async def get_creator_agent_stats(
         raise
     except Exception as e:
         logger.error(f"获取创建者角色统计失败: {str(e)}")
-        return schemas.APIResponse.error(message="获取统计信息失败")
+        return schemas.APIResponse.error(message="Failed to get statistics")
 
 
 @router.get("/{agent_id}/prompt", response_model=schemas.APIResponse[dict])
@@ -629,7 +628,7 @@ async def get_agent_prompt(
         raise
     except Exception as e:
         logger.error(f"获取Agent提示词失败: {str(e)}")
-        return schemas.APIResponse.error(message="获取提示词失败")
+        return schemas.APIResponse.error(message="Failed to get prompts")
 
 
 @router.get("/{agent_id}/prompt/preview", response_model=schemas.APIResponse[dict])
@@ -687,7 +686,7 @@ async def preview_agent_prompt(
         raise
     except Exception as e:
         logger.error(f"预览Agent提示词失败: {str(e)}")
-        return schemas.APIResponse.error(message="预览提示词失败")
+        return schemas.APIResponse.error(message="Failed to preview prompt")
 
 
 @router.get("/templates", response_model=schemas.APIResponse[dict])
@@ -718,7 +717,7 @@ async def list_prompt_templates(
         
     except Exception as e:
         logger.error(f"获取提示词模版列表失败: {str(e)}")
-        return schemas.APIResponse.error(message="获取模版列表失败")
+        return schemas.APIResponse.error(message="Failed to get template list")
 
 
 # ==================== 角色卡相关API端点 ====================
@@ -746,7 +745,7 @@ async def import_character_card(
             
     except Exception as e:
         logger.error(f"导入角色卡失败: {str(e)}")
-        return APIResponse.error(message=f"导入角色卡失败: {str(e)}")
+        return APIResponse.error(message=f"Failed to import character card: {str(e)}")
 
 
 @router.post("/import-character-card-file", response_model=APIResponse[CharacterCardImportResponse])
@@ -764,7 +763,7 @@ async def import_character_card_file(
     try:
         # 验证文件大小 (最大10MB)
         if file.size and file.size > 10 * 1024 * 1024:
-            return APIResponse.error(message="文件大小不能超过10MB")
+            return APIResponse.error(message="File size cannot exceed 10MB")
         
         result = await character_card_service.import_character_card_from_file(
             file=file,
@@ -782,7 +781,7 @@ async def import_character_card_file(
             
     except Exception as e:
         logger.error(f"从文件导入角色卡失败: {str(e)}")
-        return APIResponse.error(message=f"从文件导入角色卡失败: {str(e)}")
+        return APIResponse.error(message=f"Failed to import character card from file: {str(e)}")
 
 
 @router.post("/export-character-card", response_model=APIResponse[dict])
@@ -810,7 +809,7 @@ async def export_character_card(
         raise
     except Exception as e:
         logger.error(f"导出角色卡失败: {str(e)}")
-        return APIResponse.error(message=f"导出角色卡失败: {str(e)}")
+        return APIResponse.error(message=f"Failed to export character card: {str(e)}")
 
 
 @router.get("/{agent_id}/character-card", response_model=APIResponse[dict])
@@ -841,7 +840,7 @@ async def get_agent_character_card(
         raise
     except Exception as e:
         logger.error(f"获取角色卡数据失败: {str(e)}")
-        return APIResponse.error(message=f"获取角色卡数据失败: {str(e)}")
+        return APIResponse.error(message=f"Failed to get character card data: {str(e)}")
 
 
 @router.post("/validate-character-card", response_model=APIResponse[CharacterCardValidationResponse])
@@ -858,7 +857,7 @@ async def validate_character_card(
         
     except Exception as e:
         logger.error(f"验证角色卡失败: {str(e)}")
-        return APIResponse.error(message=f"验证角色卡失败: {str(e)}")
+        return APIResponse.error(message=f"Failed to validate character card: {str(e)}")
 
 
 @router.get("/character-card/features", response_model=APIResponse[dict])
@@ -882,4 +881,4 @@ async def get_character_card_features(
         
     except Exception as e:
         logger.error(f"获取角色卡功能列表失败: {str(e)}")
-        return APIResponse.error(message=f"获取角色卡功能列表失败: {str(e)}") 
+        return APIResponse.error(message=f"Failed to get character card features: {str(e)}") 

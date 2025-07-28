@@ -1,8 +1,9 @@
-from typing import Optional, Dict, Any, Union
-from pydantic import BaseModel, EmailStr, Field
 from datetime import datetime
+from typing import Any, Dict, Optional, Union
 
-from app.models.user import Gender, AuthType
+from pydantic import BaseModel, EmailStr, Field
+
+from app.models.user import AuthType, Gender
 
 
 class Token(BaseModel):

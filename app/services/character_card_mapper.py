@@ -1,10 +1,12 @@
-from typing import Dict, Any, Optional, List
-import uuid
 import re
-from app.schemas.character_card import CharacterCardV2, CharacterCardDataV2
-from app.models.user import Gender
-from app.models.agent import AgentVisibility, AgentStatus
+import uuid
+from typing import Any, Dict, List, Optional
+
 from loguru import logger
+
+from app.models.agent import AgentStatus, AgentVisibility
+from app.models.user import Gender
+from app.schemas.character_card import CharacterCardDataV2, CharacterCardV2
 
 
 class CharacterCardMapper:

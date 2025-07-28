@@ -1,9 +1,10 @@
-from sqlalchemy import Column, String, DateTime, ForeignKey, Boolean, UniqueConstraint, Index
-from sqlalchemy.sql import func
-from sqlalchemy.orm import relationship
-from sqlalchemy.ext.hybrid import hybrid_property
-from sqlalchemy.dialects.postgresql import JSON
 import sqlalchemy as sa
+from sqlalchemy import (Boolean, Column, DateTime, ForeignKey, Index, String,
+                        UniqueConstraint)
+from sqlalchemy.dialects.postgresql import JSON
+from sqlalchemy.ext.hybrid import hybrid_property
+from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
 
 from app.db.base_class import Base
 

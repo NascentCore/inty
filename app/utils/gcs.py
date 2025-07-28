@@ -1,7 +1,10 @@
-from google.cloud import storage
-from app.core.config import settings  # 假设你的配置是settings对象
 import re
 from urllib.parse import urlparse
+
+from google.cloud import storage
+
+from app.core.config import settings  # 假设你的配置是settings对象
+
 
 def upload_to_gcs(file_data, content_type, bucket_name, path):
     client = storage.Client.from_service_account_json(settings.gcs.credentials)

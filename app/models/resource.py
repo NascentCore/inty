@@ -1,8 +1,9 @@
-from sqlalchemy import Column, String, DateTime, Enum, ForeignKey, JSON
-from sqlalchemy.sql import func
-from sqlalchemy.orm import relationship
 import enum
+
 import sqlalchemy as sa
+from sqlalchemy import JSON, Column, DateTime, Enum, ForeignKey, String
+from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
 
 from app.db.base_class import Base
 

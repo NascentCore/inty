@@ -1,11 +1,11 @@
 import asyncio
 import json
-import time
-from typing import Dict, Any, Optional
-from concurrent.futures import ThreadPoolExecutor
-from queue import Queue, Empty
-import threading
 import logging
+import threading
+import time
+from concurrent.futures import ThreadPoolExecutor
+from queue import Empty, Queue
+from typing import Any, Dict, Optional
 
 logger = logging.getLogger(__name__)
 

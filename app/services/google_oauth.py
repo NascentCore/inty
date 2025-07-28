@@ -1,4 +1,5 @@
-from typing import Optional, Dict
+from typing import Dict, Optional
+
 import httpx
 from fastapi import HTTPException
 

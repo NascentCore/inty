@@ -1,7 +1,9 @@
 from typing import List, Optional
+
 from sqlalchemy.orm import Session
 
 from app import models, schemas
+
 
 def get_resource(db: Session, resource_id: str) -> Optional[models.Resource]:
     """
