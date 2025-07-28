@@ -494,7 +494,7 @@ private fun AvatarGridSection(
                 Box(
                     modifier = Modifier
                         .weight(1f)
-                        .aspectRatio(1f)
+                        .aspectRatio(9 / 16f)
                         .background(
                             color = Color(0x1A78599A),
                             shape = RoundedCornerShape(8.dp)
@@ -529,6 +529,7 @@ fun RegenButton(
     Box(
         modifier = Modifier
             .fillMaxSize()
+            .aspectRatio(1f)
             .background(
                 color = Color(0x1A78599A),
                 shape = RoundedCornerShape(8.dp)
