@@ -7,13 +7,13 @@ from concurrent.futures import ThreadPoolExecutor
 from threading import Lock, RLock
 from typing import Any, Dict, List, Optional, Union
 
-
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.runnables import Runnable, RunnableLambda
 from langchain_core.tools import Tool
 from langchain_google_community import GoogleSearchAPIWrapper
 from langchain_openai import ChatOpenAI
+from langmem import create_manage_memory_tool, create_search_memory_tool
 from langchain_postgres import PostgresChatMessageHistory
 from langgraph.graph import MessagesState
 from langgraph.managed import RemainingSteps
@@ -174,12 +174,17 @@ google_search_tool = Tool(
 
 
 class Agent:
+    """
+    An agent is an instance of a character. It comprises of everything that to assemble
+    prompt from character information and user profile, and any other information that
+    is relevant to a role-play session between the character and the users.
+    """
+
     def __init__(
         self,
         agent_id: str,
         name: str,
         model_config: dict,
-        # TODO: description seems not used anywhere.
         description: str = "",
         # 主提示词和模式提示词参数
         main_prompt: str = "",
@@ -310,11 +315,9 @@ class Agent:
             # 处理dict和CustomAgentState输入
             if isinstance(state, dict):
                 user_profile = state.get("user_profile", "")
-                user_id = state.get("user_id", "")
             else:
                 # CustomAgentState对象
                 user_profile = getattr(state, "user_profile", "")
-                user_id = getattr(state, "user_id", "")
 
             # 从用户profile中提取用户名
             user_name = self._extract_user_name_from_profile(user_profile)
