@@ -148,6 +148,7 @@ fun IntySmallTextField2(
     isError: Boolean = false,
     singleLine: Boolean = false,
     enabled: Boolean = true,
+    maxLength: Int = -1,//限制最大输入字数，-1 表示不限制
     placeholder: @Composable (() -> Unit)? = null,
     leadingIcon: @Composable (() -> Unit)? = null,
     trailingIcon: @Composable (() -> Unit)? = null,
@@ -206,7 +207,10 @@ fun IntySmallTextField2(
                 textStyle = TextStyle.Default.copy(
                     fontSize = 14.sp, color = TextFieldColor.Text
                 ),
-                onValueChange = onValueChange,
+                onValueChange = { str ->
+                    if (maxLength > 0 && str.length <= maxLength)
+                        onValueChange(str)
+                },
                 keyboardOptions = keyboardOptions,
                 keyboardActions = newActions,
                 cursorBrush = SolidColor(TextFieldColor.Text)
