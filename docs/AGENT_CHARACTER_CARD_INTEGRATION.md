@@ -15,8 +15,14 @@
   * system prompt/系统提示词：指影响模型、对用户不可见的提示词；比如酒馆中用于说明沟通方式的主提示词（main prompt）：
     <img width="400" alt="image" src="https://github.com/user-attachments/assets/31d8f25e-25a6-4ba2-a773-9f2ae5301961" />
   * character prompt/角色提示词：指描述角色信息的提示词；是角色卡中的主要内容，比如：
-    * 角色身份信息：性别、年龄、性别、外貌、职业、等等
-    *
+    * Persona/角色画像：性别、年龄、性别、外貌、职业、等等
+    * Personality/角色性格：？？？
+    * Description/角色描述：？？？
+  * chats prompt/聊天提示词：一般叫消息历史、指聊天的过程一来一回用户与角色之间的消息记录；
+    过于久远的消息历史会经过处理、以记忆（memory）的形式呈现到历史记录中
+  * memory/记忆：chats prompt 经过处理，缩小数据量，可以以记忆的方式动态加载到提示词中  
+* dynamic prompting/提示词动态调整：指在上述提示词内容框架中，通过动态调整提示词内容，
+  来达到某种更高级、复杂、更有价值的聊天体验的技术手段
 
 ## 当前架构分析
 
