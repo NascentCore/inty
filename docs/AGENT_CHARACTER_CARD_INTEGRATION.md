@@ -13,6 +13,7 @@
   常被滥用，使用时应区分具体所指的提示词；提示词常分为 3 类：system prompt/系统提示词、
   character prompt/角色提示词、chats prompt/聊天提示词，以下详述：
   * system prompt/系统提示词：指影响模型、对用户不可见的提示词；比如酒馆中用于说明沟通方式的主提示词（main prompt）：
+    <img width="400" alt="image" src="https://github.com/user-attachments/assets/31d8f25e-25a6-4ba2-a773-9f2ae5301961" />
   * character prompt/角色提示词：指描述角色信息的提示词；是角色卡中的主要内容，比如：
     * 角色身份信息：性别、年龄、性别、外貌、职业、等等
     *
