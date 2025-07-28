@@ -80,5 +80,3 @@ class TestAgentChat:
         )
 
         assert response == "Hello, how are you today?!"
-
-        print(f"✅ Chat test passed! Response: {response[:100]}...")
