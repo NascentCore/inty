@@ -681,6 +681,8 @@ class Agent:
 
                 # 获取相关的历史消息
                 get_history_start = time.time()
+                # TODO: 建议取消截取，因为：目前原型产品状态的截取无明确价值；引入额外复杂性无意义。
+                # 待聊天记录过长才需要截取、记忆等复杂机制。
                 recent_history = self._get_relevant_history(
                     history.messages, max_messages=15
                 )
@@ -692,6 +694,7 @@ class Agent:
                 # 构建包含历史的完整消息列表
                 build_msg_start = time.time()
                 all_messages = recent_history + messages["messages"]
+                logger.debug(f"all_messages: {all_messages}")
                 build_msg_time = time.time() - build_msg_start
                 logger.info(
                     f"消息构建耗时: {build_msg_time:.3f}秒 - Agent: {self.agent_id}"
@@ -962,12 +965,10 @@ class Agent:
         self, user_id: str, session_id: str, messages: dict[str, Any], db_session=None
     ) -> str:
         """异步聊天方法（优化版本）"""
-        chat_start_time = time.time()
         logger.info(f"开始聊天处理 - Agent: {self.agent_id}, Session: {session_id}")
 
         self._update_last_used()
 
-        # 异步获取用户profile信息
         profile_start = time.time()
         user_profile = self._get_user_profile_sync(user_id)
         profile_time = time.time() - profile_start

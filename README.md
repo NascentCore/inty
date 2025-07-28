@@ -298,6 +298,7 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 alembic revision --autogenerate -m "描述"
 alembic upgrade head
 
-# 运行测试
-pytest
+# Setting pyhton path when running tests
+PYTHONPATH=/Users/yzhao/Workspace/NascentCore/inty-backend \
+    pytest app/core/agent/agent_test.py -v
 ```
