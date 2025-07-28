@@ -5,15 +5,19 @@ import com.squareup.moshi.JsonClass
 
 @JsonClass(generateAdapter = true)
 data class CreateGuestReq(
-    val device_id: String,
-    val system_language: String,
+    @Json(name = "device_id")
+    val deviceId: String,
+    @Json(name = "system_language")
+    val systemLanguage: String,
 )
 
 @JsonClass(generateAdapter = true)
 data class CreateGuestResult(
-    val guest_id: String,
+    @Json(name = "guest_id")
+    val guestId: String,
     val token: String,
-    val is_new_guest: Boolean,
+    @Json(name = "is_new_guest")
+    val isNewGuest: Boolean,
 )
 
 /**
@@ -110,9 +114,12 @@ data class GoogleLoginResponse(
  */
 @JsonClass(generateAdapter = true)
 data class UserDeletionCheckResponse(
-    val active_subscription: Boolean,
-    val can_delete: Boolean,
-    val error_message: String?,
+    @Json(name = "active_subscription")
+    val activeSubscription: Boolean,
+    @Json(name = "can_delete")
+    val canDelete: Boolean,
+    @Json(name = "error_message")
+    val errorMessage: String?,
 )
 
 /**
@@ -122,6 +129,7 @@ data class UserDeletionCheckResponse(
 data class UserDeleteResponse(
     val message: String?,
     val success: Boolean,
-    val user_id: String?,
+    @Json(name = "user_id")
+    val userId: String?,
 )
 

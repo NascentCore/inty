@@ -41,7 +41,6 @@ data class Usage(
     val totalTokens: Int = 0
 )
 
-
 @JsonClass(generateAdapter = true)
 data class QueryMsgReq(
     val page: String = "",
@@ -66,7 +65,6 @@ data class MsgInfo(
     val role: String = "",
 )
 
-
 @JsonClass(generateAdapter = true)
 data class ConversationItem(
     @Json(name = "agent_id")
@@ -90,7 +88,6 @@ data class ConversationItem(
     fun getShowTime(): String {
         return convertUtcToLocal(createdAt)
     }
-
 }
 
 @JsonClass(generateAdapter = true)

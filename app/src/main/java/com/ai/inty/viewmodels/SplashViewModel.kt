@@ -51,13 +51,18 @@ class SplashViewModel : BaseActivityViewModel() {
 
     private suspend fun createGuest() {
         EasyLog.log("Creating guest account...")
-        val result = userApi.createGuest(CreateGuestReq(device_id = AppEnv.DeviceID, AppEnv.locale.language))
+        val result = userApi.createGuest(
+            CreateGuestReq(
+                deviceId = AppEnv.DeviceID,
+                systemLanguage = AppEnv.locale.language
+            )
+        )
         EasyLog.log("createGuest result: $result")
         
         when (result) {
             is HttpResult.Success -> {
-                IntySetting.login(true, result.data.guest_id, result.data.token)
-                EasyLog.log("Guest created successfully: ${result.data.guest_id}")
+                IntySetting.login(true, result.data.guestId, result.data.token)
+                EasyLog.log("Guest created successfully: ${result.data.guestId}")
                 onLoginSuccess()
             }
             is HttpResult.Failure -> {

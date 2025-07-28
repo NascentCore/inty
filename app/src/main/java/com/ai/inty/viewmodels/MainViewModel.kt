@@ -895,7 +895,7 @@ class MainViewModel : BaseActivityViewModel() {
                     when (result) {
                         is HttpResult.Success -> {
                             EasyLog.log("检查账号需要取消订阅的结果 success: ${result.data}")
-                            if (result.data.can_delete && !result.data.active_subscription) {
+                            if (result.data.canDelete && !result.data.activeSubscription) {
                                 deleteUserAccount()
                             } else {
                                 ToastUtils.showToast("Please cancel the subscription before proceeding")
