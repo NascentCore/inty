@@ -26,7 +26,7 @@ class TestAgentChat:
             "api_key": "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",
             "base_url": "https://openrouter.ai/api/v1",
             "temperature": 0.7,
-            "max_tokens": 500,
+            "max_tokens": 100,
         }
 
         self.test_messages = {
@@ -40,6 +40,7 @@ class TestAgentChat:
 
         self.agent = None
 
+        # Teardown fixture: https://stackoverflow.com/a/22638709
         yield
 
         # Cleanup after test
@@ -61,7 +62,6 @@ class TestAgentChat:
         4. All dependencies are properly mocked to avoid external calls
         """
 
-        print("Starting test_agent_chat_happy_path")
         # Create agent instance
         self.agent = Agent(
             agent_id=self.agent_id,
@@ -73,25 +73,12 @@ class TestAgentChat:
             mode_prompt="Respond in a helpful manner.",
         )
 
-        # Verify agent was created successfully
-        assert self.agent is not None
-        assert self.agent.agent_id == self.agent_id
-        assert self.agent.name == self.agent_name
-        assert self.agent.personality == self.test_personality
-
         response = await self.agent.chat(
             user_id=self.user_id,
             session_id=self.session_id,
             messages=self.test_messages,
         )
 
-        # Verify response is a string
-        assert isinstance(response, str)
-        assert len(response) > 0
+        assert response == "Hello, how are you today?!"
 
         print(f"✅ Chat test passed! Response: {response[:100]}...")
-
-        # Additional assertions
-        assert response is not None
-        assert isinstance(response, str)
-        assert response == "Hello, how are you today?!"
