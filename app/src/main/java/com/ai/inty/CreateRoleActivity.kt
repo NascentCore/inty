@@ -851,7 +851,7 @@ private fun CreateRolePage(
                 }
             )
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(60.dp))
         }
     }
 }
@@ -1097,8 +1097,8 @@ private fun AvatarUploadSection(
                 // Fixed Regen button on the left
                 Box(
                     modifier = Modifier
-                        .width(72.dp)
-                        .height(90.dp)
+                        .width(88.dp)
+                        .aspectRatio(9 / 16f)
                 ) {
                     RegenButton(
                         onClick = { onRegenerate(AvatarManager.getGenerationPrompt()) },
@@ -1116,8 +1116,8 @@ private fun AvatarUploadSection(
                         val imageUrl = avatarUrls[index]
                         Box(
                             modifier = Modifier
-                                .width(72.dp)
-                                .height(90.dp)
+                                .width(88.dp)
+                                .aspectRatio(9 / 16f)
                                 .background(
                                     color = Color(0x1A78599A),
                                     shape = RoundedCornerShape(8.dp)
