@@ -74,6 +74,7 @@ class User(UserInDBBase):
     public_agents_count: Optional[int] = 0
     total_public_agents_follows: Optional[int] = 0
     followers_count: Optional[int] = 0
+    connector_count: Optional[int] = 0
 
 class UserInDB(UserInDBBase):
     """数据库中的完整用户信息"""
@@ -109,6 +110,7 @@ class UserListItem(BaseModel):
     google_id: Optional[str] = None
     device_id: Optional[str] = None
     system_language: Optional[str] = None
+    connector_count: Optional[int] = 0
     is_active: bool
     is_superuser: bool
     created_at: datetime

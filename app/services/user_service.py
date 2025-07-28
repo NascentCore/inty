@@ -16,6 +16,7 @@ from app.models import User
 from app.models.user import AuthType, DeviceToken
 from app.models.user_deletion_log import UserDeletionLog
 from app.models.subscription import UserSubscription, SubscriptionStatus
+from app.models.chat import Chat
 from app.schemas import UserUpdate
 from app.core.config import settings
 
@@ -629,3 +630,29 @@ async def get_all_users(
     except Exception as e:
         logger.error(f"获取所有用户失败: {str(e)}")
         raise e
+
+
+async def get_user_connector_count(db: AsyncSession, user_id: str) -> int:
+    """
+    计算用户的对话数量（与多少个不同agent产生过对话）
+    
+    Args:
+        db: 数据库会话
+        user_id: 用户ID
+        
+    Returns:
+        int: 对话数量
+    """
+    try:
+        from sqlalchemy import func, distinct
+        
+        # 查询用户与多少个不同的agent有过聊天
+        stmt = select(func.count(distinct(Chat.agent_id))).where(Chat.user_id == user_id)
+        result = await db.execute(stmt)
+        count = result.scalar() or 0
+        
+        return count
+        
+    except Exception as e:
+        logger.error(f"计算用户对话数量失败: {str(e)}")
+        return 0

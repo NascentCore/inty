@@ -21,13 +21,40 @@ from app.core.config import settings
 router = APIRouter()
 
 @router.get("/profile", response_model=User)
-def get_profile(
+async def get_profile(
     current_user: User = Depends(deps.get_current_active_user),
+    db: AsyncSession = Depends(get_async_db),
 ) -> Any:
     """
     Get current user profile.
     """
-    return current_user
+    # 计算connector_count
+    connector_count = await user_service.get_user_connector_count(db, current_user.id)
+    
+    # 创建用户响应对象，包含connector_count
+    user_dict = {
+        "id": current_user.id,
+        "readable_id": current_user.readable_id,
+        "nickname": current_user.nickname,
+        "avatar": current_user.avatar,
+        "email": current_user.email,
+        "phone": current_user.phone,
+        "gender": current_user.gender,
+        "age_group": current_user.age_group,
+        "description": current_user.description,
+        "system_language": current_user.system_language,
+        "auth_type": current_user.auth_type,
+        "is_active": current_user.is_active,
+        "created_at": current_user.created_at,
+        "updated_at": current_user.updated_at,
+        "is_superuser": current_user.is_superuser,
+        "public_agents_count": 0,  # 这些字段可能需要其他查询来获取
+        "total_public_agents_follows": 0,
+        "followers_count": 0,
+        "connector_count": connector_count
+    }
+    
+    return User(**user_dict)
 
 @router.put("/profile", response_model=User)
 async def update_profile(
