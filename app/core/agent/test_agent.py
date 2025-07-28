@@ -4,7 +4,9 @@ from unittest.mock import patch, MagicMock
 
 from langchain_core.messages import HumanMessage
 
+from app.core.agent import prompts
 from app.core.agent.agent import Agent
+from app.core.agent.personality import EVERYONE_LIKES_YOU
 from app.core.config import settings
 
 
@@ -29,14 +31,7 @@ class TestAgentChat:
             "max_tokens": 100,
         }
 
-        self.test_messages = {
-            "messages": [HumanMessage(content="Hello, how are you today?")]
-        }
-
-        # Agent personality/prompt for testing
-        self.test_personality = (
-            "You are a helpful AI assistant. Be friendly and concise in your responses."
-        )
+        self.test_messages = {"messages": [HumanMessage(content="Who are you?")]}
 
         self.agent = None
 
@@ -68,9 +63,9 @@ class TestAgentChat:
             name=self.agent_name,
             model_config=self.model_config,
             description="Test agent for unit testing",
-            personality=self.test_personality,
-            main_prompt="You are a test agent.",
-            mode_prompt="Respond in a helpful manner.",
+            personality=EVERYONE_LIKES_YOU.to_prompt(),
+            main_prompt=prompts.CHAT_SYS_PROMPT,
+            mode_prompt=prompts.HELPFUL_MODE_PROMPT,
         )
 
         response = await self.agent.chat(
