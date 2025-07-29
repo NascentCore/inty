@@ -1,16 +1,49 @@
+import google.genai as genai
+from google.genai import types
 import os
-import uuid
-from datetime import datetime
-
-import vertexai
+import json
 from loguru import logger
-from vertexai.preview.vision_models import ImageGenerationModel
 
 from app.core.config import settings
-from app.utils.gcs import upload_to_gcs
 
-# Initialize Vertex AI
-vertexai.init()  # 使用你的Google Cloud项目ID
+# Initialize Google Gen AI client with Vertex AI
+# The client will use the same credentials as configured for GCS
+client = None  # Will be initialized when needed
+
+
+def get_genai_client():
+    """Get or create Google Gen AI client with proper configuration"""
+    global client
+    if client is None:
+        try:
+            # Initialize with Vertex AI configuration
+            # This will use the same service account credentials as GCS
+
+            # Try to get project ID from credentials file
+            credentials_path = settings.gcs.credentials
+            project_id = None
+            location = "us-central1"  # Default location for Imagen
+
+            if os.path.exists(credentials_path):
+                with open(credentials_path, "r") as f:
+                    creds = json.load(f)
+                    project_id = creds.get("project_id")
+
+            if not project_id:
+                # Fallback: try to get from environment or use default
+                project_id = os.environ.get("GOOGLE_CLOUD_PROJECT", "inty-backend")
+
+            client = genai.Client(vertexai=True, project=project_id, location=location)
+            logger.info(
+                f"Initialized Google Gen AI client with project: {project_id}, location: {location}"
+            )
+        except Exception as e:
+            logger.error(f"Error initializing Google Gen AI client: {e}")
+            # Fallback to basic initialization
+            client = genai.Client(vertexai=True)
+
+    return client
+
 
 def get_opposite_gender(user_gender: str) -> str:
     """
@@ -19,47 +52,57 @@ def get_opposite_gender(user_gender: str) -> str:
     """
     if not user_gender:
         return ""
-    
+
     gender_mapping = {
         "male": "female",
-        "female": "male", 
+        "female": "male",
         "non-binary": "",
         "they/them": "",
         "nb": "",  # non-binary 的简写
-        "other": ""
+        "other": "",
     }
-    
+
     # 转换为小写进行匹配
     normalized_gender = user_gender.lower().strip()
     opposite = gender_mapping.get(normalized_gender, "")
-    
-    print(f"User gender: {user_gender} -> Opposite gender for prompt: '{opposite}'")
+
+    logger.info(
+        f"User gender: {user_gender} -> Opposite gender for prompt: '{opposite}'"
+    )
     return opposite
 
-def generate_background_image_to_gcs(prompt: str, gcs_uri_base: str, count=1, aspect_ratio="9:16", gender: str = None):
+
+def generate_background_image_to_gcs(
+    prompt: str,
+    gcs_uri_base: str,
+    count=1,
+    aspect_ratio="9:16",
+    gender: str = None,
+    include_rai_reason=False,
+):
     """
     使用output_gcs_uri参数直接将生成的背景图保存到GCS，返回实际生成的图片GCS路径列表
-    
+    支持includeRaiReason参数获取RAI过滤原因
+
     Args:
         prompt (str): 生成图片的描述提示词
         gcs_uri_base (str): GCS 存储基础URI
         count (int): 生成图片数量，默认为1
         aspect_ratio (str): 图片尺寸比例，默认为"9:16"
         gender (str): 用户性别，支持 "male", "female", "non-binary", "they/them" 等
-    
+        include_rai_reason (bool): 是否包含RAI过滤原因
+
     Returns:
-        list: 生成图片的HTTPS URL列表
+        list: 生成图片的HTTPS URL列表，或包含RAI原因的字典
     """
     try:
         logger.info(f"Starting image generation with prompt: {prompt}, count: {count}")
         logger.info(f"Target GCS URI base: {gcs_uri_base}")
         logger.info(f"User gender: {gender}")
-        
-        model = ImageGenerationModel.from_pretrained("imagen-4.0-fast-generate-preview-06-06")
-        
+
         # 获取反向性别
         opposite_gender = get_opposite_gender(gender)
-        
+
         # 构建增强提示词
         enhanced_prompt = f"""
         The person's description:
@@ -69,75 +112,101 @@ def generate_background_image_to_gcs(prompt: str, gcs_uri_base: str, count=1, as
         age: 22 - 35
         gender: {opposite_gender}
         """
-        
-        # 使用output_gcs_uri直接上传到GCS
-        images = model.generate_images(
-            prompt=enhanced_prompt,
+
+        # 使用新的Google Gen AI SDK生成图片
+        config = types.GenerateImagesConfig(
             number_of_images=count,
             aspect_ratio=aspect_ratio,
-            safety_filter_level="block_some",
-            person_generation="allow_adult",
-            output_gcs_uri=gcs_uri_base
+            safety_filter_level=types.SafetyFilterLevel.BLOCK_MEDIUM_AND_ABOVE,
+            person_generation=types.PersonGeneration.ALLOW_ADULT,
+            output_gcs_uri=gcs_uri_base,
+            include_rai_reason=include_rai_reason,
         )
-        
-        print(f"Generated images type: {type(images)}")
-        print(f"Images object attributes: {[attr for attr in dir(images) if not attr.startswith('__')]}")
-        
+
+        client = get_genai_client()
+        response = client.models.generate_images(
+            model="imagen-4.0-fast-generate-preview-06-06",
+            prompt=enhanced_prompt,
+            config=config,
+        )
+
+        # 处理响应中的图片
         generated_uris = []
-        
-        # 直接通过images.images获取图片列表
-        for i, image in enumerate(images.images):
-            try:
-                # 直接获取_gcs_uri属性
-                gcs_uri = image._gcs_uri
-                
-                # 转换为HTTPS URL
+        rai_reasons = []
+
+        logger.info(f"Generated {len(response.generated_images)} images")
+
+        # 处理每个生成的图片
+        for i, image in enumerate(response.generated_images):
+            # 检查是否被RAI过滤
+            if image.rai_filtered_reason:
+                rai_reasons.append(image.rai_filtered_reason)
+                logger.warning(
+                    f"Image {i} filtered by RAI: {image.rai_filtered_reason}"
+                )
+                continue
+
+            # 获取GCS URI并转换为HTTPS URL
+            gcs_uri = image.image.gcs_uri
+            if gcs_uri:
                 if gcs_uri.startswith("gs://"):
                     gcs_path = gcs_uri[5:]  # 移除"gs://"前缀
                     https_url = f"https://storage.googleapis.com/{gcs_path}"
                     generated_uris.append(https_url)
-                    print(f"Image {i}: {gcs_uri} -> {https_url}")
+                    logger.info(f"Image {i}: {gcs_uri} -> {https_url}")
                 else:
                     generated_uris.append(gcs_uri)
-                    print(f"Image {i}: {gcs_uri}")
-                    
-            except Exception as e:
-                print(f"Error processing image {i}: {e}")
-                continue
-        
+                    logger.info(f"Image {i}: {gcs_uri}")
+
+        # 检查是否生成了任何图片
         if not generated_uris:
-            raise Exception("No images were successfully generated，Please check whether the prompt contains any prohibited content")
-        
-        print(f"Successfully generated {len(generated_uris)} images")
-        return generated_uris
-        
+            error_msg = "No images were successfully generated. Please check whether the prompt contains any prohibited content"
+            if rai_reasons:
+                error_msg += f". RAI filtering reasons: {'; '.join(rai_reasons)}"
+            raise Exception(error_msg)
+
+        logger.info(f"Successfully generated {len(generated_uris)} images")
+
+        # 根据include_rai_reason参数返回不同格式
+        if include_rai_reason:
+            return {"image_uris": generated_uris, "rai_reasons": rai_reasons}
+        else:
+            return generated_uris
+
     except Exception as e:
-        print(f"Error in generate_background_image_to_gcs: {e}")
+        logger.error(f"Error in generate_background_image_to_gcs: {e}")
         import traceback
+
         traceback.print_exc()
         raise e
 
 
 if __name__ == "__main__":
+    prompt = "a beautiful girl, age: 25"
 
-    prompt = "生成一个小女孩"
-
-    model = ImageGenerationModel.from_pretrained("imagen-4.0-fast-generate-preview-06-06")
-    images = model.generate_images(
-        prompt=prompt,
-        number_of_images=1,
+    # 使用新的SDK进行测试
+    config = types.GenerateImagesConfig(
+        number_of_images=4,
         aspect_ratio="1:1",
-        safety_filter_level="block_some",
-        person_generation="allow_adult",
-        # output_gcs_uri="gs://inty-static/tmp/output-image.png"
+        safety_filter_level=types.SafetyFilterLevel.BLOCK_MEDIUM_AND_ABOVE,
+        person_generation=types.PersonGeneration.ALLOW_ADULT,
+        include_rai_reason=True,
     )
 
-    images[0].save(location="./output-image.png", include_generation_parameters=False)
+    client = get_genai_client()
+    response = client.models.generate_images(
+        model="imagen-4.0-fast-generate-preview-06-06", prompt=prompt, config=config
+    )
 
-    # Optional. View the generated image in a notebook.
-    # images[0].show()
+    for image in response.generated_images:
+        image.image.show()
+        print(image.image.gcs_uri)
 
-
-    print(f"Created output image using {len(images[0]._image_bytes)} bytes")
-    # Example response:
-    # Created output image using 1234567 bytes
+    # 测试我们的函数
+    # result = generate_background_image_to_gcs(
+    #     prompt=prompt,
+    #     gcs_uri_base="gs://inty-static/tmp/",
+    #     count=1,
+    #     include_rai_reason=True
+    # )
+    # print(f"Function result: {result}")
