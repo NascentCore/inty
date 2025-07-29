@@ -98,7 +98,7 @@ class AvatarGenerateViewModel : ViewModel() {
 
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    val errorMessage = e.message ?: "Unknown error"
+                    val errorMessage = e.message?.substringBefore(':') ?: "Unknown error"
                     AvatarManager.setGenerationError(errorMessage)
                     _errorMessage.value = errorMessage
                     EasyLog.log("Ai头像生成异常: ${e.message}", EasyLog.ERROR)
@@ -152,7 +152,7 @@ class AvatarGenerateViewModel : ViewModel() {
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    val errorMessage = "Regeneration error: ${e.message ?: "Unknown error"}"
+                    val errorMessage = e.message?.substringBefore(':') ?: "Unknown error"
                     _errorMessage.value = errorMessage
                     EasyLog.log("Regenerate avatar error: ${e.message}", EasyLog.ERROR)
                     EasyLog.log(e)
