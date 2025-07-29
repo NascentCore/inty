@@ -15,14 +15,11 @@ class TestAgentChat:
 
     @pytest.fixture(autouse=True)
     def setup(self):
-        """Set up test fixtures before each test method"""
-        # Test agent configuration
         self.agent_id = "test-agent-123"
         self.agent_name = "Test Agent"
         self.user_id = "test-user-456"
         self.session_id = str(uuid.uuid4())
 
-        # Model configuration for testing
         self.model_config = {
             "model": settings.agent.model,
             "api_key": settings.agent.api_key,
@@ -38,7 +35,6 @@ class TestAgentChat:
         # Teardown fixture: https://stackoverflow.com/a/22638709
         yield
 
-        # Cleanup after test
         if self.agent:
             try:
                 self.agent.cleanup()
