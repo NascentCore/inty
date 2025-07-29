@@ -2,10 +2,8 @@ package com.ai.inty
 
 import android.content.Intent
 import android.os.Bundle
-import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
@@ -27,6 +25,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -40,6 +39,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
@@ -59,11 +59,9 @@ import com.ai.inty.base.BaseActivity
 import com.ai.inty.base.ToastUtils
 import com.ai.inty.base.noRippleClickable
 import com.ai.inty.ui.theme.IntyTheme
+import com.ai.inty.utils.CredentialManagerHelper
 import com.ai.inty.utils.UserProfileManager
 import com.ai.inty.viewmodels.LoginActivityViewModel
-import com.google.android.gms.auth.api.signin.GoogleSignIn
-import com.google.android.gms.auth.api.signin.GoogleSignInOptions
-import com.google.android.gms.common.api.ApiException
 import com.inty.utils.log.EasyLog
 import com.therouter.TheRouter
 import com.therouter.router.Route
@@ -74,6 +72,7 @@ import kotlinx.coroutines.launch
 
 /**
  * 登录页面
+ * 使用最新的 Credential Manager API 进行 Google 登录
  */
 @Route(path = Constant.ROUTE_LOGIN)
 class LoginActivity : BaseActivity() {
@@ -122,42 +121,57 @@ class LoginActivity : BaseActivity() {
     }
 }
 
+/**
+ * 登录页面 UI 组件
+ * 使用最新的 Credential Manager API
+ */
 @Composable
 fun LoginScreen(
     onClose: () -> Unit = {},
     onGoogleLoginSuccess: (idToken: String) -> Unit,
 ) {
-    val context = androidx.compose.ui.platform.LocalContext.current
+    val context = LocalContext.current
     var lastClickTime by remember { mutableLongStateOf(0L) }
+    var isLoading by remember { mutableStateOf(false) }
+    val coroutineScope = rememberCoroutineScope()
 
-    val googleSignInLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartActivityForResult(),
-        onResult = { result ->
-            val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
+    // 使用新的 Credential Manager 登录
+    fun performGoogleSignIn() {
+        if (isLoading) return
+
+        val currentTime = System.currentTimeMillis()
+        if (!AntiClick.isValidClick(lastClickTime)) return
+        lastClickTime = currentTime
+
+        coroutineScope.launch {
+            isLoading = true
             try {
-                val account = task.getResult(ApiException::class.java)!!
-                val idToken = account.idToken
-                if (idToken != null) {
-                    onGoogleLoginSuccess(idToken)
-                } else {
-                    EasyLog.log("Google Sign-In idToken is null")
-                }
-            } catch (e: ApiException) {
-                EasyLog.log("Google Sign-In failed with code: ${e.statusCode}")
+                val result = CredentialManagerHelper.signInWithGoogle(context)
+                result.fold(
+                    onSuccess = { idToken ->
+                        EasyLog.log("Credential Manager sign-in successful")
+                        onGoogleLoginSuccess(idToken)
+                    },
+                    onFailure = { exception ->
+                        val errorMessage = when (exception) {
+                            is androidx.credentials.exceptions.NoCredentialException -> "没有可用的登录凭证"
+                            else -> "登录失败: ${exception.message}"
+                        }
+                        EasyLog.log(
+                            "Credential Manager sign-in failed: $errorMessage",
+                            EasyLog.ERROR
+                        )
+                        // 显示错误提示
+                        coroutineScope.launch {
+                            ToastUtils.showToast(errorMessage)
+                        }
+                    }
+                )
+            } finally {
+                isLoading = false
             }
         }
-    )
-
-    val gso = remember {
-        GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-            .requestIdToken(context.getString(R.string.web_client_id))
-            .requestEmail()
-            .build()
     }
-    val googleSignInClient = remember { GoogleSignIn.getClient(context, gso) }
-
-    // var selectGender by remember { mutableStateOf(GENDER.OTHER) }
-    // var selectAge by remember { mutableStateOf("") }
 
     Box(
         modifier = Modifier
@@ -179,23 +193,22 @@ fun LoginScreen(
                 ),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            // 关闭按钮
             Image(
                 modifier = Modifier
                     .align(Alignment.End)
                     .padding(end = 16.dp, top = 16.dp)
                     .size(18.dp, 18.dp)
-                    .noRippleClickable {
-                        onClose()
-                    },
+                    .noRippleClickable { onClose() },
                 painter = painterResource(R.drawable.close),
                 contentDescription = null,
             )
 
             Spacer(Modifier.height(12.dp))
 
+            // Logo 图片
             Image(
-                modifier = Modifier
-                    .size(width = 239.dp, height = 190.dp),
+                modifier = Modifier.size(width = 239.dp, height = 190.dp),
                 painter = painterResource(R.drawable.group2085655930),
                 contentScale = ContentScale.Crop,
                 alignment = Alignment.TopCenter,
@@ -204,6 +217,7 @@ fun LoginScreen(
 
             Spacer(modifier = Modifier.height(40.dp))
 
+            // 欢迎文本
             Text(
                 text = "Welcome to IntelliMate",
                 color = Color.White,
@@ -222,18 +236,12 @@ fun LoginScreen(
 
             Spacer(modifier = Modifier.height(40.dp))
 
-            //是否勾选
+            // Google 登录按钮
             var selected by remember { mutableStateOf(false) }
-            val coroutineScope = rememberCoroutineScope()
             Button(
                 onClick = {
                     if (selected) {
-                        val currentTime = System.currentTimeMillis()
-                        if (AntiClick.isValidClick(lastClickTime)) {
-                            lastClickTime = currentTime
-                            val signInIntent = googleSignInClient.signInIntent
-                            googleSignInLauncher.launch(signInIntent)
-                        }
+                        performGoogleSignIn()
                     } else {
                         coroutineScope.launch {
                             ToastUtils.showToast("Please check Terms of Use & Privacy Policy")
@@ -247,9 +255,9 @@ fun LoginScreen(
                     disabledContainerColor = Color.White.copy(.7f)
                 ),
                 border = BorderStroke(1.dp, Color(0xFFEEEEEE)),
-                contentPadding = PaddingValues(0.dp)
+                contentPadding = PaddingValues(0.dp),
+                enabled = !isLoading
             ) {
-
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
@@ -268,11 +276,20 @@ fun LoginScreen(
                         fontSize = 14.sp,
                         fontWeight = FontWeight.SemiBold
                     )
+
+                    if (isLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            color = Color.Black,
+                            strokeWidth = 2.dp
+                        )
+                    }
                 }
             }
 
             Spacer(modifier = Modifier.height(24.dp))
 
+            // 隐私政策文本
             PolicyText(selected, { selected = it })
 
             Spacer(modifier = Modifier.height(60.dp))
@@ -280,10 +297,13 @@ fun LoginScreen(
     }
 }
 
+/**
+ * 隐私政策文本组件
+ */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun PolicyText(checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
-    val context = androidx.compose.ui.platform.LocalContext.current
+    val context = LocalContext.current
     val baseTextStyle = TextStyle(
         color = Color.White.copy(alpha = 0.35f),
         fontSize = 12.sp,
@@ -292,7 +312,6 @@ private fun PolicyText(checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
     )
 
     Row(verticalAlignment = Alignment.CenterVertically) {
-
         Image(
             painter = painterResource(
                 if (checked) R.drawable.checked else R.drawable.check_no
@@ -300,7 +319,9 @@ private fun PolicyText(checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
             contentDescription = null,
             modifier = Modifier.clickable { onCheckedChange(!checked) }
         )
+
         Spacer(Modifier.width(8.dp))
+
         Column(
             modifier = Modifier,
             verticalArrangement = Arrangement.Center,
@@ -333,13 +354,18 @@ private fun PolicyText(checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
                     })
                 )
 
-                Text(text = " & ", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp)
+                Text(
+                    text = " & ",
+                    color = Color.White.copy(alpha = 0.6f),
+                    fontSize = 12.sp
+                )
 
                 val policyStr = buildAnnotatedString {
                     withStyle(SpanStyle(textDecoration = TextDecoration.Underline)) {
                         append(stringResource(R.string.privacy_policy))
                     }
                 }
+
                 Text(
                     text = policyStr,
                     fontSize = 12.sp,
@@ -352,12 +378,9 @@ private fun PolicyText(checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
                         context.startActivity(intent)
                     })
                 )
-
             }
-
         }
     }
-
 }
 
 @Preview(backgroundColor = 0xFFffffff, showBackground = true)
