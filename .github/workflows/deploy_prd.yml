@@ -36,7 +36,7 @@ jobs:
         username: ${{ secrets.DEV_SERVER_USER }}
         key: ${{ secrets.DEV_SERVER_SSH_KEY }}
         script: |
-          sudo docker pull ${{ env.REGISTRY }}/${{ env.DOCKER_REPO }}:${{ env.DOCKER_TAG }}
+          sudo docker pull ${{ env.DOCKER_REGISTRY }}/${{ env.DOCKER_REPO }}:${{ env.DOCKER_TAG }}
           sudo docker stop inty-backend-prd || true
           sudo docker rm inty-backend-prd || true
           sudo docker run -d \
@@ -46,4 +46,4 @@ jobs:
             -v /opt/inty-prd/config.yaml:/app/config.yaml \
             -v /opt/inty-prd/inty-backend-key.json:/app/inty-backend-key.json \
             -v /opt/inty-prd/inty-firebase-key.json:/app/inty-firebase-key.json \
-            ${{ env.REGISTRY }}/${{ env.DOCKER_REPO }}:${{ env.DOCKER_TAG }} 
+            ${{ env.DOCKER_REGISTRY }}/${{ env.DOCKER_REPO }}:${{ env.DOCKER_TAG }} 
