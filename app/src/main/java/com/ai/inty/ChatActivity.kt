@@ -30,7 +30,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 /**
- * 私聊的 聊天页面
+ * 私聊的聊天页面
  */
 @Route(path = Constant.ROUTE_CHAT)
 class ChatActivity : BaseActivity() {
@@ -41,31 +41,54 @@ class ChatActivity : BaseActivity() {
     @Autowired
     var agent_id: String? = null
 
-    val chatViewModel: ChatViewModel by viewModels()
+    private val chatViewModel: ChatViewModel by viewModels()
     private val agentApi: IAgentApi = TheRouter.get(IAgentApi::class.java)!!
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        setupWindow()
+        initializeChatViewModel()
+        setupUI()
+    }
+
+    /**
+     * 设置窗口属性
+     */
+    private fun setupWindow() {
         enableEdgeToEdge()
-        
-        // Set status bar icons to white for dark theme
+        // 设置状态栏图标为白色（深色主题）
         WindowCompat.setDecorFitsSystemWindows(window, false)
         val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
         windowInsetsController.isAppearanceLightStatusBars = false
+    }
 
-        if (agent == null) {
-            if (agent_id != null) {
+    /**
+     * 初始化聊天ViewModel
+     */
+    private fun initializeChatViewModel() {
+        when {
+            agent != null -> {
+                chatViewModel.setAgentInfo(agent)
+            }
+
+            agent_id != null -> {
                 chatViewModel.setAgentID(agent_id!!)
-            } else {
-                // 既没有 agent 对象也没有 agent_id，说明参数传递有问题
+            }
+
+            else -> {
+                // 既没有agent对象也没有agent_id，说明参数传递有问题
+                EasyLog.log("ChatActivity: No agent or agent_id provided, finishing activity")
                 finish()
                 return
             }
-        } else {
-            chatViewModel.setAgentInfo(agent)
         }
         chatViewModel.updateUserInfo()
+    }
 
+    /**
+     * 设置UI
+     */
+    private fun setupUI() {
         setContent {
             IntyTheme {
                 ChatPage(
@@ -73,8 +96,7 @@ class ChatActivity : BaseActivity() {
                         .fillMaxSize()
                         .background(BackGround)
                         .imePadding()
-                        .navigationBarsPadding()
-                    ,
+                        .navigationBarsPadding(),
                     chatViewModel = chatViewModel,
                     showBackButton = true,
                     onBack = { finish() },
@@ -82,29 +104,13 @@ class ChatActivity : BaseActivity() {
                         toggleFollowAgent(agentId)
                     }
                 )
-//                Box(
-//                    modifier = Modifier
-//                        .fillMaxSize()
-//                        .background(BackGround)
-//                        .imePadding()
-//                    ,
-//                ) {
-//                    var textData by remember { mutableStateOf("") }
-//                    IntySmallTextField(
-//                        modifier = Modifier.fillMaxWidth().height(80.dp)
-//                            .background(Color.Red)
-//                            .align(Alignment.BottomCenter)
-//                        ,
-//                        value = textData,
-//                        onValueChange = {
-//                            textData = it
-//                        }
-//                    )
-//                }
             }
         }
     }
-    
+
+    /**
+     * 切换关注状态
+     */
     private fun toggleFollowAgent(agentId: String) {
         val currentAgent = chatViewModel.agentInfo.value
         val isCurrentlyFollowed = currentAgent?.isFollowed ?: false
@@ -119,74 +125,98 @@ class ChatActivity : BaseActivity() {
             followAgent(agentId)
         }
     }
-    
+
+    /**
+     * 关注代理
+     */
     private fun followAgent(agentId: String) {
         EasyLog.log("followAgent: $agentId")
         lifecycleScope.launch(Dispatchers.IO) {
-            val result = agentApi.followAgent(agentId)
-            EasyLog.log("followAgent = $result")
-            
-            when (result) {
-                is HttpResult.Success -> {
-                    runOnUiThread {
-                        lifecycleScope.launch {
-                            ToastUtils.showToast("Successfully Followed")
-                        }
+            try {
+                val result = agentApi.followAgent(agentId)
+                EasyLog.log("followAgent = $result")
+
+                when (result) {
+                    is HttpResult.Success -> {
+                        handleFollowSuccess(agentId, true)
                     }
-                    // Update agent state in ChatViewModel
-                    chatViewModel.updateAgentFollowState(agentId, true)
-                    
-                    // Notify other components about follow state change
-                    val intent = Intent("FOLLOW_STATE_CHANGED")
-                    intent.putExtra("agentId", agentId)
-                    intent.putExtra("isFollowed", true)
-                    LocalBroadcastManager.getInstance(this@ChatActivity).sendBroadcast(intent)
-                    
-                    EasyLog.log("Sent FOLLOW_STATE_CHANGED broadcast - followed: $agentId")
-                }
-                is HttpResult.Failure -> {
-                    runOnUiThread {
-                        lifecycleScope.launch {
-                            ToastUtils.showToast("Follow Failed: ${result.message}")
-                        }
+
+                    is HttpResult.Failure -> {
+                        handleFollowFailure("Follow Failed: ${result.message}")
                     }
                 }
+            } catch (e: Exception) {
+                EasyLog.log("followAgent exception: ${e.message}", EasyLog.ERROR)
+                handleFollowFailure("Network error: ${e.message}")
             }
         }
     }
-    
+
+    /**
+     * 取消关注代理
+     */
     private fun unfollowAgent(agentId: String) {
         EasyLog.log("unfollowAgent: $agentId")
         lifecycleScope.launch(Dispatchers.IO) {
-            val result = agentApi.unfollowAgent(agentId)
-            EasyLog.log("unfollowAgent = $result")
-            
-            when (result) {
-                is HttpResult.Success -> {
-                    runOnUiThread {
-                        lifecycleScope.launch {
-                            ToastUtils.showToast("Unfollowed")
-                        }
+            try {
+                val result = agentApi.unfollowAgent(agentId)
+                EasyLog.log("unfollowAgent = $result")
+
+                when (result) {
+                    is HttpResult.Success -> {
+                        handleFollowSuccess(agentId, false)
                     }
-                    // Update agent state in ChatViewModel
-                    chatViewModel.updateAgentFollowState(agentId, false)
-                    
-                    // Notify other components about follow state change
-                    val intent = Intent("FOLLOW_STATE_CHANGED")
-                    intent.putExtra("agentId", agentId)
-                    intent.putExtra("isFollowed", false)
-                    LocalBroadcastManager.getInstance(this@ChatActivity).sendBroadcast(intent)
-                    
-                    EasyLog.log("Sent FOLLOW_STATE_CHANGED broadcast - unfollowed: $agentId")
-                }
-                is HttpResult.Failure -> {
-                    runOnUiThread {
-                        lifecycleScope.launch {
-                            ToastUtils.showToast("Unfollow request failed: ${result.message}")
-                        }
+
+                    is HttpResult.Failure -> {
+                        handleFollowFailure(result.message)
                     }
                 }
+            } catch (e: Exception) {
+                EasyLog.log("unfollowAgent exception: ${e.message}", EasyLog.ERROR)
+                handleFollowFailure("Network error: ${e.message}")
             }
         }
+    }
+
+    /**
+     * 处理关注成功
+     */
+    private fun handleFollowSuccess(agentId: String, isFollowed: Boolean) {
+        runOnUiThread {
+            lifecycleScope.launch {
+                val message = if (isFollowed) "Followed" else "Unfollowed"
+                ToastUtils.showToast(message)
+            }
+        }
+
+        // 更新ChatViewModel中的代理状态
+        chatViewModel.updateAgentFollowState(agentId, isFollowed)
+
+        // 通知其他组件关注状态变更
+        sendFollowStateBroadcast(agentId, isFollowed)
+
+        EasyLog.log("Sent FOLLOW_STATE_CHANGED broadcast - ${if (isFollowed) "followed" else "unfollowed"}: $agentId")
+    }
+
+    /**
+     * 处理关注失败
+     */
+    private fun handleFollowFailure(message: String) {
+        runOnUiThread {
+            lifecycleScope.launch {
+                ToastUtils.showToast(message)
+            }
+        }
+    }
+
+    /**
+     * 发送关注状态变更广播
+     */
+    private fun sendFollowStateBroadcast(agentId: String, isFollowed: Boolean) {
+        val intent = Intent("FOLLOW_STATE_CHANGED").apply {
+            putExtra("agentId", agentId)
+            putExtra("isFollowed", isFollowed)
+        }
+        LocalBroadcastManager.getInstance(this@ChatActivity).sendBroadcast(intent)
     }
 }

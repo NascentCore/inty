@@ -26,10 +26,8 @@ import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
@@ -47,7 +45,6 @@ import com.ai.inty.beans.ConversationItem
 import com.ai.inty.beans.SysMsgItem
 import com.ai.inty.utils.AuthClickable
 import com.inty.utils.formatTimestampToDateTime
-
 
 enum class ConversionsPageTab {
     TabMessage,
@@ -70,80 +67,125 @@ fun ConversionsPage(
     onClickFollowingAgent: (AgentInfo) -> Unit,
     onUnfollowAgent: ((String) -> Unit)? = null,
 ) {
-    Box(
-        modifier = modifier
-    ) {
+    Box(modifier = modifier) {
+        // 背景图片
         IntyImage(
             modifier = Modifier.align(Alignment.TopEnd),
             model = R.drawable.notify_header_bg
         )
-        Scaffold(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Transparent),
-            containerColor = Color.Transparent
-        ) { innerPadding ->
 
-            Column {
-                Spacer(Modifier.height(innerPadding.calculateTopPadding() + 28.dp))
+        // 主内容
+        ConversionsPageContent(
+            selectedTab = selectedTab,
+            conversions = conversions,
+            followingAgents = followingAgents,
+            lastSysMsg = lastSysMsg,
+            onSelectTab = onSelectTab,
+            onClickConversionItem = onClickConversionItem,
+            onClickSysMsg = onClickSysMsg,
+            onClickFollowingAgent = onClickFollowingAgent,
+            onUnfollowAgent = onUnfollowAgent
+        )
+    }
+}
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center,
-                ) {
+/**
+ * 会话页面主内容
+ */
+@Composable
+private fun ConversionsPageContent(
+    selectedTab: ConversionsPageTab,
+    conversions: List<ConversationItem>,
+    followingAgents: List<AgentInfo>,
+    lastSysMsg: SysMsgItem?,
+    onSelectTab: (ConversionsPageTab) -> Unit,
+    onClickConversionItem: (ConversationItem) -> Unit,
+    onClickSysMsg: () -> Unit,
+    onClickFollowingAgent: (AgentInfo) -> Unit,
+    onUnfollowAgent: ((String) -> Unit)? = null,
+) {
+    Scaffold(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Transparent),
+        containerColor = Color.Transparent
+    ) { innerPadding ->
+        Column {
+            Spacer(Modifier.height(innerPadding.calculateTopPadding() + 28.dp))
 
-                    ConversionsPageTabItem(
-                        Modifier.noRippleClickable {
-                            onSelectTab(ConversionsPageTab.TabMessage)
-                        },
-                        stringResource(R.string.tab_message), selectedTab==ConversionsPageTab.TabMessage
-                    )
-                    Spacer(Modifier.width(15.dp))
-                    ConversionsPageTabItem(
-                        Modifier.noRippleClickable {
-                            onSelectTab(ConversionsPageTab.TabFollowing)
-                        },
-                        stringResource(R.string.tab_following), selectedTab==ConversionsPageTab.TabFollowing
+            // Tab选择器
+            ConversionsTabSelector(
+                selectedTab = selectedTab,
+                onSelectTab = onSelectTab
+            )
+
+            Spacer(Modifier.height(22.dp))
+
+            // 内容区域
+            when (selectedTab) {
+                ConversionsPageTab.TabMessage -> {
+                    MessageTabContent(
+                        conversions = conversions,
+                        lastSysMsg = lastSysMsg,
+                        onClickConversionItem = onClickConversionItem,
+                        onClickSysMsg = onClickSysMsg
                     )
                 }
 
-                Spacer(Modifier.height(22.dp))
-
-                when (selectedTab) {
-                    ConversionsPageTab.TabMessage -> {
-                        ConversionsPageContent(
-                            modifier = Modifier.fillMaxWidth(),
-                            conversions = conversions,
-                            onClickConversionItem = {
-                                onClickConversionItem(it)
-                            },
-                            lastSysMsg = lastSysMsg,
-                            onClickSysMsg = onClickSysMsg
-                        )
-                    }
-                    ConversionsPageTab.TabFollowing -> {
-                        FollowingPage(
-                            modifier = Modifier.fillMaxWidth(),
-                            followingAgents = followingAgents,
-                            onClickAgent = onClickFollowingAgent,
-                            onUnfollowAgent = onUnfollowAgent
-                        )
-                    }
+                ConversionsPageTab.TabFollowing -> {
+                    FollowingTabContent(
+                        followingAgents = followingAgents,
+                        onClickAgent = onClickFollowingAgent,
+                        onUnfollowAgent = onUnfollowAgent
+                    )
                 }
             }
         }
     }
 }
 
+/**
+ * Tab选择器组件
+ */
+@Composable
+private fun ConversionsTabSelector(
+    selectedTab: ConversionsPageTab,
+    onSelectTab: (ConversionsPageTab) -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.Center,
+    ) {
+        ConversionsPageTabItem(
+            modifier = Modifier.noRippleClickable {
+                onSelectTab(ConversionsPageTab.TabMessage)
+            },
+            text = stringResource(R.string.tab_message),
+            isSelected = selectedTab == ConversionsPageTab.TabMessage
+        )
+
+        Spacer(Modifier.width(15.dp))
+
+        ConversionsPageTabItem(
+            modifier = Modifier.noRippleClickable {
+                onSelectTab(ConversionsPageTab.TabFollowing)
+            },
+            text = stringResource(R.string.tab_following),
+            isSelected = selectedTab == ConversionsPageTab.TabFollowing
+        )
+    }
+}
+
+/**
+ * Tab项组件
+ */
 @Composable
 fun ConversionsPageTabItem(
     modifier: Modifier,
     text: String,
     isSelected: Boolean,
 ) {
-    Column(
-        modifier = modifier.size(120.dp, 38.dp)
-    ) {
+    Column(modifier = modifier.size(120.dp, 38.dp)) {
         if (isSelected) {
             val colorStops = arrayOf(
                 0.0f to Color(0xFFFF905D),
@@ -158,7 +200,6 @@ fun ConversionsPageTabItem(
                     brush = brush,
                     fontSize = 20.sp,
                     fontWeight = FontWeight.SemiBold,
-
                 ),
             )
             IntyImage(
@@ -179,30 +220,21 @@ fun ConversionsPageTabItem(
     }
 }
 
-
-
-
+/**
+ * 消息Tab内容
+ */
 @Composable
-fun ConversionsPageContent(
-    modifier: Modifier,
+private fun MessageTabContent(
     conversions: List<ConversationItem>,
-    onClickConversionItem: (ConversationItem) -> Unit,
     lastSysMsg: SysMsgItem?,
+    onClickConversionItem: (ConversationItem) -> Unit,
     onClickSysMsg: () -> Unit,
-
-    ) {
-    LocalContext.current
-    LazyColumn(
-        modifier = modifier,
-    ) {
-
+) {
+    LazyColumn {
+        // 系统消息
         lastSysMsg?.let { sysMsg ->
             item {
-                AuthClickable(
-                    onClick = {
-                        onClickSysMsg()
-                    }
-                ) { authModifier ->
+                AuthClickable(onClick = onClickSysMsg) { authModifier ->
                     ConversationItem(
                         modifier = authModifier
                             .fillMaxWidth()
@@ -219,12 +251,9 @@ fun ConversionsPageContent(
             }
         }
 
+        // 会话列表
         items(conversions) { conversion ->
-            AuthClickable(
-                onClick = {
-                    onClickConversionItem(conversion)
-                }
-            ) { authModifier ->
+            AuthClickable(onClick = { onClickConversionItem(conversion) }) { authModifier ->
                 ConversationItem(
                     modifier = authModifier.fillMaxWidth(),
                     conversation = conversion
@@ -232,9 +261,43 @@ fun ConversionsPageContent(
             }
         }
     }
-
 }
 
+/**
+ * 关注Tab内容
+ */
+@Composable
+private fun FollowingTabContent(
+    followingAgents: List<AgentInfo>,
+    onClickAgent: (AgentInfo) -> Unit,
+    onUnfollowAgent: ((String) -> Unit)? = null,
+) {
+    LazyColumn {
+        items(
+            items = followingAgents,
+            key = { agent -> agent.id }
+        ) { agent ->
+            if (onUnfollowAgent != null) {
+                SwipeToUnfollowItem(
+                    agent = agent,
+                    onClickAgent = onClickAgent,
+                    onUnfollowAgent = onUnfollowAgent
+                )
+            } else {
+                FollowingAgentItem(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .noRippleClickable { onClickAgent(agent) },
+                    agent = agent
+                )
+            }
+        }
+    }
+}
+
+/**
+ * 会话项组件
+ */
 @Composable
 fun ConversationItem(
     modifier: Modifier,
@@ -247,6 +310,7 @@ fun ConversationItem(
     ) {
         Spacer(Modifier.width(16.dp))
 
+        // 头像
         IntyImage(
             modifier = Modifier.size(56.dp),
             model = conversation.agentAvatar,
@@ -255,9 +319,8 @@ fun ConversationItem(
 
         Spacer(Modifier.width(14.dp))
 
-        Column(
-            modifier = Modifier.weight(1f)
-        ) {
+        // 内容区域
+        Column(modifier = Modifier.weight(1f)) {
             Text(
                 modifier = Modifier.height(22.dp),
                 text = conversation.agentName,
@@ -277,9 +340,9 @@ fun ConversationItem(
                 overflow = TextOverflow.Ellipsis
             )
         }
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
+
+        // 右侧信息
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
                 text = conversation.getShowTime(),
                 fontSize = 12.sp,
@@ -299,41 +362,9 @@ fun ConversationItem(
     }
 }
 
-
-@Composable
-fun FollowingPage(
-    modifier: Modifier,
-    followingAgents: List<AgentInfo>,
-    onClickAgent: (AgentInfo) -> Unit,
-    onUnfollowAgent: ((String) -> Unit)? = null
-) {
-    LazyColumn(
-        modifier = modifier,
-    ) {
-        items(
-            items = followingAgents,
-            key = { agent -> agent.id }
-        ) { agent ->
-            if (onUnfollowAgent != null) {
-                SwipeToUnfollowItem(
-                    agent = agent,
-                    onClickAgent = onClickAgent,
-                    onUnfollowAgent = onUnfollowAgent
-                )
-            } else {
-                FollowingAgentItem(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .noRippleClickable {
-                            onClickAgent(agent)
-                        },
-                    agent = agent
-                )
-            }
-        }
-    }
-}
-
+/**
+ * 关注代理项组件
+ */
 @Composable
 fun FollowingAgentItem(
     modifier: Modifier,
@@ -345,6 +376,7 @@ fun FollowingAgentItem(
     ) {
         Spacer(Modifier.width(16.dp))
 
+        // 头像
         IntyImage(
             modifier = Modifier.size(56.dp),
             model = agent.avatar,
@@ -353,9 +385,8 @@ fun FollowingAgentItem(
 
         Spacer(Modifier.width(14.dp))
 
-        Column(
-            modifier = Modifier.weight(1f)
-        ) {
+        // 内容区域
+        Column(modifier = Modifier.weight(1f)) {
             Text(
                 modifier = Modifier.height(22.dp),
                 text = agent.name,
@@ -375,10 +406,9 @@ fun FollowingAgentItem(
                 overflow = TextOverflow.Ellipsis
             )
         }
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
 
+        // 右侧信息
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
                 text = formatTimestampToDateTime(agent.createdAt),
                 fontSize = 12.sp,
@@ -389,6 +419,9 @@ fun FollowingAgentItem(
     }
 }
 
+/**
+ * 滑动取消关注项组件
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SwipeToUnfollowItem(
@@ -427,24 +460,17 @@ fun SwipeToUnfollowItem(
                         imageVector = Icons.Default.Delete,
                         contentDescription = "取消关注",
                         tint = Color.White,
-                        modifier = Modifier.scale(progress)
                     )
                 }
             } else {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Color.Transparent)
-                )
+                Box(modifier = Modifier.fillMaxSize())
             }
         }
     ) {
         FollowingAgentItem(
             modifier = Modifier
                 .fillMaxWidth()
-                .noRippleClickable {
-                    onClickAgent(agent)
-                },
+                .noRippleClickable { onClickAgent(agent) },
             agent = agent
         )
     }
