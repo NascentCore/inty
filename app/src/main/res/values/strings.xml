@@ -1,3 +1,15 @@
+<!--
+    TODO: Use the following prompt to revise the strings.xml, dont do it now,
+    as we are preparing for the release, which uses screenshots and we want to avoid churns.
+    Revise the wording of these messages according to general rules about similar situations in android app, additionally, following these following rules:
+    1. Be consistent
+    2. Be precise
+    3. Be kind and inclusive
+    4. Be concise
+    5. Be clear
+    6. Be natural
+    7. Be positive
+-->
 <resources>
     <string name="app_name">IntelliMate</string>
     <string name="tab_message">Message</string>
