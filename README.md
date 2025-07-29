@@ -76,12 +76,13 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 ### 生产环境部署
 
+TODO: 只保留一种就够了！
+
 1. **配置生产环境**
 
 ```bash
-# 设置生产配置
+# 设置生产配置；编辑生产环境配置
 cp config.yaml.example config.yaml
-# 编辑生产环境配置
 ```
 
 2. **使用 Gunicorn 部署**
