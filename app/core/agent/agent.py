@@ -184,6 +184,7 @@ class Agent:
         agent_id: str,
         name: str,
         model_config: dict,
+        # TODO: description seems not used anywhere.
         description: str = "",
         # 主提示词和模式提示词参数
         main_prompt: str = "",
