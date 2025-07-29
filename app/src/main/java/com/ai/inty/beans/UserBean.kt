@@ -39,7 +39,8 @@ data class CreateGuestResult(
  *   "is_superuser": false,
  *   "public_agents_count": 0,
  *   "total_public_agents_follows": 0,
- *   "followers_count": 0
+ *   "followers_count": 0,
+ *   "connector_count": 0
  * }
  */
 @JsonClass(generateAdapter = true)
@@ -70,9 +71,11 @@ data class UserProfile(
     @Json(name = "public_agents_count")
     val publicAgentsCount: Int = 0,
     @Json(name = "total_public_agents_follows")
-    val connectorCount: Int = 0,
+    val totalAgentsFollows: Int = 0,
     @Json(name = "followers_count")
     val followerCount: Int = 0,
+    @Json(name = "connector_count")
+    val connectorCount: Int = 0,
 ) {
     /**
      * 性别代指
