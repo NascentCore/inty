@@ -12,6 +12,15 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    services:
+      pgsql:
+        image: pgvector/pgvector:pg16
+        ports:
+          - 15432:5432
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: sxwl666!
+          POSTGRES_DB: inty_db
 
     steps:
       - uses: actions/checkout@v4
@@ -26,10 +35,6 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install pytest
-
-      - name: Setup postgres
-        run: |
-          echo "TODO: Launch postgres docker container"
 
       - name: Run tests
         run: |
