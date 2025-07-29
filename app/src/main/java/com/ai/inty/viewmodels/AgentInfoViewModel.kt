@@ -49,7 +49,7 @@ class AgentInfoViewModel: BaseActivityViewModel() {
             refreshAgentData(agent.id)
         }
     }
-    
+
     private fun refreshAgentData(agentId: String) {
         viewModelScope.launch(Dispatchers.IO) {
             val result = agentApi.getAgentDetail(agentId)
@@ -65,11 +65,11 @@ class AgentInfoViewModel: BaseActivityViewModel() {
             }
         }
     }
-    
+
     fun followAgent(agentId: String, context: Context) {
         val currentAgent = _agentInfo.value ?: return
         EasyLog.log("followAgent: $agentId, current status: ${currentAgent.isFollowed}")
-        
+
         viewModelScope.launch(Dispatchers.IO) {
             val result = if (currentAgent.isFollowed) {
                 agentApi.unfollowAgent(agentId)
@@ -77,7 +77,7 @@ class AgentInfoViewModel: BaseActivityViewModel() {
                 agentApi.followAgent(agentId)
             }
             EasyLog.log("followAgent result = $result")
-            
+
             when (result) {
                 is HttpResult.Success -> {
                     val newFollowStatus = !currentAgent.isFollowed
@@ -90,8 +90,9 @@ class AgentInfoViewModel: BaseActivityViewModel() {
                         isFollowed = newFollowStatus,
                         followerCount = newFollowerCount
                     )
+
                     showSnackbar(result.data.message)
-                    
+
                     // Send broadcast to notify MainActivity about follow state change
                     val intent = Intent("FOLLOW_STATE_CHANGED")
                     intent.putExtra("agentId", agentId)
