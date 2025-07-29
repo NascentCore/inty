@@ -1638,6 +1638,7 @@ class AgentManager:
 agent_manager = AgentManager()
 
 
+# TODO: These should be replaced by test_agent.py.
 if __name__ == "__main__":
     import asyncio
 

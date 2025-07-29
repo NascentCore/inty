@@ -15,11 +15,13 @@ class LoggingConfig:
     rotation: str
     retention: str
 
+
 @dataclass
 class SecurityConfig:
     secret_key: str
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 60 * 24 * 7  # 7 days
+
 
 @dataclass
 class DatabaseSettings:
@@ -44,15 +46,18 @@ class DatabaseSettings:
     def async_url(self) -> str:
         return f"postgresql+asyncpg://{self.user}:{self.password}@{self.host}:{self.port}/{self.db}"
 
+
 @dataclass
 class GoogleOAuthConfig:
     client_id: Optional[str] = None
     client_secret: Optional[str] = None
     redirect_uri: Optional[str] = None
 
+
 @dataclass
 class VerificationConfig:
     code_expire_minutes: int = 5
+
 
 @dataclass
 class AppConfig:
@@ -66,6 +71,7 @@ class AppConfig:
         if self.backend_cors_origins is None:
             self.backend_cors_origins = []
 
+
 @dataclass
 class EmbeddingConfig:
     base_url: str = "http://localhost:8001/v1"
@@ -77,6 +83,7 @@ class EmbeddingConfig:
 class GoogleSearchConfig:
     api_key: str
     cse_id: str
+
 
 @dataclass
 class AgentConfig:
@@ -94,14 +101,17 @@ class AgentConfig:
     default_main_prompt: str = "你是一个AI助手，请根据你的角色设定与用户进行对话。"
     default_mode_prompt: str = "请保持友好、耐心的对话风格，根据角色特点进行回应。"
 
+
 @dataclass
 class GCSConfig:
     bucket: str
     credentials: str
 
+
 @dataclass
 class FirebaseConfig:
     service_account_path: str
+
 
 @dataclass
 class KeepTalkingConfig:
@@ -110,22 +120,27 @@ class KeepTalkingConfig:
     max_idle_time: int = 1800  # 30分钟没有回复则发送keep_talking消息
     max_keep_talking_messages: int = 3  # 最多发送3条keep_talking消息
 
+
 @dataclass
 class GooglePlayConfig:
     """Google Play配置"""
+
     service_account_key: str  # 服务账号密钥JSON字符串
     package_name: str  # 应用包名
     webhook_secret: Optional[str] = None  # Webhook密钥（可选）
 
+
 @dataclass
 class ElevenLabsConfig:
     """ElevenLabs语音生成配置"""
+
     api_key: str
     model: str = "eleven_multilingual_v2"
     voice_id: str = "JBFqnCBsd6RMkjVDRZzb"  # 默认语音ID
     output_format: str = "mp3_44100_128"
     enabled: bool = True
     max_text_length: int = 5000  # 最大文本长度限制
+
 
 @dataclass
 class Config:
@@ -144,12 +159,13 @@ class Config:
     google_play: GooglePlayConfig
     elevenlabs: ElevenLabsConfig
 
+
 def load_config(path: str = "config.yaml") -> Config:
     config_path = Path(path)
     if not config_path.exists():
         print(f"config file {path} not found!")
         sys.exit(1)
-    
+
     with open(path, "r", encoding="utf-8") as f:
         data = yaml.safe_load(f)
 
@@ -167,8 +183,8 @@ def load_config(path: str = "config.yaml") -> Config:
         firebase=FirebaseConfig(**data.get("firebase", {})),
         keep_talking=KeepTalkingConfig(**data.get("keep_talking", {})),
         google_play=GooglePlayConfig(**data.get("google_play", {})),
-        elevenlabs=ElevenLabsConfig(**data.get("elevenlabs", {}))
+        elevenlabs=ElevenLabsConfig(**data.get("elevenlabs", {})),
     )
 
-# load config
-settings = load_config() 
+
+settings = load_config()
