@@ -215,7 +215,6 @@ private fun ReportScreen(
 
             Spacer(Modifier.height(24.dp))
 
-
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -291,9 +290,7 @@ private fun ReportScreen(
                 Spacer(Modifier.height(16.dp))
             }
 
-
             Spacer(Modifier.height(24.dp))
-
 
             Column(
                 modifier = Modifier
@@ -360,6 +357,8 @@ private fun ReportScreen(
 
             Spacer(Modifier.height(60.dp))
 
+            SaveBtn(onSave = onSave)
+            Spacer(Modifier.height(60.dp))
         }
 
 
@@ -386,8 +385,8 @@ private fun ReportScreen(
                 )
 
             },
+        )
 
-            )
     }
 }
 
