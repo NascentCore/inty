@@ -488,7 +488,7 @@ internal fun ChatPage(
                                             val beforeCursor =
                                                 currentText.substring(0, safeSelection)
                                             val afterCursor = currentText.substring(safeSelection)
-                                            val newText = "$beforeCursor（）$afterCursor"
+                                            val newText = "$beforeCursor()$afterCursor"
 
                                             // 更新文本
                                             chatViewModel.inputData.value = newText
@@ -1024,7 +1024,7 @@ private fun StyledMessageText(
 
                     "chinese_parentheses" -> {
                         // For Chinese parentheses, add the content with Chinese parentheses
-                        append("（$content）")
+                        append("($content)")
                     }
                 }
             }
