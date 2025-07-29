@@ -237,6 +237,9 @@ Remember: You are {{ char }} talking to {{ user }}."""
             Rendered system prompt
         """
         template = self.get_template(template_name)
+        # TODO: This is bad. This is so-called defensive programming,
+        # which is ok for legacy code, but not for new code.
+        # New code should be strict in correctness across all code paths.
         if not template:
             logger.warning(
                 f"Template '{template_name}' not found, using basic template"
