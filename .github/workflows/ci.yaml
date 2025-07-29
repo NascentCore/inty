@@ -27,6 +27,10 @@ jobs:
           pip install -r requirements.txt
           pip install pytest
 
+      - name: Setup postgres
+        run: |
+          echo "TODO: Launch postgres docker container"
+
       - name: Run tests
         run: |
           cp config.yaml.example config.yaml
