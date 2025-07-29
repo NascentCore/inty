@@ -174,9 +174,9 @@ google_search_tool = Tool(
 
 class Agent:
     """
-    An agent is an instance of a character. It comprises of everything that to assemble
-    prompt from character information and user profile, and any other information that
-    is relevant to a role-play session between the character and the users.
+    An agent is an instance of a character. It assembles a prompt from character
+    information and user profile, and any other information that is relevant to a
+    role-play session between the character and the user.
     """
 
     def __init__(
