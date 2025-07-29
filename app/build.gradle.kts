@@ -170,13 +170,7 @@ android {
         sourceCompatibility = JavaVersion.VERSION_21
         targetCompatibility = JavaVersion.VERSION_21
     }
-    
-    kotlinOptions {
-        jvmTarget = "21"
-        freeCompilerArgs += listOf(
-            "-Xannotation-default-target=param-property"
-        )
-    }
+
 
     buildFeatures {
         compose = true
@@ -241,8 +235,11 @@ dependencies {
 
     //Google支付
 //    implementation(libs.billing.ktx)
-    //google 登录授权
-    implementation(libs.play.services.auth)
+
+    // 新的身份验证方式
+    implementation(libs.credential.manager)
+    implementation(libs.credential.play.service.auth)
+    implementation(libs.google.identity)
     //firebase 相关依赖
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.analytics)

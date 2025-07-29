@@ -18,11 +18,12 @@ composeBom = "2025.07.00"
 
 # Google 服务
 firebaseBom = "34.0.0"
-playServicesAuth = "21.4.0"
 billingKtx = "8.0.0"
 googleServices = "4.4.3"
 firebaseCrashlytics = "3.0.5"
 firebasePerf = "2.0.0"
+credentialManager = "1.6.0-alpha04"
+googleIdentity = "1.1.1"
 
 # 测试相关
 junit = "4.13.2"
@@ -69,8 +70,10 @@ firebase-messaging = { module = "com.google.firebase:firebase-messaging" }
 firebase-messaging-directboot = { module = "com.google.firebase:firebase-messaging-directboot" }
 firebase-crashlytics = { module = "com.google.firebase:firebase-crashlytics" }
 firebase-perf = { module = "com.google.firebase:firebase-perf" }
-play-services-auth = { group = "com.google.android.gms", name = "play-services-auth", version.ref = "playServicesAuth" }
 billing-ktx = { group = "com.android.billingclient", name = "billing-ktx", version.ref = "billingKtx" }
+credential-manager = { group = "androidx.credentials", name = "credentials", version.ref = "credentialManager" }
+credential-play-service-auth = { group = "androidx.credentials", name = "credentials-play-services-auth", version.ref = "credentialManager" }
+google-identity = { group = "com.google.android.libraries.identity.googleid", name = "googleid", version.ref = "googleIdentity" }
 
 # ===== 测试库 =====
 junit = { group = "junit", name = "junit", version.ref = "junit" }
