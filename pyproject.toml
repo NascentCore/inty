@@ -1,0 +1,9 @@
+[project]
+name = "inty-backend"
+version = "1.0.1"
+description = "Inty Backend Application"
+readme = "README.md"
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+asyncio_default_fixture_loop_scope = "function"
