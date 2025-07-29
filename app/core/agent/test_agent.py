@@ -6,7 +6,7 @@ from langchain_core.messages import HumanMessage
 
 from app.core.agent import prompts
 from app.core.agent.agent import Agent
-from app.core.agent.personality import EVERYONE_LIKES_YOU
+from app.core.agent.personality import EVERYONE_HATES_YOU, EVERYONE_LIKES_YOU
 from app.core.config import settings
 
 
@@ -59,7 +59,7 @@ class TestAgentChat:
             name=self.agent_name,
             model_config=self.model_config,
             description="Test agent for unit testing",
-            personality=EVERYONE_LIKES_YOU.to_prompt(),
+            personality=EVERYONE_HATES_YOU.to_prompt(),
             main_prompt=prompts.CHAT_SYS_PROMPT,
             mode_prompt=prompts.HELPFUL_MODE_PROMPT,
         )
