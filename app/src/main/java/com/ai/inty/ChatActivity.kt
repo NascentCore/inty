@@ -18,6 +18,7 @@ import com.ai.inty.base.ToastUtils
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.chat.ChatPage
 import com.ai.inty.net.IAgentApi
+import com.ai.inty.R
 import com.ai.inty.ui.theme.BackGround
 import com.ai.inty.ui.theme.IntyTheme
 import com.ai.inty.viewmodels.ChatViewModel
@@ -138,7 +139,7 @@ class ChatActivity : BaseActivity() {
 
                 when (result) {
                     is HttpResult.Success -> {
-                        handleFollowSuccess(agentId, true)
+                        handleFollowUnfollowSuccess(agentId, true)
                     }
 
                     is HttpResult.Failure -> {
@@ -164,7 +165,7 @@ class ChatActivity : BaseActivity() {
 
                 when (result) {
                     is HttpResult.Success -> {
-                        handleFollowSuccess(agentId, false)
+                        handleFollowUnfollowSuccess(agentId, false)
                     }
 
                     is HttpResult.Failure -> {
@@ -178,22 +179,22 @@ class ChatActivity : BaseActivity() {
         }
     }
 
-    // TODO: 函数名字表明已经成功，因此 isFollowed 是多余的；另外调用点也确实只会在 follow 成功后才会调用这个函数。
-    private fun handleFollowSuccess(agentId: String, isFollowed: Boolean) {
+    // follow/unfollow 成功后的处理函数
+    private fun handleFollowUnfollowSuccess(agentId: String, isFollow: Boolean) {
         runOnUiThread {
             lifecycleScope.launch {
-                val message = if (isFollowed) "Followed" else "Unfollowed"
+                val message = if (isFollow) R.string.followed_successfully else R.string.unfollowed_successfully
                 ToastUtils.showToast(message)
             }
         }
 
         // 更新ChatViewModel中的代理状态
-        chatViewModel.updateAgentFollowState(agentId, isFollowed)
+        chatViewModel.updateAgentFollowState(agentId, isFollow)
 
         // 通知其他组件关注状态变更
-        sendFollowStateBroadcast(agentId, isFollowed)
+        sendFollowStateBroadcast(agentId, isFollow)
 
-        EasyLog.log("Sent FOLLOW_STATE_CHANGED broadcast - ${if (isFollowed) "followed" else "unfollowed"}: $agentId")
+        EasyLog.log("Sent FOLLOW_STATE_CHANGED broadcast: agentId: $agentId, isFollow: $isFollow")
     }
 
     /**
