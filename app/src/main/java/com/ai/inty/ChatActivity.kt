@@ -178,9 +178,7 @@ class ChatActivity : BaseActivity() {
         }
     }
 
-    /**
-     * 处理关注成功
-     */
+    // TODO: 函数名字表明已经成功，因此 isFollowed 是多余的；另外调用点也确实只会在 follow 成功后才会调用这个函数。
     private fun handleFollowSuccess(agentId: String, isFollowed: Boolean) {
         runOnUiThread {
             lifecycleScope.launch {
