@@ -29,4 +29,5 @@ jobs:
 
       - name: Run tests
         run: |
+          cp config.yaml.example config.yaml
           PYTHONPATH=$(pwd) pytest app/ -v --tb=short -s

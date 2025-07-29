@@ -160,7 +160,7 @@ class Config:
     elevenlabs: ElevenLabsConfig
 
 
-def load_config(path: str = "config.yaml") -> Config:
+def load_config(path: str) -> Config:
     config_path = Path(path)
     if not config_path.exists():
         print(f"config file {path} not found!")
@@ -187,4 +187,4 @@ def load_config(path: str = "config.yaml") -> Config:
     )
 
 
-settings = load_config()
+settings = load_config("config.yaml")
