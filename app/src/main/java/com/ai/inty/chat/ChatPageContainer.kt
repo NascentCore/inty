@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
@@ -38,6 +39,7 @@ import com.ai.inty.beans.AgentInfo
 import com.ai.inty.beans.UserProfile
 import com.ai.inty.viewmodels.ChatViewModel
 import com.inty.utils.storage.IntySetting
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -51,13 +53,9 @@ fun ChatPageContainer(
     onPageChanged: (Int) -> Unit = {},
     onFollowAgent: ((String) -> Unit)? = null,
 ) {
-    val pageState = rememberPagerState(
-        initialPage = currentPageIndex
-    ) {
-        agentList.size
-    }
+    val pageState = rememberPagerState(initialPage = currentPageIndex) { agentList.size }
     val scope = rememberCoroutineScope()
-    
+
     // 监听页面变化
     LaunchedEffect(pageState.currentPage) {
         onPageChanged(pageState.currentPage)
@@ -68,9 +66,7 @@ fun ChatPageContainer(
             modifier = modifier,
             state = pageState,
         ) { currentPage ->
-
-            val agent = agentList.get(currentPage)
-
+            val agent = agentList[currentPage]
             val chatViewModel: ChatViewModel = viewModel(
                 key = agent.id,
                 factory = viewModelFactory
@@ -84,46 +80,56 @@ fun ChatPageContainer(
             ChatPage(
                 modifier = Modifier.fillMaxSize(),
                 chatViewModel = chatViewModel,
-            	onFollowAgent = onFollowAgent,
+                onFollowAgent = onFollowAgent,
             )
         }
 
-        //新用户 聊天滑动引导
-        var hasShowGuest by remember {
-            mutableStateOf(IntySetting.hasShowGuest())
+        // 新用户聊天滑动引导
+        NewUserGuide(
+            agentList = agentList,
+            pageState = pageState,
+            scope = scope
+        )
+    }
+}
+
+/**
+ * 新用户引导组件
+ */
+@Composable
+private fun NewUserGuide(
+    agentList: List<AgentInfo>,
+    pageState: PagerState,
+    scope: CoroutineScope,
+) {
+    var hasShowGuest by remember { mutableStateOf(IntySetting.hasShowGuest()) }
+
+    if (!hasShowGuest && agentList.size > 1) {
+        val density = LocalDensity.current
+        val pageScrollPx = with(density) { 80.dp.toPx() }
+        val showHand = MutableTransitionState(false)
+
+        LaunchedEffect(Unit) {
+            delay(3000)
+            showHand.targetState = true
+            pageState.animateScrollBy(pageScrollPx)
+            IntySetting.setShowGuested()
+            delay(1000)
+            showHand.targetState = false
+            pageState.animateScrollToPage(pageState.currentPage)
         }
-        if ( !hasShowGuest && (agentList.size > 1) ) {
 
-            val density = LocalDensity.current
-            val pageScrollPx = with(density) { 80.dp.toPx() }
-
-            val showHand = MutableTransitionState(false)
-
-            LaunchedEffect(Unit) {
-                    delay(3000)
-
-                    showHand.targetState = true
-                pageState.animateScrollBy(pageScrollPx)
-
-                    IntySetting.setShowGuested()
-
-                    delay(1000)
-                    showHand.targetState = false
-                    pageState.animateScrollToPage(pageState.currentPage)
-            }
-
-            AnimatedVisibility(
-                visibleState = showHand,
-                enter = fadeIn() + slideInHorizontally(
-                    initialOffsetX = { fullWidth ->
-                        fullWidth
-                    }
-                ),
-                exit = fadeOut(targetAlpha = 0.01f) + slideOutHorizontally(
-                    targetOffsetX = { it }
-                )
-            ) {
-                Box(modifier = Modifier
+        AnimatedVisibility(
+            visibleState = showHand,
+            enter = fadeIn() + slideInHorizontally(
+                initialOffsetX = { fullWidth -> fullWidth / 6 } // 从屏幕右侧1/6处出现
+            ),
+            exit = fadeOut(targetAlpha = 0.01f) + slideOutHorizontally(
+                targetOffsetX = { it }
+            )
+        ) {
+            Box(
+                modifier = Modifier
                     .fillMaxSize()
                     .noRippleClickable {
                         scope.launch {
@@ -131,33 +137,36 @@ fun ChatPageContainer(
                             pageState.animateScrollToPage(pageState.currentPage)
                             hasShowGuest = true
                         }
-                    }) {
-                    Box(
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(top = 340.dp)
-                            .size(210.dp, 40.dp)
-                            .background(
-                                brush = Brush.horizontalGradient(
-                                    colors = listOf(
-                                        Color.White.copy(0.7f),
-                                        Color.White.copy(0.1f)
-                                    )
-                                ),
-                                shape = RoundedCornerShape(
-                                    topStart = 20.dp, bottomStart = 20.dp
+                    }
+            ) {
+                // 背景渐变框
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(top = 340.dp)
+                        .size(210.dp, 40.dp)
+                        .background(
+                            brush = Brush.horizontalGradient(
+                                colors = listOf(
+                                    Color.White.copy(0.7f),
+                                    Color.White.copy(0.1f)
                                 )
+                            ),
+                            shape = RoundedCornerShape(
+                                topStart = 20.dp, bottomStart = 20.dp
                             )
-                    ) {}
-                    Image(
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(top = 340.dp, end = 92.dp)
-                            .size(112.dp),
-                        painter = painterResource(R.drawable.scroll_hand),
-                        contentDescription = ""
-                    )
-                }
+                        )
+                )
+
+                // 手势图标
+                Image(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(top = 340.dp, end = 92.dp)
+                        .size(112.dp),
+                    painter = painterResource(R.drawable.scroll_hand),
+                    contentDescription = "滑动引导手势"
+                )
             }
         }
     }
