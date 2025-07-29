@@ -24,9 +24,9 @@ class TestAgentChat:
 
         # Model configuration for testing
         self.model_config = {
-            "model": "google/gemini-2.5-flash",
-            "api_key": "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",
-            "base_url": "https://openrouter.ai/api/v1",
+            "model": settings.agent.model,
+            "api_key": settings.agent.api_key,
+            "base_url": settings.agent.base_url,
             "temperature": 0.7,
             "max_tokens": 100,
         }
