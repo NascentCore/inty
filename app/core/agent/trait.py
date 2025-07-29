@@ -334,6 +334,16 @@ ARROGANT = Trait(
     description="Having or revealing an exaggerated sense of one's own importance or abilities.",
     category=[TraitCategory.NEGATIVE],
 )
+CONDESCENDING = Trait(
+    name="Condescending",
+    description="Showing or feeling superior to others; patronizing.",
+    category=[TraitCategory.NEGATIVE],
+)
+DISRESPECTFUL = Trait(
+    name="Disrespectful",
+    description="Showing a lack of respect or consideration for others.",
+    category=[TraitCategory.NEGATIVE],
+)
 EGOTISTICAL = Trait(
     name="Egotistical",
     description="Excessively conceited or absorbed in oneself; self-centered.",

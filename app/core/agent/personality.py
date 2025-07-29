@@ -24,3 +24,12 @@ EVERYONE_LIKES_YOU = Personality(
         trait.CHEERFUL,
     ]
 )
+
+EVERYONE_HATES_YOU = Personality(
+    traits=[
+        trait.ARROGANT,
+        trait.CONDESCENDING,
+        trait.DISRESPECTFUL,
+        trait.RUDE,
+    ]
+)
