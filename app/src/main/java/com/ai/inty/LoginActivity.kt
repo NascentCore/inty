@@ -42,13 +42,9 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextDecoration
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -60,6 +56,7 @@ import com.ai.inty.base.ToastUtils
 import com.ai.inty.base.noRippleClickable
 import com.ai.inty.ui.theme.IntyTheme
 import com.ai.inty.utils.CredentialManagerHelper
+import com.ai.inty.utils.TextStyleUtils
 import com.ai.inty.utils.UserProfileManager
 import com.ai.inty.viewmodels.LoginActivityViewModel
 import com.inty.utils.log.EasyLog
@@ -335,14 +332,8 @@ private fun PolicyText(checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
             Spacer(Modifier.height(4.dp))
 
             Row {
-                val termsOfUse = buildAnnotatedString {
-                    withStyle(SpanStyle(textDecoration = TextDecoration.Underline)) {
-                        append(stringResource(R.string.terms_of_use))
-                    }
-                }
-
                 Text(
-                    text = termsOfUse,
+                    text = TextStyleUtils.createUnderlinedText(stringResource(R.string.terms_of_use)),
                     fontSize = 12.sp,
                     color = Color.White,
                     modifier = Modifier.noRippleClickable(onClick = {
@@ -360,14 +351,8 @@ private fun PolicyText(checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
                     fontSize = 12.sp
                 )
 
-                val policyStr = buildAnnotatedString {
-                    withStyle(SpanStyle(textDecoration = TextDecoration.Underline)) {
-                        append(stringResource(R.string.privacy_policy))
-                    }
-                }
-
                 Text(
-                    text = policyStr,
+                    text = TextStyleUtils.createUnderlinedText(stringResource(R.string.privacy_policy)),
                     fontSize = 12.sp,
                     color = Color.White,
                     modifier = Modifier.noRippleClickable(onClick = {

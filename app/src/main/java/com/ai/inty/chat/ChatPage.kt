@@ -58,12 +58,8 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -81,6 +77,7 @@ import com.ai.inty.base.noRippleClickable
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.beans.MsgInfo
 import com.ai.inty.ui.theme.BackGround
+import com.ai.inty.utils.ChatTextFormatter
 import com.ai.inty.utils.getChatBackground
 import com.ai.inty.viewmodels.ChatViewModel
 import com.inty.utils.log.EasyLog
@@ -972,84 +969,14 @@ private fun StyledMessageText(
     normalColor: Color,
     actionColor: Color,
 ) {
-    val annotatedText = buildAnnotatedString {
-        var currentIndex = 0
-
-        // Regex to match (text) and （text） patterns only
-        val parenthesesRegex = Regex("\\(([^)]+)\\)")
-        val chineseParenthesesRegex = Regex("（([^）]+)）")
-
-        // Create a list of all matches (parentheses and chinese parentheses) with their types
-        val allMatches = mutableListOf<Triple<IntRange, String, String>>() // range, content, type
-
-        parenthesesRegex.findAll(text).forEach { match ->
-            allMatches.add(Triple(match.range, match.groupValues[1], "parentheses"))
-        }
-
-        chineseParenthesesRegex.findAll(text).forEach { match ->
-            allMatches.add(Triple(match.range, match.groupValues[1], "chinese_parentheses"))
-        }
-
-        // Sort matches by start position
-        allMatches.sortBy { it.first.first }
-
-        allMatches.forEach { (range, content, type) ->
-            // Add text before the match
-            if (range.first > currentIndex) {
-                withStyle(
-                    style = SpanStyle(
-                        color = normalColor,
-                        fontSize = fontSize,
-                        fontWeight = fontWeight
-                    )
-                ) {
-                    append(text.substring(currentIndex, range.first))
-                }
-            }
-
-            // Add the styled text based on type
-            withStyle(
-                style = SpanStyle(
-                    color = actionColor,
-                    fontSize = fontSize,
-                    fontWeight = fontWeight,
-                    fontStyle = FontStyle.Italic
-                )
-            ) {
-                when (type) {
-                    "parentheses" -> {
-                        // For parentheses, add the content with parentheses
-                        append("($content)")
-                    }
-
-                    "chinese_parentheses" -> {
-                        // For Chinese parentheses, add the content with Chinese parentheses
-                        append("($content)")
-                    }
-                }
-            }
-
-            currentIndex = range.last + 1
-        }
-
-        // Add remaining text after last match
-        if (currentIndex < text.length) {
-            withStyle(
-                style = SpanStyle(
-                    color = normalColor,
-                    fontSize = fontSize,
-                    fontWeight = fontWeight
-                )
-            ) {
-                append(text.substring(currentIndex))
-            }
-        }
-    }
-
     Text(
-        text = annotatedText,
-        fontSize = fontSize,
-        fontWeight = fontWeight
+        text = ChatTextFormatter.formatChatMessage(
+            text = text,
+            fontSize = fontSize,
+            fontWeight = fontWeight,
+            normalColor = normalColor,
+            italicColor = actionColor
+        )
     )
 }
 
