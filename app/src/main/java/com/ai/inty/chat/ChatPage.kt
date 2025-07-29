@@ -670,7 +670,7 @@ internal fun ChatPage(
                         )
                         com.ai.inty.MySettingItem(
                             key = "My Persona",
-                            value = "Edit",
+                            value = userProfile.value.description ?: "Edit",
                             onClick = {
                                 // 检查是否正式登录（非游客且已登录）
                                 if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {

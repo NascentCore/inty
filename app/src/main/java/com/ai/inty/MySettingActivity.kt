@@ -44,6 +44,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -86,7 +88,7 @@ private fun EditKey.toDisplayName(): String {
  * 个人设置页面
  */
 @Route(path = Constant.ROUTE_SETTING_MY)
-class MySettingActivity: BaseActivity() {
+class MySettingActivity : BaseActivity() {
 
     @Autowired
     var userProfile: UserProfile? = null
@@ -130,7 +132,8 @@ class MySettingActivity: BaseActivity() {
                 }
 
                 val galleryLauncher = rememberLauncherForActivityResult(
-                    ActivityResultContracts.GetContent()) { imageUri ->
+                    ActivityResultContracts.GetContent()
+                ) { imageUri ->
                     imageUri?.let {
                         val intentCrop = UCropHelper.getIntent(context, it, cropTitle)
                         activityCropResultLauncher.launch(intentCrop)
@@ -176,8 +179,7 @@ class MySettingActivity: BaseActivity() {
                                 .background(Color.Black.copy(0.6f))
                                 .noRippleClickable {
                                     editKey = EditKey.None
-                                }
-                            ,
+                                },
                         ) {
 
 
@@ -268,6 +270,7 @@ class MySettingActivity: BaseActivity() {
                                                 onValueChange = {
                                                     editValue = it
                                                 },
+                                                maxLength = 400,
                                                 singleLine = false,
                                                 placeholder = {
                                                     Text(
@@ -295,17 +298,7 @@ class MySettingActivity: BaseActivity() {
                                             modifier = Modifier
                                                 .padding(horizontal = 16.dp, vertical = 0.dp)
                                                 .fillMaxWidth()
-                                                .height(48.dp)
-//                                                .background(
-//                                                    Color.White.copy(0.1f),
-//                                                    RoundedCornerShape(8.dp)
-//                                                )
-//                                                .border(
-//                                                    width = 0.5.dp,
-//                                                    color = Color.White.copy(0.2f),
-//                                                    shape = RoundedCornerShape(8.dp)
-//                                                )
-                                            ,
+                                                .height(48.dp),
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
                                             PronounsItem(
@@ -518,8 +511,7 @@ fun MySettingItem(
             .fillMaxWidth()
             .height(48.dp)
             .padding(horizontal = 12.dp)
-            .noRippleClickable { onClick() }
-        ,
+            .noRippleClickable { onClick() },
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
@@ -529,15 +521,19 @@ fun MySettingItem(
             color = Color.White
 
         )
-        Spacer(Modifier.weight(1f))
+        Spacer(Modifier.width(8.dp))
         Text(
             text = value,
             fontSize = 14.sp,
             fontWeight = FontWeight.Normal,
-            color = Color.White.copy(0.55f)
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            color = Color.White.copy(0.55f),
+            textAlign = TextAlign.End,
+            modifier = Modifier.weight(1f),
 
         )
-        Spacer(Modifier.width(10.dp))
+        Spacer(Modifier.width(8.dp))
         Image(
             painter = painterResource(R.drawable.icon_next),
             contentDescription = null,
@@ -610,8 +606,7 @@ private fun RowScope.PronounsItem(
             )
             .noRippleClickable {
                 onSelected()
-            }
-        ,
+            },
         contentAlignment = Alignment.Center,
     ) {
         if (isSelected) {

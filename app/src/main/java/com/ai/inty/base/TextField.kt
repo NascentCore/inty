@@ -208,8 +208,15 @@ fun IntySmallTextField2(
                     fontSize = 14.sp, color = TextFieldColor.Text
                 ),
                 onValueChange = { str ->
-                    if (maxLength > 0 && str.length <= maxLength)
+                    //有最大输入数字限制时候
+                    if (maxLength > 0 && str.length <= maxLength) {
                         onValueChange(str)
+                    } else {
+                        //不作限制
+                        if (maxLength == -1) {
+                            onValueChange(str)
+                        }
+                    }
                 },
                 keyboardOptions = keyboardOptions,
                 keyboardActions = newActions,
