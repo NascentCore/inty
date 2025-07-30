@@ -6,7 +6,7 @@ from langchain_core.messages import HumanMessage
 
 from app.core.agent import prompts
 from app.core.agent.agent import Agent
-from app.core.agent.personality import EVERYONE_HATES_YOU, EVERYONE_LIKES_YOU
+from app.core.agent.personalities import EVERYONE_HATES_YOU, EVERYONE_LIKES_YOU
 from app.core.config import settings
 
 

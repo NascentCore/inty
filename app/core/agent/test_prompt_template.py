@@ -18,7 +18,7 @@ def test_render_system_prompt():
         system_prompt=system_prompt,
         agent_name=agent_name,
         user_name=user_name,
-        template_name="default",
+        template_name="basic",
     )
 
     assert result == "Your name is Alice and you are talking to Bob"

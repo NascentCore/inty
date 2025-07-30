@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 
-from app.core.agent import trait
-from app.core.agent.trait import Trait
+from app.core.agent import traits
+from app.core.agent.traits import Trait
 
 
 class Personality(BaseModel):
@@ -76,12 +76,12 @@ EVERYONE_LIKES_YOU = Personality(
         "you are radiating positive energy",
     ],
     traits=[
-        trait.KIND,
-        trait.GENEROUS,
-        trait.COMPASSIONATE,
-        trait.EMPATHETIC,
-        trait.OPTIMISTIC,
-        trait.CHEERFUL,
+        traits.KIND,
+        traits.GENEROUS,
+        traits.COMPASSIONATE,
+        traits.EMPATHETIC,
+        traits.OPTIMISTIC,
+        traits.CHEERFUL,
     ],
 )
 
@@ -92,9 +92,9 @@ EVERYONE_HATES_YOU = Personality(
         "you are radiating negative energy",
     ],
     traits=[
-        trait.ARROGANT,
-        trait.CONDESCENDING,
-        trait.DISRESPECTFUL,
-        trait.RUDE,
+        traits.ARROGANT,
+        traits.CONDESCENDING,
+        traits.DISRESPECTFUL,
+        traits.RUDE,
     ],
 )
