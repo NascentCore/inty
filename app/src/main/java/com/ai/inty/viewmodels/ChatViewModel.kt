@@ -1,6 +1,5 @@
 package com.ai.inty.viewmodels
 
-import android.util.Log
 import androidx.compose.runtime.mutableStateListOf
 import androidx.lifecycle.viewModelScope
 import com.ai.inty.base.BaseActivityViewModel
@@ -80,24 +79,13 @@ class ChatViewModel : BaseActivityViewModel() {
                     is HttpResult.Success -> {
                         msgs.clear()
                         msgs.addAll(result.data.messages)
-                        Log.d(
-                            "测试",
-                            "queryMsgs Size ${result.data.messages.size} , msgSize:${msgs.size}",
-                        )
+
                     }
 
                     is HttpResult.Failure -> {
                         showSnackbar(result.message)
-                        Log.e(
-                            "测试",
-                            "queryMsgs msgSize:${msgs.size}",
-                        )
                     }
                 }
-                Log.w(
-                    "测试",
-                    "queryMsgs msgSize:${msgs.size}",
-                )
 
             }
         }

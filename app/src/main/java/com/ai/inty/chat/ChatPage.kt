@@ -360,7 +360,6 @@ internal fun ChatPage(
                     reverseLayout = true,
                 ) {
                     val msgs = chatViewModel.msgs
-                    EasyLog.log(" 测试，， msgs count = ${msgs.size}", 4)
                     item {
                         Spacer(Modifier.height(16.dp))
                     }
