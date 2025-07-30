@@ -136,32 +136,40 @@ class MainViewModel : BaseActivityViewModel() {
         _isLoading.value = true
         EasyLog.log("loadAgents - page: $currentPage")
         viewModelScope.launch(Dispatchers.IO) {
-            val result = agentApi.recommendAgents(currentPage, 10)
-            EasyLog.log("loadAgents = $result")
+            try {
+                val result = agentApi.recommendAgents(currentPage, 10)
+                EasyLog.log("loadAgents = $result")
 
-            when (result) {
-                is HttpResult.Success -> {
-                    result.data.list?.let { agents ->
-                        if (agents.isEmpty()) {
-                            hasMoreData = false
-                            EasyLog.log("No more agents to load")
-                        } else {
-                            agentList.addAll(agents)
-                            EasyLog.log("Added ${agents.size} agents, total: ${agentList.size}")
-                            // 只在第一页加载时设置chatViewModel
-                            if (currentPage == 1) {
-                                chatViewModel?.setAgentInfo(agentList.firstOrNull())
+                when (result) {
+                    is HttpResult.Success -> {
+                        result.data.list?.let { agents ->
+                            if (agents.isEmpty()) {
+                                hasMoreData = false
+                                EasyLog.log("No more agents to load")
+                            } else {
+                                agentList.addAll(agents)
+                                EasyLog.log("Added ${agents.size} agents, total: ${agentList.size}")
+                                // 只在第一页加载时设置chatViewModel
+                                if (currentPage == 1) {
+                                    chatViewModel?.setAgentInfo(agentList.firstOrNull())
+                                }
                             }
                         }
                     }
-                }
 
-                is HttpResult.Failure -> {
-                    showSnackbar(result.message)
-                    // 如果加载失败，回退页码
-                    if (currentPage > 1) {
-                        currentPage--
+                    is HttpResult.Failure -> {
+                        showNetworkAwareError(result.message)
+                        // 如果加载失败，回退页码
+                        if (currentPage > 1) {
+                            currentPage--
+                        }
                     }
+                }
+            } catch (e: Exception) {
+                handleNetworkException(e)
+                // 如果加载失败，回退页码
+                if (currentPage > 1) {
+                    currentPage--
                 }
             }
             _isLoading.value = false
@@ -237,9 +245,7 @@ class MainViewModel : BaseActivityViewModel() {
                             "getUserProfile failure: ${result.message}",
                             priority = EasyLog.ERROR
                         )
-                        withContext(Dispatchers.Main) {
-                            showSnackbar(result.message)
-                        }
+                        showNetworkAwareError(result.message)
                     }
                 }
             } catch (e: retrofit2.HttpException) {
@@ -254,15 +260,11 @@ class MainViewModel : BaseActivityViewModel() {
                     502, 503 -> "Server temporarily unavailable, please try again later"
                     else -> "Failed to get user information (${e.code()})"
                 }
-                withContext(Dispatchers.Main) {
-                    showSnackbar(errorMessage)
-                }
+                showNetworkAwareError(errorMessage)
             } catch (e: Exception) {
                 EasyLog.log("getUserProfile exception: ${e.message}", priority = EasyLog.ERROR)
                 EasyLog.log(e)
-                withContext(Dispatchers.Main) {
-                    showSnackbar("Failed to get user information: ${e.message}")
-                }
+                handleNetworkException(e)
             }
         }
     }
@@ -299,16 +301,22 @@ class MainViewModel : BaseActivityViewModel() {
 
     fun getSysMsgs() {
         viewModelScope.launch(Dispatchers.IO) {
-            val result = userApi.getSysMsgs(1, 10)
-            EasyLog.log("getSysMsgs = $result")
-            when (result) {
-                is HttpResult.Success -> {
-                    sysMsgs.addAll(result.data.list)
-                }
+            try {
+                val result = userApi.getSysMsgs(1, 10)
+                EasyLog.log("getSysMsgs = $result")
+                when (result) {
+                    is HttpResult.Success -> {
+                        sysMsgs.clear()
+                        sysMsgs.addAll(result.data.list)
+                    }
 
-                is HttpResult.Failure -> {
-
+                    is HttpResult.Failure -> {
+                        showNetworkAwareError(result.message)
+                    }
                 }
+            } catch (e: Exception) {
+                EasyLog.log("getSysMsgs exception: ${e.message}", priority = EasyLog.ERROR)
+                handleNetworkException(e)
             }
         }
     }
@@ -510,7 +518,7 @@ class MainViewModel : BaseActivityViewModel() {
                             "loadUserCreatedAgents - API failure: ${result.message}",
                             priority = EasyLog.ERROR
                         )
-                        showSnackbar(result.message)
+                        showNetworkAwareError(result.message)
                         // If loading failed, rollback page counter
                         if (currentUserAgentsPage > 0) {
                             currentUserAgentsPage--
@@ -519,11 +527,11 @@ class MainViewModel : BaseActivityViewModel() {
                 }
             } catch (e: Exception) {
                 EasyLog.log(
-                    "loadUserCreatedAgents - Exception occurred: ${e.message}",
+                    "loadUserCreatedAgents exception: ${e.message}",
                     priority = EasyLog.ERROR
                 )
                 EasyLog.log(e)
-                showSnackbar("Failed to load created agents: ${e.message}")
+                handleNetworkException(e)
                 // If loading failed, rollback page counter
                 if (currentUserAgentsPage > 0) {
                     currentUserAgentsPage--

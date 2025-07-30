@@ -26,19 +26,23 @@ class AgentInfoViewModel: BaseActivityViewModel() {
 
     fun setAgentID(agentId: String) {
         viewModelScope.launch(Dispatchers.IO) {
-            val result = chatApi.getAgentInfo(agentId)
-            EasyLog.log("getAgentInfo = $result")
-            when (result) {
-                is HttpResult.Success -> {
-                    setAgentInfo(result.data)
+            try {
+                val result = chatApi.getAgentInfo(agentId)
+                EasyLog.log("getAgentInfo = $result")
+                when (result) {
+                    is HttpResult.Success -> {
+                        setAgentInfo(result.data)
+                    }
 
+                    is HttpResult.Failure -> {
+                        showNetworkAwareError(result.message)
+                    }
                 }
-                is HttpResult.Failure -> {
-                    showSnackbar(result.message)
-                }
+            } catch (e: Exception) {
+                EasyLog.log("setAgentID exception: ${e.message}", priority = EasyLog.ERROR)
+                handleNetworkException(e)
             }
         }
-
     }
 
     fun setAgentInfo(agentInfo: AgentInfo?) {
@@ -52,16 +56,21 @@ class AgentInfoViewModel: BaseActivityViewModel() {
 
     private fun refreshAgentData(agentId: String) {
         viewModelScope.launch(Dispatchers.IO) {
-            val result = agentApi.getAgentDetail(agentId)
-            EasyLog.log("refreshAgentData = $result")
-            when (result) {
-                is HttpResult.Success -> {
-                    _agentInfo.value = result.data
-                    EasyLog.log("Creator stats: publicAgentsCount=${result.data.creator?.publicAgentsCount}, totalPublicAgentsFollows=${result.data.creator?.totalPublicAgentsFollows}")
+            try {
+                val result = agentApi.getAgentDetail(agentId)
+                EasyLog.log("refreshAgentData = $result")
+                when (result) {
+                    is HttpResult.Success -> {
+                        _agentInfo.value = result.data
+                    }
+
+                    is HttpResult.Failure -> {
+                        showNetworkAwareError(result.message)
+                    }
                 }
-                is HttpResult.Failure -> {
-                    EasyLog.log("Failed to refresh agent data: ${result.message}")
-                }
+            } catch (e: Exception) {
+                EasyLog.log("refreshAgentData exception: ${e.message}", priority = EasyLog.ERROR)
+                handleNetworkException(e)
             }
         }
     }

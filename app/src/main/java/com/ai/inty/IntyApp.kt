@@ -3,6 +3,7 @@ package com.ai.inty
 import android.app.Application
 import android.content.Context
 import com.ai.inty.base.initImageLoader
+import com.ai.inty.utils.NetworkManager
 import com.inty.utils.AppEnv
 import com.inty.utils.log.EasyLog
 import com.inty.utils.log.defaultInit
@@ -33,5 +34,8 @@ class IntyApp : Application() {
 
         EasyLog.defaultInit()
         initImageLoader()
+
+        // 初始化网络管理器
+        NetworkManager.getInstance().initialize(this)
     }
 }

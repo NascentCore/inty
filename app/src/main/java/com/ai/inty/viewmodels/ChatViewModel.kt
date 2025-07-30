@@ -9,6 +9,7 @@ import com.ai.inty.beans.MsgInfo
 import com.ai.inty.beans.SendMsgReq
 import com.ai.inty.beans.UserProfile
 import com.ai.inty.net.IChatApi
+import com.ai.inty.utils.NetworkManager
 import com.ai.inty.utils.UserProfileManager
 import com.architecture.httplib.core.HttpResult
 import com.inty.utils.log.EasyLog
@@ -71,28 +72,39 @@ class ChatViewModel : BaseActivityViewModel() {
 
     fun queryMsgs() {
         viewModelScope.launch(Dispatchers.IO) {
+            try {
+                agentInfo.value?.let { agent ->
+                    val result = chatApi.getMsgs(agent.id, 100, 0)
+                    EasyLog.log("queryMsgs ($agent) = $result")
+                    when (result) {
+                        is HttpResult.Success -> {
+                            msgs.clear()
+                            msgs.addAll(result.data.messages)
+                        }
 
-            agentInfo.value?.let { agent ->
-                val result = chatApi.getMsgs(agent.id, 100, 0)
-                EasyLog.log("queryMsgs ($agent) = $result")
-                when (result) {
-                    is HttpResult.Success -> {
-                        msgs.clear()
-                        msgs.addAll(result.data.messages)
-
-                    }
-
-                    is HttpResult.Failure -> {
-                        showSnackbar(result.message)
+                        is HttpResult.Failure -> {
+                            showNetworkAwareError(result.message)
+                        }
                     }
                 }
-
+            } catch (e: Exception) {
+                EasyLog.log("queryMsgs exception: ${e.message}", priority = EasyLog.ERROR)
+                handleNetworkException(e)
             }
         }
     }
 
     fun sendMsg() {
         viewModelScope.launch(Dispatchers.IO) {
+            // 检查网络连接
+            val networkManager = NetworkManager.getInstance()
+            if (!networkManager.isNetworkConnected()) {
+                withContext(Dispatchers.Main) {
+                    showSnackbar("Please check your network connection")
+                }
+                return@launch
+            }
+
             val inputMsg = inputData.value
             inputData.value = ""
             EasyLog.log("send msg $inputMsg")
@@ -150,17 +162,24 @@ class ChatViewModel : BaseActivityViewModel() {
                     }
 
                     is HttpResult.Failure -> {
-                        showSnackbar(result.message)
+                        showNetworkAwareError(result.message)
                     }
                 }
             }
-
-
         }
     }
 
     fun sendKeepTalkingMessage() {
         viewModelScope.launch(Dispatchers.IO) {
+            // 检查网络连接
+            val networkManager = NetworkManager.getInstance()
+            if (!networkManager.isNetworkConnected()) {
+                withContext(Dispatchers.Main) {
+                    showSnackbar("Please check your network connection")
+                }
+                return@launch
+            }
+
             val keepTalkingMsg = "continue"
             EasyLog.log("send keep talking msg")
 
@@ -215,7 +234,7 @@ class ChatViewModel : BaseActivityViewModel() {
                     }
 
                     is HttpResult.Failure -> {
-                        showSnackbar(result.message)
+                        showNetworkAwareError(result.message)
                     }
                 }
             }
@@ -224,43 +243,50 @@ class ChatViewModel : BaseActivityViewModel() {
 
     fun getConversions() {
         viewModelScope.launch(Dispatchers.IO) {
-            val result = chatApi.getConversions(0, 100)
-            EasyLog.log("getConversions = $result")
-            conversions.clear()
-            when (result) {
-                is HttpResult.Success -> {
-                    // 只显示用户主动发起的对话
-                    val userInitiatedConversations = result.data.filter { conversation ->
-                        IntySetting.isUserInitiatedConversation(conversation.agentId)
+            try {
+                val result = chatApi.getConversions(0, 100)
+                EasyLog.log("getConversions = $result")
+                conversions.clear()
+                when (result) {
+                    is HttpResult.Success -> {
+                        // 只显示用户主动发起的对话
+                        val userInitiatedConversations = result.data.filter { conversation ->
+                            IntySetting.isUserInitiatedConversation(conversation.agentId)
+                        }
+                        conversions.addAll(userInitiatedConversations)
+                        EasyLog.log("Filtered conversations: ${userInitiatedConversations.size} out of ${result.data.size}")
                     }
-                    conversions.addAll(userInitiatedConversations)
-                    EasyLog.log("Filtered conversations: ${userInitiatedConversations.size} out of ${result.data.size}")
-                }
 
-                is HttpResult.Failure -> {
-                    showSnackbar(result.message)
+                    is HttpResult.Failure -> {
+                        showNetworkAwareError(result.message)
+                    }
                 }
-
+            } catch (e: Exception) {
+                EasyLog.log("getConversions exception: ${e.message}", priority = EasyLog.ERROR)
+                handleNetworkException(e)
             }
         }
     }
 
     fun setAgentID(agentId: String) {
         viewModelScope.launch(Dispatchers.IO) {
-            val result = chatApi.getAgentInfo(agentId)
-            EasyLog.log("getAgentInfo = $result")
-            when (result) {
-                is HttpResult.Success -> {
-                    setAgentInfo(result.data)
+            try {
+                val result = chatApi.getAgentInfo(agentId)
+                EasyLog.log("getAgentInfo = $result")
+                when (result) {
+                    is HttpResult.Success -> {
+                        setAgentInfo(result.data)
+                    }
 
+                    is HttpResult.Failure -> {
+                        showNetworkAwareError(result.message)
+                    }
                 }
-
-                is HttpResult.Failure -> {
-                    showSnackbar(result.message)
-                }
+            } catch (e: Exception) {
+                EasyLog.log("setAgentID exception: ${e.message}", priority = EasyLog.ERROR)
+                handleNetworkException(e)
             }
         }
-
     }
 
     fun setConversionReaded(conversationItem: ConversationItem) {
@@ -279,8 +305,10 @@ class ChatViewModel : BaseActivityViewModel() {
         msgs.clear()
         conversions.clear()
         _agentInfo.value = null
+        _userProfile.value = UserProfile()
         inputData.value = ""
-        EasyLog.log("ChatViewModel cleared all data")
+        inputSelection.value = 0
+        _isWaitingForReply.value = false
     }
 
     fun setUserProfile(userProfile: UserProfile) {
