@@ -5,8 +5,15 @@ package com.ai.inty
  */
 class Constant {
     companion object {
+        // This refers to the production backend endpoint.
+        // Right now it's same as dev instance, as the prod environment is not yet setup.
         const val USER_HOST = "dev.inty.sxwl.ai"
+
+        // This refers to the shared development backend endpoint.
         const val USER_HOST_DEV = "dev.inty.sxwl.ai"
+
+        // This refers to the local backend endpoint. Used for local development.
+        const val USER_HOST_LOCAL = "localhost:8000"
 
         const val SYS_NOTIFICATION_ID = "SYS_NOTIFICATION_ID_888"
 
