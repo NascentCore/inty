@@ -120,6 +120,26 @@ PYTHONPATH=/Users/yzhao/Workspace/NascentCore/inty-backend \
     pytest app/core/agent/agent_test.py -v
 ```
 
+## 服务帐号密钥生成
+配置文件中需要配置 GCS 和 FireBase 的服务帐号密钥
+
+### Firebase 服务账号密钥生成：
+  1. 进入 Firebase Console：
+    - 访问 https://console.firebase.google.com/
+    - 选择项目 "inty-87a58"
+  2. 生成服务账号密钥：
+    - 在项目设置 -> 服务账号 -> 生成新的私钥
+    - 下载的文件重命名为：inty-firebase-key.json
+
+### Google Cloud Storage 服务账号密钥生成：
+  1. 进入 Google Cloud Console：
+    - 访问 https://console.cloud.google.com/
+    - 选择对应的项目（Inty）
+  2. 创建服务账号：
+    - 设置 “roles/storage.admin” 角色
+    - 点击创建的服务帐号 -> 密钥 -> 创建新密钥
+    - 下载的文件重命名为：inty-backend-key.json
+
 ## 功能特性
 
 TODO: 这部分内容应该浓缩成对读者有价值的关键信息，而不是罗列低效信息。
