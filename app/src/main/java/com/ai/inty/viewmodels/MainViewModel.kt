@@ -414,9 +414,9 @@ class MainViewModel : BaseActivityViewModel() {
                     // Remove from following list
                     followingAgents.removeAll { it.id == agentId }
                     // Show success toast
-                    viewModelScope.launch(Dispatchers.Main) {
-                        ToastUtils.showToast(R.string.unfollowed_successfully)
-                    }
+//                    viewModelScope.launch(Dispatchers.Main) {
+//                        ToastUtils.showToast(R.string.unfollowed_successfully)
+//                    }
                     // Update agent state in list
                     updateAgentFollowStateInList(agentId, false)
                     // Send broadcast to update UI with required parameters

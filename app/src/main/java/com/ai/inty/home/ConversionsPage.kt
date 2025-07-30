@@ -1,5 +1,6 @@
 package com.ai.inty.home
 
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,12 +19,18 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -302,7 +309,7 @@ private fun FollowingTabContent(
 fun ConversationItem(
     modifier: Modifier,
     conversation: ConversationItem,
-    placeholderID: Int = R.drawable.app_icon
+    placeholderID: Int = R.drawable.app_icon,
 ) {
     Row(
         modifier = modifier.height(88.dp),
@@ -368,7 +375,7 @@ fun ConversationItem(
 @Composable
 fun FollowingAgentItem(
     modifier: Modifier,
-    agent: AgentInfo
+    agent: AgentInfo,
 ) {
     Row(
         modifier = modifier.height(88.dp),
@@ -427,51 +434,67 @@ fun FollowingAgentItem(
 fun SwipeToUnfollowItem(
     agent: AgentInfo,
     onClickAgent: (AgentInfo) -> Unit,
-    onUnfollowAgent: (String) -> Unit
+    onUnfollowAgent: (String) -> Unit,
 ) {
-    val swipeState = rememberSwipeToDismissBoxState(
-        confirmValueChange = { dismissValue ->
-            when (dismissValue) {
-                SwipeToDismissBoxValue.EndToStart -> {
-                    onUnfollowAgent(agent.id)
-                    false // Return false to prevent automatic dismissal
-                }
-                else -> false
-            }
+    var isDeleting by remember { mutableStateOf(false) }
+    val swipeToDismissBoxState = rememberSwipeToDismissBoxState()
+
+    LaunchedEffect(swipeToDismissBoxState.currentValue) {
+        if (swipeToDismissBoxState.currentValue == SwipeToDismissBoxValue.EndToStart &&
+            swipeToDismissBoxState.progress > 0.8f && !isDeleting
+        ) {
+            isDeleting = true
+            onUnfollowAgent(agent.id)
+            // 重置状态，确保位置恢复
+            swipeToDismissBoxState.reset()
         }
-    )
+    }
 
     SwipeToDismissBox(
-        state = swipeState,
-        enableDismissFromStartToEnd = false,
+        state = swipeToDismissBoxState,
+        enableDismissFromStartToEnd = false, // 禁用从左向右滑动
         backgroundContent = {
-            val progress = swipeState.progress
-            val isSwipingToEnd = swipeState.dismissDirection == SwipeToDismissBoxValue.EndToStart
-            
-            if (isSwipingToEnd && progress > 0.1f) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Color.Red.copy(alpha = progress))
-                        .padding(16.dp),
-                    contentAlignment = Alignment.CenterEnd
+            val color by animateColorAsState(
+                when (swipeToDismissBoxState.targetValue) {
+                    SwipeToDismissBoxValue.Settled -> Color.Transparent
+                    SwipeToDismissBoxValue.EndToStart -> Color.Red
+                    SwipeToDismissBoxValue.StartToEnd -> Color.Transparent
+                }
+            )
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(color)
+                    .padding(horizontal = 20.dp),
+                contentAlignment = Alignment.CenterEnd
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Icon(
                         imageVector = Icons.Default.Delete,
-                        contentDescription = "取消关注",
-                        tint = Color.White,
+                        contentDescription = "Unfollow",
+                        tint = Color.White
                     )
+                    if (swipeToDismissBoxState.progress > 0.5f) {
+                        Text(
+                            text = "Release to unfollow",
+                            color = Color.White,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
                 }
-            } else {
-                Box(modifier = Modifier.fillMaxSize())
             }
+        },
+        content = {
+            FollowingAgentItem(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color(0xFF1C1523))
+                    .noRippleClickable { onClickAgent(agent) },
+                agent = agent
+            )
         }
-    ) {
-        FollowingAgentItem(
-            modifier = Modifier
-                .fillMaxWidth()
-                .noRippleClickable { onClickAgent(agent) },
-            agent = agent
-        )
-    }
+    )
 }
