@@ -111,6 +111,8 @@ def generate_background_image_to_gcs(
         The person's information:
         age: 22 - 35
         gender: {opposite_gender}
+
+        Important requirement: The image must be of a person. It cannot be a landscape, object, or any other non-human content.
         """
 
         # 使用新的Google Gen AI SDK生成图片
@@ -183,11 +185,20 @@ def generate_background_image_to_gcs(
 
 
 if __name__ == "__main__":
-    prompt = "a beautiful girl, age: 25"
+    prompt = """
+    The person's description:
+    a beautiful girl
+
+    The person's information:
+    age: 22 - 35
+    gender: female
+
+    Important requirement: The image must be of a person. It cannot be a landscape, object, or any other non-human content.
+    """
 
     # 使用新的SDK进行测试
     config = types.GenerateImagesConfig(
-        number_of_images=4,
+        number_of_images=1,
         aspect_ratio="1:1",
         safety_filter_level=types.SafetyFilterLevel.BLOCK_MEDIUM_AND_ABOVE,
         person_generation=types.PersonGeneration.ALLOW_ADULT,
@@ -200,8 +211,10 @@ if __name__ == "__main__":
     )
 
     for image in response.generated_images:
-        image.image.show()
-        print(image.image.gcs_uri)
+        if image.rai_filtered_reason:
+            print(image.rai_filtered_reason)
+        else:
+            image.image.save("test.png")
 
     # 测试我们的函数
     # result = generate_background_image_to_gcs(
