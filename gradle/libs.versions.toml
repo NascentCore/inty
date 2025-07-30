@@ -2,6 +2,7 @@
 # Android & Kotlin 核心版本
 agp = "8.11.1"
 kotlin = "2.2.0"
+coroutines = "1.10.2"
 ksp = "2.2.0-2.0.2"
 
 # AndroidX 核心库
@@ -81,6 +82,8 @@ androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "j
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
 
 # ===== 腾讯系库 =====
+kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
+kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
 mmkv = { group = "com.tencent", name = "mmkv", version.ref = "mmkv" }
 mars-xlog = { group = "com.tencent.mars", name = "mars-xlog", version.ref = "mars" }
 

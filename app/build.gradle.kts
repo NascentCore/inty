@@ -249,6 +249,10 @@ dependencies {
     implementation(libs.firebase.perf)
 
     api(libs.ucrop)
+
+    // 协程支持
+    implementation(libs.kotlinx.coroutines.core)
+    implementation(libs.kotlinx.coroutines.android)
 }
 
 // GitHub Actions直接从构建文件和Git历史中提取版本信息，不再需要专门的Gradle任务
