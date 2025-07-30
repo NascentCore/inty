@@ -160,9 +160,17 @@ async def create_chat(
         if agent.opening:
             try:
                 session_id = generate_session_id(chat_id)
-                chat_history_service.add_agent_opening_message(session_id, agent.opening)
+                # 检查是否已有消息，避免重复添加开场白
+                existing_messages = chat_history_service.get_messages_paginated(
+                    session_id=session_id, limit=1, offset=0
+                )
+                if existing_messages.get('total', 0) == 0:
+                    chat_history_service.add_agent_opening_message(session_id, agent.opening)
+                    logger.info(f"添加Agent开场白成功 - Session ID: {session_id}")
+                else:
+                    logger.debug(f"聊天会话已有消息({existing_messages.get('total', 0)}条)，跳过开场白添加 - Session ID: {session_id}")
             except Exception as e:
-                logger.error(f"Failed to add opening message: {str(e)}")
+                logger.error(f"处理开场白失败: {str(e)}")
                 # Continue execution, don't affect chat creation
         
         # Re-query to load relational data
@@ -429,11 +437,17 @@ async def get_or_create_chat_by_agent(
         if agent_opening:
             try:
                 session_id = generate_session_id(chat_id)
-                # 直接添加开场白，但简化处理避免长时间阻塞
-                chat_history_service.add_agent_opening_message(session_id, agent_opening)
-                logger.info(f"添加Agent开场白成功 - Session ID: {session_id}")
+                # 检查是否已有消息，避免重复添加开场白
+                existing_messages = chat_history_service.get_messages_paginated(
+                    session_id=session_id, limit=1, offset=0
+                )
+                if existing_messages.get('total', 0) == 0:
+                    chat_history_service.add_agent_opening_message(session_id, agent_opening)
+                    logger.info(f"添加Agent开场白成功 - Session ID: {session_id}")
+                else:
+                    logger.debug(f"聊天会话已有消息({existing_messages.get('total', 0)}条)，跳过开场白添加 - Session ID: {session_id}")
             except Exception as e:
-                logger.error(f"提交开场白添加任务失败: {str(e)}")
+                logger.error(f"处理开场白失败: {str(e)}")
                 # 继续执行，不影响chat创建
         
         # 9. 设置Agent信息并缓存会话（优化：避免重复查询）
