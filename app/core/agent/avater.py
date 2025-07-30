@@ -117,7 +117,8 @@ def generate_background_image_to_gcs(
         config = types.GenerateImagesConfig(
             number_of_images=count,
             aspect_ratio=aspect_ratio,
-            safety_filter_level=types.SafetyFilterLevel.BLOCK_MEDIUM_AND_ABOVE,
+            # TODO: 上架期间仅生成低风险图片，选择屏蔽低风险和以上风险图片。
+            safety_filter_level=types.SafetyFilterLevel.BLOCK_LOW_AND_ABOVE,
             person_generation=types.PersonGeneration.ALLOW_ADULT,
             output_gcs_uri=gcs_uri_base,
             include_rai_reason=include_rai_reason,
