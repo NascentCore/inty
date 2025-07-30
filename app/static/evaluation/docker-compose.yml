@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  inty-frontend:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    container_name: inty-evaluation-frontend
+    ports:
+      - "3000:80"
+    environment:
+      - NODE_ENV=production
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - inty-network
+
+  # 如果需要与后端一起部署，可以添加后端服务
+  # inty-backend:
+  #   image: your-backend-image:latest
+  #   container_name: inty-backend
+  #   ports:
+  #     - "8000:8000"
+  #   environment:
+  #     - NODE_ENV=production
+  #   networks:
+  #     - inty-network
+
+networks:
+  inty-network:
+    driver: bridge

@@ -5,6 +5,7 @@ from fastapi.openapi.utils import get_openapi
 from jose.exceptions import JWTError
 from loguru import logger
 from pydantic import ValidationError
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -59,6 +60,12 @@ app.add_exception_handler(SQLAlchemyError, sqlalchemy_exception_handler)
 app.add_exception_handler(ValidationError, validation_error_handler)
 
 app.include_router(api_router, prefix=settings.app.api_v1_prefix)
+
+# 配置静态文件服务 - 用于评测系统前端
+import os
+static_dir = os.path.join(os.path.dirname(__file__), "static")
+if os.path.exists(static_dir):
+    app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
 # 初始化 Firebase
 init_firebase()

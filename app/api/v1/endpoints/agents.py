@@ -996,3 +996,58 @@ async def get_character_card_features(
         return APIResponse.error(
             message=f"Failed to get character card features: {str(e)}"
         )
+
+
+@router.get("/models/openrouter", response_model=schemas.APIResponse[List[dict]])
+async def get_openrouter_models(
+    current_user: schemas.User = Depends(deps.get_current_active_user)
+):
+    """
+    获取OpenRouter模型列表
+    """
+    try:
+        from app.services.scoring_service import ScoringService
+        
+        scoring_service = ScoringService()
+        models = await scoring_service._fetch_openrouter_models()
+        
+        if models is None:
+            # 如果获取失败，返回默认模型列表
+            models = [
+                {
+                    "id": "openai/gpt-4o",
+                    "name": "GPT-4o",
+                    "description": "OpenAI最新的多模态模型，支持文本、图像、音频和视频处理"
+                },
+                {
+                    "id": "openai/gpt-4o-mini",
+                    "name": "GPT-4o Mini",
+                    "description": "OpenAI的轻量级多模态模型，快速且经济"
+                },
+                {
+                    "id": "anthropic/claude-3.5-sonnet",
+                    "name": "Claude 3.5 Sonnet",
+                    "description": "Anthropic的最新Claude模型，擅长分析、写作和推理"
+                },
+                {
+                    "id": "anthropic/claude-3.5-haiku",
+                    "name": "Claude 3.5 Haiku",
+                    "description": "Anthropic的快速模型，适合实时对话"
+                },
+                {
+                    "id": "google/gemini-pro-1.5",
+                    "name": "Gemini Pro 1.5",
+                    "description": "Google的Gemini模型，支持长上下文和多模态"
+                },
+                {
+                    "id": "meta-llama/llama-3.1-405b-instruct",
+                    "name": "Llama 3.1 405B Instruct",
+                    "description": "Meta最大的开源语言模型，顶级性能"
+                }
+            ]
+        
+        return schemas.APIResponse.success(data=models)
+        
+    except Exception as e:
+        logger.error(f"获取OpenRouter模型失败: {str(e)}")
+        return schemas.APIResponse.error(message=f"获取OpenRouter模型失败: {str(e)}") 

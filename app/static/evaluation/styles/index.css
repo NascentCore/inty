@@ -1,0 +1,321 @@
+/**
+ * 评测系统全局样式
+ */
+
+/* 全局样式重置 */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB',
+    'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.5715;
+  color: rgba(0, 0, 0, 0.85);
+  background-color: #f0f2f5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* 滚动条样式 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* 布局组件样式 */
+.evaluation-page {
+  min-height: 100vh;
+}
+
+.chat-page {
+  min-height: 100vh;
+}
+
+/* 智能体选择器样式 */
+.agent-selector .agent-item {
+  transition: all 0.3s ease;
+}
+
+.agent-selector .agent-item:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transform: translateY(-1px);
+}
+
+.agent-selector .agent-item.selected {
+  border-color: #1890ff !important;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+}
+
+/* 问题管理器样式 */
+.question-manager .question-item {
+  transition: all 0.2s ease;
+}
+
+.question-manager .question-item:hover {
+  background-color: #fafafa;
+  border-color: #d9d9d9;
+}
+
+/* 评测监控样式 */
+.evaluation-monitor .ant-progress-line {
+  margin-bottom: 8px;
+}
+
+.evaluation-monitor .ant-statistic-content {
+  font-size: 18px;
+  line-height: 1;
+}
+
+/* 聊天页面样式 */
+.chat-page .agent-item {
+  transition: all 0.3s ease;
+}
+
+.chat-page .agent-item:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transform: translateY(-1px);
+}
+
+.chat-page .agent-item.selected {
+  border-color: #1890ff !important;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+}
+
+/* 消息样式 */
+.chat-message {
+  margin-bottom: 16px;
+}
+
+.chat-message.user {
+  text-align: right;
+}
+
+.chat-message.assistant {
+  text-align: left;
+}
+
+.chat-bubble {
+  display: inline-block;
+  max-width: 70%;
+  padding: 12px 16px;
+  border-radius: 18px;
+  word-wrap: break-word;
+}
+
+.chat-bubble.user {
+  background-color: #1890ff;
+  color: white;
+}
+
+.chat-bubble.assistant {
+  background-color: white;
+  color: rgba(0, 0, 0, 0.85);
+  border: 1px solid #f0f0f0;
+}
+
+/* 表单样式增强 */
+.ant-form-item-label > label {
+  font-weight: 500;
+}
+
+.ant-input:focus,
+.ant-input-focused {
+  border-color: #1890ff;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+}
+
+/* 卡片样式增强 */
+.ant-card {
+  border-radius: 8px;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03), 0 1px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px 0 rgba(0, 0, 0, 0.02);
+}
+
+.ant-card-head {
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.ant-card-head-title {
+  font-weight: 600;
+}
+
+/* 按钮样式增强 */
+.ant-btn {
+  font-weight: 500;
+  border-radius: 6px;
+  transition: all 0.3s ease;
+}
+
+.ant-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.ant-btn-primary {
+  background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
+  border-color: #1890ff;
+}
+
+.ant-btn-primary:hover {
+  background: linear-gradient(135deg, #40a9ff 0%, #1890ff 100%);
+  border-color: #40a9ff;
+}
+
+/* 标签样式增强 */
+.ant-tag {
+  border-radius: 12px;
+  font-size: 12px;
+  line-height: 20px;
+  margin: 2px;
+}
+
+/* 步骤条样式 */
+.ant-steps-item-title {
+  font-weight: 500;
+}
+
+.ant-steps-item-description {
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.45);
+}
+
+/* 侧边栏样式 */
+.ant-layout-sider {
+  box-shadow: 2px 0 8px 0 rgba(29, 35, 41, 0.05);
+}
+
+.ant-menu-item {
+  margin: 4px 8px;
+  border-radius: 6px;
+}
+
+.ant-menu-item-selected {
+  background-color: #e6f7ff !important;
+  border-color: transparent !important;
+}
+
+.ant-menu-item-selected::after {
+  display: none;
+}
+
+/* 头部样式 */
+.ant-layout-header {
+  box-shadow: 0 1px 4px rgba(0, 21, 41, 0.08);
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .ant-layout-sider {
+    position: fixed !important;
+    height: 100vh;
+    z-index: 999;
+  }
+  
+  .ant-layout {
+    margin-left: 80px !important;
+  }
+  
+  .chat-page .ant-row {
+    flex-direction: column;
+  }
+  
+  .chat-page .ant-col:first-child {
+    width: 100% !important;
+    margin-bottom: 16px;
+  }
+  
+  .chat-page .ant-col:last-child {
+    width: 100% !important;
+  }
+}
+
+/* 加载状态样式 */
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 200px;
+}
+
+/* 错误状态样式 */
+.error-container {
+  text-align: center;
+  padding: 48px 24px;
+}
+
+.error-container .ant-result-icon {
+  margin-bottom: 24px;
+}
+
+/* 空状态样式 */
+.empty-container {
+  text-align: center;
+  padding: 48px 24px;
+  color: rgba(0, 0, 0, 0.45);
+}
+
+/* 动画效果 */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.slide-in {
+  animation: slideIn 0.3s ease-out;
+}
+
+/* 打印样式 */
+@media print {
+  .ant-layout-sider,
+  .ant-layout-header,
+  .no-print {
+    display: none !important;
+  }
+  
+  .ant-layout {
+    margin-left: 0 !important;
+  }
+  
+  .ant-card {
+    box-shadow: none;
+    border: 1px solid #ddd;
+  }
+}

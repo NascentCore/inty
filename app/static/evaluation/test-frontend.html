@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>前端连接测试 - InTy 评测系统</title>
+    <style>
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; 
+            max-width: 800px; 
+            margin: 40px auto; 
+            padding: 20px; 
+            line-height: 1.6; 
+        }
+        .status { 
+            padding: 10px 15px; 
+            border-radius: 5px; 
+            margin: 10px 0; 
+            border-left: 4px solid; 
+        }
+        .success { 
+            background: #f0f9ff; 
+            border-color: #0ea5e9; 
+            color: #0c4a6e; 
+        }
+        .error { 
+            background: #fef2f2; 
+            border-color: #ef4444; 
+            color: #991b1b; 
+        }
+        .pending { 
+            background: #fefce8; 
+            border-color: #eab308; 
+            color: #a16207; 
+        }
+        button { 
+            background: #3b82f6; 
+            color: white; 
+            border: none; 
+            padding: 10px 20px; 
+            border-radius: 5px; 
+            cursor: pointer; 
+            margin: 5px; 
+        }
+        button:hover { 
+            background: #2563eb; 
+        }
+        pre { 
+            background: #f8fafc; 
+            padding: 15px; 
+            border-radius: 5px; 
+            overflow-x: auto; 
+            border: 1px solid #e2e8f0; 
+        }
+        .grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); 
+            gap: 20px; 
+            margin: 20px 0; 
+        }
+        .card { 
+            border: 1px solid #e2e8f0; 
+            border-radius: 8px; 
+            padding: 20px; 
+            background: white; 
+        }
+    </style>
+</head>
+<body>
+    <h1>🎯 前端连接测试 - InTy 评测系统</h1>
+    
+    <div class="status pending" id="status">
+        ⏳ 准备测试前端和后端连接...
+    </div>
+
+    <div class="grid">
+        <div class="card">
+            <h3>🔗 连接信息</h3>
+            <p><strong>前端地址:</strong> <span id="frontend-url">正在检测...</span></p>
+            <p><strong>后端地址:</strong> http://localhost:8000</p>
+            <p><strong>API代理:</strong> /api → http://localhost:8000/api</p>
+        </div>
+
+        <div class="card">
+            <h3>📊 测试结果</h3>
+            <div id="test-results">
+                <div>等待测试...</div>
+            </div>
+        </div>
+    </div>
+
+    <div style="margin: 20px 0;">
+        <button onclick="testConnections()">🧪 运行连接测试</button>
+        <button onclick="testAgentsAPI()">🤖 测试智能体API</button>
+        <button onclick="testEvaluationAPI()">📝 测试评测API</button>
+        <button onclick="location.reload()">🔄 刷新页面</button>
+    </div>
+
+    <div id="test-output" style="margin-top: 20px;"></div>
+
+    <h3>📚 快速导航</h3>
+    <div style="margin: 20px 0;">
+        <a href="http://localhost:3001" target="_blank" style="display: inline-block; background: #059669; color: white; padding: 10px 15px; text-decoration: none; border-radius: 5px; margin: 5px;">🎨 前端应用 (React)</a>
+        <a href="http://localhost:8000/docs" target="_blank" style="display: inline-block; background: #7c3aed; color: white; padding: 10px 15px; text-decoration: none; border-radius: 5px; margin: 5px;">📖 API 文档</a>
+        <a href="http://localhost:8000/static/evaluation/simple.html" target="_blank" style="display: inline-block; background: #ea580c; color: white; padding: 10px 15px; text-decoration: none; border-radius: 5px; margin: 5px;">🎮 简单测试页</a>
+    </div>
+
+    <script>
+        // 检测当前运行环境
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('frontend-url').textContent = window.location.origin;
+            
+            // 自动运行基础测试
+            setTimeout(testConnections, 1000);
+        });
+
+        async function updateStatus(message, type = 'pending') {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = `status ${type}`;
+        }
+
+        async function addTestResult(name, result, details = '') {
+            const container = document.getElementById('test-results');
+            const resultElement = document.createElement('div');
+            resultElement.style.margin = '5px 0';
+            
+            const icon = result ? '✅' : '❌';
+            const color = result ? '#059669' : '#dc2626';
+            
+            resultElement.innerHTML = `
+                <span style="color: ${color};">${icon} ${name}</span>
+                ${details ? `<br><small style="color: #6b7280;">${details}</small>` : ''}
+            `;
+            
+            container.appendChild(resultElement);
+        }
+
+        async function testConnections() {
+            document.getElementById('test-results').innerHTML = '<div>正在测试...</div>';
+            updateStatus('🔍 正在测试连接...', 'pending');
+
+            try {
+                // 测试后端健康检查
+                const backendResponse = await fetch('http://localhost:8000/');
+                const backendOk = backendResponse.ok;
+                await addTestResult('后端服务', backendOk, backendOk ? '8000端口正常' : '连接失败');
+
+                // 测试API代理 (如果在开发环境)
+                if (window.location.port === '3001' || window.location.port === '3000') {
+                    try {
+                        const proxyResponse = await fetch('/api/v1/ai/agents/');
+                        const proxyOk = proxyResponse.status === 401 || proxyResponse.ok; // 401是正常的，说明代理工作
+                        await addTestResult('API代理', proxyOk, proxyOk ? '代理正常工作' : '代理配置问题');
+                    } catch (err) {
+                        await addTestResult('API代理', false, '代理不可用');
+                    }
+                }
+
+                // 测试前端资源
+                const frontendOk = true; // 如果能运行这个脚本，前端就是OK的
+                await addTestResult('前端服务', frontendOk, '页面加载成功');
+
+                if (backendOk) {
+                    updateStatus('✅ 基础连接测试通过！前端和后端都正常运行。', 'success');
+                } else {
+                    updateStatus('❌ 后端服务连接失败，请检查8000端口。', 'error');
+                }
+
+            } catch (error) {
+                updateStatus('❌ 连接测试失败: ' + error.message, 'error');
+                await addTestResult('连接测试', false, error.message);
+            }
+        }
+
+        async function testAgentsAPI() {
+            const output = document.getElementById('test-output');
+            output.innerHTML = '<h4>🤖 智能体API测试</h4>';
+
+            try {
+                updateStatus('🤖 测试智能体API...', 'pending');
+                
+                const response = await fetch('/api/v1/ai/agents/');
+                const text = await response.text();
+                
+                output.innerHTML += `
+                    <p><strong>状态码:</strong> ${response.status}</p>
+                    <p><strong>响应:</strong></p>
+                    <pre>${text}</pre>
+                `;
+
+                if (response.status === 401) {
+                    updateStatus('✅ 智能体API连接正常 (需要认证)', 'success');
+                } else if (response.ok) {
+                    updateStatus('✅ 智能体API测试成功', 'success');
+                } else {
+                    updateStatus('⚠️ 智能体API异常响应', 'error');
+                }
+            } catch (error) {
+                updateStatus('❌ 智能体API测试失败', 'error');
+                output.innerHTML += `<p style="color: red;">错误: ${error.message}</p>`;
+            }
+        }
+
+        async function testEvaluationAPI() {
+            const output = document.getElementById('test-output');
+            output.innerHTML = '<h4>📝 评测API测试</h4>';
+
+            try {
+                updateStatus('📝 测试评测API...', 'pending');
+                
+                const response = await fetch('/api/v1/evaluation/sessions');
+                const text = await response.text();
+                
+                output.innerHTML += `
+                    <p><strong>状态码:</strong> ${response.status}</p>
+                    <p><strong>响应:</strong></p>
+                    <pre>${text}</pre>
+                `;
+
+                if (response.status === 401) {
+                    updateStatus('✅ 评测API连接正常 (需要认证)', 'success');
+                } else if (response.ok) {
+                    updateStatus('✅ 评测API测试成功', 'success');
+                } else {
+                    updateStatus('⚠️ 评测API异常响应', 'error');
+                }
+            } catch (error) {
+                updateStatus('❌ 评测API测试失败', 'error');
+                output.innerHTML += `<p style="color: red;">错误: ${error.message}</p>`;
+            }
+        }
+    </script>
+</body>
+</html>

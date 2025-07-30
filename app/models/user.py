@@ -72,6 +72,9 @@ class User(Base):
     subscriptions = relationship("UserSubscription", back_populates="user")
     subscription_transactions = relationship("SubscriptionTransaction", back_populates="user")
     subscription_usage = relationship("SubscriptionUsage", back_populates="user")
+    
+    # 评测相关关系
+    evaluation_sessions = relationship("EvaluationSession", back_populates="creator")
 
 class DeviceToken(Base):
     __tablename__ = 'device_tokens'

@@ -1,0 +1,468 @@
+/**
+ * 评测监控组件
+ * 负责实时监控评测进度、显示结果、管理评测状态
+ */
+
+import React, { useState, useEffect, useMemo } from 'react';
+import {
+  Card,
+  Progress,
+  Button,
+  Tag,
+  Space,
+  Alert,
+  Typography,
+  Row,
+  Col,
+  Statistic,
+  Descriptions,
+  Modal,
+  message,
+  Badge,
+  Empty,
+} from 'antd';
+import {
+  PlayCircleOutlined,
+  StopOutlined,
+  ReloadOutlined,
+  DownloadOutlined,
+  ExclamationCircleOutlined,
+  CheckCircleOutlined,
+  ClockCircleOutlined,
+  FireOutlined,
+  RobotOutlined,
+} from '@ant-design/icons';
+import { useEvaluationSession } from '../../hooks/useEvaluationSession';
+import { MultiAgentChatDisplay } from './MultiAgentChatDisplay';
+import api from '../../services/api';
+import type { 
+  EvaluationSession, 
+  EvaluationResult, 
+  EvaluationStatus,
+  EvaluationInteraction 
+} from '../../types';
+
+const { Title, Text } = Typography;
+
+interface EvaluationMonitorProps {
+  session: EvaluationSession | null;
+  onSessionChange?: (session: EvaluationSession | null) => void;
+  showControls?: boolean;
+  autoRefresh?: boolean;
+}
+
+
+export const EvaluationMonitor: React.FC<EvaluationMonitorProps> = ({
+  session: propSession,
+  onSessionChange,
+  showControls = true,
+  autoRefresh = true,
+}) => {
+  // 状态管理
+  const [results, setResults] = useState<EvaluationResult[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // 如果没有传入session，则使用hook管理
+  const {
+    session: hookSession,
+    results: hookResults,
+    loading: hookLoading,
+    error: hookError,
+    startSession,
+    cancelSession,
+    refreshSession,
+    refreshResults,
+    connectWebSocket,
+    disconnectWebSocket,
+    isWebSocketConnected,
+  } = useEvaluationSession({
+    autoRefresh: !propSession && autoRefresh, // 只有没有传入session时才使用hook的autoRefresh
+    refreshInterval: 5000,
+  });
+
+  // 使用传入的session或hook的session
+  const session = propSession || hookSession;
+
+  // 当有传入session时，管理自己的结果数据和刷新逻辑
+  useEffect(() => {
+    if (propSession?.id) {
+      // 使用传入的session时，加载结果
+      const loadResults = async () => {
+        setLoading(true);
+        setError(null);
+        try {
+          const sessionResults = await api.sessions.getResults(propSession.id);
+          setResults(sessionResults);
+        } catch (err: any) {
+          setError(err.message || '加载结果失败');
+        } finally {
+          setLoading(false);
+        }
+      };
+      
+      loadResults();
+    } else if (!propSession) {
+      // 没有传入session时，使用hook的数据
+      setResults(hookResults);
+      setLoading(hookLoading);
+      setError(hookError);
+    }
+  }, [propSession?.id, propSession?.status, hookResults, hookLoading, hookError]);
+
+  // 自动刷新逻辑 - 当传入session且需要自动刷新时
+  useEffect(() => {
+    if (propSession && autoRefresh && ['PENDING', 'RUNNING'].includes(propSession.status)) {
+      const interval = propSession.status === 'RUNNING' ? 3000 : 10000;
+      
+      const timer = setInterval(async () => {
+        try {
+          console.log(`自动刷新评测结果: ${propSession.id}, 状态: ${propSession.status}`);
+          const sessionResults = await api.sessions.getResults(propSession.id);
+          setResults(sessionResults);
+          
+          // 通知父组件刷新session状态
+          if (onSessionChange) {
+            const updatedSession = await api.sessions.get(propSession.id);
+            onSessionChange(updatedSession);
+          }
+        } catch (err) {
+          console.error('自动刷新失败:', err);
+        }
+      }, interval);
+
+      return () => clearInterval(timer);
+    }
+  }, [propSession, autoRefresh, onSessionChange]);
+
+  // 状态变化通知
+  useEffect(() => {
+    if (onSessionChange && session !== propSession && !propSession) {
+      onSessionChange(session);
+    }
+  }, [session, propSession, onSessionChange]);
+
+  // WebSocket连接管理
+  useEffect(() => {
+    if (session && (session.status === 'RUNNING' || session.status === 'PENDING')) {
+      connectWebSocket(session.id);
+    } else {
+      disconnectWebSocket();
+    }
+
+    return () => {
+      disconnectWebSocket();
+    };
+  }, [session, connectWebSocket, disconnectWebSocket]);
+
+  // 计算统计数据
+  const statistics = useMemo(() => {
+    if (!session || !results) {
+      return {
+        totalTests: 0,
+        completedTests: 0,
+        totalAgents: 0,
+        averageScore: 0,
+        completionRate: 0,
+      };
+    }
+
+    const totalAgents = session.selected_agents?.length || 0;
+    const totalQuestions = session.questions?.length || 0;
+    const totalTests = totalAgents * totalQuestions;
+    const completedTests = results.length;
+    const averageScore = results.length > 0 
+      ? results.reduce((sum, result) => sum + (result.overall_score || 0), 0) / results.length 
+      : 0;
+    const completionRate = totalTests > 0 ? completedTests / totalTests : 0;
+
+    return {
+      totalTests,
+      completedTests,
+      totalAgents,
+      averageScore,
+      completionRate,
+    };
+  }, [session, results]);
+
+  // 操作处理
+  const handleStart = async () => {
+    if (!session) return;
+    await startSession(session.id);
+  };
+
+  const handleCancel = async () => {
+    if (!session) return;
+    Modal.confirm({
+      title: '确认取消评测',
+      content: '确定要取消当前的评测会话吗？已完成的结果将保留。',
+      okText: '确定',
+      cancelText: '取消',
+      onOk: () => cancelSession(session.id),
+    });
+  };
+
+  const handleRefresh = async () => {
+    if (!session) return;
+    await Promise.all([
+      refreshSession(session.id),
+      refreshResults(session.id),
+    ]);
+  };
+
+  // 移除handleViewResult方法，直接展示结果
+
+  const handleExportResults = () => {
+    if (!results || results.length === 0) {
+      message.warning('暂无可导出的结果');
+      return;
+    }
+
+    try {
+      // 准备导出数据
+      const exportData = {
+        session: {
+          id: session?.id,
+          name: session?.name,
+          created_at: session?.created_at,
+          status: session?.status,
+          total_tests: session?.total_tests,
+          completed_tests: session?.completed_tests,
+        },
+        results: results.map(result => ({
+          agent_id: result.agent_id,
+          agent_name: result.agent_name,
+          question: result.question,
+          question_index: result.question_index,
+          agent_response: result.agent_response,
+          response_time: result.response_time,
+          overall_score: result.overall_score,
+          detailed_scores: result.detailed_scores,
+          scoring_reason: result.scoring_reason,
+          scoring_model_used: result.scoring_model_used,
+          is_success: result.is_success,
+          error_message: result.error_message,
+          created_at: result.created_at
+        }))
+      };
+
+      // 生成文件名
+      const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+      const filename = `evaluation_results_${session?.name || 'unknown'}_${timestamp}.json`;
+
+      // 创建并下载文件
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      message.success(`评测结果已导出: ${filename}`);
+    } catch (error) {
+      console.error('导出失败:', error);
+      message.error('导出失败，请重试');
+    }
+  };
+
+  // 状态颜色映射
+  const getStatusColor = (status: EvaluationStatus) => {
+    switch (status) {
+      case 'PENDING':
+        return 'default';
+      case 'RUNNING':
+        return 'processing';
+      case 'COMPLETED':
+        return 'success';
+      case 'FAILED':
+        return 'error';
+      case 'CANCELLED':
+        return 'warning';
+      default:
+        return 'default';
+    }
+  };
+
+  // 状态图标映射
+  const getStatusIcon = (status: EvaluationStatus) => {
+    switch (status) {
+      case 'PENDING':
+        return <ClockCircleOutlined />;
+      case 'RUNNING':
+        return <FireOutlined />;
+      case 'COMPLETED':
+        return <CheckCircleOutlined />;
+      case 'FAILED':
+        return <ExclamationCircleOutlined />;
+      case 'CANCELLED':
+        return <StopOutlined />;
+      default:
+        return <ClockCircleOutlined />;
+    }
+  };
+
+  if (!session) {
+    return (
+      <Card title="评测监控">
+        <Empty
+          description="请先创建评测会话"
+          image={Empty.PRESENTED_IMAGE_SIMPLE}
+        />
+      </Card>
+    );
+  }
+
+  return (
+    <div className="evaluation-monitor">
+      {/* 会话状态卡片 */}
+      <Card
+        title={
+          <Space>
+            <RobotOutlined />
+            评测监控
+            <Tag color={getStatusColor(session.status)} icon={getStatusIcon(session.status)}>
+              {session.status === 'PENDING' && '等待中'}
+              {session.status === 'RUNNING' && '运行中'}
+              {session.status === 'COMPLETED' && '已完成'}
+              {session.status === 'FAILED' && '失败'}
+              {session.status === 'CANCELLED' && '已取消'}
+            </Tag>
+            {isWebSocketConnected && (
+              <Badge status="success" text="实时连接" />
+            )}
+          </Space>
+        }
+        extra={
+          showControls && (
+            <Space>
+              <Button
+                icon={<ReloadOutlined />}
+                onClick={handleRefresh}
+                loading={loading}
+              >
+                刷新
+              </Button>
+              {session.status === 'PENDING' && (
+                <Button
+                  type="primary"
+                  icon={<PlayCircleOutlined />}
+                  onClick={handleStart}
+                  loading={loading}
+                >
+                  开始评测
+                </Button>
+              )}
+              {session.status === 'RUNNING' && (
+                <Button
+                  danger
+                  icon={<StopOutlined />}
+                  onClick={handleCancel}
+                  loading={loading}
+                >
+                  取消评测
+                </Button>
+              )}
+              {results.length > 0 && (
+                <Button
+                  icon={<DownloadOutlined />}
+                  onClick={handleExportResults}
+                >
+                  导出结果
+                </Button>
+              )}
+            </Space>
+          )
+        }
+      >
+        {/* 会话信息 */}
+        <Descriptions column={2} size="small" style={{ marginBottom: 16 }}>
+          <Descriptions.Item label="会话名称">{session.name}</Descriptions.Item>
+          <Descriptions.Item label="创建时间">
+            {new Date(session.created_at).toLocaleString()}
+          </Descriptions.Item>
+          <Descriptions.Item label="测试问题">
+            {session.questions?.length || 0} 个
+          </Descriptions.Item>
+          <Descriptions.Item label="测试智能体">
+            {session.selected_agents?.length || 0} 个
+          </Descriptions.Item>
+        </Descriptions>
+
+        {/* 错误提示 */}
+        {error && (
+          <Alert
+            message="监控错误"
+            description={error}
+            type="error"
+            closable
+            style={{ marginBottom: 16 }}
+          />
+        )}
+
+        {/* 进度统计 */}
+        <Row gutter={16} style={{ marginBottom: 16 }}>
+          <Col span={6}>
+            <Statistic
+              title="总体进度"
+              value={statistics.completionRate * 100}
+              precision={1}
+              suffix="%"
+            />
+            <Progress
+              percent={statistics.completionRate * 100}
+              size="small"
+              status={session.status === 'RUNNING' ? 'active' : 'normal'}
+            />
+          </Col>
+          <Col span={6}>
+            <Statistic
+              title="已完成测试"
+              value={statistics.completedTests}
+              suffix={`/ ${statistics.totalTests}`}
+            />
+          </Col>
+          <Col span={6}>
+            <Statistic
+              title="平均分数"
+              value={statistics.averageScore}
+              precision={1}
+              suffix="/ 10"
+              valueStyle={{ 
+                color: statistics.averageScore >= 7 ? '#52c41a' : 
+                       statistics.averageScore >= 5 ? '#faad14' : '#ff4d4f' 
+              }}
+            />
+          </Col>
+          <Col span={6}>
+            <Statistic
+              title="评测结果"
+              value={results.length}
+              suffix="个"
+            />
+          </Col>
+        </Row>
+      </Card>
+
+      {/* 评测结果展示 */}
+      {results.length > 0 && (
+        <div style={{ marginTop: 16 }}>
+          <MultiAgentChatDisplay
+            session={session}
+            results={results}
+            loading={loading}
+            showControls={true}
+            onViewDetail={(result) => {
+              // 在监控页面中，这个回调可以用于其他操作，比如导出单个结果
+              console.log('查看结果详情:', result);
+            }}
+          />
+        </div>
+      )}
+
+    </div>
+  );
+};
