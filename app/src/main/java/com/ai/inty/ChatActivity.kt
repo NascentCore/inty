@@ -26,7 +26,6 @@ import com.inty.utils.log.EasyLog
 import com.therouter.TheRouter
 import com.therouter.router.Autowired
 import com.therouter.router.Route
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 /**
@@ -119,9 +118,9 @@ class ChatActivity : BaseActivity() {
     private fun toggleFollowAgent(agentId: String) {
         val currentAgent = chatViewModel.agentInfo.value
         val isCurrentlyFollowed = currentAgent?.isFollowed ?: false
-        
+
         EasyLog.log("toggleFollowAgent - agentId: $agentId, current state: $isCurrentlyFollowed")
-        
+
         if (isCurrentlyFollowed) {
             EasyLog.log("Agent is currently followed, will unfollow")
             unfollowAgent(agentId)
@@ -136,7 +135,7 @@ class ChatActivity : BaseActivity() {
      */
     private fun followAgent(agentId: String) {
         EasyLog.log("followAgent: $agentId")
-        lifecycleScope.launch(Dispatchers.IO) {
+        chatViewModel.launchWithNetCheck {
             try {
                 val result = agentApi.followAgent(agentId)
                 EasyLog.log("followAgent = $result")
@@ -162,7 +161,7 @@ class ChatActivity : BaseActivity() {
      */
     private fun unfollowAgent(agentId: String) {
         EasyLog.log("unfollowAgent: $agentId")
-        lifecycleScope.launch(Dispatchers.IO) {
+        chatViewModel.launchWithNetCheck {
             try {
                 val result = agentApi.unfollowAgent(agentId)
                 EasyLog.log("unfollowAgent = $result")
@@ -187,7 +186,8 @@ class ChatActivity : BaseActivity() {
     private fun handleFollowUnfollowSuccess(agentId: String, isFollow: Boolean) {
         runOnUiThread {
             lifecycleScope.launch {
-                val message = if (isFollow) R.string.followed_successfully else R.string.unfollowed_successfully
+                val message =
+                    if (isFollow) R.string.followed_successfully else R.string.unfollowed_successfully
                 ToastUtils.showToast(message)
             }
         }

@@ -260,7 +260,10 @@ class MainViewModel : BaseActivityViewModel() {
                 }
             } catch (e: retrofit2.HttpException) {
                 // 专门处理HTTP异常
-                EasyLog.log("getUserProfile HTTP Exception: ${e.code()} - ${e.message()}", EasyLog.ERROR)
+                EasyLog.log(
+                    "getUserProfile HTTP Exception: ${e.code()} - ${e.message()}",
+                    EasyLog.ERROR
+                )
                 val errorMessage = handleHttpException(e, "user")
                 showNetworkAwareError(errorMessage)
             } catch (e: Exception) {
@@ -357,7 +360,7 @@ class MainViewModel : BaseActivityViewModel() {
                 }
 
                 is HttpResult.Failure -> {
-                    showSnackbar(result.message)
+                    showNetworkAwareError(result.message)
                 }
             }
         }
@@ -365,7 +368,7 @@ class MainViewModel : BaseActivityViewModel() {
 
     fun followAgent(agentId: String) {
         EasyLog.log("followAgent: $agentId")
-        viewModelScope.launch(Dispatchers.IO) {
+        launchWithNetCheck {
             val result = agentApi.followAgent(agentId)
             EasyLog.log("followAgent = $result")
 
@@ -407,7 +410,7 @@ class MainViewModel : BaseActivityViewModel() {
 
     fun unfollowAgent(agentId: String) {
         EasyLog.log("unfollowAgent: $agentId")
-        viewModelScope.launch(Dispatchers.IO) {
+        launchWithNetCheck {
             try {
                 val result = agentApi.unfollowAgent(agentId)
                 EasyLog.log("unfollowAgent = $result")
@@ -563,15 +566,18 @@ class MainViewModel : BaseActivityViewModel() {
         }
     }
 
+    /**
+     * 创建Ai Agent的接口
+     */
     fun createAgent(
         request: CreateAgentRequest,
         onSuccess: (AgentInfo) -> Unit,
-        onError: (String) -> Unit
+        onError: (String) -> Unit,
     ) {
         EasyLog.log("createAgent: ${request.name}")
         EasyLog.log("createAgent request full details: $request")
         EasyLog.log("createAgent avatar URL: ${request.avatar}")
-        viewModelScope.launch(Dispatchers.IO) {
+        launchWithNetCheck {
             try {
                 val result = agentApi.createAgent(request)
                 EasyLog.log("createAgent = $result")
@@ -587,14 +593,18 @@ class MainViewModel : BaseActivityViewModel() {
 
                         is HttpResult.Failure -> {
                             EasyLog.log("createAgent error: $result", priority = EasyLog.ERROR)
-                            val errorMessage = result.message.ifBlank { "Creation failed, please check network connection" }
+                            val errorMessage =
+                                result.message.ifBlank { "Creation failed, please check network connection" }
                             onError(errorMessage)
                         }
                     }
                 }
             } catch (e: retrofit2.HttpException) {
                 // 专门处理HTTP异常
-                EasyLog.log("createAgent HTTP Exception: ${e.code()} - ${e.message()}", EasyLog.ERROR)
+                EasyLog.log(
+                    "createAgent HTTP Exception: ${e.code()} - ${e.message()}",
+                    EasyLog.ERROR
+                )
                 val errorMessage = handleHttpException(e, "create")
                 withContext(Dispatchers.Main) {
                     onError(errorMessage)
@@ -651,10 +661,10 @@ class MainViewModel : BaseActivityViewModel() {
     fun deleteAgent(
         agentId: String,
         onSuccess: () -> Unit,
-        onError: (String) -> Unit
+        onError: (String) -> Unit,
     ) {
         EasyLog.log("deleteAgent: $agentId")
-        viewModelScope.launch(Dispatchers.IO) {
+        launchWithNetCheck {
             try {
                 val result = agentApi.deleteAgent(agentId)
                 EasyLog.log("deleteAgent = $result")
@@ -690,7 +700,10 @@ class MainViewModel : BaseActivityViewModel() {
                 }
             } catch (e: retrofit2.HttpException) {
                 // 专门处理HTTP异常
-                EasyLog.log("deleteAgent HTTP Exception: ${e.code()} - ${e.message()}", EasyLog.ERROR)
+                EasyLog.log(
+                    "deleteAgent HTTP Exception: ${e.code()} - ${e.message()}",
+                    EasyLog.ERROR
+                )
                 val errorMessage = handleHttpException(e, "delete")
                 withContext(Dispatchers.Main) {
                     ToastUtils.showToast(errorMessage)
@@ -712,10 +725,10 @@ class MainViewModel : BaseActivityViewModel() {
         agentId: String,
         request: CreateAgentRequest,
         onSuccess: (AgentInfo) -> Unit,
-        onError: (String) -> Unit
+        onError: (String) -> Unit,
     ) {
         EasyLog.log("updateAgent: $agentId")
-        viewModelScope.launch(Dispatchers.IO) {
+        launchWithNetCheck {
             try {
                 val result = agentApi.updateAgent(agentId, request)
                 EasyLog.log("updateAgent = $result")
@@ -746,7 +759,10 @@ class MainViewModel : BaseActivityViewModel() {
                 }
             } catch (e: retrofit2.HttpException) {
                 // 专门处理HTTP异常
-                EasyLog.log("updateAgent HTTP Exception: ${e.code()} - ${e.message()}", EasyLog.ERROR)
+                EasyLog.log(
+                    "updateAgent HTTP Exception: ${e.code()} - ${e.message()}",
+                    EasyLog.ERROR
+                )
                 val errorMessage = handleHttpException(e, "update")
                 withContext(Dispatchers.Main) {
                     ToastUtils.showToast(errorMessage)
@@ -767,7 +783,7 @@ class MainViewModel : BaseActivityViewModel() {
     fun generateBackground(
         request: GenerateBackgroundRequest,
         onSuccess: (GenerateBackgroundResponse) -> Unit,
-        onError: (String) -> Unit
+        onError: (String) -> Unit,
     ) {
         EasyLog.log("generateBackground: ${request.prompt}")
         viewModelScope.launch(Dispatchers.IO) {
@@ -787,14 +803,18 @@ class MainViewModel : BaseActivityViewModel() {
                                 "generateBackground error: $result",
                                 priority = EasyLog.ERROR
                             )
-                            val errorMessage = result.message.ifBlank { "Generation failed, please check network connection" }
+                            val errorMessage =
+                                result.message.ifBlank { "Generation failed, please check network connection" }
                             onError(errorMessage)
                         }
                     }
                 }
             } catch (e: retrofit2.HttpException) {
                 // 专门处理HTTP异常
-                EasyLog.log("generateBackground HTTP Exception: ${e.code()} - ${e.message()}", EasyLog.ERROR)
+                EasyLog.log(
+                    "generateBackground HTTP Exception: ${e.code()} - ${e.message()}",
+                    EasyLog.ERROR
+                )
                 val errorMessage = handleHttpException(e, "generate")
                 withContext(Dispatchers.Main) {
                     onError(errorMessage)
@@ -843,7 +863,10 @@ class MainViewModel : BaseActivityViewModel() {
                 }
             } catch (e: retrofit2.HttpException) {
                 // 专门处理HTTP异常
-                EasyLog.log("checkAccountSubscribe HTTP Exception: ${e.code()} - ${e.message()}", EasyLog.ERROR)
+                EasyLog.log(
+                    "checkAccountSubscribe HTTP Exception: ${e.code()} - ${e.message()}",
+                    EasyLog.ERROR
+                )
                 val errorMessage = handleHttpException(e, "account")
                 withContext(Dispatchers.Main) {
                     ToastUtils.showToast(errorMessage)
@@ -870,7 +893,7 @@ class MainViewModel : BaseActivityViewModel() {
      */
     private fun deleteUserAccount() {
         EasyLog.log("删除用户账号 ---> ")
-        viewModelScope.launch(Dispatchers.IO) {
+        launchWithNetCheck {
             try {
                 val result = userApi.userDeleteAccount()
 
@@ -894,7 +917,10 @@ class MainViewModel : BaseActivityViewModel() {
                 }
             } catch (e: retrofit2.HttpException) {
                 // 专门处理HTTP异常
-                EasyLog.log("deleteUserAccount HTTP Exception: ${e.code()} - ${e.message()}", EasyLog.ERROR)
+                EasyLog.log(
+                    "deleteUserAccount HTTP Exception: ${e.code()} - ${e.message()}",
+                    EasyLog.ERROR
+                )
                 val errorMessage = handleHttpException(e, "account")
                 withContext(Dispatchers.Main) {
                     ToastUtils.showToast(errorMessage)

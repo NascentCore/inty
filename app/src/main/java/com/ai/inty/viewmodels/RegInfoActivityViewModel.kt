@@ -1,7 +1,6 @@
 package com.ai.inty.viewmodels
 
 import android.content.Intent
-import androidx.lifecycle.viewModelScope
 import com.ai.inty.MainActivity
 import com.ai.inty.base.BaseActivityViewModel
 import com.ai.inty.beans.GENDER
@@ -12,7 +11,6 @@ import com.inty.utils.AppEnv
 import com.inty.utils.log.EasyLog
 import com.therouter.TheRouter
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class RegInfoActivityViewModel: BaseActivityViewModel() {
@@ -24,7 +22,7 @@ class RegInfoActivityViewModel: BaseActivityViewModel() {
     }
 
     fun onSave(gender: GENDER, age: String) {
-        viewModelScope.launch(Dispatchers.IO) {
+        launchWithNetCheck {
 
             //调用接口，需要让服务端存储游客的性别和年龄数据
             val result = userApi2.setUserProfile(
@@ -50,7 +48,7 @@ class RegInfoActivityViewModel: BaseActivityViewModel() {
                     }
                 }
                 is HttpResult.Failure -> {
-                    showSnackbar(result.message)
+                    showNetworkAwareError(result.message)
                 }
             }
         }

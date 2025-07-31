@@ -2,7 +2,6 @@ package com.ai.inty.viewmodels
 
 import android.content.Intent
 import android.widget.Toast
-import androidx.lifecycle.viewModelScope
 import com.ai.inty.MainActivity
 import com.ai.inty.R
 import com.ai.inty.base.BaseActivityViewModel
@@ -15,7 +14,6 @@ import com.inty.utils.log.EasyLog
 import com.inty.utils.storage.IntySetting
 import com.therouter.TheRouter
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class LoginActivityViewModel: BaseActivityViewModel() {
@@ -27,7 +25,7 @@ class LoginActivityViewModel: BaseActivityViewModel() {
     }
 
     fun onGoogleLoginSuccess(idToken: String) {
-        viewModelScope.launch(Dispatchers.IO) {
+        launchWithNetCheck {
             val result = userApi.loginByGoogle(GoogleLoginRequest(idToken = idToken))
             EasyLog.log("loginByGoogle($idToken) result:")
             when (result) {
@@ -59,7 +57,7 @@ class LoginActivityViewModel: BaseActivityViewModel() {
                 is HttpResult.Failure -> {
                     EasyLog.log("Google login failed: ${result.message}", EasyLog.ERROR)
                     withContext(Dispatchers.Main) {
-                        showSnackbar(result.message)
+                        showNetworkAwareError(result.message)
                     }
                 }
             }

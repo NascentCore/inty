@@ -3,20 +3,39 @@ package com.ai.inty.base
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ai.inty.utils.NetworkErrorHandler
+import com.ai.inty.utils.NetworkManager
 import com.inty.utils.log.EasyLog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
-open class BaseViewModel: ViewModel() {
+open class BaseViewModel : ViewModel() {
 
     fun showSnackbar(text: String) {
         viewModelScope.launch {
             ToastUtils.showToast(text)
         }
     }
+
+    /**
+     * 附带网络检查的launch
+     */
+    fun launchWithNetCheck(block: suspend () -> Unit) = viewModelScope.launch(Dispatchers.IO) {
+        // 检查网络连接
+        val networkManager = NetworkManager.getInstance()
+        if (!networkManager.isNetworkConnected()) {
+            withContext(Dispatchers.Main) {
+                showSnackbar("Please check your network connection")
+            }
+            return@launch
+        }
+        block()
+
+    }
+
 
     /**
      * 显示网络感知的错误提示

@@ -1,7 +1,6 @@
 package com.ai.inty.viewmodels
 
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
+import com.ai.inty.base.BaseViewModel
 import com.ai.inty.beans.GenerateBackgroundRequest
 import com.ai.inty.beans.GenerateBackgroundResponse
 import com.ai.inty.net.IAgentApi
@@ -12,10 +11,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class AvatarGenerateViewModel : ViewModel() {
+class AvatarGenerateViewModel : BaseViewModel() {
 
     // 延迟获取依赖，避免在构造函数中立即获取导致空指针异常
     private val agentApi by lazy {
@@ -65,7 +63,7 @@ class AvatarGenerateViewModel : ViewModel() {
         _isLoading.value = true
         clearError()
 
-        viewModelScope.launch(Dispatchers.IO) {
+        launchWithNetCheck {
             try {
                 val request = GenerateBackgroundRequest(prompt = currentPrompt)
 
@@ -128,7 +126,7 @@ class AvatarGenerateViewModel : ViewModel() {
         _isLoading.value = true
         _errorMessage.value = null
 
-        viewModelScope.launch(Dispatchers.IO) {
+        launchWithNetCheck {
             try {
                 val request = GenerateBackgroundRequest(prompt = currentPrompt)
 

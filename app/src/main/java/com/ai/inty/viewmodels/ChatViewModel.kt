@@ -9,7 +9,6 @@ import com.ai.inty.beans.MsgInfo
 import com.ai.inty.beans.SendMsgReq
 import com.ai.inty.beans.UserProfile
 import com.ai.inty.net.IChatApi
-import com.ai.inty.utils.NetworkManager
 import com.ai.inty.utils.UserProfileManager
 import com.architecture.httplib.core.HttpResult
 import com.inty.utils.log.EasyLog
@@ -99,16 +98,7 @@ class ChatViewModel : BaseActivityViewModel() {
     }
 
     fun sendMsg() {
-        viewModelScope.launch(Dispatchers.IO) {
-            // 检查网络连接
-            val networkManager = NetworkManager.getInstance()
-            if (!networkManager.isNetworkConnected()) {
-                withContext(Dispatchers.Main) {
-                    showSnackbar("Please check your network connection")
-                }
-                return@launch
-            }
-
+        launchWithNetCheck {
             val inputMsg = inputData.value
             inputData.value = ""
             EasyLog.log("send msg $inputMsg")
@@ -174,23 +164,11 @@ class ChatViewModel : BaseActivityViewModel() {
     }
 
     fun sendKeepTalkingMessage() {
-        viewModelScope.launch(Dispatchers.IO) {
-            // 检查网络连接
-            val networkManager = NetworkManager.getInstance()
-            if (!networkManager.isNetworkConnected()) {
-                withContext(Dispatchers.Main) {
-                    showSnackbar("Please check your network connection")
-                }
-                return@launch
-            }
-
+        launchWithNetCheck {
             val keepTalkingMsg = "continue"
             EasyLog.log("send keep talking msg")
 
-            val msgInfo = MsgInfo(
-                content = keepTalkingMsg,
-                role = "user"
-            )
+            val msgInfo = MsgInfo(content = keepTalkingMsg, role = "user")
 
             // 添加临时的加载消息 (keep talking不显示用户消息，只显示加载动画)
             val loadingMsg = MsgInfo(

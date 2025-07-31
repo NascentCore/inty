@@ -86,7 +86,7 @@ class AgentInfoViewModel: BaseActivityViewModel() {
         val currentAgent = _agentInfo.value ?: return
         EasyLog.log("followAgent: $agentId, current status: ${currentAgent.isFollowed}")
 
-        viewModelScope.launch(Dispatchers.IO) {
+        launchWithNetCheck {
             val result = if (currentAgent.isFollowed) {
                 agentApi.unfollowAgent(agentId)
             } else {
@@ -117,7 +117,7 @@ class AgentInfoViewModel: BaseActivityViewModel() {
                     LocalBroadcastManager.getInstance(context).sendBroadcast(intent)
                 }
                 is HttpResult.Failure -> {
-                    showSnackbar(result.message)
+                    showNetworkAwareError(result.message)
                 }
             }
         }

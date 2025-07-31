@@ -2,17 +2,14 @@ package com.ai.inty.viewmodels
 
 import android.net.Uri
 import androidx.compose.runtime.mutableStateSetOf
-import androidx.lifecycle.viewModelScope
 import com.ai.inty.base.BaseActivityViewModel
 import com.ai.inty.beans.ReportItem
 import com.ai.inty.beans.ReportReq
 import com.ai.inty.net.IReportApi
 import com.inty.utils.log.EasyLog
 import com.therouter.TheRouter
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
 
 class ReportViewModel : BaseActivityViewModel() {
 
@@ -90,8 +87,8 @@ class ReportViewModel : BaseActivityViewModel() {
             showSnackbar("Please fill in the report description")
             return
         }
-        
-        viewModelScope.launch(Dispatchers.IO) {
+
+        launchWithNetCheck {
             val result = reportApi.report(
                 ReportReq(
                     reasonIds = selectIDS.toList(),

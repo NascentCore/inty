@@ -57,11 +57,11 @@ class MySettingActivityViewModel: BaseActivityViewModel() {
     }
 
     fun onSave() {
-        viewModelScope.launch(Dispatchers.IO) {
+        launchWithNetCheck {
             if (_avatarChanged.value) {
                 val fileUri = _userProfile.value.avatar?.toUri()
                 val requestBody = File(
-                    fileUri?.path ?: return@launch
+                    fileUri?.path ?: return@launchWithNetCheck
                 ).asRequestBody(contentType = "image/jpg".toMediaTypeOrNull())
                 val result = userApi.uploadAvatar(MultipartBody.Part.createFormData("file", "file.png", requestBody))
                 EasyLog.log("upload avatar = $result")
@@ -77,7 +77,7 @@ class MySettingActivityViewModel: BaseActivityViewModel() {
                         }
                     }
                     is HttpResult.Failure -> {
-                        showSnackbar(result.message)
+                        showNetworkAwareError(result.message)
                     }
                 }
             }
@@ -97,7 +97,7 @@ class MySettingActivityViewModel: BaseActivityViewModel() {
                     }
                 }
                 is HttpResult.Failure -> {
-                    showSnackbar(result2.message)
+                    showNetworkAwareError(result2.message)
                 }
             }
 

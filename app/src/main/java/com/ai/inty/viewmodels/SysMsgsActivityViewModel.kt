@@ -35,7 +35,7 @@ class SysMsgsActivityViewModel: BaseActivityViewModel() {
                     sysMsgs.addAll(result.data.list)
                 }
                 is HttpResult.Failure -> {
-                    showSnackbar(result.message)
+                    showNetworkAwareError(result.message)
                 }
             }
         }
