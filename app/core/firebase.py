@@ -20,7 +20,7 @@ def init_firebase() -> None:
         # firebase_admin.initialize_app(cred)
 
         firebase_admin.initialize_app(cred, {
-            "projectId": "inty-87a58"
+            "projectId": "alien-paratext-461204-i9"
         })
 
         logger.info("Firebase Admin SDK initialized successfully")
