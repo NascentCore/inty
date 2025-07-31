@@ -416,40 +416,54 @@ class MainViewModel : BaseActivityViewModel() {
     fun unfollowAgent(agentId: String) {
         EasyLog.log("unfollowAgent: $agentId")
         viewModelScope.launch(Dispatchers.IO) {
-            val result = agentApi.unfollowAgent(agentId)
-            EasyLog.log("unfollowAgent = $result")
+            try {
+                val result = agentApi.unfollowAgent(agentId)
+                EasyLog.log("unfollowAgent = $result")
 
-            when (result) {
-                is HttpResult.Success -> {
-                    EasyLog.log("unfollowAgent success")
-                    // Update the agent list to reflect follow status
-                    agentList.find { it.id == agentId }?.let { agent ->
-                        val index = agentList.indexOf(agent)
-                        if (index != -1) {
-                            agentList[index] = agent.copy(isFollowed = false)
+                when (result) {
+                    is HttpResult.Success -> {
+                        EasyLog.log("unfollowAgent success")
+
+                        // 使用 withContext 确保在主线程上安全更新 UI 状态
+                        withContext(Dispatchers.Main) {
+                            // 安全地从关注列表中移除
+                            val indexToRemove = followingAgents.indexOfFirst { it.id == agentId }
+                            if (indexToRemove != -1) {
+                                followingAgents.removeAt(indexToRemove)
+                                EasyLog.log("Removed agent from following list at index: $indexToRemove")
+                            }
+
+                            // 更新主列表中的agent状态
+                            val mainListIndex = agentList.indexOfFirst { it.id == agentId }
+                            if (mainListIndex != -1) {
+                                agentList[mainListIndex] =
+                                    agentList[mainListIndex].copy(isFollowed = false)
+                                EasyLog.log("Updated agent in main list at index: $mainListIndex")
+                            }
+                        }
+
+                        // 发送广播更新UI
+                        val intent = Intent("FOLLOW_STATE_CHANGED")
+                        intent.putExtra("agentId", agentId)
+                        intent.putExtra("isFollowed", false)
+                        LocalBroadcastManager.getInstance(AppEnv.context).sendBroadcast(intent)
+                        EasyLog.log("Sent FOLLOW_STATE_CHANGED broadcast - unfollowed: $agentId")
+                    }
+
+                    is HttpResult.Failure -> {
+                        EasyLog.log("unfollowAgent error: $result", priority = EasyLog.ERROR)
+                        withContext(Dispatchers.Main) {
+                            ToastUtils.showToast(
+                                R.string.unfollow_failed_with_reason,
+                                result.message
+                            )
                         }
                     }
-                    // Remove from following list
-                    followingAgents.removeAll { it.id == agentId }
-                    // Show success toast
-//                    viewModelScope.launch(Dispatchers.Main) {
-//                        ToastUtils.showToast(R.string.unfollowed_successfully)
-//                    }
-                    // Update agent state in list
-                    updateAgentFollowStateInList(agentId, false)
-                    // Send broadcast to update UI with required parameters
-                    val intent = Intent("FOLLOW_STATE_CHANGED")
-                    intent.putExtra("agentId", agentId)
-                    intent.putExtra("isFollowed", false)
-                    LocalBroadcastManager.getInstance(AppEnv.context).sendBroadcast(intent)
-                    EasyLog.log("Sent FOLLOW_STATE_CHANGED broadcast - unfollowed: $agentId")
                 }
-
-                is HttpResult.Failure -> {
-                    EasyLog.log("unfollowAgent error: $result", priority = EasyLog.ERROR)
-                    viewModelScope.launch(Dispatchers.Main) {
-                        ToastUtils.showToast(R.string.unfollow_failed_with_reason, result.message)
-                    }
+            } catch (e: Exception) {
+                EasyLog.log("取消关注 异常: ${e.message}", EasyLog.ERROR)
+                withContext(Dispatchers.Main) {
+                    ToastUtils.showToast("${e.message}")
                 }
             }
         }
