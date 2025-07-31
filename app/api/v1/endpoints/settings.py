@@ -13,6 +13,7 @@ from app.services import create_settings, get_settings, update_settings
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
+
 @router.get("/", response_model=schemas.Settings)
 def get_settings_endpoint(
     db: Session = Depends(deps.get_db),
@@ -30,13 +31,18 @@ def get_settings_endpoint(
         logger.info(f"Successfully retrieved user settings: user_id={current_user.id}")
         return settings
     except SQLAlchemyError as e:
-        logger.error(f"Failed to get user settings: user_id={current_user.id}, error={str(e)}")
+        logger.error(
+            f"Failed to get user settings: user_id={current_user.id}, error={str(e)}"
+        )
         logger.error(f"Error stack: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail="Database operation failed")
     except Exception as e:
-        logger.error(f"Unknown error occurred while getting user settings: user_id={current_user.id}, error={str(e)}")
+        logger.error(
+            f"Unknown error occurred while getting user settings: user_id={current_user.id}, error={str(e)}"
+        )
         logger.error(f"Error stack: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail="Internal server error")
+
 
 @router.put("/", response_model=schemas.Settings)
 def update_settings_endpoint(
@@ -49,27 +55,49 @@ def update_settings_endpoint(
     Update current user settings
     """
     try:
-        logger.info(f"Updating user settings: user_id={current_user.id}, settings={settings_in.dict()}")
+        logger.info(
+            f"Updating user settings: user_id={current_user.id}, settings={settings_in.dict()}"
+        )
         settings = get_settings(db, user_id=current_user.id)
         if not settings:
             # Create new settings
             settings_create = schemas.SettingsCreate(
                 language=settings_in.language or "en",
-                voice_enabled=settings_in.voice_enabled if settings_in.voice_enabled is not None else True,
-                keep_talking=settings_in.keep_talking if settings_in.keep_talking is not None else True
+                voice_enabled=(
+                    settings_in.voice_enabled
+                    if settings_in.voice_enabled is not None
+                    else True
+                ),
+                keep_talking=(
+                    settings_in.keep_talking
+                    if settings_in.keep_talking is not None
+                    else True
+                ),
             )
-            logger.info(f"Creating new user settings: user_id={current_user.id}, settings={settings_create.dict()}")
-            settings = create_settings(db, settings_in=settings_create, user_id=current_user.id)
+            logger.info(
+                f"Creating new user settings: user_id={current_user.id}, settings={settings_create.dict()}"
+            )
+            settings = create_settings(
+                db, settings_in=settings_create, user_id=current_user.id
+            )
         else:
-            logger.info(f"Updating existing user settings: user_id={current_user.id}, settings={settings_in.dict()}")
-            settings = update_settings(db, db_settings=settings, settings_in=settings_in)
+            logger.info(
+                f"Updating existing user settings: user_id={current_user.id}, settings={settings_in.dict()}"
+            )
+            settings = update_settings(
+                db, db_settings=settings, settings_in=settings_in
+            )
         logger.info(f"Successfully updated user settings: user_id={current_user.id}")
         return settings
     except SQLAlchemyError as e:
-        logger.error(f"Failed to update user settings: user_id={current_user.id}, error={str(e)}")
+        logger.error(
+            f"Failed to update user settings: user_id={current_user.id}, error={str(e)}"
+        )
         logger.error(f"Error stack: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail="Database operation failed")
     except Exception as e:
-        logger.error(f"Unknown error occurred while updating user settings: user_id={current_user.id}, error={str(e)}")
+        logger.error(
+            f"Unknown error occurred while updating user settings: user_id={current_user.id}, error={str(e)}"
+        )
         logger.error(f"Error stack: {traceback.format_exc()}")
-        raise HTTPException(status_code=500, detail="Internal server error") 
+        raise HTTPException(status_code=500, detail="Internal server error")

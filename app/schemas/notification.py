@@ -8,6 +8,7 @@ from app.models.notification import NotificationTemplateType
 
 class NotificationItem(BaseModel):
     """通知项"""
+
     id: str
     type: int
     template_id: Optional[int]
@@ -21,22 +22,28 @@ class NotificationItem(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
+
 class NotificationListResponse(BaseModel):
     """通知列表响应"""
+
     items: List[NotificationItem]
     total: int
     page: int
     size: int
 
+
 class NotificationQuery(BaseModel):
     """通知查询参数"""
+
     user_id: str
     is_read: Optional[bool] = None
     skip: int = 0
     limit: int = 20
 
+
 class NotificationTemplateCreate(BaseModel):
     """创建通知模板请求"""
+
     type: int
     title: str
     content: Optional[str] = None
@@ -44,8 +51,10 @@ class NotificationTemplateCreate(BaseModel):
     link_urls: Optional[List[str]] = None
     is_active: bool = True
 
+
 class NotificationTemplateItem(BaseModel):
     """通知模板项"""
+
     id: int
     type: int
     title: str
@@ -56,8 +65,10 @@ class NotificationTemplateItem(BaseModel):
     created_at: datetime
     updated_at: datetime
 
+
 class NotificationSendRequest(BaseModel):
     """发送通知请求"""
+
     template_id: int
     all_users: bool = False
     user_ids: Optional[List[str]] = None

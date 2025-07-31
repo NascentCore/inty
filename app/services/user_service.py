@@ -23,6 +23,7 @@ from app.schemas import UserUpdate
 
 logger = logging.getLogger(__name__)
 
+
 async def generate_next_readable_id(db: AsyncSession) -> str:
     """
     Generate next readable ID for user, starting from 10000000
@@ -30,21 +31,25 @@ async def generate_next_readable_id(db: AsyncSession) -> str:
     try:
         # Get the maximum readable_id from the database
         result = await db.execute(
-            text("SELECT MAX(CAST(readable_id AS INTEGER)) FROM users WHERE readable_id ~ '^[0-9]+$'")
+            text(
+                "SELECT MAX(CAST(readable_id AS INTEGER)) FROM users WHERE readable_id ~ '^[0-9]+$'"
+            )
         )
         max_id = result.scalar()
-        
+
         if max_id is None or max_id < 10000000:
             next_id = 10000000
         else:
             next_id = max_id + 1
-            
+
         return str(next_id).zfill(8)
     except Exception as e:
         logger.error(f"Error generating readable ID: {str(e)}")
         # Fallback to a random 8-digit number starting from 10000000
         import random
+
         return str(random.randint(10000000, 99999999))
+
 
 def generate_next_readable_id_sync(db: Session) -> str:
     """
@@ -53,34 +58,40 @@ def generate_next_readable_id_sync(db: Session) -> str:
     try:
         # Get the maximum readable_id from the database
         result = db.execute(
-            text("SELECT MAX(CAST(readable_id AS INTEGER)) FROM users WHERE readable_id ~ '^[0-9]+$'")
+            text(
+                "SELECT MAX(CAST(readable_id AS INTEGER)) FROM users WHERE readable_id ~ '^[0-9]+$'"
+            )
         )
         max_id = result.scalar()
-        
+
         if max_id is None or max_id < 10000000:
             next_id = 10000000
         else:
             next_id = max_id + 1
-            
+
         return str(next_id).zfill(8)
     except Exception as e:
         logger.error(f"Error generating readable ID: {str(e)}")
         # Fallback to a random 8-digit number starting from 10000000
         import random
+
         return str(random.randint(10000000, 99999999))
+
 
 def register_user(db: Session, user_in) -> User:
     """Register user (phone number etc.)"""
     try:
         user_id = str(uuid.uuid4())
         readable_id = generate_next_readable_id_sync(db)
-        
+
         user = User(
             id=user_id,
             readable_id=readable_id,
             auth_type=user_in.auth_type,
-            system_language=user_in.user_info.system_language if user_in.user_info else "en",
-            is_active=True
+            system_language=(
+                user_in.user_info.system_language if user_in.user_info else "en"
+            ),
+            is_active=True,
         )
         if user_in.user_info:
             user.gender = user_in.user_info.gender
@@ -102,15 +113,17 @@ def register_user(db: Session, user_in) -> User:
         logger.error(f"Error stack: {traceback.format_exc()}")
         raise e
 
+
 def get_user_by_phone(db: Session, phone: str) -> Optional[User]:
     """Get user by phone number"""
     return db.query(User).filter(User.phone == phone).first()
+
 
 async def create_guest_user(
     db: AsyncSession,
     device_id: Optional[str] = None,
     system_language: Optional[str] = None,
-    age_group: Optional[str] = None
+    age_group: Optional[str] = None,
 ) -> User:
     """Create guest user - can create anonymous users without device_id association"""
     try:
@@ -118,16 +131,16 @@ async def create_guest_user(
             stmt = select(User).where(
                 User.device_id == device_id,
                 User.auth_type == AuthType.GUEST,
-                User.deleted_at.is_(None)  # 只查找未删除的用户
+                User.deleted_at.is_(None),  # 只查找未删除的用户
             )
             result = await db.execute(stmt)
             existing_user = result.scalars().first()
             if existing_user:
                 return existing_user
-        
+
         user_id = uid(prefix="user")
         readable_id = await generate_next_readable_id(db)
-        
+
         user = User(
             id=user_id,
             readable_id=readable_id,
@@ -136,7 +149,7 @@ async def create_guest_user(
             nickname=f"Guest_{user_id[-8:]}",
             system_language=system_language or "en",
             age_group=age_group,
-            is_active=True
+            is_active=True,
         )
         db.add(user)
         await db.commit()
@@ -155,45 +168,52 @@ async def create_guest_user(
         logger.error(f"Error stack: {traceback.format_exc()}")
         raise e
 
-async def update_user(
-    db: AsyncSession,
-    user_id: str,
-    user_in: UserUpdate
-) -> User:
+
+async def update_user(db: AsyncSession, user_id: str, user_in: UserUpdate) -> User:
     """Update user information"""
     try:
         stmt = select(User).where(User.id == user_id)
         result = await db.execute(stmt)
         user = result.scalars().first()
-        
+
         if not user:
             raise ValueError(f"User does not exist: {user_id}")
-            
+
         update_data = user_in.model_dump(exclude_unset=True)
-        
+
         # 过滤掉不应该被用户更新的字段
-        excluded_fields = {'readable_id', 'id', 'auth_type', 'is_active', 'is_superuser', 'created_at', 'updated_at'}
+        excluded_fields = {
+            "readable_id",
+            "id",
+            "auth_type",
+            "is_active",
+            "is_superuser",
+            "created_at",
+            "updated_at",
+        }
         update_data = {k: v for k, v in update_data.items() if k not in excluded_fields}
-        
+
         for field, value in update_data.items():
             setattr(user, field, value)
-            
+
         await db.commit()
         await db.refresh(user)
         return user
     except Exception as e:
         logger.error(f"Failed to update user information: {str(e)}")
         logger.error(f"Error stack: {traceback.format_exc()}")
-        raise e 
+        raise e
+
 
 def generate_avatar_path(user_id: str, filename: str) -> str:
-    ext = filename.split('.')[-1].lower()
-    if ext not in ['jpg', 'jpeg', 'png', 'webp']:
+    ext = filename.split(".")[-1].lower()
+    if ext not in ["jpg", "jpeg", "png", "webp"]:
         raise ValueError(f"Unsupported file type: {ext}")
-    
+
     timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
     unique_id = uuid.uuid4().hex[:8]
     return f"avatars/{user_id}/avatar-{timestamp}-{unique_id}.{ext}"
+
 
 def get_path_from_gcs_url(url: str) -> str:
     if not url:
@@ -208,10 +228,9 @@ def get_path_from_gcs_url(url: str) -> str:
         path = path[len(bucket) + 1 :]
     return path
 
+
 async def register_device_token(
-    db: AsyncSession,
-    token: str,
-    user_id: str
+    db: AsyncSession, token: str, user_id: str
 ) -> DeviceToken:
     """
     Register or update device token
@@ -221,35 +240,30 @@ async def register_device_token(
         stmt = select(DeviceToken).where(DeviceToken.token == token)
         result = await db.execute(stmt)
         device_token = result.scalars().first()
-        
+
         if device_token:
             # If exists, update user_id
             device_token.user_id = user_id
         else:
             # If not exists, create new record
-            device_token = DeviceToken(
-                token=token,
-                user_id=user_id
-            )
+            device_token = DeviceToken(token=token, user_id=user_id)
             db.add(device_token)
-            
+
         await db.commit()
         await db.refresh(device_token)
         return device_token
-        
+
     except Exception as e:
         raise e
 
-async def get_users_device_tokens(
-    db: AsyncSession,
-    user_ids: list[str]
-) -> list[str]:
+
+async def get_users_device_tokens(db: AsyncSession, user_ids: list[str]) -> list[str]:
     """Get all device tokens for multiple users
-    
+
     Args:
         db: Database session
         user_ids: List of user IDs
-        
+
     Returns:
         list[str]: List of device tokens, returns empty list if no records found
     """
@@ -264,10 +278,12 @@ async def get_users_device_tokens(
         raise e
 
 
-async def check_user_can_delete_account(db: AsyncSession, user_id: str) -> tuple[bool, str]:
+async def check_user_can_delete_account(
+    db: AsyncSession, user_id: str
+) -> tuple[bool, str]:
     """
     检查用户是否可以删除账户
-    
+
     Returns:
         tuple[bool, str]: (是否可以删除, 错误信息)
     """
@@ -276,29 +292,29 @@ async def check_user_can_delete_account(db: AsyncSession, user_id: str) -> tuple
         stmt = select(User).where(User.id == user_id)
         result = await db.execute(stmt)
         user = result.scalars().first()
-        
+
         if not user:
             return False, "用户不存在"
-        
+
         if user.deleted_at:
             return False, "账户已被删除"
-        
+
         # 检查是否有活跃订阅
         active_subscription_stmt = select(UserSubscription).where(
             and_(
                 UserSubscription.user_id == user_id,
                 UserSubscription.status == SubscriptionStatus.ACTIVE,
-                UserSubscription.end_date > datetime.now(UTC)
+                UserSubscription.end_date > datetime.now(UTC),
             )
         )
         active_subscription_result = await db.execute(active_subscription_stmt)
         active_subscription = active_subscription_result.scalars().first()
-        
+
         if active_subscription:
             return False, "存在活跃订阅，请先取消订阅后再删除账户"
-        
+
         return True, ""
-        
+
     except Exception as e:
         logger.error(f"检查用户删除权限失败: {str(e)}")
         raise e
@@ -307,44 +323,46 @@ async def check_user_can_delete_account(db: AsyncSession, user_id: str) -> tuple
 async def anonymize_user_data(db: AsyncSession, user: User) -> List[str]:
     """
     匿名化用户数据
-    
+
     Returns:
         List[str]: 已匿名化的字段列表
     """
     anonymized_fields = []
-    
+
     # 生成唯一的匿名标识符
-    anonymous_suffix = hashlib.md5(f"{user.id}{datetime.now(UTC)}".encode()).hexdigest()[:8]
-    
+    anonymous_suffix = hashlib.md5(
+        f"{user.id}{datetime.now(UTC)}".encode()
+    ).hexdigest()[:8]
+
     # 匿名化个人信息
     if user.email:
         user.email = None  # 设置为空值，避免邮箱验证问题
         anonymized_fields.append("email")
-    
+
     if user.phone:
         user.phone = f"deleted_{anonymous_suffix}"
         anonymized_fields.append("phone")
-    
+
     if user.nickname:
         user.nickname = f"已删除用户_{anonymous_suffix}"
         anonymized_fields.append("nickname")
-    
+
     if user.google_id:
         user.google_id = f"deleted_google_{anonymous_suffix}"
         anonymized_fields.append("google_id")
-    
+
     # 清除其他个人信息
     if user.avatar:
         user.avatar = None
         anonymized_fields.append("avatar")
-    
+
     if user.description:
         user.description = None
         anonymized_fields.append("description")
-    
+
     # 设置匿名化时间戳
     user.anonymized_at = datetime.now(UTC)
-    
+
     return anonymized_fields
 
 
@@ -354,10 +372,10 @@ async def create_deletion_audit_log(
     deletion_reason: str,
     anonymized_fields: List[str],
     processor_id: str,
-    subscription_status: str = None
+    subscription_status: str = None,
 ) -> UserDeletionLog:
     """创建删除审计日志"""
-    
+
     # 创建原始用户数据快照（移除敏感信息）
     user_data_snapshot = {
         "id": user.id,
@@ -368,9 +386,9 @@ async def create_deletion_audit_log(
         "age_group": user.age_group,
         "is_active": user.is_active,
         "created_at": user.created_at.isoformat() if user.created_at else None,
-        "deleted_at": user.deleted_at.isoformat() if user.deleted_at else None
+        "deleted_at": user.deleted_at.isoformat() if user.deleted_at else None,
     }
-    
+
     deletion_log = UserDeletionLog(
         id=uid(prefix="del_log"),
         user_id=user.id,
@@ -381,13 +399,13 @@ async def create_deletion_audit_log(
         subscription_status_at_deletion=subscription_status,
         related_data_action="anonymized",
         processor_id=processor_id,
-        created_at=datetime.now(UTC)
+        created_at=datetime.now(UTC),
     )
-    
+
     db.add(deletion_log)
     await db.commit()
     await db.refresh(deletion_log)
-    
+
     return deletion_log
 
 
@@ -395,17 +413,17 @@ async def delete_user_account(
     db: AsyncSession,
     user_id: str,
     deletion_reason: str = "用户主动删除",
-    processor_id: str = None
+    processor_id: str = None,
 ) -> dict:
     """
     删除用户账户
-    
+
     Args:
         db: 数据库会话
         user_id: 用户ID
         deletion_reason: 删除原因
         processor_id: 处理者ID（通常是用户本人）
-        
+
     Returns:
         dict: 删除结果信息
     """
@@ -413,70 +431,75 @@ async def delete_user_account(
         # 检查用户是否可以删除
         can_delete, error_msg = await check_user_can_delete_account(db, user_id)
         if not can_delete:
-            return {
-                "success": False,
-                "message": error_msg,
-                "user_id": user_id
-            }
-        
+            return {"success": False, "message": error_msg, "user_id": user_id}
+
         # 获取用户信息
         stmt = select(User).where(User.id == user_id)
         result = await db.execute(stmt)
         user = result.scalars().first()
-        
+
         if not user:
-            return {
-                "success": False,
-                "message": "用户不存在",
-                "user_id": user_id
-            }
-        
+            return {"success": False, "message": "用户不存在", "user_id": user_id}
+
         # 获取用户当前订阅状态
         from app.services.subscription_service import subscription_service
-        subscription_status_response = await subscription_service.get_user_subscription_status(db, user_id)
-        subscription_status = "active" if subscription_status_response.is_subscribed else "inactive"
-        
+
+        subscription_status_response = (
+            await subscription_service.get_user_subscription_status(db, user_id)
+        )
+        subscription_status = (
+            "active" if subscription_status_response.is_subscribed else "inactive"
+        )
+
         # 如果用户有活跃订阅，先取消订阅
         cancellation_stats = None
         if subscription_status_response.is_subscribed:
             try:
-                cancellation_stats = await subscription_service.cancel_user_subscriptions_for_deletion(db, user_id)
+                cancellation_stats = (
+                    await subscription_service.cancel_user_subscriptions_for_deletion(
+                        db, user_id
+                    )
+                )
                 logger.info(f"用户 {user_id} 订阅取消统计: {cancellation_stats}")
             except Exception as e:
                 logger.warning(f"取消用户订阅失败，继续删除流程: {str(e)}")
-        
+
         # 设置删除时间戳
         user.deleted_at = datetime.now(UTC)
         user.deletion_reason = deletion_reason
         user.is_active = False
-        
+
         # 匿名化用户数据
         anonymized_fields = await anonymize_user_data(db, user)
-        
+
         # 创建删除审计日志
         deletion_log = await create_deletion_audit_log(
-            db, user, deletion_reason, anonymized_fields,
-            processor_id or user_id, subscription_status
+            db,
+            user,
+            deletion_reason,
+            anonymized_fields,
+            processor_id or user_id,
+            subscription_status,
         )
-        
+
         # 提交用户数据更改
         await db.commit()
         await db.refresh(user)
-        
+
         # 标记审计日志为已处理
         deletion_log.processed_at = datetime.now(UTC)
         await db.commit()
-        
+
         logger.info(f"用户账户删除成功: {user_id}, 日志ID: {deletion_log.id}")
-        
+
         return {
             "success": True,
             "message": "账户删除成功",
             "user_id": user_id,
             "deletion_log_id": deletion_log.id,
-            "anonymized_fields": anonymized_fields
+            "anonymized_fields": anonymized_fields,
         }
-        
+
     except Exception as e:
         await db.rollback()
         logger.error(f"删除用户账户失败: {str(e)}")
@@ -487,11 +510,11 @@ async def delete_user_account(
 async def anonymize_related_data(db: AsyncSession, user_id: str) -> dict:
     """
     匿名化用户相关数据（Agent、聊天记录等）
-    
+
     Args:
         db: 数据库会话
         user_id: 用户ID
-        
+
     Returns:
         dict: 匿名化结果统计
     """
@@ -499,46 +522,49 @@ async def anonymize_related_data(db: AsyncSession, user_id: str) -> dict:
         anonymization_stats = {
             "agents_anonymized": 0,
             "messages_anonymized": 0,
-            "chats_updated": 0
+            "chats_updated": 0,
         }
-        
+
         # 匿名化用户创建的Agent
         from app.models.agent import Agent
+
         agent_stmt = select(Agent).where(Agent.creator_id == user_id)
         agent_result = await db.execute(agent_stmt)
         user_agents = agent_result.scalars().all()
-        
+
         for agent in user_agents:
             # 将Agent标记为系统拥有，而不是删除
             agent.creator_id = None  # 设为系统Agent
             anonymization_stats["agents_anonymized"] += 1
-        
+
         # 匿名化用户的消息记录
         from app.models.message import Message
+
         message_stmt = select(Message).where(Message.sender_id == user_id)
         message_result = await db.execute(message_stmt)
         user_messages = message_result.scalars().all()
-        
+
         for message in user_messages:
             message.sender_id = None  # 匿名化发送者
             anonymization_stats["messages_anonymized"] += 1
-        
+
         # 更新聊天记录 - 保留聊天但匿名化用户信息
         from app.models.chat import Chat
+
         chat_stmt = select(Chat).where(Chat.user_id == user_id)
         chat_result = await db.execute(chat_stmt)
         user_chats = chat_result.scalars().all()
-        
+
         for chat in user_chats:
             chat.is_active = False  # 标记为非活跃
             anonymization_stats["chats_updated"] += 1
-        
+
         await db.commit()
-        
+
         logger.info(f"用户相关数据匿名化完成: {user_id}, 统计: {anonymization_stats}")
-        
+
         return anonymization_stats
-        
+
     except Exception as e:
         await db.rollback()
         logger.error(f"匿名化相关数据失败: {str(e)}")
@@ -546,20 +572,17 @@ async def anonymize_related_data(db: AsyncSession, user_id: str) -> dict:
 
 
 async def get_all_users(
-    db: AsyncSession,
-    skip: int = 0,
-    limit: int = 50,
-    search: Optional[str] = None
+    db: AsyncSession, skip: int = 0, limit: int = 50, search: Optional[str] = None
 ) -> dict:
     """
     获取所有用户信息，支持分页和关键字搜索
-    
+
     Args:
         db: 数据库会话
         skip: 跳过记录数
         limit: 限制记录数
         search: 搜索关键字，可匹配昵称和readable_id
-        
+
     Returns:
         dict: 包含总数和分页数据的字典
     """
@@ -569,65 +592,64 @@ async def get_all_users(
         # 构建基础查询
         base_query = select(User)
         count_query = select(func.count()).select_from(User)
-        
+
         # 如果有搜索关键字，添加搜索条件
         if search:
             search_condition = or_(
-                User.nickname.ilike(f'%{search}%'),
-                User.readable_id.ilike(f'%{search}%')
+                User.nickname.ilike(f"%{search}%"),
+                User.readable_id.ilike(f"%{search}%"),
             )
             base_query = base_query.where(search_condition)
             count_query = count_query.where(search_condition)
-        
+
         # 获取总数
         count_result = await db.execute(count_query)
         total = count_result.scalar()
-        
+
         # 获取分页数据
         result = await db.execute(
-            base_query
-            .order_by(User.created_at.desc())
-            .offset(skip)
-            .limit(limit)
+            base_query.order_by(User.created_at.desc()).offset(skip).limit(limit)
         )
         users = result.scalars().all()
-        
+
         # 转换为字典格式
         items = []
         for user in users:
-            items.append({
-                'id': user.id,
-                'readable_id': user.readable_id,
-                'nickname': user.nickname,
-                'avatar': user.avatar,
-                'email': user.email,
-                'phone': user.phone,
-                'gender': user.gender,
-                'age_group': user.age_group,
-                'description': user.description,
-                'auth_type': user.auth_type,
-                'google_id': user.google_id,
-                'device_id': user.device_id,
-                'system_language': user.system_language,
-                'is_active': user.is_active,
-                'is_superuser': user.is_superuser,
-                'created_at': user.created_at,
-                'updated_at': user.updated_at,
-                'deleted_at': user.deleted_at,
-                'anonymized_at': user.anonymized_at,
-                'deletion_reason': user.deletion_reason
-            })
-        
+            items.append(
+                {
+                    "id": user.id,
+                    "readable_id": user.readable_id,
+                    "nickname": user.nickname,
+                    "avatar": user.avatar,
+                    "email": user.email,
+                    "phone": user.phone,
+                    "gender": user.gender,
+                    "age_group": user.age_group,
+                    "description": user.description,
+                    "auth_type": user.auth_type,
+                    "google_id": user.google_id,
+                    "device_id": user.device_id,
+                    "system_language": user.system_language,
+                    "is_active": user.is_active,
+                    "is_superuser": user.is_superuser,
+                    "created_at": user.created_at,
+                    "updated_at": user.updated_at,
+                    "deleted_at": user.deleted_at,
+                    "anonymized_at": user.anonymized_at,
+                    "deletion_reason": user.deletion_reason,
+                }
+            )
+
         has_more = total > skip + len(items)
-        
+
         return {
-            'total': total,
-            'skip': skip,
-            'limit': limit,
-            'items': items,
-            'has_more': has_more
+            "total": total,
+            "skip": skip,
+            "limit": limit,
+            "items": items,
+            "has_more": has_more,
         }
-        
+
     except Exception as e:
         logger.error(f"获取所有用户失败: {str(e)}")
         raise e
@@ -636,11 +658,11 @@ async def get_all_users(
 async def get_user_connector_count(db: AsyncSession, user_id: str) -> int:
     """
     计算用户的对话数量（与多少个不同agent产生过对话）
-    
+
     Args:
         db: 数据库会话
         user_id: 用户ID
-        
+
     Returns:
         int: 对话数量
     """
@@ -648,12 +670,14 @@ async def get_user_connector_count(db: AsyncSession, user_id: str) -> int:
         from sqlalchemy import distinct, func
 
         # 查询用户与多少个不同的agent有过聊天
-        stmt = select(func.count(distinct(Chat.agent_id))).where(Chat.user_id == user_id)
+        stmt = select(func.count(distinct(Chat.agent_id))).where(
+            Chat.user_id == user_id
+        )
         result = await db.execute(stmt)
         count = result.scalar() or 0
-        
+
         return count
-        
+
     except Exception as e:
         logger.error(f"计算用户对话数量失败: {str(e)}")
         return 0

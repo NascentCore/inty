@@ -20,25 +20,28 @@ class InterceptHandler(logging.Handler):
             frame = frame.f_back
             depth += 1
 
-        logger.opt(depth=depth, exception=record.exc_info).log(level, record.getMessage())
+        logger.opt(depth=depth, exception=record.exc_info).log(
+            level, record.getMessage()
+        )
+
 
 def init_logger():
     """初始化日志配置"""
     # 移除默认的处理器
     logger.remove()
-    
+
     # 添加控制台输出
     logger.add(
         sys.stderr,
         format=settings.logging.format,
         level=settings.logging.level,
-        colorize=True
+        colorize=True,
     )
-    
+
     # 确保日志目录存在
     log_path = Path(settings.logging.file).parent
     log_path.mkdir(parents=True, exist_ok=True)
-    
+
     # 添加文件输出
     logger.add(
         settings.logging.file,
@@ -46,7 +49,7 @@ def init_logger():
         level=settings.logging.level,
         rotation=settings.logging.rotation,
         retention=settings.logging.retention,
-        encoding="utf-8"
+        encoding="utf-8",
     )
 
     # 拦截标准 logging 的日志（例如 FastAPI/uvicorn）
@@ -54,6 +57,13 @@ def init_logger():
     logging.basicConfig(handlers=[intercept_handler], level=0, force=True)
 
     # 指定要被接管的标准 logger 名称
-    for name in ("uvicorn", "uvicorn.error", "uvicorn.access", "fastapi", "gunicorn", "gunicorn.error"):
+    for name in (
+        "uvicorn",
+        "uvicorn.error",
+        "uvicorn.access",
+        "fastapi",
+        "gunicorn",
+        "gunicorn.error",
+    ):
         logging.getLogger(name).handlers = [intercept_handler]
         logging.getLogger(name).propagate = False

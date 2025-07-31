@@ -1,8 +1,7 @@
 import enum
 
 import sqlalchemy as sa
-from sqlalchemy import (JSON, Boolean, Column, DateTime, Enum, ForeignKey,
-                        String, Text)
+from sqlalchemy import JSON, Boolean, Column, DateTime, Enum, ForeignKey, String, Text
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
@@ -13,6 +12,7 @@ from app.models.user import Gender
 
 class AgentStatus(str, enum.Enum):
     """AI角色状态"""
+
     PENDING = "PENDING"
     APPROVED = "APPROVED"
     REJECTED = "REJECTED"
@@ -20,12 +20,14 @@ class AgentStatus(str, enum.Enum):
 
 class AgentVisibility(str, enum.Enum):
     """AI角色可见性"""
+
     PUBLIC = "PUBLIC"
     PRIVATE = "PRIVATE"
 
 
 class Agent(Base):
     """AI角色模型"""
+
     __tablename__ = "agents"
 
     id = Column(String, primary_key=True, index=True)
@@ -39,12 +41,14 @@ class Agent(Base):
     settings = Column(JSON)
     intro = Column(String)
     opening = Column(String)
-    visibility = Column(Enum(AgentVisibility, name="visibility"), default=AgentVisibility.PUBLIC)
+    visibility = Column(
+        Enum(AgentVisibility, name="visibility"), default=AgentVisibility.PUBLIC
+    )
     photos = Column(JSON)
     category = Column(String)
     status = Column(Enum(AgentStatus, name="agentstatus"), default=AgentStatus.PENDING)
-    created_at = Column(DateTime(timezone=True), server_default=sa.text('now()'))
-    updated_at = Column(DateTime(timezone=True), onupdate=sa.text('now()'))
+    created_at = Column(DateTime(timezone=True), server_default=sa.text("now()"))
+    updated_at = Column(DateTime(timezone=True), onupdate=sa.text("now()"))
     deleted_at = Column(DateTime(timezone=True), nullable=True)
     prompt = Column(String)
 
@@ -72,11 +76,9 @@ class Agent(Base):
     # 关系
     creator = relationship("User", back_populates="agents")
     followers = relationship(
-        "User",
-        secondary=agent_followers,
-        back_populates="following_agents"
+        "User", secondary=agent_followers, back_populates="following_agents"
     )
     messages = relationship("Message", back_populates="agent")
     chat_settings = relationship("ChatSettings", back_populates="agent")
     chats = relationship("Chat", back_populates="agent")
-    resources = relationship("Resource", back_populates="agent") 
+    resources = relationship("Resource", back_populates="agent")

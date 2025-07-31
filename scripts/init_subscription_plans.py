@@ -22,7 +22,7 @@ from app.models.subscription import SubscriptionPlanType
 
 async def init_subscription_plans():
     """初始化三种订阅计划"""
-    
+
     subscription_plans = [
         {
             "id": "premium_monthly",
@@ -40,7 +40,7 @@ async def init_subscription_plans():
                         "description": "无限制聊天消息数量",
                         "type": "real",
                         "icon": "💬",
-                        "order": 1
+                        "order": 1,
                     },
                     {
                         "key": "premium_model_usage",
@@ -48,7 +48,7 @@ async def init_subscription_plans():
                         "description": "使用更先进的AI模型",
                         "type": "fake",
                         "icon": "🧠",
-                        "order": 2
+                        "order": 2,
                     },
                     {
                         "key": "extra_chat_inspiration",
@@ -56,7 +56,7 @@ async def init_subscription_plans():
                         "description": "获得更多聊天话题建议",
                         "type": "fake",
                         "icon": "💡",
-                        "order": 3
+                        "order": 3,
                     },
                     {
                         "key": "customize_ai_responses",
@@ -64,7 +64,7 @@ async def init_subscription_plans():
                         "description": "个性化AI回复风格",
                         "type": "fake",
                         "icon": "🎨",
-                        "order": 4
+                        "order": 4,
                     },
                     {
                         "key": "chat_memory",
@@ -72,7 +72,7 @@ async def init_subscription_plans():
                         "description": "AI记住聊天历史上下文",
                         "type": "fake",
                         "icon": "🧠",
-                        "order": 5
+                        "order": 5,
                     },
                     {
                         "key": "new_features_privilege",
@@ -80,22 +80,22 @@ async def init_subscription_plans():
                         "description": "优先体验最新功能",
                         "type": "fake",
                         "icon": "🚀",
-                        "order": 6
-                    }
+                        "order": 6,
+                    },
                 ],
                 "real_features": ["unlimited_messages"],
                 "fake_features": [
                     "premium_model_usage",
-                    "extra_chat_inspiration", 
+                    "extra_chat_inspiration",
                     "customize_ai_responses",
                     "chat_memory",
-                    "new_features_privilege"
-                ]
+                    "new_features_privilege",
+                ],
             },
             "chat_limit_per_day": -1,  # 无限制
             "agent_creation_limit": 50,
             "is_active": True,
-            "sort_order": 1
+            "sort_order": 1,
         },
         {
             "id": "premium_quarterly",
@@ -113,7 +113,7 @@ async def init_subscription_plans():
                         "description": "无限制聊天消息数量",
                         "type": "real",
                         "icon": "💬",
-                        "order": 1
+                        "order": 1,
                     },
                     {
                         "key": "premium_model_usage",
@@ -121,7 +121,7 @@ async def init_subscription_plans():
                         "description": "使用更先进的AI模型",
                         "type": "fake",
                         "icon": "🧠",
-                        "order": 2
+                        "order": 2,
                     },
                     {
                         "key": "extra_chat_inspiration",
@@ -129,7 +129,7 @@ async def init_subscription_plans():
                         "description": "获得更多聊天话题建议",
                         "type": "fake",
                         "icon": "💡",
-                        "order": 3
+                        "order": 3,
                     },
                     {
                         "key": "customize_ai_responses",
@@ -137,7 +137,7 @@ async def init_subscription_plans():
                         "description": "个性化AI回复风格",
                         "type": "fake",
                         "icon": "🎨",
-                        "order": 4
+                        "order": 4,
                     },
                     {
                         "key": "chat_memory",
@@ -145,7 +145,7 @@ async def init_subscription_plans():
                         "description": "AI记住聊天历史上下文",
                         "type": "fake",
                         "icon": "🧠",
-                        "order": 5
+                        "order": 5,
                     },
                     {
                         "key": "new_features_privilege",
@@ -153,22 +153,22 @@ async def init_subscription_plans():
                         "description": "优先体验最新功能",
                         "type": "fake",
                         "icon": "🚀",
-                        "order": 6
-                    }
+                        "order": 6,
+                    },
                 ],
                 "real_features": ["unlimited_messages"],
                 "fake_features": [
                     "premium_model_usage",
-                    "extra_chat_inspiration", 
+                    "extra_chat_inspiration",
                     "customize_ai_responses",
                     "chat_memory",
-                    "new_features_privilege"
-                ]
+                    "new_features_privilege",
+                ],
             },
             "chat_limit_per_day": -1,  # 无限制
             "agent_creation_limit": 75,
             "is_active": True,
-            "sort_order": 2
+            "sort_order": 2,
         },
         {
             "id": "premium_yearly",
@@ -186,7 +186,7 @@ async def init_subscription_plans():
                         "description": "无限制聊天消息数量",
                         "type": "real",
                         "icon": "💬",
-                        "order": 1
+                        "order": 1,
                     },
                     {
                         "key": "premium_model_usage",
@@ -194,7 +194,7 @@ async def init_subscription_plans():
                         "description": "使用更先进的AI模型",
                         "type": "fake",
                         "icon": "🧠",
-                        "order": 2
+                        "order": 2,
                     },
                     {
                         "key": "extra_chat_inspiration",
@@ -202,7 +202,7 @@ async def init_subscription_plans():
                         "description": "获得更多聊天话题建议",
                         "type": "fake",
                         "icon": "💡",
-                        "order": 3
+                        "order": 3,
                     },
                     {
                         "key": "customize_ai_responses",
@@ -210,7 +210,7 @@ async def init_subscription_plans():
                         "description": "个性化AI回复风格",
                         "type": "fake",
                         "icon": "🎨",
-                        "order": 4
+                        "order": 4,
                     },
                     {
                         "key": "chat_memory",
@@ -218,7 +218,7 @@ async def init_subscription_plans():
                         "description": "AI记住聊天历史上下文",
                         "type": "fake",
                         "icon": "🧠",
-                        "order": 5
+                        "order": 5,
                     },
                     {
                         "key": "new_features_privilege",
@@ -226,61 +226,65 @@ async def init_subscription_plans():
                         "description": "优先体验最新功能",
                         "type": "fake",
                         "icon": "🚀",
-                        "order": 6
-                    }
+                        "order": 6,
+                    },
                 ],
                 "real_features": ["unlimited_messages"],
                 "fake_features": [
                     "premium_model_usage",
-                    "extra_chat_inspiration", 
+                    "extra_chat_inspiration",
                     "customize_ai_responses",
                     "chat_memory",
-                    "new_features_privilege"
-                ]
+                    "new_features_privilege",
+                ],
             },
             "chat_limit_per_day": -1,  # 无限制
             "agent_creation_limit": 100,
             "is_active": True,
-            "sort_order": 3
-        }
+            "sort_order": 3,
+        },
     ]
-    
+
     async with AsyncSessionLocal() as db:
         try:
             print("开始初始化订阅计划...")
-            
+
             for plan_data in subscription_plans:
                 try:
                     # 检查计划是否已存在
-                    existing_plan = await subscription_service.get_subscription_plan_by_id(
-                        db, plan_data["id"]
+                    existing_plan = (
+                        await subscription_service.get_subscription_plan_by_id(
+                            db, plan_data["id"]
+                        )
                     )
-                    
+
                     if existing_plan:
                         print(f"订阅计划 {plan_data['name']} 已存在，跳过...")
                         continue
-                    
+
                     # 创建订阅计划
                     plan_create = SubscriptionPlanCreate(**plan_data)
                     created_plan = await subscription_service.create_subscription_plan(
                         db, plan_create
                     )
-                    
+
                     print(f"✅ 成功创建订阅计划: {created_plan.name}")
                     print(f"   - ID: {created_plan.id}")
                     print(f"   - 类型: {created_plan.plan_type}")
                     print(f"   - 价格: {created_plan.price} {created_plan.currency}")
-                    print(f"   - Google Play Product ID: {created_plan.google_play_product_id}")
+                    print(
+                        f"   - Google Play Product ID: {created_plan.google_play_product_id}"
+                    )
                     print(f"   - 聊天限制: {created_plan.chat_limit_per_day}")
                     print(f"   - Agent创建限制: {created_plan.agent_creation_limit}")
                     print()
-                    
+
                 except Exception as e:
                     print(f"❌ 创建订阅计划 {plan_data['name']} 失败: {str(e)}")
                     continue
-            
+
             print("订阅计划初始化完成！")
-            
+
         except Exception as e:
             print(f"❌ 初始化订阅计划失败: {str(e)}")
             raise
@@ -290,11 +294,13 @@ async def list_subscription_plans():
     """列出所有订阅计划"""
     async with AsyncSessionLocal() as db:
         try:
-            plans = await subscription_service.get_subscription_plans(db, include_inactive=True)
-            
+            plans = await subscription_service.get_subscription_plans(
+                db, include_inactive=True
+            )
+
             print("当前所有订阅计划:")
             print("=" * 50)
-            
+
             for plan in plans:
                 print(f"ID: {plan.id}")
                 print(f"名称: {plan.name}")
@@ -306,21 +312,25 @@ async def list_subscription_plans():
                 print(f"是否激活: {plan.is_active}")
                 print(f"创建时间: {plan.created_at}")
                 print("-" * 30)
-                
+
         except Exception as e:
             print(f"❌ 获取订阅计划失败: {str(e)}")
 
 
 if __name__ == "__main__":
     import argparse
-    
+
     parser = argparse.ArgumentParser(description="订阅计划管理脚本")
-    parser.add_argument("--action", choices=["init", "list"], default="init", 
-                       help="执行的操作: init=初始化计划, list=列出计划")
-    
+    parser.add_argument(
+        "--action",
+        choices=["init", "list"],
+        default="init",
+        help="执行的操作: init=初始化计划, list=列出计划",
+    )
+
     args = parser.parse_args()
-    
+
     if args.action == "init":
         asyncio.run(init_subscription_plans())
     elif args.action == "list":
-        asyncio.run(list_subscription_plans()) 
+        asyncio.run(list_subscription_plans())

@@ -14,7 +14,10 @@ async def list_report_reasons(db: AsyncSession) -> List[ReportReason]:
     result = await db.execute(stmt)
     return result.scalars().all()
 
-async def create_report(db: AsyncSession, report_in: ReportCreate, reporter_id: str) -> Report:
+
+async def create_report(
+    db: AsyncSession, report_in: ReportCreate, reporter_id: str
+) -> Report:
     report_id = uid(prefix="report")
     report = Report(
         id=report_id,
@@ -23,17 +26,15 @@ async def create_report(db: AsyncSession, report_in: ReportCreate, reporter_id: 
         reporter_id=reporter_id,
         reason_ids=report_in.reason_ids,
         image_urls=report_in.image_urls or [],
-        description=report_in.description
+        description=report_in.description,
     )
     db.add(report)
     await db.commit()
     await db.refresh(report)
     return report
 
-async def query_reports(
-    db: AsyncSession,
-    query: ReportQuery
-):
+
+async def query_reports(db: AsyncSession, query: ReportQuery):
     filters = []
     if query.reason_ids:
         filters.append(Report.reason_ids.overlap(query.reason_ids))

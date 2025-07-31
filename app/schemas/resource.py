@@ -8,6 +8,7 @@ from app.models.resource import ResourceType
 
 class ResourceBase(BaseModel):
     """资源基础模型"""
+
     type: ResourceType
     url: str
     resource_metadata: Optional[Dict[str, Any]] = None
@@ -15,11 +16,13 @@ class ResourceBase(BaseModel):
 
 class ResourceCreate(ResourceBase):
     """创建资源"""
+
     pass
 
 
 class ResourceUpdate(BaseModel):
     """更新资源"""
+
     type: Optional[ResourceType] = None
     url: Optional[str] = None
     resource_metadata: Optional[Dict[str, Any]] = None
@@ -27,6 +30,7 @@ class ResourceUpdate(BaseModel):
 
 class ResourceInDB(ResourceBase):
     """数据库中的资源"""
+
     id: str
     user_id: str
     agent_id: str
@@ -39,4 +43,5 @@ class ResourceInDB(ResourceBase):
 
 class Resource(ResourceInDB):
     """资源"""
-    pass 
+
+    pass
