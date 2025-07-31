@@ -1,3 +1,5 @@
+# TODO: This probably should be removed. Most admin entries can be included in py source files.
+# And update by redeploying the app.
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, status
