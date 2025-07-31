@@ -395,6 +395,13 @@ class Agent:
             if user_profile:
                 system_messages.append(SystemMessage(content=user_profile))
 
+            system_messages.extend(
+                [
+                    SystemMessage(content=prompt)
+                    for prompt in prompts.ROMANTIC_ROLEPLAY_PROMPT.auxiliary_prompts
+                ]
+            )
+
             return system_messages
 
         # 创建一个返回完整消息列表的函数
