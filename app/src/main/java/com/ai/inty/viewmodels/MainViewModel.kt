@@ -261,15 +261,7 @@ class MainViewModel : BaseActivityViewModel() {
             } catch (e: retrofit2.HttpException) {
                 // 专门处理HTTP异常
                 EasyLog.log("getUserProfile HTTP Exception: ${e.code()} - ${e.message()}", EasyLog.ERROR)
-                val errorMessage = when (e.code()) {
-                    401 -> "Session expired, please login again"
-                    403 -> "Permission denied to access user information"
-                    404 -> "User information not found"
-                    429 -> "Too many requests, please try again later"
-                    500 -> "Internal server error, please try again later"
-                    502, 503 -> "Server temporarily unavailable, please try again later"
-                    else -> "Failed to get user information (${e.code()})"
-                }
+                val errorMessage = handleHttpException(e, "user")
                 showNetworkAwareError(errorMessage)
             } catch (e: Exception) {
                 EasyLog.log("getUserProfile exception: ${e.message}", priority = EasyLog.ERROR)
@@ -603,40 +595,14 @@ class MainViewModel : BaseActivityViewModel() {
             } catch (e: retrofit2.HttpException) {
                 // 专门处理HTTP异常
                 EasyLog.log("createAgent HTTP Exception: ${e.code()} - ${e.message()}", EasyLog.ERROR)
-                val errorMessage = when (e.code()) {
-                    400 -> "Invalid request parameters, please check your input"
-                    401 -> "Session expired, please login again"
-                    403 -> "Permission denied for this operation"
-                    404 -> "Service not found"
-                    429 -> "Too many requests, please try again later"
-                    500 -> "Internal server error, please try again later"
-                    502, 503 -> "Server temporarily unavailable, please try again later"
-                    else -> "Network request failed (${e.code()})"
-                }
+                val errorMessage = handleHttpException(e, "create")
                 withContext(Dispatchers.Main) {
                     onError(errorMessage)
                 }
             } catch (e: Exception) {
                 EasyLog.log("createAgent exception: ${e.message}", priority = EasyLog.ERROR)
                 EasyLog.log(e)
-                val errorMessage = when {
-                    e.message?.contains(
-                        "timeout",
-                        ignoreCase = true
-                    ) == true -> "Request timeout, please try again later"
-
-                    e.message?.contains(
-                        "network",
-                        ignoreCase = true
-                    ) == true -> "Network connection failed, please check your connection"
-
-                    e.message?.contains(
-                        "json",
-                        ignoreCase = true
-                    ) == true -> "Data format error, please try again later"
-
-                    else -> "Creation failed: ${e.message ?: "Unknown error"}"
-                }
+                val errorMessage = handleGeneralException(e, "create")
                 withContext(Dispatchers.Main) {
                     onError(errorMessage)
                 }
@@ -725,16 +691,7 @@ class MainViewModel : BaseActivityViewModel() {
             } catch (e: retrofit2.HttpException) {
                 // 专门处理HTTP异常
                 EasyLog.log("deleteAgent HTTP Exception: ${e.code()} - ${e.message()}", EasyLog.ERROR)
-                val errorMessage = when (e.code()) {
-                    400 -> "Invalid request parameters, please check your input"
-                    401 -> "Session expired, please login again"
-                    403 -> "Permission denied for this operation"
-                    404 -> "Character not found"
-                    429 -> "Too many requests, please try again later"
-                    500 -> "Internal server error, please try again later"
-                    502, 503 -> "Server temporarily unavailable, please try again later"
-                    else -> "Network request failed (${e.code()})"
-                }
+                val errorMessage = handleHttpException(e, "delete")
                 withContext(Dispatchers.Main) {
                     ToastUtils.showToast(errorMessage)
                     onError(errorMessage)
@@ -742,19 +699,7 @@ class MainViewModel : BaseActivityViewModel() {
             } catch (e: Exception) {
                 EasyLog.log("deleteAgent exception: ${e.message}", priority = EasyLog.ERROR)
                 EasyLog.log(e)
-                val errorMessage = when {
-                    e.message?.contains(
-                        "timeout",
-                        ignoreCase = true
-                    ) == true -> "Request timeout, please try again later"
-
-                    e.message?.contains(
-                        "network",
-                        ignoreCase = true
-                    ) == true -> "Network connection failed, please check your connection"
-
-                    else -> "Delete failed: ${e.message ?: "Unknown error"}"
-                }
+                val errorMessage = handleGeneralException(e, "delete")
                 withContext(Dispatchers.Main) {
                     ToastUtils.showToast(errorMessage)
                     onError(errorMessage)
@@ -802,16 +747,7 @@ class MainViewModel : BaseActivityViewModel() {
             } catch (e: retrofit2.HttpException) {
                 // 专门处理HTTP异常
                 EasyLog.log("updateAgent HTTP Exception: ${e.code()} - ${e.message()}", EasyLog.ERROR)
-                val errorMessage = when (e.code()) {
-                    400 -> "Invalid request parameters, please check your input"
-                    401 -> "Session expired, please login again"
-                    403 -> "Permission denied for this operation"
-                    404 -> "Character not found"
-                    429 -> "Too many requests, please try again later"
-                    500 -> "Internal server error, please try again later"
-                    502, 503 -> "Server temporarily unavailable, please try again later"
-                    else -> "Network request failed (${e.code()})"
-                }
+                val errorMessage = handleHttpException(e, "update")
                 withContext(Dispatchers.Main) {
                     ToastUtils.showToast(errorMessage)
                     onError(errorMessage)
@@ -819,19 +755,7 @@ class MainViewModel : BaseActivityViewModel() {
             } catch (e: Exception) {
                 EasyLog.log("updateAgent exception: ${e.message}", priority = EasyLog.ERROR)
                 EasyLog.log(e)
-                val errorMessage = when {
-                    e.message?.contains(
-                        "timeout",
-                        ignoreCase = true
-                    ) == true -> "Request timeout, please try again later"
-
-                    e.message?.contains(
-                        "network",
-                        ignoreCase = true
-                    ) == true -> "Network connection failed, please check your connection"
-
-                    else -> "Update failed: ${e.message ?: "Unknown error"}"
-                }
+                val errorMessage = handleGeneralException(e, "update")
                 withContext(Dispatchers.Main) {
                     ToastUtils.showToast(errorMessage)
                     onError(errorMessage)
@@ -871,40 +795,14 @@ class MainViewModel : BaseActivityViewModel() {
             } catch (e: retrofit2.HttpException) {
                 // 专门处理HTTP异常
                 EasyLog.log("generateBackground HTTP Exception: ${e.code()} - ${e.message()}", EasyLog.ERROR)
-                val errorMessage = when (e.code()) {
-                    400 -> "Invalid request parameters, please check your input"
-                    401 -> "Session expired, please login again"
-                    403 -> "Permission denied for this operation"
-                    404 -> "Service not found"
-                    429 -> "Too many requests, please try again later"
-                    500 -> "Internal server error, please try again later"
-                    502, 503 -> "Server temporarily unavailable, please try again later"
-                    else -> "Network request failed (${e.code()})"
-                }
+                val errorMessage = handleHttpException(e, "generate")
                 withContext(Dispatchers.Main) {
                     onError(errorMessage)
                 }
             } catch (e: Exception) {
                 EasyLog.log("generateBackground exception: ${e.message}", priority = EasyLog.ERROR)
                 EasyLog.log(e)
-                val errorMessage = when {
-                    e.message?.contains(
-                        "timeout",
-                        ignoreCase = true
-                    ) == true -> "Request timeout, please try again later"
-
-                    e.message?.contains(
-                        "network",
-                        ignoreCase = true
-                    ) == true -> "Network connection failed, please check your connection"
-
-                    e.message?.contains(
-                        "json",
-                        ignoreCase = true
-                    ) == true -> "Data format error, please try again later"
-
-                    else -> "Generation failed: ${e.message ?: "Unknown error"}"
-                }
+                val errorMessage = handleGeneralException(e, "generate")
                 withContext(Dispatchers.Main) {
                     onError(errorMessage)
                 }
@@ -946,16 +844,7 @@ class MainViewModel : BaseActivityViewModel() {
             } catch (e: retrofit2.HttpException) {
                 // 专门处理HTTP异常
                 EasyLog.log("checkAccountSubscribe HTTP Exception: ${e.code()} - ${e.message()}", EasyLog.ERROR)
-                val errorMessage = when (e.code()) {
-                    400 -> "Invalid request parameters, please check your input"
-                    401 -> "Session expired, please login again"
-                    403 -> "Permission denied for this operation"
-                    404 -> "Account information not found"
-                    429 -> "Too many requests, please try again later"
-                    500 -> "Internal server error, please try again later"
-                    502, 503 -> "Server temporarily unavailable, please try again later"
-                    else -> "Network request failed (${e.code()})"
-                }
+                val errorMessage = handleHttpException(e, "account")
                 withContext(Dispatchers.Main) {
                     ToastUtils.showToast(errorMessage)
                 }
@@ -965,19 +854,7 @@ class MainViewModel : BaseActivityViewModel() {
                     priority = EasyLog.ERROR
                 )
                 EasyLog.log(e)
-                val errorMessage = when {
-                    e.message?.contains(
-                        "timeout",
-                        ignoreCase = true
-                    ) == true -> "Request timeout, please try again later"
-
-                    e.message?.contains(
-                        "network",
-                        ignoreCase = true
-                    ) == true -> "Network connection failed, please check your connection"
-
-                    else -> "Update failed: ${e.message ?: "Unknown error"}"
-                }
+                val errorMessage = handleGeneralException(e, "account")
                 withContext(Dispatchers.Main) {
                     ToastUtils.showToast(errorMessage)
                 }
@@ -1018,38 +895,84 @@ class MainViewModel : BaseActivityViewModel() {
             } catch (e: retrofit2.HttpException) {
                 // 专门处理HTTP异常
                 EasyLog.log("deleteUserAccount HTTP Exception: ${e.code()} - ${e.message()}", EasyLog.ERROR)
-                val errorMessage = when (e.code()) {
-                    400 -> "Invalid request parameters, please check your input"
-                    401 -> "Session expired, please login again"
-                    403 -> "Permission denied for this operation"
-                    404 -> "Account information not found"
-                    429 -> "Too many requests, please try again later"
-                    500 -> "Internal server error, please try again later"
-                    502, 503 -> "Server temporarily unavailable, please try again later"
-                    else -> "Network request failed (${e.code()})"
-                }
+                val errorMessage = handleHttpException(e, "account")
                 withContext(Dispatchers.Main) {
                     ToastUtils.showToast(errorMessage)
                 }
             } catch (e: Exception) {
                 EasyLog.log("删除用户账号 exception: ${e.message}", priority = EasyLog.ERROR)
                 EasyLog.log(e)
-                val errorMessage = when {
-                    e.message?.contains(
-                        "timeout",
-                        ignoreCase = true
-                    ) == true -> "Request timeout, please try again later"
-
-                    e.message?.contains(
-                        "network",
-                        ignoreCase = true
-                    ) == true -> "Network connection failed, please check your connection"
-
-                    else -> "Update failed: ${e.message ?: "Unknown error"}"
-                }
+                val errorMessage = handleGeneralException(e, "account")
                 withContext(Dispatchers.Main) {
                     ToastUtils.showToast(errorMessage)
                 }
+            }
+        }
+    }
+
+    /**
+     * 处理 HTTP 异常并返回用户友好的错误消息
+     * @param e HTTP 异常
+     * @param operation 操作名称，用于自定义错误消息
+     * @return 用户友好的错误消息
+     */
+    private fun handleHttpException(
+        e: retrofit2.HttpException,
+        operation: String = "operation",
+    ): String {
+        return when (e.code()) {
+            400 -> "Invalid request parameters, please check your input"
+            401 -> "Session expired, please login again"
+            403 -> "Permission denied for this operation"
+            404 -> when {
+                operation.contains("user", ignoreCase = true) -> "User information not found"
+                operation.contains("character", ignoreCase = true) || operation.contains(
+                    "agent",
+                    ignoreCase = true
+                ) -> "Character not found"
+
+                else -> "Resource not found"
+            }
+
+            429 -> "Too many requests, please try again later"
+            500 -> "Internal server error, please try again later"
+            502, 503 -> "Server temporarily unavailable, please try again later"
+            else -> "Network request failed (${e.code()})"
+        }
+    }
+
+    /**
+     * 处理一般异常并返回用户友好的错误消息
+     * @param e 异常
+     * @param operation 操作名称，用于自定义错误消息
+     * @return 用户友好的错误消息
+     */
+    private fun handleGeneralException(e: Exception, operation: String = "operation"): String {
+        return when {
+            e.message?.contains(
+                "timeout",
+                ignoreCase = true
+            ) == true -> "Request timeout, please try again later"
+
+            e.message?.contains(
+                "network",
+                ignoreCase = true
+            ) == true -> "Network connection failed, please check your connection"
+
+            e.message?.contains(
+                "json",
+                ignoreCase = true
+            ) == true -> "Data format error, please try again later"
+
+            else -> {
+                val operationName = when {
+                    operation.contains("create", ignoreCase = true) -> "Creation"
+                    operation.contains("update", ignoreCase = true) -> "Update"
+                    operation.contains("delete", ignoreCase = true) -> "Delete"
+                    operation.contains("generate", ignoreCase = true) -> "Generation"
+                    else -> "Operation"
+                }
+                "$operationName failed: ${e.message ?: "Unknown error"}"
             }
         }
     }
