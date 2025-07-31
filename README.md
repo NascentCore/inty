@@ -1,16 +1,9 @@
-# HeartMate - AI 聊天伴侣应用
+# AI intimacy simulation for young male adults
 
-<div align="center">
-  <img src="app/src/main/res/drawable/app_1.png" alt="HeartMate Logo" width="120" height="120" />
-  
-  [![Android](https://img.shields.io/badge/Android-API%2029+-brightgreen.svg?style=flat)](https://android-arsenal.com/api?level=29)
-  [![Kotlin](https://img.shields.io/badge/Kotlin-100%-blue.svg?style=flat)](https://kotlinlang.org)
-  [![Jetpack Compose](https://img.shields.io/badge/Jetpack%20Compose-1.6.0+-green.svg?style=flat)](https://developer.android.com/jetpack/compose)
-</div>
+## Overview
 
-## 📱 关于项目
-
-HeartMate 是一款现代化的 Android 应用程序，为用户提供与 AI 驱动的虚拟伙伴进行交流的平台。使用 Kotlin 和 Jetpack Compose 构建，为用户提供与可定制 AI 角色进行有意义对话的引人入胜的平台。
+* Kotlin+Jetpack Compose
+* Local development setup: https://g.co/gemini/share/e068464e9dbd
 
 ### ✨ 核心功能
 
@@ -36,25 +29,6 @@ HeartMate 是一款现代化的 Android 应用程序，为用户提供与 AI 驱
 - **状态管理**: StateFlow + MMKV 持久化
 - **图片加载**: Coil3 异步加载
 - **依赖注入**: TheRouter 的 @Singleton 和 @Autowired
-
-### 项目结构
-
-```
-inty-app/
-├── app/                    # 主应用模块
-│   ├── src/main/java/      # Kotlin 源代码
-│   │   ├── chat/          # 聊天功能
-│   │   ├── home/          # 主页组件
-│   │   ├── beans/         # 数据模型
-│   │   ├── net/           # API 接口
-│   │   ├── viewmodels/    # MVVM ViewModels
-│   │   └── base/          # 基础组件
-│   └── src/main/res/      # 资源文件 (布局、字符串等)
-├── network/               # 网络层模块
-├── utils/                 # 工具模块 (日志、存储)
-├── sign/                  # 密钥库文件
-└── docs/                  # 文档
-```
 
 ### 核心组件
 
@@ -166,14 +140,6 @@ EasyLog.log("发生错误", EasyLog.ERROR)
 private val _messages = MutableStateFlow<List<Message>>(emptyList())
 val messages = _messages.asStateFlow()
 ```
-
-### 代码风格和约定
-
-- 遵循 [Kotlin 编码约定](https://kotlinlang.org/docs/coding-conventions.html)
-- 使用有意义的变量和函数名
-- 优先使用 StateFlow 而不是 LiveData 进行响应式编程
-- UI 组件使用 `@Composable` 函数
-- 网络调用在 ViewModels 中，UI 逻辑在 Composables 中
 
 ## 🔧 配置
 
