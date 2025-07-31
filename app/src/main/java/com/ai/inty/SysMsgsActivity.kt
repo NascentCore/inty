@@ -124,7 +124,10 @@ fun SysMsgsScreen(
             LazyColumn(
                 modifier = Modifier.padding(innerPadding)
             ) {
-                itemsIndexed(msgs) { index, msg ->
+                itemsIndexed(
+                    items = msgs,
+                    key = { _, msg -> msg.id }
+                ) { index, msg ->
                     when(msg.templateId) {
                         SysMsgTemplateId.TEXT_WITH_LINK.id -> {
                             SysMsgItemTextLink(msg)

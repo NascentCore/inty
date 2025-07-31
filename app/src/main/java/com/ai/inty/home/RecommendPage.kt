@@ -200,7 +200,10 @@ fun RecommendPage(
                     horizontalArrangement = Arrangement.spacedBy(13.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
-                    items(agents) { agent ->
+                    items(
+                        items = agents,
+                        key = { agent -> agent.id }
+                    ) { agent ->
                         RecommendPageItem(
                             modifier = Modifier
                                 .size(165.dp, 220.dp)

@@ -307,7 +307,10 @@ internal fun MyPage(
                         horizontalArrangement = Arrangement.spacedBy(13.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        items(agents) { agent ->
+                        items(
+                            items = agents,
+                            key = { agent -> agent.id }
+                        ) { agent ->
                             MyAgentCard(
                                 modifier = Modifier.noRippleClickable {
                                     onClickAgent(agent)
