@@ -21,8 +21,15 @@ class AgentInfoViewModel: BaseActivityViewModel() {
     private val _agentInfo = MutableStateFlow<AgentInfo?>(null)
     val agentInfo = _agentInfo.asStateFlow()
 
-    val chatApi = TheRouter.get(IChatApi::class.java)!!
-    val agentApi = TheRouter.get(IAgentApi::class.java)!!
+    // 延迟获取依赖，避免在构造函数中立即获取导致空指针异常
+    val chatApi by lazy {
+        TheRouter.get(IChatApi::class.java)
+            ?: throw IllegalStateException("IChatApi not found in TheRouter")
+    }
+    val agentApi by lazy {
+        TheRouter.get(IAgentApi::class.java)
+            ?: throw IllegalStateException("IAgentApi not found in TheRouter")
+    }
 
     fun setAgentID(agentId: String) {
         viewModelScope.launch(Dispatchers.IO) {

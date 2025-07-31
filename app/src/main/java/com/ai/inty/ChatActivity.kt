@@ -18,7 +18,6 @@ import com.ai.inty.base.ToastUtils
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.chat.ChatPage
 import com.ai.inty.net.IAgentApi
-import com.ai.inty.R
 import com.ai.inty.ui.theme.BackGround
 import com.ai.inty.ui.theme.IntyTheme
 import com.ai.inty.viewmodels.ChatViewModel
@@ -43,7 +42,12 @@ class ChatActivity : BaseActivity() {
     var agent_id: String? = null
 
     private val chatViewModel: ChatViewModel by viewModels()
-    private val agentApi: IAgentApi = TheRouter.get(IAgentApi::class.java)!!
+
+    // 延迟获取依赖，避免在构造函数中立即获取导致空指针异常
+    private val agentApi by lazy {
+        TheRouter.get(IAgentApi::class.java)
+            ?: throw IllegalStateException("IAgentApi not found in TheRouter")
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

@@ -48,9 +48,19 @@ enum class HomeTabIndex {
 
 class MainViewModel : BaseActivityViewModel() {
 
-    val userApi: IUserApi = TheRouter.get(IUserApi::class.java)!!
-    val agentApi: IAgentApi = TheRouter.get(IAgentApi::class.java)!!
-    val userApi2: IUserApi2 = TheRouter.get(IUserApi2::class.java)!!
+    // 延迟获取依赖，避免在构造函数中立即获取导致空指针异常
+    val userApi: IUserApi by lazy {
+        TheRouter.get(IUserApi::class.java)
+            ?: throw IllegalStateException("IUserApi not found in TheRouter")
+    }
+    val agentApi: IAgentApi by lazy {
+        TheRouter.get(IAgentApi::class.java)
+            ?: throw IllegalStateException("IAgentApi not found in TheRouter")
+    }
+    val userApi2: IUserApi2 by lazy {
+        TheRouter.get(IUserApi2::class.java)
+            ?: throw IllegalStateException("IUserApi2 not found in TheRouter")
+    }
 
     val agentList = mutableStateListOf<AgentInfo>()
     val followingAgents = mutableStateListOf<AgentInfo>()

@@ -6,9 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.ai.inty.base.BaseActivityViewModel
 import com.ai.inty.beans.ReportItem
 import com.ai.inty.beans.ReportReq
-import com.ai.inty.beans.ReportResponse
 import com.ai.inty.net.IReportApi
-import com.architecture.httplib.core.HttpResult
 import com.inty.utils.log.EasyLog
 import com.therouter.TheRouter
 import kotlinx.coroutines.Dispatchers
@@ -21,7 +19,11 @@ class ReportViewModel : BaseActivityViewModel() {
     var targetID: String = ""
     var targetType: String = "USER"
 
-    val reportApi = TheRouter.get(IReportApi::class.java)!!
+    // 延迟获取依赖，避免在构造函数中立即获取导致空指针异常
+    val reportApi by lazy {
+        TheRouter.get(IReportApi::class.java)
+            ?: throw IllegalStateException("IReportApi not found in TheRouter")
+    }
 
     // Hard-coded list of report reasons
     private val _reasons = MutableStateFlow<List<ReportItem>>(

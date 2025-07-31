@@ -17,7 +17,11 @@ import kotlinx.coroutines.withContext
 
 class AvatarGenerateViewModel : ViewModel() {
 
-    private val agentApi: IAgentApi = TheRouter.get(IAgentApi::class.java)!!
+    // 延迟获取依赖，避免在构造函数中立即获取导致空指针异常
+    private val agentApi by lazy {
+        TheRouter.get(IAgentApi::class.java)
+            ?: throw IllegalStateException("IAgentApi not found in TheRouter")
+    }
 
     // UI States
     private val _prompt = MutableStateFlow("")

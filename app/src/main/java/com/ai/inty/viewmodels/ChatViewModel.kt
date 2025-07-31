@@ -40,7 +40,11 @@ class ChatViewModel : BaseActivityViewModel() {
     val userProfile = _userProfile.asStateFlow()
 
 
-    val chatApi = TheRouter.get(IChatApi::class.java)!!
+    // 延迟获取依赖，避免在构造函数中立即获取导致空指针异常
+    val chatApi by lazy {
+        TheRouter.get(IChatApi::class.java)
+            ?: throw IllegalStateException("IChatApi not found in TheRouter")
+    }
 
     init {
         EasyLog.log("ChatViewModel = ${hashCode()}")

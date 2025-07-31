@@ -31,7 +31,11 @@ class MySettingActivityViewModel: BaseActivityViewModel() {
 
     private val _avatarChanged = MutableStateFlow(false)
 
-    private val userApi = TheRouter.get(IUserApi::class.java)!!
+    // 延迟获取依赖，避免在构造函数中立即获取导致空指针异常
+    private val userApi by lazy {
+        TheRouter.get(IUserApi::class.java)
+            ?: throw IllegalStateException("IUserApi not found in TheRouter")
+    }
 
     fun init(userProfile: UserProfile?) {
         _userProfile.value = userProfile!!
@@ -78,7 +82,10 @@ class MySettingActivityViewModel: BaseActivityViewModel() {
                 }
             }
 
-            val userApi2 = TheRouter.get(IUserApi2::class.java)!!
+            val userApi2 by lazy {
+                TheRouter.get(IUserApi2::class.java)
+                    ?: throw IllegalStateException("IUserApi2 not found in TheRouter")
+            }
             val result2 = userApi2.setUserProfile(_userProfile.value)
             EasyLog.log("set user profile = $result2")
             when (result2) {

@@ -17,7 +17,11 @@ import kotlinx.coroutines.withContext
 
 class RegInfoActivityViewModel: BaseActivityViewModel() {
 
-    private val userApi2 = TheRouter.get(IUserApi2::class.java)!!
+    // 延迟获取依赖，避免在构造函数中立即获取导致空指针异常
+    private val userApi2 by lazy {
+        TheRouter.get(IUserApi2::class.java)
+            ?: throw IllegalStateException("IUserApi2 not found in TheRouter")
+    }
 
     fun onSave(gender: GENDER, age: String) {
         viewModelScope.launch(Dispatchers.IO) {

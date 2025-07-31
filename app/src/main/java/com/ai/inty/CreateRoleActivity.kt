@@ -250,11 +250,12 @@ private fun CreateRolePage(
                         val body = MultipartBody.Part.createFormData("file", file.name, requestFile)
 
                         val agentApi = TheRouter.get(IAgentApi::class.java)
+                            ?: throw IllegalStateException("IAgentApi not found in TheRouter")
 
                         // Use the mainViewModel's scope to launch the coroutine
                         mainViewModel.viewModelScope.launch(Dispatchers.IO) {
                             try {
-                                val response = agentApi!!.uploadAvatar(body)
+                                val response = agentApi.uploadAvatar(body)
                                 when (response) {
                                     is com.architecture.httplib.core.HttpResult.Success -> {
                                         val uploadedUrl = response.data.url

@@ -44,7 +44,7 @@ class SplashActivity : ComponentActivity() {
         windowInsetsController.isAppearanceLightStatusBars = false
         setContent {
             IntyTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+                Scaffold(modifier = Modifier.fillMaxSize()) { _ ->
                     Box(
                         modifier = Modifier.fillMaxSize()
                     ) {

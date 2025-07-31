@@ -24,8 +24,15 @@ enum class InitState {
 
 class SplashViewModel : BaseActivityViewModel() {
 
-    private val userApi: IUserApi = TheRouter.get(IUserApi::class.java)!!
-    private val userApi2: IUserApi2 = TheRouter.get(IUserApi2::class.java)!!
+    // 延迟获取依赖，避免在构造函数中立即获取导致空指针异常
+    private val userApi: IUserApi by lazy {
+        TheRouter.get(IUserApi::class.java)
+            ?: throw IllegalStateException("IUserApi not found in TheRouter")
+    }
+    private val userApi2: IUserApi2 by lazy {
+        TheRouter.get(IUserApi2::class.java)
+            ?: throw IllegalStateException("IUserApi2 not found in TheRouter")
+    }
 
     private val _initState = MutableStateFlow(InitState.Loading)
     val initState = _initState.asStateFlow()

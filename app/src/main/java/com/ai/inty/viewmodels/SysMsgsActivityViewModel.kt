@@ -13,7 +13,11 @@ import kotlinx.coroutines.launch
 
 class SysMsgsActivityViewModel: BaseActivityViewModel() {
 
-    private val userApi = TheRouter.get(IUserApi::class.java)!!
+    // 延迟获取依赖，避免在构造函数中立即获取导致空指针异常
+    private val userApi by lazy {
+        TheRouter.get(IUserApi::class.java)
+            ?: throw IllegalStateException("IUserApi not found in TheRouter")
+    }
 
     val sysMsgs = mutableStateListOf<SysMsgItem>()
 
