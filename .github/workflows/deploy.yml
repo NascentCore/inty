@@ -13,6 +13,10 @@ env:
   DOCKER_TAG: ${{ github.sha }}
   REGISTRY: registry.cn-beijing.aliyuncs.com/sxwl-ai
 
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
