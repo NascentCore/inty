@@ -151,8 +151,8 @@ fun LoginScreen(
                     },
                     onFailure = { exception ->
                         val errorMessage = when (exception) {
-                            is androidx.credentials.exceptions.NoCredentialException -> "没有可用的登录凭证"
-                            else -> "登录失败: ${exception.message}"
+                            is androidx.credentials.exceptions.NoCredentialException -> "No credentials available"
+                            else -> "Login Failed: ${exception.message}"
                         }
                         EasyLog.log(
                             "Credential Manager sign-in failed: $errorMessage",
