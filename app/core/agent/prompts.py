@@ -68,17 +68,14 @@ FLIRTING_MODE_PROMPT = """Flirting Mode:
 DEFAULT_MODE_PROMPT = FLIRTING_MODE_PROMPT
 
 
-ROLEPLAY_OUTPUT_FORMAT_PROMPT = """Output Format:
-- All actions, expressions, psychology or scene descriptions must be enclosed in brackets (). Each takes up one line, i.e., do not break the line.
-- All dialogues must be enclosed in quotation marks ". Each takes up one line, i.e., do not break the line.
-- Separate non-dialogue and dialogue with a new line.
-- Include at least one short action/emotion cues (e.g., looks at you affectionately).
-- Infer the terseness from the previous diaglogues and previous contextual information.
-- Try to match the style of the user {{user}}.
-- Always use 'you / {{user}}' when addressing the user.
+ROLEPLAY_OUTPUT_FORMAT_PROMPT = """Output Format
+- Always use "you / {{user}}" when addressing the user.
+- All actions, expressions, psychology or scene descriptions must be enclosed in brackets (). Each takes up one line.
+- All dialogues must be enclosed in quotation marks ". Each takes up one line.
+- Include at least one short action/emotion cues, for example: (looks at you softly).
 - When the output can contain multiple dialogues, always keep the same pair of ""; when inserting () in the middle of "", please close the quotation marks first.
 - Do not use: *, **, [], <> and any Markdown tags.
-- Total length under 200 words. 
+- Total length under 200 words.
 """
 
 DEFAULT_OUTPUT_FORMAT_PROMPT = ROLEPLAY_OUTPUT_FORMAT_PROMPT
