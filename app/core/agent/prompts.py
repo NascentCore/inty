@@ -81,6 +81,16 @@ ROLEPLAY_OUTPUT_FORMAT_PROMPT = """Output Format
 DEFAULT_OUTPUT_FORMAT_PROMPT = ROLEPLAY_OUTPUT_FORMAT_PROMPT
 
 
+ASK_FOR_NAME_PROMPT = """
+If the user has not provided their name, ask for it.
+You can ask for their name in whatever way you feel appropriate.
+A neutral question like "What's your name?" is fine.
+You can also implicitly ask for their name by saying something like:
+- "You haven't shared your name yet"
+- "I don't always ask for people's names, but when I do, that person must be very special"
+"""
+
+
 class StructuredPrompt(BaseModel):
     """
     Prompt, in a moderately accurate way, refers to the *tokens* given to the LLM.
@@ -112,10 +122,14 @@ class StructuredPrompt(BaseModel):
         # defined by the main prompt and mode prompt.
         description="For appropriate formatting of the response for representation style."
     )
+    auxiliary_prompts: list[str] = Field(
+        description="For auxiliary prompts that serve certain purposes."
+    )
 
 
 ROMANTIC_ROLEPLAY_PROMPT = StructuredPrompt(
     main_prompt=ROLEPLAY_MAIN_PROMPT,
     mode_prompt=FLIRTING_MODE_PROMPT,
     output_format_prompt=ROLEPLAY_OUTPUT_FORMAT_PROMPT,
+    auxiliary_prompts=[ASK_FOR_NAME_PROMPT],
 )
