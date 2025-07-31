@@ -801,7 +801,7 @@ class Agent:
                     f"输入数据构建耗时: {input_build_time:.3f}秒 - Agent: {self.agent_id}"
                 )
 
-                # 调用agent进行对话（使用带回调的agent）
+                # 调用agent进行对话
                 agent_invoke_start = time.time()
                 logger.info(f"开始Agent推理 - Agent: {self.agent_id}")
 
