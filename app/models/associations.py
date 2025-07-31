@@ -10,5 +10,5 @@ agent_followers = Table(
     "agent_followers",
     Base.metadata,
     Column("user_id", String, ForeignKey("users.id"), primary_key=True),
-    Column("agent_id", String, ForeignKey("agents.id"), primary_key=True)
+    Column("agent_id", String, ForeignKey("agents.id"), primary_key=True),
 )

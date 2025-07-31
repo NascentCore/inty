@@ -1,4 +1,5 @@
 """评测系统的Pydantic模型定义"""
+
 from datetime import datetime
 from typing import List, Optional, Dict, Any, Union
 from pydantic import BaseModel, Field, validator
@@ -8,20 +9,23 @@ from app.models.evaluation import EvaluationStatus
 
 class EvaluationSessionCreate(BaseModel):
     """创建评测会话的请求模型"""
+
     name: str = Field(..., min_length=1, max_length=255, description="评测会话名称")
     questions: List[str] = Field(..., min_items=1, description="测试问题列表")
-    selected_agents: List[str] = Field(..., min_items=1, description="选中的智能体ID列表")
+    selected_agents: List[str] = Field(
+        ..., min_items=1, description="选中的智能体ID列表"
+    )
     scoring_model: str = Field(..., description="评分模型")
     scoring_criteria: Optional[str] = Field(None, description="评分标准")
     use_new_user_identity: bool = Field(False, description="是否使用新用户身份")
     config: Optional[Dict[str, Any]] = Field(None, description="其他配置参数")
-    
-    @validator('questions')
+
+    @validator("questions")
     def validate_questions(cls, v):
         """验证问题列表"""
         if not v:
             raise ValueError("问题列表不能为空")
-        
+
         # 去重
         unique_questions = []
         seen = set()
@@ -30,29 +34,30 @@ class EvaluationSessionCreate(BaseModel):
             if q_clean and q_clean.lower() not in seen:
                 unique_questions.append(q_clean)
                 seen.add(q_clean.lower())
-        
+
         if not unique_questions:
             raise ValueError("没有有效的问题")
-        
+
         if len(unique_questions) > 50:
             raise ValueError("问题数量不能超过50个")
-        
+
         return unique_questions
-    
-    @validator('selected_agents')
+
+    @validator("selected_agents")
     def validate_agents(cls, v):
         """验证智能体列表"""
         if not v:
             raise ValueError("必须选择至少一个智能体")
-        
+
         if len(v) > 20:
             raise ValueError("选择的智能体数量不能超过20个")
-        
+
         return list(set(v))  # 去重
 
 
 class EvaluationSessionResponse(BaseModel):
     """评测会话响应模型"""
+
     id: str
     name: str
     creator_id: str
@@ -71,13 +76,14 @@ class EvaluationSessionResponse(BaseModel):
     updated_at: Optional[datetime]
     started_at: Optional[datetime]
     completed_at: Optional[datetime]
-    
+
     class Config:
         from_attributes = True
 
 
 class EvaluationResultResponse(BaseModel):
     """评测结果响应模型"""
+
     id: str
     session_id: str
     agent_id: str
@@ -95,13 +101,14 @@ class EvaluationResultResponse(BaseModel):
     extra_data: Optional[Dict[str, Any]]
     created_at: datetime
     updated_at: Optional[datetime]
-    
+
     class Config:
         from_attributes = True
 
 
 class EvaluationInteractionResponse(BaseModel):
     """评测交互记录响应模型"""
+
     id: str
     session_id: str
     result_id: str
@@ -112,19 +119,21 @@ class EvaluationInteractionResponse(BaseModel):
     user_identity: Optional[Dict[str, Any]]
     response_metadata: Optional[Dict[str, Any]]
     created_at: datetime
-    
+
     class Config:
         from_attributes = True
 
 
 class EvaluationSessionDetail(EvaluationSessionResponse):
     """评测会话详细信息（包含结果）"""
+
     results: List[EvaluationResultResponse] = []
     interactions: List[EvaluationInteractionResponse] = []
 
 
 class EvaluationTemplateCreate(BaseModel):
     """创建评测模板的请求模型"""
+
     name: str = Field(..., min_length=1, max_length=255, description="模板名称")
     description: Optional[str] = Field(None, description="模板描述")
     questions: List[str] = Field(..., min_items=1, description="问题列表")
@@ -137,6 +146,7 @@ class EvaluationTemplateCreate(BaseModel):
 
 class EvaluationTemplateResponse(BaseModel):
     """评测模板响应模型"""
+
     id: str
     name: str
     description: Optional[str]
@@ -151,13 +161,14 @@ class EvaluationTemplateResponse(BaseModel):
     is_active: bool
     created_at: datetime
     updated_at: Optional[datetime]
-    
+
     class Config:
         from_attributes = True
 
 
 class QuestionFileUpload(BaseModel):
     """问题文件上传结果"""
+
     questions: List[str]
     total_count: int
     valid_count: int
@@ -167,6 +178,7 @@ class QuestionFileUpload(BaseModel):
 
 class ScoringModelInfo(BaseModel):
     """评分模型信息"""
+
     id: str
     name: str
     description: Optional[str]
@@ -176,6 +188,7 @@ class ScoringModelInfo(BaseModel):
 
 class EvaluationStats(BaseModel):
     """评测统计信息"""
+
     total_sessions: int
     completed_sessions: int
     running_sessions: int
@@ -188,6 +201,7 @@ class EvaluationStats(BaseModel):
 
 class WebSocketMessage(BaseModel):
     """WebSocket消息格式"""
+
     type: str = Field(..., description="消息类型")
     session_id: str = Field(..., description="会话ID")
     data: Optional[Dict[str, Any]] = Field(None, description="消息数据")
@@ -196,16 +210,20 @@ class WebSocketMessage(BaseModel):
 
 class EvaluationSessionUpdate(BaseModel):
     """更新评测会话"""
+
     name: Optional[str] = Field(None, min_length=1, max_length=255)
     scoring_criteria: Optional[str] = None
 
 
 class BatchEvaluationRequest(BaseModel):
     """批量评测请求"""
+
     template_id: Optional[str] = Field(None, description="使用的模板ID")
-    sessions: List[EvaluationSessionCreate] = Field(..., min_items=1, max_items=5, description="评测会话列表")
-    
-    @validator('sessions')
+    sessions: List[EvaluationSessionCreate] = Field(
+        ..., min_items=1, max_items=5, description="评测会话列表"
+    )
+
+    @validator("sessions")
     def validate_sessions(cls, v):
         if len(v) > 5:
             raise ValueError("批量评测最多支持5个会话")
@@ -214,6 +232,7 @@ class BatchEvaluationRequest(BaseModel):
 
 class EvaluationComparison(BaseModel):
     """评测对比结果"""
+
     agents: List[str]
     questions: List[str]
     results: Dict[str, Dict[str, Any]]  # agent_id -> question_index -> result
@@ -222,6 +241,7 @@ class EvaluationComparison(BaseModel):
 
 class EvaluationExportRequest(BaseModel):
     """评测结果导出请求"""
+
     session_ids: List[str] = Field(..., min_items=1, description="要导出的会话ID列表")
     format: str = Field("csv", pattern="^(csv|json|xlsx)$", description="导出格式")
     include_interactions: bool = Field(False, description="是否包含交互记录")

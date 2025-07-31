@@ -10,6 +10,7 @@ from app.db.base_class import Base
 
 class MessageType(str, enum.Enum):
     """消息类型"""
+
     TEXT = "TEXT"
     VOICE = "VOICE"
     IMAGE = "IMAGE"
@@ -17,19 +18,21 @@ class MessageType(str, enum.Enum):
 
 class SenderType(str, enum.Enum):
     """发送者类型"""
+
     USER = "USER"
     AI = "AI"
 
 
 class Message(Base):
     """消息模型"""
+
     __tablename__ = "messages"
 
     id = Column(String, primary_key=True, index=True)
     content = Column(String)
     type = Column(Enum(MessageType), default=MessageType.TEXT)
     sender_type = Column(Enum(SenderType))
-    created_at = Column(DateTime(timezone=True), server_default=sa.text('now()'))
+    created_at = Column(DateTime(timezone=True), server_default=sa.text("now()"))
 
     # 外键
     sender_id = Column(String, ForeignKey("users.id"))
@@ -41,4 +44,4 @@ class Message(Base):
 
     # 聊天关联
     chat_id = Column(String, ForeignKey("chats.id"))
-    chat = relationship("Chat") 
+    chat = relationship("Chat")

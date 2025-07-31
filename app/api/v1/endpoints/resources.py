@@ -9,6 +9,7 @@ from app.services import resource_service
 
 router = APIRouter()
 
+
 @router.get("/", response_model=List[schemas.Resource])
 def list_resources(
     db: Session = Depends(deps.get_db),
@@ -22,6 +23,7 @@ def list_resources(
     resources = resource_service.get_resources(db, skip=skip, limit=limit)
     return resources
 
+
 @router.post("/", response_model=schemas.Resource)
 def create_resource(
     *,
@@ -32,8 +34,11 @@ def create_resource(
     """
     Create new resource
     """
-    resource = resource_service.create_resource(db, resource_in=resource_in, user_id=current_user.id)
+    resource = resource_service.create_resource(
+        db, resource_in=resource_in, user_id=current_user.id
+    )
     return resource
+
 
 @router.get("/{resource_id}", response_model=schemas.Resource)
 def get_resource(
@@ -50,6 +55,7 @@ def get_resource(
         raise HTTPException(status_code=404, detail="Resource not found")
     return resource
 
+
 @router.put("/{resource_id}", response_model=schemas.Resource)
 def update_resource(
     *,
@@ -64,8 +70,11 @@ def update_resource(
     resource = resource_service.get_resource(db, resource_id=resource_id)
     if not resource:
         raise HTTPException(status_code=404, detail="Resource not found")
-    resource = resource_service.update_resource(db, db_resource=resource, resource_in=resource_in)
+    resource = resource_service.update_resource(
+        db, db_resource=resource, resource_in=resource_in
+    )
     return resource
+
 
 @router.delete("/{resource_id}", response_model=schemas.Resource)
 def delete_resource(
@@ -81,4 +90,4 @@ def delete_resource(
     if not resource:
         raise HTTPException(status_code=404, detail="Resource not found")
     resource = resource_service.delete_resource(db, db_resource=resource)
-    return resource 
+    return resource

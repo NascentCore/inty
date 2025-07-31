@@ -18,12 +18,16 @@ async def main():
 
     async def handle_realtime_connection():
         nonlocal connection, last_audio_item_id
-        async with client.beta.realtime.connect(model="gpt-4o-realtime-preview") as conn:
+        async with client.beta.realtime.connect(
+            model="gpt-4o-realtime-preview"
+        ) as conn:
             connection = conn
             connection_ready.set()
 
             # Enable server-side voice activity detection
-            await conn.session.update(session={"turn_detection": {"type": "server_vad"}})
+            await conn.session.update(
+                session={"turn_detection": {"type": "server_vad"}}
+            )
 
             acc_items: dict[str, Any] = {}
 
@@ -88,7 +92,9 @@ async def main():
 
                 # Send audio data to the connection
                 if connection:
-                    await connection.input_audio_buffer.append(audio=base64.b64encode(cast(Any, data)).decode("utf-8"))
+                    await connection.input_audio_buffer.append(
+                        audio=base64.b64encode(cast(Any, data)).decode("utf-8")
+                    )
 
                 await asyncio.sleep(0)
         except KeyboardInterrupt:

@@ -16,9 +16,11 @@ class ReportReason(BaseModel):
     class Config:
         from_attributes = True
 
+
 class TargetType(str, Enum):
     user = "USER"
     agent = "AGENT"
+
 
 class ReportCreate(BaseModel):
     target_id: str
@@ -26,6 +28,7 @@ class ReportCreate(BaseModel):
     reason_ids: List[int]
     image_urls: Optional[List[str]] = []
     description: Optional[str] = None
+
 
 class ReportQuery(BaseModel):
     reason_ids: Optional[List[int]] = None
@@ -35,6 +38,7 @@ class ReportQuery(BaseModel):
     reporter_id: Optional[str] = None
     skip: int = 0
     limit: int = 100
+
 
 class ReportOut(BaseModel):
     id: str
@@ -49,4 +53,4 @@ class ReportOut(BaseModel):
     created_at: datetime
 
     class Config:
-        from_attributes = True 
+        from_attributes = True
