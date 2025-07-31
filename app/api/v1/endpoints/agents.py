@@ -671,6 +671,8 @@ async def get_creator_agent_stats(
         return schemas.APIResponse.error(message="Failed to get statistics")
 
 
+# TODO: Needs to disable this endpoint in production environment.
+# https://github.com/NascentCore/inty-backend/issues/43
 @router.get("/{agent_id}/prompt", response_model=schemas.APIResponse[dict])
 async def get_agent_prompt(
     *,

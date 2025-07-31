@@ -23,6 +23,7 @@ from openai import OpenAI
 from psycopg import Connection
 from psycopg_pool import ConnectionPool
 
+from app.core.agent import prompts
 from app.core.agent.prompt_template import prompt_template_manager
 from app.core.config import settings
 from app.services.background_task_service import background_task_service
@@ -189,6 +190,7 @@ class Agent:
         # 主提示词和模式提示词参数
         main_prompt: str = "",
         mode_prompt: str = "",
+        output_format_prompt: str = "",
         # 角色卡相关参数
         personality: str = "",
         scenario: str = "",
@@ -211,6 +213,7 @@ class Agent:
         # 主提示词和模式提示词属性
         self.main_prompt = main_prompt
         self.mode_prompt = mode_prompt
+        self.output_format_prompt = output_format_prompt
 
         # 角色卡相关属性
         self.personality = personality
@@ -298,28 +301,32 @@ class Agent:
         )
 
     def _get_effective_main_prompt(self) -> str:
-        """获取有效的主提示词，优先级：agent自定义 > 全局默认"""
-        return self.main_prompt or settings.agent.default_main_prompt
+        return self.main_prompt or prompts.ROMANTIC_ROLEPLAY_PROMPT.main_prompt
 
     def _get_effective_mode_prompt(self) -> str:
-        """获取有效的模式提示词，优先级：agent自定义 > 全局默认"""
-        return self.mode_prompt or settings.agent.default_mode_prompt
+        return self.mode_prompt or prompts.ROMANTIC_ROLEPLAY_PROMPT.mode_prompt
+
+    def _get_effective_output_format_prompt(self) -> str:
+        return (
+            self.output_format_prompt
+            or prompts.ROMANTIC_ROLEPLAY_PROMPT.output_format_prompt
+        )
 
     def _create_dynamic_prompt_runnable(self) -> Runnable:
         """
-        创建动态提示词Runnable，支持角色卡信息和用户profile信息
+        创建动态提示词 Runnable 用于输入给 LangChain React Agent 来生成发送给 LLM 的最终提示词。
         """
 
         def build_system_messages(state) -> List[SystemMessage]:
-            """构建系统消息列表，从state中获取用户信息"""
-            # 处理dict和CustomAgentState输入
+            """构建系统消息列表，从state中获取用户信息，state 是 LangChain 运行时系统的一部分。"""
+
+            # User 指与此角色对话的人类用户
             if isinstance(state, dict):
                 user_profile = state.get("user_profile", "")
             else:
                 # CustomAgentState对象
                 user_profile = getattr(state, "user_profile", "")
 
-            # 从用户profile中提取用户名
             user_name = self._extract_user_name_from_profile(user_profile)
 
             system_messages = []
@@ -367,6 +374,22 @@ class Agent:
                         system_messages.append(SystemMessage(content=mode_prompt))
                 else:
                     system_messages.append(SystemMessage(content=mode_prompt))
+
+            output_format_prompt = self._get_effective_output_format_prompt()
+            if output_format_prompt:
+                if "{{" in output_format_prompt and "}}" in output_format_prompt:
+                    # TODO: render_system_prompt is over-engineered.
+                    # Consider replacing it with
+                    # Jinja2 template rendering render_template({"char": name_of_char, "user": name_of_user})
+                    rendered_prompt = prompt_template_manager.render_system_prompt(
+                        system_prompt=output_format_prompt,
+                        agent_name=self.name,
+                        user_name=user_name,
+                        template_name="basic",
+                    )
+                    system_messages.append(SystemMessage(content=rendered_prompt))
+                else:
+                    system_messages.append(SystemMessage(content=output_format_prompt))
 
             # 4. 用户个性化信息 - 独立的SystemMessage
             if user_profile:
