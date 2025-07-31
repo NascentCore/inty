@@ -23,7 +23,9 @@ from openai import OpenAI
 from psycopg import Connection
 from psycopg_pool import ConnectionPool
 
+from app.core.agent import prompts
 from app.core.agent.prompt_template import prompt_template_manager
+from app.core.agent.callbacks import create_openai_callback_handler
 from app.core.config import settings
 from app.services.background_task_service import background_task_service
 from app.services.cache_service import cache_service
@@ -189,6 +191,7 @@ class Agent:
         # 主提示词和模式提示词参数
         main_prompt: str = "",
         mode_prompt: str = "",
+        output_format_prompt: str = "",
         # 角色卡相关参数
         personality: str = "",
         scenario: str = "",
@@ -211,6 +214,7 @@ class Agent:
         # 主提示词和模式提示词属性
         self.main_prompt = main_prompt
         self.mode_prompt = mode_prompt
+        self.output_format_prompt = output_format_prompt
 
         # 角色卡相关属性
         self.personality = personality
@@ -282,6 +286,9 @@ class Agent:
         # 构建动态提示词Runnable
         self.prompt_runnable = self._create_dynamic_prompt_runnable()
 
+        # Store the base chat parameters for creating models with callbacks
+        self._base_chat_params = chat_params
+
         # 创建无状态的LangGraph Agent，使用自定义状态模式
         # 移除了checkpointer，对话历史通过PostgresChatMessageHistory管理
         self.agent = create_react_agent(
@@ -299,11 +306,77 @@ class Agent:
 
     def _get_effective_main_prompt(self) -> str:
         """获取有效的主提示词，优先级：agent自定义 > 全局默认"""
-        return self.main_prompt or settings.agent.default_main_prompt
+        return self.main_prompt or prompts.DEFAULT_MAIN_PROMPT
 
     def _get_effective_mode_prompt(self) -> str:
         """获取有效的模式提示词，优先级：agent自定义 > 全局默认"""
-        return self.mode_prompt or settings.agent.default_mode_prompt
+        return self.mode_prompt or prompts.DEFAULT_MODE_PROMPT
+
+    def _get_effective_output_format_prompt(self) -> str:
+        return self.output_format_prompt or prompts.DEFAULT_OUTPUT_FORMAT_PROMPT
+
+    def _create_model_with_callbacks(
+        self, user_id: str = None, session_id: str = None, streaming: bool = False
+    ) -> ChatOpenAI:
+        """
+        Create a ChatOpenAI model with dynamic callbacks for logging
+
+        Args:
+            user_id: User ID for logging context
+            session_id: Session ID for logging context
+            streaming: Whether this is for streaming responses
+
+        Returns:
+            ChatOpenAI model with callbacks
+        """
+        # Create callback handler with context
+        callback_handler = create_openai_callback_handler(
+            agent_id=self.agent_id,
+            user_id=user_id,
+            session_id=session_id,
+            streaming=streaming,
+        )
+
+        # Create model with callbacks
+        chat_params = self._base_chat_params.copy()
+        chat_params["callbacks"] = [callback_handler]
+
+        return ChatOpenAI(**chat_params)
+
+    def _create_agent_with_callbacks(
+        self, user_id: str = None, session_id: str = None, streaming: bool = False
+    ):
+        """
+        Create a new agent instance with callbacks for logging
+
+        Args:
+            user_id: User ID for logging context
+            session_id: Session ID for logging context
+            streaming: Whether this is for streaming responses
+
+        Returns:
+            LangGraph agent with callbacks
+        """
+        # Create model with callbacks
+        model_with_callbacks = self._create_model_with_callbacks(
+            user_id=user_id, session_id=session_id, streaming=streaming
+        )
+
+        # Create new agent with the model that has callbacks
+        agent_with_callbacks = create_react_agent(
+            name=self.name,
+            model=model_with_callbacks,
+            tools=[
+                # create_manage_memory_tool(namespace=('memories',self.name,'{user_id}')),
+                # create_search_memory_tool(namespace=('memories',self.name,'{user_id}'))
+                # google_search_tool
+            ],
+            prompt=self.prompt_runnable,
+            store=postgres_store,
+            state_schema=CustomAgentState,
+        )
+
+        return agent_with_callbacks
 
     def _create_dynamic_prompt_runnable(self) -> Runnable:
         """
@@ -367,6 +440,19 @@ class Agent:
                         system_messages.append(SystemMessage(content=mode_prompt))
                 else:
                     system_messages.append(SystemMessage(content=mode_prompt))
+
+            output_format_prompt = self._get_effective_output_format_prompt()
+            if output_format_prompt:
+                if "{{" in output_format_prompt and "}}" in output_format_prompt:
+                    rendered_prompt = prompt_template_manager.render_system_prompt(
+                        system_prompt=output_format_prompt,
+                        agent_name=self.name,
+                        user_name=user_name,
+                        template_name="basic",
+                    )
+                    system_messages.append(SystemMessage(content=rendered_prompt))
+                else:
+                    system_messages.append(SystemMessage(content=output_format_prompt))
 
             # 4. 用户个性化信息 - 独立的SystemMessage
             if user_profile:
@@ -725,10 +811,16 @@ class Agent:
                     f"输入数据构建耗时: {input_build_time:.3f}秒 - Agent: {self.agent_id}"
                 )
 
-                # 调用agent进行对话
+                # 调用agent进行对话（使用带回调的agent）
                 agent_invoke_start = time.time()
                 logger.info(f"开始Agent推理 - Agent: {self.agent_id}")
-                response = self.agent.invoke(state_data, config)
+
+                # Create agent with callbacks for this specific request
+                agent_with_callbacks = self._create_agent_with_callbacks(
+                    user_id=user_id, session_id=session_id, streaming=False
+                )
+
+                response = agent_with_callbacks.invoke(state_data, config)
                 agent_invoke_time = time.time() - agent_invoke_start
                 logger.info(
                     f"Agent推理耗时: {agent_invoke_time:.3f}秒 - Agent: {self.agent_id}"
@@ -1035,7 +1127,13 @@ class Agent:
 
                     # 收集完整的流式响应用于调试
                     stream_messages = []
-                    for message_chunk, metadata in self.agent.stream(
+
+                    # Create agent with callbacks for streaming
+                    agent_with_callbacks = self._create_agent_with_callbacks(
+                        user_id=user_id, session_id=session_id, streaming=True
+                    )
+
+                    for message_chunk, metadata in agent_with_callbacks.stream(
                         state_data, config, stream_mode="messages"
                     ):
                         stream_messages.append(message_chunk)
