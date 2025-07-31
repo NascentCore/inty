@@ -30,7 +30,6 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
-
 @router.get("/", response_model=List[schemas.Chat])
 async def list_chats(
     db: AsyncSession = Depends(deps.get_async_db),
@@ -44,11 +43,7 @@ async def list_chats(
     chats = await chat_service.get_chats(
         db, user_id=current_user.id, skip=skip, limit=limit
     )
-    chats = await chat_service.get_chats(
-        db, user_id=current_user.id, skip=skip, limit=limit
-    )
     return chats
-
 
 
 @router.post("/", response_model=schemas.Chat)

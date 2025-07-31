@@ -25,7 +25,6 @@ from psycopg_pool import ConnectionPool
 
 from app.core.agent import prompts
 from app.core.agent.prompt_template import prompt_template_manager
-from app.core.agent.callbacks import create_openai_callback_handler
 from app.core.config import settings
 from app.services.background_task_service import background_task_service
 from app.services.cache_service import cache_service
@@ -329,17 +328,8 @@ class Agent:
         Returns:
             ChatOpenAI model with callbacks
         """
-        # Create callback handler with context
-        callback_handler = create_openai_callback_handler(
-            agent_id=self.agent_id,
-            user_id=user_id,
-            session_id=session_id,
-            streaming=streaming,
-        )
-
         # Create model with callbacks
         chat_params = self._base_chat_params.copy()
-        chat_params["callbacks"] = [callback_handler]
 
         return ChatOpenAI(**chat_params)
 
@@ -663,7 +653,7 @@ class Agent:
 
                 # 构建用户信息字符串
                 user_info_parts = []
-                nickname, gender, age_group, description, system_language = row
+                nickname, gender, age_group, description, _ = row
 
                 if nickname:
                     user_info_parts.append(f"Name: {nickname}")
@@ -1058,7 +1048,7 @@ class Agent:
             # 不中断正常聊天流程
 
     async def chat(
-        self, user_id: str, session_id: str, messages: dict[str, Any], db_session=None
+        self, user_id: str, session_id: str, messages: dict[str, Any]
     ) -> str:
         """异步聊天方法（优化版本）"""
         logger.info(f"开始聊天处理 - Agent: {self.agent_id}, Session: {session_id}")
@@ -1087,7 +1077,7 @@ class Agent:
             raise
 
     async def chat_stream(
-        self, user_id: str, session_id: str, messages: dict[str, Any], db_session=None
+        self, user_id: str, session_id: str, messages: dict[str, Any]
     ):
         """
         异步流式聊天方法
