@@ -83,6 +83,11 @@ object CredentialManagerHelper {
                                 GoogleIdTokenCredential.createFrom(credential.data)
                             val idToken = googleIdTokenCredential.idToken
                             EasyLog.log("Google Sign-In successful via CustomCredential")
+//                            Log.w(
+//                                "测试",
+//                                "Email： ${googleIdTokenCredential.id} ,,Name： ${googleIdTokenCredential.displayName} ,, Avatar: ${googleIdTokenCredential.profilePictureUri} ",
+//                            )
+
                             Result.success(idToken)
                         } catch (e: GoogleIdTokenParsingException) {
                             EasyLog.log(
