@@ -285,9 +285,6 @@ class Agent:
         # 构建动态提示词Runnable
         self.prompt_runnable = self._create_dynamic_prompt_runnable()
 
-        # Store the base chat parameters for creating models with callbacks
-        self._base_chat_params = chat_params
-
         # 创建无状态的LangGraph Agent，使用自定义状态模式
         # 移除了checkpointer，对话历史通过PostgresChatMessageHistory管理
         self.agent = create_react_agent(
@@ -304,69 +301,13 @@ class Agent:
         )
 
     def _get_effective_main_prompt(self) -> str:
-        """获取有效的主提示词，优先级：agent自定义 > 全局默认"""
         return self.main_prompt or prompts.DEFAULT_MAIN_PROMPT
 
     def _get_effective_mode_prompt(self) -> str:
-        """获取有效的模式提示词，优先级：agent自定义 > 全局默认"""
         return self.mode_prompt or prompts.DEFAULT_MODE_PROMPT
 
     def _get_effective_output_format_prompt(self) -> str:
         return self.output_format_prompt or prompts.DEFAULT_OUTPUT_FORMAT_PROMPT
-
-    def _create_model_with_callbacks(
-        self, user_id: str = None, session_id: str = None, streaming: bool = False
-    ) -> ChatOpenAI:
-        """
-        Create a ChatOpenAI model with dynamic callbacks for logging
-
-        Args:
-            user_id: User ID for logging context
-            session_id: Session ID for logging context
-            streaming: Whether this is for streaming responses
-
-        Returns:
-            ChatOpenAI model with callbacks
-        """
-        # Create model with callbacks
-        chat_params = self._base_chat_params.copy()
-
-        return ChatOpenAI(**chat_params)
-
-    def _create_agent_with_callbacks(
-        self, user_id: str = None, session_id: str = None, streaming: bool = False
-    ):
-        """
-        Create a new agent instance with callbacks for logging
-
-        Args:
-            user_id: User ID for logging context
-            session_id: Session ID for logging context
-            streaming: Whether this is for streaming responses
-
-        Returns:
-            LangGraph agent with callbacks
-        """
-        # Create model with callbacks
-        model_with_callbacks = self._create_model_with_callbacks(
-            user_id=user_id, session_id=session_id, streaming=streaming
-        )
-
-        # Create new agent with the model that has callbacks
-        agent_with_callbacks = create_react_agent(
-            name=self.name,
-            model=model_with_callbacks,
-            tools=[
-                # create_manage_memory_tool(namespace=('memories',self.name,'{user_id}')),
-                # create_search_memory_tool(namespace=('memories',self.name,'{user_id}'))
-                # google_search_tool
-            ],
-            prompt=self.prompt_runnable,
-            store=postgres_store,
-            state_schema=CustomAgentState,
-        )
-
-        return agent_with_callbacks
 
     def _create_dynamic_prompt_runnable(self) -> Runnable:
         """
@@ -653,7 +594,7 @@ class Agent:
 
                 # 构建用户信息字符串
                 user_info_parts = []
-                nickname, gender, age_group, description, _ = row
+                nickname, gender, age_group, description, system_language = row
 
                 if nickname:
                     user_info_parts.append(f"Name: {nickname}")
@@ -804,13 +745,7 @@ class Agent:
                 # 调用agent进行对话
                 agent_invoke_start = time.time()
                 logger.info(f"开始Agent推理 - Agent: {self.agent_id}")
-
-                # Create agent with callbacks for this specific request
-                agent_with_callbacks = self._create_agent_with_callbacks(
-                    user_id=user_id, session_id=session_id, streaming=False
-                )
-
-                response = agent_with_callbacks.invoke(state_data, config)
+                response = self.agent.invoke(state_data, config)
                 agent_invoke_time = time.time() - agent_invoke_start
                 logger.info(
                     f"Agent推理耗时: {agent_invoke_time:.3f}秒 - Agent: {self.agent_id}"
@@ -1048,7 +983,7 @@ class Agent:
             # 不中断正常聊天流程
 
     async def chat(
-        self, user_id: str, session_id: str, messages: dict[str, Any]
+        self, user_id: str, session_id: str, messages: dict[str, Any], db_session=None
     ) -> str:
         """异步聊天方法（优化版本）"""
         logger.info(f"开始聊天处理 - Agent: {self.agent_id}, Session: {session_id}")
@@ -1077,7 +1012,7 @@ class Agent:
             raise
 
     async def chat_stream(
-        self, user_id: str, session_id: str, messages: dict[str, Any]
+        self, user_id: str, session_id: str, messages: dict[str, Any], db_session=None
     ):
         """
         异步流式聊天方法
@@ -1117,13 +1052,7 @@ class Agent:
 
                     # 收集完整的流式响应用于调试
                     stream_messages = []
-
-                    # Create agent with callbacks for streaming
-                    agent_with_callbacks = self._create_agent_with_callbacks(
-                        user_id=user_id, session_id=session_id, streaming=True
-                    )
-
-                    for message_chunk, metadata in agent_with_callbacks.stream(
+                    for message_chunk, metadata in self.agent.stream(
                         state_data, config, stream_mode="messages"
                     ):
                         stream_messages.append(message_chunk)
