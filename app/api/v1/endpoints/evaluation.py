@@ -275,9 +275,7 @@ async def get_scoring_models(
     current_user: schemas.User = Depends(deps.get_current_active_user),
 ) -> Any:
     """
-    获取可用的评分模型
-
-    返回支持的LLM模型列表，用于智能体回复评分
+    获取可用模型列表
     """
     try:
         scoring_service = ScoringService()
