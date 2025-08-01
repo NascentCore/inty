@@ -1,0 +1,14 @@
+{
+  "sexual": "any content related to sexual activity, nudity, or explicit sexual content",
+  "violence": "any content depicting violence, weapons, fighting, or physical harm",
+  "hate_speech": "any content promoting hatred, discrimination, or violence against specific groups",
+  "drugs": "any content related to illegal drugs, drug use, or drug paraphernalia",
+  "gore": "any content showing graphic violence, blood, or disturbing medical content",
+  "spam": "any content that appears to be spam, scams, or misleading information",
+  "copyright": "any content that may violate copyright or intellectual property rights",
+  "child_safety": "any content that may be harmful to children or inappropriate for minors",
+  "political": "any content related to political topics, elections, or political figures",
+  "medical": "any content related to medical procedures, health advice, or medical conditions",
+  "financial": "any content related to financial advice, investments, or money management",
+  "religion": "any content related to religious beliefs, practices, or religious figures"
+} 

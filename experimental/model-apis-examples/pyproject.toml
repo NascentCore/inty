@@ -1,0 +1,12 @@
+[project]
+name = "model-apis-engineering"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "google-genai>=1.26.0",
+    "openai>=1.97.0",
+    "pillow>=11.3.0",
+    "vertexai>=1.71.1",
+]
