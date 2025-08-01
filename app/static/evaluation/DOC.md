@@ -1,6 +1,6 @@
 # Eval
 
-User name and password to test.inty.cc & new.test.inty.cc:
+User name and password to `test.inty.cc` `new.test.inty.cc`
 
 ```password
 wzy:sxwl6662025!
