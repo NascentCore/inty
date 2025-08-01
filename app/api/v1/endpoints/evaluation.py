@@ -1,6 +1,5 @@
 """评测系统API端点 - 专门用于评测聊天系统效果"""
 
-import asyncio
 from typing import Any, List, Optional
 from fastapi import (
     APIRouter,
@@ -8,10 +7,8 @@ from fastapi import (
     HTTPException,
     UploadFile,
     File,
-    BackgroundTasks,
     Query,
 )
-from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import schemas
@@ -40,6 +37,9 @@ async def get_evaluation_sessions(
 
     返回当前用户创建的评测会话列表
     """
+    if not current_user.is_superuser:
+        return schemas.APIResponse.error(message="Unauthorized access")
+
     try:
         evaluation_service = EvaluationService(db)
 
@@ -66,6 +66,9 @@ async def create_evaluation_session(
 
     用于评测当前聊天系统的智能体对话效果
     """
+    if not current_user.is_superuser:
+        return schemas.APIResponse.error(message="Unauthorized access")
+
     try:
         evaluation_service = EvaluationService(db)
 
@@ -102,6 +105,9 @@ async def start_evaluation_session(
 
     开始执行对智能体的批量测试和评分
     """
+    if not current_user.is_superuser:
+        return schemas.APIResponse.error(message="Unauthorized access")
+
     try:
         evaluation_service = EvaluationService(db)
 
@@ -137,6 +143,9 @@ async def get_evaluation_session(
 
     包含完整的测试结果和交互记录
     """
+    if not current_user.is_superuser:
+        return schemas.APIResponse.error(message="Unauthorized access")
+
     try:
         evaluation_service = EvaluationService(db)
 
@@ -169,6 +178,9 @@ async def get_evaluation_results(
 
     返回指定会话的所有测试结果
     """
+    if not current_user.is_superuser:
+        return schemas.APIResponse.error(message="Unauthorized access")
+
     try:
         evaluation_service = EvaluationService(db)
 
@@ -200,6 +212,9 @@ async def cancel_evaluation_session(
 
     停止正在进行的评测任务
     """
+    if not current_user.is_superuser:
+        return schemas.APIResponse.error(message="Unauthorized access")
+
     try:
         evaluation_service = EvaluationService(db)
 
@@ -232,6 +247,9 @@ async def parse_questions_file(
 
     支持txt、csv、json格式的问题文件上传和解析
     """
+    if not current_user.is_superuser:
+        return schemas.APIResponse.error(message="Unauthorized access")
+
     try:
         # 验证文件大小（最大10MB）
         if file.size and file.size > 10 * 1024 * 1024:
@@ -277,6 +295,9 @@ async def get_scoring_models(
     """
     获取可用模型列表
     """
+    if not current_user.is_superuser:
+        return schemas.APIResponse.error(message="Unauthorized access")
+
     try:
         scoring_service = ScoringService()
         models = await scoring_service.get_available_models()
@@ -298,6 +319,9 @@ async def validate_scoring_criteria(
 
     检查评分标准的格式和完整性
     """
+    if not current_user.is_superuser:
+        return schemas.APIResponse.error(message="Unauthorized access")
+
     try:
         scoring_service = ScoringService()
         validation = scoring_service.validate_scoring_criteria(criteria)
@@ -320,6 +344,9 @@ async def get_evaluation_stats(
 
     显示用户的评测历史和统计数据
     """
+    if not current_user.is_superuser:
+        return schemas.APIResponse.error(message="Unauthorized access")
+
     try:
         # 这里可以实现统计逻辑
         # 暂时返回模拟数据
@@ -345,12 +372,16 @@ async def monitor_evaluation_session(
     websocket,
     session_id: str,
     db: AsyncSession = Depends(deps.get_async_db),
+    current_user: schemas.User = Depends(deps.get_current_active_user),
 ):
     """
     实时监控评测会话进度
 
     通过WebSocket推送评测进度和结果
     """
+    if not current_user.is_superuser:
+        return schemas.APIResponse.error(message="Unauthorized access")
+
     await websocket.accept()
 
     try:
@@ -411,6 +442,9 @@ async def get_evaluation_agents(
 
     支持获取公开和私有智能体，用于评测系统选择测试对象
     """
+    if not current_user.is_superuser:
+        return schemas.APIResponse.error(message="Unauthorized access")
+
     try:
         from app.services import agent_service
         from app.models.agent import AgentVisibility
@@ -446,6 +480,9 @@ async def create_evaluation_agent(
 
     在评测系统中创建新的智能体用于测试
     """
+    if not current_user.is_superuser:
+        return schemas.APIResponse.error(message="Unauthorized access")
+
     try:
         from app.services import agent_service
 
@@ -474,6 +511,9 @@ async def update_evaluation_agent(
 
     修改智能体的配置和提示词等信息
     """
+    if not current_user.is_superuser:
+        return schemas.APIResponse.error(message="Unauthorized access")
+
     try:
         from app.services import agent_service
 
@@ -511,6 +551,9 @@ async def delete_evaluation_agent(
 
     删除用户创建的私有智能体
     """
+    if not current_user.is_superuser:
+        return schemas.APIResponse.error(message="Unauthorized access")
+
     try:
         from app.services import agent_service
 
@@ -547,6 +590,9 @@ async def deploy_agent_to_production(
 
     需要管理员权限，将测试智能体上线到生产环境
     """
+    if not current_user.is_superuser:
+        return schemas.APIResponse.error(message="Unauthorized access")
+
     try:
         # 这里应该实现实际的部署逻辑
         # 暂时返回模拟响应
@@ -581,6 +627,9 @@ async def create_evaluation_template(
 
     保存常用的问题集和评分标准为模板
     """
+    if not current_user.is_superuser:
+        return schemas.APIResponse.error(message="Unauthorized access")
+
     try:
         from app.models.evaluation import EvaluationTemplate
         import uuid
@@ -626,6 +675,9 @@ async def get_evaluation_templates(
 
     返回用户的模板和公开模板
     """
+    if not current_user.is_superuser:
+        return schemas.APIResponse.error(message="Unauthorized access")
+
     try:
         from sqlalchemy import select, or_
         from app.models.evaluation import EvaluationTemplate
@@ -666,6 +718,9 @@ async def create_batch_evaluation(
 
     一次性创建多个评测会话
     """
+    if not current_user.is_superuser:
+        return schemas.APIResponse.error(message="Unauthorized access")
+
     try:
         evaluation_service = EvaluationService(db)
         sessions = []
@@ -703,6 +758,9 @@ async def export_evaluation_results(
 
     将评测结果导出为CSV、JSON或Excel格式
     """
+    if not current_user.is_superuser:
+        return schemas.APIResponse.error(message="Unauthorized access")
+
     try:
         # 这里应该实现实际的导出逻辑
         # 暂时返回下载链接
@@ -733,6 +791,9 @@ async def compare_evaluation_sessions(
 
     分析多个会话的结果差异
     """
+    if not current_user.is_superuser:
+        return schemas.APIResponse.error(message="Unauthorized access")
+
     try:
         # 这里应该实现实际的对比逻辑
         # 暂时返回模拟数据
