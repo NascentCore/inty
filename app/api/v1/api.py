@@ -36,7 +36,8 @@ api_router.include_router(report.router, prefix="/report", tags=["report"])
 api_router.include_router(agents.router, prefix="/ai/agents", tags=["agents"])
 api_router.include_router(chats.router, prefix="/chats", tags=["chats"])
 api_router.include_router(settings.router, prefix="/settings", tags=["settings"])
-api_router.include_router(resources.router, prefix="/resources", tags=["resources"])
+# TODO: Consider remove /resources endpoint.
+# api_router.include_router(resources.router, prefix="/resources", tags=["resources"])
 api_router.include_router(
     subscription.router, prefix="/subscription", tags=["subscription"]
 )
