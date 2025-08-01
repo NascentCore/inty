@@ -285,6 +285,7 @@ private fun FollowingTabContent(
     onUnfollowAgent: ((String) -> Unit)? = null,
 ) {
     LazyColumn {
+
         items(
             items = followingAgents,
             key = { agent -> agent.id }
@@ -442,6 +443,7 @@ fun LongPressUnfollowItem(
 ) {
     var isDeleting by remember { mutableStateOf(false) }
     var showPopup by remember { mutableStateOf(false) }
+    var longPressOffset by remember { mutableStateOf(DpOffset.Zero) }
 
     // 如果正在删除，显示加载状态
     if (isDeleting) {
@@ -459,33 +461,33 @@ fun LongPressUnfollowItem(
         }
     } else {
         Box {
-            // 锚点Box，用于定位DropdownMenu
-            Box(
+            FollowingAgentItem(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(Color(0xFF1C1523))
                     .pointerInput(Unit) {
+                        val height = size.height.toDp()
                         detectTapGestures(
                             onTap = {
                                 onClickAgent(agent)
                             },
-                            onLongPress = {
+                            onLongPress = { offset ->
+                                // 获取长按位置并转换为Dp
+                                val xDp = offset.x.toDp()
+                                val yDp = offset.y.toDp()
+                                longPressOffset = DpOffset(x = xDp, y = yDp - height)
                                 showPopup = true
                             }
                         )
-                    }
-            ) {
-                FollowingAgentItem(
-                    modifier = Modifier.fillMaxWidth(),
-                    agent = agent
-                )
-            }
+                    },
+                agent = agent
+            )
 
             // 长按弹出菜单
             DropdownMenu(
                 expanded = showPopup,
                 onDismissRequest = { showPopup = false },
-                offset = DpOffset(x = 0.dp, y = (-40).dp), // 向上偏移，避免被下一个item遮挡
+                offset = longPressOffset,
                 containerColor = Color(0xFF2A1F2E),
                 shape = RoundedCornerShape(8.dp)
             ) {
