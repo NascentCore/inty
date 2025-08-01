@@ -1,0 +1,53 @@
+# AI角色迁移脚本配置文件
+environments:
+  test:
+    name: "测试环境"
+    database:
+      host: "localhost"
+      port: 15432
+      user: "postgres"
+      password: "postgres"
+      db: "devdb"
+    
+  production:
+    name: "生产环境"
+    database:
+      host: "localhost"
+      port: 15432
+      user: "postgres"
+      password: "postgres"
+      db: "test"
+
+migration:
+  # 导出选项
+  export:
+    # 是否包含已删除的角色
+    include_deleted: false
+    # 导出状态过滤 (PENDING, APPROVED, REJECTED 或 null 表示全部)
+    status_filter: "PENDING"
+    # 可见性过滤 (PUBLIC, PRIVATE 或 null 表示全部)
+    visibility_filter: PUBLIC
+    # 是否导出创建者信息
+    include_creator_info: false
+    # 导出文件路径
+    output_file: "agents_export.json"
+  
+  # 导入选项
+  import:
+    # 如果角色已存在是否更新
+    update_existing: false
+    # 是否保持原始ID
+    keep_original_ids: false
+    # 默认创建者ID (如果不存在创建者)
+    default_creator_id: user-01K0V3RK5H4BCFHGS1H6BBTZ4R
+    # 导入状态 (如果要覆盖原状态)
+    force_status: null
+    # 是否跳过验证
+    skip_validation: false
+    # 是否创建缺失的用户
+    create_missing_users: true
+
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(levelname)s - %(message)s"
+  file: "migration.log"

@@ -1,0 +1,4 @@
+# AI角色迁移脚本依赖
+asyncpg==0.29.0
+pydantic==2.5.0
+PyYAML==6.0.1
