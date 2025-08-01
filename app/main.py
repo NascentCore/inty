@@ -31,6 +31,8 @@ app = FastAPI(
     version="1.0.0",
     # Disable swagger UI by default to reduce security risk.
     openapi_url=None,
+    # Uncomment the following to enable openapi docs
+    # docs_url='/docs'
     docs_url=None,
     redoc_url=None,
     # These probably are not needed.
