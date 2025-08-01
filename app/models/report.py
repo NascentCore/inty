@@ -13,6 +13,11 @@ from app.db.base_class import Base
 class ReportReason(Base):
     """举报原因模型"""
 
+    # TODO: Remove this table.
+    # Reasons are hardcoded in the app.
+    # When reporting, use the actual reason code instead of reason ID.
+    # App currenctly uses reason ID to report issue, we need to change it to reason code.
+    # Only after that, this table can be removed.
     __tablename__ = "report_reason"
 
     id = Column(Integer, primary_key=True, autoincrement=True)

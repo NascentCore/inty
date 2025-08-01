@@ -15,7 +15,6 @@ from app.schemas.report import (
     ReportCreate,
     ReportOut,
     ReportQuery,
-    ReportReason,
     TargetType,
 )
 from app.schemas.response import APIResponse, PaginationData
@@ -23,17 +22,6 @@ from app.services import report_service
 from app.utils.gcs import upload_to_gcs
 
 router = APIRouter()
-
-
-@router.get("/reasons", response_model=APIResponse[List[ReportReason]])
-async def get_report_reasons(db: AsyncSession = Depends(get_async_db)):
-    """Get report reasons list"""
-    try:
-        reasons = await report_service.list_report_reasons(db)
-        return APIResponse.success(data=reasons)
-    except Exception as e:
-        logger.error(f"Failed to get report reasons: {str(e)}")
-        return APIResponse.error(message=str(e))
 
 
 @router.post("/upload-image", response_model=APIResponse[dict])
