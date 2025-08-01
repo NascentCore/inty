@@ -122,6 +122,9 @@ object NetServiceMgr {
     }
 
     fun baseUrl(): String {
+        // Uncomment the line below to point to the backend running on your local machine.
+        // You might need to change the port if you're not using the default one.
+        // return "http://${Constant.USER_HOST_LOCAL}/"
         return if (AppEnv.testEnv) {
             "https://${Constant.USER_HOST_DEV}/"
         } else {
@@ -148,7 +151,6 @@ object NetServiceMgr {
 
     val retrofitNoWrapper: Retrofit
         get() {
-
             val retrofitUser =
                 Retrofit.Builder()
                     .baseUrl(baseUrl())

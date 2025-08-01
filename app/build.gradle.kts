@@ -183,7 +183,7 @@ android {
 TheRouter {
     debug = false
     // 编译期检查路由表合法性，可选参数 warning(仅告警)/error(编译期抛异常)/delete(每次根据注解重新生成路由表)，不配置则不校验
-//    checkRouteMap = "delete"
+    // checkRouteMap = "delete"
     // 检查 FlowTask 是否有循环引用，可选参数 warning(仅打印日志)/error(编译期抛异常)，不配置则不校验
     checkFlowDepend = "warning"
     // 图形化展示当前的 FlowTask 依赖图
@@ -233,8 +233,8 @@ dependencies {
     // 统一使用 Coil 3.x 版本
     implementation(libs.bundles.coils3)
 
-    //Google支付
-//    implementation(libs.billing.ktx)
+    // Google支付
+    // implementation(libs.billing.ktx)
 
     // 新的身份验证方式
     implementation(libs.credential.manager)
