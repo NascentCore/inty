@@ -125,9 +125,6 @@ async def send_notification(
     background_tasks: BackgroundTasks,
     request: NotificationSendRequest,
 ) -> None:
-    """
-    Send notification
-    """
     try:
         # 1. Get template
         template = await db.get(NotificationTemplate, request.template_id)
