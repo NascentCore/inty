@@ -83,6 +83,7 @@ async def create_report(
         return APIResponse.error(message=str(e))
 
 
+# TODO: Move this under admin path.
 @router.get("/", response_model=APIResponse[PaginationData[ReportOut]])
 async def list_reports(
     reason_ids: Optional[List[int]] = Query(None),
