@@ -129,12 +129,7 @@ class VoiceService:
                 )
                 if cached_url:
                     logger.info(f"使用缓存的语音文件: {cached_url}")
-                    # 异步更新访问统计，不阻塞返回
-                    asyncio.create_task(
-                        voice_cache_service.update_access_stats(
-                            db, text, voice_id, model, language
-                        )
-                    )
+                    # 访问统计已经在get_cached_voice中异步更新了，这里不需要重复更新
                     return cached_url
                 logger.debug("未找到缓存，开始新的语音生成")
 

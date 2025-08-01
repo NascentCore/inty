@@ -632,14 +632,16 @@ export const chatApi = {
     size?: number;
   }): Promise<{
     messages: Array<{
+      id: number;
+      role: 'user' | 'assistant';
       content: string;
-      sender_type: 'USER' | 'AI';
-      created_at: string;
+      timestamp: string;
     }>;
     total: number;
-    page: number;
-    size: number;
+    limit: number;
+    offset: number;
     has_more: boolean;
+    page: number;
   }> =>
     apiClient.get(`/chats/agents/${agentId}/messages`, params),
 
@@ -659,6 +661,17 @@ export const chatApi = {
   // 获取智能体调试消息
   getAgentDebugMessages: (agentId: string): Promise<any> =>
     apiClient.get(`/chats/agents/${agentId}/debug-messages`),
+
+  // 生成消息语音
+  generateVoice: (agentId: string, messageId: string, language: string = 'zh'): Promise<{
+    audio_url: string;
+    message_id: string;
+    voice_id: string;
+    language: string;
+    cached: boolean;
+    generation_time: number | null;
+  }> =>
+    apiClient.post(`/chats/agents/${agentId}/messages/${messageId}/voice?language=${language}`, {}),
 };
 
 // =============================================================================

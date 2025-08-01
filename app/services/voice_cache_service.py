@@ -94,22 +94,26 @@ class VoiceCacheService:
             if cache_entry:
                 # 检查文件是否还存在
                 if self.gcs_service.check_voice_file_exists(cache_entry.audio_url):
-                    # 更新访问时间和命中次数
-                    cache_entry.last_accessed = datetime.now()
-                    cache_entry.hit_count += 1
-                    await db.commit()
-
                     logger.info(
                         f"语音缓存命中: {content_hash}, 命中次数: {cache_entry.hit_count}"
                     )
+                    
+                    # 异步更新访问统计，不阻塞主流程
+                    import asyncio
+                    asyncio.create_task(
+                        self._update_cache_hit_async(content_hash, text, voice_id, model, language)
+                    )
+                    
                     return cache_entry.audio_url
                 else:
-                    # 文件不存在，标记为无效
-                    cache_entry.is_active = False
-                    await db.commit()
-                    logger.warning(
-                        f"语音缓存文件不存在，标记为无效: {cache_entry.audio_url}"
-                    )
+                    # 文件不存在，标记为无效（使用独立事务）
+                    try:
+                        await self._mark_cache_invalid_async(content_hash)
+                        logger.warning(
+                            f"语音缓存文件不存在，标记为无效: {cache_entry.audio_url}"
+                        )
+                    except Exception as e:
+                        logger.error(f"标记缓存无效失败: {str(e)}")
 
             return None
 
@@ -144,9 +148,9 @@ class VoiceCacheService:
         """
         # 如果没有提供数据库会话，创建新的会话
         if db is None:
-            from app.api.deps import get_async_db
-
-            async for db_session in get_async_db():
+            from app.db.session import AsyncSessionLocal
+            
+            async with AsyncSessionLocal() as db_session:
                 return await self._save_voice_cache_impl(
                     db_session, text, voice_id, model, language, audio_url, file_size
                 )
@@ -226,13 +230,12 @@ class VoiceCacheService:
         """
         # 如果没有提供数据库会话，创建新的会话
         if db is None:
-            from app.api.deps import get_async_db
-
-            async for db_session in get_async_db():
+            from app.db.session import AsyncSessionLocal
+            
+            async with AsyncSessionLocal() as db_session:
                 await self._update_access_stats_impl(
                     db_session, text, voice_id, model, language
                 )
-                return
         else:
             await self._update_access_stats_impl(db, text, voice_id, model, language)
 
@@ -263,6 +266,65 @@ class VoiceCacheService:
                 await db.rollback()
             except Exception:
                 pass  # 如果rollback也失败，忽略
+
+    async def _update_cache_hit_async(
+        self, content_hash: str, text: str, voice_id: str, model: str, language: str
+    ) -> None:
+        """异步更新缓存命中统计，使用独立的数据库会话"""
+        try:
+            from app.db.session import AsyncSessionLocal
+            
+            # 创建独立的数据库会话
+            async with AsyncSessionLocal() as db_session:
+                try:
+                    # 更新访问统计
+                    stmt = (
+                        update(VoiceCache)
+                        .where(VoiceCache.content_hash == content_hash)
+                        .values(
+                            last_accessed=datetime.now(), 
+                            hit_count=VoiceCache.hit_count + 1
+                        )
+                    )
+
+                    await db_session.execute(stmt)
+                    await db_session.commit()
+                    
+                    logger.debug(f"异步更新缓存访问统计: {content_hash}")
+                    
+                except Exception as e:
+                    logger.error(f"异步更新缓存访问统计失败: {str(e)}")
+                    await db_session.rollback()
+                    
+        except Exception as e:
+            logger.error(f"创建异步数据库会话失败: {str(e)}")
+
+    async def _mark_cache_invalid_async(self, content_hash: str) -> None:
+        """异步标记缓存为无效，使用独立的数据库会话"""
+        try:
+            from app.db.session import AsyncSessionLocal
+            
+            # 创建独立的数据库会话
+            async with AsyncSessionLocal() as db_session:
+                try:
+                    # 标记为无效
+                    stmt = (
+                        update(VoiceCache)
+                        .where(VoiceCache.content_hash == content_hash)
+                        .values(is_active=False)
+                    )
+
+                    await db_session.execute(stmt)
+                    await db_session.commit()
+                    
+                    logger.debug(f"异步标记缓存无效: {content_hash}")
+                    
+                except Exception as e:
+                    logger.error(f"异步标记缓存无效失败: {str(e)}")
+                    await db_session.rollback()
+                    
+        except Exception as e:
+            logger.error(f"创建异步数据库会话失败: {str(e)}")
 
     async def get_cache_stats(self, db: AsyncSession) -> Dict[str, Any]:
         """

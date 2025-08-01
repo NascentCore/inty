@@ -45,6 +45,7 @@ import {
 import { useAgents } from '../hooks/useAgents';
 import api from '../services/api';
 import type { Agent, ChatMessage } from '../types';
+import VoicePlayer from '../components/common/VoicePlayer';
 
 const { Content } = Layout;
 const { Title, Text, Paragraph } = Typography;
@@ -213,7 +214,7 @@ export const ChatPage: React.FC = () => {
             role: msg.role, // 直接使用API返回的role字段（'user' 或 'assistant'）
             content: msg.content,
             timestamp: msg.timestamp,
-            remoteId: String(msg.id), // 使用真正的数据库消息ID，转为字符串
+            remoteId: msg.id ? String(msg.id) : `remote_${index}`, // 安全地访问id字段
           }));
           
           setMessages(convertedMessages.reverse()); // 反转顺序，最新的在底部
@@ -273,19 +274,58 @@ export const ChatPage: React.FC = () => {
       const finalMessages = [...messagesWithUser, assistantMessage];
       setMessages(finalMessages);
 
-      // 更新会话
-      const updatedSession = {
-        ...currentSession,
-        messages: finalMessages,
-      };
-      setCurrentSession(updatedSession);
+      // 发送成功后，刷新聊天记录以获取真实的消息ID
+      try {
+        // 等待一小段时间确保后端处理完成
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // 重新获取最新的聊天记录
+        const refreshedData = await api.chat.getMessages(selectedAgent.id, { page: 1, size: 100 });
+        
+        if (refreshedData.messages && refreshedData.messages.length > 0) {
+          const refreshedMessages: ChatMessage[] = refreshedData.messages.map((msg, index) => ({
+            id: `msg_refreshed_${index}_${Date.now()}`,
+            role: msg.role,
+            content: msg.content,
+            timestamp: msg.timestamp,
+            remoteId: msg.id ? String(msg.id) : `remote_${index}`,
+          }));
+          
+          // 更新消息列表（最新的在底部）
+          setMessages(refreshedMessages.reverse());
+          
+          // 更新会话
+          const updatedSession = {
+            ...currentSession,
+            messages: refreshedMessages,
+          };
+          setCurrentSession(updatedSession);
 
-      // 更新历史记录
-      const updatedHistory = chatHistory.map(session =>
-        session.id === currentSession.id ? updatedSession : session
-      );
-      setChatHistory(updatedHistory);
-      saveChatHistory(updatedHistory);
+          // 更新历史记录
+          const updatedHistory = chatHistory.map(session =>
+            session.id === currentSession.id ? updatedSession : session
+          );
+          setChatHistory(updatedHistory);
+          saveChatHistory(updatedHistory);
+          
+          console.log('已刷新聊天记录，获取到真实消息ID');
+        }
+      } catch (refreshError) {
+        console.warn('刷新聊天记录失败，但消息发送成功:', refreshError);
+        
+        // 如果刷新失败，仍然保留原来的逻辑
+        const updatedSession = {
+          ...currentSession,
+          messages: finalMessages,
+        };
+        setCurrentSession(updatedSession);
+
+        const updatedHistory = chatHistory.map(session =>
+          session.id === currentSession.id ? updatedSession : session
+        );
+        setChatHistory(updatedHistory);
+        saveChatHistory(updatedHistory);
+      }
 
     } catch (error) {
       console.error('发送消息失败:', error);
@@ -788,8 +828,28 @@ export const ChatPage: React.FC = () => {
                                     transition: 'opacity 0.2s',
                                     display: 'flex',
                                     gap: '4px',
+                                    alignItems: 'center',
                                   }}
                                 >
+                                  {/* 语音播放按钮 - 只对AI回复且有真实消息ID的消息显示 */}
+                                  {message.role === 'assistant' && message.remoteId && 
+                                   !message.remoteId.startsWith('assistant_') && !message.remoteId.startsWith('error_') &&
+                                   !message.remoteId.startsWith('remote_') && selectedAgent && (
+                                    <VoicePlayer 
+                                      agentId={selectedAgent.id}
+                                      messageId={message.remoteId}
+                                      messageText={message.content}
+                                      language="zh"
+                                      size="small"
+                                      style={{ 
+                                        color: '#666',
+                                        padding: '2px 4px',
+                                        height: 'auto',
+                                        minWidth: 'auto',
+                                      }}
+                                    />
+                                  )}
+                                  
                                   {/* 只有历史消息才显示重新发送和删除按钮 */}
                                   {message.remoteId && !message.remoteId.startsWith('user_') && 
                                    !message.remoteId.startsWith('assistant_') && !message.remoteId.startsWith('error_') && (
