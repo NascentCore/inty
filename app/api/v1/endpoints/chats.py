@@ -105,6 +105,7 @@ async def get_agent_status(
     }
 
 
+# TODO: Remove this feature.
 @router.get("/keep-talking/status")
 async def get_keep_talking_status(
     current_user: schemas.User = Depends(deps.get_current_active_user),

@@ -749,6 +749,9 @@ async def preview_agent_prompt(
     """
     预览Agent使用指定模版的提示词
     """
+    if not current_user.is_superuser:
+        return schemas.APIResponse.error(message="Unauthorized access")
+
     try:
         # 验证agent是否存在
         agent = await agent_service.get_agent(db, agent_id=agent_id)
@@ -1011,6 +1014,9 @@ async def get_openrouter_models(
     """
     获取OpenRouter模型列表
     """
+    if not current_user.is_superuser:
+        return schemas.APIResponse.error(message="Unauthorized access")
+
     try:
         from app.services.scoring_service import ScoringService
 
