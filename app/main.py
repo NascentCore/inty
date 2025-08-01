@@ -27,13 +27,13 @@ init_logger()
 
 app = FastAPI(
     title=settings.app.name,
-    description="""
-    InTy 后端服务
-    """,
+    description="InTy",
     version="1.0.0",
-    openapi_url=f"{settings.app.api_v1_prefix}/openapi.json",
-    docs_url="/docs",
-    redoc_url="/redoc",
+    # Disable swagger UI by default to reduce security risk.
+    openapi_url=None,
+    docs_url=None,
+    redoc_url=None,
+    # These probably are not needed.
     swagger_ui_parameters={
         "persistAuthorization": True,
         "displayRequestDuration": True,
