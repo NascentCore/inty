@@ -18,6 +18,12 @@ $ docker build --platform linux/amd64 \
 # 上传镜像
 $ docker push registry.cn-beijing.aliyuncs.com/sxwl-ai/inty-frontend:latest .
 
+# Use gcp to ssh to gcp vm
+sudo docker stop inty-test-new
+sudo docker rmi registry.cn-beijing.aliyuncs.com/sxwl-ai/inty-frontend:latest
+sudo docker run --rm -d -p 8103:80 --name inty-test-new \
+    registry.cn-beijing.aliyuncs.com/sxwl-ai/inty-frontend:latest
+
 # namecheap 上配置域名解析
 例：new.test.inty.cc -> 35.186.154.142
 
