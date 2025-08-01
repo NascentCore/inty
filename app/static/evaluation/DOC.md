@@ -1,3 +1,12 @@
+# Eval
+
+User name and password to test.inty.cc & new.test.inty.cc:
+
+```password
+wzy:sxwl6662025!
+heartmate:heartmate.inty.cc
+```
+
 ```bash
 # 构建镜像
 $ git clone git@github.com:NascentCore/inty-backend.git
