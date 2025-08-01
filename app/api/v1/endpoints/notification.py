@@ -57,11 +57,8 @@ async def list_notifications(
     is_read: Optional[bool] = Query(None, description="是否已读，不传则查询全部"),
 ) -> APIResponse[PaginationData[NotificationItem]]:
     """
-    分页查询用户的消息列表
+    分页查询用户的消息列表；返回用户收到的通知。
     """
-    if not current_user.is_superuser:
-        logger.error("非超级管理员不能发送通知")
-        return APIResponse.error(message="Only superusers can send notifications")
     try:
         # 创建查询参数
         query = NotificationQuery(
