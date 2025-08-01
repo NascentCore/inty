@@ -1,29 +1,16 @@
 from fastapi import APIRouter
 
 from app.api.v1.endpoints import (
+    admin,
     auth,
     notification,
     users,
     agents,
     chats,
     settings,
-    resources,
     report,
     subscription,
     evaluation,
-)
-from app.api.v1 import verification_code
-from app.api.v1.endpoints import (
-    admin,
-    agents,
-    auth,
-    chats,
-    notification,
-    report,
-    resources,
-    settings,
-    subscription,
-    users,
 )
 
 api_router = APIRouter()
@@ -42,10 +29,4 @@ api_router.include_router(
     subscription.router, prefix="/subscription", tags=["subscription"]
 )
 api_router.include_router(admin.router, prefix="/admin", tags=["admin"])
-api_router.include_router(
-    verification_code.router, prefix="/verification-code", tags=["verification-code"]
-)
-api_router.include_router(
-    verification_code.router, prefix="/verification-code", tags=["verification-code"]
-)
 api_router.include_router(evaluation.router, prefix="/evaluation", tags=["evaluation"])
