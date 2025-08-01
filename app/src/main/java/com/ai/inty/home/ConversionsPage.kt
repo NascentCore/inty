@@ -1,7 +1,8 @@
 package com.ai.inty.home
 
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,19 +16,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SwipeToDismissBox
-import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -36,11 +31,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ai.inty.Constant
@@ -53,7 +50,10 @@ import com.ai.inty.beans.ConversationItem
 import com.ai.inty.beans.SysMsgItem
 import com.ai.inty.utils.AuthClickable
 import com.inty.utils.formatTimestampToDateTime
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 enum class ConversionsPageTab {
     TabMessage,
@@ -290,7 +290,7 @@ private fun FollowingTabContent(
             key = { agent -> agent.id }
         ) { agent ->
             if (onUnfollowAgent != null) {
-                SwipeToUnfollowItem(
+                LongPressUnfollowItem(
                     agent = agent,
                     onClickAgent = onClickAgent,
                     onUnfollowAgent = onUnfollowAgent
@@ -432,33 +432,16 @@ fun FollowingAgentItem(
 }
 
 /**
- * 滑动取消关注项组件
+ * 长按取消关注项组件
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SwipeToUnfollowItem(
+fun LongPressUnfollowItem(
     agent: AgentInfo,
     onClickAgent: (AgentInfo) -> Unit,
     onUnfollowAgent: (String) -> Unit,
 ) {
     var isDeleting by remember { mutableStateOf(false) }
-    val swipeToDismissBoxState = rememberSwipeToDismissBoxState()
-
-    LaunchedEffect(swipeToDismissBoxState.currentValue) {
-        if (swipeToDismissBoxState.currentValue == SwipeToDismissBoxValue.EndToStart &&
-            swipeToDismissBoxState.progress > 0.8f && !isDeleting
-        ) {
-            isDeleting = true
-            // 添加延迟，避免快速连续删除
-            delay(100)
-            onUnfollowAgent(agent.id)
-            // 重置状态，确保位置恢复
-            swipeToDismissBoxState.reset()
-            // 延迟重置删除状态，防止重复触发
-            delay(500)
-            isDeleting = false
-        }
-    }
+    var showPopup by remember { mutableStateOf(false) }
 
     // 如果正在删除，显示加载状态
     if (isDeleting) {
@@ -475,52 +458,60 @@ fun SwipeToUnfollowItem(
             )
         }
     } else {
-        SwipeToDismissBox(
-            state = swipeToDismissBoxState,
-            enableDismissFromStartToEnd = false, // 禁用从左向右滑动
-            backgroundContent = {
-                val color by animateColorAsState(
-                    when (swipeToDismissBoxState.targetValue) {
-                        SwipeToDismissBoxValue.Settled -> Color.Transparent
-                        SwipeToDismissBoxValue.EndToStart -> Color.Red
-                        SwipeToDismissBoxValue.StartToEnd -> Color.Transparent
-                    }
-                )
-
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(color)
-                        .padding(horizontal = 20.dp),
-                    contentAlignment = Alignment.CenterEnd
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Delete,
-                            contentDescription = "Unfollow",
-                            tint = Color.White
+        Box {
+            // 锚点Box，用于定位DropdownMenu
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color(0xFF1C1523))
+                    .pointerInput(Unit) {
+                        detectTapGestures(
+                            onTap = {
+                                onClickAgent(agent)
+                            },
+                            onLongPress = {
+                                showPopup = true
+                            }
                         )
-                        if (swipeToDismissBoxState.progress > 0.5f) {
-                            Text(
-                                text = "Release to unfollow",
-                                color = Color.White,
-                                style = MaterialTheme.typography.bodySmall
-                            )
-                        }
                     }
-                }
-            },
-            content = {
+            ) {
                 FollowingAgentItem(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(Color(0xFF1C1523))
-                        .noRippleClickable { onClickAgent(agent) },
+                    modifier = Modifier.fillMaxWidth(),
                     agent = agent
                 )
             }
-        )
+
+            // 长按弹出菜单
+            DropdownMenu(
+                expanded = showPopup,
+                onDismissRequest = { showPopup = false },
+                offset = DpOffset(x = 0.dp, y = (-40).dp), // 向上偏移，避免被下一个item遮挡
+                containerColor = Color(0xFF2A1F2E),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .padding(horizontal = 20.dp, vertical = 2.dp)
+                        .clickable(onClick = {
+                            showPopup = false
+                            isDeleting = true
+                            onUnfollowAgent(agent.id)
+                            // 延迟重置删除状态
+                            CoroutineScope(Dispatchers.Main).launch {
+                                delay(500)
+                                isDeleting = false
+                            }
+                        }),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = "取消关注",
+                        color = Color.White,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            }
+        }
     }
 }
