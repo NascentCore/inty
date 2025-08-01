@@ -14,9 +14,7 @@ $ cd inty-backend/app/static/evaluation
 $ docker build --platform linux/amd64 \
     --build-arg REACT_APP_API_BASE_URL=https://dev.inty.sxwl.ai/api/v1 \
     -t registry.cn-beijing.aliyuncs.com/sxwl-ai/inty-frontend:latest .
-    
-# 上传镜像
-$ docker push registry.cn-beijing.aliyuncs.com/sxwl-ai/inty-frontend:latest .
+$ docker push registry.cn-beijing.aliyuncs.com/sxwl-ai/inty-frontend:latest
 
 # Use gcp to ssh to gcp vm
 sudo docker stop inty-test-new
