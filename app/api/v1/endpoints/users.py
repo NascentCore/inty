@@ -214,21 +214,7 @@ async def delete_user_account(
         )
 
 
-# @router.get("/{user_id}/profile", response_model=schemas.User)
-# def get_user_profile(
-#     user_id: str,
-#     db: AsyncSession = Depends(get_async_db),
-#     current_user: schemas.User = Depends(deps.get_current_active_user),
-# ) -> Any:
-#     """
-#     Get user profile by ID.
-#     """
-#     user = await user_service.get_user(db, user_id)
-#     if not user:
-#         raise HTTPException(status_code=404, detail="User not found")
-#     return user
-
-
+# TODO: Move this to admin router, and do not include the router in production.
 @router.get("/", response_model=UserList)
 async def get_all_users(
     *,

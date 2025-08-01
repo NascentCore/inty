@@ -59,6 +59,9 @@ async def list_notifications(
     """
     分页查询用户的消息列表
     """
+    if not current_user.is_superuser:
+        logger.error("非超级管理员不能发送通知")
+        return APIResponse.error(message="Only superusers can send notifications")
     try:
         # 创建查询参数
         query = NotificationQuery(
@@ -95,10 +98,17 @@ async def list_notifications(
 
 
 @router.get("/templates/types", response_model=APIResponse[Dict[str, int]])
-async def get_template_types() -> APIResponse[Dict[str, int]]:
+async def get_template_types(
+    current_user=Depends(deps.get_current_active_user),
+) -> APIResponse[Dict[str, int]]:
     """
     获取通知模板类型映射关系
     """
+    if not current_user.is_superuser:
+        logger.error("非超级管理员不能获取通知模板类型映射关系")
+        return APIResponse.error(
+            message="Only superusers can get notification template type mapping"
+        )
     try:
         return APIResponse.success(data=TEMPLATE_TYPE_MAP)
     except Exception as e:
@@ -117,12 +127,12 @@ async def create_notification_template(
     """
     创建通知模板
     """
+    if not current_user.is_superuser:
+        logger.error("非超级管理员不能创建通知模板")
+        return APIResponse.error(
+            message="Only superusers can create notification templates"
+        )
     try:
-        if not current_user.is_superuser:
-            logger.error("非超级管理员不能创建通知模板")
-            return APIResponse.error(
-                message="Only superusers can create notification templates"
-            )
 
         template = await notification_service.create_notification_template(
             db, template_data
@@ -153,6 +163,11 @@ async def list_templates(
     """
     分页查询通知模板列表
     """
+    if not current_user.is_superuser:
+        logger.error("非超级管理员不能查询通知模板列表")
+        return APIResponse.error(
+            message="Only superusers can query notification template list"
+        )
     try:
         # 查询数据
         items, total = await notification_service.query_templates(
