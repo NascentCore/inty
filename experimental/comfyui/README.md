@@ -1,5 +1,10 @@
 # ComfyUI
 
+## Nodes
+
+* ComfyUI-Manager
+  * Config file path: ComfyUI/user/default/ComfyUI-Manager/config.ini
+
 ## Key concepts
 
 * **Nodes:** Individual functions (e.g., Load Checkpoint, KSampler) that are the building blocks of a workflow.
