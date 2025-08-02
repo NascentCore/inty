@@ -2,6 +2,7 @@
 
 ## Deployment
 
+* Run [deploy_prd.yml](../.github/workflows/deploy_prd.yml) to deploy the app to production server
 * Open Google Cloud Console, login with `it@sxwl.ai` (or your own account)
 * Open Compute Engine, and find `dev-intance`
 * `/etc/nginx/conf.d/sxwl.ai.conf` has the host's nginx config
