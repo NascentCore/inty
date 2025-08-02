@@ -508,7 +508,7 @@ fun LongPressUnfollowItem(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        text = "取消关注",
+                        text = "Unfollow",
                         color = Color.White,
                         style = MaterialTheme.typography.bodyMedium
                     )
