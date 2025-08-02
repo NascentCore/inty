@@ -40,6 +40,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+
 import com.ai.inty.Constant
 import com.ai.inty.R
 import com.ai.inty.base.IntyImage
@@ -49,7 +50,9 @@ import com.ai.inty.beans.AgentInfo
 import com.ai.inty.beans.ConversationItem
 import com.ai.inty.beans.SysMsgItem
 import com.ai.inty.utils.AuthClickable
+
 import com.inty.utils.formatTimestampToDateTime
+
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -508,7 +511,7 @@ fun LongPressUnfollowItem(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        text = getStringByResId(R.string.unfollow),
+                        text = stringResource(R.string.unfollow),
                         color = Color.White,
                         style = MaterialTheme.typography.bodyMedium
                     )
