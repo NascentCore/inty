@@ -12,6 +12,8 @@
 ## 安装依赖
 
 ```bash
+python -m venv .venv
+source .venv/bin/activate
 pip install -r requirements_migration.txt
 ```
 
@@ -64,11 +66,13 @@ migration:
 ### 导出AI角色
 
 从测试环境导出AI角色：
+
 ```bash
 python agent_migration.py export --from test --config agent_migration_config.yaml
 ```
 
 指定导出文件路径：
+
 ```bash
 python agent_migration.py export --from test --file my_agents.json
 ```
@@ -76,6 +80,7 @@ python agent_migration.py export --from test --file my_agents.json
 ### 导入AI角色
 
 向生产环境导入AI角色：
+
 ```bash
 python agent_migration.py import --to production --file agents_export.json --config agent_migration_config.yaml
 ```
@@ -91,7 +96,9 @@ python agent_migration.py import --to production --file agents_export.json --con
 ## 日志文件
 
 脚本运行时会生成 `migration.log` 日志文件，记录详细的操作过程和错误信息。
+
 - log 示例
+
 ```bash
 2025-08-01 14:59:59,491 - INFO - 开始从 test 环境导出AI角色
 2025-08-01 15:00:00,183 - INFO - 成功连接到 test 环境数据库
@@ -118,38 +125,45 @@ python agent_migration.py import --to production --file agents_export.json --con
 ## 故障排除
 
 ### 连接数据库失败
+
 - 检查数据库主机、端口、用户名、密码是否正确
 - 确认数据库服务是否运行
 - 检查网络连接和防火墙设置
 
 ### 导入失败
+
 - 检查导入文件格式是否正确
 - 查看日志文件中的具体错误信息
 - 确认目标数据库表结构是否匹配
 
 ### 权限错误
+
 - 确保数据库用户有agents表和users表的读写权限
 - 检查是否有外键约束限制
 
 ## 示例工作流
 
 1. 导出测试环境数据：
+
 ```bash
 python agent_migration.py export --from test
 ```
 
 2. 检查导出文件：
+
 ```bash
 # 查看导出的角色数量和基本信息
 head -20 agents_export.json
 ```
 
 3. 导入到生产环境：
+
 ```bash
 python agent_migration.py import --to production --file agents_export.json
 ```
 
 4. 验证导入结果：
+
 ```bash
 # 检查日志
 tail -50 migration.log
