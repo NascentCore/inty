@@ -1,11 +1,19 @@
 # Eval
 
-User name and password to `test.inty.cc` `new.test.inty.cc`
+* This is a thin wrapper on top of inty backend
+* JWT token is hardcoded in api.ts
+* The inty backend is configured through env var REACT_APP_API_BASE_URL
 
-```password
-wzy:sxwl6662025!
-heartmate:heartmate.inty.cc
-```
+Nginx is installed on the server to do login:
+
+* `test.inty.cc` `new.test.inty.cc` share the same password files; there are 2 users:
+
+    ```password
+    wzy:sxwl6662025!
+    heartmate:heartmate.inty.cc
+    ```
+
+Deployment process:
 
 ```bash
 # 构建镜像
