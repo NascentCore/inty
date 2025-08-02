@@ -1,9 +1,16 @@
 # ComfyUI
 
-## Nodes
+## Sample workflows
+
+* [civitai link](https://civitai.com/images/86482829)
+  * [workflow.json](workflow.json)
+  * [workflow_advanced.json](workflow_advanced.json)
+
+## Pointers
 
 * ComfyUI-Manager
   * Config file path: ComfyUI/user/default/ComfyUI-Manager/config.ini
+* [Wiki](https://comfyui-wiki.com/en)
 
 ## Key concepts
 
