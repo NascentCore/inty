@@ -6,7 +6,7 @@
 
 - `agent_migration.py` - 主脚本文件
 - `agent_migration_config.yaml` - 配置文件
-- `requirements_migration.txt` - Python依赖
+- `requirements.txt` - Python依赖
 - `MIGRATION_README.md` - 使用说明
 
 ## 安装依赖
@@ -14,7 +14,7 @@
 ```bash
 python -m venv .venv
 source .venv/bin/activate
-pip install -r requirements_migration.txt
+pip install -r requirements.txt
 ```
 
 ## 配置文件说明
