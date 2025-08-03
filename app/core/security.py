@@ -14,8 +14,8 @@ def create_access_token(
 ) -> str:
     """创建访问令牌。
 
-    expires_delta 为 ``None`` 时使用配置中的默认过期时间。
-    传入 ``timedelta(0)`` 可使令牌立即过期。
+    expires_delta 为 `None` 时使用配置中的默认过期时间。
+    传入 `timedelta(0)` 可使令牌立即过期。
     """
     if expires_delta is not None:
         expire = datetime.utcnow() + expires_delta
