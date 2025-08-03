@@ -5,8 +5,10 @@ Minimal example of using RunPod SDK to call runsync on a serverless ComfyUI work
 
 import argparse
 import base64
+from datetime import datetime
 import os
 import json
+import random
 import re
 import runpod
 
@@ -36,19 +38,39 @@ print("pwd: ", os.getcwd())
 req_json = json.load(open("runpod_serverless_comfyui_sd3_workflow.json"))
 
 
-result = endpoint.run_sync(req_json)
-
-# Extract images from the images field
-images = result["images"]
-
-# Save each image as PNG
-for idx, image in enumerate(images):
-    out_path = f"image_{idx+1:03d}.png"
-    image_data = base64.b64decode(image["data"])
+def save_images(image_base64_data: str):
+    rand_int = random.randint(0, 1000000)
+    out_path = f"image_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{rand_int}.png"
+    image_data = base64.b64decode(image_base64_data)
     with open(out_path, "wb") as f:
         f.write(image_data)
     print(f"Saved: {out_path}")
 
-# json.dump(result, open("result.json", "w"), indent=2)
 
-print(f"Saved {len(images)} images to {os.path.abspath(out_path)}")
+def run_sync(req_json):
+    result = endpoint.run_sync(req_json)
+    images = result["images"]
+    for image in images:
+        save_images(image["data"])
+
+
+def run_async(req_json):
+    result1, result2 = endpoint.run(req_json), endpoint.run(req_json)
+    print(result1.status())
+    print(result2.status())
+
+    output1 = result1.output(timeout=100)
+    for image in output1["images"]:
+        save_images(image["data"])
+
+    output2 = result2.output(timeout=100)
+    for image in output2["images"]:
+        save_images(image["data"])
+
+
+def main():
+    run_async(req_json)
+
+
+if __name__ == "__main__":
+    main()

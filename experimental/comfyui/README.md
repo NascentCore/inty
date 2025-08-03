@@ -1,5 +1,11 @@
 # ComfyUI
 
+## Demos
+
+* [runpod_serverless_endpoint_comfyui_sd3](./runpod_serverless_endpoint_comfyui_sd3.py):
+  shows how to make request to runpod comfyui serverless endpoint.
+  It writes output images to local png files.
+
 ## Sample workflows
 
 * [civitai link](https://civitai.com/images/86482829)
