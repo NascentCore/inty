@@ -5,6 +5,14 @@
 * worker-comfyui endpoint
 * attached network volume with all models, loras and other data items
 
+Verification:
+
+* Worker image cannot be run on pod
+* Launch comfyui pod on runpod
+* Attach network volume to `/runpod-volume` (required by worker image)
+* Open comfyui webui, open terminal, download extra models
+  * As required by the workflow
+
 ## Demos
 
 * [runpod_serverless_endpoint_comfyui_sd3](./runpod_serverless_endpoint_comfyui_sd3.py):
