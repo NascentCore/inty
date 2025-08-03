@@ -16,7 +16,7 @@ Verification:
 
     ```bash
     cd /workspace/comfyui/models/checkpoints
-    curl -L -o "model_filename.safetensors" "https://civitai.com/api/download/models/1761560?type=Model&format=SafeTensor&size=pruned&fp=fp16"
+    curl -L -o "illustriousXL_v01.safetensors" "https://civitai.com/api/download/models/1761560?type=Model&format=SafeTensor&size=pruned&fp=fp16"
     ```
 
 ## Demos
