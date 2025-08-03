@@ -48,6 +48,12 @@ class RunPodClient:
         Returns:
             API response as dictionary
         """
+        # This is the format used by the runpod endpoint.
+        # If prompt is a single string, it's meant for a normal text2image model.
+        # If prompt is a workflow, it's meant for comfyui workflows.
+        # TODO: Need to further verify runpod comfyui workflows.
+        # https://www.runpod.io/articles/guides/comfy-ui-flux
+        # https://github.com/runpod-workers/worker-comfyui/tree/main
         payload = {"input": {"prompt": prompt, **kwargs}}
 
         try:
