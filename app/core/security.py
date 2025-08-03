@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from typing import Any, Union
+from typing import Any, Optional, Union
 
 from jose import jwt
 from passlib.context import CryptContext
@@ -10,10 +10,12 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 def create_access_token(
-    subject: Union[str, Any], expires_delta: timedelta | None = None
+    subject: Union[str, Any], expires_delta: Optional[timedelta] = None
 ) -> str:
-    """
-    创建访问令牌
+    """创建访问令牌。
+
+    expires_delta 为 `None` 时使用配置中的默认过期时间。
+    传入 `timedelta(0)` 可使令牌立即过期。
     """
     if expires_delta is not None:
         expire = datetime.utcnow() + expires_delta
