@@ -12,7 +12,8 @@
   * Config file path: ComfyUI/user/default/ComfyUI-Manager/config.ini
 * [Wiki](https://comfyui-wiki.com/en)
 * Installing comfyui, there is multiple options, use `comfy-cli`, which seems most reliable
-  ```
+
+  ```bash
   mkdir comfyui # Or another dir as the parent dir to install comfyui
   cd comfyui
   python3 -m venv comfy-env
@@ -20,6 +21,9 @@
   pip install comfy-cli
   comfy install # Install comfyui and comfyui-manager
   ```
+
+* [base_api_example.py](./basic_api_example.py) showcases caching.
+  The same prompt will instantly return the saved image.
 
 ## Key concepts
 
