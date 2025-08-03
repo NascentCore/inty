@@ -301,15 +301,15 @@ class Agent:
         )
 
     def _get_effective_main_prompt(self) -> str:
-        return self.main_prompt or prompts.ROMANTIC_ROLEPLAY_PROMPT.main_prompt
+        return self.main_prompt or prompts.FRIENDLY_ROLEPLAY_PROMPT.main_prompt
 
     def _get_effective_mode_prompt(self) -> str:
-        return self.mode_prompt or prompts.ROMANTIC_ROLEPLAY_PROMPT.mode_prompt
+        return self.mode_prompt or prompts.FRIENDLY_ROLEPLAY_PROMPT.mode_prompt
 
     def _get_effective_output_format_prompt(self) -> str:
         return (
             self.output_format_prompt
-            or prompts.ROMANTIC_ROLEPLAY_PROMPT.output_format_prompt
+            or prompts.FRIENDLY_ROLEPLAY_PROMPT.output_format_prompt
         )
 
     def _create_dynamic_prompt_runnable(self) -> Runnable:
@@ -398,7 +398,7 @@ class Agent:
             system_messages.extend(
                 [
                     SystemMessage(content=prompt)
-                    for prompt in prompts.ROMANTIC_ROLEPLAY_PROMPT.auxiliary_prompts
+                    for prompt in prompts.FRIENDLY_ROLEPLAY_PROMPT.auxiliary_prompts
                 ]
             )
 
