@@ -14,7 +14,7 @@ from pathlib import Path
 
 # this is the one for the default workflow
 # Read from req.json to req_text
-req_json = json.load(open("experimental/comfyui/req.json"))
+req_json = json.load(open("req.json"))
 
 
 def queue_prompt(prompt):
@@ -29,6 +29,7 @@ def queue_prompt(prompt):
     # Generate a key here: https://platform.comfy.org/login
 
     data = json.dumps(p).encode("utf-8")
+    print("Sending data: ", data)
     req = request.Request("http://127.0.0.1:8188/prompt", data=data)
     response = request.urlopen(req)
     return json.loads(response.read())
@@ -45,6 +46,7 @@ def get_image(filename):
     """Download an image by filename"""
     req = request.Request(f"http://127.0.0.1:8188/view?filename={filename}")
     response = request.urlopen(req)
+    print("response: ", response.read())
     return response.read()
 
 
@@ -74,8 +76,11 @@ def save_images_from_history(history_data, output_dir="output"):
 
     if "outputs" in history_data:
         for node_id, node_output in history_data["outputs"].items():
+            print("node_output: ", node_output)
+            print("node_id: ", node_id)
             if "images" in node_output:
                 for image_data in node_output["images"]:
+                    print("image_data: ", image_data)
                     filename = image_data["filename"]
                     image_bytes = get_image(filename)
 

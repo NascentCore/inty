@@ -188,3 +188,5 @@ inty-firebase-key.json
 
 # Ignore the top level output folder
 /output/
+# Text2image outputs
+*.png
