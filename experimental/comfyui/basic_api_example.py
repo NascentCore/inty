@@ -1,5 +1,8 @@
 import json
+import time
+import base64
 from urllib import request
+from pathlib import Path
 
 # This is the ComfyUI api prompt format.
 
@@ -10,97 +13,12 @@ from urllib import request
 # keep in mind ComfyUI is pre alpha software so this format will change a bit.
 
 # this is the one for the default workflow
-prompt_text = """
-{
-    "3": {
-        "class_type": "KSampler",
-        "inputs": {
-            "cfg": 8,
-            "denoise": 1,
-            "latent_image": [
-                "5",
-                0
-            ],
-            "model": [
-                "4",
-                0
-            ],
-            "negative": [
-                "7",
-                0
-            ],
-            "positive": [
-                "6",
-                0
-            ],
-            "sampler_name": "euler",
-            "scheduler": "normal",
-            "seed": 8566257,
-            "steps": 20
-        }
-    },
-    "4": {
-        "class_type": "CheckpointLoaderSimple",
-        "inputs": {
-            "ckpt_name": "v1-5-pruned-emaonly.safetensors"
-        }
-    },
-    "5": {
-        "class_type": "EmptyLatentImage",
-        "inputs": {
-            "batch_size": 1,
-            "height": 512,
-            "width": 512
-        }
-    },
-    "6": {
-        "class_type": "CLIPTextEncode",
-        "inputs": {
-            "clip": [
-                "4",
-                1
-            ],
-            "text": "masterpiece best quality girl"
-        }
-    },
-    "7": {
-        "class_type": "CLIPTextEncode",
-        "inputs": {
-            "clip": [
-                "4",
-                1
-            ],
-            "text": "bad hands"
-        }
-    },
-    "8": {
-        "class_type": "VAEDecode",
-        "inputs": {
-            "samples": [
-                "3",
-                0
-            ],
-            "vae": [
-                "4",
-                2
-            ]
-        }
-    },
-    "9": {
-        "class_type": "SaveImage",
-        "inputs": {
-            "filename_prefix": "ComfyUI",
-            "images": [
-                "8",
-                0
-            ]
-        }
-    }
-}
-"""
+# Read from req.json to req_text
+req_json = json.load(open("experimental/comfyui/req.json"))
 
 
 def queue_prompt(prompt):
+    """Queue a prompt and return the prompt_id"""
     p = {"prompt": prompt}
 
     # If the workflow contains API nodes, you can add a Comfy API key to the `extra_data`` field of the payload.
@@ -112,15 +30,83 @@ def queue_prompt(prompt):
 
     data = json.dumps(p).encode("utf-8")
     req = request.Request("http://127.0.0.1:8188/prompt", data=data)
-    request.urlopen(req)
+    response = request.urlopen(req)
+    return json.loads(response.read())
 
 
-prompt = json.loads(prompt_text)
-# set the text prompt for our positive CLIPTextEncode
-prompt["6"]["inputs"]["text"] = "masterpiece best quality man"
+def get_history(prompt_id):
+    """Get the history for a specific prompt_id"""
+    req = request.Request(f"http://127.0.0.1:8188/history/{prompt_id}")
+    response = request.urlopen(req)
+    return json.loads(response.read())
 
-# set the seed for our KSampler node
-prompt["3"]["inputs"]["seed"] = 5
+
+def get_image(filename):
+    """Download an image by filename"""
+    req = request.Request(f"http://127.0.0.1:8188/view?filename={filename}")
+    response = request.urlopen(req)
+    return response.read()
 
 
-queue_prompt(prompt)
+def wait_for_completion(prompt_id, max_wait=60):
+    """Wait for a prompt to complete and return the results"""
+    start_time = time.time()
+
+    while time.time() - start_time < max_wait:
+        try:
+            history = get_history(prompt_id)
+            if prompt_id in history:
+                return history[prompt_id]
+            time.sleep(1)
+        except Exception as e:
+            print(f"Error checking history: {e}")
+            time.sleep(1)
+
+    raise TimeoutError(f"Prompt {prompt_id} did not complete within {max_wait} seconds")
+
+
+def save_images_from_history(history_data, output_dir="output"):
+    """Save images from history data to local files"""
+    output_path = Path(output_dir)
+    output_path.mkdir(exist_ok=True)
+
+    saved_files = []
+
+    if "outputs" in history_data:
+        for node_id, node_output in history_data["outputs"].items():
+            if "images" in node_output:
+                for image_data in node_output["images"]:
+                    filename = image_data["filename"]
+                    image_bytes = get_image(filename)
+
+                    # Save the image
+                    file_path = output_path / filename
+                    with open(file_path, "wb") as f:
+                        f.write(image_bytes)
+
+                    saved_files.append(str(file_path))
+                    print(f"Saved image: {file_path}")
+
+    return saved_files
+
+
+def main():
+    """Main function to demonstrate the complete workflow"""
+    print("Queueing prompt...")
+    result = queue_prompt(req_json)
+    prompt_id = result["prompt_id"]
+    print(f"Prompt queued with ID: {prompt_id}")
+
+    print("Waiting for completion...")
+    history_data = wait_for_completion(prompt_id)
+    print("Prompt completed!")
+
+    print("Saving images...")
+    saved_files = save_images_from_history(history_data)
+    print(f"Saved {len(saved_files)} images")
+
+    return saved_files
+
+
+if __name__ == "__main__":
+    main()
