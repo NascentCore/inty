@@ -17,26 +17,22 @@ Deployment process:
 
 ```bash
 # 构建镜像
-$ git clone git@github.com:NascentCore/inty-backend.git
-$ cd inty-backend/app/static/evaluation
-$ docker build --platform linux/amd64 \
+git clone git@github.com:NascentCore/inty-backend.git
+cd inty-backend
+cd app/static/evaluation
+IMAGE=ghcr.io/nascentcore/inty-backend/inty-eval:latest
+docker build --platform linux/amd64 \
     --build-arg REACT_APP_API_BASE_URL=https://dev.inty.sxwl.ai/api/v1 \
-    -t registry.cn-beijing.aliyuncs.com/sxwl-ai/inty-eval:latest .
-$ docker push registry.cn-beijing.aliyuncs.com/sxwl-ai/inty-eval:latest
+    -t $IMAGE .
+docker push $IMAGE
 
 # Use gcp to ssh to gcp vm
-sudo docker stop inty-test-new
-sudo docker rmi registry.cn-beijing.aliyuncs.com/sxwl-ai/inty-eval:latest
-sudo docker run --rm -d -p 8103:80 --name inty-test-new \
-    registry.cn-beijing.aliyuncs.com/sxwl-ai/inty-eval:latest
+docker stop inty-test-new
+docker rmi $IMAGE
+docker run --rm -d -p 8103:80 --name inty-test-new $IMAGE
 
 # namecheap 上配置域名解析
 例：new.test.inty.cc -> 35.186.154.142
-
-# 在服务器上部署
-$ sudo docker run -d -p 8103:80  \
-    --name inty-test-new \
-    registry.cn-beijing.aliyuncs.com/sxwl-ai/inty-eval:latest
     
 # 配置 nginx
 $ sudo vim /etc/nginx/conf.d/sxwl.ai.conf
