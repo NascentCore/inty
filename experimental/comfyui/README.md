@@ -1,5 +1,10 @@
 # ComfyUI
 
+## Proposed architecture
+
+* worker-comfyui endpoint
+* attached network volume with all models, loras and other data items
+
 ## Demos
 
 * [runpod_serverless_endpoint_comfyui_sd3](./runpod_serverless_endpoint_comfyui_sd3.py):
