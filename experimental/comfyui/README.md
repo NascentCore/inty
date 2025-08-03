@@ -11,6 +11,15 @@
 * ComfyUI-Manager
   * Config file path: ComfyUI/user/default/ComfyUI-Manager/config.ini
 * [Wiki](https://comfyui-wiki.com/en)
+* Installing comfyui, there is multiple options, use `comfy-cli`, which seems most reliable
+  ```
+  mkdir comfyui # Or another dir as the parent dir to install comfyui
+  cd comfyui
+  python3 -m venv comfy-env
+  source comfy-env/bin/activate
+  pip install comfy-cli
+  comfy install # Install comfyui and comfyui-manager
+  ```
 
 ## Key concepts
 
