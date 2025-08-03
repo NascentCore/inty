@@ -21,6 +21,9 @@ Verification:
         "https://civitai.com/api/download/models/1761560?type=Model&format=SafeTensor&size=pruned&fp=fp16"
     ```
 
+    [download with curl](
+      https://stackoverflow.com/questions/6881034/curl-to-grab-remote-filename-after-following-location)
+
 ## Demos
 
 * [runpod_serverless_endpoint_comfyui_sd3](./runpod_serverless_endpoint_comfyui_sd3.py):
