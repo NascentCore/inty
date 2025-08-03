@@ -185,3 +185,6 @@ inty-firebase-key.json
 .cursor/
 
 *.wav
+
+# Ignore the top level output folder
+output/
