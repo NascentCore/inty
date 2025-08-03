@@ -12,6 +12,12 @@ Verification:
 * Attach network volume to `/runpod-volume` (required by worker image)
 * Open comfyui webui, open terminal, download extra models
   * As required by the workflow
+  * Open workflow on civitai, find the model download link, and download with `curl`:
+
+    ```bash
+    cd /workspace/comfyui/models/checkpoints
+    curl -L -o "model_filename.safetensors" "https://civitai.com/api/download/models/1761560?type=Model&format=SafeTensor&size=pruned&fp=fp16"
+    ```
 
 ## Demos
 
