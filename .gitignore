@@ -187,4 +187,4 @@ inty-firebase-key.json
 *.wav
 
 # Ignore the top level output folder
-output/
+/output/
