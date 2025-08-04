@@ -9,6 +9,8 @@
 Verification:
 
 * Use the default template with [workflow_sd3.json](https://github.com/runpod-workers/worker-comfyui/blob/main/test_resources/workflows/workflow_sd3.json)
+* Created [library_night_seductive_api.json](./experimental/comfyui/library_night_seductive_api.json)
+  based on [civitai](https://civitai.com/images/86482829)
 * Worker image cannot be run on pod
 * Launch comfyui pod on runpod
 * Attach network volume to `/runpod-volume` (required by worker image)
