@@ -149,9 +149,25 @@ class StructuredPrompt(BaseModel):
         # defined by the main prompt and mode prompt.
         description="For appropriate formatting of the response for representation style."
     )
-    auxiliary_prompts: list[str] = Field(
-        description="For auxiliary prompts that serve certain purposes."
+    sample_dialogues: list[str] = Field(
+        default_factory=list,
+        description="For sample dialogues that serve as examples for the LLM to follow.",
     )
+    auxiliary_prompts: list[str] = Field(
+        default_factory=list,
+        description="For auxiliary prompts that serve certain purposes.",
+    )
+
+    def assemble(self) -> str:
+        return "\n".join(
+            [
+                self.main_prompt,
+                self.mode_prompt,
+                self.output_format_prompt,
+                *self.sample_dialogues,
+                *self.auxiliary_prompts,
+            ]
+        )
 
 
 ROMANTIC_ROLEPLAY_PROMPT = StructuredPrompt(
