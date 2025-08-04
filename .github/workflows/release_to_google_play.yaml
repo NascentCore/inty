@@ -1,4 +1,4 @@
-name: Build and Deploy to Google Play Internal Testing
+name: Build and release to Google Play Store
 
 on:
   push:
