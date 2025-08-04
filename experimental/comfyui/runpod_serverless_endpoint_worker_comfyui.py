@@ -10,6 +10,7 @@ import os
 import json
 import random
 import re
+import time
 import runpod
 
 from dotenv import load_dotenv
@@ -37,11 +38,8 @@ args = parse_args()
 endpoint = runpod.Endpoint(args.endpoint)
 
 
-print("pwd: ", os.getcwd())
 workflow_json = json.load(open(args.workflow))
 req_json = {"input": {"workflow": workflow_json}}
-
-print(req_json)
 
 
 def save_images(image_base64_data: str):
@@ -75,7 +73,10 @@ def run_async(req_json):
 
 
 def main():
+    start_time = time.time()
     run_sync(req_json)
+    end_time = time.time()
+    print(f"Time taken: {end_time - start_time} seconds")
 
 
 if __name__ == "__main__":

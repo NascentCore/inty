@@ -8,6 +8,7 @@
 
 Verification:
 
+* Use the default template with [workflow_sd3.json](https://github.com/runpod-workers/worker-comfyui/blob/main/test_resources/workflows/workflow_sd3.json)
 * Worker image cannot be run on pod
 * Launch comfyui pod on runpod
 * Attach network volume to `/runpod-volume` (required by worker image)
