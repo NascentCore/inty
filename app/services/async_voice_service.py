@@ -134,7 +134,7 @@ class AsyncVoiceService:
             # 任务可能已经完成并被清理，或者任务ID无效
             return {
                 "status": "not_found",
-                "message": "任务不存在或已过期。可能任务已完成超过5分钟被自动清理，或任务ID无效。",
+                "message": "任务不存在或已过期。任务完成后会保留10分钟供查询，超过后将自动清理，或任务ID无效。",
             }
 
         task_info = self.pending_tasks[task_id].copy()
