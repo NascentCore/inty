@@ -131,10 +131,10 @@ class CacheService:
                     if total_cleaned > 0:
                         logger.debug(f"定时清理过期缓存，共清理 {total_cleaned} 个条目")
 
-                except Exception as e:
-                    logger.error(f"缓存清理任务出错: {str(e)}")
                 except asyncio.CancelledError:
                     break
+                except Exception as e:
+                    logger.error(f"缓存清理任务出错: {str(e)}")
 
         self._cleanup_task = asyncio.create_task(cleanup_loop())
         logger.info("缓存清理任务已启动")
