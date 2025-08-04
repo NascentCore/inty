@@ -6,16 +6,13 @@ on:
       - 'v*'
   workflow_dispatch:
     inputs:
-      track:
-        description: 'Release track (internal, alpha, beta, production)'
+      environment:
+        description: 'Release environment (corresponds to Google Play tracks)'
         required: true
-        default: 'internal'
-        type: choice
-        options:
-        - internal
-        - alpha
-        - beta
-        - production
+        # Staging corresponds to Google Play's internal testing track.
+        # Production corresponds to Google Play's production track. But are not used yet.
+        default: 'staging'
+        type: environment
 
 jobs:
   build-and-deploy:
