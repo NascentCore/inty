@@ -20,8 +20,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
+import androidx.lifecycle.lifecycleScope
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.ai.inty.base.BaseActivity
+import com.ai.inty.billing.BillingRepository
 import com.ai.inty.home.HomeScreen
 import com.ai.inty.ui.theme.IntyTheme
 import com.ai.inty.viewmodels.ChatViewModel
@@ -91,12 +93,12 @@ class MainActivity : BaseActivity() {
         mainViewModel.getUserCreatedAgents()
 
         // 异步更新会员状态
-//        mainViewModel.updatePlans()
+        mainViewModel.updatePlans()
 
         // 初始化 BillingRepository 并获取数据
-//        lifecycleScope.launch {
-//            BillingRepository.initializeAndFetch(this@MainActivity)
-//        }
+        lifecycleScope.launch {
+            BillingRepository.initializeAndFetch(this@MainActivity)
+        }
 
         setContent {
             IntyTheme {
@@ -234,7 +236,7 @@ class MainActivity : BaseActivity() {
         super.onDestroy()
 
         // 释放 BillingRepository 资源
-//        BillingRepository.release()
+        BillingRepository.release()
 
         // 取消协程
         exitJob?.cancel()

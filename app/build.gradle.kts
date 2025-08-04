@@ -234,7 +234,7 @@ dependencies {
     implementation(libs.bundles.coils3)
 
     // Google支付
-    // implementation(libs.billing.ktx)
+    implementation(libs.billing.ktx)
 
     // 新的身份验证方式
     implementation(libs.credential.manager)

@@ -30,6 +30,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -51,6 +52,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ai.inty.base.BaseActivity
 import com.ai.inty.base.noRippleClickable
+import com.ai.inty.billing.BillingRepository
 import com.ai.inty.ui.theme.BackGround
 import com.ai.inty.ui.theme.IntyTheme
 import com.ai.inty.viewmodels.MainViewModel
@@ -114,7 +116,7 @@ private fun SettingScreen(
     var showKeepTalking by remember { mutableStateOf(IntySetting.isShowKeepTalking()) }
 
     // 获取订阅状态
-//    val vipStatus by BillingRepository.vipStatusFlow.collectAsState()
+    val vipStatus by BillingRepository.vipStatusFlow.collectAsState()
 
     Scaffold(
         modifier = modifier,
@@ -471,7 +473,7 @@ private fun SettingScreen(
                         )
                 )
                 //region 订阅管理
-                /*
+
                 Spacer(Modifier.height(4.dp))
                 Row(
                     modifier = Modifier
@@ -521,7 +523,7 @@ private fun SettingScreen(
                                 )
                             )
                         )
-                )*/
+                )
                 //endregion
                 //版本号
                 Spacer(Modifier.height(4.dp))
