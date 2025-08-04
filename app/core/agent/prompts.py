@@ -158,16 +158,17 @@ class StructuredPrompt(BaseModel):
         description="For auxiliary prompts that serve certain purposes.",
     )
 
-    def assemble(self) -> str:
-        return "\n".join(
-            [
-                self.main_prompt,
-                self.mode_prompt,
-                self.output_format_prompt,
-                *self.sample_dialogues,
-                *self.auxiliary_prompts,
-            ]
-        )
+    def assemble(self) -> list[dict]:
+        """
+        Assemble the structured prompt into a list of messages.
+        """
+        return [
+            {"role": "system", "content": self.main_prompt},
+            {"role": "system", "content": self.mode_prompt},
+            {"role": "system", "content": self.output_format_prompt},
+            {"role": "system", "content": "\n".join(self.sample_dialogues)},
+            {"role": "system", "content": "\n".join(self.auxiliary_prompts)},
+        ]
 
 
 ROMANTIC_ROLEPLAY_PROMPT = StructuredPrompt(
