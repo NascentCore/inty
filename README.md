@@ -58,6 +58,10 @@ InTy 是一个基于 FastAPI 和 PostgreSQL 的 AI 聊天应用后端，集成�
 └────────────────────────────────────────────────────────────────────┘
 ```
 
+GCS public access
+
+<img width="800" alt="image" src="https://github.com/user-attachments/assets/9230dc1f-1430-467b-b12e-bfba1def3922" />
+
 ## 在本地开发环境启动 App
 
 ```bash
