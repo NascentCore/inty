@@ -25,6 +25,9 @@ def parse_args():
     parser.add_argument(
         "--endpoint", type=str, required=True, help="The endpoint ID to send to the API"
     )
+    parser.add_argument(
+        "--workflow", type=str, required=True, help="The workflow file to use"
+    )
     return parser.parse_args()
 
 
@@ -35,7 +38,10 @@ endpoint = runpod.Endpoint(args.endpoint)
 
 
 print("pwd: ", os.getcwd())
-req_json = json.load(open("runpod_serverless_comfyui_sd3_workflow.json"))
+workflow_json = json.load(open(args.workflow))
+req_json = {"input": {"workflow": workflow_json}}
+
+print(req_json)
 
 
 def save_images(image_base64_data: str):
@@ -69,7 +75,7 @@ def run_async(req_json):
 
 
 def main():
-    run_async(req_json)
+    run_sync(req_json)
 
 
 if __name__ == "__main__":

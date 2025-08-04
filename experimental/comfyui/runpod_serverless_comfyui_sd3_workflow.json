@@ -1,11 +1,20 @@
 {
     "input": {
         "workflow": {
-            "6": {
+            "1": {
                 "inputs": {
-                    "text": "comic illustration of a rainbow unicorn with a golden horn and pink mane and tail standing amidst a colorful and magical fantasy landscape. The background is filled with pastel-colored mountains and fluffy clouds and colorful balloons and stars. There are vibrant rainbows arching across the sky. The ground is adorned with oversized, candy-like plants, trees shaped like lollipops, and swirling ice cream cones. The scene is bathed in soft, dreamy light, giving it an enchanting and otherworldly feel. 4k, high resolution",
+                    "ckpt_name": "illustriousXL_v01.safetensors"
+                },
+                "class_type": "CheckpointLoaderSimple",
+                "_meta": {
+                    "title": "Load Checkpoint"
+                }
+            },
+            "2": {
+                "inputs": {
+                    "text": "Semi-realism, painterly, lineless, solo, adult, woman, library, (very dark skin:1.2), black brown hair, long hair, fluffy bangs, hazel eyes, round glasses, freckles, chubby, large breasts, brown cardigan, jeans, shy, smile, flushed, head in hand, closeup, bust portrait, (from above)",
                     "clip": [
-                        "252",
+                        "11",
                         1
                     ]
                 },
@@ -14,90 +23,52 @@
                     "title": "CLIP Text Encode (Prompt)"
                 }
             },
-            "13": {
+            "3": {
                 "inputs": {
-                    "shift": 3,
-                    "model": [
-                        "252",
-                        0
-                    ]
-                },
-                "class_type": "ModelSamplingSD3",
-                "_meta": {
-                    "title": "ModelSamplingSD3"
-                }
-            },
-            "71": {
-                "inputs": {
-                    "text": "worst quality, lowres, blurry, deformed, overexposure, bright, hands, oversaturated, burned, oversharpened, artifacts, hand, human, handwriting, nsfw, breast, breasts",
+                    "text": "anthro, furry, text, english text, censored, deformed, blurry, watermark, greyscale, black and white, 3d, sepia, lowres, monochrome, grayscale, child, young, hand in pockets, shaved head, headband, glowing eyes, tanlines, dark, night",
                     "clip": [
-                        "252",
+                        "11",
                         1
                     ]
                 },
                 "class_type": "CLIPTextEncode",
                 "_meta": {
-                    "title": "CLIP Text Encode (Negative Prompt)"
+                    "title": "CLIP Text Encode (Prompt)"
                 }
             },
-            "135": {
+            "4": {
                 "inputs": {
-                    "width": 1152,
-                    "height": 768,
-                    "batch_size": 1
+                    "width": 832,
+                    "height": 1216,
+                    "batch_size": 4
                 },
-                "class_type": "EmptySD3LatentImage",
+                "class_type": "EmptyLatentImage",
                 "_meta": {
-                    "title": "EmptySD3LatentImage"
+                    "title": "Empty Latent Image"
                 }
             },
-            "231": {
+            "5": {
                 "inputs": {
-                    "samples": [
-                        "271",
-                        0
-                    ],
-                    "vae": [
-                        "252",
-                        2
-                    ]
-                },
-                "class_type": "VAEDecode",
-                "_meta": {
-                    "title": "VAE Decode"
-                }
-            },
-            "252": {
-                "inputs": {
-                    "ckpt_name": "sd3_medium_incl_clips_t5xxlfp8.safetensors"
-                },
-                "class_type": "CheckpointLoaderSimple",
-                "_meta": {
-                    "title": "Load Checkpoint"
-                }
-            },
-            "271": {
-                "inputs": {
-                    "seed": 291740611171897,
-                    "steps": 28,
-                    "cfg": 4.5,
+                    "seed": 740453311024083,
+                    "steps": 20,
+                    "cfg": 4,
                     "sampler_name": "dpmpp_2m",
-                    "scheduler": "sgm_uniform",
+                    "scheduler": "karras",
                     "denoise": 1,
                     "model": [
-                        "13",
+                        "11",
                         0
                     ],
                     "positive": [
-                        "6",
+                        "2",
                         0
                     ],
                     "negative": [
-                        "71",
+                        "3",
                         0
                     ],
                     "latent_image": [
-                        "135",
+                        "4",
                         0
                     ]
                 },
@@ -106,17 +77,90 @@
                     "title": "KSampler"
                 }
             },
-            "273": {
+            "6": {
                 "inputs": {
-                    "filename_prefix": "sd3/sd3",
+                    "samples": [
+                        "5",
+                        0
+                    ],
+                    "vae": [
+                        "1",
+                        2
+                    ]
+                },
+                "class_type": "VAEDecode",
+                "_meta": {
+                    "title": "VAE Decode"
+                }
+            },
+            "7": {
+                "inputs": {
+                    "filename_prefix": "ComfyUI",
                     "images": [
-                        "231",
+                        "6",
                         0
                     ]
                 },
                 "class_type": "SaveImage",
                 "_meta": {
                     "title": "Save Image"
+                }
+            },
+            "9": {
+                "inputs": {
+                    "lora_name": "96YOTTEA-WAI.safetensors",
+                    "strength_model": 0.45000000000000007,
+                    "strength_clip": 1,
+                    "model": [
+                        "1",
+                        0
+                    ],
+                    "clip": [
+                        "1",
+                        1
+                    ]
+                },
+                "class_type": "LoraLoader",
+                "_meta": {
+                    "title": "Load LoRA"
+                }
+            },
+            "10": {
+                "inputs": {
+                    "lora_name": "HoloEden-08.safetensors",
+                    "strength_model": 0.5500000000000002,
+                    "strength_clip": 1,
+                    "model": [
+                        "9",
+                        0
+                    ],
+                    "clip": [
+                        "9",
+                        1
+                    ]
+                },
+                "class_type": "LoraLoader",
+                "_meta": {
+                    "title": "Load LoRA"
+                }
+            },
+            "11": {
+                "inputs": {
+                    "lora_name": "Semi-realism_illustrious.safetensors",
+                    "strength_model": 1,
+                    "strength_clip": 1,
+                    "model": [
+                        "10",
+                        0
+                    ],
+                    "clip": [
+                        "10",
+                        1
+                    ]
+                },
+                "class_type": "LoraLoader",
+                "_meta": {
+                    "title": "Load LoRA"
                 }
             }
         }

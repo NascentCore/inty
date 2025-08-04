@@ -4,6 +4,7 @@
 
 * worker-comfyui endpoint
 * attached network volume with all models, loras and other data items
+* Use cpu pod to download models to correct path on network volume
 
 Verification:
 
@@ -18,7 +19,7 @@ Verification:
     cd /workspace/comfyui/models/checkpoints
     # Need civitai api key to download certain models
     curl --remote-name --remote-header-name --location \
-        "https://civitai.com/api/download/models/1761560?type=Model&format=SafeTensor&size=pruned&fp=fp16"
+        "https://civitai.com/api/download/models/1761560?type=Model&format=SafeTensor&size=pruned&fp=fp16&Token=<your-token>"
     ```
 
     [download with curl](
