@@ -1,0 +1,11 @@
+---
+description:
+globs: **/*.md
+alwaysApply: true
+---
+
+# Markdown rules
+
+- Do not use emojis
+- Be concise
+- Do not include generic information or low information-density content
