@@ -2,6 +2,62 @@
 
 InTy 是一个基于 FastAPI 和 PostgreSQL 的 AI 聊天应用后端，集成了 LangChain 和 LangGraph 技术栈，支持多种 AI 模型和智能体管理。项目采用现代化的异步编程架构，提供完整的 AI 对话解决方案和商业化订阅服务。
 
+## 系统架构
+
+```
+                               HTTP Clients
+                                      │
+                                      ▼
+┌────────────────────────────────────────────────────────────────────┐
+│                FastAPI application (app/main.py)                   │
+│ • loads config, logging                                            │
+│ • CORS & error middleware                                         │
+│ • startup: init Firebase, cache_service, background_task_service,  │
+│   keep_talking_service, agent_manager                              │
+└───────────────┬────────────────────────────────────────────────────┘
+                │
+                ▼
+          ┌──────────────┐
+          │ API Routers  │  (/api/v1/endpoints/* – auth, users, agents,
+          └───────┬──────┘   chats, settings, report, subscription, evaluation…)
+                  │
+                  ▼
+          ┌──────────────────────────┐
+          │        Services          │
+          │ agent_service, chat_service, user_service,
+          │ voice_service, notification_service, …                     │
+          └──────┬───────────────────┘
+                 │
+        ┌────────▼────────┐         ┌───────────────────────────┐
+        │ Core Agent       │         │ Data Access Layer         │
+        │ (LangChain /     │         │ • SQLAlchemy models       │
+        │  LangGraph /     │         │ • async sessions          │
+        │  embeddings /    │         │ • chat_history_service    │
+        │  GCS / cache )   │         └───────────┬──────────────┘
+        └───────┬─────────┘                     │
+                │                               ▼
+                │                    ┌────────────────────┐
+                │                    │ PostgreSQL DB      │
+                │                    │ (app data + chat   │
+                │                    │  history store)    │
+                │                    └────────────────────┘
+                │
+                ▼
+      ┌────────────────────────────────────────────┐
+      │  Support services                          │
+      │  • cache_service (in‑memory cache)         │
+      │  • background_task_service (thread pool)   │
+      │  • keep_talking_service (idle chat monitor)│
+      └────────────────────────────────────────────┘
+                │
+                ▼
+┌────────────────────────────────────────────────────────────────────┐
+│                    External Integrations                           │
+│ OpenAI/LLM APIs, Google Search API, Google Cloud Storage, Firebase │
+│ Google OAuth & Google Play, ElevenLabs voice, SMS/Notification svc │
+└────────────────────────────────────────────────────────────────────┘
+```
+
 ## 在本地开发环境启动 App
 
 ```bash
