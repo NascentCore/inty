@@ -17,12 +17,10 @@ from app.api import deps
 from app.core.agent.agent import agent_manager
 from app.core.agent.avatar import generate_background_image_to_gcs
 from app.core.config import settings
-from app.schemas.character_card import (
-    CharacterCardExportRequest,
-    CharacterCardImportRequest,
-    CharacterCardImportResponse,
-    CharacterCardValidationResponse,
-)
+from app.schemas.character_card import (CharacterCardExportRequest,
+                                        CharacterCardImportRequest,
+                                        CharacterCardImportResponse,
+                                        CharacterCardValidationResponse)
 from app.schemas.response import APIResponse
 from app.services import agent_service
 from app.services.character_card_service import character_card_service
@@ -276,20 +274,31 @@ async def generate_background(
         if not is_allowed:
             # 超级管理员不受限制
             if not current_user.is_superuser:
+                # 获取用户订阅状态来区分错误提示
+                subscription_status = (
+                    await subscription_service.get_user_subscription_status(
+                        db, current_user.id
+                    )
+                )
+
                 if limit == -1:
                     error_message = (
-                        f"Background image generation failed, daily limit reached"
+                        "Background image generation failed, daily limit reached"
                     )
                 else:
-                    error_message = f"Daily background image generation limit reached ({used_count}/{limit})"
-                    if limit <= 3:  # 免费用户每日限制
-                        error_message += ", please consider upgrading your subscription for more daily generations"
+                    if subscription_status.is_subscribed:
+                        # 订阅用户的错误提示
+                        error_message = f"Daily background image generation limit reached ({used_count}/{limit})"
+                    else:
+                        # 免费用户的错误提示
+                        error_message = f"Daily free background image generation limit reached ({used_count}/{limit})"
 
                 return APIResponse.error(
                     message=error_message,
                     data={
                         "used_count": used_count,
                         "limit": limit,
+                        "is_subscribed": subscription_status.is_subscribed,
                         "error_code": "BACKGROUND_GENERATION_LIMIT_EXCEEDED",
                     },
                 )
