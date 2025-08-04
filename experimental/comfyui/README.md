@@ -42,6 +42,7 @@ Verification:
 
 ## Pointers
 
+* [Runpod worker comfyui testing](https://github.com/runpod-workers/worker-comfyui/blob/main/docs/development.md#local-api)
 * ComfyUI-Manager
   * Config file path: ComfyUI/user/default/ComfyUI-Manager/config.ini
 * [Wiki](https://comfyui-wiki.com/en)
