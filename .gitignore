@@ -181,9 +181,6 @@ backend/alembic.ini
 inty-backend-key.json
 inty-firebase-key.json
 
-# cursor
-.cursor/
-
 *.wav
 
 # Ignore the top level output folder
