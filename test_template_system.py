@@ -41,8 +41,6 @@ user -> user name"""
 
 def test_character_substitution():
     """Test character substitution in various text scenarios"""
-    print("=== Testing Character Substitution ===")
-
     test_cases = [
         {
             "text": "Hello {{user}}, I am {{char}}. Nice to meet you!",
@@ -64,33 +62,14 @@ def test_character_substitution():
         },
     ]
 
-    for i, test_case in enumerate(test_cases, 1):
-        print(f"Test case {i}:")
-        print(f"Input: {test_case['text']}")
-
+    for test_case in test_cases:
         result = prompt_template_manager._perform_character_substitution(
             test_case["text"], test_case["agent_name"], test_case["user_name"]
         )
-
-        print(f"Output: {result}")
-
-        # Check if expected content is present
         all_found = all(
             expected in result for expected in test_case["expected_contains"]
         )
-        print(f"✓ Contains expected content: {all_found}")
-
-        if not all_found:
-            missing = [
-                expected
-                for expected in test_case["expected_contains"]
-                if expected not in result
-            ]
-            print(f"❌ Missing: {missing}")
-
-        print("-" * 50)
-
-    return True
+        assert all_found
 
 
 def test_template_validation():
