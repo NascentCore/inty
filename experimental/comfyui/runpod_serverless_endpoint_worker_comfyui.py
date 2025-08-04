@@ -54,6 +54,7 @@ def save_images(image_base64_data: str):
 def run_sync(req_json):
     result = endpoint.run_sync(req_json)
     images = result["images"]
+    print(images)
     for image in images:
         save_images(image["data"])
 
