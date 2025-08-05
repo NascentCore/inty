@@ -1,11 +1,11 @@
-name: Build and release APK to GitHub Release
+name: Build and release staging APK to GitHub Release
 
 on:
   workflow_dispatch:
 
 jobs:
   build-apk:
-    name: Build APK and Upload
+    name: Build staging APK and Upload
     runs-on: ubuntu-latest
 
     steps:
