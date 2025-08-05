@@ -1,0 +1,331 @@
+package com.ai.inty.ui.components
+
+import android.content.Intent
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.core.net.toUri
+import com.ai.inty.R
+import com.ai.inty.base.noRippleClickable
+import com.ai.inty.billing.VipPlan
+
+/**
+ * 会员权益项组件
+ */
+@Composable
+fun PremiumBenefitItem(text: String) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.padding(vertical = 2.dp)
+    ) {
+        Image(
+            painter = painterResource(id = R.drawable.ic_checked_premium),
+            contentDescription = null,
+            modifier = Modifier.size(16.dp)
+        )
+        Spacer(Modifier.width(8.dp))
+        Text(
+            text = text,
+            color = Color.White,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Light
+        )
+    }
+    Spacer(Modifier.height(4.dp))
+}
+
+/**
+ * 订阅计划卡片组件
+ */
+@Composable
+fun PremiumPlanCard(
+    plan: VipPlan,
+    isSelected: Boolean,
+    isSubscribed: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val subModifier = if (isSubscribed) Modifier.alpha(.4f) else Modifier
+
+    Box(
+        modifier = modifier
+            .fillMaxHeight()
+            .background(
+                color = if (isSelected) Color(0x99350D5D) else Color(0x991C1523),
+                shape = RoundedCornerShape(8.dp)
+            )
+            .border(
+                width = 1.dp,
+                color = if (isSelected) Color.White else Color.Transparent,
+                shape = RoundedCornerShape(8.dp)
+            )
+            .then(subModifier)
+            .clickable(enabled = !isSubscribed) { onClick() }
+            .padding(vertical = 8.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = plan.name,
+            color = when {
+                isSubscribed -> Color.White.copy(alpha = 0.5f)
+                else -> Color.White
+            },
+            fontWeight = FontWeight.Bold,
+            fontSize = 16.sp,
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .then(subModifier)
+        )
+
+        val priceStr = buildAnnotatedString {
+            append(plan.price.substringBefore('$'))
+            append("$")
+            withStyle(style = SpanStyle(fontSize = 24.sp, fontWeight = FontWeight.Bold)) {
+                append(plan.price.substringAfterLast('$'))
+            }
+        }
+
+        Text(
+            text = priceStr,
+            color = when {
+                isSubscribed -> Color.White.copy(alpha = 0.5f)
+                else -> Color.White
+            },
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Normal,
+            modifier = subModifier
+        )
+
+        // 折扣标签
+        if (plan.discountRate < 1) {
+            Box(
+                Modifier
+                    .size(64.dp, 22.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(
+                        brush = Brush.horizontalGradient(
+                            colors = listOf(
+                                Color(0xFFC1F9FD),
+                                Color(0xFFD4AEFD),
+                                Color(0xFF7B96FB),
+                            )
+                        )
+                    )
+                    .then(subModifier)
+                    .align(Alignment.BottomCenter),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "Save ${((1 - plan.discountRate) * 100).toInt()}/%",
+                    color = Color.Black,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = subModifier
+                )
+            }
+        }
+    }
+}
+
+/**
+ * 订阅计划列表组件
+ */
+@Composable
+fun PremiumPlanList(
+    plans: List<VipPlan>,
+    selectedIndex: Int,
+    isSubscribed: Boolean,
+    onPlanSelected: (Int) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(132.dp)
+            .padding(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        plans.forEachIndexed { idx, plan ->
+            PremiumPlanCard(
+                plan = plan,
+                isSelected = idx == selectedIndex,
+                isSubscribed = isSubscribed,
+                onClick = { onPlanSelected(idx) },
+                modifier = Modifier.weight(1f)
+            )
+        }
+    }
+}
+
+/**
+ * 购买按钮组件
+ */
+@Composable
+fun PurchaseButton(
+    isSubscribed: Boolean,
+    hasSelectedPlan: Boolean,
+    onPurchase: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 15.dp)
+            .height(56.dp)
+            .clip(RoundedCornerShape(28.dp))
+            .background(
+                brush = Brush.horizontalGradient(
+                    colors = listOf(
+                        Color(0xFF9756FF),
+                        Color(0xFFEF56FF)
+                    )
+                )
+            )
+            .alpha(if (isSubscribed) .4f else 1f)
+            .clickable(
+                enabled = !isSubscribed && hasSelectedPlan,
+                onClick = onPurchase
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = if (isSubscribed) {
+                stringResource(R.string.premium_subscribed)
+            } else {
+                stringResource(R.string.premium_continue)
+            },
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color.White,
+            modifier = Modifier.alpha(if (isSubscribed) .7f else 1f)
+        )
+    }
+}
+
+/**
+ * 自动续费提示组件
+ */
+@Composable
+fun AutoRenewalNotice(
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier) {
+        Text(
+            text = stringResource(R.string.premium_autorenew),
+            fontSize = 12.sp,
+            color = Color.White,
+            modifier = Modifier.align(Alignment.CenterHorizontally)
+        )
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            val context = LocalContext.current
+
+            val policyStr = buildAnnotatedString {
+                withStyle(SpanStyle(textDecoration = TextDecoration.Underline)) {
+                    append(stringResource(R.string.privacy_policy))
+                }
+            }
+            Text(
+                text = policyStr,
+                fontSize = 12.sp,
+                color = Color.White.copy(alpha = 0.6f),
+                modifier = Modifier.noRippleClickable {
+                    val intent = Intent(
+                        Intent.ACTION_VIEW,
+                        context.getString(R.string.settings_str_privacy_policy).toUri()
+                    )
+                    context.startActivity(intent)
+                }
+            )
+
+            Text(text = " & ", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp)
+
+            val termsOfUse = buildAnnotatedString {
+                withStyle(SpanStyle(textDecoration = TextDecoration.Underline)) {
+                    append(stringResource(R.string.terms_of_use))
+                }
+            }
+            Text(
+                text = termsOfUse,
+                fontSize = 12.sp,
+                color = Color.White.copy(alpha = 0.6f),
+                modifier = Modifier.noRippleClickable {
+                    val intent = Intent(
+                        Intent.ACTION_VIEW,
+                        context.getString(R.string.settings_str_user_agreement).toUri()
+                    )
+                    context.startActivity(intent)
+                }
+            )
+        }
+    }
+}
+
+/**
+ * 空状态组件
+ */
+@Composable
+fun EmptyPlanState(
+    modifier: Modifier = Modifier
+) {
+    Text(
+        text = "暂无订阅计划信息",
+        color = Color.White.copy(alpha = 0.6f),
+        fontSize = 14.sp,
+        textAlign = TextAlign.Center,
+        modifier = modifier.fillMaxWidth()
+    )
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun PremiumBenefitItemPreview() {
+    PremiumBenefitItem("无限对话次数")
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun PurchaseButtonPreview() {
+    PurchaseButton(
+        isSubscribed = false,
+        hasSelectedPlan = true,
+        onPurchase = {}
+    )
+} 
