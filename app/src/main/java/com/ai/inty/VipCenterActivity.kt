@@ -2,7 +2,6 @@ package com.ai.inty
 
 import android.annotation.SuppressLint
 import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
 import android.view.Gravity
 import android.view.ViewGroup
@@ -33,9 +32,11 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -56,6 +57,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.net.toUri
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.ai.inty.base.BaseActivity
 import com.ai.inty.base.noRippleClickable
 import com.ai.inty.billing.VipPlan
@@ -102,7 +104,6 @@ private fun VipCenterScreen(
     Box(modifier = Modifier.fillMaxSize()) {
         // 全屏视频播放器
         BackgroundVideoPlayer()
-
         // 半透明遮罩层，确保内容可读性
         Box(
             modifier = Modifier
@@ -300,15 +301,19 @@ private class FullScreenVideoView(context: android.content.Context) : VideoView(
  */
 @Composable
 private fun BackgroundVideoPlayer() {
+
+    var videoView by remember { mutableStateOf<VideoView?>(null) }
+
     AndroidView(
         factory = { ctx ->
             FrameLayout(ctx).apply {
+                removeAllViews()
                 layoutParams = ViewGroup.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.MATCH_PARENT
                 )
 
-                val videoView = FullScreenVideoView(ctx).apply {
+                videoView = FullScreenVideoView(ctx).apply {
                     layoutParams = FrameLayout.LayoutParams(
                         FrameLayout.LayoutParams.MATCH_PARENT,
                         FrameLayout.LayoutParams.MATCH_PARENT,
@@ -317,7 +322,7 @@ private fun BackgroundVideoPlayer() {
 
                     // 设置视频路径
                     val videoPath = "android.resource://${ctx.packageName}/raw/subscribe_bg"
-                    setVideoURI(Uri.parse(videoPath))
+                    setVideoURI(videoPath.toUri())
 
                     // 设置循环播放
                     setOnPreparedListener { mediaPlayer ->
@@ -333,16 +338,13 @@ private fun BackgroundVideoPlayer() {
                 addView(videoView)
             }
         },
-        modifier = Modifier.fillMaxSize(),
-        update = { frameLayout ->
-            // 组件更新时的处理逻辑
-        }
+        modifier = Modifier.fillMaxSize()
     )
 
-    // 组件销毁时停止播放
-    DisposableEffect(Unit) {
-        onDispose {
-            // 这里不需要手动停止，VideoView会在Activity销毁时自动清理
+    LifecycleResumeEffect(null) {
+        videoView?.start()
+        onPauseOrDispose {
+            videoView?.stopPlayback()
         }
     }
 }
