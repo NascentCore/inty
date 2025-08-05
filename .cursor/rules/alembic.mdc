@@ -1,0 +1,9 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+
+# Sqlalchemy models
+
+* When generating sqlalchemy table definition, place them in `app/models` dir.
