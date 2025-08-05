@@ -31,6 +31,9 @@ class ApiClient {
 
   constructor(baseURL: string = process.env.REACT_APP_API_BASE_URL || '/api/v1') {
     this.baseURL = baseURL;
+    // This is the default headers for all requests.
+    // Some API endpoints needs different content header, like upload avatar,
+    // needs multipart/form-data.
     this.headers = {
       'Content-Type': 'application/json',
     };
@@ -56,7 +59,8 @@ class ApiClient {
         ...options.headers, // 优先使用传入的headers
         ...this.headers,    // 然后合并默认headers（除了Content-Type）
       };
-      // 删除Content-Type，让浏览器自动设置
+      // 删除Content-Type，让浏览器自动设置；覆盖默认的 Content-Type: application/json
+      // TODO: 是否仅支持浏览器使用，代码中使用该 API 是否会有问题
       if (config.headers && typeof config.headers === 'object') {
         delete (config.headers as any)['Content-Type'];
       }
