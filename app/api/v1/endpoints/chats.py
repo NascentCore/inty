@@ -24,10 +24,7 @@ from app.services.subscription_service import subscription_service
 from app.services.voice_cache_service import voice_cache_service
 from app.services.voice_cleanup_service import voice_cleanup_service
 from app.services.voice_service import voice_service
-from app.core.errors import (
-    create_chat_limit_exceeded_response,
-    create_style_prompt_subscription_required_response,
-)
+from app.schemas.response import create_business_error_response, BusinessErrorCode
 
 router = APIRouter()
 
@@ -460,7 +457,10 @@ async def agent_chat_completions(
         )
 
         if not is_allowed:
-            return create_chat_limit_exceeded_response(used_count, daily_limit)
+            return create_business_error_response(
+                error_info=BusinessErrorCode.SUBSCRIPTION_REQUIRED,
+                extra_data={"used_count": used_count, "daily_limit": daily_limit}
+            )
 
         # 优化：简化Agent验证，在创建Agent实例时验证
         agent_query_start = time.time()
@@ -1085,7 +1085,9 @@ async def update_agent_chat_settings(
                 )
             )
             if not subscription_status.is_subscribed:
-                return create_style_prompt_subscription_required_response()
+                return create_business_error_response(
+                    error_info=BusinessErrorCode.SUBSCRIPTION_REQUIRED
+                )
 
         # Then update settings
         settings = await chat_service.update_chat_settings(

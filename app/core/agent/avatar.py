@@ -22,7 +22,7 @@ def get_genai_client():
 
             # Set environment variable for proper authentication
             credentials_path = settings.gcs.credentials
-            os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = credentials_path
+            os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = credentials_path
 
             # Try to get project ID from credentials file
             project_id = None
@@ -38,7 +38,7 @@ def get_genai_client():
                 project_id = os.environ.get("GOOGLE_CLOUD_PROJECT", "inty-backend")
 
             # Clear any cached client to ensure fresh authentication
-            if hasattr(genai, '_client_cache'):
+            if hasattr(genai, "_client_cache"):
                 genai._client_cache.clear()
 
             client = genai.Client(vertexai=True, project=project_id, location=location)
@@ -142,7 +142,7 @@ def generate_background_image_to_gcs(
 
         client = get_genai_client()
         response = client.models.generate_images(
-            model=settings.agent.models.image_gen,
+            model="imagen-4.0-fast-generate-preview-06-06",
             prompt=enhanced_prompt,
             config=config,
         )

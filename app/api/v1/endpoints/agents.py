@@ -24,7 +24,7 @@ from app.schemas.character_card import (
     CharacterCardValidationResponse,
 )
 # 移除未使用的导入
-from app.schemas.response import APIResponse
+from app.schemas.response import APIResponse, create_business_error_response, BusinessErrorCode
 from app.services import agent_service
 from app.services.character_card_service import character_card_service
 from app.services.subscription_service import SubscriptionService
@@ -277,27 +277,14 @@ async def generate_background(
         if not is_allowed:
             # 超级管理员不受限制
             if not current_user.is_superuser:
-                # 获取用户订阅状态来区分错误提示
-                subscription_status = (
-                    await subscription_service.get_user_subscription_status(
-                        db, current_user.id
-                    )
-                )
-
-                # 根据订阅状态显示不同错误消息
-                if subscription_status.is_subscribed:
-                    error_message = f"Daily background image generation limit reached ({used_count}/{limit})"
-                else:
-                    error_message = f"Daily free background image generation limit reached ({used_count}/{limit})"
-
-                return APIResponse.error(
-                    message=error_message,
-                    data={
+                # 返回统一的订阅错误响应
+                return create_business_error_response(
+                    error_info=BusinessErrorCode.SUBSCRIPTION_REQUIRED,
+                    extra_data={
                         "used_count": used_count,
                         "limit": limit,
-                        "is_subscribed": subscription_status.is_subscribed,
-                        "error_code": "BACKGROUND_GENERATION_LIMIT_EXCEEDED",
-                    },
+                        "feature": "background_generation"
+                    }
                 )
 
         # Construct GCS base path
