@@ -5,7 +5,7 @@ import sqlalchemy as sa
 from sqlalchemy import Column, DateTime, Enum, Index, String, Text
 from sqlalchemy.sql import func
 
-from app.db.base_class import Base
+from app.models import Base
 
 
 class SettingType(str, enum.Enum):

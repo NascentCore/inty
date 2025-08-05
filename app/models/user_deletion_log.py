@@ -3,7 +3,7 @@ from datetime import UTC, datetime
 import sqlalchemy as sa
 from sqlalchemy import ARRAY, JSON, Column, DateTime, Index, String
 
-from app.db.base_class import Base
+from app.models import Base
 
 
 class UserDeletionLog(Base):
