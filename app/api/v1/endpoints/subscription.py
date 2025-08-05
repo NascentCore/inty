@@ -70,6 +70,7 @@ async def get_subscription_plans(
         return APIResponse.error(message="Failed to get subscription plans")
 
 
+# TODO: Can this be removed? /plans already returns the users's subscription status.
 @router.get("/status", response_model=APIResponse[SubscriptionStatusResponse])
 async def get_subscription_status(
     *,
@@ -90,6 +91,8 @@ async def get_subscription_status(
         return APIResponse.error(message="Failed to get subscription status")
 
 
+# TODO: Can be removed, as usage is only used for checking limits, and limits checking now is done
+# on server side.
 @router.get("/usage", response_model=APIResponse[UsageStatisticsResponse])
 async def get_usage_statistics(
     *,
@@ -110,6 +113,8 @@ async def get_usage_statistics(
         return APIResponse.error(message="Failed to get usage statistics")
 
 
+# This is only used for verifying the purchase on client side.
+# TODO: Can it verify the restoration and cancellation?
 @router.post("/verify", response_model=APIResponse[PurchaseVerificationResponse])
 async def verify_purchase(
     *,
@@ -118,7 +123,7 @@ async def verify_purchase(
     current_user: schemas.User = Depends(deps.get_current_active_user),
 ) -> Any:
     """
-    验证Google Play购买并创建订阅
+    验证 Google Play 购买并创建订阅
     """
     try:
         google_play_request = GooglePlayPurchaseRequest(
@@ -145,6 +150,7 @@ async def verify_purchase(
         return APIResponse.error(message="Purchase verification failed")
 
 
+# Handles restoration and cancellation from Google Play.
 @router.post("/webhook")
 async def google_play_webhook(
     request: Request,
