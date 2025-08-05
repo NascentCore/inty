@@ -32,6 +32,7 @@ config.set_main_option("sqlalchemy.url", db_url)
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
+# 导入所有模型
 from app.models import Base
 
 target_metadata = Base.metadata
