@@ -8,6 +8,7 @@ from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.core.config import settings
 from app.models.subscription import (
     SubscriptionPlan,
     SubscriptionPlanType,
@@ -829,16 +830,10 @@ class SubscriptionService:
                 if background_limit == -1:
                     return True, today_generation_count, -1
             else:
-                # 免费用户：从动态配置中读取每日限制
-                background_limit = await system_settings_service.get_setting(
-                    db, "free_user_background_generation_limit", 3
-                )
+                background_limit = settings.app.free_user_image_gen_limit
 
-            # 检查是否超出限制
             is_allowed = today_generation_count < background_limit
-
             return is_allowed, today_generation_count, background_limit
-
         except Exception as e:
             logger.error(f"检查背景图生成次数限制失败: {str(e)}")
             # 出错时默认允许，避免影响用户体验

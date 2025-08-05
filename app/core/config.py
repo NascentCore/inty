@@ -1,5 +1,5 @@
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
@@ -66,6 +66,8 @@ class AppConfig:
     debug_messages: bool = False  # 是否启用调试消息记录功能
     api_v1_prefix: str = "/api/v1"
     backend_cors_origins: List[AnyHttpUrl] = None
+    free_user_image_gen_limit: int = 80
+    premium_user_image_gen_limit: int = 40
 
     def __post_init__(self):
         if self.backend_cors_origins is None:
@@ -96,10 +98,15 @@ class AgentConfig:
     top_k: int = 50
     frequency_penalty: float = 0.0
     presence_penalty: float = 0.0
-    enable_debug_logging: bool = False  # 是否启用调试日志记录功能
-    # 默认提示词配置
-    default_main_prompt: str = "你是一个AI助手，请根据你的角色设定与用户进行对话。"
-    default_mode_prompt: str = "请保持友好、耐心的对话风格，根据角色特点进行回应。"
+    enable_debug_logging: bool = False
+
+    @dataclass
+    class Models:
+        image_gen: str = "imagen-4.0-fast-generate-preview-06-06"
+        chat: str = "gemini-2.5-flash"
+        tts: str = "eleven_flash_v2_5"
+
+    models: Models = field(default_factory=Models)
 
 
 @dataclass

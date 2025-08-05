@@ -27,6 +27,7 @@ from app.schemas.response import APIResponse
 from app.services import agent_service
 from app.services.character_card_service import character_card_service
 from app.services.subscription_service import SubscriptionService
+from app.utils.error_code import ErrorCode
 from app.utils.gcs import delete_from_gcs, is_user_gcs_file, upload_to_gcs
 
 router = APIRouter()
@@ -281,7 +282,9 @@ async def generate_background(
                         f"Background image generation failed, daily limit reached"
                     )
                 else:
-                    error_message = f"Daily background image generation limit reached ({used_count}/{limit})"
+                    error_message = (
+                        f"Daily image generation limit reached ({used_count}/{limit})"
+                    )
                     if limit <= 3:  # 免费用户每日限制
                         error_message += ", please consider upgrading your subscription for more daily generations"
 
@@ -290,7 +293,7 @@ async def generate_background(
                     data={
                         "used_count": used_count,
                         "limit": limit,
-                        "error_code": "BACKGROUND_GENERATION_LIMIT_EXCEEDED",
+                        "error_code": ErrorCode.FREE_USER_IMG_GEN_LIMIT_EXCEEDED,
                     },
                 )
 

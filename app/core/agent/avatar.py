@@ -6,6 +6,8 @@ from loguru import logger
 
 from app.core.config import settings
 
+# Remove circular import - will get settings when needed
+
 # Initialize Google Gen AI client with Vertex AI
 # The client will use the same credentials as configured for GCS
 client = None  # Will be initialized when needed
@@ -16,6 +18,9 @@ def get_genai_client():
     global client
     if client is None:
         try:
+            # Import settings here to avoid circular import
+            from app.core.config import settings
+
             # Initialize with Vertex AI configuration
             # This will use the same service account credentials as GCS
 
@@ -33,6 +38,8 @@ def get_genai_client():
                 # Fallback: try to get from environment or use default
                 project_id = os.environ.get("GOOGLE_CLOUD_PROJECT", "inty-backend")
 
+            # TODO: 这里依赖本地缓存的身份信息，当运行于 Google Cloud 内部环境时，不需要额外控制
+            # 即可运行；比如运行在同属于同样 project 的 VM 上时，不需要额外配置即可链接对应的 API。
             client = genai.Client(vertexai=True, project=project_id, location=location)
             logger.info(
                 f"Initialized Google Gen AI client with project: {project_id}, location: {location}"
@@ -105,14 +112,20 @@ def generate_background_image_to_gcs(
 
         # 构建增强提示词
         enhanced_prompt = f"""
+        A person who is welcoming, friendly.
+
         The person's description:
         {prompt}
-        
+
         The person's information:
         age: 22 - 35
         gender: {opposite_gender}
 
-        Important requirement: The image must be of a person. It cannot be a landscape, object, or any other non-human content.
+        Additional requirements:
+        The image must be of a person.
+        It cannot be a landscape, object, or any other non-human content.
+        Avoid generating images of people appearing less than 18 years old.
+        All content must be appropriate for a general audience.
         """
 
         # 使用新的Google Gen AI SDK生成图片
@@ -128,7 +141,7 @@ def generate_background_image_to_gcs(
 
         client = get_genai_client()
         response = client.models.generate_images(
-            model="imagen-4.0-fast-generate-preview-06-06",
+            model=settings.agent.models.image_gen,
             prompt=enhanced_prompt,
             config=config,
         )
@@ -215,12 +228,3 @@ if __name__ == "__main__":
             print(image.rai_filtered_reason)
         else:
             image.image.save("test.png")
-
-    # 测试我们的函数
-    # result = generate_background_image_to_gcs(
-    #     prompt=prompt,
-    #     gcs_uri_base="gs://inty-static/tmp/",
-    #     count=1,
-    #     include_rai_reason=True
-    # )
-    # print(f"Function result: {result}")
