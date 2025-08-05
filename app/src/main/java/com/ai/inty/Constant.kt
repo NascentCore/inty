@@ -6,10 +6,12 @@ package com.ai.inty
 class Constant {
     companion object {
         // This refers to the production backend endpoint.
-        // Right now it's same as dev instance, as the prod environment is not yet setup.
-        const val USER_HOST = "dev.inty.sxwl.ai"
+        // The domain & DNS is on namecheap, pointing to the public IP of the dev instance.
+        // Nginx is running on the dev instance to proxy to different backend instances on different ports.
+        const val USER_HOST = "app.inty.cc"
 
         // This refers to the shared development backend endpoint.
+        // This is the backend endpoint for the debug build (default build type).
         const val USER_HOST_DEV = "dev.inty.sxwl.ai"
 
         // This refers to the local backend endpoint that can be accessed

@@ -17,6 +17,8 @@ object AppEnv {
     var topActivity: WeakReference<Activity>? = null
 
     lateinit var context: Context
+    // Build types are defined in build.gradle.kts.
+    var buildType: String = "debug"
     var testEnv = false
     var DEBUG = false
     var APPLICATION_ID = ""
