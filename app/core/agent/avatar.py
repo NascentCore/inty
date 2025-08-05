@@ -17,9 +17,6 @@ def get_genai_client():
     global client
     if client is None:
         try:
-            # Import settings here to avoid circular import
-            from app.core.config import settings
-
             # Initialize with Vertex AI configuration
             # This will use the same service account credentials as GCS
 

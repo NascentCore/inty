@@ -66,7 +66,7 @@ class AppConfig:
     debug_messages: bool = False  # 是否启用调试消息记录功能
     api_v1_prefix: str = "/api/v1"
     backend_cors_origins: List[AnyHttpUrl] = None
-    free_user_image_gen_limit: int = 80
+    free_user_image_gen_limit: int = 8
     premium_user_image_gen_limit: int = 40
 
     def __post_init__(self):
