@@ -59,6 +59,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -312,7 +313,11 @@ private fun CreateRolePage(
             result.data?.let { data ->
                 val cropError = UCrop.getError(data)
                 EasyLog.log("UCrop error: ${cropError?.message}", EasyLog.ERROR)
-                Toast.makeText(context, "Crop failed: ${cropError?.message}", Toast.LENGTH_LONG)
+                Toast.makeText(
+                    context,
+                    context.getString(R.string.toast_crop_failed, cropError?.message ?: ""),
+                    Toast.LENGTH_LONG
+                )
                     .show()
             }
         }
@@ -628,7 +633,11 @@ private fun CreateRolePage(
                                     }
                                 }
                             } else {
-                                Toast.makeText(context, "Invalid image URL", Toast.LENGTH_SHORT)
+                                Toast.makeText(
+                                    context,
+                                    context.getString(R.string.toast_invalid_image_url),
+                                    Toast.LENGTH_SHORT
+                                )
                                     .show()
                             }
                         } else {
@@ -641,7 +650,11 @@ private fun CreateRolePage(
                             startUCropWithLocalFile(sourceFile, context, cropLauncher)
                         }
                     } else {
-                        Toast.makeText(context, "No avatar image to crop", Toast.LENGTH_SHORT)
+                        Toast.makeText(
+                            context,
+                            context.getString(R.string.toast_no_avatar_image),
+                            Toast.LENGTH_SHORT
+                        )
                             .show()
                     }
                 }
@@ -871,7 +884,11 @@ private fun startUCropWithLocalFile(
                 "Source file does not exist or is empty: ${sourceFile.absolutePath}",
                 EasyLog.ERROR
             )
-            Toast.makeText(context, "Image file not found", Toast.LENGTH_SHORT).show()
+            Toast.makeText(
+                context,
+                context.getString(R.string.toast_image_file_not_found),
+                Toast.LENGTH_SHORT
+            ).show()
             return
         }
 
@@ -909,7 +926,11 @@ private fun startUCropWithLocalFile(
         cropLauncher.launch(cropIntent)
     } catch (e: Exception) {
         EasyLog.log("Failed to start UCrop with local file: ${e.message}", EasyLog.ERROR)
-        Toast.makeText(context, "Failed to open crop editor", Toast.LENGTH_SHORT).show()
+        Toast.makeText(
+            context,
+            context.getString(R.string.toast_failed_open_crop_editor),
+            Toast.LENGTH_SHORT
+        ).show()
     }
 }
 
@@ -964,7 +985,7 @@ private fun AvatarUploadSection(
                     EasyLog.log("AvatarUploadSection: Displaying selected avatar with URL: $displayUrl")
                     AsyncImage(
                         model = displayUrl,
-                        contentDescription = "Selected Avatar",
+                        contentDescription = stringResource(R.string.content_desc_selected_avatar),
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop,
                         onSuccess = {
@@ -983,7 +1004,7 @@ private fun AvatarUploadSection(
                     EasyLog.log("AvatarUploadSection: Displaying avatar with URL: $avatarUrl")
                     AsyncImage(
                         model = avatarUrl,
-                        contentDescription = "Generated Avatar",
+                        contentDescription = stringResource(R.string.content_desc_generated_avatar),
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop,
                         onSuccess = {
@@ -1009,7 +1030,7 @@ private fun AvatarUploadSection(
                         )
                         Spacer(modifier = Modifier.height(12.dp))
                         Text(
-                            text = "Generate\nAvatar",
+                            text = stringResource(R.string.generate_avatar_title_full),
                             fontSize = 14.sp,
                             color = Color.White.copy(0.7f),
                             textAlign = TextAlign.Center
@@ -1069,11 +1090,11 @@ private fun AvatarUploadSection(
                     ) {
                         Image(
                             painter = painterResource(R.drawable.ic_crop),
-                            contentDescription = "Face edit",
+                            contentDescription = stringResource(R.string.content_desc_face_edit),
                             modifier = Modifier.size(16.dp)
                         )
                         Text(
-                            text = "Face edit",
+                            text = stringResource(R.string.face_edit_full),
                             color = Color.White,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Medium
@@ -1135,7 +1156,10 @@ private fun AvatarUploadSection(
                         ) {
                             AsyncImage(
                                 model = imageUrl,
-                                contentDescription = "Generated Avatar $index",
+                                contentDescription = stringResource(
+                                    R.string.content_desc_generated_avatar_index,
+                                    index
+                                ),
                                 modifier = Modifier
                                     .fillMaxSize()
                                     .padding(4.dp),
@@ -1157,7 +1181,7 @@ private fun GenderSelectionSection(
 ) {
     Column {
         Text(
-            text = "Gender (Unmodified after Creation) *",
+            text = stringResource(R.string.gender_unmodified_full),
             fontSize = 16.sp,
             color = Color.White,
             fontWeight = FontWeight.Medium
@@ -1169,19 +1193,19 @@ private fun GenderSelectionSection(
             modifier = Modifier.fillMaxWidth()
         ) {
             GenderButton(
-                text = "Male",
+                text = stringResource(R.string.male_full),
                 isSelected = selectedGender == "MALE",
                 onClick = { onGenderChange("MALE") },
                 modifier = Modifier.weight(0.8f)
             )
             GenderButton(
-                text = "Female",
+                text = stringResource(R.string.female_full),
                 isSelected = selectedGender == "FEMALE",
                 onClick = { onGenderChange("FEMALE") },
                 modifier = Modifier.weight(0.9f)
             )
             GenderButton(
-                text = "Non-Binary",
+                text = stringResource(R.string.non_binary_full),
                 isSelected = selectedGender == "NON_BINARY",
                 onClick = { onGenderChange("NON_BINARY") },
                 modifier = Modifier.weight(1.1f)
@@ -1218,7 +1242,7 @@ private fun SoundSelectionSection() {
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = "🎵",
+                text = stringResource(R.string.music_note_symbol),
                 fontSize = 16.sp
             )
         }
@@ -1226,7 +1250,7 @@ private fun SoundSelectionSection() {
         Spacer(modifier = Modifier.width(12.dp))
 
         Text(
-            text = "Sound *",
+            text = stringResource(R.string.sound_required_full),
             fontSize = 16.sp,
             color = Color.White,
             fontWeight = FontWeight.Medium,
@@ -1234,7 +1258,7 @@ private fun SoundSelectionSection() {
         )
 
         Text(
-            text = "Inty Voice",
+            text = stringResource(R.string.inty_voice_option_full),
             fontSize = 14.sp,
             color = Color.White.copy(0.7f)
         )
@@ -1242,7 +1266,7 @@ private fun SoundSelectionSection() {
         Spacer(modifier = Modifier.width(8.dp))
 
         Text(
-            text = ">",
+            text = stringResource(R.string.greater_than_symbol),
             fontSize = 16.sp,
             color = Color.White.copy(0.7f)
         )
@@ -1283,7 +1307,7 @@ private fun VisibilitySelectionSection(
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = "★",
+                text = stringResource(R.string.star_symbol),
                 fontSize = 16.sp,
                 color = Color.White
             )
@@ -1292,7 +1316,7 @@ private fun VisibilitySelectionSection(
         Spacer(modifier = Modifier.width(12.dp))
 
         Text(
-            text = "Visibility *",
+            text = stringResource(R.string.visibility_required_title_full),
             fontSize = 16.sp,
             color = Color.White,
             fontWeight = FontWeight.Medium,
@@ -1308,7 +1332,7 @@ private fun VisibilitySelectionSection(
         Spacer(modifier = Modifier.width(8.dp))
 
         Text(
-            text = ">",
+            text = stringResource(R.string.greater_than_symbol),
             fontSize = 16.sp,
             color = Color.White.copy(0.7f)
         )
@@ -1457,4 +1481,3 @@ private fun CreateButton(
         }
     }
 }
-

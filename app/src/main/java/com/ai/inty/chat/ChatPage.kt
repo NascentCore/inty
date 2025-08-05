@@ -414,13 +414,13 @@ internal fun ChatPage(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Text(
-                                        text = "▶",
+                                        text = stringResource(R.string.play_button_symbol),
                                         color = Color.White,
                                         fontSize = 12.sp
                                     )
                                     Spacer(modifier = Modifier.width(0.dp))
                                     Text(
-                                        text = "▶",
+                                        text = stringResource(R.string.play_button_symbol),
                                         color = Color.White,
                                         fontSize = 12.sp
                                     )
@@ -479,6 +479,8 @@ internal fun ChatPage(
 
                             // 括号按钮区域 - 仅在输入框获得焦点时显示
                             if (isInputFocused.value) {
+                                val stringResource =
+                                    stringResource(R.string.empty_parentheses_symbol)
                                 Box(
                                     modifier = Modifier
                                         .width(40.dp)
@@ -501,7 +503,7 @@ internal fun ChatPage(
                                             val beforeCursor =
                                                 currentText.substring(0, safeSelection)
                                             val afterCursor = currentText.substring(safeSelection)
-                                            val newText = "$beforeCursor()$afterCursor"
+                                            val newText = "$beforeCursor$stringResource$afterCursor"
 
                                             // 更新文本
                                             chatViewModel.inputData.value = newText
@@ -513,7 +515,7 @@ internal fun ChatPage(
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Text(
-                                        text = "()",
+                                        text = stringResource(R.string.empty_parentheses_symbol),
                                         color = Color.White,
                                         fontSize = 14.sp,
                                         fontWeight = FontWeight.Medium
@@ -578,7 +580,7 @@ internal fun ChatPage(
                             Spacer(Modifier.width(16.dp))
                             MorePanelItem(
                                 icon = R.drawable.icon_report,
-                                text = "Report",
+                                text = stringResource(R.string.report_button),
                                 onClick = {
                                     // 检查是否正式登录（非游客且已登录）
                                     if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
@@ -622,7 +624,7 @@ internal fun ChatPage(
                         )
                 ) {
                     Text(
-                        text = "My Chat Persona",
+                        text = stringResource(R.string.my_chat_persona_full),
                         modifier = Modifier.padding(top = 58.dp, start = 16.dp),
                         fontSize = 20.sp,
                         fontWeight = FontWeight.SemiBold,
@@ -706,7 +708,7 @@ internal fun ChatPage(
                     Spacer(Modifier.height(30.dp))
 
                     Text(
-                        text = "Chat Settings",
+                        text = stringResource(R.string.chat_settings_full),
                         modifier = Modifier.padding(start = 16.dp),
                         fontSize = 20.sp,
                         fontWeight = FontWeight.SemiBold,

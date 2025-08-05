@@ -216,7 +216,7 @@ fun LoginScreen(
 
             // 欢迎文本
             Text(
-                text = "Welcome to IntelliMate",
+                text = stringResource(R.string.welcome_to_intellimate),
                 color = Color.White,
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold
@@ -225,7 +225,7 @@ fun LoginScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "Create an account or log in to continue",
+                text = stringResource(R.string.create_account_or_login),
                 color = Color.White.copy(alpha = 0.55f),
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Normal
@@ -241,7 +241,7 @@ fun LoginScreen(
                         performGoogleSignIn()
                     } else {
                         coroutineScope.launch {
-                            ToastUtils.showToast("Please check Terms of Use & Privacy Policy")
+                            ToastUtils.showToast(context.getString(R.string.toast_check_terms_privacy))
                         }
                     }
                 },
@@ -261,14 +261,14 @@ fun LoginScreen(
                 ) {
                     Image(
                         painter = painterResource(id = R.drawable.google),
-                        contentDescription = "Google Login",
+                        contentDescription = stringResource(R.string.content_desc_google_login),
                         modifier = Modifier
                             .align(Alignment.CenterStart)
                             .padding(start = 20.dp)
                             .size(24.dp)
                     )
                     Text(
-                        text = "Continue with Google",
+                        text = stringResource(R.string.continue_with_google),
                         color = Color.Black,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.SemiBold
@@ -325,7 +325,7 @@ private fun PolicyText(checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "By continuing, you agree to IntelliMate's",
+                text = stringResource(R.string.by_continuing_agree_full),
                 style = baseTextStyle
             )
 
@@ -346,7 +346,7 @@ private fun PolicyText(checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
                 )
 
                 Text(
-                    text = " & ",
+                    text = stringResource(R.string.and_symbol),
                     color = Color.White.copy(alpha = 0.6f),
                     fontSize = 12.sp
                 )

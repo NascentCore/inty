@@ -1,5 +1,6 @@
 package com.ai.inty.viewmodels
 
+//import com.ai.inty.billing.BillingRepository
 import android.content.Context
 import android.content.Intent
 import androidx.compose.runtime.mutableStateListOf
@@ -17,7 +18,6 @@ import com.ai.inty.beans.SysMsgItem
 import com.ai.inty.beans.TokenBean
 import com.ai.inty.beans.UserProfile
 import com.ai.inty.billing.BillingRepository
-//import com.ai.inty.billing.BillingRepository
 import com.ai.inty.home.ConversionsPageTab
 import com.ai.inty.net.IAgentApi
 import com.ai.inty.net.IUserApi
@@ -459,7 +459,9 @@ class MainViewModel : BaseActivityViewModel() {
             } catch (e: Exception) {
                 EasyLog.log("取消关注 异常: ${e.message}", EasyLog.ERROR)
                 withContext(Dispatchers.Main) {
-                    ToastUtils.showToast("${e.message}")
+                    val msg =
+                        AppEnv.context.getString(R.string.toast_error_message, e.message ?: "")
+                    ToastUtils.showToast(msg)
                 }
             }
         }
@@ -849,7 +851,7 @@ class MainViewModel : BaseActivityViewModel() {
                             if (result.data.canDelete && !result.data.activeSubscription) {
                                 deleteUserAccount()
                             } else {
-                                ToastUtils.showToast("Please cancel the subscription before proceeding")
+                                ToastUtils.showToast(AppEnv.context.getString(R.string.toast_cancel_subscription_first))
                             }
                         }
 
@@ -858,7 +860,7 @@ class MainViewModel : BaseActivityViewModel() {
                                 "检查账号需要取消订阅的结果 error: $result",
                                 priority = EasyLog.ERROR
                             )
-                            ToastUtils.showToast("Check Account Deletion Server Error !")
+                            ToastUtils.showToast(AppEnv.context.getString(R.string.toast_check_account_deletion_error))
                         }
                     }
                 }
@@ -912,7 +914,7 @@ class MainViewModel : BaseActivityViewModel() {
                                 "删除用户账号的结果 error: $result",
                                 priority = EasyLog.ERROR
                             )
-                            ToastUtils.showToast("Account Deletion Server Error !")
+                            ToastUtils.showToast(AppEnv.context.getString(R.string.toast_account_deletion_error))
                         }
                     }
                 }

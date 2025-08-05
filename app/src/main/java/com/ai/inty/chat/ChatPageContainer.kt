@@ -30,6 +30,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -165,7 +166,7 @@ private fun NewUserGuide(
                         .padding(top = 340.dp, end = 92.dp)
                         .size(112.dp),
                     painter = painterResource(R.drawable.scroll_hand),
-                    contentDescription = "滑动引导手势"
+                    contentDescription = stringResource(R.string.content_desc_swipe_guide)
                 )
             }
         }

@@ -55,6 +55,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -128,7 +129,7 @@ private fun AvatarGeneratePage(
                     .copy(containerColor = Color.Transparent),
                 title = {
                     Text(
-                        text = "Generate Avatar",
+                        text = stringResource(R.string.generate_avatar),
                         fontSize = 18.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = Color.White
@@ -250,7 +251,7 @@ private fun AvatarPreviewSection(
                 EasyLog.log("Displaying image with URL: $imageUrl")
                 AsyncImage(
                     model = imageUrl,
-                    contentDescription = "Generated Avatar",
+                    contentDescription = stringResource(R.string.content_desc_generated_avatar),
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(4.dp),
@@ -275,7 +276,7 @@ private fun AvatarPreviewSection(
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
-                        text = "Preview\nGenerated Avatar",
+                        text = stringResource(R.string.preview_generated_avatar),
                         fontSize = 14.sp,
                         color = Color.White.copy(0.7f),
                         textAlign = TextAlign.Center
@@ -317,7 +318,7 @@ private fun PromptInputField(
 ) {
     Column {
         Text(
-            text = "Describe your desired avatar *",
+            text = stringResource(R.string.describe_desired_avatar),
             fontSize = 16.sp,
             color = Color.White,
             fontWeight = FontWeight.Medium
@@ -349,7 +350,7 @@ private fun PromptInputField(
                 Box {
                     if (value.isEmpty()) {
                         Text(
-                            text = "Your avatar and background image will be created based on the input prompt word.",
+                            text = stringResource(R.string.avatar_creation_hint_full),
                             fontSize = 16.sp,
                             color = Color.White.copy(0.5f)
                         )
@@ -402,7 +403,7 @@ private fun GenerateButton(
             )
         } else {
             Text(
-                text = "Generate Avatar",
+                text = stringResource(R.string.generate_avatar_button),
                 fontSize = 18.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = Color.White
@@ -426,7 +427,7 @@ private fun UseAvatarButton(
             .height(48.dp)
     ) {
         Text(
-            text = "Use This Avatar",
+            text = stringResource(R.string.use_this_avatar_button),
             fontSize = 16.sp,
             fontWeight = FontWeight.Medium,
             color = Color.White
@@ -510,7 +511,10 @@ private fun AvatarGridSection(
                 ) {
                     AsyncImage(
                         model = imageUrl,
-                        contentDescription = "Generated Avatar $index",
+                        contentDescription = stringResource(
+                            R.string.content_desc_generated_avatar_index,
+                            index
+                        ),
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(4.dp),
@@ -544,7 +548,7 @@ fun RegenButton(
         contentAlignment = Alignment.Center
     ) {
         Text(
-            text = "Regen.",
+            text = stringResource(R.string.regen_button),
             fontSize = 14.sp,
             fontWeight = FontWeight.Medium,
             color = if (enabled) Color.White else Color.White.copy(0.5f)

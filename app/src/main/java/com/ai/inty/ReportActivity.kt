@@ -191,7 +191,7 @@ private fun ReportScreen(
                 Spacer(Modifier.height(16.dp))
 
                 Text(
-                    text = "NPC *",
+                    text = stringResource(R.string.npc_asterisk_full),
                     modifier = Modifier.fillMaxWidth(),
                     fontSize = 14.sp,
                     fontWeight = FontWeight.SemiBold,
@@ -239,7 +239,7 @@ private fun ReportScreen(
                 Spacer(Modifier.height(16.dp))
                 Text(
                     modifier = Modifier.fillMaxWidth(),
-                    text = "Report description *",
+                    text = stringResource(R.string.report_description_full),
                     fontSize = 14.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = Color.White,
@@ -267,7 +267,7 @@ private fun ReportScreen(
                                 modifier = Modifier
                                     .matchParentSize()
                                     .align(Alignment.TopStart),
-                                text = "Please fill in the feedback content...",
+                                text = stringResource(R.string.please_fill_feedback_full),
                                 fontWeight = FontWeight.Normal,
                                 color = Color.White.copy(0.55f),
                                 fontSize = 14.sp,
@@ -282,7 +282,10 @@ private fun ReportScreen(
                         modifier = Modifier
                             .align(Alignment.BottomEnd)
                             .padding(horizontal = 12.dp),
-                        text = "${description.length}/400",
+                        text = stringResource(
+                            R.string.character_count_format_full,
+                            description.length
+                        ),
                         fontSize = 12.sp,
                         color = Color.White.copy(0.55f),
                     )
@@ -316,7 +319,7 @@ private fun ReportScreen(
                 Spacer(Modifier.height(16.dp))
                 Text(
                     modifier = Modifier.fillMaxWidth(),
-                    text = "Image evidence",
+                    text = stringResource(R.string.image_evidence_full),
                     fontSize = 14.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = Color.White,
@@ -443,7 +446,7 @@ private fun SaveBtn(onSave: () -> Unit) {
     ) {
         Text(
             modifier = Modifier.align(Alignment.Center),
-            text = "Submit",
+            text = stringResource(R.string.submit_button),
             fontSize = 16.sp,
             fontWeight = FontWeight.Normal,
             color = Color.White,

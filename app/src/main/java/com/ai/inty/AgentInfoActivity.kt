@@ -292,7 +292,7 @@ private fun AgentInfoScreen(
                     Row(
                         modifier = Modifier.padding(horizontal = 12.dp)
                     ) {
-                        TagItem(text = "#${agent.gender}")
+                        TagItem(text = stringResource(R.string.gender_tag_format, agent.gender))
                     }
                     Spacer(Modifier.height(21.dp))
                     AgentSpacerLine()
@@ -525,7 +525,7 @@ private fun BottomSheetContent(
             shape = RoundedCornerShape(16.dp)
         ) {
             Text(
-                text = "Report",
+                text = stringResource(R.string.report_button),
                 color = Color.White,
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Normal
@@ -546,7 +546,7 @@ private fun BottomSheetContent(
             shape = RoundedCornerShape(16.dp)
         ) {
             Text(
-                text = "Cancel",
+                text = stringResource(R.string.cancel_button),
                 color = Color.White,
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Normal

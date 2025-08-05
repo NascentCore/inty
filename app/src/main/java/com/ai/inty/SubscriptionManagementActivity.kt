@@ -278,10 +278,18 @@ private fun openPlayStoreSubscriptions(context: android.content.Context) {
             EasyLog.log("✅ 成功跳转到 Google Play 订阅管理页面")
         } else {
             EasyLog.log("❌ 没有找到可以处理 Google Play 订阅管理页面的应用")
-            Toast.makeText(context, "无法打开 Google Play 商店。", Toast.LENGTH_LONG).show()
+            Toast.makeText(
+                context,
+                context.getString(R.string.toast_google_play_unavailable),
+                Toast.LENGTH_LONG
+            ).show()
         }
     } catch (e: Exception) {
         EasyLog.log("❌ 跳转到 Google Play 订阅管理页面失败: ${e.message}")
-        Toast.makeText(context, "跳转失败，请稍后再试。", Toast.LENGTH_LONG).show()
+        Toast.makeText(
+            context,
+            context.getString(R.string.toast_navigation_failed),
+            Toast.LENGTH_LONG
+        ).show()
     }
 }
