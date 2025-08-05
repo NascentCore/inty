@@ -37,6 +37,10 @@ jobs:
           pip install -r requirements.txt
           pip install pytest
 
+      - name: Test Alembic versions
+        run: |
+          alembic upgrade head
+
       - name: Run tests
         run: |
           cp config.yaml.example config.yaml
