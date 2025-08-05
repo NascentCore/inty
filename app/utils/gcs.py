@@ -5,13 +5,46 @@ from google.cloud import storage
 
 from app.core.config import settings  # 假设你的配置是settings对象
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 def upload_to_gcs(file_data, content_type, bucket_name, path):
-    client = storage.Client.from_service_account_json(settings.gcs.credentials)
-    bucket = client.bucket(bucket_name)
-    blob = bucket.blob(path)
-    blob.upload_from_string(file_data, content_type=content_type)
-    return blob.public_url
+    logger.info(f"=== 开始GCS上传 ===")
+    logger.info(f"文件大小: {len(file_data)} bytes")
+    logger.info(f"Content-Type: {content_type}")
+    logger.info(f"Bucket: {bucket_name}")
+    logger.info(f"路径: {path}")
+
+    try:
+        logger.info(f"使用凭证文件: {settings.gcs.credentials}")
+        client = storage.Client.from_service_account_json(settings.gcs.credentials)
+        logger.info("GCS客户端创建成功")
+
+        bucket = client.bucket(bucket_name)
+        logger.info(f"获取bucket: {bucket_name}")
+
+        blob = bucket.blob(path)
+        logger.info(f"创建blob对象: {path}")
+
+        logger.info("开始上传文件内容")
+        blob.upload_from_string(file_data, content_type=content_type)
+        logger.info("文件上传完成")
+
+        public_url = blob.public_url
+        logger.info(f"获取公共URL: {public_url}")
+
+        logger.info("=== GCS上传成功 ===")
+        return public_url
+
+    except Exception as e:
+        logger.error(f"GCS上传失败: {str(e)}")
+        logger.error(f"错误类型: {type(e).__name__}")
+        import traceback
+
+        logger.error(f"错误堆栈: {traceback.format_exc()}")
+        raise
 
 
 # 新增删除方法
