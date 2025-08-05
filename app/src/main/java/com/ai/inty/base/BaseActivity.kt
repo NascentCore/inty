@@ -5,7 +5,6 @@ import android.content.res.Configuration
 import android.os.Bundle
 import android.os.PersistableBundle
 import androidx.activity.ComponentActivity
-import com.inty.utils.log.EasyLog
 import com.therouter.TheRouter
 
 open class BaseActivity : ComponentActivity() {
@@ -28,10 +27,5 @@ open class BaseActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?, persistentState: PersistableBundle?) {
         super.onCreate(savedInstanceState, persistentState)
         onInit()
-    }
-
-    override fun finish() {
-        EasyLog.log(Exception("log $this"))
-        super.finish()
     }
 }
