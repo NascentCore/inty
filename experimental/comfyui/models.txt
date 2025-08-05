@@ -1,0 +1,2 @@
+# List of models to be downloed from civitai
+# Used for populating models onto gcs bucket and then transfer to runpod network volume
