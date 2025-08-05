@@ -20,8 +20,11 @@ def get_genai_client():
             # Initialize with Vertex AI configuration
             # This will use the same service account credentials as GCS
 
-            # Try to get project ID from credentials file
+            # Set environment variable for proper authentication
             credentials_path = settings.gcs.credentials
+            os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = credentials_path
+
+            # Try to get project ID from credentials file
             project_id = None
             location = "us-central1"  # Default location for Imagen
 
@@ -34,15 +37,17 @@ def get_genai_client():
                 # Fallback: try to get from environment or use default
                 project_id = os.environ.get("GOOGLE_CLOUD_PROJECT", "inty-backend")
 
-            # TODO: 这里依赖本地缓存的身份信息，当运行于 Google Cloud 内部环境时，不需要额外控制
-            # 即可运行；比如运行在同属于同样 project 的 VM 上时，不需要额外配置即可链接对应的 API。
+            # Clear any cached client to ensure fresh authentication
+            if hasattr(genai, '_client_cache'):
+                genai._client_cache.clear()
+
             client = genai.Client(vertexai=True, project=project_id, location=location)
             logger.info(
                 f"Initialized Google Gen AI client with project: {project_id}, location: {location}"
             )
         except Exception as e:
             logger.error(f"Error initializing Google Gen AI client: {e}")
-            # Fallback to basic initialization
+            # Fallback to basic initialization with environment variable set
             client = genai.Client(vertexai=True)
 
     return client
