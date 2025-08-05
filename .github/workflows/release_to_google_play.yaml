@@ -1,9 +1,6 @@
 name: Build and release to Google Play Store
 
 on:
-  push:
-    tags:
-      - 'v*'
   workflow_dispatch:
     inputs:
       environment:
