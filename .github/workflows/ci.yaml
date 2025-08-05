@@ -10,6 +10,13 @@ on:
       - "requirements.txt"
       - ".github/workflows/ci.yaml"
 
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "**/*.py"
+      - "requirements.txt"
+
 jobs:
   test:
     runs-on: ubuntu-latest
