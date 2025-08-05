@@ -64,6 +64,10 @@ GCS public access
 
 <img width="800" alt="image" src="https://github.com/user-attachments/assets/9230dc1f-1430-467b-b12e-bfba1def3922" />
 
+Get your GCP credential key json file to allow backend access to your GCS buckets:
+
+<img width="3018" height="1218" alt="image" src="https://github.com/user-attachments/assets/df5c7bfb-b4ad-4d0a-b4cb-65b25c7d4560" />
+
 ## 在本地开发环境启动 App
 
 ```bash
