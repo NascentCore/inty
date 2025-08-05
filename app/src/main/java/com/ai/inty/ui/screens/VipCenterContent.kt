@@ -133,7 +133,7 @@ private fun VipCenterTopBar(
             IconButton(onClick = onClose) {
                 Image(
                     painter = painterResource(R.drawable.back),
-                    contentDescription = "back"
+                    contentDescription = stringResource(R.string.content_desc_back)
                 )
             }
         },

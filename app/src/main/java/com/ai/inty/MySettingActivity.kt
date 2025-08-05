@@ -274,7 +274,7 @@ class MySettingActivity : BaseActivity() {
                                                 singleLine = false,
                                                 placeholder = {
                                                     Text(
-                                                        text = "Please enter your character...",
+                                                        text = stringResource(R.string.please_enter_character_full),
                                                         color = Color.White.copy(0.55f),
                                                         fontSize = 12.sp,
                                                         fontWeight = FontWeight.Normal,
@@ -285,7 +285,10 @@ class MySettingActivity : BaseActivity() {
                                                 modifier = Modifier
                                                     .align(Alignment.BottomEnd)
                                                     .padding(12.dp, 8.dp),
-                                                text = "${editValue.length}/400",
+                                                text = stringResource(
+                                                    R.string.character_count_format_my,
+                                                    editValue.length
+                                                ),
                                                 color = Color.White.copy(0.55f),
                                                 fontSize = 12.sp,
                                                 fontWeight = FontWeight.Normal,
@@ -302,7 +305,7 @@ class MySettingActivity : BaseActivity() {
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
                                             PronounsItem(
-                                                text = "He/Him",
+                                                text = stringResource(R.string.he_him),
                                                 isSelected = (editValue == GENDER.MALE.value),
                                                 onSelected = {
                                                     editValue = GENDER.MALE.value
@@ -310,7 +313,7 @@ class MySettingActivity : BaseActivity() {
                                             )
                                             Spacer(Modifier.width(6.dp))
                                             PronounsItem(
-                                                text = "She/Her",
+                                                text = stringResource(R.string.she_her),
                                                 isSelected = (editValue == GENDER.FEMALE.value),
                                                 onSelected = {
                                                     editValue = GENDER.FEMALE.value
@@ -318,7 +321,7 @@ class MySettingActivity : BaseActivity() {
                                             )
                                             Spacer(Modifier.width(6.dp))
                                             PronounsItem(
-                                                text = "They/Them",
+                                                text = stringResource(R.string.they_them),
                                                 isSelected = (editValue != GENDER.MALE.value && editValue != GENDER.FEMALE.value),
                                                 onSelected = {
                                                     editValue = GENDER.OTHER.value
@@ -491,7 +494,7 @@ private fun SaveBtn(onSave: () -> Unit) {
     ) {
         Text(
             modifier = Modifier.align(Alignment.Center),
-            text = "Save",
+            text = stringResource(R.string.save_button),
             fontSize = 16.sp,
             fontWeight = FontWeight.Normal,
             color = Color.White,

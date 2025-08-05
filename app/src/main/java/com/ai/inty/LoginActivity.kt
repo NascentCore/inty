@@ -241,7 +241,7 @@ fun LoginScreen(
                         performGoogleSignIn()
                     } else {
                         coroutineScope.launch {
-                            ToastUtils.showToast("Please check Terms of Use & Privacy Policy")
+                            ToastUtils.showToast(context.getString(R.string.toast_check_terms_privacy))
                         }
                     }
                 },
@@ -261,7 +261,7 @@ fun LoginScreen(
                 ) {
                     Image(
                         painter = painterResource(id = R.drawable.google),
-                        contentDescription = "Google Login",
+                        contentDescription = stringResource(R.string.content_desc_google_login),
                         modifier = Modifier
                             .align(Alignment.CenterStart)
                             .padding(start = 20.dp)
@@ -325,7 +325,7 @@ private fun PolicyText(checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "By continuing, you agree to IntelliMate's",
+                text = stringResource(R.string.by_continuing_agree_full),
                 style = baseTextStyle
             )
 
@@ -346,7 +346,7 @@ private fun PolicyText(checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
                 )
 
                 Text(
-                    text = " & ",
+                    text = stringResource(R.string.and_symbol),
                     color = Color.White.copy(alpha = 0.6f),
                     fontSize = 12.sp
                 )

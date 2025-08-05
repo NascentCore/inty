@@ -311,7 +311,8 @@ private fun mailTo(context: Context, email: String) {
     try {
         context.startActivity(Intent.createChooser(intent, "email"))
     } catch (e: Exception) {
-        Toast.makeText(context, "email error", Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, context.getString(R.string.toast_email_error), Toast.LENGTH_SHORT)
+            .show()
     }
 }
 

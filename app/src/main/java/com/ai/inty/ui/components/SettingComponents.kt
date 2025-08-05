@@ -243,7 +243,7 @@ fun LogoutButton(
 @Composable
 private fun SettingSwitchItemPreview() {
     SettingSwitchItem(
-        title = "Keep Talking",
+        title = stringResource(R.string.keep_talking),
         isEnabled = true,
         onToggle = {}
     )
@@ -253,8 +253,8 @@ private fun SettingSwitchItemPreview() {
 @Composable
 private fun SettingNavigationItemPreview() {
     SettingNavigationItem(
-        title = "Email Support",
-        subtitle = "support@inty.com",
+        title = stringResource(R.string.email_support),
+        subtitle = stringResource(R.string.support_email),
         onClick = {}
     )
 }
@@ -263,7 +263,7 @@ private fun SettingNavigationItemPreview() {
 @Composable
 private fun SettingInfoItemPreview() {
     SettingInfoItem(
-        title = "About",
+        title = stringResource(R.string.about),
         value = "1.0.0"
     )
 } 

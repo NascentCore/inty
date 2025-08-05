@@ -221,7 +221,7 @@ fun SysMsgItemContainer(
                 ) {
                     Text(
                         modifier = Modifier.padding(16.dp, 14.dp),
-                        text = "Click to check",
+                        text = stringResource(R.string.click_to_check_full),
                         fontSize = 14.sp,
                         color = Color.White.copy(0.55f)
                     )

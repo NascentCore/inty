@@ -304,4 +304,11 @@
     <string name="delete_character_confirm_full">Are you sure you want to delete "%s"? This action cannot be undone.</string>
     <string name="delete_button">Delete</string>
     <string name="cancel_button_full">Cancel</string>
+
+    <!-- Additional UI Text -->
+    <string name="keep_talking">Keep Talking</string>
+    <string name="email_support">Email Support</string>
+    <string name="support_email">support@inty.com</string>
+    <string name="about">About</string>
+
 </resources>

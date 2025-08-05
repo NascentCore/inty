@@ -182,7 +182,7 @@ internal fun MyPage(
                             overflow = TextOverflow.Ellipsis
                         )
                         Text(
-                            text = "Connectors",
+                            text = stringResource(R.string.connectors_full),
                             color = Color.White,
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Normal,
@@ -204,7 +204,7 @@ internal fun MyPage(
                             overflow = TextOverflow.Ellipsis
                         )
                         Text(
-                            text = "Followers",
+                            text = stringResource(R.string.followers_full),
                             color = Color.White,
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Normal,
@@ -417,7 +417,7 @@ private fun MyAgentCard(
                         DropdownMenuItem(
                             text = {
                                 Text(
-                                    text = "Edit",
+                                    text = stringResource(R.string.edit_button),
                                     color = Color.White,
                                     fontSize = 14.sp
                                 )
@@ -433,7 +433,7 @@ private fun MyAgentCard(
                         DropdownMenuItem(
                             text = {
                                 Text(
-                                    text = "Delete",
+                                    text = stringResource(R.string.delete_button),
                                     color = Color.Red,
                                     fontSize = 14.sp
                                 )
@@ -454,7 +454,7 @@ private fun MyAgentCard(
                 onDismissRequest = { showDeleteDialog = false },
                 title = {
                     Text(
-                        text = "Delete Character",
+                        text = stringResource(R.string.delete_character_full),
                         color = Color.White,
                         fontSize = 18.sp,
                         fontWeight = FontWeight.SemiBold
@@ -462,7 +462,10 @@ private fun MyAgentCard(
                 },
                 text = {
                     Text(
-                        text = "Are you sure you want to delete \"${agentInfo.name}\"? This action cannot be undone.",
+                        text = stringResource(
+                            R.string.delete_character_confirm_full,
+                            agentInfo.name
+                        ),
                         color = Color.White,
                         fontSize = 14.sp
                     )
@@ -478,7 +481,7 @@ private fun MyAgentCard(
                         )
                     ) {
                         Text(
-                            text = "Delete",
+                            text = stringResource(R.string.delete_button),
                             color = Color.White,
                             fontSize = 14.sp
                         )
@@ -492,7 +495,7 @@ private fun MyAgentCard(
                         )
                     ) {
                         Text(
-                            text = "Cancel",
+                            text = stringResource(R.string.cancel_button_full),
                             color = Color.White,
                             fontSize = 14.sp
                         )

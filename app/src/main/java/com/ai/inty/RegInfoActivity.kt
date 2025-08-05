@@ -254,11 +254,12 @@ fun RegInfoScreen(
 
             Spacer(Modifier.height(64.dp))
             val coroutineScope = rememberCoroutineScope()
+            val msg = stringResource(R.string.toast_fill_form_real_age)
             SaveBtn(
                 onSave = {
                     if (selectAge == "<18") {
                         coroutineScope.launch {
-                            ToastUtils.showToast("Please fill in the form according to your real age")
+                            ToastUtils.showToast(msg)
                         }
                     } else {
                         onSave(selectGender, selectAge)

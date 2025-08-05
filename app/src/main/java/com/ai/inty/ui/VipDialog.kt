@@ -67,7 +67,7 @@ private fun OpenChatDialog(
                     Spacer(Modifier.height(170.dp))
                 }
                 Text(
-                    text = "HeartMate Premium",
+                    text = stringResource(R.string.heartmate_premium_full),
                     fontSize = 22.sp,
                     fontWeight = FontWeight.Normal,
                     color = Color.White,
@@ -87,7 +87,7 @@ private fun OpenChatDialog(
                 HeartPrimaryButton(btnText = dialogData.btnText, onClick = onSure)
                 Spacer(Modifier.height(12.dp))
                 Text(
-                    text = "Auto-renews, cancel anytime",
+                    text = stringResource(R.string.auto_renews_cancel_full),
                     fontSize = 13.sp,
                     lineHeight = 20.sp,
                     fontWeight = FontWeight.Normal,
@@ -95,7 +95,7 @@ private fun OpenChatDialog(
                     textAlign = TextAlign.Center,
                 )
                 Text(
-                    text = "More Information",
+                    text = stringResource(R.string.more_information_full),
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Normal,
                     color = Color(0x59FFFFFF),
