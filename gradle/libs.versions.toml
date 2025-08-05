@@ -122,7 +122,7 @@ kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 
 # ===== 第三方插件 =====
-the-router = { id = "cn.therouter.agp8", version.ref = "theRouter" }
+the-router = { id = "cn.therouter", version.ref = "theRouter" }
 
 # ===== Google 服务插件 =====
 google-services = { id = "com.google.gms.google-services", version.ref = "googleServices" }
@@ -135,4 +135,3 @@ coils3 = ["coil-kt-compose3", "coil-kt-network-okhttp3"]
 
 # ===== JSON 序列化 =====
 moshi = ["moshi", "moshi-kotlin", "retrofit-moshi"]
-
