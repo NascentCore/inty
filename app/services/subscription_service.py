@@ -822,7 +822,7 @@ class SubscriptionService:
             if subscription_status.is_subscribed:
                 # 付费用户：使用订阅计划中的限制
                 background_limit = getattr(
-                    subscription_status, "background_generation_limit_per_day", 80
+                    subscription_status, "background_generation_limit_per_day", -1
                 )
 
                 # 如果是无限制，直接返回允许

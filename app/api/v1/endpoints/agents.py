@@ -17,10 +17,13 @@ from app.api import deps
 from app.core.agent.agent import agent_manager
 from app.core.agent.avatar import generate_background_image_to_gcs
 from app.core.config import settings
-from app.schemas.character_card import (CharacterCardExportRequest,
-                                        CharacterCardImportRequest,
-                                        CharacterCardImportResponse,
-                                        CharacterCardValidationResponse)
+from app.schemas.character_card import (
+    CharacterCardExportRequest,
+    CharacterCardImportRequest,
+    CharacterCardImportResponse,
+    CharacterCardValidationResponse,
+)
+# 移除未使用的导入
 from app.schemas.response import APIResponse
 from app.services import agent_service
 from app.services.character_card_service import character_card_service
@@ -281,17 +284,11 @@ async def generate_background(
                     )
                 )
 
-                if limit == -1:
-                    error_message = (
-                        "Background image generation failed, daily limit reached"
-                    )
+                # 根据订阅状态显示不同错误消息
+                if subscription_status.is_subscribed:
+                    error_message = f"Daily background image generation limit reached ({used_count}/{limit})"
                 else:
-                    if subscription_status.is_subscribed:
-                        # 订阅用户的错误提示
-                        error_message = f"Daily background image generation limit reached ({used_count}/{limit})"
-                    else:
-                        # 免费用户的错误提示
-                        error_message = f"Daily free background image generation limit reached ({used_count}/{limit})"
+                    error_message = f"Daily free background image generation limit reached ({used_count}/{limit})"
 
                 return APIResponse.error(
                     message=error_message,

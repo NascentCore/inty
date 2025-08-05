@@ -62,6 +62,7 @@ class ChatSettingsBase(BaseModel):
     language: str = "en"
     voice_enabled: bool = True  # 个性化语音自动播放开关
     keep_talking: bool = True
+    style_prompt: Optional[str] = None  # 风格提示词，仅订阅用户可设置
 
 
 class ChatSettingsCreate(ChatSettingsBase):
@@ -76,6 +77,7 @@ class ChatSettingsUpdate(ChatSettingsBase):
     language: Optional[str] = None
     voice_enabled: Optional[bool] = None  # 个性化语音自动播放开关
     keep_talking: Optional[bool] = None
+    style_prompt: Optional[str] = None  # 风格提示词，仅订阅用户可设置
 
 
 class ChatSettingsInDB(ChatSettingsBase):
@@ -85,6 +87,7 @@ class ChatSettingsInDB(ChatSettingsBase):
     user_id: str
     agent_id: str
     chat_id: str
+    style_prompt: Optional[str] = None  # 风格提示词，仅订阅用户可设置
     created_at: datetime
     updated_at: Optional[datetime] = None
 

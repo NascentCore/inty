@@ -36,6 +36,7 @@ logger = logging.getLogger(__name__)
 class CustomAgentState(MessagesState):
     user_profile: str = ""
     user_id: str = ""
+    chat_settings: Optional[Dict] = None
     remaining_steps: RemainingSteps
 
 
@@ -354,7 +355,32 @@ class Agent:
             character_messages = self._build_character_context(user_name=user_name)
             system_messages.extend(character_messages)
 
-            # 3. 模式提示词（在角色卡后面）- 使用全局默认或agent自定义
+            # 3. Chat Settings 中的风格提示词
+            if hasattr(state, "chat_settings") and state.chat_settings:
+                if (
+                    hasattr(state.chat_settings, "style_prompt")
+                    and state.chat_settings.style_prompt
+                ):
+                    system_messages.append(
+                        SystemMessage(content=state.chat_settings.style_prompt)
+                    )
+            elif isinstance(state, dict) and state.get("chat_settings"):
+                chat_settings = state.get("chat_settings")
+                if (
+                    hasattr(chat_settings, "style_prompt")
+                    and chat_settings.style_prompt
+                ):
+                    system_messages.append(
+                        SystemMessage(content=chat_settings.style_prompt)
+                    )
+                elif isinstance(chat_settings, dict) and chat_settings.get(
+                    "style_prompt"
+                ):
+                    system_messages.append(
+                        SystemMessage(content=chat_settings["style_prompt"])
+                    )
+
+            # 4. 模式提示词（在角色卡后面）- 使用全局默认或agent自定义
             mode_prompt = self._get_effective_mode_prompt()
             if mode_prompt:
                 # 支持模板渲染和字符替换
@@ -391,7 +417,7 @@ class Agent:
                 else:
                     system_messages.append(SystemMessage(content=output_format_prompt))
 
-            # 4. 用户个性化信息 - 独立的SystemMessage
+            # 5. 用户个性化信息 - 独立的SystemMessage
             if user_profile:
                 system_messages.append(SystemMessage(content=user_profile))
 
@@ -687,6 +713,7 @@ class Agent:
         session_id: str,
         messages: dict[str, Any],
         user_profile: str = None,
+        chat_settings=None,
     ) -> str:
         """
         优化版同步聊天方法，接受预计算的参数
@@ -748,6 +775,7 @@ class Agent:
                     messages=all_messages,
                     user_profile=user_profile or "",
                     user_id=user_id,
+                    chat_settings=chat_settings,
                 )
                 config = {"configurable": {"user_id": user_id}}
                 input_build_time = time.time() - input_build_start
@@ -996,7 +1024,12 @@ class Agent:
             # 不中断正常聊天流程
 
     async def chat(
-        self, user_id: str, session_id: str, messages: dict[str, Any], db_session=None
+        self,
+        user_id: str,
+        session_id: str,
+        messages: dict[str, Any],
+        db_session=None,
+        chat_settings=None,
     ) -> str:
         """异步聊天方法（优化版本）"""
         logger.info(f"开始聊天处理 - Agent: {self.agent_id}, Session: {session_id}")
@@ -1018,6 +1051,7 @@ class Agent:
                 session_id,
                 messages,
                 user_profile,
+                chat_settings,
             )
             return result
         except Exception as e:
