@@ -6,7 +6,7 @@
 
 import asyncio
 import aiohttp
-import json
+import pytest
 from typing import Dict, Any
 
 # 测试配置
@@ -50,6 +50,7 @@ class APITester:
                 return {}
 
 
+@pytest.mark.asyncio
 async def test_existing_apis():
     """测试现有的API端点"""
     print("🔍 测试现有API端点...")
