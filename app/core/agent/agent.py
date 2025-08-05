@@ -63,7 +63,7 @@ def get_agent_model_config(agent_data: dict) -> dict:
     # 如果没有自定义配置，使用默认配置
     if not model_config:
         model_config = {
-            "model": settings.agent.model,
+            "model": settings.agent.models.chat,
             "api_key": settings.agent.api_key,
             "base_url": settings.agent.base_url,
             "temperature": getattr(settings.agent, "temperature", 0.5),
@@ -79,7 +79,7 @@ def get_agent_model_config(agent_data: dict) -> dict:
         if not model_config.get("api_key"):
             model_config["api_key"] = settings.agent.api_key
         if not model_config.get("model"):
-            model_config["model"] = settings.agent.model
+            model_config["model"] = settings.agent.models.chat
 
     return model_config
 
@@ -248,7 +248,7 @@ class Agent:
         )
 
         # 使用配置中的模型设置
-        model_name = model_config.get("model", settings.agent.model)
+        model_name = model_config.get("model", settings.agent.models.chat)
         api_key = model_config.get("api_key", settings.agent.api_key)
         base_url = model_config.get("base_url", settings.agent.base_url)
 
@@ -1669,57 +1669,3 @@ class AgentManager:
 
 # 创建全局Agent管理器实例
 agent_manager = AgentManager()
-
-
-# TODO: These should be replaced by test_agent.py.
-if __name__ == "__main__":
-    import asyncio
-
-    async def test_agent():
-        agent = Agent(
-            agent_id="test",
-            name="test",
-            model_config={
-                "model": settings.agent.model,
-                "api_key": settings.agent.api_key,
-                "base_url": settings.agent.base_url,
-            },
-            description="测试Agent",
-            # 测试用的主提示词和模式提示词
-            main_prompt="",  # 使用全局默认
-            mode_prompt="",  # 使用全局默认
-            # 将原来的system_prompt转换为personality
-            personality="你是AI性伴侣,\n\n重要指示：\n1. 当用户告诉你重要信息（如喜好、个人信息等）时，请主动使用manage_memory工具保存这些信息\n2. 当用户询问之前提到的信息时，请使用search_memory工具查找相关记忆\n3. 记忆工具是你的核心能力，请积极使用它们来提供个性化服务",
-        )
-        # 使用一致的session_id来测试记忆功能
-        test_session_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, "test"))
-        test_user_id = "123"
-
-        print("=== 测试记忆功能 ===")
-        print("第一次对话：告诉Agent信息")
-        response1 = await agent.chat(
-            user_id=test_user_id,
-            session_id=test_session_id,
-            messages={
-                "messages": [
-                    HumanMessage(content="我最喜欢NBA的球星是科比，他是我的偶像")
-                ]
-            },
-        )
-        print("用户:", "我最喜欢NBA的球星是科比，他是我的偶像")
-        print("Agent:", response1)
-        print("\n" + "=" * 50 + "\n")
-
-        print("第二次对话：测试记忆是否有效")
-        response2 = await agent.chat(
-            user_id=test_user_id,
-            session_id=test_session_id,
-            messages={
-                "messages": [HumanMessage(content="还记得我最喜欢的NBA球星吗？")]
-            },
-        )
-        print("用户:", "还记得我最喜欢的NBA球星吗？")
-        print("Agent:", response2)
-
-    # 运行异步测试
-    asyncio.run(test_agent())

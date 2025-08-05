@@ -21,7 +21,7 @@ class TestAgentChat:
         self.session_id = str(uuid.uuid4())
 
         self.model_config = {
-            "model": settings.agent.model,
+            "model": settings.agent.models.chat,
             "api_key": settings.agent.api_key,
             "base_url": settings.agent.base_url,
             "temperature": 0.7,

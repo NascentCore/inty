@@ -109,7 +109,6 @@ class GoogleSearchConfig:
 
 @dataclass
 class AgentConfig:
-    model: str = "ep-20250210154211-js9rc"
     base_url: str = "https://ark.cn-beijing.volces.com/api/v3"
     api_key: str = "ff9ed2dd-cdf0-40d4-b4ec-d3aa19e2bd0b"
     temperature: float = 0.5
@@ -122,8 +121,11 @@ class AgentConfig:
 
     @dataclass
     class Models:
+        # Accessed through google's own SDK. So no need to specify google/ prefix.
         image_gen: str = "imagen-4.0-fast-generate-preview-06-06"
-        chat: str = "gemini-2.5-flash"
+        # Accessed through openai sdk + openrouter, so need to specify google/ prefix.
+        chat: str = "google/gemini-2.5-flash"
+        # Accessed through elevenlabs sdk. So no need to specify prefix.
         tts: str = "eleven_flash_v2_5"
 
     models: Models = field(default_factory=Models)
