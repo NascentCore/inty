@@ -84,7 +84,8 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
     private val _eventFlow = MutableSharedFlow<BillingEvent>()
     val eventFlow: SharedFlow<BillingEvent> = _eventFlow.asSharedFlow()
 
-    private val api = TheRouter.get(ISubscriptionApi::class.java)!!
+    private val api = TheRouter.get(ISubscriptionApi::class.java)
+        ?: error("Billing Repository theRouter init Error")
 
     init {
         // 应用启动先读本地
@@ -304,7 +305,7 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
                     _eventFlow.emit(
                         BillingEvent.PurchaseFailed(
                             billingResult.responseCode,
-                            billingResult.debugMessage ?: "未知错误"
+                            billingResult.debugMessage
                         )
                     )
                 }
@@ -1056,7 +1057,7 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
 
             when (billingResult.responseCode) {
                 BillingClient.BillingResponseCode.OK -> {
-                    productDetailsResult?.productDetailsList?.firstOrNull()?.let { productDetails ->
+                    productDetailsResult.productDetailsList.firstOrNull()?.let { productDetails ->
                         EasyLog.log("✅ 找到商品详情: ${productDetails.productId}")
                         EasyLog.log("   商品标题: ${productDetails.title}")
                         EasyLog.log("   商品描述: ${productDetails.description}")

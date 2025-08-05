@@ -48,11 +48,14 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.core.net.toUri
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ai.inty.base.BaseActivity
 import com.ai.inty.base.noRippleClickable
 import com.ai.inty.billing.BillingRepository
+import com.ai.inty.ui.AdvancedModelChatDialog
+import com.ai.inty.ui.ChatDialogData
 import com.ai.inty.ui.theme.BackGround
 import com.ai.inty.ui.theme.IntyTheme
 import com.ai.inty.viewmodels.MainViewModel
@@ -114,6 +117,8 @@ private fun SettingScreen(
     val context = LocalContext.current
 
     var showKeepTalking by remember { mutableStateOf(IntySetting.isShowKeepTalking()) }
+    var usePremiumMode by remember { mutableStateOf(IntySetting.isShowPremiumModel()) }
+    var showPremiumDialog by remember { mutableStateOf(false) }
 
     // 获取订阅状态
     val vipStatus by BillingRepository.vipStatusFlow.collectAsState()
@@ -188,6 +193,39 @@ private fun SettingScreen(
                     Spacer(Modifier.weight(1f))
                     Image(
                         painter = if (showKeepTalking) painterResource(R.drawable.opened) else painterResource(
+                            R.drawable.closed
+                        ),
+                        contentDescription = null,
+                    )
+                }
+                //高级模型使用开关,要有vip权限才能操作
+                val vipStatus = BillingRepository.vipStatusFlow.collectAsState().value
+                Spacer(Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp)
+                        .padding(horizontal = 12.dp)
+                        .noRippleClickable {
+                            if (!vipStatus.isSubscribed) {
+                                //非会员，则弹窗，高级模型使用的dialog
+                                showPremiumDialog = true
+                            } else {
+                                usePremiumMode = !usePremiumMode
+                                IntySetting.setShowPremiumModel(usePremiumMode)
+                            }
+                        },
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = stringResource(R.string.settings_premium_model),
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color.White
+                    )
+                    Spacer(Modifier.weight(1f))
+                    Image(
+                        painter = if (usePremiumMode) painterResource(R.drawable.opened) else painterResource(
                             R.drawable.closed
                         ),
                         contentDescription = null,
@@ -357,7 +395,7 @@ private fun SettingScreen(
                         .noRippleClickable {
                             val intent = Intent(
                                 Intent.ACTION_VIEW,
-                                Uri.parse(context.getString(R.string.settings_str_user_agreement))
+                                context.getString(R.string.settings_str_user_agreement).toUri()
                             )
                             context.startActivity(intent)
                         },
@@ -472,6 +510,7 @@ private fun SettingScreen(
                             )
                         )
                 )
+
                 //region 订阅管理
 
                 Spacer(Modifier.height(4.dp))
@@ -525,6 +564,7 @@ private fun SettingScreen(
                         )
                 )
                 //endregion
+
                 //版本号
                 Spacer(Modifier.height(4.dp))
                 Row(
@@ -611,6 +651,28 @@ private fun SettingScreen(
                 DeleteDialog(
                     { showDeleteAccountDialog = false },
                     onSubmit = { viewmodel.checkAccountSubscribe() })
+            }
+
+            //高级模型弹窗
+            if (showPremiumDialog) {
+                val data = ChatDialogData(
+                    R.drawable.img_advanced_model_dialog_bg,
+                    stringResource(R.string.str_premium_mode_dialog_content),
+                    stringResource(R.string.settings_premium_model)
+                )
+                AdvancedModelChatDialog(
+                    data,
+                    onCancel = { showPremiumDialog = false },
+                    onSure = {
+                        //购买最低档位的订阅
+                        showPremiumDialog = false
+                    },
+                    onMoreInfo = {
+                        //去会员中心
+                        TheRouter.build(Constant.ROUTE_VIP_CENTER).navigation()
+                        showPremiumDialog = false
+                    }
+                )
             }
 
         }

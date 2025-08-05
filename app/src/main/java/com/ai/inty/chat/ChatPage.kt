@@ -1,7 +1,6 @@
 package com.ai.inty.chat
 
 //import com.ai.inty.billing.BillingRepository
-import android.widget.Toast
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
@@ -79,6 +78,8 @@ import com.ai.inty.base.noRippleClickable
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.beans.MsgInfo
 import com.ai.inty.billing.BillingRepository
+import com.ai.inty.ui.AdvancedModelChatDialog
+import com.ai.inty.ui.ChatDialogData
 import com.ai.inty.ui.theme.BackGround
 import com.ai.inty.utils.ChatTextFormatter
 import com.ai.inty.utils.getChatBackground
@@ -156,7 +157,7 @@ internal fun ChatPage(
     }
 
     var showMorePanel by remember { mutableStateOf(false) }
-
+    var showPremiumDialog by remember { mutableStateOf(false) }
 
 
     Box(
@@ -206,10 +207,7 @@ internal fun ChatPage(
         }
 
         // 顶部渐变遮罩 - 固定位置
-        val colors = listOf(
-            Color(0xFF000000),
-            Color(0x00000000)
-        )
+        val colors = listOf(Color(0xFF000000), Color(0x00000000))
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -277,84 +275,100 @@ internal fun ChatPage(
 
                 Spacer(Modifier.height(16.dp))
 
-                // Premium model标签 - 左上角
+                //region  Premium model标签 - 左上角
+
                 if (agentInfo != null) {
                     Row(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 18.dp),
-                        horizontalArrangement = Arrangement.Start
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .height(32.dp)
-                                .background(
-                                    brush = if (agentPremiumModel) {
-                                        // 激活状态：渐变背景
-                                        Brush.horizontalGradient(
-                                            colors = listOf(
-                                                Color(0xFF2196F3), // 更鲜艳的蓝色
-                                                Color(0xFFE91E63)  // 粉色
-                                            )
+                            .padding(horizontal = 16.dp)
+                            .height(28.dp)
+                            .background(
+                                brush = if (agentPremiumModel) {
+                                    // 激活状态：渐变背景
+                                    Brush.horizontalGradient(
+                                        colors = listOf(
+                                            Color(0xFF00EEFF),
+                                            Color(0xFF0B50FF),
+                                            Color(0xFFFF00D0),
                                         )
-                                    } else {
-                                        // 置灰状态：半透明灰色
-                                        Brush.verticalGradient(
-                                            colors = listOf(
-                                                Color.Gray.copy(alpha = 0.7f),
-                                                Color.Gray.copy(alpha = 0.7f)
-                                            )
+                                    )
+                                } else {
+                                    // 置灰状态：半透明灰色
+                                    Brush.horizontalGradient(
+                                        colors = listOf(
+                                            Color(0xFF595959),
+                                            Color(0xFF9E9E9E),
+                                            Color(0xFF686868),
                                         )
-                                    },
-                                    shape = RoundedCornerShape(16.dp)
-                                )
-                                .padding(horizontal = 12.dp)
-                                .noRippleClickable {
-                                    // 检查VIP状态
-                                    if (!vipStatus.isSubscribed) {
-                                        // 如果不是VIP，显示提示
-                                        Toast.makeText(
-                                            context,
-                                            youAreNotVipText,
-                                            Toast.LENGTH_SHORT
-                                        ).show()
-                                    } else {
-                                        // 如果是VIP，打开聊天设置抽屉
-                                        scope.launch {
-                                            if (drawerState.value == DrawerValue.Closed) {
-                                                drawerState.value = DrawerValue.Open
-                                            } else {
-                                                drawerState.value = DrawerValue.Closed
-                                            }
+                                    )
+                                },
+                                shape = RoundedCornerShape(16.dp)
+                            )
+                            .noRippleClickable {
+                                // 检查VIP状态
+                                if (!vipStatus.isSubscribed) {
+                                    // 如果不是VIP，现实高级模型的弹窗
+                                    showPremiumDialog = true
+                                } else {
+                                    // 如果是VIP，打开聊天设置抽屉，让用户手动设置开关
+                                    scope.launch {
+                                        if (drawerState.value == DrawerValue.Closed) {
+                                            drawerState.value = DrawerValue.Open
+                                        } else {
+                                            drawerState.value = DrawerValue.Closed
                                         }
                                     }
-                                },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                // V图标
-                                Text(
-                                    text = "V",
-                                    color = Color.White,
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-
-                                // Premium model文本
-                                Text(
-                                    text = premiumModelText,
-                                    color = Color.White,
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Medium
-                                )
+                                }
                             }
-                        }
+                            .padding(horizontal = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        // V图标
+                        Image(
+                            painter = painterResource(if (vipStatus.isSubscribed) R.drawable.icon_vip_flag_on else R.drawable.icon_vip_flag_off),
+                            contentDescription = "",
+                            modifier = Modifier.size(20.dp)
+                        )
+
+                        // Premium model文本
+                        Text(
+                            text = premiumModelText,
+                            color = Color.White,
+                            fontSize = 10.sp,
+                            lineHeight = 10.sp,
+                            fontWeight = FontWeight.Normal
+                        )
                     }
                     Spacer(Modifier.height(8.dp))
+
+
+                    //高级模型弹窗
+                    if (showPremiumDialog) {
+                        val data = ChatDialogData(
+                            R.drawable.img_advanced_model_dialog_bg,
+                            stringResource(R.string.str_premium_mode_dialog_content),
+                            stringResource(R.string.settings_premium_model)
+                        )
+                        AdvancedModelChatDialog(
+                            data,
+                            onCancel = { showPremiumDialog = false },
+                            onSure = {
+                                //购买最低档位的订阅
+                                showPremiumDialog = false
+                            },
+                            onMoreInfo = {
+                                //去会员中心
+                                TheRouter.build(Constant.ROUTE_VIP_CENTER).navigation()
+                                showPremiumDialog = false
+                            }
+                        )
+                    }
+
                 }
+
+
+                //endregion
 
                 LazyColumn(
                     modifier = Modifier
@@ -773,11 +787,7 @@ internal fun ChatPage(
                                             // 检查VIP状态
                                             if (!vipStatus.isSubscribed) {
                                                 // 如果不是VIP，显示提示
-                                                Toast.makeText(
-                                                    context,
-                                                    youAreNotVipText,
-                                                    Toast.LENGTH_SHORT
-                                                ).show()
+                                                showPremiumDialog = true
                                             } else {
                                                 // 如果是VIP，允许切换
                                                 agentPremiumModel = !agentPremiumModel

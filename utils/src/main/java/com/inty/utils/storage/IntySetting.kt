@@ -158,13 +158,20 @@ object IntySetting {
         }
     }
 
-    // Premium model相关设置
+    //region Premium model相关设置
+
+    /**
+     * 设置全局app的模型，都使用高级vip模型
+     */
     fun setShowPremiumModel(show: Boolean) {
         curUserSetting.putBoolean("show_premium_model", show)
         // 当全局设置改变时，重置所有角色的premium model设置为与全局一致
         resetAllAgentPremiumModelToGlobal(show)
     }
 
+    /**
+     * 判断是否使用全局 高级vip模型
+     */
     fun isShowPremiumModel(): Boolean {
         return curUserSetting.decodeBool("show_premium_model", false)
     }
@@ -198,6 +205,8 @@ object IntySetting {
             }
         }
     }
+    //endregion
+
 
     private var isLoggingOut = false
 

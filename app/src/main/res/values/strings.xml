@@ -140,4 +140,9 @@
     <string name="settings_str_delete_account">Delete My Account</string>
     <string name="settings_str_user_agreement">https://app.termly.io/policy-viewer/policy.html?policyUUID=97416d63-aebb-4ea5-b990-eccc5aa6cff1</string>
     <string name="settings_str_privacy_policy">https://app.termly.io/policy-viewer/policy.html?policyUUID=c82c3bfa-10a0-4075-a7f1-a98d5146d71c</string>
+    <string name="str_premium_mode_dialog_content">Advanced models can reply to you more intelligently, more humanely and more efficiently. Become a member and enjoy a better conversation experience!</string>
+    <string name="str_premium_chat_dialog_content">If you want AI to reply to you in a more vivid and human tone, please purchase a membership and enjoy a better experience!</string>
+    <string name="str_beeter_ai_responeses">Customize better ai responses</string>
+    <string name="str_unlimit_dialog_content">If you want to continue chatting, you need to purchase a membership, which provides unlimited chats and more features for a comfortable experience!</string>
+    <string name="str_unlimit_btn_text">Unlimited Messages</string>
 </resources>
