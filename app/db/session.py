@@ -1,29 +1,10 @@
-from typing import AsyncGenerator, Generator
+from typing import AsyncGenerator
 
-from sqlalchemy import create_engine
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
 from app.core.config import settings
 
-# # 同步数据库引擎
-# engine = create_engine(
-#     str(settings.database.url),
-#     pool_pre_ping=True,
-# )
-# SessionLocal = sessionmaker(
-#     autocommit=False,
-#     autoflush=False,
-#     bind=engine
-# )
-
-# def get_db() -> Generator:
-#     """获取数据库会话"""
-#     try:
-#         db = SessionLocal()
-#         yield db
-#     finally:
-#         db.close()
 
 # 异步数据库引擎
 async_engine = create_async_engine(

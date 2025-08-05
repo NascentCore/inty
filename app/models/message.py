@@ -5,7 +5,7 @@ from sqlalchemy import Column, DateTime, Enum, ForeignKey, String
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
-from app.db.base_class import Base
+from app.models import Base
 
 
 class MessageType(str, enum.Enum):

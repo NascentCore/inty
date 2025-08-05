@@ -1,3 +1,14 @@
+"""
+Imports all models for centralized management.
+
+Base object is used to define all tables in app/models, when importing all models,
+their metadata is added to Base.metadata, which is then shared with alembic's env.py file
+to get all data tables.
+
+!!! All models must be defined with Base as their base class.
+!!! All models must be imported here to be added to Base.metadata.
+"""
+
 from sqlalchemy.ext.declarative import declarative_base
 
 Base = declarative_base()
@@ -43,3 +54,4 @@ from app.models.evaluation import (
     EvaluationTemplate,
     EvaluationStatus,
 )
+from app.models.voice_cache import VoiceCache

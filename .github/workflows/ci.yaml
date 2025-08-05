@@ -37,6 +37,17 @@ jobs:
           pip install -r requirements.txt
           pip install pytest
 
+      - name: Test Alembic versions
+        run: |
+          # Create a config.yaml file for alembic to reach the database:
+          echo "database:" >> config.yaml
+          echo "  db: inty_db" >> config.yaml
+          echo "  host: localhost" >> config.yaml
+          echo "  password: sxwl666!" >> config.yaml
+          echo "  port: 15432" >> config.yaml
+          echo "  user: postgres" >> config.yaml
+          alembic upgrade head
+
       - name: Run tests
         run: |
           cp config.yaml.example config.yaml
