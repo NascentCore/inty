@@ -4,36 +4,38 @@ InTy 是一个基于 FastAPI 和 PostgreSQL 的 AI 聊天应用后端，集成�
 
 ## 系统架构
 
-```
+```ascii
                                HTTP Clients
                                       │
                                       ▼
 ┌────────────────────────────────────────────────────────────────────┐
 │                FastAPI application (app/main.py)                   │
 │ • loads config, logging                                            │
-│ • CORS & error middleware                                         │
+│ • CORS & error middleware                                          │
 │ • startup: init Firebase, cache_service, background_task_service,  │
 │   keep_talking_service, agent_manager                              │
-└───────────────┬────────────────────────────────────────────────────┘
-                │
-                ▼
-          ┌──────────────┐
-          │ API Routers  │  (/api/v1/endpoints/* – auth, users, agents,
-          └───────┬──────┘   chats, settings, report, subscription, evaluation…)
+└─────────────────┬────────────────────────────────────────────────────┘
                   │
                   ▼
-          ┌──────────────────────────┐
-          │        Services          │
-          │ agent_service, chat_service, user_service,
-          │ voice_service, notification_service, …                     │
-          └──────┬───────────────────┘
+          ┌──────────────┐   (/api/v1/endpoints/* – auth, users, agents,
+          │ API Routers  │    chats, settings, report, subscription, evaluation…)
+          └───────┬──────┘   
+                  │
+                  ▼
+          ┌──────────────────────────────┐
+          │        Services              │
+          │ agent_service, chat_service, |
+          │ user_service, voice_service, |
+          | notification_service, …      │
+          └──────┬───────────────────────┘
                  │
-        ┌────────▼────────┐         ┌───────────────────────────┐
-        │ Core Agent       │         │ Data Access Layer         │
-        │ (LangChain /     │         │ • SQLAlchemy models       │
-        │  LangGraph /     │         │ • async sessions          │
-        │  embeddings /    │         │ • chat_history_service    │
-        │  GCS / cache )   │         └───────────┬──────────────┘
+                 ▼
+        ┌─────────────────┐         ┌───────────────────────────┐
+        │ Core Agent      │         │ Data Access Layer         │
+        │ (LangChain /    │         │ • SQLAlchemy models       │
+        │  LangGraph /    │         │ • async sessions          │
+        │  embeddings /   │         │ • chat_history_service    │
+        │  GCS / cache )  │         └───────────┬───────────────┘
         └───────┬─────────┘                     │
                 │                               ▼
                 │                    ┌────────────────────┐
@@ -69,12 +71,13 @@ git clone https://github.com/NascentCore/inty-backend.git
 cd inty-backend
 
 python -m venv venv
-source venv/bin/activate  # Linux/Mac
+source venv/bin/activate
 
 pip install -r requirements.txt
 
 # Copy the sample config file to the actual file name
 # And edit config.yaml to set the correct settings.
+# You only need to do this once to have a working config.yaml file.
 cp config.yaml.example config.yaml
 ```
 
@@ -104,15 +107,7 @@ docker run --rm --name pg-vec-inty -p $PG_PORT:5432 \
     -e POSTGRES_PASSWORD=sxwl666! -d pgvector/pgvector:pg16
 createdb -h localhost -p 15432 -U postgres inty_db
 
-# Update database schemas
-# Fill in the correct database settings to config.yaml
-# The rest of configs can use the defaults, which do not affect local development.
-# database:
-#   db: inty_db
-#   host: "localhost"
-#   password: sxwl666!
-#   port: 15432
-#   user: postgres
+# Update database schemas using alembic
 alembic upgrade head
 
 # 初始化订阅计划（可选）
@@ -145,7 +140,7 @@ TODO: 只保留一种就够了！
 cp config.yaml.example config.yaml
 ```
 
-2. **使用 Gunicorn 部署**
+1. **使用 Gunicorn 部署**
 
 ```bash
 # 安装 Gunicorn
@@ -155,7 +150,7 @@ pip install gunicorn
 gunicorn app.main:app -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000
 ```
 
-3. **使用 Docker 部署**
+1. **使用 Docker 部署**
 
 ```bash
 # 构建镜像
@@ -202,53 +197,6 @@ PYTHONPATH=/Users/yzhao/Workspace/NascentCore/inty-backend \
     - 设置 “roles/storage.admin” 角色
     - 点击创建的服务帐号 -> 密钥 -> 创建新密钥
     - 下载的文件重命名为：inty-backend-key.json
-
-## 功能特性
-
-TODO: 这部分内容应该浓缩成对读者有价值的关键信息，而不是罗列低效信息。
-
-### 🤖 AI 智能体系统
-
-* **基于 LangGraph 的智能体引擎**：支持复杂的对话流程和状态管理
-* **多模型支持**：集成 OpenAI、Anthropic、Google AI 等主流模型
-* **智能体管理**：创建、编辑、发布和管理 AI 角色
-* **提示词模板系统**：支持动态提示词生成和模板化管理
-* **记忆系统**：基于 PostgreSQL 的持久化对话记忆
-* **Keep Talking 功能**：智能主动延续对话，提升用户体验
-
-### 🔐 用户认证与授权
-
-* **多种认证方式**：手机号、Google OAuth、游客模式
-* **JWT 令牌认证**：安全的身份验证机制
-* **Firebase 集成**：完整的身份验证服务
-* **用户权限管理**：基于角色的访问控制
-
-### 💰 商业化订阅系统
-
-* **Google Play 订阅集成**：支持月度和季度订阅
-* **订阅状态管理**：实时跟踪用户订阅状态
-* **使用量统计**：详细的功能使用统计和限制
-* **收据验证**：安全的购买验证机制
-* **订阅权益管理**：灵活的功能权限配置
-
-### 💬 聊天功能
-
-* **实时消息传输**：高性能的异步消息处理
-* **AI 语音回复**：集成 ElevenLabs API 的智能语音合成
-* **语音自动播放**：可配置的语音自动播放和手动播放
-* **语音缓存优化**：智能缓存机制，降低API调用成本
-* **多媒体支持**：文本、语音、图片消息
-* **聊天设置管理**：个性化的对话配置
-* **多语言支持**：国际化的用户界面
-* **消息推送**：实时通知系统
-
-### 🛠 系统功能
-
-* **资源管理**：集成 Google Cloud Storage 的文件管理
-* **日志监控**：完整的日志记录和错误追踪
-* **API 文档**：自动生成的 OpenAPI 文档
-* **数据库迁移**：版本化的数据库管理
-* **性能优化**：异步处理和连接池优化
 
 ## 技术栈
 
