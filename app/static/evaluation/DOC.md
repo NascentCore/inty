@@ -27,7 +27,10 @@ docker build --platform linux/amd64 \
 docker push $IMAGE
 
 # Use gcp to ssh to gcp vm
+ssh inty
 docker stop inty-test-new
+# You are now on another server, redefine env var
+IMAGE=ghcr.io/nascentcore/inty-backend/inty-eval:latest
 docker rmi $IMAGE
 docker run --rm -d -p 8103:80 --name inty-test-new $IMAGE
 
