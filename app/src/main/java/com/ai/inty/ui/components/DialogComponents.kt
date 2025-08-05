@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -46,7 +47,7 @@ fun DeleteAccountDialog(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Are you sure?",
+                    text = stringResource(R.string.are_you_sure),
                     fontSize = 22.sp,
                     color = Color.White
                 )
@@ -63,7 +64,7 @@ fun DeleteAccountDialog(
             Spacer(Modifier.height(8.dp))
 
             Text(
-                text = "All your data including chats history and created AI characters will be lost, and cannot be restored.",
+                text = stringResource(R.string.delete_account_warning),
                 fontSize = 14.sp,
                 color = Color.White
             )
@@ -71,7 +72,7 @@ fun DeleteAccountDialog(
             Spacer(Modifier.height(8.dp))
 
             Text(
-                text = "Please read the warning carefully and proceed with caution.",
+                text = stringResource(R.string.please_read_warning),
                 fontSize = 16.sp,
                 color = Color.White
             )
@@ -85,14 +86,14 @@ fun DeleteAccountDialog(
                     .fillMaxWidth(.85f)
                     .align(Alignment.CenterHorizontally)
             ) {
-                Text("Cancel", fontSize = 18.sp, color = Color.White)
+                Text(stringResource(R.string.cancel), fontSize = 18.sp, color = Color.White)
             }
 
             TextButton(
                 onClick = onConfirm,
                 modifier = Modifier.align(Alignment.CenterHorizontally)
             ) {
-                Text("Delete", fontSize = 14.sp, color = Color.Red)
+                Text(stringResource(R.string.delete), fontSize = 14.sp, color = Color.Red)
             }
         }
     }

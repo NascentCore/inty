@@ -216,7 +216,7 @@ fun LoginScreen(
 
             // 欢迎文本
             Text(
-                text = "Welcome to IntelliMate",
+                text = stringResource(R.string.welcome_to_intellimate),
                 color = Color.White,
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold
@@ -225,7 +225,7 @@ fun LoginScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "Create an account or log in to continue",
+                text = stringResource(R.string.create_account_or_login),
                 color = Color.White.copy(alpha = 0.55f),
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Normal
@@ -268,7 +268,7 @@ fun LoginScreen(
                             .size(24.dp)
                     )
                     Text(
-                        text = "Continue with Google",
+                        text = stringResource(R.string.continue_with_google),
                         color = Color.Black,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.SemiBold

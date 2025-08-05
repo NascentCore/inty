@@ -55,6 +55,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -128,7 +129,7 @@ private fun AvatarGeneratePage(
                     .copy(containerColor = Color.Transparent),
                 title = {
                     Text(
-                        text = "Generate Avatar",
+                        text = stringResource(R.string.generate_avatar),
                         fontSize = 18.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = Color.White
@@ -275,7 +276,7 @@ private fun AvatarPreviewSection(
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
-                        text = "Preview\nGenerated Avatar",
+                        text = stringResource(R.string.preview_generated_avatar),
                         fontSize = 14.sp,
                         color = Color.White.copy(0.7f),
                         textAlign = TextAlign.Center
@@ -317,7 +318,7 @@ private fun PromptInputField(
 ) {
     Column {
         Text(
-            text = "Describe your desired avatar *",
+            text = stringResource(R.string.describe_desired_avatar),
             fontSize = 16.sp,
             color = Color.White,
             fontWeight = FontWeight.Medium

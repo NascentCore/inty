@@ -17,7 +17,7 @@
     <string name="ID">ID:%s</string>
     <string name="no_agent">No relevant content</string>
     <string name="settings">Settings</string>
-    <string name="settings_keep_talking">Show “Keep Talking” button</string>
+    <string name="settings_keep_talking">Show "Keep Talking" button</string>
     <string name="settings_auto_play_audio">Auto-play voice messages</string>
     <string name="settings_email_support">Email Support</string>
     <string name="settings_email_inty">IntelliMate@inty.cc</string>
@@ -145,4 +145,163 @@
     <string name="str_beeter_ai_responeses">Customize better ai responses</string>
     <string name="str_unlimit_dialog_content">If you want to continue chatting, you need to purchase a membership, which provides unlimited chats and more features for a comfortable experience!</string>
     <string name="str_unlimit_btn_text">Unlimited Messages</string>
+
+    <!-- Login and Registration -->
+    <string name="welcome_to_intellimate">Welcome to IntelliMate</string>
+    <string name="create_account_or_login">Create an account or log in to continue</string>
+    <string name="continue_with_google">Continue with Google</string>
+    <string name="by_continuing_agree">By continuing, you agree to IntelliMate\'s</string>
+    <string name="and">&amp;</string>
+    <string name="hello_wave">Hello 👋</string>
+    <string name="tell_us_more">Tell us more for a better personalized experience</string>
+    <string name="which_pronoun_use">Which pronoun do you use? *</string>
+    <string name="what_is_your_age">What is your age? *</string>
+    <string name="age_under_18">&lt;18</string>
+    <string name="age_18_20">18-20</string>
+    <string name="age_21_23">21-23</string>
+    <string name="age_24_29">24-29</string>
+    <string name="age_30_36">30-36</string>
+    <string name="age_above_36">Above 36</string>
+    <string name="enter">Enter</string>
+
+    <!-- Avatar Generation -->
+    <string name="generate_avatar">Generate Avatar</string>
+    <string name="preview_generated_avatar">Preview\nGenerated Avatar</string>
+    <string name="describe_desired_avatar">Describe your desired avatar *</string>
+    <string name="avatar_creation_hint">Your avatar and background image will be created based on the input prompt word.</string>
+    <string name="use_this_avatar">Use This Avatar</string>
+    <string name="regen">Regen.</string>
+
+    <!-- Character Creation -->
+    <string name="generate_avatar_title">Generate\nAvatar</string>
+    <string name="face_edit">Face edit</string>
+    <string name="gender_unmodified">Gender (Unmodified after Creation) *</string>
+    <string name="sound_required">Sound *</string>
+    <string name="inty_voice_option">Inty Voice</string>
+    <string name="greater_than">&gt;</string>
+    <string name="star">★</string>
+    <string name="visibility_required_title">Visibility *</string>
+    <string name="music_note">🎵</string>
+
+    <!-- Report -->
+    <string name="npc_asterisk">NPC *</string>
+    <string name="report_description">Report description *</string>
+    <string name="please_fill_feedback">Please fill in the feedback content...</string>
+    <string name="character_count_format">%d/400</string>
+    <string name="image_evidence">Image evidence</string>
+    <string name="submit">Submit</string>
+
+    <!-- Settings -->
+    <string name="please_enter_character">Please enter your character...</string>
+    <string name="he_him">He/Him</string>
+    <string name="she_her">She/Her</string>
+    <string name="they_them">They/Them</string>
+    <string name="save">Save</string>
+
+    <!-- System Messages -->
+    <string name="click_to_check">Click to check</string>
+
+    <!-- Dialog Components -->
+    <string name="are_you_sure">Are you sure?</string>
+    <string name="delete_account_warning">All your data including chats history and created AI characters will be lost, and cannot be restored.</string>
+    <string name="please_read_warning">Please read the warning carefully and proceed with caution.</string>
+    <string name="cancel">Cancel</string>
+    <string name="delete">Delete</string>
+
+    <!-- My Page -->
+    <string name="connectors">Connectors</string>
+    <string name="followers">Followers</string>
+    <string name="edit">Edit</string>
+    <string name="delete_character">Delete Character</string>
+    <string name="delete_character_confirm">Are you sure you want to delete "%s"? This action cannot be undone.</string>
+
+    <!-- VIP Dialog -->
+    <string name="heartmate_premium">HeartMate Premium</string>
+    <string name="auto_renews_cancel">Auto-renews, cancel anytime</string>
+    <string name="more_information">More Information</string>
+
+    <!-- Chat -->
+    <string name="play_button">▶</string>
+    <string name="empty_parentheses">()</string>
+    <string name="my_chat_persona">My Chat Persona</string>
+    <string name="chat_settings">Chat Settings</string>
+
+    <!-- VIP Components -->
+    <string name="save_percentage">Save %d%%</string>
+    <string name="no_subscription_plans">暂无订阅计划信息</string>
+
+    <!-- Agent Info -->
+    <string name="gender_tag_format">#%s</string>
+
+    <!-- Toast Messages -->
+    <string name="toast_google_play_unavailable">无法打开 Google Play 商店。</string>
+    <string name="toast_navigation_failed">跳转失败，请稍后再试。</string>
+    <string name="toast_crop_failed">Crop failed: %s</string>
+    <string name="toast_invalid_image_url">Invalid image URL</string>
+    <string name="toast_no_avatar_image">No avatar image to crop</string>
+    <string name="toast_image_file_not_found">Image file not found</string>
+    <string name="toast_failed_open_crop_editor">Failed to open crop editor</string>
+    <string name="toast_email_error">email error</string>
+    <string name="toast_fill_form_real_age">Please fill in the form according to your real age</string>
+    <string name="toast_check_terms_privacy">Please check Terms of Use &amp; Privacy Policy</string>
+    <string name="toast_error_message">%s</string>
+    <string name="toast_cancel_subscription_first">Please cancel the subscription before proceeding</string>
+    <string name="toast_check_account_deletion_error">Check Account Deletion Server Error !</string>
+    <string name="toast_account_deletion_error">Account Deletion Server Error !</string>
+
+    <!-- Content Descriptions -->
+    <string name="content_desc_google_login">Google Login</string>
+    <string name="content_desc_vip_banner">vip banner</string>
+    <string name="content_desc_generated_avatar">Generated Avatar</string>
+    <string name="content_desc_generated_avatar_index">Generated Avatar %d</string>
+    <string name="content_desc_swipe_guide">滑动引导手势</string>
+    <string name="content_desc_selected_avatar">Selected Avatar</string>
+    <string name="content_desc_face_edit">Face edit</string>
+    <string name="content_desc_back">back</string>
+
+    <!-- Additional UI Text -->
+    <string name="avatar_creation_hint_full">Your avatar and background image will be created based on the input prompt word.</string>
+    <string name="generate_avatar_button">Generate Avatar</string>
+    <string name="use_this_avatar_button">Use This Avatar</string>
+    <string name="regen_button">Regen.</string>
+    <string name="by_continuing_agree_full">By continuing, you agree to IntelliMate\'s</string>
+    <string name="and_symbol">&amp;</string>
+    <string name="npc_asterisk_full">NPC *</string>
+    <string name="report_description_full">Report description *</string>
+    <string name="please_fill_feedback_full">Please fill in the feedback content...</string>
+    <string name="character_count_format_full">%d/400</string>
+    <string name="image_evidence_full">Image evidence</string>
+    <string name="submit_button">Submit</string>
+    <string name="please_enter_character_full">Please enter your character...</string>
+    <string name="character_count_format_my">%d/400</string>
+    <string name="save_button">Save</string>
+    <string name="click_to_check_full">Click to check</string>
+    <string name="report_button">Report</string>
+    <string name="cancel_button">Cancel</string>
+    <string name="generate_avatar_title_full">Generate\nAvatar</string>
+    <string name="face_edit_full">Face edit</string>
+    <string name="gender_unmodified_full">Gender (Unmodified after Creation) *</string>
+    <string name="male_full">Male</string>
+    <string name="female_full">Female</string>
+    <string name="non_binary_full">Non-Binary</string>
+    <string name="music_note_symbol">🎵</string>
+    <string name="sound_required_full">Sound *</string>
+    <string name="inty_voice_option_full">Inty Voice</string>
+    <string name="greater_than_symbol">&gt;</string>
+    <string name="star_symbol">★</string>
+    <string name="visibility_required_title_full">Visibility *</string>
+    <string name="heartmate_premium_full">HeartMate Premium</string>
+    <string name="auto_renews_cancel_full">Auto-renews, cancel anytime</string>
+    <string name="more_information_full">More Information</string>
+    <string name="play_button_symbol">▶</string>
+    <string name="empty_parentheses_symbol">()</string>
+    <string name="my_chat_persona_full">My Chat Persona</string>
+    <string name="chat_settings_full">Chat Settings</string>
+    <string name="connectors_full">Connectors</string>
+    <string name="followers_full">Followers</string>
+    <string name="edit_button">Edit</string>
+    <string name="delete_character_full">Delete Character</string>
+    <string name="delete_character_confirm_full">Are you sure you want to delete "%s"? This action cannot be undone.</string>
+    <string name="delete_button">Delete</string>
+    <string name="cancel_button_full">Cancel</string>
 </resources>

@@ -32,6 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -122,7 +123,7 @@ fun RegInfoScreen(
             Spacer(Modifier.height(6.dp))
             Text(
                 modifier = Modifier.padding(horizontal = 24.dp),
-                text = "Hello \uD83D\uDC4B",
+                text = stringResource(R.string.hello_wave),
                 fontSize = 26.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.White,
@@ -130,7 +131,7 @@ fun RegInfoScreen(
             Spacer(Modifier.height(13.dp))
             Text(
                 modifier = Modifier.padding(horizontal = 24.dp),
-                text = "Welcome to IntelliMate",
+                text = stringResource(R.string.welcome_to_intellimate),
                 fontSize = 26.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.White,
@@ -138,7 +139,7 @@ fun RegInfoScreen(
             Spacer(Modifier.height(8.dp))
             Text(
                 modifier = Modifier.padding(horizontal = 24.dp),
-                text = "Tell us more for a better personalized experience",
+                text = stringResource(R.string.tell_us_more),
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Normal,
                 color = Color.White.copy(0.55f),
@@ -146,7 +147,7 @@ fun RegInfoScreen(
             Spacer(Modifier.height(26.dp))
             Text(
                 modifier = Modifier.padding(horizontal = 24.dp),
-                text = "Which pronoun do you use?  *",
+                text = stringResource(R.string.which_pronoun_use),
                 fontSize = 14.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = Color.White,
@@ -184,7 +185,7 @@ fun RegInfoScreen(
             Spacer(Modifier.height(16.dp))
             Text(
                 modifier = Modifier.padding(horizontal = 24.dp),
-                text = "What is your age? *",
+                text = stringResource(R.string.what_is_your_age),
                 fontSize = 14.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = Color.White,
@@ -203,7 +204,7 @@ fun RegInfoScreen(
                     .height(48.dp)
                 AgeItem(
                     itemModifier,
-                    text = "<18",
+                    text = stringResource(R.string.age_under_18),
                     isSelected = (selectAge == "<18"),
                     onSelected = {
                         selectAge = "<18"
@@ -211,7 +212,7 @@ fun RegInfoScreen(
                 )
                 AgeItem(
                     itemModifier,
-                    text = "18-20",
+                    text = stringResource(R.string.age_18_20),
                     isSelected = (selectAge == "18-20"),
                     onSelected = {
                         selectAge = "18-20"
@@ -219,7 +220,7 @@ fun RegInfoScreen(
                 )
                 AgeItem(
                     itemModifier,
-                    text = "21-23",
+                    text = stringResource(R.string.age_21_23),
                     isSelected = (selectAge == "21-23"),
                     onSelected = {
                         selectAge = "21-23"
@@ -227,7 +228,7 @@ fun RegInfoScreen(
                 )
                 AgeItem(
                     itemModifier,
-                    text = "24-29",
+                    text = stringResource(R.string.age_24_29),
                     isSelected = (selectAge == "24-29"),
                     onSelected = {
                         selectAge = "24-29"
@@ -235,7 +236,7 @@ fun RegInfoScreen(
                 )
                 AgeItem(
                     itemModifier,
-                    text = "30-36",
+                    text = stringResource(R.string.age_30_36),
                     isSelected = (selectAge == "30-36"),
                     onSelected = {
                         selectAge = "30-36"
@@ -243,7 +244,7 @@ fun RegInfoScreen(
                 )
                 AgeItem(
                     itemModifier,
-                    text = "Above 36",
+                    text = stringResource(R.string.age_above_36),
                     isSelected = (selectAge == "Above 36"),
                     onSelected = {
                         selectAge = "Above 36"
@@ -291,7 +292,7 @@ private fun SaveBtn(onSave: () -> Unit) {
     ) {
         Text(
             modifier = Modifier.align(Alignment.Center),
-            text = "Enter",
+            text = stringResource(R.string.enter),
             fontSize = 16.sp,
             fontWeight = FontWeight.Normal,
             color = Color.White,

@@ -149,7 +149,10 @@ fun PremiumPlanCard(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "Save ${((1 - plan.discountRate) * 100).toInt()}/%",
+                    text = stringResource(
+                        R.string.save_percentage,
+                        ((1 - plan.discountRate) * 100).toInt()
+                    ),
                     color = Color.Black,
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Bold,
@@ -275,7 +278,11 @@ fun AutoRenewalNotice(
                 }
             )
 
-            Text(text = " & ", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp)
+            Text(
+                text = stringResource(R.string.and),
+                color = Color.White.copy(alpha = 0.6f),
+                fontSize = 12.sp
+            )
 
             val termsOfUse = buildAnnotatedString {
                 withStyle(SpanStyle(textDecoration = TextDecoration.Underline)) {
@@ -306,7 +313,7 @@ fun EmptyPlanState(
     modifier: Modifier = Modifier
 ) {
     Text(
-        text = "暂无订阅计划信息",
+        text = stringResource(R.string.no_subscription_plans),
         color = Color.White.copy(alpha = 0.6f),
         fontSize = 14.sp,
         textAlign = TextAlign.Center,
