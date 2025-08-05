@@ -16,7 +16,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import relationship
 
-from app.db.base_class import Base
+from app.models import Base
 
 
 class SubscriptionPlanType(str, enum.Enum):

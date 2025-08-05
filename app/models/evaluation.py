@@ -17,7 +17,7 @@ import sqlalchemy as sa
 import enum
 import uuid
 
-from app.db.base_class import Base
+from app.models import Base
 
 
 class EvaluationStatus(str, enum.Enum):
