@@ -14,6 +14,8 @@ When adding new tables, you also need to import the table in
 When deploying backend service, you also need to run `alembic upgrade head`
 to sync the db to the codebase.
 
+All table definitions must be added to `app/models` directory for consistency.
+
 ## Core Structure
 
 | Layer | Key Modules | Notes |
