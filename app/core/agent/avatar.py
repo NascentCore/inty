@@ -6,7 +6,6 @@ from loguru import logger
 
 from app.core.config import settings
 
-# Remove circular import - will get settings when needed
 
 # Initialize Google Gen AI client with Vertex AI
 # The client will use the same credentials as configured for GCS
