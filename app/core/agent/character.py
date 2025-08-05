@@ -75,7 +75,7 @@ def get_opposite_gender(user_gender: str) -> str:
     return opposite
 
 
-def generate_background_image_to_gcs(
+def generate_character_image_to_gcs(
     prompt: str,
     gcs_uri_base: str,
     count=1,
@@ -84,7 +84,7 @@ def generate_background_image_to_gcs(
     include_rai_reason=False,
 ):
     """
-    使用output_gcs_uri参数直接将生成的背景图保存到GCS，返回实际生成的图片GCS路径列表
+    使用output_gcs_uri参数直接将生成的角色图片保存到GCS，返回实际生成的图片GCS路径列表
     支持includeRaiReason参数获取RAI过滤原因
 
     Args:
@@ -186,7 +186,7 @@ def generate_background_image_to_gcs(
             return generated_uris
 
     except Exception as e:
-        logger.error(f"Error in generate_background_image_to_gcs: {e}")
+        logger.error(f"Error in generate_character_image_to_gcs: {e}")
         import traceback
 
         traceback.print_exc()

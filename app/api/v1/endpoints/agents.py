@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app import schemas
 from app.api import deps
 from app.core.agent.agent import agent_manager
-from app.core.agent.avatar import generate_background_image_to_gcs
+from app.core.agent.character import generate_character_image_to_gcs
 from app.core.config import settings
 from app.schemas.character_card import (
     CharacterCardExportRequest,
@@ -310,7 +310,7 @@ async def generate_background(
         )
 
         # Generate images and get actual GCS URLs with RAI reason support
-        result = generate_background_image_to_gcs(
+        result = generate_character_image_to_gcs(
             request.prompt,
             gcs_uri_base,
             count=request.count,

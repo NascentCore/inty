@@ -1,4 +1,4 @@
-# Avatar generation
+# Character generation
 
 ## Common words that should not cause failure
 
