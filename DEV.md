@@ -2,6 +2,18 @@
 
 InTy is a FastAPI- and PostgreSQL-based AI chat backend that integrates LangChain and LangGraph for managing multi-model AI agents in an asynchronous architecture. The project supports features such as user authentication, subscription management, and AI voice services.
 
+## Alembic
+
+When change existing tables, or add new tables, or removing tables,
+you must run `alembic revision --autogenerate -m "description"`
+to generate new alembic versions.
+
+When adding new tables, you also need to import the table in
+`app/models/__init__.py` so that alembic can pick up the table definition.
+
+When deploying backend service, you also need to run `alembic upgrade head`
+to sync the db to the codebase.
+
 ## Core Structure
 
 | Layer | Key Modules | Notes |
