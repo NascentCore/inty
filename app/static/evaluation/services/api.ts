@@ -1,6 +1,5 @@
 /**
- * 评测系统API服务层
- * 基于现代Web API标准，支持TypeScript类型安全
+ * 此处代码是评测系统调用 Inty 后端 API
  */
 
 import { authService } from './auth';
@@ -32,6 +31,9 @@ class ApiClient {
 
   constructor(baseURL: string = process.env.REACT_APP_API_BASE_URL || '/api/v1') {
     this.baseURL = baseURL;
+    // This is the default headers for all requests.
+    // Some API endpoints needs different content header, like upload avatar,
+    // needs multipart/form-data.
     this.headers = {
       'Content-Type': 'application/json',
     };
@@ -42,7 +44,7 @@ class ApiClient {
     options: RequestInit = {}
   ): Promise<T> {
     const url = `${this.baseURL}${endpoint}`;
-    
+
     const config: RequestInit = {
       ...options,
       headers: {
@@ -50,6 +52,19 @@ class ApiClient {
         ...options.headers,
       },
     };
+
+    // 如果是上传请求（FormData），不要覆盖Content-Type
+    if (options.body instanceof FormData) {
+      config.headers = {
+        ...options.headers, // 优先使用传入的headers
+        ...this.headers,    // 然后合并默认headers（除了Content-Type）
+      };
+      // 删除Content-Type，让浏览器自动设置；覆盖默认的 Content-Type: application/json
+      // TODO: 是否仅支持浏览器使用，代码中使用该 API 是否会有问题
+      if (config.headers && typeof config.headers === 'object') {
+        delete (config.headers as any)['Content-Type'];
+      }
+    }
 
     // 添加认证token
     const token = this.getAuthToken();
@@ -62,12 +77,12 @@ class ApiClient {
 
     try {
       const response = await fetch(url, config);
-      
+
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(
-          errorData.detail || 
-          errorData.message || 
+          errorData.detail ||
+          errorData.message ||
           `HTTP ${response.status}: ${response.statusText}`
         );
       }
@@ -75,15 +90,15 @@ class ApiClient {
       const contentType = response.headers.get('content-type');
       if (contentType && contentType.includes('application/json')) {
         const result = await response.json();
-        
+
         // 处理inty-backend特殊的响应格式 {code, message, data}
         if (result && typeof result === 'object' && 'data' in result && result.code === 200) {
           return result.data;
         }
-        
+
         return result;
       }
-      
+
       return response as any;
     } catch (error) {
       console.error(`API请求失败: ${endpoint}`, error);
@@ -105,7 +120,7 @@ class ApiClient {
   // GET请求
   async get<T>(endpoint: string, params?: Record<string, any>, options?: RequestInit): Promise<T> {
     let finalEndpoint = endpoint;
-    
+
     if (params && !('signal' in params)) {
       const searchParams = new URLSearchParams();
       Object.entries(params).forEach(([key, value]) => {
@@ -149,7 +164,7 @@ class ApiClient {
   async upload<T>(endpoint: string, file: File, additionalData?: Record<string, any>): Promise<T> {
     const formData = new FormData();
     formData.append('file', file);
-    
+
     if (additionalData) {
       Object.entries(additionalData).forEach(([key, value]) => {
         formData.append(key, String(value));
@@ -199,7 +214,7 @@ export const evaluationSessionApi = {
   // 获取评测结果
   getResults: (sessionId: string): Promise<EvaluationResult[]> =>
     apiClient.get(`/evaluation/sessions/${sessionId}/results`),
-  
+
   // 删除评测会话
   delete: (sessionId: string): Promise<{ success: boolean; message: string }> =>
     apiClient.delete(`/evaluation/sessions/${sessionId}`),
@@ -324,16 +339,16 @@ export const scoringApi = {
       // 设置较短的超时时间
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000); // 5秒超时
-      
+
       const models = await apiClient.get('/evaluation/models', undefined, {
         signal: controller.signal
       });
-      
+
       clearTimeout(timeoutId);
       return models;
     } catch (error) {
       console.warn('获取评分模型失败，使用默认模型列表:', error);
-      
+
       // 返回默认模型列表
       return [
         {
@@ -473,7 +488,7 @@ export class WebSocketManager {
   private handleMessage(message: any) {
     const { type } = message;
     const listeners = this.listeners.get(type);
-    
+
     if (listeners) {
       listeners.forEach(callback => {
         try {
@@ -501,7 +516,7 @@ export class WebSocketManager {
     if (this.reconnectAttempts < this.maxReconnectAttempts) {
       this.reconnectAttempts++;
       console.log(`尝试重连WebSocket (${this.reconnectAttempts}/${this.maxReconnectAttempts})...`);
-      
+
       setTimeout(() => {
         this.connect().catch(error => {
           console.error('WebSocket重连失败:', error);
