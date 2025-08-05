@@ -60,14 +60,34 @@ class VerificationConfig:
 
 
 @dataclass
+class Limits:
+    """
+    Various limits for different features under different scenarios.
+
+    Generally separated between free and premium (subscribed) users.
+    """
+
+    image_gen: int
+
+
+@dataclass
 class AppConfig:
     name: str = "InTy"
     debug: bool = False
     debug_messages: bool = False  # 是否启用调试消息记录功能
     api_v1_prefix: str = "/api/v1"
     backend_cors_origins: List[AnyHttpUrl] = None
-    free_user_image_gen_limit: int = 8
-    premium_user_image_gen_limit: int = 40
+
+    free_user_limits: Limits = field(
+        default_factory=lambda: Limits(
+            image_gen=8,
+        )
+    )
+    premium_user_limits: Limits = field(
+        default_factory=lambda: Limits(
+            image_gen=40,
+        )
+    )
 
     def __post_init__(self):
         if self.backend_cors_origins is None:

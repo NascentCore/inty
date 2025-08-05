@@ -234,9 +234,7 @@ class SubscriptionStatusResponse(BaseModel):
     plan: Optional[SubscriptionPlan] = Field(None, description="计划信息")
     remaining_days: Optional[int] = Field(None, description="剩余天数")
     chat_limit_per_day: int = Field(-1, description="每日聊天次数限制")
-    total_chat_limit: Optional[int] = Field(
-        None, description="总聊天次数限制（免费用户）"
-    )
+    total_chat_limit: Optional[int] = Field(None, description="总聊天次数限制")
     agent_creation_limit: int = Field(6, description="Agent创建数量限制")
     background_generation_limit_per_day: int = Field(
         3, description="每日背景图生成次数限制"

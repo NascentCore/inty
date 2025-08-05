@@ -267,33 +267,27 @@ async def generate_background(
         if request.count < 1 or request.count > 4:
             return APIResponse.error(message="Count must be between 1 and 4")
 
-        # 检查背景图生成限制
-        is_allowed, used_count, limit = (
-            await subscription_service.check_background_generation_limit(
-                db, current_user.id
+        if not current_user.is_superuser:
+            is_allowed, used_count, limit, error_code = (
+                await subscription_service.check_background_generation_limit(
+                    db, current_user.id
+                )
             )
-        )
 
-        if not is_allowed:
-            # 超级管理员不受限制
-            if not current_user.is_superuser:
-                if limit == -1:
-                    error_message = (
-                        f"Background image generation failed, daily limit reached"
-                    )
-                else:
-                    error_message = (
-                        f"Daily image generation limit reached ({used_count}/{limit})"
-                    )
-                    if limit <= 3:  # 免费用户每日限制
-                        error_message += ", please consider upgrading your subscription for more daily generations"
+            if not is_allowed:
+                error_message = (
+                    f"Daily image generation limit reached ({used_count}/{limit})"
+                )
+                if error_code == ErrorCode.FREE_USER_IMG_GEN_LIMIT_EXCEEDED:
+                    # TODO: Error message should be displayed in the app accordingly.
+                    error_message += ", please subscribe."
 
                 return APIResponse.error(
                     message=error_message,
                     data={
                         "used_count": used_count,
                         "limit": limit,
-                        "error_code": ErrorCode.FREE_USER_IMG_GEN_LIMIT_EXCEEDED,
+                        "error_code": error_code,
                     },
                 )
 

@@ -37,6 +37,7 @@ from app.schemas.subscription import UserSubscription as UserSubscriptionSchema
 from app.schemas.subscription import UserSubscriptionCreate
 from app.services.google_play_service import google_play_service
 from app.services.system_settings_service import system_settings_service
+from app.utils.error_code import ErrorCode
 
 logger = logging.getLogger(__name__)
 
@@ -830,10 +831,15 @@ class SubscriptionService:
                 if background_limit == -1:
                     return True, today_generation_count, -1
             else:
-                background_limit = settings.app.free_user_image_gen_limit
+                background_limit = settings.app.free_user_limits.image_gen
 
             is_allowed = today_generation_count < background_limit
-            return is_allowed, today_generation_count, background_limit
+            error_code = (
+                ErrorCode.PREMIUM_USER_IMG_GEN_LIMIT_EXCEEDED
+                if subscription_status.is_subscribed
+                else ErrorCode.FREE_USER_IMG_GEN_LIMIT_EXCEEDED
+            )
+            return is_allowed, today_generation_count, background_limit, error_code
         except Exception as e:
             logger.error(f"检查背景图生成次数限制失败: {str(e)}")
             # 出错时默认允许，避免影响用户体验
