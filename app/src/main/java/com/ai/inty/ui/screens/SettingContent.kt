@@ -1,5 +1,6 @@
 package com.ai.inty.ui.screens
 
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -285,10 +286,15 @@ private fun SettingDialogs(
             stringResource(R.string.str_premium_mode_dialog_content),
             stringResource(R.string.settings_premium_model)
         )
+        val context = LocalContext.current
+        val viewmodel = viewModel<SettingViewModel>()
         AdvancedModelChatDialog(
             data,
             onCancel = onHidePremiumDialog,
             onSure = {
+                if (context is Activity) {
+                    viewmodel.purchaseFirstVip(context)
+                }
                 // 购买最低档位的订阅
                 onHidePremiumDialog()
             },

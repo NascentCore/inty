@@ -1,16 +1,23 @@
 package com.ai.inty.viewmodels
 
+import android.app.Activity
 import androidx.compose.runtime.mutableStateListOf
 import androidx.lifecycle.viewModelScope
+import com.ai.inty.R
 import com.ai.inty.base.BaseActivityViewModel
 import com.ai.inty.beans.AgentInfo
+import com.ai.inty.beans.ChatSettingsReq
 import com.ai.inty.beans.ConversationItem
 import com.ai.inty.beans.MsgInfo
 import com.ai.inty.beans.SendMsgReq
 import com.ai.inty.beans.UserProfile
+import com.ai.inty.billing.BillingRepository
+import com.ai.inty.billing.BillingRepository.plansFlow
+import com.ai.inty.billing.BillingRepository.vipStatusFlow
 import com.ai.inty.net.IChatApi
 import com.ai.inty.utils.UserProfileManager
 import com.architecture.httplib.core.HttpResult
+import com.inty.utils.AppEnv
 import com.inty.utils.log.EasyLog
 import com.inty.utils.storage.IntySetting
 import com.therouter.TheRouter
@@ -40,7 +47,7 @@ class ChatViewModel : BaseActivityViewModel() {
 
 
     // 延迟获取依赖，避免在构造函数中立即获取导致空指针异常
-    val chatApi by lazy {
+    private val chatApi by lazy {
         TheRouter.get(IChatApi::class.java)
             ?: throw IllegalStateException("IChatApi not found in TheRouter")
     }
@@ -97,16 +104,14 @@ class ChatViewModel : BaseActivityViewModel() {
         }
     }
 
+    val showLimitDialog = MutableStateFlow(false)
     fun sendMsg() {
         launchWithNetCheck {
             val inputMsg = inputData.value
             inputData.value = ""
             EasyLog.log("send msg $inputMsg")
 
-            val msgInfo = MsgInfo(
-                content = inputMsg,
-                role = "user"
-            )
+            val msgInfo = MsgInfo(content = inputMsg, role = "user")
 
             // 添加临时的加载消息
             val loadingMsg = MsgInfo(
@@ -144,15 +149,20 @@ class ChatViewModel : BaseActivityViewModel() {
 
                 when (result) {
                     is HttpResult.Success -> {
+                        //有免费次数限制，需要vip订阅
+                        if (result.data.code == 10001001) {
+                            showLimitDialog.emit(true)
+                        }
                         withContext(Dispatchers.Main) {
-                            for (choice in result.data.choices) {
+                            for (choice in result.data.data?.choices ?: emptyList()) {
                                 msgs.add(0, choice.message)
                             }
                         }
                         IntySetting.setConversationReaded(
                             agent.id,
-                            result.data.choices.last()?.message?.content ?: ""
+                            result.data.data?.choices?.lastOrNull()?.message?.content ?: ""
                         )
+
                     }
 
                     is HttpResult.Failure -> {
@@ -161,6 +171,11 @@ class ChatViewModel : BaseActivityViewModel() {
                 }
             }
         }
+    }
+
+    //关闭limit次数 拦截消息的弹窗
+    fun dismissDialog() = viewModelScope.launch {
+        showLimitDialog.emit(false)
     }
 
     fun sendKeepTalkingMessage() {
@@ -204,14 +219,18 @@ class ChatViewModel : BaseActivityViewModel() {
 
                 when (result) {
                     is HttpResult.Success -> {
+                        //有免费次数限制，需要vip订阅
+                        if (result.data.code == 10001001) {
+                            showLimitDialog.emit(true)
+                        }
                         withContext(Dispatchers.Main) {
-                            for (choice in result.data.choices) {
+                            for (choice in result.data.data?.choices ?: emptyList()) {
                                 msgs.add(0, choice.message)
                             }
                         }
                         IntySetting.setConversationReaded(
                             agent.id,
-                            result.data.choices.last()?.message?.content ?: ""
+                            result.data.data?.choices?.lastOrNull()?.message?.content ?: ""
                         )
                     }
 
@@ -219,6 +238,36 @@ class ChatViewModel : BaseActivityViewModel() {
                         showNetworkAwareError(result.message)
                     }
                 }
+            }
+        }
+    }
+
+    //获取聊天消息设置
+    fun getChatSetting() = launchWithNetCheck {
+        val agentId = agentInfo.value?.id ?: return@launchWithNetCheck
+        //有agent信息，才请求
+        val result = chatApi.getChatSettings(agentId)
+        when (result) {
+            is HttpResult.Failure -> showNetworkAwareError(result.message)
+            is HttpResult.Success -> {
+                val isPremiumMode = result.data.data?.premium_mode == true
+            }
+        }
+    }
+
+    //高级模型定制化回复的接口调用
+    fun updateChatReplySettings(prompt: String) = launchWithNetCheck {
+        val agentId = agentInfo.value?.id ?: return@launchWithNetCheck
+        //有agent信息，才请求
+        val req = ChatSettingsReq(style_prompt = prompt)
+        val result = chatApi.updateChatSettings(agentId, req)
+        when (result) {
+            is HttpResult.Failure -> showNetworkAwareError(result.message)
+            is HttpResult.Success -> {
+                showNetworkAwareError(
+                    result.data.message
+                        ?: AppEnv.context.getString(R.string.custom_reply_successful)
+                )
             }
         }
     }
@@ -271,6 +320,7 @@ class ChatViewModel : BaseActivityViewModel() {
         }
     }
 
+    //标记会话消息 已读
     fun setConversionReaded(conversationItem: ConversationItem) {
         IntySetting.setConversationReaded(conversationItem.agentId, conversationItem.lastMessage)
 
@@ -301,6 +351,29 @@ class ChatViewModel : BaseActivityViewModel() {
         if (UserProfileManager.hasUserProfile()) {
             _userProfile.value = UserProfileManager.getUserProfile()
             EasyLog.log("Loaded user profile from cache: ${_userProfile.value.nickname}")
+        }
+    }
+
+
+    //购买vip会员订阅，最低档
+    fun purchaseFirstVip(activity: Activity) {
+
+        val currentPlans = plansFlow.value
+
+        if (currentPlans.isNotEmpty()) {
+            val selectedPlan = currentPlans[0]
+            EasyLog.log("purchaseFirstVip 准备购买订阅计划: ${selectedPlan.name} (${selectedPlan.googleProductId}) - ${selectedPlan.price}")
+
+            // 检查用户是否已经订阅
+            if (vipStatusFlow.value.isSubscribed) {
+                EasyLog.log("purchaseFirstVip 用户已经是订阅用户，无需重复购买", EasyLog.WARN)
+                return
+            }
+
+            // 启动购买流程
+            BillingRepository.launchBillingFlow(activity, selectedPlan.googleProductId)
+        } else {
+            EasyLog.log("purchaseFirstVip 无可用会员订阅计划plan", EasyLog.WARN)
         }
     }
 }

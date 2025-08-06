@@ -1,5 +1,6 @@
 package com.ai.inty.viewmodels
 
+import android.app.Activity
 import androidx.lifecycle.ViewModel
 import com.ai.inty.billing.BillingRepository
 import com.ai.inty.billing.VipPlan
@@ -37,7 +38,7 @@ class VipCenterViewModel : ViewModel() {
     /**
      * 购买选中的订阅计划
      */
-    fun purchaseSelectedPlan(activity: android.app.Activity) {
+    fun purchaseSelectedPlan(activity: Activity) {
         val selectedIndex = _selectedPlanIndex.value
         val currentPlans = plansFlow.value
 

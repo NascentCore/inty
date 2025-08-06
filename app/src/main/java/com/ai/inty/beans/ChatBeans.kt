@@ -6,21 +6,29 @@ import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 
 @JsonClass(generateAdapter = true)
+data class SendMsgResponse(
+    val code: Int? = null,
+    val message: String? = null,
+    val data: SentMsgRspData? = null
+) {
+    data class SentMsgRspData(
+        val error_code: String? = null,
+        val description: String? = null,
+        val choices: List<Choice> = listOf(),
+        val created: Int = 0,
+        val id: String = "",
+        val model: String = "",
+        @Json(name = "object")
+        val objectX: String = "",
+        val usage: Usage = Usage()
+    )
+}
+
+@JsonClass(generateAdapter = true)
 data class SendMsgReq(
     val messages: List<MsgInfo> = listOf(),
     val model: String = "chatbot",
     val stream: Boolean = false
-)
-
-@JsonClass(generateAdapter = true)
-data class SendMsgResponse(
-    val choices: List<Choice> = listOf(),
-    val created: Int = 0,
-    val id: String = "",
-    val model: String = "",
-    @Json(name = "object")
-    val objectX: String = "",
-    val usage: Usage = Usage()
 )
 
 @JsonClass(generateAdapter = true)
@@ -120,3 +128,31 @@ data class SysMsgItem(
     val title: String = "",
     val type: Int = 0
 )
+
+//chat settings
+
+/**
+ * 聊天相关的设置接口，注意一个接口多个使用，不需要的参数，保持null，避免覆盖
+ */
+@JsonClass(generateAdapter = true)
+data class ChatSettingsReq(
+    val keep_talking: Boolean? = null,
+    val language: String? = null,
+    val premium_mode: Boolean? = null,
+    val style_prompt: String? = null,
+    val voice_enabled: Boolean? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class ChatSettingsResponse(
+    val code: Int? = null,
+    val message: String? = null,
+    val data: ChatSettingRspData? = null
+) {
+    data class ChatSettingRspData(
+        val language: String? = null,//聊天语言
+        val voice_enabled: Boolean? = null,//是否启用语音
+        val keep_talking: Boolean? = null,//连续回复
+        val premium_mode: Boolean? = null,//是否会员模式
+    )
+}

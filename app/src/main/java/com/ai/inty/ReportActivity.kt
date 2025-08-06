@@ -165,8 +165,12 @@ private fun ReportScreen(
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-
-            Spacer(Modifier.height(100.dp))
+            //布局占位用
+            CenterAlignedTopAppBar(
+                title = {},
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+            )
+            Spacer(Modifier.height(16.dp))
 
             Column(
                 modifier = Modifier

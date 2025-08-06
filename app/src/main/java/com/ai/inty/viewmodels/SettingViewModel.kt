@@ -1,8 +1,12 @@
 package com.ai.inty.viewmodels
 
+import android.app.Activity
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ai.inty.billing.BillingRepository
+import com.ai.inty.billing.BillingRepository.plansFlow
+import com.ai.inty.billing.BillingRepository.vipStatusFlow
+import com.inty.utils.log.EasyLog
 import com.inty.utils.storage.IntySetting
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -90,6 +94,29 @@ class SettingViewModel : ViewModel() {
     fun confirmDeleteAccount() {
         // 这里可以调用删除账号的 API
         hideDeleteAccountDialog()
+    }
+
+
+    //购买vip会员订阅，最低档
+    fun purchaseFirstVip(activity: Activity) {
+
+        val currentPlans = plansFlow.value
+
+        if (currentPlans.isNotEmpty()) {
+            val selectedPlan = currentPlans[0]
+            EasyLog.log("purchaseFirstVip 准备购买订阅计划: ${selectedPlan.name} (${selectedPlan.googleProductId}) - ${selectedPlan.price}")
+
+            // 检查用户是否已经订阅
+            if (vipStatusFlow.value.isSubscribed) {
+                EasyLog.log("purchaseFirstVip 用户已经是订阅用户，无需重复购买", EasyLog.WARN)
+                return
+            }
+
+            // 启动购买流程
+            BillingRepository.launchBillingFlow(activity, selectedPlan.googleProductId)
+        } else {
+            EasyLog.log("purchaseFirstVip 无可用会员订阅计划plan", EasyLog.WARN)
+        }
     }
 }
 

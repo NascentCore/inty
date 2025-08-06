@@ -60,17 +60,17 @@
     <string name="login_successfully">Login successfully</string>
     <string name="create_ai_successfully">Create AI successfully</string>
     <string name="logout_successfully">Logout successfully</string>
-    
+
     <!-- Form validation messages -->
     <string name="please_fill_required_fields">Please fill in all required fields</string>
-    
+
     <!-- Success messages -->
     <string name="character_updated_successfully">Character updated successfully!</string>
     <string name="character_deleted_successfully">Delete Successfully</string>
     <string name="followed_successfully">Successfully Followed</string>
     <string name="unfollowed_successfully">Successfully Unfollowed</string>
     <string name="saved_successfully">Saved Successfully</string>
-    
+
     <!-- Error messages -->
     <string name="follow_failed">Follow failed</string>
     <string name="unfollow_failed">Unfollow failed</string>
@@ -79,7 +79,7 @@
     <string name="creation_failed">Creation failed</string>
     <string name="generation_failed">Generation failed</string>
     <string name="get_user_info_failed">Failed to get user information</string>
-    
+
     <!-- Network error messages -->
     <string name="network_timeout">Network timeout, please try again later</string>
     <string name="network_connection_failed">Network connection failed, please check network</string>
@@ -87,14 +87,14 @@
     <string name="unknown_error">Unknown error</string>
     <string name="check_network_connection">please check network connection</string>
     <string name="please_try_again_later">please try again later</string>
-    
+
     <!-- Loading messages -->
     <string name="loading">Loading...</string>
     <string name="loading_user_info">Loading user information...</string>
-    
+
     <!-- Content descriptions -->
     <string name="unfollow">Unfollow</string>
-    
+
     <!-- Error message formats -->
     <string name="update_failed_with_reason">Update failed: %s</string>
     <string name="delete_failed_with_reason">Delete failed: %s</string>
@@ -103,12 +103,12 @@
     <string name="follow_failed_with_reason">Follow failed: %s</string>
     <string name="unfollow_failed_with_reason">Unfollow failed: %s</string>
     <string name="get_user_info_failed_with_reason">Failed to get user information: %s</string>
-    
+
     <!-- Generic error patterns -->
     <string name="operation_error_with_reason" formatted="false">%s error: %s</string>
     <string name="operation_failed_check_network" formatted="false">%s failed, %s</string>
     <string name="operation_failed_try_later" formatted="false">%s failed, %s</string>
-    
+
     <!-- Edge swipe exit -->
     <string name="edge_swipe_exit_hint">Swipe again to exit</string>
 
@@ -130,6 +130,7 @@
     <string name="premium_subscribed">Subscribed</string>
     <string name="settings_subscription_management">Subscription Management</string>
     <string name="subscribed">Subscribed</string>
+    <string name="subscribe">Subscribe</string>
     <string name="unsubscribed">Unsubscribed</string>
     <string name="restore_subscription">Restore Subscription</string>
     <string name="redemption_code">Redemption Code</string>
@@ -142,6 +143,7 @@
     <string name="settings_str_privacy_policy">https://app.termly.io/policy-viewer/policy.html?policyUUID=c82c3bfa-10a0-4075-a7f1-a98d5146d71c</string>
     <string name="str_premium_mode_dialog_content">Advanced models can reply to you more intelligently, more humanely and more efficiently. Become a member and enjoy a better conversation experience!</string>
     <string name="str_premium_chat_dialog_content">If you want AI to reply to you in a more vivid and human tone, please purchase a membership and enjoy a better experience!</string>
+    <string name="str_expired_vip_dialog_content">Your Premium membership has expired and you will lose your benefits,Do you want to continue subscribing to a premium membership?</string>
     <string name="str_beeter_ai_responeses">Customize better ai responses</string>
     <string name="str_unlimit_dialog_content">If you want to continue chatting, you need to purchase a membership, which provides unlimited chats and more features for a comfortable experience!</string>
     <string name="str_unlimit_btn_text">Unlimited Messages</string>
@@ -274,9 +276,9 @@
     <string name="submit_button">Submit</string>
     <string name="please_enter_character_full">Please enter your character...</string>
     <string name="character_count_format_my">%d/400</string>
-    <string name="save_button">Save</string>
     <string name="click_to_check_full">Click to check</string>
     <string name="report_button">Report</string>
+    <string name="reply_style">Reply Style</string>
     <string name="cancel_button">Cancel</string>
     <string name="generate_avatar_title_full">Generate\nAvatar</string>
     <string name="face_edit_full">Face edit</string>
@@ -291,6 +293,7 @@
     <string name="star_symbol">★</string>
     <string name="visibility_required_title_full">Visibility *</string>
     <string name="heartmate_premium_full">HeartMate Premium</string>
+    <string name="become_a_premium">Become a Premium Member</string>
     <string name="auto_renews_cancel_full">Auto-renews, cancel anytime</string>
     <string name="more_information_full">More Information</string>
     <string name="play_button_symbol">▶</string>
@@ -310,5 +313,9 @@
     <string name="email_support">Email Support</string>
     <string name="support_email">support@inty.com</string>
     <string name="about">About</string>
+    <string name="custom_reply_style">Custom reply style</string>
+    <string name="custom_reply_successful">Custom reply Successful</string>
+
+    <string name="reply_hint_str">You can enter some keywords to customize the AI\'s reply style, so that the AI ​​will always communicate with you in the tone you want.</string>
 
 </resources>

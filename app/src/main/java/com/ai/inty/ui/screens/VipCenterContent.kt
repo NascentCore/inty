@@ -117,9 +117,7 @@ fun VipCenterContent(
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun VipCenterTopBar(
-    onClose: () -> Unit
-) {
+private fun VipCenterTopBar(onClose: () -> Unit) {
     CenterAlignedTopAppBar(
         title = {
             Text(

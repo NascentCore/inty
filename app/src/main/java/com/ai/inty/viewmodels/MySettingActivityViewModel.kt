@@ -4,13 +4,13 @@ import android.net.Uri
 import androidx.core.net.toUri
 import androidx.lifecycle.viewModelScope
 import com.ai.inty.Constant
-import com.ai.inty.EditKey
 import com.ai.inty.R
 import com.ai.inty.base.BaseActivityViewModel
 import com.ai.inty.base.ToastUtils
 import com.ai.inty.beans.UserProfile
 import com.ai.inty.net.IUserApi
 import com.ai.inty.net.IUserApi2
+import com.ai.inty.ui.components.EditKey
 import com.ai.inty.utils.UserProfileManager
 import com.architecture.httplib.core.HttpResult
 import com.inty.utils.log.EasyLog
