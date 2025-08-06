@@ -52,6 +52,11 @@ async def get_subscription_plans(
             db, current_user.id
         )
 
+        # 获取用户历史订阅记录
+        has_ever_subscribed = await subscription_service.has_ever_subscribed(
+            db, current_user.id
+        )
+
         # 将 SQLAlchemy 模型转换为 Pydantic 模型
         current_subscription_schema = None
         if current_subscription:
@@ -60,7 +65,9 @@ async def get_subscription_plans(
             )
 
         response = SubscriptionPlansResponse(
-            plans=plans, current_subscription=current_subscription_schema
+            plans=plans, 
+            current_subscription=current_subscription_schema,
+            has_ever_subscribed=has_ever_subscribed
         )
 
         return APIResponse.success(data=response)

@@ -230,6 +230,7 @@ class SubscriptionStatusResponse(BaseModel):
     """订阅状态响应"""
 
     is_subscribed: bool = Field(..., description="是否订阅")
+    has_ever_subscribed: bool = Field(False, description="是否曾经有过订阅记录")
     subscription: Optional[UserSubscription] = Field(None, description="订阅信息")
     plan: Optional[SubscriptionPlan] = Field(None, description="计划信息")
     remaining_days: Optional[int] = Field(None, description="剩余天数")
@@ -271,6 +272,7 @@ class SubscriptionPlansResponse(BaseModel):
     current_subscription: Optional[UserSubscription] = Field(
         None, description="当前订阅"
     )
+    has_ever_subscribed: bool = Field(False, description="是否曾经有过订阅记录")
 
 
 # 购买验证相关
