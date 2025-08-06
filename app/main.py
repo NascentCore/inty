@@ -25,20 +25,16 @@ from app.services.keep_talking_service import keep_talking_service
 
 init_logger()
 
+# 根据debug模式决定是否开启OpenAPI docs
 app = FastAPI(
     title=settings.app.name,
     description="InTy",
     version="1.0.0",
-    # Disable swagger UI by default to reduce security risk.
-    # openapi_url=None,
-    # Uncomment the following to enable openapi docs
-    # docs_url="/docs",
-    # docs_url=None,
-    # redoc_url=None,
-    openapi_url=f"{settings.app.api_v1_prefix}/openapi.json",
-    docs_url="/docs",
-    redoc_url="/redoc",
-    # These probably are not needed.
+    # 只在debug模式下开启OpenAPI docs
+    openapi_url=f"{settings.app.api_v1_prefix}/openapi.json" if settings.app.debug else None,
+    docs_url="/docs" if settings.app.debug else None,
+    redoc_url="/redoc" if settings.app.debug else None,
+    # Swagger UI参数配置（仅在debug模式下生效）
     swagger_ui_parameters={
         "persistAuthorization": True,
         "displayRequestDuration": True,
@@ -47,7 +43,7 @@ app = FastAPI(
         "requestSnippetsEnabled": True,
         "defaultModelsExpandDepth": 3,
         "defaultModelExpandDepth": 3,
-    },
+    } if settings.app.debug else {},
 )
 
 # Set all CORS enabled origins
@@ -248,6 +244,10 @@ async def shutdown_event():
 
 
 def custom_openapi():
+    # 只在debug模式下提供OpenAPI schema
+    if not settings.app.debug:
+        return None
+        
     if app.openapi_schema:
         return app.openapi_schema
 
@@ -291,7 +291,9 @@ def custom_openapi():
     return app.openapi_schema
 
 
-app.openapi = custom_openapi
+# 只在debug模式下设置自定义OpenAPI
+if settings.app.debug:
+    app.openapi = custom_openapi
 
 
 @app.get("/")
