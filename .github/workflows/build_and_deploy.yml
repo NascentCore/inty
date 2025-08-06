@@ -1,6 +1,11 @@
-name: Build and deploy to production environment
+name: Build and deploy inty backend
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - "app/**/*.py"
   workflow_dispatch:
     inputs:
       environment:
@@ -69,3 +74,7 @@ jobs:
     - name: Sanity check
       run: |
         curl -s --fail --retry 5 --retry-delay 5 ${{ vars.SERVICE_PUBLIC_URL }}
+
+    - name: Write summary
+      run: |
+        echo "Deployed to ${{ inputs.environment }} at ${{ vars.SERVICE_PUBLIC_URL }}" >> $GITHUB_STEP_SUMMARY
