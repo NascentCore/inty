@@ -82,7 +82,14 @@ jobs:
                 "tag": "div",
                 "text": {
                   "tag": "lark_md",
-                  "content": "✅ 改动列表见 [GitHub Release](${RELEASE_URL})，[APK 下载链接](${RELEASE_APK_URL})"
+                  "content": "✅ 改动列表见 [GitHub Release](${RELEASE_URL})"
+                }
+              },
+              {
+                "tag": "div",
+                "text": {
+                  "tag": "lark_md",
+                  "content": "📦 [APK 下载链接](${RELEASE_APK_URL})"
                 }
               }
             ]
