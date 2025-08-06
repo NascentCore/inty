@@ -1,5 +1,7 @@
 # AI intimacy simulation for young male adults
 
+[![Build release APK and AAB](https://github.com/NascentCore/inty-app/actions/workflows/ci.yaml/badge.svg)](https://github.com/NascentCore/inty-app/actions/workflows/ci.yaml)
+
 ## Google Play uploading and signing
 
 Uploading key is under app signing settings:
