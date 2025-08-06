@@ -12,6 +12,8 @@ Uploading key is under app signing settings:
 
 * Kotlin+Jetpack Compose
 * Local development setup: <https://g.co/gemini/share/e068464e9dbd>
+* [Daily release for testing](https://github.com/NascentCore/inty-app/releases)
+  * 国内手机需要安装 Google 套件才能使用 Google 登录功能
 
 ### ✨ 核心功能
 
@@ -37,26 +39,6 @@ Uploading key is under app signing settings:
 * **状态管理**: StateFlow + MMKV 持久化
 * **图片加载**: Coil3 异步加载
 * **依赖注入**: TheRouter 的 @Singleton 和 @Autowired
-
-### 核心组件
-
-#### 主要 Activity
-
-* `SplashActivity` - 应用启动和初始化
-
-* `MainActivity` - 主应用界面，包含底部导航
-* `ChatActivity` - 单个角色聊天界面
-* `LoginActivity` - 认证流程
-* `CreateRoleActivity` - 角色创建
-* `AvatarGenerateActivity` - AI 头像生成
-
-#### 业务逻辑
-
-* `MainViewModel` - 管理角色发现和关注
-
-* `ChatViewModel` - 处理对话流程和消息
-* `UserProfileManager` - 用户会话管理
-* `IntySetting` - 设置和偏好存储
 
 ## 🚀 快速开始
 
