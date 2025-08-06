@@ -109,7 +109,8 @@ jobs:
         track: ${{ github.event.inputs.track || 'internal' }}
         status: draft
         inAppUpdatePriority: 2
-        whatsNewDirectory: distribution/whatsnew-dynamic
+        # TODO: Add dynamic release notes.
+        # whatsNewDirectory: distribution/whatsnew-dynamic
 
     - name: Upload AAB artifact
       uses: actions/upload-artifact@v4
