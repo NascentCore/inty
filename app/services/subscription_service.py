@@ -124,6 +124,19 @@ class SubscriptionService:
             logger.error(f"创建订阅计划失败: {str(e)}")
             raise
 
+    async def has_ever_subscribed(self, db: AsyncSession, user_id: str) -> bool:
+        """检查用户是否曾经有过订阅记录"""
+        try:
+            result = await db.execute(
+                select(UserSubscription.id)
+                .where(UserSubscription.user_id == user_id)
+                .limit(1)
+            )
+            return result.first() is not None
+        except Exception as e:
+            logger.error(f"检查用户历史订阅记录失败: user_id={user_id}, error={str(e)}")
+            return False
+
     async def get_user_current_subscription(
         self, db: AsyncSession, user_id: str
     ) -> Optional[UserSubscription]:
@@ -156,6 +169,9 @@ class SubscriptionService:
     ) -> SubscriptionStatusResponse:
         """获取用户订阅状态"""
         try:
+            # 获取用户历史订阅记录
+            has_ever_subscribed = await self.has_ever_subscribed(db, user_id)
+            
             # 获取当前有效订阅
             subscription = await self.get_user_current_subscription(db, user_id)
 
@@ -192,6 +208,7 @@ class SubscriptionService:
 
                 return SubscriptionStatusResponse(
                     is_subscribed=True,
+                    has_ever_subscribed=has_ever_subscribed,
                     subscription=subscription_schema,
                     plan=plan_schema,
                     remaining_days=remaining_days,
@@ -229,6 +246,7 @@ class SubscriptionService:
 
                 return SubscriptionStatusResponse(
                     is_subscribed=False,
+                    has_ever_subscribed=has_ever_subscribed,
                     subscription=None,
                     plan=None,
                     remaining_days=None,
