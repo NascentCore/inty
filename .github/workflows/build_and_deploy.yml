@@ -15,6 +15,11 @@ on:
         required: true
         default: dev
 
+concurrency:
+  group: ${{ github.workflow }}-${{ inputs.environment || 'dev' }}
+  # Do not cancel in-progress builds.
+  cancel-in-progress: false
+
 env:
   INTY_SERVER_IMAGE: ghcr.io/nascentcore/inty-backend/inty-server
 jobs:
