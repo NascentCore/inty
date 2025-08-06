@@ -3,7 +3,7 @@ import json
 import logging
 import time
 import uuid
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Union
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
@@ -24,6 +24,7 @@ from app.services.subscription_service import subscription_service
 from app.services.voice_cache_service import voice_cache_service
 from app.services.voice_cleanup_service import voice_cleanup_service
 from app.services.voice_service import voice_service
+from app.schemas.response import create_business_error_response, BusinessErrorCode
 
 router = APIRouter()
 
@@ -425,7 +426,7 @@ async def get_agent_chat_messages(
         )
 
 
-@router.post("/agents/{agent_id}/chat/completions")
+@router.post("/agents/{agent_id}/chat/completions", response_model=Union[dict, schemas.APIResponse[dict]])
 async def agent_chat_completions(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
@@ -451,20 +452,15 @@ async def agent_chat_completions(
         )
 
         # 检查用户聊天次数限制
-        # is_allowed, used_count, daily_limit = await subscription_service.check_chat_limit(
-        #     db, current_user.id
-        # )
+        is_allowed, used_count, daily_limit = (
+            await subscription_service.check_chat_limit(db, current_user.id)
+        )
 
-        # if not is_allowed:
-        #     raise HTTPException(
-        #         status_code=429,  # Too Many Requests
-        #         detail={
-        #             "message": "今日聊天次数已达上限",
-        #             "used_count": used_count,
-        #             "daily_limit": daily_limit,
-        #             "error_code": "CHAT_LIMIT_EXCEEDED"
-        #         }
-        #     )
+        if not is_allowed:
+            return create_business_error_response(
+                error_info=BusinessErrorCode.SUBSCRIPTION_REQUIRED,
+                extra_data={"used_count": used_count, "daily_limit": daily_limit}
+            )
 
         # 优化：简化Agent验证，在创建Agent实例时验证
         agent_query_start = time.time()
@@ -588,25 +584,27 @@ async def agent_chat_completions(
                 # 同时启动AI回复和聊天设置获取
                 import asyncio
 
-                ai_task = asyncio.create_task(
-                    agent.chat(
-                        user_id=current_user.id,
-                        session_id=session_id,
-                        messages=messages,
-                        db_session=db,
-                    )
-                )
-
                 settings_task = asyncio.create_task(
                     chat_service.get_or_create_chat_settings(
                         db, chat.id, current_user.id, agent_id
                     )
                 )
 
-                # 等待两个任务完成
-                response_content, chat_settings = await asyncio.gather(
-                    ai_task, settings_task
+                # 先获取设置，然后传递给AI任务
+                chat_settings = await settings_task
+
+                ai_task = asyncio.create_task(
+                    agent.chat(
+                        user_id=current_user.id,
+                        session_id=session_id,
+                        messages=messages,
+                        db_session=db,
+                        chat_settings=chat_settings,
+                    )
                 )
+
+                # 等待任务完成
+                response_content = await ai_task
                 chat_processing_time = time.time() - chat_processing_start
                 logger.info(
                     f"Agent聊天响应成功: {response_content[:100]}..., 耗时: {chat_processing_time:.3f}秒"
@@ -1040,7 +1038,7 @@ async def get_voice_cache_stats(
         )
 
 
-@router.put("/agents/{agent_id}/settings", response_model=schemas.ChatSettings)
+@router.put("/agents/{agent_id}/settings", response_model=Union[schemas.APIResponse[schemas.ChatSettings], schemas.APIResponse[dict]])
 async def update_agent_chat_settings(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
@@ -1079,6 +1077,30 @@ async def update_agent_chat_settings(
             db=db, chat_id=chat.id, user_id=current_user.id, agent_id=agent_id
         )
 
+        # Check if trying to update style_prompt and if user has subscription
+        if settings_update.style_prompt is not None:
+            subscription_status = (
+                await subscription_service.get_user_subscription_status(
+                    db, current_user.id
+                )
+            )
+            if not subscription_status.is_subscribed:
+                return create_business_error_response(
+                    error_info=BusinessErrorCode.SUBSCRIPTION_REQUIRED
+                )
+
+        # Check if trying to update premium_mode and if user has subscription
+        if settings_update.premium_mode is not None and settings_update.premium_mode:
+            subscription_status = (
+                await subscription_service.get_user_subscription_status(
+                    db, current_user.id
+                )
+            )
+            if not subscription_status.is_subscribed:
+                return create_business_error_response(
+                    error_info=BusinessErrorCode.SUBSCRIPTION_REQUIRED
+                )
+
         # Then update settings
         settings = await chat_service.update_chat_settings(
             db=db, chat_id=chat.id, settings_update=settings_update
@@ -1088,7 +1110,7 @@ async def update_agent_chat_settings(
             f"Successfully updated Agent chat settings - Agent ID: {agent_id}, Settings ID: {settings.id}"
         )
 
-        return settings
+        return schemas.APIResponse.success(data=settings)
 
     except HTTPException:
         raise

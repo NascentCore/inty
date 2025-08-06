@@ -30,11 +30,14 @@ app = FastAPI(
     description="InTy",
     version="1.0.0",
     # Disable swagger UI by default to reduce security risk.
-    openapi_url=None,
+    # openapi_url=None,
     # Uncomment the following to enable openapi docs
     # docs_url="/docs",
-    docs_url=None,
-    redoc_url=None,
+    # docs_url=None,
+    # redoc_url=None,
+    openapi_url=f"{settings.app.api_v1_prefix}/openapi.json",
+    docs_url="/docs",
+    redoc_url="/redoc",
     # These probably are not needed.
     swagger_ui_parameters={
         "persistAuthorization": True,
