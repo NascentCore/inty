@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - "app/**/*.py"
+
   workflow_dispatch:
     inputs:
       environment:
