@@ -100,41 +100,6 @@ jobs:
           RELEASE_HEADER="📱 版本 $VERSION_NAME (构建 $VERSION_CODE)"
           EN_HEADER="📱 Version $VERSION_NAME (Build $VERSION_CODE)"
         fi
-        
-        # 如果没有提交信息，使用默认内容
-        if [[ -z "$COMMITS" ]]; then
-          COMMITS="• 性能优化和错误修复"
-        fi
-        
-        # 生成中文发布说明
-        cat > distribution/whatsnew-dynamic/whatsnew-zh-CN << EOF
-        $RELEASE_HEADER
-        
-        本次更新内容：
-        $COMMITS
-        
-        ✨ 持续改进用户体验
-        🔧 修复已知问题
-        EOF
-        
-        # 生成英文发布说明  
-        EN_COMMITS=$(echo "$COMMITS" | sed 's/• /• /' | head -5)
-        cat > distribution/whatsnew-dynamic/whatsnew-en-US << EOF
-        $EN_HEADER
-        
-        What's new:
-        $EN_COMMITS
-        
-        ✨ Enhanced user experience
-        🔧 Bug fixes and improvements
-        EOF
-        
-        echo "🎯 Generated release notes for version $VERSION_CODE:"
-        echo "--- 中文版 ---"
-        cat distribution/whatsnew-dynamic/whatsnew-zh-CN
-        echo ""
-        echo "--- English ---"
-        cat distribution/whatsnew-dynamic/whatsnew-en-US
 
     - name: Upload AAB to Google Play Internal Testing
       uses: r0adkll/upload-google-play@v1

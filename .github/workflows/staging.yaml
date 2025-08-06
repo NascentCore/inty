@@ -1,12 +1,12 @@
 # The app is built with debug build type, and connects to dev backend
 # at dev.inty.sxwl.ai.
-name: Build and release staging APK to GitHub Release (app debug build + dev backend)
+name: Build and release dev APK to GitHub Release (app debug build + dev backend)
 
 on:
   workflow_dispatch:
   schedule:
     # 18:00 UTC
-    - cron: '0 18 * * *'
+    - cron: '0 1,5,10,15,20 * * *'
 
 jobs:
   build-apk:
@@ -35,9 +35,6 @@ jobs:
         KEYSTORE_PROPERTIES: ${{ secrets.KEYSTORE_PROPERTIES }}
       run: |
         echo "$KEYSTORE_PROPERTIES" > keystore.properties
-
-    - name: Make gradlew executable
-      run: chmod +x ./gradlew
 
     - name: Build APK
       run: |
