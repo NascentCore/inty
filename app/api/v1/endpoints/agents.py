@@ -23,11 +23,11 @@ from app.schemas.character_card import (
     CharacterCardImportResponse,
     CharacterCardValidationResponse,
 )
-from app.schemas.response import APIResponse
+# 移除未使用的导入
+from app.schemas.response import APIResponse, create_business_error_response, BusinessErrorCode
 from app.services import agent_service
 from app.services.character_card_service import character_card_service
 from app.services.subscription_service import SubscriptionService
-from app.utils.error_code import ErrorCode
 from app.utils.gcs import delete_from_gcs, is_user_gcs_file, upload_to_gcs
 
 router = APIRouter()
@@ -267,28 +267,24 @@ async def generate_background(
         if request.count < 1 or request.count > 4:
             return APIResponse.error(message="Count must be between 1 and 4")
 
-        if not current_user.is_superuser:
-            is_allowed, used_count, limit, error_code = (
-                await subscription_service.check_background_generation_limit(
-                    db, current_user.id
-                )
+        # 检查背景图生成限制
+        is_allowed, used_count, limit = (
+            await subscription_service.check_background_generation_limit(
+                db, current_user.id
             )
+        )
 
-            if not is_allowed:
-                error_message = (
-                    f"Daily image generation limit reached ({used_count}/{limit})"
-                )
-                if error_code == ErrorCode.FREE_USER_IMG_GEN_LIMIT_EXCEEDED:
-                    # TODO: Error message should be displayed in the app accordingly.
-                    error_message += ", please subscribe."
-
-                return APIResponse.error(
-                    message=error_message,
-                    data={
+        if not is_allowed:
+            # 超级管理员不受限制
+            if not current_user.is_superuser:
+                # 返回统一的订阅错误响应
+                return create_business_error_response(
+                    error_info=BusinessErrorCode.SUBSCRIPTION_REQUIRED,
+                    extra_data={
                         "used_count": used_count,
                         "limit": limit,
-                        "error_code": error_code,
-                    },
+                        "feature": "background_generation"
+                    }
                 )
 
         # Construct GCS base path
@@ -394,23 +390,58 @@ async def upload_avatar_preview(
     """
     上传头像文件，返回URL供创建agent时使用
     """
+    logger.info(f"=== 开始处理头像上传请求 ===")
+    logger.info(f"用户ID: {current_user.id}")
+    logger.info(f"用户昵称: {current_user.nickname}")
+    logger.info(
+        f"文件信息: filename={file.filename}, content_type={file.content_type}, size={file.size if hasattr(file, 'size') else 'unknown'}"
+    )
+
     try:
         # 验证文件类型
-        if not file.content_type or not file.content_type.startswith("image/"):
+        logger.info(f"验证文件类型: content_type={file.content_type}")
+        if not file.content_type:
+            logger.error("文件content_type为空")
+            return APIResponse.error(
+                message="File content type is required",
+                data={
+                    "error_code": "FILE_CONTENT_TYPE_REQUIRED",
+                    "error_message": "File content type is required",
+                },
+            )
+
+        if not file.content_type.startswith("image/"):
+            logger.error(f"不支持的文件类型: {file.content_type}")
             return APIResponse.error(message="Only image files are allowed")
 
         # 验证文件大小 (最大 10MB)
         max_size = 10 * 1024 * 1024  # 10MB
+        logger.info(f"开始读取文件数据，最大允许大小: {max_size} bytes")
         file_data = await file.read()
-        if len(file_data) > max_size:
+        file_size = len(file_data)
+        logger.info(f"文件实际大小: {file_size} bytes")
+
+        if file_size > max_size:
+            logger.error(f"文件大小超出限制: {file_size} > {max_size}")
             return APIResponse.error(message="File size exceeds 10MB limit")
 
         # 验证文件扩展名
-        if not file.filename or "." not in file.filename:
+        logger.info(f"验证文件扩展名: filename={file.filename}")
+        if not file.filename:
+            logger.error("文件名为空")
+            return APIResponse.error(message="Filename is required")
+
+        if "." not in file.filename:
+            logger.error(f"文件名格式错误，缺少扩展名: {file.filename}")
             return APIResponse.error(message="Invalid filename")
 
         file_ext = file.filename.split(".")[-1].lower()
-        if file_ext not in ["jpg", "jpeg", "png", "webp"]:
+        logger.info(f"文件扩展名: {file_ext}")
+        allowed_extensions = ["jpg", "jpeg", "png", "webp"]
+        if file_ext not in allowed_extensions:
+            logger.error(
+                f"不支持的文件扩展名: {file_ext}，支持的格式: {allowed_extensions}"
+            )
             return APIResponse.error(
                 message="Unsupported file type, only jpg, jpeg, png, webp formats are supported"
             )
@@ -421,29 +452,48 @@ async def upload_avatar_preview(
         avatar_path = (
             f"avatars/tmp/{current_user.id}/{timestamp}-{unique_id}.{file_ext}"
         )
+        logger.info(f"生成的存储路径: {avatar_path}")
+
+        # 验证GCS配置
+        logger.info(f"GCS配置: bucket={settings.gcs.bucket}")
+        if not settings.gcs.bucket:
+            logger.error("GCS bucket未配置")
+            return APIResponse.error(message="GCS bucket not configured")
 
         # 上传到GCS
-        url = upload_to_gcs(
-            file_data, file.content_type, settings.gcs.bucket, avatar_path
-        )
+        logger.info("开始上传文件到GCS")
+        try:
+            url = upload_to_gcs(
+                file_data, file.content_type, settings.gcs.bucket, avatar_path
+            )
+            logger.info(f"GCS上传成功，返回URL: {url}")
+        except Exception as gcs_error:
+            logger.error(f"GCS上传失败: {str(gcs_error)}")
+            logger.error(f"GCS错误堆栈: {traceback.format_exc()}")
+            return APIResponse.error(
+                message=f"Failed to upload to GCS: {str(gcs_error)}"
+            )
 
         logger.info(f"头像上传成功: {url}")
-        return APIResponse.success(
-            data={
-                "url": url,
-                "filename": file.filename,
-                "size": len(file_data),
-                "content_type": file.content_type,
-            }
-        )
+        response_data = {
+            "url": url,
+            "filename": file.filename,
+            "size": file_size,
+            "content_type": file.content_type,
+        }
+        logger.info(f"返回响应数据: {response_data}")
+        return APIResponse.success(data=response_data)
 
     except ValueError as e:
         logger.error(f"文件验证错误: {str(e)}")
+        logger.error(f"验证错误堆栈: {traceback.format_exc()}")
         return APIResponse.error(message=str(e))
     except Exception as e:
         logger.error(f"头像上传失败: {str(e)}")
         logger.error(f"错误堆栈: {traceback.format_exc()}")
         return APIResponse.error(message="Avatar upload failed")
+    finally:
+        logger.info("=== 头像上传请求处理完成 ===")
 
 
 @router.post("/{agent_id}/avatar", response_model=APIResponse[schemas.Agent])
