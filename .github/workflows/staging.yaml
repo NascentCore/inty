@@ -74,7 +74,7 @@ jobs:
             "header": {
               "title": {
                 "tag": "plain_text",
-                "content": "📦 $RELEASE_NAME APK 发布"
+                "content": "开发用测试版本 APK 发布：$RELEASE_NAME"
               }
             },
             "elements": [
