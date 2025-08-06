@@ -3,6 +3,7 @@ name: Build and release staging APK to GitHub Release
 on:
   workflow_dispatch:
   schedule:
+    # 18:00 UTC
     - cron: '0 18 * * *'
 
 jobs:
