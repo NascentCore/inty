@@ -7,6 +7,12 @@ jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
 
+    permissions:
+      # Push to ghcr.io
+      packages: write
+      # Checkout repository
+      contents: read
+
     environment: prod
     
     steps:
