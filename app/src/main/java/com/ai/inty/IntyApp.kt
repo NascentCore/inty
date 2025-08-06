@@ -18,11 +18,11 @@ class IntyApp : Application() {
     override fun attachBaseContext(base: Context?) {
         AppEnv.context = this
         AppEnv.DEBUG = BuildConfig.DEBUG
+        AppEnv.buildType = BuildConfig.BUILD_TYPE
         AppEnv.testEnv = BuildConfig.DEBUG
         AppEnv.version_code = BuildConfig.VERSION_CODE
         AppEnv.version_name = BuildConfig.VERSION_NAME
         AppEnv.APPLICATION_ID = BuildConfig.APPLICATION_ID
-
 
         TheRouter.isDebug = BuildConfig.DEBUG
 

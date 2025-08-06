@@ -28,7 +28,6 @@ class AuthInterceptor : Interceptor {
         val request =
             chain.request().newBuilder()
                 .addHeader("accept", "application/json")
-//                .addHeader("Content-Type", "application/json")
                 .addHeader("Authorization", "Bearer ${IntySetting.getCurToken()}")
                 .build()
 
@@ -122,13 +121,11 @@ object NetServiceMgr {
     }
 
     fun baseUrl(): String {
-        // Uncomment the line below to point to the backend running on your local machine.
-        // You might need to change the port if you're not using the default one.
-        // return "http://${Constant.USER_HOST_LOCAL}/"
-        return if (AppEnv.testEnv) {
-            "https://${Constant.USER_HOST_DEV}/"
-        } else {
-            "https://${Constant.USER_HOST}/"
+        return when (AppEnv.buildType) {
+            "local" -> "http://${Constant.USER_HOST_LOCAL}/"
+            "debug" -> "https://${Constant.USER_HOST_DEV}/"
+            "release" -> "https://${Constant.USER_HOST}/"
+            else -> "https://${Constant.USER_HOST_DEV}/"  // fallback to staging
         }
     }
 

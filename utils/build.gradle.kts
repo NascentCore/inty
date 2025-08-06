@@ -21,6 +21,9 @@ android {
                 "proguard-rules.pro"
             )
         }
+        create("local") {
+            initWith(getByName("debug"))
+        }
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_21

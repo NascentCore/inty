@@ -5,7 +5,6 @@ plugins {
 }
 
 android {
-
     namespace = "com.architecture.httplib"
     compileSdk = 36
 
@@ -23,6 +22,9 @@ android {
                 "proguard-rules.pro"
             )
         }
+        create("local") {
+            initWith(getByName("debug"))
+        }
     }
 
     compileOptions {
@@ -38,9 +40,9 @@ android {
 
 
 dependencies {
-
     //http log viewer
     debugImplementation(libs.chucker.library)
+    "localImplementation"(libs.chucker.library)
     releaseImplementation(libs.chucker.library.no.op)
 
     ksp(libs.moshi.kotlin.codegen)

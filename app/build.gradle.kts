@@ -160,10 +160,17 @@ android {
                 debugSymbolLevel = "FULL" // 或者 'SYMBOL_TABLE'
             }
         }
+        // TODO: Consider rename this to staging, meaning it's talking to the staging backend,
+        // which is not local.
         debug {
+            // This build is meant to be pushed to Google Play testing track.
+            // This build talks to the staging backend.
             signingConfig = signingConfigs.getByName("inty")
             versionNameSuffix = " ($gitCommitId)"
             buildConfigField("boolean", "IS_DEBUG_BUILD", "true")
+        }
+        create("local") {
+            initWith(getByName("debug"))
         }
     }
     compileOptions {
@@ -176,8 +183,6 @@ android {
         compose = true
         buildConfig = true
     }
-
-
 }
 
 TheRouter {
@@ -217,7 +222,6 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
 
-
     implementation(libs.router)
     ksp(libs.therouter.apt)
 
@@ -225,6 +229,7 @@ dependencies {
     implementation(project(":network"))
 
     debugImplementation(libs.chucker.library)
+    "localImplementation"(libs.chucker.library)
     releaseImplementation(libs.chucker.library.no.op)
 
     api(libs.retrofit.core)

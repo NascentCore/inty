@@ -1,5 +1,11 @@
 # AI intimacy simulation for young male adults
 
+## Google Play uploading and signing
+
+Uploading key is under app signing settings:
+
+<img width="2304" height="1576" alt="image" src="https://github.com/user-attachments/assets/3a0ff063-3745-4109-8cb6-a78f5559d0a5" />
+
 ## Overview
 
 * Kotlin+Jetpack Compose
