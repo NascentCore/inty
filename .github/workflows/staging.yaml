@@ -54,7 +54,7 @@ jobs:
         draft: false
         prerelease: false
         files: |
-          app/build/outputs/apk/release/app-release.apk
+          app/build/outputs/apk/debug/app-debug.apk
         generate_release_notes: true
         make_latest: true
         fail_on_unmatched_files: false
