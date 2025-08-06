@@ -142,7 +142,7 @@ def generate_background_image_to_gcs(
 
         client = get_genai_client()
         response = client.models.generate_images(
-            model="imagen-4.0-fast-generate-preview-06-06",
+            model=settings.agent.vertex_image_model,
             prompt=enhanced_prompt,
             config=config,
         )

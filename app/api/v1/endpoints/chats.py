@@ -1089,6 +1089,18 @@ async def update_agent_chat_settings(
                     error_info=BusinessErrorCode.SUBSCRIPTION_REQUIRED
                 )
 
+        # Check if trying to update premium_mode and if user has subscription
+        if settings_update.premium_mode is not None and settings_update.premium_mode:
+            subscription_status = (
+                await subscription_service.get_user_subscription_status(
+                    db, current_user.id
+                )
+            )
+            if not subscription_status.is_subscribed:
+                return create_business_error_response(
+                    error_info=BusinessErrorCode.SUBSCRIPTION_REQUIRED
+                )
+
         # Then update settings
         settings = await chat_service.update_chat_settings(
             db=db, chat_id=chat.id, settings_update=settings_update
