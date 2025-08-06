@@ -1,4 +1,4 @@
-name: Build and Deploy Prd
+name: Build and deploy to production environment
 
 on:
   workflow_dispatch:
