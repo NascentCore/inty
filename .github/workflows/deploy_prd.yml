@@ -58,10 +58,13 @@ jobs:
             --name inty-backend-${{ inputs.environment }} \
             --restart unless-stopped \
             --publish ${{ vars.SERVICE_PORT }}:8000 \
+            --env LANGCHAIN_TRACING_V2=true \
+            --env LANGCHAIN_PROJECT=inty-backend-${{ inputs.environment }} \
+            --env LANGCHAIN_API_KEY=${{ secrets.LANGCHAIN_API_KEY }} \
             --volume /opt/inty-${{ inputs.environment }}/config.yaml:/app/config.yaml \
             --volume /opt/inty-${{ inputs.environment }}/inty-backend-key.json:/app/inty-backend-key.json \
             --volume /opt/inty-${{ inputs.environment }}/inty-firebase-key.json:/app/inty-firebase-key.json \
             ${{ env.INTY_SERVER_IMAGE }}@${{ steps.build-docker-image.outputs.digest }}
     - name: Sanity check
       run: |
-        curl ${{ vars.SERVICE_PUBLIC_URL }}
+        curl -s --fail --retry 5 --retry-delay 5 ${{ vars.SERVICE_PUBLIC_URL }}
