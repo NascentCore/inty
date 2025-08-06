@@ -6,8 +6,6 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    permissions:
-      packages: write
 
     environment: prod
     
