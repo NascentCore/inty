@@ -16,7 +16,7 @@ InTy 是一个基于 FastAPI 和 PostgreSQL 的 AI 聊天应用后端，集成�
 │ • CORS & error middleware                                          │
 │ • startup: init Firebase, cache_service, background_task_service,  │
 │   keep_talking_service, agent_manager                              │
-└─────────────────┬────────────────────────────────────────────────────┘
+└─────────────────┬──────────────────────────────────────────────────┘
                   │
                   ▼
           ┌──────────────┐   (/api/v1/endpoints/* – auth, users, agents,
@@ -133,6 +133,21 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 * **ReDoc**: <http://localhost:8000/redoc>
 * **OpenAPI JSON**: <http://localhost:8000/api/v1/openapi.json>
 
+### 开发
+
+```bash
+# 启动开发服务器
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+
+# 数据库迁移
+alembic revision --autogenerate -m "描述"
+alembic upgrade head
+
+# Setting python path when running tests
+PYTHONPATH=/Users/yzhao/Workspace/NascentCore/inty-backend \
+    pytest app/core/agent/agent_test.py -v
+```
+
 ## 部署
 
 ### 生产环境部署
@@ -146,16 +161,6 @@ TODO: 只保留一种就够了！
 cp config.yaml.example config.yaml
 ```
 
-1. **使用 Gunicorn 部署**
-
-```bash
-# 安装 Gunicorn
-pip install gunicorn
-
-# 启动应用
-gunicorn app.main:app -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000
-```
-
 1. **使用 Docker 部署**
 
 ```bash
@@ -164,21 +169,6 @@ docker build -t inty-backend .
 
 # 运行容器
 docker run -p 8000:8000 -v $(pwd)/config.yaml:/app/config.yaml inty-backend
-```
-
-## 开发指南
-
-```bash
-# 启动开发服务器
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-
-# 数据库迁移
-alembic revision --autogenerate -m "描述"
-alembic upgrade head
-
-# Setting python path when running tests
-PYTHONPATH=/Users/yzhao/Workspace/NascentCore/inty-backend \
-    pytest app/core/agent/agent_test.py -v
 ```
 
 ## 服务帐号密钥生成
@@ -199,7 +189,7 @@ PYTHONPATH=/Users/yzhao/Workspace/NascentCore/inty-backend \
   1. 进入 Google Cloud Console：
     - 访问 <https://console.cloud.google.com/>
     - 选择项目（Inty）
-  2. 创建服务账号：
+  2. 创建服务账号（service account）：
     - 设置 “roles/storage.admin” 角色
     - 点击创建的服务帐号 -> 密钥 -> 创建新密钥
     - 下载的文件重命名为：inty-backend-key.json
@@ -209,7 +199,6 @@ PYTHONPATH=/Users/yzhao/Workspace/NascentCore/inty-backend \
 ### 🚀 核心框架
 
 * **Python 3.8+** - 编程语言
-
 * **FastAPI** - 高性能异步 Web 框架
 * **PostgreSQL** - 关系型数据库
 * **SQLAlchemy** - 异步 ORM 框架
@@ -219,11 +208,9 @@ PYTHONPATH=/Users/yzhao/Workspace/NascentCore/inty-backend \
 ### 🤖 AI 技术栈
 
 * **LangChain** - AI 应用开发框架
-
 * **LangGraph** - 智能体状态管理和工作流
-* **OpenAI API** - GPT 模型集成
-* **Anthropic API** - Claude 模型集成
-* **Google AI** - Gemini 模型集成
+* **OpenRouter API** - GPT 模型集成
+* **Google Gemini API** - Gemini 模型集成
 * **LangMem** - 记忆管理系统
 * **向量数据库** - pgvector 扩展
 
@@ -241,10 +228,3 @@ PYTHONPATH=/Users/yzhao/Workspace/NascentCore/inty-backend \
 * **Google Play Developer API** - 订阅管理
 * **Firebase Cloud Messaging** - 消息推送
 * **ElevenLabs API** - 高质量语音合成服务
-
-### 🛠 开发工具
-
-* **Pydantic** - 数据验证
-* **PyYAML** - 配置管理
-* **Loguru** - 日志系统
-* **pytest** - 测试框架
