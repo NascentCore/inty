@@ -41,55 +41,27 @@ jobs:
       run: |
         ./gradlew clean assembleRelease --stacktrace --info
 
-    - name: Get version name and code
-      id: version
+    - id: gen-release-info
       run: |
-        VERSION_NAME=$(grep 'versionName = ' app/build.gradle.kts | sed 's/.*versionName = "\(.*\)".*/\1/')
-        GIT_COMMIT_COUNT=$(git rev-list --count HEAD)
-        VERSION_CODE=$(( GIT_COMMIT_COUNT > 10 ? GIT_COMMIT_COUNT : 10 ))
-        echo "version_name=$VERSION_NAME" >> $GITHUB_OUTPUT
-        echo "version_code=$VERSION_CODE" >> $GITHUB_OUTPUT
+        echo "name=v$(date +%Y%m%d-%H%M%S)" >> $GITHUB_OUTPUT
 
-    - name: Create GitHub Release
-      id: create_release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - id: create-release
+      uses: softprops/action-gh-release@v2
       with:
-        tag_name: v${{ steps.version.outputs.version_code }}
-        release_name: APK Release v${{ steps.version.outputs.version_name }} (Build ${{ steps.version.outputs.version_code }})
-        body: |
-          🔧 APK Release Build
-
-          - Version Name: ${{ steps.version.outputs.version_name }}
-          - Version Code: ${{ steps.version.outputs.version_code }}
-          - Built from commit: ${{ github.sha }}
+        tag_name: ${{ steps.gen-release-info.outputs.name }}
         draft: false
         prerelease: false
-
-    - name: Upload APK to GitHub Release
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: app/build/outputs/apk/release/app-release.apk
-        asset_name: app-release.apk
-        asset_content_type: application/vnd.android.package-archive
+        files: |
+          app/build/outputs/apk/release/app-release.apk
+        generate_release_notes: true
+        make_latest: true
+        fail_on_unmatched_files: false
 
     - name: Notify Feishu group
       run: |
-        VERSION_NAME=${{ steps.version.outputs.version_name }}
-        VERSION_CODE=${{ steps.version.outputs.version_code }}
-        REPO=${{ github.repository }}
-        RELEASE_TAG="v${VERSION_CODE}"
-        APK_NAME="app-release.apk"
-        RELEASE_URL="https://github.com/${REPO}/releases/download/${RELEASE_TAG}/${APK_NAME}"
-
-        # 获取最近提交（格式化并转义换行）
-        COMMITS=$(git log -n 5 --pretty=format:"- %s" | sed ':a;N;$!ba;s/\n/\\n/g')
-
-        # 构建 JSON
+        RELEASE_NAME=${{ steps.gen-release-info.outputs.name }}
+        RELEASE_URL=${{ steps.create-release.outputs.url }}
+        RELEASE_APK_URL=${{ fromJSON(steps.create-release.outputs.assets)[0].browser_download_url }}
         cat <<EOF > feishu_card.json
         {
           "msg_type": "interactive",
@@ -100,48 +72,21 @@ jobs:
             "header": {
               "title": {
                 "tag": "plain_text",
-                "content": "📦 新版本 APK 发布"
+                "content": "📦 $RELEASE_NAME APK 发布"
               }
             },
             "elements": [
               {
                 "tag": "div",
-                "fields": [
-                  {
-                    "is_short": true,
-                    "text": {
-                      "tag": "lark_md",
-                      "content": "**版本名称：** ${VERSION_NAME}"
-                    }
-                  },
-                  {
-                    "is_short": true,
-                    "text": {
-                      "tag": "lark_md",
-                      "content": "**版本号：** ${VERSION_CODE}"
-                    }
-                  }
-                ]
-              },
-              {
-                "tag": "div",
                 "text": {
                   "tag": "lark_md",
-                  "content": "**更新内容：**\\n${COMMITS}"
-                }
-              },
-              {
-                "tag": "div",
-                "text": {
-                  "tag": "lark_md",
-                  "content": "✅ APK 构建完成并上传至 [GitHub Release](${RELEASE_URL})"
+                  "content": "✅ APK 构建完成并上传至 [GitHub Release](${RELEASE_URL})，[下载链接](${RELEASE_APK_URL})"
                 }
               }
             ]
           }
         }
         EOF
-
         curl -X POST ${{ secrets.FEISHU_WEBHOOK_URL }} \
           -H "Content-Type: application/json" \
           -d @feishu_card.json
