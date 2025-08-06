@@ -63,7 +63,11 @@ jobs:
       run: |
         RELEASE_NAME=${{ steps.gen-release-info.outputs.name }}
         RELEASE_URL=${{ steps.create-release.outputs.url }}
+        # See https://github.com/softprops/action-gh-release?tab=readme-ov-file#outputs
         RELEASE_APK_URL=${{ fromJSON(steps.create-release.outputs.assets)[0].browser_download_url }}
+        # See:
+        # https://open.larksuite.com/document/common-capabilities/message-card/message-cards-content/using-markdown-tags
+        # for how to write content in feishu card.
         cat <<EOF > feishu_card.json
         {
           "msg_type": "interactive",
@@ -74,7 +78,7 @@ jobs:
             "header": {
               "title": {
                 "tag": "plain_text",
-                "content": "开发用测试版本 APK 发布：$RELEASE_NAME"
+                "content": "IntelliMate Debug APK 发布，版本：$RELEASE_NAME"
               }
             },
             "elements": [
@@ -82,14 +86,7 @@ jobs:
                 "tag": "div",
                 "text": {
                   "tag": "lark_md",
-                  "content": "✅ 改动列表见 [GitHub Release](${RELEASE_URL})"
-                }
-              },
-              {
-                "tag": "div",
-                "text": {
-                  "tag": "lark_md",
-                  "content": "📦 [APK 下载链接](${RELEASE_APK_URL})"
+                  "content": "✅ 改动列表见 [GitHub Release](${RELEASE_URL})\n📦 [APK 下载链接](${RELEASE_APK_URL})"
                 }
               }
             ]
