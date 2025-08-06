@@ -37,7 +37,7 @@ jobs:
         push: true
         tags: ${{ env.INTY_SERVER_IMAGE }}:${{ github.ref_name }}
         
-    - name: Deploy to prd server
+    - name: Deploy to prod server
       uses: appleboy/ssh-action@master
       with:
         host: ${{ secrets.DEV_SERVER_HOST }}
@@ -46,14 +46,14 @@ jobs:
         script: |
           sudo docker login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }}
           sudo docker pull ${{ env.INTY_SERVER_IMAGE }}@${{ steps.build-docker-image.outputs.digest }}
-          sudo docker stop inty-backend-prd || true
+          sudo docker stop inty-backend-prod || true
           sudo docker run --detach --rm \
-            --name inty-backend-prd \
+            --name inty-backend-prod \
             --restart unless-stopped \
-            --publish 8100:8000 \
-            --volume /opt/inty-prd/config.yaml:/app/config.yaml \
-            --volume /opt/inty-prd/inty-backend-key.json:/app/inty-backend-key.json \
-            --volume /opt/inty-prd/inty-firebase-key.json:/app/inty-firebase-key.json \
+            --publish ${{ vars.SERVICE_PORT }}:8000 \
+            --volume /opt/inty-prod/config.yaml:/app/config.yaml \
+            --volume /opt/inty-prod/inty-backend-key.json:/app/inty-backend-key.json \
+            --volume /opt/inty-prod/inty-firebase-key.json:/app/inty-firebase-key.json \
             ${{ env.INTY_SERVER_IMAGE }}@${{ steps.build-docker-image.outputs.digest }}
     - name: Sanity check
       run: |
