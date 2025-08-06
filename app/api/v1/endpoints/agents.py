@@ -284,7 +284,7 @@ async def generate_background(
             if not current_user.is_superuser:
                 # 返回统一的订阅错误响应
                 return create_business_error_response(
-                    error_info=BusinessErrorCode.SUBSCRIPTION_REQUIRED,
+                    error_info=BusinessErrorCode.BACKGROUND_GENERATION_LIMIT_REACHED,
                     extra_data={
                         "used_count": used_count,
                         "limit": limit,

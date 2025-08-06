@@ -455,17 +455,6 @@ async def agent_chat_completions(
             f"request.messages数量: {len(request.messages) if request.messages else 0}"
         )
 
-        # 检查用户聊天次数限制
-        is_allowed, used_count, daily_limit = (
-            await subscription_service.check_chat_limit(db, current_user.id)
-        )
-
-        if not is_allowed:
-            return create_business_error_response(
-                error_info=BusinessErrorCode.SUBSCRIPTION_REQUIRED,
-                extra_data={"used_count": used_count, "daily_limit": daily_limit},
-            )
-
         # 优化：简化Agent验证，在创建Agent实例时验证
         agent_query_start = time.time()
         logger.debug(f"简化Agent验证: {agent_id}")
@@ -552,6 +541,24 @@ async def agent_chat_completions(
         session_id = generate_session_id(chat.id)
         session_id_time = time.time() - session_id_start
         logger.info(f"Session ID生成耗时: {session_id_time:.3f}秒")
+
+        # 检查用户聊天次数限制
+        is_allowed, used_count, daily_limit = (
+            await subscription_service.check_chat_limit(db, current_user.id)
+        )
+
+        if not is_allowed:
+            # 在返回错误前，先保存用户消息到聊天历史
+            try:
+                chat_history_service.add_user_message(session_id, last_user_message)
+                logger.info(f"用户消息已保存到历史记录: {session_id}")
+            except Exception as e:
+                logger.warning(f"保存用户消息失败: {str(e)}")
+            
+            return create_business_error_response(
+                error_info=BusinessErrorCode.SUBSCRIPTION_REQUIRED,
+                extra_data={"used_count": used_count, "daily_limit": daily_limit},
+            )
 
         # 用户发送新消息时，重置keep_talking计数
         keep_talking_service.reset_keep_talking_count(chat.id)

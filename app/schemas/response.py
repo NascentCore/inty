@@ -46,6 +46,11 @@ class BusinessErrorCode:
         "error_code": "SUBSCRIPTION_REQUIRED",
         "message": "Subscription required",
     }
+    BACKGROUND_GENERATION_LIMIT_REACHED = {
+        "code": 10001002,
+        "error_code": "BACKGROUND_GENERATION_LIMIT_REACHED",
+        "message": "Background generation limit reached",
+    }
 
 
 # 业务错误消息定义
