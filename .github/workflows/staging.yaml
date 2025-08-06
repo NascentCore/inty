@@ -21,14 +21,21 @@ jobs:
         java-version: '21'
         distribution: 'temurin'
 
-    - name: Cache Gradle dependencies
+    - name: Cache Gradle dependencies and build cache
       uses: actions/cache@v4
       with:
         path: |
           ~/.gradle/caches
           ~/.gradle/wrapper
-        key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          .gradle
+          build
+          app/build
+          network/build
+          utils/build
+        # https://github.com/actions/cache/blob/main/examples.md#java---gradle
+        key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}-${{ github.sha }}
         restore-keys: |
+          ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}-
           ${{ runner.os }}-gradle-
 
     - name: Create keystore.properties
@@ -45,11 +52,11 @@ jobs:
 
     - name: Build APK
       run: |
-        ./gradlew clean assembleDebug --stacktrace --info
+        ./gradlew assembleDebug --stacktrace --info
 
     - name: Build AAB
       run: |
-        ./gradlew clean bundleDebug --stacktrace --info
+        ./gradlew bundleDebug --stacktrace --info
 
     - id: gen-release-info
       run: |
