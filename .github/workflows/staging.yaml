@@ -39,7 +39,7 @@ jobs:
 
     - name: Build APK
       run: |
-        ./gradlew clean assembleRelease --stacktrace --info
+        ./gradlew clean assembleDebug --stacktrace --info
 
     - id: gen-release-info
       run: |
