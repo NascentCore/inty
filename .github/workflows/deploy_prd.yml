@@ -2,6 +2,11 @@ name: Build and deploy to production environment
 
 on:
   workflow_dispatch:
+    inputs:
+      environment:
+        description: The environment to deploy to
+        required: true
+        default: dev
 
 env:
   INTY_SERVER_IMAGE: ghcr.io/nascentcore/inty-backend/inty-server
@@ -15,7 +20,7 @@ jobs:
       # Checkout repository
       contents: read
 
-    environment: prod
+    environment: ${{ inputs.environment }}
     
     steps:
     - uses: actions/checkout@v4
@@ -46,14 +51,15 @@ jobs:
         script: |
           sudo docker login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }}
           sudo docker pull ${{ env.INTY_SERVER_IMAGE }}@${{ steps.build-docker-image.outputs.digest }}
-          sudo docker stop inty-backend-prod || true
+          sudo docker stop inty-backend-${{ inputs.environment }} || true
+          sudo docker rm inty-backend-${{ inputs.environment }} || true
           sudo docker run --detach \
-            --name inty-backend-prod \
+            --name inty-backend-${{ inputs.environment }} \
             --restart unless-stopped \
             --publish ${{ vars.SERVICE_PORT }}:8000 \
-            --volume /opt/inty-prod/config.yaml:/app/config.yaml \
-            --volume /opt/inty-prod/inty-backend-key.json:/app/inty-backend-key.json \
-            --volume /opt/inty-prod/inty-firebase-key.json:/app/inty-firebase-key.json \
+            --volume /opt/inty-${{ inputs.environment }}/config.yaml:/app/config.yaml \
+            --volume /opt/inty-${{ inputs.environment }}/inty-backend-key.json:/app/inty-backend-key.json \
+            --volume /opt/inty-${{ inputs.environment }}/inty-firebase-key.json:/app/inty-firebase-key.json \
             ${{ env.INTY_SERVER_IMAGE }}@${{ steps.build-docker-image.outputs.digest }}
     - name: Sanity check
       run: |
