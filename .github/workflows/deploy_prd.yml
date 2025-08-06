@@ -4,6 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       environment:
+        type: environment
         description: The environment to deploy to
         required: true
         default: dev
