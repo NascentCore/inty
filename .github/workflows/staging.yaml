@@ -37,9 +37,19 @@ jobs:
       run: |
         echo "$KEYSTORE_PROPERTIES" > keystore.properties
 
+    - name: Create Google Play service account key
+      env:
+        GOOGLE_PLAY_SERVICE_ACCOUNT_KEY: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_KEY }}
+      run: |
+        echo "$GOOGLE_PLAY_SERVICE_ACCOUNT_KEY" > service-account-key.json
+
     - name: Build APK
       run: |
         ./gradlew clean assembleDebug --stacktrace --info
+
+    - name: Build AAB
+      run: |
+        ./gradlew clean bundleDebug --stacktrace --info
 
     - id: gen-release-info
       run: |
@@ -53,9 +63,21 @@ jobs:
         prerelease: false
         files: |
           app/build/outputs/apk/debug/app-debug.apk
+          app/build/outputs/bundle/debug/app-debug.aab
         generate_release_notes: true
         make_latest: true
         fail_on_unmatched_files: false
+
+    - name: Upload AAB to Google Play Internal Testing
+      uses: r0adkll/upload-google-play@v1
+      with:
+        serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_KEY }}
+        packageName: com.ai.intellimate
+        releaseFiles: app/build/outputs/bundle/debug/app-debug.aab
+        track: 'internal'
+        status: draft
+        inAppUpdatePriority: 2
+        whatsNewDirectory: distribution/whatsnew-dynamic
 
     - name: Notify Feishu group
       run: |

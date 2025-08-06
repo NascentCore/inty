@@ -55,8 +55,7 @@ jobs:
         echo "✅ AAB build completed!"
         ls -la app/build/outputs/bundle/release/
 
-    - name: Extract version info
-      id: version_info
+    - id: version_info
       run: |
         # 直接计算版本信息，避免Gradle任务的复杂输出
         echo "🔍 Calculating version information..."
