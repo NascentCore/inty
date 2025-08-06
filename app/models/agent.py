@@ -1,6 +1,7 @@
-import enum
-
 import sqlalchemy as sa
+
+from enum import StrEnum
+
 from sqlalchemy import JSON, Boolean, Column, DateTime, Enum, ForeignKey, String, Text
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -10,7 +11,7 @@ from app.models.associations import agent_followers
 from app.models.user import Gender
 
 
-class AgentStatus(str, enum.Enum):
+class AgentStatus(StrEnum):
     """AI角色状态"""
 
     PENDING = "PENDING"
@@ -18,15 +19,15 @@ class AgentStatus(str, enum.Enum):
     REJECTED = "REJECTED"
 
 
-class AgentVisibility(str, enum.Enum):
-    """AI角色可见性"""
+class AgentVisibility(StrEnum):
+    """AI 角色可见性"""
 
     PUBLIC = "PUBLIC"
     PRIVATE = "PRIVATE"
 
 
 class Agent(Base):
-    """AI角色模型"""
+    """AI 角色，Agent 的提法是早期的用词，改动比较麻烦，就沿用了。"""
 
     __tablename__ = "agents"
 
