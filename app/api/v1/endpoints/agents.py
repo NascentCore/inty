@@ -23,8 +23,13 @@ from app.schemas.character_card import (
     CharacterCardImportResponse,
     CharacterCardValidationResponse,
 )
+
 # 移除未使用的导入
-from app.schemas.response import APIResponse, create_business_error_response, BusinessErrorCode
+from app.schemas.response import (
+    APIResponse,
+    create_business_error_response,
+    BusinessErrorCode,
+)
 from app.services import agent_service
 from app.services.character_card_service import character_card_service
 from app.services.subscription_service import SubscriptionService
@@ -267,24 +272,24 @@ async def generate_background(
         if request.count < 1 or request.count > 4:
             return APIResponse.error(message="Count must be between 1 and 4")
 
-        # 检查背景图生成限制
-        is_allowed, used_count, limit = (
-            await subscription_service.check_background_generation_limit(
-                db, current_user.id
-            )
-        )
-
-        if not is_allowed:
+        if not current_user.is_superuser:
             # 超级管理员不受限制
-            if not current_user.is_superuser:
+            # 检查背景图生成限制
+            is_allowed, used_count, limit = (
+                await subscription_service.check_background_generation_limit(
+                    db, current_user.id
+                )
+            )
+
+            if not is_allowed:
                 # 返回统一的订阅错误响应
                 return create_business_error_response(
                     error_info=BusinessErrorCode.SUBSCRIPTION_REQUIRED,
                     extra_data={
                         "used_count": used_count,
                         "limit": limit,
-                        "feature": "background_generation"
-                    }
+                        "feature": "background_generation",
+                    },
                 )
 
         # Construct GCS base path
