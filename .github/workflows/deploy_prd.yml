@@ -45,7 +45,7 @@ jobs:
         key: ${{ secrets.DEV_SERVER_SSH_KEY }}
         script: |
           sudo docker login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }}
-          sudo docker pull ${{ env.INTY_SERVER_IMAGE }}:${{ steps.build-docker-image.outputs.imageid }}
+          sudo docker pull ${{ env.INTY_SERVER_IMAGE }}@${{ steps.build-docker-image.outputs.digest }}
           sudo docker stop inty-backend-prd || true
           sudo docker run --detach --rm \
             --name inty-backend-prd \
@@ -54,7 +54,7 @@ jobs:
             --volume /opt/inty-prd/config.yaml:/app/config.yaml \
             --volume /opt/inty-prd/inty-backend-key.json:/app/inty-backend-key.json \
             --volume /opt/inty-prd/inty-firebase-key.json:/app/inty-firebase-key.json \
-            ${{ env.INTY_SERVER_IMAGE }}:${{ steps.build-docker-image.outputs.imageid }}
+            ${{ env.INTY_SERVER_IMAGE }}@${{ steps.build-docker-image.outputs.digest }}
     - name: Sanity check
       run: |
         curl ${{ vars.SERVICE_PUBLIC_URL }}
