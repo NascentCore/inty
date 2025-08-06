@@ -1,4 +1,6 @@
-name: Build and release staging APK to GitHub Release
+# The app is built with debug build type, and connects to dev backend
+# at dev.inty.sxwl.ai.
+name: Build and release staging APK to GitHub Release (app debug build + dev backend)
 
 on:
   workflow_dispatch:
@@ -80,7 +82,7 @@ jobs:
                 "tag": "div",
                 "text": {
                   "tag": "lark_md",
-                  "content": "✅ APK 构建完成并上传至 [GitHub Release](${RELEASE_URL})，[下载链接](${RELEASE_APK_URL})"
+                  "content": "✅ 改动列表见 [GitHub Release](${RELEASE_URL})，[APK 下载链接](${RELEASE_APK_URL})"
                 }
               }
             ]
