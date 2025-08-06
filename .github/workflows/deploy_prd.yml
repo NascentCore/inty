@@ -42,6 +42,7 @@ jobs:
         username: ${{ secrets.DEV_SERVER_USER }}
         key: ${{ secrets.DEV_SERVER_SSH_KEY }}
         script: |
+          sudo docker login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }}
           sudo docker pull ${{ steps.build-docker-image.outputs.imageid }}
           sudo docker stop inty-backend-prd || true
           sudo docker run --detach --rm \
