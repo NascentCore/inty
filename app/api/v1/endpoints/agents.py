@@ -23,8 +23,13 @@ from app.schemas.character_card import (
     CharacterCardImportResponse,
     CharacterCardValidationResponse,
 )
+
 # 移除未使用的导入
-from app.schemas.response import APIResponse, create_business_error_response, BusinessErrorCode
+from app.schemas.response import (
+    APIResponse,
+    BusinessErrorCode,
+    create_business_error_response,
+)
 from app.services import agent_service
 from app.services.character_card_service import character_card_service
 from app.services.subscription_service import SubscriptionService
@@ -283,8 +288,8 @@ async def generate_background(
                     extra_data={
                         "used_count": used_count,
                         "limit": limit,
-                        "feature": "background_generation"
-                    }
+                        "feature": "background_generation",
+                    },
                 )
 
         # Construct GCS base path

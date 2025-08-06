@@ -1,8 +1,9 @@
 import os
-from app.core.agent.prompts import StructuredPrompt
 
 from dotenv import load_dotenv
 from openai import OpenAI
+
+from app.core.agent.prompts import StructuredPrompt
 
 load_dotenv()
 

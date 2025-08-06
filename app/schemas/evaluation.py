@@ -1,7 +1,8 @@
 """评测系统的Pydantic模型定义"""
 
 from datetime import datetime
-from typing import List, Optional, Dict, Any, Union
+from typing import Any, Dict, List, Optional, Union
+
 from pydantic import BaseModel, Field, validator
 
 from app.models.evaluation import EvaluationStatus

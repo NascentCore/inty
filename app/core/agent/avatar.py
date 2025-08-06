@@ -1,11 +1,11 @@
+import json
+import os
+
 import google.genai as genai
 from google.genai import types
-import os
-import json
 from loguru import logger
 
 from app.core.config import settings
-
 
 # Initialize Google Gen AI client with Vertex AI
 # The client will use the same credentials as configured for GCS

@@ -7,9 +7,7 @@ import hashlib
 from datetime import datetime, timedelta
 from typing import Any, Dict, Optional
 
-
 from loguru import logger
-
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import func

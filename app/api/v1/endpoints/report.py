@@ -11,12 +11,7 @@ from app.core.config import settings
 from app.db.session import get_async_db
 from app.models.report import ReportStatus
 from app.models.user import User
-from app.schemas.report import (
-    ReportCreate,
-    ReportOut,
-    ReportQuery,
-    TargetType,
-)
+from app.schemas.report import ReportCreate, ReportOut, ReportQuery, TargetType
 from app.schemas.response import APIResponse, PaginationData
 from app.services import report_service
 from app.utils.gcs import upload_to_gcs

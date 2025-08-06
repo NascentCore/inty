@@ -65,9 +65,9 @@ async def get_subscription_plans(
             )
 
         response = SubscriptionPlansResponse(
-            plans=plans, 
+            plans=plans,
             current_subscription=current_subscription_schema,
-            has_ever_subscribed=has_ever_subscribed
+            has_ever_subscribed=has_ever_subscribed,
         )
 
         return APIResponse.success(data=response)

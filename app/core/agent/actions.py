@@ -5,6 +5,7 @@ https://gemini.google.com/app/93d0a15ee57189f2
 """
 
 from enum import StrEnum
+
 from pydantic import BaseModel
 
 

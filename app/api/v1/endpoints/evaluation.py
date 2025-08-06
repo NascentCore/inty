@@ -1,22 +1,16 @@
 """评测系统API端点 - 专门用于评测聊天系统效果"""
 
+import logging
 from typing import Any, List, Optional
-from fastapi import (
-    APIRouter,
-    Depends,
-    HTTPException,
-    UploadFile,
-    File,
-    Query,
-)
+
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import schemas
 from app.api import deps
 from app.services.evaluation_service import EvaluationService
-from app.services.scoring_service import ScoringService
 from app.services.question_parser_service import QuestionParserService
-import logging
+from app.services.scoring_service import ScoringService
 
 logger = logging.getLogger(__name__)
 
@@ -446,8 +440,8 @@ async def get_evaluation_agents(
         return schemas.APIResponse.error(message="Unauthorized access")
 
     try:
-        from app.services import agent_service
         from app.models.agent import AgentVisibility
+        from app.services import agent_service
 
         if type == "private":
             # 获取用户创建的私有智能体
@@ -631,8 +625,9 @@ async def create_evaluation_template(
         return schemas.APIResponse.error(message="Unauthorized access")
 
     try:
-        from app.models.evaluation import EvaluationTemplate
         import uuid
+
+        from app.models.evaluation import EvaluationTemplate
 
         template = EvaluationTemplate(
             id=str(uuid.uuid4()),
@@ -679,7 +674,8 @@ async def get_evaluation_templates(
         return schemas.APIResponse.error(message="Unauthorized access")
 
     try:
-        from sqlalchemy import select, or_
+        from sqlalchemy import or_, select
+
         from app.models.evaluation import EvaluationTemplate
 
         # 构建查询条件

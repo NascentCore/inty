@@ -1,26 +1,26 @@
 """评测会话管理服务"""
 
 import asyncio
+import json
+import logging
 import uuid
 from datetime import datetime
-from typing import List, Optional, Dict, Any
+from typing import Any, Dict, List, Optional
+
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
-from sqlalchemy import select, update
-import json
 
+from app.models.agent import Agent
 from app.models.evaluation import (
-    EvaluationSession,
-    EvaluationResult,
     EvaluationInteraction,
+    EvaluationResult,
+    EvaluationSession,
     EvaluationStatus,
 )
 from app.models.user import User
-from app.models.agent import Agent
+from app.services import agent_service, chat_service
 from app.services.scoring_service import ScoringService
-from app.services import chat_service
-from app.services import agent_service
-import logging
 
 logger = logging.getLogger(__name__)
 

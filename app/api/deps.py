@@ -2,6 +2,7 @@
 依赖注入：为 FastAPI 接口处理函数注入依赖数据。
 """
 
+import logging
 from typing import Generator, Optional
 
 from fastapi import Depends, HTTPException, status
@@ -19,8 +20,6 @@ from app.db.base import SessionLocal
 from app.db.session import get_async_db
 from app.models.user import User
 from app.schemas.token import TokenPayload
-
-import logging
 
 logger = logging.getLogger(__name__)
 

@@ -5,9 +5,10 @@
 """
 
 import asyncio
+from typing import Any, Dict
+
 import aiohttp
 import pytest
-from typing import Dict, Any
 
 # 测试配置
 BASE_URL = "http://localhost:8000/api/v1"

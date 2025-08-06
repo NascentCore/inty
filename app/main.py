@@ -2,10 +2,10 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
+from fastapi.staticfiles import StaticFiles
 from jose.exceptions import JWTError
 from loguru import logger
 from pydantic import ValidationError
-from fastapi.staticfiles import StaticFiles
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -31,19 +31,25 @@ app = FastAPI(
     description="InTy",
     version="1.0.0",
     # 只在debug模式下开启OpenAPI docs
-    openapi_url=f"{settings.app.api_v1_prefix}/openapi.json" if settings.app.debug else None,
+    openapi_url=(
+        f"{settings.app.api_v1_prefix}/openapi.json" if settings.app.debug else None
+    ),
     docs_url="/docs" if settings.app.debug else None,
     redoc_url="/redoc" if settings.app.debug else None,
     # Swagger UI参数配置（仅在debug模式下生效）
-    swagger_ui_parameters={
-        "persistAuthorization": True,
-        "displayRequestDuration": True,
-        "syntaxHighlight.theme": "obsidian",
-        "tryItOutEnabled": True,
-        "requestSnippetsEnabled": True,
-        "defaultModelsExpandDepth": 3,
-        "defaultModelExpandDepth": 3,
-    } if settings.app.debug else {},
+    swagger_ui_parameters=(
+        {
+            "persistAuthorization": True,
+            "displayRequestDuration": True,
+            "syntaxHighlight.theme": "obsidian",
+            "tryItOutEnabled": True,
+            "requestSnippetsEnabled": True,
+            "defaultModelsExpandDepth": 3,
+            "defaultModelExpandDepth": 3,
+        }
+        if settings.app.debug
+        else {}
+    ),
 )
 
 # Set all CORS enabled origins
@@ -247,7 +253,7 @@ def custom_openapi():
     # 只在debug模式下提供OpenAPI schema
     if not settings.app.debug:
         return None
-        
+
     if app.openapi_schema:
         return app.openapi_schema
 

@@ -44,42 +44,41 @@ class BusinessErrorCode:
     SUBSCRIPTION_REQUIRED = {
         "code": 10001001,
         "error_code": "SUBSCRIPTION_REQUIRED",
-        "message": "Subscription required"
+        "message": "Subscription required",
     }
 
 
 # 业务错误消息定义
 BUSINESS_ERROR_MESSAGES = {
-    BusinessErrorCode.SUBSCRIPTION_REQUIRED["code"]: BusinessErrorCode.SUBSCRIPTION_REQUIRED["message"],
+    BusinessErrorCode.SUBSCRIPTION_REQUIRED[
+        "code"
+    ]: BusinessErrorCode.SUBSCRIPTION_REQUIRED["message"],
 }
 
 
 def create_business_error_response(
-    error_info: Dict[str, Any],
-    extra_data: Optional[Dict[str, Any]] = None
+    error_info: Dict[str, Any], extra_data: Optional[Dict[str, Any]] = None
 ) -> APIResponse[Dict[str, Any]]:
     """
     创建统一格式的业务错误响应
-    
+
     Args:
         error_info: 包含code, error_code, message的错误信息字典
         extra_data: 额外数据
-    
+
     Returns:
         APIResponse
     """
-    # 构建错误数据  
+    # 构建错误数据
     error_data = {
         "error_code": error_info["error_code"],
         "description": error_info["message"],
     }
-    
+
     # 添加额外数据
     if extra_data:
         error_data.update(extra_data)
-    
+
     return APIResponse.error(
-        message=error_info["message"], 
-        code=error_info["code"], 
-        data=error_data
+        message=error_info["message"], code=error_info["code"], data=error_data
     )

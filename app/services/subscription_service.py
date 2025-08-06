@@ -171,7 +171,7 @@ class SubscriptionService:
         try:
             # 获取用户历史订阅记录
             has_ever_subscribed = await self.has_ever_subscribed(db, user_id)
-            
+
             # 获取当前有效订阅
             subscription = await self.get_user_current_subscription(db, user_id)
 

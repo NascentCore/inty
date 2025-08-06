@@ -1,11 +1,11 @@
+import logging
+
 from fastapi import Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from jose.exceptions import JWTError
 from pydantic import ValidationError
 from sqlalchemy.exc import SQLAlchemyError
-
-import logging
 
 logger = logging.getLogger(__name__)
 

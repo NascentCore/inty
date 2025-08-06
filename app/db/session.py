@@ -5,7 +5,6 @@ from sqlalchemy.orm import sessionmaker
 
 from app.core.config import settings
 
-
 # 异步数据库引擎
 async_engine = create_async_engine(
     str(settings.database.async_url),

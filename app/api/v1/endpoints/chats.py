@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from langchain_core.messages import HumanMessage
 from pydantic import BaseModel
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import models, schemas
@@ -16,6 +17,7 @@ from app.api import deps
 from app.core.agent.agent import agent_manager
 from app.core.config import settings
 from app.schemas.chat import ChatCompletionRequest
+from app.schemas.response import BusinessErrorCode, create_business_error_response
 from app.services import agent_service, chat_history_service, chat_service
 from app.services.async_voice_service import async_voice_service
 from app.services.chat_service import generate_session_id
@@ -24,7 +26,6 @@ from app.services.subscription_service import subscription_service
 from app.services.voice_cache_service import voice_cache_service
 from app.services.voice_cleanup_service import voice_cleanup_service
 from app.services.voice_service import voice_service
-from app.schemas.response import create_business_error_response, BusinessErrorCode
 
 router = APIRouter()
 
@@ -426,7 +427,10 @@ async def get_agent_chat_messages(
         )
 
 
-@router.post("/agents/{agent_id}/chat/completions", response_model=Union[dict, schemas.APIResponse[dict]])
+@router.post(
+    "/agents/{agent_id}/chat/completions",
+    response_model=Union[dict, schemas.APIResponse[dict]],
+)
 async def agent_chat_completions(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
@@ -459,7 +463,7 @@ async def agent_chat_completions(
         if not is_allowed:
             return create_business_error_response(
                 error_info=BusinessErrorCode.SUBSCRIPTION_REQUIRED,
-                extra_data={"used_count": used_count, "daily_limit": daily_limit}
+                extra_data={"used_count": used_count, "daily_limit": daily_limit},
             )
 
         # 优化：简化Agent验证，在创建Agent实例时验证
@@ -467,8 +471,6 @@ async def agent_chat_completions(
         logger.debug(f"简化Agent验证: {agent_id}")
 
         # 简化查询，只获取基本字段
-        from sqlalchemy import select
-
         result = await db.execute(
             select(models.Agent.id, models.Agent.name).where(
                 models.Agent.id == agent_id
@@ -1038,7 +1040,12 @@ async def get_voice_cache_stats(
         )
 
 
-@router.put("/agents/{agent_id}/settings", response_model=Union[schemas.APIResponse[schemas.ChatSettings], schemas.APIResponse[dict]])
+@router.put(
+    "/agents/{agent_id}/settings",
+    response_model=Union[
+        schemas.APIResponse[schemas.ChatSettings], schemas.APIResponse[dict]
+    ],
+)
 async def update_agent_chat_settings(
     *,
     db: AsyncSession = Depends(deps.get_async_db),

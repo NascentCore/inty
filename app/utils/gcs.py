@@ -1,11 +1,10 @@
+import logging
 import re
 from urllib.parse import urlparse
 
 from google.cloud import storage
 
 from app.core.config import settings  # 假设你的配置是settings对象
-
-import logging
 
 logger = logging.getLogger(__name__)
 

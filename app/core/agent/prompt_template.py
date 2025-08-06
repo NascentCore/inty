@@ -1,6 +1,5 @@
 import logging
 import re
-
 from dataclasses import dataclass
 from string import Template
 from typing import Any, Dict, List, Optional

@@ -1,7 +1,7 @@
 import uuid
-import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
+import pytest
 from langchain_core.messages import HumanMessage
 
 from app.core.agent import prompts

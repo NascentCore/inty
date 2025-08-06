@@ -1,21 +1,22 @@
-from sqlalchemy import (
-    Column,
-    String,
-    DateTime,
-    ForeignKey,
-    Boolean,
-    Text,
-    Integer,
-    Float,
-    Enum,
-    JSON,
-)
-from sqlalchemy.sql import func
-from sqlalchemy.orm import relationship
-from sqlalchemy.dialects.postgresql import UUID
-import sqlalchemy as sa
 import enum
 import uuid
+
+import sqlalchemy as sa
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    Column,
+    DateTime,
+    Enum,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+)
+from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
 
 from app.models import Base
 

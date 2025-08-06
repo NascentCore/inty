@@ -2,15 +2,15 @@ from fastapi import APIRouter
 
 from app.api.v1.endpoints import (
     admin,
-    auth,
-    notification,
-    users,
     agents,
+    auth,
     chats,
-    settings,
-    report,
-    subscription,
     evaluation,
+    notification,
+    report,
+    settings,
+    subscription,
+    users,
 )
 
 api_router = APIRouter()

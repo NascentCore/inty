@@ -16,7 +16,9 @@ class ChatSettings(Base):
     voice_enabled = Column(Boolean, default=True)  # 个性化语音自动播放开关
     keep_talking = Column(Boolean, default=True)
     style_prompt = Column(Text, nullable=True, comment="风格提示词，仅订阅用户可设置")
-    premium_mode = Column(Boolean, default=False, comment="高级模式开关，仅订阅用户可设置")
+    premium_mode = Column(
+        Boolean, default=False, comment="高级模式开关，仅订阅用户可设置"
+    )
     created_at = Column(DateTime(timezone=True), server_default=sa.text("now()"))
     updated_at = Column(DateTime(timezone=True), onupdate=sa.text("now()"))
 
