@@ -2,20 +2,17 @@ name: Build and release staging APK to GitHub Release
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '0 18 * * *'
 
 jobs:
   build-apk:
-    name: Build staging APK and Upload
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
+    - uses: actions/checkout@v4
 
-    - name: Set up JDK 21
-      uses: actions/setup-java@v4
+    - uses: actions/setup-java@v4
       with:
         java-version: '21'
         distribution: 'temurin'
@@ -42,8 +39,6 @@ jobs:
     - name: Build APK
       run: |
         ./gradlew clean assembleRelease --stacktrace --info
-        echo "✅ APK build completed!"
-        ls -la app/build/outputs/apk/release/
 
     - name: Get version name and code
       id: version
@@ -81,7 +76,7 @@ jobs:
         asset_name: app-release.apk
         asset_content_type: application/vnd.android.package-archive
 
-    - name: Notify Feishu group with card and QR
+    - name: Notify Feishu group
       run: |
         VERSION_NAME=${{ steps.version.outputs.version_name }}
         VERSION_CODE=${{ steps.version.outputs.version_code }}
@@ -92,9 +87,6 @@ jobs:
 
         # 获取最近提交（格式化并转义换行）
         COMMITS=$(git log -n 5 --pretty=format:"- %s" | sed ':a;N;$!ba;s/\n/\\n/g')
-
-        # 生成二维码链接
-        QR_CODE_URL="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${RELEASE_URL}"
 
         # 构建 JSON
         cat <<EOF > feishu_card.json
@@ -125,7 +117,7 @@ jobs:
                     "is_short": true,
                     "text": {
                       "tag": "lark_md",
-                      "content": "**版本号（Build）：** ${VERSION_CODE}"
+                      "content": "**版本号：** ${VERSION_CODE}"
                     }
                   }
                 ]
@@ -141,14 +133,7 @@ jobs:
                 "tag": "div",
                 "text": {
                   "tag": "lark_md",
-                  "content": "✅ APK 构建完成并上传至 GitHub Release：[点击查看](${RELEASE_URL})"
-                }
-              },
-              {
-                "tag": "div",
-                "text": {
-                  "tag": "lark_md",
-                  "content": "📲 手机扫码下载：[点击查看](${QR_CODE_URL})"
+                  "content": "✅ APK 构建完成并上传至 [GitHub Release](${RELEASE_URL})"
                 }
               }
             ]
