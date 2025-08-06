@@ -8,7 +8,7 @@ on:
         required: true
         # Staging corresponds to Google Play's internal testing track.
         # Production corresponds to Google Play's production track. But are not used yet.
-        default: 'staging'
+        default: dev
         type: environment
 
 jobs:

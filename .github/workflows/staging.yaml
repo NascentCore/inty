@@ -4,6 +4,7 @@ name: Build and release dev APK to GitHub Release (app debug build + dev backend
 
 on:
   workflow_dispatch:
+
   schedule:
     # 18:00 UTC
     - cron: '0 1,5,10,15,20 * * *'
