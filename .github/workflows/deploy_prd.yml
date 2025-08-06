@@ -47,7 +47,7 @@ jobs:
           sudo docker login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }}
           sudo docker pull ${{ env.INTY_SERVER_IMAGE }}@${{ steps.build-docker-image.outputs.digest }}
           sudo docker stop inty-backend-prod || true
-          sudo docker run --detach --rm \
+          sudo docker run --detach \
             --name inty-backend-prod \
             --restart unless-stopped \
             --publish ${{ vars.SERVICE_PORT }}:8000 \
