@@ -1,7 +1,7 @@
 package com.ai.inty.viewmodels
 
 import android.app.Activity
-import androidx.lifecycle.ViewModel
+import com.ai.inty.base.BaseViewModel
 import com.ai.inty.billing.BillingRepository
 import com.ai.inty.billing.VipPlan
 import com.ai.inty.billing.VipStatus
@@ -13,7 +13,7 @@ import kotlinx.coroutines.flow.asStateFlow
 /**
  * 会员中心ViewModel，管理订阅状态和计划信息。
  */
-class VipCenterViewModel : ViewModel() {
+class VipCenterViewModel : BaseViewModel() {
     private val _selectedPlanIndex = MutableStateFlow(0)
     val selectedPlanIndex: StateFlow<Int> = _selectedPlanIndex.asStateFlow()
 
@@ -49,12 +49,15 @@ class VipCenterViewModel : ViewModel() {
             // 检查用户是否已经订阅
             if (vipStatusFlow.value.isSubscribed) {
                 EasyLog.log("用户已经是订阅用户，无需重复购买")
+                showNetworkAwareError("The user is already a subscribed user.")
+
                 return
             }
 
             // 启动购买流程
             BillingRepository.launchBillingFlow(activity, selectedPlan.googleProductId)
         } else {
+            showNetworkAwareError("Error VipPlan Index: $selectedIndex")
             EasyLog.log("无效的计划索引: $selectedIndex")
         }
     }

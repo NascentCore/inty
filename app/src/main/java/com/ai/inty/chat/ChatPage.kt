@@ -32,13 +32,14 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.LifecycleResumeEffect
+import androidx.lifecycle.compose.LifecycleStartEffect
 import com.ai.inty.Constant
 import com.ai.inty.R
 import com.ai.inty.billing.BillingRepository
 import com.ai.inty.ui.AdvancedModelChatDialog
 import com.ai.inty.ui.ChatDialogData
 import com.ai.inty.ui.UnlimitChatDialog
+import com.ai.inty.utils.SecurityUtils
 import com.ai.inty.viewmodels.ChatViewModel
 import com.inty.utils.storage.IntySetting
 import com.therouter.TheRouter
@@ -52,9 +53,19 @@ internal fun ChatPage(
     showBackButton: Boolean = false,
     onBack: (() -> Unit)? = null,
 ) {
-    LifecycleResumeEffect(chatViewModel) {
+
+    val context = LocalContext.current
+
+    LifecycleStartEffect(chatViewModel) {
         chatViewModel.queryMsgs()
-        onPauseOrDispose { }
+        if (context is Activity) {
+            SecurityUtils.enableSecureMode(context)
+        }
+        onStopOrDispose {
+            if (context is Activity) {
+                SecurityUtils.disableSecureMode(context)
+            }
+        }
     }
 
     val density = LocalDensity.current
@@ -184,7 +195,6 @@ internal fun ChatPage(
                         }
                     )
                     Spacer(Modifier.height(8.dp))
-                    val context = LocalContext.current
                     // 高级模型弹窗
                     if (showPremiumDialog) {
                         val data = ChatDialogData(

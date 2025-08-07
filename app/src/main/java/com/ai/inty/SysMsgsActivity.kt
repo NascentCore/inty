@@ -2,7 +2,6 @@ package com.ai.inty
 
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -39,6 +38,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.net.toUri
 import com.ai.inty.base.IntyImage
 import com.ai.inty.base.noRippleClickable
 import com.ai.inty.beans.SysMsgItem
@@ -165,8 +165,7 @@ fun SysMsgItemContainer(
             .padding(16.dp, 16.dp, 16.dp, 9.dp)
             .noRippleClickable {
                 msg.linkUrls.firstOrNull()?.let { onClickUrl(context, it) }
-            }
-        ,
+            },
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Box(
@@ -198,8 +197,7 @@ fun SysMsgItemContainer(
                     ),
                     width = 1.dp,
                     shape = RoundedCornerShape(8.dp)
-                )
-            ,
+                ),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             content()
@@ -300,7 +298,7 @@ fun SysMsgItemImageLink(msg: SysMsgItem) {
 }
 
 fun onClickUrl(context: Context, url: String) {
-    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+    val intent = Intent(Intent.ACTION_VIEW, url.toUri())
     context.startActivity(intent)
 
 }
@@ -324,4 +322,3 @@ fun SysMsgItemTextLink(
         )
     }
 }
-

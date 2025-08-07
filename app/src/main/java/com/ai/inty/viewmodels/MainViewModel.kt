@@ -41,7 +41,7 @@ import kotlinx.coroutines.withContext
 
 enum class HomeTabIndex {
     Chat,
-    Conversions,
+    Conversation,
     Add,
     Suggest,
     My
@@ -192,7 +192,7 @@ class MainViewModel : BaseActivityViewModel() {
     fun selectTab(tab: Int) {
         _selectedTab.value = HomeTabIndex.entries.toTypedArray()[tab]
         when (_selectedTab.value) {
-            HomeTabIndex.Conversions -> {
+            HomeTabIndex.Conversation -> {
                 chatViewModel?.getConversions()
                 getSysMsgs()
                 // 如果切换到对话页面且当前选中关注列表，则刷新关注列表
@@ -469,7 +469,7 @@ class MainViewModel : BaseActivityViewModel() {
 
     fun refreshFollowingListIfOnTab() {
         EasyLog.log("refreshFollowingListIfOnTab - selectedTab: ${_selectedTab.value}, selectedConversionsTab: ${_selectedConversionsTab.value}")
-        if (_selectedTab.value == HomeTabIndex.Conversions &&
+        if (_selectedTab.value == HomeTabIndex.Conversation &&
             _selectedConversionsTab.value == ConversionsPageTab.TabFollowing
         ) {
             EasyLog.log("Refreshing following agents due to follow state change")

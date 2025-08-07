@@ -1,8 +1,8 @@
 package com.ai.inty.viewmodels
 
 import android.app.Activity
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.ai.inty.base.BaseViewModel
 import com.ai.inty.billing.BillingRepository
 import com.ai.inty.billing.BillingRepository.plansFlow
 import com.ai.inty.billing.BillingRepository.vipStatusFlow
@@ -16,7 +16,7 @@ import kotlinx.coroutines.launch
 /**
  * 设置页面 ViewModel
  */
-class SettingViewModel : ViewModel() {
+class SettingViewModel : BaseViewModel() {
 
     // 设置状态
     private val _settingsState = MutableStateFlow(SettingsState())

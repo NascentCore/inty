@@ -126,7 +126,7 @@ private fun HomeContent(
             )
         }
 
-        HomeTabIndex.Conversions -> {
+        HomeTabIndex.Conversation -> {
             ConversionsTabContent(
                 mainViewModel = mainViewModel,
                 chatViewModel = chatViewModel,
@@ -378,4 +378,3 @@ fun BottomBarItem(
         )
     }
 }
-

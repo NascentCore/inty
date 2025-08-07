@@ -1,7 +1,6 @@
 package com.ai.inty
 
 import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.compose.setContent
@@ -37,6 +36,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.net.toUri
 import androidx.lifecycle.ViewModelProvider
 import com.ai.inty.base.BaseActivity
 import com.ai.inty.base.noRippleClickable
@@ -270,7 +270,7 @@ fun SubscriptionManagementItem(
  */
 private fun openPlayStoreSubscriptions(context: android.content.Context) {
     try {
-        val uri = Uri.parse("https://play.google.com/store/account/subscriptions")
+        val uri = "https://play.google.com/store/account/subscriptions".toUri()
         val intent = Intent(Intent.ACTION_VIEW, uri)
 
         if (intent.resolveActivity(context.packageManager) != null) {

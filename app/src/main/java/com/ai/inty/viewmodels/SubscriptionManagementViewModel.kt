@@ -1,7 +1,7 @@
 package com.ai.inty.viewmodels
 
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.ai.inty.base.BaseViewModel
 import com.inty.utils.log.EasyLog
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -19,7 +19,7 @@ sealed class SubscriptionUiEvent {
 /**
  * 订阅管理页面 ViewModel
  */
-class SubscriptionManagementViewModel : ViewModel() {
+class SubscriptionManagementViewModel : BaseViewModel() {
 
     private val _uiEvent = MutableSharedFlow<SubscriptionUiEvent>()
     val uiEvent: SharedFlow<SubscriptionUiEvent> = _uiEvent
