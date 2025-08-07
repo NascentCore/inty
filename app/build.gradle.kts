@@ -136,6 +136,8 @@ android {
         // To release a new public version, we increase fix (third) digit of the version name.
         // Each time we upload a new binary for a release version, 1.1.x,
         // we need to increase the fix digit, and create a new tag for that binary.
+        //
+        // Bug fix public release, code changes are applied on the versioned branch.
         versionName = "1.1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"

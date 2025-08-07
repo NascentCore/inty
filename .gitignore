@@ -20,4 +20,5 @@ local.properties
 keystore.properties
 bundletool.jar
 *.apks
+*.aab
 version.properties
