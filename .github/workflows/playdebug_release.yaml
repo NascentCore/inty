@@ -21,10 +21,12 @@ jobs:
             prod)
               echo "target=bundleRelease" >> $GITHUB_OUTPUT
               echo "track=internal" >> $GITHUB_OUTPUT
+              echo "aab=app/release/app-release.aab"
               ;;
             *)
               echo "target=bundlePlaydebug" >> $GITHUB_OUTPUT
               echo "track=internal" >> $GITHUB_OUTPUT
+              echo "aab=app/playdebug/app-playdebug.aab"
               ;;
           esac
 
@@ -76,10 +78,23 @@ jobs:
         run: |
           ./gradlew clean ${{ steps.get-build-target.outputs.target }} --stacktrace
 
-      - name: Write version summary
+      - id: get-version-info
         run: |
           echo "## Version information" >> $GITHUB_STEP_SUMMARY
           ./gradlew printVersionWithSuffix >> $GITHUB_STEP_SUMMARY
+          echo "version_code=$(./gradlew printVersionWithSuffix | grep 'Version Code:' | awk '{print $3}')" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: "playstore-versioncode-${{ steps.get-version-info.outputs.version_code }}"
+          draft: false
+          prerelease: false
+          files: |
+            ${{ steps.get-build-target.outputs.aab }}
+          generate_release_notes: true
+          make_latest: false
+          fail_on_unmatched_files: false
 
       - name: Upload AAB to Google Play Internal Testing
         # https://github.com/r0adkll/upload-google-play
@@ -87,7 +102,7 @@ jobs:
         with:
           serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_KEY }}
           packageName: com.ai.intellimate
-          releaseFiles: app/build/outputs/bundle/playdebug/app-playdebug.aab
+          releaseFiles: ${{ steps.get-build-target.outputs.aab }}
           # https://developers.google.com/android-publisher/tracks#adding_and_modifying_apks
           track: ${{ steps.get-build-target.outputs.track }}
           status: draft
