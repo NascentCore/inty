@@ -65,7 +65,7 @@ jobs:
         releaseFiles: app/build/outputs/bundle/playdebug/app-playdebug.aab
         # https://developers.google.com/android-publisher/tracks#adding_and_modifying_apks
         track: 'internal'
-        status: completed
+        status: draft
         inAppUpdatePriority: 2
         # TODO(yaxiong): Add dynamic release notes.
         # whatsNewDirectory: distribution/whatsnew-dynamic
