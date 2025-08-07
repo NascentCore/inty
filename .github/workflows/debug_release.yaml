@@ -55,7 +55,8 @@ jobs:
 
     - id: gen-release-info
       run: |
-        echo "name=debug-$(date +%Y%m%d-%H%M%S)" >> $GITHUB_OUTPUT
+        short_sha=$(git rev-parse --short HEAD)
+        echo "name=debug-$(TZ=Asia/Shanghai date +%Y%m%d-%H%M%S)-$short_sha" >> $GITHUB_OUTPUT
 
     - id: create-release
       uses: softprops/action-gh-release@v2
