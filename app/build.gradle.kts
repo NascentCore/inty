@@ -38,70 +38,17 @@ val gitCommitId = try {
     "2fbffaf"  // 当前commit ID作为fallback
 }
 
-// 自动递增 versionCode 的函数
+// 返回 git commit count 作为自增的 version code.
 fun getVersionCode(): Int {
-    // 检查是否在 CI 环境中
-    val isCIBuild = System.getenv("CI") != null || System.getenv("GITHUB_ACTIONS") != null
-    
-    if (isCIBuild) {
-        // CI 环境：基于时间戳或提交历史生成版本号
-        val gitCommitCount = try {
-            val process = ProcessBuilder("git", "rev-list", "--count", "HEAD").start()
-            process.waitFor()
-            if (process.exitValue() == 0) {
-                process.inputStream.bufferedReader().readText().trim().toInt()
-            } else {
-                // fallback：使用时间戳生成版本号
-                (System.currentTimeMillis() / 1000 / 3600).toInt() // 每小时递增
-            }
-        } catch (e: Exception) {
-            println("⚠️ Git commit count failed, using timestamp fallback")
-            (System.currentTimeMillis() / 1000 / 3600).toInt()
-        }
-        
-        // 确保 CI 版本号不会太小（至少从10开始）
-        val ciVersionCode = maxOf(gitCommitCount, 10)
-        println("🤖 CI Build detected! Using version code: $ciVersionCode (based on git commits: $gitCommitCount)")
-        return ciVersionCode
+    val process = ProcessBuilder("git", "rev-list", "--count", "HEAD").start()
+    process.waitFor()
+    if (process.exitValue() != 0) {
+        println("⚠️ Git commit count failed, using timestamp fallback")
+        throw GradleException("Git commit count failed")
     }
-    
-    // 本地构建：使用原有逻辑
-    val versionFile = rootProject.file("version.properties")
-    val versionProperties = Properties()
-    
-    // 如果文件不存在，创建初始版本
-    if (!versionFile.exists()) {
-        versionProperties.setProperty("versionCode", "1")
-        versionFile.outputStream().use { 
-            versionProperties.store(it, "Version Code Auto Increment") 
-        }
-        return 1
-    }
-    
-    // 读取当前版本号
-    versionFile.inputStream().use { 
-        versionProperties.load(it) 
-    }
-    
-    val currentVersionCode = versionProperties.getProperty("versionCode", "1").toInt()
-    
-    // 检查是否是 release 构建任务
-    val isReleaseBuild = gradle.startParameter.taskNames.any { 
-        it.contains("bundle") && it.contains("Release") 
-    }
-    
-    if (isReleaseBuild) {
-        // 如果是 release 构建，递增版本号并保存
-        val newVersionCode = currentVersionCode + 1
-        versionProperties.setProperty("versionCode", newVersionCode.toString())
-        versionFile.outputStream().use { 
-            versionProperties.store(it, "Version Code Auto Increment - Updated on Release Build") 
-        }
-        println("🚀 Release build detected! Version code incremented: $currentVersionCode -> $newVersionCode")
-        return newVersionCode
-    }
-    
-    return currentVersionCode
+    val gitCommitCount = process.inputStream.bufferedReader().readText().trim().toInt()
+    println("🚀 VERSION CODE: $gitCommitCount (based on git commits) for build type: ${project.gradle.startParameter.taskNames.joinToString()}")
+    return gitCommitCount
 }
 
 android {
@@ -120,7 +67,9 @@ android {
         //
         // Do not increase this for development builds.
         // Only google play uses this.
-        versionCode = 300
+        // Largest version code is 2100000000
+        // https://developer.android.com/studio/publish/versioning.html
+        versionCode = getVersionCode()
 
         // Version name follows Semantic Versioning 2.0.0 (https://semver.org/).
         //
@@ -182,13 +131,18 @@ android {
                 "proguard-rules.pro"
             )
             ndk {
-                debugSymbolLevel = "FULL" // 或者 'SYMBOL_TABLE'
+                // https://developer.android.com/build/include-native-symbols
+                debugSymbolLevel = "FULL"
             }
+        }
+        create("playdebug") {
+            // This build is meant to be pushed to Google Play for debugging.
+            // It talks to the dev backend, but app is built as release.
+            initWith(getByName("release"))
         }
         // TODO: Consider rename this to staging, meaning it's talking to the staging backend,
         // which is not local.
         debug {
-            // This build is meant to be pushed to Google Play testing track.
             // This build talks to the staging backend.
             signingConfig = signingConfigs.getByName("inty")
             versionNameSuffix = " ($gitCommitId)"
@@ -256,6 +210,7 @@ dependencies {
     debugImplementation(libs.chucker.library)
     "localImplementation"(libs.chucker.library)
     releaseImplementation(libs.chucker.library.no.op)
+    "playdebugImplementation"(libs.chucker.library.no.op)
 
     api(libs.retrofit.core)
 

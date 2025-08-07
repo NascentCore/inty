@@ -22,6 +22,9 @@ android {
                 "proguard-rules.pro"
             )
         }
+        create("playdebug") {
+            initWith(getByName("release"))
+        }
         create("local") {
             initWith(getByName("debug"))
         }
@@ -35,7 +38,6 @@ android {
     kotlin {
         jvmToolchain(21)
     }
-
 }
 
 
@@ -44,6 +46,7 @@ dependencies {
     debugImplementation(libs.chucker.library)
     "localImplementation"(libs.chucker.library)
     releaseImplementation(libs.chucker.library.no.op)
+    "playdebugImplementation"(libs.chucker.library.no.op)
 
     ksp(libs.moshi.kotlin.codegen)
 

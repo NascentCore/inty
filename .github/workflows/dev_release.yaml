@@ -105,7 +105,7 @@ jobs:
             "header": {
               "title": {
                 "tag": "plain_text",
-                "content": "IntelliMate Debug APK 发布，版本：$RELEASE_NAME"
+                "content": "IntelliMate 开发测试用 APK 发布，版本：$RELEASE_NAME"
               }
             },
             "elements": [

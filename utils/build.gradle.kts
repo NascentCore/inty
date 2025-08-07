@@ -21,6 +21,9 @@ android {
                 "proguard-rules.pro"
             )
         }
+        create("playdebug") {
+            initWith(getByName("release"))
+        }
         create("local") {
             initWith(getByName("debug"))
         }

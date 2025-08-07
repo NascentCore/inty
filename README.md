@@ -15,6 +15,9 @@ Uploading key is under app signing settings:
 
 <img width="2304" height="1576" alt="image" src="https://github.com/user-attachments/assets/3a0ff063-3745-4109-8cb6-a78f5559d0a5" />
 
+如需上传 aab，确保 versioncode，versioncode 来源于当前分支至 HEAD 为止的 commit 数量，
+因此，如有必要，则需要写入新的 commit 来增加 version code。
+
 ## Overview
 
 * Kotlin+Jetpack Compose
