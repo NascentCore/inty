@@ -15,6 +15,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -37,6 +38,7 @@ import com.ai.inty.base.MyModalNavigationDrawer
 import com.ai.inty.base.noRippleClickable
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.billing.BillingRepository
+import com.ai.inty.ui.components.MySettingItem
 import com.ai.inty.viewmodels.ChatViewModel
 import com.inty.utils.storage.IntySetting
 import com.therouter.TheRouter
@@ -48,8 +50,9 @@ import com.therouter.TheRouter
 fun ChatSettingsDrawer(
     chatViewModel: ChatViewModel,
     agentInfo: AgentInfo?,
-    drawerState: androidx.compose.runtime.MutableState<DrawerValue>,
+    drawerState: MutableState<DrawerValue>,
     onPremiumDialogShow: (Boolean) -> Unit,
+    onPremiumModeChange: (Boolean) -> Unit,
 ) {
     val context = LocalContext.current
     val vipStatus = BillingRepository.vipStatusFlow.collectAsState().value
@@ -132,7 +135,7 @@ fun ChatSettingsDrawer(
                         )
                 ) {
                     val userProfile = chatViewModel.userProfile.collectAsState()
-                    com.ai.inty.ui.components.MySettingItem(
+                    MySettingItem(
                         key = "Name",
                         value = userProfile.value.nickname,
                         onClick = {
@@ -148,7 +151,7 @@ fun ChatSettingsDrawer(
                             }
                         }
                     )
-                    com.ai.inty.ui.components.MySettingItem(
+                    MySettingItem(
                         key = "My Pronoun",
                         value = userProfile.value.pronouns(),
                         onClick = {
@@ -164,7 +167,7 @@ fun ChatSettingsDrawer(
                             }
                         }
                     )
-                    com.ai.inty.ui.components.MySettingItem(
+                    MySettingItem(
                         key = "My Persona",
                         value = userProfile.value.description ?: "Edit",
                         onClick = {
@@ -267,11 +270,12 @@ fun ChatSettingsDrawer(
                                             onPremiumDialogShow(true)
                                         } else {
                                             // 如果是VIP，允许切换
-                                            agentPremiumModel = !agentPremiumModel
+                                            agentPremiumModel = agentPremiumModel.not()
                                             IntySetting.setAgentPremiumModel(
                                                 agent.id,
                                                 agentPremiumModel
                                             )
+                                            onPremiumModeChange(agentPremiumModel)
                                         }
                                     } else {
                                         // 未登录或游客时跳转到登录页面

@@ -15,23 +15,23 @@ import com.squareup.moshi.DefaultIfNullFactory
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import com.therouter.inject.ServiceProvider
-import java.util.concurrent.TimeUnit
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.Response
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
+import java.util.concurrent.TimeUnit
 
 class AuthInterceptor : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
         val request =
-                chain.request()
-                        .newBuilder()
-                        .addHeader("accept", "application/json")
-                        .addHeader("appVersionCode", AppEnv.version_code.toString())
+            chain.request()
+                .newBuilder()
+                .addHeader("accept", "application/json")
+                .addHeader("appVersionCode", AppEnv.version_code.toString())
                 .addHeader("appVersionName", AppEnv.version_name)
                 .addHeader("Authorization", "Bearer ${IntySetting.getCurToken()}")
-                        .build()
+                .build()
 
         EasyLog.log("request = $request")
         val response = chain.proceed(request)
@@ -71,31 +71,31 @@ object NetServiceMgr {
     val okHttpClient: OkHttpClient
         get() {
             val builder: OkHttpClient.Builder =
-                    OkHttpClient.Builder()
-                            .connectTimeout(5, TimeUnit.SECONDS)
-                            .writeTimeout(5, TimeUnit.SECONDS)
-                            .readTimeout(50, TimeUnit.SECONDS)
-                            .addInterceptor(authInterceptor)
-                            .addInterceptor(ChuckerInterceptor(AppEnv.context))
+                OkHttpClient.Builder()
+                    .connectTimeout(5, TimeUnit.SECONDS)
+                    .writeTimeout(5, TimeUnit.SECONDS)
+                    .readTimeout(50, TimeUnit.SECONDS)
+                    .addInterceptor(authInterceptor)
+                    .addInterceptor(ChuckerInterceptor(AppEnv.context))
             return builder.build()
         }
     val moshi: Moshi
         get() {
             return Moshi.Builder()
-                    // 添加返回的json 数据自定义解析器
-                    .add(DefaultIfNullFactory())
-                    .add(MoshiResultTypeAdapterFactory(getHttpWrapperHandler()))
-                    .addLast(KotlinJsonAdapterFactory()) //
-                    .build()
+                // 添加返回的json 数据自定义解析器
+                .add(DefaultIfNullFactory())
+                .add(MoshiResultTypeAdapterFactory(getHttpWrapperHandler()))
+                .addLast(KotlinJsonAdapterFactory()) //
+                .build()
         }
     val moshiNoWrapper: Moshi
         get() {
             return Moshi.Builder()
-                    // 添加返回的json 数据自定义解析器
-                    .add(DefaultIfNullFactory())
-                    .add(MoshiResultTypeAdapterFactory(null))
-                    .addLast(KotlinJsonAdapterFactory()) //
-                    .build()
+                // 添加返回的json 数据自定义解析器
+                .add(DefaultIfNullFactory())
+                .add(MoshiResultTypeAdapterFactory(null))
+                .addLast(KotlinJsonAdapterFactory()) //
+                .build()
         }
 
     private val globalErrorHandler = GlobalErrorHandler()
@@ -135,15 +135,15 @@ object NetServiceMgr {
         get() {
 
             val retrofitUser =
-                    Retrofit.Builder()
-                            .baseUrl(baseUrl())
-                            .client(okHttpClient)
-                            .addConverterFactory(MoshiConverterFactory.create(moshi))
-                            .addCallAdapterFactory(CoroutineCallAdapterFactory())
-                            .addCallAdapterFactory(
-                                    HttpResponseCallAdapterFactory(globalErrorHandler) // 全局的错误处理器
-                            )
-                            .build()
+                Retrofit.Builder()
+                    .baseUrl(baseUrl())
+                    .client(okHttpClient)
+                    .addConverterFactory(MoshiConverterFactory.create(moshi))
+                    .addCallAdapterFactory(CoroutineCallAdapterFactory())
+                    .addCallAdapterFactory(
+                        HttpResponseCallAdapterFactory(globalErrorHandler) // 全局的错误处理器
+                    )
+                    .build()
 
             return retrofitUser
         }
@@ -151,15 +151,15 @@ object NetServiceMgr {
     val retrofitNoWrapper: Retrofit
         get() {
             val retrofitUser =
-                    Retrofit.Builder()
-                            .baseUrl(baseUrl())
-                            .client(okHttpClient)
-                            .addConverterFactory(MoshiConverterFactory.create(moshiNoWrapper))
-                            .addCallAdapterFactory(CoroutineCallAdapterFactory())
-                            .addCallAdapterFactory(
-                                    HttpResponseCallAdapterFactory(globalErrorHandler) // 全局的错误处理器
-                            )
-                            .build()
+                Retrofit.Builder()
+                    .baseUrl(baseUrl())
+                    .client(okHttpClient)
+                    .addConverterFactory(MoshiConverterFactory.create(moshiNoWrapper))
+                    .addCallAdapterFactory(CoroutineCallAdapterFactory())
+                    .addCallAdapterFactory(
+                        HttpResponseCallAdapterFactory(globalErrorHandler) // 全局的错误处理器
+                    )
+                    .build()
 
             return retrofitUser
         }

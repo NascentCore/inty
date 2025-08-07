@@ -269,7 +269,8 @@ internal fun ChatPage(
             chatViewModel = chatViewModel,
             agentInfo = agentInfo,
             drawerState = drawerState,
-            onPremiumDialogShow = { show -> showPremiumDialog = show }
+            onPremiumDialogShow = { show -> showPremiumDialog = show },
+            onPremiumModeChange = { mode -> agentPremiumModel = mode }
         )
 
         //免费聊天次数限制的dialog

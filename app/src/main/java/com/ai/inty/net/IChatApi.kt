@@ -12,6 +12,7 @@ import com.therouter.inject.Singleton
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.POST
+import retrofit2.http.PUT
 import retrofit2.http.Path
 import retrofit2.http.Query
 
@@ -32,7 +33,7 @@ interface IChatApi {
     @GET("/api/v1/chats/agents/{agent_id}/settings")
     suspend fun getChatSettings(@Path("agent_id") agent_id: String): HttpResult<ChatSettingsResponse>
 
-    @POST("/api/v1/chats/agents/{agent_id}/settings")
+    @PUT("/api/v1/chats/agents/{agent_id}/settings")
     suspend fun updateChatSettings(
         @Path("agent_id") agent_id: String,
         @Body req: ChatSettingsReq
