@@ -1,5 +1,5 @@
 # This version talks to the dev backend.
-name: Build and release testing version to Google Play Store
+name: Build and release to Google Play Store
 
 on:
   workflow_dispatch:
