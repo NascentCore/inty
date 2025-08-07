@@ -146,35 +146,20 @@ def get_connection_pool():
     return _connection_pool
 
 
-# 延迟初始化数据库连接
-_conn = None
-_postgres_store = None
+# 初始化聊天历史表和记忆表
+conn = Connection.connect(settings.database.url, autocommit=True)
 
+table_name = "chat_history"
+PostgresChatMessageHistory.create_tables(conn, table_name)
 
-def get_connection():
-    global _conn
-    if _conn is None:
-        _conn = Connection.connect(settings.database.url, autocommit=True)
-    return _conn
-
-
-def get_postgres_store():
-    global _postgres_store
-    if _postgres_store is None:
-        conn = get_connection()
-        table_name = "chat_history"
-        PostgresChatMessageHistory.create_tables(conn, table_name)
-
-        _postgres_store = PostgresStore(
-            conn=conn,
-            index={
-                "dims": 768,
-                "embed": embed_texts,
-            },
-        )
-        _postgres_store.setup()
-    return _postgres_store
-
+postgres_store = PostgresStore(
+    conn=conn,
+    index={
+        "dims": 768,
+        "embed": embed_texts,
+    },
+)
+postgres_store.setup()
 
 # 初始化Google搜索工具
 search = GoogleSearchAPIWrapper(
