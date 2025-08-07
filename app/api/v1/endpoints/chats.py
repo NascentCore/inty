@@ -342,7 +342,7 @@ async def get_agent_chat_detail(
         )
 
         # Assemble return data
-        return {
+        data = {
             "chat_info": {
                 "id": chat.id,
                 "agent_id": chat.agent_id,
@@ -364,6 +364,7 @@ async def get_agent_chat_detail(
                 ),
             },
         }
+        return data
 
     except Exception as e:
         raise HTTPException(
@@ -429,7 +430,7 @@ async def get_agent_chat_messages(
 
 @router.post(
     "/agents/{agent_id}/chat/completions",
-    response_model=Union[dict, schemas.APIResponse[dict]],
+    response_model=schemas.APIResponse[dict],
 )
 async def agent_chat_completions(
     *,
@@ -554,7 +555,7 @@ async def agent_chat_completions(
                 logger.info(f"用户消息已保存到历史记录: {session_id}")
             except Exception as e:
                 logger.warning(f"保存用户消息失败: {str(e)}")
-            
+
             return create_business_error_response(
                 error_info=BusinessErrorCode.SUBSCRIPTION_REQUIRED,
                 extra_data={"used_count": used_count, "daily_limit": daily_limit},
@@ -590,9 +591,6 @@ async def agent_chat_completions(
 
             # 并行获取聊天设置和AI回复
             try:
-                # 同时启动AI回复和聊天设置获取
-                import asyncio
-
                 settings_task = asyncio.create_task(
                     chat_service.get_or_create_chat_settings(
                         db, chat.id, current_user.id, agent_id
@@ -682,7 +680,7 @@ async def agent_chat_completions(
             logger.info(
                 f"聊天请求处理成功: agent_id={agent_id}, response_length={len(response_content)}, 总耗时: {total_request_time:.3f}秒"
             )
-            return {
+            data = {
                 "id": f"chatcmpl-{uuid.uuid4().hex[:12]}",
                 "object": "chat.completion",
                 "created": int(time.time()),
@@ -695,6 +693,7 @@ async def agent_chat_completions(
                     + len(response_content.split()),
                 },
             }
+            return schemas.APIResponse.success(data=data)
 
     except Exception as e:
         logger.error(f"聊天请求处理失败: {str(e)}")

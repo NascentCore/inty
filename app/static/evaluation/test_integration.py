@@ -43,7 +43,11 @@ class APITester:
         url = f"{self.base_url}{endpoint}"
         async with self.session.post(url, json=data) as response:
             if response.status in [200, 201]:
-                return await response.json()
+                result = await response.json()
+                # 仅对聊天接口处理 APIResponse 格式
+                if "chat/completions" in endpoint and isinstance(result, dict) and "data" in result and result.get("code") == 200:
+                    return result["data"]
+                return result
             else:
                 print(f"POST {endpoint} failed: {response.status}")
                 text = await response.text()
