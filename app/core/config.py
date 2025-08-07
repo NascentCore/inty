@@ -1,8 +1,7 @@
-import os
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, List, Optional
 
 import yaml
 from pydantic import AnyHttpUrl
@@ -41,20 +40,10 @@ class DatabaseSettings:
 
     @property
     def url(self) -> str:
-        # Use DATABASE_URL environment variable if available
-        database_url = os.getenv("DATABASE_URL")
-        if database_url:
-            return database_url
         return f"postgresql://{self.user}:{self.password}@{self.host}:{self.port}/{self.db}"
 
     @property
     def async_url(self) -> str:
-        # Use DATABASE_URL environment variable if available
-        database_url = os.getenv("DATABASE_URL")
-        if database_url:
-            # Convert to async URL format
-            if database_url.startswith("postgresql://"):
-                return database_url.replace("postgresql://", "postgresql+asyncpg://")
         return f"postgresql+asyncpg://{self.user}:{self.password}@{self.host}:{self.port}/{self.db}"
 
 
