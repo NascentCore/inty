@@ -31,9 +31,7 @@ app = FastAPI(
     description="InTy",
     version="1.0.0",
     # 只在debug模式下开启OpenAPI docs
-    openapi_url=(
-        f"{settings.app.api_v1_prefix}/openapi.json" if settings.app.debug else None
-    ),
+    openapi_url="/openapi.json" if settings.app.debug else None,
     docs_url="/docs" if settings.app.debug else None,
     redoc_url="/redoc" if settings.app.debug else None,
     # Swagger UI参数配置（仅在debug模式下生效）
