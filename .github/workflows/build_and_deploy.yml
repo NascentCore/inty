@@ -76,9 +76,9 @@ jobs:
             --env LANGCHAIN_TRACING_V2=true \
             --env LANGCHAIN_PROJECT=inty-backend-${{ steps.set-environment.outputs.environment }} \
             --env LANGCHAIN_API_KEY=${{ secrets.LANGCHAIN_API_KEY }} \
-            --volume /opt/inty-${{ steps.set-environment.outputs.environment }}/config.yaml:/app/config.yaml \
-            --volume /opt/inty-${{ steps.set-environment.outputs.environment }}/inty-backend-key.json:/app/inty-backend-key.json \
-            --volume /opt/inty-${{ steps.set-environment.outputs.environment }}/inty-firebase-key.json:/app/inty-firebase-key.json \
+            --volume /opt/inty-${{ steps.set-environment.outputs.environment }}/config.yaml:/config.yaml \
+            --volume /opt/inty-${{ steps.set-environment.outputs.environment }}/inty-backend-key.json:/inty-backend-key.json \
+            --volume /opt/inty-${{ steps.set-environment.outputs.environment }}/inty-firebase-key.json:/inty-firebase-key.json \
             ${{ env.INTY_SERVER_IMAGE }}@${{ steps.build-docker-image.outputs.digest }}
 
     - name: Sanity check
