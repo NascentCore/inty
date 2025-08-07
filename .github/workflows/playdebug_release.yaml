@@ -1,5 +1,5 @@
-# This workflow is not fully verified yet. Do not use it.
-name: Build and release to Google Play Store
+# This version talks to the dev backend.
+name: Build and release testing version to Google Play Store
 
 on:
   workflow_dispatch:
