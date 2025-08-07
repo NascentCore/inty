@@ -126,6 +126,15 @@ class GooglePlayConfig:
     service_account_key: str  # 服务账号密钥JSON字符串
     package_name: str  # 应用包名
     webhook_secret: Optional[str] = None  # Webhook密钥（可选）
+    # 版本检查相关配置
+    enable_version_check: bool = True  # 是否启用版本检查
+    min_supported_version: int = 1  # 最低支持版本代码
+    release_track: str = "production"  # 发布轨道：internal/closed/open/production
+    fallback_tracks: List[str] = None  # 备用轨道列表
+    
+    def __post_init__(self):
+        if self.fallback_tracks is None:
+            self.fallback_tracks = ["production", "internal"]
 
 
 @dataclass
