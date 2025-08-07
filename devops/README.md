@@ -1,5 +1,7 @@
 # DevOps
 
+GCP logging: 基于 [docker gcplogs 驱动](https://github.com/GoogleCloudPlatform/community/blob/master/archived/docker-gcplogs-driver/index.md)
+
 OpenRouter justicezyx@gmail.com 提供
 
 * All services are running on 1 gcp vm (it@sxwl.ai)
