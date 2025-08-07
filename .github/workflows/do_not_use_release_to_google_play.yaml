@@ -27,15 +27,21 @@ jobs:
         java-version: '21'
         distribution: 'temurin'
 
-    - name: Cache Gradle dependencies
+    - name: Cache Gradle dependencies and build cache
       uses: actions/cache@v4
       with:
         path: |
           ~/.gradle/caches
           ~/.gradle/wrapper
-        key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          .gradle
+          build
+          app/build
+          network/build
+          utils/build
+        # https://github.com/actions/cache/blob/main/examples.md#java---gradle
+        key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}-${{ github.sha }}
         restore-keys: |
-          ${{ runner.os }}-gradle-
+          ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}-
 
     - name: Create keystore.properties
       env:
@@ -49,107 +55,25 @@ jobs:
       run: |
         echo "$GOOGLE_PLAY_SERVICE_ACCOUNT_KEY" > service-account-key.json
 
-    - name: Make gradlew executable
-      run: chmod +x ./gradlew
-
     - name: Build Release AAB
       run: |
-        echo "🔧 Starting AAB build..."
-        ./gradlew clean bundleRelease --stacktrace --info
-        echo "✅ AAB build completed!"
-        ls -la app/build/outputs/bundle/release/
+        ./gradlew clean bundlePlaydebug --stacktrace
 
-    - id: version_info
+    - name: Write version summary
       run: |
-        # 直接计算版本信息，避免Gradle任务的复杂输出
-        echo "🔍 Calculating version information..."
-        
-        # CI环境下使用Git提交数量作为版本号
-        GIT_COMMIT_COUNT=$(git rev-list --count HEAD)
-        VERSION_CODE=$(( GIT_COMMIT_COUNT > 10 ? GIT_COMMIT_COUNT : 10 ))
-        
-        # 从app/build.gradle.kts中提取版本名称
-        VERSION_NAME=$(grep 'versionName = ' app/build.gradle.kts | sed 's/.*versionName = "\(.*\)".*/\1/')
-        
-        echo "version_code=$VERSION_CODE" >> $GITHUB_OUTPUT
-        echo "version_name=$VERSION_NAME" >> $GITHUB_OUTPUT
-        echo "✅ Version Code: $VERSION_CODE, Version Name: $VERSION_NAME"
-
-    - name: Generate dynamic release notes
-      run: |
-        mkdir -p distribution/whatsnew-dynamic
-        
-        # 获取版本信息
-        VERSION_CODE=${{ steps.version_info.outputs.version_code }}
-        VERSION_NAME=${{ steps.version_info.outputs.version_name }}
-        
-        # 获取最近的变更日志（从上个标签到现在的提交）
-        if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
-          # 标签触发：获取标签信息和从上个标签的变更
-          TAG_NAME=${GITHUB_REF#refs/tags/}
-          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
-          
-          if [[ -n "$PREV_TAG" ]]; then
-            COMMITS=$(git log --oneline ${PREV_TAG}..HEAD --pretty=format:"• %s" | head -5)
-          else
-            COMMITS=$(git log --oneline HEAD~5..HEAD --pretty=format:"• %s")
-          fi
-          
-          RELEASE_HEADER="🚀 版本 $TAG_NAME (构建 $VERSION_CODE)"
-          EN_HEADER="🚀 Release $TAG_NAME (Build $VERSION_CODE)"
-        else
-          # 手动触发：获取最近的提交
-          COMMITS=$(git log --oneline HEAD~3..HEAD --pretty=format:"• %s")
-          RELEASE_HEADER="📱 版本 $VERSION_NAME (构建 $VERSION_CODE)"
-          EN_HEADER="📱 Version $VERSION_NAME (Build $VERSION_CODE)"
-        fi
+        echo "## Version information" >> $GITHUB_STEP_SUMMARY
+        ./gradlew printVersionWithSuffix >> $GITHUB_STEP_SUMMARY
 
     - name: Upload AAB to Google Play Internal Testing
+      # https://github.com/r0adkll/upload-google-play
       uses: r0adkll/upload-google-play@v1
       with:
         serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_KEY }}
         packageName: com.ai.intellimate
-        releaseFiles: app/build/outputs/bundle/release/app-release.aab
-        track: ${{ github.event.inputs.track || 'internal' }}
-        status: draft
+        releaseFiles: app/build/outputs/bundle/playdebug/app-playdebug.aab
+        # https://developers.google.com/android-publisher/tracks#adding_and_modifying_apks
+        track: 'qa'
+        status: completed
         inAppUpdatePriority: 2
-        # TODO: Add dynamic release notes.
+        # TODO(yaxiong): Add dynamic release notes.
         # whatsNewDirectory: distribution/whatsnew-dynamic
-
-    - name: Upload AAB artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: app-release-aab
-        path: app/build/outputs/bundle/release/app-release.aab
-
-    - name: Upload mapping artifact
-      uses: actions/upload-artifact@v4  
-      with:
-        name: app-release-mapping
-        path: app/build/outputs/mapping/release/mapping.txt
-
-    - name: Create GitHub release for tagged release
-      if: startsWith(github.ref, 'refs/tags/')
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: ${{ github.ref }}
-        release_name: Release ${{ github.ref }}
-        body: |
-          Changes in this Release:
-          - AAB uploaded to Google Play Internal Testing
-          - Built from commit: ${{ github.sha }}
-        draft: false
-        prerelease: false
-
-    - name: Upload AAB to GitHub release for tagged release
-      if: startsWith(github.ref, 'refs/tags/')
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: app/build/outputs/bundle/release/app-release.aab
-        asset_name: app-release.aab
-        asset_content_type: application/octet-stream

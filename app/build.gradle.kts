@@ -51,6 +51,16 @@ fun getVersionCode(): Int {
     return gitCommitCount
 }
 
+// Add task to print both version code and name with suffix
+tasks.register("printVersionWithSuffix") {
+    group = "versioning"
+    description = "Print both version code and name with git commit suffix"
+    doLast {
+        println("Version Code: ${getVersionCode()}")
+        println("Version Name with Suffix: 1.1.0 ($gitCommitId)")
+    }
+}
+
 android {
     namespace = "com.ai.inty"
     compileSdk = 36
