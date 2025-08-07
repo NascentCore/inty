@@ -6,9 +6,16 @@ InTy 是一个基于 FastAPI 和 PostgreSQL 的 AI 聊天应用后端，集成�
 
 ## Running local server
 
-* Run `docker compose -f docker_compose.yaml up -d` to start local server.
-* Run `docker compose -f docker_compose.yaml logs inty-server -f` to watch inty server logs.
-* Run `docker compose -f docker_compose.yaml down -v` to cleanup all local running processes.
+```bash
+git clone git@github.com:NascentCore/inty-backend.git
+cd inty-backend
+
+# 服务在 http://localhost:8000
+docker compose -f docker_compose.yaml up --build
+
+# 删除所有容器和其挂在的存储卷
+docker compose -f docker_compose.yaml down -v
+```
 
 ## 系统架构
 
