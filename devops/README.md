@@ -1,9 +1,8 @@
 # DevOps
 
-GCP logging: 基于 [docker gcplogs 驱动](https://github.com/GoogleCloudPlatform/community/blob/master/archived/docker-gcplogs-driver/index.md)
-
-OpenRouter justicezyx@gmail.com 提供
-
+* GCP logging: 基于 [docker gcplogs 驱动](https://github.com/GoogleCloudPlatform/community/blob/master/archived/docker-gcplogs-driver/index.md)
+* langsmith 监控平台：try@sxwl.ai
+* OpenRouter justicezyx@gmail.com 提供
 * All services are running on 1 gcp vm (it@sxwl.ai)
   * [GCP VM url](https://console.cloud.google.com/welcome?inv=1&invt=Ab4RWg&project=bustling-pen-sv00q)
   * <img width="3022" height="420" alt="image" src="https://github.com/user-attachments/assets/931abe03-e7c9-4475-bbb0-abb2d2247152" />
