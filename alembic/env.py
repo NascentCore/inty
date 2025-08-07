@@ -16,13 +16,22 @@ from alembic import context
 # access to the values within the .ini file in use.
 config = context.config
 
-# 读取config.yaml文件
-with open(ROOT_DIR / "config.yaml", "r") as f:
-    yaml_config = yaml.safe_load(f)
+import os
 
-# 从yaml配置中获取数据库配置
-db_config = yaml_config["database"]
-db_url = f"postgresql://{db_config['user']}:{db_config['password']}@{db_config['host']}:{db_config['port']}/{db_config['db']}"
+# 优先使用环境变量中的DATABASE_URL
+database_url = os.getenv("DATABASE_URL")
+
+if database_url:
+    # 使用环境变量中的数据库URL
+    db_url = database_url
+else:
+    # 回退到config.yaml文件
+    with open(ROOT_DIR / "config.yaml", "r") as f:
+        yaml_config = yaml.safe_load(f)
+
+    # 从yaml配置中获取数据库配置
+    db_config = yaml_config["database"]
+    db_url = f"postgresql://{db_config['user']}:{db_config['password']}@{db_config['host']}:{db_config['port']}/{db_config['db']}"
 
 # 设置数据库URL
 config.set_main_option("sqlalchemy.url", db_url)

@@ -1,3 +1,4 @@
+import os
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -40,10 +41,20 @@ class DatabaseSettings:
 
     @property
     def url(self) -> str:
+        # Use DATABASE_URL environment variable if available
+        database_url = os.getenv("DATABASE_URL")
+        if database_url:
+            return database_url
         return f"postgresql://{self.user}:{self.password}@{self.host}:{self.port}/{self.db}"
 
     @property
     def async_url(self) -> str:
+        # Use DATABASE_URL environment variable if available
+        database_url = os.getenv("DATABASE_URL")
+        if database_url:
+            # Convert to async URL format
+            if database_url.startswith("postgresql://"):
+                return database_url.replace("postgresql://", "postgresql+asyncpg://")
         return f"postgresql+asyncpg://{self.user}:{self.password}@{self.host}:{self.port}/{self.db}"
 
 
@@ -62,8 +73,8 @@ class VerificationConfig:
 @dataclass
 class AppConfig:
     name: str = "InTy"
-    debug: bool = False
-    debug_messages: bool = False  # 是否启用调试消息记录功能
+    debug: bool = True
+    debug_messages: bool = True
     api_v1_prefix: str = "/api/v1"
     backend_cors_origins: List[AnyHttpUrl] = None
 
