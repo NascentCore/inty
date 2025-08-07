@@ -10,22 +10,11 @@ on:
   workflow_dispatch:
 
 env:
-  SDK_REPO: inty-kotlin-sdk
   OPENAPI_GENERATOR_VERSION: 7.2.0
 
 jobs:
   generate-sdk:
     runs-on: ubuntu-latest
-
-    services:
-      pgsql:
-        image: pgvector/pgvector:pg16
-        ports:
-          - 15432:5432
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: sxwl666!
-          POSTGRES_DB: inty_db
     
     permissions:
       contents: write
@@ -44,13 +33,13 @@ jobs:
 
     - name: Start backend server
       run: |
-        pip install -r requirements.txt
-        python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 &
+        docker compose -f docker_compose.yaml up -d
+        # Wait for backend server to start
         sleep 10
 
     - name: Download OpenAPI spec
       run: |
-        curl -o openapi.json http://localhost:8000/api/v1/openapi.json
+        curl -o openapi.json http://localhost:8000/openapi.json
 
     - name: Generate version
       id: version

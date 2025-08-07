@@ -76,6 +76,8 @@ jobs:
             --env LANGCHAIN_TRACING_V2=true \
             --env LANGCHAIN_PROJECT=inty-backend-${{ steps.set-environment.outputs.environment }} \
             --env LANGCHAIN_API_KEY=${{ secrets.LANGCHAIN_API_KEY }} \
+            --label environment=${{ steps.set-environment.outputs.environment }} \
+            --log-opt labels=environment \
             --volume /opt/inty-${{ steps.set-environment.outputs.environment }}/config.yaml:/config.yaml \
             --volume /opt/inty-${{ steps.set-environment.outputs.environment }}/inty-backend-key.json:/inty-backend-key.json \
             --volume /opt/inty-${{ steps.set-environment.outputs.environment }}/inty-firebase-key.json:/inty-firebase-key.json \

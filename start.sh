@@ -1,5 +1,8 @@
 #!/bin/bash -e
 
+# This is for launching the backend server in docker container.
+# You should use docker compose to launch the server locally.
+
 # Run database migrations
 echo "Starting database migrations..."
 alembic upgrade head
