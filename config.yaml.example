@@ -1,8 +1,6 @@
 app:
-  name: "InTy"
-  debug: false
-  debug_messages: false  # 是否启用调试消息记录功能（保存发送给大模型的完整messages）
-  api_v1_prefix: "/api/v1"
+  # name: "InTy"
+  # debug_messages: true
   backend_cors_origins: ["http://localhost:3000","http://localhost:8000"]
 
 logging:
@@ -20,9 +18,9 @@ security:
 database:
   host: "localhost"
   port: 5432
-  user: "your-db-user"
-  password: "your-db-password"
-  db: "your-db-name"
+  user: "postgres"
+  password: "sxwl666!"
+  db: "inty_db"
 
 google_oauth:
   client_id: "your-google-client-id"

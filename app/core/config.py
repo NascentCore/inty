@@ -1,7 +1,7 @@
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import List, Optional
 
 import yaml
 from pydantic import AnyHttpUrl
@@ -62,8 +62,8 @@ class VerificationConfig:
 @dataclass
 class AppConfig:
     name: str = "InTy"
-    debug: bool = False
-    debug_messages: bool = False  # 是否启用调试消息记录功能
+    debug: bool = True
+    debug_messages: bool = True
     api_v1_prefix: str = "/api/v1"
     backend_cors_origins: List[AnyHttpUrl] = None
 

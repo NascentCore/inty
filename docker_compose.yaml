@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  inty-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./config.yaml:/app/config.yaml
+      - ./inty-backend-key.json:/app/inty-backend-key.json
+      - ./inty-firebase-key.json:/app/inty-firebase-key.json
+    environment:
+      - DATABASE_URL=postgresql://postgres:sxwl666!@pgvector:5432/inty_db
+    depends_on:
+      pgvector:
+        condition: service_healthy
+    networks:
+      - inty-network
+
+  pgvector:
+    image: pgvector/pgvector:pg16
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=sxwl666!
+      - POSTGRES_DB=inty_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - inty-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d inty_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+networks:
+  inty-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local
