@@ -1,6 +1,6 @@
 # The app is built with debug build type, and connects to dev backend
 # at dev.inty.sxwl.ai.
-name: Dev release
+name: Debug release
 
 on:
   workflow_dispatch:
