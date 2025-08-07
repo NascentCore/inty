@@ -273,7 +273,7 @@ class SubscriptionPlansResponse(BaseModel):
         None, description="当前订阅"
     )
     has_ever_subscribed: bool = Field(False, description="是否曾经有过订阅记录")
-    previous_skus: Optional[List[str]] = Field(None, description="之前订阅过的SKU列表")
+    previous_plan_id: Optional[str] = Field(None, description="最新的订阅计划ID")
 
 
 # 购买验证相关

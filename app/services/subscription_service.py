@@ -137,21 +137,22 @@ class SubscriptionService:
             logger.error(f"检查用户历史订阅记录失败: user_id={user_id}, error={str(e)}")
             return False
 
-    async def get_user_previous_skus(self, db: AsyncSession, user_id: str) -> List[str]:
-        """获取用户之前订阅过的所有SKU"""
+    async def get_user_latest_plan_id(self, db: AsyncSession, user_id: str) -> Optional[str]:
+        """获取用户最新的订阅计划ID（Google Play Product ID）"""
         try:
             result = await db.execute(
                 select(SubscriptionPlan.google_play_product_id)
                 .select_from(UserSubscription)
                 .join(SubscriptionPlan)
                 .where(UserSubscription.user_id == user_id)
-                .distinct()
+                .order_by(UserSubscription.created_at.desc())
+                .limit(1)
             )
-            skus = [row[0] for row in result.fetchall()]
-            return skus
+            product_id = result.scalar_one_or_none()
+            return product_id
         except Exception as e:
-            logger.error(f"获取用户历史订阅SKU失败: user_id={user_id}, error={str(e)}")
-            return []
+            logger.error(f"获取用户最新订阅计划ID失败: user_id={user_id}, error={str(e)}")
+            return None
 
     async def get_user_current_subscription(
         self, db: AsyncSession, user_id: str

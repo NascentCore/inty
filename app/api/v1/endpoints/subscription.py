@@ -57,10 +57,10 @@ async def get_subscription_plans(
             db, current_user.id
         )
 
-        # 获取用户之前订阅过的SKU（仅当曾经订阅过时）
-        previous_skus = None
+        # 获取用户最新的订阅计划ID（仅当曾经订阅过时）
+        previous_plan_id = None
         if has_ever_subscribed:
-            previous_skus = await subscription_service.get_user_previous_skus(
+            previous_plan_id = await subscription_service.get_user_latest_plan_id(
                 db, current_user.id
             )
 
@@ -75,7 +75,7 @@ async def get_subscription_plans(
             plans=plans,
             current_subscription=current_subscription_schema,
             has_ever_subscribed=has_ever_subscribed,
-            previous_skus=previous_skus,
+            previous_plan_id=previous_plan_id,
         )
 
         return APIResponse.success(data=response)
