@@ -87,7 +87,7 @@ jobs:
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: "playstore-versioncode-${{ steps.get-version-info.outputs.version_code }}"
+          tag_name: "playstore-${{ inputs.environment }}-versioncode-${{ steps.get-version-info.outputs.version_code }}"
           draft: false
           prerelease: false
           files: |
@@ -102,6 +102,7 @@ jobs:
         with:
           serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_KEY }}
           packageName: com.ai.intellimate
+          releaseName: "${{ inputs.environment }}-versioncode-${{ steps.get-version-info.outputs.version_code }}"
           releaseFiles: ${{ steps.get-build-target.outputs.aab }}
           # https://developers.google.com/android-publisher/tracks#adding_and_modifying_apks
           track: ${{ steps.get-build-target.outputs.track }}
