@@ -69,7 +69,8 @@ jobs:
           sudo docker pull ${{ env.INTY_SERVER_IMAGE }}@${{ steps.build-docker-image.outputs.digest }}
           sudo docker stop inty-backend-${{ steps.set-environment.outputs.environment }} || true
           sudo docker rm inty-backend-${{ steps.set-environment.outputs.environment }} || true
-          sudo docker run --detach \
+          # log-driver: https://docs.docker.com/engine/logging/drivers/gcplogs/
+          sudo docker run --detach --log-driver=gcplogs \
             --name inty-backend-${{ steps.set-environment.outputs.environment }} \
             --restart unless-stopped \
             --publish ${{ vars.SERVICE_PORT }}:8000 \
