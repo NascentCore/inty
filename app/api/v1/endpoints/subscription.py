@@ -57,6 +57,13 @@ async def get_subscription_plans(
             db, current_user.id
         )
 
+        # 获取用户之前订阅过的SKU（仅当曾经订阅过时）
+        previous_skus = None
+        if has_ever_subscribed:
+            previous_skus = await subscription_service.get_user_previous_skus(
+                db, current_user.id
+            )
+
         # 将 SQLAlchemy 模型转换为 Pydantic 模型
         current_subscription_schema = None
         if current_subscription:
@@ -68,6 +75,7 @@ async def get_subscription_plans(
             plans=plans,
             current_subscription=current_subscription_schema,
             has_ever_subscribed=has_ever_subscribed,
+            previous_skus=previous_skus,
         )
 
         return APIResponse.success(data=response)
