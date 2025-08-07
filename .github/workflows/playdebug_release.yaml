@@ -21,12 +21,12 @@ jobs:
             prod)
               echo "target=bundleRelease" >> $GITHUB_OUTPUT
               echo "track=internal" >> $GITHUB_OUTPUT
-              echo "aab=app/release/app-release.aab" >> $GITHUB_OUTPUT
+              echo "aab=app/build/outputs/bundle/release/app-release.aab" >> $GITHUB_OUTPUT
               ;;
             *)
               echo "target=bundlePlaydebug" >> $GITHUB_OUTPUT
               echo "track=internal" >> $GITHUB_OUTPUT
-              echo "aab=app/playdebug/app-playdebug.aab" >> $GITHUB_OUTPUT
+              echo "aab=app/build/outputs/bundle/playdebug/app-playdebug.aab" >> $GITHUB_OUTPUT
               ;;
           esac
 
