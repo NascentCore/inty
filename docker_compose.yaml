@@ -14,7 +14,8 @@ services:
     environment:
       - DATABASE_URL=postgresql://postgres:sxwl666!@pgvector:5432/inty_db
     depends_on:
-      - pgvector
+      pgvector:
+        condition: service_healthy
     networks:
       - inty-network
 
@@ -26,9 +27,21 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=sxwl666!
       - POSTGRES_DB=inty_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
     networks:
       - inty-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d inty_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
 networks:
   inty-network:
     driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local

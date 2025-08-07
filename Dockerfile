@@ -1,6 +1,6 @@
 FROM python:3.11-slim
 
-WORKDIR /app
+WORKDIR /
 
 # 安装系统依赖
 RUN apt-get update && apt-get install -y \
@@ -21,4 +21,4 @@ COPY . .
 EXPOSE 8000
 
 # 启动命令
-CMD ["/app/start.sh"]
+CMD ["/start.sh"]

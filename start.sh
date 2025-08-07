@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Run database migrations
-echo "Running database migrations..."
+echo "Starting database migrations..."
 alembic upgrade head
 
 # Start the application
