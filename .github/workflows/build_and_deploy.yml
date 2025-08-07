@@ -1,6 +1,12 @@
-name: Build and deploy to production environment
+name: Build and deploy inty backend
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - "app/**/*.py"
+
   workflow_dispatch:
     inputs:
       environment:
@@ -8,6 +14,11 @@ on:
         description: The environment to deploy to
         required: true
         default: dev
+
+concurrency:
+  group: ${{ github.workflow }}-${{ inputs.environment || 'dev' }}
+  # Do not cancel in-progress builds.
+  cancel-in-progress: false
 
 env:
   INTY_SERVER_IMAGE: ghcr.io/nascentcore/inty-backend/inty-server
@@ -21,9 +32,13 @@ jobs:
       # Checkout repository
       contents: read
 
-    environment: ${{ inputs.environment }}
+    environment: ${{ inputs.environment || 'dev' }}
     
     steps:
+    - id: set-environment
+      run: |
+        echo "environment=${{ inputs.environment || 'dev' }}" >> $GITHUB_OUTPUT
+
     - uses: actions/checkout@v4
 
     - uses: docker/login-action@v3
@@ -43,7 +58,7 @@ jobs:
         push: true
         tags: ${{ env.INTY_SERVER_IMAGE }}:${{ github.ref_name }}
         
-    - name: Deploy to ${{ inputs.environment }}
+    - name: Deploy to ${{ steps.set-environment.outputs.environment }}
       uses: appleboy/ssh-action@master
       with:
         host: ${{ secrets.DEV_SERVER_HOST }}
@@ -52,20 +67,28 @@ jobs:
         script: |
           sudo docker login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }}
           sudo docker pull ${{ env.INTY_SERVER_IMAGE }}@${{ steps.build-docker-image.outputs.digest }}
-          sudo docker stop inty-backend-${{ inputs.environment }} || true
-          sudo docker rm inty-backend-${{ inputs.environment }} || true
+          sudo docker stop inty-backend-${{ steps.set-environment.outputs.environment }} || true
+          sudo docker rm inty-backend-${{ steps.set-environment.outputs.environment }} || true
           sudo docker run --detach \
-            --name inty-backend-${{ inputs.environment }} \
+            --name inty-backend-${{ steps.set-environment.outputs.environment }} \
             --restart unless-stopped \
             --publish ${{ vars.SERVICE_PORT }}:8000 \
             --env LANGCHAIN_TRACING_V2=true \
-            --env LANGCHAIN_PROJECT=inty-backend-${{ inputs.environment }} \
+            --env LANGCHAIN_PROJECT=inty-backend-${{ steps.set-environment.outputs.environment }} \
             --env LANGCHAIN_API_KEY=${{ secrets.LANGCHAIN_API_KEY }} \
-            --volume /opt/inty-${{ inputs.environment }}/config.yaml:/app/config.yaml \
-            --volume /opt/inty-${{ inputs.environment }}/inty-backend-key.json:/app/inty-backend-key.json \
-            --volume /opt/inty-${{ inputs.environment }}/inty-firebase-key.json:/app/inty-firebase-key.json \
+            --label environment=${{ steps.set-environment.outputs.environment }} \
+            --log-opt labels=environment \
+            --volume /opt/inty-${{ steps.set-environment.outputs.environment }}/config.yaml:/config.yaml \
+            --volume /opt/inty-${{ steps.set-environment.outputs.environment }}/inty-backend-key.json:/inty-backend-key.json \
+            --volume /opt/inty-${{ steps.set-environment.outputs.environment }}/inty-firebase-key.json:/inty-firebase-key.json \
             ${{ env.INTY_SERVER_IMAGE }}@${{ steps.build-docker-image.outputs.digest }}
 
     - name: Sanity check
       run: |
         curl -s --fail --retry 5 --retry-delay 5 ${{ vars.SERVICE_PUBLIC_URL }}
+
+    - name: Write summary
+      run: |
+        echo "## Build and deploy"
+        echo "GitHub ref: ${{ github.ref }}"
+        echo "Deployed to ${{ steps.set-environment.outputs.environment }} for ${{ vars.SERVICE_PUBLIC_URL }}" >> $GITHUB_STEP_SUMMARY
