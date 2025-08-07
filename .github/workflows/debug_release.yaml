@@ -69,16 +69,6 @@ jobs:
         make_latest: true
         fail_on_unmatched_files: false
 
-    - name: Upload AAB to Google Play Internal Testing
-      uses: r0adkll/upload-google-play@v1
-      with:
-        serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_KEY }}
-        packageName: com.ai.intellimate
-        releaseFiles: app/build/outputs/bundle/release/app-release.aab
-        track: 'internal'
-        status: draft
-        inAppUpdatePriority: 2
-
     - name: Notify Feishu group
       run: |
         RELEASE_NAME=${{ steps.gen-release-info.outputs.name }}
