@@ -1,5 +1,7 @@
 package com.ai.inty.home
 
+import android.app.Activity
+import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -13,18 +15,27 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.ai.inty.Constant
 import com.ai.inty.R
 import com.ai.inty.base.IntyImage
 import com.ai.inty.base.noRippleClickable
 import com.ai.inty.beans.UserProfile
+import com.ai.inty.billing.BillingRepository
 import com.ai.inty.chat.ChatPageContainer
+import com.ai.inty.ui.ChatDialogData
+import com.ai.inty.ui.ExpiredVipDialog
 import com.ai.inty.ui.theme.BackGround
 import com.ai.inty.viewmodels.ChatViewModel
 import com.ai.inty.viewmodels.HomeTabIndex
@@ -84,6 +95,53 @@ fun HomeScreen(
             viewModelFactory = viewModelFactory,
             context = context
         )
+
+        //感知vip订阅过期的提示弹窗
+        var showExpiredDialog by remember { mutableStateOf(false) }
+        val vipStatue by mainViewModel.vipStatusFlow.collectAsState()
+        val vipPlan by mainViewModel.vipPlanFlow.collectAsState()
+        LifecycleResumeEffect(mainViewModel) {
+            if (!vipStatue.isSubscribed && vipStatue.everSubscribed) {
+                //未订阅状态，且曾经订阅过，表示已过期;如果app未曾提示过一次，则弹窗。有过提示记录，则不弹窗
+                if (!IntySetting.hasTipsVipExpired()) {
+                    showExpiredDialog = true
+                }
+            }
+            onPauseOrDispose {
+
+            }
+        }
+        if (showExpiredDialog) {
+            val data = ChatDialogData(
+                R.drawable.img_unlimit_dialog_bg,
+                stringResource(R.string.str_expired_vip_dialog_content),
+                stringResource(R.string.subscribe)
+            )
+            val context = LocalContext.current
+            ExpiredVipDialog(
+                data,
+                onCancel = { showExpiredDialog = false },
+                onSure = {
+                    //判断如果之前订阅的档位还在，则继续原订阅。如果没有了，则跳转到订阅中心
+                    val plan =
+                        vipPlan.find { plan -> plan.googleProductId == vipStatue.previous_plan_id }
+                            ?: vipPlan.firstOrNull()
+
+                    val googleProductId = plan?.googleProductId
+                    if (googleProductId != null) {
+                        // 启动购买流程
+                        if (context is Activity)
+                            BillingRepository.launchBillingFlow(context, googleProductId)
+                    } else {
+                        //跳转到订阅中心
+                        TheRouter.build(Constant.ROUTE_VIP_CENTER).navigation()
+                    }
+                    showExpiredDialog = false
+                })
+            //标记已经展示了tips的dialog
+            IntySetting.setTipsVipExpired(true)
+        }
+
     }
 }
 
@@ -92,7 +150,7 @@ fun HomeScreen(
  */
 private fun handleTabSelection(
     tabIndex: Int,
-    context: android.content.Context,
+    context: Context,
     mainViewModel: MainViewModel,
 ) {
     if (tabIndex == HomeTabIndex.Add.ordinal) {
@@ -188,8 +246,8 @@ private fun ChatTabContent(
 private fun ConversionsTabContent(
     mainViewModel: MainViewModel,
     chatViewModel: ChatViewModel,
-    selectedConversionsTab: com.ai.inty.home.ConversionsPageTab,
-    context: android.content.Context,
+    selectedConversionsTab: ConversionsPageTab,
+    context: Context,
 ) {
     val conversions = chatViewModel.conversions
     val sysMsgs = mainViewModel.sysMsgs

@@ -10,7 +10,10 @@ import com.squareup.moshi.JsonClass
 data class SubscriptionPlansResponse(
     val plans: List<SubscriptionPlan>,
     @Json(name = "current_subscription")
-    val currentSubscription: CurrentSubscription?
+    val currentSubscription: CurrentSubscription? = null,//当前用户的订阅信息，null，表示没有订阅，或者已过期。结合has_ever_subscribed判断
+    val has_ever_subscribed: Boolean = false,//是否之前购买过会员订阅
+    val previous_plan_id: String? = null,//上次订阅的sku的id
+
 )
 
 /**

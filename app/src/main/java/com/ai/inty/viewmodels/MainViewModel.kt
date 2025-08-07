@@ -327,6 +327,9 @@ class MainViewModel : BaseActivityViewModel() {
         }
     }
 
+    //感知接口获取到的用户订阅状态
+    val vipStatusFlow = BillingRepository.vipStatusFlow
+    val vipPlanFlow = BillingRepository.plansFlow
     /**
      * 异步更新订阅计划列表和会员状态
      */

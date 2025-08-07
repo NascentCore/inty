@@ -32,26 +32,16 @@ class BillingRemoteManager(
                         // 根据currentSubscription是否为空判断会员状态
                         val isSubscribed = currentSubscription != null
                         val subscriptionId = currentSubscription?.planId
-                        val purchaseTime = currentSubscription?.startDate?.let {
-                            try {
-                                it.toLong()
-                            } catch (e: Exception) {
-                                0L
-                            }
-                        } ?: 0L
-                        val expiryTime = currentSubscription?.endDate?.let {
-                            try {
-                                it.toLong()
-                            } catch (e: Exception) {
-                                0L
-                            }
-                        } ?: 0L
+                        val purchaseTime = currentSubscription?.startDate?.toLongOrNull() ?: 0L
+                        val expiryTime = currentSubscription?.endDate?.toLongOrNull() ?: 0L
 
                         val vipStatus = VipStatus(
                             isSubscribed = isSubscribed,
                             subscriptionId = subscriptionId,
                             purchaseTime = purchaseTime,
-                            expiryTime = expiryTime
+                            expiryTime = expiryTime,
+                            everSubscribed = response.has_ever_subscribed,
+                            previous_plan_id = response.previous_plan_id
                         )
 
                         EasyLog.log("会员状态更新: isSubscribed=$isSubscribed, subscriptionId=$subscriptionId")

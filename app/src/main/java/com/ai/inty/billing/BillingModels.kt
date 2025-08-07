@@ -4,10 +4,12 @@ package com.ai.inty.billing
  * 订阅状态数据类
  */
 data class VipStatus(
-    val isSubscribed: Boolean,
-    val subscriptionId: String? = null,
-    val purchaseTime: Long = 0L,
-    val expiryTime: Long = 0L,
+    val isSubscribed: Boolean,//是否订阅中的状态
+    val subscriptionId: String? = null,//订阅的id
+    val purchaseTime: Long = 0L,//购买时间的时间戳
+    val expiryTime: Long = 0L,//过期时间的时间戳，
+    val everSubscribed: Boolean = false,//是否曾经订阅过
+    val previous_plan_id: String? = null,//上次订阅的sku的id
 )
 
 /**

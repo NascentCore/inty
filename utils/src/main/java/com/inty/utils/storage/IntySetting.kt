@@ -207,6 +207,14 @@ object IntySetting {
     }
     //endregion
 
+    //标记是否已经提示过订阅过期的弹窗
+    fun hasTipsVipExpired(): Boolean {
+        return curUserSetting.getBoolean("has_tips_vip_expired", false)
+    }
+
+    fun setTipsVipExpired(showed: Boolean) {
+        curUserSetting.putBoolean("has_tips_vip_expired", showed)
+    }
 
     private var isLoggingOut = false
 
@@ -228,7 +236,7 @@ object IntySetting {
         return isLoggingOut
     }
 
-    // 通用的用户信息存储方法（不依赖具体的 UserProfile 类）
+    //region 通用的用户信息存储方法（不依赖具体的 UserProfile 类）
     fun setUserProfileData(key: String, value: String) {
         curUserSetting.putString("user_profile_$key", value)
     }
@@ -278,5 +286,7 @@ object IntySetting {
     fun setShowGuested() {
         allUserSetting.putBoolean("show_guest", true)
     }
+    //endregion
+
 
 }
