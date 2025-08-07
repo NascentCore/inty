@@ -112,8 +112,31 @@ android {
         applicationId = "com.ai.intellimate"
         minSdk = 29
         targetSdk = 36
-        versionCode = getVersionCode()
-        versionName = "1.0.1"
+
+        // When release a new aab, increase this version code by 1.
+        // This is different from version name, which is public to users.
+        // This is used by Google Play to determine which binary is newer or older.
+        // This should never decrease.
+        //
+        // Do not increase this for development builds.
+        // Only google play uses this.
+        versionCode = 300
+
+        // Version name follows Semantic Versioning 2.0.0 (https://semver.org/).
+        //
+        // Public version, refers the version name seen by public users.
+        // It's also a tag applied to main or release branches (if fix commits are done after tagging).
+        //
+        // New public versions, can only increase minor (middle) digit of the version name.
+        // Or rarely, increase the major (first) digit.
+        //
+        // Dev version, refers to a name uniquely identify a commit on the main branch.
+        // It's now uses YYYYMMDD-HHMMSS format, applied during the cron schedule in github workflow.
+        //
+        // To release a new public version, we increase fix (third) digit of the version name.
+        // Each time we upload a new binary for a release version, 1.1.x,
+        // we need to increase the fix digit, and create a new tag for that binary.
+        versionName = "1.1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 

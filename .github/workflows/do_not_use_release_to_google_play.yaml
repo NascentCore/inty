@@ -1,3 +1,4 @@
+# This workflow is not fully verified yet. Do not use it.
 name: Build and release to Google Play Store
 
 on:
