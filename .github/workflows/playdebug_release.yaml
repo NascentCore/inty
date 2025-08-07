@@ -64,7 +64,7 @@ jobs:
         packageName: com.ai.intellimate
         releaseFiles: app/build/outputs/bundle/playdebug/app-playdebug.aab
         # https://developers.google.com/android-publisher/tracks#adding_and_modifying_apks
-        track: 'qa'
+        track: 'internal'
         status: completed
         inAppUpdatePriority: 2
         # TODO(yaxiong): Add dynamic release notes.
