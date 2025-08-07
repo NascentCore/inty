@@ -122,20 +122,28 @@ fun HomeScreen(
                 data,
                 onCancel = { showExpiredDialog = false },
                 onSure = {
-                    //判断如果之前订阅的档位还在，则继续原订阅。如果没有了，则跳转到订阅中心
-                    val plan =
-                        vipPlan.find { plan -> plan.googleProductId == vipStatue.previous_plan_id }
-                            ?: vipPlan.firstOrNull()
+                    // 检查是否正式登录（非游客且已登录）
+                    if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
+                        //判断如果之前订阅的档位还在，则继续原订阅。如果没有了，则跳转到订阅中心
+                        val plan =
+                            vipPlan.find { plan -> plan.googleProductId == vipStatue.previous_plan_id }
+                                ?: vipPlan.firstOrNull()
 
-                    val googleProductId = plan?.googleProductId
-                    if (googleProductId != null) {
-                        // 启动购买流程
-                        if (context is Activity)
-                            BillingRepository.launchBillingFlow(context, googleProductId)
+                        val googleProductId = plan?.googleProductId
+                        if (googleProductId != null) {
+                            // 启动购买流程
+                            if (context is Activity)
+                                BillingRepository.launchBillingFlow(context, googleProductId)
+                        } else {
+                            //跳转到订阅中心
+                            TheRouter.build(Constant.ROUTE_VIP_CENTER).navigation()
+                        }
                     } else {
-                        //跳转到订阅中心
-                        TheRouter.build(Constant.ROUTE_VIP_CENTER).navigation()
+                        //如果未登录，要求先登录
+                        TheRouter.build(Constant.ROUTE_LOGIN)
+                            .navigation(context)
                     }
+
                     showExpiredDialog = false
                 })
             //标记已经展示了tips的dialog

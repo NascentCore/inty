@@ -11,7 +11,7 @@ import com.therouter.TheRouter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-class SysMsgsActivityViewModel: BaseActivityViewModel() {
+class SysMsgViewModel : BaseActivityViewModel() {
 
     // 延迟获取依赖，避免在构造函数中立即获取导致空指针异常
     private val userApi by lazy {

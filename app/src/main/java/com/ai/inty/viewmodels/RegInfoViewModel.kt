@@ -13,7 +13,7 @@ import com.therouter.TheRouter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-class RegInfoActivityViewModel: BaseActivityViewModel() {
+class RegInfoViewModel : BaseActivityViewModel() {
 
     // 延迟获取依赖，避免在构造函数中立即获取导致空指针异常
     private val userApi2 by lazy {

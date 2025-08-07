@@ -176,7 +176,6 @@ internal fun ChatPage(
                 if (agentInfo != null) {
                     PremiumModelTag(
                         isPremiumModel = agentPremiumModel,
-                        isVipSubscribed = vipStatus.isSubscribed,
                         onClick = {
                             // 检查VIP状态
                             if (!vipStatus.isSubscribed) {
@@ -206,15 +205,30 @@ internal fun ChatPage(
                             data,
                             onCancel = { showPremiumDialog = false },
                             onSure = {
-                                if (context is Activity) {
-                                    chatViewModel.purchaseFirstVip(context)
+                                // 检查是否正式登录（非游客且已登录）
+                                if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
+                                    if (context is Activity) {
+                                        // 购买最低档位的订阅
+                                        chatViewModel.purchaseFirstVip(context)
+                                    }
+                                } else {
+                                    //如果未登录，要求先登录
+                                    TheRouter.build(Constant.ROUTE_LOGIN)
+                                        .navigation(context)
                                 }
-                                // 购买最低档位的订阅
                                 showPremiumDialog = false
+
                             },
                             onMoreInfo = {
-                                // 去会员中心
-                                TheRouter.build(Constant.ROUTE_VIP_CENTER).navigation()
+                                // 检查是否正式登录（非游客且已登录）
+                                if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
+                                    // 去会员中心
+                                    TheRouter.build(Constant.ROUTE_VIP_CENTER).navigation()
+                                } else {
+                                    //如果未登录，要求先登录
+                                    TheRouter.build(Constant.ROUTE_LOGIN)
+                                        .navigation(context)
+                                }
                                 showPremiumDialog = false
                             }
                         )
@@ -295,15 +309,29 @@ private fun ShowLimitDialog(chatViewModel: ChatViewModel) {
                 chatViewModel.dismissDialog()
             },
             onSure = {
-                if (context is Activity) {
-                    chatViewModel.purchaseFirstVip(context)
+                // 检查是否正式登录（非游客且已登录）
+                if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
+                    if (context is Activity) {
+                        //最低档位购买会员订阅
+                        chatViewModel.purchaseFirstVip(context)
+                    }
+                } else {
+                    //如果未登录，要求先登录
+                    TheRouter.build(Constant.ROUTE_LOGIN)
+                        .navigation(context)
                 }
-                //最低档位购买会员订阅
                 chatViewModel.dismissDialog()
             },
             onMoreInfo = {
-                // 去会员中心
-                TheRouter.build(Constant.ROUTE_VIP_CENTER).navigation()
+                // 检查是否正式登录（非游客且已登录）
+                if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
+                    // 去会员中心
+                    TheRouter.build(Constant.ROUTE_VIP_CENTER).navigation()
+                } else {
+                    //如果未登录，要求先登录
+                    TheRouter.build(Constant.ROUTE_LOGIN)
+                        .navigation(context)
+                }
                 chatViewModel.dismissDialog()
             },
         )

@@ -28,7 +28,6 @@ import com.ai.inty.base.noRippleClickable
 @Composable
 fun PremiumModelTag(
     isPremiumModel: Boolean,
-    isVipSubscribed: Boolean,
     onClick: () -> Unit,
 ) {
     Row(
@@ -65,7 +64,7 @@ fun PremiumModelTag(
         // V图标
         Image(
             painter = painterResource(
-                if (isVipSubscribed) R.drawable.icon_vip_flag_on
+                if (isPremiumModel) R.drawable.icon_vip_flag_on
                 else R.drawable.icon_vip_flag_off
             ),
             contentDescription = "",

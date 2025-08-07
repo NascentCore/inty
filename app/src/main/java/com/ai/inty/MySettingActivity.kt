@@ -21,7 +21,7 @@ import com.ai.inty.ui.components.EditKey
 import com.ai.inty.ui.components.MySettingScreen
 import com.ai.inty.ui.theme.IntyTheme
 import com.ai.inty.utils.UCropHelper
-import com.ai.inty.viewmodels.MySettingActivityViewModel
+import com.ai.inty.viewmodels.MySettingViewModel
 import com.inty.utils.log.EasyLog
 import com.therouter.router.Autowired
 import com.therouter.router.Route
@@ -38,7 +38,7 @@ class MySettingActivity : BaseActivity() {
     @Autowired
     var userProfile: com.ai.inty.beans.UserProfile? = null
 
-    private val viewModel: MySettingActivityViewModel by viewModels()
+    private val viewModel: MySettingViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

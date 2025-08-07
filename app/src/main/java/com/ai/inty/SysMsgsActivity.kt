@@ -8,7 +8,7 @@ import androidx.activity.viewModels
 import androidx.compose.runtime.Composable
 import com.ai.inty.ui.screens.SysMsgsScreen
 import com.ai.inty.ui.theme.IntyTheme
-import com.ai.inty.viewmodels.SysMsgsActivityViewModel
+import com.ai.inty.viewmodels.SysMsgViewModel
 import com.therouter.router.Route
 
 /**
@@ -17,7 +17,7 @@ import com.therouter.router.Route
 @Route(path = Constant.ROUTE_SYS_MSGS)
 class SysMsgsActivity : ComponentActivity() {
 
-    private val viewModel: SysMsgsActivityViewModel by viewModels()
+    private val viewModel: SysMsgViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

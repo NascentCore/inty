@@ -10,7 +10,7 @@ import com.ai.inty.base.BaseActivity
 import com.ai.inty.ui.screens.LoginScreen
 import com.ai.inty.ui.theme.IntyTheme
 import com.ai.inty.utils.UserProfileManager
-import com.ai.inty.viewmodels.LoginActivityViewModel
+import com.ai.inty.viewmodels.LoginViewModel
 import com.inty.utils.log.EasyLog
 import com.therouter.TheRouter
 import com.therouter.router.Route
@@ -26,7 +26,7 @@ import kotlinx.coroutines.launch
 @Route(path = Constant.ROUTE_LOGIN)
 class LoginActivity : BaseActivity() {
 
-    private val viewModel: LoginActivityViewModel by viewModels()
+    private val viewModel: LoginViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

@@ -48,6 +48,7 @@ import com.ai.inty.viewmodels.DialogState
 import com.ai.inty.viewmodels.MainViewModel
 import com.ai.inty.viewmodels.SettingViewModel
 import com.ai.inty.viewmodels.SettingsState
+import com.inty.utils.storage.IntySetting
 import com.therouter.TheRouter
 import kotlinx.coroutines.flow.collectLatest
 
@@ -292,15 +293,30 @@ private fun SettingDialogs(
             data,
             onCancel = onHidePremiumDialog,
             onSure = {
-                if (context is Activity) {
-                    viewmodel.purchaseFirstVip(context)
+                // 检查是否正式登录（非游客且已登录）
+                if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
+                    //购买最低档位的vip会员订阅
+                    if (context is Activity) {
+                        // 购买最低档位的订阅
+                        viewmodel.purchaseFirstVip(context)
+                    }
+                } else {
+                    //如果未登录，要求先登录
+                    TheRouter.build(Constant.ROUTE_LOGIN)
+                        .navigation(context)
                 }
-                // 购买最低档位的订阅
                 onHidePremiumDialog()
             },
             onMoreInfo = {
-                // 去会员中心
-                TheRouter.build(Constant.ROUTE_VIP_CENTER).navigation()
+                // 检查是否正式登录（非游客且已登录）
+                if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
+                    // 去会员中心
+                    TheRouter.build(Constant.ROUTE_VIP_CENTER).navigation()
+                } else {
+                    //如果未登录，要求先登录
+                    TheRouter.build(Constant.ROUTE_LOGIN)
+                        .navigation(context)
+                }
                 onHidePremiumDialog()
             }
         )

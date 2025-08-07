@@ -8,7 +8,7 @@ import androidx.lifecycle.lifecycleScope
 import com.ai.inty.base.BaseActivity
 import com.ai.inty.ui.screens.RegInfoScreen
 import com.ai.inty.ui.theme.IntyTheme
-import com.ai.inty.viewmodels.RegInfoActivityViewModel
+import com.ai.inty.viewmodels.RegInfoViewModel
 import com.therouter.router.Route
 import kotlinx.coroutines.launch
 
@@ -18,7 +18,7 @@ import kotlinx.coroutines.launch
 @Route(path = Constant.ROUTE_REG_INFO)
 class RegInfoActivity : BaseActivity() {
 
-    private val viewModel: RegInfoActivityViewModel by viewModels()
+    private val viewModel: RegInfoViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

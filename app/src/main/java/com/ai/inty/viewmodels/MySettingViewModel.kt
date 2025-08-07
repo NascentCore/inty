@@ -24,7 +24,7 @@ import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
 import java.io.File
 
-class MySettingActivityViewModel: BaseActivityViewModel() {
+class MySettingViewModel : BaseActivityViewModel() {
 
     private val _userProfile = MutableStateFlow<UserProfile>(UserProfile())
     val userProfile = _userProfile.asStateFlow()

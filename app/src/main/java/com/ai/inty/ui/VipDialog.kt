@@ -71,12 +71,13 @@ private fun OpenChatDialog(
                 .fillMaxWidth()
                 .heightIn(430.dp)
                 .padding(horizontal = 24.dp)
+                .clip(RoundedCornerShape(8.dp)),
         ) {
             Image(
                 painter = painterResource(dialogData.imageRes),
                 contentDescription = "",
                 contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.matchParentSize(),
             )
             Column(
                 modifier = Modifier
