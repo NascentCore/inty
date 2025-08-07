@@ -3,69 +3,90 @@ name: Build and release testing version to Google Play Store
 
 on:
   workflow_dispatch:
+    inputs:
+      environment:
+        description: 'The environment to release to, corresponds to combination of Google Play track, app build type, and backend endpoints'
+        required: true
+        default: dev
+        type: environment
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     
     steps:
-    - uses: actions/checkout@v4
-      with:
-        # Some operations look for history, so we need to fetch full history.
-        fetch-depth: 0
+      - id: get-build-target
+        run: |
+          case "${{ inputs.environment }}" in
+            prod)
+              echo "target=bundleRelease" >> $GITHUB_OUTPUT
+              echo "track=internal" >> $GITHUB_OUTPUT
+              ;;
+            *)
+              echo "target=bundlePlaydebug" >> $GITHUB_OUTPUT
+              echo "track=internal" >> $GITHUB_OUTPUT
+              ;;
+          esac
+          echo "target=$target"
+          echo "track=$track"
 
-    - uses: actions/setup-java@v4
-      with:
-        java-version: '21'
-        distribution: 'temurin'
+      - uses: actions/checkout@v4
+        with:
+          # Some operations look for history, so we need to fetch full history.
+          fetch-depth: 0
 
-    - name: Cache Gradle dependencies and build cache
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.gradle/caches
-          ~/.gradle/wrapper
-          .gradle
-          build
-          app/build
-          network/build
-          utils/build
-        # https://github.com/actions/cache/blob/main/examples.md#java---gradle
-        key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}-${{ github.sha }}
-        restore-keys: |
-          ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}-
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
 
-    - name: Create keystore.properties
-      env:
-        KEYSTORE_PROPERTIES: ${{ secrets.KEYSTORE_PROPERTIES }}
-      run: |
-        echo "$KEYSTORE_PROPERTIES" > keystore.properties
+      - name: Cache Gradle dependencies and build cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            .gradle
+            build
+            app/build
+            network/build
+            utils/build
+          # https://github.com/actions/cache/blob/main/examples.md#java---gradle
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}-
 
-    - name: Create Google Play service account key
-      env:
-        GOOGLE_PLAY_SERVICE_ACCOUNT_KEY: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_KEY }}
-      run: |
-        echo "$GOOGLE_PLAY_SERVICE_ACCOUNT_KEY" > service-account-key.json
+      - name: Create keystore.properties
+        env:
+          KEYSTORE_PROPERTIES: ${{ secrets.KEYSTORE_PROPERTIES }}
+        run: |
+          echo "$KEYSTORE_PROPERTIES" > keystore.properties
 
-    - name: Build Release AAB
-      run: |
-        ./gradlew clean bundlePlaydebug --stacktrace
+      - name: Create Google Play service account key
+        env:
+          GOOGLE_PLAY_SERVICE_ACCOUNT_KEY: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_KEY }}
+        run: |
+          echo "$GOOGLE_PLAY_SERVICE_ACCOUNT_KEY" > service-account-key.json
 
-    - name: Write version summary
-      run: |
-        echo "## Version information" >> $GITHUB_STEP_SUMMARY
-        ./gradlew printVersionWithSuffix >> $GITHUB_STEP_SUMMARY
+      - name: Build Release AAB
+        run: |
+          ./gradlew clean ${{ steps.get-build-target.outputs.target }} --stacktrace
 
-    - name: Upload AAB to Google Play Internal Testing
-      # https://github.com/r0adkll/upload-google-play
-      uses: r0adkll/upload-google-play@v1
-      with:
-        serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_KEY }}
-        packageName: com.ai.intellimate
-        releaseFiles: app/build/outputs/bundle/playdebug/app-playdebug.aab
-        # https://developers.google.com/android-publisher/tracks#adding_and_modifying_apks
-        track: 'internal'
-        status: draft
-        inAppUpdatePriority: 2
-        # TODO(yaxiong): Add dynamic release notes.
-        # whatsNewDirectory: distribution/whatsnew-dynamic
+      - name: Write version summary
+        run: |
+          echo "## Version information" >> $GITHUB_STEP_SUMMARY
+          ./gradlew printVersionWithSuffix >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload AAB to Google Play Internal Testing
+        # https://github.com/r0adkll/upload-google-play
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_KEY }}
+          packageName: com.ai.intellimate
+          releaseFiles: app/build/outputs/bundle/playdebug/app-playdebug.aab
+          # https://developers.google.com/android-publisher/tracks#adding_and_modifying_apks
+          track: ${{ steps.get-build-target.outputs.track }}
+          status: draft
+          inAppUpdatePriority: 2
+          # TODO(yaxiong): Add dynamic release notes.
+          # whatsNewDirectory: distribution/whatsnew-dynamic
