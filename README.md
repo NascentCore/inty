@@ -6,7 +6,8 @@ InTy 是一个基于 FastAPI 和 PostgreSQL 的 AI 聊天应用后端，集成�
 
 ## 本地运行后端服务
 
-访问 <https://docs.docker.com/desktop/setup/install/mac-install/> 安装 Docker Desktop。
+1. 访问 <https://docs.docker.com/desktop/setup/install/mac-install/> 安装 Docker Desktop。
+1. 拷贝`config.yaml` `inty-backend-key.json` `inty-firebase-key.json` 到 inty-backend 代码库顶层目录。
 
 ```bash
 git clone git@github.com:NascentCore/inty-backend.git
