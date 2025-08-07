@@ -11,6 +11,7 @@ from app.api.v1.endpoints import (
     settings,
     subscription,
     users,
+    version,
 )
 
 api_router = APIRouter()
@@ -30,3 +31,4 @@ api_router.include_router(
 )
 api_router.include_router(admin.router, prefix="/admin", tags=["admin"])
 api_router.include_router(evaluation.router, prefix="/evaluation", tags=["evaluation"])
+api_router.include_router(version.router, prefix="/version", tags=["version"])
