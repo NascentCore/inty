@@ -2,6 +2,11 @@
 
 [![Build release APK and AAB](https://github.com/NascentCore/inty-app/actions/workflows/ci.yaml/badge.svg)](https://github.com/NascentCore/inty-app/actions/workflows/ci.yaml)
 
+## 注意 ⚠️
+
+* 安装应用来自 2 个来源，GitHub Release、Google Play 内测轨道
+* 同一手机，只能选择 2 个来源之一，安装另一来源，需要删除原来源安装的版本
+
 ## 提交 bug 报告时附带版本号
 
 如果测试、使用中遇到 bug，采用录屏、截图的方式记录 bug 特征；并且附带版本号截图，方便工程师确认对应版本
