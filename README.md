@@ -4,7 +4,9 @@
 
 InTy 是一个基于 FastAPI 和 PostgreSQL 的 AI 聊天应用后端，集成了 LangChain 和 LangGraph 技术栈，支持多种 AI 模型和智能体管理。项目采用现代化的异步编程架构，提供完整的 AI 对话解决方案和商业化订阅服务。
 
-## Running local server
+## 本地运行后端服务
+
+访问 <https://docs.docker.com/desktop/setup/install/mac-install/> 安装 Docker Desktop。
 
 ```bash
 git clone git@github.com:NascentCore/inty-backend.git
