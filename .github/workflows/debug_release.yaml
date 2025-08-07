@@ -56,7 +56,7 @@ jobs:
     - id: gen-release-info
       run: |
         short_sha=$(git rev-parse --short HEAD)
-        echo "name=debug-$(TZ=Asia/Shanghai date +%Y%m%d-%H%M%S)-$short_sha" >> $GITHUB_OUTPUT
+        echo "name=debug-apk-$(TZ=Asia/Shanghai date +%Y%m%d-%H%M%S)-$short_sha" >> $GITHUB_OUTPUT
 
     - id: create-release
       uses: softprops/action-gh-release@v2
