@@ -1,0 +1,11 @@
+---
+description: General rules of naming files
+globs: *
+alwaysApply: true
+---
+
+# File naming
+
+* Write yaml file with .yaml suffix, not .yml suffix
+* All files use _ instead of -
+* Do not generate README markdown file for your generated code
