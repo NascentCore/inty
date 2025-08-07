@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.viewModels
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -37,7 +38,7 @@ class MySettingActivity : BaseActivity() {
     @Autowired
     var userProfile: com.ai.inty.beans.UserProfile? = null
 
-    private val viewModel = MySettingActivityViewModel()
+    private val viewModel: MySettingActivityViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

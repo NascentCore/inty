@@ -28,7 +28,9 @@ class AuthInterceptor : Interceptor {
                 chain.request()
                         .newBuilder()
                         .addHeader("accept", "application/json")
-                        .addHeader("Authorization", "Bearer ${IntySetting.getCurToken()}")
+                        .addHeader("appVersionCode", AppEnv.version_code.toString())
+                .addHeader("appVersionName", AppEnv.version_name)
+                .addHeader("Authorization", "Bearer ${IntySetting.getCurToken()}")
                         .build()
 
         EasyLog.log("request = $request")

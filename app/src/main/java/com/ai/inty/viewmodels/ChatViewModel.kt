@@ -367,6 +367,7 @@ class ChatViewModel : BaseActivityViewModel() {
             // 检查用户是否已经订阅
             if (vipStatusFlow.value.isSubscribed) {
                 EasyLog.log("purchaseFirstVip 用户已经是订阅用户，无需重复购买", EasyLog.WARN)
+                showNetworkAwareError("User Already Subscribed !")
                 return
             }
 
@@ -374,6 +375,7 @@ class ChatViewModel : BaseActivityViewModel() {
             BillingRepository.launchBillingFlow(activity, selectedPlan.googleProductId)
         } else {
             EasyLog.log("purchaseFirstVip 无可用会员订阅计划plan", EasyLog.WARN)
+            showNetworkAwareError("Chat Purchase No Vip Plan !")
         }
     }
 }
