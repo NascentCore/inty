@@ -27,8 +27,12 @@ jobs:
               echo "track=internal" >> $GITHUB_OUTPUT
               ;;
           esac
-          echo "target=$target"
-          echo "track=$track"
+
+      - name: Generate build summary
+        run: |
+          echo "## Build target" >> $GITHUB_STEP_SUMMARY
+          echo "target: ${{ steps.get-build-target.outputs.target }}" >> $GITHUB_STEP_SUMMARY
+          echo "track: ${{ steps.get-build-target.outputs.track }}" >> $GITHUB_STEP_SUMMARY
 
       - uses: actions/checkout@v4
         with:
