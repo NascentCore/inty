@@ -3,14 +3,6 @@ name: Build and release to Google Play Store
 
 on:
   workflow_dispatch:
-    inputs:
-      environment:
-        description: 'Release environment (corresponds to Google Play tracks)'
-        required: true
-        # Staging corresponds to Google Play's internal testing track.
-        # Production corresponds to Google Play's production track. But are not used yet.
-        default: dev
-        type: environment
 
 jobs:
   build-and-deploy:
