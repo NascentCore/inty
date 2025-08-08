@@ -2,7 +2,9 @@
 
 * GCP 谷歌云平台，提供文生图等各类后端服务：it@sxwl.ai
   * CloudSQL Postgres:
-    * 实例：inty:sxwl666A!
+    * us-central-1:inty-dev-prod:sxwl666A!
+    * asia-southeast1-1:inty-prod:sxwl666A!
+      * 与后端服务器同一 zone
   * logging: 基于 [docker gcplogs 驱动](https://github.com/GoogleCloudPlatform/community/blob/master/archived/docker-gcplogs-driver/index.md)
   * All services are running on 1 gcp vm (it@sxwl.ai)
     * [GCP VM url](https://console.cloud.google.com/welcome?inv=1&invt=Ab4RWg&project=bustling-pen-sv00q)
