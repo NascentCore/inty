@@ -277,14 +277,11 @@ async def generate_background(
             # 超级管理员不受限制
             if not current_user.is_superuser:
                 if limit == -1:
-                    error_message = (
-                        f"Background image generation failed, daily limit reached"
-                    )
+                    error_message = f"Daily image generation limit reached"
                 else:
-                    error_message = f"Daily background image generation limit reached ({used_count}/{limit})"
-                    if limit <= 3:  # 免费用户每日限制
-                        error_message += ", please consider upgrading your subscription for more daily generations"
-
+                    error_message = (
+                        f"Daily image generation limit reached ({used_count}/{limit})"
+                    )
                 return APIResponse.error(
                     message=error_message,
                     data={
