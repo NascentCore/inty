@@ -67,7 +67,9 @@ def upgrade() -> None:
     op.drop_index(op.f('ix_agents_readable_id'), table_name='agents')
     op.create_index(op.f('ix_agents_readable_id'), 'agents', ['readable_id'], unique=True)
     op.create_index(op.f('ix_agents_name'), 'agents', ['name'], unique=False)
-    op.drop_index(op.f('uq_chats_user_agent_active'), table_name='chats', postgresql_where='(is_active = true)')
+    # 注释：保留唯一约束，同时添加普通索引以优化查询性能
+    # 原来的代码错误地删除了唯一约束，这里修复为保留唯一约束
+    # op.drop_index(op.f('uq_chats_user_agent_active'), table_name='chats', postgresql_where='(is_active = true)')
     op.create_index('ix_chats_user_agent_active', 'chats', ['user_id', 'agent_id', 'is_active'], unique=False)
     op.alter_column('device_tokens', 'created_at',
                existing_type=postgresql.TIMESTAMP(timezone=True),
@@ -694,8 +696,9 @@ def downgrade() -> None:
     op.alter_column('device_tokens', 'created_at',
                existing_type=postgresql.TIMESTAMP(timezone=True),
                nullable=False)
+    # 修复：只删除普通索引，保留唯一约束
     op.drop_index('ix_chats_user_agent_active', table_name='chats')
-    op.create_index(op.f('uq_chats_user_agent_active'), 'chats', ['user_id', 'agent_id'], unique=True, postgresql_where='(is_active = true)')
+    # op.create_index(op.f('uq_chats_user_agent_active'), 'chats', ['user_id', 'agent_id'], unique=True, postgresql_where='(is_active = true)')
     op.drop_index(op.f('ix_agents_name'), table_name='agents')
     op.drop_index(op.f('ix_agents_readable_id'), table_name='agents')
     op.create_index(op.f('ix_agents_readable_id'), 'agents', ['readable_id'], unique=False)
