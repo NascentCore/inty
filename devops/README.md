@@ -1,8 +1,16 @@
 # DevOps
 
+## Inty prod 部署
+
+* GCP zone: asia-southeast1-a
+  * CloudSQL Postgres: inty-prod:sxwl666A!
+  * GCE VM: dev-instance
+* GitHub deployment environment: prod
+
+## Other services
+
 * GCP 谷歌云平台，提供文生图等各类后端服务：it@sxwl.ai
   * CloudSQL Postgres:
-    * us-central-1:inty-dev-prod:sxwl666A!
     * asia-southeast1-1:inty-prod:sxwl666A!
       * 与后端服务器同一 zone
   * logging: 基于 [docker gcplogs 驱动](https://github.com/GoogleCloudPlatform/community/blob/master/archived/docker-gcplogs-driver/index.md)
