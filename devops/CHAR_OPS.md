@@ -1,5 +1,7 @@
 # 管理预置角色
 
+## 删除角色
+
 ```
 inty=> DELETE FROM agents WHERE name = 'Sophie Walsh  Hot';
 ERROR:  update or delete on table "agents" violates foreign key constraint "chat_settings_agent_id_fkey" on table "chat_settings"
@@ -26,4 +28,10 @@ DELETE 14
 inty=> DELETE FROM agents WHERE name = 'Sophie Walsh  Hot';
 DELETE 1
 inty=>
+```
+
+## 更新角色字段
+
+```
+update agents set opening = $$ ... $$ where id = '...';
 ```
