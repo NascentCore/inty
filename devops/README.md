@@ -3,8 +3,8 @@
 ## Inty prod 部署
 
 * GCP zone: asia-southeast1-a
-  * CloudSQL Postgres: inty-prod:sxwl666A!
-  * GCE VM: dev-instance
+  * CloudSQL Postgres: [inty-prod](https://console.cloud.google.com/sql/instances/inty-prod):sxwl666A!
+  * GCE VM: [dev-instance](https://console.cloud.google.com/compute/instancesDetail/zones/asia-southeast1-a/instances/dev-instance)
 * GitHub deployment environment: prod
 * Cloud logging on prod container: [streaming logs](https://cloudlogging.app.goo.gl/g4kuYWM3CzGXeG938)
 * Website: https://intellimate.app
