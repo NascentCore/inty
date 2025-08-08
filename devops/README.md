@@ -7,6 +7,9 @@
   * GCE VM: [dev-instance](https://console.cloud.google.com/compute/instancesDetail/zones/asia-southeast1-a/instances/dev-instance)
 * GitHub deployment environment: prod
 * Cloud logging on prod container: [streaming logs](https://cloudlogging.app.goo.gl/g4kuYWM3CzGXeG938)
+  * 基于 [docker gcplogs 驱动](https://github.com/GoogleCloudPlatform/community/blob/master/archived/docker-gcplogs-driver/index.md)
+  * [Docker run 命令行参数](https://github.com/NascentCore/inty-backend/blob/9fa17750b82d5eeaf5519d486cd20e04dff4370c/.github/workflows/build_and_deploy.yml#L73)
+  * [日志标签设置](https://github.com/NascentCore/inty-backend/blob/9fa17750b82d5eeaf5519d486cd20e04dff4370c/.github/workflows/build_and_deploy.yml#L80)，日志标签示例：<img width="600" height="1062" alt="image" src="https://github.com/user-attachments/assets/f0414fe4-053e-4ce2-b8d4-4fb39049a929" />
 * Website: https://intellimate.app
   * Status page: https://stats.uptimerobot.com/XqJhsnW1cN
 * API endpoint: https://app.inty.cc
@@ -18,7 +21,7 @@
   * CloudSQL Postgres:
     * asia-southeast1-1:inty-prod:sxwl666A!
       * 与后端服务器同一 zone
-  * logging: 基于 [docker gcplogs 驱动](https://github.com/GoogleCloudPlatform/community/blob/master/archived/docker-gcplogs-driver/index.md)
+  * logging: 
   * All services are running on 1 gcp vm (it@sxwl.ai)
     * [GCP VM url](https://console.cloud.google.com/welcome?inv=1&invt=Ab4RWg&project=bustling-pen-sv00q)
     * <img width="3022" height="420" alt="image" src="https://github.com/user-attachments/assets/931abe03-e7c9-4475-bbb0-abb2d2247152" />
