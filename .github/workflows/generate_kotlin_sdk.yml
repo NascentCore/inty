@@ -1,11 +1,11 @@
 name: Generate Kotlin SDK (Simple)
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - "app/**/*.py"
+  # push:
+  #   branches:
+  #     - main
+  #   paths:
+  #     - "app/**/*.py"
 
   workflow_dispatch:
 
