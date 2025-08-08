@@ -186,8 +186,8 @@ fun getChatApi(): IChatApi {
 }
 
 @ServiceProvider
-fun getReportApi(): IReportApi {
-    return NetServiceMgr.retrofitNormal.create(IReportApi::class.java)
+fun getReportApi(): ICommonApi {
+    return NetServiceMgr.retrofitNormal.create(ICommonApi::class.java)
 }
 
 @ServiceProvider

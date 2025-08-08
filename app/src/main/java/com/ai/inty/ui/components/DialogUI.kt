@@ -24,6 +24,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.ai.inty.R
 
 /**
@@ -103,6 +104,80 @@ fun DeleteAccountDialog(
 @Composable
 private fun DeleteAccountDialogPreview() {
     DeleteAccountDialog(
+        onDismiss = {},
+        onConfirm = {}
+    )
+}
+
+/**
+ * App强制更新的Dialog
+ */
+@Composable
+fun ForceUpgradeDialog(
+    content: String = stringResource(R.string.str_upgrade_content),
+    onDismiss: () -> Unit = {},
+    onConfirm: () -> Unit = {},
+) {
+    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(false, false, true)) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(20.dp))
+                .background(color = Color(0xFF1B0130))
+                .padding(12.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = stringResource(R.string.str_upgrade_required),
+                    fontSize = 22.sp,
+                    color = Color.White
+                )
+                Spacer(Modifier.weight(1f))
+                IconButton(onClick = onDismiss, enabled = false) {
+//                    Icon(
+//                        painter = painterResource(R.drawable.close),
+//                        contentDescription = "",
+//                        tint = Color.White
+//                    )
+                }
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            Text(
+                text = content,
+                fontSize = 14.sp,
+                color = Color.White
+            )
+
+
+            Spacer(Modifier.height(16.dp))
+
+            // 按钮
+            Button(
+                onClick = onConfirm,
+                modifier = Modifier
+                    .fillMaxWidth(.85f)
+                    .align(Alignment.CenterHorizontally)
+            ) {
+                Text(
+                    stringResource(R.string.str_upgrade_now),
+                    fontSize = 18.sp,
+                    color = Color.White
+                )
+            }
+
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun PreviewForceUpgradeDialog() {
+    ForceUpgradeDialog(
         onDismiss = {},
         onConfirm = {}
     )

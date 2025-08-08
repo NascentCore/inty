@@ -25,6 +25,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ai.inty.R
+import com.ai.inty.base.RedDot
 import com.ai.inty.base.noRippleClickable
 
 /**
@@ -141,7 +142,8 @@ fun SettingNavigationItem(
 fun SettingInfoItem(
     title: String,
     value: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    hasRedDot: Boolean = false,
 ) {
     Row(
         modifier = modifier
@@ -163,6 +165,7 @@ fun SettingInfoItem(
             fontWeight = FontWeight.Normal,
             color = Color.White.copy(0.55f)
         )
+        if (hasRedDot) RedDot()
     }
 }
 

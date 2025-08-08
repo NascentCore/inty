@@ -216,6 +216,25 @@ object IntySetting {
         curUserSetting.putBoolean("has_tips_vip_expired", showed)
     }
 
+    //标记是否已经有可用的App更新，用于红点标记
+    fun hasAppUpdateTips(): Boolean {
+        return curUserSetting.getBoolean("has_app_update_tips", false)
+    }
+
+    fun setAppUpdateTips(showed: Boolean) {
+        curUserSetting.putBoolean("has_app_update_tips", showed)
+    }
+
+    fun appGooglePlayUrl(): String {
+        return curUserSetting.getString("app_google_play_url", "") ?: ""
+    }
+
+    fun setAppGooglePlayUrl(url: String) {
+        curUserSetting.putString("app_google_play_url", url)
+    }
+
+
+
     private var isLoggingOut = false
 
     fun logout() {

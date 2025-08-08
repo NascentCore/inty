@@ -315,7 +315,8 @@
     <string name="about">About</string>
     <string name="custom_reply_style">Custom reply style</string>
     <string name="custom_reply_successful">Custom reply Successful</string>
-
-    <string name="reply_hint_str">You can enter some keywords to customize the AI\'s reply style, so that the AI ​​will always communicate with you in the tone you want.</string>
-
+    <string name="reply_hint_str">You can enter some keywords to customize the AI\'s reply style, so that the AI will always communicate with you in the tone you want.</string>
+    <string name="str_upgrade_required">Update Required</string>
+    <string name="str_upgrade_content">We\'ve made some important improvements to make your IntelliMate experience even better! To ensure you have access to the latest features and security updates, please update your app now. This update is required to continue using IntelliMate.</string>
+    <string name="str_upgrade_now">Update Now</string>
 </resources>

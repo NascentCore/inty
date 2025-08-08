@@ -11,6 +11,7 @@ import com.ai.inty.R
 import com.ai.inty.base.BaseActivityViewModel
 import com.ai.inty.base.ToastUtils
 import com.ai.inty.beans.AgentInfo
+import com.ai.inty.beans.AppVersionRsp
 import com.ai.inty.beans.CreateAgentRequest
 import com.ai.inty.beans.GenerateBackgroundRequest
 import com.ai.inty.beans.GenerateBackgroundResponse
@@ -20,6 +21,7 @@ import com.ai.inty.beans.UserProfile
 import com.ai.inty.billing.BillingRepository
 import com.ai.inty.home.ConversionsPageTab
 import com.ai.inty.net.IAgentApi
+import com.ai.inty.net.ICommonApi
 import com.ai.inty.net.IUserApi
 import com.ai.inty.net.IUserApi2
 import com.ai.inty.utils.UserProfileManager
@@ -61,6 +63,11 @@ class MainViewModel : BaseActivityViewModel() {
     val userApi2: IUserApi2 by lazy {
         TheRouter.get(IUserApi2::class.java)
             ?: throw IllegalStateException("IUserApi2 not found in TheRouter")
+    }
+
+    val commonApi: ICommonApi by lazy {
+        TheRouter.get(ICommonApi::class.java)
+            ?: throw IllegalStateException("ICommonApi not found in TheRouter")
     }
 
     val agentList = mutableStateListOf<AgentInfo>()
@@ -110,6 +117,7 @@ class MainViewModel : BaseActivityViewModel() {
         loadBusinessData()
 
         TheRouter.addActionInterceptor(Constant.ACTION_USER_PROFILE_CHANGED, userProfileChanged)
+
     }
 
     private fun loadBusinessData() {
@@ -124,6 +132,8 @@ class MainViewModel : BaseActivityViewModel() {
         getUserProfile() // 从服务器获取最新信息并更新本地缓存
         regFCM()
         getSysMsgs()
+        //检查app版本更新
+        checkAppVersion()
     }
 
     fun getAgents() {
@@ -330,6 +340,7 @@ class MainViewModel : BaseActivityViewModel() {
     //感知接口获取到的用户订阅状态
     val vipStatusFlow = BillingRepository.vipStatusFlow
     val vipPlanFlow = BillingRepository.plansFlow
+
     /**
      * 异步更新订阅计划列表和会员状态
      */
@@ -1005,6 +1016,30 @@ class MainViewModel : BaseActivityViewModel() {
                     else -> "Operation"
                 }
                 "$operationName failed: ${e.message ?: "Unknown error"}"
+            }
+        }
+    }
+
+
+    /**
+     * 检查app版本更新
+     */
+    val needForceUpgrade = MutableStateFlow<AppVersionRsp.AppVersionData?>(null)
+    private fun checkAppVersion() = launchWithNetCheck {
+        val result = commonApi.checkAppUpgrade()
+        when (result) {
+            is HttpResult.Success -> {
+                val rsp = result.data.data ?: return@launchWithNetCheck
+                if (rsp.update_required && rsp.force_update) {
+                    //有更新，且需要强制更新
+                    needForceUpgrade.emit(rsp)
+                }
+                IntySetting.setAppUpdateTips(rsp.update_required)
+                IntySetting.setAppGooglePlayUrl(rsp.download_url ?: "")
+            }
+
+            is HttpResult.Failure -> {
+                EasyLog.log(result.message, EasyLog.WARN)
             }
         }
     }

@@ -5,7 +5,7 @@ import androidx.compose.runtime.mutableStateSetOf
 import com.ai.inty.base.BaseActivityViewModel
 import com.ai.inty.beans.ReportItem
 import com.ai.inty.beans.ReportReq
-import com.ai.inty.net.IReportApi
+import com.ai.inty.net.ICommonApi
 import com.inty.utils.log.EasyLog
 import com.therouter.TheRouter
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -18,7 +18,7 @@ class ReportViewModel : BaseActivityViewModel() {
 
     // 延迟获取依赖，避免在构造函数中立即获取导致空指针异常
     val reportApi by lazy {
-        TheRouter.get(IReportApi::class.java)
+        TheRouter.get(ICommonApi::class.java)
             ?: throw IllegalStateException("IReportApi not found in TheRouter")
     }
 

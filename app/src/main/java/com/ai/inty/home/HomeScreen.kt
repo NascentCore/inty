@@ -23,6 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelProvider
@@ -36,6 +37,7 @@ import com.ai.inty.billing.BillingRepository
 import com.ai.inty.chat.ChatPageContainer
 import com.ai.inty.ui.ChatDialogData
 import com.ai.inty.ui.ExpiredVipDialog
+import com.ai.inty.ui.components.ForceUpgradeDialog
 import com.ai.inty.ui.theme.BackGround
 import com.ai.inty.viewmodels.ChatViewModel
 import com.ai.inty.viewmodels.HomeTabIndex
@@ -96,60 +98,86 @@ fun HomeScreen(
             context = context
         )
 
-        //感知vip订阅过期的提示弹窗
-        var showExpiredDialog by remember { mutableStateOf(false) }
-        val vipStatue by mainViewModel.vipStatusFlow.collectAsState()
-        val vipPlan by mainViewModel.vipPlanFlow.collectAsState()
-        LifecycleResumeEffect(mainViewModel) {
-            if (!vipStatue.isSubscribed && vipStatue.everSubscribed) {
-                //未订阅状态，且曾经订阅过，表示已过期;如果app未曾提示过一次，则弹窗。有过提示记录，则不弹窗
-                if (!IntySetting.hasTipsVipExpired()) {
-                    showExpiredDialog = true
+        ExpiredDialogLogic(mainViewModel)
+
+        AppVersionLogic(mainViewModel)
+    }
+}
+
+//App检查更新的逻辑，强制更新则弹窗
+@Composable
+private fun AppVersionLogic(mainViewModel: MainViewModel) {
+    val uriHandler = LocalUriHandler.current
+    val rsp by mainViewModel.needForceUpgrade.collectAsState()
+    if (rsp?.force_update == true) {
+        ForceUpgradeDialog(
+            content = rsp?.message ?: stringResource(R.string.str_upgrade_content),
+            onConfirm = {
+                runCatching {
+                    rsp?.download_url?.let { url ->
+                        uriHandler.openUri(url)
+                    }
                 }
             }
-            onPauseOrDispose {
+        )
+    }
+}
 
+
+@Composable
+private fun ExpiredDialogLogic(mainViewModel: MainViewModel) {
+    //感知vip订阅过期的提示弹窗
+    var showExpiredDialog by remember { mutableStateOf(false) }
+    val vipStatue by mainViewModel.vipStatusFlow.collectAsState()
+    val vipPlan by mainViewModel.vipPlanFlow.collectAsState()
+    LifecycleResumeEffect(mainViewModel) {
+        if (!vipStatue.isSubscribed && vipStatue.everSubscribed) {
+            //未订阅状态，且曾经订阅过，表示已过期;如果app未曾提示过一次，则弹窗。有过提示记录，则不弹窗
+            if (!IntySetting.hasTipsVipExpired()) {
+                showExpiredDialog = true
             }
         }
-        if (showExpiredDialog) {
-            val data = ChatDialogData(
-                R.drawable.img_unlimit_dialog_bg,
-                stringResource(R.string.str_expired_vip_dialog_content),
-                stringResource(R.string.subscribe)
-            )
-            val context = LocalContext.current
-            ExpiredVipDialog(
-                data,
-                onCancel = { showExpiredDialog = false },
-                onSure = {
-                    // 检查是否正式登录（非游客且已登录）
-                    if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
-                        //判断如果之前订阅的档位还在，则继续原订阅。如果没有了，则跳转到订阅中心
-                        val plan =
-                            vipPlan.find { plan -> plan.googleProductId == vipStatue.previous_plan_id }
-                                ?: vipPlan.firstOrNull()
+        onPauseOrDispose {
 
-                        val googleProductId = plan?.googleProductId
-                        if (googleProductId != null) {
-                            // 启动购买流程
-                            if (context is Activity)
-                                BillingRepository.launchBillingFlow(context, googleProductId)
-                        } else {
-                            //跳转到订阅中心
-                            TheRouter.build(Constant.ROUTE_VIP_CENTER).navigation()
-                        }
-                    } else {
-                        //如果未登录，要求先登录
-                        TheRouter.build(Constant.ROUTE_LOGIN)
-                            .navigation(context)
-                    }
-
-                    showExpiredDialog = false
-                })
-            //标记已经展示了tips的dialog
-            IntySetting.setTipsVipExpired(true)
         }
+    }
+    if (showExpiredDialog) {
+        val data = ChatDialogData(
+            R.drawable.img_unlimit_dialog_bg,
+            stringResource(R.string.str_expired_vip_dialog_content),
+            stringResource(R.string.subscribe)
+        )
+        val context = LocalContext.current
+        ExpiredVipDialog(
+            data,
+            onCancel = { showExpiredDialog = false },
+            onSure = {
+                // 检查是否正式登录（非游客且已登录）
+                if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
+                    //判断如果之前订阅的档位还在，则继续原订阅。如果没有了，则跳转到订阅中心
+                    val plan =
+                        vipPlan.find { plan -> plan.googleProductId == vipStatue.previous_plan_id }
+                            ?: vipPlan.firstOrNull()
 
+                    val googleProductId = plan?.googleProductId
+                    if (googleProductId != null) {
+                        // 启动购买流程
+                        if (context is Activity)
+                            BillingRepository.launchBillingFlow(context, googleProductId)
+                    } else {
+                        //跳转到订阅中心
+                        TheRouter.build(Constant.ROUTE_VIP_CENTER).navigation()
+                    }
+                } else {
+                    //如果未登录，要求先登录
+                    TheRouter.build(Constant.ROUTE_LOGIN)
+                        .navigation(context)
+                }
+
+                showExpiredDialog = false
+            })
+        //标记已经展示了tips的dialog
+        IntySetting.setTipsVipExpired(true)
     }
 }
 

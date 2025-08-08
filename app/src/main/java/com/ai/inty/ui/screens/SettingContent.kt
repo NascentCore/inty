@@ -22,6 +22,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -35,6 +36,7 @@ import com.ai.inty.Constant
 import com.ai.inty.R
 import com.ai.inty.base.noRippleClickable
 import com.ai.inty.billing.BillingRepository
+import com.ai.inty.billing.VipStatus
 import com.ai.inty.ui.AdvancedModelChatDialog
 import com.ai.inty.ui.ChatDialogData
 import com.ai.inty.ui.components.DeleteAccountDialog
@@ -124,9 +126,7 @@ fun SettingContent(
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun SettingTopBar(
-    onBack: () -> Unit
-) {
+private fun SettingTopBar(onBack: () -> Unit) {
     CenterAlignedTopAppBar(
         title = {
             Text(
@@ -154,7 +154,7 @@ private fun SettingTopBar(
 @Composable
 private fun SettingOptionsSection(
     settingsState: SettingsState,
-    vipStatus: com.ai.inty.billing.VipStatus,
+    vipStatus: VipStatus,
     onToggleKeepTalking: () -> Unit,
     onTogglePremiumMode: () -> Unit
 ) {
@@ -255,9 +255,17 @@ private fun SupportAndHelpSection(
         SettingDivider()
 
         // 版本号
+        val uriHandler = LocalUriHandler.current
         SettingInfoItem(
             title = stringResource(R.string.settings_about),
-            value = BuildConfig.VERSION_NAME
+            value = BuildConfig.VERSION_NAME,
+            modifier = Modifier.noRippleClickable(onClick = {
+                runCatching {
+                    val url = IntySetting.appGooglePlayUrl()
+                    if (url.isNotBlank()) uriHandler.openUri(url)
+                }
+            }),
+            hasRedDot = IntySetting.hasAppUpdateTips()
         )
     }
 }
@@ -328,7 +336,7 @@ private fun SettingDialogs(
  */
 private fun mailTo(context: Context, email: String) {
     val intent = Intent(Intent.ACTION_SENDTO).apply {
-        data = Uri.parse("mailto:$email")
+        data = "mailto:$email".toUri()
     }
     try {
         context.startActivity(Intent.createChooser(intent, "email"))
