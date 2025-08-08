@@ -19,7 +19,7 @@ import com.ai.inty.beans.SysMsgItem
 import com.ai.inty.beans.TokenBean
 import com.ai.inty.beans.UserProfile
 import com.ai.inty.billing.BillingRepository
-import com.ai.inty.home.ConversionsPageTab
+import com.ai.inty.home.ConversationsPageTab
 import com.ai.inty.net.IAgentApi
 import com.ai.inty.net.ICommonApi
 import com.ai.inty.net.IUserApi
@@ -88,8 +88,8 @@ class MainViewModel : BaseActivityViewModel() {
     private val _selectedTab = MutableStateFlow(HomeTabIndex.Chat)
     val selectedTab = _selectedTab.asStateFlow()
 
-    private val _selectedConversionsTab = MutableStateFlow(ConversionsPageTab.TabMessage)
-    val selectedConversionsTab = _selectedConversionsTab.asStateFlow()
+    private val _selectedConversationsTab = MutableStateFlow(ConversationsPageTab.TabMessage)
+    val selectedConversationsTab = _selectedConversationsTab.asStateFlow()
 
     private val _currentChatPageIndex = MutableStateFlow(0)
     val currentChatPageIndex = _currentChatPageIndex.asStateFlow()
@@ -203,11 +203,11 @@ class MainViewModel : BaseActivityViewModel() {
         _selectedTab.value = HomeTabIndex.entries.toTypedArray()[tab]
         when (_selectedTab.value) {
             HomeTabIndex.Conversation -> {
-                chatViewModel?.getConversions()
+                chatViewModel?.getConversations()
                 getSysMsgs()
                 // 如果切换到对话页面且当前选中关注列表，则刷新关注列表
-                if (_selectedConversionsTab.value == ConversionsPageTab.TabFollowing) {
-                    EasyLog.log("Switching to Conversions tab while following tab is selected - refreshing following agents")
+                if (_selectedConversationsTab.value == ConversationsPageTab.TabFollowing) {
+                    EasyLog.log("Switching to Conversations tab while following tab is selected - refreshing following agents")
                     getFollowingAgents()
                 }
             }
@@ -228,10 +228,10 @@ class MainViewModel : BaseActivityViewModel() {
         chatViewModel.setAgentInfo(agentList.firstOrNull())
     }
 
-    fun onSelectConversionsTab(tab: ConversionsPageTab) {
-        _selectedConversionsTab.value = tab
+    fun onSelectConversationsTab(tab: ConversationsPageTab) {
+        _selectedConversationsTab.value = tab
         when (tab) {
-            ConversionsPageTab.TabFollowing -> {
+            ConversationsPageTab.TabFollowing -> {
                 // 每次切换到关注列表时都刷新
                 EasyLog.log("Switching to following tab - refreshing following agents")
                 getFollowingAgents()
@@ -409,7 +409,7 @@ class MainViewModel : BaseActivityViewModel() {
                     intent.putExtra("isFollowed", true)
                     LocalBroadcastManager.getInstance(AppEnv.context).sendBroadcast(intent)
                     EasyLog.log("Sent FOLLOW_STATE_CHANGED broadcast - followed: $agentId")
-                    // Refresh following list if on conversions tab
+                    // Refresh following list if on conversations tab
                     refreshFollowingListIfOnTab()
                 }
 
@@ -482,9 +482,9 @@ class MainViewModel : BaseActivityViewModel() {
     }
 
     fun refreshFollowingListIfOnTab() {
-        EasyLog.log("refreshFollowingListIfOnTab - selectedTab: ${_selectedTab.value}, selectedConversionsTab: ${_selectedConversionsTab.value}")
+        EasyLog.log("refreshFollowingListIfOnTab - selectedTab: ${_selectedTab.value}, selectedConversationsTab: ${_selectedConversationsTab.value}")
         if (_selectedTab.value == HomeTabIndex.Conversation &&
-            _selectedConversionsTab.value == ConversionsPageTab.TabFollowing
+            _selectedConversationsTab.value == ConversationsPageTab.TabFollowing
         ) {
             EasyLog.log("Refreshing following agents due to follow state change")
             getFollowingAgents()

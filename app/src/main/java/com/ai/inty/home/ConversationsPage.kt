@@ -58,7 +58,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-enum class ConversionsPageTab {
+enum class ConversationsPageTab {
     TabMessage,
     TabFollowing
 }
@@ -67,14 +67,14 @@ enum class ConversionsPageTab {
  * 主页面第二个tab，会话列表页面，包含关注和聊天列表
  */
 @Composable
-fun ConversionsPage(
+fun ConversationsPage(
     modifier: Modifier,
-    selectedTab: ConversionsPageTab,
-    conversions: List<ConversationItem>,
+    selectedTab: ConversationsPageTab,
+    conversations: List<ConversationItem>,
     followingAgents: List<AgentInfo>,
     lastSysMsg: SysMsgItem?,
-    onSelectTab: (ConversionsPageTab) -> Unit,
-    onClickConversionItem: (ConversationItem) -> Unit,
+    onSelectTab: (ConversationsPageTab) -> Unit,
+    onClickConversationItem: (ConversationItem) -> Unit,
     onClickSysMsg: () -> Unit,
     onClickFollowingAgent: (AgentInfo) -> Unit,
     onUnfollowAgent: ((String) -> Unit)? = null,
@@ -87,13 +87,13 @@ fun ConversionsPage(
         )
 
         // 主内容
-        ConversionsPageContent(
+        ConversationsPageContent(
             selectedTab = selectedTab,
-            conversions = conversions,
+            conversations = conversations,
             followingAgents = followingAgents,
             lastSysMsg = lastSysMsg,
             onSelectTab = onSelectTab,
-            onClickConversionItem = onClickConversionItem,
+            onClickConversationItem = onClickConversationItem,
             onClickSysMsg = onClickSysMsg,
             onClickFollowingAgent = onClickFollowingAgent,
             onUnfollowAgent = onUnfollowAgent
@@ -105,13 +105,13 @@ fun ConversionsPage(
  * 会话页面主内容
  */
 @Composable
-private fun ConversionsPageContent(
-    selectedTab: ConversionsPageTab,
-    conversions: List<ConversationItem>,
+private fun ConversationsPageContent(
+    selectedTab: ConversationsPageTab,
+    conversations: List<ConversationItem>,
     followingAgents: List<AgentInfo>,
     lastSysMsg: SysMsgItem?,
-    onSelectTab: (ConversionsPageTab) -> Unit,
-    onClickConversionItem: (ConversationItem) -> Unit,
+    onSelectTab: (ConversationsPageTab) -> Unit,
+    onClickConversationItem: (ConversationItem) -> Unit,
     onClickSysMsg: () -> Unit,
     onClickFollowingAgent: (AgentInfo) -> Unit,
     onUnfollowAgent: ((String) -> Unit)? = null,
@@ -126,7 +126,7 @@ private fun ConversionsPageContent(
             Spacer(Modifier.height(innerPadding.calculateTopPadding() + 28.dp))
 
             // Tab选择器
-            ConversionsTabSelector(
+            ConversationsTabSelector(
                 selectedTab = selectedTab,
                 onSelectTab = onSelectTab
             )
@@ -135,16 +135,16 @@ private fun ConversionsPageContent(
 
             // 内容区域
             when (selectedTab) {
-                ConversionsPageTab.TabMessage -> {
+                ConversationsPageTab.TabMessage -> {
                     MessageTabContent(
-                        conversions = conversions,
+                        conversations = conversations,
                         lastSysMsg = lastSysMsg,
-                        onClickConversionItem = onClickConversionItem,
+                        onClickConversationItem = onClickConversationItem,
                         onClickSysMsg = onClickSysMsg
                     )
                 }
 
-                ConversionsPageTab.TabFollowing -> {
+                ConversationsPageTab.TabFollowing -> {
                     FollowingTabContent(
                         followingAgents = followingAgents,
                         onClickAgent = onClickFollowingAgent,
@@ -160,39 +160,39 @@ private fun ConversionsPageContent(
  * Tab选择器组件
  */
 @Composable
-private fun ConversionsTabSelector(
-    selectedTab: ConversionsPageTab,
-    onSelectTab: (ConversionsPageTab) -> Unit,
+private fun ConversationsTabSelector(
+    selectedTab: ConversationsPageTab,
+    onSelectTab: (ConversationsPageTab) -> Unit,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.Center,
     ) {
-        ConversionsPageTabItem(
+        ConversationsPageTabItem(
             modifier = Modifier.noRippleClickable {
-                onSelectTab(ConversionsPageTab.TabMessage)
+                onSelectTab(ConversationsPageTab.TabMessage)
             },
             text = stringResource(R.string.tab_message),
-            isSelected = selectedTab == ConversionsPageTab.TabMessage
+            isSelected = selectedTab == ConversationsPageTab.TabMessage
         )
 
         Spacer(Modifier.width(15.dp))
 
-        ConversionsPageTabItem(
+        ConversationsPageTabItem(
             modifier = Modifier.noRippleClickable {
-                onSelectTab(ConversionsPageTab.TabFollowing)
+                onSelectTab(ConversationsPageTab.TabFollowing)
             },
             text = stringResource(R.string.tab_following),
-            isSelected = selectedTab == ConversionsPageTab.TabFollowing
+            isSelected = selectedTab == ConversationsPageTab.TabFollowing
         )
-    }
+}
 }
 
 /**
  * Tab项组件
  */
 @Composable
-fun ConversionsPageTabItem(
+fun ConversationsPageTabItem(
     modifier: Modifier,
     text: String,
     isSelected: Boolean,
@@ -237,9 +237,9 @@ fun ConversionsPageTabItem(
  */
 @Composable
 private fun MessageTabContent(
-    conversions: List<ConversationItem>,
+    conversations: List<ConversationItem>,
     lastSysMsg: SysMsgItem?,
-    onClickConversionItem: (ConversationItem) -> Unit,
+    onClickConversationItem: (ConversationItem) -> Unit,
     onClickSysMsg: () -> Unit,
 ) {
     LazyColumn {
@@ -265,13 +265,13 @@ private fun MessageTabContent(
 
         // 会话列表
         items(
-            items = conversions,
-            key = { conversion -> conversion.agentId }
-        ) { conversion ->
-            AuthClickable(onClick = { onClickConversionItem(conversion) }) { authModifier ->
+            items = conversations,
+            key = { conversation -> conversation.agentId }
+        ) { conversation ->
+            AuthClickable(onClick = { onClickConversationItem(conversation) }) { authModifier ->
                 ConversationItem(
                     modifier = authModifier.fillMaxWidth(),
-                    conversation = conversion
+                    conversation = conversation
                 )
             }
         }

@@ -39,7 +39,7 @@ class ChatViewModel : BaseActivityViewModel() {
     val agentInfo = _agentInfo.asStateFlow()
 
     val msgs = mutableStateListOf<MsgInfo>()
-    val conversions = mutableStateListOf<ConversationItem>()
+    val conversations = mutableStateListOf<ConversationItem>()
 
     val inputData = MutableStateFlow<String>("")
     val inputSelection = MutableStateFlow<Int>(0)
@@ -278,19 +278,19 @@ class ChatViewModel : BaseActivityViewModel() {
         }
     }
 
-    fun getConversions() {
+    fun getConversations() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val result = chatApi.getConversions(0, 100)
-                EasyLog.log("getConversions = $result")
-                conversions.clear()
+                val result = chatApi.getConversations(0, 100)
+                EasyLog.log("getConversations = $result")
+                conversations.clear()
                 when (result) {
                     is HttpResult.Success -> {
                         // 只显示用户主动发起的对话
                         val userInitiatedConversations = result.data.filter { conversation ->
                             IntySetting.isUserInitiatedConversation(conversation.agentId)
                         }
-                        conversions.addAll(userInitiatedConversations)
+                        conversations.addAll(userInitiatedConversations)
                         EasyLog.log("Filtered conversations: ${userInitiatedConversations.size} out of ${result.data.size}")
                     }
 
@@ -299,7 +299,7 @@ class ChatViewModel : BaseActivityViewModel() {
                     }
                 }
             } catch (e: Exception) {
-                EasyLog.log("getConversions exception: ${e.message}", priority = EasyLog.ERROR)
+                EasyLog.log("getConversations exception: ${e.message}", priority = EasyLog.ERROR)
                 handleNetworkException(e)
             }
         }
@@ -327,21 +327,21 @@ class ChatViewModel : BaseActivityViewModel() {
     }
 
     //标记会话消息 已读
-    fun setConversionReaded(conversationItem: ConversationItem) {
+    fun setConversationReaded(conversationItem: ConversationItem) {
         IntySetting.setConversationReaded(conversationItem.agentId, conversationItem.lastMessage)
 
-        val index = conversions.indexOfFirst {
+        val index = conversations.indexOfFirst {
             (it.id == conversationItem.id) && (it.agentId == conversationItem.agentId)
         }
         if (index >= 0) {
-            conversions[index] = conversationItem.copy(isNew = false)
+            conversations[index] = conversationItem.copy(isNew = false)
         }
     }
 
     // 新增：清理所有数据的方法
     fun clearAllData() {
         msgs.clear()
-        conversions.clear()
+        conversations.clear()
         _agentInfo.value = null
         _userProfile.value = UserProfile()
         inputData.value = ""

@@ -69,7 +69,7 @@ fun HomeScreen(
     viewModelFactory: ViewModelProvider.Factory,
 ) {
     val selectedTab = mainViewModel.selectedTab.collectAsState()
-    val selectedConversionsTab = mainViewModel.selectedConversionsTab.collectAsState()
+    val selectedConversationsTab = mainViewModel.selectedConversationsTab.collectAsState()
     val agentList = mainViewModel.agentList
     val context = LocalContext.current
 
@@ -91,7 +91,7 @@ fun HomeScreen(
     ) { _ ->
         HomeContent(
             selectedTab = selectedTab.value,
-            selectedConversionsTab = selectedConversionsTab.value,
+            selectedConversationsTab = selectedConversationsTab.value,
             mainViewModel = mainViewModel,
             chatViewModel = chatViewModel,
             viewModelFactory = viewModelFactory,
@@ -206,7 +206,7 @@ private fun handleTabSelection(
 @Composable
 private fun HomeContent(
     selectedTab: HomeTabIndex,
-    selectedConversionsTab: com.ai.inty.home.ConversionsPageTab,
+    selectedConversationsTab: com.ai.inty.home.ConversationsPageTab,
     mainViewModel: MainViewModel,
     chatViewModel: ChatViewModel,
     viewModelFactory: ViewModelProvider.Factory,
@@ -221,10 +221,10 @@ private fun HomeContent(
         }
 
         HomeTabIndex.Conversation -> {
-            ConversionsTabContent(
+            ConversationsTabContent(
                 mainViewModel = mainViewModel,
                 chatViewModel = chatViewModel,
-                selectedConversionsTab = selectedConversionsTab,
+                selectedConversationsTab = selectedConversationsTab,
                 context = context
             )
         }
@@ -279,26 +279,26 @@ private fun ChatTabContent(
  * 会话Tab内容
  */
 @Composable
-private fun ConversionsTabContent(
+private fun ConversationsTabContent(
     mainViewModel: MainViewModel,
     chatViewModel: ChatViewModel,
-    selectedConversionsTab: ConversionsPageTab,
+    selectedConversationsTab: ConversationsPageTab,
     context: Context,
 ) {
-    val conversions = chatViewModel.conversions
+    val conversations = chatViewModel.conversations
     val sysMsgs = mainViewModel.sysMsgs
     val followingAgents = mainViewModel.followingAgents
 
-    ConversionsPage(
+    ConversationsPage(
         modifier = Modifier,
-        selectedTab = selectedConversionsTab,
-        conversions = conversions,
+        selectedTab = selectedConversationsTab,
+        conversations = conversations,
         followingAgents = followingAgents,
         onSelectTab = {
-            mainViewModel.onSelectConversionsTab(it)
+            mainViewModel.onSelectConversationsTab(it)
         },
-        onClickConversionItem = { conversation ->
-            chatViewModel.setConversionReaded(conversation)
+        onClickConversationItem = { conversation ->
+            chatViewModel.setConversationReaded(conversation)
             TheRouter.build(Constant.ROUTE_CHAT)
                 .withObject("agent_id", conversation.agentId)
                 .navigation(context)
