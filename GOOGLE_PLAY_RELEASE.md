@@ -10,7 +10,7 @@
 <img width="480" height="1312" alt="image" src="https://github.com/user-attachments/assets/e4362ecd-7001-4013-91da-4987619f4d59" />
 
 工作流完成后，测试版本的草稿会出现在 [Play Console](https://play.google.com/console/u/0/developers/8311322450209629787/app/4972036709846537052/tracks/internal-testing)；
-需要进一步将其进行发布；此时需要使用 AdsPower 指纹浏览器登录 Play 账号
+需要进一步将其进行发布；此时需要使用 AdsPower 指纹浏览器登录 Play 账号（参考[飞书文档指纹浏览器使用指南](https://tricorder.feishu.cn/wiki/WMuAwlr6EiX3RakwidGcLrH7nuY)）
 
 <img width="480" height="1538" alt="image" src="https://github.com/user-attachments/assets/0e9f2098-9717-4532-8d0d-5ee8ea924749" />
 <img width="480" height="1790" alt="image" src="https://github.com/user-attachments/assets/80c46bc9-1331-424d-8e94-5dfa5a673c4b" />
