@@ -84,6 +84,8 @@ async def startup_event():
     """应用启动事件"""
     try:
         logger.info("正在初始化应用...")
+        logger.info(f"数据库 URL: {settings.database.url}")
+        logger.info(f"异步数据库 URL: {settings.database.async_url}")
 
         # 0. 预初始化数据库连接池和chat_history表
         await _preload_database_connections()
