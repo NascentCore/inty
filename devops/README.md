@@ -28,4 +28,6 @@
 postgres with pgvector (docker container) migration to gcp cloudsql
 pg_dump > inty_prd.sql
 然后倒入到 db
-<img width="900" height="1662" alt="image" src="https://github.com/user-attachments/assets/9c4e52a2-9128-4b50-a620-443c0c2547be" />
+<img width="300" height="1662" alt="image" src="https://github.com/user-attachments/assets/9c4e52a2-9128-4b50-a620-443c0c2547be" />
+<img width="300" height="1186" alt="image" src="https://github.com/user-attachments/assets/fdff5c54-aec4-44a2-91bc-8c9bbbda222b" />
+
