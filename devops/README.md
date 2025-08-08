@@ -7,7 +7,10 @@
   * GCE VM: dev-instance
 * GitHub deployment environment: prod
 * Cloud logging on prod container: [streaming logs](https://cloudlogging.app.goo.gl/g4kuYWM3CzGXeG938)
-* [IntelliMate.app status page](https://stats.uptimerobot.com/XqJhsnW1cN)
+* Website: https://intellimate.app
+  * Status page: https://stats.uptimerobot.com/XqJhsnW1cN
+* API endpoint: https://app.inty.cc
+  * Monitoring: https://app.checklyhq.com/accounts/1896e6d6-1599-414f-998e-3dabcc58fd7f
 
 ## Other services
 
