@@ -14,6 +14,8 @@
 * OpenRouter 大模型聚合调用平台：it@sxwl.ai
   * 下面 2 个 API key 应该删除（不知道哪里用到）
   * <img width="800" height="268" alt="image" src="https://github.com/user-attachments/assets/322ef239-ef54-4679-b7e0-441b0025a93c" />
+* ElevenLabs 语音 AI 平台：it@sxwl.ai
+  * <img width="800" height="610" alt="image" src="https://github.com/user-attachments/assets/450ebfae-bb29-47fe-9f59-e89d7a49386a" />
 
 部署环境：dev prod GitHub deployment environments
 
