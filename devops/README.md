@@ -6,6 +6,7 @@
   * CloudSQL Postgres: inty-prod:sxwl666A!
   * GCE VM: dev-instance
 * GitHub deployment environment: prod
+* Cloud logging on prod container: [streaming logs](https://cloudlogging.app.goo.gl/g4kuYWM3CzGXeG938)
 
 ## Other services
 
