@@ -73,7 +73,7 @@ jobs:
           sudo docker run --detach --log-driver=gcplogs \
             --name inty-backend-${{ steps.set-environment.outputs.environment }} \
             --restart unless-stopped \
-            --publish ${{ vars.SERVICE_PORT }}:8000 \
+            --publish ${{ vars.SERVICE_PORT_ON_HOST }}:8000 \
             --env LANGCHAIN_TRACING_V2=true \
             --env LANGCHAIN_PROJECT=inty-backend-${{ steps.set-environment.outputs.environment }} \
             --env LANGCHAIN_API_KEY=${{ secrets.LANGCHAIN_API_KEY }} \
