@@ -1,5 +1,5 @@
 import sqlalchemy as sa
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, String, Text
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, String, Text, Index
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
@@ -10,6 +10,7 @@ class ChatSettings(Base):
     """聊天设置模型"""
 
     __tablename__ = "chat_settings"
+    __table_args__ = (Index("uq_chat_settings_chat_id", "chat_id", unique=True),)
 
     id = Column(String, primary_key=True, index=True)
     language = Column(String, default="en")

@@ -593,7 +593,7 @@ async def get_or_create_chat_settings(
     db: AsyncSession, chat_id: str, user_id: str, agent_id: str
 ) -> models.ChatSettings:
     """
-    获取或创建聊天设置
+    获取或创建聊天设置（处理并发创建和外键约束）
     """
     try:
         # 先查找是否已存在设置，预加载agent关系
@@ -606,6 +606,16 @@ async def get_or_create_chat_settings(
 
         if settings:
             return settings
+
+        # 确保chat记录存在（防止外键约束违反）
+        chat_result = await db.execute(
+            select(models.Chat).where(models.Chat.id == chat_id)
+        )
+        chat = chat_result.scalar_one_or_none()
+        
+        if not chat:
+            logger.error(f"Chat记录不存在，无法创建设置 - chat_id: {chat_id}")
+            raise HTTPException(status_code=404, detail="聊天记录不存在")
 
         # 如果不存在，创建新的设置
         settings_id = str(uuid.uuid4())
@@ -620,18 +630,34 @@ async def get_or_create_chat_settings(
         )
 
         db.add(db_settings)
-        await db.commit()
-        await db.refresh(db_settings)
-
-        # 重新查询以加载关系数据
-        result = await db.execute(
-            select(models.ChatSettings)
-            .options(selectinload(models.ChatSettings.agent))
-            .where(models.ChatSettings.id == db_settings.id)
-        )
-        settings_with_agent = result.scalar_one()
-
-        return settings_with_agent
+        
+        try:
+            await db.commit()
+            await db.refresh(db_settings)
+            
+            # 重新查询以加载关系数据
+            result = await db.execute(
+                select(models.ChatSettings)
+                .options(selectinload(models.ChatSettings.agent))
+                .where(models.ChatSettings.id == db_settings.id)
+            )
+            settings_with_agent = result.scalar_one()
+            
+            logger.info(f"成功创建聊天设置 - chat_id: {chat_id}")
+            return settings_with_agent
+            
+        except IntegrityError:
+            await db.rollback()
+            logger.info(f"并发创建聊天设置冲突，查询已存在设置 - chat_id: {chat_id}")
+            
+            # 查询已存在的设置
+            result = await db.execute(
+                select(models.ChatSettings)
+                .options(selectinload(models.ChatSettings.agent))
+                .where(models.ChatSettings.chat_id == chat_id)
+            )
+            existing_settings = result.scalar_one()
+            return existing_settings
 
     except SQLAlchemyError as e:
         await db.rollback()
