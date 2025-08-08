@@ -24,3 +24,8 @@
 * [后端部署](https://github.com/NascentCore/inty-backend/actions/workflows/build_and_deploy.yml)
 * [前端 APK 发布](https://github.com/NascentCore/inty-app/actions/workflows/debug_release.yaml)
 * [前端 AAB 发布](https://github.com/NascentCore/inty-app/blob/main/.github/workflows/playdebug_release.yaml)
+
+postgres with pgvector (docker container) migration to gcp cloudsql
+pg_dump > inty_prd.sql
+然后倒入到 db
+<img width="900" height="1662" alt="image" src="https://github.com/user-attachments/assets/9c4e52a2-9128-4b50-a620-443c0c2547be" />
