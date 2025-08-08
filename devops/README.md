@@ -14,3 +14,9 @@
 * OpenRouter 大模型聚合调用平台：it@sxwl.ai
   * 下面 2 个 API key 应该删除（不知道哪里用到）
   * <img width="800" height="268" alt="image" src="https://github.com/user-attachments/assets/322ef239-ef54-4679-b7e0-441b0025a93c" />
+
+部署环境：dev prod GitHub deployment environments
+
+* [后端部署](https://github.com/NascentCore/inty-backend/actions/workflows/build_and_deploy.yml)
+* [前端 APK 发布](https://github.com/NascentCore/inty-app/actions/workflows/debug_release.yaml)
+* [前端 AAB 发布](https://github.com/NascentCore/inty-app/blob/main/.github/workflows/playdebug_release.yaml)
