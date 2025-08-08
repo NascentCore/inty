@@ -27,6 +27,12 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+// 聊天对话 app + backend 交互
+// app 启动
+// app 请求聊天记录（/agents/{agent_id}/messages
+// backednf 创建对话（如果是首次对话）
+// backend 返回对话 ID
+// app 请求聊天回复（/agents/{agent_id}/chat/completions
 class ChatViewModel : BaseActivityViewModel() {
 
     private val _agentInfo = MutableStateFlow<AgentInfo?>(null)
