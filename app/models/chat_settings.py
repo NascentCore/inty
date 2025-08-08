@@ -1,5 +1,5 @@
 import sqlalchemy as sa
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, String
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, String, Index
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
@@ -28,3 +28,8 @@ class ChatSettings(Base):
 
     chat_id = Column(String, ForeignKey("chats.id"))
     chat = relationship("Chat", back_populates="settings")
+
+    # 唯一约束：每个聊天只能有一个设置记录
+    __table_args__ = (
+        Index("uq_chat_settings_chat_id", "chat_id", unique=True),
+    )

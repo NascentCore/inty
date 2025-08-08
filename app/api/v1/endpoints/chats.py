@@ -583,29 +583,21 @@ async def agent_chat_completions(
             chat_processing_start = time.time()
             logger.debug(f"开始Agent聊天处理: session_id={session_id}")
 
-            # 并行获取聊天设置和AI回复
+            # 先获取聊天设置，再处理AI回复
             try:
-                # 同时启动AI回复和聊天设置获取
                 import asyncio
 
-                ai_task = asyncio.create_task(
-                    agent.chat(
-                        user_id=current_user.id,
-                        session_id=session_id,
-                        messages=messages,
-                        db_session=db,
-                    )
+                # 先获取或创建聊天设置
+                chat_settings = await chat_service.get_or_create_chat_settings(
+                    db, chat.id, current_user.id, agent_id
                 )
 
-                settings_task = asyncio.create_task(
-                    chat_service.get_or_create_chat_settings(
-                        db, chat.id, current_user.id, agent_id
-                    )
-                )
-
-                # 等待两个任务完成
-                response_content, chat_settings = await asyncio.gather(
-                    ai_task, settings_task
+                # 然后处理AI回复
+                response_content = await agent.chat(
+                    user_id=current_user.id,
+                    session_id=session_id,
+                    messages=messages,
+                    db_session=db,
                 )
                 chat_processing_time = time.time() - chat_processing_start
                 logger.info(
