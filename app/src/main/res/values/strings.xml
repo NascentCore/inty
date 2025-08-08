@@ -58,18 +58,18 @@
 
     <string name="web_client_id">1034291688895-0e5hq72pghd4nihhpmf989ptv0ag1542.apps.googleusercontent.com</string>
     <string name="login_successfully">Login successfully</string>
-    <string name="create_ai_successfully">Create AI successfully</string>
+    <string name="create_ai_successfully">Created</string>
     <string name="logout_successfully">Logout successfully</string>
 
     <!-- Form validation messages -->
     <string name="please_fill_required_fields">Please fill in all required fields</string>
 
     <!-- Success messages -->
-    <string name="character_updated_successfully">Character updated successfully!</string>
-    <string name="character_deleted_successfully">Delete Successfully</string>
-    <string name="followed_successfully">Successfully Followed</string>
-    <string name="unfollowed_successfully">Successfully Unfollowed</string>
-    <string name="saved_successfully">Saved Successfully</string>
+    <string name="character_updated_successfully">Updated</string>
+    <string name="character_deleted_successfully">Deleted</string>
+    <string name="followed_successfully">Followed</string>
+    <string name="unfollowed_successfully">Unfollowed</string>
+    <string name="saved_successfully">Saved</string>
 
     <!-- Error messages -->
     <string name="follow_failed">Follow failed</string>
