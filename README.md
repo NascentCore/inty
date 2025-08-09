@@ -61,6 +61,8 @@ Uploading key is under app signing settings:
 
 ## 🚀 快速开始
 
+<img width="600" height="1408" alt="image" src="https://github.com/user-attachments/assets/47cd8996-afef-41a4-b039-383e5bf167cf" />
+
 ### 环境要求
 
 * Android Studio Hedgehog | 2023.1.1 或更新版本
