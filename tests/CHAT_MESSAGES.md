@@ -11,11 +11,3 @@
 * What's my name?
 * What's my gender?
 * What's my pronoun?
-
-## SFW guardrails
-
-* Penis
-* Pussy
-* Kiss me
-* Undress yourself
-* Suck my dick
