@@ -12,8 +12,8 @@
 
 如果测试、使用中遇到 bug，采用录屏、截图的方式记录 bug 特征；并且附带版本号截图，方便工程师确认对应版本
 
-<img width="350" alt="image" src="https://github.com/user-attachments/assets/9a47f539-9105-4810-9fe7-17d69c3f3a00" />
-<img width="350" alt="image" src="https://github.com/user-attachments/assets/a19a99ed-4165-48e5-88d8-2aca17cfad0d" />
+<img width="280" alt="image" src="https://github.com/user-attachments/assets/9a47f539-9105-4810-9fe7-17d69c3f3a00" />
+<img width="280" alt="image" src="https://github.com/user-attachments/assets/a19a99ed-4165-48e5-88d8-2aca17cfad0d" />
 
 ## Google Play uploading and signing
 
@@ -61,14 +61,29 @@ Uploading key is under app signing settings:
 
 ## 🚀 快速开始
 
+### 连接本地运行后端
+
+**本机**运行后端，其端口位于`http://localhost:8000`；Android Studio，启动模拟器、或 USB 连接手机；需要使用 `adb` 命令行工具将本地服务端口映射到模拟器、手机上。
+
+```bash
+# 列出设备，记录自己使用的设备 ID
+adb devices
+
+# 将本机 :8000 端口映射到指定的设备
+adb -s <device-id> reverse tcp:8000 tcp:8000
+```
+
+然后使用 `local` 构建模式（build type）来启动 App，该构建模式下，`baseUrl()`返回
+`http://localhost:8000`。
+
+安装`adb`：`adb`包含在 Android Platform Tools 内，Tools -> SDK Manager，
+选择安装 Android SDK Platform Tools；将其路径加入 PATH：
+
+```rc
+PATH="/Users/yzhao/Library/Android/sdk/platform-tools:$PATH"
+```
+
 <img width="600" height="1408" alt="image" src="https://github.com/user-attachments/assets/47cd8996-afef-41a4-b039-383e5bf167cf" />
-
-### 环境要求
-
-* Android Studio Hedgehog | 2023.1.1 或更新版本
-* JDK 17 (推荐使用 Android Studio 内置的 JBR)
-* Android SDK API 29+ (Android 10+)
-* Git 版本控制
 
 ### 设置步骤
 
