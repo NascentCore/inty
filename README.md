@@ -1,4 +1,4 @@
-# AI intimacy simulation for young male adults
+# AI 驱动的、面向北美年轻男性的亲密体验模拟 Android app（AI-driven intimacy simulation for NA young male adults）
 
 [![Build release APK and AAB](https://github.com/NascentCore/inty-app/actions/workflows/ci.yaml/badge.svg)](https://github.com/NascentCore/inty-app/actions/workflows/ci.yaml)
 
@@ -33,15 +33,18 @@ Uploading key is under app signing settings:
 
 ### ✨ 核心功能
 
-* 🤖 **AI 伙伴**: 与多样化的 AI 个性聊天
-* 👤 **自定义角色**: 创建和定制您自己的 AI 伙伴
-* 🎨 **AI 头像生成**: 使用 AI 生成独特头像
-* 💬 **实时聊天**: 无缝消息体验
-* 🔊 **语音消息**: 音频播放支持
-* 📱 **Google 登录**: 安全认证，支持游客模式
-* 💎 **高级功能**: 应用内购买和订阅
-* 🌍 **多语言**: 国际化支持
-* 🔒 **隐私优先**: 无广告跟踪，注重隐私的设计
+5 个底 tab，从左到右依次为：
+
+1. Chat (HomeTabIndex.Chat) - The main chat interface where users can interact with AI agents
+   * 聊天：用户左右滑动浏览推荐的 AI 角色
+1. Conversations (HomeTabIndex.Conversation) - Shows conversation history and system messages
+   * 聊天历史和关注角色
+1. Add (HomeTabIndex.Add) - Special tab that navigates to role creation or login
+   * 创建 AI 角色
+1. Suggest (HomeTabIndex.Suggest) - Recommendation page showing suggested AI agents
+   * AI 角色浏览
+1. My (HomeTabIndex.My) - User profile and personal settings page
+   * 我的：设置、创建的角色列表等
 
 ## 🏗️ 架构设计
 
