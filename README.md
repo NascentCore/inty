@@ -296,13 +296,6 @@ implementation("com.google.android.gms:play-services-auth:21.2.0")
 ./gradlew test --tests "com.ai.inty.ExampleUnitTest"
 ```
 
-### 测试结构
-
-* ViewModels 和业务逻辑的单元测试
-
-* 网络层的集成测试
-* 关键用户流程的 UI 测试
-
 ## 🚀 部署
 
 ### Play Store 发布
@@ -331,41 +324,6 @@ implementation("com.google.android.gms:play-services-auth:21.2.0")
 * `versionCode`: 每次发布递增
 * `versionName`: 语义版本控制 (例如 1.0.1)
 * 调试构建包含 git 提交哈希: `1.0.1 (d799932)`
-
-## 🤝 贡献
-
-### 开发工作流程
-
-1. **Fork 仓库**
-2. **创建功能分支**
-
-   ```bash
-   git checkout -b feature/amazing-feature
-   ```
-
-3. **进行更改**
-   * 遵循代码风格指南
-   * 为新功能添加测试
-   * 根据需要更新文档
-4. **提交更改**
-
-   ```bash
-   git commit -m "添加惊人功能"
-   ```
-
-5. **推送并创建 PR**
-
-   ```bash
-   git push origin feature/amazing-feature
-   ```
-
-### 代码审查指南
-
-* 确保所有测试通过
-
-* 遵循既定的架构模式
-* 包含适当的错误处理
-* 更新相关文档
 
 ## 参考
 
