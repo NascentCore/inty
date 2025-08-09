@@ -1,3 +1,7 @@
+# Generate the SDK in this repo
+# * Using openapi generator
+# Generating it in the separate repo
+# * Using stainless to generate
 name: Generate Kotlin SDK (Simple)
 
 on:
