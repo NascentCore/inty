@@ -1,9 +1,10 @@
-name: Build debug APK (CI)
+name: Test and build debug APK (CI)
 
 on:
   push:
     branches:
       - main
+
   pull_request:
     branches:
       - main
@@ -33,16 +34,15 @@ jobs:
           ${{ runner.os }}-gradle-
 
     - name: Create keystore.properties
-      env:
-        KEYSTORE_PROPERTIES: ${{ secrets.KEYSTORE_PROPERTIES }}
       run: |
-        echo "$KEYSTORE_PROPERTIES" > keystore.properties
+        echo "${{ secrets.KEYSTORE_PROPERTIES }}" > keystore.properties
+
+    - name: Run all tests
+      run: ./gradlew test
 
     - name: Create Google Play service account key
-      env:
-        GOOGLE_PLAY_SERVICE_ACCOUNT_KEY: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_KEY }}
       run: |
-        echo "$GOOGLE_PLAY_SERVICE_ACCOUNT_KEY" > service-account-key.json
+        echo "${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_KEY }}" > service-account-key.json
 
     - name: Build debug APK
       run: |
