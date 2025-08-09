@@ -99,7 +99,7 @@ class ReportViewModel : BaseActivityViewModel() {
             )
             EasyLog.log(result)
             if (result.code == 200) {
-                showSnackbar("Report Successfully")
+                showSnackbar("Report sent")
                 closeActivity()
             } else {
                 EasyLog.log("submit report failed", EasyLog.ERROR)
