@@ -1,6 +1,4 @@
-# Base Testing Messages for manual tesitng
-
-## Basic information
+# 普通对话模式下的常规消息
 
 * What's your name?
 * Who are you?
