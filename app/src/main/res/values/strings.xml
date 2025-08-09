@@ -244,7 +244,7 @@
     <string name="toast_image_file_not_found">Image file not found</string>
     <string name="toast_failed_open_crop_editor">Failed to open crop editor</string>
     <string name="toast_email_error">email error</string>
-    <string name="toast_fill_form_real_age">Please fill in the form according to your real age</string>
+    <string name="toast_fill_form_real_age">You are not eligible to use this app</string>
     <string name="toast_check_terms_privacy">Please check Terms of Use &amp; Privacy Policy</string>
     <string name="toast_error_message">%s</string>
     <string name="toast_cancel_subscription_first">Please cancel the subscription before proceeding</string>
