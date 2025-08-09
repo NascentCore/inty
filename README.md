@@ -16,10 +16,12 @@ git clone git@github.com:NascentCore/inty-backend.git
 cd inty-backend
 
 # 服务在 http://localhost:8000
-docker compose -f docker_compose.yaml up --build
+docker compose up --build
 
 # 删除所有容器和其挂在的存储卷
-docker compose -f docker_compose.yaml down -v
+# 数据库存储卷如果不删除，则会使用旧的景象，如果修改了数据库默认数据库，
+# 老得存储卷会导致数据库启动失败
+docker compose down --volume
 ```
 
 ## 系统架构

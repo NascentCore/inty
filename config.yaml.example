@@ -3,13 +3,6 @@ app:
   # debug_messages: true
   backend_cors_origins: ["http://localhost:3000","http://localhost:8000"]
 
-logging:
-  level: "INFO"
-  format: "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>"
-  file: "logs/app.log"
-  rotation: "500 MB"
-  retention: "10 days"
-
 security:
   secret_key: "your-secret-key-here"
   algorithm: "HS256"

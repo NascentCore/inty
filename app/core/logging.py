@@ -1,7 +1,5 @@
 import logging
-import os
 import sys
-from pathlib import Path
 
 from loguru import logger
 
@@ -35,21 +33,7 @@ def init_logger():
         sys.stderr,
         format=settings.logging.format,
         level=settings.logging.level,
-        colorize=True,
-    )
-
-    # 确保日志目录存在
-    log_path = Path(settings.logging.file).parent
-    log_path.mkdir(parents=True, exist_ok=True)
-
-    # 添加文件输出
-    logger.add(
-        settings.logging.file,
-        format=settings.logging.format,
-        level=settings.logging.level,
-        rotation=settings.logging.rotation,
-        retention=settings.logging.retention,
-        encoding="utf-8",
+        colorize=False,  # Disable ANSI colors to prevent escape codes in logs
     )
 
     # 拦截标准 logging 的日志（例如 FastAPI/uvicorn）

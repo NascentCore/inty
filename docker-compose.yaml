@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   inty-server:
     build:
@@ -8,11 +6,9 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - ./config.yaml:/app/config.yaml
-      - ./inty-backend-key.json:/app/inty-backend-key.json
-      - ./inty-firebase-key.json:/app/inty-firebase-key.json
-    environment:
-      - DATABASE_URL=postgresql://postgres:sxwl666!@pgvector:5432/inty_db
+      - ./config.yaml:/config.yaml
+      - ./inty-backend-key.json:/inty-backend-key.json
+      - ./inty-firebase-key.json:/inty-firebase-key.json
     depends_on:
       pgvector:
         condition: service_healthy
@@ -26,13 +22,13 @@ services:
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=sxwl666!
-      - POSTGRES_DB=inty_db
+      - POSTGRES_DB=inty
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - inty-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d inty_db"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d inty"]
       interval: 5s
       timeout: 5s
       retries: 5

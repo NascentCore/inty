@@ -1,4 +1,5 @@
 import sys
+
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional
@@ -9,11 +10,13 @@ from pydantic import AnyHttpUrl
 
 @dataclass
 class LoggingConfig:
-    level: str
-    format: str
-    file: str
-    rotation: str
-    retention: str
+    level: str = "INFO"
+    format: str = (
+        "{time:YYYY-MM-DD HH:mm:ss.SSS} | {level: <8} | {name}:{function}:{line} - {message}"
+    )
+    file: str = "inty.log"
+    rotation: str = "100 MB"
+    retention: str = "7 days"
 
 
 @dataclass
@@ -131,7 +134,7 @@ class GooglePlayConfig:
     min_supported_version: int = 1  # 最低支持版本代码
     release_track: str = "production"  # 发布轨道：internal/closed/open/production
     fallback_tracks: List[str] = None  # 备用轨道列表
-    
+
     def __post_init__(self):
         if self.fallback_tracks is None:
             self.fallback_tracks = ["production", "internal"]
