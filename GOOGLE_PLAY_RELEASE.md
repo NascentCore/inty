@@ -3,6 +3,7 @@
 ## 重要链接
 
 * [Google Play 内测轨道](https://play.google.com/apps/internaltest/4701704785767590286)
+<img width="680" height="1182" alt="image" src="https://github.com/user-attachments/assets/2b01ba6e-9412-4824-bf37-59dbb15b59a4" />
 
 ## 向 Play 发布新内测版本（适用于需要 Play 签名后的功能测试，如订阅）
 
