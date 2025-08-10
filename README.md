@@ -150,6 +150,19 @@ echo "keystore.properties" >> .gitignore  # 已配置
 * **Release**: 生产构建，用于分发，Android 自带构建类型；后端指向生成环境
 * **Playdebug**：继承自 Release 指向共享的开发环境
 
+### 🧪 测试
+
+```bash
+# 单元测试
+./gradlew test
+
+# 仪器测试  
+./gradlew connectedAndroidTest
+
+# 特定测试类
+./gradlew test --tests "com.ai.inty.ExampleUnitTest"
+```
+
 ### 关键开发工具
 
 #### 网络调试
@@ -169,7 +182,6 @@ EasyLog.log("发生错误", EasyLog.ERROR)
 ```
 
 <img width="960" height="1040" alt="image" src="https://github.com/user-attachments/assets/2ec97c47-07f0-4cfb-85b4-57dba7222925" />
-
 
 #### 状态管理
 
@@ -214,40 +226,6 @@ val messages = _messages.asStateFlow()
    keytool -list -v -keystore sign/my-release-key.jks -alias my-key-alias
    ```
 
-### 应用内购买设置
-
-在 Google Play 控制台配置计费：
-
-* 创建订阅产品
-* 设置定价和可用性
-* 使用许可证测试员进行测试
-
-## 📱 功能深度解析
-
-### 聊天系统
-
-* 与 AI 角色实时消息传递
-
-* 动作文本的消息样式 `(动作文本)`
-* 持续对话的保持通话功能
-* 角色特定和全局设置
-
-### 角色管理
-
-* 关注/取消关注 AI 角色
-
-* 使用 AI 生成头像创建自定义角色
-* 背景图像和个性设置
-* 语音偏好和互动风格
-
-### 用户体验
-
-* 导航的边缘滑动手势
-
-* 带有动态背景的沉浸式 UI
-* 键盘感知布局
-* 直观的材料设计
-
 ## 🔒 隐私与安全
 
 ### 隐私功能
@@ -260,56 +238,9 @@ val messages = _messages.asStateFlow()
 ### 安全措施
 
 * 发布构建中的 ProGuard 混淆
-
 * 使用安全密钥库签名的 APK/AAB
 * Firebase 安全规则实现
 * 输入验证和清理
-
-## 📦 依赖项
-
-### 核心依赖
-
-```kotlin
-// UI 和架构
-implementation("androidx.activity:activity-compose:1.8.2")
-implementation("androidx.compose.material3:material3")
-implementation("androidx.lifecycle:lifecycle-viewmodel-compose")
-
-// 网络
-implementation("com.squareup.retrofit2:retrofit:2.9.0")
-implementation("com.squareup.okhttp3:okhttp:4.12.0")
-
-// 图片加载
-implementation("io.coil-kt.coil3:coil-compose:3.2.0")
-
-// 存储和日志
-implementation("com.tencent:mmkv:1.3.5")
-implementation("com.tencent.mars:mars-xlog:1.2.6")
-
-// Firebase
-implementation(platform("com.google.firebase:firebase-bom:32.7.0"))
-implementation("com.google.firebase:firebase-analytics")
-implementation("com.google.firebase:firebase-messaging")
-
-// 导航和依赖注入
-implementation("cn.therouter:router:1.2.3")
-implementation("com.google.android.gms:play-services-auth:21.2.0")
-```
-
-## 🧪 测试
-
-### 运行测试
-
-```bash
-# 单元测试
-./gradlew test
-
-# 仪器测试  
-./gradlew connectedAndroidTest
-
-# 特定测试类
-./gradlew test --tests "com.ai.inty.ExampleUnitTest"
-```
 
 ## 🚀 部署
 
