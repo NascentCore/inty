@@ -1,11 +1,12 @@
 # Google Play Release（发布）
 
-## 重要链接
+## 重要事项
 
 * [Google Play 内测轨道 App 页面](https://play.google.com/store/apps/details?id=com.ai.intellimate&hl=en-US&ah=EmlT1IB-9hWsv_1I4B8Go9FEIFc)
 * 须手动升级（[官方文档](https://play.google.com/apps/internaltest/4701704785767590286)表示可以自动升级，但实际上没有效果）
   * 可能与 App 还未发布有关
   * <img width="480" height="1512" alt="image" src="https://github.com/user-attachments/assets/3d7c05ea-7cd8-406e-9973-f123d06d1671" />
+* Google Play 不允许复用 Version Code，即便是已经被丢弃的版本
 
 ## 向 Play 发布新内测版本（适用于需要 Play 签名后的功能测试，如订阅）
 
