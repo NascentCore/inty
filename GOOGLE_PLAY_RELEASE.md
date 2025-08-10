@@ -27,3 +27,7 @@
 ### 疑难问题
 
 由于 version code 采用了 git commit count，老版本可能无法得到足够大的 version code，因此需要手动给 [versionCode 赋值](app/build.gradle.kts)
+
+## 手动构建 AAB 并上传
+
+<img width="960" height="1400" alt="image" src="https://github.com/user-attachments/assets/e4db0d37-976b-4f42-aaeb-e98c148a3df5" />
