@@ -12,8 +12,8 @@
 
 如果测试、使用中遇到 bug，采用录屏、截图的方式记录 bug 特征；并且附带版本号截图，方便工程师确认对应版本
 
-<img width="280" alt="image" src="https://github.com/user-attachments/assets/9a47f539-9105-4810-9fe7-17d69c3f3a00" />
-<img width="280" alt="image" src="https://github.com/user-attachments/assets/a19a99ed-4165-48e5-88d8-2aca17cfad0d" />
+<img width="250" alt="image" src="https://github.com/user-attachments/assets/9a47f539-9105-4810-9fe7-17d69c3f3a00" />
+<img width="250" alt="image" src="https://github.com/user-attachments/assets/a19a99ed-4165-48e5-88d8-2aca17cfad0d" />
 
 ## Google Play uploading and signing
 
@@ -143,17 +143,12 @@ echo "keystore.properties" >> .gitignore  # 已配置
 
 ## 🛠️ 开发指南
 
-### 构建变体
+### 构建类型（build type）
 
-* **Debug**: 开发构建，包含调试工具
-  * 包含 Chucker 网络检查
-  * 版本名包含 git 提交哈希
-  * 使用调试签名配置
-  
-* **Release**: 生产构建，用于分发
-  * 启用代码混淆和资源压缩
-  * 使用发布签名配置
-  * 性能优化
+* **Debug**（默认）: 开发构建，包含调试工具，Android 自带构建类型；后端指向共享的开发环境
+* **Local**：继承自 Debug 指向本地运行的后端
+* **Release**: 生产构建，用于分发，Android 自带构建类型；后端指向生成环境
+* **Playdebug**：继承自 Release 指向共享的开发环境
 
 ### 关键开发工具
 
@@ -172,6 +167,9 @@ releaseImplementation("com.github.chuckerteam.chucker:library-no-op:3.5.2")
 EasyLog.log("调试消息")
 EasyLog.log("发生错误", EasyLog.ERROR)
 ```
+
+<img width="960" height="1040" alt="image" src="https://github.com/user-attachments/assets/2ec97c47-07f0-4cfb-85b4-57dba7222925" />
+
 
 #### 状态管理
 
