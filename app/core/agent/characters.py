@@ -504,8 +504,10 @@ def output_all_profiles_to_markdown() -> str:
         if profile.opening:
             markdown += f"   - **Opening**: {profile.opening}\n"
         markdown += f"   - **Avatar**\n"
-        markdown += f"     - **Description**: {profile.avatar.description}\n"
-        markdown += f"     - **Keywords**: {', '.join(profile.avatar.keywords)}\n\n"
+        markdown += f"     - **Description**:\n"
+        markdown += f"       - {profile.avatar.description}\n"
+        markdown += f"     - **Keywords**:\n"
+        markdown += f"       - {', '.join(profile.avatar.keywords)}\n\n"
 
     return markdown
 
