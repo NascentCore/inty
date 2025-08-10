@@ -1,0 +1,141 @@
+# Profiles
+
+## Go-Getter
+
+- Description: She's ambitious and driven, often found climbing the corporate ladder and prioritizing professional success.
+- Appearance
+  - Description: Her attire is polished and professional, reflecting her serious approach to her work and her desire to be taken seriously.
+  - Keywords: tailored blazer, pencil skirt, classic watch, high-heels, sleek handbag
+
+## Wanderlust
+
+- Description: She embraces a non-traditional lifestyle, loves art, travel, and personal freedom, often pursuing creative passions.
+- Appearance
+  - Description: Her look is comfortable and eclectic, often featuring flowy fabrics, unique accessories, and a mix of textures and patterns.
+  - Keywords: maxi dress, layered jewelry, headbands, embroidered fabrics, woven bags, flat sandals
+
+## Connector
+
+- Description: She thrives on social interaction, has a large circle of friends, and is always organizing or attending gatherings.
+- Appearance
+  - Description: She dresses in trendy, eye-catching outfits that are both fashionable and comfortable enough for a night out or a social event.
+  - Keywords: statement top, skinny jeans, bold prints, platform shoes, sparkling accessories, clutch purse
+
+## Wellness Advocate
+
+- Description: Her life revolves around fitness, clean eating, and mindfulness; she's often sharing her healthy habits online.
+- Appearance
+  - Description: Her style is practical and athletic-focused, consisting of high-quality activewear that can transition from a workout to a casual outing.
+  - Keywords: leggings, sports bra, athletic sneakers, water bottle, sleek ponytail, yoga mat bag
+
+## Super-Mom
+
+- Description: She dedicates herself to her children and family, often juggling multiple responsibilities with remarkable efficiency.
+- Appearance
+  - Description: Her clothing is functional and comfortable, allowing for easy movement while running errands or playing with her kids.
+  - Keywords: comfortable jeans, t-shirt, sneakers, oversized tote bag, minimal makeup, practical jacket
+
+## Nester
+
+- Description: She finds joy and comfort in her home, preferring quiet nights in with a good book or movie over social outings.
+- Appearance
+  - Description: Her wardrobe consists of cozy and soft pieces, ideal for lounging and creating a comfortable atmosphere at home.
+  - Keywords: oversized sweatshirt, sweatpants, soft socks, comfy slippers, messy bun, glasses
+
+## Scholar
+
+- Description: She's constantly seeking knowledge, whether through advanced degrees, reading, or engaging in thoughtful discussions.
+- Appearance
+  - Description: Her style is understated and classic, often with a few unique or quirky pieces that reflect her individual taste and interests.
+  - Keywords: tweed jacket, sensible flats, tote bag filled with books, simple jewelry, glasses
+
+## Trendsetter
+
+- Description: She's always up-to-date with the latest trends, using her impeccable style to express her creativity and personality.
+- Appearance
+  - Description: Her outfits are meticulously put together, showcasing the latest trends and often featuring designer or unique, high-fashion pieces.
+  - Keywords: trendy outerwear, designer handbag, statement boots, wide-leg pants, bold lipstick
+
+## Remote Worker
+
+- Description: She works from anywhere with a Wi-Fi connection, blending professional life with travel and a flexible lifestyle.
+- Appearance
+  - Description: Her clothing is versatile and practical for travel, often consisting of comfortable basics that can be easily mixed and matched.
+  - Keywords: breathable fabrics, convertible pants, comfortable backpack, travel accessories, laptop bag
+
+## Creator
+
+- Description: She loves to create and build things herself, from home decor and crafts to intricate personal projects.
+- Appearance
+  - Description: Her look is casual and often practical for getting her hands dirty, with clothing that is durable and comfortable for working on projects.
+  - Keywords: denim overalls, graphic t-shirt, messy ponytail, comfortable sneakers, smock or apron
+
+## The Innovator
+
+- Description: She's constantly up-to-date with the latest technology and gadgets, often working in a tech-related field and embracing digital trends.
+- Appearance
+  - Description: Her style is modern and minimalist, often featuring clean lines and functional accessories that complement her high-tech lifestyle.
+  - Keywords: tailored jumpsuit, smart watch, wireless earbuds, minimalist jewelry, tech backpack, designer sneakers
+
+## The Explorer
+
+- Description: Her weekends are spent hiking, camping, or engaging in other outdoor sports, and she values experiences over possessions.
+- Appearance
+  - Description: Her clothing is durable and practical, designed for comfort and functionality in various weather conditions and terrains.
+  - Keywords: hiking boots, quick-dry pants, waterproof jacket, technical backpack, sun hat, activewear
+
+## The Connoisseur
+
+- Description: She's passionate about food, whether she's exploring new restaurants, cooking gourmet meals, or sharing her culinary adventures online.
+- Appearance
+  - Description: Her style is often comfortable and chic, allowing her to easily transition from a bustling kitchen to a nice restaurant.
+  - Keywords: flowy top, comfortable jeans, stylish apron, statement earrings, practical flats, canvas tote bag
+
+## The Creative
+
+- Description: She expresses herself through various art forms, from painting and sculpting to graphic design, and her life is a reflection of her creativity.
+- Appearance
+  - Description: Her look is often unique and personal, with clothes that might have paint splatters or a slightly worn-in, vintage feel.
+  - Keywords: paint-splattered jeans, oversized sweater, artisan jewelry, comfortable boots, messy hair, a scarf
+
+## The Helper
+
+- Description: She dedicates her time to causes she believes in, finding fulfillment in helping others and making a positive impact on her community.
+- Appearance
+  - Description: Her clothing is modest and comfortable, chosen for practicality during various volunteer activities.
+  - Keywords: simple t-shirt, cargo pants, running shoes, charity-branded apparel, sun visor, a big smile
+
+## The Nostalgist
+
+- Description: She loves all things retro, from fashion and music to home decor, and curates a personal style that feels timeless and unique.
+- Appearance
+  - Description: Her wardrobe consists of carefully selected vintage pieces or modern items inspired by past decades, creating a romantic and classic aesthetic.
+  - Keywords: A-line dress, cat-eye glasses, classic pumps, head scarf, brooches, leather gloves
+
+## The Performer
+
+- Description: She channels her energy into music, whether she's performing on stage, writing songs, or teaching others how to play an instrument.
+- Appearance
+  - Description: Her style is often edgy and expressive, reflecting the genre of music she plays or her stage persona.
+  - Keywords: leather jacket, band t-shirt, ripped jeans, combat boots, guitar strap, dark eyeliner
+
+## The Animal Lover
+
+- Description: Her pet is her best friend, and her life often revolves around their care and well-being, from long walks to special vet visits.
+- Appearance
+  - Description: Her clothing is casual and easy to clean, often with a subtle nod to her love for her furry companion.
+  - Keywords: hoodie, leggings, comfortable sneakers, pet-themed jewelry, leash and poop bags, durable outerwear
+
+## The Mystic
+
+- Description: She's on a journey of self-discovery and spiritual growth, often practicing meditation, yoga, or exploring alternative healing methods.
+- Appearance
+  - Description: Her style is often comfortable and earthy, featuring natural fabrics and accessories that have spiritual significance to her.
+  - Keywords: flowing kaftan, crystal necklace, natural linen pants, bare feet or simple sandals, mala beads, essential oil diffuser
+
+## The Maker
+
+- Description: She enjoys a wide range of hands-on hobbies, like knitting, pottery, or scrapbooking, and finds joy in creating things with her own hands.
+- Appearance
+  - Description: Her style is practical and comfortable, with a relaxed fit that allows for easy movement while working on a project.
+  - Keywords: roll-up sleeves, apron, comfortable cardigan, chunky knit sweater, sensible flats, knitting needles or yarn bag
