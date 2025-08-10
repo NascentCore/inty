@@ -31,3 +31,6 @@
 ## 手动构建 AAB 并上传
 
 <img width="960" height="1400" alt="image" src="https://github.com/user-attachments/assets/e4db0d37-976b-4f42-aaeb-e98c148a3df5" />
+
+* 生成 aab 文件位于 app/release/app-release.aab
+* 使用 bundletool 检查其 version code，确保大于最近一次的 release version code
