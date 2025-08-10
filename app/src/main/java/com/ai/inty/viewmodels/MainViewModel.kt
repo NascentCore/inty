@@ -45,7 +45,7 @@ enum class HomeTabIndex {
     Chat,
     Conversation,
     Add,
-    Suggest,
+    Explore,
     My
 }
 

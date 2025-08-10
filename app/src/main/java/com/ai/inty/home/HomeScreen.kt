@@ -233,7 +233,7 @@ private fun HomeContent(
             // Add tab is handled in handleTabSelection
         }
 
-        HomeTabIndex.Suggest -> {
+        HomeTabIndex.Explore -> {
             SuggestTabContent(
                 mainViewModel = mainViewModel,
                 context = context
