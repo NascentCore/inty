@@ -23,7 +23,7 @@
     <string name="settings_email_inty">IntelliMate@inty.cc</string>
     <string name="settings_about">About IntelliMate</string>
     <string name="logout">Log out</string>
-    <string name="crop_image">Face Recognition</string>
+    <string name="crop_image">Crop Image</string>
     <string name="sys_notify_title">System Notification</string>
     <string name="creator">Creator:</string>
     <string name="info">Info:</string>
