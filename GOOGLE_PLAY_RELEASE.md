@@ -1,5 +1,9 @@
 # Google Play Release（发布）
 
+## 重要链接
+
+* [Google Play 内测轨道](https://play.google.com/apps/internaltest/4701704785767590286)
+
 ## 向 Play 发布新内测版本（适用于需要 Play 签名后的功能测试，如订阅）
 
 总体流程：运行 github workflow 构建新版本、并上传到 internal testing、发布、打开内测轨道连接、从 Play Store 下载新版本
