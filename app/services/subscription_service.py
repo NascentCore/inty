@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 import json
 import logging
 import uuid
@@ -8,6 +9,8 @@ from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app import schemas
+from app.utils.admin import is_superuser_based_on_email
 from app.models.subscription import (
     SubscriptionPlan,
     SubscriptionPlanType,
@@ -137,7 +140,9 @@ class SubscriptionService:
             logger.error(f"检查用户历史订阅记录失败: user_id={user_id}, error={str(e)}")
             return False
 
-    async def get_user_latest_plan_id(self, db: AsyncSession, user_id: str) -> Optional[str]:
+    async def get_user_latest_plan_id(
+        self, db: AsyncSession, user_id: str
+    ) -> Optional[str]:
         """获取用户最新的订阅计划ID（Google Play Product ID）"""
         try:
             result = await db.execute(
@@ -151,7 +156,9 @@ class SubscriptionService:
             product_id = result.scalar_one_or_none()
             return product_id
         except Exception as e:
-            logger.error(f"获取用户最新订阅计划ID失败: user_id={user_id}, error={str(e)}")
+            logger.error(
+                f"获取用户最新订阅计划ID失败: user_id={user_id}, error={str(e)}"
+            )
             return None
 
     async def get_user_current_subscription(
@@ -879,6 +886,41 @@ class SubscriptionService:
             # 出错时默认允许，避免影响用户体验
             return True, 0, -1
 
+    @dataclass
+    class image_gen_limit_check_result:
+        is_allowed: bool
+        used_count: int
+        limit: int
+        reason: str
+
+    async def check_image_gen_limit(
+        self, db: AsyncSession, user: schemas.User
+    ) -> image_gen_limit_check_result:
+        """检查用户是否运行达到图片生成限制，如果达到限制，返回限制信息"""
+        if user.is_superuser:
+            return self.image_gen_limit_check_result(
+                is_allowed=True,
+                used_count=-1,
+                limit=-1,
+                reason="superuser",
+            )
+        if is_superuser_based_on_email(user.email):
+            return self.image_gen_limit_check_result(
+                is_allowed=True,
+                used_count=-1,
+                limit=-1,
+                reason="superuser based on email",
+            )
+        is_allowed, used_count, limit = await self.check_background_generation_limit(
+            db, user.id
+        )
+        return self.image_gen_limit_check_result(
+            is_allowed=is_allowed,
+            used_count=used_count,
+            limit=limit,
+            reason="background generation limit check",
+        )
+
     async def handle_subscription_notification(
         self, db: AsyncSession, notification_data: Dict[str, Any]
     ) -> bool:
@@ -1513,6 +1555,9 @@ class SubscriptionService:
         else:
             # 基本数据类型（str, int, float, bool, None）
             return data
+            logger.error(f"检查背景图生成次数限制失败: {str(e)}")
+            # 出错时默认允许，避免影响用户体验
+            return True, 0, -1
 
 
 # 全局实例

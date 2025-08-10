@@ -7,7 +7,7 @@
 
 InTy 是一个基于 FastAPI 和 PostgreSQL 的 AI 聊天应用后端，集成了 LangChain 和 LangGraph 技术栈，支持多种 AI 模型和智能体管理。项目采用现代化的异步编程架构，提供完整的 AI 对话解决方案和商业化订阅服务。
 
-## 本地运行后端服务
+## 使用 Docker 容器本地运行后端服务（适用于 app 开发者）
 
 1. 访问 <https://docs.docker.com/desktop/setup/install/mac-install/> 安装 Docker Desktop。
 1. 拷贝`config.yaml` `inty-backend-key.json` `inty-firebase-key.json` 到 inty-backend 代码库顶层目录。
@@ -23,6 +23,16 @@ docker compose up --build
 # 数据库存储卷如果不删除，则会使用旧的景象，如果修改了数据库默认数据库，
 # 老得存储卷会导致数据库启动失败
 docker compose down --volume
+```
+
+## 使用 uvicorn 运行后端服务（面向后端开发者）
+
+```bash
+# 只启动数据库
+docker compose up -d pgvector
+
+# 启动后端服务
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 --log-level debug
 ```
 
 ## 系统架构

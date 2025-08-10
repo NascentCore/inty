@@ -272,25 +272,19 @@ async def generate_background(
         if request.count < 1 or request.count > 4:
             return APIResponse.error(message="Count must be between 1 and 4")
 
-        # 检查背景图生成限制
-        is_allowed, used_count, limit = (
-            await subscription_service.check_background_generation_limit(
-                db, current_user.id
-            )
+        check_result: subscription_service.image_gen_limit_check_result = (
+            await subscription_service.check_image_gen_limit(db, current_user)
         )
 
-        if not is_allowed:
-            # 超级管理员不受限制
-            if not current_user.is_superuser:
-                # 返回统一的订阅错误响应
-                return create_business_error_response(
-                    error_info=BusinessErrorCode.BACKGROUND_GENERATION_LIMIT_REACHED,
-                    extra_data={
-                        "used_count": used_count,
-                        "limit": limit,
-                        "feature": "background_generation",
-                    },
-                )
+        if not check_result.is_allowed:
+            return create_business_error_response(
+                error_info=BusinessErrorCode.BACKGROUND_GENERATION_LIMIT_REACHED,
+                extra_data={
+                    "used_count": check_result.used_count,
+                    "limit": check_result.limit,
+                    "feature": "background_generation",
+                },
+            )
 
         # Construct GCS base path
         gcs_base_path = f"backgrounds/tmp/{current_user.id}/{uuid.uuid4().hex}"
@@ -347,8 +341,8 @@ async def generate_background(
             "count": len(gcs_urls),
             "format": "png",
             "remaining_usage": {
-                "used_count": used_count + request.count,
-                "limit": limit,
+                "used_count": check_result.used_count + request.count,
+                "limit": check_result.limit,
             },
         }
 
