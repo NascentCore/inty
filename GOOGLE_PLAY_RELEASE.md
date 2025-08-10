@@ -2,8 +2,10 @@
 
 ## 重要链接
 
-* [Google Play 内测轨道](https://play.google.com/apps/internaltest/4701704785767590286)
-<img width="680" height="1182" alt="image" src="https://github.com/user-attachments/assets/2b01ba6e-9412-4824-bf37-59dbb15b59a4" />
+* [Google Play 内测轨道 App 页面](https://play.google.com/store/apps/details?id=com.ai.intellimate&hl=en-US&ah=EmlT1IB-9hWsv_1I4B8Go9FEIFc)
+* 须手动升级（[官方文档](https://play.google.com/apps/internaltest/4701704785767590286)表示可以自动升级，但实际上没有效果）
+  * 可能与 App 还未发布有关
+  * <img width="480" height="1512" alt="image" src="https://github.com/user-attachments/assets/3d7c05ea-7cd8-406e-9973-f123d06d1671" />
 
 ## 向 Play 发布新内测版本（适用于需要 Play 签名后的功能测试，如订阅）
 
