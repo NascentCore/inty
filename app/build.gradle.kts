@@ -93,7 +93,7 @@ android {
         // we need to increase the fix digit, and create a new tag for that binary.
         //
         // Bug fix public release, code changes are applied on the versioned branch.
-        versionName = "1.1.0"
+        versionName = "1.1.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
