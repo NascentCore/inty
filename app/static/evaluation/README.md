@@ -7,7 +7,16 @@ InTy 智能体评测系统前端是基于 React + TypeScript + Vite 构建的现
 Insert the following record to the backend DB to allow this app to use `user-01JWZ34Y4D1C92GD86A5R6EWYJ`
 to talk to the backend.
 
-```
+### 使用本地 Inty 后端地址
+
+在本代码库顶层目录，运行 `docker compose up --build` 来启动本地后端，
+启动后，后端地址位于 `http://localhost:8000/api/v1`，该地址要填入 Inty-eval 所使用的后端地址。
+
+然后，需要向 Inty 后端数据库内写入预置的用户信息，以便让 inty-eval 可以通过内置的用户名来访问本地 inty 后端。
+登录后端数据库：`docker exec -it inty-backend-pgvector-1 psql -U postgres -d inty`
+然后运行以下 SQL 指令
+
+```psql
 INSERT INTO users (
     id,
     nickname,
@@ -53,6 +62,17 @@ INSERT INTO users (
 );
 ```
 
+然后，将 inty-eval 指向后端地址，即可调用。上面创建的用户，其 jwt token 已经写死在
+inty-eval 代码中。位于 `getAuthToken()`。
+
+```bash
+# 先将环境变量指定为本地 Inty 后端地址
+export REACT_APP_API_BASE_URL=http://localhost:8000/api/v1
+
+# 启动 inty-eval 服务；打开 http://localhost:3000
+npm run dev
+```
+
 ### 🎯 核心特性
 
 - ✅ **现代化技术栈** - React 18 + TypeScript + Vite + Ant Design 5
@@ -69,6 +89,7 @@ INSERT INTO users (
 ## 🏗️ 技术架构
 
 ### 前端技术栈
+
 ```
 React 18                    # 用户界面库
 ├── TypeScript              # 类型安全的JavaScript超集
@@ -79,6 +100,7 @@ React 18                    # 用户界面库
 ```
 
 ### 项目结构
+
 ```
 app/static/evaluation/
 ├── components/                   # React组件库
@@ -121,31 +143,36 @@ app/static/evaluation/
 ## 🔧 环境要求
 
 ### 开发环境
+
 - Node.js 18+ (用于本地开发和构建)
 - npm 或 yarn (包管理器)
 - Modern Web Browser (Chrome 90+, Firefox 88+, Safari 14+)
 
 ### 生产环境
+
 - Docker (用于容器化部署)
-- 远程后端API服务 (如: https://dev.inty.sxwl.ai)
+- 远程后端API服务 (如: <https://dev.inty.sxwl.ai>)
 
 ## 🚀 快速开始
 
 ### 方式一：本地开发模式
 
 1. **安装依赖**
+
 ```bash
 cd app/static/evaluation
 npm install
 ```
 
 2. **配置环境变量**
+
 ```bash
 # 创建环境变量文件
 echo "REACT_APP_API_BASE_URL=https://dev.inty.sxwl.ai/api/v1" > .env
 ```
 
 3. **启动开发服务器**
+
 ```bash
 npm run dev
 ```
@@ -156,6 +183,7 @@ npm run dev
 ### 方式二：Docker容器部署
 
 1. **构建Docker镜像**
+
 ```bash
 # 构建并配置API地址
 docker build \
@@ -164,6 +192,7 @@ docker build \
 ```
 
 2. **运行容器**
+
 ```bash
 docker run -d -p 3000:80 --name inty-frontend inty-frontend:latest
 ```
@@ -174,6 +203,7 @@ docker run -d -p 3000:80 --name inty-frontend inty-frontend:latest
 ### 方式三：快速部署脚本
 
 使用提供的部署脚本：
+
 ```bash
 # 开发环境快速启动
 ./dev.sh
@@ -188,6 +218,7 @@ docker run -d -p 3000:80 --name inty-frontend inty-frontend:latest
 ## 📋 API 端点
 
 ### 评测会话管理
+
 - `POST /api/v1/evaluation/sessions` - 创建评测会话
 - `GET /api/v1/evaluation/sessions` - 获取会话列表
 - `GET /api/v1/evaluation/sessions/{id}` - 获取会话详情
@@ -196,6 +227,7 @@ docker run -d -p 3000:80 --name inty-frontend inty-frontend:latest
 - `GET /api/v1/evaluation/sessions/{id}/results` - 获取评测结果
 
 ### 智能体管理
+
 - `GET /api/v1/ai/agents/` - 获取智能体列表
 - `GET /api/v1/ai/agents/{id}` - 获取智能体详情
 - `GET /api/v1/ai/agents/recommend` - 获取推荐智能体
@@ -204,19 +236,23 @@ docker run -d -p 3000:80 --name inty-frontend inty-frontend:latest
 - `PUT /api/v1/ai/agents/{id}` - 更新智能体
 
 ### 聊天功能
+
 - `POST /api/v1/chats/agents/{id}/chat/completions` - 发送消息 (OpenAI格式)
 - `POST /api/v1/chats/agents/{id}/chat/fast` - 快速聊天接口
 - `GET /api/v1/chats/agents/{id}/detail` - 获取聊天详情
 - `POST /api/v1/chats/agents/{id}/clear-messages` - 清除消息
 
 ### 认证管理
+
 - `POST /api/v1/auth/guest` - 创建游客用户
 - `GET /api/v1/auth/profile` - 获取用户信息
 
 ### 模型管理
+
 - `GET /api/v1/ai/models/openrouter` - 获取可用模型列表
 
 ### 实时监控
+
 - `WSS /api/v1/evaluation/sessions/{id}/monitor` - WebSocket监控
 
 ## 🎮 功能模块使用指南
@@ -252,6 +288,7 @@ docker run -d -p 3000:80 --name inty-frontend inty-frontend:latest
 ### 2. 智能体聊天模块
 
 **单智能体对话功能：**
+
 - 选择任意智能体进行实时对话
 - 支持流式和非流式聊天模式
 - 查看完整聊天历史记录
@@ -261,6 +298,7 @@ docker run -d -p 3000:80 --name inty-frontend inty-frontend:latest
 ### 3. 智能体管理模块
 
 **智能体CRUD操作：**
+
 - 查看所有可用智能体列表
 - 创建新的智能体配置
 - 编辑现有智能体的属性和提示词
@@ -270,6 +308,7 @@ docker run -d -p 3000:80 --name inty-frontend inty-frontend:latest
 ### 4. 评测历史模块
 
 **历史记录管理：**
+
 - 查看所有历史评测会话
 - 按时间、状态、评分等条件筛选
 - 详细查看评测结果和统计信息
@@ -279,6 +318,7 @@ docker run -d -p 3000:80 --name inty-frontend inty-frontend:latest
 ### 5. Prompt查询模块
 
 **提示词管理工具：**
+
 - 搜索和查看智能体的系统提示词
 - 分析提示词的结构和特点
 - 比较不同智能体的提示词差异
@@ -287,24 +327,28 @@ docker run -d -p 3000:80 --name inty-frontend inty-frontend:latest
 ## 🔍 核心设计原则
 
 ### 1. 现代化前端架构
+
 - **组件化设计**: 高度模块化的React组件，易于维护和复用
 - **类型安全**: 完整的TypeScript类型定义，减少运行时错误
 - **状态管理**: 使用React Hooks进行状态管理，代码更简洁
 - **API抽象**: 统一的API客户端，支持错误处理和类型转换
 
 ### 2. 容器化部署
+
 - **环境变量配置**: 支持构建时和运行时环境变量配置
 - **多阶段构建**: Docker多阶段构建优化镜像大小
 - **Nginx代理**: 生产环境使用Nginx提供静态文件服务
 - **健康检查**: 内置容器健康检查机制
 
 ### 3. 开发体验优化
+
 - **热重载**: Vite提供快速的开发服务器和热重载
 - **代码规范**: ESLint + TypeScript确保代码质量
 - **构建优化**: 生产构建自动优化和压缩
 - **源码映射**: 支持生产环境调试
 
 ### 4. 用户体验设计
+
 - **响应式布局**: 适配不同屏幕尺寸的设备
 - **实时反馈**: WebSocket实时更新和加载状态提示
 - **错误处理**: 友好的错误提示和异常处理
@@ -315,17 +359,20 @@ docker run -d -p 3000:80 --name inty-frontend inty-frontend:latest
 ### 本地开发调试
 
 1. **启动开发服务器**
+
 ```bash
 npm run dev
 # 访问 http://localhost:3000
 ```
 
 2. **类型检查**
+
 ```bash
 npm run type-check
 ```
 
 3. **代码规范检查**
+
 ```bash
 npm run lint
 ```
@@ -333,11 +380,13 @@ npm run lint
 ### 生产构建测试
 
 1. **构建生产版本**
+
 ```bash
 npm run build
 ```
 
 2. **预览构建结果**
+
 ```bash
 npm run preview
 # 访问 http://localhost:4173
@@ -346,6 +395,7 @@ npm run preview
 ### API连通性测试
 
 1. **检查后端API状态**
+
 ```bash
 # 测试智能体API
 curl "https://dev.inty.sxwl.ai/api/v1/ai/agents/?limit=10"
@@ -355,6 +405,7 @@ curl "https://dev.inty.sxwl.ai/api/v1/evaluation/sessions"
 ```
 
 2. **使用测试页面**
+
 ```bash
 # 访问API测试页面
 open test-api-fix.html
@@ -364,16 +415,19 @@ open test-frontend.html
 ### Docker容器调试
 
 1. **查看容器日志**
+
 ```bash
 docker logs inty-frontend --tail 50 -f
 ```
 
 2. **进入容器调试**
+
 ```bash
 docker exec -it inty-frontend sh
 ```
 
 3. **检查容器健康状态**
+
 ```bash
 docker inspect inty-frontend | grep -A 10 Health
 ```
@@ -381,6 +435,7 @@ docker inspect inty-frontend | grep -A 10 Health
 ## 📊 监控和性能
 
 ### 评测会话状态
+
 - `PENDING` - 等待启动
 - `RUNNING` - 正在执行
 - `COMPLETED` - 已完成
@@ -388,6 +443,7 @@ docker inspect inty-frontend | grep -A 10 Health
 - `CANCELLED` - 已取消
 
 ### 性能指标
+
 - 响应时间统计
 - 成功率分析
 - 智能体性能对比
@@ -398,6 +454,7 @@ docker inspect inty-frontend | grep -A 10 Health
 ### 环境变量配置
 
 1. **构建时环境变量**
+
 ```bash
 # Dockerfile中的ARG参数
 ARG REACT_APP_API_BASE_URL=https://dev.inty.sxwl.ai/api/v1
@@ -405,6 +462,7 @@ ARG REACT_APP_ENV=production
 ```
 
 2. **开发环境变量**
+
 ```bash
 # .env文件
 REACT_APP_API_BASE_URL=https://dev.inty.sxwl.ai/api/v1
@@ -438,6 +496,7 @@ export default defineConfig({
 ### Docker配置
 
 1. **多阶段构建配置**
+
 ```dockerfile
 # 构建阶段
 FROM node:18-alpine AS builder
@@ -450,6 +509,7 @@ COPY --from=builder /app/dist /usr/share/nginx/html
 ```
 
 2. **Nginx配置 (nginx.conf)**
+
 ```nginx
 server {
     listen 80;
@@ -473,6 +533,7 @@ server {
 ### 常见问题及解决方案
 
 1. **API请求404错误**
+
    ```bash
    # 问题：前端请求API返回404
    # 原因：API地址配置错误或后端服务未启动
@@ -489,6 +550,7 @@ server {
    ```
 
 2. **Docker构建失败**
+
    ```bash
    # 问题：构建时环境变量未生效
    # 原因：ARG和ENV配置不正确
@@ -501,6 +563,7 @@ server {
    ```
 
 3. **前端页面空白或加载失败**
+
    ```bash
    # 问题：页面无法正常显示
    # 原因：静态资源路径错误或nginx配置问题
@@ -517,6 +580,7 @@ server {
    ```
 
 4. **CORS跨域错误**
+
    ```bash
    # 问题：浏览器提示跨域错误
    # 原因：后端未配置允许前端域名的CORS
@@ -529,6 +593,7 @@ server {
 ### 调试工具和命令
 
 1. **前端调试**
+
 ```bash
 # 查看构建产物
 npm run build && ls -la dist/
@@ -541,6 +606,7 @@ npm run type-check
 ```
 
 2. **容器调试**
+
 ```bash
 # 查看容器内部文件
 docker exec inty-frontend find /usr/share/nginx/html -name "*.js" | head -5
@@ -553,6 +619,7 @@ docker exec inty-frontend curl -f http://localhost/health
 ```
 
 3. **网络调试**
+
 ```bash
 # 从容器内测试API连通性
 docker exec inty-frontend wget -qO- https://dev.inty.sxwl.ai/api/v1/ai/agents/
@@ -564,6 +631,7 @@ docker exec inty-frontend nslookup dev.inty.sxwl.ai
 ## 📈 发展路线图
 
 ### 已完成功能 ✅
+
 - [x] React + TypeScript + Vite 现代化前端架构
 - [x] Docker容器化部署支持
 - [x] 环境变量配置和多环境支持
@@ -576,6 +644,7 @@ docker exec inty-frontend nslookup dev.inty.sxwl.ai
 - [x] 响应式UI设计和用户体验优化
 
 ### 计划中功能 🚧
+
 - [ ] **流式评测结果** - 支持流式显示评测进度和结果
 - [ ] **语音评测集成** - 集成语音合成和识别功能
 - [ ] **智能体性能分析** - 详细的性能指标和统计分析
@@ -584,4 +653,3 @@ docker exec inty-frontend nslookup dev.inty.sxwl.ai
 - [ ] **批量操作优化** - 支持批量导入、导出和操作
 - [ ] **移动端适配** - 提供移动设备友好的界面
 - [ ] **国际化支持** - 多语言界面支持
-
