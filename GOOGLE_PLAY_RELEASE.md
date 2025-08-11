@@ -7,6 +7,7 @@
   * 可能与 App 还未发布有关
   * <img width="480" height="1512" alt="image" src="https://github.com/user-attachments/assets/3d7c05ea-7cd8-406e-9973-f123d06d1671" />
 * Google Play 不允许复用 Version Code，即便是已经被丢弃的版本
+* 发布 2 个版本：用于支持产品测试的版本（指向 dev 后端）、用户上架发布的版本（指向 prod 后端）
 
 ## 向 Play 发布新内测版本（适用于需要 Play 签名后的功能测试，如订阅）
 
