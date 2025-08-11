@@ -545,7 +545,7 @@ async def agent_chat_completions(
 
         # 检查用户聊天次数限制
         is_allowed, used_count, daily_limit = (
-            await subscription_service.check_chat_limit(db, current_user.id)
+            await subscription_service.check_chat_limit(db, current_user)
         )
 
         if not is_allowed:
