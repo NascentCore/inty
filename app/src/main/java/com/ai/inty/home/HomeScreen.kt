@@ -26,7 +26,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.ai.inty.Constant
 import com.ai.inty.R
@@ -66,7 +65,6 @@ fun HomeScreen(
     modifier: Modifier = Modifier,
     mainViewModel: MainViewModel,
     chatViewModel: ChatViewModel,
-    viewModelFactory: ViewModelProvider.Factory,
 ) {
     val selectedTab = mainViewModel.selectedTab.collectAsState()
     val selectedConversationsTab = mainViewModel.selectedConversationsTab.collectAsState()
@@ -94,7 +92,6 @@ fun HomeScreen(
             selectedConversationsTab = selectedConversationsTab.value,
             mainViewModel = mainViewModel,
             chatViewModel = chatViewModel,
-            viewModelFactory = viewModelFactory,
             context = context
         )
 
@@ -209,14 +206,12 @@ private fun HomeContent(
     selectedConversationsTab: com.ai.inty.home.ConversationsPageTab,
     mainViewModel: MainViewModel,
     chatViewModel: ChatViewModel,
-    viewModelFactory: ViewModelProvider.Factory,
     context: android.content.Context,
 ) {
     when (selectedTab) {
         HomeTabIndex.Chat -> {
             ChatTabContent(
-                mainViewModel = mainViewModel,
-                viewModelFactory = viewModelFactory
+                mainViewModel = mainViewModel
             )
         }
 
@@ -255,14 +250,12 @@ private fun HomeContent(
 @Composable
 private fun ChatTabContent(
     mainViewModel: MainViewModel,
-    viewModelFactory: ViewModelProvider.Factory,
 ) {
     val userProfile = mainViewModel.userProfile.collectAsState()
     val currentChatPageIndex = mainViewModel.currentChatPageIndex.collectAsState()
 
     ChatPageContainer(
         modifier = Modifier,
-        viewModelFactory = viewModelFactory,
         agentList = mainViewModel.agentList,
         userProfile = userProfile.value,
         currentPageIndex = currentChatPageIndex.value,

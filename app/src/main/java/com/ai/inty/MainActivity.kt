@@ -106,8 +106,7 @@ class MainActivity : BaseActivity() {
                 HomeScreen(
                     modifier = Modifier.fillMaxSize(),
                     mainViewModel = mainViewModel,
-                    chatViewModel = chatViewModel,
-                    viewModelFactory = defaultViewModelProviderFactory
+                    chatViewModel = chatViewModel
                 )
             }
         }

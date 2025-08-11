@@ -4,7 +4,6 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.activity.viewModels
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.imePadding
@@ -21,6 +20,7 @@ import com.ai.inty.net.IAgentApi
 import com.ai.inty.ui.theme.BackGround
 import com.ai.inty.ui.theme.IntyTheme
 import com.ai.inty.viewmodels.ChatViewModel
+import com.ai.inty.viewmodels.ChatViewModelHolder
 import com.architecture.httplib.core.HttpResult
 import com.inty.utils.log.EasyLog
 import com.therouter.TheRouter
@@ -40,7 +40,7 @@ class ChatActivity : BaseActivity() {
     @Autowired
     var agent_id: String? = null
 
-    private val chatViewModel: ChatViewModel by viewModels()
+    private lateinit var chatViewModel: ChatViewModel
 
     // 延迟获取依赖，避免在构造函数中立即获取导致空指针异常
     private val agentApi by lazy {
@@ -51,7 +51,14 @@ class ChatActivity : BaseActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setupWindow()
-        initializeChatViewModel()
+        val id = agent?.id ?: agent_id
+        if (id == null) {
+            EasyLog.log("ChatActivity: No agent or agent_id provided, finishing activity")
+            finish()
+            return
+        }
+        chatViewModel = ChatViewModelHolder.get(id)
+        initializeChatViewModel(id)
         setupUI()
     }
 
@@ -69,23 +76,10 @@ class ChatActivity : BaseActivity() {
     /**
      * 初始化聊天ViewModel
      */
-    private fun initializeChatViewModel() {
-        when {
-            agent != null -> {
-                chatViewModel.setAgentInfo(agent)
-            }
-
-            agent_id != null -> {
-                chatViewModel.setAgentID(agent_id!!)
-            }
-
-            else -> {
-                // 既没有agent对象也没有agent_id，说明参数传递有问题
-                EasyLog.log("ChatActivity: No agent or agent_id provided, finishing activity")
-                finish()
-                return
-            }
-        }
+    private fun initializeChatViewModel(agentId: String) {
+        agent?.let {
+            chatViewModel.setAgentInfo(it)
+        } ?: chatViewModel.setAgentID(agentId)
         chatViewModel.updateUserInfo()
     }
 
