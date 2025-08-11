@@ -82,7 +82,7 @@ jobs:
         run: |
           echo "## Version information" >> $GITHUB_STEP_SUMMARY
           ./gradlew printVersionWithSuffix >> $GITHUB_STEP_SUMMARY
-          echo "version_code=$(./gradlew printVersionWithSuffix | grep 'Version Code:' | awk '{print $3}')" >> $GITHUB_OUTPUT
+          echo "version_name_with_commit_id=$(./gradlew printVersionWithSuffix | grep 'Version Name with Suffix: ' | awk -F': ' '{print $2}')" >> $GITHUB_OUTPUT
 
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
@@ -102,7 +102,7 @@ jobs:
         with:
           serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_KEY }}
           packageName: com.ai.intellimate
-          releaseName: "${{ inputs.environment }}-versioncode-${{ steps.get-version-info.outputs.version_code }}"
+          releaseName: "${{ inputs.environment }}-${{ steps.get-version-info.outputs.version_name_with_commit_id }}"
           releaseFiles: ${{ steps.get-build-target.outputs.aab }}
           # https://developers.google.com/android-publisher/tracks#adding_and_modifying_apks
           track: ${{ steps.get-build-target.outputs.track }}

@@ -55,13 +55,12 @@ jobs:
 
     - id: gen-release-info
       run: |
-        short_sha=$(git rev-parse --short HEAD)
-        echo "name=debug-apk-$(TZ=Asia/Shanghai date +%Y%m%d-%H%M%S)-$short_sha" >> $GITHUB_OUTPUT
+        echo "version_name_with_commit_id=$(./gradlew printVersionWithSuffix | grep 'Version Name with Suffix: ' | awk -F': ' '{print $2}')" >> $GITHUB_OUTPUT
 
     - id: create-release
       uses: softprops/action-gh-release@v2
       with:
-        tag_name: ${{ steps.gen-release-info.outputs.name }}
+        tag_name: ${{ steps.gen-release-info.outputs.version_name_with_commit_id }}
         draft: false
         prerelease: false
         files: |
@@ -72,7 +71,7 @@ jobs:
 
     - name: Notify Feishu group
       run: |
-        RELEASE_NAME=${{ steps.gen-release-info.outputs.name }}
+        RELEASE_NAME=${{ steps.gen-release-info.outputs.version_name_with_commit_id }}
         RELEASE_URL=${{ steps.create-release.outputs.url }}
         # See https://github.com/softprops/action-gh-release?tab=readme-ov-file#outputs
         RELEASE_APK_URL=${{ fromJSON(steps.create-release.outputs.assets)[0].browser_download_url }}
@@ -89,7 +88,7 @@ jobs:
             "header": {
               "title": {
                 "tag": "plain_text",
-                "content": "IntelliMate 开发测试用 APK 发布，版本：$RELEASE_NAME"
+                "content": "IntelliMate 测试 APK 发布，版本：$RELEASE_NAME"
               }
             },
             "elements": [
