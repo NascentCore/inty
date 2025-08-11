@@ -56,11 +56,13 @@ jobs:
     - id: gen-release-info
       run: |
         echo "version_name_with_commit_id=$(./gradlew printVersionWithSuffix | grep 'Version Name with Suffix: ' | awk -F': ' '{print $2}')" >> $GITHUB_OUTPUT
+        echo "release_name=$(./gradlew printVersionWithSuffix | grep 'Version Name with Suffix: ' | awk -F': ' '{print $2}' | sed 's/ (/-/; s/)//')" >> $GITHUB_OUTPUT
+
 
     - id: create-release
       uses: softprops/action-gh-release@v2
       with:
-        tag_name: ${{ steps.gen-release-info.outputs.version_name_with_commit_id }}
+        tag_name: ${{ steps.gen-release-info.outputs.release_name }}
         draft: false
         prerelease: false
         files: |
@@ -71,7 +73,7 @@ jobs:
 
     - name: Notify Feishu group
       run: |
-        RELEASE_NAME=${{ steps.gen-release-info.outputs.version_name_with_commit_id }}
+        RELEASE_NAME=${{ steps.gen-release-info.outputs.release_name }}
         RELEASE_URL=${{ steps.create-release.outputs.url }}
         # See https://github.com/softprops/action-gh-release?tab=readme-ov-file#outputs
         RELEASE_APK_URL=${{ fromJSON(steps.create-release.outputs.assets)[0].browser_download_url }}
