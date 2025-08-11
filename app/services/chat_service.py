@@ -612,7 +612,7 @@ async def get_or_create_chat_settings(
             select(models.Chat).where(models.Chat.id == chat_id)
         )
         chat = chat_result.scalar_one_or_none()
-        
+
         if not chat:
             logger.error(f"Chat记录不存在，无法创建设置 - chat_id: {chat_id}")
             raise HTTPException(status_code=404, detail="聊天记录不存在")
@@ -630,11 +630,11 @@ async def get_or_create_chat_settings(
         )
 
         db.add(db_settings)
-        
+
         try:
             await db.commit()
             await db.refresh(db_settings)
-            
+
             # 重新查询以加载关系数据
             result = await db.execute(
                 select(models.ChatSettings)
@@ -642,14 +642,14 @@ async def get_or_create_chat_settings(
                 .where(models.ChatSettings.id == db_settings.id)
             )
             settings_with_agent = result.scalar_one()
-            
+
             logger.info(f"成功创建聊天设置 - chat_id: {chat_id}")
             return settings_with_agent
-            
+
         except IntegrityError:
             await db.rollback()
             logger.info(f"并发创建聊天设置冲突，查询已存在设置 - chat_id: {chat_id}")
-            
+
             # 查询已存在的设置
             result = await db.execute(
                 select(models.ChatSettings)
@@ -877,10 +877,10 @@ async def save_debug_messages(
         # 根据 session_id 推算出 chat_id
         # session_id 是通过 generate_session_id(chat_id) 生成的
         # 需要通过查询数据库找到对应的 chat 记录
-        from app.core.config import settings
+        from app.core.config import global_config_loaded_from_config_yaml
 
         # 如果调试功能未启用，直接返回
-        if not settings.app.debug_messages:
+        if not global_config_loaded_from_config_yaml.app.debug_messages:
             return
 
         # 查找对应的 chat 记录

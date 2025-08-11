@@ -15,7 +15,7 @@ from typing_extensions import deprecated
 
 from app import models, schemas
 from app.core import security
-from app.core.config import settings
+from app.core.config import global_config_loaded_from_config_yaml
 from app.db.base import SessionLocal
 from app.db.session import get_async_db
 from app.models.user import User
@@ -24,7 +24,7 @@ from app.schemas.token import TokenPayload
 logger = logging.getLogger(__name__)
 
 oauth2_scheme = OAuth2PasswordBearer(
-    tokenUrl=f"{settings.app.api_v1_prefix}/auth/login"
+    tokenUrl=f"{global_config_loaded_from_config_yaml.app.api_v1_prefix}/auth/login"
 )
 
 
@@ -57,14 +57,16 @@ async def get_current_user(
     try:
         logger.debug(f"开始解码JWT token")
         logger.debug(
-            f"使用密钥: {settings.security.secret_key[:10] + '...' if settings.security.secret_key else 'None'}"
+            f"使用密钥: {global_config_loaded_from_config_yaml.security.secret_key[:10] + '...' if global_config_loaded_from_config_yaml.security.secret_key else 'None'}"
         )
-        logger.debug(f"使用算法: {settings.security.algorithm}")
+        logger.debug(
+            f"使用算法: {global_config_loaded_from_config_yaml.security.algorithm}"
+        )
 
         payload = jwt.decode(
             token,
-            settings.security.secret_key,
-            algorithms=[settings.security.algorithm],
+            global_config_loaded_from_config_yaml.security.secret_key,
+            algorithms=[global_config_loaded_from_config_yaml.security.algorithm],
         )
         logger.debug(f"JWT解码成功，payload: {payload}")
 

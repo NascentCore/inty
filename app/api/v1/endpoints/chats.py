@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app import models, schemas
 from app.api import deps
 from app.core.agent.agent import agent_manager
-from app.core.config import settings
+from app.core.config import global_config_loaded_from_config_yaml
 from app.schemas.chat import ChatCompletionRequest
 from app.schemas.response import BusinessErrorCode, create_business_error_response
 from app.services import agent_service, chat_history_service, chat_service
@@ -116,7 +116,7 @@ async def get_keep_talking_status(
     Get Keep Talking service status
     """
     return {
-        "enabled": settings.keep_talking.enabled,
+        "enabled": global_config_loaded_from_config_yaml.keep_talking.enabled,
         "running": keep_talking_service._running,
         "check_interval": keep_talking_service.check_interval,
         "max_idle_time": keep_talking_service.max_idle_time,
@@ -939,7 +939,8 @@ async def generate_message_voice(
         return {
             "audio_url": audio_url,
             "message_id": message_id,
-            "voice_id": agent_voice_id or settings.elevenlabs.voice_id,
+            "voice_id": agent_voice_id
+            or global_config_loaded_from_config_yaml.elevenlabs.voice_id,
             "language": language,
             "cached": False,  # 这里可以后续实现缓存检测
             "generation_time": None,  # 可以记录生成时间
@@ -961,7 +962,10 @@ async def get_available_voices(
     """
     try:
         voices = await voice_service.get_available_voices()
-        return {"voices": voices, "default_voice_id": settings.elevenlabs.voice_id}
+        return {
+            "voices": voices,
+            "default_voice_id": global_config_loaded_from_config_yaml.elevenlabs.voice_id,
+        }
     except Exception as e:
         logger.error(f"获取语音列表失败: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to get voices: {str(e)}")

@@ -197,4 +197,4 @@ def load_config(path: str) -> Config:
     )
 
 
-settings = load_config("config.yaml")
+global_config_loaded_from_config_yaml = load_config("config.yaml")

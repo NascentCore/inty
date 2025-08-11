@@ -5,7 +5,7 @@ from typing import Optional
 
 from sqlalchemy.orm import Session
 
-from app.core.config import settings
+from app.core.config import global_config_loaded_from_config_yaml
 from app.models.verification_code import VerificationCode
 
 
@@ -21,7 +21,7 @@ def create_verification_code(db: Session, phone: str) -> VerificationCode:
 
     # 计算过期时间
     expires_at = datetime.utcnow() + timedelta(
-        minutes=settings.verification.code_expire_minutes
+        minutes=global_config_loaded_from_config_yaml.verification.code_expire_minutes
     )
 
     # 创建验证码记录

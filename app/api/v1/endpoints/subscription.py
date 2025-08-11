@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import schemas
 from app.api import deps
-from app.core.config import settings
+from app.core.config import global_config_loaded_from_config_yaml
 from app.models.subscription import UserSubscription
 from app.schemas.response import APIResponse
 from app.schemas.subscription import (
@@ -181,7 +181,7 @@ async def google_play_webhook(
         body = await request.body()
 
         # 验证webhook签名（如果配置了webhook密钥）
-        if settings.google_play.webhook_secret:
+        if global_config_loaded_from_config_yaml.google_play.webhook_secret:
             signature = request.headers.get("X-Goog-Message-Signature")
             if not signature or not _verify_webhook_signature(body, signature):
                 raise HTTPException(status_code=400, detail="Invalid webhook signature")
@@ -284,11 +284,15 @@ async def _process_google_play_notification(
 def _verify_webhook_signature(body: bytes, signature: str) -> bool:
     """验证webhook签名"""
     try:
-        if not settings.google_play.webhook_secret:
+        if not global_config_loaded_from_config_yaml.google_play.webhook_secret:
             return True
 
         expected_signature = hmac.new(
-            settings.google_play.webhook_secret.encode("utf-8"), body, hashlib.sha256
+            global_config_loaded_from_config_yaml.google_play.webhook_secret.encode(
+                "utf-8"
+            ),
+            body,
+            hashlib.sha256,
         ).hexdigest()
 
         return hmac.compare_digest(signature, expected_signature)

@@ -14,7 +14,7 @@ from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api import deps
-from app.core.config import settings
+from app.core.config import global_config_loaded_from_config_yaml
 from app.db.session import get_async_db
 from app.schemas.response import APIResponse
 from app.schemas.user import DeviceTokenRegister, User, UserList, UserUpdate
@@ -96,15 +96,22 @@ async def upload_avatar(
         file_data = await file.read()
         avatar_path = user_service.generate_avatar_path(current_user.id, file.filename)
         url = upload_to_gcs(
-            file_data, file.content_type, settings.gcs.bucket, avatar_path
+            file_data,
+            file.content_type,
+            global_config_loaded_from_config_yaml.gcs.bucket,
+            avatar_path,
         )
 
         # 删除旧头像，但只有当它确实是存储在用户GCS bucket中的文件时才删除
         old_avatar = current_user.avatar
-        if old_avatar and is_user_gcs_file(old_avatar, settings.gcs.bucket):
+        if old_avatar and is_user_gcs_file(
+            old_avatar, global_config_loaded_from_config_yaml.gcs.bucket
+        ):
             old_path = user_service.get_path_from_gcs_url(old_avatar)
             if old_path:
-                delete_from_gcs(settings.gcs.bucket, old_path)
+                delete_from_gcs(
+                    global_config_loaded_from_config_yaml.gcs.bucket, old_path
+                )
                 logger.info(f"已删除旧头像: {old_avatar}")
         elif old_avatar:
             logger.info(f"跳过删除非GCS头像: {old_avatar}")

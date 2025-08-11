@@ -5,7 +5,7 @@ import google.genai as genai
 from google.genai import types
 from loguru import logger
 
-from app.core.config import settings
+from app.core.config import global_config_loaded_from_config_yaml
 
 # Initialize Google Gen AI client with Vertex AI
 # The client will use the same credentials as configured for GCS
@@ -21,7 +21,7 @@ def get_genai_client():
             # This will use the same service account credentials as GCS
 
             # Set environment variable for proper authentication
-            credentials_path = settings.gcs.credentials
+            credentials_path = global_config_loaded_from_config_yaml.gcs.credentials
             os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = credentials_path
 
             # Try to get project ID from credentials file
@@ -142,7 +142,7 @@ def generate_background_image_to_gcs(
 
         client = get_genai_client()
         response = client.models.generate_images(
-            model=settings.agent.vertex_image_model,
+            model=global_config_loaded_from_config_yaml.agent.vertex_image_model,
             prompt=enhanced_prompt,
             config=config,
         )

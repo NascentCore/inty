@@ -7,7 +7,7 @@ import psycopg
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from langchain_postgres import PostgresChatMessageHistory
 
-from app.core.config import settings
+from app.core.config import global_config_loaded_from_config_yaml
 
 logger = logging.getLogger(__name__)
 
@@ -59,7 +59,9 @@ def get_chat_history_connection():
     global _connection
     if _connection is None or _connection.closed:
         try:
-            _connection = psycopg.connect(settings.database.url, autocommit=True)
+            _connection = psycopg.connect(
+                global_config_loaded_from_config_yaml.database.url, autocommit=True
+            )
             logger.info("chat_history数据库连接已建立")
         except Exception as e:
             logger.error(f"建立chat_history数据库连接失败: {str(e)}")

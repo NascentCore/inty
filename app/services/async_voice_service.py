@@ -9,7 +9,7 @@ from typing import Any, Dict, Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import settings
+from app.core.config import global_config_loaded_from_config_yaml
 from app.services.voice_cache_service import voice_cache_service
 from app.services.voice_service import voice_service
 
@@ -214,8 +214,10 @@ class AsyncVoiceService:
         """实际的缓存检查实现"""
         try:
             # 使用默认语音ID
-            voice_id = voice_id or settings.elevenlabs.voice_id
-            model = settings.elevenlabs.model
+            voice_id = (
+                voice_id or global_config_loaded_from_config_yaml.elevenlabs.voice_id
+            )
+            model = global_config_loaded_from_config_yaml.elevenlabs.model
 
             # 快速检查缓存
             cached_url = await self.cache_service.get_cached_voice(

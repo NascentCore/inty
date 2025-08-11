@@ -14,7 +14,7 @@ import aiohttp
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import settings
+from app.core.config import global_config_loaded_from_config_yaml
 from app.services.gcs_service import GCSService
 
 
@@ -22,7 +22,7 @@ class VoiceService:
     """语音生成服务"""
 
     def __init__(self):
-        self.config = settings.elevenlabs
+        self.config = global_config_loaded_from_config_yaml.elevenlabs
         self.gcs_service = GCSService()
         self.base_url = "https://api.elevenlabs.io/v1"
 

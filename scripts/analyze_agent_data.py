@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import psycopg2
-from app.core.config import settings
+from app.core.config import global_config_loaded_from_config_yaml
 
 
 def analyze_agent_data():
@@ -8,11 +8,11 @@ def analyze_agent_data():
 
     # 建立数据库连接
     conn = psycopg2.connect(
-        host=settings.database.host,
-        port=settings.database.port,
-        user=settings.database.user,
-        password=settings.database.password,
-        dbname=settings.database.db,
+        host=global_config_loaded_from_config_yaml.database.host,
+        port=global_config_loaded_from_config_yaml.database.port,
+        user=global_config_loaded_from_config_yaml.database.user,
+        password=global_config_loaded_from_config_yaml.database.password,
+        dbname=global_config_loaded_from_config_yaml.database.db,
     )
 
     cursor = conn.cursor()

@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_async_db
 from app.api.v1.api import api_router
 from app.core.agent.agent import agent_manager
-from app.core.config import settings
+from app.core.config import global_config_loaded_from_config_yaml
 from app.core.firebase import init_firebase
 from app.core.logging import init_logger
 from app.middleware.error_handler import (
@@ -27,13 +27,15 @@ init_logger()
 
 # 根据debug模式决定是否开启OpenAPI docs
 app = FastAPI(
-    title=settings.app.name,
+    title=global_config_loaded_from_config_yaml.app.name,
     description="InTy",
     version="1.0.0",
     # 只在debug模式下开启OpenAPI docs
-    openapi_url="/openapi.json" if settings.app.debug else None,
-    docs_url="/docs" if settings.app.debug else None,
-    redoc_url="/redoc" if settings.app.debug else None,
+    openapi_url=(
+        "/openapi.json" if global_config_loaded_from_config_yaml.app.debug else None
+    ),
+    docs_url="/docs" if global_config_loaded_from_config_yaml.app.debug else None,
+    redoc_url="/redoc" if global_config_loaded_from_config_yaml.app.debug else None,
     # Swagger UI参数配置（仅在debug模式下生效）
     swagger_ui_parameters=(
         {
@@ -45,16 +47,19 @@ app = FastAPI(
             "defaultModelsExpandDepth": 3,
             "defaultModelExpandDepth": 3,
         }
-        if settings.app.debug
+        if global_config_loaded_from_config_yaml.app.debug
         else {}
     ),
 )
 
 # Set all CORS enabled origins
-if settings.app.backend_cors_origins:
+if global_config_loaded_from_config_yaml.app.backend_cors_origins:
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=[str(origin) for origin in settings.app.backend_cors_origins],
+        allow_origins=[
+            str(origin)
+            for origin in global_config_loaded_from_config_yaml.app.backend_cors_origins
+        ],
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
@@ -66,7 +71,9 @@ app.add_exception_handler(JWTError, jwt_exception_handler)
 app.add_exception_handler(SQLAlchemyError, sqlalchemy_exception_handler)
 app.add_exception_handler(ValidationError, validation_error_handler)
 
-app.include_router(api_router, prefix=settings.app.api_v1_prefix)
+app.include_router(
+    api_router, prefix=global_config_loaded_from_config_yaml.app.api_v1_prefix
+)
 
 # 配置静态文件服务 - 用于评测系统前端
 import os
@@ -84,8 +91,10 @@ async def startup_event():
     """应用启动事件"""
     try:
         logger.info("正在初始化应用...")
-        logger.info(f"数据库 URL: {settings.database.url}")
-        logger.info(f"异步数据库 URL: {settings.database.async_url}")
+        logger.info(f"数据库 URL: {global_config_loaded_from_config_yaml.database.url}")
+        logger.info(
+            f"异步数据库 URL: {global_config_loaded_from_config_yaml.database.async_url}"
+        )
 
         # 0. 预初始化数据库连接池和chat_history表
         await _preload_database_connections()
@@ -104,7 +113,7 @@ async def startup_event():
         logger.info("Agent初始化完成")
 
         # 根据配置决定是否启动Keep Talking服务
-        if settings.keep_talking.enabled:
+        if global_config_loaded_from_config_yaml.keep_talking.enabled:
             logger.info("正在启动Keep Talking服务...")
             await keep_talking_service.start()
             logger.info("Keep Talking服务已启动")
@@ -223,7 +232,7 @@ async def shutdown_event():
     """应用关闭事件"""
     try:
         # 只有在服务启用时才需要停止
-        if settings.keep_talking.enabled:
+        if global_config_loaded_from_config_yaml.keep_talking.enabled:
             logger.info("正在停止Keep Talking服务...")
             await keep_talking_service.stop()
             logger.info("Keep Talking服务已停止")
@@ -251,14 +260,14 @@ async def shutdown_event():
 
 def custom_openapi():
     # 只在debug模式下提供OpenAPI schema
-    if not settings.app.debug:
+    if not global_config_loaded_from_config_yaml.app.debug:
         return None
 
     if app.openapi_schema:
         return app.openapi_schema
 
     openapi_schema = get_openapi(
-        title=settings.app.name,
+        title=global_config_loaded_from_config_yaml.app.name,
         version="1.0.0",
         description=app.description,
         routes=app.routes,
@@ -298,7 +307,7 @@ def custom_openapi():
 
 
 # 只在debug模式下设置自定义OpenAPI
-if settings.app.debug:
+if global_config_loaded_from_config_yaml.app.debug:
     app.openapi = custom_openapi
 
 
@@ -308,5 +317,8 @@ async def root():
     return {
         "code": 200,
         "message": "success",
-        "data": {"app_name": settings.app.name, "version": "1.0.0"},
+        "data": {
+            "app_name": global_config_loaded_from_config_yaml.app.name,
+            "version": "1.0.0",
+        },
     }

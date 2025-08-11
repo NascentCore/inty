@@ -10,7 +10,7 @@ from sqlalchemy.orm import selectinload
 
 from app.api.deps import get_async_db
 from app.core.agent.agent import agent_manager
-from app.core.config import settings
+from app.core.config import global_config_loaded_from_config_yaml
 from app.models.agent import Agent
 from app.models.chat import Chat
 from app.models.chat_settings import ChatSettings
@@ -38,17 +38,17 @@ class KeepTalkingService:
         self.check_interval = (
             check_interval
             if check_interval is not None
-            else settings.keep_talking.check_interval
+            else global_config_loaded_from_config_yaml.keep_talking.check_interval
         )
         self.max_idle_time = (
             max_idle_time
             if max_idle_time is not None
-            else settings.keep_talking.max_idle_time
+            else global_config_loaded_from_config_yaml.keep_talking.max_idle_time
         )
         self.max_keep_talking_messages = (
             max_keep_talking_messages
             if max_keep_talking_messages is not None
-            else settings.keep_talking.max_keep_talking_messages
+            else global_config_loaded_from_config_yaml.keep_talking.max_keep_talking_messages
         )
         self._running = False
         self._task = None

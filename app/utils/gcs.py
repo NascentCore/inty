@@ -4,7 +4,9 @@ from urllib.parse import urlparse
 
 from google.cloud import storage
 
-from app.core.config import settings  # 假设你的配置是settings对象
+from app.core.config import (
+    global_config_loaded_from_config_yaml,
+)  # 假设你的配置是settings对象
 
 logger = logging.getLogger(__name__)
 
@@ -17,8 +19,12 @@ def upload_to_gcs(file_data, content_type, bucket_name, path):
     logger.info(f"路径: {path}")
 
     try:
-        logger.info(f"使用凭证文件: {settings.gcs.credentials}")
-        client = storage.Client.from_service_account_json(settings.gcs.credentials)
+        logger.info(
+            f"使用凭证文件: {global_config_loaded_from_config_yaml.gcs.credentials}"
+        )
+        client = storage.Client.from_service_account_json(
+            global_config_loaded_from_config_yaml.gcs.credentials
+        )
         logger.info("GCS客户端创建成功")
 
         bucket = client.bucket(bucket_name)
@@ -50,7 +56,9 @@ def upload_to_gcs(file_data, content_type, bucket_name, path):
 def delete_from_gcs(bucket_name, path):
     """删除GCS文件，如果文件不存在则忽略"""
     try:
-        client = storage.Client.from_service_account_json(settings.gcs.credentials)
+        client = storage.Client.from_service_account_json(
+            global_config_loaded_from_config_yaml.gcs.credentials
+        )
         bucket = client.bucket(bucket_name)
         blob = bucket.blob(path)
 
@@ -84,7 +92,9 @@ def copy_gcs_file(source_url: str, destination_path: str, bucket_name: str) -> s
     Returns:
         新文件的公共URL
     """
-    client = storage.Client.from_service_account_json(settings.gcs.credentials)
+    client = storage.Client.from_service_account_json(
+        global_config_loaded_from_config_yaml.gcs.credentials
+    )
 
     # 解析源文件路径
     source_path = get_path_from_gcs_url(source_url)
@@ -130,7 +140,7 @@ def get_path_from_gcs_url(url: str) -> str:
         if len(parts) >= 2:
             path = parts[1]
             # 去掉bucket名前缀
-            bucket = settings.gcs.bucket
+            bucket = global_config_loaded_from_config_yaml.gcs.bucket
             if path.startswith(bucket + "/"):
                 path = path[len(bucket) + 1 :]
                 return path
@@ -182,7 +192,9 @@ def is_temp_gcs_path(url: str, user_id: str) -> bool:
 def check_gcs_file_exists(bucket_name: str, path: str) -> bool:
     """检查GCS文件是否存在"""
     try:
-        client = storage.Client.from_service_account_json(settings.gcs.credentials)
+        client = storage.Client.from_service_account_json(
+            global_config_loaded_from_config_yaml.gcs.credentials
+        )
         bucket = client.bucket(bucket_name)
         blob = bucket.blob(path)
         return blob.exists()

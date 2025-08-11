@@ -11,7 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import schemas
-from app.core.config import settings
+from app.core.config import global_config_loaded_from_config_yaml
 from app.core.security import create_access_token
 from app.core.uuid import uid
 from app.db.session import get_async_db
@@ -23,7 +23,7 @@ from app.services.user_service import create_guest_user, generate_next_readable_
 
 router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(
-    tokenUrl=f"{settings.app.api_v1_prefix}/auth/login"
+    tokenUrl=f"{global_config_loaded_from_config_yaml.app.api_v1_prefix}/auth/login"
 )
 
 
@@ -125,7 +125,7 @@ async def google_login(
         idinfo = id_token.verify_oauth2_token(
             login_in.id_token,
             google_requests.Request(),
-            settings.google_oauth.client_id,
+            global_config_loaded_from_config_yaml.google_oauth.client_id,
         )
 
         # 验证发行者

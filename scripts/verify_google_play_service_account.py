@@ -25,7 +25,7 @@ from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
-from app.core.config import settings
+from app.core.config import global_config_loaded_from_config_yaml
 
 # Set up logging
 logging.basicConfig(
@@ -122,7 +122,7 @@ class GooglePlayVerifier:
         config_result = self.results["config_validation"]
 
         # Check if Google Play configuration exists
-        if not hasattr(settings, "google_play"):
+        if not hasattr(global_config_loaded_from_config_yaml, "google_play"):
             config_result["google_play_config"] = {
                 "status": "❌ FAILED",
                 "error": "Google Play configuration not found in settings",
@@ -130,7 +130,9 @@ class GooglePlayVerifier:
             return
 
         # Check package name
-        self.package_name = settings.google_play.package_name
+        self.package_name = (
+            global_config_loaded_from_config_yaml.google_play.package_name
+        )
         if not self.package_name:
             config_result["package_name"] = {
                 "status": "❌ FAILED",
@@ -144,7 +146,9 @@ class GooglePlayVerifier:
             print(f"   📱 Package Name: {self.package_name}")
 
         # Check service account key
-        service_account_key = settings.google_play.service_account_key
+        service_account_key = (
+            global_config_loaded_from_config_yaml.google_play.service_account_key
+        )
         if not service_account_key:
             config_result["service_account_key"] = {
                 "status": "❌ FAILED",
@@ -233,7 +237,9 @@ class GooglePlayVerifier:
 
         try:
             # Get service account credentials
-            service_account_key = settings.google_play.service_account_key
+            service_account_key = (
+                global_config_loaded_from_config_yaml.google_play.service_account_key
+            )
 
             if service_account_key.endswith(".json"):
                 # File path
