@@ -20,6 +20,10 @@ alwaysApply: true
 - **推送**: Firebase Messaging
 - **构建工具**: Gradle (Kotlin DSL)
 
+## 指导意见
+
+- 尽量使用代码库内、经过封装的函数或者 API，而不是使用外部
+
 ## 代码规范
 
 ### 1. 包结构规范
