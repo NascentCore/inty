@@ -18,7 +18,7 @@ sys.path.insert(0, str(project_root))
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import AsyncSessionLocal
 from app.models.subscription import SubscriptionPlan, SubscriptionPlanType
-from app.core.config import settings
+from app.core.config import global_config_loaded_from_config_yaml
 
 
 async def create_subscription_plan_direct(db: AsyncSession, plan_data: dict):

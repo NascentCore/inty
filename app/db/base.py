@@ -1,10 +1,10 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from app.core.config import settings
+from app.core.config import global_config_loaded_from_config_yaml
 
 # 创建数据库引擎
-engine = create_engine(settings.database.url)
+engine = create_engine(global_config_loaded_from_config_yaml.database.url)
 
 # 创建会话工厂
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

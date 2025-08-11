@@ -3,7 +3,7 @@ import sys
 
 from loguru import logger
 
-from app.core.config import settings
+from app.core.config import global_config_loaded_from_config_yaml
 
 
 class InterceptHandler(logging.Handler):
@@ -31,8 +31,8 @@ def init_logger():
     # 添加控制台输出
     logger.add(
         sys.stderr,
-        format=settings.logging.format,
-        level=settings.logging.level,
+        format=global_config_loaded_from_config_yaml.logging.format,
+        level=global_config_loaded_from_config_yaml.logging.level,
         colorize=False,  # Disable ANSI colors to prevent escape codes in logs
     )
 

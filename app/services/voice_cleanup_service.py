@@ -9,7 +9,7 @@ from typing import Any, Dict
 
 from loguru import logger
 
-from app.core.config import settings
+from app.core.config import global_config_loaded_from_config_yaml
 from app.db.session import AsyncSessionLocal
 from app.services.voice_cache_service import voice_cache_service
 

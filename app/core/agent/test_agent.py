@@ -7,7 +7,7 @@ from langchain_core.messages import HumanMessage
 from app.core.agent import prompts
 from app.core.agent.agent import Agent
 from app.core.agent.personalities import EVERYONE_HATES_YOU, EVERYONE_LIKES_YOU
-from app.core.config import settings
+from app.core.config import global_config_loaded_from_config_yaml
 
 
 class TestAgentChat:
@@ -21,9 +21,9 @@ class TestAgentChat:
         self.session_id = str(uuid.uuid4())
 
         self.model_config = {
-            "model": settings.agent.model,
-            "api_key": settings.agent.api_key,
-            "base_url": settings.agent.base_url,
+            "model": global_config_loaded_from_config_yaml.agent.model,
+            "api_key": global_config_loaded_from_config_yaml.agent.api_key,
+            "base_url": global_config_loaded_from_config_yaml.agent.base_url,
             "temperature": 0.7,
             "max_tokens": 100,
         }

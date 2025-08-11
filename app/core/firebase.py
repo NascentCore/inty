@@ -2,7 +2,7 @@ import firebase_admin
 from firebase_admin import credentials
 from loguru import logger
 
-from app.core.config import settings
+from app.core.config import global_config_loaded_from_config_yaml
 
 
 def init_firebase() -> None:
@@ -12,11 +12,13 @@ def init_firebase() -> None:
     """
     try:
         # 获取 Firebase 配置
-        if not settings.firebase.service_account_path:
+        if not global_config_loaded_from_config_yaml.firebase.service_account_path:
             raise ValueError("Firebase service account path not configured")
 
         # 初始化 Firebase Admin SDK
-        cred = credentials.Certificate(settings.firebase.service_account_path)
+        cred = credentials.Certificate(
+            global_config_loaded_from_config_yaml.firebase.service_account_path
+        )
         # firebase_admin.initialize_app(cred)
 
         firebase_admin.initialize_app(cred, {"projectId": "alien-paratext-461204-i9"})

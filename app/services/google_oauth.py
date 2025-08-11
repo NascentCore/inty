@@ -3,7 +3,7 @@ from typing import Dict, Optional
 import httpx
 from fastapi import HTTPException
 
-from app.core.config import settings
+from app.core.config import global_config_loaded_from_config_yaml
 
 
 async def get_google_token(code: str) -> Dict:
@@ -13,11 +13,11 @@ async def get_google_token(code: str) -> Dict:
             response = await client.post(
                 "https://oauth2.googleapis.com/token",
                 data={
-                    "client_id": settings.google_oauth.client_id,
-                    "client_secret": settings.google_oauth.client_secret,
+                    "client_id": global_config_loaded_from_config_yaml.google_oauth.client_id,
+                    "client_secret": global_config_loaded_from_config_yaml.google_oauth.client_secret,
                     "code": code,
                     "grant_type": "authorization_code",
-                    "redirect_uri": settings.google_oauth.redirect_uri,
+                    "redirect_uri": global_config_loaded_from_config_yaml.google_oauth.redirect_uri,
                 },
             )
             response.raise_for_status()

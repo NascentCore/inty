@@ -12,7 +12,7 @@ from sqlalchemy.orm import selectinload
 
 from app import models, schemas
 from app.core.agent.agent import agent_manager
-from app.core.config import settings
+from app.core.config import global_config_loaded_from_config_yaml
 from app.models.agent import AgentStatus, AgentVisibility
 from app.models.associations import agent_followers
 from app.services.cache_service import cache_service
@@ -792,7 +792,7 @@ def get_path_from_gcs_url(url: str) -> str:
         return ""
     path = parts[1]
     # 去掉bucket名前缀
-    bucket = settings.gcs.bucket
+    bucket = global_config_loaded_from_config_yaml.gcs.bucket
     if path.startswith(bucket + "/"):
         path = path[len(bucket) + 1 :]
     return path
@@ -836,7 +836,9 @@ def process_agent_image_urls(agent_data: dict, agent_id: str, user_id: str) -> d
 
                     # 复制到永久路径
                     new_avatar_url = copy_gcs_file(
-                        avatar_url, permanent_path, settings.gcs.bucket
+                        avatar_url,
+                        permanent_path,
+                        global_config_loaded_from_config_yaml.gcs.bucket,
                     )
                     processed_data["avatar"] = new_avatar_url
 
@@ -871,7 +873,9 @@ def process_agent_image_urls(agent_data: dict, agent_id: str, user_id: str) -> d
 
                     # 复制到永久路径
                     new_background_url = copy_gcs_file(
-                        background_url, permanent_path, settings.gcs.bucket
+                        background_url,
+                        permanent_path,
+                        global_config_loaded_from_config_yaml.gcs.bucket,
                     )
                     processed_data["background"] = new_background_url
 
@@ -909,7 +913,9 @@ def process_agent_image_urls(agent_data: dict, agent_id: str, user_id: str) -> d
 
                         # 复制到永久路径
                         new_photo_url = copy_gcs_file(
-                            photo_url, permanent_path, settings.gcs.bucket
+                            photo_url,
+                            permanent_path,
+                            global_config_loaded_from_config_yaml.gcs.bucket,
                         )
                         processed_photos.append(new_photo_url)
 
@@ -944,7 +950,9 @@ def process_agent_image_urls(agent_data: dict, agent_id: str, user_id: str) -> d
                 try:
                     temp_path = get_path_from_gcs_url(temp_url)
                     if temp_path:
-                        deleted = delete_from_gcs(settings.gcs.bucket, temp_path)
+                        deleted = delete_from_gcs(
+                            global_config_loaded_from_config_yaml.gcs.bucket, temp_path
+                        )
                         if deleted:
                             logger.info(f"删除临时文件: {temp_url}")
                         else:

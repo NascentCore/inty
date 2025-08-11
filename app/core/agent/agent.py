@@ -25,7 +25,7 @@ from psycopg_pool import ConnectionPool
 
 from app.core.agent import prompts
 from app.core.agent.prompt_template import prompt_template_manager
-from app.core.config import settings
+from app.core.config import global_config_loaded_from_config_yaml
 from app.services.background_task_service import background_task_service
 from app.services.cache_service import cache_service
 
@@ -64,36 +64,49 @@ def get_agent_model_config(agent_data: dict) -> dict:
     # 如果没有自定义配置，使用默认配置
     if not model_config:
         model_config = {
-            "model": settings.agent.model,
-            "api_key": settings.agent.api_key,
-            "base_url": settings.agent.base_url,
-            "temperature": getattr(settings.agent, "temperature", 0.5),
-            "max_tokens": getattr(settings.agent, "max_tokens", 1000),
-            "top_p": getattr(settings.agent, "top_p", 1.0),
-            "frequency_penalty": getattr(settings.agent, "frequency_penalty", 0.0),
-            "presence_penalty": getattr(settings.agent, "presence_penalty", 0.0),
+            "model": global_config_loaded_from_config_yaml.agent.model,
+            "api_key": global_config_loaded_from_config_yaml.agent.api_key,
+            "base_url": global_config_loaded_from_config_yaml.agent.base_url,
+            "temperature": getattr(
+                global_config_loaded_from_config_yaml.agent, "temperature", 0.5
+            ),
+            "max_tokens": getattr(
+                global_config_loaded_from_config_yaml.agent, "max_tokens", 1000
+            ),
+            "top_p": getattr(global_config_loaded_from_config_yaml.agent, "top_p", 1.0),
+            "frequency_penalty": getattr(
+                global_config_loaded_from_config_yaml.agent, "frequency_penalty", 0.0
+            ),
+            "presence_penalty": getattr(
+                global_config_loaded_from_config_yaml.agent, "presence_penalty", 0.0
+            ),
         }
     else:
         # 如果有自定义配置，但某些字段为空，则使用默认配置补充
         if not model_config.get("base_url"):
-            model_config["base_url"] = settings.agent.base_url
+            model_config["base_url"] = (
+                global_config_loaded_from_config_yaml.agent.base_url
+            )
         if not model_config.get("api_key"):
-            model_config["api_key"] = settings.agent.api_key
+            model_config["api_key"] = (
+                global_config_loaded_from_config_yaml.agent.api_key
+            )
         if not model_config.get("model"):
-            model_config["model"] = settings.agent.model
+            model_config["model"] = global_config_loaded_from_config_yaml.agent.model
 
     return model_config
 
 
 # 初始化自定义的embedding服务
 client = OpenAI(
-    base_url=settings.embedding.base_url, api_key=settings.embedding.api_key
+    base_url=global_config_loaded_from_config_yaml.embedding.base_url,
+    api_key=global_config_loaded_from_config_yaml.embedding.api_key,
 )
 
 
 def embed_texts(texts: list[str]) -> list[list[float]]:
     response = client.embeddings.create(
-        model=settings.embedding.model,
+        model=global_config_loaded_from_config_yaml.embedding.model,
         input=texts,
     )
     return [e.embedding for e in response.data]
@@ -111,20 +124,21 @@ def get_sync_engine():
         from sqlalchemy import create_engine
 
         _sync_engine = create_engine(
-            settings.database.url,
-            pool_size=settings.database.pool_size // 2,  # 同步引擎使用一半的连接池
-            max_overflow=settings.database.max_overflow,
-            pool_timeout=settings.database.pool_timeout,
-            pool_recycle=settings.database.pool_recycle,
-            pool_pre_ping=settings.database.pool_pre_ping,
+            global_config_loaded_from_config_yaml.database.url,
+            pool_size=global_config_loaded_from_config_yaml.database.pool_size
+            // 2,  # 同步引擎使用一半的连接池
+            max_overflow=global_config_loaded_from_config_yaml.database.max_overflow,
+            pool_timeout=global_config_loaded_from_config_yaml.database.pool_timeout,
+            pool_recycle=global_config_loaded_from_config_yaml.database.pool_recycle,
+            pool_pre_ping=global_config_loaded_from_config_yaml.database.pool_pre_ping,
             connect_args={
-                "connect_timeout": settings.database.connect_timeout,
+                "connect_timeout": global_config_loaded_from_config_yaml.database.connect_timeout,
                 "options": "-c jit=off -c application_name=inty_sync",
             },
             echo=False,  # 禁用SQL日志
         )
         logger.info(
-            f"全局同步数据库引擎已初始化 - pool_size: {settings.database.pool_size // 2}"
+            f"全局同步数据库引擎已初始化 - pool_size: {global_config_loaded_from_config_yaml.database.pool_size // 2}"
         )
     return _sync_engine
 
@@ -134,20 +148,23 @@ def get_connection_pool():
     global _connection_pool
     if _connection_pool is None:
         _connection_pool = ConnectionPool(
-            settings.database.url,
-            min_size=settings.database.pool_size // 4,  # 最小连接数
-            max_size=settings.database.pool_size,  # 最大连接数
+            global_config_loaded_from_config_yaml.database.url,
+            min_size=global_config_loaded_from_config_yaml.database.pool_size
+            // 4,  # 最小连接数
+            max_size=global_config_loaded_from_config_yaml.database.pool_size,  # 最大连接数
             max_idle=300,  # 连接最大空闲时间（秒）
             max_lifetime=1800,  # 连接最大生命周期（秒）
         )
         logger.info(
-            f"初始化数据库连接池: min_size={settings.database.pool_size // 4}, max_size={settings.database.pool_size}"
+            f"初始化数据库连接池: min_size={global_config_loaded_from_config_yaml.database.pool_size // 4}, max_size={global_config_loaded_from_config_yaml.database.pool_size}"
         )
     return _connection_pool
 
 
 # 初始化聊天历史表和记忆表
-conn = Connection.connect(settings.database.url, autocommit=True)
+conn = Connection.connect(
+    global_config_loaded_from_config_yaml.database.url, autocommit=True
+)
 
 table_name = "chat_history"
 PostgresChatMessageHistory.create_tables(conn, table_name)
@@ -163,8 +180,8 @@ postgres_store.setup()
 
 # 初始化Google搜索工具
 search = GoogleSearchAPIWrapper(
-    google_api_key=settings.google_search.api_key,
-    google_cse_id=settings.google_search.cse_id,
+    google_api_key=global_config_loaded_from_config_yaml.google_search.api_key,
+    google_cse_id=global_config_loaded_from_config_yaml.google_search.cse_id,
 )
 
 google_search_tool = Tool(
@@ -244,21 +261,32 @@ class Agent:
 
         # 线程池用于异步执行聊天任务
         self._executor = ThreadPoolExecutor(
-            max_workers=min(32, (settings.database.pool_size or 20) // 2),
+            max_workers=min(
+                32,
+                (global_config_loaded_from_config_yaml.database.pool_size or 20) // 2,
+            ),
             thread_name_prefix=f"agent-{agent_id}",
         )
 
         # 使用配置中的模型设置
-        model_name = model_config.get("model", settings.agent.model)
-        api_key = model_config.get("api_key", settings.agent.api_key)
-        base_url = model_config.get("base_url", settings.agent.base_url)
+        model_name = model_config.get(
+            "model", global_config_loaded_from_config_yaml.agent.model
+        )
+        api_key = model_config.get(
+            "api_key", global_config_loaded_from_config_yaml.agent.api_key
+        )
+        base_url = model_config.get(
+            "base_url", global_config_loaded_from_config_yaml.agent.base_url
+        )
 
         # 提取模型参数
         temperature = model_config.get(
-            "temperature", getattr(settings.agent, "temperature", 0.5)
+            "temperature",
+            getattr(global_config_loaded_from_config_yaml.agent, "temperature", 0.5),
         )
         max_tokens = model_config.get(
-            "max_tokens", getattr(settings.agent, "max_tokens", 1000)
+            "max_tokens",
+            getattr(global_config_loaded_from_config_yaml.agent, "max_tokens", 1000),
         )
         top_p = model_config.get("top_p")
         frequency_penalty = model_config.get("frequency_penalty")
@@ -819,9 +847,9 @@ class Agent:
 
                 # 调试日志记录（异步后台处理）
                 logger.debug(
-                    f"优化版检查debug_logging配置: {settings.agent.enable_debug_logging}"
+                    f"优化版检查debug_logging配置: {global_config_loaded_from_config_yaml.agent.enable_debug_logging}"
                 )
-                if settings.agent.enable_debug_logging:
+                if global_config_loaded_from_config_yaml.agent.enable_debug_logging:
                     # 预处理格式化消息（保持与_save_debug_messages一致）
                     try:
                         # 获取格式化的提示词
@@ -1107,9 +1135,9 @@ class Agent:
 
                     # 如果启用调试日志记录，保存完整的流式响应（异步后台处理）
                     logger.debug(
-                        f"流式聊天检查debug_logging配置: {settings.agent.enable_debug_logging}"
+                        f"流式聊天检查debug_logging配置: {global_config_loaded_from_config_yaml.agent.enable_debug_logging}"
                     )
-                    if settings.agent.enable_debug_logging:
+                    if global_config_loaded_from_config_yaml.agent.enable_debug_logging:
                         # 预处理格式化消息（保持与_save_debug_messages一致）
                         try:
                             # 获取格式化的提示词
@@ -1714,9 +1742,9 @@ if __name__ == "__main__":
             agent_id="test",
             name="test",
             model_config={
-                "model": settings.agent.model,
-                "api_key": settings.agent.api_key,
-                "base_url": settings.agent.base_url,
+                "model": global_config_loaded_from_config_yaml.agent.model,
+                "api_key": global_config_loaded_from_config_yaml.agent.api_key,
+                "base_url": global_config_loaded_from_config_yaml.agent.base_url,
             },
             description="测试Agent",
             # 测试用的主提示词和模式提示词

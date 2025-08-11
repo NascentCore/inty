@@ -7,7 +7,7 @@ from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
-from app.core.config import settings
+from app.core.config import global_config_loaded_from_config_yaml
 
 logger = logging.getLogger(__name__)
 
@@ -18,14 +18,18 @@ class GooglePlayService:
     def __init__(self):
         """初始化Google Play服务"""
         self.service = None
-        self.package_name = settings.google_play.package_name
+        self.package_name = (
+            global_config_loaded_from_config_yaml.google_play.package_name
+        )
         self._initialize_service()
 
     def _initialize_service(self):
         """初始化Google Play Developer API服务"""
         try:
             # 获取服务账号凭据
-            service_account_key = settings.google_play.service_account_key
+            service_account_key = (
+                global_config_loaded_from_config_yaml.google_play.service_account_key
+            )
 
             # 检查是否为文件路径还是JSON字符串
             if service_account_key.endswith(".json"):
@@ -412,61 +416,82 @@ class GooglePlayService:
     def get_app_version_info(self) -> Dict[str, Any]:
         """
         获取应用版本信息
-        
+
         Returns:
             Dict: 包含最新版本信息的字典
         """
         try:
             # 获取应用的编辑信息
-            edit_request = self.service.edits().insert(body={}, packageName=self.package_name)
+            edit_request = self.service.edits().insert(
+                body={}, packageName=self.package_name
+            )
             edit_result = edit_request.execute()
-            edit_id = edit_result['id']
+            edit_id = edit_result["id"]
 
             try:
                 # 尝试从配置的轨道获取版本信息
-                primary_track = settings.google_play.release_track
-                fallback_tracks = settings.google_play.fallback_tracks
-                
+                primary_track = (
+                    global_config_loaded_from_config_yaml.google_play.release_track
+                )
+                fallback_tracks = (
+                    global_config_loaded_from_config_yaml.google_play.fallback_tracks
+                )
+
                 # 构建要尝试的轨道列表
                 tracks_to_try = [primary_track]
                 if fallback_tracks:
-                    tracks_to_try.extend([track for track in fallback_tracks if track != primary_track])
-                
+                    tracks_to_try.extend(
+                        [track for track in fallback_tracks if track != primary_track]
+                    )
+
                 logger.info(f"尝试从轨道获取版本信息，轨道顺序: {tracks_to_try}")
-                
+
                 for track_name in tracks_to_try:
                     try:
                         logger.info(f"正在查询轨道: {track_name}")
-                        track_result = self.service.edits().tracks().get(
-                            packageName=self.package_name,
-                            editId=edit_id,
-                            track=track_name
-                        ).execute()
+                        track_result = (
+                            self.service.edits()
+                            .tracks()
+                            .get(
+                                packageName=self.package_name,
+                                editId=edit_id,
+                                track=track_name,
+                            )
+                            .execute()
+                        )
 
-                        if track_result.get('releases'):
+                        if track_result.get("releases"):
                             # 获取最新版本（releases列表按时间倒序排列）
-                            latest_release = track_result['releases'][0]
-                            
+                            latest_release = track_result["releases"][0]
+
                             version_info = {
-                                "version_code": latest_release.get('versionCodes', [0])[0],
-                                "version_name": latest_release.get('name', ''),
-                                "status": latest_release.get('status', ''),
-                                "release_notes": self._extract_release_notes(latest_release),
-                                "user_fraction": latest_release.get('userFraction'),
-                                "country_targeting": latest_release.get('countryTargeting'),
+                                "version_code": latest_release.get("versionCodes", [0])[
+                                    0
+                                ],
+                                "version_name": latest_release.get("name", ""),
+                                "status": latest_release.get("status", ""),
+                                "release_notes": self._extract_release_notes(
+                                    latest_release
+                                ),
+                                "user_fraction": latest_release.get("userFraction"),
+                                "country_targeting": latest_release.get(
+                                    "countryTargeting"
+                                ),
                                 "track": track_name,  # 添加轨道信息
                             }
-                            
-                            logger.info(f"从轨道 {track_name} 获取应用版本信息成功: {version_info}")
+
+                            logger.info(
+                                f"从轨道 {track_name} 获取应用版本信息成功: {version_info}"
+                            )
                             return version_info
                         else:
                             logger.info(f"轨道 {track_name} 没有找到版本信息")
                             continue
-                            
+
                     except HttpError as track_error:
                         logger.warning(f"查询轨道 {track_name} 失败: {track_error}")
                         continue
-                
+
                 # 所有轨道都没有找到版本信息
                 logger.warning(f"所有轨道都未找到版本信息: {tracks_to_try}")
                 return {"error": "No releases found in any track"}
@@ -475,8 +500,7 @@ class GooglePlayService:
                 # 删除编辑会话
                 try:
                     self.service.edits().delete(
-                        packageName=self.package_name,
-                        editId=edit_id
+                        packageName=self.package_name, editId=edit_id
                     ).execute()
                 except Exception as cleanup_error:
                     logger.warning(f"清理编辑会话失败: {cleanup_error}")
@@ -491,16 +515,16 @@ class GooglePlayService:
     def _extract_release_notes(self, release: Dict[str, Any]) -> Optional[str]:
         """提取发布说明"""
         try:
-            release_notes = release.get('releaseNotes', [])
+            release_notes = release.get("releaseNotes", [])
             if release_notes:
                 # 优先返回中文版本，如果没有则返回第一个可用版本
                 for note in release_notes:
-                    if note.get('language') in ['zh-CN', 'zh']:
-                        return note.get('text', '')
-                
+                    if note.get("language") in ["zh-CN", "zh"]:
+                        return note.get("text", "")
+
                 # 如果没有中文版本，返回第一个
-                return release_notes[0].get('text', '')
-            
+                return release_notes[0].get("text", "")
+
             return None
         except Exception as e:
             logger.warning(f"提取发布说明失败: {e}")
@@ -509,47 +533,57 @@ class GooglePlayService:
     def check_version_requirement(self, client_version_code: int) -> Dict[str, Any]:
         """
         检查版本更新要求
-        
+
         Args:
             client_version_code: 客户端版本代码
-            
+
         Returns:
             Dict: 版本检查结果
         """
         try:
             # 如果版本检查被禁用
-            if not settings.google_play.enable_version_check:
+            if (
+                not global_config_loaded_from_config_yaml.google_play.enable_version_check
+            ):
                 return {
                     "update_required": False,
                     "force_update": False,
-                    "message": "Version check disabled"
+                    "message": "Version check disabled",
                 }
 
             # 获取最新版本信息
             version_info = self.get_app_version_info()
-            
+
             if "error" in version_info:
-                logger.warning(f"无法获取版本信息，跳过版本检查: {version_info['error']}")
+                logger.warning(
+                    f"无法获取版本信息，跳过版本检查: {version_info['error']}"
+                )
                 return {
                     "update_required": False,
                     "force_update": False,
                     "message": "Unable to fetch version info",
-                    "error": version_info["error"]
+                    "error": version_info["error"],
                 }
 
             latest_version_name = version_info.get("version_name", "")
             latest_version_code = version_info.get("version_code", 0)
 
             # 版本比较
-            update_required = self._compare_versions(client_version_code, latest_version_code)
-            
+            update_required = self._compare_versions(
+                client_version_code, latest_version_code
+            )
+
             # 强制更新检查：只检查是否低于最低支持版本
             try:
-                min_supported_version_code = int(settings.google_play.min_supported_version)
+                min_supported_version_code = int(
+                    global_config_loaded_from_config_yaml.google_play.min_supported_version
+                )
             except (ValueError, TypeError):
-                logger.warning(f"最低支持版本配置无效: {settings.google_play.min_supported_version}, 使用默认值 1")
+                logger.warning(
+                    f"最低支持版本配置无效: {global_config_loaded_from_config_yaml.google_play.min_supported_version}, 使用默认值 1"
+                )
                 min_supported_version_code = 1
-                
+
             force_update = client_version_code < min_supported_version_code
 
             result = {
@@ -564,20 +598,24 @@ class GooglePlayService:
             }
 
             if force_update:
-                result["message"] = "Force update required - app version below minimum supported"
+                result["message"] = (
+                    "Force update required - app version below minimum supported"
+                )
             elif update_required:
                 result["message"] = "Update available"
             else:
                 result["message"] = "App is up to date"
 
             # 详细日志记录
-            log_msg = f"版本检查完成: 客户端={client_version_code}, 最新={latest_version_code}, " \
-                     f"最低支持={min_supported_version_code}, " \
-                     f"需要更新={update_required}, 强制更新={force_update}"
-            
+            log_msg = (
+                f"版本检查完成: 客户端={client_version_code}, 最新={latest_version_code}, "
+                f"最低支持={min_supported_version_code}, "
+                f"需要更新={update_required}, 强制更新={force_update}"
+            )
+
             if force_update:
                 log_msg += " (原因: 低于最低支持版本)"
-                    
+
             logger.info(log_msg)
             return result
 
@@ -587,18 +625,17 @@ class GooglePlayService:
                 "update_required": False,
                 "force_update": False,
                 "message": "Version check failed",
-                "error": str(e)
+                "error": str(e),
             }
-
 
     def _compare_versions(self, version_code1, version_code2) -> bool:
         """
         比较版本号，直接比较versionCode，判断version_code1是否小于version_code2
-        
+
         Args:
             version_code1: 版本代码1 (客户端versionCode)
             version_code2: 版本代码2 (服务端versionCode)
-            
+
         Returns:
             bool: version_code1 < version_code2 时返回True
         """
@@ -606,15 +643,14 @@ class GooglePlayService:
             # 直接比较版本代码
             client_code = int(version_code1)
             server_code = int(version_code2)
-            
+
             logger.info(f"版本代码比较: {client_code} vs {server_code}")
-            
+
             return client_code < server_code
-            
+
         except Exception as e:
             logger.warning(f"版本代码比较失败，将客户端版本视为需要更新: {e}")
             return True  # 如果比较失败，保守起见要求更新
-
 
 
 # 全局实例

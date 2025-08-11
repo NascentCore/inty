@@ -4,7 +4,7 @@ from typing import Any, Optional, Union
 from jose import jwt
 from passlib.context import CryptContext
 
-from app.core.config import settings
+from app.core.config import global_config_loaded_from_config_yaml
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -21,7 +21,7 @@ def create_access_token(
         expire = datetime.utcnow() + expires_delta
     else:
         expire = datetime.utcnow() + timedelta(
-            minutes=settings.security.access_token_expire_minutes
+            minutes=global_config_loaded_from_config_yaml.security.access_token_expire_minutes
         )
 
     to_encode = {
@@ -29,7 +29,9 @@ def create_access_token(
         "sub": str(subject),
     }
     encoded_jwt = jwt.encode(
-        to_encode, settings.security.secret_key, algorithm=settings.security.algorithm
+        to_encode,
+        global_config_loaded_from_config_yaml.security.secret_key,
+        algorithm=global_config_loaded_from_config_yaml.security.algorithm,
     )
     return encoded_jwt
 

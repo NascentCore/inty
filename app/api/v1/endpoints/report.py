@@ -7,7 +7,7 @@ from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api import deps
-from app.core.config import settings
+from app.core.config import global_config_loaded_from_config_yaml
 from app.db.session import get_async_db
 from app.models.report import ReportStatus
 from app.models.user import User
@@ -52,7 +52,10 @@ async def upload_report_image(
 
         # Upload to GCS
         url = upload_to_gcs(
-            file_data, file.content_type, settings.gcs.bucket, report_image_path
+            file_data,
+            file.content_type,
+            global_config_loaded_from_config_yaml.gcs.bucket,
+            report_image_path,
         )
 
         logger.info(f"Report image uploaded successfully: {url}")

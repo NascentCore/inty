@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import Session
 
-from app.core.config import settings
+from app.core.config import global_config_loaded_from_config_yaml
 from app.core.uuid import uid
 from app.models import User
 from app.models.chat import Chat
@@ -223,7 +223,7 @@ def get_path_from_gcs_url(url: str) -> str:
         return ""
     path = parts[1]
     # Remove bucket name prefix
-    bucket = settings.gcs.bucket
+    bucket = global_config_loaded_from_config_yaml.gcs.bucket
     if path.startswith(bucket + "/"):
         path = path[len(bucket) + 1 :]
     return path

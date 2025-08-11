@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Optional
 
 import httpx
 
-from app.core.config import settings
+from app.core.config import global_config_loaded_from_config_yaml
 
 logger = logging.getLogger(__name__)
 
@@ -18,8 +18,8 @@ class ScoringService:
 
     def __init__(self):
         # 从配置文件读取OpenRouter配置
-        self.openrouter_base_url = settings.agent.base_url
-        self.openrouter_api_key = settings.agent.api_key
+        self.openrouter_base_url = global_config_loaded_from_config_yaml.agent.base_url
+        self.openrouter_api_key = global_config_loaded_from_config_yaml.agent.api_key
 
     async def score_response(
         self,

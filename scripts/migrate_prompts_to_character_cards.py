@@ -10,7 +10,7 @@ import re
 import logging
 from typing import Dict, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.core.config import settings
+from app.core.config import global_config_loaded_from_config_yaml
 from app.api.deps import get_async_db
 from app import models
 

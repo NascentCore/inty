@@ -16,7 +16,7 @@ from app import schemas
 from app.api import deps
 from app.core.agent.agent import agent_manager
 from app.core.agent.avatar import generate_background_image_to_gcs
-from app.core.config import settings
+from app.core.config import global_config_loaded_from_config_yaml
 from app.schemas.character_card import (
     CharacterCardExportRequest,
     CharacterCardImportRequest,
@@ -288,7 +288,9 @@ async def generate_background(
 
         # Construct GCS base path
         gcs_base_path = f"backgrounds/tmp/{current_user.id}/{uuid.uuid4().hex}"
-        gcs_uri_base = f"gs://{settings.gcs.bucket}/{gcs_base_path}"
+        gcs_uri_base = (
+            f"gs://{global_config_loaded_from_config_yaml.gcs.bucket}/{gcs_base_path}"
+        )
 
         # 获取用户性别信息并转换为相应格式
         user_gender = None
@@ -454,8 +456,10 @@ async def upload_avatar_preview(
         logger.info(f"生成的存储路径: {avatar_path}")
 
         # 验证GCS配置
-        logger.info(f"GCS配置: bucket={settings.gcs.bucket}")
-        if not settings.gcs.bucket:
+        logger.info(
+            f"GCS配置: bucket={global_config_loaded_from_config_yaml.gcs.bucket}"
+        )
+        if not global_config_loaded_from_config_yaml.gcs.bucket:
             logger.error("GCS bucket未配置")
             return APIResponse.error(message="GCS bucket not configured")
 
@@ -463,7 +467,10 @@ async def upload_avatar_preview(
         logger.info("开始上传文件到GCS")
         try:
             url = upload_to_gcs(
-                file_data, file.content_type, settings.gcs.bucket, avatar_path
+                file_data,
+                file.content_type,
+                global_config_loaded_from_config_yaml.gcs.bucket,
+                avatar_path,
             )
             logger.info(f"GCS上传成功，返回URL: {url}")
         except Exception as gcs_error:
@@ -523,14 +530,21 @@ async def upload_agent_avatar(
 
         # 上传到GCS
         url = upload_to_gcs(
-            file_data, file.content_type, settings.gcs.bucket, avatar_path
+            file_data,
+            file.content_type,
+            global_config_loaded_from_config_yaml.gcs.bucket,
+            avatar_path,
         )
 
         # 删除旧头像，但只有当它确实是存储在用户GCS bucket中的文件时才删除
-        if agent.avatar and is_user_gcs_file(agent.avatar, settings.gcs.bucket):
+        if agent.avatar and is_user_gcs_file(
+            agent.avatar, global_config_loaded_from_config_yaml.gcs.bucket
+        ):
             old_path = agent_service.get_path_from_gcs_url(agent.avatar)
             if old_path:
-                delete_from_gcs(settings.gcs.bucket, old_path)
+                delete_from_gcs(
+                    global_config_loaded_from_config_yaml.gcs.bucket, old_path
+                )
                 logger.info(f"已删除旧头像: {agent.avatar}")
         elif agent.avatar:
             logger.info(f"跳过删除非GCS头像: {agent.avatar}")
@@ -583,14 +597,21 @@ async def upload_agent_background(
 
         # 上传到GCS
         url = upload_to_gcs(
-            file_data, file.content_type, settings.gcs.bucket, background_path
+            file_data,
+            file.content_type,
+            global_config_loaded_from_config_yaml.gcs.bucket,
+            background_path,
         )
 
         # 删除旧背景图，但只有当它确实是存储在用户GCS bucket中的文件时才删除
-        if agent.background and is_user_gcs_file(agent.background, settings.gcs.bucket):
+        if agent.background and is_user_gcs_file(
+            agent.background, global_config_loaded_from_config_yaml.gcs.bucket
+        ):
             old_path = agent_service.get_path_from_gcs_url(agent.background)
             if old_path:
-                delete_from_gcs(settings.gcs.bucket, old_path)
+                delete_from_gcs(
+                    global_config_loaded_from_config_yaml.gcs.bucket, old_path
+                )
                 logger.info(f"已删除旧背景图: {agent.background}")
         elif agent.background:
             logger.info(f"跳过删除非GCS背景图: {agent.background}")
