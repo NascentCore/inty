@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app import schemas
-from app.utils.admin import is_superuser_based_on_email
+from app.services.superuser_check import SUPERUSER_LIMIT_CHECK_RESULT, is_superuser
 from app.models.subscription import (
     SubscriptionPlan,
     SubscriptionPlanType,
@@ -727,7 +727,7 @@ class SubscriptionService:
             raise
 
     async def check_chat_limit(
-        self, db: AsyncSession, user_id: str
+        self, db: AsyncSession, user: schemas.User
     ) -> Tuple[bool, int, int]:
         """
         检查用户聊天次数限制
@@ -736,6 +736,10 @@ class SubscriptionService:
             Tuple[bool, int, int]: (是否允许聊天, 已用次数, 限制次数)
         """
         try:
+            if is_superuser(user):
+                logger.debug(f"Superuser {user.id} has unlimited chats")
+                return SUPERUSER_LIMIT_CHECK_RESULT
+
             # 获取订阅状态
             subscription_status = await self.get_user_subscription_status(db, user_id)
 
@@ -828,8 +832,8 @@ class SubscriptionService:
             # 出错时默认允许，避免影响用户体验
             return True, 0, 6
 
-    async def check_background_generation_limit(
-        self, db: AsyncSession, user_id: str
+    async def check_image_gen_limit(
+        self, db: AsyncSession, user: schemas.User
     ) -> Tuple[bool, int, int]:
         """
         检查用户背景图生成次数限制
@@ -838,6 +842,10 @@ class SubscriptionService:
             Tuple[bool, int, int]: (是否允许生成, 已用次数, 限制次数)
         """
         try:
+            if is_superuser(user):
+                logger.debug(f"Superuser {user.id} has unlimited image generation")
+                return SUPERUSER_LIMIT_CHECK_RESULT
+
             # 获取订阅状态
             subscription_status = await self.get_user_subscription_status(db, user_id)
 
@@ -885,41 +893,6 @@ class SubscriptionService:
             logger.error(f"检查背景图生成次数限制失败: {str(e)}")
             # 出错时默认允许，避免影响用户体验
             return True, 0, -1
-
-    @dataclass
-    class image_gen_limit_check_result:
-        is_allowed: bool
-        used_count: int
-        limit: int
-        reason: str
-
-    async def check_image_gen_limit(
-        self, db: AsyncSession, user: schemas.User
-    ) -> image_gen_limit_check_result:
-        """检查用户是否运行达到图片生成限制，如果达到限制，返回限制信息"""
-        if user.is_superuser:
-            return self.image_gen_limit_check_result(
-                is_allowed=True,
-                used_count=-1,
-                limit=-1,
-                reason="superuser",
-            )
-        if is_superuser_based_on_email(user.email):
-            return self.image_gen_limit_check_result(
-                is_allowed=True,
-                used_count=-1,
-                limit=-1,
-                reason="superuser based on email",
-            )
-        is_allowed, used_count, limit = await self.check_background_generation_limit(
-            db, user.id
-        )
-        return self.image_gen_limit_check_result(
-            is_allowed=is_allowed,
-            used_count=used_count,
-            limit=limit,
-            reason="background generation limit check",
-        )
 
     async def handle_subscription_notification(
         self, db: AsyncSession, notification_data: Dict[str, Any]

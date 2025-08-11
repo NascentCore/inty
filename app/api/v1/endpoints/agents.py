@@ -272,16 +272,16 @@ async def generate_background(
         if request.count < 1 or request.count > 4:
             return APIResponse.error(message="Count must be between 1 and 4")
 
-        check_result: subscription_service.image_gen_limit_check_result = (
-            await subscription_service.check_image_gen_limit(db, current_user)
+        check_result = await subscription_service.check_image_gen_limit(
+            db, current_user
         )
 
-        if not check_result.is_allowed:
+        if not check_result[0]:
             return create_business_error_response(
                 error_info=BusinessErrorCode.BACKGROUND_GENERATION_LIMIT_REACHED,
                 extra_data={
-                    "used_count": check_result.used_count,
-                    "limit": check_result.limit,
+                    "used_count": check_result[1],
+                    "limit": check_result[2],
                     "feature": "background_generation",
                 },
             )
@@ -341,8 +341,8 @@ async def generate_background(
             "count": len(gcs_urls),
             "format": "png",
             "remaining_usage": {
-                "used_count": check_result.used_count + request.count,
-                "limit": check_result.limit,
+                "used_count": check_result[1] + request.count,
+                "limit": check_result[2],
             },
         }
 
