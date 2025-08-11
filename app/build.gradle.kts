@@ -26,14 +26,10 @@ fun requireProperty(props: Properties, key: String): String {
     return props.getProperty(key) ?: throw GradleException("Missing property: $key")
 }
 
-val gitCommitId = {
-    val process = ProcessBuilder("git", "rev-parse", "--short", "HEAD").start()
-    process.waitFor()
-    if (process.exitValue() != 0) {
-        throw GradleException("Git commit id failed")
-    }
-    process.inputStream.bufferedReader().readText().trim()
-}
+val gitCommitId = providers.exec {
+    commandLine("git", "rev-parse", "--short", "HEAD")
+    workingDir = projectDir
+}.standardOutput.asText.get().trim()
 
 // 返回 git commit count 作为自增的 version code.
 fun getVersionCode(): Int {
