@@ -52,6 +52,7 @@ import com.ai.inty.beans.SysMsgItem
 import com.ai.inty.utils.AuthClickable
 
 import com.inty.utils.formatTimestampToDateTime
+import com.inty.utils.log.EasyLog
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -79,6 +80,8 @@ fun ConversationsPage(
     onClickFollowingAgent: (AgentInfo) -> Unit,
     onUnfollowAgent: ((String) -> Unit)? = null,
 ) {
+    EasyLog.log("ConversionsPage - Rendering with selectedTab: $selectedTab, conversions: ${conversations.size}, followingAgents: ${followingAgents.size}")
+    
     Box(modifier = modifier) {
         // 背景图片
         IntyImage(
@@ -116,6 +119,8 @@ private fun ConversationsPageContent(
     onClickFollowingAgent: (AgentInfo) -> Unit,
     onUnfollowAgent: ((String) -> Unit)? = null,
 ) {
+    EasyLog.log("ConversionsPageContent - Rendering with selectedTab: $selectedTab")
+    
     Scaffold(
         modifier = Modifier
             .fillMaxSize()
@@ -145,6 +150,7 @@ private fun ConversationsPageContent(
                 }
 
                 ConversationsPageTab.TabFollowing -> {
+                    EasyLog.log("ConversionsPageContent - Rendering FollowingTabContent")
                     FollowingTabContent(
                         followingAgents = followingAgents,
                         onClickAgent = onClickFollowingAgent,
@@ -287,6 +293,11 @@ private fun FollowingTabContent(
     onClickAgent: (AgentInfo) -> Unit,
     onUnfollowAgent: ((String) -> Unit)? = null,
 ) {
+    EasyLog.log("FollowingTabContent - Rendering ${followingAgents.size} agents")
+    followingAgents.forEachIndexed { index, agent ->
+        EasyLog.log("FollowingTabContent - Agent[$index]: ${agent.id} - ${agent.name} - opening: ${agent.opening}")
+    }
+    
     LazyColumn {
 
         items(
@@ -386,6 +397,8 @@ fun FollowingAgentItem(
     modifier: Modifier,
     agent: AgentInfo,
 ) {
+    EasyLog.log("FollowingAgentItem - Rendering agent: ${agent.id} - ${agent.name} - opening: ${agent.opening}")
+    
     Row(
         modifier = modifier.height(88.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -444,6 +457,8 @@ fun LongPressUnfollowItem(
     onClickAgent: (AgentInfo) -> Unit,
     onUnfollowAgent: (String) -> Unit,
 ) {
+    EasyLog.log("LongPressUnfollowItem - Rendering agent: ${agent.id} - ${agent.name} - opening: ${agent.opening}")
+    
     var isDeleting by remember { mutableStateOf(false) }
     var showPopup by remember { mutableStateOf(false) }
     var longPressOffset by remember { mutableStateOf(DpOffset.Zero) }

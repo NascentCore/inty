@@ -51,6 +51,9 @@ class ChatViewModel : BaseActivityViewModel() {
     private val _userProfile = MutableStateFlow<UserProfile>(UserProfile())
     val userProfile = _userProfile.asStateFlow()
 
+    // 防止重复请求的机制
+    private var lastQueryAgentId: String? = null
+    private var isQuerying = false
 
     // 延迟获取依赖，避免在构造函数中立即获取导致空指针异常
     private val chatApi by lazy {
@@ -66,7 +69,9 @@ class ChatViewModel : BaseActivityViewModel() {
     fun setAgentInfo(agentInfo: AgentInfo?) {
         EasyLog.log("agent = $agentInfo")
         if (_agentInfo.value?.id == agentInfo?.id) {
+            // 如果ID相同，只更新agent信息，不重新查询消息
             _agentInfo.value = agentInfo
+            EasyLog.log("Agent ID is the same, skipping queryMsgs")
             return
         }
         _agentInfo.value = agentInfo
@@ -90,8 +95,18 @@ class ChatViewModel : BaseActivityViewModel() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 agentInfo.value?.let { agent ->
+                    // 防止重复请求
+                    if (isQuerying && lastQueryAgentId == agent.id) {
+                        EasyLog.log("queryMsgs: Skipping duplicate request for agent ${agent.id}")
+                        return@launch
+                    }
+                    
+                    isQuerying = true
+                    lastQueryAgentId = agent.id
+                    
                     val result = chatApi.getMsgs(agent.id, 100, 0)
                     EasyLog.log("queryMsgs ($agent) = $result")
+                    
                     when (result) {
                         is HttpResult.Success -> {
                             msgs.clear()
@@ -110,10 +125,13 @@ class ChatViewModel : BaseActivityViewModel() {
                             showNetworkAwareError(result.message)
                         }
                     }
+                    
+                    isQuerying = false
                 }
             } catch (e: Exception) {
                 EasyLog.log("queryMsgs exception: ${e.message}", priority = EasyLog.ERROR)
                 handleNetworkException(e)
+                isQuerying = false
             }
         }
     }

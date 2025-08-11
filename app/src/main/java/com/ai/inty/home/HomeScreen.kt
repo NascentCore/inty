@@ -28,6 +28,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.ai.inty.Constant
+import com.ai.inty.ChatActivity
 import com.ai.inty.R
 import com.ai.inty.base.IntyImage
 import com.ai.inty.base.noRippleClickable
@@ -42,6 +43,7 @@ import com.ai.inty.viewmodels.ChatViewModel
 import com.ai.inty.viewmodels.HomeTabIndex
 import com.ai.inty.viewmodels.MainViewModel
 import com.inty.utils.storage.IntySetting
+import com.inty.utils.log.EasyLog
 import com.therouter.TheRouter
 
 data class TabInfo(
@@ -282,6 +284,8 @@ private fun ConversationsTabContent(
     val sysMsgs = mainViewModel.sysMsgs
     val followingAgents = mainViewModel.followingAgents
 
+    EasyLog.log("ConversationsTabContent - Rendering with selectedTab: $selectedConversationsTab, conversations: ${conversations.size}, followingAgents: ${followingAgents.size}")
+
     ConversationsPage(
         modifier = Modifier,
         selectedTab = selectedConversationsTab,
@@ -292,9 +296,14 @@ private fun ConversationsTabContent(
         },
         onClickConversationItem = { conversation ->
             chatViewModel.setConversationReaded(conversation)
-            TheRouter.build(Constant.ROUTE_CHAT)
-                .withObject("agent_id", conversation.agentId)
-                .navigation(context)
+            // 检查是否已经有ChatActivity在运行
+            if (!ChatActivity.isAlreadyActive()) {
+                TheRouter.build(Constant.ROUTE_CHAT)
+                    .withObject("agent_id", conversation.agentId)
+                    .navigation(context)
+            } else {
+                EasyLog.log("ChatActivity is already active, skipping navigation")
+            }
         },
         lastSysMsg = sysMsgs.firstOrNull(),
         onClickSysMsg = {
@@ -330,9 +339,14 @@ private fun SuggestTabContent(
         agents = mainViewModel.agentList,
         isLoading = isLoading.value,
         onClickAgent = { agent ->
-            TheRouter.build(Constant.ROUTE_CHAT)
-                .withObject("agent", agent)
-                .navigation(context)
+            // 检查是否已经有ChatActivity在运行
+            if (!ChatActivity.isAlreadyActive()) {
+                TheRouter.build(Constant.ROUTE_CHAT)
+                    .withObject("agent", agent)
+                    .navigation(context)
+            } else {
+                EasyLog.log("ChatActivity is already active, skipping navigation")
+            }
         },
         onLoadMore = {
             mainViewModel.loadMoreAgents()
@@ -375,9 +389,14 @@ private fun MyTabContent(
         agents = userCreatedAgents,
         isLoading = isLoadingUserAgents.value,
         onClickAgent = { agent ->
-            TheRouter.build(Constant.ROUTE_CHAT)
-                .withObject("agent", agent)
-                .navigation(context)
+            // 检查是否已经有ChatActivity在运行
+            if (!ChatActivity.isAlreadyActive()) {
+                TheRouter.build(Constant.ROUTE_CHAT)
+                    .withObject("agent", agent)
+                    .navigation(context)
+            } else {
+                EasyLog.log("ChatActivity is already active, skipping navigation")
+            }
         },
         onEditAgent = { agent ->
             TheRouter.build(Constant.ROUTE_CREATE_ROLE)
