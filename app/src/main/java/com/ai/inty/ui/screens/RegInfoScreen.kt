@@ -184,13 +184,18 @@ internal fun RegInfoScreen(
             Spacer(Modifier.height(64.dp))
 
             val coroutineScope = rememberCoroutineScope()
-            val msg = stringResource(R.string.toast_fill_form_real_age)
+            val notEligibleMsg = stringResource(R.string.toast_age_screen_not_eligible)
+            val requireMsg = stringResource(R.string.toast_age_screen_required_select_age)
 
             EnterButton(
                 onEnter = {
                     if (selectAge == "<18") {
                         coroutineScope.launch {
-                            ToastUtils.showToast(msg)
+                            ToastUtils.showToast(notEligibleMsg)
+                        }
+                    } else if (selectAge.isEmpty() || selectAge.isBlank()) {
+                        coroutineScope.launch {
+                            ToastUtils.showToast(requireMsg)
                         }
                     } else {
                         onSave(selectGender, selectAge)
