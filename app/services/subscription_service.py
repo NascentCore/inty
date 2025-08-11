@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app import schemas
+from app.core.config import global_config_loaded_from_config_yaml
 from app.services.superuser_check import SUPERUSER_LIMIT_CHECK_RESULT, is_superuser
 from app.models.subscription import (
     SubscriptionPlan,
@@ -757,13 +758,12 @@ class SubscriptionService:
                 total_chat_count = total_chat_count_result.scalar() or 0
 
                 # 检查是否超出总限制
-                is_allowed = total_chat_count < subscription_status.total_chat_limit
-
-                return (
-                    is_allowed,
-                    total_chat_count,
-                    subscription_status.total_chat_limit,
+                limit = (
+                    global_config_loaded_from_config_yaml.limits.free_user_total_chat_message_limit
                 )
+                is_allowed = total_chat_count < limit
+
+                return (is_allowed, total_chat_count, limit)
 
             # 付费用户：检查每日聊天次数限制
             # 如果是无限制，直接返回允许

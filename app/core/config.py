@@ -1,8 +1,8 @@
 import sys
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 
 import yaml
 from pydantic import AnyHttpUrl
@@ -69,6 +69,13 @@ class AppConfig:
     debug_messages: bool = True
     api_v1_prefix: str = "/api/v1"
     backend_cors_origins: List[AnyHttpUrl] = None
+
+    @dataclass
+    class LimitsConfig:
+        free_user_total_chat_message_limit: int = 1000
+        subed_user_daily_chat_message_limit: int = 1000
+
+    limits: LimitsConfig = field(default_factory=LimitsConfig)
 
     def __post_init__(self):
         if self.backend_cors_origins is None:
@@ -153,6 +160,30 @@ class ElevenLabsConfig:
 
 
 @dataclass
+class SubscriptionPlan:
+    """订阅计划配置"""
+
+    id: str
+    name: str
+    description: Optional[str] = None
+    plan_type: str = "MONTHLY"  # MONTHLY, QUARTERLY, YEARLY
+    price: float = 0.0
+    currency: str = "USD"
+    google_play_product_id: str = ""
+    discount_rate: float = 1.0  # 价格折扣率，范围0-1，1表示无折扣
+
+    # 权益配置
+    features: Dict[str, Any] = field(default_factory=dict)
+    chat_limit_per_day: int = -1  # 每日聊天次数限制，-1为无限制
+    agent_creation_limit: int = 6  # Agent创建数量限制
+    background_generation_limit_per_day: int = 3  # 每日背景图生成次数限制，-1为无限制
+
+    # 状态
+    is_active: bool = True
+    sort_order: int = 0
+
+
+@dataclass
 class Config:
     app: AppConfig
     security: SecurityConfig
@@ -168,6 +199,7 @@ class Config:
     keep_talking: KeepTalkingConfig
     google_play: GooglePlayConfig
     elevenlabs: ElevenLabsConfig
+    subscription_plans: List[SubscriptionPlan] = field(default_factory=list)
 
 
 def load_config(path: str) -> Config:
@@ -178,6 +210,12 @@ def load_config(path: str) -> Config:
 
     with open(path, "r", encoding="utf-8") as f:
         data = yaml.safe_load(f)
+
+    # Load subscription plans
+    subscription_plans_data = data.get("subscription_plans", [])
+    subscription_plans = [
+        SubscriptionPlan(**plan_data) for plan_data in subscription_plans_data
+    ]
 
     return Config(
         app=AppConfig(**data.get("app", {})),
@@ -194,7 +232,9 @@ def load_config(path: str) -> Config:
         keep_talking=KeepTalkingConfig(**data.get("keep_talking", {})),
         google_play=GooglePlayConfig(**data.get("google_play", {})),
         elevenlabs=ElevenLabsConfig(**data.get("elevenlabs", {})),
+        subscription_plans=subscription_plans,
     )
 
 
 global_config_loaded_from_config_yaml = load_config("config.yaml")
+settings = global_config_loaded_from_config_yaml
