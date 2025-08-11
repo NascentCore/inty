@@ -144,11 +144,11 @@ export const ChatPage: React.FC = () => {
   const handleSelectAgent = useCallback(async (agent: Agent) => {
     setSelectedAgent(agent);
     setSending(true);
-
+    
     try {
       // 先尝试获取现有的聊天详情和消息历史
       const chatData = await api.chat.getChatDetail(agent.id, { page: 1, size: 100 });
-
+      
       // 转换消息格式
       const convertedMessages: ChatMessage[] = chatData.messages.map((msg, index) => ({
         id: `msg_${chatData.chat.id}_${index}_${Date.now()}`,
@@ -158,7 +158,7 @@ export const ChatPage: React.FC = () => {
         sender_type: msg.sender_type,
         remoteId: msg.id || `remote_${index}`, // 添加远程消息ID
       }));
-
+      
       // 创建会话对象
       const session: ChatSession = {
         id: chatData.chat.id,
@@ -167,10 +167,10 @@ export const ChatPage: React.FC = () => {
         messages: convertedMessages,
         created_at: chatData.chat.created_at,
       };
-
+      
       setCurrentSession(session);
       setMessages(convertedMessages);
-
+      
       // 更新本地历史记录缓存
       const existingHistoryIndex = chatHistory.findIndex(s => s.agent_id === agent.id);
       let updatedHistory;
@@ -184,12 +184,12 @@ export const ChatPage: React.FC = () => {
       }
       setChatHistory(updatedHistory);
       saveChatHistory(updatedHistory);
-
+      
       console.log(`成功加载智能体 ${agent.name} 的聊天记录，共 ${convertedMessages.length} 条消息`);
-
+      
     } catch (error) {
       console.error('加载聊天会话失败:', error);
-
+      
       // 如果获取失败，不要创建新会话，直接使用本地临时会话
       // 避免因为已存在会话导致的唯一约束错误
       const tempSession: ChatSession = {
@@ -199,12 +199,12 @@ export const ChatPage: React.FC = () => {
         messages: [],
         created_at: new Date().toISOString(),
       };
-
+      
       setCurrentSession(tempSession);
       setMessages([]);
-
+      
       console.log(`为智能体 ${agent.name} 创建了本地临时会话`);
-
+      
       // 后台尝试获取历史消息，但不影响当前操作
       try {
         const historyData = await api.chat.getMessages(agent.id, { page: 1, size: 100 });
@@ -216,7 +216,7 @@ export const ChatPage: React.FC = () => {
             timestamp: msg.timestamp,
             remoteId: msg.id ? String(msg.id) : `remote_${index}`, // 安全地访问id字段
           }));
-
+          
           setMessages(convertedMessages.reverse()); // 反转顺序，最新的在底部
           console.log(`成功加载智能体 ${agent.name} 的历史消息，共 ${convertedMessages.length} 条`);
         }
@@ -258,43 +258,9 @@ export const ChatPage: React.FC = () => {
       // 调用现有的OpenAI兼容聊天API
       const response = await api.chat.sendMessage(selectedAgent.id, messageHistory);
 
-      // 添加详细的响应诊断日志
-      console.log('=== API响应诊断 ===');
-      console.log('完整响应对象:', response);
-      console.log('响应类型:', typeof response);
-      console.log('响应是否为null:', response === null);
-      console.log('响应是否为undefined:', response === undefined);
-      console.log('响应是否为数组:', Array.isArray(response));
-      console.log('响应键:', response ? Object.keys(response) : 'N/A');
-
-      if (response && typeof response === 'object') {
-        console.log('response.choices:', response.choices);
-        console.log('response.choices类型:', typeof response.choices);
-        console.log('response.choices是否为数组:', Array.isArray(response.choices));
-        console.log('response.choices长度:', response.choices?.length);
-
-        if (response.choices && response.choices.length > 0) {
-          console.log('response.choices[0]:', response.choices[0]);
-          console.log('response.choices[0].message:', response.choices[0]?.message);
-          console.log('response.choices[0].message.content:', response.choices[0]?.message?.content);
-        }
-      }
-      console.log('=== 诊断结束 ===');
-
-      // 提取助手回复 - 添加安全检查
-      let assistantContent = '抱歉，我现在无法回复。';
-
-      if (response && response.choices && Array.isArray(response.choices) && response.choices.length > 0) {
-        const firstChoice = response.choices[0];
-        if (firstChoice && firstChoice.message && firstChoice.message.content) {
-          assistantContent = firstChoice.message.content;
-        } else {
-          console.warn('响应结构不完整:', firstChoice);
-        }
-      } else {
-        console.warn('响应中没有找到choices数组或数组为空');
-      }
-
+      // 提取助手回复
+      const assistantContent = response.choices[0]?.message?.content || '抱歉，我现在无法回复。';
+      
       const assistantMessage: ChatMessage = {
         id: `msg_${Date.now() + 1}`,
         role: 'assistant',
@@ -312,47 +278,22 @@ export const ChatPage: React.FC = () => {
       try {
         // 等待一小段时间确保后端处理完成
         await new Promise(resolve => setTimeout(resolve, 500));
-
+        
         // 重新获取最新的聊天记录
         const refreshedData = await api.chat.getMessages(selectedAgent.id, { page: 1, size: 100 });
-
-        // 添加刷新数据的诊断日志
-        console.log('=== 刷新数据诊断 ===');
-        console.log('完整刷新数据:', refreshedData);
-        console.log('刷新数据类型:', typeof refreshedData);
-        console.log('refreshedData.messages:', refreshedData?.messages);
-        console.log('refreshedData.messages类型:', typeof refreshedData?.messages);
-        console.log('refreshedData.messages是否为数组:', Array.isArray(refreshedData?.messages));
-        console.log('refreshedData.messages长度:', refreshedData?.messages?.length);
-        console.log('=== 刷新诊断结束 ===');
-
-        if (refreshedData && refreshedData.messages && Array.isArray(refreshedData.messages) && refreshedData.messages.length > 0) {
-          // 添加消息映射诊断
-          console.log('=== 消息映射诊断 ===');
-          console.log('开始映射消息，总数:', refreshedData.messages.length);
-
-          const refreshedMessages: ChatMessage[] = refreshedData.messages.map((msg, index) => {
-            console.log(`映射消息 ${index}:`, msg);
-            console.log(`消息 ${index} 的role:`, msg?.role);
-            console.log(`消息 ${index} 的content:`, msg?.content);
-            console.log(`消息 ${index} 的timestamp:`, msg?.timestamp);
-            console.log(`消息 ${index} 的id:`, msg?.id);
-
-            return {
-              id: `msg_refreshed_${index}_${Date.now()}`,
-              role: msg?.role || 'assistant',
-              content: msg?.content || '消息内容为空',
-              timestamp: msg?.timestamp || new Date().toISOString(),
-              remoteId: msg?.id ? String(msg.id) : `remote_${index}`,
-            };
-          });
-
-          console.log('映射完成，结果:', refreshedMessages);
-          console.log('=== 消息映射诊断结束 ===');
-
+        
+        if (refreshedData.messages && refreshedData.messages.length > 0) {
+          const refreshedMessages: ChatMessage[] = refreshedData.messages.map((msg, index) => ({
+            id: `msg_refreshed_${index}_${Date.now()}`,
+            role: msg.role,
+            content: msg.content,
+            timestamp: msg.timestamp,
+            remoteId: msg.id ? String(msg.id) : `remote_${index}`,
+          }));
+          
           // 更新消息列表（最新的在底部）
           setMessages(refreshedMessages.reverse());
-
+          
           // 更新会话
           const updatedSession = {
             ...currentSession,
@@ -366,12 +307,12 @@ export const ChatPage: React.FC = () => {
           );
           setChatHistory(updatedHistory);
           saveChatHistory(updatedHistory);
-
+          
           console.log('已刷新聊天记录，获取到真实消息ID');
         }
       } catch (refreshError) {
         console.warn('刷新聊天记录失败，但消息发送成功:', refreshError);
-
+        
         // 如果刷新失败，仍然保留原来的逻辑
         const updatedSession = {
           ...currentSession,
@@ -388,12 +329,12 @@ export const ChatPage: React.FC = () => {
 
     } catch (error) {
       console.error('发送消息失败:', error);
-
+      
       // 添加错误消息
       const errorMessage: ChatMessage = {
         id: `msg_${Date.now() + 1}`,
         role: 'assistant',
-        content: `发送失败，后端错误信息：${error instanceof Error ? error.message : String(error)}`,
+        content: '抱歉，我现在无法回复。请稍后再试。',
         timestamp: new Date().toISOString(),
         remoteId: `error_${Date.now() + 1}`, // 为错误消息添加 remoteId
       };
@@ -418,10 +359,10 @@ export const ChatPage: React.FC = () => {
         try {
           // 调用现有API清除消息
           await api.chat.clearMessages(selectedAgent.id);
-
+          
           // 更新UI状态
           setMessages([]);
-
+          
           const updatedSession = {
             ...currentSession,
             messages: [],
@@ -433,7 +374,7 @@ export const ChatPage: React.FC = () => {
           );
           setChatHistory(updatedHistory);
           saveChatHistory(updatedHistory);
-
+          
           message.success('聊天记录已清空');
         } catch (error) {
           console.error('清空聊天记录失败:', error);
@@ -482,7 +423,7 @@ export const ChatPage: React.FC = () => {
   // 获取调试消息
   const fetchDebugMessages = useCallback(async () => {
     if (!selectedAgent?.id) return;
-
+    
     try {
       setDebugLoading(true);
       const result = await api.chat.getAgentDebugMessages(selectedAgent.id);
@@ -499,8 +440,8 @@ export const ChatPage: React.FC = () => {
   // 重新发送消息
   const handleResendMessage = useCallback(async (msg: ChatMessage) => {
     // 检查是否是历史消息（具有真正的数据库ID）
-    if (!msg.remoteId || !selectedAgent?.id || resending === msg.id ||
-      msg.remoteId.startsWith('user_') || msg.remoteId.startsWith('assistant_') || msg.remoteId.startsWith('error_')) {
+    if (!msg.remoteId || !selectedAgent?.id || resending === msg.id || 
+        msg.remoteId.startsWith('user_') || msg.remoteId.startsWith('assistant_') || msg.remoteId.startsWith('error_')) {
       message.warning('只能重新发送历史消息');
       return;
     }
@@ -510,10 +451,10 @@ export const ChatPage: React.FC = () => {
     try {
       // 调用清理消息接口，删除包含该消息在内的后续对话记录
       const clearResult = await api.chat.clearMessages(selectedAgent.id, msg.remoteId);
-
+      
       if (clearResult) {
         message.success(`已删除相关消息记录`);
-
+        
         // 从本地状态中移除被删除的消息（从该消息开始的所有后续消息）
         setMessages(prev => {
           const targetIndex = prev.findIndex(m => m.id === msg.id);
@@ -544,9 +485,9 @@ export const ChatPage: React.FC = () => {
 
           // 调用聊天API重新发送
           const response = await api.chat.sendMessage(selectedAgent.id, messageHistory);
-
+          
           const assistantContent = response.choices[0]?.message?.content || '抱歉，我现在无法回复。';
-
+          
           const assistantMessage: ChatMessage = {
             id: `msg_${Date.now() + 1}`,
             role: 'assistant',
@@ -575,8 +516,8 @@ export const ChatPage: React.FC = () => {
   // 删除消息
   const handleDeleteMessage = useCallback(async (msg: ChatMessage) => {
     // 检查是否是历史消息（具有真正的数据库ID）
-    if (!msg.remoteId || !selectedAgent?.id || clearing === msg.id ||
-      msg.remoteId.startsWith('user_') || msg.remoteId.startsWith('assistant_') || msg.remoteId.startsWith('error_')) {
+    if (!msg.remoteId || !selectedAgent?.id || clearing === msg.id || 
+        msg.remoteId.startsWith('user_') || msg.remoteId.startsWith('assistant_') || msg.remoteId.startsWith('error_')) {
       message.warning('只能删除历史消息');
       return;
     }
@@ -586,10 +527,10 @@ export const ChatPage: React.FC = () => {
     try {
       // 调用清理消息接口，删除包含该消息在内的后续对话记录
       const clearResult = await api.chat.clearMessages(selectedAgent.id, msg.remoteId);
-
+      
       if (clearResult) {
         message.success(`已删除相关消息记录`);
-
+        
         // 从本地状态中移除被删除的消息（从该消息开始的所有后续消息）
         setMessages(prev => {
           const targetIndex = prev.findIndex(m => m.id === msg.id);
@@ -613,9 +554,9 @@ export const ChatPage: React.FC = () => {
   const formatMessageContent = (content: string) => {
     // 匹配中文括号和英文括号内的内容
     const regex = /([（(].*?[）)])/g;
-
+    
     const parts = content.split(regex);
-
+    
     return parts.map((part, index) => {
       if (regex.test(part)) {
         // 括号内容，使用淡色斜体
@@ -642,7 +583,7 @@ export const ChatPage: React.FC = () => {
         <Row gutter={24} style={{ flex: 1, minHeight: 0 }}>
           {/* 智能体选择侧栏 */}
           <Col span={6} style={{ height: '100%' }}>
-            <Card
+            <Card 
               title={
                 <Space>
                   <RobotOutlined />
@@ -880,7 +821,7 @@ export const ChatPage: React.FC = () => {
                                   <ClockCircleOutlined style={{ marginRight: '2px' }} />
                                   {new Date(message.timestamp).toLocaleTimeString()}
                                 </span>
-                                <div
+                                <div 
                                   className="message-actions"
                                   style={{
                                     opacity: 0,
@@ -891,60 +832,60 @@ export const ChatPage: React.FC = () => {
                                   }}
                                 >
                                   {/* 语音播放按钮 - 只对AI回复且有真实消息ID的消息显示 */}
-                                  {message.role === 'assistant' && message.remoteId &&
-                                    !message.remoteId.startsWith('assistant_') && !message.remoteId.startsWith('error_') &&
-                                    !message.remoteId.startsWith('remote_') && selectedAgent && (
-                                      <VoicePlayer
-                                        agentId={selectedAgent.id}
-                                        messageId={message.remoteId}
-                                        messageText={message.content}
-                                        language="zh"
-                                        size="small"
-                                        style={{
-                                          color: '#666',
-                                          padding: '2px 4px',
-                                          height: 'auto',
-                                          minWidth: 'auto',
-                                        }}
-                                      />
-                                    )}
-
+                                  {message.role === 'assistant' && message.remoteId && 
+                                   !message.remoteId.startsWith('assistant_') && !message.remoteId.startsWith('error_') &&
+                                   !message.remoteId.startsWith('remote_') && selectedAgent && (
+                                    <VoicePlayer 
+                                      agentId={selectedAgent.id}
+                                      messageId={message.remoteId}
+                                      messageText={message.content}
+                                      language="zh"
+                                      size="small"
+                                      style={{ 
+                                        color: '#666',
+                                        padding: '2px 4px',
+                                        height: 'auto',
+                                        minWidth: 'auto',
+                                      }}
+                                    />
+                                  )}
+                                  
                                   {/* 只有历史消息才显示重新发送和删除按钮 */}
-                                  {message.remoteId && !message.remoteId.startsWith('user_') &&
-                                    !message.remoteId.startsWith('assistant_') && !message.remoteId.startsWith('error_') && (
-                                      <>
-                                        {message.role === 'user' && (
-                                          <Tooltip title="重新发送">
-                                            <Button
-                                              type="text"
-                                              size="small"
-                                              icon={<RedoOutlined />}
-                                              style={{
-                                                color: message.role === 'user' ? '#fff' : '#666',
-                                                padding: '2px 4px',
-                                                height: 'auto',
-                                                minWidth: 'auto',
-                                              }}
-                                              onClick={() => handleResendMessage(message)}
-                                            />
-                                          </Tooltip>
-                                        )}
-                                        <Tooltip title="删除消息">
-                                          <Button
-                                            type="text"
-                                            size="small"
-                                            icon={<DeleteOutlined />}
-                                            style={{
+                                  {message.remoteId && !message.remoteId.startsWith('user_') && 
+                                   !message.remoteId.startsWith('assistant_') && !message.remoteId.startsWith('error_') && (
+                                    <>
+                                      {message.role === 'user' && (
+                                        <Tooltip title="重新发送">
+                                          <Button 
+                                            type="text" 
+                                            size="small" 
+                                            icon={<RedoOutlined />}
+                                            style={{ 
                                               color: message.role === 'user' ? '#fff' : '#666',
                                               padding: '2px 4px',
                                               height: 'auto',
                                               minWidth: 'auto',
                                             }}
-                                            onClick={() => handleDeleteMessage(message)}
+                                            onClick={() => handleResendMessage(message)}
                                           />
                                         </Tooltip>
-                                      </>
-                                    )}
+                                      )}
+                                      <Tooltip title="删除消息">
+                                        <Button 
+                                          type="text" 
+                                          size="small" 
+                                          icon={<DeleteOutlined />}
+                                          style={{ 
+                                            color: message.role === 'user' ? '#fff' : '#666',
+                                            padding: '2px 4px',
+                                            height: 'auto',
+                                            minWidth: 'auto',
+                                          }}
+                                          onClick={() => handleDeleteMessage(message)}
+                                        />
+                                      </Tooltip>
+                                    </>
+                                  )}
                                 </div>
                               </div>
                             </div>
@@ -957,11 +898,11 @@ export const ChatPage: React.FC = () => {
                 </div>
 
                 {/* 输入区域 */}
-                <div style={{
-                  padding: '16px',
-                  backgroundColor: '#fff',
+                <div style={{ 
+                  padding: '16px', 
+                  backgroundColor: '#fff', 
                   borderTop: '1px solid #f0f0f0',
-                  flexShrink: 0
+                  flexShrink: 0 
                 }}>
                   <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
                     <TextArea
@@ -984,7 +925,7 @@ export const ChatPage: React.FC = () => {
                       发送
                     </Button>
                   </div>
-
+                  
                   {sending && (
                     <div style={{ marginTop: '8px', textAlign: 'center' }}>
                       <Spin size="small" />
@@ -1025,18 +966,18 @@ export const ChatPage: React.FC = () => {
             <div style={{ maxHeight: '60vh', overflowY: 'auto' }}>
               {debugData.debug_messages.messages.map((msg: any, index: number) => (
                 <div key={index} style={{ marginBottom: 16 }}>
-                  <h4 style={{
-                    margin: '8px 0',
-                    fontSize: '14px',
+                  <h4 style={{ 
+                    margin: '8px 0', 
+                    fontSize: '14px', 
                     fontWeight: 'bold',
                     color: msg.type === 'system' ? '#1890ff' : msg.type === 'human' ? '#52c41a' : '#fa8c16'
                   }}>
                     {msg.type === 'system' ? '系统消息' : msg.type === 'human' ? '用户消息' : 'AI回复'}
                   </h4>
-                  <div
-                    style={{
+                  <div 
+                    style={{ 
                       background: msg.type === 'system' ? '#f0f8ff' : msg.type === 'human' ? '#f6ffed' : '#fff7e6',
-                      padding: '12px',
+                      padding: '12px', 
                       borderRadius: '6px',
                       fontSize: '12px',
                       lineHeight: '1.6',
@@ -1050,16 +991,16 @@ export const ChatPage: React.FC = () => {
                   </div>
                 </div>
               ))}
-
+              
               {/* 原始JSON数据显示 */}
               <div style={{ marginTop: 24, paddingTop: 16, borderTop: '1px solid #f0f0f0' }}>
                 <h4 style={{ margin: '8px 0', fontSize: '14px', fontWeight: 'bold', color: '#666' }}>
                   原始JSON数据
                 </h4>
-                <div
-                  style={{
-                    background: '#f5f5f5',
-                    padding: '12px',
+                <div 
+                  style={{ 
+                    background: '#f5f5f5', 
+                    padding: '12px', 
                     borderRadius: '6px',
                     fontSize: '11px',
                     lineHeight: '1.4',
@@ -1097,9 +1038,9 @@ export const ChatPage: React.FC = () => {
               <List.Item
                 key={session.id}
                 actions={[
-                  <Button
+                  <Button 
                     key="load"
-                    type="link"
+                    type="link" 
                     onClick={() => {
                       setCurrentSession(session);
                       setMessages(session.messages);
@@ -1109,9 +1050,9 @@ export const ChatPage: React.FC = () => {
                   >
                     加载
                   </Button>,
-                  <Button
+                  <Button 
                     key="delete"
-                    type="link"
+                    type="link" 
                     danger
                     onClick={() => {
                       Modal.confirm({
@@ -1138,7 +1079,7 @@ export const ChatPage: React.FC = () => {
                   description={
                     <div>
                       <Text type="secondary">
-                        {session.messages.length} 条消息 |
+                        {session.messages.length} 条消息 | 
                         创建时间: {new Date(session.created_at).toLocaleString()}
                       </Text>
                       {session.messages.length > 0 && (
