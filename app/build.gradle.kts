@@ -96,6 +96,11 @@ android {
         // 添加BuildConfig字段用于调试
         buildConfigField("String", "GIT_COMMIT_ID", "\"$gitCommitId\"")
         buildConfigField("boolean", "IS_DEBUG_BUILD", "false")
+        
+        // Google OAuth client ID
+        // TODO: This is the same now for debug and release builds for convenience.
+        // Create a new client ID for debug build, but keep the production one for backward compatibility.
+        buildConfigField("String", "WEB_CLIENT_ID", "\"1034291688895-0e5hq72pghd4nihhpmf989ptv0ag1542.apps.googleusercontent.com\"")
 
         // 数据安全声明 - 不使用广告ID
         manifestPlaceholders["uses_ads"] = "false"
@@ -149,6 +154,9 @@ android {
             signingConfig = signingConfigs.getByName("inty")
             versionNameSuffix = " ($gitCommitId)"
             buildConfigField("boolean", "IS_DEBUG_BUILD", "true")
+
+            // TODO: Use a different web client ID for debug builds.
+            // buildConfigField("String", "WEB_CLIENT_ID", "\"debug_client_id_here\"")
         }
         create("local") {
             initWith(getByName("debug"))

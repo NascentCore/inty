@@ -32,7 +32,7 @@ object CredentialManagerHelper {
                 // 创建 Google ID 选项
                 val googleIdOption = GetGoogleIdOption.Builder()
                     .setFilterByAuthorizedAccounts(false)
-                    .setServerClientId(context.getString(com.ai.inty.R.string.web_client_id))
+                    .setServerClientId(com.ai.inty.BuildConfig.WEB_CLIENT_ID)
                     .build()
 
                 // 创建获取凭证请求
