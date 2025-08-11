@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ai.inty.utils.NetworkErrorHandler
 import com.ai.inty.utils.NetworkManager
+import com.inty.utils.log.EasyLog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -31,9 +32,7 @@ open class BaseViewModel : ViewModel() {
             }
             return@launch
         }
-        runCatching {
-            block()
-        }.onFailure { it.printStackTrace() }
+        block()
 
     }
 
@@ -69,7 +68,7 @@ open class BaseActivityViewModel : BaseViewModel() {
     val finishActivity = _finishActivity.asStateFlow()
 
     fun closeActivity(delayTimeMS: Long = 0) {
-//        EasyLog.log("closeActivity $this delay=$delayTimeMS")
+        EasyLog.log("closeActivity $this delay=$delayTimeMS")
         viewModelScope.launch(Dispatchers.Main) {
             if (delayTimeMS > 0) {
                 delay(delayTimeMS)

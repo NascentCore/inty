@@ -1,6 +1,10 @@
 package com.ai.inty
 
 import android.os.Bundle
+import android.content.Context
+import android.net.Uri
+import android.widget.Toast
+
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
@@ -22,6 +26,11 @@ import com.ai.inty.ui.components.MySettingScreen
 import com.ai.inty.ui.theme.IntyTheme
 import com.ai.inty.utils.UCropHelper
 import com.ai.inty.viewmodels.MySettingViewModel
+import com.inty.utils.log.EasyLog
+
+import com.ai.inty.base.ToastUtils
+import com.ai.inty.R
+
 import com.therouter.router.Autowired
 import com.therouter.router.Route
 import com.yalantis.ucrop.UCrop
@@ -59,17 +68,15 @@ class MySettingActivity : BaseActivity() {
 
                 val activityCropResultLauncher = rememberLauncherForActivityResult(
                     ActivityResultContracts.StartActivityForResult()
-                ) { result ->
-                    if (result.resultCode == RESULT_OK) {
-                        runCatching {
-                            result.data?.let { intentResult ->
-                                val imageUri = UCrop.getOutput(intentResult) // 图片uri
-                                imageUri?.let { imageUriReal ->
-                                    viewModel.setAvatar(imageUriReal)
-                                }
-//                            EasyLog.log("select $imageUri")//日志log内部的format可能异常
+                ) {
+                    if (it.resultCode == RESULT_OK) {
+                        it.data?.let { intentResult ->
+                            val imageUri = UCrop.getOutput(intentResult)
+                            imageUri?.let { imageUriReal ->
+                                viewModel.setAvatar(imageUriReal)
                             }
-                        }.onFailure { e -> e.printStackTrace() }
+                            EasyLog.log("select $imageUri")
+                        }
                     }
                 }
 
@@ -77,6 +84,18 @@ class MySettingActivity : BaseActivity() {
                     ActivityResultContracts.GetContent()
                 ) { imageUri ->
                     imageUri?.let { uri ->
+                        // Check file size before cropping - limit to 500KB
+                        val fileSize = getFileSize(context, uri)
+                        val maxSizeKB = 500
+                        if (fileSize > maxSizeKB * 1024) {
+                            val maxSizeKBStr = String.format("%dKB", maxSizeKB)
+                            val fileSizeStr = String.format("%dKB", fileSize / 1024)
+                            val msg = String.format(context.getString(R.string.user_avatar_size_too_large_with_size_format), maxSizeKBStr, fileSizeStr)
+                            lifecycleScope.launch {
+                                ToastUtils.showToast(msg)
+                            }
+                            return@let
+                        }
                         val intentCrop = UCropHelper.getIntent(context, uri, cropTitle)
                         activityCropResultLauncher.launch(intentCrop)
                     }
@@ -130,6 +149,16 @@ class MySettingActivity : BaseActivity() {
                     }
                 }
             }
+        }
+    }
+
+    private fun getFileSize(context: Context, uri: Uri): Long {
+        return try {
+            context.contentResolver.openInputStream(uri)?.use { input ->
+                input.available().toLong()
+            } ?: 0L
+        } catch (e: Exception) {
+            0L
         }
     }
 }
