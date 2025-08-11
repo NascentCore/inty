@@ -79,6 +79,7 @@
     <string name="creation_failed">Creation failed</string>
     <string name="generation_failed">Generation failed</string>
     <string name="get_user_info_failed">Failed to get user information</string>
+    <string name="user_avatar_size_too_large_with_size_format">File must be smaller than %s, got %s</string>
 
     <!-- Network error messages -->
     <string name="network_timeout">Network timeout, please try again later</string>

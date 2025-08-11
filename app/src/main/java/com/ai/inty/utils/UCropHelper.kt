@@ -12,14 +12,15 @@ import com.yalantis.ucrop.UCropActivity
 import java.io.File
 
 object UCropHelper {
-
     fun getIntent(context: Context, srcUri: Uri, title: String): Intent {
-
-
         val avatarTempFile = File(AppEnv.dirs.imagecache, "tmp.jpg")
         val uCropOptions = UCrop.Options()
         uCropOptions.apply {
             setCompressionFormat(Bitmap.CompressFormat.JPEG)
+            // According to cursor, 2048 is a good balance between quality and size.
+            setMaxBitmapSize(2048)
+            // Set compression quality to 80 for better file size control
+            setCompressionQuality(80)
             setCircleDimmedLayer(true)
             setAllowedGestures(UCropActivity.SCALE, UCropActivity.NONE, UCropActivity.NONE)
             setHideBottomControls(true)

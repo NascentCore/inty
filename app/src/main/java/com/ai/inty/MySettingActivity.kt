@@ -1,6 +1,10 @@
 package com.ai.inty
 
 import android.os.Bundle
+import android.content.Context
+import android.net.Uri
+import android.widget.Toast
+
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
@@ -23,6 +27,10 @@ import com.ai.inty.ui.theme.IntyTheme
 import com.ai.inty.utils.UCropHelper
 import com.ai.inty.viewmodels.MySettingViewModel
 import com.inty.utils.log.EasyLog
+
+import com.ai.inty.base.ToastUtils
+import com.ai.inty.R
+
 import com.therouter.router.Autowired
 import com.therouter.router.Route
 import com.yalantis.ucrop.UCrop
@@ -75,8 +83,20 @@ class MySettingActivity : BaseActivity() {
                 val galleryLauncher = rememberLauncherForActivityResult(
                     ActivityResultContracts.GetContent()
                 ) { imageUri ->
-                    imageUri?.let {
-                        val intentCrop = UCropHelper.getIntent(context, it, cropTitle)
+                    imageUri?.let { uri ->
+                        // Check file size before cropping - limit to 500KB
+                        val fileSize = getFileSize(context, uri)
+                        val maxSizeKB = 500
+                        if (fileSize > maxSizeKB * 1024) {
+                            val maxSizeKBStr = String.format("%dKB", maxSizeKB)
+                            val fileSizeStr = String.format("%dKB", fileSize / 1024)
+                            val msg = String.format(context.getString(R.string.user_avatar_size_too_large_with_size_format), maxSizeKBStr, fileSizeStr)
+                            lifecycleScope.launch {
+                                ToastUtils.showToast(msg)
+                            }
+                            return@let
+                        }
+                        val intentCrop = UCropHelper.getIntent(context, uri, cropTitle)
                         activityCropResultLauncher.launch(intentCrop)
                     }
                 }
@@ -129,6 +149,16 @@ class MySettingActivity : BaseActivity() {
                     }
                 }
             }
+        }
+    }
+
+    private fun getFileSize(context: Context, uri: Uri): Long {
+        return try {
+            context.contentResolver.openInputStream(uri)?.use { input ->
+                input.available().toLong()
+            } ?: 0L
+        } catch (e: Exception) {
+            0L
         }
     }
 }
