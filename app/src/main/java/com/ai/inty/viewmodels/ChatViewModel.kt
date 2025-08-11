@@ -96,14 +96,6 @@ class ChatViewModel : BaseActivityViewModel() {
                         is HttpResult.Success -> {
                             msgs.clear()
                             msgs.addAll(result.data.messages)
-                            
-                            // If no messages exist and agent has an opening message, show it
-                            if (result.data.messages.isEmpty() && agent.opening.isNotEmpty()) {
-                                withContext(Dispatchers.Main) {
-                                    msgs.add(0, MsgInfo(content = agent.opening, role = "assistant"))
-                                    EasyLog.log("Added opening message: ${agent.opening}")
-                                }
-                            }
                         }
 
                         is HttpResult.Failure -> {

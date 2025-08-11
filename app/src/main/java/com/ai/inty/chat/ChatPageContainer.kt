@@ -32,12 +32,13 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ai.inty.R
 import com.ai.inty.base.noRippleClickable
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.beans.UserProfile
 import com.ai.inty.viewmodels.ChatViewModel
-import com.ai.inty.viewmodels.ChatViewModelHolder
 import com.inty.utils.storage.IntySetting
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
@@ -46,6 +47,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun ChatPageContainer(
     modifier: Modifier,
+    viewModelFactory: ViewModelProvider.Factory,
     agentList: List<AgentInfo>,
     userProfile: UserProfile,
     currentPageIndex: Int = 0,
@@ -66,9 +68,10 @@ fun ChatPageContainer(
             state = pageState,
         ) { currentPage ->
             val agent = agentList[currentPage]
-            val chatViewModel: ChatViewModel = remember(agent.id) {
-                ChatViewModelHolder.get(agent.id)
-            }
+            val chatViewModel: ChatViewModel = viewModel(
+                key = agent.id,
+                factory = viewModelFactory
+            )
 
             LaunchedEffect(key1 = agent.id, key2 = agent.isFollowed) {
                 chatViewModel.setAgentInfo(agent)
