@@ -336,6 +336,9 @@ class Agent:
             if main_prompt:
                 # 支持模板渲染和字符替换
                 if "{{" in main_prompt and "}}" in main_prompt:
+                    logger.info(
+                        f"main_prompt: {main_prompt},is_template: True,agent_name: {self.name},user_name: {user_name}"
+                    )
                     try:
                         rendered_prompt = prompt_template_manager.render_system_prompt(
                             system_prompt=main_prompt,
@@ -343,11 +346,13 @@ class Agent:
                             user_name=user_name,
                             template_name="basic",
                         )
+                        logger.info(f"rendered_prompt: {rendered_prompt}")
                         system_messages.append(SystemMessage(content=rendered_prompt))
                     except Exception as e:
                         logger.error(f"主提示词模板渲染失败: {str(e)}，使用原始提示词")
                         system_messages.append(SystemMessage(content=main_prompt))
                 else:
+                    logger.info(f"main_prompt: {main_prompt},is_template: False")
                     system_messages.append(SystemMessage(content=main_prompt))
 
             # 2. 角色卡信息 - 每个字段作为独立的SystemMessage
@@ -1006,7 +1011,9 @@ class Agent:
         profile_start = time.time()
         user_profile = self._get_user_profile_sync(user_id)
         profile_time = time.time() - profile_start
-        logger.info(f"用户信息获取耗时: {profile_time:.3f}秒 - Agent: {self.agent_id}")
+        logger.info(
+            f"用户信息获取耗时: {profile_time:.3f}秒 - Agent: {self.agent_id} - User-id: {user_id} - User-profile: {user_profile}"
+        )
 
         # 在线程池中执行同步聊天逻辑
         loop = asyncio.get_event_loop()
