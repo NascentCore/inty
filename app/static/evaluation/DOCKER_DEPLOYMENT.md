@@ -232,22 +232,26 @@ jobs:
 ### 常见问题
 
 1. **容器无法启动**
+
    ```bash
    docker logs inty-frontend
    ```
 
 2. **端口被占用**
+
    ```bash
    lsof -i :3000
    docker run -p 3001:80 ...
    ```
 
 3. **镜像构建失败**
+
    ```bash
    docker build --no-cache -t inty-frontend .
    ```
 
 4. **健康检查失败**
+
    ```bash
    docker exec -it inty-frontend curl localhost/health
    ```
