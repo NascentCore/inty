@@ -6,3 +6,5 @@
 <img width="800" height="360" alt="image" src="https://github.com/user-attachments/assets/90b8c020-f7ea-4c05-85b5-33de387024c7" />
 
 如果发布 aab 的工作流出现上面的错误，则在文件里添加任意内容，来发布新的 version code
+
+* 发布 1.1.1 内测版本
