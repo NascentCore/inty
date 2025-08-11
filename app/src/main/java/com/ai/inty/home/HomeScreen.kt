@@ -189,7 +189,7 @@ private fun handleTabSelection(
     context: Context,
     mainViewModel: MainViewModel,
 ) {
-    if (tabIndex == HomeTabIndex.Add.ordinal) {
+    if (tabIndex == HomeTabIndex.Create.ordinal) {
         if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
             TheRouter.build(Constant.ROUTE_CREATE_ROLE).navigation(context)
         } else {
@@ -229,8 +229,8 @@ private fun HomeContent(
             )
         }
 
-        HomeTabIndex.Add -> {
-            // Add tab is handled in handleTabSelection
+        HomeTabIndex.Create -> {
+            // Create tab is handled in handleTabSelection
         }
 
         HomeTabIndex.Explore -> {

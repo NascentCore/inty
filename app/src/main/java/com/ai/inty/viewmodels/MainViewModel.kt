@@ -44,7 +44,7 @@ import kotlinx.coroutines.withContext
 enum class HomeTabIndex {
     Chat,
     Conversation,
-    Add,
+    Create,
     Explore,
     My
 }
