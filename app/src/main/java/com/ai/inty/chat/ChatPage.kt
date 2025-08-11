@@ -245,10 +245,17 @@ internal fun ChatPage(
                     item {
                         Spacer(Modifier.height(16.dp))
                     }
-                    itemsIndexed(msgs.filter { !(it.role == "user" && it.content == "continue") }) { index, item ->
-                        ChatItem(item)
-                        Spacer(Modifier.height(16.dp))
-                    }
+                    //可能会index或者key不唯一的异常
+                    runCatching {
+                        val items = msgs.filter { !(it.role == "user" && it.content == "continue") }
+                        if (items.isNotEmpty()) {
+                            itemsIndexed(items) { index, item ->
+                                ChatItem(item)
+                                Spacer(Modifier.height(16.dp))
+                            }
+                        }
+                    }.onFailure { it.printStackTrace() }
+
                 }
 
                 // 输入框区域

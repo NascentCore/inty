@@ -13,7 +13,6 @@ import com.ai.inty.net.IUserApi2
 import com.ai.inty.ui.components.EditKey
 import com.ai.inty.utils.UserProfileManager
 import com.architecture.httplib.core.HttpResult
-import com.inty.utils.log.EasyLog
 import com.therouter.TheRouter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -38,7 +37,11 @@ class MySettingViewModel : BaseActivityViewModel() {
     }
 
     fun init(userProfile: UserProfile?) {
-        _userProfile.value = userProfile!!
+        viewModelScope.launch {
+            userProfile?.let {
+                _userProfile.emit(userProfile)
+            }
+        }
     }
 
     fun changeUserProfile(editKey: EditKey, editValue: String) {
@@ -64,7 +67,7 @@ class MySettingViewModel : BaseActivityViewModel() {
                     fileUri?.path ?: return@launchWithNetCheck
                 ).asRequestBody(contentType = "image/jpg".toMediaTypeOrNull())
                 val result = userApi.uploadAvatar(MultipartBody.Part.createFormData("file", "file.png", requestBody))
-                EasyLog.log("upload avatar = $result")
+//                EasyLog.log("upload avatar = $result")
 
                 when (result) {
                     is HttpResult.Success -> {
@@ -87,7 +90,7 @@ class MySettingViewModel : BaseActivityViewModel() {
                     ?: throw IllegalStateException("IUserApi2 not found in TheRouter")
             }
             val result2 = userApi2.setUserProfile(_userProfile.value)
-            EasyLog.log("set user profile = $result2")
+//            EasyLog.log("set user profile = $result2")
             when (result2) {
                 is HttpResult.Success -> {
                     // Show success toast for profile update
@@ -110,7 +113,7 @@ class MySettingViewModel : BaseActivityViewModel() {
     }
 
     fun setAvatar(uri: Uri?) {
-        EasyLog.log("avatar= $uri")
+//        EasyLog.log("avatar= $uri")
         _avatarChanged.value = true
         _userProfile.value = _userProfile.value.copy(
             avatar = uri.toString()

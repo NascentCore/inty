@@ -155,20 +155,23 @@ class ChatViewModel : BaseActivityViewModel() {
 
                 when (result) {
                     is HttpResult.Success -> {
-                        //有免费次数限制，需要vip订阅
-                        if (result.data.code == 10001001) {
-                            showLimitDialog.emit(true)
-                        }
-                        withContext(Dispatchers.Main) {
-                            for (choice in result.data.data?.choices ?: emptyList()) {
-                                msgs.add(0, choice.message)
+                        runCatching {
+                            //有免费次数限制，需要vip订阅
+                            if (result.data.code == 10001001) {
+                                showLimitDialog.emit(true)
                             }
-                        }
-                        IntySetting.setConversationReaded(
-                            agent.id,
-                            result.data.data?.choices?.lastOrNull()?.message?.content ?: ""
-                        )
-
+                            withContext(Dispatchers.Main) {
+                                for (choice in result.data.data?.choices ?: emptyList()) {
+                                    msgs.add(0, choice.message)
+                                }
+                            }
+                            result.data.data?.choices?.lastOrNull()?.message?.content?.let { str ->
+                                IntySetting.setConversationReaded(
+                                    agent.id,
+                                    str
+                                )
+                            }
+                        }.onFailure { it.printStackTrace() }
                     }
 
                     is HttpResult.Failure -> {
@@ -225,19 +228,24 @@ class ChatViewModel : BaseActivityViewModel() {
 
                 when (result) {
                     is HttpResult.Success -> {
-                        //有免费次数限制，需要vip订阅
-                        if (result.data.code == 10001001) {
-                            showLimitDialog.emit(true)
-                        }
-                        withContext(Dispatchers.Main) {
-                            for (choice in result.data.data?.choices ?: emptyList()) {
-                                msgs.add(0, choice.message)
+                        runCatching {
+                            //有免费次数限制，需要vip订阅
+                            if (result.data.code == 10001001) {
+                                showLimitDialog.emit(true)
                             }
-                        }
-                        IntySetting.setConversationReaded(
-                            agent.id,
-                            result.data.data?.choices?.lastOrNull()?.message?.content ?: ""
-                        )
+                            withContext(Dispatchers.Main) {
+                                for (choice in result.data.data?.choices ?: emptyList()) {
+                                    msgs.add(0, choice.message)
+                                }
+                            }
+                            result.data.data?.choices?.lastOrNull()?.message?.content?.let { str ->
+                                IntySetting.setConversationReaded(
+                                    agent.id,
+                                    str
+                                )
+                            }
+                        }.onFailure { it.printStackTrace() }
+
                     }
 
                     is HttpResult.Failure -> {

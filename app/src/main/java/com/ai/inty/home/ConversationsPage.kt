@@ -58,7 +58,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-enum class ConversationsPageTab {
+enum class ConversionsPageTab {
     TabMessage,
     TabFollowing
 }
@@ -67,14 +67,14 @@ enum class ConversationsPageTab {
  * 主页面第二个tab，会话列表页面，包含关注和聊天列表
  */
 @Composable
-fun ConversationsPage(
+fun ConversionsPage(
     modifier: Modifier,
-    selectedTab: ConversationsPageTab,
-    conversations: List<ConversationItem>,
+    selectedTab: ConversionsPageTab,
+    conversions: List<ConversationItem>,
     followingAgents: List<AgentInfo>,
     lastSysMsg: SysMsgItem?,
-    onSelectTab: (ConversationsPageTab) -> Unit,
-    onClickConversationItem: (ConversationItem) -> Unit,
+    onSelectTab: (ConversionsPageTab) -> Unit,
+    onClickConversionItem: (ConversationItem) -> Unit,
     onClickSysMsg: () -> Unit,
     onClickFollowingAgent: (AgentInfo) -> Unit,
     onUnfollowAgent: ((String) -> Unit)? = null,
@@ -87,13 +87,13 @@ fun ConversationsPage(
         )
 
         // 主内容
-        ConversationsPageContent(
+        ConversionsPageContent(
             selectedTab = selectedTab,
-            conversations = conversations,
+            conversions = conversions,
             followingAgents = followingAgents,
             lastSysMsg = lastSysMsg,
             onSelectTab = onSelectTab,
-            onClickConversationItem = onClickConversationItem,
+            onClickConversionItem = onClickConversionItem,
             onClickSysMsg = onClickSysMsg,
             onClickFollowingAgent = onClickFollowingAgent,
             onUnfollowAgent = onUnfollowAgent
@@ -105,13 +105,13 @@ fun ConversationsPage(
  * 会话页面主内容
  */
 @Composable
-private fun ConversationsPageContent(
-    selectedTab: ConversationsPageTab,
-    conversations: List<ConversationItem>,
+private fun ConversionsPageContent(
+    selectedTab: ConversionsPageTab,
+    conversions: List<ConversationItem>,
     followingAgents: List<AgentInfo>,
     lastSysMsg: SysMsgItem?,
-    onSelectTab: (ConversationsPageTab) -> Unit,
-    onClickConversationItem: (ConversationItem) -> Unit,
+    onSelectTab: (ConversionsPageTab) -> Unit,
+    onClickConversionItem: (ConversationItem) -> Unit,
     onClickSysMsg: () -> Unit,
     onClickFollowingAgent: (AgentInfo) -> Unit,
     onUnfollowAgent: ((String) -> Unit)? = null,
@@ -122,11 +122,11 @@ private fun ConversationsPageContent(
             .background(Color.Transparent),
         containerColor = Color.Transparent
     ) { innerPadding ->
-        Column {
+        Column(modifier = Modifier.fillMaxSize()) {
             Spacer(Modifier.height(innerPadding.calculateTopPadding() + 28.dp))
 
             // Tab选择器
-            ConversationsTabSelector(
+            ConversionsTabSelector(
                 selectedTab = selectedTab,
                 onSelectTab = onSelectTab
             )
@@ -135,16 +135,16 @@ private fun ConversationsPageContent(
 
             // 内容区域
             when (selectedTab) {
-                ConversationsPageTab.TabMessage -> {
+                ConversionsPageTab.TabMessage -> {
                     MessageTabContent(
-                        conversations = conversations,
+                        conversions = conversions,
                         lastSysMsg = lastSysMsg,
-                        onClickConversationItem = onClickConversationItem,
+                        onClickConversionItem = onClickConversionItem,
                         onClickSysMsg = onClickSysMsg
                     )
                 }
 
-                ConversationsPageTab.TabFollowing -> {
+                ConversionsPageTab.TabFollowing -> {
                     FollowingTabContent(
                         followingAgents = followingAgents,
                         onClickAgent = onClickFollowingAgent,
@@ -160,39 +160,39 @@ private fun ConversationsPageContent(
  * Tab选择器组件
  */
 @Composable
-private fun ConversationsTabSelector(
-    selectedTab: ConversationsPageTab,
-    onSelectTab: (ConversationsPageTab) -> Unit,
+private fun ConversionsTabSelector(
+    selectedTab: ConversionsPageTab,
+    onSelectTab: (ConversionsPageTab) -> Unit,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.Center,
     ) {
-        ConversationsPageTabItem(
+        ConversionsPageTabItem(
             modifier = Modifier.noRippleClickable {
-                onSelectTab(ConversationsPageTab.TabMessage)
+                onSelectTab(ConversionsPageTab.TabMessage)
             },
             text = stringResource(R.string.tab_message),
-            isSelected = selectedTab == ConversationsPageTab.TabMessage
+            isSelected = selectedTab == ConversionsPageTab.TabMessage
         )
 
         Spacer(Modifier.width(15.dp))
 
-        ConversationsPageTabItem(
+        ConversionsPageTabItem(
             modifier = Modifier.noRippleClickable {
-                onSelectTab(ConversationsPageTab.TabFollowing)
+                onSelectTab(ConversionsPageTab.TabFollowing)
             },
             text = stringResource(R.string.tab_following),
-            isSelected = selectedTab == ConversationsPageTab.TabFollowing
+            isSelected = selectedTab == ConversionsPageTab.TabFollowing
         )
-}
+    }
 }
 
 /**
  * Tab项组件
  */
 @Composable
-fun ConversationsPageTabItem(
+fun ConversionsPageTabItem(
     modifier: Modifier,
     text: String,
     isSelected: Boolean,
@@ -237,44 +237,81 @@ fun ConversationsPageTabItem(
  */
 @Composable
 private fun MessageTabContent(
-    conversations: List<ConversationItem>,
+    conversions: List<ConversationItem>,
     lastSysMsg: SysMsgItem?,
-    onClickConversationItem: (ConversationItem) -> Unit,
+    onClickConversionItem: (ConversationItem) -> Unit,
     onClickSysMsg: () -> Unit,
 ) {
-    LazyColumn {
-        // 系统消息
-        lastSysMsg?.let { sysMsg ->
-            item {
-                AuthClickable(onClick = onClickSysMsg) { authModifier ->
-                    ConversationItem(
-                        modifier = authModifier
-                            .fillMaxWidth()
-                            .background(color = Color(0x3378599A)),
-                        conversation = ConversationItem(
-                            agentId = Constant.SYS_NOTIFICATION_ID,
-                            agentName = "System Notification",
-                            lastMessage = sysMsg.content,
-                            createdAt = sysMsg.createdAt
-                        ),
-                        placeholderID = R.drawable.icon_sys_notify
-                    )
+    Box(Modifier.fillMaxSize()) {
+        LazyColumn(modifier = Modifier.matchParentSize()) {
+            // 系统消息
+            lastSysMsg?.let { sysMsg ->
+                item {
+                    AuthClickable(onClick = onClickSysMsg) { authModifier ->
+                        ConversationItem(
+                            modifier = authModifier
+                                .fillMaxWidth()
+                                .background(color = Color(0x3378599A)),
+                            conversation = ConversationItem(
+                                agentId = Constant.SYS_NOTIFICATION_ID,
+                                agentName = "System Notification",
+                                lastMessage = sysMsg.content,
+                                createdAt = sysMsg.createdAt
+                            ),
+                            placeholderID = R.drawable.icon_sys_notify
+                        )
+                    }
                 }
             }
-        }
 
-        // 会话列表
-        items(
-            items = conversations,
-            key = { conversation -> conversation.agentId }
-        ) { conversation ->
-            AuthClickable(onClick = { onClickConversationItem(conversation) }) { authModifier ->
-                ConversationItem(
-                    modifier = authModifier.fillMaxWidth(),
-                    conversation = conversation
-                )
+            // 会话列表
+            if (conversions.isNotEmpty()) {
+                runCatching {
+                    items(
+                        items = conversions,
+                        key = { conversion -> conversion.agentId }
+                    ) { conversion ->
+                        AuthClickable(onClick = { onClickConversionItem(conversion) }) { authModifier ->
+                            ConversationItem(
+                                modifier = authModifier.fillMaxWidth(),
+                                conversation = conversion
+                            )
+                        }
+                    }
+                }.onFailure { it.printStackTrace() }
             }
+
         }
+        if (lastSysMsg == null && conversions.isEmpty()) {
+            EmptyContentUI()
+        }
+    }
+}
+
+@Composable
+private fun EmptyContentUI() {
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+
+
+        IntyImage(model = R.drawable.group2085655908)
+
+        Spacer(Modifier.height(16.dp))
+
+        Text(
+            modifier = Modifier
+                .padding(horizontal = 16.dp)
+                .align(Alignment.CenterHorizontally),
+            text = stringResource(R.string.no_agent),
+            color = Color.White.copy(0.55f),
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Normal,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
     }
 }
 
@@ -287,27 +324,32 @@ private fun FollowingTabContent(
     onClickAgent: (AgentInfo) -> Unit,
     onUnfollowAgent: ((String) -> Unit)? = null,
 ) {
-    LazyColumn {
-
-        items(
-            items = followingAgents,
-            key = { agent -> agent.id }
-        ) { agent ->
-            if (onUnfollowAgent != null) {
-                LongPressUnfollowItem(
-                    agent = agent,
-                    onClickAgent = onClickAgent,
-                    onUnfollowAgent = onUnfollowAgent
-                )
-            } else {
-                FollowingAgentItem(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .noRippleClickable { onClickAgent(agent) },
-                    agent = agent
-                )
-            }
+    if (followingAgents.isNotEmpty()) {
+        LazyColumn(modifier = Modifier.fillMaxSize()) {
+            runCatching {
+                items(
+                    items = followingAgents,
+                    key = { agent -> agent.id }
+                ) { agent ->
+                    if (onUnfollowAgent != null) {
+                        LongPressUnfollowItem(
+                            agent = agent,
+                            onClickAgent = onClickAgent,
+                            onUnfollowAgent = onUnfollowAgent
+                        )
+                    } else {
+                        FollowingAgentItem(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .noRippleClickable { onClickAgent(agent) },
+                            agent = agent
+                        )
+                    }
+                }
+            }.onFailure { it.printStackTrace() }
         }
+    } else {
+        EmptyContentUI()
     }
 }
 
