@@ -200,55 +200,44 @@ class MainViewModel : BaseActivityViewModel() {
     }
 
     fun selectTab(tab: Int) {
-        EasyLog.log("selectTab - Switching to tab: $tab")
         _selectedTab.value = HomeTabIndex.entries.toTypedArray()[tab]
         when (_selectedTab.value) {
             HomeTabIndex.Conversation -> {
-                EasyLog.log("selectTab - Entering Conversations tab")
                 chatViewModel?.getConversations()
                 getSysMsgs()
                 // 如果切换到对话页面且当前选中关注列表，则刷新关注列表
                 if (_selectedConversationsTab.value == ConversationsPageTab.TabFollowing) {
-                    EasyLog.log("selectTab - Following tab is selected, triggering refresh")
+                    EasyLog.log("Switching to Conversations tab while following tab is selected - refreshing following agents")
                     getFollowingAgents()
-                } else {
-                    EasyLog.log("selectTab - Following tab not selected, skipping refresh")
                 }
             }
 
             HomeTabIndex.My -> {
-                EasyLog.log("selectTab - Entering My tab")
                 getUserCreatedAgents()
             }
 
             else -> {
-                EasyLog.log("selectTab - Entering other tab: ${_selectedTab.value}")
+
             }
         }
     }
 
     fun setChatViewModel(chatViewModel: ChatViewModel) {
         this.chatViewModel = chatViewModel
-        
-        // 只有在chatViewModel还没有agent信息时才设置
-        if (chatViewModel.agentInfo.value == null) {
-            chatViewModel.setAgentInfo(agentList.firstOrNull())
-        }
+
+        chatViewModel.setAgentInfo(agentList.firstOrNull())
     }
 
     fun onSelectConversationsTab(tab: ConversationsPageTab) {
-        EasyLog.log("onSelectConversationsTab - Switching to tab: $tab")
         _selectedConversationsTab.value = tab
         when (tab) {
             ConversationsPageTab.TabFollowing -> {
                 // 每次切换到关注列表时都刷新
-                EasyLog.log("onSelectConversationsTab - Following tab selected, triggering refresh")
+                EasyLog.log("Switching to following tab - refreshing following agents")
                 getFollowingAgents()
             }
 
-            else -> {
-                EasyLog.log("onSelectConversationsTab - Other tab selected, no refresh needed")
-            }
+            else -> {}
         }
     }
 
@@ -372,41 +361,20 @@ class MainViewModel : BaseActivityViewModel() {
     }
 
     fun getFollowingAgents() {
-        EasyLog.log("getFollowingAgents - Starting refresh")
+        EasyLog.log("getFollowingAgents")
         viewModelScope.launch(Dispatchers.IO) {
             val result = agentApi.getFollowingAgents(1, 10)
-            EasyLog.log("getFollowingAgents API result = $result")
+            EasyLog.log("getFollowingAgents = $result")
 
             when (result) {
                 is HttpResult.Success -> {
-                    EasyLog.log("getFollowingAgents - Clearing list, current size: ${followingAgents.size}")
                     followingAgents.clear()
                     result.data.list?.let { agents ->
-                        EasyLog.log("getFollowingAgents - API returned ${agents.size} agents")
-                        
-                        // Check for duplicates
-                        val uniqueAgents = agents.distinctBy { it.id }
-                        if (uniqueAgents.size != agents.size) {
-                            EasyLog.log("getFollowingAgents - WARNING: Found ${agents.size - uniqueAgents.size} duplicate agents!")
-                            agents.groupBy { it.id }.forEach { (id, duplicates) ->
-                                if (duplicates.size > 1) {
-                                    EasyLog.log("getFollowingAgents - Duplicate agent ID: $id, count: ${duplicates.size}")
-                                }
-                            }
-                        }
-                        
-                        // Log each agent's opening message
-                        uniqueAgents.forEach { agent ->
-                            EasyLog.log("getFollowingAgents - Agent: ${agent.id} - ${agent.name} - opening: ${agent.opening}")
-                        }
-                        
-                        followingAgents.addAll(uniqueAgents)
-                        EasyLog.log("getFollowingAgents - Final list size: ${followingAgents.size}")
+                        followingAgents.addAll(agents)
                     }
                 }
 
                 is HttpResult.Failure -> {
-                    EasyLog.log("getFollowingAgents - API failed: ${result.message}")
                     showNetworkAwareError(result.message)
                 }
             }
@@ -518,10 +486,10 @@ class MainViewModel : BaseActivityViewModel() {
         if (_selectedTab.value == HomeTabIndex.Conversation &&
             _selectedConversationsTab.value == ConversationsPageTab.TabFollowing
         ) {
-            EasyLog.log("refreshFollowingListIfOnTab - Refreshing following agents due to follow state change")
+            EasyLog.log("Refreshing following agents due to follow state change")
             getFollowingAgents()
         } else {
-            EasyLog.log("refreshFollowingListIfOnTab - Not refreshing - not on following tab")
+            EasyLog.log("Not refreshing - not on following tab")
         }
     }
 

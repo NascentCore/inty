@@ -48,25 +48,8 @@ class ChatActivity : BaseActivity() {
             ?: throw IllegalStateException("IAgentApi not found in TheRouter")
     }
 
-    companion object {
-        private var isActivityActive = false
-        
-        fun isAlreadyActive(): Boolean {
-            return isActivityActive
-        }
-    }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        
-        // 检查是否已经有ChatActivity在运行
-        if (isActivityActive) {
-            EasyLog.log("ChatActivity: Another instance is already active, finishing")
-            finish()
-            return
-        }
-        
-        isActivityActive = true
         setupWindow()
         val id = agent?.id ?: agent_id
         if (id == null) {
@@ -232,10 +215,5 @@ class ChatActivity : BaseActivity() {
             putExtra("isFollowed", isFollowed)
         }
         LocalBroadcastManager.getInstance(this@ChatActivity).sendBroadcast(intent)
-    }
-    
-    override fun onDestroy() {
-        super.onDestroy()
-        isActivityActive = false
     }
 }
