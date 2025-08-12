@@ -29,6 +29,8 @@ from app.core.config import global_config_loaded_from_config_yaml
 from app.services.background_task_service import background_task_service
 from app.services.cache_service import cache_service
 
+from jinja2 import Template as Jinja2Template
+
 logger = logging.getLogger(__name__)
 
 
@@ -360,6 +362,11 @@ class Agent:
 
             system_messages = []
 
+            # 如缺少任一默认提示词，则认为是用户创建的角色。
+            # 此为短期解决方案，未来任何对提示词组装机制的改造，都需要重新考虑这个判定的正确性。
+            is_char_user_created = not self.main_prompt or not self.mode_prompt
+            logger.debug(f"角色是否用户创建: {is_char_user_created}")
+
             # 1. 主提示词（第一优先级）- 使用全局默认或agent自定义
             main_prompt = self._get_effective_main_prompt()
             if main_prompt:
@@ -429,32 +436,43 @@ class Agent:
                 else:
                     system_messages.append(SystemMessage(content=mode_prompt))
 
-            output_format_prompt = self._get_effective_output_format_prompt()
-            if output_format_prompt:
-                if "{{" in output_format_prompt and "}}" in output_format_prompt:
-                    # TODO: render_system_prompt is over-engineered.
-                    # Consider replacing it with
-                    # Jinja2 template rendering render_template({"char": name_of_char, "user": name_of_user})
-                    rendered_prompt = prompt_template_manager.render_system_prompt(
-                        system_prompt=output_format_prompt,
-                        agent_name=self.name,
-                        user_name=user_name,
-                        template_name="basic",
+            if is_char_user_created:
+                logger.debug(
+                    f"用户创建的角色，添加输出格式提示词: {prompts.FRIENDLY_ROLEPLAY_PROMPT.output_format_prompt}"
+                )
+                output_format_prompt = self._get_effective_output_format_prompt()
+                if output_format_prompt:
+                    if "{{" in output_format_prompt and "}}" in output_format_prompt:
+                        # TODO: render_system_prompt is over-engineered.
+                        # Consider replacing it with
+                        # Jinja2 template rendering render_template({"char": name_of_char, "user": name_of_user})
+                        template = Jinja2Template(output_format_prompt)
+                        rendered_prompt = template.render(
+                            char=self.name, user=user_name
+                        )
+                        system_messages.append(SystemMessage(content=rendered_prompt))
+                    else:
+                        system_messages.append(
+                            SystemMessage(content=output_format_prompt)
+                        )
+                    logger.debug(
+                        f"用户创建的角色，添加输出格式提示词: {system_messages[-1].content}"
                     )
-                    system_messages.append(SystemMessage(content=rendered_prompt))
-                else:
-                    system_messages.append(SystemMessage(content=output_format_prompt))
 
             # 5. 用户个性化信息 - 独立的SystemMessage
             if user_profile:
                 system_messages.append(SystemMessage(content=user_profile))
 
-            system_messages.extend(
-                [
-                    SystemMessage(content=prompt)
-                    for prompt in prompts.FRIENDLY_ROLEPLAY_PROMPT.auxiliary_prompts
-                ]
-            )
+            if is_char_user_created:
+                logger.debug(
+                    f"用户创建的角色，添加辅助提示词: {"\n".join(prompts.FRIENDLY_ROLEPLAY_PROMPT.auxiliary_prompts)}"
+                )
+                system_messages.extend(
+                    [
+                        SystemMessage(content=prompt)
+                        for prompt in prompts.FRIENDLY_ROLEPLAY_PROMPT.auxiliary_prompts
+                    ]
+                )
 
             return system_messages
 

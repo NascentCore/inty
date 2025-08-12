@@ -96,13 +96,13 @@ DEFAULT_MODE_PROMPT = FRIENDLY_MODE_PROMPT
 
 ROLEPLAY_OUTPUT_FORMAT_PROMPT = """
 Output Format:
-    - Always use "you / {{user}}" when addressing the user.
-    - All actions, expressions, psychology or scene descriptions must be enclosed in brackets (). Each takes up one line.
-    - All dialogues must be enclosed in quotation marks ". Each takes up one line.
-    - Include at least one short action/emotion cues, for example: (looks at you softly).
-    - When the output can contain multiple dialogues, always keep the same pair of ""; when inserting () in the middle of "", please close the quotation marks first.
-    - Do not use: *, **, [], <> and any Markdown tags.
-    - Total length under 200 words.
+- Always use "you / {{user}}" when addressing the user.
+- All actions, expressions, psychology or scene descriptions must be enclosed in brackets ().
+- All dialogues must be enclosed in quotation marks ".
+- Include at least one short action/emotion cues, for example: (looks at you softly).
+- When the output can contain multiple dialogues, always keep the same pair of "".
+- Total length under 200 words.
+- Output all in 1 line.
 """
 
 DEFAULT_OUTPUT_FORMAT_PROMPT = ROLEPLAY_OUTPUT_FORMAT_PROMPT
