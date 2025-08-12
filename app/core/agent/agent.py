@@ -465,7 +465,7 @@ class Agent:
 
             if is_char_user_created:
                 logger.debug(
-                    f"用户创建的角色，添加辅助提示词: {"\n".join(prompts.FRIENDLY_ROLEPLAY_PROMPT.auxiliary_prompts)}"
+                    f"用户创建的角色，添加辅助提示词: {'\n'.join(prompts.FRIENDLY_ROLEPLAY_PROMPT.auxiliary_prompts)}"
                 )
                 system_messages.extend(
                     [
