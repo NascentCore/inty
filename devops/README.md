@@ -15,6 +15,10 @@
 * API endpoint: https://app.inty.cc
   * Monitoring: https://app.checklyhq.com/accounts/1896e6d6-1599-414f-998e-3dabcc58fd7f
 
+## Inty-dev
+
+* [logs](https://cloudlogging.app.goo.gl/X1mKZ555YZnRUYFD6)
+
 ## Other services
 
 * GCP 谷歌云平台，提供文生图等各类后端服务：it@sxwl.ai
