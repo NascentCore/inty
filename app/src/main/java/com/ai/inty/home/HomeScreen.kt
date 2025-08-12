@@ -206,11 +206,11 @@ private fun handleTabSelection(
 @Composable
 private fun HomeContent(
     selectedTab: HomeTabIndex,
-    selectedConversationsTab: com.ai.inty.home.ConversationsPageTab,
+    selectedConversationsTab: ConversationsPageTab,
     mainViewModel: MainViewModel,
     chatViewModel: ChatViewModel,
     viewModelFactory: ViewModelProvider.Factory,
-    context: android.content.Context,
+    context: Context,
 ) {
     when (selectedTab) {
         HomeTabIndex.Chat -> {

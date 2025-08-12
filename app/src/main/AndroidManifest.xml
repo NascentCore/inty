@@ -72,40 +72,49 @@
         <activity
             android:name=".MainActivity"
             android:label="@string/app_name"
+            android:launchMode="singleTask"
             android:screenOrientation="portrait"
             android:theme="@style/Theme.Inty"
             android:windowSoftInputMode="adjustResize" />
         <activity
             android:name=".ChatActivity"
+            android:launchMode="singleTop"
             android:screenOrientation="portrait"
             android:theme="@style/Theme.Inty"
             android:windowSoftInputMode="adjustResize" />
         <activity
             android:name=".SettingActivity"
+            android:launchMode="singleTop"
             android:theme="@style/Theme.Inty.Popup" />
         <activity
             android:name=".MySettingActivity"
+            android:launchMode="singleTop"
             android:screenOrientation="portrait"
             android:theme="@style/Theme.Inty.Popup"
             android:windowSoftInputMode="adjustResize" />
         <activity android:name=".SysMsgsActivity" />
         <activity
             android:name=".AgentInfoActivity"
+            android:launchMode="singleTop"
             android:theme="@style/Theme.Inty.Popup" />
         <activity
             android:name=".RegInfoActivity"
+            android:launchMode="singleTop"
             android:theme="@style/Theme.Inty.Popup" />
         <activity
             android:name=".ReportActivity"
+            android:launchMode="singleTop"
             android:theme="@style/Theme.Inty.Popup"
             android:windowSoftInputMode="adjustResize" />
         <activity
             android:name=".CreateRoleActivity"
+            android:launchMode="singleTop"
             android:theme="@style/Theme.Inty.Popup"
             android:windowSoftInputMode="adjustResize" />
         <activity
             android:name=".AvatarGenerateActivity"
             android:exported="true"
+            android:launchMode="singleTop"
             android:theme="@style/Theme.Inty.Popup"
             android:windowSoftInputMode="adjustResize" />
         <activity
@@ -114,11 +123,13 @@
             android:theme="@style/Theme.Inty.UCrop" />
         <activity
             android:name=".LoginActivity"
+            android:launchMode="singleTop"
             android:theme="@style/Theme.Inty.Login" />
 
         <activity android:name=".VipCenterActivity" />
         <activity
             android:name=".SubscriptionManagementActivity"
+            android:launchMode="singleTop"
             android:theme="@style/Theme.Inty.Popup" />
 
     </application>

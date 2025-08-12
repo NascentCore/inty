@@ -122,7 +122,7 @@ private fun ConversationsPageContent(
             .background(Color.Transparent),
         containerColor = Color.Transparent
     ) { innerPadding ->
-        Column {
+        Column(modifier = Modifier.fillMaxSize()) {
             Spacer(Modifier.height(innerPadding.calculateTopPadding() + 28.dp))
 
             // Tab选择器
@@ -185,7 +185,7 @@ private fun ConversationsTabSelector(
             text = stringResource(R.string.tab_following),
             isSelected = selectedTab == ConversationsPageTab.TabFollowing
         )
-}
+    }
 }
 
 /**
@@ -242,39 +242,76 @@ private fun MessageTabContent(
     onClickConversationItem: (ConversationItem) -> Unit,
     onClickSysMsg: () -> Unit,
 ) {
-    LazyColumn {
-        // 系统消息
-        lastSysMsg?.let { sysMsg ->
-            item {
-                AuthClickable(onClick = onClickSysMsg) { authModifier ->
-                    ConversationItem(
-                        modifier = authModifier
-                            .fillMaxWidth()
-                            .background(color = Color(0x3378599A)),
-                        conversation = ConversationItem(
-                            agentId = Constant.SYS_NOTIFICATION_ID,
-                            agentName = "System Notification",
-                            lastMessage = sysMsg.content,
-                            createdAt = sysMsg.createdAt
-                        ),
-                        placeholderID = R.drawable.icon_sys_notify
-                    )
+    Box(Modifier.fillMaxSize()) {
+        LazyColumn(modifier = Modifier.matchParentSize()) {
+            // 系统消息
+            lastSysMsg?.let { sysMsg ->
+                item {
+                    AuthClickable(onClick = onClickSysMsg) { authModifier ->
+                        ConversationItem(
+                            modifier = authModifier
+                                .fillMaxWidth()
+                                .background(color = Color(0x3378599A)),
+                            conversation = ConversationItem(
+                                agentId = Constant.SYS_NOTIFICATION_ID,
+                                agentName = "System Notification",
+                                lastMessage = sysMsg.content,
+                                createdAt = sysMsg.createdAt
+                            ),
+                            placeholderID = R.drawable.icon_sys_notify
+                        )
+                    }
                 }
             }
-        }
 
-        // 会话列表
-        items(
-            items = conversations,
-            key = { conversation -> conversation.agentId }
-        ) { conversation ->
-            AuthClickable(onClick = { onClickConversationItem(conversation) }) { authModifier ->
-                ConversationItem(
-                    modifier = authModifier.fillMaxWidth(),
-                    conversation = conversation
-                )
+            // 会话列表
+            if (conversations.isNotEmpty()) {
+                runCatching {
+                    items(
+                        items = conversations,
+                        key = { conversion -> conversion.agentId }
+                    ) { conversion ->
+                        AuthClickable(onClick = { onClickConversationItem(conversion) }) { authModifier ->
+                            ConversationItem(
+                                modifier = authModifier.fillMaxWidth(),
+                                conversation = conversion
+                            )
+                        }
+                    }
+                }.onFailure { it.printStackTrace() }
             }
+
         }
+        if (lastSysMsg == null && conversations.isEmpty()) {
+            EmptyContentUI()
+        }
+    }
+}
+
+@Composable
+private fun EmptyContentUI() {
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+
+
+        IntyImage(model = R.drawable.group2085655908)
+
+        Spacer(Modifier.height(16.dp))
+
+        Text(
+            modifier = Modifier
+                .padding(horizontal = 16.dp)
+                .align(Alignment.CenterHorizontally),
+            text = stringResource(R.string.no_agent),
+            color = Color.White.copy(0.55f),
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Normal,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
     }
 }
 
@@ -287,27 +324,32 @@ private fun FollowingTabContent(
     onClickAgent: (AgentInfo) -> Unit,
     onUnfollowAgent: ((String) -> Unit)? = null,
 ) {
-    LazyColumn {
-
-        items(
-            items = followingAgents,
-            key = { agent -> agent.id }
-        ) { agent ->
-            if (onUnfollowAgent != null) {
-                LongPressUnfollowItem(
-                    agent = agent,
-                    onClickAgent = onClickAgent,
-                    onUnfollowAgent = onUnfollowAgent
-                )
-            } else {
-                FollowingAgentItem(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .noRippleClickable { onClickAgent(agent) },
-                    agent = agent
-                )
-            }
+    if (followingAgents.isNotEmpty()) {
+        LazyColumn(modifier = Modifier.fillMaxSize()) {
+            runCatching {
+                items(
+                    items = followingAgents,
+                    key = { agent -> agent.id }
+                ) { agent ->
+                    if (onUnfollowAgent != null) {
+                        LongPressUnfollowItem(
+                            agent = agent,
+                            onClickAgent = onClickAgent,
+                            onUnfollowAgent = onUnfollowAgent
+                        )
+                    } else {
+                        FollowingAgentItem(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .noRippleClickable { onClickAgent(agent) },
+                            agent = agent
+                        )
+                    }
+                }
+            }.onFailure { it.printStackTrace() }
         }
+    } else {
+        EmptyContentUI()
     }
 }
 
