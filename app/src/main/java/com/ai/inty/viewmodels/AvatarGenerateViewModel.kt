@@ -5,6 +5,7 @@ import com.ai.inty.beans.GenerateBackgroundRequest
 import com.ai.inty.beans.GenerateBackgroundResponse
 import com.ai.inty.net.IAgentApi
 import com.ai.inty.utils.AvatarManager
+import com.ai.inty.utils.NetworkErrorHandler
 import com.inty.utils.log.EasyLog
 import com.therouter.TheRouter
 import kotlinx.coroutines.Dispatchers
@@ -100,12 +101,15 @@ class AvatarGenerateViewModel : BaseViewModel() {
 
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    val errorMessage = e.message?.substringBefore(':') ?: "Unknown error"
-                    AvatarManager.setGenerationError(errorMessage)
-                    _errorMessage.value = errorMessage
-                    EasyLog.log("Ai头像生成异常: ${e.message}", EasyLog.ERROR)
-                    _isLoading.value = false
-                    clearError()
+                    withContext(Dispatchers.Main) {
+                        NetworkErrorHandler.handleNetworkException(e, { errorMessage ->
+                            AvatarManager.setGenerationError(errorMessage)
+                            _errorMessage.value = errorMessage
+                        })
+                        EasyLog.log("Ai头像生成异常: ${e.message}", EasyLog.ERROR)
+                        _isLoading.value = false
+                        clearError()
+                    }
                 }
             }
         }

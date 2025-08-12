@@ -328,7 +328,7 @@ private fun ConversationsTabContent(
 @Composable
 private fun SuggestTabContent(
     mainViewModel: MainViewModel,
-    context: android.content.Context,
+    context: Context,
 ) {
     val isLoading = mainViewModel.isLoading.collectAsState()
 
@@ -356,7 +356,7 @@ private fun SuggestTabContent(
 @Composable
 private fun MyTabContent(
     mainViewModel: MainViewModel,
-    context: android.content.Context,
+    context: Context,
 ) {
     val userProfile = mainViewModel.userProfile.collectAsState()
     val userCreatedAgents = mainViewModel.userCreatedAgents
@@ -375,7 +375,13 @@ private fun MyTabContent(
             profile
         }
     }
+    //确保更新用户信息，处理切换账号后的信息同步
+    LifecycleResumeEffect(mainViewModel) {
+        mainViewModel.getUserProfile()
+        onPauseOrDispose {
 
+        }
+    }
     MyPage(
         modifier = Modifier,
         userProfile = safeUserProfile,

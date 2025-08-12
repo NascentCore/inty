@@ -303,12 +303,12 @@ class ChatViewModel : BaseActivityViewModel() {
                     }
 
                     is HttpResult.Failure -> {
-                        showNetworkAwareError(result.message)
+//                        showNetworkAwareError(result.message)
                     }
                 }
             } catch (e: Exception) {
                 EasyLog.log("getConversations exception: ${e.message}", priority = EasyLog.ERROR)
-                handleNetworkException(e)
+//                handleNetworkException(e)
             }
         }
     }

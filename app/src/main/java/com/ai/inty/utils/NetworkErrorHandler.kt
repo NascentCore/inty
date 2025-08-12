@@ -90,7 +90,7 @@ object NetworkErrorHandler {
             exception.message?.contains("connection", ignoreCase = true) == true ->
                 "Connection failed, please check your network settings"
 
-            else -> exception.message ?: "Network request failed"
+            else -> "Network request failed"
         }
     }
 

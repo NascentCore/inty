@@ -24,6 +24,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.credentials.exceptions.NoCredentialException
 import com.ai.inty.R
 import com.ai.inty.base.AntiClick
 import com.ai.inty.base.ToastUtils
@@ -70,8 +71,8 @@ internal fun LoginScreen(
                     },
                     onFailure = { exception ->
                         val errorMessage = when (exception) {
-                            is androidx.credentials.exceptions.NoCredentialException -> "No credentials available"
-                            else -> "Login Failed: ${exception.message}"
+                            is NoCredentialException -> "No credentials available"
+                            else -> "Login Failed"
                         }
                         EasyLog.log(
                             "Credential Manager sign-in failed: $errorMessage",

@@ -52,20 +52,20 @@ enum class HomeTabIndex {
 class MainViewModel : BaseActivityViewModel() {
 
     // 延迟获取依赖，避免在构造函数中立即获取导致空指针异常
-    val userApi: IUserApi by lazy {
+    private val userApi: IUserApi by lazy {
         TheRouter.get(IUserApi::class.java)
             ?: throw IllegalStateException("IUserApi not found in TheRouter")
     }
-    val agentApi: IAgentApi by lazy {
+    private val agentApi: IAgentApi by lazy {
         TheRouter.get(IAgentApi::class.java)
             ?: throw IllegalStateException("IAgentApi not found in TheRouter")
     }
-    val userApi2: IUserApi2 by lazy {
+    private val userApi2: IUserApi2 by lazy {
         TheRouter.get(IUserApi2::class.java)
             ?: throw IllegalStateException("IUserApi2 not found in TheRouter")
     }
 
-    val commonApi: ICommonApi by lazy {
+    private val commonApi: ICommonApi by lazy {
         TheRouter.get(ICommonApi::class.java)
             ?: throw IllegalStateException("ICommonApi not found in TheRouter")
     }
@@ -96,13 +96,13 @@ class MainViewModel : BaseActivityViewModel() {
 
     private var chatViewModel: ChatViewModel? = null
 
-    private val _userProfile = MutableStateFlow<UserProfile>(UserProfile())
+    private val _userProfile = MutableStateFlow(UserProfile())
     val userProfile = _userProfile.asStateFlow()
 
     val sysMsgs = mutableStateListOf<SysMsgItem>()
 
 
-    val userProfileChanged = object : ActionInterceptor() {
+    private val userProfileChanged = object : ActionInterceptor() {
         override fun handle(context: Context, navigator: Navigator): Boolean {
             getUserProfile()
 
@@ -179,7 +179,7 @@ class MainViewModel : BaseActivityViewModel() {
                     }
 
                     is HttpResult.Failure -> {
-                        showNetworkAwareError(result.message)
+//                        showNetworkAwareError(result.message)
                         // 如果加载失败，回退页码
                         if (currentPage > 1) {
                             currentPage--
@@ -187,7 +187,7 @@ class MainViewModel : BaseActivityViewModel() {
                     }
                 }
             } catch (e: Exception) {
-                handleNetworkException(e)
+//                handleNetworkException(e)
                 // 如果加载失败，回退页码
                 if (currentPage > 1) {
                     currentPage--
@@ -266,7 +266,7 @@ class MainViewModel : BaseActivityViewModel() {
                             "getUserProfile failure: ${result.message}",
                             priority = EasyLog.ERROR
                         )
-                        showNetworkAwareError(result.message)
+//                        showNetworkAwareError(result.message)
                     }
                 }
             } catch (e: retrofit2.HttpException) {
@@ -276,11 +276,11 @@ class MainViewModel : BaseActivityViewModel() {
                     EasyLog.ERROR
                 )
                 val errorMessage = handleHttpException(e, "user")
-                showNetworkAwareError(errorMessage)
+//                showNetworkAwareError(errorMessage)
             } catch (e: Exception) {
                 EasyLog.log("getUserProfile exception: ${e.message}", priority = EasyLog.ERROR)
                 EasyLog.log(e)
-                handleNetworkException(e)
+//                handleNetworkException(e)
             }
         }
     }
@@ -291,7 +291,7 @@ class MainViewModel : BaseActivityViewModel() {
         TheRouter.removeActionInterceptor(Constant.ACTION_USER_PROFILE_CHANGED, userProfileChanged)
     }
 
-    fun regFCM() {
+    private fun regFCM() {
         viewModelScope.launch {
             FirebaseMessaging.getInstance().token.addOnCompleteListener(OnCompleteListener { task ->
                 if (!task.isSuccessful) {
@@ -327,12 +327,12 @@ class MainViewModel : BaseActivityViewModel() {
                     }
 
                     is HttpResult.Failure -> {
-                        showNetworkAwareError(result.message)
+//                        showNetworkAwareError(result.message)
                     }
                 }
             } catch (e: Exception) {
                 EasyLog.log("getSysMsgs exception: ${e.message}", priority = EasyLog.ERROR)
-                handleNetworkException(e)
+//                handleNetworkException(e)
             }
         }
     }
@@ -363,7 +363,7 @@ class MainViewModel : BaseActivityViewModel() {
     fun getFollowingAgents() {
         EasyLog.log("getFollowingAgents")
         viewModelScope.launch(Dispatchers.IO) {
-            val result = agentApi.getFollowingAgents(1, 10)
+            val result = agentApi.getFollowingAgents(1, 100)//临时设置100，pageSize最大100，这里需要做分页加载
             EasyLog.log("getFollowingAgents = $result")
 
             when (result) {
@@ -375,7 +375,7 @@ class MainViewModel : BaseActivityViewModel() {
                 }
 
                 is HttpResult.Failure -> {
-                    showNetworkAwareError(result.message)
+//                    showNetworkAwareError(result.message)
                 }
             }
         }
@@ -554,7 +554,7 @@ class MainViewModel : BaseActivityViewModel() {
                             "loadUserCreatedAgents - API failure: ${result.message}",
                             priority = EasyLog.ERROR
                         )
-                        showNetworkAwareError(result.message)
+//                        showNetworkAwareError(result.message)
                         // If loading failed, rollback page counter
                         if (currentUserAgentsPage > 0) {
                             currentUserAgentsPage--
@@ -567,7 +567,7 @@ class MainViewModel : BaseActivityViewModel() {
                     priority = EasyLog.ERROR
                 )
                 EasyLog.log(e)
-                handleNetworkException(e)
+//                handleNetworkException(e)
                 // If loading failed, rollback page counter
                 if (currentUserAgentsPage > 0) {
                     currentUserAgentsPage--

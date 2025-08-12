@@ -69,7 +69,7 @@ internal fun ChatPage(
     }
 
     val density = LocalDensity.current
-    val agentInfo = chatViewModel.agentInfo.collectAsState().value
+    val agentInfo by chatViewModel.agentInfo.collectAsState()
     val focusManager = LocalFocusManager.current
 
     // 检测键盘状态
@@ -148,13 +148,13 @@ internal fun ChatPage(
             ) {
                 Spacer(Modifier.height(48.dp))
 
-                if (agentInfo != null) {
+                agentInfo?.let { info ->
                     ChatTopBar(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(36.dp)
                             .padding(horizontal = 18.dp, vertical = 0.dp),
-                        agentInfo = agentInfo,
+                        agentInfo = info,
                         showBackButton = showBackButton,
                         onBack = onBack,
                         onClickMore = {

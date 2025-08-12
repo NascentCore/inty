@@ -1,6 +1,9 @@
 package com.ai.inty
 
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -48,11 +51,32 @@ class ChatActivity : BaseActivity() {
             ?: throw IllegalStateException("IAgentApi not found in TheRouter")
     }
 
+    private val followStateReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == "FOLLOW_STATE_CHANGED") {
+                EasyLog.log("MainActivity received FOLLOW_STATE_CHANGED broadcast")
+                val agentId = intent.getStringExtra("agentId")
+                val isFollowed = intent.getBooleanExtra("isFollowed", false)
+
+                // 强制关注状态
+                agentId?.let {
+                    chatViewModel.updateAgentFollowState(agentId, isFollowed)
+                }
+
+            }
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setupWindow()
         initializeChatViewModel()
         setupUI()
+        // 注册广播接收器
+        LocalBroadcastManager.getInstance(this).registerReceiver(
+            followStateReceiver,
+            IntentFilter("FOLLOW_STATE_CHANGED")
+        )
     }
 
     /**
@@ -146,7 +170,7 @@ class ChatActivity : BaseActivity() {
                     }
 
                     is HttpResult.Failure -> {
-                        handleFollowFailure("Follow Failed: ${result.message}")
+                        handleFollowFailure("Follow Failed")
                     }
                 }
             } catch (e: Exception) {
@@ -221,5 +245,12 @@ class ChatActivity : BaseActivity() {
             putExtra("isFollowed", isFollowed)
         }
         LocalBroadcastManager.getInstance(this@ChatActivity).sendBroadcast(intent)
+    }
+
+
+    override fun onDestroy() {
+        super.onDestroy()
+        // Unregister broadcast receiver
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(followStateReceiver)
     }
 }

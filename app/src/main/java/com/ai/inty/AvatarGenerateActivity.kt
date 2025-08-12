@@ -1,7 +1,6 @@
 package com.ai.inty
 
 import android.os.Bundle
-import android.widget.Toast
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.animation.core.animateFloat
@@ -52,7 +51,6 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -109,13 +107,12 @@ private fun AvatarGeneratePage(
     val selectedImageIndex by viewModel.selectedImageIndex.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
 
-    val context = LocalContext.current
     val focusManager = LocalFocusManager.current
 
     // Handle error messages
     LaunchedEffect(errorMessage) {
         errorMessage?.let { error ->
-            Toast.makeText(context, error, Toast.LENGTH_LONG).show()
+            viewModel.showNetworkAwareError(error)
             viewModel.clearError()
         }
     }

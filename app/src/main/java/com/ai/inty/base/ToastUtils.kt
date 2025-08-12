@@ -11,21 +11,34 @@ import kotlinx.coroutines.withContext
 
 object ToastUtils {
 
+    private var toast: Toast? = null
+
+
     suspend fun showToast(msg: String) = withContext(Dispatchers.Main) {
-        val toast: Toast = Toast.makeText(AppEnv.context, msg, Toast.LENGTH_SHORT)
-        toast.show()
+        if (toast == null) {
+            toast = Toast(AppEnv.context)
+        }
+        toast?.setText(msg)
+        toast?.show()
     }
 
     suspend fun showToast(stringResId: Int) = withContext(Dispatchers.Main) {
-        val toast: Toast = Toast.makeText(AppEnv.context, AppEnv.context.getString(stringResId), Toast.LENGTH_SHORT)
-        toast.show()
+        if (toast == null) {
+            toast = Toast(AppEnv.context)
+        }
+        toast?.setText(stringResId)
+        toast?.show()
     }
 
-    suspend fun showToast(stringResId: Int, vararg formatArgs: Any) = withContext(Dispatchers.Main) {
-        val message = AppEnv.context.getString(stringResId, *formatArgs)
-        val toast: Toast = Toast.makeText(AppEnv.context, message, Toast.LENGTH_SHORT)
-        toast.show()
-    }
+    suspend fun showToast(stringResId: Int, vararg formatArgs: Any) =
+        withContext(Dispatchers.Main) {
+            val message = AppEnv.context.getString(stringResId, *formatArgs)
+            if (toast == null) {
+                toast = Toast(AppEnv.context)
+            }
+            toast?.setText(message)
+            toast?.show()
+        }
 
     /**
      * 显示长文本 Toast，自动处理换行和样式
