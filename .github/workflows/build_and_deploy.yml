@@ -57,6 +57,9 @@ jobs:
         context: .
         push: true
         tags: ${{ env.INTY_SERVER_IMAGE }}:${{ github.ref_name }}
+        # https://docs.docker.com/build/ci/github-actions/cache/#cache-backend-api
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
         
     - name: Deploy to ${{ steps.set-environment.outputs.environment }}
       uses: appleboy/ssh-action@master
