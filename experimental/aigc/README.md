@@ -4,7 +4,7 @@ An intelligent AI agent that generates comprehensive fictional character profile
 
 ## Testing
 
-```
+```bash
 python -m pytest test_character_generation.py
 ```
 
@@ -53,6 +53,7 @@ python -m pytest test_character_generation.py
    ```
 
 3. **Set up environment variables**
+
    ```bash
    export GEMINI_API_KEY="your_gemini_api_key_here"
    ```
