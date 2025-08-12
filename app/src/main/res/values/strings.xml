@@ -200,7 +200,7 @@
     <string name="she_her">She/Her</string>
     <string name="they_them">They/Them</string>
     <string name="save">Save</string>
-    <string name="persona_placeholder">Write your persona here…</string>
+    <string name="persona_placeholder">Persona shows up here…</string>
 
     <!-- System Messages -->
     <string name="click_to_check">Click to check</string>
