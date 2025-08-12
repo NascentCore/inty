@@ -156,7 +156,7 @@ internal fun MyPage(
 
                 Text(
                     modifier = Modifier.padding(horizontal = 16.dp),
-                    text = userProfile.description ?: "Share a fun fact about yourself",
+                    text = userProfile.description ?: stringResource(R.string.persona_placeholder),
                     color = Color.White,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Medium,
