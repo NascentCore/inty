@@ -9,11 +9,13 @@ from pydantic import AnyHttpUrl
 
 @dataclass
 class LoggingConfig:
-    level: str
-    format: str
-    file: str
-    rotation: str
-    retention: str
+    level: str = "INFO"
+    format: str = (
+        "{time:YYYY-MM-DD HH:mm:ss.SSS} | {level: <8} | {name}:{function}:{line} - {message}"
+    )
+    file: str = "inty.log"
+    rotation: str = "100 MB"
+    retention: str = "7 days"
 
 
 @dataclass
