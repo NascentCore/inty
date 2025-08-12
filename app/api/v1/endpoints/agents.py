@@ -271,10 +271,11 @@ async def generate_background(
         )
 
         if not check_result.is_allowed:
+            logger.debug(f"check_result: {check_result}")
             error_message = f"Daily image generation limit reached ({check_result.used_count}/{check_result.limit})"
             return APIResponse.error(
                 message=error_message,
-                extra_data={
+                data={
                     "used_count": check_result.used_count,
                     "limit": check_result.limit,
                     "error_code": "BACKGROUND_GENERATION_LIMIT_EXCEEDED",
