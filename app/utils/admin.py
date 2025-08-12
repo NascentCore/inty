@@ -7,9 +7,13 @@ SUPER_USER_EMAILS = [
     "anonymoussocialforreal@gmail.com",
     "arthurzhang0521@gmail.com",
     "donggangcj@gmail.com",
-    "it@sxwl.ai",
     "justicezyx@gmail.com",
     "zhiwei9001@gmail.com",
+]
+
+SHARED_EMAILS = [
+    # Company IT email, has Google Account
+    "it@sxwl.ai",
     # Generic testing accounts
     "sxwlai001@gmail.com",
     "sxwlai002@gmail.com",
