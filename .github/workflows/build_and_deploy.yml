@@ -90,7 +90,7 @@ jobs:
 
     - name: Sanity check
       run: |
-        curl -s --fail --retry 5 --retry-delay 5 ${{ vars.SERVICE_PUBLIC_URL }}
+        curl --verbose --fail --retry 5 --retry-delay 5 ${{ vars.SERVICE_PUBLIC_URL }}
 
     - name: Write summary
       run: |
