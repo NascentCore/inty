@@ -12,7 +12,7 @@ from pydantic import AnyHttpUrl
 class LoggingConfig:
     level: str = "INFO"
     format: str = (
-        "{time:YYYY-MM-DD HH:mm:ss.SSS} | {level: <8} | {name}:{function}:{line} - {message}"
+        "{time:YYYY-MM-DD HH:mm:ss.SSS zz} | {level: <8} | {name}:{function}:{line} - {message}"
     )
     file: str = "inty.log"
     rotation: str = "100 MB"
