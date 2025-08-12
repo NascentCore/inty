@@ -38,11 +38,11 @@ Uploading key is under app signing settings:
 
 1. Chat (HomeTabIndex.Chat) - The main chat interface where users can interact with AI agents
    * 聊天：用户左右滑动浏览推荐的 AI 角色
-1. Conversations (HomeTabIndex.Conversation) - Shows conversation history and system messages
+1. Conversation (HomeTabIndex.Conversation) - Shows conversation history and system messages
    * 聊天历史和关注角色
-1. Add (HomeTabIndex.Add) - Special tab that navigates to role creation or login
+1. Create (HomeTabIndex.Create) - Special tab that navigates to role creation or login
    * 创建 AI 角色
-1. Suggest (HomeTabIndex.Suggest) - Recommendation page showing suggested AI agents
+1. Explore (HomeTabIndex.Explore) - Recommendation page showing suggested AI agents
    * AI 角色浏览
 1. My (HomeTabIndex.My) - User profile and personal settings page
    * 我的：设置、创建的角色列表等
@@ -271,6 +271,7 @@ val messages = _messages.asStateFlow()
 * `versionCode`: 每次发布递增
 * `versionName`: 语义版本控制 (例如 1.0.1)
 * 调试构建包含 git 提交哈希: `1.0.1 (d799932)`
+* `bundletool dump manifest --bundle app/playdebug/app-playdebug.aab | grep versionCode` 查看 aab 版本信息
 
 ## 参考
 
