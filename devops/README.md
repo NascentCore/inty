@@ -17,6 +17,9 @@
 
 ## Inty-dev
 
+共享的用于支持开发和评测的后端
+
+* Endpoint: <https://dev.inty.sxwl.ai>
 * [logs](https://cloudlogging.app.goo.gl/X1mKZ555YZnRUYFD6)
 
 ## Other services
