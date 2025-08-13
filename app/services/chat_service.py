@@ -861,69 +861,6 @@ async def delete_chats_by_agent_id(
         raise HTTPException(status_code=500, detail=f"删除聊天记录失败: {str(e)}")
 
 
-async def save_debug_messages(
-    db: AsyncSession, session_id: str, messages: List[dict]
-) -> None:
-    """
-    保存调试信息到数据库
-
-    Args:
-        db: 数据库会话
-        session_id: 会话ID
-        messages: 要保存的消息列表
-    """
-    try:
-        # 根据 session_id 推算出 chat_id
-        # session_id 是通过 generate_session_id(chat_id) 生成的
-        # 需要通过查询数据库找到对应的 chat 记录
-        from app.core.config import global_config_loaded_from_config_yaml
-
-        # 如果调试功能未启用，直接返回
-        if not global_config_loaded_from_config_yaml.app.debug_messages:
-            return
-
-        # 查找对应的 chat 记录
-        # 这里需要通过遍历来找到对应的 chat（因为 session_id 是基于 chat_id 生成的）
-        result = await db.execute(select(models.Chat))
-        chats = result.scalars().all()
-
-        target_chat = None
-        for chat in chats:
-            if generate_session_id(chat.id) == session_id:
-                target_chat = chat
-                break
-
-        if not target_chat:
-            logger.warning(f"未找到对应的 chat 记录，session_id: {session_id}")
-            return
-
-        # 将消息列表转换为 JSON 格式并保存
-        # 需要处理消息对象，确保它们可以被序列化
-        serializable_messages = []
-        for msg in messages:
-            if hasattr(msg, "dict"):
-                # 如果是 Pydantic 模型或类似对象
-                serializable_messages.append(msg.dict())
-            elif hasattr(msg, "__dict__"):
-                # 如果是普通对象
-                serializable_messages.append(msg.__dict__)
-            else:
-                # 如果已经是字典
-                serializable_messages.append(msg)
-
-        target_chat.debug_messages = serializable_messages
-
-        await db.commit()
-        logger.debug(
-            f"成功保存调试信息，session_id: {session_id}, 消息数量: {len(messages)}"
-        )
-
-    except Exception as e:
-        logger.error(f"保存调试信息失败，session_id: {session_id}, 错误: {str(e)}")
-        await db.rollback()
-        # 不抛出异常，避免影响正常的聊天流程
-
-
 async def get_debug_messages(
     db: AsyncSession,
     user_id: Optional[str] = None,
@@ -932,7 +869,7 @@ async def get_debug_messages(
     limit: int = 50,
 ) -> dict:
     """
-    查询debug messages
+    读取数据库，构建 debug messages
 
     Args:
         db: 数据库会话
@@ -946,27 +883,22 @@ async def get_debug_messages(
     """
     try:
         from sqlalchemy import and_, func
+        from app.core.agent.agent import agent_manager
+        from app.services import agent_service
 
         # 构建基础查询
-        query = (
-            select(
-                models.Chat.id.label("chat_id"),
-                models.Chat.user_id,
-                models.Chat.agent_id,
-                models.Chat.debug_messages,
-                models.Chat.created_at,
-                models.Chat.updated_at,
-                models.User.nickname.label("user_nickname"),
-                models.Agent.name.label("agent_name"),
-            )
-            .select_from(
-                models.Chat.__table__.join(
-                    models.User.__table__, models.Chat.user_id == models.User.id
-                ).join(models.Agent.__table__, models.Chat.agent_id == models.Agent.id)
-            )
-            .where(
-                models.Chat.debug_messages.isnot(None)  # 只查询有debug_messages的记录
-            )
+        query = select(
+            models.Chat.id.label("chat_id"),
+            models.Chat.user_id,
+            models.Chat.agent_id,
+            models.Chat.created_at,
+            models.Chat.updated_at,
+            models.User.nickname.label("user_nickname"),
+            models.Agent.name.label("agent_name"),
+        ).select_from(
+            models.Chat.__table__.join(
+                models.User.__table__, models.Chat.user_id == models.User.id
+            ).join(models.Agent.__table__, models.Chat.agent_id == models.Agent.id)
         )
 
         # 添加过滤条件
@@ -980,14 +912,10 @@ async def get_debug_messages(
             query = query.where(and_(*conditions))
 
         # 获取总数
-        count_query = (
-            select(func.count())
-            .select_from(
-                models.Chat.__table__.join(
-                    models.User.__table__, models.Chat.user_id == models.User.id
-                ).join(models.Agent.__table__, models.Chat.agent_id == models.Agent.id)
-            )
-            .where(models.Chat.debug_messages.isnot(None))
+        count_query = select(func.count()).select_from(
+            models.Chat.__table__.join(
+                models.User.__table__, models.Chat.user_id == models.User.id
+            ).join(models.Agent.__table__, models.Chat.agent_id == models.Agent.id)
         )
 
         if conditions:
@@ -1003,9 +931,29 @@ async def get_debug_messages(
         result = await db.execute(query)
         rows = result.fetchall()
 
-        # 转换为响应格式
+        # 转换为响应格式，生成debug messages on-the-fly
         items = []
         for row in rows:
+            try:
+                # 获取Agent实例来 generate debug messages
+                agent_data = await agent_service.get_agent_for_chat(
+                    db, agent_id=row.agent_id
+                )
+                if agent_data:
+                    agent = await agent_manager.get_agent(agent_data)
+
+                    # Generate debug messages on-the-fly
+                    debug_messages = await agent.generate_debug_messages_for_chat(
+                        user_id=row.user_id, chat_id=row.chat_id
+                    )
+                else:
+                    debug_messages = None
+            except Exception as e:
+                logger.warning(
+                    f"生成debug messages失败 for chat {row.chat_id}: {str(e)}"
+                )
+                debug_messages = None
+
             items.append(
                 {
                     "chat_id": row.chat_id,
@@ -1013,7 +961,7 @@ async def get_debug_messages(
                     "user_nickname": row.user_nickname,
                     "agent_id": row.agent_id,
                     "agent_name": row.agent_name,
-                    "debug_messages": row.debug_messages,
+                    "debug_messages": debug_messages,
                     "created_at": row.created_at,
                     "updated_at": row.updated_at,
                 }
@@ -1030,5 +978,5 @@ async def get_debug_messages(
         }
 
     except Exception as e:
-        logger.error(f"查询debug messages失败: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"查询debug messages失败: {str(e)}")
+        logger.error(f"生成debug messages失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"生成debug messages失败: {str(e)}")
