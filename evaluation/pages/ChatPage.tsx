@@ -378,7 +378,36 @@ export const ChatPage: React.FC = () => {
           message.success('聊天记录已清空');
         } catch (error) {
           console.error('清空聊天记录失败:', error);
-          message.error('清空聊天记录失败，请重试');
+          let errorMessage = '清空聊天记录失败，请重试。';
+          let errorDetail: any = null;
+
+          // Check if it's our custom ApiError
+          if (error instanceof Error && 'errorData' in error) { // Use 'in' operator for type narrowing
+            const apiError = error as any; // Cast to any to access errorData
+            errorMessage = apiError.message;
+            errorDetail = apiError.errorData;
+          } else if (error instanceof Error) {
+            errorMessage = error.message;
+          }
+
+          Modal.error({
+            title: '清空聊天记录失败',
+            content: (
+              <div>
+                <p>{errorMessage}</p>
+                {errorDetail && (
+                  <div>
+                    <p>后端返回详情:</p>
+                    <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all', maxHeight: '300px', overflowY: 'auto', background: '#f5f5f5', padding: '10px', borderRadius: '4px' }}>
+                      {JSON.stringify(errorDetail, null, 2)}
+                    </pre>
+                  </div>
+                )}
+              </div>
+            ),
+            okText: '关闭',
+            width: 600,
+          });
         }
       },
     });

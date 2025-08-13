@@ -78,12 +78,31 @@ class ApiClient {
     try {
       const response = await fetch(url, config);
 
+      class ApiError extends Error {
+  public status: number;
+  public statusText: string;
+  public errorData: any;
+
+  constructor(message: string, status: number, statusText: string, errorData: any) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+    this.statusText = statusText;
+    this.errorData = errorData;
+    // Set the prototype explicitly.
+    Object.setPrototypeOf(this, ApiError.prototype);
+  }
+}
+
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(
+        throw new ApiError(
           errorData.detail ||
           errorData.message ||
-          `HTTP ${response.status}: ${response.statusText}`
+          `HTTP ${response.status}: ${response.statusText}`,
+          response.status,
+          response.statusText,
+          errorData
         );
       }
 
