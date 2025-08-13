@@ -50,7 +50,7 @@ export const useEvaluationSession = (
 
   // Refs
   const wsManager = useRef<WebSocketManager | null>(null);
-  const refreshTimer = useRef<NodeJS.Timeout | null>(null);
+  const refreshTimer = useRef<Timeout | null>(null);
 
   // 清理函数
   useEffect(() => {

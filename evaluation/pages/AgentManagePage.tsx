@@ -27,24 +27,15 @@ import {
   EditOutlined,
   DeleteOutlined,
   EyeOutlined,
-  UserOutlined,
   RobotOutlined,
   CameraOutlined,
   ReloadOutlined,
-  SearchOutlined,
-  FilterOutlined,
-  ExclamationCircleOutlined,
   SyncOutlined,
 } from "@ant-design/icons";
-import type { UploadFile, UploadProps } from "antd";
+import type { UploadProps } from "antd";
 import api from "../services/api";
 import modelCacheService from "../services/modelCache";
-import type {
-  Agent,
-  AgentCreateRequest,
-  AgentUpdateRequest,
-  OpenRouterModel,
-} from "../types";
+import type { Agent, AgentCreateRequest, OpenRouterModel } from "../types";
 
 const { TextArea } = Input;
 const { Search } = Input;

@@ -39,10 +39,9 @@ import type {
   EvaluationSession,
   EvaluationResult,
   EvaluationStatus,
-  EvaluationInteraction,
 } from "../../types";
 
-const { Title, Text } = Typography;
+const {} = Typography;
 
 interface EvaluationMonitorProps {
   session: EvaluationSession | null;
@@ -476,10 +475,6 @@ export const EvaluationMonitor: React.FC<EvaluationMonitorProps> = ({
             results={results}
             loading={loading}
             showControls={true}
-            onViewDetail={(result) => {
-              // 在监控页面中，这个回调可以用于其他操作，比如导出单个结果
-              console.log("查看结果详情:", result);
-            }}
           />
         </div>
       )}

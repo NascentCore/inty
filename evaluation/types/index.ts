@@ -1,3 +1,5 @@
+import React from "react";
+
 /**
  * 评测系统类型定义
  * 基于后端API schemas重新设计，采用现代TypeScript最佳实践

@@ -23,7 +23,6 @@ import {
   RobotOutlined,
   QuestionCircleOutlined,
   PlayCircleOutlined,
-  EyeOutlined,
   SaveOutlined,
   ReloadOutlined,
 } from "@ant-design/icons";
@@ -32,14 +31,10 @@ import { AgentSelector } from "../components/evaluation/AgentSelector";
 import { QuestionManager } from "../components/evaluation/QuestionManager";
 import { EvaluationMonitor } from "../components/evaluation/EvaluationMonitor";
 import { useEvaluationSession } from "../hooks/useEvaluationSession";
-import type {
-  EvaluationSessionCreateRequest,
-  EvaluationSession,
-} from "../types";
+import type { EvaluationSessionCreateRequest } from "../types";
 
 const { Content } = Layout;
 const { Title, Text } = Typography;
-const { Step } = Steps;
 
 interface StepStatus {
   config: boolean;

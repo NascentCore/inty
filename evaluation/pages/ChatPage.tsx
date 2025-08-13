@@ -13,8 +13,6 @@ import {
   Avatar,
   Space,
   Typography,
-  Select,
-  Divider,
   Spin,
   Alert,
   Modal,
@@ -31,12 +29,10 @@ import {
   UserOutlined,
   ClearOutlined,
   DownloadOutlined,
-  SettingOutlined,
   MessageOutlined,
   ClockCircleOutlined,
   ReloadOutlined,
   HistoryOutlined,
-  EyeOutlined,
   TeamOutlined,
   RedoOutlined,
   DeleteOutlined,
@@ -48,9 +44,8 @@ import type { Agent, ChatMessage } from "../types";
 import VoicePlayer from "../components/common/VoicePlayer";
 
 const { Content } = Layout;
-const { Title, Text, Paragraph } = Typography;
+const { Text, Paragraph } = Typography;
 const { TextArea } = Input;
-const { Option } = Select;
 
 interface ChatSession {
   id: string;
@@ -79,7 +74,6 @@ export const ChatPage: React.FC = () => {
   const [sending, setSending] = useState(false);
   const [chatHistory, setChatHistory] = useState<ChatSession[]>([]);
   const [isGuestMode, setIsGuestMode] = useState(false);
-  const [showPrompt, setShowPrompt] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
 
   // Refs

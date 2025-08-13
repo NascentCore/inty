@@ -22,7 +22,6 @@ import {
   Tooltip,
   Badge,
   Progress,
-  Divider,
 } from "antd";
 import {
   EyeOutlined,
@@ -31,7 +30,6 @@ import {
   FilterOutlined,
   HistoryOutlined,
   RobotOutlined,
-  TrophyOutlined,
   ClockCircleOutlined,
   CheckCircleOutlined,
   ExclamationCircleOutlined,
@@ -41,12 +39,11 @@ import {
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import api from "../services/api";
-import { EvaluationMonitor } from "../components/evaluation/EvaluationMonitor";
 import { MultiAgentChatDisplay } from "../components/evaluation/MultiAgentChatDisplay";
 import type { EvaluationSession, EvaluationResult } from "../types";
 
 const { Content } = Layout;
-const { Title, Text } = Typography;
+const { Text } = Typography;
 const { Search } = Input;
 const { Option } = Select;
 const { RangePicker } = DatePicker;
@@ -307,26 +304,6 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
     }
   };
 
-  // 删除会话
-  const handleDelete = async (sessionId: string) => {
-    Modal.confirm({
-      title: "确认删除",
-      content: "确定要删除这个评测会话吗？此操作不可恢复。",
-      okText: "确定",
-      cancelText: "取消",
-      okType: "danger",
-      onOk: async () => {
-        try {
-          await api.sessions.delete(sessionId);
-          message.success("删除成功");
-          loadSessions();
-        } catch (error) {
-          message.error("删除失败");
-        }
-      },
-    });
-  };
-
   // 批量删除
   const handleBatchDelete = async () => {
     if (selectedRowKeys.length === 0) {
@@ -448,7 +425,7 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
       title: "进度",
       key: "progress",
       width: 150,
-      render: (_, record) => {
+      render: (text, record) => {
         const total = record.total_tests || 0;
         const completed = record.completed_tests || 0;
         const percentage =
@@ -491,7 +468,7 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
       title: "评分范围",
       key: "score_range",
       width: 120,
-      render: (_, record) => {
+      render: (text, record) => {
         if (record.best_score == null || record.worst_score == null) {
           return <Text type="secondary">-</Text>;
         }
@@ -544,7 +521,7 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
       title: "操作",
       key: "actions",
       width: 200,
-      render: (_, record) => (
+      render: (text, record) => (
         <Space>
           <Tooltip title="查看详情">
             <Button
