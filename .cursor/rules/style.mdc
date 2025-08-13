@@ -1,0 +1,14 @@
+---
+description: Ask
+globs: **/*
+alwaysApply: false
+---
+
+# General style
+
+* When writing brand-new *.py,*.ts files, apply canonical style,
+  like no trailing whitespaces
+* When editing existing files, follow the established style in the file,
+  if the style is mixed in the files,
+  use your best judgement to apply certain style
+* Whenever possible, use lint tool to verify your style
