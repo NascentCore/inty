@@ -88,11 +88,7 @@ jobs:
             --volume /opt/inty-${{ steps.set-environment.outputs.environment }}/inty-firebase-key.json:/inty-firebase-key.json \
             ${{ env.INTY_SERVER_IMAGE }}@${{ steps.build-docker-image.outputs.digest }}
             echo "Waiting for application startup..."
-            timeout 20 bash -c '
-              while ! sudo docker logs inty-backend-${{ steps.set-environment.outputs.environment }} 2>&1 | grep -q "Application startup complete"; do
-                sleep 1
-              done
-            '
+            timeout 20 bash -c 'while ! sudo docker logs inty-backend-${{ steps.set-environment.outputs.environment }} 2>&1 | grep -q "Application startup complete"; do sleep 1; done'
             if [ $? -eq 0 ]; then
               echo "Application startup complete detected!"
             else
