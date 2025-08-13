@@ -106,14 +106,6 @@ async def get_agent_status(
     }
 
 
-
-
-
-
-
-
-
-
 @router.post("/agents/initialize")
 async def initialize_agents(
     *,
@@ -473,7 +465,6 @@ async def agent_chat_completions(
                 error_info=BusinessErrorCode.SUBSCRIPTION_REQUIRED,
                 extra_data={"used_count": used_count, "daily_limit": daily_limit},
             )
-
 
         if request.stream:
             return StreamingResponse(
@@ -1322,6 +1313,19 @@ async def clear_agent_chat_messages(
             result = chat_history_service.clear_messages_after_timestamp(
                 session_id=session_id, timestamp=request.timestamp
             )
+
+        # 如果清除操作成功，同时清空 debug_messages 字段
+        if result.get("success", False):
+            try:
+                # 清空 debug_messages 字段
+                chat.debug_messages = None
+                await db.commit()
+                logger.info(f"已清空 debug_messages 字段 - Chat ID: {chat.id}")
+            except Exception as e:
+                logger.warning(
+                    f"清空 debug_messages 字段失败 - Chat ID: {chat.id}, Error: {str(e)}"
+                )
+                # 不抛出异常，避免影响主要的清除操作
 
         logger.info(f"消息清除操作完成 - Agent ID: {agent_id}, 结果: {result}")
 
