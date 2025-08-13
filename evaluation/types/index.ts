@@ -31,7 +31,7 @@ export interface Agent {
   updated_at?: string;
   // 评测相关字段
   main_prompt?: string;
-  personality?: string;
+  personality?: string;  
   mode_prompt?: string;
   llm_config?: LLMConfig;
 }
@@ -216,7 +216,7 @@ export interface WebSocketMessage {
   timestamp: string;
 }
 
-export type WebSocketMessageType =
+export type WebSocketMessageType = 
   | 'session_started'
   | 'test_started'
   | 'test_completed'
