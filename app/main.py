@@ -60,7 +60,7 @@ if global_config_loaded_from_config_yaml.app.backend_cors_origins:
             for origin in global_config_loaded_from_config_yaml.app.backend_cors_origins
         ],
         allow_credentials=True,
-        allow_methods=["*"],
+        allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         allow_headers=["*"],
     )
 
