@@ -1316,16 +1316,9 @@ async def clear_agent_chat_messages(
 
         # 如果清除操作成功，同时清空 debug_messages 字段
         if result.get("success", False):
-            try:
-                # 清空 debug_messages 字段
-                chat.debug_messages = None
-                await db.commit()
-                logger.info(f"已清空 debug_messages 字段 - Chat ID: {chat.id}")
-            except Exception as e:
-                logger.warning(
-                    f"清空 debug_messages 字段失败 - Chat ID: {chat.id}, Error: {str(e)}"
-                )
-                # 不抛出异常，避免影响主要的清除操作
+            chat.debug_messages = None
+            await db.commit()
+            logger.info(f"已清空 debug_messages 字段 - Chat ID: {chat.id}")
 
         logger.info(f"消息清除操作完成 - Agent ID: {agent_id}, 结果: {result}")
 
