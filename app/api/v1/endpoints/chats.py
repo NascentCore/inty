@@ -1144,77 +1144,53 @@ async def get_agent_debug_messages(
     获取Agent对话的调试信息
     根据Agent ID获取用户与该Agent的聊天会话，并生成debug messages on-the-fly
     """
-    try:
-        logger.info(
-            f"获取Agent调试信息 - Agent ID: {agent_id}, User ID: {current_user.id}"
-        )
+    logger.debug(
+        f"获取Agent调试信息 - Agent ID: {agent_id}, User ID: {current_user.id}"
+    )
 
-        # 首先验证Agent是否存在
-        agent_db = await agent_service.get_agent(db, agent_id=agent_id)
-        if not agent_db:
-            raise HTTPException(status_code=404, detail="Agent not found")
+    # 首先验证Agent是否存在
+    agent_db = await agent_service.get_agent(db, agent_id=agent_id)
+    if not agent_db:
+        raise HTTPException(status_code=404, detail="Agent not found")
 
-        # 获取用户与该Agent的聊天会话
-        chat = await chat_service.get_chat_by_agent_and_user(
-            db=db, agent_id=agent_id, user_id=current_user.id
-        )
+    # 获取用户与该Agent的聊天会话
+    chat = await chat_service.get_chat_by_agent_and_user(
+        db=db, agent_id=agent_id, user_id=current_user.id
+    )
 
-        if not chat:
-            # 如果没有聊天会话，返回空的调试信息
-            return {
-                "chat_id": None,
-                "agent_id": agent_id,
-                "agent_name": agent_db.name,
-                "debug_messages": None,
-                "message": "No chat session found with this agent",
-            }
+    if not chat:
+        # 如果没有聊天会话，返回空的调试信息
+        return {
+            "chat_id": None,
+            "agent_id": agent_id,
+            "agent_name": agent_db.name,
+            "debug_messages": None,
+            "message": "No chat session found with this agent",
+        }
 
-        # 生成debug messages on-the-fly
-        try:
-            from app.core.agent.agent import agent_manager
+    # 生成debug messages on-the-fly
+    from app.core.agent.agent import agent_manager
 
-            # 获取Agent实例
-            agent = await agent_manager.get_agent(agent_db.__dict__)
+    # 获取Agent实例
+    agent = await agent_manager.get_agent(agent_db.__dict__)
 
-            # 生成debug messages
-            debug_messages = await agent.generate_debug_messages_for_chat(
-                user_id=current_user.id, chat_id=chat.id
-            )
+    # 生成debug messages
+    debug_messages = await agent.generate_debug_messages_for_chat(
+        user_id=current_user.id, chat_id=chat.id
+    )
 
-            return {
-                "chat_id": chat.id,
-                "agent_id": chat.agent_id,
-                "agent_name": chat.agent_name or agent_db.name,
-                "debug_messages": debug_messages,
-                "last_updated": (
-                    chat.updated_at.isoformat() if chat.updated_at else None
-                ),
-                "message": (
-                    "Debug messages generated successfully"
-                    if debug_messages
-                    else "Failed to generate debug messages"
-                ),
-            }
-        except Exception as e:
-            logger.warning(f"生成debug messages失败: {str(e)}")
-            return {
-                "chat_id": chat.id,
-                "agent_id": chat.agent_id,
-                "agent_name": chat.agent_name or agent_db.name,
-                "debug_messages": None,
-                "last_updated": (
-                    chat.updated_at.isoformat() if chat.updated_at else None
-                ),
-                "message": f"Failed to generate debug messages: {str(e)}",
-            }
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"获取Agent调试信息失败 - Agent ID: {agent_id}, Error: {str(e)}")
-        raise HTTPException(
-            status_code=500, detail=f"Failed to get debug messages: {str(e)}"
-        )
+    return {
+        "chat_id": chat.id,
+        "agent_id": chat.agent_id,
+        "agent_name": chat.agent_name or agent_db.name,
+        "debug_messages": debug_messages,
+        "last_updated": (chat.updated_at.isoformat() if chat.updated_at else None),
+        "message": (
+            "Debug messages generated successfully"
+            if debug_messages
+            else "Failed to generate debug messages"
+        ),
+    }
 
 
 async def generate_chat_stream(

@@ -1218,79 +1218,60 @@ class Agent:
         Returns:
             包含debug messages的字典，如果生成失败则返回None
         """
-        try:
-            from app.services import chat_history_service
+        from app.services import chat_history_service
+        from app.services.chat_service import generate_session_id
 
-            # 生成session_id
-            session_id = f"chat_{chat_id}"
+        # 生成session_id
+        session_id = generate_session_id(chat_id)
 
-            # 获取用户profile
-            user_profile = self._get_user_profile_sync(user_id)
+        # 获取用户profile
+        user_profile = self._get_user_profile_sync(user_id)
 
-            # 获取聊天历史消息
-            history_messages = chat_history_service.get_messages(session_id)
+        # 获取聊天历史消息
+        history_messages: List[chat_history_service.Message] = (
+            chat_history_service.get_all_messages(session_id)
+        )
 
-            # 构建示例输入来生成完整的提示词
-            example_input = {
-                "messages": [HumanMessage(content="示例消息")],
-                "user_profile": user_profile or "",
-                "user_id": user_id,
-            }
+        # 构建示例输入来生成完整的提示词
+        example_input = {
+            "messages": [HumanMessage(content="示例消息")],
+            "user_profile": user_profile or "",
+            "user_id": user_id,
+        }
 
-            # 获取格式化的提示词
-            formatted_prompt = self.prompt_runnable.invoke(example_input)
+        # 获取格式化的提示词
+        formatted_prompt = self.prompt_runnable.invoke(example_input)
 
-            if hasattr(formatted_prompt, "messages"):
-                # 提取所有系统和用户消息
-                formatted_messages = []
-                for msg in formatted_prompt.messages:
-                    if hasattr(msg, "type") and hasattr(msg, "content"):
-                        # 转换消息类型：system->system, human->user, ai->character
-                        msg_type = msg.type
-                        if msg_type == "human":
-                            msg_type = "user"
-                        elif msg_type == "ai":
-                            msg_type = "character"
-                        formatted_messages.append(
-                            {"type": msg_type, "content": msg.content}
-                        )
-            else:
-                # 回退到简单格式
-                formatted_messages = [
-                    {"type": "system", "content": str(formatted_prompt)}
-                ]
+        if hasattr(formatted_prompt, "messages"):
+            # 提取所有系统和用户消息
+            formatted_messages = []
+            for msg in formatted_prompt.messages:
+                if hasattr(msg, "type") and hasattr(msg, "content"):
+                    # 转换消息类型：system->system, human->user, ai->character
+                    msg_type = msg.type
+                    if msg_type == "human":
+                        msg_type = "user"
+                    elif msg_type == "ai":
+                        msg_type = "character"
+                    formatted_messages.append(
+                        {"type": msg_type, "content": msg.content}
+                    )
+        else:
+            # 回退到简单格式
+            formatted_messages = [{"type": "system", "content": str(formatted_prompt)}]
 
-            # 构建完整的debug messages
-            debug_messages = {
-                "messages": formatted_messages,
-                "timestamp": time.time(),
-                "agent_id": self.agent_id,
-                "user_id": user_id,
-                "session_id": session_id,
-                "chat_history": (
-                    [
-                        {
-                            "type": (
-                                "user" if msg.sender_type == "USER" else "character"
-                            ),
-                            "content": msg.content,
-                            "timestamp": (
-                                msg.created_at.isoformat() if msg.created_at else None
-                            ),
-                        }
-                        for msg in history_messages
-                    ]
-                    if history_messages
-                    else []
-                ),
-            }
+        # 构建完整的debug messages
+        debug_messages = {
+            "messages": formatted_messages,
+            "timestamp": time.time(),
+            "agent_id": self.agent_id,
+            "user_id": user_id,
+            "session_id": session_id,
+            "chat_history": history_messages,
+        }
 
-            logger.debug(f"成功生成debug messages for chat {chat_id}")
-            return debug_messages
-
-        except Exception as e:
-            logger.error(f"生成debug messages失败 for chat {chat_id}: {str(e)}")
-            return None
+        logger.debug(f"成功生成debug messages for chat {chat_id}")
+        return debug_messages
 
     def cleanup(self):
         """清理资源"""
