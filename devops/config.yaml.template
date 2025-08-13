@@ -1,0 +1,55 @@
+# Used to generate config.yaml for different deployment environments.
+app:
+  {{ app.backend_cors_origins }}
+
+security:
+  {{ security.secret_key }}
+  algorithm: "HS256"
+  access_token_expire_minutes: 10080
+
+database:
+  {{ database.host }}
+  {{ database.password }}
+  port: 5432
+  user: postgres
+  pool_size: 50
+  max_overflow: 20
+  pool_timeout: 10
+  pool_recycle: 3600
+  pool_pre_ping: true
+  connect_timeout: 5
+  command_timeout: 30
+
+google_oauth:
+  {{ google_oauth__client_id }}
+  {{ google_oauth__client_secret }}
+  redirect_uri: "http://localhost:8000/api/v1/auth/google/callback"
+
+gcs:
+  credentials: "inty-backend-key.json"
+  {{ gcs__bucket }}
+
+verification:
+  code_expire_minutes: 5 
+
+firebase:
+  service_account_path: "inty-firebase-key.json"
+
+agent:
+  model: "google/gemini-2.5-flash"
+  {{ agent__api_key }}
+  base_url: "https://openrouter.ai/api/v1"
+  enable_debug_logging: true
+
+google_play:
+  service_account_key: "inty-backend-key.json"
+  package_name: "com.ai.intellimate"
+  webhook_secret: ""
+
+elevenlabs:
+  {{ elevenlabs__api_key }}
+  model: "eleven_flash_v2_5"
+  voice_id: "EXAVITQu4vr4xnSDxMaL"
+  output_format: "mp3_22050_32"
+  enabled: true
+  max_text_length: 5000
