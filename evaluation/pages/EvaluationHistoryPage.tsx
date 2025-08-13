@@ -22,7 +22,7 @@ import {
   Tooltip,
   Badge,
   Progress,
-  Divider,
+  
 } from 'antd';
 import {
   EyeOutlined,
@@ -31,7 +31,7 @@ import {
   FilterOutlined,
   HistoryOutlined,
   RobotOutlined,
-  TrophyOutlined,
+  
   ClockCircleOutlined,
   CheckCircleOutlined,
   ExclamationCircleOutlined,
@@ -41,12 +41,12 @@ import {
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import api from '../services/api';
-import { EvaluationMonitor } from '../components/evaluation/EvaluationMonitor';
+
 import { MultiAgentChatDisplay } from '../components/evaluation/MultiAgentChatDisplay';
 import type { EvaluationSession, EvaluationResult } from '../types';
 
 const { Content } = Layout;
-const { Title, Text } = Typography;
+const { Text } = Typography;
 const { Search } = Input;
 const { Option } = Select;
 const { RangePicker } = DatePicker;
@@ -173,7 +173,7 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
   };
 
   // 继续评测
-  const handleContinueEvaluation = (sessionId: string) => {
+  const handleContinueEvaluation = () => {
     // TODO: 实现跳转到评测页面并加载指定会话
     if (onNavigateToEvaluation) {
       onNavigateToEvaluation();
@@ -278,25 +278,7 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
     }
   };
 
-  // 删除会话
-  const handleDelete = async (sessionId: string) => {
-    Modal.confirm({
-      title: '确认删除',
-      content: '确定要删除这个评测会话吗？此操作不可恢复。',
-      okText: '确定',
-      cancelText: '取消',
-      okType: 'danger',
-      onOk: async () => {
-        try {
-          await api.sessions.delete(sessionId);
-          message.success('删除成功');
-          loadSessions();
-        } catch (error) {
-          message.error('删除失败');
-        }
-      },
-    });
-  };
+  
 
   // 批量删除
   const handleBatchDelete = async () => {
@@ -748,7 +730,7 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
                 results={sessionResults}
                 loading={resultsLoading}
                 showControls={true}
-                onViewDetail={(result) => {
+                onViewDetail={() => {
                   // 在这里可以进一步处理单个结果的详情查看
                   message.info('详细评分查看功能开发中');
                 }}

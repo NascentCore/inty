@@ -17,12 +17,12 @@ import {
   Tooltip,
   Empty,
   Badge,
-  Divider,
+  
   Row,
   Col,
 } from 'antd';
 import {
-  SearchOutlined,
+  
   UserOutlined,
   RobotOutlined,
   CheckCircleOutlined,
@@ -31,7 +31,7 @@ import {
   ReloadOutlined,
 } from '@ant-design/icons';
 import { useAgents } from '../../hooks/useAgents';
-import type { Agent, AgentVisibility } from '../../types';
+
 
 const { Search } = Input;
 const { Option } = Select;

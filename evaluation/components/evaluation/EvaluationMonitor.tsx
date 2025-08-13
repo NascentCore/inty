@@ -11,7 +11,7 @@ import {
   Tag,
   Space,
   Alert,
-  Typography,
+  
   Row,
   Col,
   Statistic,
@@ -39,10 +39,10 @@ import type {
   EvaluationSession, 
   EvaluationResult, 
   EvaluationStatus,
-  EvaluationInteraction 
+   
 } from '../../types';
 
-const { Title, Text } = Typography;
+
 
 interface EvaluationMonitorProps {
   session: EvaluationSession | null;

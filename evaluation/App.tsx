@@ -14,7 +14,7 @@ import {
   RobotOutlined,
   MessageOutlined,
   BarChartOutlined,
-  QuestionCircleOutlined,
+  
   HistoryOutlined,
   SearchOutlined,
 } from '@ant-design/icons';
@@ -23,7 +23,7 @@ import { EvaluationHistoryPage } from './pages/EvaluationHistoryPage';
 import { ChatPage } from './pages/ChatPage';
 import AgentManagePage from './pages/AgentManagePage';
 import PromptQueryPage from './pages/PromptQueryPage';
-import { AuthStatus } from './components/auth/AuthStatus';
+
 
 const { Sider, Content } = Layout;
 const { Title, Text } = Typography;
@@ -128,10 +128,7 @@ export const App: React.FC = () => {
     }
   };
 
-  // 获取当前页面信息
-  const getCurrentPageInfo = () => {
-    return navigationItems.find(item => item.key === currentPage);
-  };
+  
 
   return (
     <Layout style={{ minHeight: '100vh' }}>

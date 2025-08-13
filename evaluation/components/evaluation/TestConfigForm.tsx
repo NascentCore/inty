@@ -21,7 +21,7 @@ import {
   SyncOutlined,
 } from '@ant-design/icons';
 import { useForm } from '../../hooks/useForm';
-import api from '../../services/api';
+
 import modelCacheService from '../../services/modelCache';
 import type { 
   EvaluationSessionCreateRequest, 

@@ -89,7 +89,7 @@ const globalAudioManager = new GlobalAudioManager();
 export const VoicePlayer: React.FC<VoicePlayerProps> = ({
   agentId,
   messageId,
-  messageText,
+  
   language = 'zh',
   size = 'small',
   showText = false,
@@ -167,7 +167,7 @@ export const VoicePlayer: React.FC<VoicePlayerProps> = ({
           }
         });
 
-        audioRef.current.addEventListener('error', (e) => {
+        audioRef.current.addEventListener('error', () => {
           if (!isUnmountedRef.current) {
             setHasError(true);
             setIsPlaying(false);
