@@ -939,6 +939,14 @@ class Agent:
                         "response": response,
                         "response_text": response_text,
                     }
+
+                    # 提交到后台任务队列（非阻塞）
+                    background_task_service.submit_debug_save_task(
+                        user_id, session_id, self.agent_id, debug_data
+                    )
+                    logger.debug(
+                        f"优化版调试信息已提交到后台队列 - Agent: {self.agent_id}"
+                    )
                 else:
                     logger.debug(
                         f"优化版debug_logging未启用，跳过保存 - Agent: {self.agent_id}"
@@ -956,7 +964,110 @@ class Agent:
                 )
                 raise
 
-    # _save_debug_messages method removed - debug messages are now generated on-the-fly
+    def _save_debug_messages(
+        self, user_id: str, session_id: str, debug_data: dict, conn
+    ):
+        """
+        保存调试信息到数据库 - 包含发送给LLM的完整提示词
+
+        @deprecated: 此方法已弃用，现在使用 background_task_service.submit_debug_save_task()
+        进行异步后台保存，提高性能并避免阻塞主聊天流程。
+        新的实现确保了完整的动态提示词内容被保存。
+        """
+        logger.info(
+            f"开始保存调试信息 - Agent: {self.agent_id}, User: {user_id}, Session: {session_id}"
+        )
+
+        try:
+            # 提取数据
+            input_data = debug_data.get("input_data", {})
+            response = debug_data.get("response", {})
+            response_text = debug_data.get("response_text", "")
+
+            # 构建消息链
+            try:
+                # 获取格式化的提示词
+                formatted_prompt = self.prompt_runnable.invoke(input_data)
+
+                if hasattr(formatted_prompt, "messages"):
+                    # 提取所有系统和用户消息
+                    messages = []
+                    for msg in formatted_prompt.messages:
+                        if hasattr(msg, "type") and hasattr(msg, "content"):
+                            # 转换消息类型：system->system, human->user, ai->character
+                            msg_type = msg.type
+                            if msg_type == "human":
+                                msg_type = "user"
+                            elif msg_type == "ai":
+                                msg_type = "character"
+                            messages.append({"type": msg_type, "content": msg.content})
+                else:
+                    # 回退到简单格式
+                    messages = [{"type": "system", "content": str(formatted_prompt)}]
+
+            except Exception as e:
+                logger.error(f"构建消息链失败: {str(e)}, 使用fallback")
+                # 使用基础提示词作为fallback
+                final_prompt = self._build_base_system_message(agent_name=self.name)
+                messages = [{"type": "system", "content": final_prompt}]
+
+            # 添加AI响应消息
+            ai_message = None
+            for msg in response.get("messages", []):
+                if hasattr(msg, "type") and hasattr(msg, "content"):
+                    if msg.type in ["ai", "assistant"]:
+                        # 转换AI消息类型为character
+                        ai_message = {"type": "character", "content": msg.content}
+                elif isinstance(msg, dict) and msg.get("type") in ["ai", "assistant"]:
+                    # 转换AI消息类型为character
+                    ai_message = {
+                        "type": "character",
+                        "content": msg.get("content", str(msg)),
+                    }
+
+            if ai_message:
+                messages.append(ai_message)
+            elif response_text:
+                # AI响应转换为character类型
+                messages.append({"type": "character", "content": response_text})
+
+            logger.info(f"成功构建消息链，共{len(messages)}条消息")
+
+            # 保存到数据库
+            debug_data = {
+                "messages": messages,
+                "timestamp": time.time(),
+                "agent_id": self.agent_id,
+                "user_id": user_id,
+                "session_id": session_id,
+            }
+
+            query = """
+                UPDATE chats 
+                SET debug_messages = %s, updated_at = now()
+                WHERE user_id = %s AND agent_id = %s AND is_active = true
+            """
+
+            with conn.cursor() as cursor:
+                # 检查目标记录
+                check_query = "SELECT id FROM chats WHERE user_id = %s AND agent_id = %s AND is_active = true"
+                cursor.execute(check_query, (user_id, self.agent_id))
+                record_count = len(cursor.fetchall())
+
+                # 执行更新
+                cursor.execute(query, (json.dumps(debug_data), user_id, self.agent_id))
+                rows_affected = cursor.rowcount
+                conn.commit()
+
+            logger.info(
+                f"保存调试信息成功 - Agent: {self.agent_id}, 找到记录: {record_count}, 影响行数: {rows_affected}"
+            )
+
+        except Exception as e:
+            logger.error(
+                f"保存调试信息失败 - Agent: {self.agent_id}, Session: {session_id}, Error: {str(e)}"
+            )
+            # 不中断正常聊天流程
 
     async def chat(
         self,
@@ -1106,6 +1217,13 @@ class Agent:
                             "response_text": response_text,
                         }
 
+                        # 提交到后台任务队列（非阻塞）
+                        background_task_service.submit_debug_save_task(
+                            user_id, session_id, self.agent_id, debug_data
+                        )
+                        logger.debug(
+                            f"流式聊天调试信息已提交到后台队列 - Agent: {self.agent_id}"
+                        )
                     else:
                         logger.debug(
                             f"流式聊天debug_logging未启用，跳过保存 - Agent: {self.agent_id}"
@@ -1204,74 +1322,6 @@ class Agent:
                 "substitution_variables": ["char", "user", "agent_name", "user_name"],
             },
         }
-
-    async def generate_debug_messages_for_chat(
-        self, user_id: str, chat_id: str
-    ) -> Optional[dict]:
-        """
-        为指定聊天会话生成debug messages on-the-fly
-
-        Args:
-            user_id: 用户ID
-            chat_id: 聊天会话ID
-
-        Returns:
-            包含debug messages的字典，如果生成失败则返回None
-        """
-        from app.services import chat_history_service
-        from app.services.chat_service import generate_session_id
-
-        # 生成session_id
-        session_id = generate_session_id(chat_id)
-
-        # 获取用户profile
-        user_profile = self._get_user_profile_sync(user_id)
-
-        # 获取聊天历史消息
-        history_messages: List[chat_history_service.Message] = (
-            chat_history_service.get_all_messages(session_id)
-        )
-
-        # 构建示例输入来生成完整的提示词
-        example_input = {
-            "messages": [HumanMessage(content="示例消息")],
-            "user_profile": user_profile or "",
-            "user_id": user_id,
-        }
-
-        # 获取格式化的提示词
-        formatted_prompt = self.prompt_runnable.invoke(example_input)
-
-        if hasattr(formatted_prompt, "messages"):
-            # 提取所有系统和用户消息
-            formatted_messages = []
-            for msg in formatted_prompt.messages:
-                if hasattr(msg, "type") and hasattr(msg, "content"):
-                    # 转换消息类型：system->system, human->user, ai->character
-                    msg_type = msg.type
-                    if msg_type == "human":
-                        msg_type = "user"
-                    elif msg_type == "ai":
-                        msg_type = "character"
-                    formatted_messages.append(
-                        {"type": msg_type, "content": msg.content}
-                    )
-        else:
-            # 回退到简单格式
-            formatted_messages = [{"type": "system", "content": str(formatted_prompt)}]
-
-        # 构建完整的debug messages
-        debug_messages = {
-            "messages": formatted_messages,
-            "timestamp": time.time(),
-            "agent_id": self.agent_id,
-            "user_id": user_id,
-            "session_id": session_id,
-            "chat_history": history_messages,
-        }
-
-        logger.debug(f"成功生成debug messages for chat {chat_id}")
-        return debug_messages
 
     def cleanup(self):
         """清理资源"""

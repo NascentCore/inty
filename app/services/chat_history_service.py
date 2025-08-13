@@ -1,4 +1,3 @@
-from dataclasses import dataclass
 import json
 import logging
 from datetime import datetime
@@ -6,8 +5,7 @@ from typing import Any, Dict, List, Optional
 
 import psycopg
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
-from app.models import chat_history
-from app.utils.langchain import LCChatHistory
+from langchain_postgres import PostgresChatMessageHistory
 
 from app.core.config import global_config_loaded_from_config_yaml
 from app.utils.langchain import CHAT_HISTORY_TABLE_NAME, LCChatHistory
@@ -96,11 +94,11 @@ def ensure_table_initialized():
         _table_initialized = True
 
 
-def get_chat_history(session_id: str) -> LCChatHistory:
+def get_chat_history(session_id: str) -> PostgresChatMessageHistory:
     """获取聊天历史"""
     ensure_table_initialized()
     conn = get_chat_history_connection()
-    return LCChatHistory("chat_history", session_id, sync_connection=conn)
+    return PostgresChatMessageHistory("chat_history", session_id, sync_connection=conn)
 
 
 def add_agent_opening_message(session_id: str, opening_message: str) -> None:
@@ -320,14 +318,7 @@ def get_messages_paginated(
         }
 
 
-@dataclass
-class Message:
-    role: str
-    content: str
-    timestamp: datetime
-
-
-def get_all_messages(session_id: str) -> List[Message]:
+def get_all_messages(session_id: str) -> List[Dict[str, Any]]:
     """
     获取所有聊天消息（不分页）
 
@@ -337,15 +328,26 @@ def get_all_messages(session_id: str) -> List[Message]:
     Returns:
         消息列表
     """
-    history = get_chat_history(session_id)
-    messages = history.messages
+    try:
+        history = get_chat_history(session_id)
+        messages = history.messages
 
-    result = []
-    for message in messages:
-        role = "user" if isinstance(message, HumanMessage) else "assistant"
-        result.append(Message(role=role, content=message.content, timestamp=None))
+        result = []
+        for message in messages:
+            role = "user" if isinstance(message, HumanMessage) else "assistant"
+            result.append(
+                {
+                    "role": role,
+                    "content": message.content,
+                    "timestamp": None,  # PostgresChatMessageHistory 默认没有时间戳
+                }
+            )
 
-    return result
+        return result
+
+    except Exception as e:
+        logger.error(f"获取所有消息失败 {session_id}: {str(e)}")
+        return []
 
 
 def clear_session(session_id: str) -> None:
