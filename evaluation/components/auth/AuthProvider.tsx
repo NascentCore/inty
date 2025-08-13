@@ -27,26 +27,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [userId, setUserId] = useState<string | null>(null);
 
   const login = async (): Promise<boolean> => {
-    try {
-      setIsLoading(true);
-      const success = await authService.ensureAuthenticated();
-      
-      if (success) {
-        setIsAuthenticated(true);
-        setUserId(authService.getUserId());
-        message.success('认证成功');
-        return true;
-      } else {
-        message.error('认证失败，请刷新页面重试');
-        return false;
-      }
-    } catch (error) {
-      console.error('登录失败:', error);
-      message.error('登录失败');
-      return false;
-    } finally {
-      setIsLoading(false);
-    }
+    // 由于token已硬编码，直接返回成功
+    setIsAuthenticated(true);
+    setUserId('admin-user');
+    message.success('认证成功');
+    return true;
   };
 
   const logout = () => {
@@ -61,25 +46,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const initAuth = async () => {
       try {
         console.log('🔐 初始化认证...');
-        
-        // 检查是否已经有token
-        if (authService.isAuthenticated()) {
-          console.log('✅ 发现已存在的认证token');
-          setIsAuthenticated(true);
-          setUserId(authService.getUserId());
-        } else {
-          console.log('🆕 未找到认证token，创建游客用户...');
-          const success = await authService.ensureAuthenticated();
-          
-          if (success) {
-            setIsAuthenticated(true);
-            setUserId(authService.getUserId());
-            console.log('✅ 游客认证成功');
-          } else {
-            console.error('❌ 游客认证失败');
-            message.error('自动认证失败，请手动登录');
-          }
-        }
+
+        // 由于token已硬编码，直接设置为已认证状态
+        console.log('✅ 使用硬编码token，无需认证');
+        setIsAuthenticated(true);
+        setUserId('admin-user'); // 设置一个默认的管理员用户ID
+
       } catch (error) {
         console.error('认证初始化失败:', error);
         message.error('认证初始化失败');
@@ -102,17 +74,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // 显示加载状态
   if (isLoading) {
     return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
         height: '100vh',
         flexDirection: 'column',
         gap: '16px'
       }}>
         <Spin size="large" />
         <div style={{ color: '#666' }}>
-          正在初始化认证...
+          正在初始化应用...
         </div>
       </div>
     );
