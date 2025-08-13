@@ -1,23 +1,25 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>InTy 智能体评测系统</title>
-    
+
     <!-- Favicon -->
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1024 1024'><circle cx='512' cy='512' r='512' fill='%231890ff'/><path d='M512 256c141.385 0 256 114.615 256 256s-114.615 256-256 256-256-114.615-256-256 114.615-256 256-256z' fill='white'/><circle cx='512' cy='512' r='64' fill='%231890ff'/></svg>" />
-    
+    <link rel="icon" type="image/svg+xml"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1024 1024'><circle cx='512' cy='512' r='512' fill='%231890ff'/><path d='M512 256c141.385 0 256 114.615 256 256s-114.615 256-256 256-256-114.615-256-256 114.615-256 256-256z' fill='white'/><circle cx='512' cy='512' r='64' fill='%231890ff'/></svg>" />
+
     <!-- Meta tags -->
     <meta name="description" content="InTy 智能体评测系统 - 全面评测智能体的对话质量、角色一致性和表达能力">
     <meta name="keywords" content="智能体,AI,评测,聊天,对话">
     <meta name="author" content="InTy Team">
-    
+
     <!-- Open Graph -->
     <meta property="og:title" content="InTy 智能体评测系统">
     <meta property="og:description" content="全面评测智能体的对话质量、角色一致性和表达能力">
     <meta property="og:type" content="website">
-    
+
     <!-- CSS -->
     <style>
         /* 加载动画样式 */
@@ -34,7 +36,7 @@
             flex-direction: column;
             z-index: 9999;
         }
-        
+
         .loading-spinner {
             width: 40px;
             height: 40px;
@@ -43,25 +45,30 @@
             border-radius: 50%;
             animation: spin 1s linear infinite;
         }
-        
+
         @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
         }
-        
+
         .loading-text {
             margin-top: 16px;
             color: #1890ff;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
             font-size: 14px;
         }
-        
+
         /* 应用容器样式 */
         #evaluation-root {
             min-height: 100vh;
             background: #f0f2f5;
         }
-        
+
         /* 错误页面样式 */
         .error-page {
             position: fixed;
@@ -76,19 +83,19 @@
             flex-direction: column;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
         }
-        
+
         .error-icon {
             font-size: 48px;
             color: #ff4d4f;
             margin-bottom: 16px;
         }
-        
+
         .error-title {
             font-size: 20px;
             color: rgba(0, 0, 0, 0.85);
             margin-bottom: 8px;
         }
-        
+
         .error-description {
             font-size: 14px;
             color: rgba(0, 0, 0, 0.45);
@@ -96,7 +103,7 @@
             max-width: 400px;
             line-height: 1.5;
         }
-        
+
         .error-button {
             margin-top: 24px;
             padding: 8px 16px;
@@ -108,16 +115,16 @@
             font-size: 14px;
             transition: background-color 0.3s;
         }
-        
+
         .error-button:hover {
             background: #40a9ff;
         }
-        
+
         /* 确保布局正常的全局样式 */
         * {
             box-sizing: border-box;
         }
-        
+
         body {
             margin: 0;
             padding: 0;
@@ -125,26 +132,26 @@
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
         }
-        
+
         /* 修复Ant Design布局组件的潜在问题 */
         .ant-layout {
             min-height: 100vh !important;
         }
-        
+
         .ant-layout-sider {
             flex: none !important;
         }
-        
+
         .ant-layout-header {
             flex: none !important;
         }
-        
+
         /* 确保内容区域正确显示 */
         .ant-layout-content {
             flex: 1 !important;
             overflow: visible !important;
         }
-        
+
         /* 修复侧边栏菜单样式 */
         .ant-menu-item {
             height: auto !important;
@@ -152,35 +159,35 @@
             margin-bottom: 4px !important;
             border-radius: 6px !important;
         }
-        
+
         .ant-menu-item-selected {
             background-color: #e6f7ff !important;
         }
-        
+
         .ant-menu-item:hover {
             background-color: #f5f5f5 !important;
         }
-        
+
         .ant-menu-item-selected:hover {
             background-color: #e6f7ff !important;
         }
-        
+
         /* 修复菜单文字显示 */
         .ant-menu-title-content {
             width: 100% !important;
             overflow: visible !important;
         }
-        
+
         /* 确保菜单项内容不被截断 */
         .ant-menu-inline .ant-menu-item {
             padding-left: 24px !important;
             padding-right: 16px !important;
         }
-        
+
         .ant-menu-inline.ant-menu-sub {
             background: transparent !important;
         }
-        
+
         /* 响应式设计 */
         @media (max-width: 768px) {
             .ant-layout-sider {
@@ -191,35 +198,36 @@
         }
     </style>
 </head>
+
 <body>
     <!-- 加载动画 -->
     <div id="loading">
         <div class="loading-spinner"></div>
         <div class="loading-text">正在加载智能体评测系统...</div>
     </div>
-    
+
     <!-- 应用容器 -->
     <div id="evaluation-root"></div>
-    
+
     <!-- 错误处理脚本 -->
     <script>
         // 全局错误处理
-        window.addEventListener('error', function(event) {
+        window.addEventListener('error', function (event) {
             console.error('应用加载错误:', event.error);
             showErrorPage('应用加载失败', '请检查网络连接或刷新页面重试');
         });
-        
-        window.addEventListener('unhandledrejection', function(event) {
+
+        window.addEventListener('unhandledrejection', function (event) {
             console.error('未处理的Promise拒绝:', event.reason);
             // 不显示错误页面，只记录错误
         });
-        
+
         function showErrorPage(title, description) {
             const loadingEl = document.getElementById('loading');
             const rootEl = document.getElementById('evaluation-root');
-            
+
             if (loadingEl) loadingEl.style.display = 'none';
-            
+
             rootEl.innerHTML = `
                 <div class="error-page">
                     <div class="error-icon">⚠️</div>
@@ -231,20 +239,20 @@
                 </div>
             `;
         }
-        
+
         // 应用加载超时处理
-        setTimeout(function() {
+        setTimeout(function () {
             const loadingEl = document.getElementById('loading');
             if (loadingEl && loadingEl.style.display !== 'none') {
                 showErrorPage(
-                    '加载超时', 
+                    '加载超时',
                     '应用加载时间过长，可能是网络问题或服务器暂时不可用。请检查网络连接后重试。'
                 );
             }
         }, 15000); // 15秒超时
-        
+
         // 隐藏加载动画的函数
-        window.hideLoading = function() {
+        window.hideLoading = function () {
             const loadingEl = document.getElementById('loading');
             if (loadingEl) {
                 loadingEl.style.opacity = '0';
@@ -254,10 +262,10 @@
             }
         };
     </script>
-    
+
     <!-- Vite 开发服务器会自动注入这个脚本 -->
     <script type="module" src="/index.tsx"></script>
-    
+
     <!-- 开发模式提示 -->
     <script>
         // 检查是否在开发环境
@@ -271,4 +279,5 @@
         }
     </script>
 </body>
+
 </html>

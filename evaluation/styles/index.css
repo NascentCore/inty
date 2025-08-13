@@ -18,6 +18,42 @@ body {
   background-color: #f0f2f5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* 确保页面内容不被浏览器菜单栏遮挡 */
+  overflow-x: hidden;
+}
+
+/* 确保根元素和布局容器正确显示 */
+html {
+  height: 100%;
+  overflow-x: hidden;
+}
+
+#evaluation-root {
+  min-height: 100vh;
+  position: relative;
+}
+
+/* 确保Ant Design布局组件正确显示 */
+.ant-layout {
+  min-height: 100vh !important;
+  background: #f0f2f5 !important;
+}
+
+.ant-layout-sider {
+  position: fixed !important;
+  height: 100vh !important;
+  z-index: 100 !important;
+}
+
+.ant-layout-header {
+  position: relative !important;
+  background: #ffffff !important;
+  z-index: 90 !important;
+}
+
+.ant-layout-content {
+  background: #f0f2f5 !important;
+  min-height: calc(100vh - 64px) !important;
 }
 
 /* 滚动条样式 */
@@ -132,7 +168,7 @@ body {
 }
 
 /* 表单样式增强 */
-.ant-form-item-label > label {
+.ant-form-item-label>label {
   font-weight: 500;
 }
 
@@ -227,20 +263,20 @@ body {
     height: 100vh;
     z-index: 999;
   }
-  
+
   .ant-layout {
     margin-left: 80px !important;
   }
-  
+
   .chat-page .ant-row {
     flex-direction: column;
   }
-  
+
   .chat-page .ant-col:first-child {
     width: 100% !important;
     margin-bottom: 16px;
   }
-  
+
   .chat-page .ant-col:last-child {
     width: 100% !important;
   }
@@ -277,6 +313,7 @@ body {
     opacity: 0;
     transform: translateY(20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -292,6 +329,7 @@ body {
     transform: translateX(-20px);
     opacity: 0;
   }
+
   to {
     transform: translateX(0);
     opacity: 1;
@@ -304,16 +342,17 @@ body {
 
 /* 打印样式 */
 @media print {
+
   .ant-layout-sider,
   .ant-layout-header,
   .no-print {
     display: none !important;
   }
-  
+
   .ant-layout {
     margin-left: 0 !important;
   }
-  
+
   .ant-card {
     box-shadow: none;
     border: 1px solid #ddd;

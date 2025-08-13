@@ -7,27 +7,14 @@ import React, { useState, useEffect } from 'react';
 import {
   Layout,
   Menu,
-  Button,
-  Space,
   Typography,
-  Breadcrumb,
-  Avatar,
-  Dropdown,
-  Badge,
-  Divider,
   Tooltip,
 } from 'antd';
 import {
   RobotOutlined,
   MessageOutlined,
   BarChartOutlined,
-  UserOutlined,
-  HomeOutlined,
-  BulbOutlined,
-  MenuFoldOutlined,
-  MenuUnfoldOutlined,
   QuestionCircleOutlined,
-  LogoutOutlined,
   HistoryOutlined,
   SearchOutlined,
 } from '@ant-design/icons';
@@ -38,7 +25,7 @@ import AgentManagePage from './pages/AgentManagePage';
 import PromptQueryPage from './pages/PromptQueryPage';
 import { AuthStatus } from './components/auth/AuthStatus';
 
-const { Header, Sider, Content } = Layout;
+const { Sider, Content } = Layout;
 const { Title, Text } = Typography;
 
 type PageKey = 'evaluation' | 'history' | 'chat' | 'agents' | 'prompt-query';
@@ -68,7 +55,7 @@ export const App: React.FC = () => {
 
     checkScreenSize();
     window.addEventListener('resize', checkScreenSize);
-    
+
     return () => {
       window.removeEventListener('resize', checkScreenSize);
     };
@@ -121,21 +108,7 @@ export const App: React.FC = () => {
     },
   ];
 
-  // 用户菜单
-  const userMenu = (
-    <Menu>
-      <Menu.Item key="profile" icon={<UserOutlined />}>
-        个人资料
-      </Menu.Item>
-      <Menu.Item key="help" icon={<QuestionCircleOutlined />}>
-        帮助文档
-      </Menu.Item>
-      <Menu.Divider />
-      <Menu.Item key="logout" icon={<LogoutOutlined />} danger>
-        退出登录
-      </Menu.Item>
-    </Menu>
-  );
+
 
   // 渲染页面内容
   const renderPageContent = () => {
@@ -190,8 +163,8 @@ export const App: React.FC = () => {
         }}
       >
         {/* Logo区域 */}
-        <div style={{ 
-          padding: collapsed ? '16px 12px' : '16px 24px', 
+        <div style={{
+          padding: collapsed ? '16px 12px' : '16px 24px',
           borderBottom: '1px solid #f0f0f0',
           display: 'flex',
           alignItems: 'center',
@@ -219,8 +192,8 @@ export const App: React.FC = () => {
           <Menu
             mode="inline"
             selectedKeys={[currentPage]}
-            style={{ 
-              border: 'none', 
+            style={{
+              border: 'none',
               paddingTop: '16px',
               background: 'transparent'
             }}
@@ -257,14 +230,14 @@ export const App: React.FC = () => {
                     alignItems: 'flex-start'
                   }}
                 >
-                  <div style={{ 
+                  <div style={{
                     flex: 1,
                     minHeight: collapsed ? 'auto' : '40px',
                     display: 'flex',
                     flexDirection: 'column',
                     justifyContent: collapsed ? 'center' : 'flex-start'
                   }}>
-                    <div style={{ 
+                    <div style={{
                       fontSize: '14px',
                       fontWeight: '500',
                       lineHeight: '1.4',
@@ -274,8 +247,8 @@ export const App: React.FC = () => {
                       {item.label}
                     </div>
                     {!collapsed && (
-                      <div style={{ 
-                        fontSize: '11px', 
+                      <div style={{
+                        fontSize: '11px',
                         lineHeight: '1.3',
                         color: 'rgba(0, 0, 0, 0.45)',
                         marginTop: '2px'
@@ -300,7 +273,7 @@ export const App: React.FC = () => {
         }}>
           {/* 底部信息 */}
           {!collapsed && (
-            <div style={{ 
+            <div style={{
               padding: '16px 24px',
               textAlign: 'center',
               borderTop: '1px solid #f0f0f0'
@@ -314,73 +287,15 @@ export const App: React.FC = () => {
       </Sider>
 
       {/* 主内容区域 */}
-      <Layout style={{ 
-        marginLeft: isMobile ? 0 : (collapsed ? 80 : 280), 
+      <Layout style={{
+        marginLeft: isMobile ? 0 : (collapsed ? 80 : 280),
         transition: 'margin-left 0.2s',
-        minHeight: '100vh',
-        marginTop: 'env(safe-area-inset-top, 20px)'
+        minHeight: '100vh'
       }}>
-        {/* 顶部导航栏 */}
-        <Header
-          style={{
-            padding: '0 24px',
-            background: '#ffffff',
-            borderBottom: '1px solid #f0f0f0',
-            position: 'sticky',
-            top: 0,
-            zIndex: 90,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            height: '64px',
-            lineHeight: '64px',
-            boxShadow: '0 1px 4px rgba(0, 0, 0, 0.08)',
-          }}
-        >
-          {/* 面包屑导航 */}
-          <div style={{ flex: 1 }}>
-            <Breadcrumb>
-              <Breadcrumb.Item>
-                <HomeOutlined />
-              </Breadcrumb.Item>
-              <Breadcrumb.Item>
-                {getCurrentPageInfo()?.label}
-              </Breadcrumb.Item>
-            </Breadcrumb>
-            <div style={{ marginTop: '4px' }}>
-              <Text type="secondary" style={{ fontSize: '12px' }}>
-                {getCurrentPageInfo()?.description}
-              </Text>
-            </div>
-          </div>
-
-          {/* 用户信息 */}
-          <Space size="large">
-            <Button
-              type="text"
-              icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-              onClick={() => setCollapsed(!collapsed)}
-            />
-            
-            <Badge count={0} size="small">
-              <Button type="text" icon={<BulbOutlined />} />
-            </Badge>
-
-            <Dropdown overlay={userMenu} placement="bottomRight">
-              <Button type="text" style={{ padding: 0 }}>
-                <Space>
-                  <Avatar icon={<UserOutlined />} size="small" />
-                  <Text>管理员</Text>
-                </Space>
-              </Button>
-            </Dropdown>
-          </Space>
-        </Header>
-
         {/* 页面内容 */}
-        <Content style={{ 
+        <Content style={{
           background: '#f0f2f5',
-          minHeight: 'calc(100vh - 64px)',
+          minHeight: '100vh',
           overflow: 'auto',
           position: 'relative',
         }}>
