@@ -41,7 +41,11 @@ router = APIRouter()
 subscription_service = SubscriptionService()
 
 
-@router.get("/", response_model=schemas.APIResponse[List[schemas.Agent]])
+@router.get(
+    "/",
+    response_model=schemas.APIResponse[List[schemas.Agent]],
+    summary="Registered user get list of their created AI characters",
+)
 async def list_agents(
     db: AsyncSession = Depends(deps.get_async_db),
     skip: int = 0,
@@ -62,7 +66,9 @@ async def list_agents(
 
 
 @router.get(
-    "/search", response_model=schemas.APIResponse[schemas.PaginationData[schemas.Agent]]
+    "/search",
+    response_model=schemas.APIResponse[schemas.PaginationData[schemas.Agent]],
+    summary="Used by inty-eval to list all public AI characters",
 )
 async def search_agents(
     q: str = Query(..., description="Search keyword"),
@@ -258,7 +264,11 @@ async def delete_agent(
     return schemas.APIResponse.success(data=deleted_agent)
 
 
-@router.post("/generate_background", response_model=APIResponse[dict])
+@router.post(
+    "/generate_background",
+    response_model=APIResponse[dict],
+    summary="Generate images based on description of an AI character",
+)
 async def generate_background(
     request: schemas.BackgroundGenerateRequest,
     db: AsyncSession = Depends(deps.get_async_db),
@@ -383,7 +393,12 @@ async def generate_background(
             )
 
 
-@router.post("/upload-avatar", response_model=APIResponse[dict])
+@router.post(
+    "/upload-avatar",
+    response_model=APIResponse[dict],
+    description="Used by inty-eval to upload avatar image cropped from a generated image for an AI character",
+    summary="Inty-eval: Upload avatar image cropped from a generated image for an AI character",
+)
 async def upload_avatar_preview(
     file: UploadFile = File(...),
     current_user: schemas.User = Depends(deps.get_current_active_user),
@@ -720,6 +735,8 @@ async def save_background_images(
 
 @router.get(
     "/creator/{creator_id}/stats",
+    # Not used by anyone
+    deprecated=True,
     response_model=schemas.APIResponse[schemas.CreatorAgentStats],
 )
 async def get_creator_agent_stats(

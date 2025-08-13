@@ -130,7 +130,12 @@ async def get_usage_statistics(
 
 # This is only used for verifying the purchase on client side.
 # TODO: Can it verify the restoration and cancellation?
-@router.post("/verify", response_model=APIResponse[PurchaseVerificationResponse])
+@router.post(
+    "/verify",
+    response_model=APIResponse[PurchaseVerificationResponse],
+    summary="Verify Google Play purchase",
+    description="Used by app to prove user has purchased a subscription",
+)
 async def verify_purchase(
     *,
     db: AsyncSession = Depends(deps.get_async_db),

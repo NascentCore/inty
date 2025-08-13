@@ -19,7 +19,12 @@ from app.utils.gcs import upload_to_gcs
 router = APIRouter()
 
 
-@router.post("/upload-image", response_model=APIResponse[dict])
+@router.post(
+    "/upload-image",
+    response_model=APIResponse[dict],
+    summary="Upload image for report",
+    description="Used by app to upload image in their report of app content: AI characters, images, etc.",
+)
 async def upload_report_image(
     file: UploadFile = File(...),
     current_user: User = Depends(deps.get_current_active_user),
