@@ -3,7 +3,7 @@
  * 包含配置、智能体选择、问题管理、监控等功能
  */
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect } from "react";
 import {
   Layout,
   Steps,
@@ -17,7 +17,7 @@ import {
   Typography,
   Row,
   Col,
-} from 'antd';
+} from "antd";
 import {
   SettingOutlined,
   RobotOutlined,
@@ -26,13 +26,16 @@ import {
   EyeOutlined,
   SaveOutlined,
   ReloadOutlined,
-} from '@ant-design/icons';
-import { TestConfigForm } from '../components/evaluation/TestConfigForm';
-import { AgentSelector } from '../components/evaluation/AgentSelector';
-import { QuestionManager } from '../components/evaluation/QuestionManager';
-import { EvaluationMonitor } from '../components/evaluation/EvaluationMonitor';
-import { useEvaluationSession } from '../hooks/useEvaluationSession';
-import type { EvaluationSessionCreateRequest, EvaluationSession } from '../types';
+} from "@ant-design/icons";
+import { TestConfigForm } from "../components/evaluation/TestConfigForm";
+import { AgentSelector } from "../components/evaluation/AgentSelector";
+import { QuestionManager } from "../components/evaluation/QuestionManager";
+import { EvaluationMonitor } from "../components/evaluation/EvaluationMonitor";
+import { useEvaluationSession } from "../hooks/useEvaluationSession";
+import type {
+  EvaluationSessionCreateRequest,
+  EvaluationSession,
+} from "../types";
 
 const { Content } = Layout;
 const { Title, Text } = Typography;
@@ -56,41 +59,38 @@ export const EvaluationPage: React.FC = () => {
   });
 
   // 表单数据
-  const [configData, setConfigData] = useState<Partial<EvaluationSessionCreateRequest>>({});
+  const [configData, setConfigData] = useState<
+    Partial<EvaluationSessionCreateRequest>
+  >({});
   const [selectedAgents, setSelectedAgents] = useState<string[]>([]);
   const [questions, setQuestions] = useState<string[]>([]);
   const [isConfigValid, setIsConfigValid] = useState(false);
 
   // 评测会话管理
-  const {
-    session,
-    createSession,
-    startSession,
-    loading,
-    error,
-  } = useEvaluationSession();
+  const { session, createSession, startSession, loading, error } =
+    useEvaluationSession();
 
   // 步骤配置
   const steps = [
     {
-      title: '基础配置',
+      title: "基础配置",
       icon: <SettingOutlined />,
-      description: '设置测试名称、评分模型等基本信息',
+      description: "设置测试名称、评分模型等基本信息",
     },
     {
-      title: '选择智能体',
+      title: "选择智能体",
       icon: <RobotOutlined />,
-      description: '选择需要参与评测的智能体',
+      description: "选择需要参与评测的智能体",
     },
     {
-      title: '管理问题',
+      title: "管理问题",
       icon: <QuestionCircleOutlined />,
-      description: '添加或导入测试问题',
+      description: "添加或导入测试问题",
     },
     {
-      title: '开始评测',
+      title: "开始评测",
       icon: <PlayCircleOutlined />,
-      description: '启动评测并监控进度',
+      description: "启动评测并监控进度",
     },
   ];
 
@@ -102,16 +102,20 @@ export const EvaluationPage: React.FC = () => {
       questions: questions.length > 0,
       ready: false,
     };
-    
-    newStatus.ready = newStatus.config && newStatus.agents && newStatus.questions;
-    
+
+    newStatus.ready =
+      newStatus.config && newStatus.agents && newStatus.questions;
+
     setStepStatus(newStatus);
   }, [isConfigValid, configData, selectedAgents, questions]);
 
   // 表单数据变化处理
-  const handleConfigChange = useCallback((values: Partial<EvaluationSessionCreateRequest>) => {
-    setConfigData(values);
-  }, []);
+  const handleConfigChange = useCallback(
+    (values: Partial<EvaluationSessionCreateRequest>) => {
+      setConfigData(values);
+    },
+    [],
+  );
 
   const handleAgentsChange = useCallback((agents: string[]) => {
     setSelectedAgents(agents);
@@ -122,27 +126,30 @@ export const EvaluationPage: React.FC = () => {
   }, []);
 
   // 步骤导航
-  const goToStep = useCallback((step: number) => {
-    if (step < 0 || step >= steps.length) return;
-    
-    // 检查是否可以跳转到该步骤
-    if (step > 0 && !stepStatus.config) {
-      message.warning('请先完成基础配置');
-      return;
-    }
-    
-    if (step > 1 && !stepStatus.agents) {
-      message.warning('请先选择智能体');
-      return;
-    }
-    
-    if (step > 2 && !stepStatus.questions) {
-      message.warning('请先添加测试问题');
-      return;
-    }
-    
-    setCurrentStep(step);
-  }, [stepStatus]);
+  const goToStep = useCallback(
+    (step: number) => {
+      if (step < 0 || step >= steps.length) return;
+
+      // 检查是否可以跳转到该步骤
+      if (step > 0 && !stepStatus.config) {
+        message.warning("请先完成基础配置");
+        return;
+      }
+
+      if (step > 1 && !stepStatus.agents) {
+        message.warning("请先选择智能体");
+        return;
+      }
+
+      if (step > 2 && !stepStatus.questions) {
+        message.warning("请先添加测试问题");
+        return;
+      }
+
+      setCurrentStep(step);
+    },
+    [stepStatus],
+  );
 
   const nextStep = useCallback(() => {
     goToStep(currentStep + 1);
@@ -155,7 +162,7 @@ export const EvaluationPage: React.FC = () => {
   // 创建评测会话
   const handleCreateSession = useCallback(async () => {
     if (!stepStatus.ready) {
-      message.error('请完成所有配置步骤');
+      message.error("请完成所有配置步骤");
       return;
     }
 
@@ -171,34 +178,41 @@ export const EvaluationPage: React.FC = () => {
 
     const newSession = await createSession(sessionData);
     if (newSession) {
-      message.success('评测会话创建成功，正在启动评测...');
+      message.success("评测会话创建成功，正在启动评测...");
       setCurrentStep(3); // 跳转到监控步骤
-      
+
       // 立即启动评测
       try {
         await startSession(newSession.id);
-        message.success('评测已开始运行');
+        message.success("评测已开始运行");
       } catch (error) {
-        console.error('启动评测失败:', error);
-        message.error('启动评测失败，请手动点击开始按钮');
+        console.error("启动评测失败:", error);
+        message.error("启动评测失败，请手动点击开始按钮");
       }
     }
-  }, [stepStatus.ready, configData, questions, selectedAgents, createSession, startSession]);
+  }, [
+    stepStatus.ready,
+    configData,
+    questions,
+    selectedAgents,
+    createSession,
+    startSession,
+  ]);
 
   // 重置所有数据
   const handleReset = useCallback(() => {
     Modal.confirm({
-      title: '确认重置',
-      content: '确定要重置所有配置吗？这将清除当前的所有设置。',
-      okText: '确定',
-      cancelText: '取消',
+      title: "确认重置",
+      content: "确定要重置所有配置吗？这将清除当前的所有设置。",
+      okText: "确定",
+      cancelText: "取消",
       onOk: () => {
         setCurrentStep(0);
         setConfigData({});
         setSelectedAgents([]);
         setQuestions([]);
         setIsConfigValid(false);
-        message.success('配置已重置');
+        message.success("配置已重置");
       },
     });
   }, []);
@@ -211,36 +225,36 @@ export const EvaluationPage: React.FC = () => {
       questions,
       timestamp: Date.now(),
     };
-    
-    localStorage.setItem('evaluation_draft', JSON.stringify(draft));
-    message.success('草稿已保存');
+
+    localStorage.setItem("evaluation_draft", JSON.stringify(draft));
+    message.success("草稿已保存");
   }, [configData, selectedAgents, questions]);
 
   // 加载草稿
   const handleLoadDraft = useCallback(() => {
     try {
-      const draftStr = localStorage.getItem('evaluation_draft');
+      const draftStr = localStorage.getItem("evaluation_draft");
       if (!draftStr) {
-        message.info('没有找到保存的草稿');
+        message.info("没有找到保存的草稿");
         return;
       }
 
       const draft = JSON.parse(draftStr);
-      
+
       Modal.confirm({
-        title: '加载草稿',
+        title: "加载草稿",
         content: `发现草稿 (${new Date(draft.timestamp).toLocaleString()})，是否加载？这将覆盖当前配置。`,
-        okText: '加载',
-        cancelText: '取消',
+        okText: "加载",
+        cancelText: "取消",
         onOk: () => {
           setConfigData(draft.configData || {});
           setSelectedAgents(draft.selectedAgents || []);
           setQuestions(draft.questions || []);
-          message.success('草稿已加载');
+          message.success("草稿已加载");
         },
       });
     } catch (error) {
-      message.error('加载草稿失败');
+      message.error("加载草稿失败");
     }
   }, []);
 
@@ -255,7 +269,7 @@ export const EvaluationPage: React.FC = () => {
             onValidationChange={setIsConfigValid}
           />
         );
-      
+
       case 1:
         return (
           <AgentSelector
@@ -264,7 +278,7 @@ export const EvaluationPage: React.FC = () => {
             maxSelection={20}
           />
         );
-      
+
       case 2:
         return (
           <QuestionManager
@@ -273,7 +287,7 @@ export const EvaluationPage: React.FC = () => {
             maxQuestions={100}
           />
         );
-      
+
       case 3:
         return (
           <EvaluationMonitor
@@ -281,13 +295,13 @@ export const EvaluationPage: React.FC = () => {
             onSessionChange={(updatedSession) => {
               // 当EvaluationMonitor通知session状态变化时，不需要特殊处理
               // 因为useEvaluationSession hook会自动管理状态
-              console.log('评测会话状态更新:', updatedSession?.status);
+              console.log("评测会话状态更新:", updatedSession?.status);
             }}
             showControls={true}
             autoRefresh={true}
           />
         );
-      
+
       default:
         return null;
     }
@@ -302,26 +316,26 @@ export const EvaluationPage: React.FC = () => {
       actions.push(
         <Button key="prev" onClick={prevStep}>
           上一步
-        </Button>
+        </Button>,
       );
     }
 
     // 下一步/创建按钮
     if (currentStep < 2) {
-      const canNext = 
+      const canNext =
         (currentStep === 0 && stepStatus.config) ||
         (currentStep === 1 && stepStatus.agents) ||
         (currentStep === 2 && stepStatus.questions);
-        
+
       actions.push(
-        <Button 
-          key="next" 
-          type="primary" 
+        <Button
+          key="next"
+          type="primary"
           onClick={nextStep}
           disabled={!canNext}
         >
           下一步
-        </Button>
+        </Button>,
       );
     } else if (currentStep === 2) {
       actions.push(
@@ -334,7 +348,7 @@ export const EvaluationPage: React.FC = () => {
           icon={<PlayCircleOutlined />}
         >
           创建并开始评测
-        </Button>
+        </Button>,
       );
     }
 
@@ -343,7 +357,7 @@ export const EvaluationPage: React.FC = () => {
 
   return (
     <Layout className="evaluation-page">
-      <Content style={{ padding: '24px', background: '#f0f2f5' }}>
+      <Content style={{ padding: "24px", background: "#f0f2f5" }}>
         {/* 页面标题已移除，使用顶部导航栏 */}
 
         {/* 步骤指示器 */}
@@ -352,13 +366,16 @@ export const EvaluationPage: React.FC = () => {
             current={currentStep}
             items={steps.map((step, index) => ({
               ...step,
-              status: 
-                index === currentStep ? 'process' :
-                index < currentStep || 
-                (index === 0 && stepStatus.config) ||
-                (index === 1 && stepStatus.agents) ||
-                (index === 2 && stepStatus.questions) ||
-                (index === 3 && session) ? 'finish' : 'wait'
+              status:
+                index === currentStep
+                  ? "process"
+                  : index < currentStep ||
+                      (index === 0 && stepStatus.config) ||
+                      (index === 1 && stepStatus.agents) ||
+                      (index === 2 && stepStatus.questions) ||
+                      (index === 3 && session)
+                    ? "finish"
+                    : "wait",
             }))}
             onChange={goToStep}
           />
@@ -376,74 +393,71 @@ export const EvaluationPage: React.FC = () => {
         )}
 
         {/* 步骤内容 */}
-        <div style={{ marginBottom: 24 }}>
-          {renderStepContent()}
-        </div>
+        <div style={{ marginBottom: 24 }}>{renderStepContent()}</div>
 
         {/* 操作栏 */}
         <Card>
           <Row justify="space-between" align="middle">
             <Col>
               <Space>
-                <Button 
-                  icon={<SaveOutlined />} 
+                <Button
+                  icon={<SaveOutlined />}
                   onClick={handleSaveDraft}
                   disabled={currentStep === 3}
                 >
                   保存草稿
                 </Button>
-                <Button 
-                  icon={<ReloadOutlined />} 
+                <Button
+                  icon={<ReloadOutlined />}
                   onClick={handleLoadDraft}
                   disabled={currentStep === 3}
                 >
                   加载草稿
                 </Button>
-                <Button 
-                  danger 
+                <Button
+                  danger
                   onClick={handleReset}
-                  disabled={currentStep === 3 && session?.status === 'RUNNING'}
+                  disabled={currentStep === 3 && session?.status === "RUNNING"}
                 >
                   重置配置
                 </Button>
               </Space>
             </Col>
             <Col>
-              <Space>
-                {renderStepActions()}
-              </Space>
+              <Space>{renderStepActions()}</Space>
             </Col>
           </Row>
 
           {/* 配置摘要 */}
-          {(stepStatus.config || stepStatus.agents || stepStatus.questions) && currentStep < 3 && (
-            <>
-              <Divider />
-              <div>
-                <Title level={5}>当前配置摘要</Title>
-                <Row gutter={[16, 8]}>
-                  {stepStatus.config && (
-                    <Col span={8}>
-                      <Text type="secondary">评测名称: </Text>
-                      <Text strong>{configData.name}</Text>
-                    </Col>
-                  )}
-                  {stepStatus.agents && (
-                    <Col span={8}>
-                      <Text type="secondary">选中智能体: </Text>
-                      <Text strong>{selectedAgents.length}个</Text>
-                    </Col>
-                  )}
-                  {stepStatus.questions && (
-                    <Col span={8}>
-                      <Text type="secondary">测试问题: </Text>
-                      <Text strong>{questions.length}个</Text>
-                    </Col>
-                  )}
-                </Row>
-              </div>
-            </>
-          )}
+          {(stepStatus.config || stepStatus.agents || stepStatus.questions) &&
+            currentStep < 3 && (
+              <>
+                <Divider />
+                <div>
+                  <Title level={5}>当前配置摘要</Title>
+                  <Row gutter={[16, 8]}>
+                    {stepStatus.config && (
+                      <Col span={8}>
+                        <Text type="secondary">评测名称: </Text>
+                        <Text strong>{configData.name}</Text>
+                      </Col>
+                    )}
+                    {stepStatus.agents && (
+                      <Col span={8}>
+                        <Text type="secondary">选中智能体: </Text>
+                        <Text strong>{selectedAgents.length}个</Text>
+                      </Col>
+                    )}
+                    {stepStatus.questions && (
+                      <Col span={8}>
+                        <Text type="secondary">测试问题: </Text>
+                        <Text strong>{questions.length}个</Text>
+                      </Col>
+                    )}
+                  </Row>
+                </div>
+              </>
+            )}
         </Card>
       </Content>
     </Layout>

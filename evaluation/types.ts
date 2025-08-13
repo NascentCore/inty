@@ -4,10 +4,10 @@
 export interface Agent {
   id: string;
   name: string;
-  gender: 'MALE' | 'FEMALE' | 'OTHER';
+  gender: "MALE" | "FEMALE" | "OTHER";
   intro: string;
   opening: string;
-  visibility: 'PUBLIC' | 'PRIVATE';
+  visibility: "PUBLIC" | "PRIVATE";
   main_prompt: string;
   personality: string;
   mode_prompt: string;
@@ -31,10 +31,10 @@ export interface LLMConfig {
 // 创建智能体请求
 export interface AgentCreateRequest {
   name: string;
-  gender: 'MALE' | 'FEMALE' | 'OTHER';
+  gender: "MALE" | "FEMALE" | "OTHER";
   intro: string;
   opening: string;
-  visibility: 'PUBLIC' | 'PRIVATE';
+  visibility: "PUBLIC" | "PRIVATE";
   main_prompt: string;
   personality: string;
   mode_prompt: string;
@@ -45,10 +45,10 @@ export interface AgentCreateRequest {
 // 更新智能体请求
 export interface AgentUpdateRequest {
   name?: string;
-  gender?: 'MALE' | 'FEMALE' | 'OTHER';
+  gender?: "MALE" | "FEMALE" | "OTHER";
   intro?: string;
   opening?: string;
-  visibility?: 'PUBLIC' | 'PRIVATE';
+  visibility?: "PUBLIC" | "PRIVATE";
   main_prompt?: string;
   personality?: string;
   mode_prompt?: string;
@@ -59,7 +59,7 @@ export interface AgentUpdateRequest {
 // 聊天消息
 export interface ChatMessage {
   id: string;
-  role: 'user' | 'assistant';
+  role: "user" | "assistant";
   content: string;
   timestamp: string;
   remoteId?: string;
@@ -81,7 +81,7 @@ export interface EvaluationSession {
   id: string;
   name: string;
   description?: string;
-  status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled';
+  status: "pending" | "running" | "completed" | "failed" | "cancelled";
   created_at: string;
   updated_at?: string;
   completed_at?: string;
@@ -195,7 +195,7 @@ export interface EvaluationStats {
 // 导出请求
 export interface ExportRequest {
   session_ids: string[];
-  format: 'json' | 'csv' | 'xlsx';
+  format: "json" | "csv" | "xlsx";
   include_details: boolean;
 }
 

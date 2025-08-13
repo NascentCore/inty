@@ -7,11 +7,16 @@
 // 基础类型
 // =============================================================================
 
-export type EvaluationStatus = 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED' | 'CANCELLED';
+export type EvaluationStatus =
+  | "PENDING"
+  | "RUNNING"
+  | "COMPLETED"
+  | "FAILED"
+  | "CANCELLED";
 
-export type AgentGender = 'MALE' | 'FEMALE' | 'OTHER';
+export type AgentGender = "MALE" | "FEMALE" | "OTHER";
 
-export type AgentVisibility = 'PUBLIC' | 'PRIVATE';
+export type AgentVisibility = "PUBLIC" | "PRIVATE";
 
 // =============================================================================
 // 智能体相关类型
@@ -55,7 +60,7 @@ export interface AgentCreateRequest {
   main_prompt: string;
   personality: string;
   mode_prompt: string;
-  modelType?: 'default' | 'custom';
+  modelType?: "default" | "custom";
   llm_config?: LLMConfig;
 }
 
@@ -217,16 +222,16 @@ export interface WebSocketMessage {
 }
 
 export type WebSocketMessageType =
-  | 'session_started'
-  | 'test_started'
-  | 'test_completed'
-  | 'session_completed'
-  | 'session_failed'
-  | 'session_cancelled'
-  | 'progress_update';
+  | "session_started"
+  | "test_started"
+  | "test_completed"
+  | "session_completed"
+  | "session_failed"
+  | "session_cancelled"
+  | "progress_update";
 
 export interface WebSocketProgress {
-  type: 'progress_update';
+  type: "progress_update";
   session_id: string;
   data: {
     current_test: number;
@@ -238,7 +243,7 @@ export interface WebSocketProgress {
 }
 
 export interface WebSocketTestResult {
-  type: 'test_completed';
+  type: "test_completed";
   session_id: string;
   data: {
     result: EvaluationResult;
@@ -262,7 +267,7 @@ export interface TableColumn<T = any> {
   dataIndex?: string;
   render?: (value: any, record: T, index: number) => React.ReactNode;
   width?: number | string;
-  align?: 'left' | 'center' | 'right';
+  align?: "left" | "center" | "right";
   sorter?: boolean | ((a: T, b: T) => number);
   filters?: Array<{ text: string; value: any }>;
   onFilter?: (value: any, record: T) => boolean;
@@ -303,7 +308,7 @@ export interface PaginatedResponse<T = any> {
 
 export interface ExportRequest {
   session_ids: string[];
-  format: 'csv' | 'json' | 'xlsx';
+  format: "csv" | "json" | "xlsx";
   include_interactions?: boolean;
   include_metadata?: boolean;
 }

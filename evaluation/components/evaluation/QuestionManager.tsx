@@ -3,7 +3,7 @@
  * 负责测试问题的添加、编辑、导入、管理
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback } from "react";
 import {
   Card,
   Button,
@@ -18,7 +18,7 @@ import {
   Alert,
   Tooltip,
   Popconfirm,
-} from 'antd';
+} from "antd";
 import {
   UploadOutlined,
   DeleteOutlined,
@@ -27,10 +27,10 @@ import {
   SaveOutlined,
   FileTextOutlined,
   ExclamationCircleOutlined,
-} from '@ant-design/icons';
-import type { UploadFile } from 'antd';
-import api from '../../services/api';
-import type { QuestionFileUpload } from '../../types';
+} from "@ant-design/icons";
+import type { UploadFile } from "antd";
+import api from "../../services/api";
+import type { QuestionFileUpload } from "../../types";
 
 const { Option } = Select;
 
@@ -51,34 +51,34 @@ export const QuestionManager: React.FC<QuestionManagerProps> = ({
   maxQuestions = 50,
 }) => {
   // 状态管理
-  const [newQuestion, setNewQuestion] = useState('');
-  const [questionSetName, setQuestionSetName] = useState('');
+  const [newQuestion, setNewQuestion] = useState("");
+  const [questionSetName, setQuestionSetName] = useState("");
   const [savedQuestionSets, setSavedQuestionSets] = useState<QuestionSet[]>([]);
   const [uploading, setUploading] = useState(false);
 
   // 加载保存的问题集
   React.useEffect(() => {
     try {
-      const saved = localStorage.getItem('questionSets');
+      const saved = localStorage.getItem("questionSets");
       if (saved) {
         setSavedQuestionSets(JSON.parse(saved));
       }
     } catch (error) {
-      console.error('加载问题集失败:', error);
+      console.error("加载问题集失败:", error);
     }
   }, []);
 
   // 添加问题
   const addQuestion = useCallback(() => {
     const trimmedQuestion = newQuestion.trim();
-    
+
     if (!trimmedQuestion) {
-      message.warning('请输入问题内容');
+      message.warning("请输入问题内容");
       return;
     }
 
     if (questions.includes(trimmedQuestion)) {
-      message.warning('问题已存在');
+      message.warning("问题已存在");
       return;
     }
 
@@ -88,32 +88,35 @@ export const QuestionManager: React.FC<QuestionManagerProps> = ({
     }
 
     onChange([...questions, trimmedQuestion]);
-    setNewQuestion('');
-    message.success('问题添加成功');
+    setNewQuestion("");
+    message.success("问题添加成功");
   }, [newQuestion, questions, onChange, maxQuestions]);
 
   // 删除问题
-  const removeQuestion = useCallback((index: number) => {
-    const newQuestions = questions.filter((_, i) => i !== index);
-    onChange(newQuestions);
-    message.success('问题已删除');
-  }, [questions, onChange]);
+  const removeQuestion = useCallback(
+    (index: number) => {
+      const newQuestions = questions.filter((_, i) => i !== index);
+      onChange(newQuestions);
+      message.success("问题已删除");
+    },
+    [questions, onChange],
+  );
 
   // 清空问题列表
   const clearQuestions = useCallback(() => {
     onChange([]);
-    message.success('问题列表已清空');
+    message.success("问题列表已清空");
   }, [onChange]);
 
   // 保存问题集
   const saveQuestionSet = useCallback(() => {
     if (!questionSetName.trim()) {
-      message.error('请输入问题集名称');
+      message.error("请输入问题集名称");
       return;
     }
 
     if (questions.length === 0) {
-      message.error('问题列表不能为空');
+      message.error("问题列表不能为空");
       return;
     }
 
@@ -122,73 +125,90 @@ export const QuestionManager: React.FC<QuestionManagerProps> = ({
       questions: [...questions],
     };
 
-    const updatedSets = savedQuestionSets.filter(set => set.name !== newSet.name);
+    const updatedSets = savedQuestionSets.filter(
+      (set) => set.name !== newSet.name,
+    );
     updatedSets.push(newSet);
-    
+
     setSavedQuestionSets(updatedSets);
-    localStorage.setItem('questionSets', JSON.stringify(updatedSets));
-    setQuestionSetName('');
-    message.success('问题集保存成功');
+    localStorage.setItem("questionSets", JSON.stringify(updatedSets));
+    setQuestionSetName("");
+    message.success("问题集保存成功");
   }, [questionSetName, questions, savedQuestionSets]);
 
   // 加载问题集
-  const loadQuestionSet = useCallback((questionSet: QuestionSet) => {
-    onChange(questionSet.questions);
-    message.success(`已加载问题集: ${questionSet.name}`);
-  }, [onChange]);
+  const loadQuestionSet = useCallback(
+    (questionSet: QuestionSet) => {
+      onChange(questionSet.questions);
+      message.success(`已加载问题集: ${questionSet.name}`);
+    },
+    [onChange],
+  );
 
   // 删除问题集
-  const deleteQuestionSet = useCallback((name: string) => {
-    const updatedSets = savedQuestionSets.filter(set => set.name !== name);
-    setSavedQuestionSets(updatedSets);
-    localStorage.setItem('questionSets', JSON.stringify(updatedSets));
-    message.success('问题集删除成功');
-  }, [savedQuestionSets]);
+  const deleteQuestionSet = useCallback(
+    (name: string) => {
+      const updatedSets = savedQuestionSets.filter((set) => set.name !== name);
+      setSavedQuestionSets(updatedSets);
+      localStorage.setItem("questionSets", JSON.stringify(updatedSets));
+      message.success("问题集删除成功");
+    },
+    [savedQuestionSets],
+  );
 
   // 文件上传处理
-  const handleFileUpload = useCallback(async (file: UploadFile) => {
-    try {
-      setUploading(true);
-      
-      const uploadResult: QuestionFileUpload = await api.questions.parseFile(file as any);
-      
-      // 合并问题，避免重复
-      const existingQuestions = new Set(questions);
-      const newQuestions = uploadResult.questions.filter(q => !existingQuestions.has(q));
-      
-      onChange([...questions, ...newQuestions]);
-      
-      message.success(
-        `文件解析成功！导入了 ${newQuestions.length} 个新问题${
-          uploadResult.duplicates_removed > 0 ? `，去除重复 ${uploadResult.duplicates_removed} 个` : ''
-        }`
-      );
+  const handleFileUpload = useCallback(
+    async (file: UploadFile) => {
+      try {
+        setUploading(true);
 
-      // 显示警告信息
-      if (uploadResult.warnings.length > 0) {
-        Modal.warning({
-          title: '导入警告',
-          content: (
-            <div>
-              <p>文件导入成功，但有以下警告：</p>
-              <ul>
-                {uploadResult.warnings.map((warning, index) => (
-                  <li key={index}>{warning}</li>
-                ))}
-              </ul>
-            </div>
-          ),
-        });
+        const uploadResult: QuestionFileUpload = await api.questions.parseFile(
+          file as any,
+        );
+
+        // 合并问题，避免重复
+        const existingQuestions = new Set(questions);
+        const newQuestions = uploadResult.questions.filter(
+          (q) => !existingQuestions.has(q),
+        );
+
+        onChange([...questions, ...newQuestions]);
+
+        message.success(
+          `文件解析成功！导入了 ${newQuestions.length} 个新问题${
+            uploadResult.duplicates_removed > 0
+              ? `，去除重复 ${uploadResult.duplicates_removed} 个`
+              : ""
+          }`,
+        );
+
+        // 显示警告信息
+        if (uploadResult.warnings.length > 0) {
+          Modal.warning({
+            title: "导入警告",
+            content: (
+              <div>
+                <p>文件导入成功，但有以下警告：</p>
+                <ul>
+                  {uploadResult.warnings.map((warning, index) => (
+                    <li key={index}>{warning}</li>
+                  ))}
+                </ul>
+              </div>
+            ),
+          });
+        }
+      } catch (error) {
+        console.error("文件上传失败:", error);
+        message.error(`文件解析失败: ${error}`);
+      } finally {
+        setUploading(false);
       }
-    } catch (error) {
-      console.error('文件上传失败:', error);
-      message.error(`文件解析失败: ${error}`);
-    } finally {
-      setUploading(false);
-    }
-    
-    return false; // 阻止自动上传
-  }, [questions, onChange]);
+
+      return false; // 阻止自动上传
+    },
+    [questions, onChange],
+  );
 
   return (
     <Card title="问题管理" className="question-manager">
@@ -205,13 +225,15 @@ export const QuestionManager: React.FC<QuestionManagerProps> = ({
               导入文件 (支持 .txt, .csv, .json)
             </Button>
           </Upload>
-          
+
           {savedQuestionSets.length > 0 && (
             <Select
               placeholder="选择问题集模板"
               style={{ width: 200 }}
               onChange={(value) => {
-                const selectedSet = savedQuestionSets.find(set => set.name === value);
+                const selectedSet = savedQuestionSets.find(
+                  (set) => set.name === value,
+                );
                 if (selectedSet) {
                   loadQuestionSet(selectedSet);
                 }
@@ -234,7 +256,7 @@ export const QuestionManager: React.FC<QuestionManagerProps> = ({
       <div style={{ marginBottom: 16 }}>
         <Input.Group compact>
           <Input
-            style={{ width: 'calc(100% - 80px)' }}
+            style={{ width: "calc(100% - 80px)" }}
             value={newQuestion}
             onChange={(e) => setNewQuestion(e.target.value)}
             placeholder="手动添加问题"
@@ -242,16 +264,16 @@ export const QuestionManager: React.FC<QuestionManagerProps> = ({
             maxLength={500}
             disabled={questions.length >= maxQuestions}
           />
-          <Button 
-            type="primary" 
-            icon={<PlusOutlined />} 
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
             onClick={addQuestion}
             disabled={questions.length >= maxQuestions}
           >
             添加
           </Button>
         </Input.Group>
-        
+
         {questions.length >= maxQuestions && (
           <Alert
             message={`已达到最大问题数量限制 (${maxQuestions})`}
@@ -266,9 +288,16 @@ export const QuestionManager: React.FC<QuestionManagerProps> = ({
       {questions.length > 0 && (
         <div>
           {/* 操作栏 */}
-          <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div
+            style={{
+              marginBottom: 12,
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+            }}
+          >
             <Tag color="blue">已添加问题 ({questions.length})</Tag>
-            
+
             <Input
               placeholder="问题集名称"
               value={questionSetName}
@@ -276,41 +305,37 @@ export const QuestionManager: React.FC<QuestionManagerProps> = ({
               style={{ width: 150 }}
               size="small"
             />
-            
-            <Button 
-              type="primary" 
-              size="small" 
+
+            <Button
+              type="primary"
+              size="small"
               icon={<SaveOutlined />}
               onClick={saveQuestionSet}
               disabled={!questionSetName.trim() || questions.length === 0}
             >
               保存问题集
             </Button>
-            
+
             <Popconfirm
               title="确定要清空所有问题吗？"
               onConfirm={clearQuestions}
               okText="确定"
               cancelText="取消"
             >
-              <Button 
-                danger
-                size="small" 
-                icon={<ClearOutlined />}
-              >
+              <Button danger size="small" icon={<ClearOutlined />}>
                 清空列表
               </Button>
             </Popconfirm>
           </div>
 
           {/* 问题列表 */}
-          <div 
-            style={{ 
-              maxHeight: '400px', 
-              overflowY: 'auto',
-              border: '1px solid #d9d9d9',
-              borderRadius: '6px',
-              padding: '8px'
+          <div
+            style={{
+              maxHeight: "400px",
+              overflowY: "auto",
+              border: "1px solid #d9d9d9",
+              borderRadius: "6px",
+              padding: "8px",
             }}
           >
             <List
@@ -328,27 +353,27 @@ export const QuestionManager: React.FC<QuestionManagerProps> = ({
                         icon={<DeleteOutlined />}
                         onClick={() => removeQuestion(index)}
                       />
-                    </Tooltip>
+                    </Tooltip>,
                   ]}
                   style={{
-                    padding: '8px 12px',
-                    borderRadius: '4px',
-                    marginBottom: '4px',
-                    border: '1px solid #f0f0f0'
+                    padding: "8px 12px",
+                    borderRadius: "4px",
+                    marginBottom: "4px",
+                    border: "1px solid #f0f0f0",
                   }}
                 >
                   <div style={{ flex: 1 }}>
-                    <span style={{ 
-                      color: '#666', 
-                      marginRight: 8,
-                      fontSize: '12px',
-                      fontWeight: 'bold'
-                    }}>
+                    <span
+                      style={{
+                        color: "#666",
+                        marginRight: 8,
+                        fontSize: "12px",
+                        fontWeight: "bold",
+                      }}
+                    >
                       {index + 1}.
                     </span>
-                    <span style={{ wordBreak: 'break-word' }}>
-                      {question}
-                    </span>
+                    <span style={{ wordBreak: "break-word" }}>{question}</span>
                   </div>
                 </List.Item>
               )}
@@ -380,14 +405,10 @@ export const QuestionManager: React.FC<QuestionManagerProps> = ({
                     okText="确定"
                     cancelText="取消"
                   >
-                    <Button
-                      type="link"
-                      danger
-                      size="small"
-                    >
+                    <Button type="link" danger size="small">
                       删除
                     </Button>
-                  </Popconfirm>
+                  </Popconfirm>,
                 ]}
               >
                 <List.Item.Meta

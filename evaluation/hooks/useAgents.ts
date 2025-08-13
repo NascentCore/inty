@@ -3,18 +3,18 @@
  * 提供智能体的CRUD操作和缓存管理
  */
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import { message } from 'antd';
-import api from '../services/api';
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { message } from "antd";
+import api from "../services/api";
 import type {
   Agent,
   AgentCreateRequest,
   AgentUpdateRequest,
   AgentVisibility,
-} from '../types';
+} from "../types";
 
 interface UseAgentsOptions {
-  type?: 'public' | 'private' | 'all';
+  type?: "public" | "private" | "all";
   autoLoad?: boolean;
   enableCache?: boolean;
   cacheKey?: string;
@@ -26,14 +26,19 @@ interface UseAgentsReturn {
   agents: Agent[];
   loading: boolean;
   error: string | null;
-  
+
   // 操作
   loadAgents: (forceRefresh?: boolean) => Promise<void>;
-  createAgent: (data: AgentCreateRequest & { avatar?: File }) => Promise<Agent | null>;
-  updateAgent: (agentId: string, data: Partial<AgentUpdateRequest> & { avatar?: File }) => Promise<Agent | null>;
+  createAgent: (
+    data: AgentCreateRequest & { avatar?: File },
+  ) => Promise<Agent | null>;
+  updateAgent: (
+    agentId: string,
+    data: Partial<AgentUpdateRequest> & { avatar?: File },
+  ) => Promise<Agent | null>;
   deleteAgent: (agentId: string) => Promise<boolean>;
   deployAgent: (agentId: string, adminPassword: string) => Promise<boolean>;
-  
+
   // 辅助方法
   getAgentById: (id: string) => Agent | undefined;
   getAgentsByVisibility: (visibility: AgentVisibility) => Agent[];
@@ -42,7 +47,7 @@ interface UseAgentsReturn {
 
 export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
   const {
-    type = 'all',
+    type = "all",
     autoLoad = true,
     enableCache = true,
     cacheKey = `agents_cache_${type}`,
@@ -59,11 +64,11 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
 
   const getCachedData = useCallback((): Agent[] | null => {
     if (!enableCache) return null;
-    
+
     try {
       const cached = localStorage.getItem(cacheKey);
       const cacheTime = localStorage.getItem(`${cacheKey}_time`);
-      
+
       if (cached && cacheTime) {
         const isExpired = Date.now() - parseInt(cacheTime) > CACHE_EXPIRY;
         if (!isExpired) {
@@ -71,22 +76,25 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
         }
       }
     } catch (error) {
-      console.warn('读取缓存失败:', error);
+      console.warn("读取缓存失败:", error);
     }
-    
+
     return null;
   }, [enableCache, cacheKey]);
 
-  const setCachedData = useCallback((data: Agent[]) => {
-    if (!enableCache) return;
-    
-    try {
-      localStorage.setItem(cacheKey, JSON.stringify(data));
-      localStorage.setItem(`${cacheKey}_time`, Date.now().toString());
-    } catch (error) {
-      console.warn('设置缓存失败:', error);
-    }
-  }, [enableCache, cacheKey]);
+  const setCachedData = useCallback(
+    (data: Agent[]) => {
+      if (!enableCache) return;
+
+      try {
+        localStorage.setItem(cacheKey, JSON.stringify(data));
+        localStorage.setItem(`${cacheKey}_time`, Date.now().toString());
+      } catch (error) {
+        console.warn("设置缓存失败:", error);
+      }
+    },
+    [enableCache, cacheKey],
+  );
 
   const clearCache = useCallback(() => {
     localStorage.removeItem(cacheKey);
@@ -102,216 +110,248 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
   }, []);
 
   // 加载智能体列表
-  const loadAgents = useCallback(async (forceRefresh: boolean = false) => {
-    try {
-      setLoading(true);
-      setError(null);
+  const loadAgents = useCallback(
+    async (forceRefresh: boolean = false) => {
+      try {
+        setLoading(true);
+        setError(null);
 
-      // 检查缓存
-      if (!forceRefresh) {
-        const cachedData = getCachedData();
-        if (cachedData) {
-          setAgents(cachedData);
-          setLoading(false);
-          return;
+        // 检查缓存
+        if (!forceRefresh) {
+          const cachedData = getCachedData();
+          if (cachedData) {
+            setAgents(cachedData);
+            setLoading(false);
+            return;
+          }
         }
-      }
 
-      // 从API获取数据 - 使用现有的agents API
-      let data: Agent[];
-      
-      if (useRecommended) {
-        // 使用推荐API
-        data = await api.agents.getRecommended();
-      } else {
-        // 使用普通列表API，现有API不支持type参数，获取所有
-        let apiResponse = await api.agents.list({ limit: 100 });
-        
-        // 处理可能的API响应格式问题
-        if (apiResponse && typeof apiResponse === 'object' && 'data' in apiResponse && Array.isArray(apiResponse.data)) {
-          console.log('处理inty-backend API响应格式');
-          data = apiResponse.data;
-        } else if (Array.isArray(apiResponse)) {
-          data = apiResponse;
+        // 从API获取数据 - 使用现有的agents API
+        let data: Agent[];
+
+        if (useRecommended) {
+          // 使用推荐API
+          data = await api.agents.getRecommended();
         } else {
-          console.error('Unexpected API response format:', apiResponse);
-          data = [];
+          // 使用普通列表API，现有API不支持type参数，获取所有
+          let apiResponse = await api.agents.list({ limit: 100 });
+
+          // 处理可能的API响应格式问题
+          if (
+            apiResponse &&
+            typeof apiResponse === "object" &&
+            "data" in apiResponse &&
+            Array.isArray(apiResponse.data)
+          ) {
+            console.log("处理inty-backend API响应格式");
+            data = apiResponse.data;
+          } else if (Array.isArray(apiResponse)) {
+            data = apiResponse;
+          } else {
+            console.error("Unexpected API response format:", apiResponse);
+            data = [];
+          }
+
+          // 前端过滤type（如果现有API不支持的话）
+          if (type !== "all" && Array.isArray(data)) {
+            data = data.filter((agent) => {
+              if (type === "public")
+                return (
+                  agent.visibility === "PUBLIC" || agent.visibility === "public"
+                );
+              if (type === "private")
+                return (
+                  agent.visibility === "PRIVATE" ||
+                  agent.visibility === "private"
+                );
+              return true;
+            });
+          }
         }
-        
-        // 前端过滤type（如果现有API不支持的话）
-        if (type !== 'all' && Array.isArray(data)) {
-          data = data.filter(agent => {
-            if (type === 'public') return agent.visibility === 'PUBLIC' || agent.visibility === 'public';
-            if (type === 'private') return agent.visibility === 'PRIVATE' || agent.visibility === 'private';
-            return true;
-          });
+
+        setAgents(data);
+
+        // 更新缓存
+        setCachedData(data);
+
+        if (forceRefresh) {
+          message.success(
+            `${type === "private" ? "私有" : "公共"}智能体列表已刷新`,
+          );
         }
+      } catch (error) {
+        handleError(error, "获取智能体列表失败");
+      } finally {
+        setLoading(false);
       }
-      
-      setAgents(data);
-      
-      // 更新缓存
-      setCachedData(data);
-      
-      if (forceRefresh) {
-        message.success(`${type === 'private' ? '私有' : '公共'}智能体列表已刷新`);
-      }
-    } catch (error) {
-      handleError(error, '获取智能体列表失败');
-    } finally {
-      setLoading(false);
-    }
-  }, [type, getCachedData, setCachedData, handleError]);
+    },
+    [type, getCachedData, setCachedData, handleError],
+  );
 
   // 创建智能体
-  const createAgent = useCallback(async (
-    data: AgentCreateRequest & { avatar?: File }
-  ): Promise<Agent | null> => {
-    try {
-      setLoading(true);
-      setError(null);
+  const createAgent = useCallback(
+    async (
+      data: AgentCreateRequest & { avatar?: File },
+    ): Promise<Agent | null> => {
+      try {
+        setLoading(true);
+        setError(null);
 
-      let agentData = { ...data };
-      
-      // 如果有头像文件，先上传头像
-      if (data.avatar) {
-        try {
-          // 这里应该调用头像上传API
-          // const uploadResult = await api.uploadAvatar(data.avatar);
-          // agentData.avatar = uploadResult.url;
-          
-          // 暂时移除avatar字段，避免类型错误
-          const { avatar, ...restData } = agentData;
-          agentData = restData;
-        } catch (error) {
-          console.error('头像上传失败:', error);
-          message.error('头像上传失败，但智能体创建将继续');
+        let agentData = { ...data };
+
+        // 如果有头像文件，先上传头像
+        if (data.avatar) {
+          try {
+            // 这里应该调用头像上传API
+            // const uploadResult = await api.uploadAvatar(data.avatar);
+            // agentData.avatar = uploadResult.url;
+
+            // 暂时移除avatar字段，避免类型错误
+            const { avatar, ...restData } = agentData;
+            agentData = restData;
+          } catch (error) {
+            console.error("头像上传失败:", error);
+            message.error("头像上传失败，但智能体创建将继续");
+          }
         }
-      }
 
-      const newAgent = await api.agents.create(agentData);
-      
-      // 更新本地状态
-      setAgents(prev => [newAgent, ...prev]);
-      
-      // 清理缓存
-      clearCache();
-      
-      message.success('智能体创建成功');
-      return newAgent;
-    } catch (error) {
-      handleError(error, '创建智能体失败');
-      return null;
-    } finally {
-      setLoading(false);
-    }
-  }, [clearCache, handleError]);
+        const newAgent = await api.agents.create(agentData);
+
+        // 更新本地状态
+        setAgents((prev) => [newAgent, ...prev]);
+
+        // 清理缓存
+        clearCache();
+
+        message.success("智能体创建成功");
+        return newAgent;
+      } catch (error) {
+        handleError(error, "创建智能体失败");
+        return null;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [clearCache, handleError],
+  );
 
   // 更新智能体
-  const updateAgent = useCallback(async (
-    agentId: string,
-    data: Partial<AgentUpdateRequest> & { avatar?: File }
-  ): Promise<Agent | null> => {
-    try {
-      setLoading(true);
-      setError(null);
+  const updateAgent = useCallback(
+    async (
+      agentId: string,
+      data: Partial<AgentUpdateRequest> & { avatar?: File },
+    ): Promise<Agent | null> => {
+      try {
+        setLoading(true);
+        setError(null);
 
-      let updateData = { ...data };
-      
-      // 如果有头像文件，先上传头像
-      if (data.avatar) {
-        try {
-          // 这里应该调用头像上传API
-          // const uploadResult = await api.uploadAvatar(data.avatar);
-          // updateData.avatar = uploadResult.url;
-          
-          // 暂时移除avatar字段
-          const { avatar, ...restData } = updateData;
-          updateData = restData;
-        } catch (error) {
-          console.error('头像上传失败:', error);
-          message.error('头像上传失败');
-          return null;
+        let updateData = { ...data };
+
+        // 如果有头像文件，先上传头像
+        if (data.avatar) {
+          try {
+            // 这里应该调用头像上传API
+            // const uploadResult = await api.uploadAvatar(data.avatar);
+            // updateData.avatar = uploadResult.url;
+
+            // 暂时移除avatar字段
+            const { avatar, ...restData } = updateData;
+            updateData = restData;
+          } catch (error) {
+            console.error("头像上传失败:", error);
+            message.error("头像上传失败");
+            return null;
+          }
         }
-      }
 
-      const updatedAgent = await api.agents.update(agentId, updateData);
-      
-      // 更新本地状态
-      setAgents(prev => prev.map(agent => 
-        agent.id === agentId ? updatedAgent : agent
-      ));
-      
-      // 清理缓存
-      clearCache();
-      
-      message.success('智能体更新成功');
-      return updatedAgent;
-    } catch (error) {
-      handleError(error, '更新智能体失败');
-      return null;
-    } finally {
-      setLoading(false);
-    }
-  }, [clearCache, handleError]);
+        const updatedAgent = await api.agents.update(agentId, updateData);
+
+        // 更新本地状态
+        setAgents((prev) =>
+          prev.map((agent) => (agent.id === agentId ? updatedAgent : agent)),
+        );
+
+        // 清理缓存
+        clearCache();
+
+        message.success("智能体更新成功");
+        return updatedAgent;
+      } catch (error) {
+        handleError(error, "更新智能体失败");
+        return null;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [clearCache, handleError],
+  );
 
   // 删除智能体
-  const deleteAgent = useCallback(async (agentId: string): Promise<boolean> => {
-    try {
-      setLoading(true);
-      setError(null);
+  const deleteAgent = useCallback(
+    async (agentId: string): Promise<boolean> => {
+      try {
+        setLoading(true);
+        setError(null);
 
-      await api.agents.delete(agentId);
-      
-      // 更新本地状态
-      setAgents(prev => prev.filter(agent => agent.id !== agentId));
-      
-      // 清理缓存
-      clearCache();
-      
-      message.success('智能体已删除');
-      return true;
-    } catch (error) {
-      handleError(error, '删除智能体失败');
-      return false;
-    } finally {
-      setLoading(false);
-    }
-  }, [clearCache, handleError]);
+        await api.agents.delete(agentId);
+
+        // 更新本地状态
+        setAgents((prev) => prev.filter((agent) => agent.id !== agentId));
+
+        // 清理缓存
+        clearCache();
+
+        message.success("智能体已删除");
+        return true;
+      } catch (error) {
+        handleError(error, "删除智能体失败");
+        return false;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [clearCache, handleError],
+  );
 
   // 部署智能体
-  const deployAgent = useCallback(async (
-    agentId: string, 
-    adminPassword: string
-  ): Promise<boolean> => {
-    try {
-      setLoading(true);
-      setError(null);
+  const deployAgent = useCallback(
+    async (agentId: string, adminPassword: string): Promise<boolean> => {
+      try {
+        setLoading(true);
+        setError(null);
 
-      const result = await api.agents.deploy(agentId, adminPassword);
-      
-      if (result.success) {
-        message.success(result.message);
-        return true;
-      } else {
-        throw new Error(result.message);
+        const result = await api.agents.deploy(agentId, adminPassword);
+
+        if (result.success) {
+          message.success(result.message);
+          return true;
+        } else {
+          throw new Error(result.message);
+        }
+      } catch (error) {
+        handleError(error, "部署智能体失败");
+        return false;
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      handleError(error, '部署智能体失败');
-      return false;
-    } finally {
-      setLoading(false);
-    }
-  }, [handleError]);
+    },
+    [handleError],
+  );
 
   // 辅助方法
-  const getAgentById = useCallback((id: string): Agent | undefined => {
-    return agents.find(agent => agent.id === id);
-  }, [agents]);
+  const getAgentById = useCallback(
+    (id: string): Agent | undefined => {
+      return agents.find((agent) => agent.id === id);
+    },
+    [agents],
+  );
 
-  const getAgentsByVisibility = useCallback((visibility: AgentVisibility): Agent[] => {
-    return agents.filter(agent => agent.visibility === visibility);
-  }, [agents]);
+  const getAgentsByVisibility = useCallback(
+    (visibility: AgentVisibility): Agent[] => {
+      return agents.filter((agent) => agent.visibility === visibility);
+    },
+    [agents],
+  );
 
   // 自动加载
   useEffect(() => {
@@ -332,14 +372,14 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
     agents,
     loading,
     error,
-    
+
     // 操作
     loadAgents,
     createAgent,
     updateAgent,
     deleteAgent,
     deployAgent,
-    
+
     // 辅助方法
     getAgentById,
     getAgentsByVisibility,

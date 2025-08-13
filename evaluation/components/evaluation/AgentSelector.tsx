@@ -3,7 +3,7 @@
  * 负责智能体的选择、管理、创建功能
  */
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo } from "react";
 import {
   Card,
   List,
@@ -20,7 +20,7 @@ import {
   Divider,
   Row,
   Col,
-} from 'antd';
+} from "antd";
 import {
   SearchOutlined,
   UserOutlined,
@@ -29,9 +29,9 @@ import {
   GlobalOutlined,
   LockOutlined,
   ReloadOutlined,
-} from '@ant-design/icons';
-import { useAgents } from '../../hooks/useAgents';
-import type { Agent, AgentVisibility } from '../../types';
+} from "@ant-design/icons";
+import { useAgents } from "../../hooks/useAgents";
+import type { Agent, AgentVisibility } from "../../types";
 
 const { Search } = Input;
 const { Option } = Select;
@@ -48,17 +48,12 @@ export const AgentSelector: React.FC<AgentSelectorProps> = ({
   maxSelection = 10,
 }) => {
   // 状态管理
-  const [searchText, setSearchText] = useState('');
-  const [visibilityFilter, setVisibilityFilter] = useState<string>('all');
+  const [searchText, setSearchText] = useState("");
+  const [visibilityFilter, setVisibilityFilter] = useState<string>("all");
 
   // 智能体数据 - 使用现有的agents API
-  const {
-    agents,
-    loading,
-    error,
-    loadAgents,
-  } = useAgents({
-    type: 'all', // 获取所有智能体，然后前端过滤
+  const { agents, loading, error, loadAgents } = useAgents({
+    type: "all", // 获取所有智能体，然后前端过滤
     autoLoad: true,
     enableCache: true,
     useRecommended: false, // 不使用推荐API，使用完整列表
@@ -68,26 +63,33 @@ export const AgentSelector: React.FC<AgentSelectorProps> = ({
   const filteredAgents = useMemo(() => {
     // 确保agents是数组，处理可能的API响应格式问题
     let agentsArray = agents;
-    
+
     // 如果agents是{code, message, data}格式，提取data
-    if (agents && typeof agents === 'object' && 'data' in agents && Array.isArray(agents.data)) {
+    if (
+      agents &&
+      typeof agents === "object" &&
+      "data" in agents &&
+      Array.isArray(agents.data)
+    ) {
       agentsArray = agents.data;
-      console.log('从API响应中提取agents数据:', agentsArray.length);
+      console.log("从API响应中提取agents数据:", agentsArray.length);
     }
-    
+
     if (!Array.isArray(agentsArray)) {
-      console.warn('agents is not an array:', agents);
+      console.warn("agents is not an array:", agents);
       return [];
     }
-    
-    return agentsArray.filter(agent => {
+
+    return agentsArray.filter((agent) => {
       // 搜索过滤
-      const matchesSearch = !searchText || 
+      const matchesSearch =
+        !searchText ||
         agent.name.toLowerCase().includes(searchText.toLowerCase()) ||
         agent.description?.toLowerCase().includes(searchText.toLowerCase());
 
       // 可见性过滤 - 处理大小写差异
-      const matchesVisibility = visibilityFilter === 'all' || 
+      const matchesVisibility =
+        visibilityFilter === "all" ||
         agent.visibility?.toLowerCase() === visibilityFilter.toLowerCase();
 
       return matchesSearch && matchesVisibility;
@@ -95,21 +97,24 @@ export const AgentSelector: React.FC<AgentSelectorProps> = ({
   }, [agents, searchText, visibilityFilter]);
 
   // 选择/取消选择智能体
-  const toggleAgent = useCallback((agentId: string) => {
-    const isSelected = selectedAgents.includes(agentId);
-    
-    if (isSelected) {
-      // 取消选择
-      onChange(selectedAgents.filter(id => id !== agentId));
-    } else {
-      // 选择智能体
-      if (selectedAgents.length >= maxSelection) {
-        message.warning(`最多只能选择${maxSelection}个智能体`);
-        return;
+  const toggleAgent = useCallback(
+    (agentId: string) => {
+      const isSelected = selectedAgents.includes(agentId);
+
+      if (isSelected) {
+        // 取消选择
+        onChange(selectedAgents.filter((id) => id !== agentId));
+      } else {
+        // 选择智能体
+        if (selectedAgents.length >= maxSelection) {
+          message.warning(`最多只能选择${maxSelection}个智能体`);
+          return;
+        }
+        onChange([...selectedAgents, agentId]);
       }
-      onChange([...selectedAgents, agentId]);
-    }
-  }, [selectedAgents, onChange, maxSelection]);
+    },
+    [selectedAgents, onChange, maxSelection],
+  );
 
   // 全选/取消全选
   const handleSelectAll = useCallback(() => {
@@ -118,22 +123,23 @@ export const AgentSelector: React.FC<AgentSelectorProps> = ({
       onChange([]);
     } else {
       // 全选（限制数量）
-      const allIds = filteredAgents.slice(0, maxSelection).map(agent => agent.id);
+      const allIds = filteredAgents
+        .slice(0, maxSelection)
+        .map((agent) => agent.id);
       onChange(allIds);
     }
   }, [selectedAgents, filteredAgents, maxSelection, onChange]);
 
-
   return (
-    <Card 
+    <Card
       title={
         <Space>
           <RobotOutlined />
           智能体选择
-          <Badge 
-            count={selectedAgents.length} 
-            showZero 
-            style={{ backgroundColor: '#52c41a' }}
+          <Badge
+            count={selectedAgents.length}
+            showZero
+            style={{ backgroundColor: "#52c41a" }}
           />
         </Space>
       }
@@ -165,7 +171,7 @@ export const AgentSelector: React.FC<AgentSelectorProps> = ({
           <Col span={8}>
             <Select
               placeholder="筛选可见性"
-              style={{ width: '100%' }}
+              style={{ width: "100%" }}
               value={visibilityFilter}
               onChange={setVisibilityFilter}
             >
@@ -191,10 +197,10 @@ export const AgentSelector: React.FC<AgentSelectorProps> = ({
               disabled={filteredAgents.length === 0}
               block
             >
-              {selectedAgents.length === filteredAgents.length && filteredAgents.length > 0
-                ? '取消全选'
-                : '全选'
-              }
+              {selectedAgents.length === filteredAgents.length &&
+              filteredAgents.length > 0
+                ? "取消全选"
+                : "全选"}
             </Button>
           </Col>
         </Row>
@@ -214,8 +220,8 @@ export const AgentSelector: React.FC<AgentSelectorProps> = ({
 
       {/* 智能体列表 */}
       {error ? (
-        <div style={{ textAlign: 'center', padding: '20px' }}>
-          <p style={{ color: '#ff4d4f' }}>加载失败: {error}</p>
+        <div style={{ textAlign: "center", padding: "20px" }}>
+          <p style={{ color: "#ff4d4f" }}>加载失败: {error}</p>
           <Button onClick={() => loadAgents(true)}>重试</Button>
         </div>
       ) : filteredAgents.length === 0 ? (
@@ -229,27 +235,42 @@ export const AgentSelector: React.FC<AgentSelectorProps> = ({
           dataSource={filteredAgents}
           renderItem={(agent) => {
             const isSelected = selectedAgents.includes(agent.id);
-            const canSelect = !isSelected && selectedAgents.length < maxSelection;
-            
+            const canSelect =
+              !isSelected && selectedAgents.length < maxSelection;
+
             return (
               <List.Item
-                className={`agent-item ${isSelected ? 'selected' : ''}`}
+                className={`agent-item ${isSelected ? "selected" : ""}`}
                 style={{
-                  padding: '12px 16px',
-                  border: isSelected ? '2px solid #1890ff' : '1px solid #f0f0f0',
-                  borderRadius: '8px',
-                  marginBottom: '8px',
-                  backgroundColor: isSelected ? '#f6ffed' : '#fff',
-                  cursor: canSelect || isSelected ? 'pointer' : 'not-allowed',
+                  padding: "12px 16px",
+                  border: isSelected
+                    ? "2px solid #1890ff"
+                    : "1px solid #f0f0f0",
+                  borderRadius: "8px",
+                  marginBottom: "8px",
+                  backgroundColor: isSelected ? "#f6ffed" : "#fff",
+                  cursor: canSelect || isSelected ? "pointer" : "not-allowed",
                   opacity: canSelect || isSelected ? 1 : 0.6,
                 }}
-                onClick={() => (canSelect || isSelected) && toggleAgent(agent.id)}
+                onClick={() =>
+                  (canSelect || isSelected) && toggleAgent(agent.id)
+                }
                 actions={[
-                  <Tooltip title={isSelected ? '取消选择' : canSelect ? '选择' : '已达到最大选择数量'}>
+                  <Tooltip
+                    title={
+                      isSelected
+                        ? "取消选择"
+                        : canSelect
+                          ? "选择"
+                          : "已达到最大选择数量"
+                    }
+                  >
                     <Checkbox
                       checked={isSelected}
                       disabled={!canSelect && !isSelected}
-                      onChange={() => (canSelect || isSelected) && toggleAgent(agent.id)}
+                      onChange={() =>
+                        (canSelect || isSelected) && toggleAgent(agent.id)
+                      }
                     />
                   </Tooltip>,
                 ]}
@@ -261,40 +282,54 @@ export const AgentSelector: React.FC<AgentSelectorProps> = ({
                       src={agent.avatar}
                       icon={<UserOutlined />}
                       style={{
-                        backgroundColor: isSelected ? '#52c41a' : '#1890ff',
-                        border: isSelected ? '2px solid #52c41a' : 'none',
+                        backgroundColor: isSelected ? "#52c41a" : "#1890ff",
+                        border: isSelected ? "2px solid #52c41a" : "none",
                       }}
                     />
                   }
                   title={
                     <Space>
                       <span style={{ fontWeight: 600 }}>{agent.name}</span>
-                      <Tag 
-                        color={agent.visibility?.toLowerCase() === 'public' ? 'blue' : 'orange'}
-                        icon={agent.visibility?.toLowerCase() === 'public' ? <GlobalOutlined /> : <LockOutlined />}
+                      <Tag
+                        color={
+                          agent.visibility?.toLowerCase() === "public"
+                            ? "blue"
+                            : "orange"
+                        }
+                        icon={
+                          agent.visibility?.toLowerCase() === "public" ? (
+                            <GlobalOutlined />
+                          ) : (
+                            <LockOutlined />
+                          )
+                        }
                       >
-                        {agent.visibility?.toLowerCase() === 'public' ? '公开' : '私有'}
+                        {agent.visibility?.toLowerCase() === "public"
+                          ? "公开"
+                          : "私有"}
                       </Tag>
                       {agent.gender && (
                         <Tag color="default">{agent.gender}</Tag>
                       )}
                       {isSelected && (
-                        <CheckCircleOutlined style={{ color: '#52c41a' }} />
+                        <CheckCircleOutlined style={{ color: "#52c41a" }} />
                       )}
                     </Space>
                   }
                   description={
                     <div>
                       {agent.description && (
-                        <p style={{ 
-                          margin: '4px 0', 
-                          color: '#666',
-                          lineHeight: '1.4'
-                        }}>
+                        <p
+                          style={{
+                            margin: "4px 0",
+                            color: "#666",
+                            lineHeight: "1.4",
+                          }}
+                        >
                           {agent.description}
                         </p>
                       )}
-                      <div style={{ fontSize: '12px', color: '#999' }}>
+                      <div style={{ fontSize: "12px", color: "#999" }}>
                         创建时间: {new Date(agent.created_at).toLocaleString()}
                       </div>
                     </div>
@@ -305,7 +340,6 @@ export const AgentSelector: React.FC<AgentSelectorProps> = ({
           }}
         />
       )}
-
     </Card>
   );
 };
