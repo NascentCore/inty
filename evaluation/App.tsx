@@ -4,17 +4,11 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import {
-  Layout,
-  Menu,
-  Typography,
-  Tooltip,
-} from 'antd';
+import { Layout, Menu, Typography, Tooltip } from 'antd';
 import {
   RobotOutlined,
   MessageOutlined,
   BarChartOutlined,
-  
   HistoryOutlined,
   SearchOutlined,
 } from '@ant-design/icons';
@@ -23,7 +17,6 @@ import { EvaluationHistoryPage } from './pages/EvaluationHistoryPage';
 import { ChatPage } from './pages/ChatPage';
 import AgentManagePage from './pages/AgentManagePage';
 import PromptQueryPage from './pages/PromptQueryPage';
-
 
 const { Sider, Content } = Layout;
 const { Title, Text } = Typography;
@@ -108,15 +101,17 @@ export const App: React.FC = () => {
     },
   ];
 
-
-
   // 渲染页面内容
   const renderPageContent = () => {
     switch (currentPage) {
       case 'evaluation':
         return <EvaluationPage />;
       case 'history':
-        return <EvaluationHistoryPage onNavigateToEvaluation={() => setCurrentPage('evaluation')} />;
+        return (
+          <EvaluationHistoryPage
+            onNavigateToEvaluation={() => setCurrentPage('evaluation')}
+          />
+        );
       case 'chat':
         return <ChatPage />;
       case 'agents':
@@ -127,8 +122,6 @@ export const App: React.FC = () => {
         return null;
     }
   };
-
-  
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
@@ -149,24 +142,26 @@ export const App: React.FC = () => {
           zIndex: 100,
           boxShadow: '2px 0 8px 0 rgba(29, 35, 41, 0.05)',
           display: 'flex',
-          flexDirection: 'column'
+          flexDirection: 'column',
         }}
         theme="light"
         breakpoint="lg"
-        onBreakpoint={(broken) => {
+        onBreakpoint={broken => {
           if (broken) {
             setCollapsed(true);
           }
         }}
       >
         {/* Logo区域 */}
-        <div style={{
-          padding: collapsed ? '16px 12px' : '16px 24px',
-          borderBottom: '1px solid #f0f0f0',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: collapsed ? 'center' : 'flex-start',
-        }}>
+        <div
+          style={{
+            padding: collapsed ? '16px 12px' : '16px 24px',
+            borderBottom: '1px solid #f0f0f0',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: collapsed ? 'center' : 'flex-start',
+          }}
+        >
           <RobotOutlined style={{ fontSize: '24px', color: '#1890ff' }} />
           {!collapsed && (
             <div style={{ marginLeft: '12px' }}>
@@ -181,18 +176,20 @@ export const App: React.FC = () => {
         </div>
 
         {/* 导航菜单容器 */}
-        <div style={{
-          flex: 1,
-          overflow: 'auto',
-          paddingBottom: collapsed ? '20px' : '80px' // 为底部预留空间
-        }}>
+        <div
+          style={{
+            flex: 1,
+            overflow: 'auto',
+            paddingBottom: collapsed ? '20px' : '80px', // 为底部预留空间
+          }}
+        >
           <Menu
             mode="inline"
             selectedKeys={[currentPage]}
             style={{
               border: 'none',
               paddingTop: '16px',
-              background: 'transparent'
+              background: 'transparent',
             }}
           >
             {navigationItems.map(item => (
@@ -224,32 +221,38 @@ export const App: React.FC = () => {
                     marginBottom: '4px',
                     borderRadius: '6px',
                     display: 'flex',
-                    alignItems: 'flex-start'
+                    alignItems: 'flex-start',
                   }}
                 >
-                  <div style={{
-                    flex: 1,
-                    minHeight: collapsed ? 'auto' : '40px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: collapsed ? 'center' : 'flex-start'
-                  }}>
-                    <div style={{
-                      fontSize: '14px',
-                      fontWeight: '500',
-                      lineHeight: '1.4',
-                      color: 'rgba(0, 0, 0, 0.85)',
-                      marginBottom: collapsed ? '0' : '2px'
-                    }}>
+                  <div
+                    style={{
+                      flex: 1,
+                      minHeight: collapsed ? 'auto' : '40px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: collapsed ? 'center' : 'flex-start',
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        lineHeight: '1.4',
+                        color: 'rgba(0, 0, 0, 0.85)',
+                        marginBottom: collapsed ? '0' : '2px',
+                      }}
+                    >
                       {item.label}
                     </div>
                     {!collapsed && (
-                      <div style={{
-                        fontSize: '11px',
-                        lineHeight: '1.3',
-                        color: 'rgba(0, 0, 0, 0.45)',
-                        marginTop: '2px'
-                      }}>
+                      <div
+                        style={{
+                          fontSize: '11px',
+                          lineHeight: '1.3',
+                          color: 'rgba(0, 0, 0, 0.45)',
+                          marginTop: '2px',
+                        }}
+                      >
                         {item.description}
                       </div>
                     )}
@@ -261,20 +264,24 @@ export const App: React.FC = () => {
         </div>
 
         {/* 底部区域 */}
-        <div style={{
-          position: 'absolute',
-          bottom: 0,
-          left: 0,
-          right: 0,
-          background: 'inherit'
-        }}>
+        <div
+          style={{
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            background: 'inherit',
+          }}
+        >
           {/* 底部信息 */}
           {!collapsed && (
-            <div style={{
-              padding: '16px 24px',
-              textAlign: 'center',
-              borderTop: '1px solid #f0f0f0'
-            }}>
+            <div
+              style={{
+                padding: '16px 24px',
+                textAlign: 'center',
+                borderTop: '1px solid #f0f0f0',
+              }}
+            >
               <Text type="secondary" style={{ fontSize: '11px' }}>
                 InTy Backend v1.0.0
               </Text>
@@ -284,18 +291,22 @@ export const App: React.FC = () => {
       </Sider>
 
       {/* 主内容区域 */}
-      <Layout style={{
-        marginLeft: isMobile ? 0 : (collapsed ? 80 : 280),
-        transition: 'margin-left 0.2s',
-        minHeight: '100vh'
-      }}>
-        {/* 页面内容 */}
-        <Content style={{
-          background: '#f0f2f5',
+      <Layout
+        style={{
+          marginLeft: isMobile ? 0 : collapsed ? 80 : 280,
+          transition: 'margin-left 0.2s',
           minHeight: '100vh',
-          overflow: 'auto',
-          position: 'relative',
-        }}>
+        }}
+      >
+        {/* 页面内容 */}
+        <Content
+          style={{
+            background: '#f0f2f5',
+            minHeight: '100vh',
+            overflow: 'auto',
+            position: 'relative',
+          }}
+        >
           {renderPageContent()}
         </Content>
       </Layout>

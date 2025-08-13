@@ -1,11 +1,11 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-import { resolve } from 'path'
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import { resolve } from 'path';
 
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
-  
+
   // 构建配置
   build: {
     outDir: 'dist',
@@ -13,15 +13,15 @@ export default defineConfig({
     sourcemap: true,
     rollupOptions: {
       input: {
-        main: resolve(__dirname, 'index.html')
+        main: resolve(__dirname, 'index.html'),
       },
       output: {
         manualChunks: {
           vendor: ['react', 'react-dom'],
-          antd: ['antd', '@ant-design/icons']
-        }
-      }
-    }
+          antd: ['antd', '@ant-design/icons'],
+        },
+      },
+    },
   },
 
   // 开发服务器配置
@@ -33,9 +33,9 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:8000',
         changeOrigin: true,
-        secure: false
-      }
-    }
+        secure: false,
+      },
+    },
   },
 
   // 路径别名
@@ -47,13 +47,15 @@ export default defineConfig({
       '@hooks': resolve(__dirname, './hooks'),
       '@services': resolve(__dirname, './services'),
       '@types': resolve(__dirname, './types'),
-      '@styles': resolve(__dirname, './styles')
-    }
+      '@styles': resolve(__dirname, './styles'),
+    },
   },
 
   // 环境变量
   define: {
     __DEV__: JSON.stringify(process.env.NODE_ENV === 'development'),
-    'process.env.REACT_APP_API_BASE_URL': JSON.stringify(process.env.REACT_APP_API_BASE_URL)
-  }
-})
+    'process.env.REACT_APP_API_BASE_URL': JSON.stringify(
+      process.env.REACT_APP_API_BASE_URL
+    ),
+  },
+});

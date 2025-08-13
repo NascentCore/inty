@@ -27,13 +27,9 @@ import {
   EditOutlined,
   DeleteOutlined,
   EyeOutlined,
-  
   RobotOutlined,
   CameraOutlined,
   ReloadOutlined,
-  
-  
-  
   SyncOutlined,
 } from '@ant-design/icons';
 import type { UploadProps } from 'antd';
@@ -56,19 +52,19 @@ export const AgentManagePage: React.FC = () => {
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [currentAgent, setCurrentAgent] = useState<Agent | null>(null);
   const [saveLoading, setSaveLoading] = useState(false);
-  
+
   // 搜索和筛选
   const [searchText, setSearchText] = useState('');
   const [visibilityFilter, setVisibilityFilter] = useState<string>('all');
   const [genderFilter, setGenderFilter] = useState<string>('all');
-  
+
   // 分页
   const [pagination, setPagination] = useState({
     current: 1,
     pageSize: 12,
     total: 0,
   });
-  
+
   // 表单和文件上传
   const [createForm] = Form.useForm();
   const [editForm] = Form.useForm();
@@ -76,59 +72,65 @@ export const AgentManagePage: React.FC = () => {
   const [avatarPreview, setAvatarPreview] = useState<string>('');
   const [editAvatarFile, setEditAvatarFile] = useState<File | null>(null);
   const [editAvatarPreview, setEditAvatarPreview] = useState<string>('');
-  
+
   // 模型相关状态
-  const [openRouterModels, setOpenRouterModels] = useState<OpenRouterModel[]>([]);
+  const [openRouterModels, setOpenRouterModels] = useState<OpenRouterModel[]>(
+    []
+  );
   const [modelsLoading, setModelsLoading] = useState(false);
 
   // 加载智能体列表
-  const loadAgents = useCallback(async (reset = false) => {
-    if (reset) {
-      setPagination(prev => ({ ...prev, current: 1 }));
-    }
-    
-    setLoading(true);
-    try {
-      const response = await api.agents.list({
-        limit: 100, // 先获取所有数据，前端分页
-      });
-      
-      let filteredAgents = response || [];
-      
-      // 搜索筛选
-      if (searchText) {
-        filteredAgents = filteredAgents.filter(agent =>
-          agent.name.toLowerCase().includes(searchText.toLowerCase()) ||
-          agent.intro?.toLowerCase().includes(searchText.toLowerCase())
-        );
+  const loadAgents = useCallback(
+    async (reset = false) => {
+      if (reset) {
+        setPagination(prev => ({ ...prev, current: 1 }));
       }
-      
-      // 可见性筛选
-      if (visibilityFilter !== 'all') {
-        filteredAgents = filteredAgents.filter(agent =>
-          agent.visibility === visibilityFilter.toUpperCase()
-        );
+
+      setLoading(true);
+      try {
+        const response = await api.agents.list({
+          limit: 100, // 先获取所有数据，前端分页
+        });
+
+        let filteredAgents = response || [];
+
+        // 搜索筛选
+        if (searchText) {
+          filteredAgents = filteredAgents.filter(
+            agent =>
+              agent.name.toLowerCase().includes(searchText.toLowerCase()) ||
+              agent.intro?.toLowerCase().includes(searchText.toLowerCase())
+          );
+        }
+
+        // 可见性筛选
+        if (visibilityFilter !== 'all') {
+          filteredAgents = filteredAgents.filter(
+            agent => agent.visibility === visibilityFilter.toUpperCase()
+          );
+        }
+
+        // 性别筛选
+        if (genderFilter !== 'all') {
+          filteredAgents = filteredAgents.filter(
+            agent => agent.gender === genderFilter.toUpperCase()
+          );
+        }
+
+        setAgents(filteredAgents);
+        setPagination(prev => ({
+          ...prev,
+          total: filteredAgents.length,
+        }));
+      } catch (error) {
+        console.error('加载智能体列表失败:', error);
+        message.error('加载智能体列表失败');
+      } finally {
+        setLoading(false);
       }
-      
-      // 性别筛选
-      if (genderFilter !== 'all') {
-        filteredAgents = filteredAgents.filter(agent =>
-          agent.gender === genderFilter.toUpperCase()
-        );
-      }
-      
-      setAgents(filteredAgents);
-      setPagination(prev => ({
-        ...prev,
-        total: filteredAgents.length,
-      }));
-    } catch (error) {
-      console.error('加载智能体列表失败:', error);
-      message.error('加载智能体列表失败');
-    } finally {
-      setLoading(false);
-    }
-  }, [searchText, visibilityFilter, genderFilter]);
+    },
+    [searchText, visibilityFilter, genderFilter]
+  );
 
   // 加载模型列表
   const loadModels = useCallback(async (forceRefresh = false) => {
@@ -156,7 +158,7 @@ export const AgentManagePage: React.FC = () => {
   }, [loadAgents, loadModels]);
 
   // 处理头像上传
-  const handleAvatarChange: UploadProps['beforeUpload'] = (file) => {
+  const handleAvatarChange: UploadProps['beforeUpload'] = file => {
     const isImage = file.type.startsWith('image/');
     if (!isImage) {
       message.error('只能上传图片文件!');
@@ -167,10 +169,10 @@ export const AgentManagePage: React.FC = () => {
       message.error('图片大小不能超过 2MB!');
       return false;
     }
-    
+
     setAvatarFile(file);
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = e => {
       setAvatarPreview(e.target?.result as string);
     };
     reader.readAsDataURL(file);
@@ -178,7 +180,7 @@ export const AgentManagePage: React.FC = () => {
   };
 
   // 处理编辑头像上传
-  const handleEditAvatarChange: UploadProps['beforeUpload'] = (file) => {
+  const handleEditAvatarChange: UploadProps['beforeUpload'] = file => {
     const isImage = file.type.startsWith('image/');
     if (!isImage) {
       message.error('只能上传图片文件!');
@@ -189,10 +191,10 @@ export const AgentManagePage: React.FC = () => {
       message.error('图片大小不能超过 2MB!');
       return false;
     }
-    
+
     setEditAvatarFile(file);
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = e => {
       setEditAvatarPreview(e.target?.result as string);
     };
     reader.readAsDataURL(file);
@@ -204,26 +206,29 @@ export const AgentManagePage: React.FC = () => {
     try {
       const values = await createForm.validateFields();
       setSaveLoading(true);
-      
+
       let avatarUrl = '';
-      
+
       // 如果有头像文件，先上传
       if (avatarFile) {
         try {
           const uploadResult = await api.agents.uploadAvatar(avatarFile);
-          avatarUrl = uploadResult.avatar_url || uploadResult.url || uploadResult.data?.avatar_url;
+          avatarUrl =
+            uploadResult.avatar_url ||
+            uploadResult.url ||
+            uploadResult.data?.avatar_url;
         } catch (uploadError) {
           console.error('头像上传失败:', uploadError);
           message.error('头像上传失败，请重试');
           return;
         }
       }
-      
+
       const agentData: AgentCreateRequest = {
         ...values,
         avatar: avatarUrl,
       };
-      
+
       // 如果选择了自定义模型，添加LLM配置
       if (values.modelType === 'custom') {
         agentData.llm_config = {
@@ -235,7 +240,7 @@ export const AgentManagePage: React.FC = () => {
           presence_penalty: values.presence_penalty,
         };
       }
-      
+
       await api.agents.create(agentData);
       message.success('智能体创建成功');
       setCreateModalVisible(false);
@@ -254,30 +259,33 @@ export const AgentManagePage: React.FC = () => {
   // 编辑智能体
   const handleEditAgent = async () => {
     if (!currentAgent) return;
-    
+
     try {
       const values = await editForm.validateFields();
       setSaveLoading(true);
-      
+
       let avatarUrl = currentAgent.avatar;
-      
+
       // 如果有新头像文件，先上传
       if (editAvatarFile) {
         try {
           const uploadResult = await api.agents.uploadAvatar(editAvatarFile);
-          avatarUrl = uploadResult.avatar_url || uploadResult.url || uploadResult.data?.avatar_url;
+          avatarUrl =
+            uploadResult.avatar_url ||
+            uploadResult.url ||
+            uploadResult.data?.avatar_url;
         } catch (uploadError) {
           console.error('头像上传失败:', uploadError);
           message.error('头像上传失败，请重试');
           return;
         }
       }
-      
+
       const updateData = {
         ...values,
         avatar: avatarUrl,
       };
-      
+
       // 如果选择了自定义模型，添加LLM配置
       if (values.modelType === 'custom') {
         updateData.llm_config = {
@@ -289,7 +297,7 @@ export const AgentManagePage: React.FC = () => {
           presence_penalty: values.presence_penalty,
         };
       }
-      
+
       await api.agents.update(currentAgent.id, updateData);
       message.success('智能体更新成功');
       setEditModalVisible(false);
@@ -322,7 +330,7 @@ export const AgentManagePage: React.FC = () => {
   const showEditModal = (agent: Agent) => {
     setCurrentAgent(agent);
     setEditAvatarPreview(agent.avatar || '');
-    
+
     // 预填表单 - 使用 setTimeout 确保 Modal 完全渲染后再设置表单值
     setTimeout(() => {
       editForm.setFieldsValue({
@@ -338,7 +346,7 @@ export const AgentManagePage: React.FC = () => {
         ...(agent.llm_config || {}),
       });
     }, 100);
-    
+
     setEditModalVisible(true);
   };
 
@@ -366,27 +374,31 @@ export const AgentManagePage: React.FC = () => {
           showUploadList={false}
           accept="image/*"
         >
-          <div style={{ 
-            width: 80, 
-            height: 80, 
-            border: '1px dashed #d9d9d9', 
-            borderRadius: 8,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer',
-            overflow: 'hidden',
-          }}>
+          <div
+            style={{
+              width: 80,
+              height: 80,
+              border: '1px dashed #d9d9d9',
+              borderRadius: 8,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              overflow: 'hidden',
+            }}
+          >
             {(isEdit ? editAvatarPreview : avatarPreview) ? (
-              <img 
-                src={isEdit ? editAvatarPreview : avatarPreview} 
-                alt="avatar" 
+              <img
+                src={isEdit ? editAvatarPreview : avatarPreview}
+                alt="avatar"
                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
               />
             ) : (
               <div style={{ textAlign: 'center' }}>
                 <CameraOutlined style={{ fontSize: 20, color: '#999' }} />
-                <div style={{ marginTop: 4, fontSize: 12, color: '#999' }}>上传头像</div>
+                <div style={{ marginTop: 4, fontSize: 12, color: '#999' }}>
+                  上传头像
+                </div>
               </div>
             )}
           </div>
@@ -457,7 +469,7 @@ export const AgentManagePage: React.FC = () => {
 
       {/* 提示词配置 */}
       <Divider>提示词配置</Divider>
-      
+
       <Form.Item
         name="main_prompt"
         label="主提示词"
@@ -493,7 +505,7 @@ export const AgentManagePage: React.FC = () => {
 
       {/* 模型配置 */}
       <Divider>模型配置</Divider>
-      
+
       <Form.Item
         name="modelType"
         label="模型类型"
@@ -506,10 +518,13 @@ export const AgentManagePage: React.FC = () => {
         </Radio.Group>
       </Form.Item>
 
-      <Form.Item noStyle shouldUpdate={(prevValues, currentValues) => 
-        prevValues.modelType !== currentValues.modelType
-      }>
-        {({ getFieldValue }) => 
+      <Form.Item
+        noStyle
+        shouldUpdate={(prevValues, currentValues) =>
+          prevValues.modelType !== currentValues.modelType
+        }
+      >
+        {({ getFieldValue }) =>
           getFieldValue('modelType') === 'custom' && (
             <>
               <Form.Item
@@ -523,14 +538,22 @@ export const AgentManagePage: React.FC = () => {
                     placeholder="请选择模型"
                     showSearch
                     filterOption={(input, option) =>
-                      (option?.label ?? '').toLowerCase().includes(input.toLowerCase()) ||
-                      (option?.value ?? '').toLowerCase().includes(input.toLowerCase())
+                      (option?.label ?? '')
+                        .toLowerCase()
+                        .includes(input.toLowerCase()) ||
+                      (option?.value ?? '')
+                        .toLowerCase()
+                        .includes(input.toLowerCase())
                     }
                     loading={modelsLoading}
                     notFoundContent={modelsLoading ? '加载中...' : '暂无数据'}
                   >
                     {openRouterModels.map(model => (
-                      <Option key={model.id} value={model.id} label={model.name}>
+                      <Option
+                        key={model.id}
+                        value={model.id}
+                        label={model.name}
+                      >
                         <div>
                           <div style={{ fontWeight: 500 }}>{model.name}</div>
                           {model.description && (
@@ -550,7 +573,7 @@ export const AgentManagePage: React.FC = () => {
                   />
                 </div>
               </Form.Item>
-              
+
               <Row gutter={16}>
                 <Col span={12}>
                   <Form.Item
@@ -573,7 +596,7 @@ export const AgentManagePage: React.FC = () => {
                   </Form.Item>
                 </Col>
               </Row>
-              
+
               <Row gutter={16}>
                 <Col span={8}>
                   <Form.Item
@@ -625,14 +648,14 @@ export const AgentManagePage: React.FC = () => {
                 allowClear
                 style={{ width: 300 }}
                 value={searchText}
-                onChange={(e) => setSearchText(e.target.value)}
+                onChange={e => setSearchText(e.target.value)}
                 onSearch={() => loadAgents(true)}
               />
               <Select
                 placeholder="筛选可见性"
                 style={{ width: 120 }}
                 value={visibilityFilter}
-                onChange={(value) => setVisibilityFilter(value)}
+                onChange={value => setVisibilityFilter(value)}
               >
                 <Option value="all">全部</Option>
                 <Option value="public">公开</Option>
@@ -642,14 +665,17 @@ export const AgentManagePage: React.FC = () => {
                 placeholder="筛选性别"
                 style={{ width: 100 }}
                 value={genderFilter}
-                onChange={(value) => setGenderFilter(value)}
+                onChange={value => setGenderFilter(value)}
               >
                 <Option value="all">全部</Option>
                 <Option value="male">男</Option>
                 <Option value="female">女</Option>
                 <Option value="other">其他</Option>
               </Select>
-              <Button icon={<ReloadOutlined />} onClick={() => loadAgents(true)}>
+              <Button
+                icon={<ReloadOutlined />}
+                onClick={() => loadAgents(true)}
+              >
                 刷新
               </Button>
             </Space>
@@ -684,7 +710,7 @@ export const AgentManagePage: React.FC = () => {
                   xxl: 6,
                 }}
                 dataSource={getCurrentPageAgents()}
-                renderItem={(agent) => (
+                renderItem={agent => (
                   <List.Item>
                     <Card
                       hoverable
@@ -730,18 +756,30 @@ export const AgentManagePage: React.FC = () => {
                     >
                       <Card.Meta
                         title={
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <span style={{ 
-                              overflow: 'hidden', 
-                              textOverflow: 'ellipsis', 
-                              whiteSpace: 'nowrap', 
-                              flex: 1 
-                            }}>
+                          <div
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 8,
+                            }}
+                          >
+                            <span
+                              style={{
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                                flex: 1,
+                              }}
+                            >
                               {agent.name}
                             </span>
                             <Tag
                               size="small"
-                              color={agent.visibility === 'PUBLIC' ? 'green' : 'orange'}
+                              color={
+                                agent.visibility === 'PUBLIC'
+                                  ? 'green'
+                                  : 'orange'
+                              }
                             >
                               {agent.visibility === 'PUBLIC' ? '公开' : '私有'}
                             </Tag>
@@ -749,27 +787,38 @@ export const AgentManagePage: React.FC = () => {
                         }
                         description={
                           <div>
-                            <p style={{ 
-                              margin: 0, 
-                              color: '#666',
-                              fontSize: '12px',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              display: '-webkit-box',
-                              WebkitLineClamp: 2,
-                              WebkitBoxOrient: 'vertical',
-                              lineHeight: '1.4',
-                              height: '2.8em',
-                            }}>
+                            <p
+                              style={{
+                                margin: 0,
+                                color: '#666',
+                                fontSize: '12px',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                display: '-webkit-box',
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: 'vertical',
+                                lineHeight: '1.4',
+                                height: '2.8em',
+                              }}
+                            >
                               {agent.intro}
                             </p>
                             <div style={{ marginTop: 8 }}>
-                              <Tag size="small" color={
-                                agent.gender === 'MALE' ? 'blue' : 
-                                agent.gender === 'FEMALE' ? 'pink' : 'default'
-                              }>
-                                {agent.gender === 'MALE' ? '男' : 
-                                 agent.gender === 'FEMALE' ? '女' : '其他'}
+                              <Tag
+                                size="small"
+                                color={
+                                  agent.gender === 'MALE'
+                                    ? 'blue'
+                                    : agent.gender === 'FEMALE'
+                                      ? 'pink'
+                                      : 'default'
+                                }
+                              >
+                                {agent.gender === 'MALE'
+                                  ? '男'
+                                  : agent.gender === 'FEMALE'
+                                    ? '女'
+                                    : '其他'}
                               </Tag>
                             </div>
                           </div>
@@ -779,7 +828,7 @@ export const AgentManagePage: React.FC = () => {
                   </List.Item>
                 )}
               />
-              
+
               {/* 分页 */}
               <div style={{ textAlign: 'center', marginTop: 24 }}>
                 <Pagination
@@ -788,9 +837,15 @@ export const AgentManagePage: React.FC = () => {
                   pageSize={pagination.pageSize}
                   showSizeChanger
                   showQuickJumper
-                  showTotal={(total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条`}
+                  showTotal={(total, range) =>
+                    `第 ${range[0]}-${range[1]} 条，共 ${total} 条`
+                  }
                   onChange={(page, pageSize) => {
-                    setPagination({ current: page, pageSize, total: pagination.total });
+                    setPagination({
+                      current: page,
+                      pageSize,
+                      total: pagination.total,
+                    });
                   }}
                 />
               </div>
@@ -814,11 +869,7 @@ export const AgentManagePage: React.FC = () => {
         width={800}
         destroyOnHidden
       >
-        <Form
-          form={createForm}
-          layout="vertical"
-          preserve={false}
-        >
+        <Form form={createForm} layout="vertical" preserve={false}>
           {renderAgentForm(createForm)}
         </Form>
       </Modal>
@@ -839,11 +890,7 @@ export const AgentManagePage: React.FC = () => {
         width={800}
         destroyOnHidden
       >
-        <Form
-          form={editForm}
-          layout="vertical"
-          preserve={false}
-        >
+        <Form form={editForm} layout="vertical" preserve={false}>
           {renderAgentForm(editForm, true)}
         </Form>
       </Modal>
@@ -860,10 +907,14 @@ export const AgentManagePage: React.FC = () => {
           <Button key="close" onClick={() => setDetailModalVisible(false)}>
             关闭
           </Button>,
-          <Button key="edit" type="primary" onClick={() => {
-            setDetailModalVisible(false);
-            if (currentAgent) showEditModal(currentAgent);
-          }}>
+          <Button
+            key="edit"
+            type="primary"
+            onClick={() => {
+              setDetailModalVisible(false);
+              if (currentAgent) showEditModal(currentAgent);
+            }}
+          >
             编辑
           </Button>,
         ]}
@@ -880,7 +931,13 @@ export const AgentManagePage: React.FC = () => {
                     icon={<RobotOutlined />}
                   />
                   <div style={{ marginTop: 8 }}>
-                    <Tag color={currentAgent.visibility === 'PUBLIC' ? 'green' : 'orange'}>
+                    <Tag
+                      color={
+                        currentAgent.visibility === 'PUBLIC'
+                          ? 'green'
+                          : 'orange'
+                      }
+                    >
                       {currentAgent.visibility === 'PUBLIC' ? '公开' : '私有'}
                     </Tag>
                   </div>
@@ -888,75 +945,105 @@ export const AgentManagePage: React.FC = () => {
               </Col>
               <Col span={18}>
                 <h3>{currentAgent.name}</h3>
-                <p><strong>性别:</strong> {
-                  currentAgent.gender === 'MALE' ? '男' : 
-                  currentAgent.gender === 'FEMALE' ? '女' : '其他'
-                }</p>
-                <p><strong>简介:</strong> {currentAgent.intro}</p>
-                <p><strong>开场白:</strong> {currentAgent.opening}</p>
+                <p>
+                  <strong>性别:</strong>{' '}
+                  {currentAgent.gender === 'MALE'
+                    ? '男'
+                    : currentAgent.gender === 'FEMALE'
+                      ? '女'
+                      : '其他'}
+                </p>
+                <p>
+                  <strong>简介:</strong> {currentAgent.intro}
+                </p>
+                <p>
+                  <strong>开场白:</strong> {currentAgent.opening}
+                </p>
               </Col>
             </Row>
-            
+
             <Divider />
-            
+
             <div>
               <h4>主提示词</h4>
-              <div style={{ 
-                background: '#f5f5f5', 
-                padding: 12, 
-                borderRadius: 6,
-                maxHeight: 200,
-                overflowY: 'auto',
-                whiteSpace: 'pre-wrap',
-                fontSize: '12px',
-              }}>
+              <div
+                style={{
+                  background: '#f5f5f5',
+                  padding: 12,
+                  borderRadius: 6,
+                  maxHeight: 200,
+                  overflowY: 'auto',
+                  whiteSpace: 'pre-wrap',
+                  fontSize: '12px',
+                }}
+              >
                 {currentAgent.main_prompt}
               </div>
             </div>
-            
+
             <div style={{ marginTop: 16 }}>
               <h4>角色信息</h4>
-              <div style={{ 
-                background: '#f5f5f5', 
-                padding: 12, 
-                borderRadius: 6,
-                maxHeight: 200,
-                overflowY: 'auto',
-                whiteSpace: 'pre-wrap',
-                fontSize: '12px',
-              }}>
+              <div
+                style={{
+                  background: '#f5f5f5',
+                  padding: 12,
+                  borderRadius: 6,
+                  maxHeight: 200,
+                  overflowY: 'auto',
+                  whiteSpace: 'pre-wrap',
+                  fontSize: '12px',
+                }}
+              >
                 {currentAgent.personality}
               </div>
             </div>
-            
+
             <div style={{ marginTop: 16 }}>
               <h4>聊天模式</h4>
-              <div style={{ 
-                background: '#f5f5f5', 
-                padding: 12, 
-                borderRadius: 6,
-                maxHeight: 200,
-                overflowY: 'auto',
-                whiteSpace: 'pre-wrap',
-                fontSize: '12px',
-              }}>
+              <div
+                style={{
+                  background: '#f5f5f5',
+                  padding: 12,
+                  borderRadius: 6,
+                  maxHeight: 200,
+                  overflowY: 'auto',
+                  whiteSpace: 'pre-wrap',
+                  fontSize: '12px',
+                }}
+              >
                 {currentAgent.mode_prompt}
               </div>
             </div>
-            
+
             {currentAgent.llm_config && (
               <div style={{ marginTop: 16 }}>
                 <h4>自定义模型配置</h4>
                 <Row gutter={16}>
                   <Col span={12}>
-                    <p><strong>模型:</strong> {currentAgent.llm_config.model}</p>
-                    <p><strong>温度:</strong> {currentAgent.llm_config.temperature}</p>
-                    <p><strong>最大令牌数:</strong> {currentAgent.llm_config.max_tokens}</p>
+                    <p>
+                      <strong>模型:</strong> {currentAgent.llm_config.model}
+                    </p>
+                    <p>
+                      <strong>温度:</strong>{' '}
+                      {currentAgent.llm_config.temperature}
+                    </p>
+                    <p>
+                      <strong>最大令牌数:</strong>{' '}
+                      {currentAgent.llm_config.max_tokens}
+                    </p>
                   </Col>
                   <Col span={12}>
-                    <p><strong>Top P:</strong> {currentAgent.llm_config.top_p}</p>
-                    <p><strong>频率惩罚:</strong> {currentAgent.llm_config.frequency_penalty}</p>
-                    <p><strong>存在惩罚:</strong> {currentAgent.llm_config.presence_penalty}</p>
+                    <p>
+                      <strong>Top P:</strong> {currentAgent.llm_config.top_p}
+                    </p>
+                    <p>
+                      <strong>频率惩罚:</strong>{' '}
+                      {currentAgent.llm_config.frequency_penalty}
+                    </p>
+                    <p>
+                      <strong>存在惩罚:</strong>{' '}
+                      {currentAgent.llm_config.presence_penalty}
+                    </p>
                   </Col>
                 </Row>
               </div>

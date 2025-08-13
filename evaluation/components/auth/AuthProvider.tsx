@@ -3,7 +3,13 @@
  * 在应用启动时自动进行游客认证
  */
 
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+} from 'react';
 import { Spin, message } from 'antd';
 import authService from '../../services/auth';
 
@@ -51,7 +57,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         console.log('✅ 使用硬编码token，无需认证');
         setIsAuthenticated(true);
         setUserId('admin-user'); // 设置一个默认的管理员用户ID
-
       } catch (error) {
         console.error('认证初始化失败:', error);
         message.error('认证初始化失败');
@@ -68,33 +73,29 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     isLoading,
     userId,
     login,
-    logout
+    logout,
   };
 
   // 显示加载状态
   if (isLoading) {
     return (
-      <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        height: '100vh',
-        flexDirection: 'column',
-        gap: '16px'
-      }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          height: '100vh',
+          flexDirection: 'column',
+          gap: '16px',
+        }}
+      >
         <Spin size="large" />
-        <div style={{ color: '#666' }}>
-          正在初始化应用...
-        </div>
+        <div style={{ color: '#666' }}>正在初始化应用...</div>
       </div>
     );
   }
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
 // Hook for using auth context

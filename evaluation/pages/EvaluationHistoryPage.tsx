@@ -22,7 +22,6 @@ import {
   Tooltip,
   Badge,
   Progress,
-  
 } from 'antd';
 import {
   EyeOutlined,
@@ -31,7 +30,6 @@ import {
   FilterOutlined,
   HistoryOutlined,
   RobotOutlined,
-  
   ClockCircleOutlined,
   CheckCircleOutlined,
   ExclamationCircleOutlined,
@@ -64,51 +62,57 @@ interface EvaluationHistoryPageProps {
 export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
   onNavigateToEvaluation,
 }) => {
-  
   // 状态管理
   const [sessions, setSessions] = useState<EvaluationSessionWithStats[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedSession, setSelectedSession] = useState<EvaluationSession | null>(null);
+  const [selectedSession, setSelectedSession] =
+    useState<EvaluationSession | null>(null);
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [sessionResults, setSessionResults] = useState<EvaluationResult[]>([]);
   const [resultsLoading, setResultsLoading] = useState(false);
-  
+
   // 批量操作状态
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
   const [batchLoading, setBatchLoading] = useState(false);
-  
+
   // 筛选和搜索状态
   const [searchText, setSearchText] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [dateRange, setDateRange] = useState<[any, any] | null>(null);
-  const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 });
+  const [pagination, setPagination] = useState({
+    current: 1,
+    pageSize: 10,
+    total: 0,
+  });
 
   // 加载评测会话列表
   const loadSessions = useCallback(async () => {
     try {
       setLoading(true);
-      
+
       const params: any = {
         skip: (pagination.current - 1) * pagination.pageSize,
         limit: pagination.pageSize,
       };
-      
+
       if (statusFilter) {
         params.status = statusFilter;
       }
-      
+
       if (searchText) {
         params.search = searchText;
       }
-      
+
       if (dateRange) {
         params.start_date = dateRange[0]?.format('YYYY-MM-DD');
         params.end_date = dateRange[1]?.format('YYYY-MM-DD');
       }
-      
+
       const response = await api.sessions.list(params);
-      const sessionsData = Array.isArray(response) ? response : response.items || [];
-      
+      const sessionsData = Array.isArray(response)
+        ? response
+        : response.items || [];
+
       // 为每个会话加载统计信息
       const sessionsWithStats = await Promise.all(
         sessionsData.map(async (session: EvaluationSession) => {
@@ -117,7 +121,7 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
             const scores = results
               .filter((r: EvaluationResult) => r.overall_score != null)
               .map((r: EvaluationResult) => r.overall_score!);
-            
+
             return {
               ...session,
               best_score: scores.length > 0 ? Math.max(...scores) : undefined,
@@ -133,21 +137,26 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
           }
         })
       );
-      
+
       setSessions(sessionsWithStats);
-      
+
       // 更新分页信息
       if (response.total !== undefined) {
         setPagination(prev => ({ ...prev, total: response.total }));
       }
-      
     } catch (error) {
       console.error('加载评测会话失败:', error);
       message.error('加载评测会话失败');
     } finally {
       setLoading(false);
     }
-  }, [pagination.current, pagination.pageSize, statusFilter, searchText, dateRange]);
+  }, [
+    pagination.current,
+    pagination.pageSize,
+    statusFilter,
+    searchText,
+    dateRange,
+  ]);
 
   // 初始加载
   useEffect(() => {
@@ -159,7 +168,7 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
     setSelectedSession(session);
     setDetailModalVisible(true);
     setResultsLoading(true);
-    
+
     try {
       const results = await api.sessions.getResults(session.id);
       setSessionResults(results);
@@ -189,7 +198,10 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
   };
 
   // 导出结果
-  const handleExport = async (sessionId: string, format: 'json' | 'csv' = 'json') => {
+  const handleExport = async (
+    sessionId: string,
+    format: 'json' | 'csv' = 'json'
+  ) => {
     try {
       // 获取会话信息和结果
       const session = sessions.find(s => s.id === sessionId);
@@ -199,7 +211,7 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
       }
 
       const results = await api.sessions.getResults(sessionId);
-      
+
       // 准备导出数据
       const exportData = {
         session: {
@@ -225,38 +237,53 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
           scoring_model_used: result.scoring_model_used,
           is_success: result.is_success,
           error_message: result.error_message,
-          created_at: result.created_at
-        }))
+          created_at: result.created_at,
+        })),
       };
 
       // 生成文件名
-      const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+      const timestamp = new Date()
+        .toISOString()
+        .slice(0, 19)
+        .replace(/:/g, '-');
       const filename = `evaluation_${session.name}_${timestamp}.${format}`;
 
       let blob: Blob;
-      
+
       if (format === 'json') {
-        blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+        blob = new Blob([JSON.stringify(exportData, null, 2)], {
+          type: 'application/json',
+        });
       } else {
         // CSV导出
         const csvHeader = [
-          'Agent Name', 'Question Index', 'Question', 'Agent Response', 'Overall Score', 
-          'Response Time', 'Is Success', 'Error Message', 'Scoring Reason', 'Created At'
+          'Agent Name',
+          'Question Index',
+          'Question',
+          'Agent Response',
+          'Overall Score',
+          'Response Time',
+          'Is Success',
+          'Error Message',
+          'Scoring Reason',
+          'Created At',
         ].join(',');
-        
-        const csvRows = results.map((result: any) => [
-          `"${(result.agent_name || '').replace(/"/g, '""')}"`,
-          result.question_index || '',
-          `"${(result.question || '').replace(/"/g, '""')}"`,
-          `"${(result.agent_response || '').replace(/"/g, '""')}"`,
-          result.overall_score || '',
-          result.response_time || '',
-          result.is_success ? 'Yes' : 'No',
-          `"${(result.error_message || '').replace(/"/g, '""')}"`,
-          `"${(result.scoring_reason || '').replace(/"/g, '""')}"`,
-          result.created_at || ''
-        ].join(','));
-        
+
+        const csvRows = results.map((result: any) =>
+          [
+            `"${(result.agent_name || '').replace(/"/g, '""')}"`,
+            result.question_index || '',
+            `"${(result.question || '').replace(/"/g, '""')}"`,
+            `"${(result.agent_response || '').replace(/"/g, '""')}"`,
+            result.overall_score || '',
+            result.response_time || '',
+            result.is_success ? 'Yes' : 'No',
+            `"${(result.error_message || '').replace(/"/g, '""')}"`,
+            `"${(result.scoring_reason || '').replace(/"/g, '""')}"`,
+            result.created_at || '',
+          ].join(',')
+        );
+
         const csvContent = [csvHeader, ...csvRows].join('\n');
         blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       }
@@ -277,8 +304,6 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
       message.error('导出失败，请重试');
     }
   };
-
-  
 
   // 批量删除
   const handleBatchDelete = async () => {
@@ -333,15 +358,32 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
   // 获取状态标签
   const getStatusTag = (status: string) => {
     const statusConfig = {
-      PENDING: { color: 'default', icon: <ClockCircleOutlined />, text: '等待中' },
-      RUNNING: { color: 'processing', icon: <ClockCircleOutlined />, text: '运行中' },
-      COMPLETED: { color: 'success', icon: <CheckCircleOutlined />, text: '已完成' },
-      FAILED: { color: 'error', icon: <ExclamationCircleOutlined />, text: '失败' },
+      PENDING: {
+        color: 'default',
+        icon: <ClockCircleOutlined />,
+        text: '等待中',
+      },
+      RUNNING: {
+        color: 'processing',
+        icon: <ClockCircleOutlined />,
+        text: '运行中',
+      },
+      COMPLETED: {
+        color: 'success',
+        icon: <CheckCircleOutlined />,
+        text: '已完成',
+      },
+      FAILED: {
+        color: 'error',
+        icon: <ExclamationCircleOutlined />,
+        text: '失败',
+      },
       CANCELLED: { color: 'warning', icon: <StopOutlined />, text: '已取消' },
     };
-    
-    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.PENDING;
-    
+
+    const config =
+      statusConfig[status as keyof typeof statusConfig] || statusConfig.PENDING;
+
     return (
       <Tag color={config.color} icon={config.icon}>
         {config.text}
@@ -371,7 +413,7 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
       dataIndex: 'status',
       key: 'status',
       width: 120,
-      render: (status) => getStatusTag(status),
+      render: status => getStatusTag(status),
       filters: [
         { text: '等待中', value: 'PENDING' },
         { text: '运行中', value: 'RUNNING' },
@@ -387,8 +429,9 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
       render: (_, record) => {
         const total = record.total_tests || 0;
         const completed = record.completed_tests || 0;
-        const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
-        
+        const percentage =
+          total > 0 ? Math.round((completed / total) * 100) : 0;
+
         return (
           <div>
             <Progress
@@ -409,7 +452,7 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
       dataIndex: 'agent_count',
       key: 'agent_count',
       width: 100,
-      render: (count) => (
+      render: count => (
         <Badge count={count} style={{ backgroundColor: '#1890ff' }}>
           <RobotOutlined style={{ fontSize: '16px' }} />
         </Badge>
@@ -420,7 +463,7 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
       dataIndex: 'questions',
       key: 'questions',
       width: 100,
-      render: (questions) => questions?.length || 0,
+      render: questions => questions?.length || 0,
     },
     {
       title: '评分范围',
@@ -430,7 +473,7 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
         if (record.best_score == null || record.worst_score == null) {
           return <Text type="secondary">-</Text>;
         }
-        
+
         return (
           <div>
             <Text strong style={{ color: '#52c41a' }}>
@@ -449,13 +492,17 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
       dataIndex: 'average_score',
       key: 'average_score',
       width: 100,
-      render: (score) => {
+      render: score => {
         if (score == null) return <Text type="secondary">-</Text>;
-        
+
         return (
-          <Text strong style={{ 
-            color: score >= 7 ? '#52c41a' : score >= 5 ? '#faad14' : '#ff4d4f' 
-          }}>
+          <Text
+            strong
+            style={{
+              color:
+                score >= 7 ? '#52c41a' : score >= 5 ? '#faad14' : '#ff4d4f',
+            }}
+          >
             {score.toFixed(1)}
           </Text>
         );
@@ -467,8 +514,9 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
       dataIndex: 'created_at',
       key: 'created_at',
       width: 150,
-      render: (time) => new Date(time).toLocaleString('zh-CN'),
-      sorter: (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+      render: time => new Date(time).toLocaleString('zh-CN'),
+      sorter: (a, b) =>
+        new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
     },
     {
       title: '操作',
@@ -483,7 +531,7 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
               onClick={() => handleViewDetail(record)}
             />
           </Tooltip>
-          
+
           {record.status === 'PENDING' && (
             <Tooltip title="继续评测">
               <Button
@@ -493,7 +541,7 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
               />
             </Tooltip>
           )}
-          
+
           {record.status === 'COMPLETED' && (
             <Tooltip title="导出结果">
               <Button
@@ -563,7 +611,9 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
               <Statistic
                 title="失败数"
                 value={sessions.filter(s => s.status === 'FAILED').length}
-                prefix={<ExclamationCircleOutlined style={{ color: '#ff4d4f' }} />}
+                prefix={
+                  <ExclamationCircleOutlined style={{ color: '#ff4d4f' }} />
+                }
                 valueStyle={{ color: '#ff4d4f' }}
               />
             </Card>
@@ -578,7 +628,7 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
                 placeholder="搜索评测名称或ID"
                 allowClear
                 value={searchText}
-                onChange={(e) => setSearchText(e.target.value)}
+                onChange={e => setSearchText(e.target.value)}
                 onSearch={loadSessions}
                 enterButton={<SearchOutlined />}
               />
@@ -589,7 +639,7 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
                 allowClear
                 style={{ width: '100%' }}
                 value={statusFilter || undefined}
-                onChange={(value) => setStatusFilter(value || '')}
+                onChange={value => setStatusFilter(value || '')}
               >
                 <Option value="PENDING">等待中</Option>
                 <Option value="RUNNING">运行中</Option>
@@ -620,7 +670,13 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
 
         {/* 批量操作工具栏 */}
         {selectedRowKeys.length > 0 && (
-          <Card style={{ marginBottom: 16, backgroundColor: '#f6ffed', border: '1px solid #b7eb8f' }}>
+          <Card
+            style={{
+              marginBottom: 16,
+              backgroundColor: '#f6ffed',
+              border: '1px solid #b7eb8f',
+            }}
+          >
             <Row justify="space-between" align="middle">
               <Col>
                 <Space>
@@ -663,7 +719,7 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
             rowSelection={{
               selectedRowKeys,
               onChange: setSelectedRowKeys,
-              getCheckboxProps: (record) => ({
+              getCheckboxProps: record => ({
                 disabled: record.status === 'RUNNING', // 正在运行的会话不允许删除
               }),
             }}
@@ -671,7 +727,7 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
               ...pagination,
               showSizeChanger: true,
               showQuickJumper: true,
-              showTotal: (total, range) => 
+              showTotal: (total, range) =>
                 `第 ${range[0]}-${range[1]} 条，共 ${total} 条记录`,
               onChange: (page, pageSize) => {
                 setPagination(prev => ({
@@ -705,13 +761,21 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
                 <Row gutter={16}>
                   <Col span={6}>
                     <Text type="secondary">状态: </Text>
-                    <Tag color={selectedSession.status === 'COMPLETED' ? 'green' : 'orange'}>
+                    <Tag
+                      color={
+                        selectedSession.status === 'COMPLETED'
+                          ? 'green'
+                          : 'orange'
+                      }
+                    >
                       {selectedSession.status}
                     </Tag>
                   </Col>
                   <Col span={6}>
                     <Text type="secondary">智能体数量: </Text>
-                    <Text strong>{selectedSession.selected_agents?.length || 0}</Text>
+                    <Text strong>
+                      {selectedSession.selected_agents?.length || 0}
+                    </Text>
                   </Col>
                   <Col span={6}>
                     <Text type="secondary">问题数量: </Text>
@@ -719,11 +783,13 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
                   </Col>
                   <Col span={6}>
                     <Text type="secondary">创建时间: </Text>
-                    <Text>{new Date(selectedSession.created_at).toLocaleString()}</Text>
+                    <Text>
+                      {new Date(selectedSession.created_at).toLocaleString()}
+                    </Text>
                   </Col>
                 </Row>
               </Card>
-              
+
               {/* 多角色对话记录 */}
               <MultiAgentChatDisplay
                 session={selectedSession}

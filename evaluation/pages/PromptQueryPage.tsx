@@ -10,7 +10,6 @@ import {
   Col,
   Select,
   Button,
-  
   Collapse,
   Tag,
   Typography,
@@ -37,7 +36,7 @@ const { Option } = Select;
 
 // 调试消息接口定义
 interface DebugMessage {
-  type: string;  // 'system', 'character', 'user'
+  type: string; // 'system', 'character', 'user'
   content: string;
 }
 
@@ -85,7 +84,7 @@ export const PromptQueryPage: React.FC = () => {
   const [selectedAgentId, setSelectedAgentId] = useState<string>('');
   const [userSearchText, setUserSearchText] = useState('');
   const [queryResults, setQueryResults] = useState<DebugMessagesData[]>([]);
-  
+
   // 加载状态
   const [usersLoading, setUsersLoading] = useState(false);
   const [agentsLoading, setAgentsLoading] = useState(false);
@@ -95,17 +94,17 @@ export const PromptQueryPage: React.FC = () => {
   const loadUsers = useCallback(async (search?: string) => {
     try {
       setUsersLoading(true);
-      
+
       // 使用真实的用户搜索API
       try {
         const response = await api.users.searchUsers({
           search: search,
           skip: 0,
-          limit: 50
+          limit: 50,
         });
-        
+
         console.log('用户API响应:', response);
-        
+
         // 尝试不同的响应格式
         let userList: User[] = [];
         if (response.users) {
@@ -117,24 +116,26 @@ export const PromptQueryPage: React.FC = () => {
         } else if (response.data && Array.isArray(response.data)) {
           userList = response.data;
         }
-        
+
         setUsers(userList);
         console.log(`加载用户列表成功，共 ${userList.length} 个用户`);
         return;
       } catch (apiError) {
         console.warn('用户API调用失败，尝试备用API:', apiError);
-        
+
         // 尝试使用 getUsers API
         try {
           const userList = await api.users.getUsers({
             search: search,
             skip: 0,
-            limit: 50
+            limit: 50,
           });
-          
+
           console.log('用户备用API响应:', userList);
           setUsers(Array.isArray(userList) ? userList : []);
-          console.log(`使用备用API加载用户列表成功，共 ${Array.isArray(userList) ? userList.length : 0} 个用户`);
+          console.log(
+            `使用备用API加载用户列表成功，共 ${Array.isArray(userList) ? userList.length : 0} 个用户`
+          );
           return;
         } catch (fallbackError) {
           console.warn('备用API也失败:', fallbackError);
@@ -143,34 +144,35 @@ export const PromptQueryPage: React.FC = () => {
     } catch (error) {
       console.error('加载用户列表失败:', error);
     }
-    
+
     // 如果所有API都失败，使用本地备用用户列表
     const fallbackUsers: User[] = [
       {
-        id: "user-01JWZ34Y4D1C92GD86A5R6EWYJ",
-        readable_id: "admin",
-        nickname: "管理员"
+        id: 'user-01JWZ34Y4D1C92GD86A5R6EWYJ',
+        readable_id: 'admin',
+        nickname: '管理员',
       },
       {
-        id: "guest-user-1",
-        readable_id: "guest-001", 
-        nickname: "游客用户1"
+        id: 'guest-user-1',
+        readable_id: 'guest-001',
+        nickname: '游客用户1',
       },
       {
-        id: "guest-user-2",
-        readable_id: "guest-002",
-        nickname: "游客用户2"
-      }
+        id: 'guest-user-2',
+        readable_id: 'guest-002',
+        nickname: '游客用户2',
+      },
     ];
-    
+
     let filteredUsers = fallbackUsers;
     if (search) {
-      filteredUsers = fallbackUsers.filter(user => 
-        user.nickname.toLowerCase().includes(search.toLowerCase()) ||
-        user.readable_id.toLowerCase().includes(search.toLowerCase())
+      filteredUsers = fallbackUsers.filter(
+        user =>
+          user.nickname.toLowerCase().includes(search.toLowerCase()) ||
+          user.readable_id.toLowerCase().includes(search.toLowerCase())
       );
     }
-    
+
     setUsers(filteredUsers);
     message.info('使用本地用户列表，请检查后端用户接口');
     setUsersLoading(false);
@@ -207,70 +209,80 @@ export const PromptQueryPage: React.FC = () => {
 
     try {
       setQueryLoading(true);
-      
+
       console.log('开始查询提示词:', {
         selectedUserId,
         selectedAgentId,
         userInfo: users.find(u => u.id === selectedUserId),
-        agentInfo: agents.find(a => a.id === selectedAgentId)
+        agentInfo: agents.find(a => a.id === selectedAgentId),
       });
-      
+
       // 优先使用专门的调试消息API
       try {
         const params = {
           user_id: selectedUserId || undefined,
           agent_id: selectedAgentId || undefined,
           skip: 0,
-          limit: 20
+          limit: 20,
         };
-        
+
         console.log('调用调试消息API，参数:', params);
         const debugResults = await api.debug.getDebugMessages(params);
         console.log('调试消息API响应:', debugResults);
-        
+
         // 根据实际API响应格式解析数据
         let results: DebugMessagesData[] = [];
-        if (debugResults && debugResults.items && Array.isArray(debugResults.items)) {
+        if (
+          debugResults &&
+          debugResults.items &&
+          Array.isArray(debugResults.items)
+        ) {
           results = debugResults.items;
         } else if (Array.isArray(debugResults)) {
           // 兼容旧格式
           results = debugResults;
         }
-        
+
         setQueryResults(results);
         message.success(`查询成功，找到 ${results.length} 条记录`);
         return;
       } catch (debugError) {
         console.warn('调试消息API调用失败，尝试使用备用方案:', debugError);
       }
-      
+
       // 备用方案：如果有选择的Agent，尝试获取其调试消息
       if (selectedAgentId) {
         console.log('使用备用方案，调用单个Agent调试消息API:', selectedAgentId);
         const debugData = await api.chat.getAgentDebugMessages(selectedAgentId);
         console.log('Agent调试消息API响应:', debugData);
-        
+
         // 转换数据格式以匹配界面显示
-        const formattedResults: DebugMessagesData[] = [{
-          chat_id: `chat-${selectedAgentId}`,
-          user_id: selectedUserId || 'unknown',
-          user_nickname: users.find(u => u.id === selectedUserId)?.nickname || '未知用户',
-          agent_id: selectedAgentId,
-          agent_name: agents.find(a => a.id === selectedAgentId)?.name || '未知角色',
-          debug_messages: {
-            messages: Array.isArray(debugData.messages) ? debugData.messages.map((msg: any) => ({
-              type: msg.type || msg.role || 'unknown',
-              content: msg.content || ''
-            })) : [],
-            timestamp: debugData.timestamp || Date.now(),
-            agent_id: selectedAgentId,
+        const formattedResults: DebugMessagesData[] = [
+          {
+            chat_id: `chat-${selectedAgentId}`,
             user_id: selectedUserId || 'unknown',
-            session_id: debugData.session_id || `session-${Date.now()}`
+            user_nickname:
+              users.find(u => u.id === selectedUserId)?.nickname || '未知用户',
+            agent_id: selectedAgentId,
+            agent_name:
+              agents.find(a => a.id === selectedAgentId)?.name || '未知角色',
+            debug_messages: {
+              messages: Array.isArray(debugData.messages)
+                ? debugData.messages.map((msg: any) => ({
+                    type: msg.type || msg.role || 'unknown',
+                    content: msg.content || '',
+                  }))
+                : [],
+              timestamp: debugData.timestamp || Date.now(),
+              agent_id: selectedAgentId,
+              user_id: selectedUserId || 'unknown',
+              session_id: debugData.session_id || `session-${Date.now()}`,
+            },
+            created_at: debugData.created_at || new Date().toISOString(),
+            updated_at: debugData.updated_at || new Date().toISOString(),
           },
-          created_at: debugData.created_at || new Date().toISOString(),
-          updated_at: debugData.updated_at || new Date().toISOString()
-        }];
-        
+        ];
+
         setQueryResults(formattedResults);
         message.success(`查询成功，找到 ${formattedResults.length} 条记录`);
       } else {
@@ -334,7 +346,7 @@ export const PromptQueryPage: React.FC = () => {
   const renderQueryResults = () => {
     // 确保 queryResults 是数组
     const results = Array.isArray(queryResults) ? queryResults : [];
-    
+
     if (results.length === 0) {
       return (
         <Empty
@@ -351,15 +363,15 @@ export const PromptQueryPage: React.FC = () => {
             key={`${result.chat_id}-${index}`}
             header={
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <Avatar 
-                  size="small" 
+                <Avatar
+                  size="small"
                   icon={<UserOutlined />}
                   src={users.find(u => u.id === result.user_id)?.avatar}
                 />
                 <Text strong>{result.user_nickname}</Text>
                 <Text type="secondary">与</Text>
-                <Avatar 
-                  size="small" 
+                <Avatar
+                  size="small"
                   icon={<RobotOutlined />}
                   src={agents.find(a => a.id === result.agent_id)?.avatar}
                 />
@@ -372,10 +384,10 @@ export const PromptQueryPage: React.FC = () => {
             }
           >
             <div style={{ padding: '16px 0' }}>
-              {result.debug_messages && 
-               result.debug_messages.messages && 
-               Array.isArray(result.debug_messages.messages) && 
-               result.debug_messages.messages.length > 0 ? (
+              {result.debug_messages &&
+              result.debug_messages.messages &&
+              Array.isArray(result.debug_messages.messages) &&
+              result.debug_messages.messages.length > 0 ? (
                 result.debug_messages.messages.map((msg, msgIndex) => (
                   <div key={msgIndex} style={{ marginBottom: 16 }}>
                     <div style={{ marginBottom: 8 }}>
@@ -398,7 +410,7 @@ export const PromptQueryPage: React.FC = () => {
                   </div>
                 ))
               ) : (
-                <Empty 
+                <Empty
                   description="此会话暂无调试消息"
                   image={Empty.PRESENTED_IMAGE_SIMPLE}
                 />
@@ -419,7 +431,7 @@ export const PromptQueryPage: React.FC = () => {
             <MessageOutlined style={{ marginRight: 8 }} />
             会话提示词查询
           </Title>
-          
+
           <Row gutter={[16, 16]}>
             <Col xs={24} sm={12} md={8}>
               <div style={{ marginBottom: 8 }}>
@@ -440,34 +452,42 @@ export const PromptQueryPage: React.FC = () => {
                 onChange={setSelectedUserId}
                 loading={usersLoading}
                 filterOption={false}
-                notFoundContent={usersLoading ? <Spin size="small" /> : '暂无数据'}
+                notFoundContent={
+                  usersLoading ? <Spin size="small" /> : '暂无数据'
+                }
               >
                 {users.map(user => (
                   <Option key={user.id} value={user.id}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <Avatar 
-                        size="small" 
-                        icon={<UserOutlined />} 
+                    <div
+                      style={{ display: 'flex', alignItems: 'center', gap: 8 }}
+                    >
+                      <Avatar
+                        size="small"
+                        icon={<UserOutlined />}
                         src={user.avatar}
                         style={{ flexShrink: 0 }}
                       />
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ 
-                          fontWeight: 500, 
-                          color: 'rgba(0, 0, 0, 0.85)',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap'
-                        }}>
+                        <div
+                          style={{
+                            fontWeight: 500,
+                            color: 'rgba(0, 0, 0, 0.85)',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
                           {user.nickname || user.readable_id}
                         </div>
-                        <div style={{ 
-                          fontSize: '12px', 
-                          color: 'rgba(0, 0, 0, 0.45)',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap'
-                        }}>
+                        <div
+                          style={{
+                            fontSize: '12px',
+                            color: 'rgba(0, 0, 0, 0.45)',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
                           ID: {user.readable_id}
                         </div>
                       </div>
@@ -476,7 +496,7 @@ export const PromptQueryPage: React.FC = () => {
                 ))}
               </Select>
             </Col>
-            
+
             <Col xs={24} sm={12} md={8}>
               <div style={{ marginBottom: 8 }}>
                 <Text strong>选择AI角色</Text>
@@ -491,38 +511,51 @@ export const PromptQueryPage: React.FC = () => {
                 loading={agentsLoading}
                 filterOption={(input, option) => {
                   const agent = agents.find(a => a.id === option?.value);
-                  return agent?.name.toLowerCase().includes(input.toLowerCase()) || false;
+                  return (
+                    agent?.name.toLowerCase().includes(input.toLowerCase()) ||
+                    false
+                  );
                 }}
-                notFoundContent={agentsLoading ? <Spin size="small" /> : '暂无数据'}
+                notFoundContent={
+                  agentsLoading ? <Spin size="small" /> : '暂无数据'
+                }
               >
                 {agents.map(agent => (
                   <Option key={agent.id} value={agent.id}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <Avatar 
-                        size="small" 
-                        icon={<RobotOutlined />} 
+                    <div
+                      style={{ display: 'flex', alignItems: 'center', gap: 8 }}
+                    >
+                      <Avatar
+                        size="small"
+                        icon={<RobotOutlined />}
                         src={agent.avatar}
                         style={{ flexShrink: 0 }}
                       />
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ 
-                          fontWeight: 500, 
-                          color: 'rgba(0, 0, 0, 0.85)',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap'
-                        }}>
+                        <div
+                          style={{
+                            fontWeight: 500,
+                            color: 'rgba(0, 0, 0, 0.85)',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
                           {agent.name}
                         </div>
                         {agent.intro && (
-                          <div style={{ 
-                            fontSize: '12px', 
-                            color: 'rgba(0, 0, 0, 0.45)',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap'
-                          }}>
-                            {agent.intro.length > 30 ? `${agent.intro.substring(0, 30)}...` : agent.intro}
+                          <div
+                            style={{
+                              fontSize: '12px',
+                              color: 'rgba(0, 0, 0, 0.45)',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {agent.intro.length > 30
+                              ? `${agent.intro.substring(0, 30)}...`
+                              : agent.intro}
                           </div>
                         )}
                       </div>
@@ -531,7 +564,7 @@ export const PromptQueryPage: React.FC = () => {
                 ))}
               </Select>
             </Col>
-            
+
             <Col xs={24} sm={24} md={8}>
               <div style={{ marginBottom: 8 }}>
                 <Text strong>操作</Text>
@@ -549,9 +582,9 @@ export const PromptQueryPage: React.FC = () => {
               </Button>
             </Col>
           </Row>
-          
+
           <Divider />
-          
+
           <div style={{ textAlign: 'center' }}>
             <Text type="secondary">
               请至少选择一个用户或AI角色进行查询，查询结果将显示相关的会话提示词信息
@@ -571,9 +604,7 @@ export const PromptQueryPage: React.FC = () => {
             </Space>
           }
         >
-          <Spin spinning={queryLoading}>
-            {renderQueryResults()}
-          </Spin>
+          <Spin spinning={queryLoading}>{renderQueryResults()}</Spin>
         </Card>
       </div>
     </div>

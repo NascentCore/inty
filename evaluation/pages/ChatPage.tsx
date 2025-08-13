@@ -13,8 +13,6 @@ import {
   Avatar,
   Space,
   Typography,
-  
-  
   Spin,
   Alert,
   Modal,
@@ -31,12 +29,10 @@ import {
   UserOutlined,
   ClearOutlined,
   DownloadOutlined,
-  
   MessageOutlined,
   ClockCircleOutlined,
   ReloadOutlined,
   HistoryOutlined,
-  
   TeamOutlined,
   RedoOutlined,
   DeleteOutlined,
@@ -51,7 +47,6 @@ const { Content } = Layout;
 const { Text, Paragraph } = Typography;
 const { TextArea } = Input;
 
-
 interface ChatSession {
   id: string;
   agent_id: string;
@@ -60,18 +55,18 @@ interface ChatSession {
   created_at: string;
 }
 
-
-
 export const ChatPage: React.FC = () => {
   // 状态管理
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
-  const [currentSession, setCurrentSession] = useState<ChatSession | null>(null);
+  const [currentSession, setCurrentSession] = useState<ChatSession | null>(
+    null
+  );
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [sending, setSending] = useState(false);
   const [chatHistory, setChatHistory] = useState<ChatSession[]>([]);
   const [isGuestMode, setIsGuestMode] = useState(false);
-  
+
   const [showHistory, setShowHistory] = useState(false);
 
   // Refs
@@ -135,92 +130,110 @@ export const ChatPage: React.FC = () => {
   }, [loadChatHistory]);
 
   // 选择智能体 - 从后端获取真实会话记录
-  const handleSelectAgent = useCallback(async (agent: Agent) => {
-    setSelectedAgent(agent);
-    setSending(true);
-    
-    try {
-      // 先尝试获取现有的聊天详情和消息历史
-      const chatData = await api.chat.getChatDetail(agent.id, { page: 1, size: 100 });
-      
-      // 转换消息格式
-      const convertedMessages: ChatMessage[] = chatData.messages.map((msg, index) => ({
-        id: `msg_${chatData.chat.id}_${index}_${Date.now()}`,
-        role: msg.sender_type === 'USER' ? 'user' : 'assistant',
-        content: msg.content,
-        timestamp: msg.created_at,
-        sender_type: msg.sender_type,
-        remoteId: msg.id || `remote_${index}`, // 添加远程消息ID
-      }));
-      
-      // 创建会话对象
-      const session: ChatSession = {
-        id: chatData.chat.id,
-        agent_id: agent.id,
-        agent_name: agent.name,
-        messages: convertedMessages,
-        created_at: chatData.chat.created_at,
-      };
-      
-      setCurrentSession(session);
-      setMessages(convertedMessages);
-      
-      // 更新本地历史记录缓存
-      const existingHistoryIndex = chatHistory.findIndex(s => s.agent_id === agent.id);
-      let updatedHistory;
-      if (existingHistoryIndex >= 0) {
-        // 更新现有记录
-        updatedHistory = [...chatHistory];
-        updatedHistory[existingHistoryIndex] = session;
-      } else {
-        // 添加新记录到开头
-        updatedHistory = [session, ...chatHistory];
-      }
-      setChatHistory(updatedHistory);
-      saveChatHistory(updatedHistory);
-      
-      console.log(`成功加载智能体 ${agent.name} 的聊天记录，共 ${convertedMessages.length} 条消息`);
-      
-    } catch (error) {
-      console.error('加载聊天会话失败:', error);
-      
-      // 如果获取失败，不要创建新会话，直接使用本地临时会话
-      // 避免因为已存在会话导致的唯一约束错误
-      const tempSession: ChatSession = {
-        id: `temp_${Date.now()}`,
-        agent_id: agent.id,
-        agent_name: agent.name,
-        messages: [],
-        created_at: new Date().toISOString(),
-      };
-      
-      setCurrentSession(tempSession);
-      setMessages([]);
-      
-      console.log(`为智能体 ${agent.name} 创建了本地临时会话`);
-      
-      // 后台尝试获取历史消息，但不影响当前操作
+  const handleSelectAgent = useCallback(
+    async (agent: Agent) => {
+      setSelectedAgent(agent);
+      setSending(true);
+
       try {
-        const historyData = await api.chat.getMessages(agent.id, { page: 1, size: 100 });
-        if (historyData.messages && historyData.messages.length > 0) {
-          const convertedMessages: ChatMessage[] = historyData.messages.map((msg, index) => ({
-            id: `msg_history_${index}_${Date.now()}`,
-            role: msg.role, // 直接使用API返回的role字段（'user' 或 'assistant'）
+        // 先尝试获取现有的聊天详情和消息历史
+        const chatData = await api.chat.getChatDetail(agent.id, {
+          page: 1,
+          size: 100,
+        });
+
+        // 转换消息格式
+        const convertedMessages: ChatMessage[] = chatData.messages.map(
+          (msg, index) => ({
+            id: `msg_${chatData.chat.id}_${index}_${Date.now()}`,
+            role: msg.sender_type === 'USER' ? 'user' : 'assistant',
             content: msg.content,
-            timestamp: msg.timestamp,
-            remoteId: msg.id ? String(msg.id) : `remote_${index}`, // 安全地访问id字段
-          }));
-          
-          setMessages(convertedMessages.reverse()); // 反转顺序，最新的在底部
-          console.log(`成功加载智能体 ${agent.name} 的历史消息，共 ${convertedMessages.length} 条`);
+            timestamp: msg.created_at,
+            sender_type: msg.sender_type,
+            remoteId: msg.id || `remote_${index}`, // 添加远程消息ID
+          })
+        );
+
+        // 创建会话对象
+        const session: ChatSession = {
+          id: chatData.chat.id,
+          agent_id: agent.id,
+          agent_name: agent.name,
+          messages: convertedMessages,
+          created_at: chatData.chat.created_at,
+        };
+
+        setCurrentSession(session);
+        setMessages(convertedMessages);
+
+        // 更新本地历史记录缓存
+        const existingHistoryIndex = chatHistory.findIndex(
+          s => s.agent_id === agent.id
+        );
+        let updatedHistory;
+        if (existingHistoryIndex >= 0) {
+          // 更新现有记录
+          updatedHistory = [...chatHistory];
+          updatedHistory[existingHistoryIndex] = session;
+        } else {
+          // 添加新记录到开头
+          updatedHistory = [session, ...chatHistory];
         }
-      } catch (historyError) {
-        console.error('加载历史消息失败，继续使用空会话:', historyError);
+        setChatHistory(updatedHistory);
+        saveChatHistory(updatedHistory);
+
+        console.log(
+          `成功加载智能体 ${agent.name} 的聊天记录，共 ${convertedMessages.length} 条消息`
+        );
+      } catch (error) {
+        console.error('加载聊天会话失败:', error);
+
+        // 如果获取失败，不要创建新会话，直接使用本地临时会话
+        // 避免因为已存在会话导致的唯一约束错误
+        const tempSession: ChatSession = {
+          id: `temp_${Date.now()}`,
+          agent_id: agent.id,
+          agent_name: agent.name,
+          messages: [],
+          created_at: new Date().toISOString(),
+        };
+
+        setCurrentSession(tempSession);
+        setMessages([]);
+
+        console.log(`为智能体 ${agent.name} 创建了本地临时会话`);
+
+        // 后台尝试获取历史消息，但不影响当前操作
+        try {
+          const historyData = await api.chat.getMessages(agent.id, {
+            page: 1,
+            size: 100,
+          });
+          if (historyData.messages && historyData.messages.length > 0) {
+            const convertedMessages: ChatMessage[] = historyData.messages.map(
+              (msg, index) => ({
+                id: `msg_history_${index}_${Date.now()}`,
+                role: msg.role, // 直接使用API返回的role字段（'user' 或 'assistant'）
+                content: msg.content,
+                timestamp: msg.timestamp,
+                remoteId: msg.id ? String(msg.id) : `remote_${index}`, // 安全地访问id字段
+              })
+            );
+
+            setMessages(convertedMessages.reverse()); // 反转顺序，最新的在底部
+            console.log(
+              `成功加载智能体 ${agent.name} 的历史消息，共 ${convertedMessages.length} 条`
+            );
+          }
+        } catch (historyError) {
+          console.error('加载历史消息失败，继续使用空会话:', historyError);
+        }
+      } finally {
+        setSending(false);
       }
-    } finally {
-      setSending(false);
-    }
-  }, [chatHistory, saveChatHistory]);
+    },
+    [chatHistory, saveChatHistory]
+  );
 
   // 发送消息 - 使用现有聊天API
   const handleSendMessage = useCallback(async () => {
@@ -250,11 +263,15 @@ export const ChatPage: React.FC = () => {
       }));
 
       // 调用现有的OpenAI兼容聊天API
-      const response = await api.chat.sendMessage(selectedAgent.id, messageHistory);
+      const response = await api.chat.sendMessage(
+        selectedAgent.id,
+        messageHistory
+      );
 
       // 提取助手回复
-      const assistantContent = response.choices[0]?.message?.content || '抱歉，我现在无法回复。';
-      
+      const assistantContent =
+        response.choices[0]?.message?.content || '抱歉，我现在无法回复。';
+
       const assistantMessage: ChatMessage = {
         id: `msg_${Date.now() + 1}`,
         role: 'assistant',
@@ -272,22 +289,27 @@ export const ChatPage: React.FC = () => {
       try {
         // 等待一小段时间确保后端处理完成
         await new Promise(resolve => setTimeout(resolve, 500));
-        
+
         // 重新获取最新的聊天记录
-        const refreshedData = await api.chat.getMessages(selectedAgent.id, { page: 1, size: 100 });
-        
+        const refreshedData = await api.chat.getMessages(selectedAgent.id, {
+          page: 1,
+          size: 100,
+        });
+
         if (refreshedData.messages && refreshedData.messages.length > 0) {
-          const refreshedMessages: ChatMessage[] = refreshedData.messages.map((msg, index) => ({
-            id: `msg_refreshed_${index}_${Date.now()}`,
-            role: msg.role,
-            content: msg.content,
-            timestamp: msg.timestamp,
-            remoteId: msg.id ? String(msg.id) : `remote_${index}`,
-          }));
-          
+          const refreshedMessages: ChatMessage[] = refreshedData.messages.map(
+            (msg, index) => ({
+              id: `msg_refreshed_${index}_${Date.now()}`,
+              role: msg.role,
+              content: msg.content,
+              timestamp: msg.timestamp,
+              remoteId: msg.id ? String(msg.id) : `remote_${index}`,
+            })
+          );
+
           // 更新消息列表（最新的在底部）
           setMessages(refreshedMessages.reverse());
-          
+
           // 更新会话
           const updatedSession = {
             ...currentSession,
@@ -301,12 +323,12 @@ export const ChatPage: React.FC = () => {
           );
           setChatHistory(updatedHistory);
           saveChatHistory(updatedHistory);
-          
+
           console.log('已刷新聊天记录，获取到真实消息ID');
         }
       } catch (refreshError) {
         console.warn('刷新聊天记录失败，但消息发送成功:', refreshError);
-        
+
         // 如果刷新失败，仍然保留原来的逻辑
         const updatedSession = {
           ...currentSession,
@@ -320,10 +342,9 @@ export const ChatPage: React.FC = () => {
         setChatHistory(updatedHistory);
         saveChatHistory(updatedHistory);
       }
-
     } catch (error) {
       console.error('发送消息失败:', error);
-      
+
       // 添加错误消息
       const errorMessage: ChatMessage = {
         id: `msg_${Date.now() + 1}`,
@@ -338,7 +359,15 @@ export const ChatPage: React.FC = () => {
     } finally {
       setSending(false);
     }
-  }, [inputValue, selectedAgent, currentSession, messages, sending, chatHistory, saveChatHistory]);
+  }, [
+    inputValue,
+    selectedAgent,
+    currentSession,
+    messages,
+    sending,
+    chatHistory,
+    saveChatHistory,
+  ]);
 
   // 清空聊天记录 - 使用现有聊天API
   const handleClearChat = useCallback(() => {
@@ -353,10 +382,10 @@ export const ChatPage: React.FC = () => {
         try {
           // 调用现有API清除消息
           await api.chat.clearMessages(selectedAgent.id);
-          
+
           // 更新UI状态
           setMessages([]);
-          
+
           const updatedSession = {
             ...currentSession,
             messages: [],
@@ -368,7 +397,7 @@ export const ChatPage: React.FC = () => {
           );
           setChatHistory(updatedHistory);
           saveChatHistory(updatedHistory);
-          
+
           message.success('聊天记录已清空');
         } catch (error) {
           console.error('清空聊天记录失败:', error);
@@ -376,7 +405,8 @@ export const ChatPage: React.FC = () => {
           let errorDetail: any = null;
 
           // Check if it's our custom ApiError
-          if (error instanceof Error && 'errorData' in error) { // Use 'in' operator for type narrowing
+          if (error instanceof Error && 'errorData' in error) {
+            // Use 'in' operator for type narrowing
             const apiError = error as any; // Cast to any to access errorData
             errorMessage = apiError.message;
             errorDetail = apiError.errorData;
@@ -392,7 +422,17 @@ export const ChatPage: React.FC = () => {
                 {errorDetail && (
                   <div>
                     <p>后端返回详情:</p>
-                    <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all', maxHeight: '300px', overflowY: 'auto', background: '#f5f5f5', padding: '10px', borderRadius: '4px' }}>
+                    <pre
+                      style={{
+                        whiteSpace: 'pre-wrap',
+                        wordBreak: 'break-all',
+                        maxHeight: '300px',
+                        overflowY: 'auto',
+                        background: '#f5f5f5',
+                        padding: '10px',
+                        borderRadius: '4px',
+                      }}
+                    >
                       {JSON.stringify(errorDetail, null, 2)}
                     </pre>
                   </div>
@@ -423,7 +463,9 @@ export const ChatPage: React.FC = () => {
       })),
     };
 
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], {
+      type: 'application/json',
+    });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -434,19 +476,21 @@ export const ChatPage: React.FC = () => {
     URL.revokeObjectURL(url);
   }, [currentSession, messages]);
 
-
   // 键盘事件处理
-  const handleKeyPress = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
-    }
-  }, [handleSendMessage]);
+  const handleKeyPress = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        handleSendMessage();
+      }
+    },
+    [handleSendMessage]
+  );
 
   // 获取调试消息
   const fetchDebugMessages = useCallback(async () => {
     if (!selectedAgent?.id) return;
-    
+
     try {
       setDebugLoading(true);
       const result = await api.chat.getAgentDebugMessages(selectedAgent.id);
@@ -461,125 +505,156 @@ export const ChatPage: React.FC = () => {
   }, [selectedAgent?.id]);
 
   // 重新发送消息
-  const handleResendMessage = useCallback(async (msg: ChatMessage) => {
-    // 检查是否是历史消息（具有真正的数据库ID）
-    if (!msg.remoteId || !selectedAgent?.id || resending === msg.id || 
-        msg.remoteId.startsWith('user_') || msg.remoteId.startsWith('assistant_') || msg.remoteId.startsWith('error_')) {
-      message.warning('只能重新发送历史消息');
-      return;
-    }
+  const handleResendMessage = useCallback(
+    async (msg: ChatMessage) => {
+      // 检查是否是历史消息（具有真正的数据库ID）
+      if (
+        !msg.remoteId ||
+        !selectedAgent?.id ||
+        resending === msg.id ||
+        msg.remoteId.startsWith('user_') ||
+        msg.remoteId.startsWith('assistant_') ||
+        msg.remoteId.startsWith('error_')
+      ) {
+        message.warning('只能重新发送历史消息');
+        return;
+      }
 
-    setResending(msg.id);
+      setResending(msg.id);
 
-    try {
-      // 调用清理消息接口，删除包含该消息在内的后续对话记录
-      const clearResult = await api.chat.clearMessages(selectedAgent.id, msg.remoteId);
-      
-      if (clearResult) {
-        message.success(`已删除相关消息记录`);
-        
-        // 从本地状态中移除被删除的消息（从该消息开始的所有后续消息）
-        setMessages(prev => {
-          const targetIndex = prev.findIndex(m => m.id === msg.id);
-          if (targetIndex !== -1) {
-            return prev.slice(0, targetIndex);
-          }
-          return prev;
-        });
+      try {
+        // 调用清理消息接口，删除包含该消息在内的后续对话记录
+        const clearResult = await api.chat.clearMessages(
+          selectedAgent.id,
+          msg.remoteId
+        );
 
-        // 重新发送该条消息
-        const userMessage: ChatMessage = {
-          id: `msg_${Date.now()}`,
-          role: 'user',
-          content: msg.content,
-          timestamp: new Date().toISOString(),
-        };
+        if (clearResult) {
+          message.success(`已删除相关消息记录`);
 
-        // 添加用户消息
-        setMessages(prev => [...prev, userMessage]);
-        setSending(true);
+          // 从本地状态中移除被删除的消息（从该消息开始的所有后续消息）
+          setMessages(prev => {
+            const targetIndex = prev.findIndex(m => m.id === msg.id);
+            if (targetIndex !== -1) {
+              return prev.slice(0, targetIndex);
+            }
+            return prev;
+          });
 
-        try {
-          // 构造OpenAI格式的消息历史
-          const messageHistory = [
-            ...messages.slice(0, messages.findIndex(m => m.id === msg.id)),
-            { role: 'user' as const, content: msg.content }
-          ];
-
-          // 调用聊天API重新发送
-          const response = await api.chat.sendMessage(selectedAgent.id, messageHistory);
-          
-          const assistantContent = response.choices[0]?.message?.content || '抱歉，我现在无法回复。';
-          
-          const assistantMessage: ChatMessage = {
-            id: `msg_${Date.now() + 1}`,
-            role: 'assistant',
-            content: assistantContent,
+          // 重新发送该条消息
+          const userMessage: ChatMessage = {
+            id: `msg_${Date.now()}`,
+            role: 'user',
+            content: msg.content,
             timestamp: new Date().toISOString(),
           };
 
-          setMessages(prev => [...prev, assistantMessage]);
-        } catch (sendError) {
-          console.error('重新发送消息失败:', sendError);
-          message.error('重新发送消息失败，请重试');
-        } finally {
-          setSending(false);
+          // 添加用户消息
+          setMessages(prev => [...prev, userMessage]);
+          setSending(true);
+
+          try {
+            // 构造OpenAI格式的消息历史
+            const messageHistory = [
+              ...messages.slice(
+                0,
+                messages.findIndex(m => m.id === msg.id)
+              ),
+              { role: 'user' as const, content: msg.content },
+            ];
+
+            // 调用聊天API重新发送
+            const response = await api.chat.sendMessage(
+              selectedAgent.id,
+              messageHistory
+            );
+
+            const assistantContent =
+              response.choices[0]?.message?.content || '抱歉，我现在无法回复。';
+
+            const assistantMessage: ChatMessage = {
+              id: `msg_${Date.now() + 1}`,
+              role: 'assistant',
+              content: assistantContent,
+              timestamp: new Date().toISOString(),
+            };
+
+            setMessages(prev => [...prev, assistantMessage]);
+          } catch (sendError) {
+            console.error('重新发送消息失败:', sendError);
+            message.error('重新发送消息失败，请重试');
+          } finally {
+            setSending(false);
+          }
+        } else {
+          throw new Error('清理消息失败');
         }
-      } else {
-        throw new Error('清理消息失败');
+      } catch (error) {
+        console.error('重新发送失败:', error);
+        message.error('重新发送失败，请重试');
+      } finally {
+        setResending(null);
       }
-    } catch (error) {
-      console.error('重新发送失败:', error);
-      message.error('重新发送失败，请重试');
-    } finally {
-      setResending(null);
-    }
-  }, [selectedAgent?.id, resending, messages]);
+    },
+    [selectedAgent?.id, resending, messages]
+  );
 
   // 删除消息
-  const handleDeleteMessage = useCallback(async (msg: ChatMessage) => {
-    // 检查是否是历史消息（具有真正的数据库ID）
-    if (!msg.remoteId || !selectedAgent?.id || clearing === msg.id || 
-        msg.remoteId.startsWith('user_') || msg.remoteId.startsWith('assistant_') || msg.remoteId.startsWith('error_')) {
-      message.warning('只能删除历史消息');
-      return;
-    }
-
-    setClearing(msg.id);
-
-    try {
-      // 调用清理消息接口，删除包含该消息在内的后续对话记录
-      const clearResult = await api.chat.clearMessages(selectedAgent.id, msg.remoteId);
-      
-      if (clearResult) {
-        message.success(`已删除相关消息记录`);
-        
-        // 从本地状态中移除被删除的消息（从该消息开始的所有后续消息）
-        setMessages(prev => {
-          const targetIndex = prev.findIndex(m => m.id === msg.id);
-          if (targetIndex !== -1) {
-            return prev.slice(0, targetIndex);
-          }
-          return prev;
-        });
-      } else {
-        throw new Error('清理消息失败');
+  const handleDeleteMessage = useCallback(
+    async (msg: ChatMessage) => {
+      // 检查是否是历史消息（具有真正的数据库ID）
+      if (
+        !msg.remoteId ||
+        !selectedAgent?.id ||
+        clearing === msg.id ||
+        msg.remoteId.startsWith('user_') ||
+        msg.remoteId.startsWith('assistant_') ||
+        msg.remoteId.startsWith('error_')
+      ) {
+        message.warning('只能删除历史消息');
+        return;
       }
-    } catch (error) {
-      console.error('删除消息失败:', error);
-      message.error('删除消息失败，请重试');
-    } finally {
-      setClearing(null);
-    }
-  }, [selectedAgent?.id, clearing]);
+
+      setClearing(msg.id);
+
+      try {
+        // 调用清理消息接口，删除包含该消息在内的后续对话记录
+        const clearResult = await api.chat.clearMessages(
+          selectedAgent.id,
+          msg.remoteId
+        );
+
+        if (clearResult) {
+          message.success(`已删除相关消息记录`);
+
+          // 从本地状态中移除被删除的消息（从该消息开始的所有后续消息）
+          setMessages(prev => {
+            const targetIndex = prev.findIndex(m => m.id === msg.id);
+            if (targetIndex !== -1) {
+              return prev.slice(0, targetIndex);
+            }
+            return prev;
+          });
+        } else {
+          throw new Error('清理消息失败');
+        }
+      } catch (error) {
+        console.error('删除消息失败:', error);
+        message.error('删除消息失败，请重试');
+      } finally {
+        setClearing(null);
+      }
+    },
+    [selectedAgent?.id, clearing]
+  );
 
   // 处理括号内容的样式 - 复刻inty-test的formatMessageContent功能
   const formatMessageContent = (content: string) => {
     // 匹配中文括号和英文括号内的内容
     const regex = /([（(].*?[）)])/g;
-    
+
     const parts = content.split(regex);
-    
+
     return parts.map((part, index) => {
       if (regex.test(part)) {
         // 括号内容，使用淡色斜体
@@ -601,19 +676,34 @@ export const ChatPage: React.FC = () => {
   };
 
   return (
-    <Layout className="chat-page" style={{ height: '100vh', overflow: 'hidden' }}>
-      <Content style={{ padding: '24px', background: '#f0f2f5', height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <Layout
+      className="chat-page"
+      style={{ height: '100vh', overflow: 'hidden' }}
+    >
+      <Content
+        style={{
+          padding: '24px',
+          background: '#f0f2f5',
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+        }}
+      >
         <Row gutter={24} style={{ flex: 1, minHeight: 0 }}>
           {/* 智能体选择侧栏 */}
           <Col span={6} style={{ height: '100%' }}>
-            <Card 
+            <Card
               title={
                 <Space>
                   <RobotOutlined />
                   选择智能体
                 </Space>
               }
-              style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
+              style={{
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+              }}
               bodyStyle={{ flex: 1, padding: '16px', overflow: 'hidden' }}
               extra={
                 <Button
@@ -641,16 +731,20 @@ export const ChatPage: React.FC = () => {
                   <List
                     loading={agentsLoading}
                     dataSource={agents}
-                    renderItem={(agent) => (
+                    renderItem={agent => (
                       <List.Item
                         className={`agent-item ${selectedAgent?.id === agent.id ? 'selected' : ''}`}
                         style={{
                           cursor: 'pointer',
                           padding: '12px',
-                          border: selectedAgent?.id === agent.id ? '2px solid #1890ff' : '1px solid #f0f0f0',
+                          border:
+                            selectedAgent?.id === agent.id
+                              ? '2px solid #1890ff'
+                              : '1px solid #f0f0f0',
                           borderRadius: '8px',
                           marginBottom: '8px',
-                          backgroundColor: selectedAgent?.id === agent.id ? '#f6ffed' : '#fff',
+                          backgroundColor:
+                            selectedAgent?.id === agent.id ? '#f6ffed' : '#fff',
                           transition: 'all 0.2s ease',
                         }}
                         onClick={() => handleSelectAgent(agent)}
@@ -661,7 +755,10 @@ export const ChatPage: React.FC = () => {
                               src={agent.avatar}
                               icon={<RobotOutlined />}
                               style={{
-                                backgroundColor: selectedAgent?.id === agent.id ? '#52c41a' : '#1890ff',
+                                backgroundColor:
+                                  selectedAgent?.id === agent.id
+                                    ? '#52c41a'
+                                    : '#1890ff',
                               }}
                             />
                           }
@@ -672,17 +769,40 @@ export const ChatPage: React.FC = () => {
                           }
                           description={
                             <div>
-                              <Text type="secondary" style={{ fontSize: '12px', lineHeight: '1.4' }}>
+                              <Text
+                                type="secondary"
+                                style={{ fontSize: '12px', lineHeight: '1.4' }}
+                              >
                                 {agent.description}
                               </Text>
                               <div style={{ marginTop: 4 }}>
                                 {agent.gender && (
-                                  <Tag size="small" color={agent.gender === '男' ? 'blue' : agent.gender === '女' ? 'pink' : 'default'}>
+                                  <Tag
+                                    size="small"
+                                    color={
+                                      agent.gender === '男'
+                                        ? 'blue'
+                                        : agent.gender === '女'
+                                          ? 'pink'
+                                          : 'default'
+                                    }
+                                  >
                                     {agent.gender}
                                   </Tag>
                                 )}
-                                <Tag size="small" color={agent.visibility === 'PUBLIC' || agent.visibility === 'public' ? 'green' : 'orange'}>
-                                  {agent.visibility === 'PUBLIC' || agent.visibility === 'public' ? '公开' : '私有'}
+                                <Tag
+                                  size="small"
+                                  color={
+                                    agent.visibility === 'PUBLIC' ||
+                                    agent.visibility === 'public'
+                                      ? 'green'
+                                      : 'orange'
+                                  }
+                                >
+                                  {agent.visibility === 'PUBLIC' ||
+                                  agent.visibility === 'public'
+                                    ? '公开'
+                                    : '私有'}
                                 </Tag>
                               </div>
                             </div>
@@ -702,7 +822,10 @@ export const ChatPage: React.FC = () => {
               <Card
                 title={
                   <Space>
-                    <Avatar src={selectedAgent.avatar} icon={<RobotOutlined />} />
+                    <Avatar
+                      src={selectedAgent.avatar}
+                      icon={<RobotOutlined />}
+                    />
                     <div>
                       <Text strong>{selectedAgent.name}</Text>
                       <br />
@@ -753,8 +876,18 @@ export const ChatPage: React.FC = () => {
                     </Tooltip>
                   </Space>
                 }
-                style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
-                bodyStyle={{ flex: 1, display: 'flex', flexDirection: 'column', padding: 0, overflow: 'hidden' }}
+                style={{
+                  height: '100%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                }}
+                bodyStyle={{
+                  flex: 1,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  padding: 0,
+                  overflow: 'hidden',
+                }}
               >
                 {/* 消息列表 */}
                 <div
@@ -774,77 +907,111 @@ export const ChatPage: React.FC = () => {
                   ) : (
                     <List
                       dataSource={messages}
-                      renderItem={(message) => (
+                      renderItem={message => (
                         <List.Item
                           style={{
                             border: 'none',
                             padding: '8px 0',
-                            justifyContent: message.role === 'user' ? 'flex-end' : 'flex-start',
+                            justifyContent:
+                              message.role === 'user'
+                                ? 'flex-end'
+                                : 'flex-start',
                           }}
                         >
                           <div
                             style={{
                               maxWidth: '70%',
                               display: 'flex',
-                              flexDirection: message.role === 'user' ? 'row-reverse' : 'row',
+                              flexDirection:
+                                message.role === 'user' ? 'row-reverse' : 'row',
                               alignItems: 'flex-start',
                               gap: '8px',
                             }}
                           >
                             <Avatar
                               size="small"
-                              icon={message.role === 'user' ? <UserOutlined /> : <RobotOutlined />}
-                              src={message.role === 'assistant' ? selectedAgent.avatar : undefined}
+                              icon={
+                                message.role === 'user' ? (
+                                  <UserOutlined />
+                                ) : (
+                                  <RobotOutlined />
+                                )
+                              }
+                              src={
+                                message.role === 'assistant'
+                                  ? selectedAgent.avatar
+                                  : undefined
+                              }
                               style={{
-                                backgroundColor: message.role === 'user' ? '#1890ff' : '#52c41a',
+                                backgroundColor:
+                                  message.role === 'user'
+                                    ? '#1890ff'
+                                    : '#52c41a',
                                 flexShrink: 0,
                               }}
                             />
                             <div
                               style={{
-                                backgroundColor: message.role === 'user' ? '#1890ff' : '#fff',
-                                color: message.role === 'user' ? '#fff' : '#000',
+                                backgroundColor:
+                                  message.role === 'user' ? '#1890ff' : '#fff',
+                                color:
+                                  message.role === 'user' ? '#fff' : '#000',
                                 padding: '12px 16px',
                                 borderRadius: '18px',
                                 boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
                                 position: 'relative',
-                                border: message.role === 'assistant' ? '1px solid #f0f0f0' : 'none',
+                                border:
+                                  message.role === 'assistant'
+                                    ? '1px solid #f0f0f0'
+                                    : 'none',
                               }}
-                              onMouseEnter={(e) => {
-                                const actions = e.currentTarget.querySelector('.message-actions') as HTMLElement;
+                              onMouseEnter={e => {
+                                const actions = e.currentTarget.querySelector(
+                                  '.message-actions'
+                                ) as HTMLElement;
                                 if (actions) actions.style.opacity = '1';
                               }}
-                              onMouseLeave={(e) => {
-                                const actions = e.currentTarget.querySelector('.message-actions') as HTMLElement;
+                              onMouseLeave={e => {
+                                const actions = e.currentTarget.querySelector(
+                                  '.message-actions'
+                                ) as HTMLElement;
                                 if (actions) actions.style.opacity = '0';
                               }}
                             >
                               <Paragraph
                                 style={{
                                   margin: 0,
-                                  color: message.role === 'user' ? '#fff' : '#000',
+                                  color:
+                                    message.role === 'user' ? '#fff' : '#000',
                                   whiteSpace: 'pre-wrap',
                                   wordBreak: 'break-word',
                                 }}
                               >
-                                {message.role === 'assistant' ? formatMessageContent(message.content) : message.content}
+                                {message.role === 'assistant'
+                                  ? formatMessageContent(message.content)
+                                  : message.content}
                               </Paragraph>
                               <div
                                 style={{
                                   fontSize: '10px',
                                   opacity: 0.7,
                                   marginTop: '4px',
-                                  textAlign: message.role === 'user' ? 'right' : 'left',
+                                  textAlign:
+                                    message.role === 'user' ? 'right' : 'left',
                                   display: 'flex',
                                   justifyContent: 'space-between',
                                   alignItems: 'center',
                                 }}
                               >
                                 <span>
-                                  <ClockCircleOutlined style={{ marginRight: '2px' }} />
-                                  {new Date(message.timestamp).toLocaleTimeString()}
+                                  <ClockCircleOutlined
+                                    style={{ marginRight: '2px' }}
+                                  />
+                                  {new Date(
+                                    message.timestamp
+                                  ).toLocaleTimeString()}
                                 </span>
-                                <div 
+                                <div
                                   className="message-actions"
                                   style={{
                                     opacity: 0,
@@ -855,60 +1022,79 @@ export const ChatPage: React.FC = () => {
                                   }}
                                 >
                                   {/* 语音播放按钮 - 只对AI回复且有真实消息ID的消息显示 */}
-                                  {message.role === 'assistant' && message.remoteId && 
-                                   !message.remoteId.startsWith('assistant_') && !message.remoteId.startsWith('error_') &&
-                                   !message.remoteId.startsWith('remote_') && selectedAgent && (
-                                    <VoicePlayer 
-                                      agentId={selectedAgent.id}
-                                      messageId={message.remoteId}
-                                      messageText={message.content}
-                                      language="zh"
-                                      size="small"
-                                      style={{ 
-                                        color: '#666',
-                                        padding: '2px 4px',
-                                        height: 'auto',
-                                        minWidth: 'auto',
-                                      }}
-                                    />
-                                  )}
-                                  
+                                  {message.role === 'assistant' &&
+                                    message.remoteId &&
+                                    !message.remoteId.startsWith(
+                                      'assistant_'
+                                    ) &&
+                                    !message.remoteId.startsWith('error_') &&
+                                    !message.remoteId.startsWith('remote_') &&
+                                    selectedAgent && (
+                                      <VoicePlayer
+                                        agentId={selectedAgent.id}
+                                        messageId={message.remoteId}
+                                        messageText={message.content}
+                                        language="zh"
+                                        size="small"
+                                        style={{
+                                          color: '#666',
+                                          padding: '2px 4px',
+                                          height: 'auto',
+                                          minWidth: 'auto',
+                                        }}
+                                      />
+                                    )}
+
                                   {/* 只有历史消息才显示重新发送和删除按钮 */}
-                                  {message.remoteId && !message.remoteId.startsWith('user_') && 
-                                   !message.remoteId.startsWith('assistant_') && !message.remoteId.startsWith('error_') && (
-                                    <>
-                                      {message.role === 'user' && (
-                                        <Tooltip title="重新发送">
-                                          <Button 
-                                            type="text" 
-                                            size="small" 
-                                            icon={<RedoOutlined />}
-                                            style={{ 
-                                              color: message.role === 'user' ? '#fff' : '#666',
+                                  {message.remoteId &&
+                                    !message.remoteId.startsWith('user_') &&
+                                    !message.remoteId.startsWith(
+                                      'assistant_'
+                                    ) &&
+                                    !message.remoteId.startsWith('error_') && (
+                                      <>
+                                        {message.role === 'user' && (
+                                          <Tooltip title="重新发送">
+                                            <Button
+                                              type="text"
+                                              size="small"
+                                              icon={<RedoOutlined />}
+                                              style={{
+                                                color:
+                                                  message.role === 'user'
+                                                    ? '#fff'
+                                                    : '#666',
+                                                padding: '2px 4px',
+                                                height: 'auto',
+                                                minWidth: 'auto',
+                                              }}
+                                              onClick={() =>
+                                                handleResendMessage(message)
+                                              }
+                                            />
+                                          </Tooltip>
+                                        )}
+                                        <Tooltip title="删除消息">
+                                          <Button
+                                            type="text"
+                                            size="small"
+                                            icon={<DeleteOutlined />}
+                                            style={{
+                                              color:
+                                                message.role === 'user'
+                                                  ? '#fff'
+                                                  : '#666',
                                               padding: '2px 4px',
                                               height: 'auto',
                                               minWidth: 'auto',
                                             }}
-                                            onClick={() => handleResendMessage(message)}
+                                            onClick={() =>
+                                              handleDeleteMessage(message)
+                                            }
                                           />
                                         </Tooltip>
-                                      )}
-                                      <Tooltip title="删除消息">
-                                        <Button 
-                                          type="text" 
-                                          size="small" 
-                                          icon={<DeleteOutlined />}
-                                          style={{ 
-                                            color: message.role === 'user' ? '#fff' : '#666',
-                                            padding: '2px 4px',
-                                            height: 'auto',
-                                            minWidth: 'auto',
-                                          }}
-                                          onClick={() => handleDeleteMessage(message)}
-                                        />
-                                      </Tooltip>
-                                    </>
-                                  )}
+                                      </>
+                                    )}
                                 </div>
                               </div>
                             </div>
@@ -921,17 +1107,25 @@ export const ChatPage: React.FC = () => {
                 </div>
 
                 {/* 输入区域 */}
-                <div style={{ 
-                  padding: '16px', 
-                  backgroundColor: '#fff', 
-                  borderTop: '1px solid #f0f0f0',
-                  flexShrink: 0 
-                }}>
-                  <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
+                <div
+                  style={{
+                    padding: '16px',
+                    backgroundColor: '#fff',
+                    borderTop: '1px solid #f0f0f0',
+                    flexShrink: 0,
+                  }}
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      gap: '8px',
+                      alignItems: 'flex-end',
+                    }}
+                  >
                     <TextArea
                       ref={inputRef}
                       value={inputValue}
-                      onChange={(e) => setInputValue(e.target.value)}
+                      onChange={e => setInputValue(e.target.value)}
                       onKeyPress={handleKeyPress}
                       placeholder="输入消息... (Shift+Enter换行，Enter发送)"
                       autoSize={{ minRows: 1, maxRows: 4 }}
@@ -948,7 +1142,7 @@ export const ChatPage: React.FC = () => {
                       发送
                     </Button>
                   </div>
-                  
+
                   {sending && (
                     <div style={{ marginTop: '8px', textAlign: 'center' }}>
                       <Spin size="small" />
@@ -980,50 +1174,82 @@ export const ChatPage: React.FC = () => {
           footer={[
             <Button key="close" onClick={() => setDebugModalVisible(false)}>
               关闭
-            </Button>
+            </Button>,
           ]}
           width={800}
           style={{ top: 50 }}
         >
           {debugData && debugData.debug_messages && (
             <div style={{ maxHeight: '60vh', overflowY: 'auto' }}>
-              {debugData.debug_messages.messages.map((msg: any, index: number) => (
-                <div key={index} style={{ marginBottom: 16 }}>
-                  <h4 style={{ 
-                    margin: '8px 0', 
-                    fontSize: '14px', 
-                    fontWeight: 'bold',
-                    color: msg.type === 'system' ? '#1890ff' : msg.type === 'human' ? '#52c41a' : '#fa8c16'
-                  }}>
-                    {msg.type === 'system' ? '系统消息' : msg.type === 'human' ? '用户消息' : 'AI回复'}
-                  </h4>
-                  <div 
-                    style={{ 
-                      background: msg.type === 'system' ? '#f0f8ff' : msg.type === 'human' ? '#f6ffed' : '#fff7e6',
-                      padding: '12px', 
-                      borderRadius: '6px',
-                      fontSize: '12px',
-                      lineHeight: '1.6',
-                      fontFamily: msg.type === 'system' ? 'monospace' : 'inherit',
-                      whiteSpace: 'pre-wrap',
-                      wordBreak: 'break-word',
-                      border: `1px solid ${msg.type === 'system' ? '#d4edda' : msg.type === 'human' ? '#b7eb8f' : '#ffd591'}`
-                    }}
-                  >
-                    {msg.content}
+              {debugData.debug_messages.messages.map(
+                (msg: any, index: number) => (
+                  <div key={index} style={{ marginBottom: 16 }}>
+                    <h4
+                      style={{
+                        margin: '8px 0',
+                        fontSize: '14px',
+                        fontWeight: 'bold',
+                        color:
+                          msg.type === 'system'
+                            ? '#1890ff'
+                            : msg.type === 'human'
+                              ? '#52c41a'
+                              : '#fa8c16',
+                      }}
+                    >
+                      {msg.type === 'system'
+                        ? '系统消息'
+                        : msg.type === 'human'
+                          ? '用户消息'
+                          : 'AI回复'}
+                    </h4>
+                    <div
+                      style={{
+                        background:
+                          msg.type === 'system'
+                            ? '#f0f8ff'
+                            : msg.type === 'human'
+                              ? '#f6ffed'
+                              : '#fff7e6',
+                        padding: '12px',
+                        borderRadius: '6px',
+                        fontSize: '12px',
+                        lineHeight: '1.6',
+                        fontFamily:
+                          msg.type === 'system' ? 'monospace' : 'inherit',
+                        whiteSpace: 'pre-wrap',
+                        wordBreak: 'break-word',
+                        border: `1px solid ${msg.type === 'system' ? '#d4edda' : msg.type === 'human' ? '#b7eb8f' : '#ffd591'}`,
+                      }}
+                    >
+                      {msg.content}
+                    </div>
                   </div>
-                </div>
-              ))}
-              
+                )
+              )}
+
               {/* 原始JSON数据显示 */}
-              <div style={{ marginTop: 24, paddingTop: 16, borderTop: '1px solid #f0f0f0' }}>
-                <h4 style={{ margin: '8px 0', fontSize: '14px', fontWeight: 'bold', color: '#666' }}>
+              <div
+                style={{
+                  marginTop: 24,
+                  paddingTop: 16,
+                  borderTop: '1px solid #f0f0f0',
+                }}
+              >
+                <h4
+                  style={{
+                    margin: '8px 0',
+                    fontSize: '14px',
+                    fontWeight: 'bold',
+                    color: '#666',
+                  }}
+                >
                   原始JSON数据
                 </h4>
-                <div 
-                  style={{ 
-                    background: '#f5f5f5', 
-                    padding: '12px', 
+                <div
+                  style={{
+                    background: '#f5f5f5',
+                    padding: '12px',
                     borderRadius: '6px',
                     fontSize: '11px',
                     lineHeight: '1.4',
@@ -1032,7 +1258,7 @@ export const ChatPage: React.FC = () => {
                     wordBreak: 'break-word',
                     border: '1px solid #e0e0e0',
                     maxHeight: '300px',
-                    overflowY: 'auto'
+                    overflowY: 'auto',
                   }}
                 >
                   {JSON.stringify(debugData.debug_messages.messages, null, 2)}
@@ -1057,13 +1283,13 @@ export const ChatPage: React.FC = () => {
         >
           <List
             dataSource={chatHistory}
-            renderItem={(session) => (
+            renderItem={session => (
               <List.Item
                 key={session.id}
                 actions={[
-                  <Button 
+                  <Button
                     key="load"
-                    type="link" 
+                    type="link"
                     onClick={() => {
                       setCurrentSession(session);
                       setMessages(session.messages);
@@ -1073,9 +1299,9 @@ export const ChatPage: React.FC = () => {
                   >
                     加载
                   </Button>,
-                  <Button 
+                  <Button
                     key="delete"
-                    type="link" 
+                    type="link"
                     danger
                     onClick={() => {
                       Modal.confirm({
@@ -1084,7 +1310,9 @@ export const ChatPage: React.FC = () => {
                         okText: '确定',
                         cancelText: '取消',
                         onOk: () => {
-                          const updatedHistory = chatHistory.filter(h => h.id !== session.id);
+                          const updatedHistory = chatHistory.filter(
+                            h => h.id !== session.id
+                          );
                           setChatHistory(updatedHistory);
                           saveChatHistory(updatedHistory);
                           message.success('历史记录已删除');
@@ -1093,7 +1321,7 @@ export const ChatPage: React.FC = () => {
                     }}
                   >
                     删除
-                  </Button>
+                  </Button>,
                 ]}
               >
                 <List.Item.Meta
@@ -1102,13 +1330,17 @@ export const ChatPage: React.FC = () => {
                   description={
                     <div>
                       <Text type="secondary">
-                        {session.messages.length} 条消息 | 
-                        创建时间: {new Date(session.created_at).toLocaleString()}
+                        {session.messages.length} 条消息 | 创建时间:{' '}
+                        {new Date(session.created_at).toLocaleString()}
                       </Text>
                       {session.messages.length > 0 && (
                         <div style={{ marginTop: 4 }}>
                           <Text type="secondary" style={{ fontSize: '12px' }}>
-                            最后一条: {session.messages[session.messages.length - 1]?.content?.slice(0, 50)}...
+                            最后一条:{' '}
+                            {session.messages[
+                              session.messages.length - 1
+                            ]?.content?.slice(0, 50)}
+                            ...
                           </Text>
                         </div>
                       )}

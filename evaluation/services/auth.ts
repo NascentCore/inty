@@ -71,7 +71,7 @@ class AuthService {
     const token = this.getToken();
     if (token) {
       return {
-        'Authorization': `Bearer ${token}`
+        Authorization: `Bearer ${token}`,
       };
     }
     return {};

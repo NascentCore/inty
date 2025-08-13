@@ -5,18 +5,18 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Button, Tooltip, message } from 'antd';
-import { 
-  SoundOutlined, 
-  LoadingOutlined, 
+import {
+  SoundOutlined,
+  LoadingOutlined,
   PauseOutlined,
-  ExclamationCircleOutlined 
+  ExclamationCircleOutlined,
 } from '@ant-design/icons';
 import { chatApi } from '../../services/api';
 
 interface VoicePlayerProps {
   // 智能体ID
   agentId: string;
-  // 消息ID 
+  // 消息ID
   messageId: string;
   // 消息文本内容
   messageText: string;
@@ -43,7 +43,7 @@ class GlobalAudioManager {
     if (this.currentAudio && this.currentAudio !== audio) {
       this.currentAudio.pause();
       this.currentAudio.currentTime = 0;
-      
+
       // 通知之前的播放器状态变化
       if (this.currentPlayerId) {
         const prevListener = this.listeners.get(this.currentPlayerId);
@@ -75,7 +75,10 @@ class GlobalAudioManager {
     return this.currentPlayerId === playerId;
   }
 
-  registerListener(playerId: string, listener: (isPlaying: boolean) => void): void {
+  registerListener(
+    playerId: string,
+    listener: (isPlaying: boolean) => void
+  ): void {
     this.listeners.set(playerId, listener);
   }
 
@@ -89,7 +92,7 @@ const globalAudioManager = new GlobalAudioManager();
 export const VoicePlayer: React.FC<VoicePlayerProps> = ({
   agentId,
   messageId,
-  
+
   language = 'zh',
   size = 'small',
   showText = false,
@@ -100,7 +103,7 @@ export const VoicePlayer: React.FC<VoicePlayerProps> = ({
   const [isPlaying, setIsPlaying] = useState(false);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [hasError, setHasError] = useState(false);
-  
+
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const playerId = useRef(`${agentId}-${messageId}`).current;
   const isUnmountedRef = useRef(false);
@@ -126,9 +129,13 @@ export const VoicePlayer: React.FC<VoicePlayerProps> = ({
     try {
       setIsLoading(true);
       setHasError(false);
-      
-      const response = await chatApi.generateVoice(agentId, messageId, language);
-      
+
+      const response = await chatApi.generateVoice(
+        agentId,
+        messageId,
+        language
+      );
+
       if (!response.audio_url) {
         throw new Error('语音生成失败：未返回音频URL');
       }
@@ -149,7 +156,7 @@ export const VoicePlayer: React.FC<VoicePlayerProps> = ({
   const playVoice = async () => {
     try {
       let urlToPlay = audioUrl;
-      
+
       // 如果没有缓存的音频URL，先生成
       if (!urlToPlay) {
         urlToPlay = await generateVoice();
@@ -158,7 +165,7 @@ export const VoicePlayer: React.FC<VoicePlayerProps> = ({
       // 创建或重用音频元素
       if (!audioRef.current) {
         audioRef.current = new Audio();
-        
+
         // 音频事件监听
         audioRef.current.addEventListener('ended', () => {
           if (!isUnmountedRef.current) {
@@ -208,7 +215,6 @@ export const VoicePlayer: React.FC<VoicePlayerProps> = ({
       globalAudioManager.play(audioRef.current, playerId);
       setIsPlaying(true);
       onPlayStateChange?.(true);
-
     } catch (error) {
       // 错误已经在generateVoice中处理
     }
@@ -224,7 +230,7 @@ export const VoicePlayer: React.FC<VoicePlayerProps> = ({
   // 点击处理
   const handleClick = () => {
     if (isLoading) return;
-    
+
     if (isPlaying) {
       stopVoice();
     } else {
@@ -237,7 +243,7 @@ export const VoicePlayer: React.FC<VoicePlayerProps> = ({
     return () => {
       // 标记组件即将卸载
       isUnmountedRef.current = true;
-      
+
       if (audioRef.current) {
         // 静默停止音频，避免触发错误事件
         audioRef.current.removeEventListener('error', () => {});
@@ -245,7 +251,7 @@ export const VoicePlayer: React.FC<VoicePlayerProps> = ({
         audioRef.current.removeEventListener('pause', () => {});
         audioRef.current.removeEventListener('ended', () => {});
         audioRef.current.removeEventListener('loadstart', () => {});
-        
+
         try {
           audioRef.current.pause();
           audioRef.current.src = '';

@@ -7,7 +7,12 @@
 // 基础类型
 // =============================================================================
 
-export type EvaluationStatus = 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED' | 'CANCELLED';
+export type EvaluationStatus =
+  | 'PENDING'
+  | 'RUNNING'
+  | 'COMPLETED'
+  | 'FAILED'
+  | 'CANCELLED';
 
 export type AgentGender = 'MALE' | 'FEMALE' | 'OTHER';
 
