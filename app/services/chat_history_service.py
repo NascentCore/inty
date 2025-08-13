@@ -8,7 +8,8 @@ from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from langchain_postgres import PostgresChatMessageHistory
 
 from app.core.config import global_config_loaded_from_config_yaml
-from app.utils.langchain import CHAT_HISTORY_TABLE_NAME, LCChatHistory
+from app.models.chat_history import TABLE_NAME as CHAT_HISTORY_TABLE_NAME
+from app.utils.langchain import LCChatHistory
 
 logger = logging.getLogger(__name__)
 
