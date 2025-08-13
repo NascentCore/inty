@@ -3,12 +3,11 @@
  * 支持多个智能体的对话记录展示，包含全部展开/收起功能
  */
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import {
   Card,
   Collapse,
   Button,
-  Space,
   Typography,
   Avatar,
   Tag,
@@ -28,20 +27,18 @@ import {
   UserOutlined,
   CheckCircleOutlined,
   ExclamationCircleOutlined,
-  ClockCircleOutlined,
   EyeOutlined,
 } from "@ant-design/icons";
 import type { EvaluationSession, EvaluationResult } from "../../types";
 
 const { Text, Paragraph } = Typography;
-const { Panel } = Collapse;
+const {} = Collapse;
 
 interface MultiAgentChatDisplayProps {
   session: EvaluationSession;
   results: EvaluationResult[];
   loading?: boolean;
   showControls?: boolean;
-  onViewDetail?: (result: EvaluationResult) => void;
 }
 
 interface AgentResultGroup {
@@ -59,7 +56,6 @@ export const MultiAgentChatDisplay: React.FC<MultiAgentChatDisplayProps> = ({
   results,
   loading = false,
   showControls = true,
-  onViewDetail,
 }) => {
   // 展开/收起状态
   const [expandedKeys, setExpandedKeys] = useState<string[]>([]);

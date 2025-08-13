@@ -27,7 +27,7 @@ interface UseFormReturn<T> {
   clearError: (field: keyof T) => void;
   clearAllErrors: () => void;
   setTouched: (field: keyof T, touched?: boolean) => void;
-  handleSubmit: (e?: React.FormEvent) => Promise<void>;
+  handleSubmit: (e?: FormEvent) => Promise<void>;
   reset: (newValues?: Partial<T>) => void;
 
   // 辅助方法
@@ -124,7 +124,7 @@ export function useForm<T extends Record<string, any>>(
 
   // 表单提交
   const handleSubmit = useCallback(
-    async (e?: React.FormEvent) => {
+    async (e?) => {
       if (e) {
         e.preventDefault();
       }

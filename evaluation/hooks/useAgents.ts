@@ -3,7 +3,7 @@
  * 提供智能体的CRUD操作和缓存管理
  */
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { message } from "antd";
 import api from "../services/api";
 import type {
@@ -207,7 +207,7 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
             // agentData.avatar = uploadResult.url;
 
             // 暂时移除avatar字段，避免类型错误
-            const { avatar, ...restData } = agentData;
+            const { ...restData } = agentData;
             agentData = restData;
           } catch (error) {
             console.error("头像上传失败:", error);
@@ -255,7 +255,7 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
             // updateData.avatar = uploadResult.url;
 
             // 暂时移除avatar字段
-            const { avatar, ...restData } = updateData;
+            const { ...restData } = updateData;
             updateData = restData;
           } catch (error) {
             console.error("头像上传失败:", error);
