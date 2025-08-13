@@ -6,7 +6,6 @@ import { authService } from './auth';
 import type {
   Agent,
   AgentCreateRequest,
-  AgentUpdateRequest,
   EvaluationSession,
   EvaluationSessionCreateRequest,
   EvaluationResult,
@@ -20,6 +19,8 @@ import type {
   ApiResponse,
   PaginatedResponse,
 } from '../types';
+
+const UTC_START_TIMESTAMP = "1970-01-01T00:00:00Z";
 
 // =============================================================================
 // 基础API配置
@@ -78,12 +79,31 @@ class ApiClient {
     try {
       const response = await fetch(url, config);
 
+      class ApiError extends Error {
+  public status: number;
+  public statusText: string;
+  public errorData: any;
+
+  constructor(message: string, status: number, statusText: string, errorData: any) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+    this.statusText = statusText;
+    this.errorData = errorData;
+    // Set the prototype explicitly.
+    Object.setPrototypeOf(this, ApiError.prototype);
+  }
+}
+
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(
+        throw new ApiError(
           errorData.detail ||
           errorData.message ||
-          `HTTP ${response.status}: ${response.statusText}`
+          `HTTP ${response.status}: ${response.statusText}`,
+          response.status,
+          response.statusText,
+          errorData
         );
       }
 
@@ -666,7 +686,8 @@ export const chatApi = {
     cleared_count: number;
   }> =>
     apiClient.post(`/chats/agents/${agentId}/clear-messages`, {
-      message_id: messageId ? parseInt(messageId) : undefined
+      message_id: messageId ? parseInt(messageId) : undefined,
+      timestamp: messageId ? undefined : UTC_START_TIMESTAMP
     }),
 
   // 删除聊天会话
