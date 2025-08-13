@@ -2,7 +2,6 @@
  * 评测系统主应用组件
  * 包含路由管理、导航菜单、全局状态管理
  */
-
 import React, { useState, useEffect } from 'react';
 import {
   Layout,
@@ -107,8 +106,6 @@ export const App: React.FC = () => {
       description: '查询会话提示词和调试信息',
     },
   ];
-
-
 
   // 渲染页面内容
   const renderPageContent = () => {
