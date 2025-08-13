@@ -21,7 +21,6 @@ from app.middleware.error_handler import (
     validation_error_handler,
     validation_exception_handler,
 )
-from app.services.keep_talking_service import keep_talking_service
 
 init_logger()
 
@@ -112,13 +111,6 @@ async def startup_event():
             break  # 只需要一次初始化
         logger.info("Agent初始化完成")
 
-        # 根据配置决定是否启动Keep Talking服务
-        if global_config_loaded_from_config_yaml.keep_talking.enabled:
-            logger.info("正在启动Keep Talking服务...")
-            await keep_talking_service.start()
-            logger.info("Keep Talking服务已启动")
-        else:
-            logger.info("Keep Talking服务已禁用，跳过启动")
     except Exception as e:
         logger.error(f"应用启动过程中出错: {str(e)}")
 
@@ -231,13 +223,6 @@ async def _preload_database_tables(db: AsyncSession):
 async def shutdown_event():
     """应用关闭事件"""
     try:
-        # 只有在服务启用时才需要停止
-        if global_config_loaded_from_config_yaml.keep_talking.enabled:
-            logger.info("正在停止Keep Talking服务...")
-            await keep_talking_service.stop()
-            logger.info("Keep Talking服务已停止")
-        else:
-            logger.info("Keep Talking服务未启用，无需停止")
 
         logger.info("正在停止Agent管理器...")
         agent_manager.stop()

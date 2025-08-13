@@ -21,7 +21,6 @@ from app.schemas.response import BusinessErrorCode, create_business_error_respon
 from app.services import agent_service, chat_history_service, chat_service
 from app.services.async_voice_service import async_voice_service
 from app.services.chat_service import generate_session_id
-from app.services.keep_talking_service import keep_talking_service
 from app.services.subscription_service import subscription_service
 from app.services.voice_cache_service import voice_cache_service
 from app.services.voice_cleanup_service import voice_cleanup_service
@@ -107,98 +106,12 @@ async def get_agent_status(
     }
 
 
-# TODO: Remove this feature.
-@router.get("/keep-talking/status")
-async def get_keep_talking_status(
-    current_user: schemas.User = Depends(deps.get_current_active_user),
-):
-    """
-    Get Keep Talking service status
-    """
-    return {
-        "enabled": global_config_loaded_from_config_yaml.keep_talking.enabled,
-        "running": keep_talking_service._running,
-        "check_interval": keep_talking_service.check_interval,
-        "max_idle_time": keep_talking_service.max_idle_time,
-        "max_keep_talking_messages": keep_talking_service.max_keep_talking_messages,
-        "active_sessions_count": len(keep_talking_service._keep_talking_counts),
-        "keep_talking_counts": keep_talking_service._keep_talking_counts,
-    }
 
 
-@router.post("/keep-talking/start")
-async def start_keep_talking_service(
-    current_user: schemas.User = Depends(deps.get_current_active_user),
-):
-    """
-    Start the Keep Talking service
-    """
-    try:
-        if keep_talking_service._running:
-            return {
-                "status": "info",
-                "message": "Keep Talking service is already running",
-                "running": True,
-            }
-
-        await keep_talking_service.start()
-        return {
-            "status": "success",
-            "message": "Keep Talking service started",
-            "running": keep_talking_service._running,
-        }
-    except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Failed to start service: {str(e)}"
-        )
 
 
-@router.post("/keep-talking/stop")
-async def stop_keep_talking_service(
-    current_user: schemas.User = Depends(deps.get_current_active_user),
-):
-    """
-    Stop the Keep Talking service
-    """
-    try:
-        if not keep_talking_service._running:
-            return {
-                "status": "info",
-                "message": "Keep Talking service is not running",
-                "running": False,
-            }
-
-        await keep_talking_service.stop()
-        return {
-            "status": "success",
-            "message": "Keep Talking service stopped",
-            "running": keep_talking_service._running,
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to stop service: {str(e)}")
 
 
-@router.post("/keep-talking/check")
-async def trigger_keep_talking_check(
-    current_user: schemas.User = Depends(deps.get_current_active_user),
-):
-    """
-    Manually trigger Keep Talking check (for testing and debugging)
-    """
-    try:
-        if not keep_talking_service._running:
-            raise HTTPException(
-                status_code=400, detail="Keep Talking service is not running"
-            )
-
-        await keep_talking_service._check_idle_chats()
-        return {
-            "status": "success",
-            "message": "Keep Talking check completed",
-            "timestamp": time.time(),
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Check failed: {str(e)}")
 
 
 @router.post("/agents/initialize")
@@ -561,9 +474,6 @@ async def agent_chat_completions(
                 extra_data={"used_count": used_count, "daily_limit": daily_limit},
             )
 
-        # 用户发送新消息时，重置keep_talking计数
-        keep_talking_service.reset_keep_talking_count(chat.id)
-        logger.debug(f"重置会话 {chat.id} 的keep_talking计数")
 
         if request.stream:
             return StreamingResponse(

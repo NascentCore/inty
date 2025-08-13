@@ -15,7 +15,6 @@ from app.core.config import (
     AgentConfig,
     GCSConfig,
     FirebaseConfig,
-    KeepTalkingConfig,
     GooglePlayConfig,
     ElevenLabsConfig,
     Config,
@@ -269,27 +268,6 @@ class TestFirebaseConfig:
         assert config.service_account_path == "path/to/firebase-key.json"
 
 
-class TestKeepTalkingConfig:
-    def test_keep_talking_config_defaults(self):
-        """Test KeepTalkingConfig default values"""
-        config = KeepTalkingConfig()
-        assert config.enabled is False
-        assert config.check_interval == 300
-        assert config.max_idle_time == 1800
-        assert config.max_keep_talking_messages == 3
-
-    def test_keep_talking_config_custom_values(self):
-        """Test KeepTalkingConfig with custom values"""
-        config = KeepTalkingConfig(
-            enabled=True,
-            check_interval=600,
-            max_idle_time=3600,
-            max_keep_talking_messages=5,
-        )
-        assert config.enabled is True
-        assert config.check_interval == 600
-        assert config.max_idle_time == 3600
-        assert config.max_keep_talking_messages == 5
 
 
 class TestGooglePlayConfig:
@@ -380,7 +358,6 @@ class TestConfig:
         gcs_config = GCSConfig(bucket="test", credentials="test")
         google_search_config = GoogleSearchConfig(api_key="test", cse_id="test")
         firebase_config = FirebaseConfig(service_account_path="test")
-        keep_talking_config = KeepTalkingConfig()
         google_play_config = GooglePlayConfig(
             service_account_key="test", package_name="com.test.app"
         )
@@ -398,7 +375,6 @@ class TestConfig:
             gcs=gcs_config,
             google_search=google_search_config,
             firebase=firebase_config,
-            keep_talking=keep_talking_config,
             google_play=google_play_config,
             elevenlabs=elevenlabs_config,
         )
@@ -414,7 +390,6 @@ class TestConfig:
         assert config.gcs == gcs_config
         assert config.google_search == google_search_config
         assert config.firebase == firebase_config
-        assert config.keep_talking == keep_talking_config
         assert config.google_play == google_play_config
         assert config.elevenlabs == elevenlabs_config
 
@@ -445,7 +420,6 @@ class TestLoadConfig:
             "gcs": {"bucket": "test-bucket", "credentials": "test-credentials"},
             "google_search": {"api_key": "test-key", "cse_id": "test-cse"},
             "firebase": {"service_account_path": "test-path"},
-            "keep_talking": {},
             "google_play": {
                 "service_account_key": "test-key",
                 "package_name": "com.test.app",

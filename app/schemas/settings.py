@@ -9,7 +9,7 @@ class SettingsBase(BaseModel):
 
     language: str = "en"
     voice_enabled: bool = True
-    keep_talking: bool = True
+    # keep_talking 字段已弃用，不再在 API 中暴露
 
 
 class SettingsCreate(SettingsBase):
@@ -23,7 +23,7 @@ class SettingsUpdate(BaseModel):
 
     language: Optional[str] = None
     voice_enabled: Optional[bool] = None
-    keep_talking: Optional[bool] = None
+    # keep_talking 字段已弃用，不再在 API 中暴露
 
 
 class SettingsInDB(SettingsBase):
