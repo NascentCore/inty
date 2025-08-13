@@ -2,6 +2,9 @@ app:
   # name: "InTy"
   # debug_messages: true
   backend_cors_origins: ["http://localhost:3000","http://localhost:8000"]
+  limits:
+    free_user_image_gen_daily_limit: 4
+    free_user_chat_total_limit: 100
 
 security:
   secret_key: "your-secret-key-here"
