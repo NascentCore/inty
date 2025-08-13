@@ -1,5 +1,5 @@
 import sys
-from dataclasses import dataclass
+from dataclasses import Field, dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
@@ -69,9 +69,17 @@ class AppConfig:
     api_v1_prefix: str = "/api/v1"
     backend_cors_origins: List[AnyHttpUrl] = None
 
+    @dataclass
+    class LimitsConfig:
+        free_user_image_gen_daily_limit: int = 4
+
+    limits: LimitsConfig = None
+
     def __post_init__(self):
         if self.backend_cors_origins is None:
             self.backend_cors_origins = []
+        if self.limits is None:
+            self.limits = self.LimitsConfig()
 
 
 @dataclass
@@ -171,8 +179,13 @@ def load_config(path: str) -> Config:
     with open(path, "r", encoding="utf-8") as f:
         data = yaml.safe_load(f)
 
+    # Handle nested app config with limits
+    app_data = data.get("app", {})
+    if "limits" in app_data and isinstance(app_data["limits"], dict):
+        app_data["limits"] = AppConfig.LimitsConfig(**app_data["limits"])
+
     return Config(
-        app=AppConfig(**data.get("app", {})),
+        app=AppConfig(**app_data),
         security=SecurityConfig(**data.get("security", {})),
         database=DatabaseSettings(**data.get("database", {})),
         google_oauth=GoogleOAuthConfig(**data.get("google_oauth", {})),
