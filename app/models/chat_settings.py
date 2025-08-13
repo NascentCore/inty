@@ -15,7 +15,7 @@ class ChatSettings(Base):
     id = Column(String, primary_key=True, index=True)
     language = Column(String, default="en")
     voice_enabled = Column(Boolean, default=True)  # 个性化语音自动播放开关
-    keep_talking = Column(Boolean, default=True)
+    keep_talking = Column(Boolean, default=True)  # DEPRECATED: 该功能已弃用，保留字段仅为向后兼容
     style_prompt = Column(Text, nullable=True, comment="风格提示词，仅订阅用户可设置")
     premium_mode = Column(
         Boolean, default=False, comment="高级模式开关，仅订阅用户可设置"

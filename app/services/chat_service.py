@@ -626,7 +626,6 @@ async def get_or_create_chat_settings(
             chat_id=chat_id,
             language="zh",  # 默认中文
             voice_enabled=False,  # 默认不启用语音自动播放
-            keep_talking=True,
         )
 
         db.add(db_settings)

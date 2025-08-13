@@ -46,7 +46,7 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 --log-level debug
 │ • loads config, logging                                            │
 │ • CORS & error middleware                                          │
 │ • startup: init Firebase, cache_service, background_task_service,  │
-│   keep_talking_service, agent_manager                              │
+│   agent_manager                                                     │
 └─────────────────┬──────────────────────────────────────────────────┘
                   │
                   ▼
@@ -82,7 +82,6 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 --log-level debug
       │  Support services                          │
       │  • cache_service (in‑memory cache)         │
       │  • background_task_service (thread pool)   │
-      │  • keep_talking_service (idle chat monitor)│
       └────────────────────────────────────────────┘
                 │
                 ▼

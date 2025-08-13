@@ -122,12 +122,6 @@ class FirebaseConfig:
     service_account_path: str
 
 
-@dataclass
-class KeepTalkingConfig:
-    enabled: bool = False  # 默认不启用keep_talking服务
-    check_interval: int = 300  # 5分钟检查一次
-    max_idle_time: int = 1800  # 30分钟没有回复则发送keep_talking消息
-    max_keep_talking_messages: int = 3  # 最多发送3条keep_talking消息
 
 
 @dataclass
@@ -173,7 +167,6 @@ class Config:
     gcs: GCSConfig
     google_search: GoogleSearchConfig
     firebase: FirebaseConfig
-    keep_talking: KeepTalkingConfig
     google_play: GooglePlayConfig
     elevenlabs: ElevenLabsConfig
 
@@ -204,7 +197,6 @@ def load_config(path: str) -> Config:
         gcs=GCSConfig(**data.get("gcs", {})),
         google_search=GoogleSearchConfig(**data.get("google_search", {})),
         firebase=FirebaseConfig(**data.get("firebase", {})),
-        keep_talking=KeepTalkingConfig(**data.get("keep_talking", {})),
         google_play=GooglePlayConfig(**data.get("google_play", {})),
         elevenlabs=ElevenLabsConfig(**data.get("elevenlabs", {})),
     )

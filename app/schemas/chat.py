@@ -61,7 +61,7 @@ class ChatSettingsBase(BaseModel):
 
     language: str = "en"
     voice_enabled: bool = True  # 个性化语音自动播放开关
-    keep_talking: bool = True
+    # keep_talking 字段已弃用，不再在 API 中暴露
     style_prompt: Optional[str] = None  # 风格提示词，仅订阅用户可设置
     premium_mode: bool = False  # 高级模式开关，仅订阅用户可设置
 
@@ -77,7 +77,7 @@ class ChatSettingsUpdate(ChatSettingsBase):
 
     language: Optional[str] = None
     voice_enabled: Optional[bool] = None  # 个性化语音自动播放开关
-    keep_talking: Optional[bool] = None
+    # keep_talking 字段已弃用，不再在 API 中暴露
     style_prompt: Optional[str] = None  # 风格提示词，仅订阅用户可设置
     premium_mode: Optional[bool] = None  # 高级模式开关，仅订阅用户可设置
 

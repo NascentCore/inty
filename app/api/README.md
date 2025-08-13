@@ -439,7 +439,6 @@ GET /api/v1/chats/{agent_id}/settings
   "data": {
     "language": "string",
     "voice_enabled": "boolean",
-    "keep_talking": "boolean",
     "agent": {
       "id": "string",
       "name": "string",
@@ -461,7 +460,6 @@ PUT /api/v1/chats/{agent_id}/settings
 {
   "language": "string",
   "voice_enabled": "boolean",
-  "keep_talking": "boolean"
 }
 ```
 
@@ -764,7 +762,6 @@ GET /api/v1/settings
   "data": {
     "language": "string",
     "voice_enabled": "boolean",
-    "keep_talking": "boolean",
     "version": "string",
     "support_email": "string"
   }
@@ -782,7 +779,6 @@ PUT /api/v1/settings
 ```json
 {
   "language": "string",
-  "keep_talking": "boolean",
   "voice_enabled": "boolean"
 }
 ```

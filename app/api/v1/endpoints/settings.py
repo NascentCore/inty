@@ -68,11 +68,6 @@ def update_settings_endpoint(
                     if settings_in.voice_enabled is not None
                     else True
                 ),
-                keep_talking=(
-                    settings_in.keep_talking
-                    if settings_in.keep_talking is not None
-                    else True
-                ),
             )
             logger.info(
                 f"Creating new user settings: user_id={current_user.id}, settings={settings_create.dict()}"
