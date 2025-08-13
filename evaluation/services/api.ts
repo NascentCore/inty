@@ -6,7 +6,6 @@ import { authService } from './auth';
 import type {
   Agent,
   AgentCreateRequest,
-  AgentUpdateRequest,
   EvaluationSession,
   EvaluationSessionCreateRequest,
   EvaluationResult,
@@ -20,6 +19,8 @@ import type {
   ApiResponse,
   PaginatedResponse,
 } from '../types';
+
+const UTC_START_TIMESTAMP = "1970-01-01T00:00:00Z";
 
 // =============================================================================
 // 基础API配置
@@ -685,7 +686,8 @@ export const chatApi = {
     cleared_count: number;
   }> =>
     apiClient.post(`/chats/agents/${agentId}/clear-messages`, {
-      message_id: messageId ? parseInt(messageId) : undefined
+      message_id: messageId ? parseInt(messageId) : undefined,
+      timestamp: messageId ? undefined : UTC_START_TIMESTAMP
     }),
 
   // 删除聊天会话
