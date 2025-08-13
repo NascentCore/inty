@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app import schemas
+from app.core.config import global_config_loaded_from_config_yaml
 from app.services.superuser_check import SUPERUSER_LIMIT_CHECK_RESULT, is_superuser
 from app.models.subscription import (
     SubscriptionPlan,
@@ -871,6 +872,8 @@ class SubscriptionService:
             # 获取用户的具体限制
             if subscription_status.is_subscribed:
                 # 付费用户：使用订阅计划中的限制
+                # TODO: 写死 SubscriptionPlan，与 Google Play 中的订阅配置保持一致
+                # 上线后，再未来新版将 SubscriptionPlan 改为从数据库存取。
                 background_limit = getattr(
                     subscription_status, "background_generation_limit_per_day", -1
                 )
@@ -879,9 +882,8 @@ class SubscriptionService:
                 if background_limit == -1:
                     return True, today_generation_count, -1
             else:
-                # 免费用户：从动态配置中读取每日限制
-                background_limit = await system_settings_service.get_setting(
-                    db, "free_user_background_generation_limit", 3
+                background_limit = (
+                    global_config_loaded_from_config_yaml.app.limits.free_user_image_gen_daily_limit
                 )
 
             # 检查是否超出限制
