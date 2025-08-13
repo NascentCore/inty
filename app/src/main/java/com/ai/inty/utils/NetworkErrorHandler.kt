@@ -27,7 +27,7 @@ object NetworkErrorHandler {
 
         // 只有在网络连接正常时才显示错误提示
         if (networkManager.shouldShowNetworkError()) {
-            showToast(networkManager.getNetworkErrorMessage(errorMessage))
+            showToast(errorMessage)
         } else {
             // 网络未连接时，只在日志中记录，不显示 Toast
             EasyLog.log(
@@ -44,21 +44,20 @@ object NetworkErrorHandler {
      * @param logError 是否记录错误日志
      */
     fun handleNetworkException(
+        isNetworkConnected: Boolean,
         exception: Exception,
         showToast: (String) -> Unit,
         logError: Boolean = true,
     ) {
-        val networkManager = NetworkManager.getInstance()
-
         if (logError) {
             EasyLog.log("Network exception: ${exception.message}", priority = EasyLog.ERROR)
             EasyLog.log(exception)
         }
 
         // 只有在网络连接正常时才显示错误提示
-        if (networkManager.shouldShowNetworkError()) {
+        if (isNetworkConnected) {
             val errorMessage = getErrorMessageFromException(exception)
-            showToast(networkManager.getNetworkErrorMessage(errorMessage))
+            showToast(errorMessage)
         } else {
             // 网络未连接时，只在日志中记录，不显示 Toast
             EasyLog.log(
@@ -89,6 +88,11 @@ object NetworkErrorHandler {
 
             exception.message?.contains("connection", ignoreCase = true) == true ->
                 "Connection failed, please check your network settings"
+
+            // This is to work around the limitations of the error received from the server side.
+            // As the server side does not allow enum like error cases.
+            exception.message?.contains("Daily image generation limit reached", ignoreCase = true) == true ->
+                exception.message!!
 
             else -> "Network request failed"
         }

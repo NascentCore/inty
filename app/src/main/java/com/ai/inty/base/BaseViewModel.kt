@@ -57,6 +57,7 @@ open class BaseViewModel : ViewModel() {
      */
     fun handleNetworkException(exception: Exception) {
         NetworkErrorHandler.handleNetworkException(
+            isNetworkConnected = NetworkManager.getInstance().isNetworkConnected(),
             exception = exception,
             showToast = { message -> showSnackbar(message) }
         )

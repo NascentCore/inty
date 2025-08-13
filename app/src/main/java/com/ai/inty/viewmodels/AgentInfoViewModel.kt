@@ -47,7 +47,6 @@ class AgentInfoViewModel: BaseActivityViewModel() {
                 }
             } catch (e: Exception) {
                 EasyLog.log("setAgentID exception: ${e.message}", priority = EasyLog.ERROR)
-//                handleNetworkException(e)
             }
         }
     }
@@ -77,7 +76,6 @@ class AgentInfoViewModel: BaseActivityViewModel() {
                 }
             } catch (e: Exception) {
                 EasyLog.log("refreshAgentData exception: ${e.message}", priority = EasyLog.ERROR)
-//                handleNetworkException(e)
             }
         }
     }

@@ -301,14 +301,12 @@ class ChatViewModel : BaseActivityViewModel() {
                         conversations.addAll(userInitiatedConversations)
                         EasyLog.log("Filtered conversations: ${userInitiatedConversations.size} out of ${result.data.size}")
                     }
-
                     is HttpResult.Failure -> {
-//                        showNetworkAwareError(result.message)
+                        EasyLog.log("getConversations failed: ${result.message}", priority = EasyLog.ERROR)
                     }
                 }
             } catch (e: Exception) {
                 EasyLog.log("getConversations exception: ${e.message}", priority = EasyLog.ERROR)
-//                handleNetworkException(e)
             }
         }
     }

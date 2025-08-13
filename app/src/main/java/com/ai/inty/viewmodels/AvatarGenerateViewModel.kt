@@ -6,6 +6,7 @@ import com.ai.inty.beans.GenerateBackgroundResponse
 import com.ai.inty.net.IAgentApi
 import com.ai.inty.utils.AvatarManager
 import com.ai.inty.utils.NetworkErrorHandler
+import com.ai.inty.utils.NetworkManager
 import com.inty.utils.log.EasyLog
 import com.therouter.TheRouter
 import kotlinx.coroutines.Dispatchers
@@ -101,15 +102,18 @@ class AvatarGenerateViewModel : BaseViewModel() {
 
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    withContext(Dispatchers.Main) {
-                        NetworkErrorHandler.handleNetworkException(e, { errorMessage ->
+                    NetworkErrorHandler.handleNetworkException(
+                        isNetworkConnected = NetworkManager.getInstance().isNetworkConnected(),
+                        exception = e,
+                        showToast = {
+                            errorMessage ->
                             AvatarManager.setGenerationError(errorMessage)
                             _errorMessage.value = errorMessage
-                        })
-                        EasyLog.log("Ai头像生成异常: ${e.message}", EasyLog.ERROR)
-                        _isLoading.value = false
-                        clearError()
-                    }
+                        },
+                    )
+                    EasyLog.log("Ai头像生成异常: ${e.message}", EasyLog.ERROR)
+                    _isLoading.value = false
+                    clearError()
                 }
             }
         }

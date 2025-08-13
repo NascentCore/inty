@@ -233,20 +233,6 @@ class NetworkManager private constructor() {
     }
 
     /**
-     * 获取网络错误提示信息
-     * 根据网络状态返回合适的错误信息
-     * @param originalMessage 原始错误信息
-     * @return 处理后的错误信息
-     */
-    fun getNetworkErrorMessage(originalMessage: String): String {
-        return if (isNetworkConnected()) {
-            originalMessage
-        } else {
-            "Network connection unavailable, please check your network settings"
-        }
-    }
-
-    /**
      * 释放资源
      */
     fun release() {

@@ -179,7 +179,6 @@ class MainViewModel : BaseActivityViewModel() {
                     }
 
                     is HttpResult.Failure -> {
-//                        showNetworkAwareError(result.message)
                         // 如果加载失败，回退页码
                         if (currentPage > 1) {
                             currentPage--
@@ -187,7 +186,6 @@ class MainViewModel : BaseActivityViewModel() {
                     }
                 }
             } catch (e: Exception) {
-//                handleNetworkException(e)
                 // 如果加载失败，回退页码
                 if (currentPage > 1) {
                     currentPage--
@@ -276,11 +274,9 @@ class MainViewModel : BaseActivityViewModel() {
                     EasyLog.ERROR
                 )
                 val errorMessage = handleHttpException(e, "user")
-//                showNetworkAwareError(errorMessage)
             } catch (e: Exception) {
                 EasyLog.log("getUserProfile exception: ${e.message}", priority = EasyLog.ERROR)
                 EasyLog.log(e)
-//                handleNetworkException(e)
             }
         }
     }
@@ -325,14 +321,12 @@ class MainViewModel : BaseActivityViewModel() {
                         sysMsgs.clear()
                         sysMsgs.addAll(result.data.list)
                     }
-
                     is HttpResult.Failure -> {
-//                        showNetworkAwareError(result.message)
+                        EasyLog.log("getSysMsgs failed: ${result.message}", priority = EasyLog.ERROR)
                     }
                 }
             } catch (e: Exception) {
                 EasyLog.log("getSysMsgs exception: ${e.message}", priority = EasyLog.ERROR)
-//                handleNetworkException(e)
             }
         }
     }
@@ -567,7 +561,6 @@ class MainViewModel : BaseActivityViewModel() {
                     priority = EasyLog.ERROR
                 )
                 EasyLog.log(e)
-//                handleNetworkException(e)
                 // If loading failed, rollback page counter
                 if (currentUserAgentsPage > 0) {
                     currentUserAgentsPage--
