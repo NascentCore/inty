@@ -2,7 +2,7 @@
  * 此处代码是评测系统调用 Inty 后端 API
  */
 
-import { authService } from './auth';
+import { authService } from "./auth";
 import type {
   Agent,
   AgentCreateRequest,
@@ -18,7 +18,7 @@ import type {
   ComparisonResult,
   ApiResponse,
   PaginatedResponse,
-} from '../types';
+} from "../types";
 
 const UTC_START_TIMESTAMP = "1970-01-01T00:00:00Z";
 
@@ -30,19 +30,21 @@ class ApiClient {
   private baseURL: string;
   private headers: Record<string, string>;
 
-  constructor(baseURL: string = process.env.REACT_APP_API_BASE_URL || '/api/v1') {
+  constructor(
+    baseURL: string = process.env.REACT_APP_API_BASE_URL || "/api/v1",
+  ) {
     this.baseURL = baseURL;
     // This is the default headers for all requests.
     // Some API endpoints needs different content header, like upload avatar,
     // needs multipart/form-data.
     this.headers = {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
     };
   }
 
   private async request<T>(
     endpoint: string,
-    options: RequestInit = {}
+    options: RequestInit = {},
   ): Promise<T> {
     const url = `${this.baseURL}${endpoint}`;
 
@@ -58,12 +60,12 @@ class ApiClient {
     if (options.body instanceof FormData) {
       config.headers = {
         ...options.headers, // 优先使用传入的headers
-        ...this.headers,    // 然后合并默认headers（除了Content-Type）
+        ...this.headers, // 然后合并默认headers（除了Content-Type）
       };
       // 删除Content-Type，让浏览器自动设置；覆盖默认的 Content-Type: application/json
       // TODO: 是否仅支持浏览器使用，代码中使用该 API 是否会有问题
-      if (config.headers && typeof config.headers === 'object') {
-        delete (config.headers as any)['Content-Type'];
+      if (config.headers && typeof config.headers === "object") {
+        delete (config.headers as any)["Content-Type"];
       }
     }
 
@@ -72,7 +74,7 @@ class ApiClient {
     if (token) {
       config.headers = {
         ...config.headers,
-        'Authorization': `Bearer ${token}`,
+        Authorization: `Bearer ${token}`,
       };
     }
 
@@ -80,39 +82,49 @@ class ApiClient {
       const response = await fetch(url, config);
 
       class ApiError extends Error {
-  public status: number;
-  public statusText: string;
-  public errorData: any;
+        public status: number;
+        public statusText: string;
+        public errorData: any;
 
-  constructor(message: string, status: number, statusText: string, errorData: any) {
-    super(message);
-    this.name = 'ApiError';
-    this.status = status;
-    this.statusText = statusText;
-    this.errorData = errorData;
-    // Set the prototype explicitly.
-    Object.setPrototypeOf(this, ApiError.prototype);
-  }
-}
+        constructor(
+          message: string,
+          status: number,
+          statusText: string,
+          errorData: any,
+        ) {
+          super(message);
+          this.name = "ApiError";
+          this.status = status;
+          this.statusText = statusText;
+          this.errorData = errorData;
+          // Set the prototype explicitly.
+          Object.setPrototypeOf(this, ApiError.prototype);
+        }
+      }
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         throw new ApiError(
           errorData.detail ||
-          errorData.message ||
-          `HTTP ${response.status}: ${response.statusText}`,
+            errorData.message ||
+            `HTTP ${response.status}: ${response.statusText}`,
           response.status,
           response.statusText,
-          errorData
+          errorData,
         );
       }
 
-      const contentType = response.headers.get('content-type');
-      if (contentType && contentType.includes('application/json')) {
+      const contentType = response.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
         const result = await response.json();
 
         // 处理inty-backend特殊的响应格式 {code, message, data}
-        if (result && typeof result === 'object' && 'data' in result && result.code === 200) {
+        if (
+          result &&
+          typeof result === "object" &&
+          "data" in result &&
+          result.code === 200
+        ) {
           return result.data;
         }
 
@@ -129,7 +141,8 @@ class ApiClient {
   private getAuthToken(): string | null {
     // 默认使用管理员token，与inty-test项目保持一致
     // 这是从inty-test/backend/config.yaml中配置的default_token
-    const adminToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3ODQzNjAyMjAsInN1YiI6InVzZXItMDFKV1ozNFk0RDFDOTJHRDg2QTVSNkVXWUoifQ.vsYKRvrCfxWgJ5wkTjAYby3RrIOm6P-9VbcCg4msjlM";
+    const adminToken =
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3ODQzNjAyMjAsInN1YiI6InVzZXItMDFKV1ozNFk0RDFDOTJHRDg2QTVSNkVXWUoifQ.vsYKRvrCfxWgJ5wkTjAYby3RrIOm6P-9VbcCg4msjlM";
     if (adminToken) {
       return adminToken;
     }
@@ -138,10 +151,14 @@ class ApiClient {
   }
 
   // GET请求
-  async get<T>(endpoint: string, params?: Record<string, any>, options?: RequestInit): Promise<T> {
+  async get<T>(
+    endpoint: string,
+    params?: Record<string, any>,
+    options?: RequestInit,
+  ): Promise<T> {
     let finalEndpoint = endpoint;
 
-    if (params && !('signal' in params)) {
+    if (params && !("signal" in params)) {
       const searchParams = new URLSearchParams();
       Object.entries(params).forEach(([key, value]) => {
         if (value !== undefined && value !== null) {
@@ -154,13 +171,13 @@ class ApiClient {
       }
     }
 
-    return this.request<T>(finalEndpoint, { method: 'GET', ...options });
+    return this.request<T>(finalEndpoint, { method: "GET", ...options });
   }
 
   // POST请求
   async post<T>(endpoint: string, data?: any): Promise<T> {
     return this.request<T>(endpoint, {
-      method: 'POST',
+      method: "POST",
       body: data ? JSON.stringify(data) : undefined,
     });
   }
@@ -168,7 +185,7 @@ class ApiClient {
   // PUT请求
   async put<T>(endpoint: string, data?: any): Promise<T> {
     return this.request<T>(endpoint, {
-      method: 'PUT',
+      method: "PUT",
       body: data ? JSON.stringify(data) : undefined,
     });
   }
@@ -176,14 +193,18 @@ class ApiClient {
   // DELETE请求
   async delete<T>(endpoint: string): Promise<T> {
     return this.request<T>(endpoint, {
-      method: 'DELETE',
+      method: "DELETE",
     });
   }
 
   // 文件上传
-  async upload<T>(endpoint: string, file: File, additionalData?: Record<string, any>): Promise<T> {
+  async upload<T>(
+    endpoint: string,
+    file: File,
+    additionalData?: Record<string, any>,
+  ): Promise<T> {
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append("file", file);
 
     if (additionalData) {
       Object.entries(additionalData).forEach(([key, value]) => {
@@ -192,7 +213,7 @@ class ApiClient {
     }
 
     return this.request<T>(endpoint, {
-      method: 'POST',
+      method: "POST",
       body: formData,
       headers: {}, // 让浏览器自动设置Content-Type
     });
@@ -209,7 +230,7 @@ const apiClient = new ApiClient();
 export const evaluationSessionApi = {
   // 创建评测会话
   create: (data: EvaluationSessionCreateRequest): Promise<EvaluationSession> =>
-    apiClient.post('/evaluation/sessions', data),
+    apiClient.post("/evaluation/sessions", data),
 
   // 获取评测会话列表
   list: (params?: {
@@ -217,7 +238,7 @@ export const evaluationSessionApi = {
     limit?: number;
     status?: string;
   }): Promise<EvaluationSession[]> =>
-    apiClient.get('/evaluation/sessions', params),
+    apiClient.get("/evaluation/sessions", params),
 
   // 获取评测会话详情
   get: (sessionId: string): Promise<EvaluationSession> =>
@@ -240,12 +261,14 @@ export const evaluationSessionApi = {
     apiClient.delete(`/evaluation/sessions/${sessionId}`),
 
   // 批量创建评测会话
-  createBatch: (sessions: EvaluationSessionCreateRequest[]): Promise<EvaluationSession[]> =>
-    apiClient.post('/evaluation/sessions/batch', { sessions }),
+  createBatch: (
+    sessions: EvaluationSessionCreateRequest[],
+  ): Promise<EvaluationSession[]> =>
+    apiClient.post("/evaluation/sessions/batch", { sessions }),
 
   // 对比评测会话
   compare: (sessionIds: string[]): Promise<ComparisonResult> =>
-    apiClient.post('/evaluation/sessions/compare', sessionIds),
+    apiClient.post("/evaluation/sessions/compare", sessionIds),
 };
 
 // =============================================================================
@@ -255,19 +278,17 @@ export const evaluationSessionApi = {
 export const agentApi = {
   // 获取智能体列表 - 使用现有的agents API（注意路径是 /ai/agents）
   list: (params?: {
-    type?: 'public' | 'private';
+    type?: "public" | "private";
     skip?: number;
     limit?: number;
-  }): Promise<Agent[]> =>
-    apiClient.get('/ai/agents/', params),
+  }): Promise<Agent[]> => apiClient.get("/ai/agents/", params),
 
   // 获取推荐智能体 - 使用现有API
-  getRecommended: (): Promise<Agent[]> =>
-    apiClient.get('/ai/agents/recommend'),
+  getRecommended: (): Promise<Agent[]> => apiClient.get("/ai/agents/recommend"),
 
   // 搜索智能体 - 使用现有API
   search: (query: string): Promise<Agent[]> =>
-    apiClient.get('/ai/agents/search', { q: query }),
+    apiClient.get("/ai/agents/search", { q: query }),
 
   // 获取智能体详情 - 使用现有API
   get: (agentId: string): Promise<Agent> =>
@@ -275,28 +296,35 @@ export const agentApi = {
 
   // 创建智能体 - 使用现有API
   create: (data: AgentCreateRequest): Promise<Agent> =>
-    apiClient.post('/ai/agents/', data),
+    apiClient.post("/ai/agents/", data),
 
-  // 更新智能体 - 使用现有API  
-  update: (agentId: string, data: Partial<AgentUpdateRequest>): Promise<Agent> =>
-    apiClient.put(`/ai/agents/${agentId}`, data),
+  // 更新智能体 - 使用现有API
+  update: (
+    agentId: string,
+    data: Partial<AgentUpdateRequest>,
+  ): Promise<Agent> => apiClient.put(`/ai/agents/${agentId}`, data),
 
   // 删除智能体 - 使用现有API
   delete: (agentId: string): Promise<{ message: string }> =>
     apiClient.delete(`/ai/agents/${agentId}`),
 
   // 部署智能体到生产环境 - 如果存在的话
-  deploy: (agentId: string, adminPassword: string): Promise<{
+  deploy: (
+    agentId: string,
+    adminPassword: string,
+  ): Promise<{
     success: boolean;
     message: string;
     agent_id: string;
     deploy_time: string;
   }> =>
-    apiClient.post(`/ai/agents/${agentId}/deploy`, { admin_password: adminPassword }),
+    apiClient.post(`/ai/agents/${agentId}/deploy`, {
+      admin_password: adminPassword,
+    }),
 
   // 上传头像
   uploadAvatar: (file: File): Promise<any> =>
-    apiClient.upload('/ai/agents/upload-avatar', file),
+    apiClient.upload("/ai/agents/upload-avatar", file),
 };
 
 // =============================================================================
@@ -310,18 +338,23 @@ export const templateApi = {
     skip?: number;
     limit?: number;
   }): Promise<EvaluationTemplate[]> =>
-    apiClient.get('/evaluation/templates', params),
+    apiClient.get("/evaluation/templates", params),
 
   // 创建模板
-  create: (data: EvaluationTemplateCreateRequest): Promise<EvaluationTemplate> =>
-    apiClient.post('/evaluation/templates', data),
+  create: (
+    data: EvaluationTemplateCreateRequest,
+  ): Promise<EvaluationTemplate> =>
+    apiClient.post("/evaluation/templates", data),
 
   // 获取模板详情
   get: (templateId: string): Promise<EvaluationTemplate> =>
     apiClient.get(`/evaluation/templates/${templateId}`),
 
   // 更新模板
-  update: (templateId: string, data: Partial<EvaluationTemplateCreateRequest>): Promise<EvaluationTemplate> =>
+  update: (
+    templateId: string,
+    data: Partial<EvaluationTemplateCreateRequest>,
+  ): Promise<EvaluationTemplate> =>
     apiClient.put(`/evaluation/templates/${templateId}`, data),
 
   // 删除模板
@@ -336,16 +369,17 @@ export const templateApi = {
 export const questionApi = {
   // 解析问题文件
   parseFile: (file: File): Promise<QuestionFileUpload> =>
-    apiClient.upload('/evaluation/questions/parse', file),
+    apiClient.upload("/evaluation/questions/parse", file),
 
   // 验证问题列表
-  validate: (questions: string[]): Promise<{
+  validate: (
+    questions: string[],
+  ): Promise<{
     is_valid: boolean;
     issues: string[];
     warnings: string[];
     stats: Record<string, number>;
-  }> =>
-    apiClient.post('/evaluation/questions/validate', { questions }),
+  }> => apiClient.post("/evaluation/questions/validate", { questions }),
 };
 
 // =============================================================================
@@ -360,14 +394,14 @@ export const scoringApi = {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000); // 5秒超时
 
-      const models = await apiClient.get('/evaluation/models', undefined, {
-        signal: controller.signal
+      const models = await apiClient.get("/evaluation/models", undefined, {
+        signal: controller.signal,
       });
 
       clearTimeout(timeoutId);
       return models;
     } catch (error) {
-      console.warn('获取评分模型失败，使用默认模型列表:', error);
+      console.warn("获取评分模型失败，使用默认模型列表:", error);
 
       // 返回默认模型列表
       return [
@@ -376,62 +410,64 @@ export const scoringApi = {
           name: "Llama 3.1 405B Instruct",
           description: "Meta最新的大型语言模型，适合复杂的推理和评估任务",
           context_length: 32768,
-          provider: "Meta"
+          provider: "Meta",
         },
         {
           id: "anthropic/claude-3.5-sonnet",
           name: "Claude 3.5 Sonnet",
           description: "Anthropic的Claude模型，擅长分析和评估",
           context_length: 200000,
-          provider: "Anthropic"
+          provider: "Anthropic",
         },
         {
           id: "openai/gpt-4o",
           name: "GPT-4o",
           description: "OpenAI的多模态模型，具有强大的理解能力",
           context_length: 128000,
-          provider: "OpenAI"
+          provider: "OpenAI",
         },
         {
           id: "google/gemini-pro-1.5",
           name: "Gemini Pro 1.5",
           description: "Google的Gemini模型，支持长上下文",
           context_length: 2000000,
-          provider: "Google"
+          provider: "Google",
         },
         {
           id: "openai/gpt-4o-mini",
           name: "GPT-4o Mini",
           description: "OpenAI的轻量级模型，快速且经济",
           context_length: 128000,
-          provider: "OpenAI"
+          provider: "OpenAI",
         },
         {
           id: "anthropic/claude-3.5-haiku",
           name: "Claude 3.5 Haiku",
           description: "Anthropic的快速模型，适合简单评估任务",
           context_length: 200000,
-          provider: "Anthropic"
-        }
+          provider: "Anthropic",
+        },
       ];
     }
   },
 
   // 验证评分标准
-  validateCriteria: (criteria: string): Promise<{
+  validateCriteria: (
+    criteria: string,
+  ): Promise<{
     is_valid: boolean;
     issues: string[];
     suggestions: string[];
-  }> =>
-    apiClient.post('/evaluation/scoring-criteria/validate', { criteria }),
+  }> => apiClient.post("/evaluation/scoring-criteria/validate", { criteria }),
 
   // 获取OpenRouter完整模型列表
-  getOpenRouterModels: (): Promise<{
-    id: string;
-    name: string;
-    description?: string;
-  }[]> =>
-    apiClient.get('/ai/models/openrouter'),
+  getOpenRouterModels: (): Promise<
+    {
+      id: string;
+      name: string;
+      description?: string;
+    }[]
+  > => apiClient.get("/ai/models/openrouter"),
 };
 
 // =============================================================================
@@ -441,15 +477,16 @@ export const scoringApi = {
 export const statsApi = {
   // 获取统计信息
   get: (days?: number): Promise<EvaluationStats> =>
-    apiClient.get('/evaluation/stats', { days }),
+    apiClient.get("/evaluation/stats", { days }),
 
   // 导出评测结果
-  export: (data: ExportRequest): Promise<{
+  export: (
+    data: ExportRequest,
+  ): Promise<{
     download_url: string;
     format: string;
     session_count: number;
-  }> =>
-    apiClient.post('/evaluation/results/export', data),
+  }> => apiClient.post("/evaluation/results/export", data),
 };
 
 // =============================================================================
@@ -465,7 +502,7 @@ export class WebSocketManager {
   private listeners: Map<string, Set<(data: any) => void>> = new Map();
 
   constructor(sessionId: string) {
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const host = window.location.host;
     this.url = `${protocol}//${host}/api/v1/evaluation/sessions/${sessionId}/monitor`;
   }
@@ -476,7 +513,7 @@ export class WebSocketManager {
         this.ws = new WebSocket(this.url);
 
         this.ws.onopen = () => {
-          console.log('WebSocket连接已建立');
+          console.log("WebSocket连接已建立");
           this.reconnectAttempts = 0;
           resolve();
         };
@@ -486,17 +523,17 @@ export class WebSocketManager {
             const message = JSON.parse(event.data);
             this.handleMessage(message);
           } catch (error) {
-            console.error('WebSocket消息解析失败:', error);
+            console.error("WebSocket消息解析失败:", error);
           }
         };
 
         this.ws.onclose = (event) => {
-          console.log('WebSocket连接已关闭:', event.code, event.reason);
+          console.log("WebSocket连接已关闭:", event.code, event.reason);
           this.handleReconnect();
         };
 
         this.ws.onerror = (error) => {
-          console.error('WebSocket连接错误:', error);
+          console.error("WebSocket连接错误:", error);
           reject(error);
         };
       } catch (error) {
@@ -510,23 +547,23 @@ export class WebSocketManager {
     const listeners = this.listeners.get(type);
 
     if (listeners) {
-      listeners.forEach(callback => {
+      listeners.forEach((callback) => {
         try {
           callback(message);
         } catch (error) {
-          console.error('WebSocket消息处理错误:', error);
+          console.error("WebSocket消息处理错误:", error);
         }
       });
     }
 
     // 广播给所有监听器
-    const allListeners = this.listeners.get('*');
+    const allListeners = this.listeners.get("*");
     if (allListeners) {
-      allListeners.forEach(callback => {
+      allListeners.forEach((callback) => {
         try {
           callback(message);
         } catch (error) {
-          console.error('WebSocket广播消息处理错误:', error);
+          console.error("WebSocket广播消息处理错误:", error);
         }
       });
     }
@@ -535,15 +572,17 @@ export class WebSocketManager {
   private handleReconnect() {
     if (this.reconnectAttempts < this.maxReconnectAttempts) {
       this.reconnectAttempts++;
-      console.log(`尝试重连WebSocket (${this.reconnectAttempts}/${this.maxReconnectAttempts})...`);
+      console.log(
+        `尝试重连WebSocket (${this.reconnectAttempts}/${this.maxReconnectAttempts})...`,
+      );
 
       setTimeout(() => {
-        this.connect().catch(error => {
-          console.error('WebSocket重连失败:', error);
+        this.connect().catch((error) => {
+          console.error("WebSocket重连失败:", error);
         });
       }, this.reconnectInterval);
     } else {
-      console.error('WebSocket重连次数已达上限');
+      console.error("WebSocket重连次数已达上限");
     }
   }
 
@@ -580,31 +619,37 @@ export class WebSocketManager {
 
 export const chatApi = {
   // 获取用户聊天列表
-  getChats: (): Promise<Array<{
-    id: string;
-    agent_id: string;
-    agent_name: string;
-    is_active: boolean;
-    created_at: string;
-    updated_at: string;
-  }>> =>
-    apiClient.get('/chats/'),
+  getChats: (): Promise<
+    Array<{
+      id: string;
+      agent_id: string;
+      agent_name: string;
+      is_active: boolean;
+      created_at: string;
+      updated_at: string;
+    }>
+  > => apiClient.get("/chats/"),
 
   // 创建新聊天会话
-  createChat: (data: { agent_id: string }): Promise<{
+  createChat: (data: {
+    agent_id: string;
+  }): Promise<{
     id: string;
     agent_id: string;
     user_id: string;
     is_active: boolean;
     created_at: string;
-  }> =>
-    apiClient.post('/chats/', data),
+  }> => apiClient.post("/chats/", data),
 
   // 使用现有的OpenAI兼容API发送消息 - 这是核心聊天接口
-  sendMessage: (agentId: string, messages: Array<{
-    role: 'user' | 'assistant';
-    content: string;
-  }>, stream: boolean = false): Promise<{
+  sendMessage: (
+    agentId: string,
+    messages: Array<{
+      role: "user" | "assistant";
+      content: string;
+    }>,
+    stream: boolean = false,
+  ): Promise<{
     id: string;
     object: string;
     created: number;
@@ -612,7 +657,7 @@ export const chatApi = {
     choices: Array<{
       index: number;
       message: {
-        role: 'assistant';
+        role: "assistant";
         content: string;
       };
       finish_reason: string;
@@ -627,14 +672,17 @@ export const chatApi = {
       messages,
       stream,
       model: "chatbot",
-      language: "zh"
+      language: "zh",
     }),
 
   // 获取Agent聊天详情和消息历史
-  getChatDetail: (agentId: string, params?: {
-    page?: number;
-    size?: number;
-  }): Promise<{
+  getChatDetail: (
+    agentId: string,
+    params?: {
+      page?: number;
+      size?: number;
+    },
+  ): Promise<{
     chat: {
       id: string;
       agent_id: string;
@@ -651,24 +699,26 @@ export const chatApi = {
     };
     messages: Array<{
       content: string;
-      sender_type: 'USER' | 'AI';
+      sender_type: "USER" | "AI";
       created_at: string;
     }>;
     total: number;
     page: number;
     size: number;
     has_more: boolean;
-  }> =>
-    apiClient.get(`/chats/agents/${agentId}/detail`, params),
+  }> => apiClient.get(`/chats/agents/${agentId}/detail`, params),
 
   // 获取轻量级消息列表
-  getMessages: (agentId: string, params?: {
-    page?: number;
-    size?: number;
-  }): Promise<{
+  getMessages: (
+    agentId: string,
+    params?: {
+      page?: number;
+      size?: number;
+    },
+  ): Promise<{
     messages: Array<{
       id: number;
-      role: 'user' | 'assistant';
+      role: "user" | "assistant";
       content: string;
       timestamp: string;
     }>;
@@ -677,17 +727,19 @@ export const chatApi = {
     offset: number;
     has_more: boolean;
     page: number;
-  }> =>
-    apiClient.get(`/chats/agents/${agentId}/messages`, params),
+  }> => apiClient.get(`/chats/agents/${agentId}/messages`, params),
 
   // 清除聊天消息 - 注意：API 期望单个 message_id 而不是数组
-  clearMessages: (agentId: string, messageId?: string): Promise<{
+  clearMessages: (
+    agentId: string,
+    messageId?: string,
+  ): Promise<{
     message: string;
     cleared_count: number;
   }> =>
     apiClient.post(`/chats/agents/${agentId}/clear-messages`, {
       message_id: messageId ? parseInt(messageId) : undefined,
-      timestamp: messageId ? undefined : UTC_START_TIMESTAMP
+      timestamp: messageId ? undefined : UTC_START_TIMESTAMP,
     }),
 
   // 删除聊天会话
@@ -699,7 +751,11 @@ export const chatApi = {
     apiClient.get(`/chats/agents/${agentId}/debug-messages`),
 
   // 生成消息语音
-  generateVoice: (agentId: string, messageId: string, language: string = 'zh'): Promise<{
+  generateVoice: (
+    agentId: string,
+    messageId: string,
+    language: string = "zh",
+  ): Promise<{
     audio_url: string;
     message_id: string;
     voice_id: string;
@@ -707,7 +763,10 @@ export const chatApi = {
     cached: boolean;
     generation_time: number | null;
   }> =>
-    apiClient.post(`/chats/agents/${agentId}/messages/${messageId}/voice?language=${language}`, {}),
+    apiClient.post(
+      `/chats/agents/${agentId}/messages/${messageId}/voice?language=${language}`,
+      {},
+    ),
 };
 
 // =============================================================================
@@ -731,28 +790,28 @@ export const userApi = {
       created_at?: string;
     }>;
     total: number;
-  }> =>
-    apiClient.get('/users', params),
+  }> => apiClient.get("/users", params),
 
   // 获取用户列表
   getUsers: (params?: {
     skip?: number;
     limit?: number;
     search?: string;
-  }): Promise<Array<{
-    id: string;
-    readable_id: string;
-    nickname: string;
-    avatar?: string;
-    email?: string;
-    phone?: string;
-    created_at?: string;
-  }>> =>
-    apiClient.get('/users', params),
+  }): Promise<
+    Array<{
+      id: string;
+      readable_id: string;
+      nickname: string;
+      avatar?: string;
+      email?: string;
+      phone?: string;
+      created_at?: string;
+    }>
+  > => apiClient.get("/users", params),
 };
 
 // =============================================================================
-// 调试消息API - 用于提示词查询功能 
+// 调试消息API - 用于提示词查询功能
 // =============================================================================
 
 export const debugApi = {
@@ -787,9 +846,9 @@ export const debugApi = {
     }>;
     has_more: boolean;
   }> => {
-    console.log('调试消息API请求参数:', params);
-    const result = await apiClient.get('/chats/debug-messages', params);
-    console.log('调试消息API原始响应:', result);
+    console.log("调试消息API请求参数:", params);
+    const result = await apiClient.get("/chats/debug-messages", params);
+    console.log("调试消息API原始响应:", result);
     return result;
   },
 };

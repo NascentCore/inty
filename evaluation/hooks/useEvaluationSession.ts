@@ -3,16 +3,16 @@
  * 提供评测会话的创建、监控、管理功能
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { message } from 'antd';
-import api, { WebSocketManager } from '../services/api';
+import { useState, useEffect, useCallback, useRef } from "react";
+import { message } from "antd";
+import api, { WebSocketManager } from "../services/api";
 import type {
   EvaluationSession,
   EvaluationSessionCreateRequest,
   EvaluationResult,
   WebSocketMessage,
   UseEvaluationSessionOptions,
-} from '../types';
+} from "../types";
 
 interface UseEvaluationSessionReturn {
   // 状态
@@ -20,14 +20,16 @@ interface UseEvaluationSessionReturn {
   results: EvaluationResult[];
   loading: boolean;
   error: string | null;
-  
+
   // 操作
-  createSession: (data: EvaluationSessionCreateRequest) => Promise<EvaluationSession | null>;
+  createSession: (
+    data: EvaluationSessionCreateRequest,
+  ) => Promise<EvaluationSession | null>;
   startSession: (sessionId: string) => Promise<boolean>;
   cancelSession: (sessionId: string) => Promise<boolean>;
   refreshSession: (sessionId: string) => Promise<void>;
   refreshResults: (sessionId: string) => Promise<void>;
-  
+
   // WebSocket
   connectWebSocket: (sessionId: string) => Promise<void>;
   disconnectWebSocket: () => void;
@@ -35,12 +37,9 @@ interface UseEvaluationSessionReturn {
 }
 
 export const useEvaluationSession = (
-  options: UseEvaluationSessionOptions = {}
+  options: UseEvaluationSessionOptions = {},
 ): UseEvaluationSessionReturn => {
-  const {
-    autoRefresh = false,
-    refreshInterval = 10000,
-  } = options;
+  const { autoRefresh = false, refreshInterval = 10000 } = options;
 
   // 状态管理
   const [session, setSession] = useState<EvaluationSession | null>(null);
@@ -72,154 +71,181 @@ export const useEvaluationSession = (
   }, []);
 
   // 创建评测会话
-  const createSession = useCallback(async (
-    data: EvaluationSessionCreateRequest
-  ): Promise<EvaluationSession | null> => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      const newSession = await api.sessions.create(data);
-      setSession(newSession);
-      
-      message.success('评测会话创建成功');
-      return newSession;
-    } catch (error) {
-      handleError(error, '创建评测会话失败');
-      return null;
-    } finally {
-      setLoading(false);
-    }
-  }, [handleError]);
+  const createSession = useCallback(
+    async (
+      data: EvaluationSessionCreateRequest,
+    ): Promise<EvaluationSession | null> => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const newSession = await api.sessions.create(data);
+        setSession(newSession);
+
+        message.success("评测会话创建成功");
+        return newSession;
+      } catch (error) {
+        handleError(error, "创建评测会话失败");
+        return null;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [handleError],
+  );
 
   // 启动评测会话
-  const startSession = useCallback(async (sessionId: string): Promise<boolean> => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      const response = await api.sessions.start(sessionId);
-      
-      if (response.success) {
-        // 更新会话状态
-        if (session && session.id === sessionId) {
-          setSession(prev => prev ? { ...prev, status: 'RUNNING' } : null);
+  const startSession = useCallback(
+    async (sessionId: string): Promise<boolean> => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const response = await api.sessions.start(sessionId);
+
+        if (response.success) {
+          // 更新会话状态
+          if (session && session.id === sessionId) {
+            setSession((prev) =>
+              prev ? { ...prev, status: "RUNNING" } : null,
+            );
+          }
+
+          message.success("评测会话已启动");
+          return true;
+        } else {
+          throw new Error(response.message || "启动失败");
         }
-        
-        message.success('评测会话已启动');
-        return true;
-      } else {
-        throw new Error(response.message || '启动失败');
+      } catch (error) {
+        handleError(error, "启动评测会话失败");
+        return false;
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      handleError(error, '启动评测会话失败');
-      return false;
-    } finally {
-      setLoading(false);
-    }
-  }, [session, handleError]);
+    },
+    [session, handleError],
+  );
 
   // 取消评测会话
-  const cancelSession = useCallback(async (sessionId: string): Promise<boolean> => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      const response = await api.sessions.cancel(sessionId);
-      
-      if (response.success) {
-        // 更新会话状态
-        if (session && session.id === sessionId) {
-          setSession(prev => prev ? { ...prev, status: 'CANCELLED' } : null);
+  const cancelSession = useCallback(
+    async (sessionId: string): Promise<boolean> => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const response = await api.sessions.cancel(sessionId);
+
+        if (response.success) {
+          // 更新会话状态
+          if (session && session.id === sessionId) {
+            setSession((prev) =>
+              prev ? { ...prev, status: "CANCELLED" } : null,
+            );
+          }
+
+          message.success("评测会话已取消");
+          return true;
+        } else {
+          throw new Error(response.message || "取消失败");
         }
-        
-        message.success('评测会话已取消');
-        return true;
-      } else {
-        throw new Error(response.message || '取消失败');
+      } catch (error) {
+        handleError(error, "取消评测会话失败");
+        return false;
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      handleError(error, '取消评测会话失败');
-      return false;
-    } finally {
-      setLoading(false);
-    }
-  }, [session, handleError]);
+    },
+    [session, handleError],
+  );
 
   // 刷新会话信息
-  const refreshSession = useCallback(async (sessionId: string) => {
-    try {
-      const updatedSession = await api.sessions.get(sessionId);
-      setSession(updatedSession);
-    } catch (error) {
-      handleError(error, '刷新会话信息失败');
-    }
-  }, [handleError]);
+  const refreshSession = useCallback(
+    async (sessionId: string) => {
+      try {
+        const updatedSession = await api.sessions.get(sessionId);
+        setSession(updatedSession);
+      } catch (error) {
+        handleError(error, "刷新会话信息失败");
+      }
+    },
+    [handleError],
+  );
 
   // 刷新评测结果
-  const refreshResults = useCallback(async (sessionId: string) => {
-    try {
-      const updatedResults = await api.sessions.getResults(sessionId);
-      setResults(updatedResults);
-    } catch (error) {
-      handleError(error, '刷新评测结果失败');
-    }
-  }, [handleError]);
+  const refreshResults = useCallback(
+    async (sessionId: string) => {
+      try {
+        const updatedResults = await api.sessions.getResults(sessionId);
+        setResults(updatedResults);
+      } catch (error) {
+        handleError(error, "刷新评测结果失败");
+      }
+    },
+    [handleError],
+  );
 
   // 连接WebSocket
-  const connectWebSocket = useCallback(async (sessionId: string) => {
-    try {
-      // 断开之前的连接
-      disconnectWebSocket();
-      
-      wsManager.current = new WebSocketManager(sessionId);
-      
-      // 设置消息监听器
-      wsManager.current.on('session_started', (message: WebSocketMessage) => {
-        console.log('评测会话已启动:', message);
-        refreshSession(sessionId);
-      });
+  const connectWebSocket = useCallback(
+    async (sessionId: string) => {
+      try {
+        // 断开之前的连接
+        disconnectWebSocket();
 
-      wsManager.current.on('test_started', (message: WebSocketMessage) => {
-        console.log('测试开始:', message);
-        // 可以更新UI显示当前测试进度
-      });
+        wsManager.current = new WebSocketManager(sessionId);
 
-      wsManager.current.on('test_completed', (message: WebSocketMessage) => {
-        console.log('测试完成:', message);
-        // 更新结果列表
-        refreshResults(sessionId);
-        refreshSession(sessionId);
-      });
+        // 设置消息监听器
+        wsManager.current.on("session_started", (message: WebSocketMessage) => {
+          console.log("评测会话已启动:", message);
+          refreshSession(sessionId);
+        });
 
-      wsManager.current.on('session_completed', (message: WebSocketMessage) => {
-        console.log('评测会话完成:', message);
-        message.success('评测已完成');
-        refreshSession(sessionId);
-        refreshResults(sessionId);
-      });
+        wsManager.current.on("test_started", (message: WebSocketMessage) => {
+          console.log("测试开始:", message);
+          // 可以更新UI显示当前测试进度
+        });
 
-      wsManager.current.on('session_failed', (message: WebSocketMessage) => {
-        console.log('评测会话失败:', message);
-        message.error('评测执行失败');
-        refreshSession(sessionId);
-      });
+        wsManager.current.on("test_completed", (message: WebSocketMessage) => {
+          console.log("测试完成:", message);
+          // 更新结果列表
+          refreshResults(sessionId);
+          refreshSession(sessionId);
+        });
 
-      wsManager.current.on('session_cancelled', (message: WebSocketMessage) => {
-        console.log('评测会话取消:', message);
-        message.info('评测已取消');
-        refreshSession(sessionId);
-      });
+        wsManager.current.on(
+          "session_completed",
+          (message: WebSocketMessage) => {
+            console.log("评测会话完成:", message);
+            message.success("评测已完成");
+            refreshSession(sessionId);
+            refreshResults(sessionId);
+          },
+        );
 
-      // 连接WebSocket
-      await wsManager.current.connect();
-      setIsWebSocketConnected(true);
-      
-    } catch (error) {
-      console.error('WebSocket连接失败:', error);
-      setIsWebSocketConnected(false);
-    }
-  }, [refreshSession, refreshResults]);
+        wsManager.current.on("session_failed", (message: WebSocketMessage) => {
+          console.log("评测会话失败:", message);
+          message.error("评测执行失败");
+          refreshSession(sessionId);
+        });
+
+        wsManager.current.on(
+          "session_cancelled",
+          (message: WebSocketMessage) => {
+            console.log("评测会话取消:", message);
+            message.info("评测已取消");
+            refreshSession(sessionId);
+          },
+        );
+
+        // 连接WebSocket
+        await wsManager.current.connect();
+        setIsWebSocketConnected(true);
+      } catch (error) {
+        console.error("WebSocket连接失败:", error);
+        setIsWebSocketConnected(false);
+      }
+    },
+    [refreshSession, refreshResults],
+  );
 
   // 断开WebSocket
   const disconnectWebSocket = useCallback(() => {
@@ -232,12 +258,18 @@ export const useEvaluationSession = (
 
   // 自动刷新 - 扩展到所有非最终状态，增强频率
   useEffect(() => {
-    if (autoRefresh && session && ['PENDING', 'RUNNING'].includes(session.status)) {
+    if (
+      autoRefresh &&
+      session &&
+      ["PENDING", "RUNNING"].includes(session.status)
+    ) {
       // 运行中的会话更频繁刷新
-      const interval = session.status === 'RUNNING' ? 3000 : refreshInterval;
-      
+      const interval = session.status === "RUNNING" ? 3000 : refreshInterval;
+
       refreshTimer.current = setInterval(() => {
-        console.log(`自动刷新评测会话状态: ${session.id}, 当前状态: ${session.status}`);
+        console.log(
+          `自动刷新评测会话状态: ${session.id}, 当前状态: ${session.status}`,
+        );
         refreshSession(session.id);
         refreshResults(session.id);
       }, interval);
@@ -256,14 +288,14 @@ export const useEvaluationSession = (
     results,
     loading,
     error,
-    
+
     // 操作
     createSession,
     startSession,
     cancelSession,
     refreshSession,
     refreshResults,
-    
+
     // WebSocket
     connectWebSocket,
     disconnectWebSocket,

@@ -3,7 +3,7 @@
  * 负责实时监控评测进度、显示结果、管理评测状态
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Card,
   Progress,
@@ -20,7 +20,7 @@ import {
   message,
   Badge,
   Empty,
-} from 'antd';
+} from "antd";
 import {
   PlayCircleOutlined,
   StopOutlined,
@@ -31,16 +31,16 @@ import {
   ClockCircleOutlined,
   FireOutlined,
   RobotOutlined,
-} from '@ant-design/icons';
-import { useEvaluationSession } from '../../hooks/useEvaluationSession';
-import { MultiAgentChatDisplay } from './MultiAgentChatDisplay';
-import api from '../../services/api';
-import type { 
-  EvaluationSession, 
-  EvaluationResult, 
+} from "@ant-design/icons";
+import { useEvaluationSession } from "../../hooks/useEvaluationSession";
+import { MultiAgentChatDisplay } from "./MultiAgentChatDisplay";
+import api from "../../services/api";
+import type {
+  EvaluationSession,
+  EvaluationResult,
   EvaluationStatus,
-  EvaluationInteraction 
-} from '../../types';
+  EvaluationInteraction,
+} from "../../types";
 
 const { Title, Text } = Typography;
 
@@ -50,7 +50,6 @@ interface EvaluationMonitorProps {
   showControls?: boolean;
   autoRefresh?: boolean;
 }
-
 
 export const EvaluationMonitor: React.FC<EvaluationMonitorProps> = ({
   session: propSession,
@@ -95,12 +94,12 @@ export const EvaluationMonitor: React.FC<EvaluationMonitorProps> = ({
           const sessionResults = await api.sessions.getResults(propSession.id);
           setResults(sessionResults);
         } catch (err: any) {
-          setError(err.message || '加载结果失败');
+          setError(err.message || "加载结果失败");
         } finally {
           setLoading(false);
         }
       };
-      
+
       loadResults();
     } else if (!propSession) {
       // 没有传入session时，使用hook的数据
@@ -108,26 +107,38 @@ export const EvaluationMonitor: React.FC<EvaluationMonitorProps> = ({
       setLoading(hookLoading);
       setError(hookError);
     }
-  }, [propSession?.id, propSession?.status, hookResults, hookLoading, hookError]);
+  }, [
+    propSession?.id,
+    propSession?.status,
+    hookResults,
+    hookLoading,
+    hookError,
+  ]);
 
   // 自动刷新逻辑 - 当传入session且需要自动刷新时
   useEffect(() => {
-    if (propSession && autoRefresh && ['PENDING', 'RUNNING'].includes(propSession.status)) {
-      const interval = propSession.status === 'RUNNING' ? 3000 : 10000;
-      
+    if (
+      propSession &&
+      autoRefresh &&
+      ["PENDING", "RUNNING"].includes(propSession.status)
+    ) {
+      const interval = propSession.status === "RUNNING" ? 3000 : 10000;
+
       const timer = setInterval(async () => {
         try {
-          console.log(`自动刷新评测结果: ${propSession.id}, 状态: ${propSession.status}`);
+          console.log(
+            `自动刷新评测结果: ${propSession.id}, 状态: ${propSession.status}`,
+          );
           const sessionResults = await api.sessions.getResults(propSession.id);
           setResults(sessionResults);
-          
+
           // 通知父组件刷新session状态
           if (onSessionChange) {
             const updatedSession = await api.sessions.get(propSession.id);
             onSessionChange(updatedSession);
           }
         } catch (err) {
-          console.error('自动刷新失败:', err);
+          console.error("自动刷新失败:", err);
         }
       }, interval);
 
@@ -144,7 +155,10 @@ export const EvaluationMonitor: React.FC<EvaluationMonitorProps> = ({
 
   // WebSocket连接管理
   useEffect(() => {
-    if (session && (session.status === 'RUNNING' || session.status === 'PENDING')) {
+    if (
+      session &&
+      (session.status === "RUNNING" || session.status === "PENDING")
+    ) {
       connectWebSocket(session.id);
     } else {
       disconnectWebSocket();
@@ -171,9 +185,13 @@ export const EvaluationMonitor: React.FC<EvaluationMonitorProps> = ({
     const totalQuestions = session.questions?.length || 0;
     const totalTests = totalAgents * totalQuestions;
     const completedTests = results.length;
-    const averageScore = results.length > 0 
-      ? results.reduce((sum, result) => sum + (result.overall_score || 0), 0) / results.length 
-      : 0;
+    const averageScore =
+      results.length > 0
+        ? results.reduce(
+            (sum, result) => sum + (result.overall_score || 0),
+            0,
+          ) / results.length
+        : 0;
     const completionRate = totalTests > 0 ? completedTests / totalTests : 0;
 
     return {
@@ -194,27 +212,24 @@ export const EvaluationMonitor: React.FC<EvaluationMonitorProps> = ({
   const handleCancel = async () => {
     if (!session) return;
     Modal.confirm({
-      title: '确认取消评测',
-      content: '确定要取消当前的评测会话吗？已完成的结果将保留。',
-      okText: '确定',
-      cancelText: '取消',
+      title: "确认取消评测",
+      content: "确定要取消当前的评测会话吗？已完成的结果将保留。",
+      okText: "确定",
+      cancelText: "取消",
       onOk: () => cancelSession(session.id),
     });
   };
 
   const handleRefresh = async () => {
     if (!session) return;
-    await Promise.all([
-      refreshSession(session.id),
-      refreshResults(session.id),
-    ]);
+    await Promise.all([refreshSession(session.id), refreshResults(session.id)]);
   };
 
   // 移除handleViewResult方法，直接展示结果
 
   const handleExportResults = () => {
     if (!results || results.length === 0) {
-      message.warning('暂无可导出的结果');
+      message.warning("暂无可导出的结果");
       return;
     }
 
@@ -229,7 +244,7 @@ export const EvaluationMonitor: React.FC<EvaluationMonitorProps> = ({
           total_tests: session?.total_tests,
           completed_tests: session?.completed_tests,
         },
-        results: results.map(result => ({
+        results: results.map((result) => ({
           agent_id: result.agent_id,
           agent_name: result.agent_name,
           question: result.question,
@@ -242,19 +257,24 @@ export const EvaluationMonitor: React.FC<EvaluationMonitorProps> = ({
           scoring_model_used: result.scoring_model_used,
           is_success: result.is_success,
           error_message: result.error_message,
-          created_at: result.created_at
-        }))
+          created_at: result.created_at,
+        })),
       };
 
       // 生成文件名
-      const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
-      const filename = `evaluation_results_${session?.name || 'unknown'}_${timestamp}.json`;
+      const timestamp = new Date()
+        .toISOString()
+        .slice(0, 19)
+        .replace(/:/g, "-");
+      const filename = `evaluation_results_${session?.name || "unknown"}_${timestamp}.json`;
 
       // 创建并下载文件
-      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], {
+        type: "application/json",
+      });
       const url = URL.createObjectURL(blob);
-      
-      const a = document.createElement('a');
+
+      const a = document.createElement("a");
       a.href = url;
       a.download = filename;
       document.body.appendChild(a);
@@ -264,41 +284,41 @@ export const EvaluationMonitor: React.FC<EvaluationMonitorProps> = ({
 
       message.success(`评测结果已导出: ${filename}`);
     } catch (error) {
-      console.error('导出失败:', error);
-      message.error('导出失败，请重试');
+      console.error("导出失败:", error);
+      message.error("导出失败，请重试");
     }
   };
 
   // 状态颜色映射
   const getStatusColor = (status: EvaluationStatus) => {
     switch (status) {
-      case 'PENDING':
-        return 'default';
-      case 'RUNNING':
-        return 'processing';
-      case 'COMPLETED':
-        return 'success';
-      case 'FAILED':
-        return 'error';
-      case 'CANCELLED':
-        return 'warning';
+      case "PENDING":
+        return "default";
+      case "RUNNING":
+        return "processing";
+      case "COMPLETED":
+        return "success";
+      case "FAILED":
+        return "error";
+      case "CANCELLED":
+        return "warning";
       default:
-        return 'default';
+        return "default";
     }
   };
 
   // 状态图标映射
   const getStatusIcon = (status: EvaluationStatus) => {
     switch (status) {
-      case 'PENDING':
+      case "PENDING":
         return <ClockCircleOutlined />;
-      case 'RUNNING':
+      case "RUNNING":
         return <FireOutlined />;
-      case 'COMPLETED':
+      case "COMPLETED":
         return <CheckCircleOutlined />;
-      case 'FAILED':
+      case "FAILED":
         return <ExclamationCircleOutlined />;
-      case 'CANCELLED':
+      case "CANCELLED":
         return <StopOutlined />;
       default:
         return <ClockCircleOutlined />;
@@ -324,16 +344,17 @@ export const EvaluationMonitor: React.FC<EvaluationMonitorProps> = ({
           <Space>
             <RobotOutlined />
             评测监控
-            <Tag color={getStatusColor(session.status)} icon={getStatusIcon(session.status)}>
-              {session.status === 'PENDING' && '等待中'}
-              {session.status === 'RUNNING' && '运行中'}
-              {session.status === 'COMPLETED' && '已完成'}
-              {session.status === 'FAILED' && '失败'}
-              {session.status === 'CANCELLED' && '已取消'}
+            <Tag
+              color={getStatusColor(session.status)}
+              icon={getStatusIcon(session.status)}
+            >
+              {session.status === "PENDING" && "等待中"}
+              {session.status === "RUNNING" && "运行中"}
+              {session.status === "COMPLETED" && "已完成"}
+              {session.status === "FAILED" && "失败"}
+              {session.status === "CANCELLED" && "已取消"}
             </Tag>
-            {isWebSocketConnected && (
-              <Badge status="success" text="实时连接" />
-            )}
+            {isWebSocketConnected && <Badge status="success" text="实时连接" />}
           </Space>
         }
         extra={
@@ -346,7 +367,7 @@ export const EvaluationMonitor: React.FC<EvaluationMonitorProps> = ({
               >
                 刷新
               </Button>
-              {session.status === 'PENDING' && (
+              {session.status === "PENDING" && (
                 <Button
                   type="primary"
                   icon={<PlayCircleOutlined />}
@@ -356,7 +377,7 @@ export const EvaluationMonitor: React.FC<EvaluationMonitorProps> = ({
                   开始评测
                 </Button>
               )}
-              {session.status === 'RUNNING' && (
+              {session.status === "RUNNING" && (
                 <Button
                   danger
                   icon={<StopOutlined />}
@@ -415,7 +436,7 @@ export const EvaluationMonitor: React.FC<EvaluationMonitorProps> = ({
             <Progress
               percent={statistics.completionRate * 100}
               size="small"
-              status={session.status === 'RUNNING' ? 'active' : 'normal'}
+              status={session.status === "RUNNING" ? "active" : "normal"}
             />
           </Col>
           <Col span={6}>
@@ -431,18 +452,18 @@ export const EvaluationMonitor: React.FC<EvaluationMonitorProps> = ({
               value={statistics.averageScore}
               precision={1}
               suffix="/ 10"
-              valueStyle={{ 
-                color: statistics.averageScore >= 7 ? '#52c41a' : 
-                       statistics.averageScore >= 5 ? '#faad14' : '#ff4d4f' 
+              valueStyle={{
+                color:
+                  statistics.averageScore >= 7
+                    ? "#52c41a"
+                    : statistics.averageScore >= 5
+                      ? "#faad14"
+                      : "#ff4d4f",
               }}
             />
           </Col>
           <Col span={6}>
-            <Statistic
-              title="评测结果"
-              value={results.length}
-              suffix="个"
-            />
+            <Statistic title="评测结果" value={results.length} suffix="个" />
           </Col>
         </Row>
       </Card>
@@ -457,12 +478,11 @@ export const EvaluationMonitor: React.FC<EvaluationMonitorProps> = ({
             showControls={true}
             onViewDetail={(result) => {
               // 在监控页面中，这个回调可以用于其他操作，比如导出单个结果
-              console.log('查看结果详情:', result);
+              console.log("查看结果详情:", result);
             }}
           />
         </div>
       )}
-
     </div>
   );
 };

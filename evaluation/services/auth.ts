@@ -22,30 +22,30 @@ class AuthService {
    * 获取当前存储的token
    */
   getToken(): string | null {
-    return localStorage.getItem('auth_token');
+    return localStorage.getItem("auth_token");
   }
 
   /**
    * 获取当前用户ID
    */
   getUserId(): string | null {
-    return localStorage.getItem('user_id');
+    return localStorage.getItem("user_id");
   }
 
   /**
    * 保存认证信息
    */
   private saveAuth(token: string, userId: string): void {
-    localStorage.setItem('auth_token', token);
-    localStorage.setItem('user_id', userId);
+    localStorage.setItem("auth_token", token);
+    localStorage.setItem("user_id", userId);
   }
 
   /**
    * 清除认证信息
    */
   clearAuth(): void {
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('user_id');
+    localStorage.removeItem("auth_token");
+    localStorage.removeItem("user_id");
   }
 
   /**
@@ -60,7 +60,7 @@ class AuthService {
    * 自动认证 - 由于token已硬编码，始终返回true
    */
   async ensureAuthenticated(): Promise<boolean> {
-    console.log('✅ 使用硬编码token，无需认证');
+    console.log("✅ 使用硬编码token，无需认证");
     return true;
   }
 
@@ -71,7 +71,7 @@ class AuthService {
     const token = this.getToken();
     if (token) {
       return {
-        'Authorization': `Bearer ${token}`
+        Authorization: `Bearer ${token}`,
       };
     }
     return {};
