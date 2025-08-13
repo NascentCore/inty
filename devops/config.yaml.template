@@ -1,3 +1,4 @@
+# Used to generate config.yaml for different deployment environments.
 app:
   {{ app.backend_cors_origins }}
 
