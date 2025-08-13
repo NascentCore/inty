@@ -742,15 +742,23 @@ class SubscriptionService:
                 return SUPERUSER_LIMIT_CHECK_RESULT
 
             # 获取订阅状态
-            subscription_status = await self.get_user_subscription_status(db, user_id)
+            subscription_status = await self.get_user_subscription_status(db, user.id)
 
             # 免费用户：检查总聊天次数限制
             if subscription_status.total_chat_limit is not None:
+                chat_limit = subscription_status.total_chat_limit
+            elif not subscription_status.is_subscribed:
+                # 免费用户使用静态配置作为回退
+                chat_limit = global_config_loaded_from_config_yaml.app.limits.free_user_chat_total_limit
+            else:
+                chat_limit = None
+
+            if chat_limit is not None:
                 # 获取用户总聊天次数
                 total_chat_count_result = await db.execute(
                     select(func.sum(SubscriptionUsage.usage_count)).where(
                         and_(
-                            SubscriptionUsage.user_id == user_id,
+                            SubscriptionUsage.user_id == user.id,
                             SubscriptionUsage.usage_type == "chat",
                         )
                     )
@@ -758,12 +766,12 @@ class SubscriptionService:
                 total_chat_count = total_chat_count_result.scalar() or 0
 
                 # 检查是否超出总限制
-                is_allowed = total_chat_count < subscription_status.total_chat_limit
+                is_allowed = total_chat_count < chat_limit
 
                 return (
                     is_allowed,
                     total_chat_count,
-                    subscription_status.total_chat_limit,
+                    chat_limit,
                 )
 
             # 付费用户：检查每日聊天次数限制
@@ -781,7 +789,7 @@ class SubscriptionService:
             chat_count_result = await db.execute(
                 select(func.sum(SubscriptionUsage.usage_count)).where(
                     and_(
-                        SubscriptionUsage.user_id == user_id,
+                        SubscriptionUsage.user_id == user.id,
                         SubscriptionUsage.usage_type == "chat",
                         SubscriptionUsage.usage_date >= today_start,
                         SubscriptionUsage.usage_date < today_end,

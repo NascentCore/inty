@@ -73,6 +73,7 @@ class AppConfig:
     @dataclass
     class LimitsConfig:
         free_user_image_gen_daily_limit: int = 4
+        free_user_chat_total_limit: int = 100
 
     limits: LimitsConfig = None
 

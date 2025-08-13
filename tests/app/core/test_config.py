@@ -168,6 +168,7 @@ class TestAppConfig:
         assert config.api_v1_prefix == "/api/v1"
         assert config.backend_cors_origins == []
         assert config.limits.free_user_image_gen_daily_limit == 4
+        assert config.limits.free_user_chat_total_limit == 100
 
     def test_app_config_custom_values(self):
         """Test AppConfig with custom values"""
@@ -402,7 +403,10 @@ class TestLoadConfig:
                 "name": "TestApp",
                 "debug": False,
                 "backend_cors_origins": ["http://localhost:3000"],
-                "limits": {"free_user_image_gen_daily_limit": 4},
+                "limits": {
+                    "free_user_image_gen_daily_limit": 4,
+                    "free_user_chat_total_limit": 100
+                },
             },
             "security": {"secret_key": "test-secret"},
             "database": {
@@ -437,6 +441,7 @@ class TestLoadConfig:
             assert config.app.debug is False
             assert config.app.backend_cors_origins == ["http://localhost:3000"]
             assert config.app.limits.free_user_image_gen_daily_limit == 4
+            assert config.app.limits.free_user_chat_total_limit == 100
             assert config.security.secret_key == "test-secret"
             assert config.database.host == "localhost"
             assert config.database.port == 5432
