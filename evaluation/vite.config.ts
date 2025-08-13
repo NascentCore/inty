@@ -37,8 +37,8 @@ export default defineConfig({
       },
     },
     hmr: {
-      overlay: true
-    }
+      overlay: true,
+    },
   },
 
   // 路径别名
