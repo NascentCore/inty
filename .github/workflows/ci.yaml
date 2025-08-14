@@ -18,25 +18,30 @@ on:
       - "requirements.txt"
       - ".github/workflows/ci.yaml"
 
+env:
+  PG_IMAGE: postgres:16
+  PG_PASSWORD: sxwl666!
+  PG_DB: inty
+
 jobs:
   test:
     runs-on: ubuntu-latest
     services:
       pgsql:
-        image: pgvector/pgvector:pg16
+        image: ${{ env.PG_IMAGE }}
         ports:
-          - 15432:5432
+          - 5432:5432
         env:
           POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: sxwl666!
-          POSTGRES_DB: inty_db
+          POSTGRES_PASSWORD: ${{ env.PG_PASSWORD }}
+          POSTGRES_DB: ${{ env.PG_DB }}
 
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v4
         with:
-          python-version: 3.11
+          python-version: 3.12
 
       - name: Install dependencies
         run: |
@@ -48,10 +53,10 @@ jobs:
         run: |
           # Create a config.yaml file for alembic to reach the database:
           echo "database:" >> config.yaml
-          echo "  db: inty_db" >> config.yaml
+          echo "  db: ${{ env.PG_DB }}" >> config.yaml
           echo "  host: localhost" >> config.yaml
-          echo "  password: sxwl666!" >> config.yaml
-          echo "  port: 15432" >> config.yaml
+          echo "  password: ${{ env.PG_PASSWORD }}" >> config.yaml
+          echo "  port: 5432" >> config.yaml
           echo "  user: postgres" >> config.yaml
           alembic upgrade head
 
