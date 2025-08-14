@@ -66,7 +66,7 @@ jobs:
     - name: Deploy to ${{ steps.set-environment.outputs.environment }}
       uses: appleboy/ssh-action@master
       # 这个限制这一步最长时间，同时内部有一个等待的循环，从而保证不会超时。
-      timeout-minutes: 1
+      timeout-minutes: 2
       with:
         host: ${{ secrets.DEV_SERVER_HOST }}
         username: ${{ secrets.DEV_SERVER_USER }}
