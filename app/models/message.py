@@ -4,6 +4,7 @@ import sqlalchemy as sa
 from sqlalchemy import Column, DateTime, Enum, ForeignKey, String
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
+from sqlalchemy.util import deprecated
 
 from app.models import Base
 
@@ -23,6 +24,7 @@ class SenderType(str, enum.Enum):
     AI = "AI"
 
 
+@deprecated("这个表从来没有被使用过")
 class Message(Base):
     """消息模型"""
 

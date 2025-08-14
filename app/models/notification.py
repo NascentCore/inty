@@ -18,6 +18,7 @@ from sqlalchemy import (
     text,
 )
 from sqlalchemy.orm import relationship
+from sqlalchemy.util import deprecated
 
 from app.models import Base
 
@@ -45,6 +46,10 @@ TEMPLATE_TYPE_MAP = {
 TEMPLATE_TYPE_REVERSE_MAP = {v: k for k, v in TEMPLATE_TYPE_MAP.items()}
 
 
+@deprecated(
+    "系统通知的功能并为投入使用，这个表从来没有被使用过，"
+    "如果做通知，在其他系统实现，不会在服务后端来实现"
+)
 class NotificationTemplate(Base):
     __tablename__ = "notification_templates"
 
@@ -72,6 +77,9 @@ class NotificationTemplate(Base):
         return f"<NotificationTemplate(id={self.id}, type={self.type}, title={self.title})>"
 
 
+@deprecated(
+    "系统推送设计不明，是否需要此表格不清楚，默认不应该在没有计划之前就开始做实施；计划删除"
+)
 class UserNotification(Base):
     __tablename__ = "user_notifications"
 

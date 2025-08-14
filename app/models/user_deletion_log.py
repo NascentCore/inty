@@ -2,10 +2,12 @@ from datetime import UTC, datetime
 
 import sqlalchemy as sa
 from sqlalchemy import ARRAY, JSON, Column, DateTime, Index, String
+from sqlalchemy.util import deprecated
 
 from app.models import Base
 
 
+@deprecated("这个表不会用于用户删除，计划删除")
 class UserDeletionLog(Base):
     """用户删除审计日志模型"""
 
