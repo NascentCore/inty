@@ -6,12 +6,11 @@ from sqlalchemy import Enum as SAEnum
 from sqlalchemy import ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
-from sqlalchemy.util import deprecated
 
 from app.models import Base
 
 
-@deprecated("该表格内的数据会转为代码中的静态数据，不会在数据库中存储")
+# DEPRECATED: 该表格内的数据会转为代码中的静态数据，不会在数据库中存储
 class ReportReason(Base):
     """
     目前举报原因如下，会转为代码中的静态数据，不会在数据库中存储

@@ -15,7 +15,6 @@ from sqlalchemy import (
     Text,
 )
 from sqlalchemy.orm import relationship
-from sqlalchemy.util import deprecated
 
 from app.models import Base
 
@@ -51,7 +50,7 @@ class TransactionType(str, enum.Enum):
     CANCEL = "CANCEL"  # 取消
 
 
-@deprecated("这个表的数据来自 Google Play，以及对应的文案信息，不会在数据库中存储")
+# DEPRECATED: 这个表的数据来自 Google Play，以及对应的文案信息，不会在数据库中存储
 class SubscriptionPlan(Base):
     """
     直接用 scripts/init_subscription_plans_simple.py 内的静态数据即可。
@@ -98,11 +97,9 @@ class SubscriptionPlan(Base):
     user_subscriptions = relationship("UserSubscription", back_populates="plan")
 
 
-@deprecated(
-    "存储用户订阅状态，这个可以从 subscription_transactions 中的用户的订阅付费记录来推导，"
-    "因此并不需要保留这个表，同时这个表带来了额外的复杂度，维护成本；"
-    "最危险的是带来了数据不一致的风险，因此考虑计划删除，但由于其支持实际功能，具体决定需要再议"
-)
+# DEPRECATED: 存储用户订阅状态，这个可以从 subscription_transactions 中的用户的订阅付费记录来推导，
+# 因此并不需要保留这个表，同时这个表带来了额外的复杂度，维护成本；
+# 最危险的是带来了数据不一致的风险，因此考虑计划删除，但由于其支持实际功能，具体决定需要再议
 class UserSubscription(Base):
     """用户订阅记录表"""
 
