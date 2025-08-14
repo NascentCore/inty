@@ -4,13 +4,15 @@
  */
 
 import React, { useState, useEffect } from "react";
-import { Layout, Menu, Typography, Tooltip } from "antd";
+import { Layout, Menu, Typography, Tooltip, Button } from "antd";
 import {
   RobotOutlined,
   MessageOutlined,
   BarChartOutlined,
   HistoryOutlined,
   SearchOutlined,
+  MenuFoldOutlined,
+  MenuUnfoldOutlined,
 } from "@ant-design/icons";
 import { EvaluationPage } from "./pages/EvaluationPage";
 import { EvaluationHistoryPage } from "./pages/EvaluationHistoryPage";
@@ -67,20 +69,13 @@ export const App: React.FC = () => {
     return () => clearTimeout(timer);
   }, []);
 
+  // 处理侧边栏折叠/展开
+  const handleCollapse = (collapsed: boolean) => {
+    setCollapsed(collapsed);
+  };
+
   // 导航菜单配置
   const navigationItems: NavigationItem[] = [
-    {
-      key: "evaluation",
-      icon: <BarChartOutlined />,
-      label: "智能体评测",
-      description: "创建和管理智能体评测任务",
-    },
-    {
-      key: "history",
-      icon: <HistoryOutlined />,
-      label: "评测记录",
-      description: "查看历史评测会话和结果",
-    },
     {
       key: "chat",
       icon: <MessageOutlined />,
@@ -98,6 +93,18 @@ export const App: React.FC = () => {
       icon: <SearchOutlined />,
       label: "提示词查询",
       description: "查询会话提示词和调试信息",
+    },
+    {
+      key: "evaluation",
+      icon: <BarChartOutlined />,
+      label: "智能体评测",
+      description: "创建和管理智能体评测任务",
+    },
+    {
+      key: "history",
+      icon: <HistoryOutlined />,
+      label: "评测记录",
+      description: "查看历史评测会话和结果",
     },
   ];
 
@@ -127,10 +134,9 @@ export const App: React.FC = () => {
     <Layout style={{ minHeight: "100vh" }}>
       {/* 侧边导航 */}
       <Sider
-        collapsible
+        collapsible={false}
         collapsed={collapsed}
-        onCollapse={setCollapsed}
-        width={280}
+        width={220}
         collapsedWidth={80}
         style={{
           overflow: "hidden",
@@ -152,26 +158,66 @@ export const App: React.FC = () => {
           }
         }}
       >
-        {/* Logo区域 */}
+        {/* Logo区域 - 添加汉堡按钮 */}
         <div
           style={{
             padding: collapsed ? "16px 12px" : "16px 24px",
             borderBottom: "1px solid #f0f0f0",
             display: "flex",
             alignItems: "center",
-            justifyContent: collapsed ? "center" : "flex-start",
+            justifyContent: collapsed ? "center" : "space-between",
           }}
         >
-          <RobotOutlined style={{ fontSize: "24px", color: "#1890ff" }} />
+          <div style={{ display: "flex", alignItems: "center" }}>
+            {collapsed ? (
+              /* 收起状态：显示汉堡按钮 */
+              <Button
+                type="text"
+                icon={<MenuUnfoldOutlined />}
+                onClick={() => handleCollapse(false)}
+                style={{
+                  padding: "4px 8px",
+                  height: "32px",
+                  width: "32px",
+                  borderRadius: "6px",
+                  color: "#1890ff",
+                  border: "1px solid #d9d9d9",
+                  fontSize: "16px",
+                }}
+                title="展开菜单"
+              />
+            ) : (
+              /* 展开状态：显示机器人图标 */
+              <RobotOutlined style={{ fontSize: "24px", color: "#1890ff" }} />
+            )}
+            {!collapsed && (
+              <div style={{ marginLeft: "12px" }}>
+                <Title level={4} style={{ margin: 0, color: "#1890ff" }}>
+                  InTy 评测
+                </Title>
+                <Text type="secondary" style={{ fontSize: "12px" }}>
+                  智能体评测系统
+                </Text>
+              </div>
+            )}
+          </div>
+
+          {/* 汉堡按钮 - 仅在展开状态显示 */}
           {!collapsed && (
-            <div style={{ marginLeft: "12px" }}>
-              <Title level={4} style={{ margin: 0, color: "#1890ff" }}>
-                InTy 评测
-              </Title>
-              <Text type="secondary" style={{ fontSize: "12px" }}>
-                智能体评测系统
-              </Text>
-            </div>
+            <Button
+              type="text"
+              icon={<MenuFoldOutlined />}
+              onClick={() => handleCollapse(true)}
+              style={{
+                padding: "4px 8px",
+                height: "32px",
+                width: "32px",
+                borderRadius: "6px",
+                color: "#666",
+                border: "1px solid #d9d9d9",
+              }}
+              title="收起菜单"
+            />
           )}
         </div>
 
@@ -293,7 +339,7 @@ export const App: React.FC = () => {
       {/* 主内容区域 */}
       <Layout
         style={{
-          marginLeft: isMobile ? 0 : collapsed ? 80 : 280,
+          marginLeft: isMobile ? 0 : collapsed ? 80 : 220,
           transition: "margin-left 0.2s",
           minHeight: "100vh",
         }}
