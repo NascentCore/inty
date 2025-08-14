@@ -203,7 +203,7 @@ def generate_background_image_to_gcs(
                 error_msg += f". RAI filtering reasons: {'; '.join(rai_reasons)}"
             raise Exception(error_msg)
 
-        logger.info(f"Successfully generated {len(generated_uris)} images")
+        logger.debug(f"Successfully generated images: {generated_uris}")
 
         # 根据include_rai_reason参数返回不同格式
         if include_rai_reason:
