@@ -40,7 +40,11 @@ jobs:
     - uses: docker/setup-buildx-action@v3
       with:
         cache-binary: true
-        
+
+    - name: Run ls
+      run: |
+        ls -la evaluation/
+
     - id: build-docker-image
       uses: docker/build-push-action@v6
       with:
