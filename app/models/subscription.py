@@ -50,8 +50,11 @@ class TransactionType(str, enum.Enum):
     CANCEL = "CANCEL"  # 取消
 
 
+# DEPRECATED: 这个表的数据来自 Google Play，以及对应的文案信息，不会在数据库中存储
 class SubscriptionPlan(Base):
-    """订阅计划表"""
+    """
+    直接用 scripts/init_subscription_plans_simple.py 内的静态数据即可。
+    """
 
     __tablename__ = "subscription_plans"
 
@@ -94,6 +97,9 @@ class SubscriptionPlan(Base):
     user_subscriptions = relationship("UserSubscription", back_populates="plan")
 
 
+# DEPRECATED: 存储用户订阅状态，这个可以从 subscription_transactions 中的用户的订阅付费记录来推导，
+# 因此并不需要保留这个表，同时这个表带来了额外的复杂度，维护成本；
+# 最危险的是带来了数据不一致的风险，因此考虑计划删除，但由于其支持实际功能，具体决定需要再议
 class UserSubscription(Base):
     """用户订阅记录表"""
 
@@ -192,8 +198,16 @@ class SubscriptionTransaction(Base):
 
 
 class SubscriptionUsage(Base):
-    """订阅使用记录表"""
+    """
+    订阅使用记录表
+    每一类后端依赖的资源服务，需要提供对应的字段记录：
+    LLM usage: {model, input_tokens, output_tokens}
+    Image generation usage: {model, ???}
+    Audio generation usage: {model, ???}
+    TODO: 需要增加新的字段来记录 llm 以外的 AI 服务的使用量。
+    """
 
+    # TODO: 改为 usage 即可，不需要写入这里
     __tablename__ = "subscription_usage"
 
     id = Column(String, primary_key=True, index=True, comment="使用记录ID")

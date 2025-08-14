@@ -23,6 +23,7 @@ class SenderType(str, enum.Enum):
     AI = "AI"
 
 
+# DEPRECATED: 这个表从来没有被使用过
 class Message(Base):
     """消息模型"""
 
