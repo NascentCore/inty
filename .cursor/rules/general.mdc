@@ -9,3 +9,4 @@ alwaysApply: true
 - Be concise
 - When there is multiple options, choose the simplest one
   Do not try to implement multiple options
+- Do not write markdown to describe things you implemented

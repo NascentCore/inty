@@ -1,0 +1,142 @@
+import React from "react";
+import { Typography, Button, Input, Space, Collapse, Tooltip } from "antd";
+import { PlusOutlined, DeleteOutlined, MinusCircleOutlined } from "@ant-design/icons";
+import { VariableSet } from "../../pages/PromptEvaluationPage";
+
+const { Title, Text } = Typography;
+const { Panel } = Collapse;
+
+interface VariableEditorProps {
+  variableSets: VariableSet[];
+  onAddSet: () => void;
+  onDeleteSet: (id: string) => void;
+  onUpdateVariable: (setId: string, key: string, value: string) => void;
+  onDeleteVariable: (setId: string, key: string) => void;
+  onAddVariable: (setId: string) => void;
+}
+
+export const VariableEditor: React.FC<VariableEditorProps> = ({
+  variableSets,
+  onAddSet,
+  onDeleteSet,
+  onUpdateVariable,
+  onDeleteVariable,
+  onAddVariable,
+}) => {
+  return (
+    <div>
+      <div style={{ marginBottom: "16px" }}>
+        <Title level={4} style={{ margin: 0, color: "#1890ff" }}>
+          输入变量
+        </Title>
+        <Text type="secondary">
+          定义输入变量，支持多组变量集进行批量测试
+        </Text>
+      </div>
+
+      <Collapse
+        defaultActiveKey={variableSets.map(set => set.id)}
+        style={{ marginBottom: "16px" }}
+      >
+        {variableSets.map((set, setIndex) => (
+          <Panel
+            key={set.id}
+            header={
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <span>变量集 {setIndex + 1}</span>
+                {variableSets.length > 1 && (
+                  <Tooltip title="删除变量集">
+                    <Button
+                      type="text"
+                      icon={<DeleteOutlined />}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDeleteSet(set.id);
+                      }}
+                      size="small"
+                      danger
+                    />
+                  </Tooltip>
+                )}
+              </div>
+            }
+            style={{ marginBottom: "8px" }}
+          >
+            <div style={{ marginBottom: "16px" }}>
+              <Text type="secondary" style={{ fontSize: "12px" }}>
+                定义输入变量，支持多组变量集进行批量测试
+              </Text>
+            </div>
+
+            {/* 变量列表 */}
+            {Object.entries(set.variables).map(([key, value]) => (
+              <div
+                key={key}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  marginBottom: "12px",
+                  gap: "8px",
+                }}
+              >
+                <Input
+                  placeholder="变量名"
+                  value={key}
+                  onChange={(e) => {
+                    const newKey = e.target.value;
+                    if (newKey !== key) {
+                      // 创建新的变量对象，替换旧的键
+                      const newVariables = { ...set.variables };
+                      delete newVariables[key];
+                      newVariables[newKey] = value;
+                      onUpdateVariable(set.id, newKey, value);
+                    }
+                  }}
+                  style={{ flex: 1 }}
+                  size="small"
+                />
+                <Input
+                  placeholder="变量值"
+                  value={value}
+                  onChange={(e) => onUpdateVariable(set.id, key, e.target.value)}
+                  style={{ flex: 2 }}
+                  size="small"
+                />
+                <Tooltip title="删除变量">
+                  <Button
+                    type="text"
+                    icon={<MinusCircleOutlined />}
+                    onClick={() => onDeleteVariable(set.id, key)}
+                    size="small"
+                    danger
+                  />
+                </Tooltip>
+              </div>
+            ))}
+
+            {/* 添加变量按钮 */}
+            <Button
+              type="dashed"
+              icon={<PlusOutlined />}
+              onClick={() => onAddVariable(set.id)}
+              size="small"
+              style={{ width: "100%" }}
+            >
+              添加变量
+            </Button>
+          </Panel>
+        ))}
+      </Collapse>
+
+      {/* 添加变量集按钮 */}
+      <Button
+        type="dashed"
+        icon={<PlusOutlined />}
+        onClick={onAddSet}
+        style={{ width: "100%" }}
+      >
+        添加变量集
+      </Button>
+    </div>
+  );
+};
