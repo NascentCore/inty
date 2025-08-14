@@ -11,6 +11,7 @@ import {
   BarChartOutlined,
   HistoryOutlined,
   SearchOutlined,
+  ExperimentOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
 } from "@ant-design/icons";
@@ -19,11 +20,18 @@ import { EvaluationHistoryPage } from "./pages/EvaluationHistoryPage";
 import { ChatPage } from "./pages/ChatPage";
 import AgentManagePage from "./pages/AgentManagePage";
 import PromptQueryPage from "./pages/PromptQueryPage";
+import PromptEvaluationPage from "./pages/PromptEvaluationPage";
 
 const { Sider, Content } = Layout;
 const { Title, Text } = Typography;
 
-type PageKey = "evaluation" | "history" | "chat" | "agents" | "prompt-query";
+type PageKey =
+  | "evaluation"
+  | "history"
+  | "chat"
+  | "agents"
+  | "prompt-query"
+  | "prompt-evaluation";
 
 interface NavigationItem {
   key: PageKey;
@@ -95,6 +103,12 @@ export const App: React.FC = () => {
       description: "查询会话提示词和调试信息",
     },
     {
+      key: "prompt-evaluation",
+      icon: <ExperimentOutlined />,
+      label: "提示词评测",
+      description: "灵活调整和测试提示词模板",
+    },
+    {
       key: "evaluation",
       icon: <BarChartOutlined />,
       label: "智能体评测",
@@ -125,6 +139,8 @@ export const App: React.FC = () => {
         return <AgentManagePage />;
       case "prompt-query":
         return <PromptQueryPage />;
+      case "prompt-evaluation":
+        return <PromptEvaluationPage />;
       default:
         return null;
     }
