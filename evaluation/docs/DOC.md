@@ -21,10 +21,9 @@ git clone git@github.com:NascentCore/inty-backend.git
 cd inty-backend
 cd app/static/evaluation
 IMAGE=ghcr.io/nascentcore/inty-backend/inty-eval:latest
-docker build --platform linux/amd64 \
+docker build --push --platform linux/amd64 \
     --build-arg REACT_APP_API_BASE_URL=https://dev.inty.sxwl.ai/api/v1 \
-    -t $IMAGE .
-docker push $IMAGE
+    --tag $IMAGE .
 
 # Use gcp to ssh to gcp vm
 ssh inty
