@@ -157,6 +157,11 @@ def generate_background_image_to_gcs(
             person_generation=types.PersonGeneration.ALLOW_ADULT,
             output_gcs_uri=gcs_uri_base,
             include_rai_reason=include_rai_reason,
+            negative_prompt=negative_prompt,
+            guidance_scale=0.7,
+            output_mime_type="image/jpeg",
+            output_compression_quality=70,
+            enhance_prompt=True,
             # This reduces the size significantly.
             output_mime_type="image/jpeg",
         )
