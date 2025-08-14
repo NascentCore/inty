@@ -52,7 +52,7 @@ jobs:
         push: true
         tags: ${{ env.INTY_EVAL_IMAGE }}:${{ github.ref_name }}
         build-args: |
-          REACT_APP_API_BASE_URL=https://dev.inty.sxwl.ai/api/v1
+          REACT_APP_API_BASE_URL=${{ vars.SERVICE_PUBLIC_URL }}/api/v1
         # https://docs.docker.com/build/ci/github-actions/cache/#cache-backend-api
         cache-from: type=gha
         cache-to: type=gha,mode=max
