@@ -27,11 +27,11 @@ docker build --push --platform linux/amd64 \
 
 # Use gcp to ssh to gcp vm
 ssh inty
-docker stop inty-test-new
+docker stop inty-eval
 # You are now on another server, redefine env var
 IMAGE=ghcr.io/nascentcore/inty-backend/inty-eval:latest
 docker rmi $IMAGE
-docker run --rm -d -p 8103:80 --name inty-test-new $IMAGE
+docker run --rm -d -p 8103:80 --name inty-eval $IMAGE
 
 # namecheap 上配置域名解析
 例：new.test.inty.cc -> 35.186.154.142
