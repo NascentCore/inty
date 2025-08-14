@@ -47,7 +47,6 @@ jobs:
         context: ./evaluation
         push: true
         tags: ${{ env.INTY_EVAL_IMAGE }}:${{ github.ref_name }}
-        platforms: linux/amd64
         build-args: |
           REACT_APP_API_BASE_URL='https://dev.inty.sxwl.ai/api/v1'
         # https://docs.docker.com/build/ci/github-actions/cache/#cache-backend-api
