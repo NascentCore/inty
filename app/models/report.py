@@ -6,12 +6,25 @@ from sqlalchemy import Enum as SAEnum
 from sqlalchemy import ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
+from sqlalchemy.util import deprecated
 
 from app.models import Base
 
 
+@deprecated("该表格内的数据会转为代码中的静态数据，不会在数据库中存储")
 class ReportReason(Base):
-    """举报原因模型"""
+    """
+    目前举报原因如下，会转为代码中的静态数据，不会在数据库中存储
+    devdb=# select * from report_reason;
+     id |                code                |              description               | is_active |          created_at           | updated_at
+    ----+------------------------------------+----------------------------------------+-----------+-------------------------------+------------
+      1 | SENSITIVE_OR_SEXUAL_CONTENT        | Sensitive or sexual content            | t         | 2025-06-05 11:47:00.713535+00 |
+      2 | MISINFORMATION                     | Misinformation                         | t         | 2025-06-05 11:47:00.713535+00 |
+      3 | FRAUD_OR_SCAMS                     | Fraud or scams                         | t         | 2025-06-05 11:47:00.713535+00 |
+      4 | VIOLATION_OF_PRIVACY               | Violation of privacy                   | t         | 2025-06-05 11:47:00.713535+00 |
+      5 | HARMFUL_TO_MINORS                  | Harmful to minors                      | t         | 2025-06-05 11:47:00.713535+00 |
+      6 | VIOLATION_OF_INTELLECTUAL_PROPERTY | Violations of my intellectual property | t         | 2025-06-05 11:47:00.713535+00 |
+    """
 
     # TODO: Remove this table.
     # Reasons are hardcoded in the app.
