@@ -59,7 +59,9 @@ export const VariableEditor: React.FC<VariableEditorProps> = ({
           <Input
             placeholder="变量值"
             value={value}
-            onChange={(e) => onUpdateVariable(variableSets[0].id, key, e.target.value)}
+            onChange={(e) =>
+              onUpdateVariable(variableSets[0].id, key, e.target.value)
+            }
             style={{ flex: 2 }}
             size="small"
           />

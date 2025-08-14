@@ -25,7 +25,13 @@ import PromptEvaluationPage from "./pages/PromptEvaluationPage";
 const { Sider, Content } = Layout;
 const { Title, Text } = Typography;
 
-type PageKey = "evaluation" | "history" | "chat" | "agents" | "prompt-query" | "prompt-evaluation";
+type PageKey =
+  | "evaluation"
+  | "history"
+  | "chat"
+  | "agents"
+  | "prompt-query"
+  | "prompt-evaluation";
 
 interface NavigationItem {
   key: PageKey;

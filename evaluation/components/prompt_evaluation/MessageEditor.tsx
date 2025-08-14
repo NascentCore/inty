@@ -1,10 +1,10 @@
 import React, { useState } from "react";
 import { Select, Button, Input, Space, Tooltip } from "antd";
-import { 
-  CopyOutlined, 
-  DeleteOutlined, 
+import {
+  CopyOutlined,
+  DeleteOutlined,
   DragOutlined,
-  MoreOutlined 
+  MoreOutlined,
 } from "@ant-design/icons";
 import { Message } from "../../pages/PromptEvaluationPage";
 

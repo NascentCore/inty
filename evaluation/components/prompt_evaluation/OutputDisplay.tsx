@@ -16,13 +16,13 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({
   if (outputs.length === 0) {
     return (
       <div style={{ textAlign: "center", padding: "40px 20px" }}>
-        <PlayCircleOutlined style={{ fontSize: "48px", color: "#d9d9d9", marginBottom: "16px" }} />
+        <PlayCircleOutlined
+          style={{ fontSize: "48px", color: "#d9d9d9", marginBottom: "16px" }}
+        />
         <Title level={4} style={{ color: "#8c8c8c", marginBottom: "8px" }}>
           执行提示词查看输出
         </Title>
-        <Text type="secondary">
-          点击执行按钮运行提示词，结果将显示在这里
-        </Text>
+        <Text type="secondary">点击执行按钮运行提示词，结果将显示在这里</Text>
       </div>
     );
   }
@@ -33,9 +33,7 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({
         <Title level={4} style={{ margin: 0, color: "#1890ff" }}>
           输出结果
         </Title>
-        <Text type="secondary">
-          查看AI模型的响应结果
-        </Text>
+        <Text type="secondary">查看AI模型的响应结果</Text>
       </div>
 
       {outputs.map((output, index) => (
@@ -54,7 +52,7 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({
               输出 {index + 1}
             </Text>
           </div>
-          
+
           <Paragraph
             style={{
               margin: 0,

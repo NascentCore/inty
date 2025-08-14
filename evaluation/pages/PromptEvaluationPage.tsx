@@ -28,7 +28,8 @@ const PromptEvaluationPage: React.FC = () => {
     {
       id: "2",
       role: "user",
-      content: "Please write a helpful tip about prompt engineering in 3 sentences or less.",
+      content:
+        "Please write a helpful tip about prompt engineering in 3 sentences or less.",
     },
   ]);
 
@@ -50,77 +51,102 @@ const PromptEvaluationPage: React.FC = () => {
   }, [messages]);
 
   // 删除消息
-  const deleteMessage = useCallback((id: string) => {
-    if (messages.length > 1) {
-      setMessages(messages.filter(msg => msg.id !== id));
-    } else {
-      message.warning("至少需要保留一条消息");
-    }
-  }, [messages]);
+  const deleteMessage = useCallback(
+    (id: string) => {
+      if (messages.length > 1) {
+        setMessages(messages.filter((msg) => msg.id !== id));
+      } else {
+        message.warning("至少需要保留一条消息");
+      }
+    },
+    [messages],
+  );
 
   // 复制消息
-  const copyMessage = useCallback((id: string) => {
-    const msg = messages.find(msg => msg.id === id);
-    if (msg) {
-      navigator.clipboard.writeText(msg.content);
-      message.success("消息内容已复制到剪贴板");
-    }
-  }, [messages]);
+  const copyMessage = useCallback(
+    (id: string) => {
+      const msg = messages.find((msg) => msg.id === id);
+      if (msg) {
+        navigator.clipboard.writeText(msg.content);
+        message.success("消息内容已复制到剪贴板");
+      }
+    },
+    [messages],
+  );
 
   // 更新消息
-  const updateMessage = useCallback((id: string, updates: Partial<Message>) => {
-    setMessages(messages.map(msg => 
-      msg.id === id ? { ...msg, ...updates } : msg
-    ));
-  }, [messages]);
+  const updateMessage = useCallback(
+    (id: string, updates: Partial<Message>) => {
+      setMessages(
+        messages.map((msg) => (msg.id === id ? { ...msg, ...updates } : msg)),
+      );
+    },
+    [messages],
+  );
 
   // 重新排序消息
-  const reorderMessages = useCallback((fromIndex: number, toIndex: number) => {
-    const newMessages = [...messages];
-    const [removed] = newMessages.splice(fromIndex, 1);
-    newMessages.splice(toIndex, 0, removed);
-    setMessages(newMessages);
-  }, [messages]);
-
-
+  const reorderMessages = useCallback(
+    (fromIndex: number, toIndex: number) => {
+      const newMessages = [...messages];
+      const [removed] = newMessages.splice(fromIndex, 1);
+      newMessages.splice(toIndex, 0, removed);
+      setMessages(newMessages);
+    },
+    [messages],
+  );
 
   // 更新变量
-  const updateVariable = useCallback((setId: string, key: string, value: string) => {
-    setVariableSets(variableSets.map(set => {
-      if (set.id === setId) {
-        return {
-          ...set,
-          variables: { ...set.variables, [key]: value },
-        };
-      }
-      return set;
-    }));
-  }, [variableSets]);
+  const updateVariable = useCallback(
+    (setId: string, key: string, value: string) => {
+      setVariableSets(
+        variableSets.map((set) => {
+          if (set.id === setId) {
+            return {
+              ...set,
+              variables: { ...set.variables, [key]: value },
+            };
+          }
+          return set;
+        }),
+      );
+    },
+    [variableSets],
+  );
 
   // 删除变量
-  const deleteVariable = useCallback((setId: string, key: string) => {
-    setVariableSets(variableSets.map(set => {
-      if (set.id === setId) {
-        const newVariables = { ...set.variables };
-        delete newVariables[key];
-        return { ...set, variables: newVariables };
-      }
-      return set;
-    }));
-  }, [variableSets]);
+  const deleteVariable = useCallback(
+    (setId: string, key: string) => {
+      setVariableSets(
+        variableSets.map((set) => {
+          if (set.id === setId) {
+            const newVariables = { ...set.variables };
+            delete newVariables[key];
+            return { ...set, variables: newVariables };
+          }
+          return set;
+        }),
+      );
+    },
+    [variableSets],
+  );
 
   // 添加变量
-  const addVariable = useCallback((setId: string) => {
-    setVariableSets(variableSets.map(set => {
-      if (set.id === setId) {
-        return {
-          ...set,
-          variables: { ...set.variables, [`var_${Date.now()}`]: "" },
-        };
-      }
-      return set;
-    }));
-  }, [variableSets]);
+  const addVariable = useCallback(
+    (setId: string) => {
+      setVariableSets(
+        variableSets.map((set) => {
+          if (set.id === setId) {
+            return {
+              ...set,
+              variables: { ...set.variables, [`var_${Date.now()}`]: "" },
+            };
+          }
+          return set;
+        }),
+      );
+    },
+    [variableSets],
+  );
 
   // 运行提示词
   const runPrompt = useCallback(async () => {
@@ -128,7 +154,7 @@ const PromptEvaluationPage: React.FC = () => {
     try {
       // 这里将来会调用 OpenRouter API
       // 暂时模拟响应
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
       const mockResponse = "这是一个模拟的 AI 响应，用于演示功能。";
       setOutputs([mockResponse]);
       message.success("提示词执行成功");
@@ -140,26 +166,40 @@ const PromptEvaluationPage: React.FC = () => {
   }, [messages, variableSets]);
 
   // 将输出添加到下一轮
-  const addOutputToNextRound = useCallback((output: string) => {
-    const newMessage: Message = {
-      id: Date.now().toString(),
-      role: "assistant",
-      content: output,
-    };
-    setMessages([...messages, newMessage]);
-    message.success("输出已添加到下一轮对话");
-  }, [messages]);
+  const addOutputToNextRound = useCallback(
+    (output: string) => {
+      const newMessage: Message = {
+        id: Date.now().toString(),
+        role: "assistant",
+        content: output,
+      };
+      setMessages([...messages, newMessage]);
+      message.success("输出已添加到下一轮对话");
+    },
+    [messages],
+  );
 
   return (
     <div style={{ padding: "24px", height: "100vh", overflow: "hidden" }}>
-      <div style={{ 
-        display: "flex", 
-        gap: "24px", 
-        height: "calc(100vh - 48px)", 
-        background: "transparent" 
-      }}>
+      <div
+        style={{
+          display: "flex",
+          gap: "24px",
+          height: "calc(100vh - 48px)",
+          background: "transparent",
+        }}
+      >
         {/* 左侧：提示词编辑区域 */}
-        <div id="prompt-editor" style={{ background: "#fff", borderRadius: "8px", padding: "24px", flex: 1, overflow: "auto" }}>
+        <div
+          id="prompt-editor"
+          style={{
+            background: "#fff",
+            borderRadius: "8px",
+            padding: "24px",
+            flex: 1,
+            overflow: "auto",
+          }}
+        >
           <div style={{ marginBottom: "24px" }}>
             <Title level={4} style={{ margin: 0, color: "#1890ff" }}>
               提示词模板
@@ -197,9 +237,19 @@ const PromptEvaluationPage: React.FC = () => {
         </div>
 
         {/* 右侧：变量设置、执行按钮和输出区域 */}
-        <div id="variable-editor" style={{ width: "400px", display: "flex", flexDirection: "column" }}>
+        <div
+          id="variable-editor"
+          style={{ width: "400px", display: "flex", flexDirection: "column" }}
+        >
           {/* 变量编辑器 */}
-          <div style={{ background: "#fff", borderRadius: "8px", padding: "24px", marginBottom: "24px" }}>
+          <div
+            style={{
+              background: "#fff",
+              borderRadius: "8px",
+              padding: "24px",
+              marginBottom: "24px",
+            }}
+          >
             <VariableEditor
               variableSets={variableSets}
               onUpdateVariable={updateVariable}
@@ -221,7 +271,14 @@ const PromptEvaluationPage: React.FC = () => {
           </Button>
 
           {/* 输出显示区域 */}
-          <div style={{ background: "#fff", borderRadius: "8px", padding: "24px", flex: 1 }}>
+          <div
+            style={{
+              background: "#fff",
+              borderRadius: "8px",
+              padding: "24px",
+              flex: 1,
+            }}
+          >
             <OutputDisplay
               outputs={outputs}
               onAddToNextRound={addOutputToNextRound}
