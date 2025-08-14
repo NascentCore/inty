@@ -1,6 +1,6 @@
 import React from "react";
-import { Typography, Button, Input, Space, Collapse, Tooltip } from "antd";
-import { PlusOutlined, DeleteOutlined, MinusCircleOutlined } from "@ant-design/icons";
+import { Typography, Button, Input, Collapse, Tooltip } from "antd";
+import { PlusOutlined, MinusCircleOutlined } from "@ant-design/icons";
 import { VariableSet } from "../../pages/PromptEvaluationPage";
 
 const { Title, Text } = Typography;
@@ -8,8 +8,6 @@ const { Panel } = Collapse;
 
 interface VariableEditorProps {
   variableSets: VariableSet[];
-  onAddSet: () => void;
-  onDeleteSet: (id: string) => void;
   onUpdateVariable: (setId: string, key: string, value: string) => void;
   onDeleteVariable: (setId: string, key: string) => void;
   onAddVariable: (setId: string) => void;
@@ -17,8 +15,6 @@ interface VariableEditorProps {
 
 export const VariableEditor: React.FC<VariableEditorProps> = ({
   variableSets,
-  onAddSet,
-  onDeleteSet,
   onUpdateVariable,
   onDeleteVariable,
   onAddVariable,
@@ -44,30 +40,10 @@ export const VariableEditor: React.FC<VariableEditorProps> = ({
             header={
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <span>变量集 {setIndex + 1}</span>
-                {variableSets.length > 1 && (
-                  <Tooltip title="删除变量集">
-                    <Button
-                      type="text"
-                      icon={<DeleteOutlined />}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDeleteSet(set.id);
-                      }}
-                      size="small"
-                      danger
-                    />
-                  </Tooltip>
-                )}
               </div>
             }
             style={{ marginBottom: "8px" }}
           >
-            <div style={{ marginBottom: "16px" }}>
-              <Text type="secondary" style={{ fontSize: "12px" }}>
-                定义输入变量，支持多组变量集进行批量测试
-              </Text>
-            </div>
-
             {/* 变量列表 */}
             {Object.entries(set.variables).map(([key, value]) => (
               <div
@@ -127,16 +103,6 @@ export const VariableEditor: React.FC<VariableEditorProps> = ({
           </Panel>
         ))}
       </Collapse>
-
-      {/* 添加变量集按钮 */}
-      <Button
-        type="dashed"
-        icon={<PlusOutlined />}
-        onClick={onAddSet}
-        style={{ width: "100%" }}
-      >
-        添加变量集
-      </Button>
     </div>
   );
 };

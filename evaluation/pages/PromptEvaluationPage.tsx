@@ -82,23 +82,7 @@ const PromptEvaluationPage: React.FC = () => {
     setMessages(newMessages);
   }, [messages]);
 
-  // 添加变量集
-  const addVariableSet = useCallback(() => {
-    const newSet: VariableSet = {
-      id: Date.now().toString(),
-      variables: {},
-    };
-    setVariableSets([...variableSets, newSet]);
-  }, [variableSets]);
 
-  // 删除变量集
-  const deleteVariableSet = useCallback((id: string) => {
-    if (variableSets.length > 1) {
-      setVariableSets(variableSets.filter(set => set.id !== id));
-    } else {
-      message.warning("至少需要保留一个变量集");
-    }
-  }, [variableSets]);
 
   // 更新变量
   const updateVariable = useCallback((setId: string, key: string, value: string) => {
@@ -218,8 +202,6 @@ const PromptEvaluationPage: React.FC = () => {
           <div style={{ background: "#fff", borderRadius: "8px", padding: "24px", marginBottom: "24px" }}>
             <VariableEditor
               variableSets={variableSets}
-              onAddSet={addVariableSet}
-              onDeleteSet={deleteVariableSet}
               onUpdateVariable={updateVariable}
               onDeleteVariable={deleteVariable}
               onAddVariable={addVariable}
