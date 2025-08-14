@@ -146,6 +146,8 @@ def generate_background_image_to_gcs(
         All content must be appropriate for a general audience.
         """
 
+        logger.debug(f"Enhanced prompt: {enhanced_prompt}")
+
         # 使用新的Google Gen AI SDK生成图片
         config = types.GenerateImagesConfig(
             number_of_images=count,
@@ -155,6 +157,8 @@ def generate_background_image_to_gcs(
             person_generation=types.PersonGeneration.ALLOW_ADULT,
             output_gcs_uri=gcs_uri_base,
             include_rai_reason=include_rai_reason,
+            # This reduces the size significantly.
+            output_mime_type="image/jpeg",
         )
 
         client = get_genai_client()
