@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from "react";
-import { Layout, Typography, Button, message } from "antd";
+import { Typography, Button, message } from "antd";
 import { PlusOutlined, PlayCircleOutlined } from "@ant-design/icons";
 import { MessageEditor } from "../components/prompt_evaluation/MessageEditor";
 import { VariableEditor } from "../components/prompt_evaluation/VariableEditor";
@@ -168,10 +168,15 @@ const PromptEvaluationPage: React.FC = () => {
 
   return (
     <div style={{ padding: "24px", height: "100vh", overflow: "hidden" }}>
-      <Layout style={{ height: "calc(100vh - 48px)", background: "transparent" }}>
+      <div style={{ 
+        display: "flex", 
+        gap: "24px", 
+        height: "calc(100vh - 48px)", 
+        background: "transparent" 
+      }}>
         {/* 左侧：提示词编辑区域 */}
-        <div id="prompt-editor" style={{ width: "800px", flex: 1, overflow: "auto" }}>
-          <div style={{ background: "#fff", borderRadius: "8px", padding: "24px" }}>
+        <div id="prompt-editor" style={{ flex: 1, overflow: "auto" }}>
+          <div style={{ background: "#fff", borderRadius: "8px", padding: "24px", height: "100%" }}>
             <div style={{ marginBottom: "24px" }}>
               <Title level={4} style={{ margin: 0, color: "#1890ff" }}>
                 提示词模板
@@ -182,7 +187,7 @@ const PromptEvaluationPage: React.FC = () => {
             </div>
 
             {/* 消息编辑器列表 */}
-            <div style={{ width: "50%", marginBottom: "24px" }}>
+            <div style={{ marginBottom: "24px" }}>
               {messages.map((message, index) => (
                 <MessageEditor
                   key={message.id}
@@ -202,7 +207,7 @@ const PromptEvaluationPage: React.FC = () => {
               type="dashed"
               icon={<PlusOutlined />}
               onClick={addMessage}
-              style={{ width: "50%", height: "60px" }}
+              style={{ width: "100%", height: "60px" }}
             >
               添加新消息
             </Button>
@@ -210,7 +215,7 @@ const PromptEvaluationPage: React.FC = () => {
         </div>
 
         {/* 右侧：变量设置、执行按钮和输出区域 */}
-        <div id="variable-editor" style={{ width: "400px", display: "flex", flexDirection: "column", marginLeft: "auto" }}>
+        <div id="variable-editor" style={{ width: "400px", display: "flex", flexDirection: "column" }}>
           {/* 变量编辑器 */}
           <div style={{ background: "#fff", borderRadius: "8px", padding: "24px", marginBottom: "24px" }}>
             <VariableEditor
@@ -243,7 +248,7 @@ const PromptEvaluationPage: React.FC = () => {
             />
           </div>
         </div>
-      </Layout>
+      </div>
     </div>
   );
 };
