@@ -187,4 +187,6 @@ inty-firebase-key.json
 /output/
 # Text2image outputs
 *.png
+*.jpeg
+*.jpg
 /.secrets/
