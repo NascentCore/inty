@@ -49,7 +49,7 @@ jobs:
           pip install -r requirements.txt
           pip install -r test_requirements.txt
 
-      - name: Test Alembic versions
+      - name: Create config.yaml
         run: |
           # Create a config.yaml file for alembic to reach the database:
           echo "database:" >> config.yaml
@@ -58,9 +58,11 @@ jobs:
           echo "  password: ${{ env.PG_PASSWORD }}" >> config.yaml
           echo "  port: 5432" >> config.yaml
           echo "  user: postgres" >> config.yaml
+
+      - name: Test Alembic versions
+        run: |          
           alembic upgrade head
 
-      - name: Run tests
+      - name: Run python tests
         run: |
-          cp config.yaml.example config.yaml
           PYTHONPATH=$(pwd) pytest app/ -v --tb=short -s
