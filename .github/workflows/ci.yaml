@@ -6,7 +6,7 @@ on:
     branches:
       - main
     paths:
-      - "**/*.py"
+      - "app/**/*.py"
       - "requirements.txt"
       - ".github/workflows/ci.yaml"
 
@@ -14,7 +14,7 @@ on:
     branches:
       - main
     paths:
-      - "**/*.py"
+      - "app/**/*.py"
       - "requirements.txt"
       - ".github/workflows/ci.yaml"
 
