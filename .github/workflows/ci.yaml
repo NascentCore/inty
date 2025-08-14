@@ -18,44 +18,51 @@ on:
       - "requirements.txt"
       - ".github/workflows/ci.yaml"
 
+env:
+  PG_IMAGE: postgres:16
+  PG_PASSWORD: sxwl666!
+  PG_DB: inty
+
 jobs:
   test:
     runs-on: ubuntu-latest
     services:
       pgsql:
-        image: pgvector/pgvector:pg16
+        image: postgres:16
         ports:
-          - 15432:5432
+          - 5432:5432
         env:
           POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: sxwl666!
-          POSTGRES_DB: inty_db
+          POSTGRES_PASSWORD: ${{ env.PG_PASSWORD }}
+          POSTGRES_DB: ${{ env.PG_DB }}
 
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v4
         with:
-          python-version: 3.11
+          python-version: 3.12
+          cache: 'pip'
 
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install -r test_requirements.txt
 
-      - name: Test Alembic versions
+      - name: Create config.yaml
         run: |
           # Create a config.yaml file for alembic to reach the database:
           echo "database:" >> config.yaml
-          echo "  db: inty_db" >> config.yaml
+          echo "  db: ${{ env.PG_DB }}" >> config.yaml
           echo "  host: localhost" >> config.yaml
-          echo "  password: sxwl666!" >> config.yaml
-          echo "  port: 15432" >> config.yaml
+          echo "  password: ${{ env.PG_PASSWORD }}" >> config.yaml
+          echo "  port: 5432" >> config.yaml
           echo "  user: postgres" >> config.yaml
+
+      - name: Test Alembic versions
+        run: |          
           alembic upgrade head
 
-      - name: Run tests
+      - name: Run python tests
         run: |
-          cp config.yaml.example config.yaml
           PYTHONPATH=$(pwd) pytest app/ -v --tb=short -s
