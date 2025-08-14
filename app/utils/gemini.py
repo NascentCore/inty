@@ -1,3 +1,23 @@
+"""
+Wrappers of Gemini API. There are 2 sets of APIs:
+
+* google.genai, which is called Gemini API here: https://github.com/googleapis/python-genai
+* Vertex AI API: https://github.com/googleapis/python-aiplatform
+
+They share the same billing system provided by Google Cloud.
+
+They differ in:
+
+* They offer different sets of models, for example genai by Gemini offers imagen 4.
+* Vertex AI SDK wraps google.genai, which provides direct integration with Google Cloud platform.
+  For example, login through Google Cloud credentials.
+
+This file is for the genai API.
+"""
+
+import json
+import os
+
 import google.genai as genai
 from google.genai import types
 import os
