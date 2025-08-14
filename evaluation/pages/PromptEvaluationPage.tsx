@@ -175,43 +175,41 @@ const PromptEvaluationPage: React.FC = () => {
         background: "transparent" 
       }}>
         {/* 左侧：提示词编辑区域 */}
-        <div id="prompt-editor" style={{ flex: 1, overflow: "auto" }}>
-          <div style={{ background: "#fff", borderRadius: "8px", padding: "24px", height: "100%" }}>
-            <div style={{ marginBottom: "24px" }}>
-              <Title level={4} style={{ margin: 0, color: "#1890ff" }}>
-                提示词模板
-              </Title>
-              <Text type="secondary">
-                编辑符合 OpenAI Chat API 标准的消息序列
-              </Text>
-            </div>
-
-            {/* 消息编辑器列表 */}
-            <div style={{ marginBottom: "24px" }}>
-              {messages.map((message, index) => (
-                <MessageEditor
-                  key={message.id}
-                  message={message}
-                  index={index}
-                  onUpdate={(updates) => updateMessage(message.id, updates)}
-                  onDelete={() => deleteMessage(message.id)}
-                  onCopy={() => copyMessage(message.id)}
-                  onReorder={reorderMessages}
-                  isSelected={false}
-                />
-              ))}
-            </div>
-
-            {/* 添加新消息按钮 */}
-            <Button
-              type="dashed"
-              icon={<PlusOutlined />}
-              onClick={addMessage}
-              style={{ width: "100%", height: "60px" }}
-            >
-              添加新消息
-            </Button>
+        <div id="prompt-editor" style={{ background: "#fff", borderRadius: "8px", padding: "24px", flex: 1, overflow: "auto" }}>
+          <div style={{ marginBottom: "24px" }}>
+            <Title level={4} style={{ margin: 0, color: "#1890ff" }}>
+              提示词模板
+            </Title>
+            <Text type="secondary">
+              编辑符合 OpenAI Chat API 标准的消息序列
+            </Text>
           </div>
+
+          {/* 消息编辑器列表 */}
+          <div style={{ marginBottom: "24px" }}>
+            {messages.map((message, index) => (
+              <MessageEditor
+                key={message.id}
+                message={message}
+                index={index}
+                onUpdate={(updates) => updateMessage(message.id, updates)}
+                onDelete={() => deleteMessage(message.id)}
+                onCopy={() => copyMessage(message.id)}
+                onReorder={reorderMessages}
+                isSelected={false}
+              />
+            ))}
+          </div>
+
+          {/* 添加新消息按钮 */}
+          <Button
+            type="dashed"
+            icon={<PlusOutlined />}
+            onClick={addMessage}
+            style={{ width: "100%", height: "60px" }}
+          >
+            添加新消息
+          </Button>
         </div>
 
         {/* 右侧：变量设置、执行按钮和输出区域 */}
