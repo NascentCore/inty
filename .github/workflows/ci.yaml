@@ -28,7 +28,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       pgsql:
-        image: ${{ env.PG_IMAGE }}
+        image: postgres:16
         ports:
           - 5432:5432
         env:
