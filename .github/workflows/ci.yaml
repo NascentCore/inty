@@ -8,6 +8,7 @@ on:
     paths:
       - "app/**/*.py"
       - "requirements.txt"
+      - "test_requirements.txt"
       - ".github/workflows/ci.yaml"
 
   pull_request:
@@ -16,6 +17,7 @@ on:
     paths:
       - "app/**/*.py"
       - "requirements.txt"
+      - "test_requirements.txt"
       - ".github/workflows/ci.yaml"
 
 env:
@@ -44,10 +46,24 @@ jobs:
           python-version: 3.12
           cache: 'pip'
 
+      # Based on https://adamj.eu/tech/2023/11/02/github-actions-faster-python-virtual-environments/
+      - uses: actions/cache@v4
+        with:
+          path: .venv
+          # Unique key for the cache
+          key: ${{ runner.os }}-venv-${{ hashFiles('requirements.txt', 'test_requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-venv-
+  
       - name: Install dependencies
         run: |
-          pip install -r requirements.txt
-          pip install -r test_requirements.txt
+          python -m venv .venv
+          source .venv/bin/activate
+          python -m pip install -r requirements.txt
+          python -m pip install -r test_requirements.txt
+          # https://stackoverflow.com/a/74669486
+          echo "$VIRTUAL_ENV/bin" >> $GITHUB_PATH
+          echo "VIRTUAL_ENV=$VIRTUAL_ENV" >> $GITHUB_ENV
 
       - name: Create config.yaml
         run: |
@@ -60,7 +76,7 @@ jobs:
           echo "  user: postgres" >> config.yaml
 
       - name: Test Alembic versions
-        run: |          
+        run: |
           alembic upgrade head
 
       - name: Run python tests
