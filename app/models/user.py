@@ -43,7 +43,10 @@ class User(Base):
 
     __tablename__ = "users"
 
+    # TODO: This should be a UUID, but we use string to allow prepend
+    # category prefixes like user-<uuid> for better readability.
     id = Column(String, primary_key=True, comment="用户唯一标识符")
+
     readable_id = Column(
         String(8), unique=True, index=True, nullable=False, comment="用户可读ID"
     )
@@ -82,6 +85,7 @@ class User(Base):
 
     # 账户删除相关字段
     deleted_at = Column(DateTime(timezone=True), comment="账户删除时间")
+    # DEPRECATED: This field is not needed anymore.
     anonymized_at = Column(DateTime(timezone=True), comment="数据匿名化时间")
     deletion_reason = Column(String(255), comment="删除原因")
 
