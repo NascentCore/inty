@@ -267,7 +267,13 @@ async def delete_agent(
 @router.post(
     "/generate_background",
     response_model=APIResponse[dict],
-    summary="Generate images based on description of an AI character",
+    summary="Deprecated, use /text_to_image instead",
+    deprecated=True,
+)
+@router.post(
+    "/text-to-image",
+    response_model=APIResponse[dict],
+    summary="Generate images based on text description",
 )
 async def generate_background(
     request: schemas.BackgroundGenerateRequest,
