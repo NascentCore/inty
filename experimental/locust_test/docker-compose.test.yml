@@ -1,0 +1,153 @@
+version: "3.8"
+
+services:
+  # PostgreSQL 数据库服务 (带 vector 扩展支持)
+  postgres:
+    image: pgvector/pgvector:pg15
+    container_name: inty-postgres-test
+    environment:
+      POSTGRES_DB: inty_test
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres123
+      POSTGRES_HOST_AUTH_METHOD: trust
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - inty-test-network
+
+  # Inty Backend 主服务 (资源限制 1c2g)
+  inty-backend:
+    image: ghcr.io/nascentcore/inty-backend/inty-server:main@sha256:e0bbf5278b78326e9ec096b03f94f64385c4a046c974edac3ba5b421134b16d6
+    container_name: inty-backend-test
+    ports:
+      - "8000:8000"
+    environment:
+      # 简化的环境变量，主要通过config.yaml配置
+      - ENVIRONMENT=test
+
+    volumes:
+      - ./config.test.yaml:/config.yaml:ro
+      - ./inty-backend-key.json:/inty-backend-key.json:ro
+      - ./inty-firebase-key.json:/inty-firebase-key.json:ro
+      - /tmp/uploads:/tmp/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0" # 限制1核CPU
+          memory: 2G # 限制2GB内存
+        reservations:
+          cpus: "0.5" # 预留0.5核CPU
+          memory: 1G # 预留1GB内存
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - inty-test-network
+    restart: unless-stopped
+
+  # Locust 负载测试服务
+  locust-master:
+    image: locustio/locust:2.17.0
+    container_name: locust-master-test
+    ports:
+      - "8089:8089" # Locust Web UI
+    volumes:
+      - ./locustfile.py:/mnt/locust/locustfile.py:ro
+      - ./test-data:/mnt/locust/test-data:rw
+    command: -f /mnt/locust/locustfile.py --master --host=http://inty-backend:8000
+    environment:
+      - LOCUST_MODE=master
+      - LOCUST_HOST=http://inty-backend:8000
+    depends_on:
+      - inty-backend
+    networks:
+      - inty-test-network
+
+  # Locust Worker节点 (可以扩展多个)
+  locust-worker:
+    image: locustio/locust:2.17.0
+    volumes:
+      - ./locustfile.py:/mnt/locust/locustfile.py:ro
+    command: -f /mnt/locust/locustfile.py --worker --master-host=locust-master
+    environment:
+      - LOCUST_MODE=worker
+      - LOCUST_MASTER_HOST=locust-master
+    depends_on:
+      - locust-master
+    networks:
+      - inty-test-network
+    deploy:
+      replicas: 2 # 启动2个worker实例
+
+  # 监控服务 - Prometheus (可选)
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus-test
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.console.libraries=/etc/prometheus/console_libraries"
+      - "--web.console.templates=/etc/prometheus/consoles"
+      - "--storage.tsdb.retention.time=200h"
+      - "--web.enable-lifecycle"
+    networks:
+      - inty-test-network
+    profiles:
+      - monitoring
+
+  # 监控服务 - Grafana (可选)
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana-test
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin123
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+    depends_on:
+      - prometheus
+    networks:
+      - inty-test-network
+    profiles:
+      - monitoring
+
+volumes:
+  postgres_data:
+    driver: local
+  grafana_data:
+    driver: local
+
+networks:
+  inty-test-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+# 快速启动脚本配置
+# 使用方法:
+# 1. 基础测试环境: docker-compose -f docker-compose.test.yml up -d
+# 2. 包含监控: docker-compose -f docker-compose.test.yml --profile monitoring up -d
+# 3. 仅启动数据库: docker-compose -f docker-compose.test.yml up -d postgres
+# 4. 扩展worker: docker-compose -f docker-compose.test.yml up -d --scale locust-worker=4
