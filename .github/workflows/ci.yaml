@@ -1,7 +1,6 @@
-name: Python Tests
+name: CI
 
 on:
-  workflow_dispatch:
   push:
     branches:
       - main
@@ -22,6 +21,7 @@ on:
 
 env:
   PG_IMAGE: postgres:16
+  PG_USER: postgres
   PG_PASSWORD: sxwl666!
   PG_DB: inty
 
@@ -34,7 +34,7 @@ jobs:
         ports:
           - 5432:5432
         env:
-          POSTGRES_USER: postgres
+          POSTGRES_USER: ${{ env.PG_USER }}
           POSTGRES_PASSWORD: ${{ env.PG_PASSWORD }}
           POSTGRES_DB: ${{ env.PG_DB }}
 
@@ -44,30 +44,16 @@ jobs:
       - uses: actions/setup-python@v4
         with:
           python-version: 3.12
+          # This mihgt not be needed, test to remove it and see if venv still works.
           cache: 'pip'
 
-      # Based on https://adamj.eu/tech/2023/11/02/github-actions-faster-python-virtual-environments/
-      - uses: actions/cache@v4
-        with:
-          path: .venv
-          # Unique key for the cache
-          key: ${{ runner.os }}-venv-${{ hashFiles('requirements.txt', 'test_requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-venv-
-  
       - name: Install dependencies
         run: |
-          python -m venv .venv
-          source .venv/bin/activate
-          python -m pip install -r requirements.txt
-          python -m pip install -r test_requirements.txt
-          # https://stackoverflow.com/a/74669486
-          echo "$VIRTUAL_ENV/bin" >> $GITHUB_PATH
-          echo "VIRTUAL_ENV=$VIRTUAL_ENV" >> $GITHUB_ENV
+          pip install -r requirements.txt
+          pip install -r test_requirements.txt
 
-      - name: Create config.yaml
+      - name: Populate config.yaml for Alembic
         run: |
-          # Create a config.yaml file for alembic to reach the database:
           echo "database:" >> config.yaml
           echo "  db: ${{ env.PG_DB }}" >> config.yaml
           echo "  host: localhost" >> config.yaml
@@ -76,7 +62,7 @@ jobs:
           echo "  user: postgres" >> config.yaml
 
       - name: Test Alembic versions
-        run: |
+        run: |          
           alembic upgrade head
 
       - name: Run python tests
