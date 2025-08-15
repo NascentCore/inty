@@ -1,3 +1,15 @@
+"""
+init_logger() should be called at the very beginning of the application.
+Afterwards, one should just use loguru.logger in the code:
+
+```python
+from loguru import logger
+
+def your_function():
+    logger.info("Hello, world!")
+```
+"""
+
 import logging
 import sys
 
