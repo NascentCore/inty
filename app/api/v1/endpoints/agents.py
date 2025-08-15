@@ -276,7 +276,7 @@ async def delete_agent(
     summary="Generate images based on text description",
 )
 async def generate_background(
-    request: schemas.BackgroundGenerateRequest,
+    request: schemas.TextToImageRequest,
     db: AsyncSession = Depends(deps.get_async_db),
     current_user: schemas.User = Depends(deps.get_current_active_user),
 ):

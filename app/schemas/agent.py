@@ -180,7 +180,7 @@ class AgentList(BaseModel):
     items: List[Agent]
 
 
-class BackgroundGenerateRequest(BaseModel):
+class TextToImageRequest(BaseModel):
     """
     Text to image request
     """
