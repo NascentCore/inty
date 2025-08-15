@@ -44,8 +44,9 @@ jobs:
       - uses: actions/setup-python@v4
         with:
           python-version: 3.12
-          # This mihgt not be needed, test to remove it and see if venv still works.
-          cache: 'pip'
+          # This does not seem to work: https://github.com/actions/setup-python/issues/330
+          # Keep for posterity, we do want to use this such that we do not need to manage cache ourselves.
+          # cache: 'pip'
 
       # Based on https://adamj.eu/tech/2023/11/02/github-actions-faster-python-virtual-environments/
       - uses: actions/cache@v4
