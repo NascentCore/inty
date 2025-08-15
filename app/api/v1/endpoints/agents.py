@@ -267,7 +267,7 @@ async def delete_agent(
 @router.post(
     "/generate_background",
     response_model=APIResponse[dict],
-    summary="Deprecated, use /text_to_image instead",
+    summary="Deprecated, use /text-to-image instead",
     deprecated=True,
 )
 @router.post(
