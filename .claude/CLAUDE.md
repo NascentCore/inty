@@ -26,6 +26,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 * Focus on functionality, format and style is maitained using specialized tools like black,
   which should not be invoked directly.
+* When writing documentation, write them into docs/ directory.
 
 ## Philosophy
 
