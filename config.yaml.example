@@ -1,3 +1,5 @@
+# Full list of entries are at app/core/config.py
+# All these configs are used to override the defaults in the code.
 app:
   # name: "InTy"
   # debug_messages: true
