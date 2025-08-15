@@ -1,13 +1,13 @@
-name: Python Tests
+name: CI
 
 on:
-  workflow_dispatch:
   push:
     branches:
       - main
     paths:
       - "app/**/*.py"
       - "requirements.txt"
+      - "test_requirements.txt"
       - ".github/workflows/ci.yaml"
 
   pull_request:
@@ -16,10 +16,12 @@ on:
     paths:
       - "app/**/*.py"
       - "requirements.txt"
+      - "test_requirements.txt"
       - ".github/workflows/ci.yaml"
 
 env:
   PG_IMAGE: postgres:16
+  PG_USER: postgres
   PG_PASSWORD: sxwl666!
   PG_DB: inty
 
@@ -32,7 +34,7 @@ jobs:
         ports:
           - 5432:5432
         env:
-          POSTGRES_USER: postgres
+          POSTGRES_USER: ${{ env.PG_USER }}
           POSTGRES_PASSWORD: ${{ env.PG_PASSWORD }}
           POSTGRES_DB: ${{ env.PG_DB }}
 
@@ -42,16 +44,31 @@ jobs:
       - uses: actions/setup-python@v4
         with:
           python-version: 3.12
-          cache: 'pip'
+          # This does not seem to work: https://github.com/actions/setup-python/issues/330
+          # Keep for posterity, we do want to use this such that we do not need to manage cache ourselves.
+          # cache: 'pip'
 
+      # Based on https://adamj.eu/tech/2023/11/02/github-actions-faster-python-virtual-environments/
+      - uses: actions/cache@v4
+        with:
+          path: .venv
+          # Unique key for the cache
+          key: ${{ runner.os }}-venv-${{ hashFiles('requirements.txt', 'test_requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-venv-
+  
       - name: Install dependencies
         run: |
-          pip install -r requirements.txt
-          pip install -r test_requirements.txt
+          python -m venv .venv
+          source .venv/bin/activate
+          python -m pip install -r requirements.txt
+          python -m pip install -r test_requirements.txt
+          # https://stackoverflow.com/a/74669486
+          echo "$VIRTUAL_ENV/bin" >> $GITHUB_PATH
+          echo "VIRTUAL_ENV=$VIRTUAL_ENV" >> $GITHUB_ENV
 
-      - name: Create config.yaml
+      - name: Populate config.yaml for Alembic
         run: |
-          # Create a config.yaml file for alembic to reach the database:
           echo "database:" >> config.yaml
           echo "  db: ${{ env.PG_DB }}" >> config.yaml
           echo "  host: localhost" >> config.yaml
