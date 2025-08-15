@@ -8,5 +8,4 @@ alwaysApply: false
 
 ## Logging
 
-* Use the already present logging api
-* If the file has no logging api, use loguru
+* Use `from loguru import logger`, do not use other ways to create logger object
