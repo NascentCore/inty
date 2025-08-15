@@ -181,18 +181,47 @@ class AgentList(BaseModel):
 
 
 class BackgroundGenerateRequest(BaseModel):
-    """背景生成请求"""
+    """
+    Text to image request
+    """
 
-    prompt: str
+    prompt: str = Field(
+        ...,
+        description=(
+            "Text description of the image, typically a list of comma "
+            "separated keywords/tags/properties"
+        ),
+    )
+    negative_prompt: Optional[str] = Field(
+        None,
+        description=(
+            "Negative prompt to avoid generating images with certain features, "
+            "e.g. 'blurry, low quality, explicit, NSFW'"
+        ),
+    )
+    enhance_prompt: Optional[bool] = Field(
+        True,
+        description=(
+            "Whether to enhance the prompt to improve the quality of the image. "
+            "The default is True for backward comaptibility. "
+            "This enhancement is different than the underlying imagen API's own enhancement. "
+            "This parameter is also required to allow this api to be used as a text-to-image wrapper. "
+            "As a wrapper, we'll not want to apply enhancement to the prompt. "
+        ),
+    )
     count: int = Field(
-        default=4, ge=1, le=4, description="Number of images to generate (1-4)"
+        default=4,
+        ge=1,
+        le=4,
+        description="Number of images to generate",
     )
 
     class Config:
         json_schema_extra = {
             "example": {
                 "prompt": "A beautiful mountain landscape with sunset",
-                "count": 6,
+                "negative_prompt": "blurry, low quality, explicit, NSFW",
+                "count": 2,
             }
         }
 

@@ -1,0 +1,9 @@
+---
+description: Code releated to fastapi
+globs: app/**/*.py
+alwaysApply: false
+---
+
+# FastAPI
+
+* Use '-' in api path, 'text-to-image' instead 'text_to_image'
