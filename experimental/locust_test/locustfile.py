@@ -1,41 +1,34 @@
 """
-Inty Backend Chat API 负载测试脚本
+Inty Backend Chat API 负载测试脚本 (简化版)
 
-使用Locust框架对Inty Backend的chat接口进行并发测试
-主要测试场景：
+专注于测试与Nora Agent的聊天接口性能
+核心功能：
 1. 游客注册
-2. 与Nora Agent (e27c11d0-7a23-4c54-a109-66623af62d63) 聊天对话
-3. 混合场景测试
+2. 持续与Nora Agent聊天对话
 
 作者: Claude
 创建时间: 2025-08-14
-更新时间: 2025-08-14 (专用于Nora测试)
+更新时间: 2025-08-14 (简化版，专注聊天测试)
 """
 
-import json
 import random
-import time
 import uuid
 from typing import Dict, List, Optional
 
-from locust import HttpUser, TaskSet, between, task
-from locust.env import Environment
+from locust import HttpUser, between, task
 
 
 class ChatAPIUser(HttpUser):
     """
-    模拟用户的聊天行为
+    专注于聊天的用户 - 收到回复后立即发送下一条消息
     """
-    wait_time = between(2, 8)  # 用户操作间隔2-8秒
+    wait_time = between(0.1, 0.5)  # 极短间隔，快速连续聊天
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.auth_token: Optional[str] = None
         self.user_id: Optional[str] = None
-        self.agent_ids: List[str] = [
-            # Nora Agent ID (第197行数据)
-            "e27c11d0-7a23-4c54-a109-66623af62d63"
-        ]
+        self.agent_id: str = "e27c11d0-7a23-4c54-a109-66623af62d63"  # Nora Agent ID
         self.chat_messages = [
             "你好Nora，今天过得怎么样？",
             "农场里最近有什么新鲜事吗？",
@@ -58,32 +51,41 @@ class ChatAPIUser(HttpUser):
         注册游客用户
         """
         device_id = f"test_device_{uuid.uuid4().hex[:8]}"
-        nickname = f"TestUser_{random.randint(1000, 9999)}"
         
+        # 根据 GuestRequest schema 构建正确的请求负载
         payload = {
             "device_id": device_id,
-            "nickname": nickname
+            "system_language": "zh",
+            "age_group": "adult"
         }
         
         with self.client.post(
             "/api/v1/auth/guest",
             json=payload,
-            name="auth_guest_register",
+            name=None,  # 不在统计报告中显示此请求
             catch_response=True
         ) as response:
             if response.status_code == 200:
                 try:
                     data = response.json()
                     if data.get("code") == 200 and "data" in data:
-                        self.auth_token = data["data"]["token"]
-                        self.user_id = data["data"]["user"]["id"]
-                        response.success()
-                        return True
+                        # 根据实际API响应结构解析字段
+                        response_data = data["data"]
+                        self.auth_token = response_data.get("token")
+                        self.user_id = response_data.get("guest_id")  # 修正字段名
+                        
+                        if self.auth_token and self.user_id:
+                            response.success()
+                            return True
+                        else:
+                            response.failure(f"缺失必要字段: token={self.auth_token}, guest_id={self.user_id}")
+                            return False
                     else:
                         response.failure(f"注册失败: {data}")
                         return False
                 except Exception as e:
-                    response.failure(f"解析响应失败: {e}")
+                    # 增加更详细的错误信息用于调试
+                    response.failure(f"解析响应失败: {e}, 响应内容: {response.text[:200]}")
                     return False
             else:
                 response.failure(f"HTTP {response.status_code}: {response.text}")
@@ -95,17 +97,16 @@ class ChatAPIUser(HttpUser):
             return {}
         return {"Authorization": f"Bearer {self.auth_token}"}
     
-    @task(3)
+    @task
     def chat_with_agent(self):
         """
-        与Agent进行聊天对话 (权重3，相对高频)
+        与Nora Agent进行持续聊天对话
         """
         if not self.auth_token:
             # 如果没有token，先注册
             if not self.register_guest():
                 return
         
-        agent_id = random.choice(self.agent_ids)
         message_content = random.choice(self.chat_messages)
         
         payload = {
@@ -118,7 +119,7 @@ class ChatAPIUser(HttpUser):
         }
         
         with self.client.post(
-            f"/api/v1/chats/agents/{agent_id}/chat/completions",
+            f"/api/v1/chats/agents/{self.agent_id}/chat/completions",
             json=payload,
             headers=self.get_auth_headers(),
             name="chat_completions",
@@ -129,12 +130,8 @@ class ChatAPIUser(HttpUser):
                 try:
                     data = response.json()
                     if data.get("code") == 200:
-                        # 记录响应长度用于分析
-                        if "data" in data and "choices" in data["data"]:
-                            content_length = len(data["data"]["choices"][0]["message"]["content"])
-                            response.success()
-                        else:
-                            response.failure("响应格式错误")
+                        # 成功收到回复
+                        response.success()
                     else:
                         response.failure(f"业务错误: {data.get('message', 'Unknown')}")
                 except Exception as e:
@@ -146,159 +143,6 @@ class ChatAPIUser(HttpUser):
             else:
                 response.failure(f"HTTP {response.status_code}: {response.text}")
     
-    @task(1) 
-    def get_agent_messages(self):
-        """
-        获取与Agent的聊天历史 (权重1，低频)
-        """
-        if not self.auth_token:
-            return
-            
-        agent_id = random.choice(self.agent_ids)
-        
-        params = {
-            "limit": 20,
-            "offset": 0,
-            "order": "desc"
-        }
-        
-        with self.client.get(
-            f"/api/v1/chats/agents/{agent_id}/messages",
-            params=params,
-            headers=self.get_auth_headers(),
-            name="get_agent_messages",
-            catch_response=True
-        ) as response:
-            if response.status_code == 200:
-                response.success()
-            elif response.status_code == 401:
-                self.register_guest()
-                response.failure("认证失败")
-            else:
-                response.failure(f"HTTP {response.status_code}")
-
-
-class HealthCheckUser(HttpUser):
-    """
-    系统健康检查用户，用于监控系统基础状态
-    """
-    wait_time = between(10, 30)  # 健康检查频率较低
-    weight = 1  # 相对较少的健康检查用户
-    
-    @task
-    def health_check(self):
-        """健康检查"""
-        with self.client.get("/health", name="health_check", catch_response=True) as response:
-            if response.status_code == 200:
-                response.success()
-            else:
-                response.failure(f"Health check failed: {response.status_code}")
-
-
-class StressTestTaskSet(TaskSet):
-    """
-    压力测试任务集，用于更激进的测试场景
-    """
-    
-    def on_start(self):
-        """初始化"""
-        self.auth_token = None
-        self.register_guest()
-    
-    def register_guest(self):
-        """快速注册"""
-        device_id = f"stress_device_{uuid.uuid4().hex[:8]}"
-        nickname = f"StressUser_{random.randint(10000, 99999)}"
-        
-        response = self.client.post("/api/v1/auth/guest", json={
-            "device_id": device_id,
-            "nickname": nickname
-        })
-        
-        if response.status_code == 200:
-            data = response.json()
-            if data.get("code") == 200:
-                self.auth_token = data["data"]["token"]
-    
-    @task
-    def rapid_chat(self):
-        """快速连续聊天"""
-        if not self.auth_token:
-            self.register_guest()
-            
-        # 发送多条消息模拟快速对话
-        messages = ["你好Nora", "农场忙吗", "谢谢你"]
-        for msg in messages:
-            payload = {
-                "messages": [{"role": "user", "content": msg}],
-                "stream": False,
-                "model": "chatbot",
-                "language": "zh"
-            }
-            
-            self.client.post(
-                "/api/v1/chats/agents/e27c11d0-7a23-4c54-a109-66623af62d63/chat/completions",
-                json=payload,
-                headers={"Authorization": f"Bearer {self.auth_token}"} if self.auth_token else {},
-                name="rapid_chat"
-            )
-            time.sleep(0.5)  # 短暂间隔
-
-
-class StressTestUser(HttpUser):
-    """
-    压力测试用户，使用更激进的任务集
-    """
-    tasks = [StressTestTaskSet]
-    wait_time = between(1, 3)  # 更短的等待时间
-    weight = 1  # 少量压力测试用户
-
-
-# 自定义事件处理
-def on_test_start(environment: Environment, **kwargs):
-    """测试开始时的初始化"""
-    print("=" * 50)
-    print("Inty Backend Chat API 负载测试开始")
-    print(f"测试目标: {environment.host}")
-    print(f"用户数配置: {environment.runner.user_count if hasattr(environment.runner, 'user_count') else 'Unknown'}")
-    print("=" * 50)
-
-
-def on_test_stop(environment: Environment, **kwargs):
-    """测试结束时的清理"""
-    print("=" * 50)
-    print("Inty Backend Chat API 负载测试结束")
-    print("正在生成测试报告...")
-    print("=" * 50)
-
-
-# 注册事件监听器
-from locust import events
-events.test_start.add_listener(on_test_start)
-events.test_stop.add_listener(on_test_stop)
-
-
-# 测试场景配置示例
-class LightLoadUser(HttpUser):
-    """轻负载测试用户"""
-    tasks = [ChatAPIUser]
-    wait_time = between(5, 15)
-    weight = 8
-
-
-class MediumLoadUser(HttpUser): 
-    """中负载测试用户"""
-    tasks = [ChatAPIUser]
-    wait_time = between(2, 8)
-    weight = 3
-
-
-class HeavyLoadUser(HttpUser):
-    """重负载测试用户"""
-    tasks = [ChatAPIUser]
-    wait_time = between(1, 3)
-    weight = 1
-
 
 if __name__ == "__main__":
     """
@@ -309,7 +153,7 @@ if __name__ == "__main__":
     
     # 设置默认测试参数
     if len(sys.argv) == 1:
-        # 基础负载测试
+        # 基础聊天测试
         os.system("locust -f locustfile.py --host=http://localhost:8000 --users=10 --spawn-rate=2 --run-time=5m --html=report.html")
     else:
         # 使用命令行参数
