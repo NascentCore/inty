@@ -326,57 +326,10 @@ async def check_user_can_delete_account(
         raise e
 
 
-async def anonymize_user_data(db: AsyncSession, user: User) -> List[str]:
-    """
-    匿名化用户数据
-
-    Returns:
-        List[str]: 已匿名化的字段列表
-    """
-    anonymized_fields = []
-
-    # 生成唯一的匿名标识符
-    anonymous_suffix = hashlib.md5(
-        f"{user.id}{datetime.now(UTC)}".encode()
-    ).hexdigest()[:8]
-
-    # 匿名化个人信息
-    if user.email:
-        user.email = None  # 设置为空值，避免邮箱验证问题
-        anonymized_fields.append("email")
-
-    if user.phone:
-        user.phone = f"deleted_{anonymous_suffix}"
-        anonymized_fields.append("phone")
-
-    if user.nickname:
-        user.nickname = f"已删除用户_{anonymous_suffix}"
-        anonymized_fields.append("nickname")
-
-    if user.google_id:
-        user.google_id = f"deleted_google_{anonymous_suffix}"
-        anonymized_fields.append("google_id")
-
-    # 清除其他个人信息
-    if user.avatar:
-        user.avatar = None
-        anonymized_fields.append("avatar")
-
-    if user.description:
-        user.description = None
-        anonymized_fields.append("description")
-
-    # 设置匿名化时间戳
-    user.anonymized_at = datetime.now(UTC)
-
-    return anonymized_fields
-
-
 async def create_deletion_audit_log(
     db: AsyncSession,
     user: User,
     deletion_reason: str,
-    anonymized_fields: List[str],
     processor_id: str,
     subscription_status: str = None,
 ) -> UserDeletionLog:
@@ -401,7 +354,7 @@ async def create_deletion_audit_log(
         original_user_data=user_data_snapshot,
         deletion_reason=deletion_reason,
         deletion_type="user_requested",
-        anonymized_fields=anonymized_fields,
+        anonymized_fields=[],
         subscription_status_at_deletion=subscription_status,
         related_data_action="anonymized",
         processor_id=processor_id,
@@ -474,9 +427,6 @@ async def delete_user_account(
         user.deleted_at = datetime.now(UTC)
         user.deletion_reason = deletion_reason
         user.is_active = False
-
-        # 匿名化用户数据
-        anonymized_fields = await anonymize_user_data(db, user)
 
         # 创建删除审计日志
         deletion_log = await create_deletion_audit_log(

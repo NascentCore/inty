@@ -22,6 +22,8 @@ class UserDeletionLog(Base):
         default="user_requested",
         comment="删除类型：user_requested, admin_deletion, compliance",
     )
+    # DEPRECATED: This field is not needed anymore.
+    # But we want to keep it to excercise the proper process of deprecating a column.
     anonymized_fields = Column(ARRAY(String), comment="已匿名化的字段列表")
     subscription_status_at_deletion = Column(String(50), comment="删除时订阅状态")
     related_data_action = Column(String(100), comment="关联数据处理方式")
