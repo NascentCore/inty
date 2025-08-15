@@ -10,3 +10,5 @@ alwaysApply: true
 - When there is multiple options, choose the simplest one
   Do not try to implement multiple options
 - Do not write markdown to describe things you implemented
+- Follow RFC2119 https://datatracker.ietf.org/doc/html/rfc2119
+
