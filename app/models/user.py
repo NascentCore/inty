@@ -1,5 +1,6 @@
 import enum
 from datetime import UTC, datetime
+from loguru import logger
 
 import sqlalchemy as sa
 from sqlalchemy import (
@@ -14,7 +15,7 @@ from sqlalchemy import (
     String,
     Text,
 )
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, validates
 
 from app.models import Base
 from app.models.associations import agent_followers
@@ -49,13 +50,15 @@ class User(Base):
     nickname = Column(String, index=True, comment="用户昵称，可搜索")
     avatar = Column(String, comment="用户头像URL")
     email = Column(String, unique=True, comment="邮箱地址，唯一，用于登录")
-    @validates('phone')
+
+    @validates("phone")
     def validate_phone(self, key, value):
-        warnings.warn(
+        logger.warning(
             "The 'phone' is added without a clear plan to be used. Please do not use it. Ask @yaxiong if you need phone.",
-            DeprecationWarning
+            DeprecationWarning,
         )
         return value
+
     phone = Column(String, unique=True, comment="手机号码，唯一，用于登录")
     gender = Column(Enum(Gender), comment="性别：男/女/其他")
     age_group = Column(String, comment="年龄段")
