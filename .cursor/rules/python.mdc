@@ -9,3 +9,5 @@ alwaysApply: false
 ## Logging
 
 * Use `from loguru import logger`, do not use other ways to create logger object
+* `requirements.txt` is for depencens of `app/**/*.py`,
+  other code files should not updated `requirrements.txt`
