@@ -20,7 +20,7 @@ InTy 是一个基于 FastAPI 和 PostgreSQL 的 AI 聊天应用后端，集成�
    # 拷贝 cosmic-gizmo-424300-t1-6499a9d5bd94.json inty-firebase-key.json inty-backend-key.json
    # 这三个文件到代码库顶层目录下 .secrets/ 目录下
    # 然后运行下面的命令，服务在 http://localhost:8000
-   docker compose up --build
+   docker compose up --build --detach
   
    # 删除所有容器和其挂在的存储卷
    # 数据库存储卷如果不删除，则会使用旧的景象，如果修改了数据库默认数据库，
