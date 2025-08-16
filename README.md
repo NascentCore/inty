@@ -16,7 +16,10 @@ InTy 是一个基于 FastAPI 和 PostgreSQL 的 AI 聊天应用后端，集成�
 git clone git@github.com:NascentCore/inty-backend.git
 cd inty-backend
 
-# 服务在 http://localhost:8000
+# 拷贝 config.yaml 文件到代码库顶层目录下
+# 拷贝 cosmic-gizmo-424300-t1-6499a9d5bd94.json inty-firebase-key.json inty-backend-key.json
+# 这三个文件到代码库顶层目录下 .secrets/ 目录下
+# 然后运行下面的命令，服务在 http://localhost:8000
 docker compose up --build
 
 # 删除所有容器和其挂在的存储卷
