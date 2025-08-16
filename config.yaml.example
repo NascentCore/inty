@@ -46,10 +46,6 @@ embedding:
   api_key: "sk-proj-1234567890"
   model: "DMetaSoul/Dmeta-embedding-zh-small"
 
-google_search:
-  api_key: "your-google-search-api-key"
-  cse_id: "your-google-search-cse-id"
-
 gcs:
   bucket: "your-gcs-bucket"
   credentials: "path/to/your/service-account-key.json"
