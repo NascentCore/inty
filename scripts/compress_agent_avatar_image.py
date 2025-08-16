@@ -172,47 +172,37 @@ def parse_args():
 
 
 def main():
-    """Main function"""
     args = parse_args()
 
     logger.info("Starting avatar compression process")
     logger.info(f"PostgreSQL URL: {args.pg_url}")
     logger.info(f"JPEG quality: {args.quality}")
 
-    # Validate GCS configuration
-    try:
-        bucket_name = global_config_loaded_from_config_yaml.gcs.bucket
-        credentials_path = global_config_loaded_from_config_yaml.gcs.credentials
-        logger.info(f"GCS bucket: {bucket_name}")
-        logger.info(f"GCS credentials: {credentials_path}")
+    # Ask for user confirmation to proceed
+    user_input = input("Are you sure you want to proceed? (y/n): ")
+    if user_input.lower() != "y":
+        logger.info("User did not confirm, exiting...")
+        sys.exit(0)
 
-        if not bucket_name or not credentials_path:
-            logger.error("GCS configuration is incomplete")
-            sys.exit(1)
+    bucket_name = global_config_loaded_from_config_yaml.gcs.bucket
+    credentials_path = global_config_loaded_from_config_yaml.gcs.credentials
+    logger.info(f"GCS bucket: {bucket_name}")
+    logger.info(f"GCS credentials: {credentials_path}")
 
-        if not os.path.exists(credentials_path):
-            logger.error(f"GCS credentials file not found: {credentials_path}")
-            sys.exit(1)
-
-    except Exception as e:
-        logger.error(f"Failed to load GCS configuration: {e}")
+    if not bucket_name or not credentials_path:
+        logger.error("GCS configuration is incomplete")
         sys.exit(1)
 
-    # Process avatars
-    conn = None
-    try:
-        conn = get_database_connection(args.pg_url)
-        process_agent_avatars(conn, args.pg_url)
-        logger.info("Avatar compression process completed successfully")
-
-    except Exception as e:
-        logger.error(f"Avatar compression process failed: {e}")
+    if not os.path.exists(credentials_path):
+        logger.error(f"GCS credentials file not found: {credentials_path}")
         sys.exit(1)
 
-    finally:
-        if conn:
-            conn.close()
-            logger.info("Database connection closed")
+    conn = get_database_connection(args.pg_url)
+    process_agent_avatars(conn, args.pg_url)
+    logger.info("Avatar compression process completed successfully")
+
+    conn.close()
+    logger.info("Database connection closed")
 
 
 if __name__ == "__main__":
