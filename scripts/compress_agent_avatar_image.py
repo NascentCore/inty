@@ -36,7 +36,9 @@ def download_image(url: str) -> Optional[bytes]:
     """Download image from URL"""
     logger.info(f"Downloading image from: {url}")
     response = requests.get(url, timeout=30)
-    response.raise_for_status()
+    if response.status_code != 200:
+        logger.error(f"Failed to download image from {url}: {response.status_code}")
+        return None
 
     image_data = response.content
     logger.info(f"Downloaded image: {len(image_data)} bytes")
@@ -76,7 +78,7 @@ def generate_jpeg_path(original_url: str) -> os.PathLike:
     path_parts = parsed.path.split("/")
 
     # Extract the directory path (everything except the filename)
-    directory = "/".join(path_parts[:-1])
+    directory = "/".join(path_parts[2:-1])
 
     # Generate new filename with UUID
     new_filename = f"avatar-{uuid.uuid4().hex}.jpeg"
@@ -118,6 +120,10 @@ def update_agent_avatar(conn, agent_id: str, new_avatar_url: str):
 def process_one_agent_avatar(conn, agent_id: str, avatar_url: str):
     """Process one agent avatar"""
     png_data = download_image(avatar_url)
+    if not png_data:
+        logger.error(f"Failed to download image from {avatar_url}, skipping...")
+        return
+
     jpeg_data = compress_png_to_jpeg(png_data)
     if len(png_data) <= len(jpeg_data):
         logger.info(
@@ -126,6 +132,8 @@ def process_one_agent_avatar(conn, agent_id: str, avatar_url: str):
         return
 
     gcs_path = generate_jpeg_path(avatar_url)
+    logger.info(f"PNG url: {avatar_url}")
+    logger.info(f"JPEG url: {gcs_path}")
     new_avatar_url = upload_jpeg_to_gcs(jpeg_data, gcs_path)
     update_agent_avatar(conn, agent_id, new_avatar_url)
 
@@ -162,11 +170,6 @@ def parse_args():
         description="Compress PNG avatar images to JPEG format and update database"
     )
     parser.add_argument(
-        "--pg_url",
-        required=True,
-        help="PostgreSQL connection URL (e.g., postgresql://user:pass@host:port/db)",
-    )
-    parser.add_argument(
         "--quality",
         type=int,
         default=80,
@@ -181,7 +184,7 @@ def main():
     args = parse_args()
 
     logger.info("Starting avatar compression process")
-    logger.info(f"PostgreSQL URL: {args.pg_url}")
+    logger.info(f"Database URL: {global_config_loaded_from_config_yaml.database.url}")
     logger.info(f"JPEG quality: {args.quality}")
 
     # Ask for user confirmation to proceed
@@ -203,7 +206,7 @@ def main():
         logger.error(f"GCS credentials file not found: {credentials_path}")
         sys.exit(1)
 
-    conn = get_database_connection(args.pg_url)
+    conn = get_database_connection(global_config_loaded_from_config_yaml.database.url)
     process_agent_avatars(conn)
     logger.info("Avatar compression process completed successfully")
 
