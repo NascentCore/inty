@@ -43,7 +43,7 @@ def download_image(url: str) -> Optional[bytes]:
     return image_data
 
 
-def compress_png_to_jpeg(image_data: bytes, quality: int = 80) -> Optional[bytes]:
+def compress_png_to_jpeg(image_data: bytes, quality: int = 80) -> bytes:
     """Compress PNG image to JPEG format"""
     # Open image with PIL
     image = Image.open(io.BytesIO(image_data))
@@ -119,6 +119,12 @@ def process_one_agent_avatar(conn, agent_id: str, avatar_url: str):
     """Process one agent avatar"""
     png_data = download_image(avatar_url)
     jpeg_data = compress_png_to_jpeg(png_data)
+    if len(png_data) <= len(jpeg_data):
+        logger.info(
+            f"Skipping agent {agent_id} because the JPEG is larger than the PNG"
+        )
+        return
+
     gcs_path = generate_jpeg_path(avatar_url)
     new_avatar_url = upload_jpeg_to_gcs(jpeg_data, gcs_path)
     update_agent_avatar(conn, agent_id, new_avatar_url)
@@ -198,7 +204,7 @@ def main():
         sys.exit(1)
 
     conn = get_database_connection(args.pg_url)
-    process_agent_avatars(conn, args.pg_url)
+    process_agent_avatars(conn)
     logger.info("Avatar compression process completed successfully")
 
     conn.close()
