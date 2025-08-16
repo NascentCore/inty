@@ -3,6 +3,12 @@
 [![Build release APK and AAB](https://github.com/NascentCore/inty-app/actions/workflows/ci.yaml/badge.svg)](https://github.com/NascentCore/inty-app/actions/workflows/ci.yaml)
 [![Build and release debug APK](https://github.com/NascentCore/inty-app/actions/workflows/debug_release.yaml/badge.svg)](https://github.com/NascentCore/inty-app/actions/workflows/debug_release.yaml)
 
+## Description
+
+IntelliMate: Ultimate companionship, reimagined with AI
+
+Role-play with AI characters. Create your own IntelliMate, powered by carefully tuned AI agents, experience your own imagination. 
+
 ## 注意 ⚠️
 
 * 安装应用来自 2 个来源，GitHub Release、Google Play 内测轨道
