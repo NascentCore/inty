@@ -166,6 +166,11 @@
     <string name="age_30_36">30–36</string>
     <string name="age_above_36">Above 36</string>
     <string name="enter">Enter</string>
+    
+    <!-- Credential Manager Error Messages -->
+    <string name="no_credentials_available">No credentials available</string>
+    <string name="get_credential_failed">Failed to get credential</string>
+    <string name="login_failed">Login failed</string>
 
     <!-- Avatar Generation -->
     <string name="generate_avatar">Generate Avatar</string>

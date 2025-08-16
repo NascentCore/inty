@@ -24,6 +24,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.credentials.exceptions.GetCredentialException
+import androidx.credentials.exceptions.GetCredentialCancellationException
+import androidx.credentials.exceptions.GetCredentialInterruptedException
 import androidx.credentials.exceptions.NoCredentialException
 import com.ai.inty.R
 import com.ai.inty.base.AntiClick
@@ -70,17 +73,42 @@ internal fun LoginScreen(
                         onGoogleLoginSuccess(idToken)
                     },
                     onFailure = { exception ->
-                        val errorMessage = when (exception) {
-                            is NoCredentialException -> "No credentials available"
-                            else -> "Login Failed"
-                        }
-                        EasyLog.log(
-                            "Credential Manager sign-in failed: $errorMessage",
-                            EasyLog.ERROR
-                        )
-                        // 显示错误提示
-                        coroutineScope.launch {
-                            ToastUtils.showToast(errorMessage)
+                        // 检查是否为用户取消操作，如果是则不显示错误提示
+                        when (exception) {
+                            is GetCredentialCancellationException -> {
+                                // 用户取消登录，不显示错误提示
+                                EasyLog.log("User cancelled the login process")
+                                return@fold
+                            }
+                            is GetCredentialInterruptedException -> {
+                                // 登录过程被中断，不显示错误提示
+                                EasyLog.log("Login process was interrupted")
+                                return@fold
+                            }
+                            is NoCredentialException -> {
+                                val errorMessage = context.getString(R.string.no_credentials_available)
+                                EasyLog.log("Credential Manager sign-in failed: $errorMessage", EasyLog.ERROR)
+                                // 显示错误提示
+                                coroutineScope.launch {
+                                    ToastUtils.showToast(errorMessage)
+                                }
+                            }
+                            is GetCredentialException -> {
+                                val errorMessage = context.getString(R.string.get_credential_failed)
+                                EasyLog.log("Credential Manager sign-in failed: $errorMessage", EasyLog.ERROR)
+                                // 显示错误提示
+                                coroutineScope.launch {
+                                    ToastUtils.showToast(errorMessage)
+                                }
+                            }
+                            else -> {
+                                val errorMessage = context.getString(R.string.login_failed)
+                                EasyLog.log("Credential Manager sign-in failed: $errorMessage", EasyLog.ERROR)
+                                // 显示错误提示
+                                coroutineScope.launch {
+                                    ToastUtils.showToast(errorMessage)
+                                }
+                            }
                         }
                     }
                 )

@@ -24,6 +24,7 @@ import com.ai.inty.net.IAgentApi
 import com.ai.inty.net.ICommonApi
 import com.ai.inty.net.IUserApi
 import com.ai.inty.net.IUserApi2
+import com.ai.inty.utils.CredentialManagerHelper.clearCredentialState
 import com.ai.inty.utils.UserProfileManager
 import com.architecture.httplib.core.HttpResult
 import com.google.android.gms.tasks.OnCompleteListener
@@ -645,6 +646,17 @@ class MainViewModel : BaseActivityViewModel() {
         // 清理本地存储（这会切换到游客模式）
         IntySetting.logout()
         UserProfileManager.clearUserProfile()
+
+        // 清除凭证状态 - 通知所有凭证提供者清除存储的凭证会话
+        // 参考: https://developer.android.com/identity/sign-in/credential-manager-siwg#handle-sign-out
+        viewModelScope.launch {
+            try {
+                clearCredentialState(AppEnv.context)
+                EasyLog.log("Credential state cleared successfully during logout")
+            } catch (e: Exception) {
+                EasyLog.log("Failed to clear credential state during logout: ${e.message}", EasyLog.ERROR)
+            }
+        }
 
         // 切换到游客模式后，只加载本地数据，不进行网络请求
         loadGuestModeData()

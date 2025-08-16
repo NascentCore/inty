@@ -9,6 +9,7 @@ import androidx.lifecycle.lifecycleScope
 import com.ai.inty.base.BaseActivity
 import com.ai.inty.ui.screens.LoginScreen
 import com.ai.inty.ui.theme.IntyTheme
+import com.ai.inty.utils.CredentialManagerHelper
 import com.ai.inty.utils.UserProfileManager
 import com.ai.inty.viewmodels.LoginViewModel
 import com.inty.utils.log.EasyLog
@@ -22,6 +23,7 @@ import kotlinx.coroutines.launch
 /**
  * 登录页面
  * 使用最新的 Credential Manager API 进行 Google 登录
+ * 参考: https://developer.android.com/identity/sign-in/credential-manager-siwg
  */
 @Route(path = Constant.ROUTE_LOGIN)
 class LoginActivity : BaseActivity() {
@@ -64,6 +66,22 @@ class LoginActivity : BaseActivity() {
             }
         } else {
             EasyLog.log("User has set gender, no need to show RegInfoActivity")
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        // 1. **避免误清理**：如果用户已经登录成功，不应该清除凭证
+        // 2. **区分退出方式**：正常退出不需要清理，异常退出需要清理
+        // 3. **安全考虑**：确保在用户未成功认证的情况下清理敏感信息
+        if (
+            // 用户没有用户档案（未登录成功）
+            !UserProfileManager.hasUserProfile() &&
+            // Activity 不是正常结束状态
+            !isFinishing) {
+            lifecycleScope.launch {
+                CredentialManagerHelper.clearCredentialState(this@LoginActivity)
+            }
         }
     }
 }
