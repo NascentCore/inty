@@ -10,9 +10,9 @@ SUPER_USER_EMAILS = [
     "it@sxwl.ai",
     "justicezyx@gmail.com",
     "zhiwei9001@gmail.com",
-    # Generic testing accounts
-    "sxwlai001@gmail.com",
-    "sxwlai002@gmail.com",
+    # This is provided to Google Play reviewers.
+    # They require to access all features without any restrictions.
+    "test.heartmate@gmail.com",
 ]
 
 logger.info(f"SUPER_USER_EMAILS: {SUPER_USER_EMAILS}")
