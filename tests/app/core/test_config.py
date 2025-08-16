@@ -269,8 +269,6 @@ class TestFirebaseConfig:
         assert config.service_account_path == "path/to/firebase-key.json"
 
 
-
-
 class TestGooglePlayConfig:
     def test_google_play_config_required_fields(self):
         """Test GooglePlayConfig with required fields"""
@@ -357,7 +355,6 @@ class TestConfig:
         embedding_config = EmbeddingConfig()
         agent_config = AgentConfig()
         gcs_config = GCSConfig(bucket="test", credentials="test")
-        google_search_config = GoogleSearchConfig(api_key="test", cse_id="test")
         firebase_config = FirebaseConfig(service_account_path="test")
         google_play_config = GooglePlayConfig(
             service_account_key="test", package_name="com.test.app"
@@ -374,7 +371,6 @@ class TestConfig:
             embedding=embedding_config,
             agent=agent_config,
             gcs=gcs_config,
-            google_search=google_search_config,
             firebase=firebase_config,
             google_play=google_play_config,
             elevenlabs=elevenlabs_config,
@@ -389,7 +385,6 @@ class TestConfig:
         assert config.embedding == embedding_config
         assert config.agent == agent_config
         assert config.gcs == gcs_config
-        assert config.google_search == google_search_config
         assert config.firebase == firebase_config
         assert config.google_play == google_play_config
         assert config.elevenlabs == elevenlabs_config
@@ -405,7 +400,7 @@ class TestLoadConfig:
                 "backend_cors_origins": ["http://localhost:3000"],
                 "limits": {
                     "free_user_image_gen_daily_limit": 4,
-                    "free_user_chat_total_limit": 100
+                    "free_user_chat_total_limit": 100,
                 },
             },
             "security": {"secret_key": "test-secret"},
@@ -422,7 +417,6 @@ class TestLoadConfig:
             "embedding": {},
             "agent": {},
             "gcs": {"bucket": "test-bucket", "credentials": "test-credentials"},
-            "google_search": {"api_key": "test-key", "cse_id": "test-cse"},
             "firebase": {"service_account_path": "test-path"},
             "google_play": {
                 "service_account_key": "test-key",
@@ -451,8 +445,6 @@ class TestLoadConfig:
             assert config.logging.level == "DEBUG"
             assert config.gcs.bucket == "test-bucket"
             assert config.gcs.credentials == "test-credentials"
-            assert config.google_search.api_key == "test-key"
-            assert config.google_search.cse_id == "test-cse"
             assert config.firebase.service_account_path == "test-path"
             assert config.google_play.service_account_key == "test-key"
             assert config.google_play.package_name == "com.test.app"
@@ -477,7 +469,6 @@ class TestLoadConfig:
                 "db": "testdb",
             },
             "gcs": {"bucket": "test-bucket", "credentials": "test-credentials"},
-            "google_search": {"api_key": "test-key", "cse_id": "test-cse"},
             "firebase": {"service_account_path": "test-path"},
             "google_play": {
                 "service_account_key": "test-key",

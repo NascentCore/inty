@@ -92,12 +92,6 @@ class EmbeddingConfig:
 
 
 @dataclass
-class GoogleSearchConfig:
-    api_key: str
-    cse_id: str
-
-
-@dataclass
 class AgentConfig:
     model: str = "google/gemini-2.5-flash"
     base_url: str = "https://openrouter.ai/api/v1"
@@ -121,8 +115,6 @@ class GCSConfig:
 @dataclass
 class FirebaseConfig:
     service_account_path: str
-
-
 
 
 @dataclass
@@ -166,7 +158,6 @@ class Config:
     embedding: EmbeddingConfig
     agent: AgentConfig
     gcs: GCSConfig
-    google_search: GoogleSearchConfig
     firebase: FirebaseConfig
     google_play: GooglePlayConfig
     elevenlabs: ElevenLabsConfig
@@ -196,7 +187,6 @@ def load_config(path: str) -> Config:
         embedding=EmbeddingConfig(**data.get("embedding", {})),
         agent=AgentConfig(**data.get("agent", {})),
         gcs=GCSConfig(**data.get("gcs", {})),
-        google_search=GoogleSearchConfig(**data.get("google_search", {})),
         firebase=FirebaseConfig(**data.get("firebase", {})),
         google_play=GooglePlayConfig(**data.get("google_play", {})),
         elevenlabs=ElevenLabsConfig(**data.get("elevenlabs", {})),

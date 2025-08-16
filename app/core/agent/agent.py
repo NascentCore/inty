@@ -180,18 +180,6 @@ postgres_store = PostgresStore(
 )
 postgres_store.setup()
 
-# 初始化Google搜索工具
-search = GoogleSearchAPIWrapper(
-    google_api_key=global_config_loaded_from_config_yaml.google_search.api_key,
-    google_cse_id=global_config_loaded_from_config_yaml.google_search.cse_id,
-)
-
-google_search_tool = Tool(
-    name="google_search",
-    description="Search Google for recent results.",
-    func=search.run,
-)
-
 
 class Agent:
     """
