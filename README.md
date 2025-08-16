@@ -10,23 +10,23 @@ InTy 是一个基于 FastAPI 和 PostgreSQL 的 AI 聊天应用后端，集成�
 ## 使用 Docker 容器本地运行后端服务（适用于 app 开发者）
 
 1. 访问 <https://docs.docker.com/desktop/setup/install/mac-install/> 安装 Docker Desktop。
-1. 拷贝`config.yaml` `inty-backend-key.json` `inty-firebase-key.json` 到 inty-backend 代码库顶层目录。
+1. 拷贝配置文件（config.yaml）及密钥文件到 inty-backend 代码库顶层目录。
 
-```bash
-git clone git@github.com:NascentCore/inty-backend.git
-cd inty-backend
-
-# 拷贝 config.yaml 文件到代码库顶层目录下
-# 拷贝 cosmic-gizmo-424300-t1-6499a9d5bd94.json inty-firebase-key.json inty-backend-key.json
-# 这三个文件到代码库顶层目录下 .secrets/ 目录下
-# 然后运行下面的命令，服务在 http://localhost:8000
-docker compose up --build
-
-# 删除所有容器和其挂在的存储卷
-# 数据库存储卷如果不删除，则会使用旧的景象，如果修改了数据库默认数据库，
-# 老得存储卷会导致数据库启动失败
-docker compose down --volume
-```
+   ```bash
+   git clone git@github.com:NascentCore/inty-backend.git
+   cd inty-backend
+  
+   # 拷贝 config.yaml 文件到代码库顶层目录下
+   # 拷贝 cosmic-gizmo-424300-t1-6499a9d5bd94.json inty-firebase-key.json inty-backend-key.json
+   # 这三个文件到代码库顶层目录下 .secrets/ 目录下
+   # 然后运行下面的命令，服务在 http://localhost:8000
+   docker compose up --build
+  
+   # 删除所有容器和其挂在的存储卷
+   # 数据库存储卷如果不删除，则会使用旧的景象，如果修改了数据库默认数据库，
+   # 老得存储卷会导致数据库启动失败
+   docker compose down --volume
+   ```
 
 ## 使用 uvicorn 运行后端服务（面向后端开发者）
 
