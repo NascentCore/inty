@@ -28,7 +28,7 @@ InTy 是一个基于 FastAPI 和 PostgreSQL 的 AI 聊天应用后端，集成�
    docker compose down --volume
    ```
 
-1. 然后在 inty-app 内选择 local build type，同时照下面的步骤创建端口映射
+1. 然后在按照下面的步骤创建端口映射，然后选择 local build type 构建 Android app
 
    ```bash
    adb devices
