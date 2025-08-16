@@ -1,14 +1,11 @@
-import logging
+import loguru
 import re
-from urllib.parse import urlparse
 
 from google.cloud import storage
 
-from app.core.config import (
-    global_config_loaded_from_config_yaml,
-)  # 假设你的配置是settings对象
+from app.core.config import global_config_loaded_from_config_yaml
 
-logger = logging.getLogger(__name__)
+logger = loguru.logger
 
 
 def upload_to_gcs(file_data, content_type, bucket_name, path):
