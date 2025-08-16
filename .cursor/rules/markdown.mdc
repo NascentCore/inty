@@ -1,7 +1,7 @@
 ---
-description:
+description: markdown
 globs: **/*.md
-alwaysApply: true
+alwaysApply: false
 ---
 
 # Markdown rules

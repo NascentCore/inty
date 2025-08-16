@@ -1,7 +1,7 @@
 ---
-description: Ask
+description: general styles
 globs: **/*
-alwaysApply: false
+alwaysApply: true
 ---
 
 # General style

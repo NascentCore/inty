@@ -1,6 +1,6 @@
 ---
-description:
-globs:
+description: alembic
+globs: app/models/**/*.py,alembic/**/*.py
 alwaysApply: false
 ---
 
