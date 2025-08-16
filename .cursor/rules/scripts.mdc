@@ -1,0 +1,9 @@
+---
+description: scripts
+globs: scripts/**/*.py
+alwaysApply: false
+---
+
+# Scripts
+
+* Do not try to be defensive, as these are one-time scripts, instead, aim for simple code.
