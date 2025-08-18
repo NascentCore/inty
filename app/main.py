@@ -304,5 +304,6 @@ async def root():
         "message": "success",
         "data": {
             "app_name": global_config_loaded_from_config_yaml.app.name,
+            "version": global_config_loaded_from_config_yaml.app.version,
         },
     }
