@@ -92,6 +92,77 @@ class ChatCompletionRequest(BaseModel):
 
 
 @router.get(
+    "/agents/status",
+    deprecated=True,
+    include_in_schema=False,
+    description="No record of who is using this",
+)
+async def get_agent_status(
+    current_user: schemas.User = Depends(deps.get_current_active_user),
+):
+    """
+    Get Agent manager status
+    """
+    return {
+        "active_agents": agent_manager.get_agent_count(),
+        "max_agents": agent_manager.max_agents,
+        "cleanup_interval": agent_manager.cleanup_interval,
+        "max_idle_time": agent_manager.max_idle_time,
+    }
+
+
+@router.post(
+    "/agents/initialize",
+    deprecated=True,
+    include_in_schema=False,
+    description="No record of who is using this",
+)
+async def initialize_agents(
+    *,
+    db: AsyncSession = Depends(deps.get_async_db),
+    current_user: schemas.User = Depends(deps.get_current_active_user),
+):
+    """
+    Manually initialize commonly used Agents (admin function)
+    """
+    try:
+        await agent_manager.initialize_popular_agents(db)
+        return {
+            "status": "success",
+            "message": "Common Agents initialization completed",
+            "active_agents": agent_manager.get_agent_count(),
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Initialization failed: {str(e)}")
+
+
+@router.delete(
+    "/agents/cleanup",
+    deprecated=True,
+    include_in_schema=False,
+    description="No record of who is using this",
+)
+async def cleanup_idle_agents(
+    current_user: schemas.User = Depends(deps.get_current_active_user),
+):
+    """
+    Manually cleanup idle Agents (admin function)
+    """
+    try:
+        old_count = agent_manager.get_agent_count()
+        agent_manager._cleanup_idle_agents()
+        new_count = agent_manager.get_agent_count()
+        return {
+            "status": "success",
+            "message": "Idle Agents cleanup completed",
+            "cleaned_count": old_count - new_count,
+            "remaining_agents": new_count,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Cleanup failed: {str(e)}")
+
+
+@router.get(
     "/{chat_id}/detail",
     include_in_schema=False,
     summary="Get Chat Detail",
