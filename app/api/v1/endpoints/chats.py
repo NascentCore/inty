@@ -91,7 +91,12 @@ class ChatCompletionRequest(BaseModel):
     language: str = "zh"  # 添加语言字段，默认中文
 
 
-@router.get("/{chat_id}/detail")
+@router.get(
+    "/{chat_id}/detail",
+    include_in_schema=False,
+    summary="Get Chat Detail",
+    description="Get chat details with paginated message records",
+)
 async def get_chat_detail(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
@@ -152,7 +157,13 @@ async def get_chat_detail(
         )
 
 
-@router.get("/agents/{agent_id}/detail")
+@router.get(
+    "/agents/{agent_id}/detail",
+    include_in_schema=False,
+    deprecated=True,
+    summary="Get Chat Detail for agent identified by agent_id",
+    description="Return the chat details by Agent ID with paginated message records",
+)
 async def get_agent_chat_detail(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
@@ -221,7 +232,12 @@ async def get_agent_chat_detail(
         )
 
 
-@router.get("/agents/{agent_id}/messages")
+@router.get(
+    "/agents/{agent_id}/messages",
+    tags=["inty-eval"],
+    summary="Get Agent Chat Messages",
+    description="Get only chat message records by Agent ID (lighter interface)",
+)
 async def get_agent_chat_messages(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
@@ -1077,7 +1093,13 @@ async def delete_agent_chats(
         )
 
 
-@router.get("/agents/{agent_id}/debug-messages")
+@router.get(
+    "/agents/{agent_id}/debug-messages",
+    include_in_schema=False,
+    tags=["inty-eval"],
+    summary="Get Agent Debug Messages",
+    description="Get Agent Debug Messages by Agent ID",
+)
 async def get_agent_debug_messages(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
@@ -1277,7 +1299,13 @@ async def clear_agent_chat_messages(
         )
 
 
-@router.get("/debug-messages", response_model=schemas.DebugMessageList)
+@router.get(
+    "/debug-messages",
+    description="Used by inty-eval to get chat history",
+    tags=["inty-eval"],
+    response_model=schemas.DebugMessageList,
+    include_in_schema=False,
+)
 async def get_debug_messages(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
