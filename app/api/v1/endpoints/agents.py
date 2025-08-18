@@ -970,7 +970,9 @@ async def list_prompt_templates(
 
 
 @router.post(
-    "/import-character-card", response_model=APIResponse[CharacterCardImportResponse]
+    "/import-character-card",
+    response_model=APIResponse[CharacterCardImportResponse],
+    include_in_schema=False,
 )
 async def import_character_card(
     request: CharacterCardImportRequest,
@@ -998,6 +1000,7 @@ async def import_character_card(
 @router.post(
     "/import-character-card-file",
     response_model=APIResponse[CharacterCardImportResponse],
+    include_in_schema=False,
 )
 async def import_character_card_file(
     file: UploadFile = File(...),
@@ -1036,7 +1039,9 @@ async def import_character_card_file(
         )
 
 
-@router.post("/export-character-card", response_model=APIResponse[dict])
+@router.post(
+    "/export-character-card", response_model=APIResponse[dict], include_in_schema=False
+)
 async def export_character_card(
     request: CharacterCardExportRequest,
     current_user: schemas.User = Depends(deps.get_current_active_user),
@@ -1064,7 +1069,11 @@ async def export_character_card(
         return APIResponse.error(message=f"Failed to export character card: {str(e)}")
 
 
-@router.get("/{agent_id}/character-card", response_model=APIResponse[dict])
+@router.get(
+    "/{agent_id}/character-card",
+    response_model=APIResponse[dict],
+    include_in_schema=False,
+)
 async def get_agent_character_card(
     agent_id: str,
     include_character_book: bool = Query(True, description="是否包含角色书"),
@@ -1098,6 +1107,7 @@ async def get_agent_character_card(
 @router.post(
     "/validate-character-card",
     response_model=APIResponse[CharacterCardValidationResponse],
+    include_in_schema=False,
 )
 async def validate_character_card(
     card_data: dict, current_user: schemas.User = Depends(deps.get_current_active_user)
@@ -1114,7 +1124,11 @@ async def validate_character_card(
         return APIResponse.error(message=f"Failed to validate character card: {str(e)}")
 
 
-@router.get("/character-card/features", response_model=APIResponse[dict])
+@router.get(
+    "/character-card/features",
+    response_model=APIResponse[dict],
+    include_in_schema=False,
+)
 async def get_character_card_features(
     current_user: schemas.User = Depends(deps.get_current_active_user),
 ):
