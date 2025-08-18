@@ -15,7 +15,8 @@ They differ in:
 This file is for the genai API.
 """
 
-from ast import List
+from enum import StrEnum
+from typing import List
 from dataclasses import dataclass
 import json
 import os
@@ -89,45 +90,17 @@ def get_genai_client():
     return client
 
 
-def get_opposite_gender(user_gender: str) -> str:
-    """
-    获取用户性别的相反性别
-    用于生成与用户性别相反的图片
-    """
-    if not user_gender:
-        return ""
-
-    gender_mapping = {
-        "male": "female",
-        "female": "male",
-        "non-binary": "",
-        "they/them": "",
-        "nb": "",  # non-binary 的简写
-        "other": "",
-    }
-
-    # 转换为小写进行匹配
-    normalized_gender = user_gender.lower().strip()
-    opposite = gender_mapping.get(normalized_gender, "")
-
-    logger.info(
-        f"User gender: {user_gender} -> Opposite gender for prompt: '{opposite}'"
-    )
-    return opposite
-
-
 def enhance_prompt(prompt: str, gender: str) -> str:
     """
     增强提示词
     """
     # 获取反向性别
-    opposite_gender = get_opposite_gender(gender)
 
     # 构建增强提示词
     enhanced_prompt = f"""
     A person who is welcoming, friendly.
     age: 22 - 35
-    gender: {opposite_gender}
+    gender: {gender}
 
     {prompt}
 
@@ -163,12 +136,18 @@ class ImagenGeneratedImage(BaseModel):
     )
 
 
+class MimeType(StrEnum):
+    JPEG = "image/jpeg"
+
+
 def text_to_image(
     prompt: str,
     negative_prompt: str,
+    enhanced_prompt: bool,
+    gender: str,
+    aspect_ratio: str,
     gcs_uri_base: str,
     count: int,
-    aspect_ratio: str,
 ) -> List[ImagenGeneratedImage]:
     """
     使用output_gcs_uri参数直接将生成的背景图保存到GCS，返回实际生成的图片GCS路径列表
@@ -185,8 +164,13 @@ def text_to_image(
         list: 生成图片的HTTPS URL列表，或包含RAI原因的字典
     """
     try:
-        logger.debug(f"Starting image generation with prompt: {prompt}, count: {count}")
-        logger.debug(f"Target GCS URI base: {gcs_uri_base}")
+        logger.debug(
+            f"Starting image generation with prompt: {prompt}, "
+            f"negative_prompt: {negative_prompt}, "
+            f"gcs_uri_base: {gcs_uri_base}, "
+            f"count: {count}, "
+            f"aspect_ratio: {aspect_ratio}"
+        )
 
         # 使用新的Google Gen AI SDK生成图片
         config = types.GenerateImagesConfig(
@@ -199,37 +183,31 @@ def text_to_image(
             output_gcs_uri=gcs_uri_base,
             include_rai_reason=True,
             # This reduces the size significantly.
-            output_mime_type="image/jpeg",
-            enhance_prompt=True,
+            output_mime_type=MimeType.JPEG,
+            # This is imagen's own enhancement, not the one from inty-backend's own enhancement.
+            enhance_prompt=enhanced_prompt,
         )
 
         client = get_genai_client()
+        if enhanced_prompt:
+            prompt = enhance_prompt(prompt, gender)
         response = client.models.generate_images(
             model=global_config_loaded_from_config_yaml.agent.vertex_image_model,
             prompt=prompt,
             config=config,
         )
 
-        # 处理响应中的图片
-        generated_uris = []
-        rai_reasons = []
-
-        logger.info(f"Generated {len(response.generated_images)} images")
+        logger.debug(f"Image generation response: {response}")
 
         generated_images = []
         # 处理每个生成的图片
         for i, image in enumerate(response.generated_images):
             # 获取GCS URI并转换为HTTPS URL
             gcs_uri = image.image.gcs_uri
-            if gcs_uri:
-                if gcs_uri.startswith("gs://"):
-                    gcs_path = gcs_uri[5:]  # 移除"gs://"前缀
-                    https_url = f"https://storage.googleapis.com/{gcs_path}"
-                    generated_uris.append(https_url)
-                    logger.info(f"Image {i}: {gcs_uri} -> {https_url}")
-                else:
-                    generated_uris.append(gcs_uri)
-                    logger.info(f"Image {i}: {gcs_uri}")
+            if gcs_uri.startswith("gs://"):
+                gcs_path = gcs_uri[5:]  # 移除"gs://"前缀
+                gcs_uri = f"https://storage.googleapis.com/{gcs_path}"
+                logger.debug(f"Image {i}: {gcs_uri}")
             generated_images.append(
                 ImagenGeneratedImage(
                     gcs_uri=gcs_uri,
@@ -244,95 +222,3 @@ def text_to_image(
 
         traceback.print_exc()
         raise e
-
-
-def generate_background_image_to_gcs(
-    prompt: str,
-    gcs_uri_base: str,
-    count=1,
-    aspect_ratio="9:16",
-    gender: str = None,
-    include_rai_reason=False,
-):
-    """
-    使用output_gcs_uri参数直接将生成的背景图保存到GCS，返回实际生成的图片GCS路径列表
-    支持includeRaiReason参数获取RAI过滤原因
-
-    Args:
-        prompt (str): 生成图片的描述提示词
-        gcs_uri_base (str): GCS 存储基础URI
-        count (int): 生成图片数量，默认为1
-        aspect_ratio (str): 图片尺寸比例，默认为"9:16"
-        gender (str): 用户性别，支持 "male", "female", "non-binary", "they/them" 等
-        include_rai_reason (bool): 是否包含RAI过滤原因
-
-    Returns:
-        list: 生成图片的HTTPS URL列表，或包含RAI原因的字典
-    """
-    try:
-        logger.info(f"Starting image generation with prompt: {prompt}, count: {count}")
-        logger.info(f"Target GCS URI base: {gcs_uri_base}")
-        logger.info(f"User gender: {gender}")
-
-        enhanced_prompt = enhance_prompt(prompt, gender)
-
-        logger.debug(f"Enhanced prompt: {enhanced_prompt}")
-
-        generated_images = text_to_image(
-            enhanced_prompt,
-            gcs_uri_base,
-            count,
-            aspect_ratio,
-        )
-
-        # 处理响应中的图片
-        generated_uris = []
-        rai_reasons = []
-
-        logger.info(f"Generated {len(generated_images)} images")
-
-        # 处理每个生成的图片
-        for i, image in enumerate(generated_images):
-            # 检查是否被RAI过滤
-            if image.rai_filtered_reason:
-                rai_reasons.append(image.rai_filtered_reason)
-                logger.debug(f"Image {i} filtered by RAI: {image.rai_filtered_reason}")
-                continue
-
-            # 获取GCS URI并转换为HTTPS URL
-            if image.gcs_uri:
-                generated_uris.append(image.gcs_uri)
-                logger.info(f"Image {i}: {image.gcs_uri}")
-
-        # 检查是否生成了任何图片
-        if not generated_uris:
-            error_msg = "No images were successfully generated. Please check whether the prompt contains any prohibited content"
-            if rai_reasons:
-                error_msg += f". RAI filtering reasons: {'; '.join(rai_reasons)}"
-            raise Exception(error_msg)
-
-        logger.debug(f"Successfully generated images: {generated_uris}")
-
-        # 根据include_rai_reason参数返回不同格式
-        if include_rai_reason:
-            return {"image_uris": generated_uris, "rai_reasons": rai_reasons}
-        else:
-            return generated_uris
-
-    except Exception as e:
-        logger.error(f"Error in generate_background_image_to_gcs: {e}")
-        import traceback
-
-        traceback.print_exc()
-        raise e
-
-
-if __name__ == "__main__":
-    images = generate_background_image_to_gcs(
-        "sunset",
-        "blurry, low quality, explicit, NSFW",
-        "gs://inty-yx-test",
-        1,
-        "9:16",
-    )
-    logger.info(f"Images: {images}")

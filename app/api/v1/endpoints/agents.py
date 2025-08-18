@@ -2,9 +2,8 @@
 Agents endpoints for accessing agents for interactions.
 """
 
-import traceback
+from enum import StrEnum
 import uuid
-from datetime import datetime
 from typing import Any, List
 
 import vertexai
@@ -15,7 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app import schemas
 from app.api import deps
 from app.core.agent.agent import agent_manager
-from app.utils.gemini import generate_background_image_to_gcs
+from app.utils.gemini import ImagenGeneratedImage, text_to_image
 from app.core.config import global_config_loaded_from_config_yaml
 from app.schemas.character_card import (
     CharacterCardExportRequest,
@@ -264,6 +263,57 @@ async def delete_agent(
     return schemas.APIResponse.success(data=deleted_agent)
 
 
+def get_opposite_gender(gender: str) -> str:
+    gender_mapping = {
+        "male": "female",
+        "female": "male",
+        "non-binary": "",
+        "they/them": "",
+        "nb": "",  # non-binary 的简写
+        "other": "",
+        "": "",
+    }
+    normalized_gender = gender.lower().strip()
+    opposite = gender_mapping.get(normalized_gender, "")
+    return opposite
+
+
+def process_generated_images(generated_images: List[ImagenGeneratedImage]) -> dict:
+    """
+    Process the generated images and return the HTTPS URL list and RAI filtering reasons.
+    """
+    generated_uris = []
+    rai_reasons = []
+
+    for i, image in enumerate(generated_images):
+        if image.rai_filtered_reason:
+            rai_reasons.append(image.rai_filtered_reason)
+            logger.warning(f"Image {i} filtered by RAI: {image.rai_filtered_reason}")
+            continue
+
+        if image.gcs_uri:
+            generated_uris.append(image.gcs_uri)
+
+    if not generated_uris:
+        error_msg = "No images were successfully generated. Please check whether the prompt contains any prohibited content"
+        if rai_reasons:
+            error_msg += f". RAI filtering reasons: {'; '.join(rai_reasons)}"
+        raise Exception(error_msg)
+
+    return {"image_uris": generated_uris, "rai_reasons": rai_reasons}
+
+
+class AspectRatio(StrEnum):
+    PORTRAIT = "9:16"
+
+
+class ImageFormat(StrEnum):
+    JPG = "jpg"
+    JPEG = "jpeg"
+    PNG = "png"
+    WEBP = "webp"
+
+
 @router.post(
     "/generate_background",
     response_model=APIResponse[dict],
@@ -319,28 +369,23 @@ async def generate_background(
             f"Starting background generation for user {current_user.id}, prompt: {request.prompt}, count: {request.count}, gender: {user_gender}"
         )
 
+        opposite_gender = get_opposite_gender(user_gender)
+
         # Generate images and get actual GCS URLs with RAI reason support
-        result = generate_background_image_to_gcs(
+        generated_images = text_to_image(
             request.prompt,
-            gcs_uri_base,
+            request.negative_prompt,
+            request.enhance_prompt,
+            gender=opposite_gender,
+            aspect_ratio=AspectRatio.PORTRAIT,
+            gcs_uri_base=gcs_uri_base,
             count=request.count,
-            aspect_ratio="9:16",
-            gender=user_gender,
-            include_rai_reason=True,
         )
 
-        # Handle both new format (with RAI reasons) and old format (just URLs)
-        if isinstance(result, dict) and "image_uris" in result:
-            gcs_urls = result["image_uris"]
-            rai_reasons = result.get("rai_reasons", [])
-            if rai_reasons:
-                logger.warning(f"Some images were filtered by RAI: {rai_reasons}")
-        else:
-            # Backward compatibility: if result is still a list
-            gcs_urls = result
-            rai_reasons = []
+        result = process_generated_images(generated_images)
 
-        logger.info(f"Successfully generated {len(gcs_urls)} background images")
+        gcs_urls = result["image_uris"]
+        rai_reasons = result["rai_reasons"]
 
         # 记录背景图生成使用次数
         try:
@@ -352,12 +397,11 @@ async def generate_background(
             )
         except Exception as usage_error:
             logger.error(f"Failed to record usage: {str(usage_error)}")
-            # 使用记录失败不影响主要功能，继续返回结果
 
         response_data = {
             "urls": gcs_urls,
             "count": len(gcs_urls),
-            "format": "png",
+            "format": ImageFormat.JPEG,
             "remaining_usage": {
                 "used_count": check_result[1] + request.count,
                 "limit": check_result[2],
@@ -459,7 +503,12 @@ async def upload_avatar_preview(
 
         file_ext = file.filename.split(".")[-1].lower()
         logger.info(f"文件扩展名: {file_ext}")
-        allowed_extensions = ["jpg", "jpeg", "png", "webp"]
+        allowed_extensions = [
+            ImageFormat.JPG,
+            ImageFormat.JPEG,
+            ImageFormat.PNG,
+            ImageFormat.WEBP,
+        ]
         if file_ext not in allowed_extensions:
             logger.error(
                 f"不支持的文件扩展名: {file_ext}，支持的格式: {allowed_extensions}"
