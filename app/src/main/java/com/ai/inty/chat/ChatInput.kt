@@ -81,8 +81,9 @@ fun ChatInput(
                 enabled = IntySetting.needBlockInput().not(),
                 value = inputData.value,
                 singleLine = false,
-                onValueChange = {
-                    chatViewModel.inputData.value = it
+                onValueChange = { input ->
+                    val sanitizedInput = input.trim() // trim首末空白
+                    chatViewModel.inputData.value = sanitizedInput
                 },
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Default),
                 keyboardActions = KeyboardActions(),

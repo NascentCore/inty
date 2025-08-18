@@ -250,6 +250,8 @@ class ChatActivity : BaseActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        // 清理 ChatViewModel 资源
+        chatViewModel.clearAllData()
         // Unregister broadcast receiver
         LocalBroadcastManager.getInstance(this).unregisterReceiver(followStateReceiver)
     }

@@ -17,6 +17,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -24,6 +25,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
@@ -41,6 +43,7 @@ import com.ai.inty.ui.ChatDialogData
 import com.ai.inty.ui.UnlimitChatDialog
 import com.ai.inty.utils.SecurityUtils
 import com.ai.inty.viewmodels.ChatViewModel
+import com.inty.utils.log.EasyLog
 import com.inty.utils.storage.IntySetting
 import com.therouter.TheRouter
 import kotlinx.coroutines.launch
@@ -234,28 +237,78 @@ internal fun ChatPage(
                         )
                     }
                 }
-
+                val chatMessages by chatViewModel.msgs.collectAsState()
                 LazyColumn(
                     modifier = Modifier
                         .weight(1f)
                         .padding(horizontal = 16.dp),
                     reverseLayout = true,
                 ) {
-                    val msgs = chatViewModel.msgs
                     item {
                         Spacer(Modifier.height(16.dp))
                     }
-                    //可能会index或者key不唯一的异常
+                    // 添加安全检查
                     runCatching {
-                        val items = msgs.filter { !(it.role == "user" && it.content == "continue") }
-                        if (items.isNotEmpty()) {
-                            itemsIndexed(items) { index, item ->
-                                ChatItem(item)
-                                Spacer(Modifier.height(16.dp))
+                        if (chatMessages.isNotEmpty()) {
+                            // 创建消息列表的副本以避免并发修改
+                            val messagesCopy = chatMessages.toList()
+                            val items =
+                                messagesCopy.filter { !(it.role == "user" && it.content == "continue") }
+                            if (items.isNotEmpty()) {
+                                itemsIndexed(
+                                    items,
+                                    key = { index, info ->
+                                        // 使用消息的唯一标识符作为 key，如果没有则使用索引和内容的组合
+                                        info.msgId.ifEmpty { "${index}_${info.role}_${info.content.hashCode()}" }
+                                    }
+                                ) { index, item ->
+                                    runCatching {
+                                        //明确数据边界
+                                        if (index < items.size) {
+                                            ChatItem(item)
+                                        }
+                                        Spacer(Modifier.height(16.dp))
+                                    }.onFailure { e ->
+                                        EasyLog.log(
+                                            "Error rendering chat item at index $index: ${e.message}",
+                                            priority = EasyLog.ERROR
+                                        )
+                                        // 渲染失败时显示错误占位符
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .height(60.dp)
+                                                .background(Color.Red.copy(alpha = 0.1f))
+                                        ) {
+                                            Text(
+                                                text = "Message loading failed",
+                                                color = Color.White,
+                                                modifier = Modifier.align(Alignment.Center)
+                                            )
+                                        }
+                                        Spacer(Modifier.height(16.dp))
+                                    }
+                                }
                             }
                         }
-                    }.onFailure { it.printStackTrace() }
-
+                    }.onFailure { e ->
+                        EasyLog.log("Error in LazyColumn: ${e.message}", priority = EasyLog.ERROR)
+                        // 如果整个列表渲染失败，显示错误信息
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(100.dp)
+                                    .background(Color.Red.copy(alpha = 0.1f))
+                            ) {
+                                Text(
+                                    text = "Chat history loading failed, please retry",
+                                    color = Color.White,
+                                    modifier = Modifier.align(Alignment.Center)
+                                )
+                            }
+                        }
+                    }
                 }
 
                 // 输入框区域

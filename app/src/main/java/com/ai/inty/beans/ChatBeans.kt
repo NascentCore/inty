@@ -71,6 +71,8 @@ data class QueryMsgsResponse(
 data class MsgInfo(
     val content: String = "",
     val role: String = "",
+    //本地创建一个msgId，临时用于消息标记
+    val msgId: String = "${System.currentTimeMillis()}_${role}_$content",
 )
 
 @JsonClass(generateAdapter = true)

@@ -285,7 +285,7 @@ private fun ConversationsTabContent(
     selectedConversationsTab: ConversationsPageTab,
     context: Context,
 ) {
-    val conversations = chatViewModel.conversations
+    val conversations by chatViewModel.conversations.collectAsState()
     val sysMsgs = mainViewModel.sysMsgs
     val followingAgents = mainViewModel.followingAgents
 
@@ -367,9 +367,9 @@ private fun MyTabContent(
         if (profile.id.isEmpty()) {
             UserProfile(
                 id = "loading",
-                nickname = "加载中...",
+                nickname = "Loading...",
                 avatar = null,
-                description = "正在加载用户信息..."
+                description = "UserInfo Loading..."
             )
         } else {
             profile
