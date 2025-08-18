@@ -433,7 +433,6 @@ async def delete_user_account(
             db,
             user,
             deletion_reason,
-            anonymized_fields,
             processor_id or user_id,
             subscription_status,
         )
@@ -453,7 +452,7 @@ async def delete_user_account(
             "message": "账户删除成功",
             "user_id": user_id,
             "deletion_log_id": deletion_log.id,
-            "anonymized_fields": anonymized_fields,
+            "anonymized_fields": [],
         }
 
     except Exception as e:
