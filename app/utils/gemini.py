@@ -116,7 +116,7 @@ def get_opposite_gender(user_gender: str) -> str:
     return opposite
 
 
-def enhance_prompt(prompt: str, negative_prompt: str, gender: str) -> str:
+def enhance_prompt(prompt: str, gender: str) -> str:
     """
     增强提示词
     """
@@ -130,8 +130,6 @@ def enhance_prompt(prompt: str, negative_prompt: str, gender: str) -> str:
     gender: {opposite_gender}
 
     {prompt}
-
-    {negative_prompt}
 
     Additional requirements:
     The image must be of a person.
@@ -276,26 +274,7 @@ def generate_background_image_to_gcs(
         logger.info(f"Target GCS URI base: {gcs_uri_base}")
         logger.info(f"User gender: {gender}")
 
-        # 获取反向性别
-        opposite_gender = get_opposite_gender(gender)
-
-        # 构建增强提示词
-        enhanced_prompt = f"""
-        A person who is welcoming, friendly.
-
-        The person's description:
-        {prompt}
-
-        The person's information:
-        age: 22 - 35
-        gender: {opposite_gender}
-
-        Additional requirements:
-        The image must be of a person.
-        It cannot be a landscape, object, or any other non-human content.
-        Avoid generating images of people appearing less than 18 years old.
-        All content must be appropriate for a general audience.
-        """
+        enhanced_prompt = enhance_prompt(prompt, gender)
 
         logger.debug(f"Enhanced prompt: {enhanced_prompt}")
 
