@@ -15,13 +15,16 @@ They differ in:
 This file is for the genai API.
 """
 
+from ast import List
 from dataclasses import dataclass
 import json
 import os
+from typing import Optional
 
 import google.genai as genai
 from google.genai import types
 from loguru import logger
+from pydantic import BaseModel, Field
 
 from app.core.config import global_config_loaded_from_config_yaml
 
@@ -113,74 +116,99 @@ def get_opposite_gender(user_gender: str) -> str:
     return opposite
 
 
+def enhance_prompt(prompt: str, negative_prompt: str, gender: str) -> str:
+    """
+    增强提示词
+    """
+    # 获取反向性别
+    opposite_gender = get_opposite_gender(gender)
+
+    # 构建增强提示词
+    enhanced_prompt = f"""
+    A person who is welcoming, friendly.
+    age: 22 - 35
+    gender: {opposite_gender}
+
+    {prompt}
+
+    {negative_prompt}
+
+    Additional requirements:
+    The image must be of a person.
+    It cannot be a landscape, object, or any other non-human content.
+    Avoid generating images of people appearing less than 18 years old.
+    All content must be appropriate for a general audience.
+    """
+
+    logger.debug(f"Enhanced prompt: {enhanced_prompt}")
+    return enhanced_prompt
+
+
+class ImagenGeneratedImage(BaseModel):
+    """
+    An output image from Imagen API.
+    This has keep the same as types.GeneratedImage from the google.genai package.
+    It is used to wrap the types.GeneratedImage to make it more user-friendly.
+    """
+
+    gcs_uri: Optional[str] = Field(
+        default=None,
+        description="""The output image's GCS URI. None if filtered out by RAI.""",
+    )
+    rai_filtered_reason: Optional[str] = Field(
+        default=None,
+        description="""Reason why this image is filtered out. None if not filtered out.""",
+    )
+    enhanced_prompt: str = Field(
+        ...,
+        description="""The rewritten prompt used for the image generation.""",
+    )
+
+
 def generate_background_image_to_gcs(
     prompt: str,
+    negative_prompt: str,
     gcs_uri_base: str,
-    count=1,
-    aspect_ratio="9:16",
-    gender: str = None,
-    include_rai_reason=False,
-):
+    count: int,
+    aspect_ratio: str,
+) -> List[ImagenGeneratedImage]:
     """
     使用output_gcs_uri参数直接将生成的背景图保存到GCS，返回实际生成的图片GCS路径列表
     支持includeRaiReason参数获取RAI过滤原因
 
     Args:
         prompt (str): 生成图片的描述提示词
+        negative_prompt (str): 生成图片的负面提示词
         gcs_uri_base (str): GCS 存储基础URI
         count (int): 生成图片数量，默认为1
         aspect_ratio (str): 图片尺寸比例，默认为"9:16"
-        gender (str): 用户性别，支持 "male", "female", "non-binary", "they/them" 等
-        include_rai_reason (bool): 是否包含RAI过滤原因
 
     Returns:
         list: 生成图片的HTTPS URL列表，或包含RAI原因的字典
     """
     try:
-        logger.info(f"Starting image generation with prompt: {prompt}, count: {count}")
-        logger.info(f"Target GCS URI base: {gcs_uri_base}")
-        logger.info(f"User gender: {gender}")
-
-        # 获取反向性别
-        opposite_gender = get_opposite_gender(gender)
-
-        # 构建增强提示词
-        enhanced_prompt = f"""
-        A person who is welcoming, friendly.
-
-        The person's description:
-        {prompt}
-
-        The person's information:
-        age: 22 - 35
-        gender: {opposite_gender}
-
-        Additional requirements:
-        The image must be of a person.
-        It cannot be a landscape, object, or any other non-human content.
-        Avoid generating images of people appearing less than 18 years old.
-        All content must be appropriate for a general audience.
-        """
-
-        logger.debug(f"Enhanced prompt: {enhanced_prompt}")
+        logger.debug(f"Starting image generation with prompt: {prompt}, count: {count}")
+        logger.debug(f"Target GCS URI base: {gcs_uri_base}")
 
         # 使用新的Google Gen AI SDK生成图片
         config = types.GenerateImagesConfig(
+            negative_prompt=negative_prompt,
             number_of_images=count,
             aspect_ratio=aspect_ratio,
             # TODO: 上架期间仅生成低风险图片，选择屏蔽低风险和以上风险图片。
             safety_filter_level=types.SafetyFilterLevel.BLOCK_LOW_AND_ABOVE,
             person_generation=types.PersonGeneration.ALLOW_ADULT,
             output_gcs_uri=gcs_uri_base,
-            include_rai_reason=include_rai_reason,
+            include_rai_reason=True,
             # This reduces the size significantly.
             output_mime_type="image/jpeg",
+            enhance_prompt=True,
         )
 
         client = get_genai_client()
         response = client.models.generate_images(
             model=global_config_loaded_from_config_yaml.agent.vertex_image_model,
-            prompt=enhanced_prompt,
+            prompt=prompt,
             config=config,
         )
 
@@ -190,16 +218,9 @@ def generate_background_image_to_gcs(
 
         logger.info(f"Generated {len(response.generated_images)} images")
 
+        generated_images = []
         # 处理每个生成的图片
         for i, image in enumerate(response.generated_images):
-            # 检查是否被RAI过滤
-            if image.rai_filtered_reason:
-                rai_reasons.append(image.rai_filtered_reason)
-                logger.warning(
-                    f"Image {i} filtered by RAI: {image.rai_filtered_reason}"
-                )
-                continue
-
             # 获取GCS URI并转换为HTTPS URL
             gcs_uri = image.image.gcs_uri
             if gcs_uri:
@@ -211,22 +232,14 @@ def generate_background_image_to_gcs(
                 else:
                     generated_uris.append(gcs_uri)
                     logger.info(f"Image {i}: {gcs_uri}")
-
-        # 检查是否生成了任何图片
-        if not generated_uris:
-            error_msg = "No images were successfully generated. Please check whether the prompt contains any prohibited content"
-            if rai_reasons:
-                error_msg += f". RAI filtering reasons: {'; '.join(rai_reasons)}"
-            raise Exception(error_msg)
-
-        logger.debug(f"Successfully generated images: {generated_uris}")
-
-        # 根据include_rai_reason参数返回不同格式
-        if include_rai_reason:
-            return {"image_uris": generated_uris, "rai_reasons": rai_reasons}
-        else:
-            return generated_uris
-
+            generated_images.append(
+                ImagenGeneratedImage(
+                    gcs_uri=gcs_uri,
+                    rai_filtered_reason=image.rai_filtered_reason,
+                    enhanced_prompt=image.enhanced_prompt or "",
+                )
+            )
+        return generated_images
     except Exception as e:
         logger.error(f"Error in generate_background_image_to_gcs: {e}")
         import traceback
@@ -236,33 +249,11 @@ def generate_background_image_to_gcs(
 
 
 if __name__ == "__main__":
-    prompt = """
-    The person's description:
-    a beautiful girl
-
-    The person's information:
-    age: 22 - 35
-    gender: female
-
-    Important requirement: The image must be of a person. It cannot be a landscape, object, or any other non-human content.
-    """
-
-    # 使用新的SDK进行测试
-    config = types.GenerateImagesConfig(
-        number_of_images=1,
-        aspect_ratio="1:1",
-        safety_filter_level=types.SafetyFilterLevel.BLOCK_MEDIUM_AND_ABOVE,
-        person_generation=types.PersonGeneration.ALLOW_ADULT,
-        include_rai_reason=True,
+    images = generate_background_image_to_gcs(
+        "sunset",
+        "blurry, low quality, explicit, NSFW",
+        "gs://inty-yx-test",
+        1,
+        "9:16",
     )
-
-    client = get_genai_client()
-    response = client.models.generate_images(
-        model="imagen-4.0-fast-generate-preview-06-06", prompt=prompt, config=config
-    )
-
-    for image in response.generated_images:
-        if image.rai_filtered_reason:
-            print(image.rai_filtered_reason)
-        else:
-            image.image.save("test.png")
+    logger.info(f"Images: {images}")
