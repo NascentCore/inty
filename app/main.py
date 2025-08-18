@@ -28,7 +28,7 @@ init_logger()
 app = FastAPI(
     title=global_config_loaded_from_config_yaml.app.name,
     description="InTy",
-    version="1.0.0",
+    version=global_config_loaded_from_config_yaml.app.version,
     # 只在debug模式下开启OpenAPI docs
     openapi_url=(
         "/openapi.json" if global_config_loaded_from_config_yaml.app.debug else None
@@ -253,8 +253,8 @@ def custom_openapi():
 
     openapi_schema = get_openapi(
         title=global_config_loaded_from_config_yaml.app.name,
-        version="1.0.0",
         description=app.description,
+        version=global_config_loaded_from_config_yaml.app.version,
         routes=app.routes,
     )
 
@@ -304,6 +304,5 @@ async def root():
         "message": "success",
         "data": {
             "app_name": global_config_loaded_from_config_yaml.app.name,
-            "version": "1.0.0",
         },
     }
