@@ -180,7 +180,7 @@ class AgentList(BaseModel):
     items: List[Agent]
 
 
-class BackgroundGenerateRequest(BaseModel):
+class TextToImageRequest(BaseModel):
     """
     Text to image request
     """
@@ -200,6 +200,8 @@ class BackgroundGenerateRequest(BaseModel):
         ),
     )
     enhance_prompt: Optional[bool] = Field(
+        # 默认打开提示词增强，以兼容旧版本。
+        # 此为方便用户生成角色形象时针对角色性别和人物进行增强，让文生图模型能生成更合规和符合 app 设定的异性恋对象角色。
         True,
         description=(
             "Whether to enhance the prompt to improve the quality of the image. "
@@ -221,6 +223,7 @@ class BackgroundGenerateRequest(BaseModel):
             "example": {
                 "prompt": "A beautiful mountain landscape with sunset",
                 "negative_prompt": "blurry, low quality, explicit, NSFW",
+                "enhance_prompt": True,
                 "count": 2,
             }
         }

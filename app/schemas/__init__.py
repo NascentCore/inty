@@ -3,7 +3,7 @@ from app.schemas.agent import (
     AgentCreate,
     AgentInDB,
     AgentUpdate,
-    BackgroundGenerateRequest,
+    TextToImageRequest,
     CreatorAgentStats,
 )
 from app.schemas.auth import (
