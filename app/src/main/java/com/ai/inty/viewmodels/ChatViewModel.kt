@@ -217,8 +217,8 @@ class ChatViewModel : BaseActivityViewModel() {
                 _msgs.update { currentMsgs ->
                     try {
                         val newMsgs = mutableListOf<MsgInfo>()
-                        newMsgs.add(msgInfo) // 添加用户消息
                         newMsgs.add(loadingMsg) // 添加加载动画消息
+                        newMsgs.add(msgInfo) // 添加用户消息
                         // 创建当前消息的副本以避免并发修改
                         newMsgs.addAll(currentMsgs.toList())
                         EasyLog.log("Successfully updated messages - new count: ${newMsgs.size}")

@@ -82,8 +82,7 @@ fun ChatInput(
                 value = inputData.value,
                 singleLine = false,
                 onValueChange = { input ->
-                    val sanitizedInput = input.trim() // trim首末空白
-                    chatViewModel.inputData.value = sanitizedInput
+                    chatViewModel.inputData.value = input
                 },
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Default),
                 keyboardActions = KeyboardActions(),
