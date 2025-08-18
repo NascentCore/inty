@@ -7,8 +7,7 @@ services:
       - "8000:8000"
     volumes:
       - ./config.yaml:/config.yaml
-      - ./inty-backend-key.json:/inty-backend-key.json
-      - ./inty-firebase-key.json:/inty-firebase-key.json
+      - ./.secrets:/.secrets
     depends_on:
       pgvector:
         condition: service_healthy
