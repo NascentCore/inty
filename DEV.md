@@ -36,19 +36,18 @@ All table definitions must be added to `app/models` directory for consistency.
 | **Utilities** | [`scripts/`](scripts) | Setup helpers and maintenance scripts |
 | **Testing** | [`testing/`](testing) | Sample data and test utilities |
 
-## Important Concepts
+## Configuring Cursor
 
-- **Config-driven setup** – [`config.yaml`](config.yaml.example) controls database credentials, Google OAuth, agent defaults, voice generation, and other services; see the [README](README.md) for environment prerequisites.
-- **Asynchronous I/O** – Database access and most services use `AsyncSession` and `async def` for concurrency.
-- **Agent lifecycle** – [`app/core/agent/agent.py`](app/core/agent/agent.py) shows how agents use LangChain, Postgres message history, and custom tools.
-- **Service layer** – Core logic (e.g., chat creation, caching, subscriptions) is separated from API endpoints for easier reuse and testing.
+### Enable format on save with black formatter
 
-## Next Steps for New Contributors
+Goal: install and enable black formatter to format file on save, use the default black format style.
 
-1. **Run locally**: Follow the setup and launch instructions in the [README](README.md) to spin up PostgreSQL, apply migrations, and start the FastAPI server.
-2. **Review docs**: Browse the [`docs/`](docs) folder for deeper dives into the AI voice system, prompt templates, and subscription flows.
-3. **Explore agents**: Study the [`app/core/agent`](app/core/agent) modules to understand the LangGraph agent architecture and memory tools.
-4. **Inspect services**: Look at modules under [`app/services`](app/services) to see how business logic, caching, and external APIs (Google Cloud Storage, ElevenLabs, etc.) are implemented.
-5. **Check tests**: Examine the test files in the repository to see example usage patterns and expected behaviors.
+* First install Black Formatter
+  
+  <img width="600" alt="image" src="https://github.com/user-attachments/assets/279a14ae-1814-4f89-b82b-0215810e3624" />
+* Then enable "format on save"
+  
+  <img width="600" alt="image" src="https://github.com/user-attachments/assets/aad4af61-bb27-4b4d-9ebe-5c4bb57316b1" />
+  <img width="600" alt="image" src="https://github.com/user-attachments/assets/aa251443-ada9-4331-9c99-1756aed57344" />
 
-This guide provides a map of where features live and how the system pieces fit together. The docs and service implementations are good resources for understanding specialized components such as character cards, AI voice, or subscription management.
+Result: file got formated whenever you make a change to the file.

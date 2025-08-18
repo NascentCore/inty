@@ -7,6 +7,11 @@
 
 InTy 是一个基于 FastAPI 和 PostgreSQL 的 AI 聊天应用后端，集成了 LangChain 和 LangGraph 技术栈，支持多种 AI 模型和智能体管理。项目采用现代化的异步编程架构，提供完整的 AI 对话解决方案和商业化订阅服务。
 
+以下改动须经过 @yaxiong review 同意
+
+* 增加新的 http api paths
+* 增加新的 数据库表格
+
 ## 使用 Docker 容器本地运行后端服务和 Android app（适用于 app 开发者）
 
 1. 访问 <https://docs.docker.com/desktop/setup/install/mac-install/> 安装 Docker Desktop。
@@ -34,6 +39,7 @@ InTy 是一个基于 FastAPI 和 PostgreSQL 的 AI 聊天应用后端，集成�
    adb devices
    adb -s emulator-5554 reverse tcp:8000 tcp:8000
    ```
+
    <img width="600" height="1850" alt="image" src="https://github.com/user-attachments/assets/9dc4e50d-91b5-4fbf-b04c-2c154db42b29" />
 
 ## 使用 uvicorn 运行后端服务（面向后端开发者）
