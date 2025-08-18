@@ -290,15 +290,10 @@ def process_generated_images(generated_images: List[ImagenGeneratedImage]) -> di
             rai_reasons.append(image.rai_filtered_reason)
             logger.warning(f"Image {i} filtered by RAI: {image.rai_filtered_reason}")
             continue
-
-        if image.gcs_uri:
-            generated_uris.append(image.gcs_uri)
+        generated_uris.append(image.gcs_uri)
 
     if not generated_uris:
-        error_msg = "No images were successfully generated. Please check whether the prompt contains any prohibited content"
-        if rai_reasons:
-            error_msg += f". RAI filtering reasons: {'; '.join(rai_reasons)}"
-        raise Exception(error_msg)
+        raise Exception(f"No images were generated, rai reasons: {rai_reasons}")
 
     return {"image_uris": generated_uris, "rai_reasons": rai_reasons}
 
