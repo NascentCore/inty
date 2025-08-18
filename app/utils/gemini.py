@@ -30,20 +30,6 @@ from pydantic import BaseModel, Field
 from app.core.config import global_config_loaded_from_config_yaml
 
 
-@dataclass
-class TextToImageRequest:
-    prompt: str
-    negative_prompt: str = None
-
-    count: int = 1
-    aspect_ratio: str = "9:16"
-    gender: str = None
-
-    @dataclass
-    class OutputConfig:
-        gcs_uri_base: str
-
-
 # Initialize Google Gen AI client with Vertex AI
 # The client will use the same credentials as configured for GCS
 client = None  # Will be initialized when needed
