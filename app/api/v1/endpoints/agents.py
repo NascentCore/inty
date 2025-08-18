@@ -392,6 +392,7 @@ async def generate_background(
             )
         except Exception as usage_error:
             logger.error(f"Failed to record usage: {str(usage_error)}")
+            # 使用记录失败不影响主要功能，继续返回结果
 
         response_data = {
             "urls": gcs_urls,
