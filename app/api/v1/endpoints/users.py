@@ -222,7 +222,7 @@ async def delete_user_account(
 
 
 # TODO: Move this to admin router, and do not include the router in production.
-@router.get("", response_model=UserList)
+@router.get("", response_model=UserList, include_in_schema=False)
 async def get_all_users(
     *,
     db: AsyncSession = Depends(get_async_db),
