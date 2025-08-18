@@ -165,7 +165,7 @@ class ImagenGeneratedImage(BaseModel):
     )
 
 
-def generate_background_image_to_gcs(
+def text_to_image(
     prompt: str,
     negative_prompt: str,
     gcs_uri_base: str,
@@ -240,6 +240,106 @@ def generate_background_image_to_gcs(
                 )
             )
         return generated_images
+    except Exception as e:
+        logger.error(f"Error in generate_background_image_to_gcs: {e}")
+        import traceback
+
+        traceback.print_exc()
+        raise e
+
+
+def generate_background_image_to_gcs(
+    prompt: str,
+    gcs_uri_base: str,
+    count=1,
+    aspect_ratio="9:16",
+    gender: str = None,
+    include_rai_reason=False,
+):
+    """
+    使用output_gcs_uri参数直接将生成的背景图保存到GCS，返回实际生成的图片GCS路径列表
+    支持includeRaiReason参数获取RAI过滤原因
+
+    Args:
+        prompt (str): 生成图片的描述提示词
+        gcs_uri_base (str): GCS 存储基础URI
+        count (int): 生成图片数量，默认为1
+        aspect_ratio (str): 图片尺寸比例，默认为"9:16"
+        gender (str): 用户性别，支持 "male", "female", "non-binary", "they/them" 等
+        include_rai_reason (bool): 是否包含RAI过滤原因
+
+    Returns:
+        list: 生成图片的HTTPS URL列表，或包含RAI原因的字典
+    """
+    try:
+        logger.info(f"Starting image generation with prompt: {prompt}, count: {count}")
+        logger.info(f"Target GCS URI base: {gcs_uri_base}")
+        logger.info(f"User gender: {gender}")
+
+        # 获取反向性别
+        opposite_gender = get_opposite_gender(gender)
+
+        # 构建增强提示词
+        enhanced_prompt = f"""
+        A person who is welcoming, friendly.
+
+        The person's description:
+        {prompt}
+
+        The person's information:
+        age: 22 - 35
+        gender: {opposite_gender}
+
+        Additional requirements:
+        The image must be of a person.
+        It cannot be a landscape, object, or any other non-human content.
+        Avoid generating images of people appearing less than 18 years old.
+        All content must be appropriate for a general audience.
+        """
+
+        logger.debug(f"Enhanced prompt: {enhanced_prompt}")
+
+        generated_images = text_to_image(
+            enhanced_prompt,
+            gcs_uri_base,
+            count,
+            aspect_ratio,
+        )
+
+        # 处理响应中的图片
+        generated_uris = []
+        rai_reasons = []
+
+        logger.info(f"Generated {len(generated_images)} images")
+
+        # 处理每个生成的图片
+        for i, image in enumerate(generated_images):
+            # 检查是否被RAI过滤
+            if image.rai_filtered_reason:
+                rai_reasons.append(image.rai_filtered_reason)
+                logger.debug(f"Image {i} filtered by RAI: {image.rai_filtered_reason}")
+                continue
+
+            # 获取GCS URI并转换为HTTPS URL
+            if image.gcs_uri:
+                generated_uris.append(image.gcs_uri)
+                logger.info(f"Image {i}: {image.gcs_uri}")
+
+        # 检查是否生成了任何图片
+        if not generated_uris:
+            error_msg = "No images were successfully generated. Please check whether the prompt contains any prohibited content"
+            if rai_reasons:
+                error_msg += f". RAI filtering reasons: {'; '.join(rai_reasons)}"
+            raise Exception(error_msg)
+
+        logger.debug(f"Successfully generated images: {generated_uris}")
+
+        # 根据include_rai_reason参数返回不同格式
+        if include_rai_reason:
+            return {"image_uris": generated_uris, "rai_reasons": rai_reasons}
+        else:
+            return generated_uris
+
     except Exception as e:
         logger.error(f"Error in generate_background_image_to_gcs: {e}")
         import traceback
