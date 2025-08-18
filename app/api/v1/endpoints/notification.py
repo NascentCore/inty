@@ -19,7 +19,7 @@ from app.services import notification_service
 router = APIRouter()
 
 
-@router.post("/", response_model=APIResponse)
+@router.post("/", response_model=APIResponse, include_in_schema=False)
 async def send_notification(
     request: NotificationSendRequest,
     background_tasks: BackgroundTasks,
@@ -94,7 +94,11 @@ async def list_notifications(
         return APIResponse.error(message=str(e))
 
 
-@router.get("/templates/types", response_model=APIResponse[Dict[str, int]])
+@router.get(
+    "/templates/types",
+    response_model=APIResponse[Dict[str, int]],
+    include_in_schema=False,
+)
 async def get_template_types(
     current_user=Depends(deps.get_current_active_user),
 ) -> APIResponse[Dict[str, int]]:
@@ -115,7 +119,11 @@ async def get_template_types(
         )
 
 
-@router.post("/templates", response_model=APIResponse[NotificationTemplateItem])
+@router.post(
+    "/templates",
+    response_model=APIResponse[NotificationTemplateItem],
+    include_in_schema=False,
+)
 async def create_notification_template(
     template_data: NotificationTemplateCreate,
     db: AsyncSession = Depends(deps.get_async_db),
@@ -148,7 +156,9 @@ async def create_notification_template(
 
 
 @router.get(
-    "/templates", response_model=APIResponse[PaginationData[NotificationTemplateItem]]
+    "/templates",
+    response_model=APIResponse[PaginationData[NotificationTemplateItem]],
+    include_in_schema=False,
 )
 async def list_templates(
     db: AsyncSession = Depends(deps.get_async_db),
