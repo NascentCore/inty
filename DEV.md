@@ -2,6 +2,10 @@
 
 InTy is a FastAPI- and PostgreSQL-based AI chat backend that integrates LangChain and LangGraph for managing multi-model AI agents in an asynchronous architecture. The project supports features such as user authentication, subscription management, and AI voice services.
 
+## Common instructions for Gemini CLI, Claude Code, Cursor
+
+* Add a blank line at the bottom of each and every file written.
+
 ## Alembic
 
 When change existing tables, or add new tables, or removing tables,
