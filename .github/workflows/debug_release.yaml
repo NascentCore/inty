@@ -7,7 +7,7 @@ on:
 
   schedule:
     # 1 am UTC, 9 am Beijing time, 6 pm PST.
-    - cron: '0 1,6,10 * * *'
+    - cron: '0 1 * * *'
 
 jobs:
   build-apk:
