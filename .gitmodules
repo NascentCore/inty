@@ -1,3 +1,0 @@
-[submodule "inty_sdk"]
-	path = inty_sdk
-	url = git@github.com:NascentCore/inty-sdk-kotlin.git
