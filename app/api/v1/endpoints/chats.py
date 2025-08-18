@@ -735,7 +735,7 @@ async def get_voice_task_stats(
         )
 
 
-@router.post("/agents/{agent_id}/messages/{message_id}/voice")
+@router.post("/agents/{agent_id}/messages/{message_id}/voice", include_in_schema=False)
 async def generate_message_voice(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
@@ -798,7 +798,7 @@ async def generate_message_voice(
         )
 
 
-@router.get("/voices")
+@router.get("/voices", include_in_schema=False)
 async def get_available_voices(
     current_user: schemas.User = Depends(deps.get_current_active_user),
 ):
@@ -816,7 +816,7 @@ async def get_available_voices(
         raise HTTPException(status_code=500, detail=f"Failed to get voices: {str(e)}")
 
 
-@router.get("/voices/{voice_id}")
+@router.get("/voices/{voice_id}", include_in_schema=False)
 async def get_voice_info(
     voice_id: str,
     current_user: schemas.User = Depends(deps.get_current_active_user),
