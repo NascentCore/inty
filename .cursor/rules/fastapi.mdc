@@ -6,23 +6,25 @@ alwaysApply: false
 
 # FastAPI
 
+* Use ../FASTAPI_BEST_PRACTICES_ZH.md as guideline
 * Use '-' in api path, 'text-to-image' instead 'text_to_image'
 
-https://fastapi.tiangolo.com/tutorial/bigger-applications/#include-the-apirouters-for-users-and-items
+<https://fastapi.tiangolo.com/tutorial/bigger-applications/#include-the-apirouters-for-users-and-items>
 
-https://github.com/zhanymkanov/fastapi-best-practices
+<https://github.com/zhanymkanov/fastapi-best-practices>
 
 Here are the specific best practices for organizing a FastAPI application using APIRouter:
 Centralizing Configurations with APIRouter
 Instead of applying settings to each individual path operation, you can define them once for a whole group of endpoints by adding them to the APIRouter instance. This prevents code duplication and keeps your code DRY (Don't Repeat Yourself).
- * Prefix: Use the prefix parameter to specify a common path segment for all routes in the router. For example, if you set APIRouter(prefix="/items"), all your defined routes will automatically be prefixed with /items, so / becomes /items/ and /{item_id} becomes /items/{item_id}.
- * Tags: Use the tags parameter to add a list of tags that apply to all endpoints in the router. This helps group related endpoints in the automatically generated API documentation.
- * Dependencies: You can add dependencies to an APIRouter using the dependencies parameter. These dependencies will be executed for every request handled by the router, which is useful for enforcing things like authentication across a whole group of endpoints.
- * Responses: You can specify common responses for the entire router. This will be included in the documentation for every path operation defined within it, ensuring consistency.
+
+* Prefix: Use the prefix parameter to specify a common path segment for all routes in the router. For example, if you set APIRouter(prefix="/items"), all your defined routes will automatically be prefixed with /items, so / becomes /items/ and /{item_id} becomes /items/{item_id}.
+* Tags: Use the tags parameter to add a list of tags that apply to all endpoints in the router. This helps group related endpoints in the automatically generated API documentation.
+* Dependencies: You can add dependencies to an APIRouter using the dependencies parameter. These dependencies will be executed for every request handled by the router, which is useful for enforcing things like authentication across a whole group of endpoints.
+* Responses: You can specify common responses for the entire router. This will be included in the documentation for every path operation defined within it, ensuring consistency.
 File Structure and Relative Imports
 A well-organized file structure is crucial for larger applications. The recommended practice is to use Python packages and subpackages.
- * Package Structure: A main app directory serves as the root package, with subdirectories for different components like routers (for your API routes) and internal (for private modules). Each directory should contain an __init__.py file to be recognized as a Python package.
- * Relative Imports: The use of relative imports (e.g., from ..dependencies import get_token_header) is essential for cleanly importing code from other modules within the same package.
-   * Single dot (.): Refers to the current package.
-   * Double dot (..): Refers to the parent package. This is used when you need to access a module one level up in the directory tree.
- * Example: From app/routers/items.py, you can use from ..dependencies import get_token_header to import a function from app/dependencies.py without needing to specify the full path. This makes the code more portable and easier to manage.
+* Package Structure: A main app directory serves as the root package, with subdirectories for different components like routers (for your API routes) and internal (for private modules). Each directory should contain an __init__.py file to be recognized as a Python package.
+* Relative Imports: The use of relative imports (e.g., from ..dependencies import get_token_header) is essential for cleanly importing code from other modules within the same package.
+  * Single dot (.): Refers to the current package.
+  * Double dot (..): Refers to the parent package. This is used when you need to access a module one level up in the directory tree.
+* Example: From app/routers/items.py, you can use from ..dependencies import get_token_header to import a function from app/dependencies.py without needing to specify the full path. This makes the code more portable and easier to manage.

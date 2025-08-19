@@ -43,7 +43,17 @@ subscription_service = SubscriptionService()
 @router.get(
     "/",
     response_model=schemas.APIResponse[List[schemas.Agent]],
-    summary="Registered user get list of their created AI characters",
+    # This cannot be distinguished from GET /api/v1/ai/agents/{agent_id} by stainless sdk generator.
+    # So we have to use /me instead.
+    deprecated=True,
+    include_in_schema=False,
+    # Use "/me" instead
+)
+@router.get(
+    "/me",
+    response_model=schemas.APIResponse[List[schemas.Agent]],
+    summary="Get list of user's created AI characters",
+    description="This endpoint is used by an registered user to list their created AI characters (agents as a misnomer)",
 )
 async def list_agents(
     db: AsyncSession = Depends(deps.get_async_db),
@@ -163,7 +173,13 @@ async def create_agent(
     return schemas.APIResponse.success(data=agent)
 
 
-@router.get("/{agent_id}", response_model=schemas.Agent)
+@router.get(
+    "/{agent_id}",
+    response_model=schemas.Agent,
+    operation_id="get_public_agent_by_id",
+    summary="Get public agent by ID",
+    description="Get public agent by ID, include pre-generated agents and user-created public agents",
+)
 async def get_agent(
     *,
     db: AsyncSession = Depends(deps.get_async_db),

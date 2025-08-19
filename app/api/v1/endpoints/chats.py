@@ -93,7 +93,12 @@ class ChatCompletionRequest(BaseModel):
     language: str = "zh"  # 添加语言字段，默认中文
 
 
-@router.get("/agents/status")
+@router.get(
+    "/agents/status",
+    deprecated=True,
+    include_in_schema=False,
+    description="No record of who is using this",
+)
 async def get_agent_status(
     current_user: schemas.User = Depends(deps.get_current_active_user),
 ):
@@ -108,7 +113,12 @@ async def get_agent_status(
     }
 
 
-@router.post("/agents/initialize")
+@router.post(
+    "/agents/initialize",
+    deprecated=True,
+    include_in_schema=False,
+    description="No record of who is using this",
+)
 async def initialize_agents(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
@@ -128,7 +138,12 @@ async def initialize_agents(
         raise HTTPException(status_code=500, detail=f"Initialization failed: {str(e)}")
 
 
-@router.delete("/agents/cleanup")
+@router.delete(
+    "/agents/cleanup",
+    deprecated=True,
+    include_in_schema=False,
+    description="No record of who is using this",
+)
 async def cleanup_idle_agents(
     current_user: schemas.User = Depends(deps.get_current_active_user),
 ):
@@ -149,7 +164,13 @@ async def cleanup_idle_agents(
         raise HTTPException(status_code=500, detail=f"Cleanup failed: {str(e)}")
 
 
-@router.get("/{chat_id}/detail")
+@router.get(
+    "/{chat_id}/detail",
+    include_in_schema=False,
+    tags=["unknown"],
+    summary="Get Chat Detail",
+    description="Get chat details with paginated message records",
+)
 async def get_chat_detail(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
@@ -210,7 +231,14 @@ async def get_chat_detail(
         )
 
 
-@router.get("/agents/{agent_id}/detail")
+@router.get(
+    "/agents/{agent_id}/detail",
+    tags=["unknown", "inty-eval"],
+    include_in_schema=False,
+    deprecated=True,
+    summary="Get Chat Detail for agent identified by agent_id",
+    description="Return the chat details by Agent ID with paginated message records",
+)
 async def get_agent_chat_detail(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
@@ -279,7 +307,12 @@ async def get_agent_chat_detail(
         )
 
 
-@router.get("/agents/{agent_id}/messages")
+@router.get(
+    "/agents/{agent_id}/messages",
+    tags=["inty-eval"],
+    summary="Get Agent Chat Messages",
+    description="Get only chat message records by Agent ID (lighter interface)",
+)
 async def get_agent_chat_messages(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
@@ -748,7 +781,13 @@ async def agent_chat_fast_response(
         raise HTTPException(status_code=500, detail=f"Fast chat failed: {str(e)}")
 
 
-@router.get("/voice/tasks/{task_id}")
+@router.get(
+    "/voice/tasks/{task_id}",
+    include_in_schema=False,
+    tags=["inty", "voice"],
+    summary="Get Voice Task Status",
+    description="No record of who is using this",
+)
 async def get_voice_task_status(
     task_id: str,
     current_user: schemas.User = Depends(deps.get_current_active_user),
@@ -775,7 +814,13 @@ async def get_voice_task_status(
         )
 
 
-@router.get("/voice/tasks/stats")
+@router.get(
+    "/voice/tasks/stats",
+    include_in_schema=False,
+    tags=["inty", "voice"],
+    summary="Get Voice Task Stats",
+    description="Get voice task stats",
+)
 async def get_voice_task_stats(
     current_user: schemas.User = Depends(deps.get_current_active_user),
 ):
@@ -793,7 +838,13 @@ async def get_voice_task_stats(
         )
 
 
-@router.post("/agents/{agent_id}/messages/{message_id}/voice")
+@router.post(
+    "/agents/{agent_id}/messages/{message_id}/voice",
+    include_in_schema=False,
+    tags=["inty", "voice"],
+    summary="Generate Message Voice",
+    description="Generate voice for a message",
+)
 async def generate_message_voice(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
@@ -856,7 +907,13 @@ async def generate_message_voice(
         )
 
 
-@router.get("/voices")
+@router.get(
+    "/voices",
+    include_in_schema=False,
+    tags=["inty", "voice"],
+    summary="Get Available Voices",
+    description="Get available voices",
+)
 async def get_available_voices(
     current_user: schemas.User = Depends(deps.get_current_active_user),
 ):
@@ -874,7 +931,13 @@ async def get_available_voices(
         raise HTTPException(status_code=500, detail=f"Failed to get voices: {str(e)}")
 
 
-@router.get("/voices/{voice_id}")
+@router.get(
+    "/voices/{voice_id}",
+    include_in_schema=False,
+    tags=["inty", "voice"],
+    summary="Get Voice Info",
+    description="Get voice info by voice_id",
+)
 async def get_voice_info(
     voice_id: str,
     current_user: schemas.User = Depends(deps.get_current_active_user),
@@ -895,7 +958,13 @@ async def get_voice_info(
         )
 
 
-@router.post("/voice/cleanup")
+@router.post(
+    "/voice/cleanup",
+    include_in_schema=False,
+    tags=["inty", "voice"],
+    summary="Manual Voice Cleanup",
+    description="Manual cleanup of voice files",
+)
 async def manual_voice_cleanup(
     cleanup_type: str = Query("all", description="清理类型: expired, invalid, all"),
     current_user: schemas.User = Depends(deps.get_current_active_user),
@@ -916,7 +985,13 @@ async def manual_voice_cleanup(
         raise HTTPException(status_code=500, detail=f"Manual cleanup failed: {str(e)}")
 
 
-@router.get("/voice/stats")
+@router.get(
+    "/voice/stats",
+    include_in_schema=False,
+    tags=["inty", "voice"],
+    summary="Get Voice Stats",
+    description="Get voice stats",
+)
 async def get_voice_stats(
     current_user: schemas.User = Depends(deps.get_current_active_user),
 ):
@@ -934,7 +1009,13 @@ async def get_voice_stats(
         )
 
 
-@router.get("/voice/cache/stats")
+@router.get(
+    "/voice/cache/stats",
+    include_in_schema=False,
+    tags=["inty", "voice"],
+    summary="Get Voice Cache Stats",
+    description="Get voice cache stats",
+)
 async def get_voice_cache_stats(
     db: AsyncSession = Depends(deps.get_async_db),
     current_user: schemas.User = Depends(deps.get_current_active_user),
@@ -955,8 +1036,14 @@ async def get_voice_cache_stats(
 
 @router.put(
     "/agents/{agent_id}/settings",
+    include_in_schema=False,
+    tags=["inty"],
+    summary="Update Agent Chat Settings",
+    description="Update chat settings by Agent ID",
     response_model=Union[
-        schemas.APIResponse[schemas.ChatSettings], schemas.APIResponse[dict]
+        # TODO: Why do we use union here?
+        schemas.APIResponse[schemas.ChatSettings],
+        schemas.APIResponse[dict],
     ],
 )
 async def update_agent_chat_settings(
@@ -1043,7 +1130,15 @@ async def update_agent_chat_settings(
         )
 
 
-@router.get("/agents/{agent_id}/settings", response_model=schemas.ChatSettings)
+# TODO: Should we switch to /chats/{chat_id}/settings?
+@router.get(
+    "/agents/{agent_id}/settings",
+    response_model=schemas.ChatSettings,
+    include_in_schema=False,
+    tags=["inty"],
+    summary="Get Agent Chat Settings",
+    description="Get chat settings by Agent ID",
+)
 async def get_agent_chat_settings(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
@@ -1091,7 +1186,15 @@ async def get_agent_chat_settings(
         )
 
 
-@router.delete("/agents/{agent_id}/chats", response_model=schemas.ChatDeletionResponse)
+# TODO: Should we switch to /chats/{chat_id}?
+@router.delete(
+    "/agents/{agent_id}/chats",
+    response_model=schemas.ChatDeletionResponse,
+    include_in_schema=False,
+    tags=["inty"],
+    summary="Delete Agent Chats",
+    description="Delete all chats by Agent ID",
+)
 async def delete_agent_chats(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
@@ -1135,7 +1238,13 @@ async def delete_agent_chats(
         )
 
 
-@router.get("/agents/{agent_id}/debug-messages")
+@router.get(
+    "/agents/{agent_id}/debug-messages",
+    include_in_schema=False,
+    tags=["inty-eval"],
+    summary="Get Agent Debug Messages",
+    description="Get Agent Debug Messages by Agent ID",
+)
 async def get_agent_debug_messages(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
@@ -1256,7 +1365,12 @@ async def generate_chat_stream(
 
 
 @router.post(
-    "/agents/{agent_id}/clear-messages", response_model=schemas.ClearMessagesResponse
+    "/agents/{agent_id}/clear-messages",
+    response_model=schemas.ClearMessagesResponse,
+    include_in_schema=False,
+    tags=["inty-eval"],
+    summary="Clear Agent Chat Messages",
+    description="Clear chat messages by Agent ID, currently used by inty-eval, probably will be used by inty app as well.",
 )
 async def clear_agent_chat_messages(
     *,
@@ -1335,7 +1449,13 @@ async def clear_agent_chat_messages(
         )
 
 
-@router.get("/debug-messages", response_model=schemas.DebugMessageList)
+@router.get(
+    "/debug-messages",
+    description="Used by inty-eval to get chat history",
+    tags=["inty-eval"],
+    response_model=schemas.DebugMessageList,
+    include_in_schema=False,
+)
 async def get_debug_messages(
     *,
     db: AsyncSession = Depends(deps.get_async_db),

@@ -69,6 +69,7 @@ class AppConfig:
     debug_messages: bool = True
     api_v1_prefix: str = "/api/v1"
     backend_cors_origins: List[AnyHttpUrl] = None
+    version: str = "1.0.2"
 
     @dataclass
     class LimitsConfig:
