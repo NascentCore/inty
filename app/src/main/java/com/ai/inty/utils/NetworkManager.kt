@@ -37,8 +37,8 @@ class NetworkManager private constructor() {
 
     private var connectivityManager: ConnectivityManager? = null
     private var applicationContext: Context? = null
-    private val networkCallbacks = mutableListOf<NetworkCallback>()
-    private val networkStateListeners = mutableListOf<NetworkStateListener>()
+    private val networkCallbacks = java.util.concurrent.CopyOnWriteArrayList<NetworkCallback>()
+    private val networkStateListeners = java.util.concurrent.CopyOnWriteArrayList<NetworkStateListener>()
 
     /**
      * 网络状态监听器接口
