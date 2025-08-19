@@ -8,6 +8,7 @@ from app.api import deps
 from app.models.notification import TEMPLATE_TYPE_MAP
 from app.schemas.notification import (
     NotificationItem,
+    NotificationList,
     NotificationQuery,
     NotificationSendRequest,
     NotificationTemplateCreate,
@@ -48,14 +49,14 @@ async def send_notification(
         )
 
 
-@router.get("/", response_model=APIResponse[PaginationData[NotificationItem]])
+@router.get("/", response_model=APIResponse[NotificationList])
 async def list_notifications(
     db: AsyncSession = Depends(deps.get_async_db),
     current_user=Depends(deps.get_current_active_user),
     page: int = 1,
     page_size: int = 20,
     is_read: Optional[bool] = Query(None, description="是否已读，不传则查询全部"),
-) -> APIResponse[PaginationData[NotificationItem]]:
+) -> APIResponse[NotificationList]:
     """
     分页查询用户的消息列表；返回用户收到的通知。
     """
@@ -80,7 +81,7 @@ async def list_notifications(
         total_pages = (total + page_size - 1) // page_size if page_size else 1
 
         # 构建分页响应
-        pagination = PaginationData[NotificationItem](
+        pagination = NotificationList(
             list=items,
             total=total,
             page=page,

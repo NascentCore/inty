@@ -158,7 +158,7 @@ async def verify_purchase(
 
         logger.error(f"购买验证结果: {result}")
 
-        if result.is_valid:
+        if result.is_verified:
             return APIResponse.success(
                 data=result, message="Purchase verification successful"
             )
