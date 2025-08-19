@@ -35,6 +35,7 @@ from app.services import agent_service
 from app.services.character_card_service import character_card_service
 from app.services.subscription_service import SubscriptionService
 from app.utils.gcs import delete_from_gcs, is_user_gcs_file, upload_to_gcs
+from app.utils.image import compress_png_to_jpeg
 
 router = APIRouter()
 
@@ -493,14 +494,18 @@ async def upload_avatar_preview(
             return APIResponse.error(message="Only image files are allowed")
 
         # 验证文件大小 (最大 10MB)
-        max_size = 10 * 1024 * 1024  # 10MB
-        logger.info(f"开始读取文件数据，最大允许大小: {max_size} bytes")
+        max_size_bytes = (
+            global_config_loaded_from_config_yaml.app.limits.max_image_size_mb
+            * 1024
+            * 1024
+        )
+        logger.info(f"开始读取文件数据，最大允许大小: {max_size_bytes} bytes")
         file_data = await file.read()
         file_size = len(file_data)
-        logger.info(f"文件实际大小: {file_size} bytes")
+        logger.debug(f"文件实际大小: {file_size} bytes")
 
-        if file_size > max_size:
-            logger.error(f"文件大小超出限制: {file_size} > {max_size}")
+        if file_size > max_size_bytes:
+            logger.error(f"文件大小超出限制: {file_size} > {max_size_bytes}")
             return APIResponse.error(message="File size exceeds 10MB limit")
 
         # 验证文件扩展名
@@ -529,47 +534,33 @@ async def upload_avatar_preview(
                 message="Unsupported file type, only jpg, jpeg, png, webp formats are supported"
             )
 
-        # 生成存储路径
+        if file_ext == ImageFormat.PNG:
+            file_data = compress_png_to_jpeg(file_data)
+            file_ext = ImageFormat.JPEG
+            logger.debug(
+                f"Compressed PNG ({file_size} bytes) to JPEG ({len(file_data)} bytes)"
+            )
+
         timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
         unique_id = uuid.uuid4().hex[:8]
         avatar_path = (
             f"avatars/tmp/{current_user.id}/{timestamp}-{unique_id}.{file_ext}"
         )
-        logger.info(f"生成的存储路径: {avatar_path}")
 
-        # 验证GCS配置
-        logger.info(
-            f"GCS配置: bucket={global_config_loaded_from_config_yaml.gcs.bucket}"
+        url = upload_to_gcs(
+            file_data,
+            file.content_type,
+            global_config_loaded_from_config_yaml.gcs.bucket,
+            avatar_path,
         )
-        if not global_config_loaded_from_config_yaml.gcs.bucket:
-            logger.error("GCS bucket未配置")
-            return APIResponse.error(message="GCS bucket not configured")
+        logger.debug(f"GCS上传成功，返回URL: {url}")
 
-        # 上传到GCS
-        logger.info("开始上传文件到GCS")
-        try:
-            url = upload_to_gcs(
-                file_data,
-                file.content_type,
-                global_config_loaded_from_config_yaml.gcs.bucket,
-                avatar_path,
-            )
-            logger.info(f"GCS上传成功，返回URL: {url}")
-        except Exception as gcs_error:
-            logger.error(f"GCS上传失败: {str(gcs_error)}")
-            logger.error(f"GCS错误堆栈: {traceback.format_exc()}")
-            return APIResponse.error(
-                message=f"Failed to upload to GCS: {str(gcs_error)}"
-            )
-
-        logger.info(f"头像上传成功: {url}")
         response_data = {
             "url": url,
             "filename": file.filename,
             "size": file_size,
             "content_type": file.content_type,
         }
-        logger.info(f"返回响应数据: {response_data}")
         return APIResponse.success(data=response_data)
 
     except ValueError as e:
