@@ -50,10 +50,11 @@ api_router.include_router(
 # This is used for evaluating AI characters, and is not part of the app's runtime.
 # Instead, we should have an internal service to evaluate AI characters.
 # Still keep the endpoint for now, as it's used for evaluating AI characters.
-api_router.include_router(
-    evaluation.router,
-    prefix="/evaluation",
-    tags=["evaluation"],
-    include_in_schema=False,
-)
+# api_router.include_router(
+#     evaluation.router,
+#     prefix="/evaluation",
+#     tags=["evaluation"],
+#     include_in_schema=False,
+# )
+
 api_router.include_router(version.router, prefix="/version", tags=["version"])

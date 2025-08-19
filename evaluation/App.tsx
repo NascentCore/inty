@@ -8,15 +8,11 @@ import { Layout, Menu, Typography, Tooltip, Button } from "antd";
 import {
   RobotOutlined,
   MessageOutlined,
-  BarChartOutlined,
-  HistoryOutlined,
   SearchOutlined,
   ExperimentOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
 } from "@ant-design/icons";
-import { EvaluationPage } from "./pages/EvaluationPage";
-import { EvaluationHistoryPage } from "./pages/EvaluationHistoryPage";
 import { ChatPage } from "./pages/ChatPage";
 import AgentManagePage from "./pages/AgentManagePage";
 import PromptQueryPage from "./pages/PromptQueryPage";
@@ -26,8 +22,6 @@ const { Sider, Content } = Layout;
 const { Title, Text } = Typography;
 
 type PageKey =
-  | "evaluation"
-  | "history"
   | "chat"
   | "agents"
   | "prompt-query"
@@ -42,7 +36,7 @@ interface NavigationItem {
 
 export const App: React.FC = () => {
   // 状态管理
-  const [currentPage, setCurrentPage] = useState<PageKey>("evaluation");
+  const [currentPage, setCurrentPage] = useState<PageKey>("chat");
   const [collapsed, setCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
@@ -108,31 +102,11 @@ export const App: React.FC = () => {
       label: "提示词评测",
       description: "灵活调整和测试提示词模板",
     },
-    {
-      key: "evaluation",
-      icon: <BarChartOutlined />,
-      label: "智能体评测",
-      description: "创建和管理智能体评测任务",
-    },
-    {
-      key: "history",
-      icon: <HistoryOutlined />,
-      label: "评测记录",
-      description: "查看历史评测会话和结果",
-    },
   ];
 
   // 渲染页面内容
   const renderPageContent = () => {
     switch (currentPage) {
-      case "evaluation":
-        return <EvaluationPage />;
-      case "history":
-        return (
-          <EvaluationHistoryPage
-            onNavigateToEvaluation={() => setCurrentPage("evaluation")}
-          />
-        );
       case "chat":
         return <ChatPage />;
       case "agents":
