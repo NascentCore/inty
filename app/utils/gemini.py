@@ -190,10 +190,12 @@ def text_to_image(
         for i, image in enumerate(response.generated_images):
             # 获取GCS URI并转换为HTTPS URL
             gcs_uri = image.image.gcs_uri
-            if gcs_uri.startswith("gs://"):
+            if gcs_uri and gcs_uri.startswith("gs://"):
                 gcs_path = gcs_uri[5:]  # 移除"gs://"前缀
                 gcs_uri = f"https://storage.googleapis.com/{gcs_path}"
                 logger.debug(f"Image {i}: {gcs_uri}")
+            elif gcs_uri is None:
+                logger.debug(f"Image {i}: Filtered by RAI - no GCS URI available")
             generated_images.append(
                 ImagenGeneratedImage(
                     gcs_uri=gcs_uri,
