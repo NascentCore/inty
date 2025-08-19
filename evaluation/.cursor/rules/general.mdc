@@ -1,0 +1,9 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+
+# General rules of working with inty-eval
+
+* Do not verify the service by running npm, the user will verify manually after your changes.

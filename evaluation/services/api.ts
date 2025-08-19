@@ -2,7 +2,6 @@
  * 此处代码是评测系统调用 Inty 后端 API
  */
 
-import { authService } from "./auth";
 import type {
   Agent,
   AgentCreateRequest,
@@ -141,11 +140,7 @@ class ApiClient {
     // 这是从inty-test/backend/config.yaml中配置的default_token
     const adminToken =
       "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3ODQzNjAyMjAsInN1YiI6InVzZXItMDFKV1ozNFk0RDFDOTJHRDg2QTVSNkVXWUoifQ.vsYKRvrCfxWgJ5wkTjAYby3RrIOm6P-9VbcCg4msjlM";
-    if (adminToken) {
-      return adminToken;
-    }
-    // 回退到游客token
-    return authService.getToken();
+    return adminToken;
   }
 
   // GET请求
