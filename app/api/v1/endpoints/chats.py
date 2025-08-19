@@ -165,6 +165,7 @@ async def cleanup_idle_agents(
 @router.get(
     "/{chat_id}/detail",
     include_in_schema=False,
+    tags=["unknown"],
     summary="Get Chat Detail",
     description="Get chat details with paginated message records",
 )
@@ -230,6 +231,7 @@ async def get_chat_detail(
 
 @router.get(
     "/agents/{agent_id}/detail",
+    tags=["unknown", "inty-eval"],
     include_in_schema=False,
     deprecated=True,
     summary="Get Chat Detail for agent identified by agent_id",
