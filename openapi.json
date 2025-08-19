@@ -659,7 +659,7 @@
                 ],
                 "summary": "Registered user get list of their created AI characters",
                 "description": "Get current user's created AI agents list",
-                "operationId": "list_agents_api_v1_ai_agents__get",
+                "operationId": "list_user_created_agents",
                 "security": [
                     {
                         "Bearer": []
@@ -739,65 +739,6 @@
                             "application/json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/APIResponse_Agent_"
-                                }
-                            }
-                        }
-                    },
-                    "422": {
-                        "description": "Validation Error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/HTTPValidationError"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/ai/agents": {
-            "get": {
-                "tags": [
-                    "agents"
-                ],
-                "summary": "Registered user get list of their created AI characters",
-                "description": "Get current user's created AI agents list",
-                "operationId": "list_agents_api_v1_ai_agents_get",
-                "security": [
-                    {
-                        "Bearer": []
-                    }
-                ],
-                "parameters": [
-                    {
-                        "name": "skip",
-                        "in": "query",
-                        "required": false,
-                        "schema": {
-                            "type": "integer",
-                            "default": 0,
-                            "title": "Skip"
-                        }
-                    },
-                    {
-                        "name": "limit",
-                        "in": "query",
-                        "required": false,
-                        "schema": {
-                            "type": "integer",
-                            "default": 100,
-                            "title": "Limit"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Successful Response",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/APIResponse_List_Agent__"
                                 }
                             }
                         }
@@ -1029,9 +970,9 @@
                 "tags": [
                     "agents"
                 ],
-                "summary": "Get Agent",
-                "description": "Get AI agent by ID",
-                "operationId": "get_agent_api_v1_ai_agents__agent_id__get",
+                "summary": "Get public agent by ID",
+                "description": "Get public agent by ID, include pre-generated agents and user-created public agents",
+                "operationId": "get_public_agent_by_id",
                 "security": [
                     {
                         "Bearer": []
