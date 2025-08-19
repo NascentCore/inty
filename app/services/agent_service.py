@@ -738,6 +738,10 @@ async def delete_agent(db: AsyncSession, db_agent: models.Agent) -> models.Agent
 
         db_agent.deleted_at = datetime.utcnow()
 
+        # TODO: soft delete all chats and chat_settings associated with this agent
+        # 这个 agent 关联的所有数据都标记成 deleted_at 不为空
+        # TODO: query 要过滤掉 deleted_at 不为空的记录
+
         # 提交更改
         await db.commit()
         await db.refresh(db_agent)
