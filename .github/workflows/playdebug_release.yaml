@@ -30,7 +30,7 @@ jobs:
               ;;
           esac
 
-      - name: Generate build summary
+      - name: Write build summary
         run: |
           echo "## Build target" >> $GITHUB_STEP_SUMMARY
           echo "target: ${{ steps.get-build-target.outputs.target }}" >> $GITHUB_STEP_SUMMARY
@@ -46,8 +46,7 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
 
-      - name: Cache Gradle dependencies and build cache
-        uses: actions/cache@v4
+      - uses: actions/cache@v4
         with:
           path: |
             ~/.gradle/caches
@@ -76,18 +75,18 @@ jobs:
 
       - name: Build Release AAB
         run: |
-          ./gradlew clean ${{ steps.get-build-target.outputs.target }} --stacktrace
+          ./gradlew clean ${{ steps.get-build-target.outputs.target }}
 
       - id: get-version-info
         run: |
           echo "## Version information" >> $GITHUB_STEP_SUMMARY
-          ./gradlew printVersionWithSuffix >> $GITHUB_STEP_SUMMARY
-          echo "version_name_with_commit_id=$(./gradlew printVersionWithSuffix | grep 'Version Name with Suffix: ' | awk -F': ' '{print $2}')" >> $GITHUB_OUTPUT
+          ./gradlew printVersionInfo >> $GITHUB_STEP_SUMMARY
+          echo "version_name_with_suffix=$(./gradlew printVersionInfo | grep 'Version name with suffix:' | awk '{print $NF}')" >> $GITHUB_OUTPUT
 
-      - name: Create GitHub release
+      - id: create-github-release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: "playstore-${{ inputs.environment }}-versioncode-${{ steps.get-version-info.outputs.version_code }}"
+          tag_name: "playstore-${{ inputs.environment }}-${{ steps.get-version-info.outputs.version_name_with_suffix }}"
           draft: false
           prerelease: false
           files: |
@@ -96,13 +95,13 @@ jobs:
           make_latest: false
           fail_on_unmatched_files: false
 
-      - name: Upload AAB to Google Play Internal Testing
+      - id: upload-google-play
         # https://github.com/r0adkll/upload-google-play
         uses: r0adkll/upload-google-play@v1
         with:
           serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_KEY }}
           packageName: com.ai.intellimate
-          releaseName: "${{ inputs.environment }}-${{ steps.get-version-info.outputs.version_name_with_commit_id }}"
+          releaseName: "${{ inputs.environment }}-${{ steps.get-version-info.outputs.version_name_with_suffix }}"
           releaseFiles: ${{ steps.get-build-target.outputs.aab }}
           # https://developers.google.com/android-publisher/tracks#adding_and_modifying_apks
           track: ${{ steps.get-build-target.outputs.track }}
@@ -110,3 +109,9 @@ jobs:
           inAppUpdatePriority: 2
           # TODO(yaxiong): Add dynamic release notes.
           # whatsNewDirectory: distribution/whatsnew-dynamic
+
+      - name: Write summary
+        run: |
+          echo "## Release notes" >> $GITHUB_STEP_SUMMARY
+          echo "GitHub Release: ${{ steps.create-github-release.outputs.url }}" >> $GITHUB_STEP_SUMMARY
+          echo "Google Play release: ${{ steps.upload-google-play.outputs.internalSharingDownloadUrls }}" >> $GITHUB_STEP_SUMMARY

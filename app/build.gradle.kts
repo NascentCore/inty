@@ -32,7 +32,7 @@ val gitCommitId = providers.exec {
 }.standardOutput.asText.get().trim()
 
 // 返回 git commit count 作为自增的 version code.
-fun getVersionCode(): Int {
+fun getCommitCount(): Int {
     val process = ProcessBuilder("git", "rev-list", "--count", "HEAD").start()
     process.waitFor()
     if (process.exitValue() != 0) {
@@ -43,13 +43,13 @@ fun getVersionCode(): Int {
     return gitCommitCount
 }
 
-// Add task to print both version code and name with suffix
-tasks.register("printVersionWithSuffix") {
+tasks.register("printVersionInfo") {
     group = "versioning"
-    description = "Print both version code and name with git commit suffix"
+    description = "Print version code and name"
     doLast {
-        println("Version Code: ${getVersionCode()}")
-        println("Version Name with Suffix: 1.1.0 ($gitCommitId)")
+        println("Version code: ${android.defaultConfig.versionCode}")
+        println("Version name: ${android.defaultConfig.versionName}")
+        println("Version name with suffix: ${android.defaultConfig.versionName}${android.defaultConfig.versionNameSuffix}")
     }
 }
 
@@ -71,7 +71,7 @@ android {
         // Only google play uses this.
         // Largest version code is 2100000000
         // https://developer.android.com/studio/publish/versioning.html
-        versionCode = getVersionCode()
+        versionCode = getCommitCount()
 
         // Version name follows Semantic Versioning 2.0.0 (https://semver.org/).
         //
@@ -89,20 +89,26 @@ android {
         // we need to increase the fix digit, and create a new tag for that binary.
         //
         // Bug fix public release, code changes are applied on the versioned branch.
+        //
+        // TODO: Can this be set in a external file so that the app and backend share this version?
+        // No, we don't want to share version between app and backend, as backend can move faster.
+        // But backend has to be compatible with older versions of the app.
         versionName = "1.1.1"
 
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        // Version name suffix is appended to the version name to identify the build.
+        // Use - to form a legal name for git tag.
+        versionNameSuffix = "-$gitCommitId"
 
-        // 添加BuildConfig字段用于调试
-        buildConfigField("String", "GIT_COMMIT_ID", "\"$gitCommitId\"")
-        buildConfigField("boolean", "IS_DEBUG_BUILD", "false")
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         
         // Google OAuth client ID
         // TODO: This is the same now for debug and release builds for convenience.
         // Create a new client ID for debug build, but keep the production one for backward compatibility.
+        // https://github.com/NascentCore/inty-backend/issues/171
         buildConfigField("String", "WEB_CLIENT_ID", "\"1034291688895-0e5hq72pghd4nihhpmf989ptv0ag1542.apps.googleusercontent.com\"")
 
         // 数据安全声明 - 不使用广告ID
+        // TODO：这个没有被用到，也不影响实际的构建；应该移除。
         manifestPlaceholders["uses_ads"] = "false"
         vectorDrawables {
             useSupportLibrary = true
@@ -113,12 +119,6 @@ android {
         }
     }
     signingConfigs {
-        create("inty") {
-            storeFile = rootProject.file(requireProperty(keystoreProperties, "debug.storeFile"))
-            storePassword = requireProperty(keystoreProperties, "debug.storePassword")
-            keyAlias = requireProperty(keystoreProperties, "debug.keyAlias")
-            keyPassword = requireProperty(keystoreProperties, "debug.keyPassword")
-        }
         create("release") {
             storeFile = rootProject.file(requireProperty(keystoreProperties, "release.storeFile"))
             storePassword = requireProperty(keystoreProperties, "release.storePassword")
@@ -132,7 +132,6 @@ android {
             signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = true
             isShrinkResources = true
-            versionNameSuffix = " ($gitCommitId)"
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -151,9 +150,7 @@ android {
         // which is not local.
         debug {
             // This build talks to the staging backend.
-            signingConfig = signingConfigs.getByName("inty")
-            versionNameSuffix = " ($gitCommitId)"
-            buildConfigField("boolean", "IS_DEBUG_BUILD", "true")
+            // signingConfig = signingConfigs.getByName("inty")
 
             // TODO: Use a different web client ID for debug builds.
             // buildConfigField("String", "WEB_CLIENT_ID", "\"debug_client_id_here\"")
@@ -247,5 +244,3 @@ dependencies {
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.coroutines.android)
 }
-
-// GitHub Actions直接从构建文件和Git历史中提取版本信息，不再需要专门的Gradle任务
