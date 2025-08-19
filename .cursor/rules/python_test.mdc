@@ -1,0 +1,12 @@
+---
+description: Python test files
+globs: **/test_*.py
+alwaysApply: false
+---
+
+# Python test files
+
+* Do not write main() function
+* Do not generate multiple test cases, always start with 1 test
+* Do not use try...except in test functions
+* Do not use pytest.skip()
