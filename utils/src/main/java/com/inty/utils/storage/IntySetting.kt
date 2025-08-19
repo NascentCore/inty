@@ -100,15 +100,6 @@ object IntySetting {
         curUserSetting.putString("conversation_last_$agentID", lastMessage)
     }
 
-    // 标记用户主动发起的对话
-    fun setUserInitiatedConversation(agentID: String) {
-        curUserSetting.putBoolean("user_initiated_$agentID", true)
-    }
-
-    // 检查对话是否为用户主动发起
-    fun isUserInitiatedConversation(agentID: String): Boolean {
-        return curUserSetting.decodeBool("user_initiated_$agentID", false)
-    }
 
     fun setShowKeepTalking(show: Boolean) {
         curUserSetting.putBoolean("show_keep_talking", show)

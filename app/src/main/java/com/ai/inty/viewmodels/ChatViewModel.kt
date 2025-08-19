@@ -238,8 +238,6 @@ class ChatViewModel : BaseActivityViewModel() {
                 val req = SendMsgReq(listOf(msgInfo))
                 val currentAgent = agentInfo.value
                 currentAgent?.let { agent ->
-                    // 标记为用户主动发起的对话
-                    IntySetting.setUserInitiatedConversation(agent.id)
 
                     val result = chatApi.sendMsg(agent.id, req)
 
@@ -361,8 +359,6 @@ class ChatViewModel : BaseActivityViewModel() {
             val req = SendMsgReq(listOf(msgInfo))
 
             agentInfo.value?.let { agent ->
-                // 标记为用户主动发起的对话
-                IntySetting.setUserInitiatedConversation(agent.id)
 
                 val result = chatApi.sendMsg(agent.id, req)
 
@@ -463,9 +459,7 @@ class ChatViewModel : BaseActivityViewModel() {
                 when (result) {
                     is HttpResult.Success -> {
                         // 只显示用户主动发起的对话
-                        val userInitiatedConversations = result.data.filter { conversation ->
-                            IntySetting.isUserInitiatedConversation(conversation.agentId)
-                        }
+                        val userInitiatedConversations = result.data
                         _conversations.value = userInitiatedConversations
                         EasyLog.log("Filtered conversations: ${userInitiatedConversations.size} out of ${result.data.size}")
                     }
