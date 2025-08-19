@@ -288,6 +288,9 @@ class PurchaseVerificationRequest(BaseModel):
 class PurchaseVerificationResponse(BaseModel):
     """购买验证响应"""
 
+    is_valid: bool = Field(
+        ..., deprecated=True, description="是否有效，使用 is_verified 代替"
+    )
     is_verified: bool = Field(..., description="是否有效")
     subscription: Optional[UserSubscription] = Field(None, description="订阅信息")
     message: str = Field(..., description="验证消息")
