@@ -1607,60 +1607,6 @@
                 }
             }
         },
-        "/api/v1/ai/agents/templates": {
-            "get": {
-                "tags": [
-                    "agents"
-                ],
-                "summary": "List Prompt Templates",
-                "description": "获取所有可用的提示词模版",
-                "operationId": "list_prompt_templates_api_v1_ai_agents_templates_get",
-                "responses": {
-                    "200": {
-                        "description": "Successful Response",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/APIResponse_dict_"
-                                }
-                            }
-                        }
-                    }
-                },
-                "security": [
-                    {
-                        "Bearer": []
-                    }
-                ]
-            }
-        },
-        "/api/v1/ai/agents/models/openrouter": {
-            "get": {
-                "tags": [
-                    "agents"
-                ],
-                "summary": "Get Openrouter Models",
-                "description": "获取OpenRouter模型列表",
-                "operationId": "get_openrouter_models_api_v1_ai_agents_models_openrouter_get",
-                "responses": {
-                    "200": {
-                        "description": "Successful Response",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/APIResponse_List_dict__"
-                                }
-                            }
-                        }
-                    }
-                },
-                "security": [
-                    {
-                        "Bearer": []
-                    }
-                ]
-            }
-        },
         "/api/v1/chats/": {
             "get": {
                 "tags": [
@@ -2799,37 +2745,6 @@
                 },
                 "type": "object",
                 "title": "APIResponse[List[SubscriptionPlan]]"
-            },
-            "APIResponse_List_dict__": {
-                "properties": {
-                    "code": {
-                        "type": "integer",
-                        "title": "Code",
-                        "default": 200
-                    },
-                    "message": {
-                        "type": "string",
-                        "title": "Message",
-                        "default": "success"
-                    },
-                    "data": {
-                        "anyOf": [
-                            {
-                                "items": {
-                                    "additionalProperties": true,
-                                    "type": "object"
-                                },
-                                "type": "array"
-                            },
-                            {
-                                "type": "null"
-                            }
-                        ],
-                        "title": "Data"
-                    }
-                },
-                "type": "object",
-                "title": "APIResponse[List[dict]]"
             },
             "APIResponse_LoginResponse_": {
                 "properties": {
@@ -5250,6 +5165,12 @@
                     "is_valid": {
                         "type": "boolean",
                         "title": "Is Valid",
+                        "description": "是否有效，使用 is_verified 代替",
+                        "deprecated": true
+                    },
+                    "is_verified": {
+                        "type": "boolean",
+                        "title": "Is Verified",
                         "description": "是否有效"
                     },
                     "subscription": {
@@ -5284,6 +5205,7 @@
                 "type": "object",
                 "required": [
                     "is_valid",
+                    "is_verified",
                     "message"
                 ],
                 "title": "PurchaseVerificationResponse",
