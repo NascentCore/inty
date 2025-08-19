@@ -15,6 +15,16 @@ class PaginationData(BaseModel, Generic[T]):
     total_pages: int = 0  # 总页数
 
 
+class PagedResponse(BaseModel, Generic[T]):
+    """分页数据结构"""
+
+    items: List[T] = []
+    total: int = 0
+    page: int = 1
+    page_size: int = 10
+    total_pages: int = 0
+
+
 class APIResponse(BaseModel, Generic[T]):
     code: int = 200
     message: str = "success"

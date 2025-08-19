@@ -5145,12 +5145,12 @@
             },
             "NotificationList": {
                 "properties": {
-                    "list": {
+                    "items": {
                         "items": {
                             "$ref": "#/components/schemas/NotificationItem"
                         },
                         "type": "array",
-                        "title": "List",
+                        "title": "Items",
                         "default": []
                     },
                     "total": {

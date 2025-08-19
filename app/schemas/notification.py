@@ -4,7 +4,7 @@ from typing import List, Optional
 from pydantic import BaseModel, ConfigDict
 
 from app.models.notification import NotificationTemplateType
-from app.schemas.response import PaginationData
+from app.schemas.response import PagedResponse, PaginationData
 
 
 class NotificationItem(BaseModel):
@@ -24,7 +24,7 @@ class NotificationItem(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class NotificationList(PaginationData[NotificationItem]):
+class NotificationList(PagedResponse[NotificationItem]):
     """Specific model for a paginated list of notification items."""
 
     pass
