@@ -2,6 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Key instructions
+
+* When writing FastAPI code, use ../FASTAPI_BEST_PRACTICES_ZH.md as guidelines
+
 ## Overview
 
 * This repo is a monorepo of Inty. Inty is an AI-driven intimacy simulation for young male adults.

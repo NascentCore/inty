@@ -1,8 +1,6 @@
-# Fast Api最佳实践指南
+# FastAPI 最佳实践
 
 这是我在初创公司使用的一系列最佳实践和约定。
-
-在过去几年的生产实践中，我们做过一些好的和不好的决策，这些决策极大地影响了开发者体验。其中一些经验值得分享。
 
 ## 目录
 
@@ -513,7 +511,6 @@ async def get_user_profile_by_id(
 ):
     """Get creator's profile by id."""
     return creator_profile
-
 ```
 
 ### FastAPI响应序列化
@@ -548,7 +545,7 @@ async def root():
 
 **日志输出：**
 
-```
+```bash
 [INFO] [2022-08-28 12:00:00.000000] created pydantic model
 [INFO] [2022-08-28 12:00:00.000020] created pydantic model
 
@@ -696,7 +693,7 @@ metadata = MetaData(naming_convention=POSTGRES_INDEXES_NAMING_CONVENTION)
 2. 生成具有描述性名称和slug的迁移。slug是必需的，应该解释所做的更改。
 3. 为新迁移设置人类可读的文件模板。我们使用`date*_*slug*.py`模式，例如`2022-08-24_post_content_idx.py`
 
-```
+```bash
 # alembic.ini
 file_template = %%(year)d-%%(month).2d-%%(day).2d_%%(slug)s
 ```
@@ -825,29 +822,3 @@ async def test_create_post(client: TestClient):
 ```
 
 除非你有同步数据库连接（抱歉？）或者不打算编写集成测试。
-
-### 使用ruff
-
-有了代码检查工具，你可以忘记代码格式化，专注于编写业务逻辑。
-
-[Ruff](https://github.com/astral-sh/ruff)是一个“速度极快”的新代码检查工具，它替代了black、autoflake、isort，并支持600多个检查规则。
-
-使用pre-commit钩子是一种流行的最佳实践，但对我们来说，只使用脚本就足够了。
-
-```bash
-#!/bin/sh -e
-set -x
-
-ruff check --fix src
-ruff format src
-```
-
-## 额外部分
-
-一些非常善良的人分享了他们自己的经验和最佳实践，绝对值得一读。
-
-查看项目的[issues（问题）](https://github.com/zhanymkanov/fastapi-best-practices/issues)部分。
-
-例如，[lowercase00](https://github.com/zhanymkanov/fastapi-best-practices/issues/4)详细描述了他们在权限和认证、基于类的服务和视图、任务队列、自定义响应序列化器、使用dynaconf进行配置等方面的最佳实践。
-
-如果你有关于使用FastAPI的经验要分享，无论是好是坏，都非常欢迎创建一个新的issue。我们很乐意阅读它。
