@@ -1194,7 +1194,7 @@ async def get_character_card_features(
     include_in_schema=False,
     summary="Get OpenRouter models list",
     description="Get OpenRouter models, used by inty-eval to list all available models, so users can select models for evaluation",
-    tags=["unknown", "inty-eval"],
+    tags=["inty-eval"],
 )
 async def get_openrouter_models(
     current_user: schemas.User = Depends(deps.get_current_active_user),
