@@ -952,7 +952,15 @@ async def preview_agent_prompt(
         return schemas.APIResponse.error(message="Failed to preview prompt")
 
 
-@router.get("/templates", response_model=schemas.APIResponse[dict])
+@router.get(
+    "/templates",
+    response_model=schemas.APIResponse[dict],
+    deprecated=True,
+    include_in_schema=False,
+    summary="Return prompt templates",
+    description="Return prompt templates, used by inty-eval",
+    tags=["unknown", "inty-eval"],
+)
 async def list_prompt_templates(
     current_user: schemas.User = Depends(deps.get_current_active_user),
 ) -> Any:
@@ -989,6 +997,7 @@ async def list_prompt_templates(
     "/import-character-card",
     response_model=APIResponse[CharacterCardImportResponse],
     include_in_schema=False,
+    tags=["unknown", "inty-eval"],
 )
 async def import_character_card(
     request: CharacterCardImportRequest,
@@ -1017,6 +1026,7 @@ async def import_character_card(
     "/import-character-card-file",
     response_model=APIResponse[CharacterCardImportResponse],
     include_in_schema=False,
+    tags=["unknown", "inty-eval"],
 )
 async def import_character_card_file(
     file: UploadFile = File(...),
@@ -1056,7 +1066,10 @@ async def import_character_card_file(
 
 
 @router.post(
-    "/export-character-card", response_model=APIResponse[dict], include_in_schema=False
+    "/export-character-card",
+    response_model=APIResponse[dict],
+    include_in_schema=False,
+    tags=["unknown", "inty-eval"],
 )
 async def export_character_card(
     request: CharacterCardExportRequest,
@@ -1089,6 +1102,7 @@ async def export_character_card(
     "/{agent_id}/character-card",
     response_model=APIResponse[dict],
     include_in_schema=False,
+    tags=["unknown", "inty-eval"],
 )
 async def get_agent_character_card(
     agent_id: str,
@@ -1124,6 +1138,7 @@ async def get_agent_character_card(
     "/validate-character-card",
     response_model=APIResponse[CharacterCardValidationResponse],
     include_in_schema=False,
+    tags=["unknown", "inty-eval"],
 )
 async def validate_character_card(
     card_data: dict, current_user: schemas.User = Depends(deps.get_current_active_user)
@@ -1144,6 +1159,7 @@ async def validate_character_card(
     "/character-card/features",
     response_model=APIResponse[dict],
     include_in_schema=False,
+    tags=["unknown", "inty-eval"],
 )
 async def get_character_card_features(
     current_user: schemas.User = Depends(deps.get_current_active_user),
@@ -1172,7 +1188,14 @@ async def get_character_card_features(
         )
 
 
-@router.get("/models/openrouter", response_model=schemas.APIResponse[List[dict]])
+@router.get(
+    "/models/openrouter",
+    response_model=schemas.APIResponse[List[dict]],
+    include_in_schema=False,
+    summary="Get OpenRouter models list",
+    description="Get OpenRouter models, used by inty-eval to list all available models, so users can select models for evaluation",
+    tags=["unknown", "inty-eval"],
+)
 async def get_openrouter_models(
     current_user: schemas.User = Depends(deps.get_current_active_user),
 ):
