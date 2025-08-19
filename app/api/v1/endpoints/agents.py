@@ -42,12 +42,17 @@ subscription_service = SubscriptionService()
 
 @router.get(
     "/",
-    # This is required to distinguish from GET /api/v1/ai/agents/{agent_id}
-    # Without this, stainless sdk generator confuses the two endpoints as with the
-    # same request type.
-    operation_id="list_user_created_agents",
     response_model=schemas.APIResponse[List[schemas.Agent]],
-    summary="Registered user get list of their created AI characters",
+    # This cannot be distinguished from GET /api/v1/ai/agents/{agent_id} by stainless sdk generator.
+    # So we have to use /me instead.
+    deprecated=True,
+    include_in_schema=False,
+    # Use "/me" instead
+)
+@router.get(
+    "/me",
+    response_model=schemas.APIResponse[List[schemas.Agent]],
+    summary="Get list of user's created AI characters",
     description="This endpoint is used by an registered user to list their created AI characters (agents as a misnomer)",
 )
 async def list_agents(

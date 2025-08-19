@@ -652,14 +652,14 @@
                 }
             }
         },
-        "/api/v1/ai/agents/": {
+        "/api/v1/ai/agents/me": {
             "get": {
                 "tags": [
                     "agents"
                 ],
-                "summary": "Registered user get list of their created AI characters",
-                "description": "Get current user's created AI agents list",
-                "operationId": "list_user_created_agents",
+                "summary": "Get list of user's created AI characters",
+                "description": "This endpoint is used by an registered user to list their created AI characters (agents as a misnomer)",
+                "operationId": "list_agents_api_v1_ai_agents_me_get",
                 "security": [
                     {
                         "Bearer": []
@@ -694,51 +694,6 @@
                             "application/json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/APIResponse_List_Agent__"
-                                }
-                            }
-                        }
-                    },
-                    "422": {
-                        "description": "Validation Error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/HTTPValidationError"
-                                }
-                            }
-                        }
-                    }
-                }
-            },
-            "post": {
-                "tags": [
-                    "agents"
-                ],
-                "summary": "Create Agent",
-                "description": "Create new AI agent\n\n推荐使用角色卡字段构建AI角色：\n- personality: 角色性格特点 (推荐)\n- scenario: 背景设定 (推荐)\n- first_message: 开场白\n- message_example: 对话示例\n\n兼容性说明：\n- 仍支持legacy的prompt字段\n- 如果同时提供prompt和角色卡字段，将优先使用角色卡字段\n- 建议新创建的角色使用角色卡字段以获得更好的效果",
-                "operationId": "create_agent_api_v1_ai_agents__post",
-                "security": [
-                    {
-                        "Bearer": []
-                    }
-                ],
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/AgentCreate"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "200": {
-                        "description": "Successful Response",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/APIResponse_Agent_"
                                 }
                             }
                         }
@@ -963,6 +918,53 @@
                         }
                     }
                 }
+            }
+        },
+        "/api/v1/ai/agents/": {
+            "post": {
+                "tags": [
+                    "agents"
+                ],
+                "summary": "Create Agent",
+                "description": "Create new AI agent\n\n推荐使用角色卡字段构建AI角色：\n- personality: 角色性格特点 (推荐)\n- scenario: 背景设定 (推荐)\n- first_message: 开场白\n- message_example: 对话示例\n\n兼容性说明：\n- 仍支持legacy的prompt字段\n- 如果同时提供prompt和角色卡字段，将优先使用角色卡字段\n- 建议新创建的角色使用角色卡字段以获得更好的效果",
+                "operationId": "create_agent_api_v1_ai_agents__post",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AgentCreate"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/APIResponse_Agent_"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ]
             }
         },
         "/api/v1/ai/agents/{agent_id}": {
