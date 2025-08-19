@@ -20,6 +20,7 @@ from app.models.subscription import SubscriptionStatus, UserSubscription
 from app.models.user import AuthType, DeviceToken
 from app.models.user_deletion_log import UserDeletionLog
 from app.schemas import UserUpdate
+from app.services.cache_service import cache_service
 
 logger = logging.getLogger(__name__)
 
@@ -198,6 +199,11 @@ async def update_user(db: AsyncSession, user_id: str, user_in: UserUpdate) -> Us
 
         await db.commit()
         await db.refresh(user)
+        
+        # 清除用户信息缓存，确保Agent系统能获取到最新信息
+        cache_service.invalidate_user_info(user_id)
+        logger.debug(f"已清除用户 {user_id} 的缓存信息")
+        
         return user
     except Exception as e:
         logger.error(f"Failed to update user information: {str(e)}")
