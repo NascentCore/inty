@@ -52,5 +52,6 @@ EOF
 
 log "Performing sanity check..."
 curl --user heartmate:heartmate.inty.cc --verbose --fail --retry 5 --retry-delay 5 "${SERVICE_PUBLIC_URL}" || { log "Sanity check failed."; exit 1; }
+echo
 
 log "Deployment script finished successfully."
