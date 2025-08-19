@@ -304,7 +304,7 @@ class SubscriptionService:
 
             if not plan:
                 return PurchaseVerificationResponse(
-                    is_valid=False,
+                    is_verified=False,
                     subscription=None,
                     message="未找到对应的订阅计划",
                     error_code="PLAN_NOT_FOUND",
@@ -317,7 +317,7 @@ class SubscriptionService:
 
             if not is_valid:
                 return PurchaseVerificationResponse(
-                    is_valid=False,
+                    is_verified=False,
                     subscription=None,
                     message="Google Play购买验证失败",
                     error_code="GOOGLE_PLAY_VERIFICATION_FAILED",
@@ -333,7 +333,7 @@ class SubscriptionService:
 
             if existing_subscription.scalar_one_or_none():
                 return PurchaseVerificationResponse(
-                    is_valid=False,
+                    is_verified=False,
                     subscription=None,
                     message="该购买令牌已被使用",
                     error_code="DUPLICATE_PURCHASE_TOKEN",
@@ -414,7 +414,7 @@ class SubscriptionService:
             await db.rollback()
             logger.error(f"验证购买并创建订阅失败: {str(e)}")
             return PurchaseVerificationResponse(
-                is_valid=False,
+                is_verified=False,
                 subscription=None,
                 message="服务器内部错误",
                 error_code="INTERNAL_ERROR",
@@ -749,7 +749,9 @@ class SubscriptionService:
                 chat_limit = subscription_status.total_chat_limit
             elif not subscription_status.is_subscribed:
                 # 免费用户使用静态配置作为回退
-                chat_limit = global_config_loaded_from_config_yaml.app.limits.free_user_chat_total_limit
+                chat_limit = (
+                    global_config_loaded_from_config_yaml.app.limits.free_user_chat_total_limit
+                )
             else:
                 chat_limit = None
 
