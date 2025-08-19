@@ -5,6 +5,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Key instructions
 
 * When writing FastAPI code, use ../FASTAPI_BEST_PRACTICES_ZH.md as guidelines
+* Do not wrap everything inside try...except block, as we already have FastAPI to do that
+  * We'll try...except in FastAPI handler functions
 
 ## Overview
 
