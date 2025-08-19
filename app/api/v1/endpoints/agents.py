@@ -41,6 +41,11 @@ subscription_service = SubscriptionService()
 
 
 @router.get(
+    "",
+    response_model=schemas.APIResponse[List[schemas.Agent]],
+    summary="Registered user get list of their created AI characters",
+)
+@router.get(
     "/",
     response_model=schemas.APIResponse[List[schemas.Agent]],
     summary="Registered user get list of their created AI characters",
@@ -167,14 +172,14 @@ async def create_agent(
 async def get_agent(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
-    request: schemas.AgentGetRequest,
+    agent_id: str,
     current_user: schemas.User = Depends(deps.get_current_active_user),
 ) -> Any:
     """
     Get AI agent by ID
     """
     agent = await agent_service.get_agent(
-        db, agent_id=request.agent_id, current_user_id=current_user.id
+        db, agent_id=agent_id, current_user_id=current_user.id
     )
     if not agent:
         raise HTTPException(status_code=404, detail="Agent not found")
