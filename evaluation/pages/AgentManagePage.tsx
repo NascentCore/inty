@@ -133,10 +133,10 @@ export const AgentManagePage: React.FC = () => {
   );
 
   // 加载模型列表
-  const loadModels = useCallback(async (forceRefresh = false) => {
+  const loadModels = useCallback(async () => {
     setModelsLoading(true);
     try {
-      const models = await modelCacheService.getOpenRouterModels(forceRefresh);
+      const models = await modelCacheService.getOpenRouterModels();
       setOpenRouterModels(models);
     } catch (error) {
       console.error("加载模型列表失败:", error);
@@ -148,7 +148,7 @@ export const AgentManagePage: React.FC = () => {
 
   // 刷新模型列表
   const handleRefreshModels = useCallback(() => {
-    loadModels(true);
+    loadModels();
     message.success("正在刷新模型列表...");
   }, [loadModels]);
 

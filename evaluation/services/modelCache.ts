@@ -1,6 +1,6 @@
 /**
  * 模型缓存服务
- * 提供OpenRouter模型列表的缓存功能
+ * 提供评分模型列表的缓存功能，OpenRouter模型列表不缓存
  */
 
 import api from "./api";
@@ -8,8 +8,6 @@ import type { OpenRouterModel, ScoringModel } from "../types";
 
 // 缓存配置
 const CACHE_KEYS = {
-  OPENROUTER_MODELS: "inty_openrouter_models_cache",
-  OPENROUTER_MODELS_TIME: "inty_openrouter_models_cache_time",
   SCORING_MODELS: "inty_scoring_models_cache",
   SCORING_MODELS_TIME: "inty_scoring_models_cache_time",
 };
@@ -18,32 +16,13 @@ const CACHE_EXPIRY = 60 * 60 * 1000; // 1小时过期
 
 class ModelCacheService {
   /**
-   * 获取OpenRouter模型列表（带缓存）
+   * 获取OpenRouter模型列表（无缓存）
    */
-  async getOpenRouterModels(forceRefresh = false): Promise<OpenRouterModel[]> {
-    // 检查缓存
-    if (!forceRefresh) {
-      const cached = this.getCachedModels(
-        CACHE_KEYS.OPENROUTER_MODELS,
-        CACHE_KEYS.OPENROUTER_MODELS_TIME,
-      );
-      if (cached) {
-        console.log(`使用缓存的OpenRouter模型列表: ${cached.length} 个模型`);
-        return cached;
-      }
-    }
-
+  async getOpenRouterModels(): Promise<OpenRouterModel[]> {
     try {
-      console.log("从OpenRouter API获取完整模型列表");
+      console.log("从OpenRouter API获取模型列表");
       const models = await api.scoring.getOpenRouterModels();
-
-      // 缓存API结果
-      this.cacheModels(
-        models,
-        CACHE_KEYS.OPENROUTER_MODELS,
-        CACHE_KEYS.OPENROUTER_MODELS_TIME,
-      );
-      console.log(`成功获取并缓存OpenRouter模型列表: ${models.length} 个模型`);
+      console.log(`成功获取OpenRouter模型列表: ${models.length} 个模型`);
       return models;
     } catch (error) {
       console.warn("OpenRouter API调用失败，使用默认模型列表:", error);
@@ -115,24 +94,6 @@ class ModelCacheService {
   }
 
   /**
-   * 清除OpenRouter模型缓存
-   */
-  clearOpenRouterCache(): void {
-    localStorage.removeItem(CACHE_KEYS.OPENROUTER_MODELS);
-    localStorage.removeItem(CACHE_KEYS.OPENROUTER_MODELS_TIME);
-    console.log("已清除OpenRouter模型缓存");
-  }
-
-  /**
-   * 强制刷新OpenRouter模型列表
-   */
-  async refreshOpenRouterModels(): Promise<OpenRouterModel[]> {
-    console.log("强制刷新OpenRouter模型列表");
-    this.clearOpenRouterCache();
-    return await this.getOpenRouterModels(true);
-  }
-
-  /**
    * 清除评分模型缓存
    */
   clearScoringCache(): void {
@@ -145,23 +106,11 @@ class ModelCacheService {
    * 获取缓存状态信息
    */
   getCacheStatus() {
-    const openRouterCacheTime = localStorage.getItem(
-      CACHE_KEYS.OPENROUTER_MODELS_TIME,
-    );
     const scoringCacheTime = localStorage.getItem(
       CACHE_KEYS.SCORING_MODELS_TIME,
     );
 
     return {
-      openRouter: {
-        hasCache: !!openRouterCacheTime,
-        cacheTime: openRouterCacheTime
-          ? new Date(parseInt(openRouterCacheTime))
-          : null,
-        isExpired: openRouterCacheTime
-          ? Date.now() - parseInt(openRouterCacheTime) > CACHE_EXPIRY
-          : true,
-      },
       scoring: {
         hasCache: !!scoringCacheTime,
         cacheTime: scoringCacheTime
