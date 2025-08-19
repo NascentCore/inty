@@ -38,6 +38,4 @@ interface IChatApi {
         @Path("agent_id") agent_id: String,
         @Body req: ChatSettingsReq
     ): HttpResult<ChatSettingsResponse>
-
-
 }

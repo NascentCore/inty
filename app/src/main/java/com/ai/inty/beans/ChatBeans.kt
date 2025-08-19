@@ -67,8 +67,20 @@ data class QueryMsgsResponse(
     val total: Int = 0
 )
 
+// 该数据结构对应后端 dict 数据结构；每条消息都是对应的 key:value 字典。
+// 后端会写入数据库，格式如下：
+// {
+//  "id": null,
+//  "name": null,
+//  "type": "human",
+//  "content": "test",
+//  "example": false,
+//  "additional_kwargs": {},
+//  "response_metadata": {}
+// }
 @JsonClass(generateAdapter = true)
 data class MsgInfo(
+    val id: String = "",
     val content: String = "",
     val role: String = "",
     //本地创建一个msgId，临时用于消息标记

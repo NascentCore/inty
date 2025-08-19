@@ -32,6 +32,8 @@ import kotlinx.coroutines.launch
 // backednf 创建对话（如果是首次对话）
 // backend 返回对话 ID
 // app 请求聊天回复（/agents/{agent_id}/chat/completions
+// 操作什么数据，支持什么 UI？Model 是 beans
+// View 是各类 page/activity。
 class ChatViewModel : BaseActivityViewModel() {
 
     private val _agentInfo = MutableStateFlow<AgentInfo?>(null)
