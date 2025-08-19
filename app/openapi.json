@@ -400,7 +400,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/APIResponse_PaginationData_NotificationItem__"
+                                    "$ref": "#/components/schemas/APIResponse_NotificationList_"
                                 }
                             }
                         }
@@ -473,20 +473,15 @@
                 "summary": "Create Report",
                 "description": "Submit report",
                 "operationId": "create_report_api_v1_report__post",
-                "security": [
-                    {
-                        "Bearer": []
-                    }
-                ],
                 "requestBody": {
-                    "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
                                 "$ref": "#/components/schemas/ReportCreate"
                             }
                         }
-                    }
+                    },
+                    "required": true
                 },
                 "responses": {
                     "200": {
@@ -509,147 +504,12 @@
                             }
                         }
                     }
-                }
-            },
-            "get": {
-                "tags": [
-                    "report"
-                ],
-                "summary": "List Reports",
-                "description": "Query report records (requires admin permission)",
-                "operationId": "list_reports_api_v1_report__get",
+                },
                 "security": [
                     {
                         "Bearer": []
                     }
-                ],
-                "parameters": [
-                    {
-                        "name": "reason_ids",
-                        "in": "query",
-                        "required": false,
-                        "schema": {
-                            "anyOf": [
-                                {
-                                    "type": "array",
-                                    "items": {
-                                        "type": "integer"
-                                    }
-                                },
-                                {
-                                    "type": "null"
-                                }
-                            ],
-                            "title": "Reason Ids"
-                        }
-                    },
-                    {
-                        "name": "target_id",
-                        "in": "query",
-                        "required": false,
-                        "schema": {
-                            "anyOf": [
-                                {
-                                    "type": "string"
-                                },
-                                {
-                                    "type": "null"
-                                }
-                            ],
-                            "title": "Target Id"
-                        }
-                    },
-                    {
-                        "name": "target_type",
-                        "in": "query",
-                        "required": false,
-                        "schema": {
-                            "anyOf": [
-                                {
-                                    "$ref": "#/components/schemas/TargetType"
-                                },
-                                {
-                                    "type": "null"
-                                }
-                            ],
-                            "title": "Target Type"
-                        }
-                    },
-                    {
-                        "name": "status",
-                        "in": "query",
-                        "required": false,
-                        "schema": {
-                            "anyOf": [
-                                {
-                                    "$ref": "#/components/schemas/ReportStatus"
-                                },
-                                {
-                                    "type": "null"
-                                }
-                            ],
-                            "title": "Status"
-                        }
-                    },
-                    {
-                        "name": "reporter_id",
-                        "in": "query",
-                        "required": false,
-                        "schema": {
-                            "anyOf": [
-                                {
-                                    "type": "string"
-                                },
-                                {
-                                    "type": "null"
-                                }
-                            ],
-                            "title": "Reporter Id"
-                        }
-                    },
-                    {
-                        "name": "page",
-                        "in": "query",
-                        "required": false,
-                        "schema": {
-                            "type": "integer",
-                            "default": 1,
-                            "title": "Page"
-                        }
-                    },
-                    {
-                        "name": "page_size",
-                        "in": "query",
-                        "required": false,
-                        "schema": {
-                            "type": "integer",
-                            "default": 20,
-                            "title": "Page Size"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Successful Response",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/APIResponse_PaginationData_ReportOut__"
-                                }
-                            }
-                        }
-                    },
-                    "422": {
-                        "description": "Validation Error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/HTTPValidationError"
-                                }
-                            }
-                        }
-                    }
-                }
+                ]
             }
         },
         "/api/v1/ai/agents/me": {
@@ -2997,6 +2857,32 @@
                 "type": "object",
                 "title": "APIResponse[LoginResponse]"
             },
+            "APIResponse_NotificationList_": {
+                "properties": {
+                    "code": {
+                        "type": "integer",
+                        "title": "Code",
+                        "default": 200
+                    },
+                    "message": {
+                        "type": "string",
+                        "title": "Message",
+                        "default": "success"
+                    },
+                    "data": {
+                        "anyOf": [
+                            {
+                                "$ref": "#/components/schemas/NotificationList"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
+                    }
+                },
+                "type": "object",
+                "title": "APIResponse[NotificationList]"
+            },
             "APIResponse_PaginationData_Agent__": {
                 "properties": {
                     "code": {
@@ -3022,58 +2908,6 @@
                 },
                 "type": "object",
                 "title": "APIResponse[PaginationData[Agent]]"
-            },
-            "APIResponse_PaginationData_NotificationItem__": {
-                "properties": {
-                    "code": {
-                        "type": "integer",
-                        "title": "Code",
-                        "default": 200
-                    },
-                    "message": {
-                        "type": "string",
-                        "title": "Message",
-                        "default": "success"
-                    },
-                    "data": {
-                        "anyOf": [
-                            {
-                                "$ref": "#/components/schemas/PaginationData_NotificationItem_"
-                            },
-                            {
-                                "type": "null"
-                            }
-                        ]
-                    }
-                },
-                "type": "object",
-                "title": "APIResponse[PaginationData[NotificationItem]]"
-            },
-            "APIResponse_PaginationData_ReportOut__": {
-                "properties": {
-                    "code": {
-                        "type": "integer",
-                        "title": "Code",
-                        "default": 200
-                    },
-                    "message": {
-                        "type": "string",
-                        "title": "Message",
-                        "default": "success"
-                    },
-                    "data": {
-                        "anyOf": [
-                            {
-                                "$ref": "#/components/schemas/PaginationData_ReportOut_"
-                            },
-                            {
-                                "type": "null"
-                            }
-                        ]
-                    }
-                },
-                "type": "object",
-                "title": "APIResponse[PaginationData[ReportOut]]"
             },
             "APIResponse_PurchaseVerificationResponse_": {
                 "properties": {
@@ -5309,6 +5143,41 @@
                 "title": "NotificationItem",
                 "description": "通知项"
             },
+            "NotificationList": {
+                "properties": {
+                    "list": {
+                        "items": {
+                            "$ref": "#/components/schemas/NotificationItem"
+                        },
+                        "type": "array",
+                        "title": "List",
+                        "default": []
+                    },
+                    "total": {
+                        "type": "integer",
+                        "title": "Total",
+                        "default": 0
+                    },
+                    "page": {
+                        "type": "integer",
+                        "title": "Page",
+                        "default": 1
+                    },
+                    "page_size": {
+                        "type": "integer",
+                        "title": "Page Size",
+                        "default": 10
+                    },
+                    "total_pages": {
+                        "type": "integer",
+                        "title": "Total Pages",
+                        "default": 0
+                    }
+                },
+                "type": "object",
+                "title": "NotificationList",
+                "description": "Specific model for a paginated list of notification items."
+            },
             "PaginationData_Agent_": {
                 "properties": {
                     "list": {
@@ -5342,74 +5211,6 @@
                 },
                 "type": "object",
                 "title": "PaginationData[Agent]"
-            },
-            "PaginationData_NotificationItem_": {
-                "properties": {
-                    "list": {
-                        "items": {
-                            "$ref": "#/components/schemas/NotificationItem"
-                        },
-                        "type": "array",
-                        "title": "List",
-                        "default": []
-                    },
-                    "total": {
-                        "type": "integer",
-                        "title": "Total",
-                        "default": 0
-                    },
-                    "page": {
-                        "type": "integer",
-                        "title": "Page",
-                        "default": 1
-                    },
-                    "page_size": {
-                        "type": "integer",
-                        "title": "Page Size",
-                        "default": 10
-                    },
-                    "total_pages": {
-                        "type": "integer",
-                        "title": "Total Pages",
-                        "default": 0
-                    }
-                },
-                "type": "object",
-                "title": "PaginationData[NotificationItem]"
-            },
-            "PaginationData_ReportOut_": {
-                "properties": {
-                    "list": {
-                        "items": {
-                            "$ref": "#/components/schemas/ReportOut"
-                        },
-                        "type": "array",
-                        "title": "List",
-                        "default": []
-                    },
-                    "total": {
-                        "type": "integer",
-                        "title": "Total",
-                        "default": 0
-                    },
-                    "page": {
-                        "type": "integer",
-                        "title": "Page",
-                        "default": 1
-                    },
-                    "page_size": {
-                        "type": "integer",
-                        "title": "Page Size",
-                        "default": 10
-                    },
-                    "total_pages": {
-                        "type": "integer",
-                        "title": "Total Pages",
-                        "default": 0
-                    }
-                },
-                "type": "object",
-                "title": "PaginationData[ReportOut]"
             },
             "PurchaseVerificationRequest": {
                 "properties": {
@@ -5617,91 +5418,6 @@
                     "reason_ids"
                 ],
                 "title": "ReportCreate"
-            },
-            "ReportOut": {
-                "properties": {
-                    "id": {
-                        "type": "string",
-                        "title": "Id"
-                    },
-                    "target_id": {
-                        "type": "string",
-                        "title": "Target Id"
-                    },
-                    "target_type": {
-                        "type": "string",
-                        "title": "Target Type"
-                    },
-                    "reporter_id": {
-                        "type": "string",
-                        "title": "Reporter Id"
-                    },
-                    "reason_ids": {
-                        "items": {
-                            "type": "integer"
-                        },
-                        "type": "array",
-                        "title": "Reason Ids"
-                    },
-                    "reason_codes": {
-                        "items": {
-                            "type": "string"
-                        },
-                        "type": "array",
-                        "title": "Reason Codes"
-                    },
-                    "image_urls": {
-                        "items": {
-                            "type": "string"
-                        },
-                        "type": "array",
-                        "title": "Image Urls"
-                    },
-                    "description": {
-                        "anyOf": [
-                            {
-                                "type": "string"
-                            },
-                            {
-                                "type": "null"
-                            }
-                        ],
-                        "title": "Description"
-                    },
-                    "status": {
-                        "type": "string",
-                        "title": "Status"
-                    },
-                    "created_at": {
-                        "type": "string",
-                        "format": "date-time",
-                        "title": "Created At"
-                    }
-                },
-                "type": "object",
-                "required": [
-                    "id",
-                    "target_id",
-                    "target_type",
-                    "reporter_id",
-                    "reason_ids",
-                    "reason_codes",
-                    "image_urls",
-                    "description",
-                    "status",
-                    "created_at"
-                ],
-                "title": "ReportOut"
-            },
-            "ReportStatus": {
-                "type": "string",
-                "enum": [
-                    "PENDING",
-                    "PROCESSING",
-                    "RESOLVED",
-                    "REJECTED"
-                ],
-                "title": "ReportStatus"
             },
             "Settings": {
                 "properties": {

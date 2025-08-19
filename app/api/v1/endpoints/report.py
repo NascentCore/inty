@@ -11,7 +11,13 @@ from app.core.config import global_config_loaded_from_config_yaml
 from app.db.session import get_async_db
 from app.models.report import ReportStatus
 from app.models.user import User
-from app.schemas.report import ReportCreate, ReportOut, ReportQuery, TargetType
+from app.schemas.report import (
+    ReportCreate,
+    ReportOut,
+    ReportQuery,
+    ReportsList,
+    TargetType,
+)
 from app.schemas.response import APIResponse, PaginationData
 from app.services import report_service
 from app.utils.gcs import upload_to_gcs
@@ -87,7 +93,14 @@ async def create_report(
 
 
 # TODO: Move this under admin path.
-@router.get("/", response_model=APIResponse[PaginationData[ReportOut]])
+@router.get(
+    "/",
+    response_model=APIResponse[ReportsList],
+    include_in_schema=False,
+    deprecated=True,
+    summary="Query report records (requires admin permission)",
+    description="Query report records (requires admin permission), this should be moved out of the app's runtime.",
+)
 async def list_reports(
     reason_ids: Optional[List[int]] = Query(None),
     target_id: Optional[str] = None,

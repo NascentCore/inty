@@ -5,6 +5,7 @@ from typing import List, Optional
 from pydantic import BaseModel
 
 from app.models.report import ReportStatus
+from app.schemas.response import PaginationData
 
 
 class ReportReason(BaseModel):
@@ -54,3 +55,9 @@ class ReportOut(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class ReportsList(PaginationData[ReportOut]):
+    """Specific model for a paginated list of report items."""
+
+    pass
