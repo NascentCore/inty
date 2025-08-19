@@ -137,8 +137,8 @@ data class SubscriptionVerifyRequest(
  */
 @JsonClass(generateAdapter = true)
 data class SubscriptionVerifyResponse(
-    @Json(name = "is_valid")
-    val isValid: Boolean,
+    @Json(name = "is_verified")
+    val isVerified: Boolean,
     val subscription: CurrentSubscription?,
     val message: String?,
     @Json(name = "error_code")

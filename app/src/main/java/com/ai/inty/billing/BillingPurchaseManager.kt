@@ -264,7 +264,7 @@ class BillingPurchaseManager(
                 when (result) {
                     is HttpResult.Success -> {
                         val response = result.data
-                        if (response.isValid) {
+                        if (response.isVerified) {
                             EasyLog.log("✅ 订阅验证成功")
                         } else {
                             EasyLog.log("⚠️ 订阅验证失败: ${response.message}")
