@@ -34,7 +34,9 @@ logger = logging.getLogger(__name__)
 @router.get("/", response_model=List[schemas.Chat])
 async def list_chats(
     db: AsyncSession = Depends(deps.get_async_db),
+    # Start index of the query, 0-based
     skip: int = 0,
+    # Upper limit of the number of chats to return
     limit: int = 100,
     current_user: schemas.User = Depends(deps.get_current_active_user),
 ) -> Any:
