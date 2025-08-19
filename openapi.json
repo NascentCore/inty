@@ -978,17 +978,16 @@
                         "Bearer": []
                     }
                 ],
-                "parameters": [
-                    {
-                        "name": "agent_id",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "string",
-                            "title": "Agent Id"
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AgentGetRequest"
+                            }
                         }
                     }
-                ],
+                },
                 "responses": {
                     "200": {
                         "description": "Successful Response",
@@ -4080,6 +4079,21 @@
                 ],
                 "title": "AgentCreate",
                 "description": "创建AI角色\n\n推荐使用方式：\n1. 使用personality + scenario字段构建角色\n2. 添加first_message作为开场白\n3. 可选添加message_example展示对话风格\n\n兼容性说明：\n- 仍支持使用prompt字段 (legacy模式)\n- 优先级：角色卡字段 > prompt字段"
+            },
+            "AgentGetRequest": {
+                "properties": {
+                    "agent_id": {
+                        "type": "string",
+                        "title": "Agent Id",
+                        "description": "Agent ID"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "agent_id"
+                ],
+                "title": "AgentGetRequest",
+                "description": "Request for getting a single agent."
             },
             "AgentStatus": {
                 "type": "string",

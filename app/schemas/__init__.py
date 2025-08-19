@@ -5,6 +5,7 @@ from app.schemas.agent import (
     AgentUpdate,
     TextToImageRequest,
     CreatorAgentStats,
+    AgentGetRequest,
 )
 from app.schemas.auth import (
     GoogleAuthRequest,

@@ -238,3 +238,11 @@ class CreatorAgentStats(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class AgentGetRequest(BaseModel):
+    """
+    Request for getting a single agent.
+    """
+
+    agent_id: str = Field(..., description="Agent ID")
