@@ -5162,12 +5162,6 @@
             },
             "PurchaseVerificationResponse": {
                 "properties": {
-                    "is_valid": {
-                        "type": "boolean",
-                        "title": "Is Valid",
-                        "description": "是否有效，使用 is_verified 代替",
-                        "deprecated": true
-                    },
                     "is_verified": {
                         "type": "boolean",
                         "title": "Is Verified",
@@ -5204,7 +5198,6 @@
                 },
                 "type": "object",
                 "required": [
-                    "is_valid",
                     "is_verified",
                     "message"
                 ],
