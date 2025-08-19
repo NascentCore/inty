@@ -45,11 +45,6 @@ subscription_service = SubscriptionService()
     response_model=schemas.APIResponse[List[schemas.Agent]],
     summary="Registered user get list of their created AI characters",
 )
-@router.get(
-    "/",
-    response_model=schemas.APIResponse[List[schemas.Agent]],
-    summary="Registered user get list of their created AI characters",
-)
 async def list_agents(
     db: AsyncSession = Depends(deps.get_async_db),
     skip: int = 0,
