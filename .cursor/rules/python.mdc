@@ -11,3 +11,5 @@ alwaysApply: false
 * Use `from loguru import logger`, do not use other ways to create logger object
 * `requirements.txt` is for depencens of `app/**/*.py`,
   other code files should not updated `requirrements.txt`
+* Do not wrap everything inside try...except block, as we already have FastAPI to do that
+  * We'll try...except in FastAPI handler functions

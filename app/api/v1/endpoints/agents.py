@@ -2,7 +2,9 @@
 Agents endpoints for accessing agents for interactions.
 """
 
+from datetime import datetime
 from enum import StrEnum
+import traceback
 import uuid
 from typing import Any, List
 
@@ -429,8 +431,6 @@ async def generate_background(
 
     except Exception as e:
         logger.error(f"Background image generation failed: {str(e)}")
-        import traceback
-
         logger.error(f"Traceback: {traceback.format_exc()}")
 
         # Check if the error message contains RAI filtering information
