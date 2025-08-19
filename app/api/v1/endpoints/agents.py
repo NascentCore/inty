@@ -48,6 +48,7 @@ subscription_service = SubscriptionService()
     operation_id="list_user_created_agents",
     response_model=schemas.APIResponse[List[schemas.Agent]],
     summary="Registered user get list of their created AI characters",
+    description="This endpoint is used by an registered user to list their created AI characters (agents as a misnomer)",
 )
 async def list_agents(
     db: AsyncSession = Depends(deps.get_async_db),
