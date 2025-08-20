@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "start": "vite --mode production",
     "type-check": "tsc --noEmit",
     "lint:check": "eslint . --ext .ts,.tsx",
     "lint:format": "npx prettier --write \"**/*.{ts,tsx}\"",
