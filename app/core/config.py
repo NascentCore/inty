@@ -1,9 +1,11 @@
+import os
 import sys
 
 from dataclasses import Field, dataclass
 from pathlib import Path
 from typing import List, Optional
 
+from loguru import logger
 import yaml
 from pydantic import AnyHttpUrl
 
@@ -64,12 +66,13 @@ class VerificationConfig:
 
 @dataclass
 class AppConfig:
-    name: str = "InTy"
+    name: str = "inty-backend"
     debug: bool = True
     debug_messages: bool = True
     api_v1_prefix: str = "/api/v1"
     backend_cors_origins: List[AnyHttpUrl] = None
     version: str = "1.0.2"
+    environment: str = "dev"
 
     @dataclass
     class LimitsConfig:
@@ -107,6 +110,7 @@ class AgentConfig:
     presence_penalty: float = 0.0
     enable_debug_logging: bool = False  # 是否启用调试日志记录功能
     vertex_image_model: str = "imagen-4.0-fast-generate-preview-06-06"
+    langchain_api_key: str = "<fill-in-key>"
 
 
 @dataclass
@@ -197,3 +201,16 @@ def load_config(path: str) -> Config:
 
 
 global_config_loaded_from_config_yaml = load_config("config.yaml")
+
+# 设置 LangSmith 环境变量用于支持 tracing，因为其只支持从环境变量读取设置，而非依赖注入。
+os.environ["LANGSMITH_TRACING_V2"] = "true"
+os.environ["LANGSMITH_PROJECT"] = (
+    f"{global_config_loaded_from_config_yaml.app.name}-{global_config_loaded_from_config_yaml.app.environment}"
+)
+os.environ["LANGCHAIN_API_KEY"] = (
+    global_config_loaded_from_config_yaml.agent.langchain_api_key
+)
+logger.info(f"Setting LangSmith environment variables for project: ")
+logger.info(f"LANGSMITH_TRACING_V2: {os.getenv('LANGSMITH_TRACING_V2')}")
+logger.info(f"LANGSMITH_PROJECT: {os.getenv('LANGSMITH_PROJECT')}")
+logger.info(f"LANGCHAIN_API_KEY: {os.getenv('LANGCHAIN_API_KEY')}")

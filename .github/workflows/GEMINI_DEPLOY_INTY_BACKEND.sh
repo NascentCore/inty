@@ -76,9 +76,6 @@ ssh "${REMOTE_HOST}" << EOF
     --name "${CONTAINER_NAME}" \
     --restart unless-stopped \
     --publish ${SERVICE_PORT_ON_HOST}:8000 \
-    --env LANGCHAIN_TRACING_V2=true \
-    --env LANGCHAIN_PROJECT=inty-backend-${DEPLOY_ENV} \
-    --env LANGCHAIN_API_KEY=${LANGCHAIN_API_KEY} \
     --label application=inty-backend \
     --label environment=${DEPLOY_ENV} \
     --log-opt labels=application,environment \

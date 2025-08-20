@@ -9,10 +9,14 @@ from pydantic import ValidationError
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+# ！！！ 这个 import 必须在所有导入其他应用代码之前。
+# 因为这里设置了 LangSmith 环境变量
+# 如果不在最前面，有可能导致环境变量未注入导致 LangSmith tracing 获得空的环境变量，从而失效
+from app.core.config import global_config_loaded_from_config_yaml
+
 from app.api.deps import get_async_db
 from app.api.v1.api import api_router
 from app.core.agent.agent import agent_manager
-from app.core.config import global_config_loaded_from_config_yaml
 from app.core.firebase import init_firebase
 from app.core.logging import init_logger
 from app.middleware.error_handler import (
