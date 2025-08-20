@@ -259,8 +259,7 @@ internal fun ChatPage(
                                     items,
                                     key = { index, info ->
                                         // 使用消息的唯一标识符作为 key，如果没有则使用索引和内容的组合
-                                        info.generateMsgId()
-                                            .ifEmpty { "${index}_${info.role}_${info.content.hashCode()}_${index}" }
+                                        info.msgId.ifEmpty { "${index}_${info.role}_${info.content.hashCode()}_${index}" }
                                     }
                                 ) { index, item ->
                                     runCatching {
