@@ -927,11 +927,12 @@ class Agent:
                     "type": "character",
                     "content": response_text,
                 }
-                openai_messages.append(ai_message)
+                debug_messages.append(ai_message)
+                logger.debug(f"debug_messages: {debug_messages}")
 
                 # 准备调试数据（包含预格式化的完整消息）
                 debug_data = {
-                    "formatted_messages": openai_messages,  # 新增预格式化消息
+                    "formatted_messages": debug_messages,  # 新增预格式化消息
                     "input_data": {
                         "messages": state_data.get("messages", []),
                         "user_profile": state_data.get("user_profile", ""),
