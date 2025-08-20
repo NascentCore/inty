@@ -884,15 +884,10 @@ class Agent:
                         for message in response.get("messages", [])
                         if isinstance(message, AIMessage)
                     ]
-                    # OpenAI API response format: response.choices[0].message.content
                     response_text = (
                         ai_messages[-1].content
                         if ai_messages
-                        else (
-                            response.choices[0].message.content
-                            if response.choices and response.choices[0].message
-                            else "Sorry, I cannot understand your message. Please try again."
-                        )
+                        else "抱歉，我无法理解您的消息。请再试一次。"
                     )
                     response_process_time = time.time() - response_process_start
 
