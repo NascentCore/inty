@@ -1,6 +1,13 @@
-# InTy 智能体评测系统前端
+# Inty-eval（角色评测工具）
 
 这是一个使用 React/TypeScript 构建的 Web 应用程序，用于评估 AI 角色、管理提示和显示聊天交互。
+
+```
+git clone https://github.com/NascentCore/inty-backend.git
+cd inty-backend
+evaluation/start.sh
+# Open http://localhost:3000/
+```
 
 ## 使用本地 Inty 后端地址
 
