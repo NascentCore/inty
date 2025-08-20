@@ -70,9 +70,7 @@ app.add_exception_handler(JWTError, jwt_exception_handler)
 app.add_exception_handler(SQLAlchemyError, sqlalchemy_exception_handler)
 app.add_exception_handler(ValidationError, validation_error_handler)
 
-app.include_router(
-    api_router, prefix=global_config_loaded_from_config_yaml.app.api_v1_prefix
-)
+app.include_router(api_router)
 
 # 配置静态文件服务 - 用于评测系统前端
 import os
