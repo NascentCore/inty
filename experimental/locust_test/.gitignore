@@ -7,6 +7,7 @@ database_export/
 # 如果使用真实密钥文件，应该被忽略 (当前使用的是mock文件)
 # inty-backend-key.json
 # inty-firebase-key.json
+batch_test_results/
 
 # Locust报告
 *.html
