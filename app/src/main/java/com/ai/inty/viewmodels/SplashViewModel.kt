@@ -37,9 +37,10 @@ class SplashViewModel : BaseActivityViewModel() {
     private val _initState = MutableStateFlow(InitState.Loading)
     val initState = _initState.asStateFlow()
 
+    //启动初始化流程
     fun initTask() {
         EasyLog.log("SplashViewModel initTask - starting initialization")
-        
+
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 if (IntySetting.isLogin()) {
@@ -56,6 +57,9 @@ class SplashViewModel : BaseActivityViewModel() {
         }
     }
 
+    /**
+     * 创建guest用户，并自动登录
+     */
     private suspend fun createGuest() {
         EasyLog.log("Creating guest account...")
         val result = userApi.createGuest(
@@ -65,13 +69,14 @@ class SplashViewModel : BaseActivityViewModel() {
             )
         )
         EasyLog.log("createGuest result: $result")
-        
+
         when (result) {
             is HttpResult.Success -> {
                 IntySetting.login(true, result.data.guestId, result.data.token)
                 EasyLog.log("Guest created successfully: ${result.data.guestId}")
                 onLoginSuccess()
             }
+
             is HttpResult.Failure -> {
                 EasyLog.log("Guest creation failed: ${result.message}", EasyLog.ERROR)
                 _initState.value = InitState.Failed
@@ -79,21 +84,28 @@ class SplashViewModel : BaseActivityViewModel() {
         }
     }
 
+    /**
+     * Guest或正式用户登录成功后，执行更新用户信息逻辑
+     */
     private suspend fun onLoginSuccess() {
         EasyLog.log("onLoginSuccess - user: ${IntySetting.getCurUserID()}")
-        
+
         // 优先从本地缓存获取用户信息
+        // todo ⚠️这里并没有使用缓存数据，逻辑需要修正
         if (UserProfileManager.hasUserProfile()) {
             EasyLog.log("Loaded user profile from cache")
         }
-        
+
         // 获取用户信息
         getUserProfile()
-        
+
         EasyLog.log("Initialization completed successfully")
         _initState.value = InitState.Success
     }
 
+    /**
+     * 从接口获取用户信息（Guest或正式用户）
+     */
     private suspend fun getUserProfile() {
         val result = userApi2.getUserProfile()
         when (result) {
@@ -101,10 +113,12 @@ class SplashViewModel : BaseActivityViewModel() {
                 UserProfileManager.saveUserProfile(result.data)
                 EasyLog.log("Updated user profile from server: ${result.data.nickname}")
             }
+
             is HttpResult.Failure -> {
                 EasyLog.log("Failed to get user profile: ${result.message}", EasyLog.ERROR)
                 // 不阻止初始化成功，因为用户信息不是必需的
             }
         }
     }
+
 }

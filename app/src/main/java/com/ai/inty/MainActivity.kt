@@ -57,6 +57,7 @@ class MainActivity : BaseActivity() {
     private val backTimeout = 2000L // 2秒内需要第二次返回
     private var exitJob: Job? = null
 
+    // 关注状态变化的 广播接收器
     private val followStateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action == "FOLLOW_STATE_CHANGED") {

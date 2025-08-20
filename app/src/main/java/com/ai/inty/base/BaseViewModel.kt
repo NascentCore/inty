@@ -70,7 +70,6 @@ open class BaseActivityViewModel : BaseViewModel() {
     val finishActivity = _finishActivity.asStateFlow()
 
     fun closeActivity(delayTimeMS: Long = 0) {
-//        EasyLog.log("closeActivity $this delay=$delayTimeMS")
         viewModelScope.launch(Dispatchers.Main) {
             if (delayTimeMS > 0) {
                 delay(delayTimeMS)

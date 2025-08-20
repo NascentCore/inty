@@ -33,7 +33,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.window.DialogWindowProvider
@@ -72,8 +71,6 @@ fun BottomSheetDialog(
         }
         InnerDialog(
             visible = visible,
-            cancelable = cancelable,
-            onDismissRequest = onDismissRequest,
             content = content
         )
     }
@@ -82,46 +79,18 @@ fun BottomSheetDialog(
 @Composable
 private fun BoxScope.InnerDialog(
     visible: Boolean,
-    cancelable: Boolean,
-    onDismissRequest: () -> Unit,
     content: @Composable () -> Unit
 ) {
     var offsetY by remember {
         mutableFloatStateOf(value = 0f)
     }
     val offsetYAnimate by animateFloatAsState(targetValue = offsetY, label = "")
-    var bottomSheetHeight by remember { mutableFloatStateOf(value = 0f) }
     AnimatedVisibility(
         modifier = Modifier
             .align(alignment = Alignment.BottomCenter)
-            .clickableNoRipple {
-
-            }
-            .onGloballyPositioned {
-                bottomSheetHeight = it.size.height.toFloat()
-            }
             .offset(offset = {
                 IntOffset(0, offsetYAnimate.roundToInt())
-            })
-//            .draggable(
-//                state = rememberDraggableState(
-//                    onDelta = {
-//                        offsetY = (offsetY + it.toInt()).coerceAtLeast(0f)
-//                    }
-//                ),
-//                orientation = Orientation.Vertical,
-//                onDragStarted = {
-//
-//                },
-//                onDragStopped = {
-//                    if (cancelable && offsetY > bottomSheetHeight / 2) {
-//                        onDismissRequest()
-//                    } else {
-//                        offsetY = 0f
-//                    }
-//                }
-//            )
-        ,
+            }),
         visible = visible,
         enter = slideInVertically(
             animationSpec = tween(durationMillis = 400, easing = LinearOutSlowInEasing),

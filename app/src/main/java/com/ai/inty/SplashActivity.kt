@@ -42,6 +42,7 @@ class SplashActivity : ComponentActivity() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
         val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
         windowInsetsController.isAppearanceLightStatusBars = false
+
         setContent {
             IntyTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { _ ->
@@ -73,6 +74,7 @@ class SplashActivity : ComponentActivity() {
 
         viewModel.initTask()
 
+        //后台初始化状态的监听结果变化
         viewModel.viewModelScope.launch {
             viewModel.initState.collect {
                 EasyLog.log("initState=$it")
