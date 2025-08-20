@@ -813,7 +813,6 @@ class Agent:
                 logger.info(
                     f"历史记录初始化耗时: {history_init_time:.3f}秒 - Agent: {self.agent_id}"
                 )
-                config = {"configurable": {"user_id": user_id}}
 
                 # 获取相关的历史消息
                 get_history_start = time.time()
@@ -852,6 +851,7 @@ class Agent:
                     user_id=user_id,
                     chat_settings=chat_settings,
                 )
+                config = {"configurable": {"user_id": user_id}}
 
                 input_build_time = time.time() - input_build_start
                 logger.info(
