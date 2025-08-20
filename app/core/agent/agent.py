@@ -861,16 +861,11 @@ class Agent:
                 agent_invoke_start = time.time()
                 logger.info(f"开始Agent推理 - Agent: {self.agent_id}")
 
-                if (
+                use_openai_client = (
                     global_config_loaded_from_config_yaml.agent.enable_langsmith_wrapped_openai_client
-                ):
-                    response = (
-                        self._chat_sync_optimized_with_langsmith_wrapped_openai_client(
-                            user_id, session_id, state_data, all_messages
-                        )
-                    )
-                    response_text = response.choices[0].message.content
-                else:
+                )
+
+                if not use_openai_client:
                     response = self.agent.invoke(state_data, config)
                     agent_invoke_time = time.time() - agent_invoke_start
                     logger.info(
@@ -890,6 +885,13 @@ class Agent:
                         else "抱歉，我无法理解您的消息。请再试一次。"
                     )
                     response_process_time = time.time() - response_process_start
+                else:
+                    esponse = (
+                        self._chat_sync_optimized_with_langsmith_wrapped_openai_client(
+                            user_id, session_id, state_data, all_messages
+                        )
+                    )
+                    response_text = response.choices[0].message.content
 
                 logger.info(
                     f"响应处理耗时: {response_process_time:.3f}秒 - Agent: {self.agent_id}"
