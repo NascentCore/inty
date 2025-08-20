@@ -886,7 +886,7 @@ class Agent:
                     )
                     response_process_time = time.time() - response_process_start
                 else:
-                    esponse = (
+                    response = (
                         self._chat_sync_optimized_with_langsmith_wrapped_openai_client(
                             user_id, session_id, state_data, all_messages
                         )
