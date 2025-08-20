@@ -29,6 +29,7 @@ from app.core.config import global_config_loaded_from_config_yaml
 
 from jinja2 import Template as Jinja2Template
 
+from app.services import cache_service
 from app.utils.langchain import to_openai_message
 from app.utils.openai_client import get_openai_client
 
