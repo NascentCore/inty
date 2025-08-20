@@ -107,6 +107,8 @@ class AgentConfig:
     presence_penalty: float = 0.0
     enable_debug_logging: bool = False  # 是否启用调试日志记录功能
     vertex_image_model: str = "imagen-4.0-fast-generate-preview-06-06"
+    # 默认为真，启动新的调用流程
+    enable_langsmith_wrapped_openai_client: bool = True
 
 
 @dataclass

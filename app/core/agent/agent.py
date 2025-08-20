@@ -31,6 +31,7 @@ from app.services.cache_service import cache_service
 
 from jinja2 import Template as Jinja2Template
 
+from app.utils.langchain import to_openai_message
 from app.utils.openai_client import get_openai_client
 
 logger = logging.getLogger(__name__)
@@ -743,6 +744,43 @@ class Agent:
 
         return recent_messages
 
+    def _chat_sync_optimized_with_langsmith_wrapped_openai_client(
+        self,
+        user_id: str,
+        session_id: str,
+        state_data: CustomAgentState,
+        all_messages: list[BaseMessage],
+    ) -> str:
+        formatted_prompt = self.prompt_runnable.invoke(state_data)
+        openai_messages = [to_openai_message(m) for m in formatted_prompt.messages]
+        openai_messages.extend([to_openai_message(m) for m in all_messages])
+
+        logger.debug(f"openai_messages: {openai_messages}")
+
+        return get_openai_client(
+            {
+                "user_id": user_id,
+                "agent_id": self.agent_id,
+                "session_id": session_id,
+            }
+        ).chat.completions.create(
+            model=self.model_config.get(
+                "model", global_config_loaded_from_config_yaml.agent.model
+            ),
+            messages=openai_messages,
+            temperature=self.model_config.get(
+                "temperature",
+                global_config_loaded_from_config_yaml.agent.temperature,
+            ),
+            max_tokens=self.model_config.get(
+                "max_tokens",
+                global_config_loaded_from_config_yaml.agent.max_tokens,
+            ),
+            top_p=self.model_config.get(
+                "top_p", global_config_loaded_from_config_yaml.agent.top_p
+            ),
+        )
+
     def _chat_sync_optimized(
         self,
         user_id: str,
@@ -775,6 +813,7 @@ class Agent:
                 logger.info(
                     f"历史记录初始化耗时: {history_init_time:.3f}秒 - Agent: {self.agent_id}"
                 )
+                config = {"configurable": {"user_id": user_id}}
 
                 # 获取相关的历史消息
                 get_history_start = time.time()
@@ -823,62 +862,16 @@ class Agent:
                 agent_invoke_start = time.time()
                 logger.info(f"开始Agent推理 - Agent: {self.agent_id}")
 
-                # Get properly formatted messages from prompt_runnable
-                formatted_prompt = self.prompt_runnable.invoke(state_data)
-                openai_messages = []
-
-                for message in formatted_prompt.messages:
-                    if isinstance(message, SystemMessage):
-                        openai_messages.append(
-                            {"role": "system", "content": message.content}
+                if (
+                    global_config_loaded_from_config_yaml.agent.enable_langsmith_wrapped_openai_client
+                ):
+                    response = (
+                        self._chat_sync_optimized_with_langsmith_wrapped_openai_client(
+                            user_id, session_id, state_data, all_messages
                         )
-                    elif isinstance(message, HumanMessage):
-                        openai_messages.append(
-                            {"role": "user", "content": message.content}
-                        )
-                    elif isinstance(message, AIMessage):
-                        openai_messages.append(
-                            {"role": "assistant", "content": message.content}
-                        )
-                logger.debug(f"openai_messages: {openai_messages}")
-
-                for message in all_messages:
-                    if isinstance(message, SystemMessage):
-                        openai_messages.append(
-                            {"role": "system", "content": message.content}
-                        )
-                    elif isinstance(message, HumanMessage):
-                        openai_messages.append(
-                            {"role": "user", "content": message.content}
-                        )
-                    elif isinstance(message, AIMessage):
-                        openai_messages.append(
-                            {"role": "assistant", "content": message.content}
-                        )
-                logger.debug(f"openai_messages: {openai_messages}")
-
-                response = get_openai_client(
-                    {
-                        "user_id": user_id,
-                        "agent_id": self.agent_id,
-                        "session_id": session_id,
-                    }
-                ).chat.completions.create(
-                    model=self.model_config.get(
-                        "model", global_config_loaded_from_config_yaml.agent.model
-                    ),
-                    messages=openai_messages,
-                    temperature=self.model_config.get(
-                        "temperature",
-                        global_config_loaded_from_config_yaml.agent.temperature,
-                    ),
-                    max_tokens=self.model_config.get(
-                        "max_tokens",
-                        global_config_loaded_from_config_yaml.agent.max_tokens,
-                    ),
-                    top_p=self.model_config.get("top_p"),
-                )
-                # response = self.agent.invoke(state_data, config)
+                    )
+                else:
+                    response = self.agent.invoke(state_data, config)
                 agent_invoke_time = time.time() - agent_invoke_start
                 logger.info(
                     f"Agent推理耗时: {agent_invoke_time:.3f}秒 - Agent: {self.agent_id}"
