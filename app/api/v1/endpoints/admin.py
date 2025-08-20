@@ -19,7 +19,7 @@ from app.schemas.system_settings import (
 )
 from app.services.system_settings_service import system_settings_service
 
-router = APIRouter()
+router = APIRouter(prefix="/admin")
 
 
 async def get_current_superuser(

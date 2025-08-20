@@ -11,7 +11,7 @@ from app.api import deps
 from app.services import create_settings, get_settings, update_settings
 
 logger = logging.getLogger(__name__)
-router = APIRouter()
+router = APIRouter(prefix="/settings")
 
 
 @router.get("/", response_model=schemas.Settings)

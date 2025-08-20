@@ -27,7 +27,7 @@ from app.schemas.user_deletion import (
 from app.services import user_service
 from app.utils.gcs import delete_from_gcs, is_user_gcs_file, upload_to_gcs
 
-router = APIRouter()
+router = APIRouter(prefix="/users")
 
 
 @router.get("/profile", response_model=User)

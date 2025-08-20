@@ -9,7 +9,7 @@ from app.schemas.response import APIResponse
 from app.schemas.version import VersionCheckResponse
 from app.services.google_play_service import google_play_service
 
-router = APIRouter()
+router = APIRouter(prefix="/version")
 logger = logging.getLogger(__name__)
 
 

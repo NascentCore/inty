@@ -26,7 +26,7 @@ from app.services.voice_cache_service import voice_cache_service
 from app.services.voice_cleanup_service import voice_cleanup_service
 from app.services.voice_service import voice_service
 
-router = APIRouter()
+router = APIRouter(prefix="/chats")
 
 logger = logging.getLogger(__name__)
 

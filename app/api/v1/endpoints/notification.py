@@ -17,7 +17,7 @@ from app.schemas.notification import (
 from app.schemas.response import APIResponse, PaginationData
 from app.services import notification_service
 
-router = APIRouter()
+router = APIRouter(prefix="/notifications")
 
 
 @router.post("/", response_model=APIResponse, include_in_schema=False)

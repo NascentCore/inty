@@ -22,7 +22,7 @@ from app.schemas.response import APIResponse, PaginationData
 from app.services import report_service
 from app.utils.gcs import upload_to_gcs
 
-router = APIRouter()
+router = APIRouter(prefix="/report")
 
 
 @router.post(
