@@ -66,7 +66,7 @@ class VerificationConfig:
 
 @dataclass
 class AppConfig:
-    name: str = "inty"
+    name: str = "inty-backend"
     debug: bool = True
     debug_messages: bool = True
     api_v1_prefix: str = "/api/v1"
@@ -202,7 +202,7 @@ def load_config(path: str) -> Config:
 
 global_config_loaded_from_config_yaml = load_config("config.yaml")
 
-# 设置 LangSmith 环境变量用于支持 tracing
+# 设置 LangSmith 环境变量用于支持 tracing，因为其只支持从环境变量读取设置，而非依赖注入。
 os.environ["LANGSMITH_TRACING_V2"] = "true"
 os.environ["LANGSMITH_PROJECT"] = (
     f"{global_config_loaded_from_config_yaml.app.name}-{global_config_loaded_from_config_yaml.app.environment}"
