@@ -85,8 +85,8 @@ def get_openai_client(chat_name: str, labels: dict[str, str]):
     assert os.getenv("LANGCHAIN_API_KEY"), "LANGCHAIN_API_KEY must be set"
     assert os.getenv("LANGSMITH_TRACING_V2"), "LANGSMITH_TRACING_V2 must be set"
     assert os.getenv("LANGSMITH_PROJECT"), "LANGSMITH_PROJECT must be set"
-    # Create OpenAI client and wrap it with LangSmith
-    tracing_extra = {
+
+    tracing_extra: TracingExtra = {
         "metadata": labels,
     }
     _client = wrappers.wrap_openai(
@@ -124,7 +124,11 @@ if __name__ == "__main__":
     from dotenv import load_dotenv
 
     load_dotenv()
-    client = get_openai_client({"model": "openai/gpt-3.5-turbo"})
+    client = get_openai_client(
+        {
+            "user_id": "yx-test",
+        }
+    )
     response = client.chat.completions.create(
         model="openai/gpt-3.5-turbo",
         messages=[{"role": "user", "content": "Hello, world!"}],
