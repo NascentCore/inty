@@ -93,7 +93,7 @@ async def get_chats(
         )
         all_chats = result.scalars().all()
 
-        # Get recent message and timestamp for each chat
+        # Get recent message and timestamp for each chat, and filter out opening-only chats
         chats_with_message_time = []
         for chat in all_chats:
             try:
@@ -110,10 +110,30 @@ async def get_chats(
                     chat.last_message = None
                     chat.last_message_time = None
 
+                # Check if chat has user messages (not just opening messages)
+                messages_data = chat_history_service.get_messages_paginated(
+                    session_id=session_id, limit=10, offset=0  # Check first 10 messages
+                )
+
+                # Filter out chats that only have opening messages
+                has_user_messages = False
+                if messages_data and messages_data.get("messages"):
+                    for message in messages_data["messages"]:
+                        if message.get("role") == "user":
+                            has_user_messages = True
+                            break
+
+                # Only include chats that have user messages
+                if not has_user_messages:
+                    logger.debug(f"过滤掉仅有开场白的聊天: chat_id={chat.id}")
+                    continue
+
             except Exception as e:
                 logger.error(f"Failed to get recent message: {str(e)}")
                 chat.last_message = None
                 chat.last_message_time = None
+                # In case of error, include the chat to be safe
+                pass
 
             chat.agent_name = chat.agent.name if chat.agent else None
             chat.agent_avatar = chat.agent.avatar if chat.agent else None
