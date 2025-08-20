@@ -7,7 +7,7 @@ from app import schemas
 from app.api import deps
 from app.services import resource_service
 
-router = APIRouter()
+router = APIRouter(prefix="/resources")
 
 
 @router.get("/", response_model=List[schemas.Resource])

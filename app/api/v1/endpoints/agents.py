@@ -37,7 +37,7 @@ from app.services.subscription_service import SubscriptionService
 from app.utils.gcs import delete_from_gcs, is_user_gcs_file, upload_to_gcs
 from app.utils.image import compress_png_to_jpeg
 
-router = APIRouter()
+router = APIRouter(prefix="/ai/agents")
 
 # 创建订阅服务实例
 subscription_service = SubscriptionService()

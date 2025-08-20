@@ -14,7 +14,7 @@ from app.services.scoring_service import ScoringService
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter()
+router = APIRouter(prefix="/evaluation")
 
 
 @router.get("/sessions", response_model=List[schemas.EvaluationSessionResponse])

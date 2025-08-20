@@ -21,7 +21,7 @@ from app.schemas.auth import GuestResponse, LoginResponse, LoginUserResponse
 from app.schemas.response import APIResponse
 from app.services.user_service import create_guest_user, generate_next_readable_id
 
-router = APIRouter()
+router = APIRouter(prefix="/auth")
 oauth2_scheme = OAuth2PasswordBearer(
     tokenUrl=f"{global_config_loaded_from_config_yaml.app.api_v1_prefix}/auth/login"
 )

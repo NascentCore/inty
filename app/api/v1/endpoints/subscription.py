@@ -28,7 +28,7 @@ from app.schemas.subscription import (
 )
 from app.services.subscription_service import subscription_service
 
-router = APIRouter()
+router = APIRouter(prefix="/subscription")
 logger = logging.getLogger(__name__)
 
 

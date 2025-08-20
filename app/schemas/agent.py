@@ -171,6 +171,7 @@ class Agent(AgentInDB):
     follower_count: int = 0
     connector_count: int = 0
     creator: Optional[User] = None
+    has_chat: bool = False
 
 
 class AgentList(BaseModel):
