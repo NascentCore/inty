@@ -148,12 +148,6 @@ async def _preload_database_connections():
         await cache_service.start_cleanup_task()
         logger.info("缓存服务启动完成")
 
-        # 5. 启动后台任务服务
-        from app.services.background_task_service import background_task_service
-
-        background_task_service.start()
-        logger.info("后台任务服务启动完成")
-
         logger.info("数据库连接池初始化完成")
 
     except Exception as e:

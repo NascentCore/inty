@@ -4,7 +4,6 @@ We should only use exposed functions and classes from this module.
 """
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
-from langchain_postgres import PostgresChatMessageHistory as LCChatHistory
 
 
 # Based on the OpenAI Python SDK, we should use the following roles:

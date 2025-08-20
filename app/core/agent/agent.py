@@ -26,8 +26,6 @@ from psycopg_pool import ConnectionPool
 from app.core.agent import prompts
 from app.core.agent.prompt_template import prompt_template_manager
 from app.core.config import global_config_loaded_from_config_yaml
-from app.services.background_task_service import background_task_service
-from app.services.cache_service import cache_service
 
 from jinja2 import Template as Jinja2Template
 
@@ -916,35 +914,17 @@ class Agent:
                 debug_messages = []
                 for m in openai_messages:
                     if m["role"] == "assistant":
-                        debug_messages.append(
-                            {"type": "character", "content": m["content"]}
-                        )
-                    else:
-                        debug_messages.append(m)
+                        m["role"] = "character"
+                    elif m["role"] == "user":
+                        m["role"] = "human"
+                    debug_messages.append(m)
 
-                # 添加AI响应消息
-                ai_message = {
-                    "type": "character",
-                    "content": response_text,
-                }
-                debug_messages.append(ai_message)
+                debug_messages.append({"type": "character", "content": response_text})
                 logger.debug(f"debug_messages: {debug_messages}")
-
-                # 准备调试数据（包含预格式化的完整消息）
-                debug_data = {
-                    "formatted_messages": debug_messages,  # 新增预格式化消息
-                    "input_data": {
-                        "messages": state_data.get("messages", []),
-                        "user_profile": state_data.get("user_profile", ""),
-                        "user_id": state_data.get("user_id", ""),
-                    },
-                    "response": response,
-                    "response_text": response_text,
-                }
 
                 # 提交到后台任务队列（非阻塞）
                 background_task_service.submit_debug_save_task(
-                    user_id, session_id, self.agent_id, debug_data
+                    user_id, session_id, self.agent_id, debug_messages
                 )
                 logger.debug(f"优化版调试信息已提交到后台队列 - Agent: {self.agent_id}")
 
@@ -1141,84 +1121,6 @@ class Agent:
                     ):
                         stream_messages.append(message_chunk)
                         yield message_chunk, metadata
-
-                    # 如果启用调试日志记录，保存完整的流式响应（异步后台处理）
-                    logger.debug(
-                        f"流式聊天检查debug_logging配置: {global_config_loaded_from_config_yaml.agent.enable_debug_logging}"
-                    )
-                    if global_config_loaded_from_config_yaml.agent.enable_debug_logging:
-                        # 预处理格式化消息（保持与_save_debug_messages一致）
-                        try:
-                            # 获取格式化的提示词
-                            formatted_prompt = self.prompt_runnable.invoke(state_data)
-
-                            if hasattr(formatted_prompt, "messages"):
-                                # 提取所有系统和用户消息
-                                formatted_messages = []
-                                for msg in formatted_prompt.messages:
-                                    if hasattr(msg, "type") and hasattr(msg, "content"):
-                                        # 转换消息类型：system->system, human->user, ai->character
-                                        msg_type = msg.type
-                                        if msg_type == "human":
-                                            msg_type = "user"
-                                        elif msg_type == "ai":
-                                            msg_type = "character"
-                                        formatted_messages.append(
-                                            {"type": msg_type, "content": msg.content}
-                                        )
-                            else:
-                                # 回退到简单格式
-                                formatted_messages = [
-                                    {"type": "system", "content": str(formatted_prompt)}
-                                ]
-
-                        except Exception as e:
-                            logger.error(
-                                f"流式聊天预处理格式化消息失败: {str(e)}, 使用fallback"
-                            )
-                            # 使用基础系统消息作为fallback
-                            formatted_messages = [
-                                {"type": "system", "content": "流式消息格式化失败"}
-                            ]
-
-                        # 处理流式响应文本
-                        response_text = "".join(
-                            [
-                                getattr(msg, "content", str(msg))
-                                for msg in stream_messages
-                                if hasattr(msg, "content")
-                            ]
-                        )
-
-                        # 添加AI响应消息
-                        if response_text:
-                            formatted_messages.append(
-                                {"type": "character", "content": response_text}
-                            )
-
-                        # 构建完整的调试数据，包含预格式化消息
-                        debug_data = {
-                            "formatted_messages": formatted_messages,  # 新增预格式化消息
-                            "input_data": {
-                                "messages": state_data.get("messages", []),
-                                "user_profile": state_data.get("user_profile", ""),
-                                "user_id": state_data.get("user_id", ""),
-                            },
-                            "response": {"messages": stream_messages},
-                            "response_text": response_text,
-                        }
-
-                        # 提交到后台任务队列（非阻塞）
-                        background_task_service.submit_debug_save_task(
-                            user_id, session_id, self.agent_id, debug_data
-                        )
-                        logger.debug(
-                            f"流式聊天调试信息已提交到后台队列 - Agent: {self.agent_id}"
-                        )
-                    else:
-                        logger.debug(
-                            f"流式聊天debug_logging未启用，跳过保存 - Agent: {self.agent_id}"
-                        )
                 except Exception as e:
                     logger.error(
                         f"流式聊天处理失败 - Agent: {self.agent_id}, Session: {session_id}, Error: {str(e)}"

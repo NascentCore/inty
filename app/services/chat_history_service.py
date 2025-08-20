@@ -9,7 +9,7 @@ from langchain_postgres import PostgresChatMessageHistory
 
 from app.core.config import global_config_loaded_from_config_yaml
 from app.models.chat_history import TABLE_NAME as CHAT_HISTORY_TABLE_NAME
-from app.utils.langchain import LCChatHistory
+from langchain_postgres import PostgresChatMessageHistory
 
 logger = logging.getLogger(__name__)
 
@@ -76,7 +76,7 @@ def init_chat_history_table():
     """初始化chat_history表"""
     try:
         conn = get_chat_history_connection()
-        LCChatHistory.create_tables(conn, CHAT_HISTORY_TABLE_NAME)
+        PostgresChatMessageHistory.create_tables(conn, CHAT_HISTORY_TABLE_NAME)
         logger.info("chat_history表已初始化")
     except Exception as e:
         logger.error(f"初始化chat_history表失败: {str(e)}")
