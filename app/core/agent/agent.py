@@ -803,208 +803,156 @@ class Agent:
         logger.info(f"连接池获取耗时: {pool_time:.3f}秒 - Agent: {self.agent_id}")
 
         with pool.connection() as conn_local:
-            try:
-                # 创建历史记录对象
-                history_start = time.time()
-                history = PostgresChatMessageHistory(
-                    table_name, session_id, sync_connection=conn_local
-                )
-                history_init_time = time.time() - history_start
+            # 创建历史记录对象
+            history_start = time.time()
+            history = PostgresChatMessageHistory(
+                table_name, session_id, sync_connection=conn_local
+            )
+            history_init_time = time.time() - history_start
+            logger.info(
+                f"历史记录初始化耗时: {history_init_time:.3f}秒 - Agent: {self.agent_id}"
+            )
+
+            # 获取相关的历史消息
+            get_history_start = time.time()
+            # TODO: 建议取消截取，因为：目前原型产品状态的截取无明确价值；引入额外复杂性无意义。
+            # 待聊天记录过长才需要截取、记忆等复杂机制。
+            recent_history = self._get_relevant_history(
+                history.messages, max_messages=15
+            )
+            get_history_time = time.time() - get_history_start
+            logger.info(
+                f"历史消息获取耗时: {get_history_time:.3f}秒 - Agent: {self.agent_id}"
+            )
+
+            # 构建包含历史的完整消息列表
+            build_msg_start = time.time()
+            all_messages = recent_history + messages["messages"]
+            logger.debug(f"all_messages: {all_messages}")
+            build_msg_time = time.time() - build_msg_start
+            logger.info(
+                f"消息构建耗时: {build_msg_time:.3f}秒 - Agent: {self.agent_id}"
+            )
+
+            # 保存原始用户消息到历史记录
+            save_msg_start = time.time()
+            history.add_messages(messages["messages"])
+            save_msg_time = time.time() - save_msg_start
+            logger.info(
+                f"用户消息保存耗时: {save_msg_time:.3f}秒 - Agent: {self.agent_id}"
+            )
+
+            # 构建自定义状态数据
+            input_build_start = time.time()
+            state_data = CustomAgentState(
+                messages=all_messages,
+                user_profile=user_profile or "",
+                user_id=user_id,
+                chat_settings=chat_settings,
+            )
+            config = {"configurable": {"user_id": user_id}}
+            input_build_time = time.time() - input_build_start
+            logger.info(
+                f"输入数据构建耗时: {input_build_time:.3f}秒 - Agent: {self.agent_id}"
+            )
+
+            # 调用agent进行对话
+            agent_invoke_start = time.time()
+            logger.info(f"开始Agent推理 - Agent: {self.agent_id}")
+
+            use_openai_client = (
+                global_config_loaded_from_config_yaml.agent.enable_langsmith_wrapped_openai_client
+            )
+
+            if not use_openai_client:
+                response = self.agent.invoke(state_data, config)
+                agent_invoke_time = time.time() - agent_invoke_start
                 logger.info(
-                    f"历史记录初始化耗时: {history_init_time:.3f}秒 - Agent: {self.agent_id}"
+                    f"Agent推理耗时: {agent_invoke_time:.3f}秒 - Agent: {self.agent_id}"
                 )
 
-                # 获取相关的历史消息
-                get_history_start = time.time()
-                # TODO: 建议取消截取，因为：目前原型产品状态的截取无明确价值；引入额外复杂性无意义。
-                # 待聊天记录过长才需要截取、记忆等复杂机制。
-                recent_history = self._get_relevant_history(
-                    history.messages, max_messages=15
+                # 处理响应
+                response_process_start = time.time()
+                ai_messages = [
+                    message
+                    for message in response.get("messages", [])
+                    if isinstance(message, AIMessage)
+                ]
+                response_text = (
+                    ai_messages[-1].content
+                    if ai_messages
+                    else "抱歉，我无法理解您的消息。请再试一次。"
                 )
-                get_history_time = time.time() - get_history_start
-                logger.info(
-                    f"历史消息获取耗时: {get_history_time:.3f}秒 - Agent: {self.agent_id}"
-                )
-
-                # 构建包含历史的完整消息列表
-                build_msg_start = time.time()
-                all_messages = recent_history + messages["messages"]
-                logger.debug(f"all_messages: {all_messages}")
-                build_msg_time = time.time() - build_msg_start
-                logger.info(
-                    f"消息构建耗时: {build_msg_time:.3f}秒 - Agent: {self.agent_id}"
-                )
-
-                # 保存原始用户消息到历史记录
-                save_msg_start = time.time()
-                history.add_messages(messages["messages"])
-                save_msg_time = time.time() - save_msg_start
-                logger.info(
-                    f"用户消息保存耗时: {save_msg_time:.3f}秒 - Agent: {self.agent_id}"
-                )
-
-                # 构建自定义状态数据
-                input_build_start = time.time()
-                state_data = CustomAgentState(
-                    messages=all_messages,
-                    user_profile=user_profile or "",
-                    user_id=user_id,
-                    chat_settings=chat_settings,
-                )
-                config = {"configurable": {"user_id": user_id}}
-                input_build_time = time.time() - input_build_start
-                logger.info(
-                    f"输入数据构建耗时: {input_build_time:.3f}秒 - Agent: {self.agent_id}"
-                )
-
-                # 调用agent进行对话
-                agent_invoke_start = time.time()
-                logger.info(f"开始Agent推理 - Agent: {self.agent_id}")
-
-                use_openai_client = (
-                    global_config_loaded_from_config_yaml.agent.enable_langsmith_wrapped_openai_client
-                )
-
-                if not use_openai_client:
-                    response = self.agent.invoke(state_data, config)
-                    agent_invoke_time = time.time() - agent_invoke_start
-                    logger.info(
-                        f"Agent推理耗时: {agent_invoke_time:.3f}秒 - Agent: {self.agent_id}"
-                    )
-
-                    # 处理响应
-                    response_process_start = time.time()
-                    ai_messages = [
-                        message
-                        for message in response.get("messages", [])
-                        if isinstance(message, AIMessage)
-                    ]
-                    response_text = (
-                        ai_messages[-1].content
-                        if ai_messages
-                        else "抱歉，我无法理解您的消息。请再试一次。"
-                    )
-                    response_process_time = time.time() - response_process_start
-                else:
-                    response = (
-                        self._chat_sync_optimized_with_langsmith_wrapped_openai_client(
-                            user_id, session_id, state_data, all_messages
-                        )
-                    )
-                    response_text = response.choices[0].message.content
-
-                logger.info(
+                response_process_time = time.time() - response_process_start
+                logger.debug(
                     f"响应处理耗时: {response_process_time:.3f}秒 - Agent: {self.agent_id}"
                 )
-
-                # 保存AI响应到历史记录
-                save_response_start = time.time()
-                history.add_messages([AIMessage(content=response_text)])
-                save_response_time = time.time() - save_response_start
-                logger.info(
-                    f"AI响应保存耗时: {save_response_time:.3f}秒 - Agent: {self.agent_id}"
+            else:
+                response = (
+                    self._chat_sync_optimized_with_langsmith_wrapped_openai_client(
+                        user_id, session_id, state_data, all_messages
+                    )
                 )
+                response_text = response.choices[0].message.content
 
-                # 调试日志记录（异步后台处理）
-                logger.debug(
-                    f"优化版检查debug_logging配置: {global_config_loaded_from_config_yaml.agent.enable_debug_logging}"
-                )
-                if global_config_loaded_from_config_yaml.agent.enable_debug_logging:
-                    # 预处理格式化消息（保持与_save_debug_messages一致）
-                    try:
-                        # 获取格式化的提示词
-                        formatted_prompt = self.prompt_runnable.invoke(state_data)
+            # 保存AI响应到历史记录
+            save_response_start = time.time()
+            history.add_messages([AIMessage(content=response_text)])
+            save_response_time = time.time() - save_response_start
+            logger.info(
+                f"AI响应保存耗时: {save_response_time:.3f}秒 - Agent: {self.agent_id}"
+            )
 
-                        if hasattr(formatted_prompt, "messages"):
-                            # 提取所有系统和用户消息
-                            formatted_messages = []
-                            for msg in formatted_prompt.messages:
-                                if hasattr(msg, "type") and hasattr(msg, "content"):
-                                    # 转换消息类型：system->system, human->user, ai->character
-                                    msg_type = msg.type
-                                    if msg_type == "human":
-                                        msg_type = "user"
-                                    elif msg_type == "ai":
-                                        msg_type = "character"
-                                    formatted_messages.append(
-                                        {"type": msg_type, "content": msg.content}
-                                    )
-                        else:
-                            # 回退到简单格式
-                            formatted_messages = [
-                                {"type": "system", "content": str(formatted_prompt)}
-                            ]
-
-                    except Exception as e:
-                        logger.error(f"预处理格式化消息失败: {str(e)}, 使用fallback")
-                        # 使用基础系统消息作为fallback
-                        formatted_messages = [
-                            {"type": "system", "content": "消息格式化失败"}
-                        ]
-
-                    # 添加AI响应消息
-                    ai_message = None
-                    for msg in response.get("messages", []):
-                        if hasattr(msg, "type") and hasattr(msg, "content"):
-                            if msg.type in ["ai", "assistant"]:
-                                # 转换AI消息类型为character
-                                ai_message = {
-                                    "type": "character",
-                                    "content": msg.content,
-                                }
-                        elif isinstance(msg, dict) and msg.get("type") in [
-                            "ai",
-                            "assistant",
-                        ]:
-                            # 转换AI消息类型为character
-                            ai_message = {
-                                "type": "character",
-                                "content": msg.get("content", str(msg)),
-                            }
-
-                    if ai_message:
-                        formatted_messages.append(ai_message)
-                    elif response_text:
-                        # AI响应转换为character类型
-                        formatted_messages.append(
-                            {"type": "character", "content": response_text}
+            # 调试日志记录（异步后台处理）
+            logger.debug(
+                f"优化版检查debug_logging配置: {global_config_loaded_from_config_yaml.agent.enable_debug_logging}"
+            )
+            if global_config_loaded_from_config_yaml.agent.enable_debug_logging:
+                formatted_prompt = self.prompt_runnable.invoke(state_data)
+                openai_messages = [
+                    to_openai_message(m) for m in formatted_prompt.messages
+                ]
+                openai_messages.extend([to_openai_message(m) for m in all_messages])
+                debug_messages = []
+                for m in openai_messages:
+                    if m["role"] == "assistant":
+                        debug_messages.append(
+                            {"type": "character", "content": m["content"]}
                         )
+                    else:
+                        debug_messages.append(m)
 
-                    # 准备调试数据（包含预格式化的完整消息）
-                    debug_data = {
-                        "formatted_messages": formatted_messages,  # 新增预格式化消息
-                        "input_data": {
-                            "messages": state_data.get("messages", []),
-                            "user_profile": state_data.get("user_profile", ""),
-                            "user_id": state_data.get("user_id", ""),
-                        },
-                        "response": response,
-                        "response_text": response_text,
-                    }
+                # 添加AI响应消息
+                ai_message = {
+                    "type": "character",
+                    "content": response_text,
+                }
+                openai_messages.append(ai_message)
 
-                    # 提交到后台任务队列（非阻塞）
-                    background_task_service.submit_debug_save_task(
-                        user_id, session_id, self.agent_id, debug_data
-                    )
-                    logger.debug(
-                        f"优化版调试信息已提交到后台队列 - Agent: {self.agent_id}"
-                    )
-                else:
-                    logger.debug(
-                        f"优化版debug_logging未启用，跳过保存 - Agent: {self.agent_id}"
-                    )
+                # 准备调试数据（包含预格式化的完整消息）
+                debug_data = {
+                    "formatted_messages": openai_messages,  # 新增预格式化消息
+                    "input_data": {
+                        "messages": state_data.get("messages", []),
+                        "user_profile": state_data.get("user_profile", ""),
+                        "user_id": state_data.get("user_id", ""),
+                    },
+                    "response": response,
+                    "response_text": response_text,
+                }
 
-                total_time = time.time() - chat_start_time
-                logger.info(
-                    f"聊天处理总耗时（优化版）: {total_time:.3f}秒 - Agent: {self.agent_id}"
+                # 提交到后台任务队列（非阻塞）
+                background_task_service.submit_debug_save_task(
+                    user_id, session_id, self.agent_id, debug_data
                 )
+                logger.debug(f"优化版调试信息已提交到后台队列 - Agent: {self.agent_id}")
 
-                return response_text
-            except Exception as e:
-                logger.error(
-                    f"聊天处理失败（优化版） - Agent: {self.agent_id}, Session: {session_id}, Error: {str(e)}"
-                )
-                raise
+            total_time = time.time() - chat_start_time
+            logger.info(
+                f"聊天处理总耗时（优化版）: {total_time:.3f}秒 - Agent: {self.agent_id}"
+            )
+
+            return response_text
 
     def _save_debug_messages(
         self, user_id: str, session_id: str, debug_data: dict, conn

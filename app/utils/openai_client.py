@@ -20,15 +20,20 @@ _vanilla_openai_client = OpenAI(
 )
 
 
+os.environ["LANGSMITH_TRACING_V2"] = "true"
+os.environ["LANGSMITH_PROJECT"] = (
+    f"{global_config_loaded_from_config_yaml.app.name}-{global_config_loaded_from_config_yaml.app.environment}"
+)
+os.environ["LANGCHAIN_API_KEY"] = (
+    global_config_loaded_from_config_yaml.agent.langchain_api_key
+)
+
+
 def get_openai_client(labels: dict[str, str]):
     """
     Return an OpenAI client with LangSmith tracing.
     The ENV vars are required by langsmith.
     """
-    # These env vars has no arguments inputable to langchina api
-    assert os.getenv("LANGCHAIN_API_KEY"), "LANGCHAIN_API_KEY must be set"
-    assert os.getenv("LANGSMITH_TRACING_V2"), "LANGSMITH_TRACING_V2 must be set"
-    assert os.getenv("LANGSMITH_PROJECT"), "LANGSMITH_PROJECT must be set"
     # Create OpenAI client and wrap it with LangSmith
     tracing_extra: TracingExtra = {
         "metadata": labels,

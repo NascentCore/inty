@@ -70,6 +70,7 @@ class AppConfig:
     api_v1_prefix: str = "/api/v1"
     backend_cors_origins: List[AnyHttpUrl] = None
     version: str = "1.0.2"
+    environment: str = "dev"
 
     @dataclass
     class LimitsConfig:
@@ -98,7 +99,8 @@ class EmbeddingConfig:
 class AgentConfig:
     model: str = "google/gemini-2.5-flash"
     base_url: str = "https://openrouter.ai/api/v1"
-    api_key: str = "<fill-in-config.yaml>"
+    api_key: str = "<fill-in-key>"
+    langchain_api_key: str = "<fill-in-key>"
     temperature: float = 0.5
     max_tokens: int = 1000
     top_p: float = 1.0
