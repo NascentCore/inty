@@ -14,6 +14,10 @@ Role-play with AI characters. Create your own IntelliMate, powered by carefully 
 * 安装应用来自 2 个来源，GitHub Release、Google Play 内测轨道
 * 同一手机，只能选择 2 个来源之一，安装另一来源，需要删除原来源安装的版本
 * 从 play console 移除 app：https://youtu.be/jEwYmvqMKL8?si=pCFg09NXtkJMSKsK（不是下架）
+* `aapt dump badging /path/to/yourbuild.apk`
+  * `aapt ${ANDROID_SDK_ROOT}/build-tools/<ANDROID_API_VERSION>/aapt`
+* `bundletool dump manifest --bundle app/playdebug/app-playdebug.aab | grep versionCode`
+  * `brew install bundletool`
 
 ## 提交 bug 报告时附带版本号
 
