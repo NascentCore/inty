@@ -1466,6 +1466,7 @@ class AgentManager:
 
                 # 创建新的Agent实例
                 model_config = get_agent_model_config(agent_data)
+                logger.debug(f"model_config: {model_config}")
 
                 description = agent_data.get("description", "")
 

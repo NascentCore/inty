@@ -502,6 +502,7 @@ async def agent_chat_completions(
             )
 
         if request.stream:
+            logger.debug(f"开始流式聊天处理: session_id={session_id}")
             return StreamingResponse(
                 generate_chat_stream(
                     agent=agent,
@@ -521,9 +522,8 @@ async def agent_chat_completions(
                 },
             )
         else:
-            # 非流式聊天（异步）
+            logger.debug(f"开始非流式聊天处理: session_id={session_id}")
             chat_processing_start = time.time()
-            logger.debug(f"开始Agent聊天处理: session_id={session_id}")
 
             # 并行获取聊天设置和AI回复
             try:
@@ -535,6 +535,7 @@ async def agent_chat_completions(
 
                 # 先获取设置，然后传递给AI任务
                 chat_settings = await settings_task
+                logger.debug(f"chat_settings: {chat_settings.__dict__}")
 
                 ai_task = asyncio.create_task(
                     agent.chat(

@@ -343,7 +343,15 @@ export const AgentManagePage: React.FC = () => {
         personality: agent.personality,
         mode_prompt: agent.mode_prompt,
         modelType: agent.llm_config ? "custom" : "default",
-        ...(agent.llm_config || {}),
+        // 明确设置LLM配置字段，避免字段名不匹配问题
+        ...(agent.llm_config ? {
+          model: agent.llm_config.model,
+          temperature: agent.llm_config.temperature,
+          max_tokens: agent.llm_config.max_tokens,
+          top_p: agent.llm_config.top_p,
+          frequency_penalty: agent.llm_config.frequency_penalty,
+          presence_penalty: agent.llm_config.presence_penalty,
+        } : {}),
       });
     }, 100);
 
@@ -537,6 +545,8 @@ export const AgentManagePage: React.FC = () => {
                     style={{ flex: 1 }}
                     placeholder="请选择模型"
                     showSearch
+                    value={form.getFieldValue("model")}
+                    onChange={(value) => form.setFieldValue("model", value)}
                     filterOption={(input, option) =>
                       (option?.label ?? "")
                         .toLowerCase()
@@ -890,7 +900,7 @@ export const AgentManagePage: React.FC = () => {
         width={800}
         destroyOnHidden
       >
-        <Form form={editForm} layout="vertical" preserve={false}>
+        <Form form={editForm} layout="vertical" preserve={true}>
           {renderAgentForm(editForm, true)}
         </Form>
       </Modal>
