@@ -869,22 +869,33 @@ class Agent:
                             user_id, session_id, state_data, all_messages
                         )
                     )
+                    response_text = response.choices[0].message.content
                 else:
                     response = self.agent.invoke(state_data, config)
-                agent_invoke_time = time.time() - agent_invoke_start
-                logger.info(
-                    f"Agent推理耗时: {agent_invoke_time:.3f}秒 - Agent: {self.agent_id}"
-                )
+                    agent_invoke_time = time.time() - agent_invoke_start
+                    logger.info(
+                        f"Agent推理耗时: {agent_invoke_time:.3f}秒 - Agent: {self.agent_id}"
+                    )
 
-                # 处理响应
-                response_process_start = time.time()
-                # OpenAI API response format: response.choices[0].message.content
-                response_text = (
-                    response.choices[0].message.content
-                    if response.choices and response.choices[0].message
-                    else "抱歉，我无法理解您的消息。请再试一次。"
-                )
-                response_process_time = time.time() - response_process_start
+                    # 处理响应
+                    response_process_start = time.time()
+                    ai_messages = [
+                        message
+                        for message in response.get("messages", [])
+                        if isinstance(message, AIMessage)
+                    ]
+                    # OpenAI API response format: response.choices[0].message.content
+                    response_text = (
+                        ai_messages[-1].content
+                        if ai_messages
+                        else (
+                            response.choices[0].message.content
+                            if response.choices and response.choices[0].message
+                            else "Sorry, I cannot understand your message. Please try again."
+                        )
+                    )
+                    response_process_time = time.time() - response_process_start
+
                 logger.info(
                     f"响应处理耗时: {response_process_time:.3f}秒 - Agent: {self.agent_id}"
                 )
