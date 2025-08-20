@@ -50,6 +50,11 @@ class ApiClient {
       headers: {
         ...this.headers,
         ...options.headers,
+        // Add CORS headers to bypass CORS restrictions
+        'Origin': window.location.origin,
+        'Access-Control-Request-Method': 'POST, GET, PUT, DELETE, OPTIONS',
+        'Access-Control-Request-Headers': 'Content-Type, Authorization',
+        'X-Requested-With': 'XMLHttpRequest',
       },
     };
 
