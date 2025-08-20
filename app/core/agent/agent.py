@@ -31,6 +31,8 @@ from app.services.cache_service import cache_service
 
 from jinja2 import Template as Jinja2Template
 
+from app.utils.openai_client import get_openai_client
+
 logger = logging.getLogger(__name__)
 
 
@@ -820,7 +822,14 @@ class Agent:
                 # 调用agent进行对话
                 agent_invoke_start = time.time()
                 logger.info(f"开始Agent推理 - Agent: {self.agent_id}")
-                response = self.agent.invoke(state_data, config)
+                response = get_openai_client().chat.completions.create(
+                    model=global_config_loaded_from_config_yaml.agent.model,
+                    messages=all_messages,
+                    temperature=global_config_loaded_from_config_yaml.agent.temperature,
+                    max_tokens=global_config_loaded_from_config_yaml.agent.max_tokens,
+                    top_p=global_config_loaded_from_config_yaml.agent.top_p,
+                )
+                # response = self.agent.invoke(state_data, config)
                 agent_invoke_time = time.time() - agent_invoke_start
                 logger.info(
                     f"Agent推理耗时: {agent_invoke_time:.3f}秒 - Agent: {self.agent_id}"
