@@ -852,7 +852,6 @@ class Agent:
                     chat_settings=chat_settings,
                 )
                 config = {"configurable": {"user_id": user_id}}
-
                 input_build_time = time.time() - input_build_start
                 logger.info(
                     f"输入数据构建耗时: {input_build_time:.3f}秒 - Agent: {self.agent_id}"
