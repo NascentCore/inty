@@ -9,7 +9,6 @@ INTY_SERVER_IMAGE_NAME="ghcr.io/nascentcore/inty-backend/inty-server"
 # Use short commit hash as image tag
 IMAGE_TAG=$(git rev-parse HEAD | cut -c 1-7)
 DEPLOY_ENV="dev"
-SERVICE_PORT_ON_HOST="8000"
 REMOTE_HOST="inty"
 
 # Parse command line arguments
@@ -19,14 +18,9 @@ while [[ $# -gt 0 ]]; do
       DEPLOY_ENV="$2"
       shift 2
       ;;
-    --service-port-on-host)
-      SERVICE_PORT_ON_HOST="$2"
-      shift 2
-      ;;
     --help|-h)
-      log "Usage: $0 [--environment DEPLOY_ENV] [--service-port-on-host SERVICE_PORT_ON_HOST]"
+      log "Usage: $0 [--environment DEPLOY_ENV]"
       log "  --environment DEPLOY_ENV    Specify the environment to deploy to (default: dev)"
-      log "  --service-port-on-host SERVICE_PORT_ON_HOST    Specify the service port on host (default: 8000)"
       log "  --help, -h         Show this help message"
       exit 0
       ;;
@@ -39,8 +33,12 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [ "$DEPLOY_ENV" == "dev" ]; then
+  # 对应 github dev deployment environment 里的环境变量
+  SERVICE_PORT_ON_HOST="8000"
   SERVICE_PUBLIC_URL="https://dev.inty.sxwl.ai"
 elif [ "$DEPLOY_ENV" == "prod" ]; then
+  # 对应 github prod deployment environment 里的环境变量
+  SERVICE_PORT_ON_HOST="8100"
   SERVICE_PUBLIC_URL="https://app.inty.cc"
 else
   log "Unknown environment: $DEPLOY_ENV"
