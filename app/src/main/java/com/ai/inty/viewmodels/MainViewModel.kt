@@ -71,9 +71,10 @@ class MainViewModel : BaseActivityViewModel() {
             ?: throw IllegalStateException("ICommonApi not found in TheRouter")
     }
 
+    //系统推荐agents列表，也是首页默认的几个agents
     val agentList = mutableStateListOf<AgentInfo>()
-    val followingAgents = mutableStateListOf<AgentInfo>()
-    val userCreatedAgents = mutableStateListOf<AgentInfo>()
+    val followingAgents = mutableStateListOf<AgentInfo>()//关注的agents列表数据
+    val userCreatedAgents = mutableStateListOf<AgentInfo>()//用户自创建的agents数据
 
     private var currentPage = 0
     private var _isLoading = MutableStateFlow(false)
@@ -97,16 +98,14 @@ class MainViewModel : BaseActivityViewModel() {
 
     private var chatViewModel: ChatViewModel? = null
 
+    //使用flow数据流的形式，感知用户数据
     private val _userProfile = MutableStateFlow(UserProfile())
     val userProfile = _userProfile.asStateFlow()
 
-    val sysMsgs = mutableStateListOf<SysMsgItem>()
-
-
+    //用户切换触发更新数据的拦截器
     private val userProfileChanged = object : ActionInterceptor() {
         override fun handle(context: Context, navigator: Navigator): Boolean {
             getUserProfile()
-
             return super.handle(context, navigator)
         }
     }
@@ -245,7 +244,9 @@ class MainViewModel : BaseActivityViewModel() {
         EasyLog.log("Updated current chat page index to: $index")
     }
 
-
+    /**
+     * 接口请求获取用户信息
+     */
     fun getUserProfile() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
@@ -270,14 +271,13 @@ class MainViewModel : BaseActivityViewModel() {
                 }
             } catch (e: retrofit2.HttpException) {
                 // 专门处理HTTP异常
+                val errorMessage = handleHttpException(e, "user")
                 EasyLog.log(
                     "getUserProfile HTTP Exception: ${e.code()} - ${e.message()}",
                     EasyLog.ERROR
                 )
-                val errorMessage = handleHttpException(e, "user")
             } catch (e: Exception) {
                 EasyLog.log("getUserProfile exception: ${e.message}", priority = EasyLog.ERROR)
-                EasyLog.log(e)
             }
         }
     }
@@ -288,6 +288,9 @@ class MainViewModel : BaseActivityViewModel() {
         TheRouter.removeActionInterceptor(Constant.ACTION_USER_PROFILE_CHANGED, userProfileChanged)
     }
 
+    /**
+     * 注册firebase的推送服务
+     */
     private fun regFCM() {
         viewModelScope.launch {
             FirebaseMessaging.getInstance().token.addOnCompleteListener(OnCompleteListener { task ->
@@ -304,6 +307,7 @@ class MainViewModel : BaseActivityViewModel() {
                 val token = task.result
 
                 EasyLog.log("FCM token = $token")
+                //拿到firebase推送的token，注册给业务服务器，关联到用户
                 viewModelScope.launch(Dispatchers.IO) {
                     val result = userApi.regFCM(TokenBean(token))
                     EasyLog.log("regFCM = $result")
@@ -312,6 +316,13 @@ class MainViewModel : BaseActivityViewModel() {
         }
     }
 
+
+    //业务系统的消息列表
+    val sysMsgs = mutableStateListOf<SysMsgItem>()
+
+    /**
+     * 获取业务系统消息列表数据
+     */
     fun getSysMsgs() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
@@ -322,8 +333,12 @@ class MainViewModel : BaseActivityViewModel() {
                         sysMsgs.clear()
                         sysMsgs.addAll(result.data.list)
                     }
+
                     is HttpResult.Failure -> {
-                        EasyLog.log("getSysMsgs failed: ${result.message}", priority = EasyLog.ERROR)
+                        EasyLog.log(
+                            "getSysMsgs failed: ${result.message}",
+                            priority = EasyLog.ERROR
+                        )
                     }
                 }
             } catch (e: Exception) {
@@ -654,7 +669,10 @@ class MainViewModel : BaseActivityViewModel() {
                 clearCredentialState(AppEnv.context)
                 EasyLog.log("Credential state cleared successfully during logout")
             } catch (e: Exception) {
-                EasyLog.log("Failed to clear credential state during logout: ${e.message}", EasyLog.ERROR)
+                EasyLog.log(
+                    "Failed to clear credential state during logout: ${e.message}",
+                    EasyLog.ERROR
+                )
             }
         }
 

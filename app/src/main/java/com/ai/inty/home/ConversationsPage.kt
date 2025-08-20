@@ -15,7 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
@@ -40,7 +40,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-
 import com.ai.inty.Constant
 import com.ai.inty.R
 import com.ai.inty.base.IntyImage
@@ -50,9 +49,7 @@ import com.ai.inty.beans.AgentInfo
 import com.ai.inty.beans.ConversationItem
 import com.ai.inty.beans.SysMsgItem
 import com.ai.inty.utils.AuthClickable
-
 import com.inty.utils.formatTimestampToDateTime
-
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -267,10 +264,10 @@ private fun MessageTabContent(
             // 会话列表
             if (conversations.isNotEmpty()) {
                 runCatching {
-                    items(
+                    itemsIndexed(
                         items = conversations,
-                        key = { conversion -> conversion.agentId }
-                    ) { conversion ->
+                        key = { index, conversion -> "${conversion.agentId}_$index" }
+                    ) { index, conversion ->
                         AuthClickable(onClick = { onClickConversationItem(conversion) }) { authModifier ->
                             ConversationItem(
                                 modifier = authModifier.fillMaxWidth(),
@@ -327,10 +324,10 @@ private fun FollowingTabContent(
     if (followingAgents.isNotEmpty()) {
         LazyColumn(modifier = Modifier.fillMaxSize()) {
             runCatching {
-                items(
+                itemsIndexed(
                     items = followingAgents,
-                    key = { agent -> agent.id }
-                ) { agent ->
+                    key = { index, agent -> "${agent.id}_$index" }
+                ) { index, agent ->
                     if (onUnfollowAgent != null) {
                         LongPressUnfollowItem(
                             agent = agent,

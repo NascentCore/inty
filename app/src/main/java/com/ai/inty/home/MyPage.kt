@@ -15,7 +15,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -310,19 +310,23 @@ internal fun MyPage(
                         horizontalArrangement = Arrangement.spacedBy(13.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        items(
-                            items = agents,
-                            key = { agent -> agent.id }
-                        ) { agent ->
-                            MyAgentCard(
-                                modifier = Modifier.noRippleClickable {
-                                    onClickAgent(agent)
-                                },
-                                agentInfo = agent,
-                                onEditAgent = onEditAgent,
-                                onDeleteAgent = onDeleteAgent
-                            )
-                        }
+                        runCatching {
+                            if (agents.isNotEmpty()) {
+                                itemsIndexed(
+                                    items = agents,
+                                    key = { index, agent -> "${agent.id}_$index" }
+                                ) { index, agent ->
+                                    MyAgentCard(
+                                        modifier = Modifier.noRippleClickable {
+                                            onClickAgent(agent)
+                                        },
+                                        agentInfo = agent,
+                                        onEditAgent = onEditAgent,
+                                        onDeleteAgent = onDeleteAgent
+                                    )
+                                }
+                            }
+                        }.onFailure { it.printStackTrace() }
 
                         // Loading indicator when loading more
                         if (isLoading) {

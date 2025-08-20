@@ -16,7 +16,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Scaffold
@@ -25,6 +25,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -60,7 +61,7 @@ fun RecommendPage(
     onRefresh: () -> Unit = {},
 ) {
     // 下拉刷新状态
-    var pullOffset by remember { mutableStateOf(0f) }
+    var pullOffset by remember { mutableFloatStateOf(0f) }
     var isRefreshing by remember { mutableStateOf(false) }
     val pullThreshold = 120f // 触发刷新的阈值
 
@@ -93,7 +94,11 @@ fun RecommendPage(
                 }
             }
 
-            override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
+            override fun onPostScroll(
+                consumed: Offset,
+                available: Offset,
+                source: NestedScrollSource
+            ): Offset {
                 // 当向下滚动且已经滚动到顶部时，开始下拉
                 return if (available.y > 0 && source == NestedScrollSource.UserInput) {
                     pullOffset = (pullOffset + available.y).coerceAtMost(pullThreshold * 1.5f)
@@ -195,24 +200,33 @@ fun RecommendPage(
 
                 LazyVerticalGrid(
                     state = gridState,
-                    modifier = Modifier.padding(bottom = innerPadding.calculateBottomPadding() + 80.dp, start = 16.dp, end = 16.dp),
+                    modifier = Modifier.padding(
+                        bottom = innerPadding.calculateBottomPadding() + 80.dp,
+                        start = 16.dp,
+                        end = 16.dp
+                    ),
                     columns = GridCells.Fixed(2),
                     horizontalArrangement = Arrangement.spacedBy(13.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
-                    items(
-                        items = agents,
-                        key = { agent -> agent.id }
-                    ) { agent ->
-                        RecommendPageItem(
-                            modifier = Modifier
-                                .size(165.dp, 220.dp)
-                                .noRippleClickable {
-                                    onClickAgent(agent)
-                                },
-                            agentInfo = agent
-                        )
-                    }
+                    runCatching {
+                        if (agents.isNotEmpty()) {
+                            itemsIndexed(
+                                items = agents,
+                                key = { index, agent -> "${agent.id}_$index" }
+                            ) { index, agent ->
+                                RecommendPageItem(
+                                    modifier = Modifier
+                                        .size(165.dp, 220.dp)
+                                        .noRippleClickable {
+                                            onClickAgent(agent)
+                                        },
+                                    agentInfo = agent
+                                )
+                            }
+                        }
+                    }.onFailure { it.printStackTrace() }
+
 
                     // 加载更多指示器
                     if (isLoading && agents.isNotEmpty()) {

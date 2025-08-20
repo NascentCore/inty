@@ -91,6 +91,7 @@ import com.therouter.router.Route
 import com.yalantis.ucrop.UCrop
 import com.yalantis.ucrop.UCropActivity
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
@@ -415,7 +416,7 @@ private fun CreateRolePage(
     LaunchedEffect(Unit) {
         // 定期检查生成状态 (作为备用机制)
         while (true) {
-            kotlinx.coroutines.delay(2000) // 每2秒检查一次
+            delay(2000) // 每2秒检查一次
 
             val currentGenerationStatus = AvatarManager.isGenerating()
             if (currentGenerationStatus != isGeneratingAvatar) {
@@ -1134,37 +1135,41 @@ private fun AvatarUploadSection(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    items(items = avatarUrls.indices.toList()) { index ->
-                        val imageUrl = avatarUrls[index]
-                        Box(
-                            modifier = Modifier
-                                .width(88.dp)
-                                .aspectRatio(9 / 16f)
-                                .background(
-                                    color = Color(0x1A78599A),
-                                    shape = RoundedCornerShape(8.dp)
-                                )
-                                .border(
-                                    width = if (index == selectedIndex) 3.dp else 1.dp,
-                                    color = if (index == selectedIndex) Color(0xFFE91E63) else Color.Transparent,
-                                    shape = RoundedCornerShape(8.dp)
-                                )
-                                .noRippleClickable { onImageSelected(index) },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            AsyncImage(
-                                model = imageUrl,
-                                contentDescription = stringResource(
-                                    R.string.content_desc_generated_avatar_index,
-                                    index
-                                ),
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(4.dp),
-                                contentScale = ContentScale.Crop
-                            )
+                    runCatching {
+                        if (avatarUrls.isNotEmpty()) {
+                            items(items = avatarUrls.indices.toList()) { index ->
+                                val imageUrl = avatarUrls[index]
+                                Box(
+                                    modifier = Modifier
+                                        .width(88.dp)
+                                        .aspectRatio(9 / 16f)
+                                        .background(
+                                            color = Color(0x1A78599A),
+                                            shape = RoundedCornerShape(8.dp)
+                                        )
+                                        .border(
+                                            width = if (index == selectedIndex) 3.dp else 1.dp,
+                                            color = if (index == selectedIndex) Color(0xFFE91E63) else Color.Transparent,
+                                            shape = RoundedCornerShape(8.dp)
+                                        )
+                                        .noRippleClickable { onImageSelected(index) },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    AsyncImage(
+                                        model = imageUrl,
+                                        contentDescription = stringResource(
+                                            R.string.content_desc_generated_avatar_index,
+                                            index
+                                        ),
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .padding(4.dp),
+                                        contentScale = ContentScale.Crop
+                                    )
+                                }
+                            }
                         }
-                    }
+                    }.onFailure { it.printStackTrace() }
                 }
             }
         }

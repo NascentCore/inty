@@ -79,32 +79,37 @@ fun SysMsgsScreen(
             LazyColumn(
                 modifier = Modifier.padding(innerPadding)
             ) {
-                itemsIndexed(
-                    items = msgs,
-                    key = { _, msg -> msg.id }
-                ) { index, msg ->
-                    when (msg.templateId) {
-                        SysMsgTemplateId.TEXT_WITH_LINK.id -> {
-                            SysMsgItemTextLink(msg)
-                        }
+                runCatching {
+                    if (msgs.isNotEmpty()) {
+                        itemsIndexed(
+                            items = msgs,
+                            key = { index, msg -> "${msg.id}_$index" }
+                        ) { index, msg ->
+                            when (msg.templateId) {
+                                SysMsgTemplateId.TEXT_WITH_LINK.id -> {
+                                    SysMsgItemTextLink(msg)
+                                }
 
-                        SysMsgTemplateId.IMAGE_WITH_LINK.id -> {
-                            SysMsgItemImageLink(msg)
-                        }
+                                SysMsgTemplateId.IMAGE_WITH_LINK.id -> {
+                                    SysMsgItemImageLink(msg)
+                                }
 
-                        SysMsgTemplateId.TEXT_ONLY.id -> {
-                            SysMsgItemTextLink(msg, false)
-                        }
+                                SysMsgTemplateId.TEXT_ONLY.id -> {
+                                    SysMsgItemTextLink(msg, false)
+                                }
 
-                        SysMsgTemplateId.IMAGE_ONLY.id -> {
-                            SysMsgItemImage(msg)
-                        }
+                                SysMsgTemplateId.IMAGE_ONLY.id -> {
+                                    SysMsgItemImage(msg)
+                                }
 
-                        SysMsgTemplateId.IMAGE_TEXT_LINK.id -> {
-                            SysMsgItemImageTextLink(msg)
+                                SysMsgTemplateId.IMAGE_TEXT_LINK.id -> {
+                                    SysMsgItemImageTextLink(msg)
+                                }
+                            }
                         }
                     }
-                }
+                }.onFailure { it.printStackTrace() }
+
             }
         }
     }
