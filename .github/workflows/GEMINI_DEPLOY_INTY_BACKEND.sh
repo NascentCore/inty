@@ -6,6 +6,7 @@ log() {
 }
 
 INTY_SERVER_IMAGE_NAME="ghcr.io/nascentcore/inty-backend/inty-server"
+# Use short commit hash as image tag
 IMAGE_TAG=$(git rev-parse HEAD | cut -c 1-7)
 DEPLOY_ENV="dev"
 SERVICE_PORT_ON_HOST="8000"
