@@ -3,6 +3,8 @@
 # Make sure pwd is the directory of the script
 cd "$(dirname "$0")"
 
+export REACT_APP_API_BASE_URL="https://dev.inty.sxwl.ai/api/v1"
+
 if ! command -v npm &> /dev/null
 then
     read -p "npm is not installed. Do you want to install nodejs and npm? (y/n)" choice
