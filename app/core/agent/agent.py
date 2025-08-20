@@ -31,6 +31,8 @@ from app.services.cache_service import cache_service
 
 from jinja2 import Template as Jinja2Template
 
+from app.utils.openai_client import get_openai_client
+
 logger = logging.getLogger(__name__)
 
 
@@ -811,7 +813,7 @@ class Agent:
                     user_id=user_id,
                     chat_settings=chat_settings,
                 )
-                config = {"configurable": {"user_id": user_id}}
+
                 input_build_time = time.time() - input_build_start
                 logger.info(
                     f"输入数据构建耗时: {input_build_time:.3f}秒 - Agent: {self.agent_id}"
@@ -820,7 +822,63 @@ class Agent:
                 # 调用agent进行对话
                 agent_invoke_start = time.time()
                 logger.info(f"开始Agent推理 - Agent: {self.agent_id}")
-                response = self.agent.invoke(state_data, config)
+
+                # Get properly formatted messages from prompt_runnable
+                formatted_prompt = self.prompt_runnable.invoke(state_data)
+                openai_messages = []
+
+                for message in formatted_prompt.messages:
+                    if isinstance(message, SystemMessage):
+                        openai_messages.append(
+                            {"role": "system", "content": message.content}
+                        )
+                    elif isinstance(message, HumanMessage):
+                        openai_messages.append(
+                            {"role": "user", "content": message.content}
+                        )
+                    elif isinstance(message, AIMessage):
+                        openai_messages.append(
+                            {"role": "assistant", "content": message.content}
+                        )
+                logger.debug(f"openai_messages: {openai_messages}")
+
+                for message in all_messages:
+                    if isinstance(message, SystemMessage):
+                        openai_messages.append(
+                            {"role": "system", "content": message.content}
+                        )
+                    elif isinstance(message, HumanMessage):
+                        openai_messages.append(
+                            {"role": "user", "content": message.content}
+                        )
+                    elif isinstance(message, AIMessage):
+                        openai_messages.append(
+                            {"role": "assistant", "content": message.content}
+                        )
+                logger.debug(f"openai_messages: {openai_messages}")
+
+                response = get_openai_client(
+                    {
+                        "user_id": user_id,
+                        "agent_id": self.agent_id,
+                        "session_id": session_id,
+                    }
+                ).chat.completions.create(
+                    model=self.model_config.get(
+                        "model", global_config_loaded_from_config_yaml.agent.model
+                    ),
+                    messages=openai_messages,
+                    temperature=self.model_config.get(
+                        "temperature",
+                        global_config_loaded_from_config_yaml.agent.temperature,
+                    ),
+                    max_tokens=self.model_config.get(
+                        "max_tokens",
+                        global_config_loaded_from_config_yaml.agent.max_tokens,
+                    ),
+                    top_p=self.model_config.get("top_p"),
+                )
+                # response = self.agent.invoke(state_data, config)
                 agent_invoke_time = time.time() - agent_invoke_start
                 logger.info(
                     f"Agent推理耗时: {agent_invoke_time:.3f}秒 - Agent: {self.agent_id}"
@@ -828,14 +886,10 @@ class Agent:
 
                 # 处理响应
                 response_process_start = time.time()
-                ai_messages = [
-                    message
-                    for message in response.get("messages", [])
-                    if isinstance(message, AIMessage)
-                ]
+                # OpenAI API response format: response.choices[0].message.content
                 response_text = (
-                    ai_messages[-1].content
-                    if ai_messages
+                    response.choices[0].message.content
+                    if response.choices and response.choices[0].message
                     else "抱歉，我无法理解您的消息。请再试一次。"
                 )
                 response_process_time = time.time() - response_process_start
@@ -890,31 +944,18 @@ class Agent:
 
                     # 添加AI响应消息
                     ai_message = None
-                    for msg in response.get("messages", []):
-                        if hasattr(msg, "type") and hasattr(msg, "content"):
-                            if msg.type in ["ai", "assistant"]:
-                                # 转换AI消息类型为character
-                                ai_message = {
-                                    "type": "character",
-                                    "content": msg.content,
-                                }
-                        elif isinstance(msg, dict) and msg.get("type") in [
-                            "ai",
-                            "assistant",
-                        ]:
-                            # 转换AI消息类型为character
-                            ai_message = {
-                                "type": "character",
-                                "content": msg.get("content", str(msg)),
-                            }
+                    # OpenAI API response format: response.choices[0].message.content
+                    if response.choices and response.choices[0].message:
+                        ai_message = {
+                            "type": "character",
+                            "content": response.choices[0].message.content,
+                        }
+                    elif response_text:
+                        # Fallback to response_text if OpenAI format parsing fails
+                        ai_message = {"type": "character", "content": response_text}
 
                     if ai_message:
                         formatted_messages.append(ai_message)
-                    elif response_text:
-                        # AI响应转换为character类型
-                        formatted_messages.append(
-                            {"type": "character", "content": response_text}
-                        )
 
                     # 准备调试数据（包含预格式化的完整消息）
                     debug_data = {

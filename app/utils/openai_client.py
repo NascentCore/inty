@@ -9,15 +9,10 @@ Demo for using OpenAI SDK with LangSmith to track the usage of OpenAI API.
 import os
 from openai import OpenAI
 from langsmith import wrappers
-
+from langsmith.wrappers._openai import TracingExtra
 
 from app.core.config import global_config_loaded_from_config_yaml
 
-
-# These env vars has no arguments inputable to langchina api
-assert os.getenv("LANGCHAIN_API_KEY"), "LANGCHAIN_API_KEY must be set"
-assert os.getenv("LANGSMITH_TRACING_V2"), "LANGSMITH_TRACING_V2 must be set"
-assert os.getenv("LANGSMITH_PROJECT"), "LANGSMITH_PROJECT must be set"
 
 _vanilla_openai_client = OpenAI(
     base_url=global_config_loaded_from_config_yaml.agent.base_url,
@@ -30,6 +25,10 @@ def get_openai_client(labels: dict[str, str]):
     Return an OpenAI client with LangSmith tracing.
     The ENV vars are required by langsmith.
     """
+    # These env vars has no arguments inputable to langchina api
+    assert os.getenv("LANGCHAIN_API_KEY"), "LANGCHAIN_API_KEY must be set"
+    assert os.getenv("LANGSMITH_TRACING_V2"), "LANGSMITH_TRACING_V2 must be set"
+    assert os.getenv("LANGSMITH_PROJECT"), "LANGSMITH_PROJECT must be set"
     # Create OpenAI client and wrap it with LangSmith
     tracing_extra: TracingExtra = {
         "metadata": labels,
