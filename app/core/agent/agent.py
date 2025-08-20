@@ -944,18 +944,31 @@ class Agent:
 
                     # 添加AI响应消息
                     ai_message = None
-                    # OpenAI API response format: response.choices[0].message.content
-                    if response.choices and response.choices[0].message:
-                        ai_message = {
-                            "type": "character",
-                            "content": response.choices[0].message.content,
-                        }
-                    elif response_text:
-                        # Fallback to response_text if OpenAI format parsing fails
-                        ai_message = {"type": "character", "content": response_text}
+                    for msg in response.get("messages", []):
+                        if hasattr(msg, "type") and hasattr(msg, "content"):
+                            if msg.type in ["ai", "assistant"]:
+                                # 转换AI消息类型为character
+                                ai_message = {
+                                    "type": "character",
+                                    "content": msg.content,
+                                }
+                        elif isinstance(msg, dict) and msg.get("type") in [
+                            "ai",
+                            "assistant",
+                        ]:
+                            # 转换AI消息类型为character
+                            ai_message = {
+                                "type": "character",
+                                "content": msg.get("content", str(msg)),
+                            }
 
                     if ai_message:
                         formatted_messages.append(ai_message)
+                    elif response_text:
+                        # AI响应转换为character类型
+                        formatted_messages.append(
+                            {"type": "character", "content": response_text}
+                        )
 
                     # 准备调试数据（包含预格式化的完整消息）
                     debug_data = {
