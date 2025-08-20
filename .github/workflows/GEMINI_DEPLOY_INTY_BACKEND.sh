@@ -11,7 +11,6 @@ IMAGE_TAG=$(git rev-parse HEAD | cut -c 1-7)
 DEPLOY_ENV="dev"
 SERVICE_PORT_ON_HOST="8000"
 REMOTE_HOST="inty"
-SERVICE_PUBLIC_URL="https://dev.inty.sxwl.ai"
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
@@ -39,7 +38,14 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-
+if [ "$DEPLOY_ENV" == "dev" ]; then
+  SERVICE_PUBLIC_URL="https://dev.inty.sxwl.ai"
+elif [ "$DEPLOY_ENV" == "prod" ]; then
+  SERVICE_PUBLIC_URL="https://app.inty.cc"
+else
+  log "Unknown environment: $DEPLOY_ENV"
+  exit 1
+fi
 
 FULL_IMAGE_TAG="${INTY_SERVER_IMAGE_NAME}:${IMAGE_TAG}"
 CONTAINER_NAME="inty-backend-${DEPLOY_ENV}"
