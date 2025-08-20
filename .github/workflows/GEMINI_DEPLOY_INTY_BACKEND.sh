@@ -6,7 +6,7 @@ log() {
 }
 
 INTY_SERVER_IMAGE_NAME="ghcr.io/nascentcore/inty-backend/inty-server"
-IMAGE_TAG=$(git rev-parse --abbrev-ref HEAD)
+IMAGE_TAG=$(git rev-parse HEAD | cut -c 1-7)
 DEPLOY_ENV="dev"
 SERVICE_PORT_ON_HOST="8000"
 REMOTE_HOST="inty"
@@ -15,10 +15,6 @@ SERVICE_PUBLIC_URL="https://dev.inty.sxwl.ai"
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
   case $1 in
-    --tag)
-      IMAGE_TAG="$2"
-      shift 2
-      ;;
     --environment)
       DEPLOY_ENV="$2"
       shift 2
@@ -28,8 +24,9 @@ while [[ $# -gt 0 ]]; do
       shift 2
       ;;
     --help|-h)
-      log "Usage: $0 [--tag IMAGE_TAG]"
-      log "  --tag IMAGE_TAG    Specify the image tag (default: main)"
+      log "Usage: $0 [--environment DEPLOY_ENV] [--service-port-on-host SERVICE_PORT_ON_HOST]"
+      log "  --environment DEPLOY_ENV    Specify the environment to deploy to (default: dev)"
+      log "  --service-port-on-host SERVICE_PORT_ON_HOST    Specify the service port on host (default: 8000)"
       log "  --help, -h         Show this help message"
       exit 0
       ;;
