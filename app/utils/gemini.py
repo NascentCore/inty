@@ -76,31 +76,6 @@ def get_genai_client():
     return client
 
 
-def enhance_prompt(prompt: str, gender: str) -> str:
-    """
-    增强提示词
-    """
-    # 获取反向性别
-
-    # 构建增强提示词
-    enhanced_prompt = f"""
-    A person who is welcoming, friendly.
-    age: 22 - 35
-    gender: {gender}
-
-    {prompt}
-
-    Additional requirements:
-    The image must be of a person.
-    It cannot be a landscape, object, or any other non-human content.
-    Avoid generating images of people appearing less than 18 years old.
-    All content must be appropriate for a general audience.
-    """
-
-    logger.debug(f"Enhanced prompt: {enhanced_prompt}")
-    return enhanced_prompt
-
-
 class ImagenGeneratedImage(BaseModel):
     """
     An output image from Imagen API.
@@ -126,7 +101,11 @@ class MimeType(StrEnum):
     JPEG = "image/jpeg"
 
 
-class GenerateImagesConfig(BaseModel):
+class ImagenGenerateImagesConfig(BaseModel):
+    model: str = Field(
+        default=global_config_loaded_from_config_yaml.agent.vertex_image_model,
+        description="The model to use for the image generation. This is the model name in the Vertex AI API.",
+    )
     prompt: str
     negative_prompt: Optional[str] = None
     count: int = 1
@@ -145,7 +124,7 @@ class GenerateImagesConfig(BaseModel):
     )
 
 
-def text_to_image(config: GenerateImagesConfig) -> List[ImagenGeneratedImage]:
+def text_to_image(config: ImagenGenerateImagesConfig) -> List[ImagenGeneratedImage]:
     """
     使用output_gcs_uri参数直接将生成的背景图保存到GCS，返回实际生成的图片GCS路径列表
     支持includeRaiReason参数获取RAI过滤原因
@@ -164,7 +143,7 @@ def text_to_image(config: GenerateImagesConfig) -> List[ImagenGeneratedImage]:
         logger.debug(config.model_dump())
 
         # 使用新的Google Gen AI SDK生成图片
-        config = types.GenerateImagesConfig(
+        gen_image_config = types.GenerateImagesConfig(
             negative_prompt=config.negative_prompt,
             number_of_images=config.count,
             aspect_ratio=config.aspect_ratio,
@@ -185,9 +164,9 @@ def text_to_image(config: GenerateImagesConfig) -> List[ImagenGeneratedImage]:
         client = get_genai_client()
 
         response = client.models.generate_images(
-            model=global_config_loaded_from_config_yaml.agent.vertex_image_model,
-            prompt=prompt,
-            config=config,
+            model=config.model,
+            prompt=config.prompt,
+            config=gen_image_config,
         )
 
         logger.debug(f"Image generation response: {response}")

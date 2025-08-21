@@ -2,6 +2,7 @@
 Structured prompt for roleplay.
 """
 
+from loguru import logger
 from pydantic import BaseModel, Field
 
 ###############################################################################
@@ -184,3 +185,28 @@ FRIENDLY_ROLEPLAY_PROMPT = StructuredPrompt(
     output_format_prompt=ROLEPLAY_OUTPUT_FORMAT_PROMPT,
     auxiliary_prompts=[ASK_FOR_NAME_PROMPT],
 )
+
+
+def enhance_prompt(prompt: str, gender: str) -> str:
+    """
+    增强提示词
+    """
+    # 获取反向性别
+
+    # 构建增强提示词
+    enhanced_prompt = f"""
+    A person who is welcoming, friendly.
+    age: 22 - 35
+    gender: {gender}
+
+    {prompt}
+
+    Additional requirements:
+    The image must be of a person.
+    It cannot be a landscape, object, or any other non-human content.
+    Avoid generating images of people appearing less than 18 years old.
+    All content must be appropriate for a general audience.
+    """
+
+    logger.debug(f"Enhanced prompt: {enhanced_prompt}")
+    return enhanced_prompt
