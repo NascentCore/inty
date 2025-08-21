@@ -8,6 +8,7 @@ alwaysApply: false
 
 * Use ../FASTAPI_BEST_PRACTICES_ZH.md as guideline
 * Use '-' in api path, 'text-to-image' instead 'text_to_image'
+* Use [FastAPI TestClient](https://fastapi.tiangolo.com/reference/testclient/) in writing tests
 
 <https://fastapi.tiangolo.com/tutorial/bigger-applications/#include-the-apirouters-for-users-and-items>
 

@@ -5,6 +5,7 @@ from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api import deps
+from app.api.utils.logger_route import LoggerRoute
 from app.models.notification import TEMPLATE_TYPE_MAP
 from app.schemas.notification import (
     NotificationItem,
@@ -17,7 +18,7 @@ from app.schemas.notification import (
 from app.schemas.response import APIResponse, PaginationData
 from app.services import notification_service
 
-router = APIRouter(prefix="/notifications")
+router = APIRouter(prefix="/notifications", route_class=LoggerRoute)
 
 
 @router.post("/", response_model=APIResponse, include_in_schema=False)

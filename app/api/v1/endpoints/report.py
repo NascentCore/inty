@@ -7,6 +7,7 @@ from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api import deps
+from app.api.utils.logger_route import LoggerRoute
 from app.core.config import global_config_loaded_from_config_yaml
 from app.db.session import get_async_db
 from app.models.report import ReportStatus
@@ -22,7 +23,7 @@ from app.schemas.response import APIResponse, PaginationData
 from app.services import report_service
 from app.utils.gcs import upload_to_gcs
 
-router = APIRouter(prefix="/report")
+router = APIRouter(prefix="/report", route_class=LoggerRoute)
 
 
 @router.post(

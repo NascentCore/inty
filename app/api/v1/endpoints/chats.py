@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import models, schemas
 from app.api import deps
+from app.api.utils.logger_route import LoggerRoute
 from app.core.agent.agent import agent_manager
 from app.core.config import global_config_loaded_from_config_yaml
 from app.schemas.chat import ChatCompletionRequest
@@ -26,7 +27,7 @@ from app.services.voice_cache_service import voice_cache_service
 from app.services.voice_cleanup_service import voice_cleanup_service
 from app.services.voice_service import voice_service
 
-router = APIRouter(prefix="/chats")
+router = APIRouter(prefix="/chats", route_class=LoggerRoute)
 
 logger = logging.getLogger(__name__)
 
