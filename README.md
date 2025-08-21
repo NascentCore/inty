@@ -10,7 +10,7 @@ IntelliMate: Ultimate companionship, reimagined with AI
 Role-play with AI characters. Create your own IntelliMate, powered by carefully tuned AI agents, experience your own imagination. 
 
 * 将模拟器界面始终置于桌面前方，方便操作观察
-  <img width="680" height="1678" alt="image" src="https://github.com/user-attachments/assets/cbd3f10f-f028-4103-a5f6-c997ba8b9eb9" />
+  <img width="480" height="1678" alt="image" src="https://github.com/user-attachments/assets/cbd3f10f-f028-4103-a5f6-c997ba8b9eb9" />
 * cmd+↑（放大模拟器设备界面）cmd+↓ （缩小模拟器设备界面）
 
 ## 注意 ⚠️
