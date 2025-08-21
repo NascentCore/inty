@@ -42,12 +42,6 @@ async def get_current_user(
     token: str = Depends(oauth2_scheme), db: AsyncSession = Depends(get_async_db)
 ) -> User:
     """获取当前用户"""
-    logger.debug(f"=== 开始验证用户token ===")
-    logger.debug(f"Token长度: {len(token) if token else 0}")
-    logger.debug(
-        f"Token前缀: {token[:20] + '...' if token and len(token) > 20 else token}"
-    )
-
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -55,23 +49,13 @@ async def get_current_user(
     )
 
     try:
-        logger.debug(f"开始解码JWT token")
-        logger.debug(
-            f"使用密钥: {global_config_loaded_from_config_yaml.security.secret_key[:10] + '...' if global_config_loaded_from_config_yaml.security.secret_key else 'None'}"
-        )
-        logger.debug(
-            f"使用算法: {global_config_loaded_from_config_yaml.security.algorithm}"
-        )
-
         payload = jwt.decode(
             token,
             global_config_loaded_from_config_yaml.security.secret_key,
             algorithms=[global_config_loaded_from_config_yaml.security.algorithm],
         )
-        logger.debug(f"JWT解码成功，payload: {payload}")
 
         user_id: str = payload.get("sub")
-        logger.debug(f"从payload中提取user_id: {user_id}")
 
         if user_id is None:
             logger.error("payload中没有找到sub字段")
@@ -93,19 +77,14 @@ async def get_current_user(
         logger.error(f"错误堆栈: {traceback.format_exc()}")
         raise credentials_exception
 
-    logger.debug(f"开始查询用户: {user_id}")
     try:
         user = await db.execute(select(User).where(User.id == user_id))
         user = user.scalar_one_or_none()
-        logger.debug(f"用户查询结果: {'找到用户' if user else '用户不存在'}")
 
         if not user:
             logger.error(f"数据库中未找到用户: {user_id}")
             raise credentials_exception
 
-        logger.debug(
-            f"用户验证成功: {user.id}, 昵称: {user.nickname}, 是否激活: {user.is_active}"
-        )
         return user
 
     except Exception as db_error:
@@ -121,12 +100,6 @@ async def get_current_active_user(
     current_user: User = Depends(get_current_user),
 ) -> User:
     """获取当前活跃用户"""
-    logger.debug(f"=== 检查用户活跃状态 ===")
-    logger.debug(f"用户ID: {current_user.id}")
-    logger.debug(f"用户昵称: {current_user.nickname}")
-    logger.debug(f"用户是否激活: {current_user.is_active}")
-    logger.debug(f"用户删除时间: {current_user.deleted_at}")
-
     if not current_user.is_active:
         logger.error(f"用户未激活: {current_user.id}")
         raise HTTPException(
