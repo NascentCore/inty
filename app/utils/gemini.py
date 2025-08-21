@@ -76,6 +76,31 @@ def get_genai_client():
     return client
 
 
+def enhance_prompt(prompt: str, gender: str) -> str:
+    """
+    增强提示词
+    """
+    # 获取反向性别
+
+    # 构建增强提示词
+    enhanced_prompt = f"""
+    A person who is welcoming, friendly.
+    age: 22 - 35
+    gender: {gender}
+
+    {prompt}
+
+    Additional requirements:
+    The image must be of a person.
+    It cannot be a landscape, object, or any other non-human content.
+    Avoid generating images of people appearing less than 18 years old.
+    All content must be appropriate for a general audience.
+    """
+
+    logger.debug(f"Enhanced prompt: {enhanced_prompt}")
+    return enhanced_prompt
+
+
 class ImagenGeneratedImage(BaseModel):
     """
     An output image from Imagen API.
@@ -101,30 +126,15 @@ class MimeType(StrEnum):
     JPEG = "image/jpeg"
 
 
-class ImagenGenerateImagesConfig(BaseModel):
-    model: str = Field(
-        default=global_config_loaded_from_config_yaml.agent.vertex_image_model,
-        description="The model to use for the image generation. This is the model name in the Vertex AI API.",
-    )
-    prompt: str
-    negative_prompt: Optional[str] = None
-    count: int = 1
-    gcs_uri_base: str
-    negative_prompt: Optional[str] = None
-    guidance_scale: Optional[float] = None
-    seed: Optional[int] = Field(
-        default=None,
-        # See https://cloud.google.com/vertex-ai/generative-ai/docs/image/generate-deterministic-images#use-a-seed-to-generate-images
-        # Same seed always results into the same generated image.
-        description="The seed to use for the image generation. None means random seed.",
-    )
-    enhance_prompt: Optional[bool] = Field(
-        default=True,
-        description="Whether to enhance the prompt to improve the quality of the image.",
-    )
-
-
-def text_to_image(config: ImagenGenerateImagesConfig) -> List[ImagenGeneratedImage]:
+def text_to_image(
+    prompt: str,
+    negative_prompt: str,
+    enhanced_prompt: bool,
+    gender: str,
+    aspect_ratio: str,
+    gcs_uri_base: str,
+    count: int,
+) -> List[ImagenGeneratedImage]:
     """
     使用output_gcs_uri参数直接将生成的背景图保存到GCS，返回实际生成的图片GCS路径列表
     支持includeRaiReason参数获取RAI过滤原因
@@ -140,33 +150,37 @@ def text_to_image(config: ImagenGenerateImagesConfig) -> List[ImagenGeneratedIma
         list: 生成图片的HTTPS URL列表，或包含RAI原因的字典
     """
     try:
-        logger.debug(config.model_dump())
+        logger.debug(
+            f"Starting image generation with prompt: {prompt}, "
+            f"negative_prompt: {negative_prompt}, "
+            f"gcs_uri_base: {gcs_uri_base}, "
+            f"count: {count}, "
+            f"aspect_ratio: {aspect_ratio}"
+        )
 
         # 使用新的Google Gen AI SDK生成图片
-        gen_image_config = types.GenerateImagesConfig(
-            negative_prompt=config.negative_prompt,
-            number_of_images=config.count,
-            aspect_ratio=config.aspect_ratio,
+        config = types.GenerateImagesConfig(
+            negative_prompt=negative_prompt,
+            number_of_images=count,
+            aspect_ratio=aspect_ratio,
             # TODO: 上架期间仅生成低风险图片，选择屏蔽低风险和以上风险图片。
             safety_filter_level=types.SafetyFilterLevel.BLOCK_LOW_AND_ABOVE,
             person_generation=types.PersonGeneration.ALLOW_ADULT,
-            output_gcs_uri=config.gcs_uri_base,
+            output_gcs_uri=gcs_uri_base,
             include_rai_reason=True,
-            # add_watermark=False,
-            guidance_scale=config.guidance_scale,
-            seed=config.seed,
             # This reduces the size significantly.
             output_mime_type=MimeType.JPEG,
             # This is imagen's own enhancement, not the one from inty-backend's own enhancement.
-            enhance_prompt=True,
+            enhance_prompt=enhanced_prompt,
         )
 
         client = get_genai_client()
-
+        if enhanced_prompt:
+            prompt = enhance_prompt(prompt, gender)
         response = client.models.generate_images(
-            model=config.model,
-            prompt=config.prompt,
-            config=gen_image_config,
+            model=global_config_loaded_from_config_yaml.agent.vertex_image_model,
+            prompt=prompt,
+            config=config,
         )
 
         logger.debug(f"Image generation response: {response}")
