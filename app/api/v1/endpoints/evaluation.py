@@ -8,13 +8,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import schemas
 from app.api import deps
+from app.api.utils.logger_route import LoggerRoute
 from app.services.evaluation_service import EvaluationService
 from app.services.question_parser_service import QuestionParserService
 from app.services.scoring_service import ScoringService
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/evaluation")
+router = APIRouter(prefix="/evaluation", route_class=LoggerRoute)
 
 
 @router.get("/sessions", response_model=List[schemas.EvaluationSessionResponse])

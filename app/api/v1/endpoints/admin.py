@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import schemas
 from app.api import deps
+from app.api.utils.logger_route import LoggerRoute
 from app.db.session import get_async_db
 from app.models.system_settings import SettingCategory
 from app.schemas.response import APIResponse
@@ -19,7 +20,7 @@ from app.schemas.system_settings import (
 )
 from app.services.system_settings_service import system_settings_service
 
-router = APIRouter(prefix="/admin")
+router = APIRouter(prefix="/admin", route_class=LoggerRoute)
 
 
 async def get_current_superuser(

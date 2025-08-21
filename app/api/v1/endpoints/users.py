@@ -14,6 +14,7 @@ from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api import deps
+from app.api.utils.logger_route import LoggerRoute
 from app.core.config import global_config_loaded_from_config_yaml
 from app.db.session import get_async_db
 from app.schemas.response import APIResponse
@@ -27,7 +28,7 @@ from app.schemas.user_deletion import (
 from app.services import user_service
 from app.utils.gcs import delete_from_gcs, is_user_gcs_file, upload_to_gcs
 
-router = APIRouter(prefix="/users")
+router = APIRouter(prefix="/users", route_class=LoggerRoute)
 
 
 @router.get("/profile", response_model=User)

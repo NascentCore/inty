@@ -52,7 +52,7 @@ class LoggerRoute(APIRoute):
 
             # Log request details
             logger.debug(
-                f"{request_id} {request.method} {request.url.path} "
+                f"[Request] {request_id} {request.method} {request.url.path} "
                 f"Client: {request.client.host if request.client else 'unknown'} "
                 f"User-Agent: {request.headers.get('user-agent', 'unknown')} "
                 f"Query: {dict(request.query_params)} "
@@ -76,7 +76,7 @@ class LoggerRoute(APIRoute):
                     # No body, so no response body to log
                     pass
                 logger.debug(
-                    f"{request_id} {request.method} {request.url.path} "
+                    f"[Response] {request_id} {request.method} {request.url.path} "
                     f"Headers: {dict(response.headers)} "
                     f"Status: {response.status_code} "
                     f"Response Body: {response_body} "
@@ -86,10 +86,8 @@ class LoggerRoute(APIRoute):
             except Exception as e:
                 duration = time.time() - start_time
                 logger.debug(
-                    f"{request_id} {request.method} {request.url.path} "
-                    f"Headers: {dict(response.headers)} "
-                    f"Status: {response.status_code} "
-                    f"Response Body: {response_body}"
+                    f"[Response] {request_id} {request.method} {request.url.path} "
+                    f"Failed, error: {e} "
                     f"Duration: {duration:.3f}s "
                 )
                 raise

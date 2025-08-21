@@ -5,9 +5,10 @@ from sqlalchemy.orm import Session
 
 from app import schemas
 from app.api import deps
+from app.api.utils.logger_route import LoggerRoute
 from app.services import resource_service
 
-router = APIRouter(prefix="/resources")
+router = APIRouter(prefix="/resources", route_class=LoggerRoute)
 
 
 @router.get("/", response_model=List[schemas.Resource])

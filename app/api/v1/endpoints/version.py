@@ -5,11 +5,12 @@ from fastapi import APIRouter, Depends, HTTPException, Header
 
 from app import schemas
 from app.api import deps
+from app.api.utils.logger_route import LoggerRoute
 from app.schemas.response import APIResponse
 from app.schemas.version import VersionCheckResponse
 from app.services.google_play_service import google_play_service
 
-router = APIRouter(prefix="/version")
+router = APIRouter(prefix="/version", route_class=LoggerRoute)
 logger = logging.getLogger(__name__)
 
 
