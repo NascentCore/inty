@@ -168,6 +168,9 @@ def text_to_image(
             person_generation=types.PersonGeneration.ALLOW_ADULT,
             output_gcs_uri=gcs_uri_base,
             include_rai_reason=True,
+            add_watermark=False,
+            guidance_scale=1.0,
+            seed=12345,
             # This reduces the size significantly.
             output_mime_type=MimeType.JPEG,
             # This is imagen's own enhancement, not the one from inty-backend's own enhancement.
