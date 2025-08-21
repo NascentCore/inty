@@ -19,6 +19,7 @@ from langgraph.managed import RemainingSteps
 from langgraph.prebuilt import create_react_agent
 from langgraph.store.postgres import PostgresStore
 from langmem import create_manage_memory_tool, create_search_memory_tool
+from langsmith import tracing_context
 from openai import OpenAI
 from psycopg import Connection
 from psycopg_pool import ConnectionPool
@@ -860,7 +861,8 @@ class Agent:
                     # 预处理格式化消息（保持与_save_debug_messages一致）
                     try:
                         # 获取格式化的提示词
-                        formatted_prompt = self.prompt_runnable.invoke(state_data)
+                        with tracing_context(enabled=False):
+                            formatted_prompt = self.prompt_runnable.invoke(state_data)
 
                         if hasattr(formatted_prompt, "messages"):
                             # 提取所有系统和用户消息
