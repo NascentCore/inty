@@ -452,8 +452,9 @@ class Agent:
                 system_messages.append(SystemMessage(content=user_profile))
 
             if is_char_user_created:
+                newline = '\n'
                 logger.debug(
-                    f"用户创建的角色，添加辅助提示词: {'\n'.join(prompts.FRIENDLY_ROLEPLAY_PROMPT.auxiliary_prompts)}"
+                    f"用户创建的角色，添加辅助提示词: {newline.join(prompts.FRIENDLY_ROLEPLAY_PROMPT.auxiliary_prompts)}"
                 )
                 system_messages.extend(
                     [

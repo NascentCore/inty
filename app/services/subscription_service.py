@@ -1,7 +1,7 @@
-from dataclasses import dataclass
 import json
 import logging
 import uuid
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -11,7 +11,6 @@ from sqlalchemy.orm import selectinload
 
 from app import schemas
 from app.core.config import global_config_loaded_from_config_yaml
-from app.services.superuser_check import SUPERUSER_LIMIT_CHECK_RESULT, is_superuser
 from app.models.subscription import (
     SubscriptionPlan,
     SubscriptionPlanType,
@@ -39,6 +38,7 @@ from app.schemas.subscription import (
 from app.schemas.subscription import UserSubscription as UserSubscriptionSchema
 from app.schemas.subscription import UserSubscriptionCreate
 from app.services.google_play_service import google_play_service
+from app.services.superuser_check import SUPERUSER_LIMIT_CHECK_RESULT, is_superuser
 from app.services.system_settings_service import system_settings_service
 
 logger = logging.getLogger(__name__)
@@ -862,7 +862,7 @@ class SubscriptionService:
                 return SUPERUSER_LIMIT_CHECK_RESULT
 
             # 获取订阅状态
-            subscription_status = await self.get_user_subscription_status(db, user_id)
+            subscription_status = await self.get_user_subscription_status(db, user.id)
 
             # 获取今日背景图生成次数（免费和付费用户都使用每日限制）
             today = datetime.now(timezone.utc).date()
@@ -874,7 +874,7 @@ class SubscriptionService:
             generation_count_result = await db.execute(
                 select(func.sum(SubscriptionUsage.usage_count)).where(
                     and_(
-                        SubscriptionUsage.user_id == user_id,
+                        SubscriptionUsage.user_id == user.id,
                         SubscriptionUsage.usage_type == "background_generation",
                         SubscriptionUsage.usage_date >= today_start,
                         SubscriptionUsage.usage_date < today_end,
