@@ -171,7 +171,7 @@ def text_to_image(
             # This reduces the size significantly.
             output_mime_type=MimeType.JPEG,
             # This is imagen's own enhancement, not the one from inty-backend's own enhancement.
-            enhance_prompt=enhanced_prompt,
+            enhance_prompt=True,
         )
 
         client = get_genai_client()
