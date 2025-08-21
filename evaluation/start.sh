@@ -29,5 +29,18 @@ fi
 echo "Installing Node Modules..."
 npm i --no-audit --no-fund --loglevel=error --no-progress
 
+# Check if :3000 is already in use
+if lsof -i :3000; then
+    echo "Try to kill the process using port 3000 ..."
+    kill -9 $(lsof -t -i :3000)
+fi
+
+if lsof -i :3000; then
+    echo "Port 3000 is already in use. Please stop the server and try again."
+    echo "Only http://localhost:3000 is white listed on the server side, you must open this on :3000."
+    echo "Ask Yaxiong Zhao for help if you need to open this on :3000."
+    exit 1
+fi
+
 echo "Starting Inty-Eval Development Server..."
 npm run start

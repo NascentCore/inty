@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "InTy 智能体评测系统前端",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
