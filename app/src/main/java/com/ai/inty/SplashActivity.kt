@@ -11,16 +11,21 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Scaffold
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.viewModelScope
 import com.ai.inty.ui.theme.IntyTheme
+import com.ai.inty.utils.AppStartupManager
 import com.ai.inty.viewmodels.InitState
 import com.ai.inty.viewmodels.SplashViewModel
 import com.inty.utils.log.EasyLog
@@ -66,8 +71,22 @@ class SplashActivity : ComponentActivity() {
                             contentDescription = ""
                         )
 
-                    }
+                        // 显示启动进度
+                        val preloadProgress by AppStartupManager.preloadProgress.collectAsState()
+                        // 只在有进度时显示进度条
+                        if (preloadProgress > 0f) {
+                            CircularProgressIndicator(
+                                progress = { preloadProgress },
+                                modifier = Modifier
+                                    .size(30.dp)
+                                    .align(Alignment.TopEnd)
+                                    .padding(16.dp),
+                                color = Color.White,
+                                trackColor = Color.White.copy(alpha = 0.3f)
+                            )
+                        }
 
+                    }
                 }
             }
         }

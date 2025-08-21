@@ -15,11 +15,14 @@ import com.squareup.moshi.DefaultIfNullFactory
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import com.therouter.inject.ServiceProvider
+import okhttp3.ConnectionPool
+import okhttp3.Dns
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.Response
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
+import java.net.InetAddress
 import java.util.concurrent.TimeUnit
 
 class AuthInterceptor : Interceptor {
@@ -54,6 +57,113 @@ class AuthInterceptor : Interceptor {
     }
 }
 
+/**
+ * 重试拦截器
+ * 对网络错误进行重试，提高请求成功率
+ */
+class RetryInterceptor(private val maxRetries: Int = 3) : Interceptor {
+    override fun intercept(chain: Interceptor.Chain): Response {
+        val request = chain.request()
+        var response: Response? = null
+        var exception: Exception? = null
+
+        // 重试逻辑
+        repeat(maxRetries) { attempt ->
+            try {
+                response = chain.proceed(request)
+
+                // 如果响应成功或客户端错误（4xx），不重试
+                if (response.isSuccessful || response.code in 400..499) {
+                    return response
+                }
+
+                // 服务器错误（5xx）才重试
+                if (response.code in 500..599) {
+                    EasyLog.log("Retry attempt ${attempt + 1} for ${request.url} due to server error ${response.code}")
+                    response.close()
+                    if (attempt < maxRetries - 1) {
+                        Thread.sleep(1000L * (attempt + 1)) // 指数退避
+                    }
+                } else {
+                    return response
+                }
+            } catch (e: Exception) {
+                exception = e
+                EasyLog.log("Retry attempt ${attempt + 1} failed for ${request.url}: ${e.message}")
+                if (attempt < maxRetries - 1) {
+                    Thread.sleep(1000L * (attempt + 1)) // 指数退避
+                }
+            }
+        }
+
+        // 所有重试都失败了
+        throw exception ?: RuntimeException("Request failed after $maxRetries attempts")
+    }
+}
+
+/**
+ * 网络性能监控拦截器
+ * 监控请求耗时，帮助识别性能问题
+ */
+private class PerformanceInterceptor : Interceptor {
+    override fun intercept(chain: Interceptor.Chain): Response {
+        val request = chain.request()
+        val startTime = System.currentTimeMillis()
+
+        EasyLog.log("🌐 Starting request: ${request.method} ${request.url}")
+
+        return try {
+            val response = chain.proceed(request)
+            val endTime = System.currentTimeMillis()
+            val duration = endTime - startTime
+
+            // 记录请求性能
+            when {
+                duration < 1000 -> {
+                    EasyLog.log("✅ Request completed: ${request.method} ${request.url} (${duration}ms)")
+                }
+
+                duration < 3000 -> {
+                    EasyLog.log(
+                        "⚠️ Slow request: ${request.method} ${request.url} (${duration}ms)",
+                        EasyLog.WARN
+                    )
+                }
+
+                else -> {
+                    EasyLog.log(
+                        "🚨 Very slow request: ${request.method} ${request.url} (${duration}ms)",
+                        EasyLog.ERROR
+                    )
+                }
+            }
+
+            response
+        } catch (e: Exception) {
+            val endTime = System.currentTimeMillis()
+            val duration = endTime - startTime
+            EasyLog.log(
+                "❌ Request failed: ${request.method} ${request.url} (${duration}ms): ${e.message}",
+                EasyLog.ERROR
+            )
+            throw e
+        }
+    }
+}
+
+/**
+ * 自定义DNS解析器，支持缓存
+ */
+private class CachedDns : Dns {
+    private val cache = mutableMapOf<String, List<InetAddress>>()
+
+    override fun lookup(hostname: String): List<InetAddress> {
+        return cache.getOrPut(hostname) {
+            Dns.SYSTEM.lookup(hostname)
+        }
+    }
+}
+
 private fun restartAppProcess(context: Context) {
     val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)
     intent?.apply {
@@ -67,14 +177,26 @@ private fun restartAppProcess(context: Context) {
 
 object NetServiceMgr {
 
-    val authInterceptor = AuthInterceptor()
+
     val okHttpClient: OkHttpClient
         get() {
+            val authInterceptor = AuthInterceptor()
+            val performanceInterceptor = PerformanceInterceptor()
+            val retryInterceptor = RetryInterceptor(maxRetries = 3)
+
             val builder: OkHttpClient.Builder =
                 OkHttpClient.Builder()
-                    .connectTimeout(5, TimeUnit.SECONDS)
-                    .writeTimeout(5, TimeUnit.SECONDS)
-                    .readTimeout(50, TimeUnit.SECONDS)
+                    // 根据构建类型优化超时配置
+                    .connectTimeout(15, TimeUnit.SECONDS)
+                    .writeTimeout(15, TimeUnit.SECONDS)
+                    .readTimeout(30, TimeUnit.SECONDS)
+                    // 连接池配置
+                    .connectionPool(ConnectionPool(5, 5, TimeUnit.MINUTES))
+                    // DNS缓存
+                    .dns(CachedDns())
+                    // 拦截器（注意顺序：性能监控 -> 重试 -> 认证 -> 调试）
+                    .addInterceptor(performanceInterceptor)
+                    .addInterceptor(retryInterceptor)
                     .addInterceptor(authInterceptor)
                     .addInterceptor(ChuckerInterceptor(AppEnv.context))
             return builder.build()
@@ -100,6 +222,7 @@ object NetServiceMgr {
 
     private val globalErrorHandler = GlobalErrorHandler()
 
+    //todo 这里使用wrapper来区分 是否带有外部code，message，data格式的响应数据体
     private fun getHttpWrapperHandler(): MoshiResultTypeAdapterFactory.HttpWrapper {
 
         return object : MoshiResultTypeAdapterFactory.HttpWrapper {

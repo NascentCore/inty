@@ -5,6 +5,7 @@ import com.ai.inty.base.BaseActivityViewModel
 import com.ai.inty.beans.CreateGuestReq
 import com.ai.inty.net.IUserApi
 import com.ai.inty.net.IUserApi2
+import com.ai.inty.utils.AppStartupManager
 import com.ai.inty.utils.UserProfileManager
 import com.architecture.httplib.core.HttpResult
 import com.inty.utils.AppEnv
@@ -43,6 +44,9 @@ class SplashViewModel : BaseActivityViewModel() {
 
         viewModelScope.launch(Dispatchers.IO) {
             try {
+                // 等待启动管理器的缓存数据加载完成
+                waitForCacheData()
+                
                 if (IntySetting.isLogin()) {
                     EasyLog.log("User already logged in: ${IntySetting.getCurUserID()}")
                     onLoginSuccess()
@@ -55,6 +59,18 @@ class SplashViewModel : BaseActivityViewModel() {
                 _initState.value = InitState.Failed
             }
         }
+    }
+
+    /**
+     * 等待缓存数据加载完成
+     */
+    private suspend fun waitForCacheData() {
+        // 等待启动管理器的缓存数据加载完成
+        while (AppStartupManager.startupState.value == AppStartupManager.StartupState.Initializing) {
+            kotlinx.coroutines.delay(50) // 50ms检查一次
+        }
+
+        EasyLog.log("SplashViewModel - 缓存数据加载完成，状态: ${AppStartupManager.startupState.value}")
     }
 
     /**
@@ -91,13 +107,15 @@ class SplashViewModel : BaseActivityViewModel() {
         EasyLog.log("onLoginSuccess - user: ${IntySetting.getCurUserID()}")
 
         // 优先从本地缓存获取用户信息
-        // todo ⚠️这里并没有使用缓存数据，逻辑需要修正
         if (UserProfileManager.hasUserProfile()) {
             EasyLog.log("Loaded user profile from cache")
         }
 
         // 获取用户信息
         getUserProfile()
+
+        // 通知启动管理器开始网络预加载
+        AppStartupManager.onLoginSuccess()
 
         EasyLog.log("Initialization completed successfully")
         _initState.value = InitState.Success

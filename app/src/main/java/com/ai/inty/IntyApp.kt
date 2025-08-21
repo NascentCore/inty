@@ -3,6 +3,7 @@ package com.ai.inty
 import android.app.Application
 import android.content.Context
 import com.ai.inty.base.initImageLoader
+import com.ai.inty.utils.AppStartupManager
 import com.ai.inty.utils.NetworkManager
 import com.inty.utils.AppEnv
 import com.inty.utils.log.EasyLog
@@ -37,5 +38,8 @@ class IntyApp : Application() {
 
         // 初始化网络管理器
         NetworkManager.getInstance().initialize(this)
+
+        // 初始化应用启动管理器（优化启动流程）
+        AppStartupManager.initialize(this)
     }
 }

@@ -24,7 +24,10 @@ import com.ai.inty.net.IAgentApi
 import com.ai.inty.net.ICommonApi
 import com.ai.inty.net.IUserApi
 import com.ai.inty.net.IUserApi2
+import com.ai.inty.utils.AgentCacheManager
+import com.ai.inty.utils.AppStartupManager
 import com.ai.inty.utils.CredentialManagerHelper.clearCredentialState
+import com.ai.inty.utils.SystemMessageCacheManager
 import com.ai.inty.utils.UserProfileManager
 import com.architecture.httplib.core.HttpResult
 import com.google.android.gms.tasks.OnCompleteListener
@@ -113,34 +116,89 @@ class MainViewModel : BaseActivityViewModel() {
     init {
         EasyLog.log("MainViewModel init - current user: ${IntySetting.getCurUserID()}")
 
-        // 直接加载业务数据，登录状态已在 SplashActivity 中处理
+        // 使用启动管理器的缓存数据快速初始化UI
+        loadCachedData()
+
+        // 后台更新网络数据
         loadBusinessData()
 
         TheRouter.addActionInterceptor(Constant.ACTION_USER_PROFILE_CHANGED, userProfileChanged)
+    }
 
+    /**
+     * 加载缓存数据（快速展示）
+     */
+    private fun loadCachedData() {
+        // 从启动管理器获取缓存的用户信息
+        val cachedUserProfile = AppStartupManager.cachedUserProfile.value
+        if (cachedUserProfile != null) {
+            _userProfile.value = cachedUserProfile
+            EasyLog.log("MainViewModel - 使用缓存用户信息: ${cachedUserProfile.nickname}")
+        }
+
+        // 从启动管理器获取缓存的推荐agents
+        val cachedAgents = AppStartupManager.cachedAgents.value
+        if (cachedAgents.isNotEmpty()) {
+            agentList.clear()
+            agentList.addAll(cachedAgents)
+            EasyLog.log("MainViewModel - 使用缓存推荐agents: ${cachedAgents.size}个")
+        }
+
+        // 从启动管理器获取缓存的关注agents
+        val cachedFollowingAgents = AppStartupManager.cachedFollowingAgents.value
+        if (cachedFollowingAgents.isNotEmpty()) {
+            followingAgents.clear()
+            followingAgents.addAll(cachedFollowingAgents)
+            EasyLog.log("MainViewModel - 使用缓存关注agents: ${cachedFollowingAgents.size}个")
+        }
     }
 
     private fun loadBusinessData() {
-        // 优先从本地缓存获取用户信息
-        if (UserProfileManager.hasUserProfile()) {
-            _userProfile.value = UserProfileManager.getUserProfile()
-            EasyLog.log("Loaded user profile from cache: ${_userProfile.value.nickname}")
+        // 检查是否需要从网络更新数据
+        if (shouldUpdateFromNetwork()) {
+            // 加载业务数据
+            getAgents()
+            getUserProfile() // 从服务器获取最新信息并更新本地缓存
+            regFCM()
+            getSysMsgs()
+            //检查app版本更新
+            checkAppVersion()
+        } else {
+            EasyLog.log("MainViewModel - 使用缓存数据，跳过网络请求")
+        }
+    }
+
+    /**
+     * 检查是否需要从网络更新数据
+     */
+    private fun shouldUpdateFromNetwork(): Boolean {
+        // 只有在已登录且有有效token的情况下才进行网络更新
+        if (!IntySetting.isLogin() || IntySetting.getCurToken().isEmpty()) {
+            EasyLog.log("MainViewModel - 未登录或token为空，跳过网络更新")
+            return false
         }
 
-        // 加载业务数据
-        getAgents()
-        getUserProfile() // 从服务器获取最新信息并更新本地缓存
-        regFCM()
-        getSysMsgs()
-        //检查app版本更新
-        checkAppVersion()
+        // 如果缓存过期或没有缓存数据，则需要更新
+        return AgentCacheManager.isCacheExpired() ||
+                AppStartupManager.cachedAgents.value.isEmpty() ||
+                AppStartupManager.cachedUserProfile.value == null
     }
 
     fun getAgents() {
         EasyLog.log("getAgents - Loading first page")
         currentPage = 1
-        agentList.clear()
         hasMoreData = true
+
+        // 如果已有缓存数据，先使用缓存数据
+        val cachedAgents = AppStartupManager.cachedAgents.value
+        if (cachedAgents.isNotEmpty() && !AgentCacheManager.isCacheExpired()) {
+            agentList.clear()
+            agentList.addAll(cachedAgents)
+            EasyLog.log("getAgents - 使用缓存数据: ${cachedAgents.size}个")
+        } else {
+            agentList.clear()
+        }
+
         loadAgents()
     }
 
@@ -170,8 +228,10 @@ class MainViewModel : BaseActivityViewModel() {
                             } else {
                                 agentList.addAll(agents)
                                 EasyLog.log("Added ${agents.size} agents, total: ${agentList.size}")
-                                // 只在第一页加载时设置chatViewModel
+
+                                // 缓存第一页数据
                                 if (currentPage == 1) {
+                                    AgentCacheManager.cacheAgents(agents)
                                     chatViewModel?.setAgentInfo(agentList.firstOrNull())
                                 }
                             }
@@ -324,6 +384,14 @@ class MainViewModel : BaseActivityViewModel() {
      * 获取业务系统消息列表数据
      */
     fun getSysMsgs() {
+        // 如果已有缓存数据，先使用缓存数据
+        val cachedSysMsgs = SystemMessageCacheManager.getCachedSystemMessages()
+        if (cachedSysMsgs.isNotEmpty() && !SystemMessageCacheManager.isCacheExpired()) {
+            sysMsgs.clear()
+            sysMsgs.addAll(cachedSysMsgs)
+            EasyLog.log("getSysMsgs - 使用缓存数据: ${cachedSysMsgs.size}条")
+        }
+
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val result = userApi.getSysMsgs(1, 10)
@@ -332,6 +400,8 @@ class MainViewModel : BaseActivityViewModel() {
                     is HttpResult.Success -> {
                         sysMsgs.clear()
                         sysMsgs.addAll(result.data.list)
+                        // 缓存系统消息数据
+                        SystemMessageCacheManager.cacheSystemMessages(result.data.list)
                     }
 
                     is HttpResult.Failure -> {
@@ -372,6 +442,15 @@ class MainViewModel : BaseActivityViewModel() {
 
     fun getFollowingAgents() {
         EasyLog.log("getFollowingAgents")
+
+        // 如果已有缓存数据，先使用缓存数据
+        val cachedFollowingAgents = AppStartupManager.cachedFollowingAgents.value
+        if (cachedFollowingAgents.isNotEmpty()) {
+            followingAgents.clear()
+            followingAgents.addAll(cachedFollowingAgents)
+            EasyLog.log("getFollowingAgents - 使用缓存数据: ${cachedFollowingAgents.size}个")
+        }
+
         viewModelScope.launch(Dispatchers.IO) {
             val result = agentApi.getFollowingAgents(1, 100)//临时设置100，pageSize最大100，这里需要做分页加载
             EasyLog.log("getFollowingAgents = $result")
@@ -381,6 +460,8 @@ class MainViewModel : BaseActivityViewModel() {
                     followingAgents.clear()
                     result.data.list?.let { agents ->
                         followingAgents.addAll(agents)
+                        // 缓存关注agents数据
+                        AgentCacheManager.cacheFollowingAgents(agents)
                     }
                 }
 
@@ -407,6 +488,9 @@ class MainViewModel : BaseActivityViewModel() {
                             agentList[index] = agent.copy(isFollowed = true)
                         }
                     }
+
+                    // 同步更新缓存
+                    AgentCacheManager.updateAgentFollowState(agentId, true)
                     // Show success toast
                     viewModelScope.launch(Dispatchers.Main) {
                         ToastUtils.showToast(R.string.followed_successfully)
@@ -460,6 +544,9 @@ class MainViewModel : BaseActivityViewModel() {
                                     agentList[mainListIndex].copy(isFollowed = false)
                                 EasyLog.log("Updated agent in main list at index: $mainListIndex")
                             }
+
+                            // 同步更新缓存
+                            AgentCacheManager.updateAgentFollowState(agentId, false)
                         }
 
                         // 发送广播更新UI
@@ -719,6 +806,9 @@ class MainViewModel : BaseActivityViewModel() {
                             agentList.removeAll { it.id == agentId }
                             // 从关注列表中移除（如果存在）
                             followingAgents.removeAll { it.id == agentId }
+
+                            // 同步更新缓存
+                            AgentCacheManager.removeAgent(agentId)
 
                             ToastUtils.showToast(R.string.character_deleted_successfully)
                             onSuccess()
