@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import schemas
 from app.api import deps
+from app.utils.timed_route import TimedRoute
 from app.core.config import global_config_loaded_from_config_yaml
 from app.models.subscription import UserSubscription
 from app.schemas.response import APIResponse
@@ -28,7 +29,7 @@ from app.schemas.subscription import (
 )
 from app.services.subscription_service import subscription_service
 
-router = APIRouter(prefix="/subscription")
+router = APIRouter(prefix="/subscription", route_class=TimedRoute)
 logger = logging.getLogger(__name__)
 
 

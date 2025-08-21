@@ -13,8 +13,11 @@ from app.api.v1.endpoints import (
     users,
     version,
 )
+from app.utils.timed_route import TimedRoute
 
-api_router = APIRouter(prefix="/api/v1")
+
+api_router = APIRouter(prefix="/api/v1", route_class=TimedRoute)
+
 api_router.include_router(auth.router, tags=["auth"])
 api_router.include_router(users.router, tags=["users"])
 

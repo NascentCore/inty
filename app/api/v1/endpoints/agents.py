@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import schemas
 from app.api import deps
+from app.utils.timed_route import TimedRoute
 from app.core.agent.agent import agent_manager
 from app.utils.gemini import ImagenGeneratedImage, text_to_image
 from app.core.config import global_config_loaded_from_config_yaml
@@ -37,7 +38,7 @@ from app.services.subscription_service import SubscriptionService
 from app.utils.gcs import delete_from_gcs, is_user_gcs_file, upload_to_gcs
 from app.utils.image import compress_png_to_jpeg
 
-router = APIRouter(prefix="/ai/agents")
+router = APIRouter(prefix="/ai/agents", route_class=TimedRoute)
 
 # 创建订阅服务实例
 subscription_service = SubscriptionService()
