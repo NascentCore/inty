@@ -145,6 +145,8 @@ android {
             // This build is meant to be pushed to Google Play for debugging.
             // It talks to the dev backend, but app is built as release.
             initWith(getByName("release"))
+
+            versionNameSuffix = "-playdebug"
         }
         // TODO: Consider rename this to staging, meaning it's talking to the staging backend,
         // which is not local.
@@ -157,9 +159,12 @@ android {
 
             // TODO: Use a different web client ID for debug builds.
             // buildConfigField("String", "WEB_CLIENT_ID", "\"debug_client_id_here\"")
+
+            versionNameSuffix = "-debug"
         }
         create("local") {
             initWith(getByName("debug"))
+            versionNameSuffix = "-local"
         }
     }
     compileOptions {
