@@ -64,16 +64,14 @@ interface ChatMessage {
 }
 
 interface ChatPageProps {
-  selectedAgent?: any; // Agent type from types.ts
+  propSelectedAgent?: any; // Agent type from types.ts
 }
 
 export const ChatPage: React.FC<ChatPageProps> = ({
-  selectedAgent: propSelectedAgent,
+  propSelectedAgent: propSelectedAgent,
 }) => {
   // 状态管理
-  const [selectedAgent, setSelectedAgent] = useState<Agent | null>(
-    propSelectedAgent || null,
-  );
+  // GEMINI: propSelectedAgent is now directly from props, no longer an internal state
   const [currentSession, setCurrentSession] = useState<ChatSession | null>(
     null,
   );
@@ -146,15 +144,14 @@ export const ChatPage: React.FC<ChatPageProps> = ({
 
   // GEMINI: Handle propSelectedAgent changes
   useEffect(() => {
-    if (propSelectedAgent && propSelectedAgent.id !== selectedAgent?.id) {
+    if (propSelectedAgent) {
       handleSelectAgent(propSelectedAgent);
     }
-  }, [propSelectedAgent, selectedAgent, handleSelectAgent]);
+  }, [propSelectedAgent, handleSelectAgent]);
 
   // 选择智能体 - 从后端获取真实会话记录
   const handleSelectAgent = useCallback(
     async (agent: Agent) => {
-      setSelectedAgent(agent);
       setSending(true);
 
       try {
@@ -259,7 +256,12 @@ export const ChatPage: React.FC<ChatPageProps> = ({
 
   // 发送消息 - 使用现有聊天API
   const handleSendMessage = useCallback(async () => {
-    if (!inputValue.trim() || !selectedAgent || !currentSession || sending) {
+    if (
+      !inputValue.trim() ||
+      !propSelectedAgent ||
+      !currentSession ||
+      sending
+    ) {
       return;
     }
 
@@ -286,7 +288,7 @@ export const ChatPage: React.FC<ChatPageProps> = ({
 
       // 调用现有的OpenAI兼容聊天API
       const response = await api.chat.sendMessage(
-        selectedAgent.id,
+        propSelectedAgent.id,
         messageHistory,
       );
 
@@ -313,7 +315,7 @@ export const ChatPage: React.FC<ChatPageProps> = ({
         await new Promise((resolve) => setTimeout(resolve, 500));
 
         // 重新获取最新的聊天记录
-        const refreshedData = await api.chat.getMessages(selectedAgent.id, {
+        const refreshedData = await api.chat.getMessages(propSelectedAgent.id, {
           page: 1,
           size: 100,
         });
@@ -383,7 +385,7 @@ export const ChatPage: React.FC<ChatPageProps> = ({
     }
   }, [
     inputValue,
-    selectedAgent,
+    propSelectedAgent,
     currentSession,
     messages,
     sending,
@@ -393,7 +395,7 @@ export const ChatPage: React.FC<ChatPageProps> = ({
 
   // 清空聊天记录 - 使用现有聊天API
   const handleClearChat = useCallback(() => {
-    if (!currentSession || !selectedAgent) return;
+    if (!currentSession || !propSelectedAgent) return;
 
     Modal.confirm({
       title: "确认清空",
@@ -403,7 +405,7 @@ export const ChatPage: React.FC<ChatPageProps> = ({
       onOk: async () => {
         try {
           // 调用现有API清除消息
-          await api.chat.clearMessages(selectedAgent.id);
+          await api.chat.clearMessages(propSelectedAgent.id);
 
           // 更新UI状态
           setMessages([]);
@@ -467,7 +469,7 @@ export const ChatPage: React.FC<ChatPageProps> = ({
         }
       },
     });
-  }, [currentSession, selectedAgent, chatHistory, saveChatHistory]);
+  }, [currentSession, propSelectedAgent, chatHistory, saveChatHistory]);
 
   // 导出聊天记录
   const handleExportChat = useCallback(() => {
@@ -511,11 +513,11 @@ export const ChatPage: React.FC<ChatPageProps> = ({
 
   // 获取调试消息
   const fetchDebugMessages = useCallback(async () => {
-    if (!selectedAgent?.id) return;
+    if (!propSelectedAgent?.id) return;
 
     try {
       setDebugLoading(true);
-      const result = await api.chat.getAgentDebugMessages(selectedAgent.id);
+      const result = await api.chat.getAgentDebugMessages(propSelectedAgent.id);
       setDebugData(result);
       setDebugModalVisible(true);
     } catch (error) {
@@ -524,7 +526,7 @@ export const ChatPage: React.FC<ChatPageProps> = ({
     } finally {
       setDebugLoading(false);
     }
-  }, [selectedAgent?.id]);
+  }, [propSelectedAgent?.id]);
 
   // 重新发送消息
   const handleResendMessage = useCallback(
@@ -532,7 +534,7 @@ export const ChatPage: React.FC<ChatPageProps> = ({
       // 检查是否是历史消息（具有真正的数据库ID）
       if (
         !msg.remoteId ||
-        !selectedAgent?.id ||
+        !propSelectedAgent?.id ||
         resending === msg.id ||
         msg.remoteId.startsWith("user_") ||
         msg.remoteId.startsWith("assistant_") ||
@@ -547,7 +549,7 @@ export const ChatPage: React.FC<ChatPageProps> = ({
       try {
         // 调用清理消息接口，删除包含该消息在内的后续对话记录
         const clearResult = await api.chat.clearMessages(
-          selectedAgent.id,
+          propSelectedAgent.id,
           msg.remoteId,
         );
 
@@ -587,7 +589,7 @@ export const ChatPage: React.FC<ChatPageProps> = ({
 
             // 调用聊天API重新发送
             const response = await api.chat.sendMessage(
-              selectedAgent.id,
+              propSelectedAgent.id,
               messageHistory,
             );
 
@@ -618,7 +620,7 @@ export const ChatPage: React.FC<ChatPageProps> = ({
         setResending(null);
       }
     },
-    [selectedAgent?.id, resending, messages],
+    [propSelectedAgent?.id, resending, messages],
   );
 
   // 删除消息
@@ -627,7 +629,7 @@ export const ChatPage: React.FC<ChatPageProps> = ({
       // 检查是否是历史消息（具有真正的数据库ID）
       if (
         !msg.remoteId ||
-        !selectedAgent?.id ||
+        !propSelectedAgent?.id ||
         clearing === msg.id ||
         msg.remoteId.startsWith("user_") ||
         msg.remoteId.startsWith("assistant_") ||
@@ -642,7 +644,7 @@ export const ChatPage: React.FC<ChatPageProps> = ({
       try {
         // 调用清理消息接口，删除包含该消息在内的后续对话记录
         const clearResult = await api.chat.clearMessages(
-          selectedAgent.id,
+          propSelectedAgent.id,
           msg.remoteId,
         );
 
@@ -667,7 +669,7 @@ export const ChatPage: React.FC<ChatPageProps> = ({
         setClearing(null);
       }
     },
-    [selectedAgent?.id, clearing],
+    [propSelectedAgent?.id, clearing],
   );
 
   // 处理括号内容的样式 - 复刻inty-test的formatMessageContent功能
@@ -755,18 +757,20 @@ export const ChatPage: React.FC<ChatPageProps> = ({
                     dataSource={agents}
                     renderItem={(agent) => (
                       <List.Item
-                        className={`agent-item ${selectedAgent?.id === agent.id ? "selected" : ""}`}
+                        className={`agent-item ${propSelectedAgent?.id === agent.id ? "selected" : ""}`}
                         style={{
                           cursor: "pointer",
                           padding: "12px",
                           border:
-                            selectedAgent?.id === agent.id
+                            propSelectedAgent?.id === agent.id
                               ? "2px solid #1890ff"
                               : "1px solid #f0f0f0",
                           borderRadius: "8px",
                           marginBottom: "8px",
                           backgroundColor:
-                            selectedAgent?.id === agent.id ? "#f6ffed" : "#fff",
+                            propSelectedAgent?.id === agent.id
+                              ? "#f6ffed"
+                              : "#fff",
                           transition: "all 0.2s ease",
                         }}
                         onClick={() => handleSelectAgent(agent)}
@@ -778,7 +782,7 @@ export const ChatPage: React.FC<ChatPageProps> = ({
                               icon={<RobotOutlined />}
                               style={{
                                 backgroundColor:
-                                  selectedAgent?.id === agent.id
+                                  propSelectedAgent?.id === agent.id
                                     ? "#52c41a"
                                     : "#1890ff",
                               }}
@@ -840,19 +844,19 @@ export const ChatPage: React.FC<ChatPageProps> = ({
 
           {/* 聊天区域 */}
           <Col span={18} style={{ height: "100%" }}>
-            {selectedAgent ? (
+            {propSelectedAgent ? (
               <Card
                 title={
                   <Space>
                     <Avatar
-                      src={selectedAgent.avatar}
+                      src={propSelectedAgent.avatar}
                       icon={<RobotOutlined />}
                     />
                     <div>
-                      <Text strong>{selectedAgent.name}</Text>
+                      <Text strong>{propSelectedAgent.name}</Text>
                       <br />
                       <Text type="secondary" style={{ fontSize: "12px" }}>
-                        {selectedAgent.description}
+                        {propSelectedAgent.description}
                       </Text>
                     </div>
                   </Space>
@@ -947,8 +951,8 @@ export const ChatPage: React.FC<ChatPageProps> = ({
                     padding: "16px",
                     backgroundColor: "transparent", // Make background transparent for image
                     minHeight: 0,
-                    backgroundImage: selectedAgent?.avatar
-                      ? `url(${selectedAgent.avatar})`
+                    backgroundImage: propSelectedAgent?.avatar
+                      ? `url(${propSelectedAgent.avatar})`
                       : "none",
                     backgroundSize: "contain",
                     backgroundPosition: "center",
@@ -996,7 +1000,7 @@ export const ChatPage: React.FC<ChatPageProps> = ({
                               }
                               src={
                                 message.role === "assistant"
-                                  ? selectedAgent.avatar
+                                  ? propSelectedAgent.avatar
                                   : undefined
                               }
                               style={{
@@ -1088,9 +1092,9 @@ export const ChatPage: React.FC<ChatPageProps> = ({
                                     ) &&
                                     !message.remoteId.startsWith("error_") &&
                                     !message.remoteId.startsWith("remote_") &&
-                                    selectedAgent && (
+                                    propSelectedAgent && (
                                       <VoicePlayer
-                                        agentId={selectedAgent.id}
+                                        agentId={propSelectedAgent.id}
                                         messageId={message.remoteId}
                                         messageText={message.content}
                                         language="zh"
@@ -1206,7 +1210,7 @@ export const ChatPage: React.FC<ChatPageProps> = ({
                     <div style={{ marginTop: "8px", textAlign: "center" }}>
                       <Spin size="small" />
                       <Text type="secondary" style={{ marginLeft: "8px" }}>
-                        {selectedAgent.name} 正在思考中...
+                        {propSelectedAgent.name} 正在思考中...
                       </Text>
                     </div>
                   )}
