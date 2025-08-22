@@ -160,3 +160,11 @@ def test_calculate_crop_square_boundaries():
 
     avatar_square = _calculate_crop_square_boundaries(face_coords, 3, img_shape)
     assert avatar_square == (5, 0, 40, 40)
+
+
+def test_crop_square_face_handle_all_image_formats():
+    img_path = "tests/app/utils/test_images/test_image.jpg"
+    cropped_img_path = "tests/app/utils/test_images/test_image_cropped.jpg"
+    cropped_img = crop_square_face(img_path)
+    cropped_img.save(cropped_img_path)
+    assert cropped_img.size == (100, 100)
