@@ -120,10 +120,16 @@ android {
     }
     signingConfigs {
         create("release") {
-            storeFile = rootProject.file(requireProperty(keystoreProperties, "release.storeFile"))
-            storePassword = requireProperty(keystoreProperties, "release.storePassword")
+            storeFile = rootProject.file(requireProperty(keystoreProperties, "storeFile"))
+            storePassword = requireProperty(keystoreProperties, "storePassword")
             keyAlias = requireProperty(keystoreProperties, "release.keyAlias")
             keyPassword = requireProperty(keystoreProperties, "release.keyPassword")
+        }
+        create("dev") {
+            storeFile = rootProject.file(requireProperty(keystoreProperties, "storeFile"))
+            storePassword = requireProperty(keystoreProperties, "storePassword")
+            keyAlias = requireProperty(keystoreProperties, "dev.keyAlias")
+            keyPassword = requireProperty(keystoreProperties, "dev.keyPassword")
         }
     }
 
@@ -155,7 +161,7 @@ android {
             // WEB_CLIENT_ID 与 release 签名配置一致，因此必须使用 release 签名配置。
             // 虽然 keystore.properties debug release 签名配置都有，但是 AGP 自己会生成默认的
             // debug signingconfig，因此 keystore.properties 中 debug 签名配置无效。
-            signingConfig = signingConfigs.getByName("release")
+            signingConfig = signingConfigs.getByName("dev")
 
             // TODO: Use a different web client ID for debug builds.
             // buildConfigField("String", "WEB_CLIENT_ID", "\"debug_client_id_here\"")

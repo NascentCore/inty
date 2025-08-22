@@ -3,6 +3,43 @@
 [![Build release APK and AAB](https://github.com/NascentCore/inty-app/actions/workflows/ci.yaml/badge.svg)](https://github.com/NascentCore/inty-app/actions/workflows/ci.yaml)
 [![Build and release debug APK](https://github.com/NascentCore/inty-app/actions/workflows/debug_release.yaml/badge.svg)](https://github.com/NascentCore/inty-app/actions/workflows/debug_release.yaml)
 
+## Get Started
+
+```bash
+# Write a new key into the keystore file
+keytool -genkeypair -keyalg RSA -keysize 2048 -validity 9125 \
+    -keystore sign/intellimate-release-key.jks \
+    -storetype JKS \
+    -alias <alias of your new key> \
+    -storepass <.jks file's password> \
+    -keypass <password of your new key>
+
+# Get the fingerprint from the key
+keytool -keystore sign/intellimate-release-key.jks -list -v \
+    -storepass <.jks file's password> \
+    -alias <key alias>
+```
+
+Any new key must create an associated OAuth Client ID on Google Cloud.
+And added to firebase fingerpints.
+Then it can be used to sign the apk/aab to use Sign in with Google.
+
+There are 2 keys used locally: dev, uploading.
+The dev key is for general signing during development.
+The uploading key is used to sign aab uploaded to Google Play.
+Its fingerprint is recorded in Google Play, so Google Play can verify its authenticity.
+
+`app/google-service.json` stores 3 OAuth client IDs, 2 of them are for the above 2 keys,
+the last one is associated with Google Play's app signing key.
+
+There are 4 OAuth client IDs created on Google Cloud.
+3 of them are associated with the 3 keys above.
+1 additional is the web client ID used by backend auth with Android app.
+Which is used as `serverClientId` in [cerdential-manager-siwg](https://developer.android.com/identity/sign-in/credential-manager-siwg).
+
+Google Cloud project and Firebase project is associated through the
+`alien-paratext-461204-i9` project ID as well.
+
 ## Description
 
 IntelliMate: Ultimate companionship, reimagined with AI
