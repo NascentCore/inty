@@ -801,13 +801,13 @@ export const ChatPage: React.FC = () => {
                                   size="small"
                                   color={
                                     agent.visibility === "PUBLIC" ||
-                                      agent.visibility === "public"
+                                    agent.visibility === "public"
                                       ? "green"
                                       : "orange"
                                   }
                                 >
                                   {agent.visibility === "PUBLIC" ||
-                                    agent.visibility === "public"
+                                  agent.visibility === "public"
                                     ? "公开"
                                     : "私有"}
                                 </Tag>
@@ -860,21 +860,24 @@ export const ChatPage: React.FC = () => {
                             src="/resources/langsmith.png"
                             alt="LangSmith"
                             style={{
-                              width: '38px',
-                              height: '18px',
-                              objectFit: 'contain'
+                              width: "38px",
+                              height: "18px",
+                              objectFit: "contain",
                             }}
                           />
                         }
                         onClick={() => {
-                          window.open('https://smith.langchain.com/o/e91da43a-00f9-4d3e-a615-413bcf3ba1ac/projects/p/4b428bee-1b11-4e87-b87f-ace2c5aa162a', '_blank');
+                          window.open(
+                            "https://smith.langchain.com/o/e91da43a-00f9-4d3e-a615-413bcf3ba1ac/projects/p/4b428bee-1b11-4e87-b87f-ace2c5aa162a",
+                            "_blank",
+                          );
                         }}
                         style={{
-                          width: '50px',
-                          padding: '3px 4px 0px 4px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center'
+                          width: "50px",
+                          padding: "3px 4px 0px 4px",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
                         }}
                       />
                     </Tooltip>
@@ -927,8 +930,15 @@ export const ChatPage: React.FC = () => {
                     flex: 1,
                     overflowY: "auto",
                     padding: "16px",
-                    backgroundColor: "#fafafa",
+                    backgroundColor: "transparent", // Make background transparent for image
                     minHeight: 0,
+                    backgroundImage: selectedAgent?.avatar
+                      ? `url(${selectedAgent.avatar})`
+                      : "none",
+                    backgroundSize: "contain",
+                    backgroundPosition: "center",
+                    backgroundRepeat: "no-repeat",
+                    backgroundBlendMode: "multiply", // Blend mode for better visibility
                   }}
                 >
                   {messages.length === 0 ? (
@@ -985,7 +995,9 @@ export const ChatPage: React.FC = () => {
                             <div
                               style={{
                                 backgroundColor:
-                                  message.role === "user" ? "#1890ff" : "#fff",
+                                  message.role === "user"
+                                    ? "rgba(24, 144, 255, 0.8)"
+                                    : "rgba(255, 255, 255, 0.8)",
                                 color:
                                   message.role === "user" ? "#fff" : "#000",
                                 padding: "12px 16px",
