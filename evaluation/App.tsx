@@ -262,37 +262,24 @@ export const App: React.FC = () => {
               paddingTop: "16px",
               background: "transparent",
             }}
-          >
-            {navigationItems.map((item) => (
-              <Tooltip
-                key={item.key}
-                title={collapsed ? item.label : ""}
-                placement="right"
-                overlayStyle={{
-                  fontSize: "12px",
-                  color: "#ffffff",
-                }}
-                overlayInnerStyle={{
-                  color: "#ffffff",
-                  backgroundColor: "rgba(0, 0, 0, 0.85)",
-                  borderRadius: "6px",
-                  padding: "6px 8px",
-                  border: "none",
-                  boxShadow: "0 2px 8px rgba(0, 0, 0, 0.15)",
-                }}
-              >
-                <Menu.Item
-                  key={item.key}
-                  icon={item.icon}
-                  onClick={() => setCurrentPage(item.key)}
-                  style={{
-                    height: "auto",
-                    lineHeight: "normal",
-                    padding: collapsed ? "12px" : "12px 24px",
-                    marginBottom: "4px",
+            items={navigationItems.map((item) => ({
+              key: item.key,
+              icon: item.icon,
+              label: (
+                <Tooltip
+                  title={collapsed ? item.label : ""}
+                  placement="right"
+                  overlayStyle={{
+                    fontSize: "12px",
+                    color: "#ffffff",
+                  }}
+                  overlayInnerStyle={{
+                    color: "#ffffff",
+                    backgroundColor: "rgba(0, 0, 0, 0.85)",
                     borderRadius: "6px",
-                    display: "flex",
-                    alignItems: "flex-start",
+                    padding: "6px 8px",
+                    border: "none",
+                    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.15)",
                   }}
                 >
                   <div
@@ -328,10 +315,20 @@ export const App: React.FC = () => {
                       </div>
                     )}
                   </div>
-                </Menu.Item>
-              </Tooltip>
-            ))}
-          </Menu>
+                </Tooltip>
+              ),
+              onClick: () => setCurrentPage(item.key),
+              style: {
+                height: "auto",
+                lineHeight: "normal",
+                padding: collapsed ? "12px" : "12px 24px",
+                marginBottom: "4px",
+                borderRadius: "6px",
+                display: "flex",
+                alignItems: "flex-start",
+              },
+            }))}
+          />
         </div>
 
         {/* 底部区域 */}

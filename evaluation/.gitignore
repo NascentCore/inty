@@ -9,6 +9,8 @@ pnpm-debug.log*
 dist/
 build/
 .vite/
+vite.config.js
+vite.config.d.ts
 
 # Cache directories
 .cache/
