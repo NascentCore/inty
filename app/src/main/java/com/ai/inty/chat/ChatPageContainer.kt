@@ -1,5 +1,6 @@
 package com.ai.inty.chat
 
+import android.app.Activity
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.fadeIn
@@ -18,6 +19,7 @@ import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -28,6 +30,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -38,6 +41,7 @@ import com.ai.inty.R
 import com.ai.inty.base.noRippleClickable
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.beans.UserProfile
+import com.ai.inty.utils.SecurityUtils
 import com.ai.inty.viewmodels.ChatViewModel
 import com.inty.utils.storage.IntySetting
 import kotlinx.coroutines.CoroutineScope
@@ -91,7 +95,22 @@ fun ChatPageContainer(
             pageState = pageState,
             scope = scope
         )
+
     }
+
+    //防截屏设置
+    val context = LocalContext.current
+    DisposableEffect(null) {
+        if (context is Activity) {
+            SecurityUtils.enableSecureMode(context)
+        }
+        onDispose {
+            if (context is Activity) {
+                SecurityUtils.disableSecureMode(context)
+            }
+        }
+    }
+
 }
 
 /**

@@ -19,6 +19,7 @@ import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -34,14 +35,12 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.LifecycleStartEffect
 import com.ai.inty.Constant
 import com.ai.inty.R
 import com.ai.inty.billing.BillingRepository
 import com.ai.inty.ui.AdvancedModelChatDialog
 import com.ai.inty.ui.ChatDialogData
 import com.ai.inty.ui.UnlimitChatDialog
-import com.ai.inty.utils.SecurityUtils
 import com.ai.inty.viewmodels.ChatViewModel
 import com.inty.utils.log.EasyLog
 import com.inty.utils.storage.IntySetting
@@ -59,16 +58,8 @@ internal fun ChatPage(
 
     val context = LocalContext.current
 
-    LifecycleStartEffect(chatViewModel) {
+    LaunchedEffect(chatViewModel) {
         chatViewModel.queryMsgs()
-        if (context is Activity) {
-            SecurityUtils.enableSecureMode(context)
-        }
-        onStopOrDispose {
-            if (context is Activity) {
-                SecurityUtils.disableSecureMode(context)
-            }
-        }
     }
 
     val density = LocalDensity.current

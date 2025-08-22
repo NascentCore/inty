@@ -23,6 +23,7 @@ import com.ai.inty.chat.ChatPage
 import com.ai.inty.net.IAgentApi
 import com.ai.inty.ui.theme.BackGround
 import com.ai.inty.ui.theme.IntyTheme
+import com.ai.inty.utils.SecurityUtils
 import com.ai.inty.viewmodels.ChatViewModel
 import com.architecture.httplib.core.HttpResult
 import com.inty.utils.log.EasyLog
@@ -88,6 +89,7 @@ class ChatActivity : BaseActivity() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
         val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
         windowInsetsController.isAppearanceLightStatusBars = false
+        SecurityUtils.enableSecureMode(this)
     }
 
     /**
