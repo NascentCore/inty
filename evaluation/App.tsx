@@ -42,9 +42,18 @@ interface NavigationItem {
 
 export const App: React.FC = () => {
   // 状态管理
-  const [currentPage, setCurrentPage] = useState<PageKey>("evaluation");
+  const [currentPage, setCurrentPage] = useState<PageKey>(() => {
+    // GEMINI: 从 localStorage 读取上次访问的页面，如果不存在则默认为 "evaluation"
+    const savedPage = localStorage.getItem("lastVisitedPage");
+    return (savedPage as PageKey) || "chat";
+  });
   const [collapsed, setCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+
+  // GEMINI: 将当前页面保存到 localStorage
+  useEffect(() => {
+    localStorage.setItem("lastVisitedPage", currentPage);
+  }, [currentPage]);
 
   // 响应式检测
   useEffect(() => {
