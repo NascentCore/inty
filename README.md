@@ -3,7 +3,7 @@
 [![Build release APK and AAB](https://github.com/NascentCore/inty-app/actions/workflows/ci.yaml/badge.svg)](https://github.com/NascentCore/inty-app/actions/workflows/ci.yaml)
 [![Build and release debug APK](https://github.com/NascentCore/inty-app/actions/workflows/debug_release.yaml/badge.svg)](https://github.com/NascentCore/inty-app/actions/workflows/debug_release.yaml)
 
-## Get Started
+## Key setups
 
 ```bash
 # Write a new key into the keystore file
@@ -39,6 +39,8 @@ Which is used as `serverClientId` in [cerdential-manager-siwg](https://developer
 
 Google Cloud project and Firebase project is associated through the
 `alien-paratext-461204-i9` project ID as well.
+
+<img width="1514" height="1234" alt="image" src="https://github.com/user-attachments/assets/1d46e813-d3fd-48bb-adca-90a95691dc69" />
 
 ## Description
 
