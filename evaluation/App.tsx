@@ -42,7 +42,7 @@ interface NavigationItem {
 
 export const App: React.FC = () => {
   // 状态管理
-  const [currentPage, setCurrentPage] = useState<PageKey>("evaluation");
+  const [currentPage, setCurrentPage] = useState<PageKey>("chat");
   const [collapsed, setCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
