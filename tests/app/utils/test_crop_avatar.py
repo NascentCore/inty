@@ -1,8 +1,8 @@
 import random
 import pytest
 from PIL import Image
-from app.utils.crop_avatar import crop_square_face
-from crop_avatar import (
+from app.utils.crop_avatar import (
+    crop_square_face,
     _calculate_top_square_boundaries,
     _calculate_crop_square_boundaries,
 )
@@ -126,7 +126,7 @@ def test_calculate_crop_square_boundaries():
 
     # In certain bounary, expansion ration in [3.9, 4/3)
     avatar_square = _calculate_crop_square_boundaries(face_coords, 3.9 / 3, img_shape)
-    _draw_setup(img_shape, face_coords, avatar_square)
+    # _draw_setup(img_shape, face_coords, avatar_square)
     assert avatar_square == (6, 1, 39, 39)
     avatar_square = _calculate_crop_square_boundaries(face_coords, 3.99 / 3, img_shape)
     assert avatar_square == (6, 1, 39, 39)
@@ -164,17 +164,17 @@ def test_calculate_crop_square_boundaries():
 
 
 def test_crop_square_face_handle_all_image_formats():
-    img_path = "tests/files/test_image.jpg"
+    img_path = "tests/files/test.jpg"
     cropped_img = crop_square_face(img_path)
     cropped_img.save("avatar_test_image.jpg")
-    assert cropped_img.size == (100, 100)
+    assert cropped_img.size == (214, 214)
 
-    img_path = "tests/files/test_image.png"
+    img_path = "tests/files/test.png"
     cropped_img = crop_square_face(img_path)
     cropped_img.save("avatar_test_image.png")
-    assert cropped_img.size == (100, 100)
+    assert cropped_img.size == (214, 214)
 
-    img_path = "tests/files/test_image.webp"
+    img_path = "tests/files/test.webp"
     cropped_img = crop_square_face(img_path)
     cropped_img.save("avatar_test_image.png")
-    assert cropped_img.size == (100, 100)
+    assert cropped_img.size == (214, 214)
