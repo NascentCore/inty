@@ -8,6 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 * Do not wrap everything inside try...except block, as we already have FastAPI to do that
   * We'll try...except in FastAPI handler functions
 * When creating new folder, place an empty __init__.py file
+* Do not use magic numbers, always define variable, constants, etc.
 
 ## Overview
 
