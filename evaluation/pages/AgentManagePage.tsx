@@ -43,7 +43,13 @@ const { Option } = Select;
 
 // 类型已在 types.ts 中定义
 
-export const AgentManagePage: React.FC = () => {
+interface AgentManagePageProps {
+  onSelectAgentForChat: (agent: any) => void;
+}
+
+export const AgentManagePage: React.FC<AgentManagePageProps> = ({
+  onSelectAgentForChat,
+}) => {
   // 状态管理
   const [agents, setAgents] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(false);
@@ -726,6 +732,7 @@ export const AgentManagePage: React.FC = () => {
                   <List.Item>
                     <Card
                       hoverable
+                      onClick={() => onSelectAgentForChat(agent)}
                       cover={
                         <div style={{ padding: 16, textAlign: "center" }}>
                           <Avatar

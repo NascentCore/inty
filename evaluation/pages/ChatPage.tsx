@@ -63,9 +63,17 @@ interface ChatMessage {
   remoteId?: string; // 数据库消息ID，用于删除和重发功能
 }
 
-export const ChatPage: React.FC = () => {
+interface ChatPageProps {
+  selectedAgent?: any; // Agent type from types.ts
+}
+
+export const ChatPage: React.FC<ChatPageProps> = ({
+  selectedAgent: propSelectedAgent,
+}) => {
   // 状态管理
-  const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
+  const [selectedAgent, setSelectedAgent] = useState<Agent | null>(
+    propSelectedAgent || null,
+  );
   const [currentSession, setCurrentSession] = useState<ChatSession | null>(
     null,
   );
@@ -135,6 +143,13 @@ export const ChatPage: React.FC = () => {
   useEffect(() => {
     loadChatHistory();
   }, [loadChatHistory]);
+
+  // GEMINI: Handle propSelectedAgent changes
+  useEffect(() => {
+    if (propSelectedAgent && propSelectedAgent.id !== selectedAgent?.id) {
+      handleSelectAgent(propSelectedAgent);
+    }
+  }, [propSelectedAgent, selectedAgent, handleSelectAgent]);
 
   // 选择智能体 - 从后端获取真实会话记录
   const handleSelectAgent = useCallback(

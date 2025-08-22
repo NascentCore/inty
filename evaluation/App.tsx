@@ -48,6 +48,13 @@ export const App: React.FC = () => {
   });
   const [collapsed, setCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [selectedAgentForChat, setSelectedAgentForChat] = useState<any>(null); // To store the agent selected from AgentManagePage
+
+  // GEMINI: Callback to handle agent selection from AgentManagePage
+  const handleSelectAgentForChat = (agent: any) => {
+    setSelectedAgentForChat(agent);
+    setCurrentPage("chat");
+  };
 
   // 响应式检测
   useEffect(() => {
@@ -144,7 +151,11 @@ export const App: React.FC = () => {
       case "chat":
         return <ChatPage />;
       case "agents":
-        return <AgentManagePage />;
+        return (
+          <AgentManagePage onSelectAgentForChat={handleSelectAgentForChat} />
+        );
+      case "chat":
+        return <ChatPage selectedAgent={selectedAgentForChat} />;
       case "prompt-query":
         return <PromptQueryPage />;
       case "prompt-evaluation":
