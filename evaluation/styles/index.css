@@ -243,8 +243,18 @@ html {
 }
 
 .ant-menu-item-selected {
-  background-color: #e6f7ff !important;
+  background-color: #1890ff !important; /* Darker blue for selected item */
   border-color: transparent !important;
+}
+
+.ant-menu-item-selected .ant-menu-title-content,
+.ant-menu-item-selected .anticon {
+  color: #ffffff !important; /* White text for selected item */
+  font-weight: 600 !important; /* Make text bold */
+}
+
+.ant-menu-item-selected .ant-menu-item-icon {
+  color: #ffffff !important; /* White icon for selected item */
 }
 
 .ant-menu-item-selected::after {
