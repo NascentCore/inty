@@ -1,10 +1,11 @@
 import argparse
-from math import floor
 import os
+
+from math import floor
 from typing import Tuple
+
 import cv2
 from PIL import Image
-import numpy as np
 
 # At module level, outside any function
 _FACE_CASCADE = None
