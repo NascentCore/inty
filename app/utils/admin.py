@@ -10,6 +10,7 @@ SUPER_USER_EMAILS = [
     "it@sxwl.ai",
     "justicezyx@gmail.com",
     "zhiwei9001@gmail.com",
+    "charlesfengyu@gmail.com",
     # This is provided to Google Play reviewers.
     # They require to access all features without any restrictions.
     "test.heartmate@gmail.com",
