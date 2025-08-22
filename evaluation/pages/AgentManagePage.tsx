@@ -736,7 +736,7 @@ export const AgentManagePage: React.FC = () => {
                         </div>
                       }
                       actions={[
-                        <Tooltip title="查看详情">
+                        <Tooltip title="角色详情">
                           <Button
                             type="text"
                             icon={<EyeOutlined />}
@@ -909,7 +909,7 @@ export const AgentManagePage: React.FC = () => {
 
       {/* 智能体详情模态框 */}
       <Modal
-        title="智能体详情"
+        title="角色详情"
         open={detailModalVisible}
         onCancel={() => {
           setDetailModalVisible(false);

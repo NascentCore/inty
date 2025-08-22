@@ -269,9 +269,11 @@ export const App: React.FC = () => {
                 <Tooltip
                   title={collapsed ? item.label : ""}
                   placement="right"
-                  overlayStyle={{
-                    fontSize: "12px",
-                    color: "#ffffff",
+                  styles={{
+                    root: {
+                      fontSize: "12px",
+                      color: "#ffffff",
+                    },
                   }}
                   overlayInnerStyle={{
                     color: "#ffffff",
