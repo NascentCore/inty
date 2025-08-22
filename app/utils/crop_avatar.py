@@ -6,10 +6,11 @@ from typing import Tuple
 
 import cv2
 from PIL import Image
+import numpy as np
 
 # At module level, outside any function
 _FACE_CASCADE = None
-FACE_EXPANSION_RATIO = 2.0  # How many times larger than the face to make the crop
+FACE_EXPANSION_RATIO = 1.0  # How many times larger than the face to make the crop
 FACE_DETECTION_SCALE_FACTOR = (
     1.1  # Scale factor for face detection (smaller = more accurate but slower)
 )
@@ -29,11 +30,16 @@ Face coordinates, are represented as the top-left corner of the rectangle, and t
 """
 
 
+HAAR_CASCADE_PROFILE_FACE = "haarcascade_profileface.xml"
+HAAR_CASCADE_FRONTAL_FACE_DEFAULT = "haarcascade_frontalface_default.xml"
+HAAR_CASCADE_FRONTAL_CAT_FACE_EXTENDED = "haarcascade_frontalcatface_extended.xml"
+
+
 def _get_face_cascade():
     global _FACE_CASCADE
     if _FACE_CASCADE is None:
         _FACE_CASCADE = cv2.CascadeClassifier(
-            cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
+            cv2.data.haarcascades + HAAR_CASCADE_FRONTAL_FACE_DEFAULT
         )
     return _FACE_CASCADE
 
@@ -98,10 +104,10 @@ def _calculate_crop_square_boundaries(
 
 
 def crop_square_face(
-    image_path: str, max_expansion_ratio=FACE_EXPANSION_RATIO
+    img_data: bytes, max_expansion_ratio=FACE_EXPANSION_RATIO
 ) -> Image.Image:
     # Haar cascade classifier only works with grayscale images.
-    img = cv2.imread(image_path)
+    img = cv2.imdecode(np.frombuffer(img_data, np.uint8), cv2.IMREAD_COLOR)
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
     # Load the Haar Cascade for face detection
@@ -117,8 +123,9 @@ def crop_square_face(
         cropped_face = img[y : y + h, x : x + w]
         return Image.fromarray(cv2.cvtColor(cropped_face, cv2.COLOR_BGR2RGB))
 
+    largest_face = max(faces, key=lambda x: x[2] * x[3])
     avatar_square = _calculate_crop_square_boundaries(
-        faces[0], max_expansion_ratio, (img.shape[1], img.shape[0])
+        largest_face, max_expansion_ratio, (img.shape[1], img.shape[0])
     )
     x, y, w, h = avatar_square
     # Crop the image to a square
@@ -130,12 +137,6 @@ def crop_square_face(
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--image-path", type=str, required=True)
-    parser.add_argument(
-        "--expansion-ratio",
-        type=float,
-        default=FACE_EXPANSION_RATIO,
-        help=f"Ratio to expand crop beyond face size (default: {FACE_EXPANSION_RATIO})",
-    )
     return parser.parse_args()
 
 
@@ -144,12 +145,13 @@ def main():
     args = parse_args()
     original_image = Image.open(args.image_path)
     original_image.show()
-    cropped_image = crop_square_face(args.image_path, args.expansion_ratio)
+    img_data = open(args.image_path, "rb").read()
+    cropped_image = crop_square_face(img_data)
     original_image_file_name = os.path.basename(args.image_path)
     cropped_image_file_name = f"avatar_{original_image_file_name}"
     cropped_image.save(cropped_image_file_name)
     cropped_image.show()
-    print("Avatar created successfully!")
+    print(f"{cropped_image_file_name} created successfully!")
 
 
 if __name__ == "__main__":
