@@ -24,3 +24,5 @@ bundletool.jar
 version.properties
 # Sometime Android Studio writes build outputs here.
 /app/release/
+/app/debug/
+/app/local/
