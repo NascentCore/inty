@@ -42,19 +42,9 @@ interface NavigationItem {
 
 export const App: React.FC = () => {
   // 状态管理
-  const [currentPage, setCurrentPage] = useState<PageKey>(() => {
-    const savedPage = localStorage.getItem("lastVisitedPage");
-    return (savedPage as PageKey) || "chat";
-  });
+  const [currentPage, setCurrentPage] = useState<PageKey>("evaluation");
   const [collapsed, setCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const [selectedAgentForChat, setSelectedAgentForChat] = useState<any>(null); // To store the agent selected from AgentManagePage
-
-  // GEMINI: Callback to handle agent selection from AgentManagePage
-  const handleSelectAgentForChat = (agent: any) => {
-    setSelectedAgentForChat(agent);
-    setCurrentPage("chat");
-  };
 
   // 响应式检测
   useEffect(() => {
@@ -86,11 +76,6 @@ export const App: React.FC = () => {
 
     return () => clearTimeout(timer);
   }, []);
-
-  // GEMINI: Save current page to localStorage whenever it changes
-  useEffect(() => {
-    localStorage.setItem("lastVisitedPage", currentPage);
-  }, [currentPage]);
 
   // 处理侧边栏折叠/展开
   const handleCollapse = (collapsed: boolean) => {
@@ -148,13 +133,10 @@ export const App: React.FC = () => {
             onNavigateToEvaluation={() => setCurrentPage("evaluation")}
           />
         );
-
-      case "agents":
-        return (
-          <AgentManagePage onSelectAgentForChat={handleSelectAgentForChat} />
-        );
       case "chat":
-        return <ChatPage selectedAgent={selectedAgentForChat} />;
+        return <ChatPage />;
+      case "agents":
+        return <AgentManagePage />;
       case "prompt-query":
         return <PromptQueryPage />;
       case "prompt-evaluation":
