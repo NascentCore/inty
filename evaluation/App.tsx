@@ -148,8 +148,7 @@ export const App: React.FC = () => {
             onNavigateToEvaluation={() => setCurrentPage("evaluation")}
           />
         );
-      case "chat":
-        return <ChatPage />;
+
       case "agents":
         return (
           <AgentManagePage onSelectAgentForChat={handleSelectAgentForChat} />
