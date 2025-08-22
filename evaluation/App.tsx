@@ -42,7 +42,10 @@ interface NavigationItem {
 
 export const App: React.FC = () => {
   // 状态管理
-  const [currentPage, setCurrentPage] = useState<PageKey>("chat");
+  const [currentPage, setCurrentPage] = useState<PageKey>(() => {
+    const savedPage = localStorage.getItem("lastVisitedPage");
+    return (savedPage as PageKey) || "chat";
+  });
   const [collapsed, setCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
@@ -76,6 +79,11 @@ export const App: React.FC = () => {
 
     return () => clearTimeout(timer);
   }, []);
+
+  // GEMINI: Save current page to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem("lastVisitedPage", currentPage);
+  }, [currentPage]);
 
   // 处理侧边栏折叠/展开
   const handleCollapse = (collapsed: boolean) => {
