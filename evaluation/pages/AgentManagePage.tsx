@@ -344,14 +344,16 @@ export const AgentManagePage: React.FC = () => {
         mode_prompt: agent.mode_prompt,
         modelType: agent.llm_config ? "custom" : "default",
         // 明确设置LLM配置字段，避免字段名不匹配问题
-        ...(agent.llm_config ? {
-          model: agent.llm_config.model,
-          temperature: agent.llm_config.temperature,
-          max_tokens: agent.llm_config.max_tokens,
-          top_p: agent.llm_config.top_p,
-          frequency_penalty: agent.llm_config.frequency_penalty,
-          presence_penalty: agent.llm_config.presence_penalty,
-        } : {}),
+        ...(agent.llm_config
+          ? {
+              model: agent.llm_config.model,
+              temperature: agent.llm_config.temperature,
+              max_tokens: agent.llm_config.max_tokens,
+              top_p: agent.llm_config.top_p,
+              frequency_penalty: agent.llm_config.frequency_penalty,
+              presence_penalty: agent.llm_config.presence_penalty,
+            }
+          : {}),
       });
     }, 100);
 

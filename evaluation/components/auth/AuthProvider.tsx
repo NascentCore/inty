@@ -18,10 +18,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const initApp = async () => {
       try {
         console.log("🚀 初始化应用...");
-        
+
         // 模拟一些初始化时间
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
+        await new Promise((resolve) => setTimeout(resolve, 500));
+
         console.log("✅ 应用初始化完成");
       } catch (error) {
         console.error("应用初始化失败:", error);
