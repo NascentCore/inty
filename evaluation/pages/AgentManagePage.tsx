@@ -933,10 +933,10 @@ export const AgentManagePage: React.FC = () => {
         width={800}
       >
         {currentAgent && (
-          <div style={{ maxHeight: 600, overflowY: "auto" }}>
-            <Row gutter={24}>
-              <Col span={6}>
-                <div style={{ textAlign: "center" }}>
+          <div style={{ maxHeight: 600, overflowY: "auto", padding: 16 }}>
+            <Card size="small" title="基本信息" style={{ marginBottom: 16 }}>
+              <Row gutter={[16, 16]} align="middle">
+                <Col span={6} style={{ textAlign: "center" }}>
                   <Avatar
                     size={80}
                     src={currentAgent.avatar}
@@ -953,31 +953,51 @@ export const AgentManagePage: React.FC = () => {
                       {currentAgent.visibility === "PUBLIC" ? "公开" : "私有"}
                     </Tag>
                   </div>
-                </div>
-              </Col>
-              <Col span={18}>
-                <h3>{currentAgent.name}</h3>
-                <p>
-                  <strong>性别:</strong>{" "}
-                  {currentAgent.gender === "MALE"
-                    ? "男"
-                    : currentAgent.gender === "FEMALE"
-                      ? "女"
-                      : "其他"}
-                </p>
-                <p>
-                  <strong>简介:</strong> {currentAgent.intro}
-                </p>
-                <p>
-                  <strong>开场白:</strong> {currentAgent.opening}
-                </p>
-              </Col>
-            </Row>
+                </Col>
+                <Col span={18}>
+                  <p>
+                    <strong>ID:</strong> {currentAgent.id}
+                  </p>
+                  <p>
+                    <strong>名称:</strong> {currentAgent.name}
+                  </p>
+                  <p>
+                    <strong>性别:</strong>{" "}
+                    {currentAgent.gender === "MALE"
+                      ? "男"
+                      : currentAgent.gender === "FEMALE"
+                        ? "女"
+                        : "其他"}
+                  </p>
+                  <p>
+                    <strong>简介:</strong> {currentAgent.intro || "无"}
+                  </p>
+                  <p>
+                    <strong>开场白:</strong> {currentAgent.opening || "无"}
+                  </p>
+                  <p>
+                    <strong>描述:</strong> {currentAgent.description || "无"}
+                  </p>
+                  <p>
+                    <strong>创建时间:</strong>{" "}
+                    {currentAgent.created_at
+                      ? new Date(currentAgent.created_at).toLocaleString()
+                      : "无"}
+                  </p>
+                  <p>
+                    <strong>更新时间:</strong>{" "}
+                    {currentAgent.updated_at
+                      ? new Date(currentAgent.updated_at).toLocaleString()
+                      : "无"}
+                  </p>
+                </Col>
+              </Row>
+            </Card>
 
-            <Divider />
-
-            <div>
-              <h4>主提示词</h4>
+            <Card size="small" title="提示词配置" style={{ marginBottom: 16 }}>
+              <p>
+                <strong>主提示词:</strong>
+              </p>
               <div
                 style={{
                   background: "#f5f5f5",
@@ -989,12 +1009,11 @@ export const AgentManagePage: React.FC = () => {
                   fontSize: "12px",
                 }}
               >
-                {currentAgent.main_prompt}
+                {currentAgent.main_prompt || "无"}
               </div>
-            </div>
-
-            <div style={{ marginTop: 16 }}>
-              <h4>角色信息</h4>
+              <p style={{ marginTop: 16 }}>
+                <strong>角色信息:</strong>
+              </p>
               <div
                 style={{
                   background: "#f5f5f5",
@@ -1006,12 +1025,11 @@ export const AgentManagePage: React.FC = () => {
                   fontSize: "12px",
                 }}
               >
-                {currentAgent.personality}
+                {currentAgent.personality || "无"}
               </div>
-            </div>
-
-            <div style={{ marginTop: 16 }}>
-              <h4>聊天模式</h4>
+              <p style={{ marginTop: 16 }}>
+                <strong>聊天模式:</strong>
+              </p>
               <div
                 style={{
                   background: "#f5f5f5",
@@ -1023,42 +1041,43 @@ export const AgentManagePage: React.FC = () => {
                   fontSize: "12px",
                 }}
               >
-                {currentAgent.mode_prompt}
+                {currentAgent.mode_prompt || "无"}
               </div>
-            </div>
+            </Card>
 
             {currentAgent.llm_config && (
-              <div style={{ marginTop: 16 }}>
-                <h4>自定义模型配置</h4>
-                <Row gutter={16}>
+              <Card size="small" title="自定义模型配置">
+                <Row gutter={[16, 16]}>
                   <Col span={12}>
                     <p>
-                      <strong>模型:</strong> {currentAgent.llm_config.model}
+                      <strong>模型:</strong>{" "}
+                      {currentAgent.llm_config.model || "无"}
                     </p>
                     <p>
                       <strong>温度:</strong>{" "}
-                      {currentAgent.llm_config.temperature}
+                      {currentAgent.llm_config.temperature ?? "无"}
                     </p>
                     <p>
                       <strong>最大令牌数:</strong>{" "}
-                      {currentAgent.llm_config.max_tokens}
+                      {currentAgent.llm_config.max_tokens ?? "无"}
                     </p>
                   </Col>
                   <Col span={12}>
                     <p>
-                      <strong>Top P:</strong> {currentAgent.llm_config.top_p}
+                      <strong>Top P:</strong>{" "}
+                      {currentAgent.llm_config.top_p ?? "无"}
                     </p>
                     <p>
                       <strong>频率惩罚:</strong>{" "}
-                      {currentAgent.llm_config.frequency_penalty}
+                      {currentAgent.llm_config.frequency_penalty ?? "无"}
                     </p>
                     <p>
                       <strong>存在惩罚:</strong>{" "}
-                      {currentAgent.llm_config.presence_penalty}
+                      {currentAgent.llm_config.presence_penalty ?? "无"}
                     </p>
                   </Col>
                 </Row>
-              </div>
+              </Card>
             )}
           </div>
         )}
