@@ -1,7 +1,7 @@
 plugins {
-    id("com.android.library")
-    id("org.jetbrains.kotlin.android")
-    id("com.google.devtools.ksp") version "2.2.0-2.0.2"
+    alias(libs.plugins.android.library)
+    alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.ksp)
 }
 
 android {
@@ -42,14 +42,16 @@ android {
 
 
 dependencies {
-    //http log viewer
+    // ===== 调试工具 =====
     debugImplementation(libs.chucker.library)
     "localImplementation"(libs.chucker.library)
     releaseImplementation(libs.chucker.library.no.op)
     "playdebugImplementation"(libs.chucker.library.no.op)
 
+    // ===== JSON 序列化 =====
     ksp(libs.moshi.kotlin.codegen)
 
+    // ===== 项目模块 =====
     api(project(":utils"))
     api(libs.bundles.moshi)
 }

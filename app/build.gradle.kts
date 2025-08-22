@@ -5,9 +5,9 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-    id("com.google.devtools.ksp") version "2.2.0-2.0.2"
+    alias(libs.plugins.ksp)
     id("therouter")
-    id("kotlin-parcelize")
+    kotlin("plugin.parcelize")
 
     alias(libs.plugins.google.services)
     alias(libs.plugins.firebase.crashlytics)
@@ -194,24 +194,24 @@ TheRouter {
 }
 
 dependencies {
-
+    // ===== AndroidX 核心库 =====
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.appcompat)
+    implementation(libs.androidx.activity)
+    implementation(libs.androidx.constraintlayout)
+
+    // ===== Compose UI =====
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
-
     implementation(libs.androidx.material3)
-
-    implementation(libs.androidx.appcompat)
     implementation(libs.material)
-    implementation(libs.androidx.activity)
-    implementation(libs.androidx.constraintlayout)
 
-
+    // ===== 测试库 =====
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -220,41 +220,36 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
 
+    // ===== 路由 =====
     implementation(libs.router)
     ksp(libs.therouter.apt)
 
+    // ===== 项目模块 =====
     implementation(project(":utils"))
     implementation(project(":network"))
 
+    // ===== 调试工具 =====
     debugImplementation(libs.chucker.library)
     "localImplementation"(libs.chucker.library)
     releaseImplementation(libs.chucker.library.no.op)
     "playdebugImplementation"(libs.chucker.library.no.op)
 
+    // ===== 网络库 =====
     api(libs.retrofit.core)
-
     implementation(libs.retrofit2.kotlin.coroutines.adapter)
-    // 统一使用 Coil 3.x 版本
+
+    // ===== 图片加载 =====
     implementation(libs.bundles.coils3)
 
-    // Google支付
+    // ===== Google 服务 =====
     implementation(libs.billing.ktx)
-
-    // 新的身份验证方式
-    implementation(libs.credential.manager)
-    implementation(libs.credential.play.service.auth)
-    implementation(libs.google.identity)
-    //firebase 相关依赖
     implementation(platform(libs.firebase.bom))
-    implementation(libs.firebase.analytics)
-    implementation(libs.firebase.messaging)
-    implementation(libs.firebase.messaging.directboot)
-    implementation(libs.firebase.crashlytics)
-    implementation(libs.firebase.perf)
+    implementation(libs.bundles.firebase.core)
+    implementation(libs.bundles.credentials)
 
+    // ===== 图片处理 =====
     api(libs.ucrop)
 
-    // 协程支持
-    implementation(libs.kotlinx.coroutines.core)
-    implementation(libs.kotlinx.coroutines.android)
+    // ===== 协程 =====
+    implementation(libs.bundles.coroutines)
 }

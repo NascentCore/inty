@@ -120,6 +120,7 @@ android-application = { id = "com.android.application", version.ref = "agp" }
 android-library = { id = "com.android.library", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 
 # ===== 第三方插件 =====
 the-router = { id = "cn.therouter", version.ref = "theRouter" }
@@ -135,3 +136,12 @@ coils3 = ["coil-kt-compose3", "coil-kt-network-okhttp3"]
 
 # ===== JSON 序列化 =====
 moshi = ["moshi", "moshi-kotlin", "retrofit-moshi"]
+
+# ===== 协程 =====
+coroutines = ["kotlinx-coroutines-core", "kotlinx-coroutines-android"]
+
+# ===== Firebase 核心服务 =====
+firebase-core = ["firebase-analytics", "firebase-messaging", "firebase-messaging-directboot", "firebase-crashlytics", "firebase-perf"]
+
+# ===== 身份验证 =====
+credentials = ["credential-manager", "credential-play-service-auth", "google-identity"]

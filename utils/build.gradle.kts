@@ -40,15 +40,17 @@ android {
 }
 
 dependencies {
-
+    // ===== AndroidX 核心库 =====
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
 
+    // ===== 测试库 =====
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
 
+    // ===== 腾讯系库 =====
     api(libs.mmkv)
     implementation(libs.mars.xlog)
 }
