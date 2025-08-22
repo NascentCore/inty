@@ -7,6 +7,7 @@ from typing import Tuple
 import cv2
 from PIL import Image
 import numpy as np
+from pydantic import BaseModel
 
 # At module level, outside any function
 _FACE_CASCADE = None
@@ -17,6 +18,11 @@ FACE_DETECTION_SCALE_FACTOR = (
 FACE_DETECTION_MIN_NEIGHBORS = (
     4  # Minimum overlapping detections required to confirm a face
 )
+
+# See full list at:
+# https://github.com/opencv/opencv/tree/master/data/haarcascades
+HAAR_CASCADE_PROFILE_FACE = "haarcascade_profileface.xml"
+HAAR_CASCADE_FRONTAL_FACE_DEFAULT = "haarcascade_frontalface_default.xml"
 
 
 """
@@ -30,16 +36,30 @@ Face coordinates, are represented as the top-left corner of the rectangle, and t
 """
 
 
-HAAR_CASCADE_PROFILE_FACE = "haarcascade_profileface.xml"
-HAAR_CASCADE_FRONTAL_FACE_DEFAULT = "haarcascade_frontalface_default.xml"
-HAAR_CASCADE_FRONTAL_CAT_FACE_EXTENDED = "haarcascade_frontalcatface_extended.xml"
+class AvatarCroppingConfig(BaseModel):
+    """
+    Each face detection requires different expansion ratio.
+    """
+
+    max_expansion_ratio: float
+    face_detection_profile: str
+
+
+PROFILE_FACE = AvatarCroppingConfig(
+    max_expansion_ratio=1.0,
+    face_detection_profile=HAAR_CASCADE_PROFILE_FACE,
+)
+FRONTAL_FACE_DEFAULT = AvatarCroppingConfig(
+    max_expansion_ratio=1.5,
+    face_detection_profile=HAAR_CASCADE_FRONTAL_FACE_DEFAULT,
+)
 
 
 def _get_face_cascade():
     global _FACE_CASCADE
     if _FACE_CASCADE is None:
         _FACE_CASCADE = cv2.CascadeClassifier(
-            cv2.data.haarcascades + HAAR_CASCADE_FRONTAL_FACE_DEFAULT
+            cv2.data.haarcascades + HAAR_CASCADE_PROFILE_FACE
         )
     return _FACE_CASCADE
 
@@ -103,9 +123,7 @@ def _calculate_crop_square_boundaries(
     return (x, y, max_square_size, max_square_size)
 
 
-def crop_square_face(
-    img_data: bytes, max_expansion_ratio=FACE_EXPANSION_RATIO
-) -> Image.Image:
+def crop_square_face(img_data: bytes, max_expansion_ratio: float) -> Image.Image:
     # Haar cascade classifier only works with grayscale images.
     img = cv2.imdecode(np.frombuffer(img_data, np.uint8), cv2.IMREAD_COLOR)
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -146,7 +164,7 @@ def main():
     original_image = Image.open(args.image_path)
     original_image.show()
     img_data = open(args.image_path, "rb").read()
-    cropped_image = crop_square_face(img_data)
+    cropped_image = crop_square_face(img_data, max_expansion_ratio=1.5)
     original_image_file_name = os.path.basename(args.image_path)
     cropped_image_file_name = f"avatar_{original_image_file_name}"
     cropped_image.save(cropped_image_file_name)
