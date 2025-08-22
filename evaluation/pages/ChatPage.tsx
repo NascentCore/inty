@@ -110,6 +110,13 @@ export const ChatPage: React.FC = () => {
     scrollToBottom();
   }, [messages, scrollToBottom]);
 
+  // GEMINI: 消息发送完毕后，自动聚焦输入框
+  useEffect(() => {
+    if (!sending && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [sending]);
+
   // 加载聊天历史
   const loadChatHistory = useCallback(async () => {
     try {
