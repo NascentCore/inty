@@ -65,7 +65,7 @@ langchain-community==0.3.24
 langchain-core==0.3.62
 langchain-google-community==2.0.7
 langchain-openai==0.3.18
-langchain-postgres==0.0.14
+langchain-postgres==0.0.15
 langchain-text-splitters==0.3.8
 langgraph==0.4.7
 langgraph-checkpoint==2.0.26
@@ -81,7 +81,7 @@ marshmallow==3.26.1
 msgpack==1.1.0
 multidict==6.4.4
 mypy_extensions==1.1.0
-numpy==1.26.4
+numpy==2.2.6
 openai==1.82.1
 orjson==3.10.18
 ormsgpack==1.10.0

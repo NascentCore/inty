@@ -1,6 +1,7 @@
 import random
 import pytest
 from PIL import Image
+from app.utils.crop_avatar import crop_square_face
 from crop_avatar import (
     _calculate_top_square_boundaries,
     _calculate_crop_square_boundaries,
@@ -163,8 +164,17 @@ def test_calculate_crop_square_boundaries():
 
 
 def test_crop_square_face_handle_all_image_formats():
-    img_path = "tests/app/utils/test_images/test_image.jpg"
-    cropped_img_path = "tests/app/utils/test_images/test_image_cropped.jpg"
+    img_path = "tests/files/test_image.jpg"
     cropped_img = crop_square_face(img_path)
-    cropped_img.save(cropped_img_path)
+    cropped_img.save("avatar_test_image.jpg")
+    assert cropped_img.size == (100, 100)
+
+    img_path = "tests/files/test_image.png"
+    cropped_img = crop_square_face(img_path)
+    cropped_img.save("avatar_test_image.png")
+    assert cropped_img.size == (100, 100)
+
+    img_path = "tests/files/test_image.webp"
+    cropped_img = crop_square_face(img_path)
+    cropped_img.save("avatar_test_image.png")
     assert cropped_img.size == (100, 100)
