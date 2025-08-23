@@ -540,7 +540,7 @@ async def upload_avatar_preview(
             f"avatars/tmp/{current_user.id}/{timestamp}-{unique_id}-cropped.{file_ext}"
         )
 
-        cropped_avatar = crop_avatar(file_data, max_expansion_ratio=1.5)
+        cropped_avatar = crop_avatar(file_data)
 
         url = upload_to_gcs(
             file_data,
@@ -548,10 +548,17 @@ async def upload_avatar_preview(
             global_config_loaded_from_config_yaml.gcs.bucket,
             avatar_path,
         )
-        logger.debug(f"GCS上传成功，返回URL: {url}")
+        cropped_avatar_url = upload_to_gcs(
+            cropped_avatar,
+            file.content_type,
+            global_config_loaded_from_config_yaml.gcs.bucket,
+            cropped_avatar_path,
+        )
+        logger.debug(f"GCS上传成功，返回URL: {url} {cropped_avatar_url}")
 
         response_data = {
             "url": url,
+            "avatar_url": cropped_avatar_url,
             "filename": file.filename,
             "size": file_size,
             "content_type": file.content_type,
