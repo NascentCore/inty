@@ -9,6 +9,9 @@
   * release tag 格式 v<major>.<minor>.<fix>
   * dev branch 格式 <release-tag>-dev (v<major>.<minor>.<fix>-dev)
     * dev branch tag 须为 <fix> 增 1，如 v1.0.2-dev release tag 为 v1.0.3
+* app backend 构建发布
+
+### 发布后二次检查
 
 * `docker inspect --format '{{.Config.Image}}' inty-backend-prod` 确认生产环境服务器 docker 镜像版本
 * 生产环境部署之前要跑一次压力测试，了解其性能指标是否有明显问题
