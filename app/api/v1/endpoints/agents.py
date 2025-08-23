@@ -542,6 +542,14 @@ async def upload_avatar_preview(
 
         cropped_avatar = crop_avatar(file_data)
 
+        # Convert PIL Image to bytes for GCS upload
+        import io
+
+        cropped_avatar_bytes = io.BytesIO()
+        cropped_avatar.save(cropped_avatar_bytes, format=ImageFormat.JPEG)
+        cropped_avatar_bytes.seek(0)
+        cropped_avatar_data = cropped_avatar_bytes.getvalue()
+
         url = upload_to_gcs(
             file_data,
             file.content_type,
@@ -549,8 +557,8 @@ async def upload_avatar_preview(
             avatar_path,
         )
         cropped_avatar_url = upload_to_gcs(
-            cropped_avatar,
-            file.content_type,
+            cropped_avatar_data,
+            f"image/{ImageFormat.JPEG}",  # Cropped image is always JPEG
             global_config_loaded_from_config_yaml.gcs.bucket,
             cropped_avatar_path,
         )

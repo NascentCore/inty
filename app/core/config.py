@@ -85,7 +85,7 @@ class AppConfig:
 
     def __post_init__(self):
         if self.backend_cors_origins is None:
-            self.backend_cors_origins = []
+            self.backend_cors_origins = ["http://localhost:3000"]
         if self.limits is None:
             self.limits = self.LimitsConfig()
 
