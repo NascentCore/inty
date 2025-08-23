@@ -540,7 +540,7 @@ async def upload_avatar_preview(
             f"avatars/tmp/{current_user.id}/{timestamp}-{unique_id}-cropped.{file_ext}"
         )
 
-        cropped_avatar = crop_square_face(file_data)
+        cropped_avatar = crop_square_face(file_data, max_expansion_ratio=1.5)
 
         url = upload_to_gcs(
             file_data,

@@ -9,20 +9,35 @@ from PIL import Image
 import numpy as np
 from pydantic import BaseModel
 
-# At module level, outside any function
-_FACE_CASCADE = None
-FACE_EXPANSION_RATIO = 1.0  # How many times larger than the face to make the crop
+
+# Face detection algorithms often work by scanning an image at multiple scales (sizes)
+# to find faces of varying sizes. scaleFactor determines the step size for creating this "scale pyramid".
+# A smaller scaleFactor means more detailed scanning, but also more computational cost.
 FACE_DETECTION_SCALE_FACTOR = (
     1.1  # Scale factor for face detection (smaller = more accurate but slower)
 )
+
+# This is used to filter out false-positive rectangles.
+# An image at multiple scales using a sliding window.
+# This process can result in many false-positive rectangles,
+# with a single face potentially being identified by several overlapping rectangles.
 FACE_DETECTION_MIN_NEIGHBORS = (
-    4  # Minimum overlapping detections required to confirm a face
+    6  # Minimum overlapping detections required to confirm a face
 )
 
 # See full list at:
 # https://github.com/opencv/opencv/tree/master/data/haarcascades
 HAAR_CASCADE_PROFILE_FACE = "haarcascade_profileface.xml"
 HAAR_CASCADE_FRONTAL_FACE_DEFAULT = "haarcascade_frontalface_default.xml"
+
+_CASCADE_CACHE = {
+    HAAR_CASCADE_PROFILE_FACE: cv2.CascadeClassifier(
+        cv2.data.haarcascades + HAAR_CASCADE_PROFILE_FACE
+    ),
+    HAAR_CASCADE_FRONTAL_FACE_DEFAULT: cv2.CascadeClassifier(
+        cv2.data.haarcascades + HAAR_CASCADE_FRONTAL_FACE_DEFAULT
+    ),
+}
 
 
 """
@@ -47,21 +62,17 @@ class AvatarCroppingConfig(BaseModel):
 
 PROFILE_FACE = AvatarCroppingConfig(
     max_expansion_ratio=1.0,
+    # This is more effective for non-frontal faces.
+    # 45-degree-side-small.jpg
     face_detection_profile=HAAR_CASCADE_PROFILE_FACE,
 )
 FRONTAL_FACE_DEFAULT = AvatarCroppingConfig(
-    max_expansion_ratio=1.5,
+    max_expansion_ratio=2.0,
+    # For a frontal face, this is more effective.
+    # As profile face will try to center eyes in the middle.
+    # See half-body-frontal.jpg for such an example.
     face_detection_profile=HAAR_CASCADE_FRONTAL_FACE_DEFAULT,
 )
-
-
-def _get_face_cascade():
-    global _FACE_CASCADE
-    if _FACE_CASCADE is None:
-        _FACE_CASCADE = cv2.CascadeClassifier(
-            cv2.data.haarcascades + HAAR_CASCADE_PROFILE_FACE
-        )
-    return _FACE_CASCADE
 
 
 def _calculate_top_square_boundaries(width, height) -> Tuple[int, int, int, int]:
@@ -97,6 +108,7 @@ def _calculate_crop_square_boundaries(
         max_expansion_ratio >= 1
     ), "It's not possible to crop a square smaller than the face."
 
+    print(f"image shape: {img_shape}")
     x, y, w, h = face_coords
     face_center_x = x + w // 2
     face_center_y = y + h // 2
@@ -110,6 +122,9 @@ def _calculate_crop_square_boundaries(
     max_to_left = face_center_x
     max_to_bottom = img_shape[1] - face_center_y
     max_to_right = img_shape[0] - face_center_x
+    print(
+        f"max_to_top: {max_to_top}, max_to_left: {max_to_left}, max_to_bottom: {max_to_bottom}, max_to_right: {max_to_right}"
+    )
     max_square_size_within_img = 2 * min(
         max_to_top, max_to_left, max_to_bottom, max_to_right
     )
@@ -123,13 +138,16 @@ def _calculate_crop_square_boundaries(
     return (x, y, max_square_size, max_square_size)
 
 
-def crop_square_face(img_data: bytes, max_expansion_ratio: float) -> Image.Image:
+def crop_square_face(
+    img_data: bytes,
+    avatar_cropping_config: AvatarCroppingConfig,
+) -> Image.Image:
     # Haar cascade classifier only works with grayscale images.
     img = cv2.imdecode(np.frombuffer(img_data, np.uint8), cv2.IMREAD_COLOR)
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
     # Load the Haar Cascade for face detection
-    face_cascade = _get_face_cascade()
+    face_cascade = _CASCADE_CACHE[avatar_cropping_config.face_detection_profile]
 
     # Detect faces
     faces = face_cascade.detectMultiScale(
@@ -143,7 +161,9 @@ def crop_square_face(img_data: bytes, max_expansion_ratio: float) -> Image.Image
 
     largest_face = max(faces, key=lambda x: x[2] * x[3])
     avatar_square = _calculate_crop_square_boundaries(
-        largest_face, max_expansion_ratio, (img.shape[1], img.shape[0])
+        largest_face,
+        avatar_cropping_config.max_expansion_ratio,
+        (img.shape[1], img.shape[0]),
     )
     x, y, w, h = avatar_square
     # Crop the image to a square
@@ -164,12 +184,12 @@ def main():
     original_image = Image.open(args.image_path)
     original_image.show()
     img_data = open(args.image_path, "rb").read()
-    cropped_image = crop_square_face(img_data, max_expansion_ratio=1.5)
-    original_image_file_name = os.path.basename(args.image_path)
-    cropped_image_file_name = f"avatar_{original_image_file_name}"
-    cropped_image.save(cropped_image_file_name)
+
+    cropped_image = crop_square_face(img_data, PROFILE_FACE)
     cropped_image.show()
-    print(f"{cropped_image_file_name} created successfully!")
+
+    cropped_image = crop_square_face(img_data, FRONTAL_FACE_DEFAULT)
+    cropped_image.show()
 
 
 if __name__ == "__main__":
