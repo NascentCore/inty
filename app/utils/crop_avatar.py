@@ -89,7 +89,7 @@ PROFILE_FACE = AvatarCroppingConfig(
     face_detection_profile=HAAR_CASCADE_PROFILE_FACE,
 )
 FRONTAL_FACE_DEFAULT = AvatarCroppingConfig(
-    max_expansion_ratio=1.8,
+    max_expansion_ratio=1.5,
     # For a frontal face, this is more effective.
     # As profile face will try to center eyes in the middle.
     # See half-body-frontal.jpg for such an example.
