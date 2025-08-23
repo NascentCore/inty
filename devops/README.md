@@ -4,7 +4,11 @@
 
 * 检查 [Terms of Use](https://app.termly.io/dashboard/website/0619077d-bb29-4da6-af36-9a465bf36f08/terms-of-service)
 * 检查 [Privacy Policy](https://app.termly.io/dashboard/website/0619077d-bb29-4da6-af36-9a465bf36f08/privacy-policy)
-* Git tagging
+* Git tagging, 打标规则
+  * app backend tag 同一 
+  * release tag 格式 v<major>.<minor>.<fix>
+  * dev branch 格式 <release-tag>-dev (v<major>.<minor>.<fix>-dev)
+    * dev branch tag 须为 <fix> 增 1，如 v1.0.2-dev release tag 为 v1.0.3
 
 * `docker inspect --format '{{.Config.Image}}' inty-backend-prod` 确认生产环境服务器 docker 镜像版本
 * 生产环境部署之前要跑一次压力测试，了解其性能指标是否有明显问题
