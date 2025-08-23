@@ -14,6 +14,7 @@
   * dev branch 格式 <release-tag>-dev (v<major>.<minor>.<fix>-dev)
     * dev branch tag 须为 <fix> 增 1，如 v1.0.2-dev release tag 为 v1.0.3
   * `git tag -d $GIT_TAG && git push origin --delete $GIT_TAG`
+  * `git tag $GIT_TAG && git push --tags`
 * app backend 构建发布
   * app 构建产出物为 aab，发布于 Google Play，版本号为 git commit ID，注入为 app 内版本号，发布于内测轨道后，内测人员下载安装，确认版本号
     * [内测轨道](https://play.google.com/store/apps/details?id=com.ai.intellimate)
