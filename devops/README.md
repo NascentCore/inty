@@ -1,5 +1,9 @@
 # DevOps
 
+## SoPs
+
+* `docker inspect --format '{{.Config.Image}}' inty-backend-prod` 确认生产环境服务器 docker 镜像版本
+
 ## Dev Instance
 
 这里记录了生成环境实例的设置
