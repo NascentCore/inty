@@ -1,6 +1,9 @@
 # DevOps
 
-## SoPs
+## 发布前准备
+
+* 检查 [Terms of Use](https://app.termly.io/dashboard/website/0619077d-bb29-4da6-af36-9a465bf36f08/terms-of-service)
+* 检查 [Privacy Policy](https://app.termly.io/dashboard/website/0619077d-bb29-4da6-af36-9a465bf36f08/privacy-policy)
 
 * `docker inspect --format '{{.Config.Image}}' inty-backend-prod` 确认生产环境服务器 docker 镜像版本
 * 生产环境部署之前要跑一次压力测试，了解其性能指标是否有明显问题
