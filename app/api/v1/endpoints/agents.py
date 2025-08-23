@@ -17,7 +17,7 @@ from app import schemas
 from app.api import deps
 from app.api.utils.logger_route import LoggerRoute
 from app.core.agent.agent import agent_manager
-from app.utils.crop_avatar import crop_square_face
+from app.utils.crop_avatar import crop_avatar
 from app.utils.gemini import ImagenGeneratedImage, text_to_image
 from app.core.config import global_config_loaded_from_config_yaml
 from app.schemas.character_card import (
@@ -540,7 +540,7 @@ async def upload_avatar_preview(
             f"avatars/tmp/{current_user.id}/{timestamp}-{unique_id}-cropped.{file_ext}"
         )
 
-        cropped_avatar = crop_square_face(file_data, max_expansion_ratio=1.5)
+        cropped_avatar = crop_avatar(file_data, max_expansion_ratio=1.5)
 
         url = upload_to_gcs(
             file_data,
