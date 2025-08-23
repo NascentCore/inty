@@ -11,8 +11,8 @@ RUN apt-get update && apt-get install -y \
 # 复制依赖文件
 COPY requirements.txt .
 
-# 安装 Python 依赖
-RUN pip install --no-cache-dir -r requirements.txt
+# https://stackoverflow.com/a/58021389/31283770
+RUN --mount=type=cache,target=/root/.cache/pip pip install -r requirements.txt
 
 # 复制应用代码
 COPY app/ app/
