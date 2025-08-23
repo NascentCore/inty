@@ -18,6 +18,8 @@ RUN --mount=type=cache,target=/root/.cache/pip pip install -r requirements.txt
 COPY app/ app/
 COPY alembic/ alembic/
 COPY alembic.ini .
+# Used for manipulate backend system with bundled configurations.
+COPY scripts/ scripts/
 COPY start.sh .
 
 # 暴露端口
