@@ -119,6 +119,13 @@ def update_agent_avatar(conn, agent_id: str, new_avatar_url: str):
 
 def process_one_agent_avatar(conn, agent_id: str, avatar_url: str):
     """Process one agent avatar"""
+    consent = input(
+        f"Are you sure you want to proceed to update agent {agent_id} avatar? (y/n): "
+    )
+    if consent.lower() != "y":
+        logger.info("User did not confirm, exiting...")
+        return
+
     png_data = download_image(avatar_url)
     if not png_data:
         logger.error(f"Failed to download image from {avatar_url}, skipping...")
@@ -167,13 +174,20 @@ def process_agent_avatars(conn):
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Compress PNG avatar images to JPEG format and update database"
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+        description="Compress PNG avatar images to JPEG format and update database",
+    )
+    parser.add_argument(
+        "--pg-url",
+        default=global_config_loaded_from_config_yaml.database.url,
+        type=str,
+        help="PostgreSQL URL",
     )
     parser.add_argument(
         "--quality",
         type=int,
         default=80,
-        help="JPEG compression quality (1-100, default: 80)",
+        help="JPEG compression quality (1-100)",
     )
 
     args = parser.parse_args()
@@ -184,11 +198,11 @@ def main():
     args = parse_args()
 
     logger.info("Starting avatar compression process")
-    logger.info(f"Database URL: {global_config_loaded_from_config_yaml.database.url}")
+    logger.info(f"Database URL: {args.pg_url}")
     logger.info(f"JPEG quality: {args.quality}")
 
     # Ask for user confirmation to proceed
-    user_input = input("Are you sure you want to proceed? (y/n): ")
+    user_input = input(f"Are you sure you want to proceed with {args.pg_url}? (y/n): ")
     if user_input.lower() != "y":
         logger.info("User did not confirm, exiting...")
         sys.exit(0)
