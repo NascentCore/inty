@@ -3,6 +3,7 @@
 ## SoPs
 
 * `docker inspect --format '{{.Config.Image}}' inty-backend-prod` 确认生产环境服务器 docker 镜像版本
+* 生产环境部署之前要跑一次压力测试，了解其性能指标是否有明显问题
 
 ## Dev Instance
 
