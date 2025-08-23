@@ -202,11 +202,6 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
         // 如果有头像文件，先上传头像
         if (data.avatar) {
           try {
-            // 这里应该调用头像上传API
-            // const uploadResult = await api.uploadAvatar(data.avatar);
-            // agentData.avatar = uploadResult.url;
-
-            // 暂时移除avatar字段，避免类型错误
             const { ...restData } = agentData;
             agentData = restData;
           } catch (error) {
