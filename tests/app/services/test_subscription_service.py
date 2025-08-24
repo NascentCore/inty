@@ -17,7 +17,7 @@ class TestSubscriptionService:
 
     @pytest.mark.asyncio
     async def test_check_agent_creation_limit_success(self):
-        """Test successful agent creation limit check"""
+        """Test successful agent creation limit check for subscribed user"""
         # Arrange
         mock_db = AsyncMock(spec=AsyncSession)
         mock_subscription_status = MagicMock(spec=SubscriptionStatusResponse)
@@ -34,9 +34,20 @@ class TestSubscriptionService:
         mock_result.scalar.return_value = 3  # User has created 3 agents
         mock_db.execute.return_value = mock_result
 
+        # Create a mock user object
+        user = User(
+            id="user-123",
+            readable_id="user123",
+            email="test@example.com",
+            auth_type="google",
+            is_active=True,
+            created_at=datetime.now(timezone.utc),
+            is_superuser=False,
+        )
+
         # Act
         is_allowed, agent_count, limit = (
-            await subscription_service.check_agent_creation_limit(mock_db, "user-123")
+            await subscription_service.check_agent_creation_limit(mock_db, user)
         )
 
         # Assert
@@ -64,6 +75,7 @@ class TestSubscriptionService:
         user = User(
             id="user-123",
             readable_id="user123",
+            email="test@example.com",
             auth_type="google",
             is_active=True,
             created_at=datetime.now(timezone.utc),
@@ -96,9 +108,20 @@ class TestSubscriptionService:
         mock_result.scalar.return_value = 5  # User has created 5 agents
         mock_db.execute.return_value = mock_result
 
+        # Create a mock user object
+        user = User(
+            id="user-123",
+            readable_id="user123",
+            email="test@example.com",
+            auth_type="google",
+            is_active=True,
+            created_at=datetime.now(timezone.utc),
+            is_superuser=False,
+        )
+
         # Act
         is_allowed, agent_count, limit = (
-            await subscription_service.check_agent_creation_limit(mock_db, "user-123")
+            await subscription_service.check_agent_creation_limit(mock_db, user)
         )
 
         # Assert
