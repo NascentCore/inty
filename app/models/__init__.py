@@ -40,6 +40,5 @@ from app.models.subscription import (
 )
 from app.models.system_settings import SettingCategory, SettingType, SystemSettings
 from app.models.user import AuthType, DeviceToken, Gender, User
-from app.models.user_deletion_log import UserDeletionLog
 from app.models.verification_code import VerificationCode
 from app.models.voice_cache import VoiceCache

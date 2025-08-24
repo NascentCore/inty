@@ -1,10 +1,8 @@
-import hashlib
-import json
 import logging
 import traceback
 import uuid
 from datetime import UTC, datetime
-from typing import Any, Dict, List, Optional
+from typing import Optional
 
 from sqlalchemy import and_, text
 from sqlalchemy.exc import IntegrityError
@@ -18,7 +16,6 @@ from app.models import User
 from app.models.chat import Chat
 from app.models.subscription import SubscriptionStatus, UserSubscription
 from app.models.user import AuthType, DeviceToken
-from app.models.user_deletion_log import UserDeletionLog
 from app.schemas import UserUpdate
 from app.services.cache_service import cache_service
 
