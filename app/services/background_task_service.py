@@ -68,6 +68,8 @@ class BackgroundTaskService:
 
     def _worker_loop(self):
         """工作线程主循环"""
+        # TODO: This should be removed. Background task is used for saving llm debug messages.
+        # That can be done with langsmith tracing.
         thread_name = threading.current_thread().name
         logger.debug(f"后台工作线程启动: {thread_name}")
 

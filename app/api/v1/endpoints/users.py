@@ -199,17 +199,10 @@ async def delete_user_account(
         if not deletion_result["success"]:
             return APIResponse.error(message=deletion_result["message"])
 
-        # 异步执行相关数据匿名化
-        background_tasks.add_task(
-            user_service.anonymize_related_data, db, current_user.id
-        )
-
         response_data = AccountDeletionResponse(
             success=deletion_result["success"],
             message=deletion_result["message"],
             user_id=deletion_result["user_id"],
-            deletion_log_id=deletion_result.get("deletion_log_id"),
-            anonymized_fields=deletion_result.get("anonymized_fields"),
         )
 
         return APIResponse.success(data=response_data)

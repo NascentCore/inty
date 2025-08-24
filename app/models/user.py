@@ -52,7 +52,7 @@ class User(Base):
     )
     nickname = Column(String, index=True, comment="用户昵称，可搜索")
     avatar = Column(String, comment="用户头像URL")
-    email = Column(String, unique=True, comment="邮箱地址，唯一，用于登录")
+    email = Column(String, comment="邮箱地址")
 
     @validates("phone")
     def validate_phone(self, key, value):
@@ -69,9 +69,7 @@ class User(Base):
     auth_type = Column(
         Enum(AuthType), nullable=False, comment="认证类型：手机号/Google/游客"
     )
-    google_id = Column(
-        String, unique=True, comment="Google账号ID，唯一，用于Google登录"
-    )
+    google_id = Column(String, comment="Google账号ID，唯一，用于Google登录")
     device_id = Column(String, unique=True, comment="设备ID，唯一，用于设备识别")
     system_language = Column(String, default="en", comment="系统语言偏好，默认英语")
     is_active = Column(Boolean, default=True, comment="账号是否激活")
