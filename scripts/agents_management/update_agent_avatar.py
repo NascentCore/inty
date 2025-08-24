@@ -19,7 +19,7 @@ from loguru import logger
 from sqlalchemy import select, create_engine, and_
 from sqlalchemy.orm import Session
 
-from app.api.v1.endpoints.agents import ImageFormat
+from app.utils.image import ImageFormat
 from app.utils.crop_avatar import crop_avatar
 
 # Add the project root to Python path
