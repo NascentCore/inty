@@ -2,7 +2,7 @@ import argparse
 import os
 
 from math import floor
-from typing import Tuple
+from typing import List, Tuple
 
 import cv2
 from PIL import Image
@@ -48,6 +48,8 @@ FACE_DETECTION_MIN_NEIGHBORS = (
 # Media pipe etc.
 HAAR_CASCADE_PROFILE_FACE = "haarcascade_profileface.xml"
 HAAR_CASCADE_FRONTAL_FACE_DEFAULT = "haarcascade_frontalface_default.xml"
+ANIME_FACE = "lbpcascade_animeface.xml"
+CUSTOM_CASCADE_DIR = "app/utils/cascades/"
 
 _CASCADE_CACHE = {
     HAAR_CASCADE_PROFILE_FACE: cv2.CascadeClassifier(
@@ -56,6 +58,7 @@ _CASCADE_CACHE = {
     HAAR_CASCADE_FRONTAL_FACE_DEFAULT: cv2.CascadeClassifier(
         cv2.data.haarcascades + HAAR_CASCADE_FRONTAL_FACE_DEFAULT
     ),
+    ANIME_FACE: cv2.CascadeClassifier(CUSTOM_CASCADE_DIR + ANIME_FACE),
 }
 
 
@@ -91,6 +94,11 @@ FRONTAL_FACE_DEFAULT = AvatarCroppingConfig(
     # As profile face will try to center eyes in the middle.
     # See half-body-frontal.jpg for such an example.
     face_detection_profile=HAAR_CASCADE_FRONTAL_FACE_DEFAULT,
+)
+
+ANIME_FACE = AvatarCroppingConfig(
+    max_expansion_ratio=1.8,
+    face_detection_profile=ANIME_FACE,
 )
 
 
@@ -157,6 +165,15 @@ def _calculate_crop_square_boundaries(
     return (x, y, max_square_size, max_square_size)
 
 
+def _detect_faces(
+    gray: np.ndarray, avatar_cropping_config: AvatarCroppingConfig
+) -> List[Tuple[int, int, int, int]]:
+    face_cascade = _CASCADE_CACHE[avatar_cropping_config.face_detection_profile]
+    return face_cascade.detectMultiScale(
+        gray, FACE_DETECTION_SCALE_FACTOR, FACE_DETECTION_MIN_NEIGHBORS
+    )
+
+
 # TODO: We tried to combine profile face and frontal face detection,
 # but profile face detection always returns empty list.
 # Many ideas can be tried:
@@ -169,13 +186,18 @@ def crop_avatar(img_data: bytes) -> Image.Image:
     img = cv2.imdecode(np.frombuffer(img_data, np.uint8), cv2.IMREAD_COLOR)
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
-    # Load the Haar Cascade for face detection
-    face_cascade = _CASCADE_CACHE[FRONTAL_FACE_DEFAULT.face_detection_profile]
+    logger.debug("Detecting faces with frontal face detection ...")
+    avatar_cropping_config = FRONTAL_FACE_DEFAULT
+    faces = _detect_faces(gray, avatar_cropping_config)
 
-    # Detect faces
-    faces = face_cascade.detectMultiScale(
-        gray, FACE_DETECTION_SCALE_FACTOR, FACE_DETECTION_MIN_NEIGHBORS
-    )
+    if len(faces) == 0:
+        logger.debug("Detecting faces with anime face detection ...")
+        avatar_cropping_config = ANIME_FACE
+        faces = _detect_faces(gray, avatar_cropping_config)
+
+    ############################################################################
+    # Add new face detection passes here.
+    ############################################################################
 
     if len(faces) == 0:
         logger.warning("No faces detected, using top square boundaries")
@@ -186,7 +208,7 @@ def crop_avatar(img_data: bytes) -> Image.Image:
     largest_face = max(faces, key=lambda x: x[2] * x[3])
     avatar_square = _calculate_crop_square_boundaries(
         largest_face,
-        FRONTAL_FACE_DEFAULT.max_expansion_ratio,
+        avatar_cropping_config.max_expansion_ratio,
         (img.shape[1], img.shape[0]),
     )
 
@@ -198,6 +220,7 @@ def crop_avatar(img_data: bytes) -> Image.Image:
     # Crop the image to a square
     cropped_face = img[y : y + h, x : x + w]
 
+    # OpenCV uses BGR color order (Blue, Green, Red), needs to convert to RGB.
     return Image.fromarray(cv2.cvtColor(cropped_face, cv2.COLOR_BGR2RGB))
 
 
