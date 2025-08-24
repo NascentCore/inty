@@ -11,7 +11,6 @@ from app.core.config import (
     VerificationConfig,
     AppConfig,
     EmbeddingConfig,
-    GoogleSearchConfig,
     AgentConfig,
     GCSConfig,
     FirebaseConfig,
@@ -162,11 +161,11 @@ class TestAppConfig:
     def test_app_config_defaults(self):
         """Test AppConfig default values"""
         config = AppConfig()
-        assert config.name == "InTy"
+        assert config.name == "inty-backend"
         assert config.debug is True
         assert config.debug_messages is True
         assert config.api_v1_prefix == "/api/v1"
-        assert config.backend_cors_origins == []
+        assert config.backend_cors_origins == ["http://localhost:3000"]
         assert config.limits.free_user_image_gen_daily_limit == 4
         assert config.limits.free_user_chat_total_limit == 100
 
@@ -189,7 +188,7 @@ class TestAppConfig:
     def test_app_config_default_cors_origins(self):
         """Test AppConfig default backend_cors_origins"""
         config = AppConfig()
-        assert config.backend_cors_origins == []
+        assert config.backend_cors_origins == ["http://localhost:3000"]
 
 
 class TestEmbeddingConfig:
@@ -212,12 +211,7 @@ class TestEmbeddingConfig:
         assert config.model == "custom-model"
 
 
-class TestGoogleSearchConfig:
-    def test_google_search_config_required_fields(self):
-        """Test GoogleSearchConfig with required fields"""
-        config = GoogleSearchConfig(api_key="test-api-key", cse_id="test-cse-id")
-        assert config.api_key == "test-api-key"
-        assert config.cse_id == "test-cse-id"
+
 
 
 class TestAgentConfig:
@@ -484,7 +478,7 @@ class TestLoadConfig:
         try:
             config = load_config(temp_config_path)
             # Should use defaults for missing sections
-            assert config.app.name == "InTy"
+            assert config.app.name == "inty-backend"
             assert config.app.debug is True
             assert config.logging.level == "INFO"
             assert config.verification.code_expire_minutes == 5
