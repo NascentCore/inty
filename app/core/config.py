@@ -77,7 +77,7 @@ class AppConfig:
     @dataclass
     class LimitsConfig:
         # Maximal image size in MB, for any uploaded images.
-        max_image_size_mb: int = 2
+        max_image_size_mb: int = 4
         free_user_image_gen_daily_limit: int = 4
         free_user_chat_total_limit: int = 100
 
