@@ -16,7 +16,7 @@ import psycopg2
 import requests
 from PIL import Image
 from loguru import logger
-from sqlalchemy import select, create_engine
+from sqlalchemy import select, create_engine, and_
 from sqlalchemy.orm import Session
 
 from app.api.v1.endpoints.agents import ImageFormat
@@ -223,34 +223,6 @@ def process_one_agent_avatar_with_database(db: Session, agent_id: str):
     db.commit()
 
 
-def process_one_agent_avatar(conn, agent_id: str, avatar_url: str):
-    """Process one agent avatar"""
-    consent = input(
-        f"Are you sure you want to proceed to update agent {agent_id} avatar? (y/n): "
-    )
-    if consent.lower() != "y":
-        logger.info("User did not confirm, exiting...")
-        return
-
-    png_data = download_image(avatar_url)
-    if not png_data:
-        logger.error(f"Failed to download image from {avatar_url}, skipping...")
-        return
-
-    jpeg_data = compress_to_jpeg(png_data)
-    if len(png_data) <= len(jpeg_data):
-        logger.debug(
-            f"Skipping agent {agent_id} because the JPEG is larger than the PNG"
-        )
-        return
-
-    gcs_path = generate_jpeg_path(avatar_url)
-    logger.debug(f"PNG url: {avatar_url}")
-    logger.debug(f"JPEG url: {gcs_path}")
-    new_avatar_url = upload_jpeg_to_gcs(jpeg_data, gcs_path)
-    update_agent_avatar(conn, agent_id, new_avatar_url)
-
-
 def parse_args():
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
@@ -321,7 +293,13 @@ def main():
         db = Session(engine)
 
         agent_ids = (
-            db.execute(select(Agent.id).where(Agent.avatar.isnot(None))).scalars().all()
+            db.execute(
+                select(Agent.id).where(
+                    and_(Agent.avatar.isnot(None), Agent.deleted_at.is_(None))
+                )
+            )
+            .scalars()
+            .all()
         )
         for agent_id in agent_ids:
             process_one_agent_avatar_with_database(db, agent_id)
