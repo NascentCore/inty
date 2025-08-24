@@ -828,14 +828,14 @@ class SubscriptionService:
 
         try:
             # 获取订阅状态
-            subscription_status = await self.get_user_subscription_status(db, user_id)
+            subscription_status = await self.get_user_subscription_status(db, user.id)
 
             # 获取用户创建的Agent数量
             from app.models.agent import Agent
 
             agent_count_result = await db.execute(
                 select(func.count(Agent.id)).where(
-                    and_(Agent.creator_id == user_id, Agent.deleted_at.is_(None))
+                    and_(Agent.creator_id == user.id, Agent.deleted_at.is_(None))
                 )
             )
             agent_count = agent_count_result.scalar() or 0
@@ -1547,9 +1547,6 @@ class SubscriptionService:
         else:
             # 基本数据类型（str, int, float, bool, None）
             return data
-            logger.error(f"检查背景图生成次数限制失败: {str(e)}")
-            # 出错时默认允许，避免影响用户体验
-            return True, 0, -1
 
 
 # 全局实例
