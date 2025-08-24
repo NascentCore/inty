@@ -41,7 +41,6 @@ class Chat(Base):
     # 时间戳
     created_at = Column(DateTime(timezone=True), server_default=sa.text("now()"))
     updated_at = Column(DateTime(timezone=True), onupdate=sa.text("now()"))
-    deleted_at = Column(DateTime(timezone=True), nullable=True)
 
     # 唯一约束：每个用户与每个Agent只能有一个活跃的聊天会话
     # 注意：这里先添加普通索引，实际的唯一约束将通过迁移文件添加
