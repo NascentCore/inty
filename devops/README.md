@@ -23,7 +23,8 @@
   * backend 构建产出物为 docker image，发布于 Google Cloud VM，版本号为 git commit ID，注入为 docker image tag，发布后，内测人员确认版本号
     `docker inspect --format '{{.Config.Image}}' inty-backend-prod` 确认生产环境服务器 docker 镜像版本
 * 确认测试 Google 账户可用
-  * test.heartmate@gmail.com
+  * test.heartmate@gmail.com 填入 [Google Play Testing Instructions](
+    https://play.google.com/console/u/0/developers/8311322450209629787/app/4972036709846537052/app-content/testing-credentials)
 * app 测试
   * 人工测试【全员集中测试直到没有其他问题】
   * Expresso 测试【TBA】
