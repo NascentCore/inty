@@ -31,13 +31,6 @@ from app.utils.gcs import upload_to_gcs
 from app.models import Agent
 
 
-def get_database_connection(pg_url: str):
-    """Create database connection from PostgreSQL URL"""
-    conn = psycopg2.connect(pg_url)
-    logger.info("Database connection established successfully")
-    return conn
-
-
 def download_image(url: str) -> Optional[bytes]:
     """Download image from URL"""
     logger.info(f"Downloading image from: {url}")
@@ -92,23 +85,6 @@ def _get_gcs_base_path(gcs_http_url: str) -> str:
     return "/".join(path_parts[2:-1])
 
 
-def generate_jpeg_path(original_url: str) -> os.PathLike:
-    """Generate new JPEG path and filename"""
-    parsed = urlparse(original_url)
-    path_parts = parsed.path.split("/")
-
-    # Extract the directory path (everything except the filename)
-    directory = "/".join(path_parts[2:-1])
-
-    # Generate new filename with UUID
-    new_filename = f"avatar-{uuid.uuid4().hex}.jpeg"
-
-    # Construct new path
-    new_path = f"{directory}/{new_filename}"
-
-    return new_path
-
-
 def upload_jpeg_to_gcs(jpeg_data: bytes, gcs_path: str) -> Optional[str]:
     """Upload JPEG image to Google Cloud Storage"""
     bucket_name = global_config_loaded_from_config_yaml.gcs.bucket
@@ -159,7 +135,7 @@ def process_one_agent_avatar_with_database(db: Session, agent_id: str):
         return
     compressed_avatar_url = agent.avatar
     if len(png_data) >= 500 * 1024:
-        jpeg_path = generate_jpeg_path(agent.avatar)
+        jpeg_path = _get_gcs_base_path(agent.avatar) + f"/{str(uuid.uuid4())}.jpeg"
         consent = input(
             f"Compress agent {agent_id} avatar and upload to {jpeg_path}? (y/n): "
         )
