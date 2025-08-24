@@ -16,12 +16,19 @@ import type {
   ExportRequest,
   ComparisonResult,
 } from "../types";
+import { message } from "antd";
 
 const UTC_START_TIMESTAMP = "1970-01-01T00:00:00Z";
 
 // =============================================================================
 // 基础API配置
 // =============================================================================
+
+// Error logging API that show messages on the page and console
+export const logError = (msg: string) => {
+  console.error(msg);
+  message.error(msg);
+};
 
 class ApiClient {
   private baseURL: string;
@@ -103,8 +110,8 @@ class ApiClient {
         const errorData = await response.json().catch(() => ({}));
         throw new ApiError(
           errorData.detail ||
-            errorData.message ||
-            `HTTP ${response.status}: ${response.statusText}`,
+          errorData.message ||
+          `HTTP ${response.status}: ${response.statusText}`,
           response.status,
           response.statusText,
           errorData,
@@ -115,22 +122,49 @@ class ApiClient {
       if (contentType && contentType.includes("application/json")) {
         const result = await response.json();
 
-        // 处理inty-backend特殊的响应格式 {code, message, data}
-        if (
-          result &&
-          typeof result === "object" &&
-          "data" in result &&
-          result.code === 200
-        ) {
-          return result.data;
+        // Log the complete response from backend
+        console.log("=== FULL BACKEND RESPONSE ===");
+        console.log("Endpoint:", endpoint);
+        console.log("HTTP Status:", response.status, response.statusText);
+        console.log("Content-Type:", contentType);
+        console.log("Response Headers:", Object.fromEntries(response.headers.entries()));
+        console.log("Raw Response Body:", result);
+
+        // Check if it's APIResponse format
+        if (result && typeof result === "object" && "code" in result) {
+          console.log("APIResponse Structure:");
+          console.log("  - code:", result.code);
+          console.log("  - message:", result.message);
+          console.log("  - data:", result.data);
+
+          if (result.code === 200) {
+            console.log("✅ Success Response - returning data field");
+            return result.data;
+          } else {
+            console.log("❌ Error Response - throwing exception");
+            throw new ApiError(
+              result.message || "API Error",
+              response.status,
+              response.statusText,
+              result
+            );
+          }
+        } else {
+          console.log("⚠️ Non-APIResponse format - returning raw result");
+          return result;
         }
-
-        return result;
+      } else {
+        // Log non-JSON responses
+        console.log("=== NON-JSON RESPONSE ===");
+        console.log("Endpoint:", endpoint);
+        console.log("HTTP Status:", response.status, response.statusText);
+        console.log("Content-Type:", contentType);
+        console.log("Response Headers:", Object.fromEntries(response.headers.entries()));
+        console.log("Response is not JSON, returning response object");
+        return response as any;
       }
-
-      return response as any;
     } catch (error) {
-      console.error(`API请求失败: ${endpoint}`, error);
+      logError(`API请求失败: ${endpoint}, 错误信息: ${error}`);
       throw error;
     }
   }

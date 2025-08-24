@@ -33,7 +33,7 @@ import {
   SyncOutlined,
 } from "@ant-design/icons";
 import type { UploadProps } from "antd";
-import api from "../services/api";
+import api, { logError } from "../services/api";
 import modelCacheService from "../services/modelCache";
 import type { Agent, AgentCreateRequest, OpenRouterModel } from "../types";
 
@@ -164,11 +164,6 @@ export const AgentManagePage: React.FC = () => {
       message.error("只能上传图片文件!");
       return false;
     }
-    const isLt2M = file.size / 1024 / 1024 < 2;
-    if (!isLt2M) {
-      message.error("图片大小不能超过 2MB!");
-      return false;
-    }
 
     setAvatarFile(file);
     const reader = new FileReader();
@@ -184,11 +179,6 @@ export const AgentManagePage: React.FC = () => {
     const isImage = file.type.startsWith("image/");
     if (!isImage) {
       message.error("只能上传图片文件!");
-      return false;
-    }
-    const isLt2M = file.size / 1024 / 1024 < 2;
-    if (!isLt2M) {
-      message.error("图片大小不能超过 2MB!");
       return false;
     }
 
@@ -224,8 +214,7 @@ export const AgentManagePage: React.FC = () => {
             `上传成功：头像：${avatarUrl} 背景：${backgroundUrl} 背景图: ${backgroundImages.join(", ")}`,
           );
         } catch (uploadError) {
-          console.error("头像上传失败:", uploadError);
-          message.error("头像上传失败，请重试");
+          logError("头像上传失败:", uploadError);
           return;
         }
       }
@@ -291,8 +280,7 @@ export const AgentManagePage: React.FC = () => {
             backgroundImages = [backgroundUrl];
           }
         } catch (uploadError) {
-          console.error("头像上传失败:", uploadError);
-          message.error("头像上传失败，请重试");
+          logError("头像上传失败，请重试，错误信息：", uploadError.message);
           return;
         }
       }
