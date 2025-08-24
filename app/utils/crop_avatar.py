@@ -183,10 +183,6 @@ def _detect_faces(
 #
 # The existing approach is fast, but far from perfect.
 def crop_avatar(img_data: bytes) -> Image.Image:
-    # Haar cascade classifier only works with grayscale images.
-    img = cv2.imdecode(np.frombuffer(img_data, np.uint8), cv2.IMREAD_COLOR)
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-
     logger.debug(f"Detecting faces with py animeface ...")
     pil_img = Image.fromarray(img)
     avatar_cropping_config = ANIME_FACE
@@ -196,6 +192,10 @@ def crop_avatar(img_data: bytes) -> Image.Image:
         (face.face.pos.x, face.face.pos.y, face.face.pos.width, face.face.pos.height)
         for face in faces
     ]
+
+    # Haar cascade classifier only works with grayscale images.
+    img = cv2.imdecode(np.frombuffer(img_data, np.uint8), cv2.IMREAD_COLOR)
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
     if len(faces) == 0:
         logger.debug("Detecting faces with opencv anime face cascade ...")
