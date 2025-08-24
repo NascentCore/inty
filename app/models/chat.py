@@ -46,6 +46,13 @@ class Chat(Base):
     # 注意：这里先添加普通索引，实际的唯一约束将通过迁移文件添加
     __table_args__ = (
         Index("ix_chats_user_agent_active", "user_id", "agent_id", "is_active"),
+        Index(
+            "uq_chats_user_agent_active",
+            "user_id",
+            "agent_id",
+            unique=True,
+            postgresql_where="is_active = true",
+        ),
     )
 
     # 非数据库字段，用于存储最近消息和agent名称
