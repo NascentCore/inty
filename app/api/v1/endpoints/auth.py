@@ -172,12 +172,12 @@ async def google_login(
                 and_(User.email == idinfo["email"], User.deleted_at == None)
             )
             email_result = await db.execute(email_stmt)
-            existing_email_user = email_result.scalar_one_or_none()
+            existing_email_users = email_result.scalars().all()
 
-            if existing_email_user and not existing_email_user.deleted_at:
+            if existing_email_users:
                 # 如果邮箱已被使用，返回错误
                 return APIResponse.error(
-                    message="Email already exists with different account"
+                    message="Email already used by another account"
                 )
 
         # 如果用户不存在或者已被删除，创建新用户
