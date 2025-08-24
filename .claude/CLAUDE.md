@@ -9,6 +9,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
   * We'll try...except in FastAPI handler functions
 * When creating new folder, place an empty __init__.py file
 * Do not use magic numbers, always define variable, constants, etc.
+* When logging, prefer logger.debug(), which is turned off by default and in prod
 
 ## Overview
 

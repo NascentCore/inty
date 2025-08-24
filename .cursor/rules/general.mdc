@@ -6,10 +6,11 @@ alwaysApply: true
 
 # General instructions
 
-- Be concise
-- When there is multiple options, choose the simplest one
+* Be concise
+* When there is multiple options, choose the simplest one
   Do not try to implement multiple options
-- Do not write markdown to describe things you implemented
-- Follow RFC2119 <https://datatracker.ietf.org/doc/html/rfc2119>
-- Do not write comments that repeat what's shown in the code
-- Do not use magic numbers, always define variable, constants, etc.
+* Do not write markdown to describe things you implemented
+* Follow RFC2119 <https://datatracker.ietf.org/doc/html/rfc2119>
+* Do not write comments that repeat what's shown in the code
+* Do not use magic numbers, always define variable, constants, etc.
+* When logging, prefer logger.debug(), which is turned off by default and in prod
