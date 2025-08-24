@@ -12,6 +12,8 @@ export interface Agent {
   personality: string;
   mode_prompt: string;
   avatar?: string;
+  background?: string;
+  background_images?: string[];
   description?: string;
   created_at?: string;
   updated_at?: string;
@@ -39,6 +41,8 @@ export interface AgentCreateRequest {
   personality: string;
   mode_prompt: string;
   avatar?: string;
+  background?: string;
+  background_images?: string[];
   llm_config?: LLMConfig;
 }
 
@@ -53,6 +57,8 @@ export interface AgentUpdateRequest {
   personality?: string;
   mode_prompt?: string;
   avatar?: string;
+  background?: string;
+  background_images?: string[];
   llm_config?: LLMConfig;
 }
 

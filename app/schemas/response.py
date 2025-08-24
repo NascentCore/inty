@@ -61,6 +61,11 @@ class BusinessErrorCode:
         "error_code": "BACKGROUND_GENERATION_LIMIT_REACHED",
         "message": "Background generation limit reached",
     }
+    AGENT_CREATION_LIMIT_REACHED = {
+        "code": 10001003,
+        "error_code": "AGENT_CREATION_LIMIT_REACHED",
+        "message": "Character creation limit reached",
+    }
 
 
 # 业务错误消息定义

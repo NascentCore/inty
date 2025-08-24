@@ -208,15 +208,19 @@ export const AgentManagePage: React.FC = () => {
       setSaveLoading(true);
 
       let avatarUrl = "";
+      let backgroundUrl = "";
+      let backgroundImages: string[] = [];
 
       // 如果有头像文件，先上传
       if (avatarFile) {
         try {
           const uploadResult = await api.agents.uploadAvatar(avatarFile);
-          avatarUrl =
-            uploadResult.avatar_url ||
-            uploadResult.url ||
-            uploadResult.data?.avatar_url;
+          avatarUrl = uploadResult.avatar_url || uploadResult.data?.avatar_url;
+          backgroundUrl = uploadResult.url || uploadResult.data?.url;
+          if (backgroundUrl) {
+            backgroundImages = [backgroundUrl];
+          }
+          console.log(`上传成功：头像：${avatarUrl} 背景：${backgroundUrl} 背景图: ${backgroundImages.join(", ")}`);
         } catch (uploadError) {
           console.error("头像上传失败:", uploadError);
           message.error("头像上传失败，请重试");
@@ -227,7 +231,12 @@ export const AgentManagePage: React.FC = () => {
       const agentData: AgentCreateRequest = {
         ...values,
         avatar: avatarUrl,
+        background: values.background || backgroundUrl,
+        background_images: values.background ? [values.background] : backgroundImages,
       };
+
+      // Display background images on the page as notification
+      console.log(`创建成功：头像：${avatarUrl} 背景：${values.background} 背景图: ${backgroundImages.join(", ")}`);
 
       // 如果选择了自定义模型，添加LLM配置
       if (values.modelType === "custom") {
@@ -265,15 +274,18 @@ export const AgentManagePage: React.FC = () => {
       setSaveLoading(true);
 
       let avatarUrl = currentAgent.avatar;
+      let backgroundUrl = currentAgent.background;
+      let backgroundImages = currentAgent.background_images || [];
 
       // 如果有新头像文件，先上传
       if (editAvatarFile) {
         try {
           const uploadResult = await api.agents.uploadAvatar(editAvatarFile);
-          avatarUrl =
-            uploadResult.avatar_url ||
-            uploadResult.url ||
-            uploadResult.data?.avatar_url;
+          avatarUrl = uploadResult.avatar_url || uploadResult.data?.avatar_url;
+          backgroundUrl = uploadResult.url || uploadResult.data?.url;
+          if (backgroundUrl) {
+            backgroundImages = [backgroundUrl];
+          }
         } catch (uploadError) {
           console.error("头像上传失败:", uploadError);
           message.error("头像上传失败，请重试");
@@ -284,6 +296,8 @@ export const AgentManagePage: React.FC = () => {
       const updateData = {
         ...values,
         avatar: avatarUrl,
+        background: values.background || backgroundUrl,
+        background_images: values.background ? [values.background] : backgroundImages,
       };
 
       // 如果选择了自定义模型，添加LLM配置
@@ -342,17 +356,18 @@ export const AgentManagePage: React.FC = () => {
         main_prompt: agent.main_prompt,
         personality: agent.personality,
         mode_prompt: agent.mode_prompt,
+        background: agent.background,
         modelType: agent.llm_config ? "custom" : "default",
         // 明确设置LLM配置字段，避免字段名不匹配问题
         ...(agent.llm_config
           ? {
-              model: agent.llm_config.model,
-              temperature: agent.llm_config.temperature,
-              max_tokens: agent.llm_config.max_tokens,
-              top_p: agent.llm_config.top_p,
-              frequency_penalty: agent.llm_config.frequency_penalty,
-              presence_penalty: agent.llm_config.presence_penalty,
-            }
+            model: agent.llm_config.model,
+            temperature: agent.llm_config.temperature,
+            max_tokens: agent.llm_config.max_tokens,
+            top_p: agent.llm_config.top_p,
+            frequency_penalty: agent.llm_config.frequency_penalty,
+            presence_penalty: agent.llm_config.presence_penalty,
+          }
           : {}),
       });
     }, 100);
@@ -413,6 +428,18 @@ export const AgentManagePage: React.FC = () => {
             )}
           </div>
         </Upload>
+        <div style={{ marginTop: 8, fontSize: 12, color: "#666" }}>
+          上传头像后，系统会自动设置背景图为原图，头像为裁剪后的版本
+        </div>
+      </Form.Item>
+
+      {/* 背景图URL */}
+      <Form.Item
+        name="background"
+        label="背景图URL"
+        extra="可选：手动设置背景图URL，或上传头像时自动设置"
+      >
+        <Input placeholder="请输入背景图URL" />
       </Form.Item>
 
       {/* 基本信息 */}
@@ -1043,6 +1070,71 @@ export const AgentManagePage: React.FC = () => {
               >
                 {currentAgent.mode_prompt || "无"}
               </div>
+            </Card>
+
+            <Card size="small" title="图片资源" style={{ marginBottom: 16 }}>
+              <Row gutter={[16, 16]}>
+                <Col span={12}>
+                  <p>
+                    <strong>头像:</strong>
+                  </p>
+                  {currentAgent.avatar ? (
+                    <img
+                      src={currentAgent.avatar}
+                      alt="avatar"
+                      style={{
+                        width: "100%",
+                        maxWidth: 120,
+                        height: "auto",
+                        borderRadius: 8,
+                      }}
+                    />
+                  ) : (
+                    <span style={{ color: "#999" }}>无</span>
+                  )}
+                </Col>
+                <Col span={12}>
+                  <p>
+                    <strong>背景图:</strong>
+                  </p>
+                  {currentAgent.background ? (
+                    <img
+                      src={currentAgent.background}
+                      alt="background"
+                      style={{
+                        width: "100%",
+                        maxWidth: 120,
+                        height: "auto",
+                        borderRadius: 8,
+                      }}
+                    />
+                  ) : (
+                    <span style={{ color: "#999" }}>无</span>
+                  )}
+                </Col>
+              </Row>
+              {currentAgent.background_images && currentAgent.background_images.length > 0 && (
+                <>
+                  <p style={{ marginTop: 16 }}>
+                    <strong>背景图列表:</strong>
+                  </p>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    {currentAgent.background_images.map((img, index) => (
+                      <img
+                        key={index}
+                        src={img}
+                        alt={`background-${index}`}
+                        style={{
+                          width: 80,
+                          height: 80,
+                          objectFit: "cover",
+                          borderRadius: 6,
+                        }}
+                      />
+                    ))}
+                  </div>
+                </>
+              )}
             </Card>
 
             {currentAgent.llm_config && (

@@ -802,6 +802,7 @@ def get_path_from_gcs_url(url: str) -> str:
     return path
 
 
+# TODO：这个过于复杂，应该直接往数据库插入数据而非拷贝 gcs 文件。
 def process_agent_image_urls(agent_data: dict, agent_id: str, user_id: str) -> dict:
     """
     处理Agent创建时的图片URL，将临时路径的图片复制到永久路径
@@ -900,9 +901,11 @@ def process_agent_image_urls(agent_data: dict, agent_id: str, user_id: str) -> d
             processed_data["background"] = None
 
     # 处理相册图片
-    if agent_data.get("photos") and isinstance(agent_data["photos"], list):
+    if agent_data.get("background_images") and isinstance(
+        agent_data["background_images"], list
+    ):
         processed_photos = []
-        for i, photo_url in enumerate(agent_data["photos"]):
+        for i, photo_url in enumerate(agent_data["background_images"]):
             if is_valid_gcs_url(photo_url):
                 if is_temp_gcs_path(photo_url, user_id):
                     try:
@@ -944,11 +947,11 @@ def process_agent_image_urls(agent_data: dict, agent_id: str, user_id: str) -> d
                 # 无效URL，跳过
                 continue
 
-        processed_data["photos"] = processed_photos
+        processed_data["background_images"] = processed_photos
 
     # 删除临时文件（在后台异步执行）
     if temp_files_to_delete:
-
+        # TODO: 这个太复杂了，建议删除；应该是 AI 自动生成的复杂代码。
         def cleanup_temp_files():
             for temp_url in temp_files_to_delete:
                 try:

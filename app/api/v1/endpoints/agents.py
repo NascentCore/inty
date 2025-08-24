@@ -161,16 +161,18 @@ async def create_agent(
     - 建议新创建的角色使用角色卡字段以获得更好的效果
     """
     # 检查数量限制：系统管理员不限制，普通用户限制6个
-    if not current_user.is_superuser:
-        # 查询用户已创建的agent数量（不包括已删除的）
-        user_agents = await agent_service.get_user_agents(
-            db, user_id=current_user.id, skip=0, limit=1000
+    is_allowed, agent_count, limit = (
+        await subscription_service.check_agent_creation_limit(db, current_user)
+    )
+    if not is_allowed:
+        return create_business_error_response(
+            error_info=BusinessErrorCode.AGENT_CREATION_LIMIT_REACHED,
+            extra_data={
+                "used_count": agent_count,
+                "limit": limit,
+                "feature": "agent_creation",
+            },
         )
-        if len(user_agents) >= 6:
-            raise HTTPException(
-                status_code=400,
-                detail="普通用户最多只能创建6个Agent，如需创建更多请联系管理员",
-            )
 
     agent = await agent_service.create_agent(
         db, agent_in=agent_in, user_id=current_user.id
@@ -524,7 +526,11 @@ async def upload_avatar_preview(
                 message="Unsupported file type, only jpg, jpeg, png, webp formats are supported"
             )
 
-        if file_ext == ImageFormat.PNG:
+        # Always compress PNG, and also compress if file is > 500KB.
+        # We might adjust the threshold value of 500KB in the future.
+        # The rationale is that on a smart phone, 500KB JPEG should be sufficient.
+        # PNG is a lossless format, so we can compress it to JPEG to save space.
+        if file_ext == ImageFormat.PNG or len(file_data) > 500 * 1024:
             file_data = compress_png_to_jpeg(file_data)
             file_ext = ImageFormat.JPEG
             logger.debug(
