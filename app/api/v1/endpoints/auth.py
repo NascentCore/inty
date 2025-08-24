@@ -163,6 +163,23 @@ async def google_login(
                 )
             )
 
+        # 检查是否已有用户使用相同的邮箱，由于没有 email unique 限制，因此需要检查 email 是否被另一个活跃账户使用
+        if idinfo.get("email"):
+            logger.debug(
+                f"Checking if email is used by another active account: {idinfo['email']}"
+            )
+            email_stmt = select(User).where(
+                and_(User.email == idinfo["email"], User.deleted_at == None)
+            )
+            email_result = await db.execute(email_stmt)
+            existing_email_user = email_result.scalar_one_or_none()
+
+            if existing_email_user and not existing_email_user.deleted_at:
+                # 如果邮箱已被使用，返回错误
+                return APIResponse.error(
+                    message="Email already exists with different account"
+                )
+
         # 如果用户不存在或者已被删除，创建新用户
         # 删除的用户重新登录时会创建新的账户
 
