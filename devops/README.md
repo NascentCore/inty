@@ -7,7 +7,6 @@
   * <https://app.checklyhq.com/accounts/1896e6d6-1599-414f-998e-3dabcc58fd7f>
   * 检查 [Terms of Use](https://app.termly.io/dashboard/website/0619077d-bb29-4da6-af36-9a465bf36f08/terms-of-service)
   * 检查 [Privacy Policy](https://app.termly.io/dashboard/website/0619077d-bb29-4da6-af36-9a465bf36f08/privacy-policy)
-* 生产环境部署之前要跑一次压力测试，了解其性能指标是否有明显问题
 * Git tagging, 打标规则
   * app backend tag 同一
   * release tag 格式 v<major>.<minor>.<fix>
@@ -15,15 +14,23 @@
     * dev branch tag 须为 <fix> 增 1，如 v1.0.2-dev release tag 为 v1.0.3
   * `git tag -d $GIT_TAG && git push origin --delete $GIT_TAG`
   * `git tag $GIT_TAG && git push --tags`
+* 生产环境部署之前要跑一次压力测试，了解其性能指标是否有明显问题
 * app backend 构建发布
   * app 构建产出物为 aab，发布于 Google Play，版本号为 git commit ID，注入为 app 内版本号，发布于内测轨道后，内测人员下载安装，确认版本号
     * [内测轨道](https://play.google.com/store/apps/details?id=com.ai.intellimate)
   * backend 构建产出物为 docker image，发布于 Google Cloud VM，版本号为 git commit ID，注入为 docker image tag，发布后，内测人员确认版本号
     `docker inspect --format '{{.Config.Image}}' inty-backend-prod` 确认生产环境服务器 docker 镜像版本
+* app 测试
+  * 人工测试【全员集中测试直到没有其他问题】
+  * Expresso 测试【TBA】
+  * Firebase test lab【TBA】
 
-### 发布后二次检查
+### 发布前最终检查
 
 * `docker inspect --format '{{.Config.Image}}' inty-backend-prod` 确认生产环境服务器 docker 镜像版本
+* My->Settings->About 确认 App 版本
+* 打开 [Firebase Crashlystics](https://console.firebase.google.com/project/alien-paratext-461204-i9/releasemonitoring/app/android:com.ai.intellimate)
+  确认内测版本崩溃率为 0
 
 ## Dev Instance
 
