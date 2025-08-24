@@ -35,7 +35,7 @@ class TestSubscriptionService:
         mock_db.execute.return_value = mock_result
 
         # Create a mock user object
-        user = User(
+        mock_user = User(
             id="user-123",
             readable_id="user123",
             email="test@example.com",
@@ -47,7 +47,7 @@ class TestSubscriptionService:
 
         # Act
         is_allowed, agent_count, limit = (
-            await subscription_service.check_agent_creation_limit(mock_db, user)
+            await subscription_service.check_agent_creation_limit(mock_db, mock_user)
         )
 
         # Assert
@@ -57,7 +57,7 @@ class TestSubscriptionService:
 
         # Verify the subscription status was called
         subscription_service.get_user_subscription_status.assert_called_once_with(
-            mock_db, mock_user
+            mock_db, "user-123"
         )
 
         # Verify the database query was executed
@@ -109,7 +109,7 @@ class TestSubscriptionService:
         mock_db.execute.return_value = mock_result
 
         # Create a mock user object
-        user = User(
+        mock_user = User(
             id="user-123",
             readable_id="user123",
             email="test@example.com",
@@ -121,7 +121,7 @@ class TestSubscriptionService:
 
         # Act
         is_allowed, agent_count, limit = (
-            await subscription_service.check_agent_creation_limit(mock_db, user)
+            await subscription_service.check_agent_creation_limit(mock_db, mock_user)
         )
 
         # Assert
@@ -131,7 +131,7 @@ class TestSubscriptionService:
 
         # Verify the subscription status was called
         subscription_service.get_user_subscription_status.assert_called_once_with(
-            mock_db, mock_user
+            mock_db, "user-123"
         )
 
         # Verify the database query was executed
