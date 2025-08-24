@@ -1,6 +1,18 @@
 from PIL import Image
 import io
+from enum import StrEnum
 from loguru import logger
+
+
+class ImageFormat(StrEnum):
+    JPG = "jpg"
+    JPEG = "jpeg"
+    PNG = "png"
+    WEBP = "webp"
+
+
+class AspectRatio(StrEnum):
+    PORTRAIT = "9:16"
 
 
 def compress_png_to_jpeg(image_data: bytes, quality: int = 80) -> bytes:

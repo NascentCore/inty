@@ -37,7 +37,7 @@ from app.services import agent_service
 from app.services.character_card_service import character_card_service
 from app.services.subscription_service import SubscriptionService
 from app.utils.gcs import delete_from_gcs, is_user_gcs_file, upload_to_gcs
-from app.utils.image import compress_png_to_jpeg
+from app.utils.image import compress_png_to_jpeg, ImageFormat, AspectRatio
 
 router = APIRouter(prefix="/ai/agents", route_class=LoggerRoute)
 
@@ -319,17 +319,6 @@ def process_generated_images(generated_images: List[ImagenGeneratedImage]) -> di
         raise Exception(f"No images were generated, rai reasons: {rai_reasons}")
 
     return {"image_uris": generated_uris, "rai_reasons": rai_reasons}
-
-
-class AspectRatio(StrEnum):
-    PORTRAIT = "9:16"
-
-
-class ImageFormat(StrEnum):
-    JPG = "jpg"
-    JPEG = "jpeg"
-    PNG = "png"
-    WEBP = "webp"
 
 
 @router.post(
