@@ -280,7 +280,7 @@ export const AgentManagePage: React.FC = () => {
             backgroundImages = [backgroundUrl];
           }
         } catch (uploadError) {
-          logError("头像上传失败，请重试，错误信息：", uploadError.message);
+          logError(`头像上传失败，请重试，错误信息：${uploadError.message}`);
           return;
         }
       }
