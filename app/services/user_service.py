@@ -383,30 +383,16 @@ async def delete_user_account(
         user.deletion_reason = deletion_reason
         user.is_active = False
 
-        # 创建删除审计日志
-        deletion_log = await create_deletion_audit_log(
-            db,
-            user,
-            deletion_reason,
-            processor_id or user_id,
-            subscription_status,
-        )
-
         # 提交用户数据更改
         await db.commit()
         await db.refresh(user)
 
-        # 标记审计日志为已处理
-        deletion_log.processed_at = datetime.now(UTC)
-        await db.commit()
-
-        logger.info(f"用户账户删除成功: {user_id}, 日志ID: {deletion_log.id}")
+        logger.info(f"用户账户删除成功: {user_id}")
 
         return {
             "success": True,
             "message": "账户删除成功",
             "user_id": user_id,
-            "deletion_log_id": deletion_log.id,
         }
 
     except Exception as e:
