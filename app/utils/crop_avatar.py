@@ -9,6 +9,7 @@ from PIL import Image
 from loguru import logger
 import numpy as np
 from pydantic import BaseModel
+import animeface
 
 
 # Face detector (default): haarcascade_frontalface_default.xml
@@ -97,7 +98,9 @@ FRONTAL_FACE_DEFAULT = AvatarCroppingConfig(
 )
 
 ANIME_FACE = AvatarCroppingConfig(
-    max_expansion_ratio=1.8,
+    # Anime face is generally surrounded by larger hairs and other facial features.
+    # So we need to expand the face more.
+    max_expansion_ratio=2.0,
     face_detection_profile=ANIME_FACE,
 )
 
@@ -186,13 +189,24 @@ def crop_avatar(img_data: bytes) -> Image.Image:
     img = cv2.imdecode(np.frombuffer(img_data, np.uint8), cv2.IMREAD_COLOR)
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
-    logger.debug("Detecting faces with frontal face detection ...")
-    avatar_cropping_config = FRONTAL_FACE_DEFAULT
-    faces = _detect_faces(gray, avatar_cropping_config)
+    logger.debug(f"Detecting faces with py animeface ...")
+    pil_img = Image.fromarray(img)
+    avatar_cropping_config = ANIME_FACE
+    faces = animeface.detect(pil_img)
+    faces = [
+        # Needs to do data format conversion.
+        (face.face.pos.x, face.face.pos.y, face.face.pos.width, face.face.pos.height)
+        for face in faces
+    ]
 
     if len(faces) == 0:
-        logger.debug("Detecting faces with anime face detection ...")
+        logger.debug("Detecting faces with opencv anime face cascade ...")
         avatar_cropping_config = ANIME_FACE
+        faces = _detect_faces(gray, avatar_cropping_config)
+
+    if len(faces) == 0:
+        logger.debug("Detecting faces with frontal face default (realistic style) ...")
+        avatar_cropping_config = FRONTAL_FACE_DEFAULT
         faces = _detect_faces(gray, avatar_cropping_config)
 
     ############################################################################
