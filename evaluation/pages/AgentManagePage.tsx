@@ -420,7 +420,7 @@ export const AgentManagePage: React.FC = () => {
               <img
                 src={isEdit ? editAvatarPreview : avatarPreview}
                 alt="avatar"
-                style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                style={{ width: "100%", height: "100%", objectFit: "contain" }}
               />
             ) : (
               <div style={{ textAlign: "center" }}>
