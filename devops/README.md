@@ -37,6 +37,12 @@
 * 打开 [Firebase Crashlystics](https://console.firebase.google.com/project/alien-paratext-461204-i9/releasemonitoring/app/android:com.ai.intellimate)
   确认内测版本崩溃率为 0
 
+### 发布
+
+* 填写各项表单
+* 将送审版本发布到 [Google Play production track](
+  https://play.google.com/console/u/0/developers/8311322450209629787/app/4972036709846537052/tracks/production?tab=releaseDashboard)
+
 ## Dev Instance
 
 这里记录了生成环境实例的设置
