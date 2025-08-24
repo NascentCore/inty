@@ -43,6 +43,23 @@ target_metadata = Base.metadata
 # ... etc.
 
 
+def include_object(object, name, type_, reflected, compare_to):
+    """
+    Filter which objects Alembic should include in its operations.
+    This allows us to exclude tables that are not managed by Alembic.
+    """
+    # Exclude tables that are not managed by Alembic
+    if type_ == "table":
+        # Add any table names here that should be ignored
+        excluded_tables = {
+            "chat_history",  # LangChain Postgres table
+        }
+        if name in excluded_tables:
+            return False
+
+    return True
+
+
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode.
 
@@ -61,6 +78,7 @@ def run_migrations_offline() -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
+        include_object=include_object,
     )
 
     with context.begin_transaction():
@@ -80,7 +98,11 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
-        context.configure(connection=connection, target_metadata=target_metadata)
+        context.configure(
+            connection=connection,
+            target_metadata=target_metadata,
+            include_object=include_object,
+        )
 
         with context.begin_transaction():
             context.run_migrations()
