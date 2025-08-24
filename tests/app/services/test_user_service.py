@@ -1,3 +1,4 @@
+import uuid
 import pytest
 import psycopg2
 import asyncio
@@ -30,12 +31,15 @@ class TestUserDeletion:
 
         try:
             # Step 1: Create a test user in the database
+            user_id = f"user_test_deletion_happy_sync_{uuid.uuid4().hex}"
+            readable_id = str(uuid.uuid4().int)[:8] # Generate a unique 8-digit readable_id
+
             test_user = User(
-                id="user_test_deletion_happy_sync",
-                readable_id="10000002",
+                id=user_id,
+                readable_id=readable_id,
                 auth_type=AuthType.GOOGLE,
                 nickname="Test User Sync",
-                email="test_sync@example.com",
+                email=f"test_sync_{uuid.uuid4().hex}@example.com", # Make email unique too
                 is_active=True,
                 created_at=datetime.now(UTC),
             )
@@ -45,7 +49,7 @@ class TestUserDeletion:
             session.refresh(test_user)
 
             # Verify user was created successfully
-            user_query = select(User).where(User.id == "user_test_deletion_happy_sync")
+            user_query = select(User).where(User.id == user_id)
             result = session.execute(user_query)
             created_user = result.scalar_one()
 
@@ -89,7 +93,7 @@ class TestUserDeletion:
             session.refresh(deletion_log)
 
             # Step 3: Verify user record in database
-            user_query = select(User).where(User.id == "user_test_deletion_happy_sync")
+            user_query = select(User).where(User.id == user_id)
             result = session.execute(user_query)
             deleted_user = result.scalar_one()
 
@@ -137,7 +141,7 @@ class TestUserDeletion:
 
             # Clean up - delete the test user and log
             session.delete(deletion_log)
-            session.delete(deleted_user)
+            session.delete(test_user)
             session.commit()
 
         except Exception as e:

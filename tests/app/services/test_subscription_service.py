@@ -57,7 +57,7 @@ class TestSubscriptionService:
 
         # Verify the subscription status was called
         subscription_service.get_user_subscription_status.assert_called_once_with(
-            mock_db, "user-123"
+            mock_db, mock_user
         )
 
         # Verify the database query was executed
@@ -131,7 +131,7 @@ class TestSubscriptionService:
 
         # Verify the subscription status was called
         subscription_service.get_user_subscription_status.assert_called_once_with(
-            mock_db, "user-123"
+            mock_db, mock_user
         )
 
         # Verify the database query was executed
