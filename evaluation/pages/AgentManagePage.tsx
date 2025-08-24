@@ -233,15 +233,13 @@ export const AgentManagePage: React.FC = () => {
       const agentData: AgentCreateRequest = {
         ...values,
         avatar: avatarUrl,
-        background: values.background || backgroundUrl,
-        background_images: values.background
-          ? [values.background]
-          : backgroundImages,
+        background: backgroundUrl,
+        background_images: backgroundImages,
       };
 
       // Display background images on the page as notification
       console.log(
-        `创建成功：头像：${avatarUrl} 背景：${values.background} 背景图: ${backgroundImages.join(", ")}`,
+        `创建成功：头像：${avatarUrl} 背景：${backgroundUrl} 背景图: ${backgroundImages.join(", ")}`,
       );
 
       // 如果选择了自定义模型，添加LLM配置
@@ -302,10 +300,8 @@ export const AgentManagePage: React.FC = () => {
       const updateData = {
         ...values,
         avatar: avatarUrl,
-        background: values.background || backgroundUrl,
-        background_images: values.background
-          ? [values.background]
-          : backgroundImages,
+        background: backgroundUrl,
+        background_images: backgroundImages,
       };
 
       // 如果选择了自定义模型，添加LLM配置
@@ -364,18 +360,18 @@ export const AgentManagePage: React.FC = () => {
         main_prompt: agent.main_prompt,
         personality: agent.personality,
         mode_prompt: agent.mode_prompt,
-        background: agent.background,
+
         modelType: agent.llm_config ? "custom" : "default",
         // 明确设置LLM配置字段，避免字段名不匹配问题
         ...(agent.llm_config
           ? {
-              model: agent.llm_config.model,
-              temperature: agent.llm_config.temperature,
-              max_tokens: agent.llm_config.max_tokens,
-              top_p: agent.llm_config.top_p,
-              frequency_penalty: agent.llm_config.frequency_penalty,
-              presence_penalty: agent.llm_config.presence_penalty,
-            }
+            model: agent.llm_config.model,
+            temperature: agent.llm_config.temperature,
+            max_tokens: agent.llm_config.max_tokens,
+            top_p: agent.llm_config.top_p,
+            frequency_penalty: agent.llm_config.frequency_penalty,
+            presence_penalty: agent.llm_config.presence_penalty,
+          }
           : {}),
       });
     }, 100);
@@ -441,14 +437,7 @@ export const AgentManagePage: React.FC = () => {
         </div>
       </Form.Item>
 
-      {/* 背景图URL */}
-      <Form.Item
-        name="background"
-        label="背景图URL"
-        extra="可选：手动设置背景图URL，或上传头像时自动设置"
-      >
-        <Input placeholder="请输入背景图URL" />
-      </Form.Item>
+
 
       {/* 基本信息 */}
       <Row gutter={16}>
