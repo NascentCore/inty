@@ -808,13 +808,13 @@ export const ChatPage: React.FC = () => {
                                   size="small"
                                   color={
                                     agent.visibility === "PUBLIC" ||
-                                      agent.visibility === "public"
+                                    agent.visibility === "public"
                                       ? "green"
                                       : "orange"
                                   }
                                 >
                                   {agent.visibility === "PUBLIC" ||
-                                    agent.visibility === "public"
+                                  agent.visibility === "public"
                                     ? "公开"
                                     : "私有"}
                                 </Tag>

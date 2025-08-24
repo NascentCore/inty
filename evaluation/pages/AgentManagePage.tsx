@@ -220,7 +220,9 @@ export const AgentManagePage: React.FC = () => {
           if (backgroundUrl) {
             backgroundImages = [backgroundUrl];
           }
-          console.log(`上传成功：头像：${avatarUrl} 背景：${backgroundUrl} 背景图: ${backgroundImages.join(", ")}`);
+          console.log(
+            `上传成功：头像：${avatarUrl} 背景：${backgroundUrl} 背景图: ${backgroundImages.join(", ")}`,
+          );
         } catch (uploadError) {
           console.error("头像上传失败:", uploadError);
           message.error("头像上传失败，请重试");
@@ -232,11 +234,15 @@ export const AgentManagePage: React.FC = () => {
         ...values,
         avatar: avatarUrl,
         background: values.background || backgroundUrl,
-        background_images: values.background ? [values.background] : backgroundImages,
+        background_images: values.background
+          ? [values.background]
+          : backgroundImages,
       };
 
       // Display background images on the page as notification
-      console.log(`创建成功：头像：${avatarUrl} 背景：${values.background} 背景图: ${backgroundImages.join(", ")}`);
+      console.log(
+        `创建成功：头像：${avatarUrl} 背景：${values.background} 背景图: ${backgroundImages.join(", ")}`,
+      );
 
       // 如果选择了自定义模型，添加LLM配置
       if (values.modelType === "custom") {
@@ -297,7 +303,9 @@ export const AgentManagePage: React.FC = () => {
         ...values,
         avatar: avatarUrl,
         background: values.background || backgroundUrl,
-        background_images: values.background ? [values.background] : backgroundImages,
+        background_images: values.background
+          ? [values.background]
+          : backgroundImages,
       };
 
       // 如果选择了自定义模型，添加LLM配置
@@ -361,13 +369,13 @@ export const AgentManagePage: React.FC = () => {
         // 明确设置LLM配置字段，避免字段名不匹配问题
         ...(agent.llm_config
           ? {
-            model: agent.llm_config.model,
-            temperature: agent.llm_config.temperature,
-            max_tokens: agent.llm_config.max_tokens,
-            top_p: agent.llm_config.top_p,
-            frequency_penalty: agent.llm_config.frequency_penalty,
-            presence_penalty: agent.llm_config.presence_penalty,
-          }
+              model: agent.llm_config.model,
+              temperature: agent.llm_config.temperature,
+              max_tokens: agent.llm_config.max_tokens,
+              top_p: agent.llm_config.top_p,
+              frequency_penalty: agent.llm_config.frequency_penalty,
+              presence_penalty: agent.llm_config.presence_penalty,
+            }
           : {}),
       });
     }, 100);
@@ -1113,28 +1121,29 @@ export const AgentManagePage: React.FC = () => {
                   )}
                 </Col>
               </Row>
-              {currentAgent.background_images && currentAgent.background_images.length > 0 && (
-                <>
-                  <p style={{ marginTop: 16 }}>
-                    <strong>背景图列表:</strong>
-                  </p>
-                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                    {currentAgent.background_images.map((img, index) => (
-                      <img
-                        key={index}
-                        src={img}
-                        alt={`background-${index}`}
-                        style={{
-                          width: 80,
-                          height: 80,
-                          objectFit: "cover",
-                          borderRadius: 6,
-                        }}
-                      />
-                    ))}
-                  </div>
-                </>
-              )}
+              {currentAgent.background_images &&
+                currentAgent.background_images.length > 0 && (
+                  <>
+                    <p style={{ marginTop: 16 }}>
+                      <strong>背景图列表:</strong>
+                    </p>
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                      {currentAgent.background_images.map((img, index) => (
+                        <img
+                          key={index}
+                          src={img}
+                          alt={`background-${index}`}
+                          style={{
+                            width: 80,
+                            height: 80,
+                            objectFit: "cover",
+                            borderRadius: 6,
+                          }}
+                        />
+                      ))}
+                    </div>
+                  </>
+                )}
             </Card>
 
             {currentAgent.llm_config && (
