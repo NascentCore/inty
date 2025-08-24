@@ -939,8 +939,8 @@ export const ChatPage: React.FC = () => {
                     padding: "16px",
                     backgroundColor: "transparent", // Make background transparent for image
                     minHeight: 0,
-                    backgroundImage: selectedAgent?.avatar
-                      ? `url(${selectedAgent.avatar})`
+                    backgroundImage: selectedAgent?.background
+                      ? `url(${selectedAgent.background})`
                       : "none",
                     backgroundSize: "contain",
                     backgroundPosition: "center",

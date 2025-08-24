@@ -815,7 +815,7 @@ class SubscriptionService:
             return True, 0, -1
 
     async def check_agent_creation_limit(
-        self, db: AsyncSession, user_id: str
+        self, db: AsyncSession, user: schemas.User
     ) -> Tuple[bool, int, int]:
         """
         检查用户Agent创建数量限制
@@ -823,6 +823,9 @@ class SubscriptionService:
         Returns:
             Tuple[bool, int, int]: (是否允许创建, 已创建数量, 限制数量)
         """
+        if is_superuser(user):
+            return SUPERUSER_LIMIT_CHECK_RESULT
+
         try:
             # 获取订阅状态
             subscription_status = await self.get_user_subscription_status(db, user_id)

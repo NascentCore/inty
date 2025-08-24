@@ -189,6 +189,11 @@ def crop_avatar(img_data: bytes) -> Image.Image:
         FRONTAL_FACE_DEFAULT.max_expansion_ratio,
         (img.shape[1], img.shape[0]),
     )
+
+    # Draw the largest face on the image for debugging.
+    # x, y, w, h = largest_face
+    # cv2.rectangle(img, (x, y), (x + w, y + h), (0, 0, 255), 2)
+
     x, y, w, h = avatar_square
     # Crop the image to a square
     cropped_face = img[y : y + h, x : x + w]
