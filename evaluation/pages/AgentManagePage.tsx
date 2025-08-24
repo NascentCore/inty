@@ -397,7 +397,7 @@ export const AgentManagePage: React.FC = () => {
   const renderAgentForm = (form: any, isEdit = false) => (
     <>
       {/* 头像上传 */}
-      <Form.Item label="头像">
+      <Form.Item label="形像">
         <Upload
           beforeUpload={isEdit ? handleEditAvatarChange : handleAvatarChange}
           showUploadList={false}
@@ -426,7 +426,7 @@ export const AgentManagePage: React.FC = () => {
               <div style={{ textAlign: "center" }}>
                 <CameraOutlined style={{ fontSize: 20, color: "#999" }} />
                 <div style={{ marginTop: 4, fontSize: 12, color: "#999" }}>
-                  上传头像
+                  上传形像图
                 </div>
               </div>
             )}
