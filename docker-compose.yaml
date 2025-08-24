@@ -1,5 +1,8 @@
 services:
   inty-server:
+    # animeface pip install failed on arm64, so we use amd64 here.
+    # Mac uses VM to run docker, so this wont affect running on Mac.
+    platform: linux/amd64
     build:
       context: .
       dockerfile: Dockerfile
