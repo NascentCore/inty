@@ -193,7 +193,7 @@ async def create_chat(
                     chat_history_service.add_agent_opening_message(
                         session_id, agent.opening
                     )
-                    logger.info(f"添加Agent开场白成功 - Session ID: {session_id}")
+                    logger.debug(f"添加Agent开场白成功 - Session ID: {session_id}")
                 else:
                     logger.debug(
                         f"聊天会话已有消息({existing_messages.get('total', 0)}条)，跳过开场白添加 - Session ID: {session_id}"
@@ -340,7 +340,7 @@ async def get_or_create_chat_by_agent(
     每个用户和每个Agent只能有一个会话
     """
     try:
-        logger.info(f"获取或创建聊天会话 - 用户ID: {user_id}, Agent ID: {agent_id}")
+        logger.debug(f"获取或创建聊天会话 - 用户ID: {user_id}, Agent ID: {agent_id}")
 
         # 1. 先检查会话缓存
         session_key = f"{user_id}:{agent_id}"
@@ -371,7 +371,7 @@ async def get_or_create_chat_by_agent(
         existing_chat = result.scalar_one_or_none()
 
         if existing_chat:
-            logger.info(
+            logger.debug(
                 f"找到已存在的聊天会话 - Chat ID: {existing_chat.id}, Agent ID: {existing_chat.agent_id}"
             )
 
@@ -443,7 +443,7 @@ async def get_or_create_chat_by_agent(
                         chat_history_service.add_agent_opening_message(
                             session_id, agent_opening
                         )
-                        logger.info(
+                        logger.debug(
                             f"为已存在的空聊天会话添加Agent开场白成功 - Session ID: {session_id}"
                         )
                     else:
@@ -475,7 +475,7 @@ async def get_or_create_chat_by_agent(
             return existing_chat
 
         # 6. 如果不存在，则创建新的会话
-        logger.info(f"未找到已存在的聊天会话，创建新的会话 - Agent ID: {agent_id}")
+        logger.debug(f"未找到已存在的聊天会话，创建新的会话 - Agent ID: {agent_id}")
 
         # 7. 优先从缓存获取Agent信息
         cached_agent = cache_service.get_agent_config(agent_id)
@@ -502,13 +502,13 @@ async def get_or_create_chat_by_agent(
                 agent_id,
                 {"name": agent_name, "avatar": agent_avatar, "opening": agent_opening},
             )
-            logger.info(f"验证Agent存在 - Agent ID: {agent_id}, Name: {agent_name}")
+            logger.debug(f"验证Agent存在 - Agent ID: {agent_id}, Name: {agent_name}")
 
         # 8. 创建新的聊天会话
         chat_id = str(uuid.uuid4())
         db_chat = models.Chat(id=chat_id, user_id=user_id, agent_id=agent_id)
 
-        logger.info(
+        logger.debug(
             f"创建新聊天会话 - Chat ID: {chat_id}, User ID: {user_id}, Agent ID: {agent_id}"
         )
 
@@ -537,7 +537,7 @@ async def get_or_create_chat_by_agent(
                     chat_history_service.add_agent_opening_message(
                         session_id, agent_opening
                     )
-                    logger.info(f"添加Agent开场白成功 - Session ID: {session_id}")
+                    logger.debug(f"添加Agent开场白成功 - Session ID: {session_id}")
                 else:
                     logger.debug(
                         f"聊天会话已有消息({existing_messages.get('total', 0)}条)，跳过开场白添加 - Session ID: {session_id}"
@@ -566,7 +566,7 @@ async def get_or_create_chat_by_agent(
         db_chat.last_message = None
         db_chat.last_message_time = None
 
-        logger.info(
+        logger.debug(
             f"成功创建新聊天会话 - Chat ID: {db_chat.id}, Agent ID: {db_chat.agent_id}"
         )
         return db_chat
@@ -591,7 +591,7 @@ async def get_or_create_chat_by_agent(
             )
             existing_chat = result.scalar_one_or_none()
             if existing_chat:
-                logger.info(
+                logger.debug(
                     f"并发创建冲突，返回已存在的聊天会话 - Chat ID: {existing_chat.id}"
                 )
                 return existing_chat
@@ -662,12 +662,12 @@ async def get_or_create_chat_settings(
             )
             settings_with_agent = result.scalar_one()
 
-            logger.info(f"成功创建聊天设置 - chat_id: {chat_id}")
+            logger.debug(f"成功创建聊天设置 - chat_id: {chat_id}")
             return settings_with_agent
 
         except IntegrityError:
             await db.rollback()
-            logger.info(f"并发创建聊天设置冲突，查询已存在设置 - chat_id: {chat_id}")
+            logger.debug(f"并发创建聊天设置冲突，查询已存在设置 - chat_id: {chat_id}")
 
             # 查询已存在的设置
             result = await db.execute(
@@ -806,7 +806,7 @@ async def delete_chats_by_agent_id(
         chats = result.scalars().all()
 
         if not chats:
-            logger.info(f"未找到聊天记录 - Agent ID: {agent_id}, User ID: {user_id}")
+            logger.debug(f"未找到聊天记录 - Agent ID: {agent_id}, User ID: {user_id}")
             return {
                 "chats_deleted": 0,
                 "messages_deleted": 0,

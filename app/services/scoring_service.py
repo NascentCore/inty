@@ -253,7 +253,7 @@ class ScoringService:
 
         # 直接返回默认模型列表，避免网络请求延迟
         # 如果需要实时获取OpenRouter模型，可以在后台异步更新
-        logger.info("返回默认评分模型列表")
+        logger.debug("返回默认评分模型列表")
 
         return [
             {
@@ -311,7 +311,7 @@ class ScoringService:
                     "X-Title": "InTy Evaluation System",
                 }
 
-                logger.info("正在从OpenRouter API获取模型列表...")
+                logger.debug("正在从OpenRouter API获取模型列表...")
                 response = await client.get(
                     "https://openrouter.ai/api/v1/models", headers=headers
                 )
@@ -325,7 +325,7 @@ class ScoringService:
                 result = response.json()
                 models_data = result.get("data", [])
 
-                logger.info(f"OpenRouter API返回了 {len(models_data)} 个模型")
+                logger.debug(f"OpenRouter API返回了 {len(models_data)} 个模型")
 
                 # 转换为我们需要的格式，显示所有模型供用户选择
                 all_models = []
@@ -346,7 +346,7 @@ class ScoringService:
                 # 按质量和受欢迎程度排序，优先显示高质量模型
                 all_models.sort(key=lambda m: self._model_priority(m["id"]))
 
-                logger.info(f"成功处理 {len(all_models)} 个OpenRouter模型")
+                logger.debug(f"成功处理 {len(all_models)} 个OpenRouter模型")
                 return all_models
 
         except Exception as e:
@@ -355,7 +355,7 @@ class ScoringService:
 
     def _get_default_openrouter_models(self) -> List[Dict[str, Any]]:
         """获取默认的OpenRouter模型列表"""
-        logger.info("使用默认的OpenRouter模型列表")
+        logger.debug("使用默认的OpenRouter模型列表")
 
         return [
             {

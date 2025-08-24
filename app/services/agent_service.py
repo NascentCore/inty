@@ -481,7 +481,7 @@ async def create_agent(
             and agent_in.prompt.strip()
             and not (agent_in.personality and agent_in.personality.strip())
         ):
-            logger.info(f"将prompt转换为personality以保持向后兼容")
+            logger.debug(f"将prompt转换为personality以保持向后兼容")
             agent_in.personality = agent_in.prompt
 
         # 角色卡字段优先级验证和建议
@@ -515,7 +515,7 @@ async def create_agent(
                 logger.warning(f"图片处理返回None，使用原始数据 - Agent ID: {agent_id}")
                 processed_agent_data = agent_data
             else:
-                logger.info(f"成功处理Agent图片URL - Agent ID: {agent_id}")
+                logger.debug(f"成功处理Agent图片URL - Agent ID: {agent_id}")
         except Exception as e:
             logger.error(
                 f"处理Agent图片URL失败 - Agent ID: {agent_id}, Error: {str(e)}"
@@ -589,7 +589,7 @@ def _validate_character_card_fields(agent_in: schemas.AgentCreate):
     )
     has_prompt = bool(agent_in.prompt and agent_in.prompt.strip())
 
-    logger.info(
+    logger.debug(
         f"创建Agent字段使用情况 - character_card: {has_character_card}, prompt: {has_prompt}"
     )
 
@@ -632,7 +632,7 @@ async def update_agent(
             if "personality" not in update_data or not (
                 update_data.get("personality") and update_data["personality"].strip()
             ):
-                logger.info(f"将prompt转换为personality以保持向后兼容")
+                logger.debug(f"将prompt转换为personality以保持向后兼容")
                 update_data["personality"] = update_data["prompt"]
 
         # 处理 llm_config 字段 - 将其移动到 settings 中
@@ -685,7 +685,7 @@ async def update_agent(
                 updated_agent.id, agent_data
             )
             if reload_success:
-                logger.info(f"Agent {updated_agent.id} 缓存重载成功")
+                logger.debug(f"Agent {updated_agent.id} 缓存重载成功")
             else:
                 logger.warning(f"Agent {updated_agent.id} 缓存重载失败")
 
@@ -850,7 +850,7 @@ def process_agent_image_urls(agent_data: dict, agent_id: str, user_id: str) -> d
                     # 标记临时文件待删除
                     temp_files_to_delete.append(avatar_url)
 
-                    logger.info(
+                    logger.debug(
                         f"复制头像从临时路径到永久路径: {avatar_url} -> {new_avatar_url}"
                     )
                 except FileNotFoundError as e:
@@ -887,7 +887,7 @@ def process_agent_image_urls(agent_data: dict, agent_id: str, user_id: str) -> d
                     # 标记临时文件待删除
                     temp_files_to_delete.append(background_url)
 
-                    logger.info(
+                    logger.debug(
                         f"复制背景图从临时路径到永久路径: {background_url} -> {new_background_url}"
                     )
                 except FileNotFoundError as e:
@@ -929,7 +929,7 @@ def process_agent_image_urls(agent_data: dict, agent_id: str, user_id: str) -> d
                         # 标记临时文件待删除
                         temp_files_to_delete.append(photo_url)
 
-                        logger.info(
+                        logger.debug(
                             f"复制相册图片从临时路径到永久路径: {photo_url} -> {new_photo_url}"
                         )
                     except FileNotFoundError as e:
@@ -961,7 +961,7 @@ def process_agent_image_urls(agent_data: dict, agent_id: str, user_id: str) -> d
                             global_config_loaded_from_config_yaml.gcs.bucket, temp_path
                         )
                         if deleted:
-                            logger.info(f"删除临时文件: {temp_url}")
+                            logger.debug(f"删除临时文件: {temp_url}")
                         else:
                             logger.debug(f"临时文件不存在，跳过删除: {temp_url}")
                     else:

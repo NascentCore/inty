@@ -33,5 +33,5 @@ def compress_png_to_jpeg(image_data: bytes, quality: int = 80) -> bytes:
     image.save(output_buffer, format="JPEG", quality=quality, optimize=True)
     jpeg_data = output_buffer.getvalue()
 
-    logger.info(f"Compressed PNG to JPEG: {len(image_data)} -> {len(jpeg_data)} bytes")
+    logger.debug(f"Compressed PNG to JPEG: {len(image_data)} -> {len(jpeg_data)} bytes")
     return jpeg_data

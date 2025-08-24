@@ -444,11 +444,11 @@ class GooglePlayService:
                         [track for track in fallback_tracks if track != primary_track]
                     )
 
-                logger.info(f"尝试从轨道获取版本信息，轨道顺序: {tracks_to_try}")
+                logger.debug(f"尝试从轨道获取版本信息，轨道顺序: {tracks_to_try}")
 
                 for track_name in tracks_to_try:
                     try:
-                        logger.info(f"正在查询轨道: {track_name}")
+                        logger.debug(f"正在查询轨道: {track_name}")
                         track_result = (
                             self.service.edits()
                             .tracks()
@@ -480,12 +480,12 @@ class GooglePlayService:
                                 "track": track_name,  # 添加轨道信息
                             }
 
-                            logger.info(
+                            logger.debug(
                                 f"从轨道 {track_name} 获取应用版本信息成功: {version_info}"
                             )
                             return version_info
                         else:
-                            logger.info(f"轨道 {track_name} 没有找到版本信息")
+                            logger.debug(f"轨道 {track_name} 没有找到版本信息")
                             continue
 
                     except HttpError as track_error:
@@ -644,7 +644,7 @@ class GooglePlayService:
             client_code = int(version_code1)
             server_code = int(version_code2)
 
-            logger.info(f"版本代码比较: {client_code} vs {server_code}")
+            logger.debug(f"版本代码比较: {client_code} vs {server_code}")
 
             return client_code < server_code
 

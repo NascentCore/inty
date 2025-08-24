@@ -61,7 +61,7 @@ class VoiceCacheService:
             if cache_entry:
                 # 检查文件是否还存在
                 if self.gcs_service.check_voice_file_exists(cache_entry.audio_url):
-                    logger.info(
+                    logger.debug(
                         f"语音缓存命中: {content_hash}, 命中次数: {cache_entry.hit_count}"
                     )
 
@@ -159,7 +159,7 @@ class VoiceCacheService:
                 existing_cache.file_size = file_size
                 existing_cache.is_active = True
                 existing_cache.last_accessed = datetime.now()
-                logger.info(f"更新语音缓存: {content_hash}")
+                logger.debug(f"更新语音缓存: {content_hash}")
             else:
                 # 创建新缓存
                 cache_entry = VoiceCache(
@@ -174,7 +174,7 @@ class VoiceCacheService:
                     hit_count=0,
                 )
                 db.add(cache_entry)
-                logger.info(f"创建新语音缓存: {content_hash}")
+                logger.debug(f"创建新语音缓存: {content_hash}")
 
             await db.commit()
             return True
@@ -434,7 +434,7 @@ class VoiceCacheService:
                     if not self.gcs_service.check_voice_file_exists(cache.audio_url):
                         cache.is_active = False
                         invalid_count += 1
-                        logger.info(f"标记无效缓存: {cache.audio_url}")
+                        logger.debug(f"标记无效缓存: {cache.audio_url}")
 
                 except Exception as e:
                     logger.warning(

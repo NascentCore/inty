@@ -107,7 +107,7 @@ def add_agent_opening_message(session_id: str, opening_message: str) -> None:
     try:
         history = get_chat_history(session_id)
         history.add_messages([AIMessage(content=opening_message)])
-        logger.info(f"添加开场白到会话 {session_id}: {opening_message}")
+        logger.debug(f"添加开场白到会话 {session_id}: {opening_message}")
     except Exception as e:
         logger.error(f"添加开场白失败 {session_id}: {str(e)}")
         raise
@@ -187,7 +187,7 @@ def add_user_message(session_id: str, message: str) -> None:
     try:
         history = get_chat_history(session_id)
         history.add_messages([HumanMessage(content=message)])
-        logger.info(f"添加用户消息到会话 {session_id}: {message}")
+        logger.debug(f"添加用户消息到会话 {session_id}: {message}")
     except Exception as e:
         logger.error(f"添加用户消息失败 {session_id}: {str(e)}")
         raise
@@ -198,7 +198,7 @@ def add_ai_message(session_id: str, message: str) -> None:
     try:
         history = get_chat_history(session_id)
         history.add_messages([AIMessage(content=message)])
-        logger.info(f"添加AI消息到会话 {session_id}: {message}")
+        logger.debug(f"添加AI消息到会话 {session_id}: {message}")
     except Exception as e:
         logger.error(f"添加AI消息失败 {session_id}: {str(e)}")
         raise

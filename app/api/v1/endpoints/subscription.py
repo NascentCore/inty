@@ -243,7 +243,7 @@ async def _process_google_play_notification(
                     "notificationType", "unknown"
                 )
 
-                logger.info(
+                logger.debug(
                     f"处理Google Play通知 - 尝试 {attempt + 1}/{max_retries}, "
                     f"令牌: {purchase_token[:10]}..., 类型: {notification_type}"
                 )

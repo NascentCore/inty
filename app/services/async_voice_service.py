@@ -64,7 +64,7 @@ class AsyncVoiceService:
             "created_at": asyncio.get_event_loop().time(),
         }
 
-        logger.info(f"异步语音生成任务已创建: {task_id}")
+        logger.debug(f"异步语音生成任务已创建: {task_id}")
         return task_id
 
     async def _generate_voice_task(
@@ -84,7 +84,7 @@ class AsyncVoiceService:
             if task_id in self.pending_tasks:
                 self.pending_tasks[task_id]["status"] = "processing"
 
-            logger.info(f"开始处理异步语音任务: {task_id}")
+            logger.debug(f"开始处理异步语音任务: {task_id}")
 
             # 生成语音
             audio_url = await self.voice_service.generate_voice(
@@ -99,7 +99,7 @@ class AsyncVoiceService:
                     "completed_at"
                 ] = asyncio.get_event_loop().time()
 
-            logger.info(f"异步语音任务完成: {task_id}, URL: {audio_url}")
+            logger.debug(f"异步语音任务完成: {task_id}, URL: {audio_url}")
 
             # 如果有回调URL，发送通知
             if callback_url and audio_url:
@@ -165,7 +165,7 @@ class AsyncVoiceService:
                     headers={"Content-Type": "application/json"},
                 ) as response:
                     if response.status == 200:
-                        logger.info(f"回调通知发送成功: {task_id}")
+                        logger.debug(f"回调通知发送成功: {task_id}")
                     else:
                         logger.warning(
                             f"回调通知发送失败: {task_id}, 状态码: {response.status}"
@@ -225,7 +225,7 @@ class AsyncVoiceService:
             )
 
             if cached_url:
-                logger.info(f"快速缓存命中: {cached_url}")
+                logger.debug(f"快速缓存命中: {cached_url}")
                 # 异步更新访问统计，使用独立的数据库会话
                 asyncio.create_task(
                     self.cache_service.update_access_stats(

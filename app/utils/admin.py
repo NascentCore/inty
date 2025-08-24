@@ -22,7 +22,7 @@ SHARED_EMAILS = [
     "sxwlai002@gmail.com",
 ]
 
-logger.info(f"SUPER_USER_EMAILS: {SUPER_USER_EMAILS}")
+logger.debug(f"SUPER_USER_EMAILS: {SUPER_USER_EMAILS}")
 
 
 def is_superuser_based_on_email(email: str) -> bool:

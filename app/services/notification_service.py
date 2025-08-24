@@ -298,7 +298,7 @@ async def send_fcm_multicast(
                     delete(DeviceToken).where(DeviceToken.token.in_(invalid_tokens))
                 )
                 await db.commit()
-                logger.info(f"Cleaned up {len(invalid_tokens)} invalid tokens")
+                logger.debug(f"Cleaned up {len(invalid_tokens)} invalid tokens")
             except Exception as e:
                 logger.error(f"Failed to clean up invalid tokens: {str(e)}")
                 logger.error(f"Error stack: {traceback.format_exc()}")

@@ -191,7 +191,7 @@ Remember: You are {{ char }} talking to {{ user }}."""
         """
         config = config or self.default_config
         self.templates[name] = PromptTemplate(template_string, config)
-        logger.info(f"Registered template: {name}")
+        logger.debug(f"Registered template: {name}")
 
     def get_template(self, name: str) -> Optional[PromptTemplate]:
         """

@@ -114,7 +114,7 @@ class VoiceService:
             voice_id = voice_id or self.config.voice_id
             model = model or self.config.model
 
-            logger.info(
+            logger.debug(
                 f"开始语音生成: voice_id={voice_id}, model={model}, language={language}, text_length={len(text)}"
             )
 
@@ -128,7 +128,7 @@ class VoiceService:
                     db, text, voice_id, model, language
                 )
                 if cached_url:
-                    logger.info(f"使用缓存的语音文件: {cached_url}")
+                    logger.debug(f"使用缓存的语音文件: {cached_url}")
                     # 访问统计已经在get_cached_voice中异步更新了，这里不需要重复更新
                     return cached_url
                 logger.debug("未找到缓存，开始新的语音生成")
@@ -142,7 +142,7 @@ class VoiceService:
                 logger.error("ElevenLabs API返回空数据")
                 return None
 
-            logger.info(
+            logger.debug(
                 f"ElevenLabs API调用成功，音频数据大小: {len(audio_data)} bytes"
             )
 
@@ -167,7 +167,7 @@ class VoiceService:
                 logger.error("GCS上传失败")
                 return None
 
-            logger.info(f"GCS上传成功: {audio_url}")
+            logger.debug(f"GCS上传成功: {audio_url}")
 
             # 异步保存到缓存，不阻塞返回
             if audio_url:
@@ -187,7 +187,7 @@ class VoiceService:
                 )
                 logger.debug("语音缓存保存任务已启动")
 
-            logger.info(f"语音生成成功: {file_name}")
+            logger.debug(f"语音生成成功: {file_name}")
             return audio_url
 
         except Exception as e:
@@ -235,7 +235,7 @@ class VoiceService:
                     logger.debug(f"ElevenLabs API响应状态: {response.status}")
                     if response.status == 200:
                         audio_data = await response.read()
-                        logger.info(
+                        logger.debug(
                             f"ElevenLabs API调用成功，音频大小: {len(audio_data)} bytes"
                         )
                         return audio_data

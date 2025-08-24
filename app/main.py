@@ -92,8 +92,8 @@ async def startup_event():
     """应用启动事件"""
     try:
         logger.info("正在初始化应用...")
-        logger.info(f"数据库 URL: {global_config_loaded_from_config_yaml.database.url}")
-        logger.info(
+        logger.debug(f"数据库 URL: {global_config_loaded_from_config_yaml.database.url}")
+        logger.debug(
             f"异步数据库 URL: {global_config_loaded_from_config_yaml.database.async_url}"
         )
 

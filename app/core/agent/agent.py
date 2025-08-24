@@ -762,7 +762,7 @@ class Agent:
         pool_start = time.time()
         pool = get_connection_pool()
         pool_time = time.time() - pool_start
-        logger.info(f"连接池获取耗时: {pool_time:.3f}秒 - Agent: {self.agent_id}")
+        logger.debug(f"连接池获取耗时: {pool_time:.3f}秒 - Agent: {self.agent_id}")
 
         with pool.connection() as conn_local:
             try:
@@ -772,7 +772,7 @@ class Agent:
                     table_name, session_id, sync_connection=conn_local
                 )
                 history_init_time = time.time() - history_start
-                logger.info(
+                logger.debug(
                     f"历史记录初始化耗时: {history_init_time:.3f}秒 - Agent: {self.agent_id}"
                 )
 
@@ -784,7 +784,7 @@ class Agent:
                     history.messages, max_messages=15
                 )
                 get_history_time = time.time() - get_history_start
-                logger.info(
+                logger.debug(
                     f"历史消息获取耗时: {get_history_time:.3f}秒 - Agent: {self.agent_id}"
                 )
 
@@ -793,7 +793,7 @@ class Agent:
                 all_messages = recent_history + messages["messages"]
                 logger.debug(f"all_messages: {all_messages}")
                 build_msg_time = time.time() - build_msg_start
-                logger.info(
+                logger.debug(
                     f"消息构建耗时: {build_msg_time:.3f}秒 - Agent: {self.agent_id}"
                 )
 
@@ -801,7 +801,7 @@ class Agent:
                 save_msg_start = time.time()
                 history.add_messages(messages["messages"])
                 save_msg_time = time.time() - save_msg_start
-                logger.info(
+                logger.debug(
                     f"用户消息保存耗时: {save_msg_time:.3f}秒 - Agent: {self.agent_id}"
                 )
 
@@ -815,16 +815,16 @@ class Agent:
                 )
                 config = {"configurable": {"user_id": user_id}}
                 input_build_time = time.time() - input_build_start
-                logger.info(
+                logger.debug(
                     f"输入数据构建耗时: {input_build_time:.3f}秒 - Agent: {self.agent_id}"
                 )
 
                 # 调用agent进行对话
                 agent_invoke_start = time.time()
-                logger.info(f"开始Agent推理 - Agent: {self.agent_id}")
+                logger.debug(f"开始Agent推理 - Agent: {self.agent_id}")
                 response = self.agent.invoke(state_data, config)
                 agent_invoke_time = time.time() - agent_invoke_start
-                logger.info(
+                logger.debug(
                     f"Agent推理耗时: {agent_invoke_time:.3f}秒 - Agent: {self.agent_id}"
                 )
 
@@ -841,7 +841,7 @@ class Agent:
                     else "抱歉，我无法理解您的消息。请再试一次。"
                 )
                 response_process_time = time.time() - response_process_start
-                logger.info(
+                logger.debug(
                     f"响应处理耗时: {response_process_time:.3f}秒 - Agent: {self.agent_id}"
                 )
 
@@ -849,7 +849,7 @@ class Agent:
                 save_response_start = time.time()
                 history.add_messages([AIMessage(content=response_text)])
                 save_response_time = time.time() - save_response_start
-                logger.info(
+                logger.debug(
                     f"AI响应保存耗时: {save_response_time:.3f}秒 - Agent: {self.agent_id}"
                 )
 
@@ -944,7 +944,7 @@ class Agent:
                     )
 
                 total_time = time.time() - chat_start_time
-                logger.info(
+                logger.debug(
                     f"聊天处理总耗时（优化版）: {total_time:.3f}秒 - Agent: {self.agent_id}"
                 )
 
@@ -965,7 +965,7 @@ class Agent:
         进行异步后台保存，提高性能并避免阻塞主聊天流程。
         新的实现确保了完整的动态提示词内容被保存。
         """
-        logger.info(
+        logger.debug(
             f"开始保存调试信息 - Agent: {self.agent_id}, User: {user_id}, Session: {session_id}"
         )
 
@@ -1022,7 +1022,7 @@ class Agent:
                 # AI响应转换为character类型
                 messages.append({"type": "character", "content": response_text})
 
-            logger.info(f"成功构建消息链，共{len(messages)}条消息")
+            logger.debug(f"成功构建消息链，共{len(messages)}条消息")
 
             # 保存到数据库
             debug_data = {
@@ -1050,7 +1050,7 @@ class Agent:
                 rows_affected = cursor.rowcount
                 conn.commit()
 
-            logger.info(
+            logger.debug(
                 f"保存调试信息成功 - Agent: {self.agent_id}, 找到记录: {record_count}, 影响行数: {rows_affected}"
             )
 
@@ -1069,14 +1069,14 @@ class Agent:
         chat_settings=None,
     ) -> str:
         """异步聊天方法（优化版本）"""
-        logger.info(f"开始聊天处理 - Agent: {self.agent_id}, Session: {session_id}")
+        logger.debug(f"开始聊天处理 - Agent: {self.agent_id}, Session: {session_id}")
 
         self._update_last_used()
 
         profile_start = time.time()
         user_profile = self._get_user_profile_sync(user_id)
         profile_time = time.time() - profile_start
-        logger.info(f"用户信息获取耗时: {profile_time:.3f}秒 - Agent: {self.agent_id}")
+        logger.debug(f"用户信息获取耗时: {profile_time:.3f}秒 - Agent: {self.agent_id}")
 
         # 在线程池中执行同步聊天逻辑
         loop = asyncio.get_event_loop()
@@ -1400,7 +1400,7 @@ class AgentManager:
                             logger.error(f"清理Agent资源失败 {agent_id}: {str(e)}")
 
                         del self.agents[agent_id]
-                        logger.info(f"清理空闲Agent: {agent_id}")
+                        logger.debug(f"清理空闲Agent: {agent_id}")
 
                         # 清理对应的锁
                         with self._locks_lock:
@@ -1431,7 +1431,7 @@ class AgentManager:
                 if existing_agent.agent_id == agent_id:
                     # 更新最后使用时间（线程安全）
                     existing_agent._update_last_used()
-                    logger.info(f"从缓存返回Agent实例 - Agent ID: {agent_id}")
+                    logger.debug(f"从缓存返回Agent实例 - Agent ID: {agent_id}")
                     return existing_agent
 
         # 需要创建或替换Agent实例，使用Agent专用锁
@@ -1633,7 +1633,7 @@ class AgentManager:
                     old_agent = self.agents[agent_id]
                     try:
                         old_agent.cleanup()
-                        logger.info(f"已清理旧Agent实例: {agent_id}")
+                        logger.debug(f"已清理旧Agent实例: {agent_id}")
                     except Exception as e:
                         logger.error(f"清理旧Agent实例失败 {agent_id}: {str(e)}")
 

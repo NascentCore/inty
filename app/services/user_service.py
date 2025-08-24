@@ -466,7 +466,7 @@ async def delete_user_account(
                         db, user_id
                     )
                 )
-                logger.info(f"用户 {user_id} 订阅取消统计: {cancellation_stats}")
+                logger.debug(f"用户 {user_id} 订阅取消统计: {cancellation_stats}")
             except Exception as e:
                 logger.warning(f"取消用户订阅失败，继续删除流程: {str(e)}")
 

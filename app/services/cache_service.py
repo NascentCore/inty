@@ -75,7 +75,7 @@ class InMemoryCache:
                 del self._cache[key]
 
         if expired_keys:
-            logger.info(f"清理过期缓存，删除 {len(expired_keys)} 个条目")
+            logger.debug(f"清理过期缓存，删除 {len(expired_keys)} 个条目")
 
         return len(expired_keys)
 

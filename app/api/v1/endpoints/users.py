@@ -113,9 +113,9 @@ async def upload_avatar(
                 delete_from_gcs(
                     global_config_loaded_from_config_yaml.gcs.bucket, old_path
                 )
-                logger.info(f"已删除旧头像: {old_avatar}")
+                logger.debug(f"已删除旧头像: {old_avatar}")
         elif old_avatar:
-            logger.info(f"跳过删除非GCS头像: {old_avatar}")
+            logger.debug(f"跳过删除非GCS头像: {old_avatar}")
 
         user = await user_service.update_user(
             db, current_user.id, UserUpdate(avatar=url)
@@ -237,14 +237,14 @@ async def get_all_users(
     获取所有用户信息，支持分页和关键字搜索
     """
     try:
-        logger.info(f"获取所有用户 - skip: {skip}, limit: {limit}, search: {search}")
+        logger.debug(f"获取所有用户 - skip: {skip}, limit: {limit}, search: {search}")
 
         # 调用service层方法获取所有用户
         result = await user_service.get_all_users(
             db=db, skip=skip, limit=limit, search=search
         )
 
-        logger.info(
+        logger.debug(
             f"用户列表查询完成 - 总记录数: {result['total']}, "
             f"当前页记录数: {len(result['items'])}"
         )

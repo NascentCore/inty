@@ -254,7 +254,7 @@ async def get_agent_chat_detail(
     Support scrolling to load earlier conversations
     """
     try:
-        logger.info(f"Getting Agent chat details - Agent ID: {agent_id}")
+        logger.debug(f"Getting Agent chat details - Agent ID: {agent_id}")
 
         # Get or create unique session with this Agent
         chat = await chat_service.get_or_create_chat_by_agent(
@@ -333,7 +333,7 @@ async def get_agent_chat_messages(
     Specifically for scrolling load
     """
     try:
-        logger.info(f"Getting Agent chat messages - Agent ID: {agent_id}")
+        logger.debug(f"Getting Agent chat messages - Agent ID: {agent_id}")
 
         # Get or create unique session with this Agent
         chat = await chat_service.get_or_create_chat_by_agent(
@@ -388,7 +388,7 @@ async def agent_chat_completions(
         import time
 
         request_start_time = time.time()
-        logger.info(
+        logger.debug(
             f"开始处理聊天请求 - Agent ID: {agent_id}, User ID: {current_user.id}"
         )
         logger.debug(f"请求参数: {request.dict()}")
@@ -413,9 +413,9 @@ async def agent_chat_completions(
             raise HTTPException(status_code=404, detail="Agent not found")
 
         agent_query_time = time.time() - agent_query_start
-        logger.info(f"Agent验证成功: {agent_basic[1]}, 耗时: {agent_query_time:.3f}秒")
+        logger.debug(f"Agent验证成功: {agent_basic[1]}, 耗时: {agent_query_time:.3f}秒")
         # 添加日志记录传入的agent_id
-        logger.info(f"请求的Agent ID: {agent_id}")
+        logger.debug(f"请求的Agent ID: {agent_id}")
 
         # 获取或创建与该Agent的唯一会话
         chat_session_start = time.time()
@@ -426,7 +426,7 @@ async def agent_chat_completions(
             db=db, user_id=current_user.id, agent_id=agent_id
         )
         chat_session_time = time.time() - chat_session_start
-        logger.info(
+        logger.debug(
             f"聊天会话获取成功: chat_id={chat.id}, agent_id={chat.agent_id}, 耗时: {chat_session_time:.3f}秒"
         )
 
@@ -439,7 +439,7 @@ async def agent_chat_completions(
             )
 
         # 记录实际使用的agent_id
-        logger.info(f"实际聊天的Agent ID: {chat.agent_id}")
+        logger.debug(f"实际聊天的Agent ID: {chat.agent_id}")
 
         # 获取最后一条用户消息
         msg_process_start = time.time()
@@ -459,7 +459,7 @@ async def agent_chat_completions(
         # 构建LangChain消息格式
         messages = {"messages": [HumanMessage(content=last_user_message)]}
         msg_process_time = time.time() - msg_process_start
-        logger.info(f"消息处理耗时: {msg_process_time:.3f}秒")
+        logger.debug(f"消息处理耗时: {msg_process_time:.3f}秒")
 
         # 获取或创建Agent实例 - 需要加载完整数据
         agent_get_start = time.time()
@@ -474,7 +474,7 @@ async def agent_chat_completions(
         # 从AgentManager缓存获取Agent实例
         agent = await agent_manager.get_agent(agent_data)
         agent_get_time = time.time() - agent_get_start
-        logger.info(
+        logger.debug(
             f"Agent实例获取成功: {agent_data['name']}, 耗时: {agent_get_time:.3f}秒"
         )
 
@@ -482,7 +482,7 @@ async def agent_chat_completions(
         session_id_start = time.time()
         session_id = generate_session_id(chat.id)
         session_id_time = time.time() - session_id_start
-        logger.info(f"Session ID生成耗时: {session_id_time:.3f}秒")
+        logger.debug(f"Session ID生成耗时: {session_id_time:.3f}秒")
 
         # 检查用户聊天次数限制
         is_allowed, used_count, daily_limit = (
@@ -493,7 +493,7 @@ async def agent_chat_completions(
             # 在返回错误前，先保存用户消息到聊天历史
             try:
                 chat_history_service.add_user_message(session_id, last_user_message)
-                logger.info(f"用户消息已保存到历史记录: {session_id}")
+                logger.debug(f"用户消息已保存到历史记录: {session_id}")
             except Exception as e:
                 logger.warning(f"保存用户消息失败: {str(e)}")
 
@@ -551,7 +551,7 @@ async def agent_chat_completions(
                 # 等待任务完成
                 response_content = await ai_task
                 chat_processing_time = time.time() - chat_processing_start
-                logger.info(
+                logger.debug(
                     f"Agent聊天响应成功: {response_content[:100]}..., 耗时: {chat_processing_time:.3f}秒"
                 )
                 logger.debug(
@@ -569,7 +569,7 @@ async def agent_chat_completions(
                 if chat_settings.voice_enabled:
                     # 使用Agent的voice_id字段
                     agent_voice_id = agent_data.get("voice_id")
-                    logger.info(
+                    logger.debug(
                         f"开始语音生成: voice_id={agent_voice_id}, text_length={len(response_content)}, language={request.language}"
                     )
 
@@ -579,7 +579,7 @@ async def agent_chat_completions(
                         language=request.language,
                         db=db,
                     )
-                    logger.info(f"语音自动生成成功: {audio_url}")
+                    logger.debug(f"语音自动生成成功: {audio_url}")
                 else:
                     logger.debug("语音未启用，跳过语音生成")
 
@@ -612,10 +612,10 @@ async def agent_chat_completions(
             # 如果生成了语音，添加到响应中
             if audio_url:
                 message["audio_url"] = audio_url
-                logger.info(f"响应包含语音URL: {audio_url}")
+                logger.debug(f"响应包含语音URL: {audio_url}")
 
             total_request_time = time.time() - request_start_time
-            logger.info(
+            logger.debug(
                 f"聊天请求处理成功: agent_id={agent_id}, response_length={len(response_content)}, 总耗时: {total_request_time:.3f}秒"
             )
             data = {
@@ -652,7 +652,7 @@ async def agent_chat_fast_response(
     立即返回AI文本回复，语音异步生成
     """
     try:
-        logger.info(
+        logger.debug(
             f"开始处理极速聊天请求 - Agent ID: {agent_id}, User ID: {current_user.id}"
         )
 
@@ -730,7 +730,7 @@ async def agent_chat_fast_response(
                 # 缓存命中，立即返回
                 message["audio_url"] = cached_audio_url
                 message["audio_cached"] = True
-                logger.info(f"极速响应-缓存命中: {cached_audio_url}")
+                logger.debug(f"极速响应-缓存命中: {cached_audio_url}")
             else:
                 # 缓存未命中，启动异步生成
                 task_id = await async_voice_service.generate_voice_async(
@@ -743,7 +743,7 @@ async def agent_chat_fast_response(
 
                 message["audio_task_id"] = task_id
                 message["audio_cached"] = False
-                logger.info(f"极速响应-异步生成: {task_id}")
+                logger.debug(f"极速响应-异步生成: {task_id}")
 
         # 异步记录使用情况，使用独立的数据库会话
         asyncio.create_task(
@@ -759,7 +759,7 @@ async def agent_chat_fast_response(
             )
         )
 
-        logger.info(
+        logger.debug(
             f"极速聊天响应完成: agent_id={agent_id}, response_length={len(response_content)}"
         )
 
@@ -890,7 +890,7 @@ async def generate_message_voice(
         if not audio_url:
             raise HTTPException(status_code=500, detail="Voice generation failed")
 
-        logger.info(f"按需语音生成成功: {audio_url}")
+        logger.debug(f"按需语音生成成功: {audio_url}")
 
         return {
             "audio_url": audio_url,
@@ -1258,7 +1258,7 @@ async def get_agent_debug_messages(
     根据Agent ID获取用户与该Agent的聊天会话中的debug_messages字段
     """
     try:
-        logger.info(
+        logger.debug(
             f"获取Agent调试信息 - Agent ID: {agent_id}, User ID: {current_user.id}"
         )
 
@@ -1436,7 +1436,7 @@ async def clear_agent_chat_messages(
         if result.get("success", False):
             chat.debug_messages = None
             await db.commit()
-            logger.info(f"已清空 debug_messages 字段 - Chat ID: {chat.id}")
+            logger.debug(f"已清空 debug_messages 字段 - Chat ID: {chat.id}")
 
         logger.info(f"消息清除操作完成 - Agent ID: {agent_id}, 结果: {result}")
 
@@ -1472,14 +1472,14 @@ async def get_debug_messages(
     如果两个参数都为空，则返回所有记录
     """
     try:
-        logger.info(f"查询debug messages - user_id: {user_id}, agent_id: {agent_id}")
+        logger.debug(f"查询debug messages - user_id: {user_id}, agent_id: {agent_id}")
 
         # 调用service层方法查询debug messages
         result = await chat_service.get_debug_messages(
             db=db, user_id=user_id, agent_id=agent_id, skip=skip, limit=limit
         )
 
-        logger.info(
+        logger.debug(
             f"debug messages查询完成 - 总记录数: {result['total']}, "
             f"当前页记录数: {len(result['items'])}"
         )

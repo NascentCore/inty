@@ -81,7 +81,7 @@ class CharacterCardMapper:
             "extensions": data.extensions,
         }
 
-        logger.info(f"成功映射角色卡到Agent数据: {data.name}")
+        logger.debug(f"成功映射角色卡到Agent数据: {data.name}")
         return agent_data
 
     def map_agent_to_card(self, agent_data: Dict[str, Any]) -> CharacterCardV2:

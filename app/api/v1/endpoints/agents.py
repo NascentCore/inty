@@ -372,7 +372,7 @@ async def generate_background(
             gender_mapping = {"MALE": "male", "FEMALE": "female", "OTHER": "non-binary"}
             user_gender = gender_mapping.get(current_user.gender.value, "non-binary")
 
-        logger.info(
+        logger.debug(
             f"Starting background generation for user {current_user.id}, prompt: {request.prompt}, count: {request.count}, gender: {user_gender}"
         )
 
@@ -577,7 +577,7 @@ async def upload_avatar_preview(
         logger.error(f"错误堆栈: {traceback.format_exc()}")
         return APIResponse.error(message="Avatar upload failed")
     finally:
-        logger.info("=== 头像上传请求处理完成 ===")
+        logger.debug("=== 头像上传请求处理完成 ===")
 
 
 @router.post("/{agent_id}/avatar", response_model=APIResponse[schemas.Agent])
@@ -623,9 +623,9 @@ async def upload_agent_avatar(
                 delete_from_gcs(
                     global_config_loaded_from_config_yaml.gcs.bucket, old_path
                 )
-                logger.info(f"已删除旧头像: {agent.avatar}")
+                logger.debug(f"已删除旧头像: {agent.avatar}")
         elif agent.avatar:
-            logger.info(f"跳过删除非GCS头像: {agent.avatar}")
+            logger.debug(f"跳过删除非GCS头像: {agent.avatar}")
 
         # 更新数据库
         updated_agent = await agent_service.update_agent(
@@ -690,9 +690,9 @@ async def upload_agent_background(
                 delete_from_gcs(
                     global_config_loaded_from_config_yaml.gcs.bucket, old_path
                 )
-                logger.info(f"已删除旧背景图: {agent.background}")
+                logger.debug(f"已删除旧背景图: {agent.background}")
         elif agent.background:
-            logger.info(f"跳过删除非GCS背景图: {agent.background}")
+            logger.debug(f"跳过删除非GCS背景图: {agent.background}")
 
         # 更新数据库
         updated_agent = await agent_service.update_agent(

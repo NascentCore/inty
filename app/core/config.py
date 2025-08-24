@@ -210,7 +210,7 @@ os.environ["LANGSMITH_PROJECT"] = (
 os.environ["LANGCHAIN_API_KEY"] = (
     global_config_loaded_from_config_yaml.agent.langchain_api_key
 )
-logger.info(f"Setting LangSmith environment variables for project: ")
-logger.info(f"LANGSMITH_TRACING_V2: {os.getenv('LANGSMITH_TRACING_V2')}")
-logger.info(f"LANGSMITH_PROJECT: {os.getenv('LANGSMITH_PROJECT')}")
-logger.info(f"LANGCHAIN_API_KEY: {os.getenv('LANGCHAIN_API_KEY')}")
+logger.debug(f"Setting LangSmith environment variables for project: ")
+logger.debug(f"LANGSMITH_TRACING_V2: {os.getenv('LANGSMITH_TRACING_V2')}")
+logger.debug(f"LANGSMITH_PROJECT: {os.getenv('LANGSMITH_PROJECT')}")
+logger.debug(f"LANGCHAIN_API_KEY: {os.getenv('LANGCHAIN_API_KEY')}")

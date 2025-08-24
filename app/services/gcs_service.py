@@ -43,7 +43,7 @@ class GCSService:
             # 检查文件是否已存在（缓存机制）
             logger.debug(f"检查GCS文件是否存在: {file_path}")
             if check_gcs_file_exists(self.bucket_name, file_path):
-                logger.info(f"语音文件已存在，直接返回缓存: {file_path}")
+                logger.debug(f"语音文件已存在，直接返回缓存: {file_path}")
                 return f"https://storage.googleapis.com/{self.bucket_name}/{file_path}"
 
             logger.debug("文件不存在，开始上传到GCS")

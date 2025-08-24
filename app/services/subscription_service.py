@@ -582,7 +582,7 @@ class SubscriptionService:
             )
 
             db.add(transaction)
-            logger.info(
+            logger.debug(
                 f"创建取消交易记录成功 - 订阅: {subscription.id}, 原因: {reason}"
             )
 
@@ -995,7 +995,7 @@ class SubscriptionService:
             # 只在特定通知类型下尝试创建订阅记录
             # 1: SUBSCRIPTION_RECOVERED, 2: SUBSCRIPTION_RENEWED, 4: SUBSCRIPTION_PURCHASED
             if notification_type not in [1, 2, 4]:
-                logger.info(f"通知类型 {notification_type} 不适合创建订阅记录")
+                logger.debug(f"通知类型 {notification_type} 不适合创建订阅记录")
                 return None
 
             # 从通知数据中尝试提取产品ID（用于日志记录）
@@ -1020,7 +1020,7 @@ class SubscriptionService:
                     )
 
                     if is_valid and "error" not in purchase_info:
-                        logger.info(
+                        logger.debug(
                             f"找到匹配的订阅计划: {plan.id}, 产品ID: {plan.google_play_product_id}"
                         )
 
@@ -1334,7 +1334,7 @@ class SubscriptionService:
             )
 
             db.add(transaction)
-            logger.info(f"创建续费交易记录成功 - 订阅: {subscription.id}")
+            logger.debug(f"创建续费交易记录成功 - 订阅: {subscription.id}")
 
         except Exception as e:
             logger.error(f"创建续费交易记录失败: {str(e)}")

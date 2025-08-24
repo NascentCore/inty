@@ -200,7 +200,7 @@ class EvaluationService:
                         agent_tasks.append(task)
 
                     # 并行执行当前问题的所有智能体测试
-                    logger.info(
+                    logger.debug(
                         f"并行执行问题 {question_index + 1} 的 {len(agent_tasks)} 个智能体测试"
                     )
                     results = await asyncio.gather(*agent_tasks, return_exceptions=True)
@@ -232,7 +232,7 @@ class EvaluationService:
                                 },
                             )
 
-                    logger.info(
+                    logger.debug(
                         f"问题 {question_index + 1} 的并行测试完成，成功 {len([r for r in results if not isinstance(r, Exception) and r])} 个"
                     )
 
@@ -577,7 +577,7 @@ class EvaluationService:
 
         # 这里应该实现WebSocket广播逻辑
         # 暂时只记录日志
-        logger.info(f"广播消息到 {len(connections)} 个连接: {message['type']}")
+        logger.debug(f"广播消息到 {len(connections)} 个连接: {message['type']}")
 
     def _serialize_result(self, result: EvaluationResult) -> Dict[str, Any]:
         """序列化结果用于传输"""

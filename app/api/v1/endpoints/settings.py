@@ -24,12 +24,12 @@ def get_settings_endpoint(
     Get current user settings
     """
     try:
-        logger.info(f"Getting user settings: user_id={current_user.id}")
+        logger.debug(f"Getting user settings: user_id={current_user.id}")
         settings = get_settings(db, user_id=current_user.id)
         if not settings:
-            logger.info(f"User settings not found: user_id={current_user.id}")
+            logger.debug(f"User settings not found: user_id={current_user.id}")
             raise HTTPException(status_code=404, detail="Settings not found")
-        logger.info(f"Successfully retrieved user settings: user_id={current_user.id}")
+        logger.debug(f"Successfully retrieved user settings: user_id={current_user.id}")
         return settings
     except SQLAlchemyError as e:
         logger.error(
@@ -56,7 +56,7 @@ def update_settings_endpoint(
     Update current user settings
     """
     try:
-        logger.info(
+        logger.debug(
             f"Updating user settings: user_id={current_user.id}, settings={settings_in.dict()}"
         )
         settings = get_settings(db, user_id=current_user.id)
@@ -70,20 +70,20 @@ def update_settings_endpoint(
                     else True
                 ),
             )
-            logger.info(
+            logger.debug(
                 f"Creating new user settings: user_id={current_user.id}, settings={settings_create.dict()}"
             )
             settings = create_settings(
                 db, settings_in=settings_create, user_id=current_user.id
             )
         else:
-            logger.info(
+            logger.debug(
                 f"Updating existing user settings: user_id={current_user.id}, settings={settings_in.dict()}"
             )
             settings = update_settings(
                 db, db_settings=settings, settings_in=settings_in
             )
-        logger.info(f"Successfully updated user settings: user_id={current_user.id}")
+        logger.debug(f"Successfully updated user settings: user_id={current_user.id}")
         return settings
     except SQLAlchemyError as e:
         logger.error(

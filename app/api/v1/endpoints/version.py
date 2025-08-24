@@ -45,7 +45,7 @@ async def check_version(
         # 转换为响应模型
         response = VersionCheckResponse(**version_check_result)
 
-        logger.info(
+        logger.debug(
             f"用户 {current_user.id} 版本检查完成: versionCode {client_version_code} "
             f"(versionName: {version_name}) -> "
             f"需要更新: {response.update_required}, 强制更新: {response.force_update}"

@@ -65,7 +65,7 @@ def get_genai_client():
                 genai._client_cache.clear()
 
             client = genai.Client(vertexai=True, project=project_id, location=location)
-            logger.info(
+            logger.debug(
                 f"Initialized Google Gen AI client with project: {project_id}, location: {location}"
             )
         except Exception as e:
