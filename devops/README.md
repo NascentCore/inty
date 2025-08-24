@@ -1,6 +1,6 @@
 # DevOps
 
-## 发布前准备
+## Google Play 发布
 
 * 商业化测试
   * <https://intellimate.app/> 可以访问
