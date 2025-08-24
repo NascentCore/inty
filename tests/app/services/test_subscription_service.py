@@ -35,7 +35,7 @@ class TestSubscriptionService:
         mock_db.execute.return_value = mock_result
 
         # Create a mock user object
-        mock_user = User(
+        user = User(
             id="user-123",
             readable_id="user123",
             email="test@example.com",
@@ -47,7 +47,7 @@ class TestSubscriptionService:
 
         # Act
         is_allowed, agent_count, limit = (
-            await subscription_service.check_agent_creation_limit(mock_db, mock_user)
+            await subscription_service.check_agent_creation_limit(mock_db, user)
         )
 
         # Assert
@@ -109,7 +109,7 @@ class TestSubscriptionService:
         mock_db.execute.return_value = mock_result
 
         # Create a mock user object
-        mock_user = User(
+        user = User(
             id="user-123",
             readable_id="user123",
             email="test@example.com",
@@ -121,7 +121,7 @@ class TestSubscriptionService:
 
         # Act
         is_allowed, agent_count, limit = (
-            await subscription_service.check_agent_creation_limit(mock_db, mock_user)
+            await subscription_service.check_agent_creation_limit(mock_db, user)
         )
 
         # Assert
