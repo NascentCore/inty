@@ -1,8 +1,8 @@
-"""remove uniqueness of google_id and email from users table
+"""remove googld_id and email uniqueness from users table
 
-Revision ID: 783a6507cc9c
-Revises: 20250808_080000
-Create Date: 2025-08-24 06:54:58.810041+00:00
+Revision ID: 119c41583441
+Revises: e17e4aa7c324
+Create Date: 2025-08-24 07:28:28.465468+00:00
 
 """
 from typing import Sequence, Union
@@ -12,8 +12,8 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = '783a6507cc9c'
-down_revision: Union[str, None] = '20250808_080000'
+revision: str = '119c41583441'
+down_revision: Union[str, None] = 'e17e4aa7c324'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -23,10 +23,6 @@ def upgrade() -> None:
     op.drop_index(op.f('ix_user_deletion_logs_created_at'), table_name='user_deletion_logs')
     op.drop_index(op.f('ix_user_deletion_logs_user_id'), table_name='user_deletion_logs')
     op.drop_table('user_deletion_logs')
-    op.alter_column('chat_settings', 'premium_mode',
-               existing_type=sa.BOOLEAN(),
-               nullable=True,
-               existing_comment='高级模式开关，仅订阅用户可设置')
     op.alter_column('users', 'email',
                existing_type=sa.VARCHAR(),
                comment='邮箱地址',
@@ -56,10 +52,6 @@ def downgrade() -> None:
                comment='邮箱地址，唯一，用于登录',
                existing_comment='邮箱地址',
                existing_nullable=True)
-    op.alter_column('chat_settings', 'premium_mode',
-               existing_type=sa.BOOLEAN(),
-               nullable=False,
-               existing_comment='高级模式开关，仅订阅用户可设置')
     op.create_table('user_deletion_logs',
     sa.Column('id', sa.VARCHAR(), autoincrement=False, nullable=False, comment='删除日志ID'),
     sa.Column('user_id', sa.VARCHAR(), autoincrement=False, nullable=False, comment='被删除的用户ID'),
