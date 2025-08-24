@@ -98,6 +98,8 @@ FRONTAL_FACE_DEFAULT = AvatarCroppingConfig(
 )
 
 ANIME_FACE = AvatarCroppingConfig(
+    # Anime face is generally surrounded by larger hairs and other facial features.
+    # So we need to expand the face more.
     max_expansion_ratio=2.0,
     face_detection_profile=ANIME_FACE,
 )
