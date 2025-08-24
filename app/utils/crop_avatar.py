@@ -98,7 +98,7 @@ FRONTAL_FACE_DEFAULT = AvatarCroppingConfig(
 )
 
 ANIME_FACE = AvatarCroppingConfig(
-    max_expansion_ratio=1.8,
+    max_expansion_ratio=2.0,
     face_detection_profile=ANIME_FACE,
 )
 
