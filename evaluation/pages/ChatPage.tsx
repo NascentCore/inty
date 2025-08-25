@@ -394,15 +394,41 @@ export const ChatPage: React.FC = () => {
       cancelText: "取消",
       onOk: async () => {
         try {
-          // 调用现有API清除消息
-          await api.chat.clearMessages(selectedAgent.id);
+          // 先获取当前消息列表，找到第一个可用的消息ID
+          const currentMessages = await api.chat.getMessages(selectedAgent.id, {
+            page: 1,
+            size: 10,
+          });
 
-          // 更新UI状态
-          setMessages([]);
+          // 如果有消息，使用第一个消息的ID；如果没有消息，直接返回
+          if (currentMessages.messages && currentMessages.messages.length > 0) {
+            const firstMessageId = currentMessages.messages[0].id;
+
+            // 调用现有API清除消息，从第一个消息开始清除
+            await api.chat.clearMessages(selectedAgent.id, firstMessageId.toString());
+          }
+
+          // 重新获取消息列表，这样开场白会保留（因为后端现在保留第一条消息）
+          const refreshedMessages = await api.chat.getMessages(selectedAgent.id, {
+            page: 1,
+            size: 100,
+          });
+
+          // 转换API返回的消息格式以匹配ChatMessage类型
+          const convertedMessages: ChatMessage[] = (refreshedMessages.messages || []).map(msg => ({
+            id: msg.id.toString(), // 转换number到string
+            role: msg.role,
+            content: msg.content,
+            timestamp: msg.timestamp,
+            remoteId: msg.id.toString(), // 添加remoteId
+          }));
+
+          // 更新UI状态，保留开场白
+          setMessages(convertedMessages);
 
           const updatedSession = {
             ...currentSession,
-            messages: [],
+            messages: convertedMessages,
           };
           setCurrentSession(updatedSession);
 
@@ -412,7 +438,7 @@ export const ChatPage: React.FC = () => {
           setChatHistory(updatedHistory);
           saveChatHistory(updatedHistory);
 
-          message.success("聊天记录已清空");
+          message.success("聊天记录已清空，开场白已保留");
         } catch (error) {
           console.error("清空聊天记录失败:", error);
           let errorMessage = "清空聊天记录失败，请重试。";
@@ -808,13 +834,13 @@ export const ChatPage: React.FC = () => {
                                   size="small"
                                   color={
                                     agent.visibility === "PUBLIC" ||
-                                    agent.visibility === "public"
+                                      agent.visibility === "public"
                                       ? "green"
                                       : "orange"
                                   }
                                 >
                                   {agent.visibility === "PUBLIC" ||
-                                  agent.visibility === "public"
+                                    agent.visibility === "public"
                                     ? "公开"
                                     : "私有"}
                                 </Tag>
