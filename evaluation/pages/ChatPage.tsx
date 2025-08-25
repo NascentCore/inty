@@ -178,7 +178,7 @@ export const ChatPage: React.FC = () => {
         };
 
         setCurrentSession(session);
-        setMessages(convertedMessages);
+        setMessages(convertedMessages); // 移除.reverse()，后端已经返回正确顺序
 
         // 更新本地历史记录缓存
         const existingHistoryIndex = chatHistory.findIndex(
@@ -399,13 +399,16 @@ export const ChatPage: React.FC = () => {
             page: 1,
             size: 10,
           });
+          message.info(`currentMessages: ${JSON.stringify(currentMessages)}`);
 
-          // 如果有消息，使用第一个消息的ID；如果没有消息，直接返回
-          if (currentMessages.messages && currentMessages.messages.length > 0) {
-            const firstMessageId = currentMessages.messages[0].id;
+          // 如果有消息，使用第3个消息的ID（索引2）；如果没有消息，直接返回
+          if (currentMessages.messages && currentMessages.messages.length >= 2) {
+            // 消息顺序是最新到最旧
+            const firstUserMsgId = currentMessages.messages[currentMessages.messages.length - 2].id;
+            message.info(`firstUserMsgId: ${firstUserMsgId}`);
 
-            // 调用现有API清除消息，从第一个消息开始清除
-            await api.chat.clearMessages(selectedAgent.id, firstMessageId.toString());
+            // 调用现有API清除消息，从第3个消息开始清除（保留开场白和前两条消息）
+            await api.chat.clearMessages(selectedAgent.id, firstUserMsgId.toString());
           }
 
           // 重新获取消息列表，这样开场白会保留（因为后端现在保留第一条消息）
