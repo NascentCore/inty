@@ -2,6 +2,7 @@
 
 ## Google Play 发布
 
+* AdsPower 指纹浏览器 cliproxy VPN it@sxwl.ai 提供给 Facebook 环境
 * 商业化测试
   * <https://intellimate.app/> 可以访问
   * <https://app.checklyhq.com/accounts/1896e6d6-1599-414f-998e-3dabcc58fd7f>
