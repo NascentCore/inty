@@ -31,7 +31,6 @@ app/static/evaluation/
 │   ├── EvaluationHistoryPage.tsx # 评测历史记录页面
 │   ├── ChatPage.tsx            # 智能体聊天页面
 │   ├── AgentManagePage.tsx     # 智能体管理页面
-│   └── PromptQueryPage.tsx     # Prompt查询页面
 ├── hooks/                       # React自定义Hooks
 │   ├── useAgents.ts            # 智能体数据管理Hook
 │   ├── useEvaluationSession.ts # 评测会话管理Hook

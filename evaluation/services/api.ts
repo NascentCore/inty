@@ -838,49 +838,6 @@ export const userApi = {
 };
 
 // =============================================================================
-// 调试消息API - 用于提示词查询功能
-// =============================================================================
-
-export const debugApi = {
-  // 获取调试消息 - 返回分页格式
-  getDebugMessages: async (params?: {
-    user_id?: string;
-    agent_id?: string;
-    skip?: number;
-    limit?: number;
-  }): Promise<{
-    total: number;
-    skip: number;
-    limit: number;
-    items: Array<{
-      chat_id: string;
-      user_id: string;
-      user_nickname: string;
-      agent_id: string;
-      agent_name: string;
-      debug_messages: {
-        messages: Array<{
-          type: string;
-          content: string;
-        }>;
-        timestamp?: number;
-        agent_id?: string;
-        user_id?: string;
-        session_id?: string;
-      };
-      created_at: string;
-      updated_at: string;
-    }>;
-    has_more: boolean;
-  }> => {
-    console.log("调试消息API请求参数:", params);
-    const result = await apiClient.get("/chats/debug-messages", params);
-    console.log("调试消息API原始响应:", result);
-    return result;
-  },
-};
-
-// =============================================================================
 // 导出默认API实例
 // =============================================================================
 
@@ -893,6 +850,5 @@ export default {
   stats: statsApi,
   chat: chatApi,
   users: userApi,
-  debug: debugApi,
   WebSocketManager,
 };

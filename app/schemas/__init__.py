@@ -29,8 +29,6 @@ from app.schemas.chat import (
     ChatUpdate,
     ClearMessagesRequest,
     ClearMessagesResponse,
-    DebugMessageItem,
-    DebugMessageList,
     Message,
     MessageCreate,
     MessageList,
