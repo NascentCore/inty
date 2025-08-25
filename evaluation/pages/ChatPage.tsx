@@ -399,12 +399,12 @@ export const ChatPage: React.FC = () => {
             page: 1,
             size: 10,
           });
-          message.info(`currentMessages: ${JSON.stringify(currentMessages)}`);
+          console.log(`currentMessages: ${JSON.stringify(currentMessages)}`);
 
           if (currentMessages.messages && currentMessages.messages.length >= 2) {
             // 消息顺序是最新到最旧，找出目前消息列表中倒数第 2 个用户消息的 ID
             const firstUserMsgId = currentMessages.messages[currentMessages.messages.length - 2].id;
-            message.info(`firstUserMsgId: ${firstUserMsgId}`);
+            console.log(`firstUserMsgId: ${firstUserMsgId}`);
             await api.chat.clearMessages(selectedAgent.id, firstUserMsgId.toString());
           }
           const refreshedMessages = await api.chat.getMessages(selectedAgent.id, {
