@@ -1,10 +1,8 @@
-import hashlib
-import json
 import logging
 import traceback
 import uuid
 from datetime import UTC, datetime
-from typing import Any, Dict, List, Optional
+from typing import Optional
 
 from sqlalchemy import and_, text
 from sqlalchemy.exc import IntegrityError
@@ -18,7 +16,6 @@ from app.models import User
 from app.models.chat import Chat
 from app.models.subscription import SubscriptionStatus, UserSubscription
 from app.models.user import AuthType, DeviceToken
-from app.models.user_deletion_log import UserDeletionLog
 from app.schemas import UserUpdate
 from app.services.cache_service import cache_service
 
@@ -199,11 +196,11 @@ async def update_user(db: AsyncSession, user_id: str, user_in: UserUpdate) -> Us
 
         await db.commit()
         await db.refresh(user)
-        
+
         # 清除用户信息缓存，确保Agent系统能获取到最新信息
         cache_service.invalidate_user_info(user_id)
         logger.debug(f"已清除用户 {user_id} 的缓存信息")
-        
+
         return user
     except Exception as e:
         logger.error(f"Failed to update user information: {str(e)}")
@@ -326,95 +323,6 @@ async def check_user_can_delete_account(
         raise e
 
 
-async def anonymize_user_data(db: AsyncSession, user: User) -> List[str]:
-    """
-    匿名化用户数据
-
-    Returns:
-        List[str]: 已匿名化的字段列表
-    """
-    anonymized_fields = []
-
-    # 生成唯一的匿名标识符
-    anonymous_suffix = hashlib.md5(
-        f"{user.id}{datetime.now(UTC)}".encode()
-    ).hexdigest()[:8]
-
-    # 匿名化个人信息
-    if user.email:
-        user.email = None  # 设置为空值，避免邮箱验证问题
-        anonymized_fields.append("email")
-
-    if user.phone:
-        user.phone = f"deleted_{anonymous_suffix}"
-        anonymized_fields.append("phone")
-
-    if user.nickname:
-        user.nickname = f"已删除用户_{anonymous_suffix}"
-        anonymized_fields.append("nickname")
-
-    if user.google_id:
-        user.google_id = f"deleted_google_{anonymous_suffix}"
-        anonymized_fields.append("google_id")
-
-    # 清除其他个人信息
-    if user.avatar:
-        user.avatar = None
-        anonymized_fields.append("avatar")
-
-    if user.description:
-        user.description = None
-        anonymized_fields.append("description")
-
-    # 设置匿名化时间戳
-    user.anonymized_at = datetime.now(UTC)
-
-    return anonymized_fields
-
-
-async def create_deletion_audit_log(
-    db: AsyncSession,
-    user: User,
-    deletion_reason: str,
-    anonymized_fields: List[str],
-    processor_id: str,
-    subscription_status: str = None,
-) -> UserDeletionLog:
-    """创建删除审计日志"""
-
-    # 创建原始用户数据快照（移除敏感信息）
-    user_data_snapshot = {
-        "id": user.id,
-        "readable_id": user.readable_id,
-        "auth_type": user.auth_type.value if user.auth_type else None,
-        "system_language": user.system_language,
-        "gender": user.gender.value if user.gender else None,
-        "age_group": user.age_group,
-        "is_active": user.is_active,
-        "created_at": user.created_at.isoformat() if user.created_at else None,
-        "deleted_at": user.deleted_at.isoformat() if user.deleted_at else None,
-    }
-
-    deletion_log = UserDeletionLog(
-        id=uid(prefix="del_log"),
-        user_id=user.id,
-        original_user_data=user_data_snapshot,
-        deletion_reason=deletion_reason,
-        deletion_type="user_requested",
-        anonymized_fields=anonymized_fields,
-        subscription_status_at_deletion=subscription_status,
-        related_data_action="anonymized",
-        processor_id=processor_id,
-        created_at=datetime.now(UTC),
-    )
-
-    db.add(deletion_log)
-    await db.commit()
-    await db.refresh(deletion_log)
-
-    return deletion_log
-
-
 async def delete_user_account(
     db: AsyncSession,
     user_id: str,
@@ -475,105 +383,22 @@ async def delete_user_account(
         user.deletion_reason = deletion_reason
         user.is_active = False
 
-        # 匿名化用户数据
-        anonymized_fields = await anonymize_user_data(db, user)
-
-        # 创建删除审计日志
-        deletion_log = await create_deletion_audit_log(
-            db,
-            user,
-            deletion_reason,
-            anonymized_fields,
-            processor_id or user_id,
-            subscription_status,
-        )
-
         # 提交用户数据更改
         await db.commit()
         await db.refresh(user)
 
-        # 标记审计日志为已处理
-        deletion_log.processed_at = datetime.now(UTC)
-        await db.commit()
-
-        logger.info(f"用户账户删除成功: {user_id}, 日志ID: {deletion_log.id}")
+        logger.info(f"用户账户删除成功: {user_id}")
 
         return {
             "success": True,
             "message": "账户删除成功",
             "user_id": user_id,
-            "deletion_log_id": deletion_log.id,
-            "anonymized_fields": anonymized_fields,
         }
 
     except Exception as e:
         await db.rollback()
         logger.error(f"删除用户账户失败: {str(e)}")
         logger.error(f"Error stack: {traceback.format_exc()}")
-        raise e
-
-
-async def anonymize_related_data(db: AsyncSession, user_id: str) -> dict:
-    """
-    匿名化用户相关数据（Agent、聊天记录等）
-
-    Args:
-        db: 数据库会话
-        user_id: 用户ID
-
-    Returns:
-        dict: 匿名化结果统计
-    """
-    try:
-        anonymization_stats = {
-            "agents_anonymized": 0,
-            "messages_anonymized": 0,
-            "chats_updated": 0,
-        }
-
-        # 匿名化用户创建的Agent
-        from app.models.agent import Agent
-
-        agent_stmt = select(Agent).where(Agent.creator_id == user_id)
-        agent_result = await db.execute(agent_stmt)
-        user_agents = agent_result.scalars().all()
-
-        for agent in user_agents:
-            # 将Agent标记为系统拥有，而不是删除
-            agent.creator_id = None  # 设为系统Agent
-            anonymization_stats["agents_anonymized"] += 1
-
-        # 匿名化用户的消息记录
-        from app.models.message import Message
-
-        message_stmt = select(Message).where(Message.sender_id == user_id)
-        message_result = await db.execute(message_stmt)
-        user_messages = message_result.scalars().all()
-
-        for message in user_messages:
-            message.sender_id = None  # 匿名化发送者
-            anonymization_stats["messages_anonymized"] += 1
-
-        # 更新聊天记录 - 保留聊天但匿名化用户信息
-        from app.models.chat import Chat
-
-        chat_stmt = select(Chat).where(Chat.user_id == user_id)
-        chat_result = await db.execute(chat_stmt)
-        user_chats = chat_result.scalars().all()
-
-        for chat in user_chats:
-            chat.is_active = False  # 标记为非活跃
-            anonymization_stats["chats_updated"] += 1
-
-        await db.commit()
-
-        logger.info(f"用户相关数据匿名化完成: {user_id}, 统计: {anonymization_stats}")
-
-        return anonymization_stats
-
-    except Exception as e:
-        await db.rollback()
-        logger.error(f"匿名化相关数据失败: {str(e)}")
         raise e
 
 

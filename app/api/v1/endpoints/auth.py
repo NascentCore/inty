@@ -7,7 +7,7 @@ from fastapi.security import OAuth2PasswordBearer
 from google.auth.transport import requests as google_requests
 from google.oauth2 import id_token
 from loguru import logger
-from sqlalchemy import select
+from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import schemas
@@ -135,11 +135,14 @@ async def google_login(
             return APIResponse.error(message="invalid google token issuer")
 
         # 检查用户是否已存在
-        stmt = select(User).where(User.google_id == idinfo["sub"])
+        stmt = select(User).where(
+            and_(User.google_id == idinfo["sub"], User.deleted_at == None)
+        )
         result = await db.execute(stmt)
         existing_user = result.scalar_one_or_none()
 
         if existing_user and not existing_user.deleted_at:
+            logger.debug(f"Google login user already exists: {existing_user.id}")
             # 如果用户已存在且未被删除，直接返回 token
             access_token = create_access_token(existing_user.id)
             return APIResponse.success(
@@ -159,6 +162,23 @@ async def google_login(
                     ),
                 )
             )
+
+        # 检查是否已有用户使用相同的邮箱，由于没有 email unique 限制，因此需要检查 email 是否被另一个活跃账户使用
+        if idinfo.get("email"):
+            logger.debug(
+                f"Checking if email is used by another active account: {idinfo['email']}"
+            )
+            email_stmt = select(User).where(
+                and_(User.email == idinfo["email"], User.deleted_at == None)
+            )
+            email_result = await db.execute(email_stmt)
+            existing_email_users = email_result.scalars().all()
+
+            if existing_email_users:
+                # 如果邮箱已被使用，返回错误
+                return APIResponse.error(
+                    message="Email already used by another account"
+                )
 
         # 如果用户不存在或者已被删除，创建新用户
         # 删除的用户重新登录时会创建新的账户

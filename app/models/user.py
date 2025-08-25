@@ -43,13 +43,16 @@ class User(Base):
 
     __tablename__ = "users"
 
+    # TODO: This should be a UUID, but we use string to allow prepend
+    # category prefixes like user-<uuid> for better readability.
     id = Column(String, primary_key=True, comment="用户唯一标识符")
+
     readable_id = Column(
         String(8), unique=True, index=True, nullable=False, comment="用户可读ID"
     )
     nickname = Column(String, index=True, comment="用户昵称，可搜索")
     avatar = Column(String, comment="用户头像URL")
-    email = Column(String, unique=True, comment="邮箱地址，唯一，用于登录")
+    email = Column(String, comment="邮箱地址")
 
     @validates("phone")
     def validate_phone(self, key, value):
@@ -66,9 +69,7 @@ class User(Base):
     auth_type = Column(
         Enum(AuthType), nullable=False, comment="认证类型：手机号/Google/游客"
     )
-    google_id = Column(
-        String, unique=True, comment="Google账号ID，唯一，用于Google登录"
-    )
+    google_id = Column(String, comment="Google账号ID，用于支持用户注册登录")
     device_id = Column(String, unique=True, comment="设备ID，唯一，用于设备识别")
     system_language = Column(String, default="en", comment="系统语言偏好，默认英语")
     is_active = Column(Boolean, default=True, comment="账号是否激活")
@@ -82,6 +83,7 @@ class User(Base):
 
     # 账户删除相关字段
     deleted_at = Column(DateTime(timezone=True), comment="账户删除时间")
+    # DEPRECATED: This field is not needed anymore.
     anonymized_at = Column(DateTime(timezone=True), comment="数据匿名化时间")
     deletion_reason = Column(String(255), comment="删除原因")
 
