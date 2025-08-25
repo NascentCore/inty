@@ -9,6 +9,11 @@ evaluation/start.sh
 # Open http://localhost:3000/
 ```
 
+## langsmith 上查看大模型调用请求
+
+点击单角色聊天的 langsmith 标志；如请求没有显示，则需要刷新页面
+<img width="800" height="1026" alt="image" src="https://github.com/user-attachments/assets/ab88bf82-fb3b-4cab-b169-bf7b0f17bdeb" />
+
 ## 使用本地 Inty 后端地址
 
 在本代码库顶层目录，运行 `docker compose up --build` 来启动本地后端，
