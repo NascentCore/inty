@@ -757,13 +757,13 @@ export const chatApi = {
   // 清除聊天消息 - 注意：API 期望单个 message_id 而不是数组
   clearMessages: (
     agentId: string,
-    messageId?: string,
+    messageId: string,
   ): Promise<{
     message: string;
     cleared_count: number;
   }> =>
     apiClient.post(`/chats/agents/${agentId}/clear-messages`, {
-      message_id: messageId ? parseInt(messageId) : 2, // Use message ID 2 instead of old timestamp
+      message_id: parseInt(messageId),
       timestamp: undefined, // Always use message_id approach
     }),
 
