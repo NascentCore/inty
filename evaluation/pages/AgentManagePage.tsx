@@ -36,6 +36,7 @@ import type { UploadProps } from "antd";
 import api, { logError } from "../services/api";
 import modelCacheService from "../services/modelCache";
 import type { Agent, AgentCreateRequest, OpenRouterModel } from "../types";
+import LLMConfigForm from "../components/common/LLMConfigForm";
 
 const { TextArea } = Input;
 const { Search } = Input;
@@ -526,137 +527,11 @@ export const AgentManagePage: React.FC = () => {
       </Form.Item>
 
       {/* 模型配置 */}
-      <Divider>模型配置</Divider>
-
-      <Form.Item
-        name="modelType"
-        label="模型类型"
-        initialValue="default"
-        rules={[{ required: true, message: "请选择模型类型" }]}
-      >
-        <Radio.Group>
-          <Radio value="default">使用默认模型</Radio>
-          <Radio value="custom">自定义模型</Radio>
-        </Radio.Group>
-      </Form.Item>
-
-      <Form.Item
-        noStyle
-        shouldUpdate={(prevValues, currentValues) =>
-          prevValues.modelType !== currentValues.modelType
-        }
-      >
-        {({ getFieldValue }) =>
-          getFieldValue("modelType") === "custom" && (
-            <>
-              <Form.Item
-                name="model"
-                label="模型名称"
-                rules={[{ required: true, message: "请选择模型名称" }]}
-              >
-                <div style={{ display: "flex", gap: 8 }}>
-                  <Select
-                    style={{ flex: 1 }}
-                    placeholder="请选择模型"
-                    showSearch
-                    value={form.getFieldValue("model")}
-                    onChange={(value) => form.setFieldValue("model", value)}
-                    filterOption={(input, option) =>
-                      (option?.label ?? "")
-                        .toLowerCase()
-                        .includes(input.toLowerCase()) ||
-                      (option?.value ?? "")
-                        .toLowerCase()
-                        .includes(input.toLowerCase())
-                    }
-                    loading={modelsLoading}
-                    notFoundContent={modelsLoading ? "加载中..." : "暂无数据"}
-                  >
-                    {openRouterModels.map((model) => (
-                      <Option
-                        key={model.id}
-                        value={model.id}
-                        label={model.name}
-                      >
-                        <div>
-                          <div style={{ fontWeight: 500 }}>{model.name}</div>
-                          {model.description && (
-                            <div style={{ fontSize: "12px", color: "#666" }}>
-                              {model.description}
-                            </div>
-                          )}
-                        </div>
-                      </Option>
-                    ))}
-                  </Select>
-                  <Button
-                    icon={<SyncOutlined />}
-                    onClick={handleRefreshModels}
-                    loading={modelsLoading}
-                    title="刷新模型列表"
-                  />
-                </div>
-              </Form.Item>
-
-              <Row gutter={16}>
-                <Col span={12}>
-                  <Form.Item
-                    name="temperature"
-                    label="温度"
-                    initialValue={0.7}
-                    rules={[{ required: true, message: "请输入温度值" }]}
-                  >
-                    <Input type="number" min={0} max={2} step={0.1} />
-                  </Form.Item>
-                </Col>
-                <Col span={12}>
-                  <Form.Item
-                    name="max_tokens"
-                    label="最大令牌数"
-                    initialValue={2048}
-                    rules={[{ required: true, message: "请输入最大令牌数" }]}
-                  >
-                    <Input type="number" min={1} max={8192} />
-                  </Form.Item>
-                </Col>
-              </Row>
-
-              <Row gutter={16}>
-                <Col span={8}>
-                  <Form.Item
-                    name="top_p"
-                    label="Top P"
-                    initialValue={1}
-                    rules={[{ required: true, message: "请输入Top P值" }]}
-                  >
-                    <Input type="number" min={0} max={1} step={0.1} />
-                  </Form.Item>
-                </Col>
-                <Col span={8}>
-                  <Form.Item
-                    name="frequency_penalty"
-                    label="频率惩罚"
-                    initialValue={0}
-                    rules={[{ required: true, message: "请输入频率惩罚值" }]}
-                  >
-                    <Input type="number" min={-2} max={2} step={0.1} />
-                  </Form.Item>
-                </Col>
-                <Col span={8}>
-                  <Form.Item
-                    name="presence_penalty"
-                    label="存在惩罚"
-                    initialValue={0}
-                    rules={[{ required: true, message: "请输入存在惩罚值" }]}
-                  >
-                    <Input type="number" min={-2} max={2} step={0.1} />
-                  </Form.Item>
-                </Col>
-              </Row>
-            </>
-          )
-        }
-      </Form.Item>
+      <LLMConfigForm
+        models={openRouterModels}
+        loading={modelsLoading}
+        onRefresh={handleRefreshModels}
+      />
     </>
   );
 
