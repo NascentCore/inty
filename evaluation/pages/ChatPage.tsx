@@ -394,15 +394,35 @@ export const ChatPage: React.FC = () => {
       cancelText: "取消",
       onOk: async () => {
         try {
-          // 调用现有API清除消息
-          await api.chat.clearMessages(selectedAgent.id);
+          // 先获取当前消息列表，找到第一个可用的消息ID
+          const currentMessages = await api.chat.getMessages(selectedAgent.id, {
+            page: 1,
+            size: 10,
+          });
+          console.log(`currentMessages: ${JSON.stringify(currentMessages)}`);
 
-          // 更新UI状态
-          setMessages([]);
+          if (currentMessages.messages && currentMessages.messages.length >= 2) {
+            // 消息顺序是最新到最旧，找出目前消息列表中倒数第 2 个用户消息的 ID
+            const firstUserMsgId = currentMessages.messages[currentMessages.messages.length - 2].id;
+            console.log(`firstUserMsgId: ${firstUserMsgId}`);
+            await api.chat.clearMessages(selectedAgent.id, firstUserMsgId.toString());
+          }
+          const refreshedMessages = await api.chat.getMessages(selectedAgent.id, {
+            page: 1,
+            size: 100,
+          });
+          const convertedMessages: ChatMessage[] = (refreshedMessages.messages || []).map(msg => ({
+            id: msg.id.toString(), // 转换number到string
+            role: msg.role,
+            content: msg.content,
+            timestamp: msg.timestamp,
+            remoteId: msg.id.toString(), // 添加remoteId
+          }));
+          setMessages(convertedMessages);
 
           const updatedSession = {
             ...currentSession,
-            messages: [],
+            messages: convertedMessages,
           };
           setCurrentSession(updatedSession);
 
@@ -412,7 +432,7 @@ export const ChatPage: React.FC = () => {
           setChatHistory(updatedHistory);
           saveChatHistory(updatedHistory);
 
-          message.success("聊天记录已清空");
+          message.success("聊天记录已清空，开场白已保留");
         } catch (error) {
           console.error("清空聊天记录失败:", error);
           let errorMessage = "清空聊天记录失败，请重试。";
@@ -808,13 +828,13 @@ export const ChatPage: React.FC = () => {
                                   size="small"
                                   color={
                                     agent.visibility === "PUBLIC" ||
-                                    agent.visibility === "public"
+                                      agent.visibility === "public"
                                       ? "green"
                                       : "orange"
                                   }
                                 >
                                   {agent.visibility === "PUBLIC" ||
-                                  agent.visibility === "public"
+                                    agent.visibility === "public"
                                     ? "公开"
                                     : "私有"}
                                 </Tag>

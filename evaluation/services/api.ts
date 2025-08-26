@@ -18,8 +18,6 @@ import type {
 } from "../types";
 import { message } from "antd";
 
-const UTC_START_TIMESTAMP = "1970-01-01T00:00:00Z";
-
 // =============================================================================
 // 基础API配置
 // =============================================================================
@@ -759,14 +757,14 @@ export const chatApi = {
   // 清除聊天消息 - 注意：API 期望单个 message_id 而不是数组
   clearMessages: (
     agentId: string,
-    messageId?: string,
+    messageId: string,
   ): Promise<{
     message: string;
     cleared_count: number;
   }> =>
     apiClient.post(`/chats/agents/${agentId}/clear-messages`, {
-      message_id: messageId ? parseInt(messageId) : undefined,
-      timestamp: messageId ? undefined : UTC_START_TIMESTAMP,
+      message_id: parseInt(messageId),
+      timestamp: undefined, // Always use message_id approach
     }),
 
   // 删除聊天会话
