@@ -264,12 +264,12 @@ export const QuestionManager: React.FC<QuestionManagerProps> = ({
         <Space wrap>
           <Upload
             beforeUpload={handleFileUpload}
-            accept=".txt,.csv,.json"
+            accept=".json"
             showUploadList={false}
             disabled={uploading}
           >
             <Button icon={<UploadOutlined />} loading={uploading}>
-              导入文件 (支持 .txt, .csv, .json)
+              导入JSON文件
             </Button>
           </Upload>
 
