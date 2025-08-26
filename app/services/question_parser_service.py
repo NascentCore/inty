@@ -291,11 +291,12 @@ class QuestionParserService:
             "duplicates": len(duplicates),
             "short_questions": len(short_questions),
             "long_questions": len(long_questions),
+            "encoding_issues": len(encoding_issues),
+            "issues": issues,
+            "warnings": warnings,
         }
 
         return {
             "is_valid": len(issues) == 0,
-            "issues": issues,
-            "warnings": warnings,
             "stats": stats,
         }
