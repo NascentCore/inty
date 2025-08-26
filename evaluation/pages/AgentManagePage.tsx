@@ -195,7 +195,22 @@ export const AgentManagePage: React.FC = () => {
   // 创建智能体
   const handleCreateAgent = async () => {
     try {
+      // 在表单验证前添加调试日志
+      console.log("=== 创建智能体 - 表单验证前 ===");
+      console.log("表单所有字段值:", createForm.getFieldsValue());
+      console.log("modelType:", createForm.getFieldValue("modelType"));
+      console.log("model:", createForm.getFieldValue("model"));
+      console.log("temperature:", createForm.getFieldValue("temperature"));
+      console.log("max_tokens:", createForm.getFieldValue("max_tokens"));
+
       const values = await createForm.validateFields();
+
+      // 表单验证通过后的日志
+      console.log("=== 创建智能体 - 表单验证通过 ===");
+      console.log("验证后的所有值:", values);
+      console.log("验证后的 modelType:", values.modelType);
+      console.log("验证后的 model:", values.model);
+
       setSaveLoading(true);
 
       let avatarUrl = "";
@@ -252,7 +267,11 @@ export const AgentManagePage: React.FC = () => {
       setAvatarPreview("");
       loadAgents(true);
     } catch (error) {
-      console.error("创建智能体失败:", error);
+      console.error("=== 创建智能体 - 表单验证失败 ===");
+      console.error("错误详情:", error);
+      console.error("错误字段:", error.errorFields);
+      console.error("错误值:", error.values);
+      console.error("当前表单状态:", createForm.getFieldsValue());
       message.error("创建智能体失败，请重试");
     } finally {
       setSaveLoading(false);
@@ -264,7 +283,25 @@ export const AgentManagePage: React.FC = () => {
     if (!currentAgent) return;
 
     try {
+      // 在表单验证前添加调试日志
+      console.log("=== 编辑智能体 - 表单验证前 ===");
+      console.log("当前智能体:", currentAgent);
+      console.log("表单所有字段值:", editForm.getFieldsValue());
+      console.log("modelType:", editForm.getFieldValue("modelType"));
+      console.log("model:", editForm.getFieldValue("model"));
+      console.log("temperature:", editForm.getFieldValue("temperature"));
+      console.log("max_tokens:", editForm.getFieldValue("max_tokens"));
+
+
+
       const values = await editForm.validateFields();
+
+      // 表单验证通过后的日志
+      console.log("=== 编辑智能体 - 表单验证通过 ===");
+      console.log("验证后的所有值:", values);
+      console.log("验证后的 modelType:", values.modelType);
+      console.log("验证后的 model:", values.model);
+
       setSaveLoading(true);
 
       let avatarUrl = currentAgent.avatar;
@@ -305,7 +342,15 @@ export const AgentManagePage: React.FC = () => {
         };
       }
 
-      await api.agents.update(currentAgent.id, updateData);
+      console.log("=== 发送到后端的更新数据 ===");
+      console.log("智能体ID:", currentAgent.id);
+      console.log("更新数据:", updateData);
+      console.log("LLM配置:", updateData.llm_config);
+
+      const updateResponse = await api.agents.update(currentAgent.id, updateData);
+
+      console.log("=== 后端更新响应 ===");
+      console.log("响应数据:", updateResponse);
       message.success("智能体更新成功");
       setEditModalVisible(false);
       setCurrentAgent(null);
@@ -314,7 +359,11 @@ export const AgentManagePage: React.FC = () => {
       setEditAvatarPreview("");
       loadAgents();
     } catch (error) {
-      console.error("更新智能体失败:", error);
+      console.error("=== 编辑智能体 - 表单验证失败 ===");
+      console.error("错误详情:", error);
+      console.error("错误字段:", error.errorFields);
+      console.error("错误值:", error.values);
+      console.error("当前表单状态:", editForm.getFieldsValue());
       message.error("更新智能体失败，请重试");
     } finally {
       setSaveLoading(false);
@@ -338,9 +387,28 @@ export const AgentManagePage: React.FC = () => {
     setCurrentAgent(agent);
     setEditAvatarPreview(agent.avatar || "");
 
+    // 添加调试日志
+    console.log("=== showEditModal - 智能体数据 ===");
+    console.log("智能体:", agent);
+    console.log("llm_config:", agent.llm_config);
+    console.log("llm_config.model:", agent.llm_config?.model);
+    console.log("modelType 将设置为:", agent.llm_config ? "custom" : "default");
+    if (agent.llm_config) {
+      console.log("LLM配置字段:", {
+        model: agent.llm_config.model,
+        temperature: agent.llm_config.temperature,
+        max_tokens: agent.llm_config.max_tokens,
+        top_p: agent.llm_config.top_p,
+        frequency_penalty: agent.llm_config.frequency_penalty,
+        presence_penalty: agent.llm_config.presence_penalty,
+      });
+      console.log("model 字段是否为空:", !agent.llm_config.model);
+      console.log("model 字段类型:", typeof agent.llm_config.model);
+    }
+
     // 预填表单 - 使用 setTimeout 确保 Modal 完全渲染后再设置表单值
     setTimeout(() => {
-      editForm.setFieldsValue({
+      const formValues = {
         name: agent.name,
         gender: agent.gender,
         intro: agent.intro,
@@ -354,15 +422,29 @@ export const AgentManagePage: React.FC = () => {
         // 明确设置LLM配置字段，避免字段名不匹配问题
         ...(agent.llm_config
           ? {
-            model: agent.llm_config.model,
-            temperature: agent.llm_config.temperature,
-            max_tokens: agent.llm_config.max_tokens,
-            top_p: agent.llm_config.top_p,
-            frequency_penalty: agent.llm_config.frequency_penalty,
-            presence_penalty: agent.llm_config.presence_penalty,
+            // 如果 model 为空，设置一个默认值
+            model: agent.llm_config.model || "gpt-4o",
+            temperature: agent.llm_config.temperature || 0.7,
+            max_tokens: agent.llm_config.max_tokens || 2048,
+            top_p: agent.llm_config.top_p || 1,
+            frequency_penalty: agent.llm_config.frequency_penalty || 0,
+            presence_penalty: agent.llm_config.presence_penalty || 0,
           }
           : {}),
-      });
+      };
+
+      console.log("=== showEditModal - 设置表单值 ===");
+      console.log("要设置的表单值:", formValues);
+
+      editForm.setFieldsValue(formValues);
+
+      // 设置后立即检查表单值
+      setTimeout(() => {
+        console.log("=== showEditModal - 设置表单值后 ===");
+        console.log("表单当前值:", editForm.getFieldsValue());
+        console.log("modelType:", editForm.getFieldValue("modelType"));
+        console.log("model:", editForm.getFieldValue("model"));
+      }, 50);
     }, 100);
 
     setEditModalVisible(true);

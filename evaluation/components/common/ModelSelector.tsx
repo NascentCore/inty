@@ -1,5 +1,5 @@
 import React from "react";
-import { Form, Select, Button, Space } from "antd";
+import { Form, Select, Button } from "antd";
 import { SyncOutlined } from "@ant-design/icons";
 import type { OpenRouterModel } from "../../types";
 
@@ -17,6 +17,7 @@ interface ModelSelectorProps {
     placeholder?: string;
     style?: React.CSSProperties;
     disabled?: boolean;
+    initialValue?: string;
 }
 
 export const ModelSelector: React.FC<ModelSelectorProps> = ({
@@ -31,13 +32,21 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
     placeholder = "请选择模型",
     style,
     disabled = false,
+    initialValue,
 }) => {
+    // 添加调试日志
+    console.log(`ModelSelector render - name: ${name}, value: ${value}, initialValue: ${initialValue}, models count: ${models.length}`);
+
+    // 获取表单实例
+    const form = Form.useFormInstance();
+
     return (
         <Form.Item
             name={name}
             label={label}
             rules={rules}
             style={style}
+            initialValue={initialValue}
         >
             <div style={{ display: "flex", gap: 8 }}>
                 <Select
@@ -45,7 +54,18 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
                     placeholder={placeholder}
                     showSearch
                     value={value}
-                    onChange={onChange}
+                    onChange={(val) => {
+                        console.log(`ModelSelector onChange - name: ${name}, old value: ${value}, new value: ${val}`);
+                        // 确保表单字段值被正确更新
+                        if (onChange) {
+                            onChange(val);
+                        }
+                        // 如果是在Form内部使用，还需要手动更新表单字段
+                        if (!onChange && name && form) {
+                            console.log(`手动更新表单字段 ${name} 为: ${val}`);
+                            form.setFieldValue(name, val);
+                        }
+                    }}
                     filterOption={(input, option) =>
                         String(option?.label ?? "")
                             .toLowerCase()

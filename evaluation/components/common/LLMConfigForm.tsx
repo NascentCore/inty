@@ -42,17 +42,41 @@ export const LLMConfigForm: React.FC<LLMConfigFormProps> = ({
             <Form.Item
                 noStyle
                 shouldUpdate={(prevValues, currentValues) =>
-                    prevValues.modelType !== currentValues.modelType
+                    prevValues.modelType !== currentValues.modelType || prevValues.model !== currentValues.model
                 }
             >
-                {({ getFieldValue }) =>
-                    getFieldValue("modelType") === "custom" && (
+                {({ getFieldValue, setFieldValue }) => {
+                    // 当 modelType 变为 "custom" 时，自动设置默认模型
+                    const currentModelType = getFieldValue("modelType");
+                    const currentModel = getFieldValue("model");
+
+                    console.log("LLMConfigForm render - modelType:", currentModelType, "model:", currentModel, "models count:", models.length);
+
+                    // 只在真正需要时才自动设置默认模型
+                    // 避免覆盖用户已经选择的值
+                    if (currentModelType === "custom" && !currentModel && models.length > 0) {
+                        // 检查是否已经有用户选择的值（可能是从后端加载的）
+                        const hasUserSelection = currentModel && currentModel !== "";
+
+                        if (!hasUserSelection) {
+                            console.log("检测到新选择自定义模型且没有现有值，自动设置默认模型:", models[0].id);
+                            setTimeout(() => {
+                                setFieldValue("model", models[0].id);
+                            }, 0);
+                        } else {
+                            console.log("用户已经选择了模型，不自动覆盖:", currentModel);
+                        }
+                    }
+
+                    return currentModelType === "custom" ? (
                         <>
                             <ModelSelector
+                                name="model"
                                 models={models}
                                 loading={loading}
                                 onRefresh={onRefresh}
                                 disabled={disabled}
+                                value={currentModel}  // 显式传递当前值
                             />
 
                             {showAdvancedParams && (
@@ -144,8 +168,8 @@ export const LLMConfigForm: React.FC<LLMConfigFormProps> = ({
                                 </>
                             )}
                         </>
-                    )
-                }
+                    ) : null;
+                }}
             </Form.Item>
         </>
     );
