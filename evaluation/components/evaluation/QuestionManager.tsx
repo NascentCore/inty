@@ -142,84 +142,63 @@ export const QuestionManager: React.FC<QuestionManagerProps> = ({
     [showJson],
   );
 
-  // 导出当前问题列表为JSON
-  const exportCurrentQuestions = useCallback(() => {
+  // 通用导出JSON函数
+  const exportToJson = useCallback((
+    data: any,
+    filename: string,
+    successMessage: string
+  ) => {
     try {
-      if (questions.length === 0) {
-        message.warning("当前没有问题可导出");
-        return;
-      }
-
-      // 准备导出数据
-      const exportData = {
-        questions: questions,
-        export_metadata: {
-          export_time: new Date().toISOString(),
-          total_questions: questions.length,
-        }
-      };
-
       // 生成文件名
       const timestamp = new Date()
         .toISOString()
         .slice(0, 19)
         .replace(/:/g, "-");
-      const filename = `current_questions_${timestamp}.json`;
+      const finalFilename = `${filename}_${timestamp}.json`;
 
       // 创建并下载文件
-      const blob = new Blob([JSON.stringify(exportData, null, 2)], {
+      const blob = new Blob([JSON.stringify(data, null, 2)], {
         type: "application/json",
       });
       const url = URL.createObjectURL(blob);
 
       const a = document.createElement("a");
       a.href = url;
-      a.download = filename;
+      a.download = finalFilename;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
 
-      message.success(`当前问题已导出: ${filename}`);
+      message.success(successMessage);
     } catch (error) {
       console.error("导出失败:", error);
       message.error("导出失败，请重试");
     }
-  }, [questions]);
+  }, []);
+
+  // 导出当前问题列表为JSON
+  const exportCurrentQuestions = useCallback(() => {
+    if (questions.length === 0) {
+      message.warning("当前没有问题可导出");
+      return;
+    }
+
+    const exportData = {
+      questions: questions,
+      export_metadata: {
+        export_time: new Date().toISOString(),
+        total_questions: questions.length,
+      }
+    };
+
+    exportToJson(exportData, "current_questions", "当前问题已导出");
+  }, [questions, exportToJson]);
 
   // 导出问题集为JSON
-  const exportQuestionSet = useCallback(
-    (questionSet: QuestionSet) => {
-      try {
-        // 直接导出原始问题集数据
-        const timestamp = new Date()
-          .toISOString()
-          .slice(0, 19)
-          .replace(/:/g, "-");
-        const filename = `question_set_${questionSet.name}_${timestamp}.json`;
-
-        // 创建并下载文件
-        const blob = new Blob([JSON.stringify(questionSet, null, 2)], {
-          type: "application/json",
-        });
-        const url = URL.createObjectURL(blob);
-
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-
-        message.success(`问题集已导出: ${filename}`);
-      } catch (error) {
-        console.error("导出失败:", error);
-        message.error("导出失败，请重试");
-      }
-    },
-    [],
-  );
+  const exportQuestionSet = useCallback((questionSet: QuestionSet) => {
+    exportToJson(questionSet, `question_set_${questionSet.name}`, "问题集已导出");
+  }, [exportToJson]);
 
   // 文件上传处理
   const handleFileUpload = useCallback(
