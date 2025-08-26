@@ -14,7 +14,6 @@ plugins {
     alias(libs.plugins.firebase.perf)
 }
 
-// 安全加载 keystore.properties
 val keystorePropertiesFile = rootProject.file("keystore.properties")
 if (!keystorePropertiesFile.exists()) {
     throw GradleException("Missing keystore.properties file in project root")
