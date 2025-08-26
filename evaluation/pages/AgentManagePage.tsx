@@ -260,14 +260,7 @@ export const AgentManagePage: React.FC = () => {
     if (!currentAgent) return;
 
     try {
-
-
-
-
       const values = await editForm.validateFields();
-
-
-
       setSaveLoading(true);
 
       let avatarUrl = currentAgent.avatar;
@@ -307,15 +300,7 @@ export const AgentManagePage: React.FC = () => {
           presence_penalty: values.presence_penalty,
         };
       }
-
-
-
       await api.agents.update(currentAgent.id, updateData);
-
-
-
-
-
       message.success("智能体更新成功");
       setEditModalVisible(false);
       setCurrentAgent(null);
