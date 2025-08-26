@@ -141,7 +141,7 @@ class QuestionParserService:
                 for item in data:
                     if isinstance(item, str):
                         question = item.strip()
-                        if len(question) >= 5:
+                        if question:  # 只要不是空字符串就保留
                             questions.append(question)
                     elif isinstance(item, dict):
                         # 对象数组格式: [{"question": "...", "other": "..."}, ...]
@@ -158,7 +158,7 @@ class QuestionParserService:
                     for item in data["questions"]:
                         if isinstance(item, str):
                             question = item.strip()
-                            if len(question) >= 5:
+                            if question:  # 只要不是空字符串就保留
                                 questions.append(question)
                         elif isinstance(item, dict):
                             question = (
@@ -244,14 +244,14 @@ class QuestionParserService:
         for field in question_fields:
             if field in obj and isinstance(obj[field], str):
                 question = obj[field].strip()
-                if len(question) >= 5:
+                if question:  # 只要不是空字符串就保留
                     return question
 
         # 如果没有找到明确的问题字段，尝试取第一个字符串值
         for value in obj.values():
             if isinstance(value, str):
                 question = value.strip()
-                if len(question) >= 5:
+                if question:  # 只要不是空字符串就保留
                     return question
 
         return ""
