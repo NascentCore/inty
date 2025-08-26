@@ -182,6 +182,12 @@ export interface QuestionFileUpload {
   issues: string[];
 }
 
+// 表单验证错误
+export interface ValidationError {
+  field: string;
+  message: string;
+}
+
 // 评测统计
 export interface EvaluationStats {
   total_sessions: number;
