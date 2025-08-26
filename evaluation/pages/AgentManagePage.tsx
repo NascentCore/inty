@@ -36,6 +36,7 @@ import type { UploadProps } from "antd";
 import api, { logError } from "../services/api";
 import modelCacheService from "../services/modelCache";
 import type { Agent, AgentCreateRequest, OpenRouterModel } from "../types";
+import LLMConfigForm from "../components/common/LLMConfigForm";
 
 const { TextArea } = Input;
 const { Search } = Input;
@@ -195,6 +196,7 @@ export const AgentManagePage: React.FC = () => {
   const handleCreateAgent = async () => {
     try {
       const values = await createForm.validateFields();
+
       setSaveLoading(true);
 
       let avatarUrl = "";
@@ -210,9 +212,7 @@ export const AgentManagePage: React.FC = () => {
           if (backgroundUrl) {
             backgroundImages = [backgroundUrl];
           }
-          console.log(
-            `上传成功：头像：${avatarUrl} 背景：${backgroundUrl} 背景图: ${backgroundImages.join(", ")}`,
-          );
+
         } catch (uploadError) {
           logError("头像上传失败:", uploadError);
           return;
@@ -226,10 +226,7 @@ export const AgentManagePage: React.FC = () => {
         background_images: backgroundImages,
       };
 
-      // Display background images on the page as notification
-      console.log(
-        `创建成功：头像：${avatarUrl} 背景：${backgroundUrl} 背景图: ${backgroundImages.join(", ")}`,
-      );
+
 
       // 如果选择了自定义模型，添加LLM配置
       if (values.modelType === "custom") {
@@ -251,7 +248,7 @@ export const AgentManagePage: React.FC = () => {
       setAvatarPreview("");
       loadAgents(true);
     } catch (error) {
-      console.error("创建智能体失败:", error);
+
       message.error("创建智能体失败，请重试");
     } finally {
       setSaveLoading(false);
@@ -303,7 +300,6 @@ export const AgentManagePage: React.FC = () => {
           presence_penalty: values.presence_penalty,
         };
       }
-
       await api.agents.update(currentAgent.id, updateData);
       message.success("智能体更新成功");
       setEditModalVisible(false);
@@ -313,7 +309,7 @@ export const AgentManagePage: React.FC = () => {
       setEditAvatarPreview("");
       loadAgents();
     } catch (error) {
-      console.error("更新智能体失败:", error);
+
       message.error("更新智能体失败，请重试");
     } finally {
       setSaveLoading(false);
@@ -339,7 +335,7 @@ export const AgentManagePage: React.FC = () => {
 
     // 预填表单 - 使用 setTimeout 确保 Modal 完全渲染后再设置表单值
     setTimeout(() => {
-      editForm.setFieldsValue({
+      const formValues = {
         name: agent.name,
         gender: agent.gender,
         intro: agent.intro,
@@ -353,15 +349,18 @@ export const AgentManagePage: React.FC = () => {
         // 明确设置LLM配置字段，避免字段名不匹配问题
         ...(agent.llm_config
           ? {
-            model: agent.llm_config.model,
-            temperature: agent.llm_config.temperature,
-            max_tokens: agent.llm_config.max_tokens,
-            top_p: agent.llm_config.top_p,
-            frequency_penalty: agent.llm_config.frequency_penalty,
-            presence_penalty: agent.llm_config.presence_penalty,
+            // 如果 model 为空，设置一个默认值
+            model: agent.llm_config.model || "gpt-4o",
+            temperature: agent.llm_config.temperature || 0.7,
+            max_tokens: agent.llm_config.max_tokens || 2048,
+            top_p: agent.llm_config.top_p || 1,
+            frequency_penalty: agent.llm_config.frequency_penalty || 0,
+            presence_penalty: agent.llm_config.presence_penalty || 0,
           }
           : {}),
-      });
+      };
+
+      editForm.setFieldsValue(formValues);
     }, 100);
 
     setEditModalVisible(true);
@@ -526,137 +525,11 @@ export const AgentManagePage: React.FC = () => {
       </Form.Item>
 
       {/* 模型配置 */}
-      <Divider>模型配置</Divider>
-
-      <Form.Item
-        name="modelType"
-        label="模型类型"
-        initialValue="default"
-        rules={[{ required: true, message: "请选择模型类型" }]}
-      >
-        <Radio.Group>
-          <Radio value="default">使用默认模型</Radio>
-          <Radio value="custom">自定义模型</Radio>
-        </Radio.Group>
-      </Form.Item>
-
-      <Form.Item
-        noStyle
-        shouldUpdate={(prevValues, currentValues) =>
-          prevValues.modelType !== currentValues.modelType
-        }
-      >
-        {({ getFieldValue }) =>
-          getFieldValue("modelType") === "custom" && (
-            <>
-              <Form.Item
-                name="model"
-                label="模型名称"
-                rules={[{ required: true, message: "请选择模型名称" }]}
-              >
-                <div style={{ display: "flex", gap: 8 }}>
-                  <Select
-                    style={{ flex: 1 }}
-                    placeholder="请选择模型"
-                    showSearch
-                    value={form.getFieldValue("model")}
-                    onChange={(value) => form.setFieldValue("model", value)}
-                    filterOption={(input, option) =>
-                      (option?.label ?? "")
-                        .toLowerCase()
-                        .includes(input.toLowerCase()) ||
-                      (option?.value ?? "")
-                        .toLowerCase()
-                        .includes(input.toLowerCase())
-                    }
-                    loading={modelsLoading}
-                    notFoundContent={modelsLoading ? "加载中..." : "暂无数据"}
-                  >
-                    {openRouterModels.map((model) => (
-                      <Option
-                        key={model.id}
-                        value={model.id}
-                        label={model.name}
-                      >
-                        <div>
-                          <div style={{ fontWeight: 500 }}>{model.name}</div>
-                          {model.description && (
-                            <div style={{ fontSize: "12px", color: "#666" }}>
-                              {model.description}
-                            </div>
-                          )}
-                        </div>
-                      </Option>
-                    ))}
-                  </Select>
-                  <Button
-                    icon={<SyncOutlined />}
-                    onClick={handleRefreshModels}
-                    loading={modelsLoading}
-                    title="刷新模型列表"
-                  />
-                </div>
-              </Form.Item>
-
-              <Row gutter={16}>
-                <Col span={12}>
-                  <Form.Item
-                    name="temperature"
-                    label="温度"
-                    initialValue={0.7}
-                    rules={[{ required: true, message: "请输入温度值" }]}
-                  >
-                    <Input type="number" min={0} max={2} step={0.1} />
-                  </Form.Item>
-                </Col>
-                <Col span={12}>
-                  <Form.Item
-                    name="max_tokens"
-                    label="最大令牌数"
-                    initialValue={2048}
-                    rules={[{ required: true, message: "请输入最大令牌数" }]}
-                  >
-                    <Input type="number" min={1} max={8192} />
-                  </Form.Item>
-                </Col>
-              </Row>
-
-              <Row gutter={16}>
-                <Col span={8}>
-                  <Form.Item
-                    name="top_p"
-                    label="Top P"
-                    initialValue={1}
-                    rules={[{ required: true, message: "请输入Top P值" }]}
-                  >
-                    <Input type="number" min={0} max={1} step={0.1} />
-                  </Form.Item>
-                </Col>
-                <Col span={8}>
-                  <Form.Item
-                    name="frequency_penalty"
-                    label="频率惩罚"
-                    initialValue={0}
-                    rules={[{ required: true, message: "请输入频率惩罚值" }]}
-                  >
-                    <Input type="number" min={-2} max={2} step={0.1} />
-                  </Form.Item>
-                </Col>
-                <Col span={8}>
-                  <Form.Item
-                    name="presence_penalty"
-                    label="存在惩罚"
-                    initialValue={0}
-                    rules={[{ required: true, message: "请输入存在惩罚值" }]}
-                  >
-                    <Input type="number" min={-2} max={2} step={0.1} />
-                  </Form.Item>
-                </Col>
-              </Row>
-            </>
-          )
-        }
-      </Form.Item>
+      <LLMConfigForm
+        models={openRouterModels}
+        loading={modelsLoading}
+        onRefresh={handleRefreshModels}
+      />
     </>
   );
 
