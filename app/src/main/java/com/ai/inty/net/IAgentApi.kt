@@ -3,14 +3,13 @@ package com.ai.inty.net
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.beans.AgentInfoResponse
 import com.ai.inty.beans.CreateAgentRequest
-import com.ai.inty.beans.CreateAgentResponse
-import com.ai.inty.beans.CreateGuestResult
 import com.ai.inty.beans.FollowResponse
 import com.ai.inty.beans.GenerateBackgroundRequest
 import com.ai.inty.beans.GenerateBackgroundResponse
 import com.ai.inty.beans.UploadAvatarResponse
 import com.architecture.httplib.core.HttpResult
 import com.therouter.inject.Singleton
+import okhttp3.MultipartBody
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
@@ -20,14 +19,10 @@ import retrofit2.http.PUT
 import retrofit2.http.Part
 import retrofit2.http.Path
 import retrofit2.http.Query
-import okhttp3.MultipartBody
 
 @Singleton
 interface IAgentApi {
-    @GET("/api/v1/ai/agents")
-    suspend fun agents(skip: Int, limit: Int): HttpResult<List<AgentInfo>>
 
-//    @GET("/api/v1/recommendations/agents")
     @GET("api/v1/ai/agents/recommend")
     suspend fun recommendAgents(@Query("page") page: Int, @Query("page_size")pageSize: Int): HttpResult<AgentInfoResponse>
     

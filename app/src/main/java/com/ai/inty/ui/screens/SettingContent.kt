@@ -47,7 +47,6 @@ import com.ai.inty.ui.components.SettingNavigationItem
 import com.ai.inty.ui.components.SettingSection
 import com.ai.inty.ui.components.SettingSwitchItem
 import com.ai.inty.viewmodels.DialogState
-import com.ai.inty.viewmodels.MainViewModel
 import com.ai.inty.viewmodels.SettingViewModel
 import com.ai.inty.viewmodels.SettingsState
 import com.inty.utils.storage.IntySetting
@@ -71,9 +70,8 @@ fun SettingContent(
     val vipStatus by BillingRepository.vipStatusFlow.collectAsState()
 
     // 监听删除账号结果
-    val mainViewModel = viewModel<MainViewModel>()
-    LaunchedEffect(mainViewModel) {
-        mainViewModel.deleteAccountResultFlow.collectLatest { deleted ->
+    LaunchedEffect(viewModel) {
+        viewModel.deleteAccountResultFlow.collectLatest { deleted ->
             if (deleted) {
                 // 账号删除成功
                 onLogout()
@@ -114,7 +112,7 @@ fun SettingContent(
             SettingDialogs(
                 dialogState = dialogState,
                 onHideDeleteDialog = { viewModel.hideDeleteAccountDialog() },
-                onConfirmDelete = { mainViewModel.checkAccountSubscribe() },
+                onConfirmDelete = { viewModel.checkAccountSubscribe() },
                 onHidePremiumDialog = { viewModel.hidePremiumDialog() }
             )
         }

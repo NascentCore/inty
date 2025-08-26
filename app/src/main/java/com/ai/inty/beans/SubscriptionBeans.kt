@@ -48,44 +48,6 @@ data class SubscriptionPlan(
 )
 
 /**
- * 计划功能特性
- */
-@JsonClass(generateAdapter = true)
-data class PlanFeatures(
-    val features: List<PlanFeature>,
-    @Json(name = "real_features")
-    val realFeatures: List<String>,
-    @Json(name = "fake_features")
-    val fakeFeatures: List<String>
-)
-
-/**
- * 单个功能特性
- */
-@JsonClass(generateAdapter = true)
-data class PlanFeature(
-    val key: String,
-    val name: String,
-    val description: String,
-    val type: String, // "real" 或 "fake"
-    val icon: String,
-    val order: Int
-)
-
-/**
- * 商品数据类，包含商品的所有信息
- */
-@JsonClass(generateAdapter = true)
-data class Product(
-    val id: String,
-    val name: String,
-    val price: String = "-",
-    val originalPrice: String = "-", // 原始价格（包含货币符号）
-    val currencyCode: String = "", // 货币代码
-    val priceAmountMicros: Long = 0 // 价格金额（微秒）
-)
-
-/**
  * 当前订阅信息
  */
 @JsonClass(generateAdapter = true)
