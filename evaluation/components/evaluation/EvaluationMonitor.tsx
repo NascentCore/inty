@@ -11,7 +11,6 @@ import {
   Tag,
   Space,
   Alert,
-  Typography,
   Row,
   Col,
   Statistic,
@@ -33,15 +32,16 @@ import {
   RobotOutlined,
 } from "@ant-design/icons";
 import { useEvaluationSession } from "../../hooks/useEvaluationSession";
+import { useJsonDisplay } from "../../hooks/useJsonDisplay";
 import { MultiAgentChatDisplay } from "./MultiAgentChatDisplay";
+import { JsonDisplayModal } from "../common/JsonDisplayModal";
 import api from "../../services/api";
 import type {
   EvaluationSession,
   EvaluationResult,
-  EvaluationStatus,
 } from "../../types";
 
-const {} = Typography;
+
 
 interface EvaluationMonitorProps {
   session: EvaluationSession | null;
@@ -60,6 +60,7 @@ export const EvaluationMonitor: React.FC<EvaluationMonitorProps> = ({
   const [results, setResults] = useState<EvaluationResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { jsonModalVisible, jsonData, showJson, hideJson } = useJsonDisplay();
 
   // 如果没有传入session，则使用hook管理
   const {
@@ -119,9 +120,9 @@ export const EvaluationMonitor: React.FC<EvaluationMonitorProps> = ({
     if (
       propSession &&
       autoRefresh &&
-      ["PENDING", "RUNNING"].includes(propSession.status)
+      ["pending", "running"].includes(propSession.status)
     ) {
-      const interval = propSession.status === "RUNNING" ? 3000 : 10000;
+      const interval = propSession.status === "running" ? 3000 : 10000;
 
       const timer = setInterval(async () => {
         try {
@@ -156,7 +157,7 @@ export const EvaluationMonitor: React.FC<EvaluationMonitorProps> = ({
   useEffect(() => {
     if (
       session &&
-      (session.status === "RUNNING" || session.status === "PENDING")
+      (session.status === "running" || session.status === "pending")
     ) {
       connectWebSocket(session.id);
     } else {
@@ -288,6 +289,21 @@ export const EvaluationMonitor: React.FC<EvaluationMonitorProps> = ({
     }
   };
 
+  const handleShowJson = () => {
+    if (!results || results.length === 0) {
+      message.warning("暂无可显示的结果");
+      return;
+    }
+
+    // 准备导出数据 - 直接使用原始数据，不进行字段映射
+    const exportData = {
+      session: session,
+      results: results,
+    };
+
+    showJson(exportData);
+  };
+
   // 状态颜色映射
   const getStatusColor = (status: EvaluationStatus) => {
     switch (status) {
@@ -376,7 +392,7 @@ export const EvaluationMonitor: React.FC<EvaluationMonitorProps> = ({
                   开始评测
                 </Button>
               )}
-              {session.status === "RUNNING" && (
+              {session.status === "running" && (
                 <Button
                   danger
                   icon={<StopOutlined />}
@@ -387,12 +403,20 @@ export const EvaluationMonitor: React.FC<EvaluationMonitorProps> = ({
                 </Button>
               )}
               {results.length > 0 && (
-                <Button
-                  icon={<DownloadOutlined />}
-                  onClick={handleExportResults}
-                >
-                  导出结果
-                </Button>
+                <>
+                  <Button
+                    icon={<DownloadOutlined />}
+                    onClick={handleExportResults}
+                  >
+                    导出结果
+                  </Button>
+                  <Button
+                    icon={<RobotOutlined />}
+                    onClick={handleShowJson}
+                  >
+                    查看JSON
+                  </Button>
+                </>
               )}
             </Space>
           )
@@ -405,10 +429,10 @@ export const EvaluationMonitor: React.FC<EvaluationMonitorProps> = ({
             {new Date(session.created_at).toLocaleString()}
           </Descriptions.Item>
           <Descriptions.Item label="测试问题">
-            {session.questions?.length || 0} 个
+            {session.config?.questions?.length || 0} 个
           </Descriptions.Item>
           <Descriptions.Item label="测试智能体">
-            {session.selected_agents?.length || 0} 个
+            {session.config?.agents?.length || 0} 个
           </Descriptions.Item>
         </Descriptions>
 
@@ -435,7 +459,7 @@ export const EvaluationMonitor: React.FC<EvaluationMonitorProps> = ({
             <Progress
               percent={statistics.completionRate * 100}
               size="small"
-              status={session.status === "RUNNING" ? "active" : "normal"}
+              status={session.status === "running" ? "active" : "normal"}
             />
           </Col>
           <Col span={6}>
@@ -478,6 +502,14 @@ export const EvaluationMonitor: React.FC<EvaluationMonitorProps> = ({
           />
         </div>
       )}
+
+      {/* JSON数据展示模态框 */}
+      <JsonDisplayModal
+        open={jsonModalVisible}
+        onClose={hideJson}
+        title="评测结果JSON数据"
+        jsonData={jsonData}
+      />
     </div>
   );
 };
