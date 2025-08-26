@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
@@ -23,6 +24,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -75,6 +78,10 @@ fun ConversationsPage(
     onClickSysMsg: () -> Unit,
     onClickFollowingAgent: (AgentInfo) -> Unit,
     onUnfollowAgent: ((String) -> Unit)? = null,
+    isLoadingConversations: Boolean = false,
+    isLoadingFollowingAgents: Boolean = false,
+    onLoadMoreConversations: (() -> Unit)? = null,
+    onLoadMoreFollowingAgents: (() -> Unit)? = null,
 ) {
     Box(modifier = modifier) {
         // 背景图片
@@ -93,7 +100,11 @@ fun ConversationsPage(
             onClickConversationItem = onClickConversationItem,
             onClickSysMsg = onClickSysMsg,
             onClickFollowingAgent = onClickFollowingAgent,
-            onUnfollowAgent = onUnfollowAgent
+            onUnfollowAgent = onUnfollowAgent,
+            isLoadingConversations = isLoadingConversations,
+            isLoadingFollowingAgents = isLoadingFollowingAgents,
+            onLoadMoreConversations = onLoadMoreConversations,
+            onLoadMoreFollowingAgents = onLoadMoreFollowingAgents
         )
     }
 }
@@ -112,6 +123,10 @@ private fun ConversationsPageContent(
     onClickSysMsg: () -> Unit,
     onClickFollowingAgent: (AgentInfo) -> Unit,
     onUnfollowAgent: ((String) -> Unit)? = null,
+    isLoadingConversations: Boolean = false,
+    isLoadingFollowingAgents: Boolean = false,
+    onLoadMoreConversations: (() -> Unit)? = null,
+    onLoadMoreFollowingAgents: (() -> Unit)? = null,
 ) {
     Scaffold(
         modifier = Modifier
@@ -137,7 +152,9 @@ private fun ConversationsPageContent(
                         conversations = conversations,
                         lastSysMsg = lastSysMsg,
                         onClickConversationItem = onClickConversationItem,
-                        onClickSysMsg = onClickSysMsg
+                        onClickSysMsg = onClickSysMsg,
+                        isLoading = isLoadingConversations,
+                        onLoadMore = onLoadMoreConversations
                     )
                 }
 
@@ -145,7 +162,9 @@ private fun ConversationsPageContent(
                     FollowingTabContent(
                         followingAgents = followingAgents,
                         onClickAgent = onClickFollowingAgent,
-                        onUnfollowAgent = onUnfollowAgent
+                        onUnfollowAgent = onUnfollowAgent,
+                        isLoading = isLoadingFollowingAgents,
+                        onLoadMore = onLoadMoreFollowingAgents
                     )
                 }
             }
@@ -238,9 +257,35 @@ private fun MessageTabContent(
     lastSysMsg: SysMsgItem?,
     onClickConversationItem: (ConversationItem) -> Unit,
     onClickSysMsg: () -> Unit,
+    isLoading: Boolean = false,
+    onLoadMore: (() -> Unit)? = null,
 ) {
+    val listState = rememberLazyListState()
+
+    // 检测滚动到底部
+    val shouldLoadMore by remember {
+        derivedStateOf {
+            val layoutInfo = listState.layoutInfo
+            val totalItems = layoutInfo.totalItemsCount
+            val lastVisibleItem = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+
+            // 当滚动到倒数第3项时触发加载更多
+            totalItems > 0 && lastVisibleItem >= totalItems - 3 && !isLoading
+        }
+    }
+
+    // 监听滚动状态，触发加载更多
+    LaunchedEffect(shouldLoadMore) {
+        if (shouldLoadMore) {
+            onLoadMore?.invoke()
+        }
+    }
+
     Box(Modifier.fillMaxSize()) {
-        LazyColumn(modifier = Modifier.matchParentSize()) {
+        LazyColumn(
+            state = listState,
+            modifier = Modifier.matchParentSize()
+        ) {
             // 系统消息
             lastSysMsg?.let { sysMsg ->
                 item {
@@ -278,8 +323,25 @@ private fun MessageTabContent(
                 }.onFailure { it.printStackTrace() }
             }
 
+            // 加载更多指示器
+            if (isLoading) {
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(80.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(
+                            color = Color.White,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
+            }
         }
-        if (lastSysMsg == null && conversations.isEmpty()) {
+
+        if (lastSysMsg == null && conversations.isEmpty() && !isLoading) {
             EmptyContentUI()
         }
     }
@@ -320,9 +382,35 @@ private fun FollowingTabContent(
     followingAgents: List<AgentInfo>,
     onClickAgent: (AgentInfo) -> Unit,
     onUnfollowAgent: ((String) -> Unit)? = null,
+    isLoading: Boolean = false,
+    onLoadMore: (() -> Unit)? = null,
 ) {
+    val listState = rememberLazyListState()
+
+    // 检测滚动到底部
+    val shouldLoadMore by remember {
+        derivedStateOf {
+            val layoutInfo = listState.layoutInfo
+            val totalItems = layoutInfo.totalItemsCount
+            val lastVisibleItem = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+
+            // 当滚动到倒数第3项时触发加载更多
+            totalItems > 0 && lastVisibleItem >= totalItems - 3 && !isLoading
+        }
+    }
+
+    // 监听滚动状态，触发加载更多
+    LaunchedEffect(shouldLoadMore) {
+        if (shouldLoadMore) {
+            onLoadMore?.invoke()
+        }
+    }
+
     if (followingAgents.isNotEmpty()) {
-        LazyColumn(modifier = Modifier.fillMaxSize()) {
+        LazyColumn(
+            state = listState,
+            modifier = Modifier.fillMaxSize()
+        ) {
             runCatching {
                 itemsIndexed(
                     items = followingAgents,
@@ -344,8 +432,25 @@ private fun FollowingTabContent(
                     }
                 }
             }.onFailure { it.printStackTrace() }
+
+            // 加载更多指示器
+            if (isLoading) {
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(80.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(
+                            color = Color.White,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
+            }
         }
-    } else {
+    } else if (!isLoading) {
         EmptyContentUI()
     }
 }

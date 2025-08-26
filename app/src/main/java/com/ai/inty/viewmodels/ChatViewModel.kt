@@ -66,6 +66,12 @@ class ChatViewModel : BaseActivityViewModel() {
     private var lastQueryTime = 0L
     private val QUERY_DEBOUNCE_TIME = 2000L // 2秒防抖
 
+    // 对话列表分页状态
+    private var currentConversationsPage = 0
+    private var _isLoadingConversations = MutableStateFlow(false)
+    val isLoadingConversations = _isLoadingConversations.asStateFlow()
+    private var hasMoreConversations = true
+
 
     // 延迟获取依赖，避免在构造函数中立即获取导致空指针异常
     private val chatApi by lazy {
@@ -452,28 +458,71 @@ class ChatViewModel : BaseActivityViewModel() {
     }
 
     fun getConversations() {
+        EasyLog.log("getConversations - Loading first page")
+        currentConversationsPage = 0
+        hasMoreConversations = true
+        _conversations.value = emptyList()
+        loadConversations()
+    }
+
+    fun loadMoreConversations() {
+        if (!_isLoadingConversations.value && hasMoreConversations) {
+            currentConversationsPage++
+            loadConversations()
+        }
+    }
+
+    private fun loadConversations() {
+        if (_isLoadingConversations.value) return
+
+        _isLoadingConversations.value = true
+        EasyLog.log("loadConversations - page: ${currentConversationsPage + 1}")
+        
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val result = chatApi.getConversations(0, 100)
-                EasyLog.log("getConversations = $result")
+                val skip = currentConversationsPage * 20
+                val result = chatApi.getConversations(skip, 20)
+                EasyLog.log("loadConversations = $result")
+                
                 when (result) {
                     is HttpResult.Success -> {
-                        // 只显示用户主动发起的对话
                         val userInitiatedConversations = result.data
-                        _conversations.value = userInitiatedConversations
-                        EasyLog.log("Filtered conversations: ${userInitiatedConversations.size} out of ${result.data.size}")
+
+                        if (userInitiatedConversations.isEmpty()) {
+                            hasMoreConversations = false
+                            EasyLog.log("No more conversations to load")
+                        } else {
+                            if (currentConversationsPage == 0) {
+                                // 第一页，直接替换
+                                _conversations.value = userInitiatedConversations
+                            } else {
+                                // 后续页，追加到现有列表
+                                _conversations.value =
+                                    _conversations.value + userInitiatedConversations
+                            }
+                            EasyLog.log("Added ${userInitiatedConversations.size} conversations, total: ${_conversations.value.size}")
+                        }
                     }
 
                     is HttpResult.Failure -> {
+                        // 如果加载失败，回退页码
+                        if (currentConversationsPage > 0) {
+                            currentConversationsPage--
+                        }
                         EasyLog.log(
-                            "getConversations failed: ${result.message}",
+                            "loadConversations failed: ${result.message}",
                             priority = EasyLog.ERROR
                         )
                     }
                 }
             } catch (e: Exception) {
-                EasyLog.log("getConversations exception: ${e.message}", priority = EasyLog.ERROR)
+                // 如果加载失败，回退页码
+                if (currentConversationsPage > 0) {
+                    currentConversationsPage--
+                }
+                EasyLog.log("loadConversations exception: ${e.message}", priority = EasyLog.ERROR)
             }
+            _isLoadingConversations.value = false
         }
     }
 
@@ -527,6 +576,12 @@ class ChatViewModel : BaseActivityViewModel() {
         lastQueryAgentId = null
         lastQueryTime = 0L
         lastSendTime = 0L
+
+        // 清理分页状态
+        currentConversationsPage = 0
+        hasMoreConversations = true
+        _isLoadingConversations.value = false
+        
         EasyLog.log("All data cleared for ChatViewModel ${hashCode()}")
     }
 

@@ -45,12 +45,12 @@ import com.ai.inty.viewmodels.MainViewModel
 import com.inty.utils.storage.IntySetting
 import com.therouter.TheRouter
 
-data class TabInfo(
+private data class TabInfo(
     val normalImage: Int,
     val selectedImage: Int,
 )
 
-val MAIN_TAB_LIST = listOf(
+private val MAIN_TAB_LIST = listOf(
     TabInfo(R.drawable.tab_chat, R.drawable.tab_chat_selected),
     TabInfo(R.drawable.tab_msg, R.drawable.tab_msg_selected),
     TabInfo(R.drawable.tab_add, R.drawable.tab_add),
@@ -288,12 +288,15 @@ private fun ConversationsTabContent(
     val conversations by chatViewModel.conversations.collectAsState()
     val sysMsgs = mainViewModel.sysMsgs
     val followingAgents = mainViewModel.followingAgents
+    val isLoadingConversations by chatViewModel.isLoadingConversations.collectAsState()
+    val isLoadingFollowingAgents by mainViewModel.isLoadingFollowingAgents.collectAsState()
 
     ConversationsPage(
         modifier = Modifier,
         selectedTab = selectedConversationsTab,
         conversations = conversations,
         followingAgents = followingAgents,
+        lastSysMsg = sysMsgs.firstOrNull(),
         onSelectTab = {
             mainViewModel.onSelectConversationsTab(it)
         },
@@ -303,7 +306,6 @@ private fun ConversationsTabContent(
                 .withObject("agent_id", conversation.agentId)
                 .navigation(context)
         },
-        lastSysMsg = sysMsgs.firstOrNull(),
         onClickSysMsg = {
             IntySetting.setConversationReaded(
                 Constant.SYS_NOTIFICATION_ID,
@@ -318,6 +320,14 @@ private fun ConversationsTabContent(
         },
         onUnfollowAgent = { agentId ->
             mainViewModel.unfollowAgent(agentId)
+        },
+        isLoadingConversations = isLoadingConversations,
+        isLoadingFollowingAgents = isLoadingFollowingAgents,
+        onLoadMoreConversations = {
+            chatViewModel.loadMoreConversations()
+        },
+        onLoadMoreFollowingAgents = {
+            mainViewModel.loadMoreFollowingAgents()
         }
     )
 }
@@ -345,7 +355,7 @@ private fun SuggestTabContent(
             mainViewModel.loadMoreAgents()
         },
         onRefresh = {
-            mainViewModel.getAgents()
+            mainViewModel.refreshAgents()
         }
     )
 }
@@ -432,7 +442,7 @@ private fun handleFollowAgent(agentId: String, mainViewModel: MainViewModel) {
  * 底部导航栏
  */
 @Composable
-fun HomeBottomBar(
+private fun HomeBottomBar(
     modifier: Modifier,
     selectedTab: Int,
     onSelectTab: (Int) -> Unit,
@@ -464,7 +474,7 @@ fun HomeBottomBar(
  * 底部导航栏项
  */
 @Composable
-fun BottomBarItem(
+private fun BottomBarItem(
     modifier: Modifier,
     tabInfo: TabInfo,
     selected: Boolean,

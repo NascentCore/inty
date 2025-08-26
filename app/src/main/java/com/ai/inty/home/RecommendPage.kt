@@ -191,9 +191,11 @@ fun RecommendPage(
                     }
                 }
 
-                // 触发加载更多
+                // 触发加载更多，添加防抖机制
                 LaunchedEffect(reachedBottom.value) {
                     if (reachedBottom.value && agents.isNotEmpty() && !isLoading) {
+                        // 添加延迟，避免快速滚动时重复触发
+                        kotlinx.coroutines.delay(100)
                         onLoadMore()
                     }
                 }

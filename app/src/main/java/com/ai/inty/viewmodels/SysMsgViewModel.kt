@@ -26,7 +26,7 @@ class SysMsgViewModel : BaseActivityViewModel() {
     }
 
 
-    fun queryHistory() {
+    private fun queryHistory() {
         viewModelScope.launch(Dispatchers.IO) {
             val result = userApi.getSysMsgs(1, 20)
             EasyLog.log("getSysMsgs = $result")
@@ -34,6 +34,7 @@ class SysMsgViewModel : BaseActivityViewModel() {
                 is HttpResult.Success -> {
                     sysMsgs.addAll(result.data.list)
                 }
+
                 is HttpResult.Failure -> {
 //                    showNetworkAwareError(result.message)
                 }

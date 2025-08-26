@@ -187,7 +187,7 @@ object AppStartupManager {
                 }
             },
             startupScope.async {
-                preloadSystemMessages()
+//                preloadSystemMessages()
                 completedTasks.withLock {
                     completedCount++
                     val progress = 0.3f + (completedCount.toFloat() / totalTasks) * 0.7f
@@ -401,6 +401,22 @@ object AppStartupManager {
         AgentCacheManager.clearCache()
         SystemMessageCacheManager.clearCache()
         EasyLog.log("AppStartupManager - 缓存数据已清理")
+    }
+
+    /**
+     * 更新缓存的推荐agents
+     */
+    fun updateCachedAgents(agents: List<AgentInfo>) {
+        _cachedAgents.value = agents
+        EasyLog.log("AppStartupManager - 更新缓存推荐agents: ${agents.size}个")
+    }
+
+    /**
+     * 更新缓存的关注agents
+     */
+    fun updateCachedFollowingAgents(agents: List<AgentInfo>) {
+        _cachedFollowingAgents.value = agents
+        EasyLog.log("AppStartupManager - 更新缓存关注agents: ${agents.size}个")
     }
 
     /**
