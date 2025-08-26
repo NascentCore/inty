@@ -24,12 +24,15 @@ import {
   DeleteOutlined,
   PlusOutlined,
   ClearOutlined,
-  SaveOutlined,
   FileTextOutlined,
+  EyeOutlined,
+  DownloadOutlined,
 } from "@ant-design/icons";
 import type { UploadFile } from "antd";
 import api from "../../services/api";
 import type { QuestionFileUpload } from "../../types";
+import { useJsonDisplay } from "../../hooks/useJsonDisplay";
+import { JsonDisplayModal } from "../common/JsonDisplayModal";
 
 const { Option } = Select;
 
@@ -51,9 +54,11 @@ export const QuestionManager: React.FC<QuestionManagerProps> = ({
 }) => {
   // 状态管理
   const [newQuestion, setNewQuestion] = useState("");
-  const [questionSetName, setQuestionSetName] = useState("");
   const [savedQuestionSets, setSavedQuestionSets] = useState<QuestionSet[]>([]);
   const [uploading, setUploading] = useState(false);
+
+  // JSON显示功能
+  const { jsonModalVisible, jsonData, showJson, hideJson } = useJsonDisplay();
 
   // 加载保存的问题集
   React.useEffect(() => {
@@ -107,33 +112,7 @@ export const QuestionManager: React.FC<QuestionManagerProps> = ({
     message.success("问题列表已清空");
   }, [onChange]);
 
-  // 保存问题集
-  const saveQuestionSet = useCallback(() => {
-    if (!questionSetName.trim()) {
-      message.error("请输入问题集名称");
-      return;
-    }
 
-    if (questions.length === 0) {
-      message.error("问题列表不能为空");
-      return;
-    }
-
-    const newSet: QuestionSet = {
-      name: questionSetName.trim(),
-      questions: [...questions],
-    };
-
-    const updatedSets = savedQuestionSets.filter(
-      (set) => set.name !== newSet.name,
-    );
-    updatedSets.push(newSet);
-
-    setSavedQuestionSets(updatedSets);
-    localStorage.setItem("questionSets", JSON.stringify(updatedSets));
-    setQuestionSetName("");
-    message.success("问题集保存成功");
-  }, [questionSetName, questions, savedQuestionSets]);
 
   // 加载问题集
   const loadQuestionSet = useCallback(
@@ -154,6 +133,72 @@ export const QuestionManager: React.FC<QuestionManagerProps> = ({
     },
     [savedQuestionSets],
   );
+
+  // 查看问题集JSON
+  const viewQuestionSetJson = useCallback(
+    (questionSet: QuestionSet) => {
+      showJson(questionSet);
+    },
+    [showJson],
+  );
+
+  // 通用导出JSON函数
+  const exportToJson = useCallback((
+    data: any,
+    filename: string,
+    successMessage: string
+  ) => {
+    try {
+      // 生成文件名
+      const timestamp = new Date()
+        .toISOString()
+        .slice(0, 19)
+        .replace(/:/g, "-");
+      const finalFilename = `${filename}_${timestamp}.json`;
+
+      // 创建并下载文件
+      const blob = new Blob([JSON.stringify(data, null, 2)], {
+        type: "application/json",
+      });
+      const url = URL.createObjectURL(blob);
+
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = finalFilename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      message.success(successMessage);
+    } catch (error) {
+      console.error("导出失败:", error);
+      message.error("导出失败，请重试");
+    }
+  }, []);
+
+  // 导出当前问题列表为JSON
+  const exportCurrentQuestions = useCallback(() => {
+    if (questions.length === 0) {
+      message.warning("当前没有问题可导出");
+      return;
+    }
+
+    const exportData = {
+      questions: questions,
+      export_metadata: {
+        export_time: new Date().toISOString(),
+        total_questions: questions.length,
+      }
+    };
+
+    exportToJson(exportData, "current_questions", "当前问题已导出");
+  }, [questions, exportToJson]);
+
+  // 导出问题集为JSON
+  const exportQuestionSet = useCallback((questionSet: QuestionSet) => {
+    exportToJson(questionSet, `question_set_${questionSet.name}`, "问题集已导出");
+  }, [exportToJson]);
 
   // 文件上传处理
   const handleFileUpload = useCallback(
@@ -216,14 +261,22 @@ export const QuestionManager: React.FC<QuestionManagerProps> = ({
         <Space wrap>
           <Upload
             beforeUpload={handleFileUpload}
-            accept=".txt,.csv,.json"
+            accept=".json"
             showUploadList={false}
             disabled={uploading}
           >
             <Button icon={<UploadOutlined />} loading={uploading}>
-              导入文件 (支持 .txt, .csv, .json)
+              导入JSON文件
             </Button>
           </Upload>
+
+          <Button
+            icon={<DownloadOutlined />}
+            onClick={() => exportCurrentQuestions()}
+            disabled={questions.length === 0}
+          >
+            导出JSON文件
+          </Button>
 
           {savedQuestionSets.length > 0 && (
             <Select
@@ -297,23 +350,7 @@ export const QuestionManager: React.FC<QuestionManagerProps> = ({
           >
             <Tag color="blue">已添加问题 ({questions.length})</Tag>
 
-            <Input
-              placeholder="问题集名称"
-              value={questionSetName}
-              onChange={(e) => setQuestionSetName(e.target.value)}
-              style={{ width: 150 }}
-              size="small"
-            />
 
-            <Button
-              type="primary"
-              size="small"
-              icon={<SaveOutlined />}
-              onClick={saveQuestionSet}
-              disabled={!questionSetName.trim() || questions.length === 0}
-            >
-              保存问题集
-            </Button>
 
             <Popconfirm
               title="确定要清空所有问题吗？"
@@ -392,11 +429,29 @@ export const QuestionManager: React.FC<QuestionManagerProps> = ({
               <List.Item
                 actions={[
                   <Button
+                    key="load"
                     type="link"
                     size="small"
                     onClick={() => loadQuestionSet(set)}
                   >
                     加载
+                  </Button>,
+                  <Button
+                    key="view"
+                    type="link"
+                    size="small"
+                    icon={<EyeOutlined />}
+                    onClick={() => viewQuestionSetJson(set)}
+                  >
+                    查看JSON
+                  </Button>,
+                  <Button
+                    key="export"
+                    type="link"
+                    size="small"
+                    onClick={() => exportQuestionSet(set)}
+                  >
+                    导出JSON
                   </Button>,
                   <Popconfirm
                     title={`确定删除问题集 "${set.name}" 吗？`}
@@ -404,7 +459,7 @@ export const QuestionManager: React.FC<QuestionManagerProps> = ({
                     okText="确定"
                     cancelText="取消"
                   >
-                    <Button type="link" danger size="small">
+                    <Button key="delete" type="link" danger size="small">
                       删除
                     </Button>
                   </Popconfirm>,
@@ -420,6 +475,15 @@ export const QuestionManager: React.FC<QuestionManagerProps> = ({
           />
         </div>
       )}
+
+      {/* JSON显示模态框 */}
+      <JsonDisplayModal
+        open={jsonModalVisible}
+        onClose={hideJson}
+        title="问题集JSON数据"
+        jsonData={jsonData}
+        width={800}
+      />
     </Card>
   );
 };

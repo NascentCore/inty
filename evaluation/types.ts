@@ -179,7 +179,8 @@ export interface QuestionFileUpload {
   questions: string[];
   total_count: number;
   valid_count: number;
-  issues: string[];
+  duplicates_removed: number;
+  warnings: string[];
 }
 
 // 表单验证错误

@@ -234,31 +234,14 @@ export const EvaluationMonitor: React.FC<EvaluationMonitorProps> = ({
     }
 
     try {
-      // 准备导出数据
+      // 直接导出原始数据，保持完整结构
       const exportData = {
-        session: {
-          id: session?.id,
-          name: session?.name,
-          created_at: session?.created_at,
-          status: session?.status,
-          total_tests: session?.total_tests,
-          completed_tests: session?.completed_tests,
-        },
-        results: results.map((result) => ({
-          agent_id: result.agent_id,
-          agent_name: result.agent_name,
-          question: result.question,
-          question_index: result.question_index,
-          agent_response: result.agent_response,
-          response_time: result.response_time,
-          overall_score: result.overall_score,
-          detailed_scores: result.detailed_scores,
-          scoring_reason: result.scoring_reason,
-          scoring_model_used: result.scoring_model_used,
-          is_success: result.is_success,
-          error_message: result.error_message,
-          created_at: result.created_at,
-        })),
+        session: session,
+        results: results,
+        export_metadata: {
+          export_time: new Date().toISOString(),
+          total_results: results.length,
+        }
       };
 
       // 生成文件名

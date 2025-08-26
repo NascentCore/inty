@@ -16,27 +16,14 @@ class QuestionParserService:
 
     @staticmethod
     async def parse_questions_file(file: UploadFile) -> List[str]:
-        """解析问题文件，支持txt、csv、json格式"""
+        """解析问题文件，支持json格式"""
 
-        try:
-            # 读取文件内容
-            content = await file.read()
-            filename = file.filename or ""
+        content = await file.read()
+        filename = file.filename or ""
 
-            # 根据文件扩展名选择解析方法
-            if filename.endswith(".txt"):
-                return QuestionParserService._parse_txt(content)
-            elif filename.endswith(".csv"):
-                return QuestionParserService._parse_csv(content)
-            elif filename.endswith(".json"):
-                return QuestionParserService._parse_json(content)
-            else:
-                # 尝试自动检测格式
-                return QuestionParserService._auto_parse(content)
-
-        except Exception as e:
-            logger.error(f"问题文件解析失败: {str(e)}")
-            raise HTTPException(status_code=400, detail=f"文件解析失败: {str(e)}")
+        if not filename.endswith(".json"):
+            raise ValueError(f"不支持的文件类型: {filename}")
+        return QuestionParserService._parse_json(content)
 
     @staticmethod
     def _parse_txt(content: bytes) -> List[str]:
@@ -141,7 +128,7 @@ class QuestionParserService:
                 for item in data:
                     if isinstance(item, str):
                         question = item.strip()
-                        if len(question) >= 5:
+                        if question:  # 只要不是空字符串就保留
                             questions.append(question)
                     elif isinstance(item, dict):
                         # 对象数组格式: [{"question": "...", "other": "..."}, ...]
@@ -158,7 +145,7 @@ class QuestionParserService:
                     for item in data["questions"]:
                         if isinstance(item, str):
                             question = item.strip()
-                            if len(question) >= 5:
+                            if question:  # 只要不是空字符串就保留
                                 questions.append(question)
                         elif isinstance(item, dict):
                             question = (
@@ -244,14 +231,14 @@ class QuestionParserService:
         for field in question_fields:
             if field in obj and isinstance(obj[field], str):
                 question = obj[field].strip()
-                if len(question) >= 5:
+                if question:  # 只要不是空字符串就保留
                     return question
 
         # 如果没有找到明确的问题字段，尝试取第一个字符串值
         for value in obj.values():
             if isinstance(value, str):
                 question = value.strip()
-                if len(question) >= 5:
+                if question:  # 只要不是空字符串就保留
                     return question
 
         return ""
@@ -286,12 +273,7 @@ class QuestionParserService:
 
         # 检查问题质量
         short_questions = [i + 1 for i, q in enumerate(questions) if len(q) < 10]
-        if short_questions:
-            warnings.append(f"发现{len(short_questions)}个较短的问题（少于10字符）")
-
         long_questions = [i + 1 for i, q in enumerate(questions) if len(q) > 500]
-        if long_questions:
-            warnings.append(f"发现{len(long_questions)}个较长的问题（超过500字符）")
 
         # 检查编码问题
         encoding_issues = []
@@ -309,11 +291,12 @@ class QuestionParserService:
             "duplicates": len(duplicates),
             "short_questions": len(short_questions),
             "long_questions": len(long_questions),
+            "encoding_issues": len(encoding_issues),
+            "issues": issues,
+            "warnings": warnings,
         }
 
         return {
             "is_valid": len(issues) == 0,
-            "issues": issues,
-            "warnings": warnings,
             "stats": stats,
         }
