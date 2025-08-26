@@ -118,8 +118,6 @@ export const AgentManagePage: React.FC = () => {
           );
         }
 
-
-
         setAgents(filteredAgents);
         setPagination((prev) => ({
           ...prev,
@@ -197,11 +195,7 @@ export const AgentManagePage: React.FC = () => {
   // 创建智能体
   const handleCreateAgent = async () => {
     try {
-
-
       const values = await createForm.validateFields();
-
-
 
       setSaveLoading(true);
 
@@ -354,8 +348,6 @@ export const AgentManagePage: React.FC = () => {
     setCurrentAgent(agent);
     setEditAvatarPreview(agent.avatar || "");
 
-
-
     // 预填表单 - 使用 setTimeout 确保 Modal 完全渲染后再设置表单值
     setTimeout(() => {
       const formValues = {
@@ -383,11 +375,7 @@ export const AgentManagePage: React.FC = () => {
           : {}),
       };
 
-
-
       editForm.setFieldsValue(formValues);
-
-
     }, 100);
 
     setEditModalVisible(true);
