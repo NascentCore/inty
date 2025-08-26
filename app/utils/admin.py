@@ -9,6 +9,7 @@ SUPER_USER_EMAILS = [
     "donggangcj@gmail.com",
     "justicezyx@gmail.com",
     "zhiwei9001@gmail.com",
+    "xheuyyuki@gmail.com",
     # This is provided to Google Play reviewers.
     # They require to access all features without any restrictions.
     "test.heartmate@gmail.com",
