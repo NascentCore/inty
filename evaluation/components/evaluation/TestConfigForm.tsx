@@ -9,7 +9,6 @@ import {
   Form,
   Input,
   Checkbox,
-  Select,
   Button,
   Alert,
   Space,
@@ -18,18 +17,17 @@ import {
 import {
   InfoCircleOutlined,
   QuestionCircleOutlined,
-  SyncOutlined,
 } from "@ant-design/icons";
 import { useForm } from "../../hooks/useForm";
 import modelCacheService from "../../services/modelCache";
+import { ModelSelector } from "../common/ModelSelector";
 import type {
   EvaluationSessionCreateRequest,
-  ScoringModel,
+  OpenRouterModel,
   ValidationError,
 } from "../../types";
 
 const { TextArea } = Input;
-const { Option } = Select;
 
 interface TestConfigFormProps {
   initialValues?: Partial<EvaluationSessionCreateRequest>;
@@ -37,8 +35,14 @@ interface TestConfigFormProps {
   onValidationChange?: (isValid: boolean) => void;
 }
 
-interface FormValues extends EvaluationSessionCreateRequest {
-  // 添加一些UI专用字段
+interface FormValues {
+  name: string;
+  questions: string[];
+  selected_agents: string[];
+  scoring_model: string;
+  scoring_criteria: string;
+  use_new_user_identity: boolean;
+  config: any;
 }
 
 const defaultScoringCriteria = `请基于智能体的角色设定对其表现进行综合评分(1-10分):
@@ -61,7 +65,7 @@ export const TestConfigForm: React.FC<TestConfigFormProps> = ({
   onValidationChange,
 }) => {
   // 状态管理
-  const [scoringModels, setScoringModels] = useState<ScoringModel[]>([]);
+  const [scoringModels, setScoringModels] = useState<OpenRouterModel[]>([]);
   const [modelsLoading, setModelsLoading] = useState(false);
 
   // 表单验证
@@ -105,15 +109,13 @@ export const TestConfigForm: React.FC<TestConfigFormProps> = ({
     validate: validateForm,
   });
 
-  // 加载评分模型 - 使用缓存服务
-  const loadScoringModels = async (forceRefresh = false) => {
+  // 加载评分模型 - 使用OpenRouter模型
+  const loadScoringModels = async () => {
     try {
       setModelsLoading(true);
-      console.log("正在加载评分模型...");
-      const models = await modelCacheService.getScoringModels(forceRefresh);
+      const models = await modelCacheService.getOpenRouterModels();
 
       setScoringModels(models);
-      console.log("评分模型加载成功:", models.length, "个");
 
       // 设置默认模型
       if (models.length > 0 && !form.values.scoring_model) {
@@ -123,19 +125,17 @@ export const TestConfigForm: React.FC<TestConfigFormProps> = ({
       console.error("加载评分模型失败:", error);
     } finally {
       setModelsLoading(false);
-      console.log("评分模型加载状态已重置");
     }
   };
 
   // 刷新模型列表
   const handleRefreshModels = () => {
-    loadScoringModels(true);
+    loadScoringModels();
   };
 
   useEffect(() => {
     // 防止重复调用
     if (scoringModels.length > 0) {
-      console.log("评分模型已加载，跳过重复请求");
       return;
     }
 
@@ -214,70 +214,18 @@ export const TestConfigForm: React.FC<TestConfigFormProps> = ({
           validateStatus={form.hasFieldError("scoring_model") ? "error" : ""}
           help={form.getFieldError("scoring_model")}
         >
-          <div style={{ display: "flex", gap: 8 }}>
-            <Select
-              style={{ flex: 1 }}
-              value={form.values.scoring_model}
-              onChange={(value) => form.setValue("scoring_model", value)}
-              placeholder="选择评分模型"
-              size="large"
-              loading={modelsLoading}
-              dropdownStyle={{ maxHeight: 400, overflow: "auto" }}
-              optionLabelProp="label"
-              showSearch
-              filterOption={(input, option) => {
-                const modelName = option?.label || "";
-                const modelDescription =
-                  option?.children?.props?.children?.[1] || "";
-                const searchText = input.toLowerCase();
-                return (
-                  modelName.toLowerCase().includes(searchText) ||
-                  String(modelDescription).toLowerCase().includes(searchText)
-                );
-              }}
-            >
-              {scoringModels.map((model) => (
-                <Option key={model.id} value={model.id} label={model.name}>
-                  <div style={{ padding: "4px 0" }}>
-                    <div
-                      style={{
-                        fontWeight: "bold",
-                        marginBottom: "4px",
-                        whiteSpace: "normal",
-                        wordBreak: "break-word",
-                      }}
-                    >
-                      {model.name}
-                    </div>
-                    {model.description && (
-                      <div
-                        style={{
-                          fontSize: "12px",
-                          color: "#666",
-                          whiteSpace: "normal",
-                          wordBreak: "break-word",
-                          lineHeight: "1.4",
-                          maxHeight: "60px",
-                          overflow: "hidden",
-                        }}
-                      >
-                        {model.description.length > 100
-                          ? `${model.description.substring(0, 100)}...`
-                          : model.description}
-                      </div>
-                    )}
-                  </div>
-                </Option>
-              ))}
-            </Select>
-            <Button
-              icon={<SyncOutlined />}
-              size="large"
-              onClick={handleRefreshModels}
-              loading={modelsLoading}
-              title="刷新模型列表"
-            />
-          </div>
+          <ModelSelector
+            name="scoring_model"
+            label=""
+            rules={[{ required: true, message: "请选择评分模型" }]}
+            value={form.values.scoring_model}
+            onChange={(value) => form.setValue("scoring_model", value)}
+            models={scoringModels}
+            loading={modelsLoading}
+            onRefresh={handleRefreshModels}
+            placeholder="选择用于自动评分的LLM模型"
+            style={{ width: "100%" }}
+          />
         </Form.Item>
 
         {/* 评分标准 */}
