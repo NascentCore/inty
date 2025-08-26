@@ -24,7 +24,6 @@ import {
   DeleteOutlined,
   PlusOutlined,
   ClearOutlined,
-  SaveOutlined,
   FileTextOutlined,
   EyeOutlined,
   DownloadOutlined,
@@ -55,7 +54,6 @@ export const QuestionManager: React.FC<QuestionManagerProps> = ({
 }) => {
   // 状态管理
   const [newQuestion, setNewQuestion] = useState("");
-  const [questionSetName, setQuestionSetName] = useState("");
   const [savedQuestionSets, setSavedQuestionSets] = useState<QuestionSet[]>([]);
   const [uploading, setUploading] = useState(false);
 
@@ -114,33 +112,7 @@ export const QuestionManager: React.FC<QuestionManagerProps> = ({
     message.success("问题列表已清空");
   }, [onChange]);
 
-  // 保存问题集
-  const saveQuestionSet = useCallback(() => {
-    if (!questionSetName.trim()) {
-      message.error("请输入问题集名称");
-      return;
-    }
 
-    if (questions.length === 0) {
-      message.error("问题列表不能为空");
-      return;
-    }
-
-    const newSet: QuestionSet = {
-      name: questionSetName.trim(),
-      questions: [...questions],
-    };
-
-    const updatedSets = savedQuestionSets.filter(
-      (set) => set.name !== newSet.name,
-    );
-    updatedSets.push(newSet);
-
-    setSavedQuestionSets(updatedSets);
-    localStorage.setItem("questionSets", JSON.stringify(updatedSets));
-    setQuestionSetName("");
-    message.success("问题集保存成功");
-  }, [questionSetName, questions, savedQuestionSets]);
 
   // 加载问题集
   const loadQuestionSet = useCallback(
@@ -399,23 +371,7 @@ export const QuestionManager: React.FC<QuestionManagerProps> = ({
           >
             <Tag color="blue">已添加问题 ({questions.length})</Tag>
 
-            <Input
-              placeholder="问题集名称"
-              value={questionSetName}
-              onChange={(e) => setQuestionSetName(e.target.value)}
-              style={{ width: 150 }}
-              size="small"
-            />
 
-            <Button
-              type="primary"
-              size="small"
-              icon={<SaveOutlined />}
-              onClick={saveQuestionSet}
-              disabled={!questionSetName.trim() || questions.length === 0}
-            >
-              保存问题集
-            </Button>
 
             <Popconfirm
               title="确定要清空所有问题吗？"
