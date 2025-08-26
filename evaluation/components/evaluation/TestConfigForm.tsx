@@ -117,9 +117,11 @@ export const TestConfigForm: React.FC<TestConfigFormProps> = ({
 
       setScoringModels(models);
 
-      // 设置默认模型
+      // 设置默认模型 - 优先选择 google/gemini-2.5-flash-lite
       if (models.length > 0 && !form.values.scoring_model) {
-        form.setValue("scoring_model", models[0].id);
+        const preferredModel = models.find(model => model.id === "google/gemini-2.5-flash-lite");
+        const defaultModel = preferredModel || models[0];
+        form.setValue("scoring_model", defaultModel.id);
       }
     } catch (error) {
       console.error("加载评分模型失败:", error);
