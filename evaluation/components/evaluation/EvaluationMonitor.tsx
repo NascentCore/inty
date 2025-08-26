@@ -11,7 +11,6 @@ import {
   Tag,
   Space,
   Alert,
-  Typography,
   Row,
   Col,
   Statistic,
@@ -33,7 +32,9 @@ import {
   RobotOutlined,
 } from "@ant-design/icons";
 import { useEvaluationSession } from "../../hooks/useEvaluationSession";
+import { useJsonDisplay } from "../../hooks/useJsonDisplay";
 import { MultiAgentChatDisplay } from "./MultiAgentChatDisplay";
+import { JsonDisplayModal } from "../common/JsonDisplayModal";
 import api from "../../services/api";
 import type {
   EvaluationSession,
@@ -59,8 +60,7 @@ export const EvaluationMonitor: React.FC<EvaluationMonitorProps> = ({
   const [results, setResults] = useState<EvaluationResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [jsonModalVisible, setJsonModalVisible] = useState(false);
-  const [jsonData, setJsonData] = useState<string>("");
+  const { jsonModalVisible, jsonData, showJson, hideJson } = useJsonDisplay();
 
   // 如果没有传入session，则使用hook管理
   const {
@@ -295,19 +295,13 @@ export const EvaluationMonitor: React.FC<EvaluationMonitorProps> = ({
       return;
     }
 
-    try {
-      // 准备导出数据 - 直接使用原始数据，不进行字段映射
-      const exportData = {
-        session: session,
-        results: results,
-      };
+    // 准备导出数据 - 直接使用原始数据，不进行字段映射
+    const exportData = {
+      session: session,
+      results: results,
+    };
 
-      setJsonData(JSON.stringify(exportData, null, 2));
-      setJsonModalVisible(true);
-    } catch (error) {
-      console.error("准备JSON数据失败:", error);
-      message.error("准备JSON数据失败，请重试");
-    }
+    showJson(exportData);
   };
 
   // 状态颜色映射
@@ -510,44 +504,12 @@ export const EvaluationMonitor: React.FC<EvaluationMonitorProps> = ({
       )}
 
       {/* JSON数据展示模态框 */}
-      <Modal
-        title="评测结果JSON数据"
+      <JsonDisplayModal
         open={jsonModalVisible}
-        onCancel={() => setJsonModalVisible(false)}
-        footer={[
-          <Button key="close" onClick={() => setJsonModalVisible(false)}>
-            关闭
-          </Button>,
-          <Button
-            key="copy"
-            type="primary"
-            onClick={() => {
-              navigator.clipboard.writeText(jsonData);
-              message.success("JSON数据已复制到剪贴板");
-            }}
-          >
-            复制到剪贴板
-          </Button>,
-        ]}
-        width={800}
-        style={{ top: 20 }}
-      >
-        <div
-          style={{
-            maxHeight: "60vh",
-            overflow: "auto",
-            backgroundColor: "#f5f5f5",
-            padding: "12px",
-            borderRadius: "6px",
-            fontFamily: "monospace",
-            fontSize: "12px",
-            whiteSpace: "pre-wrap",
-            wordBreak: "break-all",
-          }}
-        >
-          {jsonData}
-        </div>
-      </Modal>
+        onClose={hideJson}
+        title="评测结果JSON数据"
+        jsonData={jsonData}
+      />
     </div>
   );
 };
