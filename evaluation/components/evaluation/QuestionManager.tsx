@@ -159,15 +159,7 @@ export const QuestionManager: React.FC<QuestionManagerProps> = ({
   const exportQuestionSet = useCallback(
     (questionSet: QuestionSet) => {
       try {
-        // 准备导出数据
-        const exportData = {
-          name: questionSet.name,
-          questions: questionSet.questions,
-          export_time: new Date().toISOString(),
-          total_questions: questionSet.questions.length,
-        };
-
-        // 生成文件名
+        // 直接导出原始问题集数据
         const timestamp = new Date()
           .toISOString()
           .slice(0, 19)
@@ -175,7 +167,7 @@ export const QuestionManager: React.FC<QuestionManagerProps> = ({
         const filename = `question_set_${questionSet.name}_${timestamp}.json`;
 
         // 创建并下载文件
-        const blob = new Blob([JSON.stringify(exportData, null, 2)], {
+        const blob = new Blob([JSON.stringify(questionSet, null, 2)], {
           type: "application/json",
         });
         const url = URL.createObjectURL(blob);
