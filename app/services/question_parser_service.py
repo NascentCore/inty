@@ -273,12 +273,7 @@ class QuestionParserService:
 
         # 检查问题质量
         short_questions = [i + 1 for i, q in enumerate(questions) if len(q) < 10]
-        if short_questions:
-            warnings.append(f"发现{len(short_questions)}个较短的问题（少于10字符）")
-
         long_questions = [i + 1 for i, q in enumerate(questions) if len(q) > 500]
-        if long_questions:
-            warnings.append(f"发现{len(long_questions)}个较长的问题（超过500字符）")
 
         # 检查编码问题
         encoding_issues = []
