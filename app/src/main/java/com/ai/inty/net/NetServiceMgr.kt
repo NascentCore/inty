@@ -18,8 +18,11 @@ import com.therouter.inject.ServiceProvider
 import okhttp3.ConnectionPool
 import okhttp3.Dns
 import okhttp3.Interceptor
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
+import okhttp3.Protocol
 import okhttp3.Response
+import okhttp3.ResponseBody.Companion.toResponseBody
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
 import java.net.InetAddress
@@ -96,8 +99,29 @@ class RetryInterceptor(private val maxRetries: Int = 3) : Interceptor {
             }
         }
 
-        // 所有重试都失败了
-        throw exception ?: RuntimeException("Request failed after $maxRetries attempts")
+        // 所有重试都失败了，返回错误响应而不是抛出异常
+        EasyLog.log(
+            "All retry attempts failed for ${request.url} after $maxRetries attempts",
+            EasyLog.ERROR
+        )
+
+        // 如果有最后一次的响应，返回它
+        if (response != null) {
+            return response
+        }
+
+        // 如果没有响应但有异常，创建一个错误响应
+        val errorMessage = exception?.message ?: "Request failed after $maxRetries attempts"
+        EasyLog.log("Creating error response for ${request.url}: $errorMessage", EasyLog.ERROR)
+
+        // 创建一个表示网络错误的响应
+        return Response.Builder()
+            .request(request)
+            .protocol(Protocol.HTTP_1_1)
+            .code(500) // 内部服务器错误
+            .message("Network Error")
+            .body(errorMessage.toResponseBody("text/plain".toMediaType()))
+            .build()
     }
 }
 
