@@ -40,6 +40,8 @@ import {
 import type { ColumnsType } from "antd/es/table";
 import api from "../services/api";
 import { MultiAgentChatDisplay } from "../components/evaluation/MultiAgentChatDisplay";
+import { JsonDisplayModal } from "../components/common/JsonDisplayModal";
+import { useJsonDisplay } from "../hooks/useJsonDisplay";
 import type { EvaluationSession, EvaluationResult } from "../types";
 
 const { Content } = Layout;
@@ -83,6 +85,9 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
     pageSize: 10,
     total: 0,
   });
+
+  // JSON显示功能
+  const { jsonModalVisible, jsonData, showJson, hideJson } = useJsonDisplay();
 
   // 加载评测会话列表
   const loadSessions = useCallback(async () => {
@@ -177,6 +182,21 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
       setSessionResults([]);
     } finally {
       setResultsLoading(false);
+    }
+  };
+
+  // 查看JSON
+  const handleShowJson = async (session: EvaluationSession) => {
+    try {
+      const results = await api.sessions.getResults(session.id);
+      const exportData = {
+        session: session,
+        results: results,
+      };
+      showJson(exportData);
+    } catch (error) {
+      console.error("加载会话结果失败:", error);
+      message.error("加载会话结果失败");
     }
   };
 
@@ -520,7 +540,7 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
     {
       title: "操作",
       key: "actions",
-      width: 200,
+      width: 250,
       render: (text, record) => (
         <Space>
           <Tooltip title="查看详情">
@@ -550,6 +570,14 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
               />
             </Tooltip>
           )}
+
+          <Tooltip title="查看JSON">
+            <Button
+              type="text"
+              icon={<RobotOutlined />}
+              onClick={() => handleShowJson(record)}
+            />
+          </Tooltip>
         </Space>
       ),
     },
@@ -803,6 +831,14 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
             </div>
           )}
         </Modal>
+
+        {/* JSON数据展示模态框 */}
+        <JsonDisplayModal
+          open={jsonModalVisible}
+          onClose={hideJson}
+          title="评测结果JSON数据"
+          jsonData={jsonData}
+        />
       </Content>
     </Layout>
   );
