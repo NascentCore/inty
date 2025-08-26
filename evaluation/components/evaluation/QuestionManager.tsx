@@ -27,6 +27,7 @@ import {
   SaveOutlined,
   FileTextOutlined,
   EyeOutlined,
+  DownloadOutlined,
 } from "@ant-design/icons";
 import type { UploadFile } from "antd";
 import api from "../../services/api";
@@ -169,6 +170,51 @@ export const QuestionManager: React.FC<QuestionManagerProps> = ({
     [showJson],
   );
 
+  // 导出当前问题列表为JSON
+  const exportCurrentQuestions = useCallback(() => {
+    try {
+      if (questions.length === 0) {
+        message.warning("当前没有问题可导出");
+        return;
+      }
+
+      // 准备导出数据
+      const exportData = {
+        questions: questions,
+        export_metadata: {
+          export_time: new Date().toISOString(),
+          total_questions: questions.length,
+        }
+      };
+
+      // 生成文件名
+      const timestamp = new Date()
+        .toISOString()
+        .slice(0, 19)
+        .replace(/:/g, "-");
+      const filename = `current_questions_${timestamp}.json`;
+
+      // 创建并下载文件
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], {
+        type: "application/json",
+      });
+      const url = URL.createObjectURL(blob);
+
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      message.success(`当前问题已导出: ${filename}`);
+    } catch (error) {
+      console.error("导出失败:", error);
+      message.error("导出失败，请重试");
+    }
+  }, [questions]);
+
   // 导出问题集为JSON
   const exportQuestionSet = useCallback(
     (questionSet: QuestionSet) => {
@@ -272,6 +318,14 @@ export const QuestionManager: React.FC<QuestionManagerProps> = ({
               导入JSON文件
             </Button>
           </Upload>
+
+          <Button
+            icon={<DownloadOutlined />}
+            onClick={() => exportCurrentQuestions()}
+            disabled={questions.length === 0}
+          >
+            导出JSON文件
+          </Button>
 
           {savedQuestionSets.length > 0 && (
             <Select
