@@ -217,10 +217,7 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
   };
 
   // 导出结果
-  const handleExport = async (
-    sessionId: string,
-    format: "json" | "csv" = "json",
-  ) => {
+  const handleExport = async (sessionId: string) => {
     try {
       // 获取会话信息和结果
       const session = sessions.find((s) => s.id === sessionId);
@@ -231,33 +228,14 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
 
       const results = await api.sessions.getResults(sessionId);
 
-      // 准备导出数据
+      // 直接导出原始数据，保持完整结构
       const exportData = {
-        session: {
-          id: session.id,
-          name: session.name,
-          created_at: session.created_at,
-          status: session.status,
-          total_tests: session.total_tests,
-          completed_tests: session.completed_tests,
-          success_rate: session.success_rate,
-          average_score: session.average_score,
-        },
-        results: results.map((result: any) => ({
-          agent_id: result.agent_id,
-          agent_name: result.agent_name,
-          question: result.question,
-          question_index: result.question_index,
-          agent_response: result.agent_response,
-          response_time: result.response_time,
-          overall_score: result.overall_score,
-          detailed_scores: result.detailed_scores,
-          scoring_reason: result.scoring_reason,
-          scoring_model_used: result.scoring_model_used,
-          is_success: result.is_success,
-          error_message: result.error_message,
-          created_at: result.created_at,
-        })),
+        session: session,
+        results: results,
+        export_metadata: {
+          export_time: new Date().toISOString(),
+          total_results: results.length,
+        }
       };
 
       // 生成文件名
@@ -265,47 +243,12 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
         .toISOString()
         .slice(0, 19)
         .replace(/:/g, "-");
-      const filename = `evaluation_${session.name}_${timestamp}.${format}`;
+      const filename = `evaluation_${session.name}_${timestamp}.json`;
 
-      let blob: Blob;
-
-      if (format === "json") {
-        blob = new Blob([JSON.stringify(exportData, null, 2)], {
-          type: "application/json",
-        });
-      } else {
-        // CSV导出
-        const csvHeader = [
-          "Agent Name",
-          "Question Index",
-          "Question",
-          "Agent Response",
-          "Overall Score",
-          "Response Time",
-          "Is Success",
-          "Error Message",
-          "Scoring Reason",
-          "Created At",
-        ].join(",");
-
-        const csvRows = results.map((result: any) =>
-          [
-            `"${(result.agent_name || "").replace(/"/g, '""')}"`,
-            result.question_index || "",
-            `"${(result.question || "").replace(/"/g, '""')}"`,
-            `"${(result.agent_response || "").replace(/"/g, '""')}"`,
-            result.overall_score || "",
-            result.response_time || "",
-            result.is_success ? "Yes" : "No",
-            `"${(result.error_message || "").replace(/"/g, '""')}"`,
-            `"${(result.scoring_reason || "").replace(/"/g, '""')}"`,
-            result.created_at || "",
-          ].join(","),
-        );
-
-        const csvContent = [csvHeader, ...csvRows].join("\n");
-        blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-      }
+      // 创建JSON blob
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], {
+        type: "application/json",
+      });
 
       // 创建并下载文件
       const url = URL.createObjectURL(blob);

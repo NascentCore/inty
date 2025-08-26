@@ -155,6 +155,48 @@ export const QuestionManager: React.FC<QuestionManagerProps> = ({
     [savedQuestionSets],
   );
 
+  // 导出问题集为JSON
+  const exportQuestionSet = useCallback(
+    (questionSet: QuestionSet) => {
+      try {
+        // 准备导出数据
+        const exportData = {
+          name: questionSet.name,
+          questions: questionSet.questions,
+          export_time: new Date().toISOString(),
+          total_questions: questionSet.questions.length,
+        };
+
+        // 生成文件名
+        const timestamp = new Date()
+          .toISOString()
+          .slice(0, 19)
+          .replace(/:/g, "-");
+        const filename = `question_set_${questionSet.name}_${timestamp}.json`;
+
+        // 创建并下载文件
+        const blob = new Blob([JSON.stringify(exportData, null, 2)], {
+          type: "application/json",
+        });
+        const url = URL.createObjectURL(blob);
+
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        message.success(`问题集已导出: ${filename}`);
+      } catch (error) {
+        console.error("导出失败:", error);
+        message.error("导出失败，请重试");
+      }
+    },
+    [],
+  );
+
   // 文件上传处理
   const handleFileUpload = useCallback(
     async (file: UploadFile) => {
@@ -392,11 +434,20 @@ export const QuestionManager: React.FC<QuestionManagerProps> = ({
               <List.Item
                 actions={[
                   <Button
+                    key="load"
                     type="link"
                     size="small"
                     onClick={() => loadQuestionSet(set)}
                   >
                     加载
+                  </Button>,
+                  <Button
+                    key="export"
+                    type="link"
+                    size="small"
+                    onClick={() => exportQuestionSet(set)}
+                  >
+                    导出JSON
                   </Button>,
                   <Popconfirm
                     title={`确定删除问题集 "${set.name}" 吗？`}
@@ -404,7 +455,7 @@ export const QuestionManager: React.FC<QuestionManagerProps> = ({
                     okText="确定"
                     cancelText="取消"
                   >
-                    <Button type="link" danger size="small">
+                    <Button key="delete" type="link" danger size="small">
                       删除
                     </Button>
                   </Popconfirm>,
