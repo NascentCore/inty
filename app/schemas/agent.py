@@ -172,6 +172,30 @@ class Agent(AgentInDB):
     connector_count: int = 0
     creator: Optional[User] = None
 
+    @field_serializer("llm_config")
+    def serialize_llm_config(
+        self, llm_config: Optional[ModelConfig]
+    ) -> Optional[ModelConfig]:
+        """
+        从settings字段中提取llm_config，数据库将 llm_config 及其他潜在
+        未来添加字段放到了 settings 字段中
+        """
+        if llm_config is not None:
+            return llm_config
+
+        # 如果llm_config为空，尝试从settings中获取
+        if self.settings and isinstance(self.settings, dict):
+            settings_llm_config = self.settings.get("llm_config")
+            if settings_llm_config:
+                # 将settings中的llm_config转换为ModelConfig对象
+                try:
+                    return ModelConfig(**settings_llm_config)
+                except Exception:
+                    # 如果转换失败，返回None
+                    return None
+
+        return None
+
 
 class AgentList(BaseModel):
     total: int
