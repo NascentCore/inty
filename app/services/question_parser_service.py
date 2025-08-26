@@ -16,27 +16,14 @@ class QuestionParserService:
 
     @staticmethod
     async def parse_questions_file(file: UploadFile) -> List[str]:
-        """解析问题文件，支持txt、csv、json格式"""
+        """解析问题文件，支持json格式"""
 
-        try:
-            # 读取文件内容
-            content = await file.read()
-            filename = file.filename or ""
+        content = await file.read()
+        filename = file.filename or ""
 
-            # 根据文件扩展名选择解析方法
-            if filename.endswith(".txt"):
-                return QuestionParserService._parse_txt(content)
-            elif filename.endswith(".csv"):
-                return QuestionParserService._parse_csv(content)
-            elif filename.endswith(".json"):
-                return QuestionParserService._parse_json(content)
-            else:
-                # 尝试自动检测格式
-                return QuestionParserService._auto_parse(content)
-
-        except Exception as e:
-            logger.error(f"问题文件解析失败: {str(e)}")
-            raise HTTPException(status_code=400, detail=f"文件解析失败: {str(e)}")
+        if not filename.endswith(".json"):
+            raise ValueError(f"不支持的文件类型: {filename}")
+        return QuestionParserService._parse_json(content)
 
     @staticmethod
     def _parse_txt(content: bytes) -> List[str]:
