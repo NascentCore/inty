@@ -118,58 +118,7 @@ export const AgentManagePage: React.FC = () => {
           );
         }
 
-        // 添加日志确认智能体的llm config
-        console.log("=== 加载智能体列表 - 确认llm config ===");
-        let customConfigCount = 0;
-        let defaultConfigCount = 0;
 
-        filteredAgents.forEach((agent, index) => {
-          console.log(`智能体 ${index + 1}: ${agent.name} (ID: ${agent.id})`);
-          console.log("  完整智能体对象:", agent);
-          console.log("  llm_config:", agent.llm_config);
-          console.log("  llm_config类型:", typeof agent.llm_config);
-          console.log("  llm_config是否为null:", agent.llm_config === null);
-          console.log("  llm_config是否为undefined:", agent.llm_config === undefined);
-
-          // 检查是否有其他可能包含LLM配置的字段
-          console.log("  检查其他可能包含LLM配置的字段:");
-          // 使用类型断言检查可能存在的字段
-          const agentAny = agent as any;
-          console.log("    settings:", agentAny.settings);
-          console.log("    settings类型:", typeof agentAny.settings);
-          if (agentAny.settings && typeof agentAny.settings === 'string') {
-            try {
-              const parsedSettings = JSON.parse(agentAny.settings);
-              console.log("    解析后的settings:", parsedSettings);
-              if (parsedSettings.llm_config) {
-                console.log("    settings中的llm_config:", parsedSettings.llm_config);
-              }
-            } catch (e) {
-              console.log("    解析settings失败:", e);
-            }
-          }
-
-          if (agent.llm_config) {
-            customConfigCount++;
-            console.log("    模型:", agent.llm_config.model);
-            console.log("    温度:", agent.llm_config.temperature);
-            console.log("    最大token:", agent.llm_config.max_tokens);
-            console.log("    top_p:", agent.llm_config.top_p);
-            console.log("    frequency_penalty:", agent.llm_config.frequency_penalty);
-            console.log("    presence_penalty:", agent.llm_config.presence_penalty);
-          } else {
-            defaultConfigCount++;
-            console.log("    使用默认LLM配置");
-          }
-          console.log("  ---");
-        });
-
-        // 总结统计
-        console.log("=== LLM配置统计 ===");
-        console.log(`总智能体数量: ${filteredAgents.length}`);
-        console.log(`使用自定义配置: ${customConfigCount}`);
-        console.log(`使用默认配置: ${defaultConfigCount}`);
-        console.log("==================");
 
         setAgents(filteredAgents);
         setPagination((prev) => ({
@@ -248,21 +197,11 @@ export const AgentManagePage: React.FC = () => {
   // 创建智能体
   const handleCreateAgent = async () => {
     try {
-      // 在表单验证前添加调试日志
-      console.log("=== 创建智能体 - 表单验证前 ===");
-      console.log("表单所有字段值:", createForm.getFieldsValue());
-      console.log("modelType:", createForm.getFieldValue("modelType"));
-      console.log("model:", createForm.getFieldValue("model"));
-      console.log("temperature:", createForm.getFieldValue("temperature"));
-      console.log("max_tokens:", createForm.getFieldValue("max_tokens"));
+
 
       const values = await createForm.validateFields();
 
-      // 表单验证通过后的日志
-      console.log("=== 创建智能体 - 表单验证通过 ===");
-      console.log("验证后的所有值:", values);
-      console.log("验证后的 modelType:", values.modelType);
-      console.log("验证后的 model:", values.model);
+
 
       setSaveLoading(true);
 
@@ -279,9 +218,7 @@ export const AgentManagePage: React.FC = () => {
           if (backgroundUrl) {
             backgroundImages = [backgroundUrl];
           }
-          console.log(
-            `上传成功：头像：${avatarUrl} 背景：${backgroundUrl} 背景图: ${backgroundImages.join(", ")}`,
-          );
+
         } catch (uploadError) {
           logError("头像上传失败:", uploadError);
           return;
@@ -295,10 +232,7 @@ export const AgentManagePage: React.FC = () => {
         background_images: backgroundImages,
       };
 
-      // Display background images on the page as notification
-      console.log(
-        `创建成功：头像：${avatarUrl} 背景：${backgroundUrl} 背景图: ${backgroundImages.join(", ")}`,
-      );
+
 
       // 如果选择了自定义模型，添加LLM配置
       if (values.modelType === "custom") {
@@ -320,11 +254,7 @@ export const AgentManagePage: React.FC = () => {
       setAvatarPreview("");
       loadAgents(true);
     } catch (error) {
-      console.error("=== 创建智能体 - 表单验证失败 ===");
-      console.error("错误详情:", error);
-      console.error("错误字段:", error.errorFields);
-      console.error("错误值:", error.values);
-      console.error("当前表单状态:", createForm.getFieldsValue());
+
       message.error("创建智能体失败，请重试");
     } finally {
       setSaveLoading(false);
@@ -336,24 +266,13 @@ export const AgentManagePage: React.FC = () => {
     if (!currentAgent) return;
 
     try {
-      // 在表单验证前添加调试日志
-      console.log("=== 编辑智能体 - 表单验证前 ===");
-      console.log("当前智能体:", currentAgent);
-      console.log("表单所有字段值:", editForm.getFieldsValue());
-      console.log("modelType:", editForm.getFieldValue("modelType"));
-      console.log("model:", editForm.getFieldValue("model"));
-      console.log("temperature:", editForm.getFieldValue("temperature"));
-      console.log("max_tokens:", editForm.getFieldValue("max_tokens"));
+
 
 
 
       const values = await editForm.validateFields();
 
-      // 表单验证通过后的日志
-      console.log("=== 编辑智能体 - 表单验证通过 ===");
-      console.log("验证后的所有值:", values);
-      console.log("验证后的 modelType:", values.modelType);
-      console.log("验证后的 model:", values.model);
+
 
       setSaveLoading(true);
 
@@ -395,36 +314,13 @@ export const AgentManagePage: React.FC = () => {
         };
       }
 
-      console.log("=== 发送到后端的更新数据 ===");
-      console.log("智能体ID:", currentAgent.id);
-      console.log("更新数据:", updateData);
-      console.log("LLM配置:", updateData.llm_config);
 
-      const updateResponse = await api.agents.update(currentAgent.id, updateData);
 
-      console.log("=== 后端更新响应 ===");
-      console.log("响应数据:", updateResponse);
+      await api.agents.update(currentAgent.id, updateData);
 
-      // 检查更新后的智能体数据是否包含LLM配置
-      console.log("=== 检查更新后的智能体数据 ===");
-      console.log("更新后的智能体对象:", updateResponse);
-      console.log("更新后的llm_config:", updateResponse.llm_config);
-      console.log("更新后的llm_config类型:", typeof updateResponse.llm_config);
 
-      // 检查是否有其他字段包含LLM配置
-      const responseAny = updateResponse as any;
-      console.log("更新后的settings:", responseAny.settings);
-      if (responseAny.settings && typeof responseAny.settings === 'string') {
-        try {
-          const parsedSettings = JSON.parse(responseAny.settings);
-          console.log("更新后解析的settings:", parsedSettings);
-          if (parsedSettings.llm_config) {
-            console.log("更新后settings中的llm_config:", parsedSettings.llm_config);
-          }
-        } catch (e) {
-          console.log("解析更新后的settings失败:", e);
-        }
-      }
+
+
 
       message.success("智能体更新成功");
       setEditModalVisible(false);
@@ -434,11 +330,7 @@ export const AgentManagePage: React.FC = () => {
       setEditAvatarPreview("");
       loadAgents();
     } catch (error) {
-      console.error("=== 编辑智能体 - 表单验证失败 ===");
-      console.error("错误详情:", error);
-      console.error("错误字段:", error.errorFields);
-      console.error("错误值:", error.values);
-      console.error("当前表单状态:", editForm.getFieldsValue());
+
       message.error("更新智能体失败，请重试");
     } finally {
       setSaveLoading(false);
@@ -462,56 +354,7 @@ export const AgentManagePage: React.FC = () => {
     setCurrentAgent(agent);
     setEditAvatarPreview(agent.avatar || "");
 
-    // 添加详细的调试日志确认智能体的llm config
-    console.log("=== showEditModal - 智能体数据详情 ===");
-    console.log("智能体基本信息:");
-    console.log("  ID:", agent.id);
-    console.log("  名称:", agent.name);
-    console.log("  性别:", agent.gender);
-    console.log("  可见性:", agent.visibility);
 
-    console.log("LLM配置信息:");
-    console.log("  llm_config对象:", agent.llm_config);
-    console.log("  llm_config类型:", typeof agent.llm_config);
-    console.log("  llm_config是否为null:", agent.llm_config === null);
-    console.log("  llm_config是否为undefined:", agent.llm_config === undefined);
-
-    // 检查是否有其他可能包含LLM配置的字段
-    const agentAny = agent as any;
-    console.log("  检查其他可能包含LLM配置的字段:");
-    console.log("    settings:", agentAny.settings);
-    console.log("    settings类型:", typeof agentAny.settings);
-    if (agentAny.settings && typeof agentAny.settings === 'string') {
-      try {
-        const parsedSettings = JSON.parse(agentAny.settings);
-        console.log("    解析后的settings:", parsedSettings);
-        if (parsedSettings.llm_config) {
-          console.log("    settings中的llm_config:", parsedSettings.llm_config);
-        }
-      } catch (e) {
-        console.log("    解析settings失败:", e);
-      }
-    }
-
-    if (agent.llm_config) {
-      console.log("  模型:", agent.llm_config.model);
-      console.log("  模型类型:", typeof agent.llm_config.model);
-      console.log("  模型是否为空:", !agent.llm_config.model);
-      console.log("  温度:", agent.llm_config.temperature);
-      console.log("  最大token:", agent.llm_config.max_tokens);
-      console.log("  top_p:", agent.llm_config.top_p);
-      console.log("  frequency_penalty:", agent.llm_config.frequency_penalty);
-      console.log("  presence_penalty:", agent.llm_config.presence_penalty);
-
-      // 检查每个字段的详细情况
-      Object.entries(agent.llm_config).forEach(([key, value]) => {
-        console.log(`    ${key}:`, value, `(类型: ${typeof value})`);
-      });
-    } else {
-      console.log("  使用默认LLM配置");
-    }
-
-    console.log("modelType 将设置为:", agent.llm_config ? "custom" : "default");
 
     // 预填表单 - 使用 setTimeout 确保 Modal 完全渲染后再设置表单值
     setTimeout(() => {
@@ -540,40 +383,11 @@ export const AgentManagePage: React.FC = () => {
           : {}),
       };
 
-      console.log("=== showEditModal - 设置表单值 ===");
-      console.log("要设置的表单值:", formValues);
+
 
       editForm.setFieldsValue(formValues);
 
-      // 设置后立即检查表单值
-      setTimeout(() => {
-        console.log("=== showEditModal - 设置表单值后 ===");
-        const formValues = editForm.getFieldsValue();
-        console.log("表单当前值:", formValues);
-        console.log("modelType:", editForm.getFieldValue("modelType"));
-        console.log("model:", editForm.getFieldValue("model"));
 
-        // 详细检查LLM相关字段
-        console.log("LLM配置字段检查:");
-        console.log("  temperature:", editForm.getFieldValue("temperature"));
-        console.log("  max_tokens:", editForm.getFieldValue("max_tokens"));
-        console.log("  top_p:", editForm.getFieldValue("top_p"));
-        console.log("  frequency_penalty:", editForm.getFieldValue("frequency_penalty"));
-        console.log("  presence_penalty:", editForm.getFieldValue("presence_penalty"));
-
-        // 对比原始智能体数据和表单值
-        console.log("=== 数据对比 ===");
-        console.log("原始智能体llm_config:", agent.llm_config);
-        console.log("表单中的LLM配置:", {
-          modelType: editForm.getFieldValue("modelType"),
-          model: editForm.getFieldValue("model"),
-          temperature: editForm.getFieldValue("temperature"),
-          max_tokens: editForm.getFieldValue("max_tokens"),
-          top_p: editForm.getFieldValue("top_p"),
-          frequency_penalty: editForm.getFieldValue("frequency_penalty"),
-          presence_penalty: editForm.getFieldValue("presence_penalty"),
-        });
-      }, 50);
     }, 100);
 
     setEditModalVisible(true);
