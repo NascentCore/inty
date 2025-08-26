@@ -26,10 +26,13 @@ import {
   ClearOutlined,
   SaveOutlined,
   FileTextOutlined,
+  EyeOutlined,
 } from "@ant-design/icons";
 import type { UploadFile } from "antd";
 import api from "../../services/api";
 import type { QuestionFileUpload } from "../../types";
+import { useJsonDisplay } from "../../hooks/useJsonDisplay";
+import { JsonDisplayModal } from "../common/JsonDisplayModal";
 
 const { Option } = Select;
 
@@ -54,6 +57,9 @@ export const QuestionManager: React.FC<QuestionManagerProps> = ({
   const [questionSetName, setQuestionSetName] = useState("");
   const [savedQuestionSets, setSavedQuestionSets] = useState<QuestionSet[]>([]);
   const [uploading, setUploading] = useState(false);
+
+  // JSON显示功能
+  const { jsonModalVisible, jsonData, showJson, hideJson } = useJsonDisplay();
 
   // 加载保存的问题集
   React.useEffect(() => {
@@ -153,6 +159,14 @@ export const QuestionManager: React.FC<QuestionManagerProps> = ({
       message.success("问题集删除成功");
     },
     [savedQuestionSets],
+  );
+
+  // 查看问题集JSON
+  const viewQuestionSetJson = useCallback(
+    (questionSet: QuestionSet) => {
+      showJson(questionSet);
+    },
+    [showJson],
   );
 
   // 导出问题集为JSON
@@ -434,6 +448,15 @@ export const QuestionManager: React.FC<QuestionManagerProps> = ({
                     加载
                   </Button>,
                   <Button
+                    key="view"
+                    type="link"
+                    size="small"
+                    icon={<EyeOutlined />}
+                    onClick={() => viewQuestionSetJson(set)}
+                  >
+                    查看JSON
+                  </Button>,
+                  <Button
                     key="export"
                     type="link"
                     size="small"
@@ -463,6 +486,15 @@ export const QuestionManager: React.FC<QuestionManagerProps> = ({
           />
         </div>
       )}
+
+      {/* JSON显示模态框 */}
+      <JsonDisplayModal
+        open={jsonModalVisible}
+        onClose={hideJson}
+        title="问题集JSON数据"
+        jsonData={jsonData}
+        width={800}
+      />
     </Card>
   );
 };
