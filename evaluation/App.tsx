@@ -10,7 +10,6 @@ import {
   MessageOutlined,
   BarChartOutlined,
   HistoryOutlined,
-  ExperimentOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
 } from "@ant-design/icons";
@@ -18,7 +17,7 @@ import { EvaluationPage } from "./pages/EvaluationPage";
 import { EvaluationHistoryPage } from "./pages/EvaluationHistoryPage";
 import { ChatPage } from "./pages/ChatPage";
 import AgentManagePage from "./pages/AgentManagePage";
-import PromptEvaluationPage from "./pages/PromptEvaluationPage";
+
 
 const { Sider, Content } = Layout;
 const { Title, Text } = Typography;
@@ -27,8 +26,7 @@ type PageKey =
   | "evaluation"
   | "history"
   | "chat"
-  | "agents"
-  | "prompt-evaluation";
+  | "agents";
 
 interface NavigationItem {
   key: PageKey;
@@ -102,12 +100,7 @@ export const App: React.FC = () => {
       label: "智能体管理",
       description: "创建、编辑和管理智能体",
     },
-    {
-      key: "prompt-evaluation",
-      icon: <ExperimentOutlined />,
-      label: "提示词评测",
-      description: "灵活调整和测试提示词模板",
-    },
+
     {
       key: "evaluation",
       icon: <BarChartOutlined />,
@@ -137,8 +130,7 @@ export const App: React.FC = () => {
         return <ChatPage />;
       case "agents":
         return <AgentManagePage />;
-      case "prompt-evaluation":
-        return <PromptEvaluationPage />;
+
       default:
         return null;
     }
