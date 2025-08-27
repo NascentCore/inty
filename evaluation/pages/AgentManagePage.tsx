@@ -277,7 +277,8 @@ export const AgentManagePage: React.FC = () => {
             backgroundImages = [backgroundUrl];
           }
         } catch (uploadError) {
-          logError(`头像上传失败，请重试，错误信息：${uploadError.message}`);
+          const errorMessage = uploadError instanceof Error ? uploadError.message : String(uploadError);
+          logError(`头像上传失败，请重试，错误信息：${errorMessage}`);
           return;
         }
       }
@@ -326,6 +327,24 @@ export const AgentManagePage: React.FC = () => {
       console.error("删除智能体失败:", error);
       message.error("删除智能体失败，请重试");
     }
+  };
+
+  // 设置创建表单的默认值
+  const setCreateFormDefaults = () => {
+    setTimeout(() => {
+      const defaultValues = {
+        name: "新智能体",
+        gender: "FEMALE",
+        visibility: "PRIVATE",
+        modelType: "default",
+        intro: "这是一个AI角色，具有独特的性格和特点。",
+        opening: "你好！很高兴认识你，我是你的AI助手。",
+        main_prompt: "你是一个友好、专业的AI助手，能够帮助用户解决各种问题。请保持礼貌、耐心，并根据用户的需求提供有用的建议。",
+        personality: "我是一个AI助手，具有以下特点：\n- 友好和善\n- 专业可靠\n- 乐于助人\n- 知识渊博\n- 耐心细致",
+        mode_prompt: "在对话中，我会：\n- 保持积极正面的态度\n- 提供准确有用的信息\n- 根据用户需求调整回答方式\n- 保持对话的连贯性和趣味性"
+      };
+      createForm.setFieldsValue(defaultValues);
+    }, 100);
   };
 
   // 显示编辑模态框
@@ -761,6 +780,11 @@ export const AgentManagePage: React.FC = () => {
           createForm.resetFields();
           setAvatarFile(null);
           setAvatarPreview("");
+        }}
+        afterOpenChange={(open) => {
+          if (open) {
+            setCreateFormDefaults();
+          }
         }}
         confirmLoading={saveLoading}
         width={800}

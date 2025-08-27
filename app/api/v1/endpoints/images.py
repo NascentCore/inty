@@ -12,7 +12,6 @@ from app import schemas
 from app.api import deps
 from app.api.utils.logger_route import LoggerRoute
 from app.schemas.response import APIResponse
-from app.schemas.images import ImageUploadRequest
 from app.utils.image_upload import process_image_upload
 
 router = APIRouter(prefix="/images", route_class=LoggerRoute)
