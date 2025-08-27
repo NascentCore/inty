@@ -207,8 +207,10 @@ export const AgentManagePage: React.FC = () => {
       if (avatarFile) {
         try {
           const uploadResult = await api.agents.uploadAvatar(avatarFile);
-          avatarUrl = uploadResult.avatar_url || uploadResult.data?.avatar_url;
-          backgroundUrl = uploadResult.url || uploadResult.data?.url;
+          // 根据后端 APIResponse 格式，图片URL在 data 字段中
+          avatarUrl = uploadResult.avatar_url || uploadResult.url;
+          backgroundUrl = uploadResult.url;
+          message.info(`上传结果: ${JSON.stringify(uploadResult)}`);
           if (backgroundUrl) {
             backgroundImages = [backgroundUrl];
           }
@@ -271,8 +273,9 @@ export const AgentManagePage: React.FC = () => {
       if (editAvatarFile) {
         try {
           const uploadResult = await api.agents.uploadAvatar(editAvatarFile);
-          avatarUrl = uploadResult.avatar_url || uploadResult.data?.avatar_url;
-          backgroundUrl = uploadResult.url || uploadResult.data?.url;
+          avatarUrl = uploadResult.avatar_url || uploadResult.url;
+          backgroundUrl = uploadResult.url;
+          message.info(`上传结果: ${JSON.stringify(uploadResult)}`);
           if (backgroundUrl) {
             backgroundImages = [backgroundUrl];
           }
@@ -383,8 +386,8 @@ export const AgentManagePage: React.FC = () => {
   // 渲染表单字段
   const renderAgentForm = (form: any, isEdit = false) => (
     <>
-      {/* 头像上传 */}
-      <Form.Item label="形像">
+      {/* 形像图片上传 */}
+      <Form.Item label="角色形像">
         <Upload
           beforeUpload={isEdit ? handleEditAvatarChange : handleAvatarChange}
           showUploadList={false}
@@ -420,11 +423,9 @@ export const AgentManagePage: React.FC = () => {
           </div>
         </Upload>
         <div style={{ marginTop: 8, fontSize: 12, color: "#666" }}>
-          上传头像后，系统会自动设置背景图为原图，头像为裁剪后的版本
+          上传形像图片后，系统会将其设置为聊天背景图，并从形像图片中扣脸作为 Avatar
         </div>
       </Form.Item>
-
-
 
       {/* 基本信息 */}
       <Row gutter={16}>
@@ -782,6 +783,12 @@ export const AgentManagePage: React.FC = () => {
           editForm.resetFields();
           setEditAvatarFile(null);
           setEditAvatarPreview("");
+        }}
+        afterClose={() => {
+          // 确保模态框完全关闭后重置状态
+          setEditAvatarFile(null);
+          setEditAvatarPreview("");
+          setCurrentAgent(null);
         }}
         confirmLoading={saveLoading}
         width={800}

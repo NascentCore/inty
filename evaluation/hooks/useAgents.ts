@@ -9,7 +9,6 @@ import api from "../services/api";
 import type {
   Agent,
   AgentCreateRequest,
-  AgentUpdateRequest,
   AgentVisibility,
 } from "../types";
 
@@ -32,10 +31,7 @@ interface UseAgentsReturn {
   createAgent: (
     data: AgentCreateRequest & { avatar?: File },
   ) => Promise<Agent | null>;
-  updateAgent: (
-    agentId: string,
-    data: Partial<AgentUpdateRequest> & { avatar?: File },
-  ) => Promise<Agent | null>;
+
   deleteAgent: (agentId: string) => Promise<boolean>;
   deployAgent: (agentId: string, adminPassword: string) => Promise<boolean>;
 
@@ -230,56 +226,7 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
     [clearCache, handleError],
   );
 
-  // 更新智能体
-  const updateAgent = useCallback(
-    async (
-      agentId: string,
-      data: Partial<AgentUpdateRequest> & { avatar?: File },
-    ): Promise<Agent | null> => {
-      try {
-        setLoading(true);
-        setError(null);
 
-        let updateData = { ...data };
-
-        // 如果有头像文件，先上传头像
-        if (data.avatar) {
-          try {
-            // 这里应该调用头像上传API
-            // const uploadResult = await api.uploadAvatar(data.avatar);
-            // updateData.avatar = uploadResult.url;
-
-            // 暂时移除avatar字段
-            const { ...restData } = updateData;
-            updateData = restData;
-          } catch (error) {
-            console.error("头像上传失败:", error);
-            message.error("头像上传失败");
-            return null;
-          }
-        }
-
-        const updatedAgent = await api.agents.update(agentId, updateData);
-
-        // 更新本地状态
-        setAgents((prev) =>
-          prev.map((agent) => (agent.id === agentId ? updatedAgent : agent)),
-        );
-
-        // 清理缓存
-        clearCache();
-
-        message.success("智能体更新成功");
-        return updatedAgent;
-      } catch (error) {
-        handleError(error, "更新智能体失败");
-        return null;
-      } finally {
-        setLoading(false);
-      }
-    },
-    [clearCache, handleError],
-  );
 
   // 删除智能体
   const deleteAgent = useCallback(
@@ -371,7 +318,6 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
     // 操作
     loadAgents,
     createAgent,
-    updateAgent,
     deleteAgent,
     deployAgent,
 

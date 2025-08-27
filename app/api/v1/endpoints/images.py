@@ -26,7 +26,7 @@ router = APIRouter(prefix="/images", route_class=LoggerRoute)
 async def upload_image(
     file: UploadFile = File(...),
     current_user: schemas.User = Depends(deps.get_current_active_user),
-) -> Any:
+) -> APIResponse[dict]:
     """
     Upload image file with validation, compression, and GCS storage.
     This endpoint reuses the same logic as the agent avatar upload endpoint.
@@ -56,4 +56,3 @@ async def upload_image(
         return APIResponse.error(message="Image upload failed")
     finally:
         logger.debug("=== 图片上传请求处理完成 ===")
-
