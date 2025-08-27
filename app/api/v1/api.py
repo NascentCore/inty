@@ -6,6 +6,7 @@ from app.api.v1.endpoints import (
     auth,
     chats,
     evaluation,
+    images,
     notification,
     report,
     settings,
@@ -30,8 +31,9 @@ api_router.include_router(
 )
 
 api_router.include_router(report.router, tags=["report"])
-api_router.include_router(agents.router, tags=["agents"])
+api_router.include_router(agents.router, tags=["agents", "characters"])
 api_router.include_router(chats.router, tags=["chats"])
+api_router.include_router(images.router, tags=["images", "resources"])
 api_router.include_router(settings.router, tags=["settings"])
 
 # TODO: Consider remove /resources endpoint.

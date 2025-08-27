@@ -20,10 +20,10 @@ from app.utils.image import compress_png_to_jpeg, ImageFormat
 async def process_image_upload(
     file: UploadFile,
     user_id: str,
-    base_path: str = "uploads",
+    base_path: str = "uploads/images",
     enable_cropping: bool = False,
-    max_size_mb: Optional[int] = None
-) -> APIResponse:
+    max_size_mb: int = global_config_loaded_from_config_yaml.app.limits.max_image_size_mb,
+) -> APIResponse[dict]:
     """
     Helper function to process image upload with validation, compression, and GCS upload.
     
@@ -52,10 +52,6 @@ async def process_image_upload(
         logger.error(f"不支持的文件类型: {file.content_type}")
         return APIResponse.error(message="Only image files are allowed")
 
-    # Validate file size
-    if max_size_mb is None:
-        max_size_mb = global_config_loaded_from_config_yaml.app.limits.max_image_size_mb
-        
     max_size_bytes = max_size_mb * 1024 * 1024
 
     file_data = await file.read()
@@ -121,7 +117,7 @@ async def process_image_upload(
     timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
     unique_id = uuid.uuid4().hex[:8]
     file_path = f"{base_path}/{user_id}/{timestamp}-{unique_id}.{file_ext}"
-    
+
     # Upload original file to GCS
     url = upload_to_gcs(
         file_data,
@@ -129,31 +125,31 @@ async def process_image_upload(
         global_config_loaded_from_config_yaml.gcs.bucket,
         file_path,
     )
-    
+
     response_data = { "url": url }
-    
+
     # Handle cropping if enabled
     if enable_cropping:
         cropped_avatar = crop_avatar(file_data)
-        
+
         # Convert PIL Image to bytes for GCS upload
         cropped_avatar_bytes = io.BytesIO()
         cropped_avatar.save(cropped_avatar_bytes, format=ImageFormat.JPEG)
         cropped_avatar_bytes.seek(0)
         cropped_avatar_data = cropped_avatar_bytes.getvalue()
-        
+
         cropped_file_path = f"{base_path}/{user_id}/{timestamp}-{unique_id}-cropped.{ImageFormat.JPEG}"
-        
+
         cropped_avatar_url = upload_to_gcs(
             cropped_avatar_data,
             f"image/{ImageFormat.JPEG}",  # Cropped image is always JPEG
             global_config_loaded_from_config_yaml.gcs.bucket,
             cropped_file_path,
         )
-        
+
         response_data["avatar_url"] = cropped_avatar_url
         logger.debug(f"扣脸图片上传 GCS 成功,返回URL: {url} {cropped_avatar_url}")
 
     logger.debug(f"Avatar 上传 GCS 成功，返回URL: {url}")
-    
+
     return APIResponse.success(data=response_data)
