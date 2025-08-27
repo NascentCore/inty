@@ -81,16 +81,17 @@ class MySettingActivity : BaseActivity() {
                 ) { imageUri ->
                     imageUri?.let { uri ->
                         runCatching {
-                            // Check file size before cropping - limit to 500KB
+                            // Check file size before cropping - limit to 10MB
                             val fileSize = getFileSize(context, uri)
-                            val maxSizeKB = 500
-                            if (fileSize > maxSizeKB * 1024) {
-                                val maxSizeKBStr = String.format("%dKB", maxSizeKB)
-                                val fileSizeStr = String.format("%dKB", fileSize / 1024)
+                            val maxSizeBytes = 10 * 1024 * 1024 // 10MB in bytes
+                            if (fileSize > maxSizeBytes) {
+                                val maxSizeMBStr = "10MB"
+                                val fileSizeMBStr =
+                                    String.format("%.1fMB", fileSize / (1024.0 * 1024.0))
                                 val msg = String.format(
                                     context.getString(R.string.user_avatar_size_too_large_with_size_format),
-                                    maxSizeKBStr,
-                                    fileSizeStr
+                                    maxSizeMBStr,
+                                    fileSizeMBStr
                                 )
                                 lifecycleScope.launch {
                                     ToastUtils.showToast(msg)
