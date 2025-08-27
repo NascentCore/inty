@@ -347,8 +347,9 @@ export const agentApi = {
       admin_password: adminPassword,
     }),
 
-  uploadAvatar: (file: File): Promise<any> =>
-    apiClient.upload("/images", file),
+  // 上传头像
+  uploadAvatar: (file: File, enableCropping: boolean = true): Promise<any> =>
+    apiClient.upload("/images", file, { enable_cropping: enableCropping }),
 };
 
 // =============================================================================
