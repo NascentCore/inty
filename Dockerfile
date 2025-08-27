@@ -1,4 +1,4 @@
-FROM python:3.12-slim
+FROM python:3.12-slim as base
 
 WORKDIR /
 
@@ -14,6 +14,8 @@ COPY requirements.txt .
 # https://stackoverflow.com/a/58021389/31283770
 RUN --mount=type=cache,target=/root/.cache/pip pip install -r requirements.txt
 
+FROM base
+
 # 复制应用代码
 COPY app/ app/
 COPY alembic/ alembic/
@@ -25,5 +27,4 @@ COPY start.sh .
 # 暴露端口
 EXPOSE 8000
 
-# 启动命令
 CMD ["/start.sh"]
