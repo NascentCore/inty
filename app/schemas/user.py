@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, EmailStr, validator
+from pydantic import BaseModel, EmailStr, field_validator, validator
 
 from app.models.user import AuthType, Gender
 
@@ -45,23 +45,37 @@ class UserUpdate(BaseModel):
 
     nickname: Optional[str] = None
     avatar: Optional[str] = None
-    email: Optional[str] = None  # 改为普通str
-    phone: Optional[str] = None
     gender: Optional[Gender] = None
-    age_group: Optional[str] = None
     description: Optional[str] = None
+    # Below fields are not allowed to be updated, should be removed
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    age_group: Optional[str] = None
     system_language: Optional[str] = None
 
-    @validator("email")
+    @field_validator("email")
     def validate_email(cls, v):
-        """宽松的邮箱验证"""
-        if v is None or v == "":
-            return v
-        if "@" in v and "." in v.split("@")[1]:
-            return v
-        if "deleted_user_" in v and "@anonymized.local" in v:
-            return v
-        return v
+        if v:
+            raise ValueError("Email is not allowed to be updated, should be removed")
+
+    @field_validator("phone")
+    def validate_phone(cls, v):
+        if v:
+            raise ValueError("Phone is not allowed to be updated, should be removed")
+
+    @field_validator("age_group")
+    def validate_age_group(cls, v):
+        if v:
+            raise ValueError(
+                "Age group is not allowed to be updated, should be removed"
+            )
+
+    @field_validator("system_language")
+    def validate_system_language(cls, v):
+        if v:
+            raise ValueError(
+                "System language is not allowed to be updated, should be removed"
+            )
 
 
 class UserInDBBase(UserBase):
