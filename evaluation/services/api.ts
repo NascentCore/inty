@@ -159,7 +159,7 @@ class ApiClient {
         console.log("Content-Type:", contentType);
         console.log("Response Headers:", Object.fromEntries(response.headers.entries()));
         console.log("Response is not JSON, returning response object");
-        return response as any;
+        return response as unknown as APIResponse;
       }
     } catch (error) {
       logError(`API请求失败: ${endpoint}, 错误信息: ${error}`);
