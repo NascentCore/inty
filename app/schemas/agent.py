@@ -1,4 +1,5 @@
 from datetime import datetime
+from enum import Enum
 from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field, field_serializer, field_validator
@@ -6,6 +7,14 @@ from pydantic import BaseModel, Field, field_serializer, field_validator
 from app.models.agent import AgentStatus, AgentVisibility
 from app.models.user import Gender
 from app.schemas.user import User
+
+
+class AgentSortOption(str, Enum):
+    """Agent sorting options"""
+    
+    CREATED_ASC = "created_asc"
+    CREATED_DESC = "created_desc"
+    RANDOM = "random"
 
 
 class ModelConfig(BaseModel):

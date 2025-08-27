@@ -2,6 +2,7 @@ from app.schemas.agent import (
     Agent,
     AgentCreate,
     AgentInDB,
+    AgentSortOption,
     AgentUpdate,
     TextToImageRequest,
     CreatorAgentStats,
