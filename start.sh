@@ -1,5 +1,22 @@
 #!/bin/bash -e
 
+DEV=false
+
+# Parse command line arguments
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    --dev)
+      DEV=true
+      shift
+      ;;
+    *)
+      echo "Unknown option: $1"
+      echo "Use --help for usage information"
+      exit 1
+      ;;
+  esac
+done
+
 # This is for launching the backend server in docker container.
 # You should use docker compose to launch the server locally.
 
@@ -7,6 +24,10 @@
 echo "Starting database migrations..."
 alembic upgrade head
 
-# Start the application
-echo "Starting application..."
-exec uvicorn app.main:app --host 0.0.0.0 --port 8000
+if [ "$DEV" = true ]; then
+  echo "Starting in development mode..."
+  uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+else
+  echo "Starting in production mode..."
+  uvicorn app.main:app --host 0.0.0.0 --port 8000
+fi

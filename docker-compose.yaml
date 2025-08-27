@@ -6,16 +6,25 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      target: base-image
     ports:
       - "8000:8000"
     volumes:
+      - ./app:/app
       - ./config.yaml:/config.yaml
+      - ./alembic:/alembic
+      - ./alembic.ini:/alembic.ini
       - ./.secrets:/.secrets
+      - ./start.sh:/start.sh
     depends_on:
       pgvector:
         condition: service_healthy
+    command: ["/start.sh", "--dev"]
     networks:
       - inty-network
+    # This does not work on mac, as docker runs container in a vm.
+    # The host networking is winthin that VM not the mac.
+    # network_mode: host
 
   pgvector:
     image: pgvector/pgvector:pg16
