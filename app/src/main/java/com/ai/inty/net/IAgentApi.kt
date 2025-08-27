@@ -27,7 +27,7 @@ interface IAgentApi {
     suspend fun recommendAgents(
         @Query("page") page: Int,
         @Query("page_size") pageSize: Int,
-        @Query("page") sort: String = "random",//三种排序 created_asc,created_desc,random
+        @Query("sort") sort: String = "random",//三种排序 created_asc,created_desc,random
     ): HttpResult<AgentInfoResponse>
 
     @GET("/api/v1/ai/agents/following")
