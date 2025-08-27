@@ -3,6 +3,10 @@
 [![Build release APK and AAB](https://github.com/NascentCore/inty-app/actions/workflows/ci.yaml/badge.svg)](https://github.com/NascentCore/inty-app/actions/workflows/ci.yaml)
 [![Build and release debug APK](https://github.com/NascentCore/inty-app/actions/workflows/debug_release.yaml/badge.svg)](https://github.com/NascentCore/inty-app/actions/workflows/debug_release.yaml)
 
+## Figma
+
+下载 SF font：https://developer.apple.com/fonts/ 下载后安装
+
 ## Key setups
 
 ```bash
@@ -90,9 +94,9 @@ Uploading key is under app signing settings:
 
 5 个底 tab，从左到右依次为：
 
-1. Chat (HomeTabIndex.Chat) - The main chat interface where users can interact with AI agents
+1. Home (HomeTabIndex.Home) - The main chat interface where users can interact with AI agents
    * 聊天：用户左右滑动浏览推荐的 AI 角色
-1. Conversation (HomeTabIndex.Conversation) - Shows conversation history and system messages
+1. Activity (HomeTabIndex.Activity) - Shows conversation history and system messages
    * 聊天历史和关注角色
 1. Create (HomeTabIndex.Create) - Special tab that navigates to role creation or login
    * 创建 AI 角色
@@ -322,7 +326,7 @@ val messages = _messages.asStateFlow()
 
 版本信息自动管理：
 
-* `versionCode`: 每次发布递增
+* `versionCode`: 取自 git commit count
 * `versionName`: 语义版本控制 (例如 1.0.1)
 * 调试构建包含 git 提交哈希: `1.0.1 (d799932)`
 * `bundletool dump manifest --bundle app/playdebug/app-playdebug.aab | grep versionCode` 查看 aab 版本信息
