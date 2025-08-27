@@ -110,13 +110,19 @@ async def recommend_agents(
     db: AsyncSession = Depends(deps.get_async_db),
     page: int = Query(1, ge=1, description="Page number, starting from 1"),
     page_size: int = Query(10, ge=1, le=100, description="Items per page, maximum 100"),
+    sort: schemas.AgentSortOption = Query(schemas.AgentSortOption.CREATED_DESC, description="Sort order: created_asc, created_desc, random"),
     current_user: schemas.User = Depends(deps.get_current_active_user),
 ) -> Any:
     """
-    Get recommended AI agents list (public and approved agents, ordered by creation time desc)
+    Get recommended AI agents list (public and approved agents)
+    
+    Sorting options:
+    - created_desc: Most recent first (default)
+    - created_asc: Oldest first 
+    - random: Random order
     """
     pagination_data = await agent_service.get_recommended_agents_paginated(
-        db, page=page, page_size=page_size, current_user_id=current_user.id
+        db, page=page, page_size=page_size, sort_by=sort, current_user_id=current_user.id
     )
     return schemas.APIResponse.success(data=pagination_data)
 

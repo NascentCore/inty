@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app import models, schemas
+from app.schemas.agent import AgentSortOption
 from app.core.agent.agent import agent_manager
 from app.core.config import global_config_loaded_from_config_yaml
 from app.models.agent import AgentStatus, AgentVisibility
@@ -361,6 +362,7 @@ async def get_recommended_agents_paginated(
     db: AsyncSession,
     page: int = 1,
     page_size: int = 10,
+    sort_by: Optional[AgentSortOption] = None,
     current_user_id: Optional[str] = None,
 ) -> schemas.PaginationData[schemas.Agent]:
     """
@@ -394,6 +396,15 @@ async def get_recommended_agents_paginated(
         count_result = await db.execute(count_query)
         total = count_result.scalar()
 
+        # 确定排序方式
+        sort_order = None
+        if sort_by == AgentSortOption.CREATED_ASC:
+            sort_order = models.Agent.created_at.asc()
+        elif sort_by == AgentSortOption.RANDOM:
+            sort_order = func.random()  # PostgreSQL/SQLite random function
+        else:  # 默认为 CREATED_DESC
+            sort_order = desc(models.Agent.created_at)
+
         # 获取分页数据包含关注者数量
         data_query = (
             select(
@@ -412,7 +423,7 @@ async def get_recommended_agents_paginated(
             .group_by(models.Agent.id)
             .offset(skip)
             .limit(page_size)
-            .order_by(desc(models.Agent.created_at))
+            .order_by(sort_order)
         )
 
         result = await db.execute(data_query)
