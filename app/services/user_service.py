@@ -24,55 +24,33 @@ logger = logging.getLogger(__name__)
 
 async def generate_next_readable_id(db: AsyncSession) -> str:
     """
-    Generate next readable ID for user, starting from 10000000
+    Generate next readable ID for user using database sequence for thread safety
     """
     try:
-        # Get the maximum readable_id from the database
-        result = await db.execute(
-            text(
-                "SELECT MAX(CAST(readable_id AS INTEGER)) FROM users WHERE readable_id ~ '^[0-9]+$'"
-            )
-        )
-        max_id = result.scalar()
-
-        if max_id is None or max_id < 10000000:
-            next_id = 10000000
-        else:
-            next_id = max_id + 1
-
+        # Use database sequence to generate next readable_id atomically
+        result = await db.execute(text("SELECT nextval('user_readable_id_seq')"))
+        next_id = result.scalar()
         return str(next_id).zfill(8)
     except Exception as e:
-        logger.error(f"Error generating readable ID: {str(e)}")
+        logger.error(f"Error generating readable ID from sequence: {str(e)}")
         # Fallback to a random 8-digit number starting from 10000000
         import random
-
         return str(random.randint(10000000, 99999999))
 
 
 def generate_next_readable_id_sync(db: Session) -> str:
     """
-    Generate next readable ID for user, starting from 10000000 (sync version)
+    Generate next readable ID for user using database sequence for thread safety (sync version)
     """
     try:
-        # Get the maximum readable_id from the database
-        result = db.execute(
-            text(
-                "SELECT MAX(CAST(readable_id AS INTEGER)) FROM users WHERE readable_id ~ '^[0-9]+$'"
-            )
-        )
-        max_id = result.scalar()
-
-        if max_id is None or max_id < 10000000:
-            next_id = 10000000
-        else:
-            next_id = max_id + 1
-
+        # Use database sequence to generate next readable_id atomically
+        result = db.execute(text("SELECT nextval('user_readable_id_seq')"))
+        next_id = result.scalar()
         return str(next_id).zfill(8)
     except Exception as e:
-        logger.error(f"Error generating readable ID: {str(e)}")
+        logger.error(f"Error generating readable ID from sequence: {str(e)}")
         # Fallback to a random 8-digit number starting from 10000000
         import random
-
         return str(random.randint(10000000, 99999999))
 
 
@@ -327,7 +305,7 @@ async def delete_user_account(
     db: AsyncSession,
     user_id: str,
     deletion_reason: str = "用户主动删除",
-    processor_id: str = None,
+    processor_id: Optional[str] = None,
 ) -> dict:
     """
     删除用户账户
@@ -360,9 +338,6 @@ async def delete_user_account(
 
         subscription_status_response = (
             await subscription_service.get_user_subscription_status(db, user_id)
-        )
-        subscription_status = (
-            "active" if subscription_status_response.is_subscribed else "inactive"
         )
 
         # 如果用户有活跃订阅，先取消订阅
