@@ -159,7 +159,7 @@ class ApiClient {
         console.log("Content-Type:", contentType);
         console.log("Response Headers:", Object.fromEntries(response.headers.entries()));
         console.log("Response is not JSON, returning response object");
-        return response as unknown as APIResponse;
+        return response as any;
       }
     } catch (error) {
       logError(`API请求失败: ${endpoint}, 错误信息: ${error}`);
@@ -348,8 +348,8 @@ export const agentApi = {
     }),
 
   // 上传头像
-  uploadAvatar: (file: File, enableCropping: boolean = true): Promise<any> =>
-    apiClient.upload("/images", file, { enable_cropping: enableCropping }),
+  uploadAvatar: (file: File, croppingAvatar: boolean = true): Promise<any> =>
+    apiClient.upload("/images", file, { cropping_avatar: croppingAvatar }),
 };
 
 // =============================================================================
