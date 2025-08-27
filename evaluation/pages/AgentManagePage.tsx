@@ -206,11 +206,9 @@ export const AgentManagePage: React.FC = () => {
       // 如果有头像文件，先上传
       if (avatarFile) {
         try {
-          const uploadResult = await api.agents.uploadAvatar(avatarFile, true); // Enable cropping for avatar
-          // 根据后端 APIResponse 格式，图片URL在 data 字段中
-          avatarUrl = uploadResult.data?.avatar_url || uploadResult.data?.url;
-          backgroundUrl = uploadResult.data?.url;
-          message.info(`上传结果: ${JSON.stringify(uploadResult)}`);
+          const uploadResult = await api.agents.uploadAvatar(avatarFile);
+          avatarUrl = uploadResult.avatar_url || uploadResult.data?.avatar_url;
+          backgroundUrl = uploadResult.url || uploadResult.data?.url;
           if (backgroundUrl) {
             backgroundImages = [backgroundUrl];
           }
@@ -227,6 +225,8 @@ export const AgentManagePage: React.FC = () => {
         background: backgroundUrl,
         background_images: backgroundImages,
       };
+
+
 
       // 如果选择了自定义模型，添加LLM配置
       if (values.modelType === "custom") {
@@ -270,16 +270,9 @@ export const AgentManagePage: React.FC = () => {
       // 如果有新头像文件，先上传
       if (editAvatarFile) {
         try {
-          const uploadResult = await api.agents.uploadAvatar(editAvatarFile, true); // Enable cropping for avatar
-          avatarUrl = uploadResult.data?.avatar_url || uploadResult.data?.url;
-          backgroundUrl = uploadResult.data?.url;
-          message.info(`上传结果: ${JSON.stringify(uploadResult)}`);
-
-          // Update the preview with the actual uploaded image URL
-          if (avatarUrl) {
-            setEditAvatarPreview(avatarUrl);
-          }
-
+          const uploadResult = await api.agents.uploadAvatar(editAvatarFile);
+          avatarUrl = uploadResult.avatar_url || uploadResult.data?.avatar_url;
+          backgroundUrl = uploadResult.url || uploadResult.data?.url;
           if (backgroundUrl) {
             backgroundImages = [backgroundUrl];
           }
@@ -308,23 +301,13 @@ export const AgentManagePage: React.FC = () => {
         };
       }
       await api.agents.update(currentAgent.id, updateData);
-      
-      // 显示更详细的成功信息
-      if (editAvatarFile) {
-        message.success("智能体更新成功！头像已更新，1.5秒后自动关闭");
-      } else {
-        message.success("智能体更新成功！");
-      }
-      
-      // 延迟关闭模态框，让用户看到更新后的头像
-      setTimeout(() => {
-        setEditModalVisible(false);
-        setCurrentAgent(null);
-        editForm.resetFields();
-        setEditAvatarFile(null);
-        setEditAvatarPreview("");
-        loadAgents();
-      }, 1500); // 延迟1.5秒关闭
+      message.success("智能体更新成功");
+      setEditModalVisible(false);
+      setCurrentAgent(null);
+      editForm.resetFields();
+      setEditAvatarFile(null);
+      setEditAvatarPreview("");
+      loadAgents();
     } catch (error) {
 
       message.error("更新智能体失败，请重试");
@@ -400,8 +383,8 @@ export const AgentManagePage: React.FC = () => {
   // 渲染表单字段
   const renderAgentForm = (form: any, isEdit = false) => (
     <>
-      {/* 形像图片上传 */}
-      <Form.Item label="角色形像">
+      {/* 头像上传 */}
+      <Form.Item label="形像">
         <Upload
           beforeUpload={isEdit ? handleEditAvatarChange : handleAvatarChange}
           showUploadList={false}
@@ -437,9 +420,11 @@ export const AgentManagePage: React.FC = () => {
           </div>
         </Upload>
         <div style={{ marginTop: 8, fontSize: 12, color: "#666" }}>
-          上传形像图片后，系统会将其设置为聊天背景图，并从形像图片中扣脸作为 Avatar
+          上传头像后，系统会自动设置背景图为原图，头像为裁剪后的版本
         </div>
       </Form.Item>
+
+
 
       {/* 基本信息 */}
       <Row gutter={16}>
@@ -797,12 +782,6 @@ export const AgentManagePage: React.FC = () => {
           editForm.resetFields();
           setEditAvatarFile(null);
           setEditAvatarPreview("");
-        }}
-        afterClose={() => {
-          // 确保模态框完全关闭后重置状态
-          setEditAvatarFile(null);
-          setEditAvatarPreview("");
-          setCurrentAgent(null);
         }}
         confirmLoading={saveLoading}
         width={800}
