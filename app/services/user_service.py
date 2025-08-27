@@ -173,7 +173,10 @@ async def update_user(db: AsyncSession, user_id: str, user_in: UserUpdate) -> Us
             setattr(user, field, value)
 
         await db.commit()
+        original_user = user.model_dump()
         await db.refresh(user)
+        logger.debug(f"Original user: {original_user}")
+        logger.debug(f"Updated user: {user}")
 
         # 清除用户信息缓存，确保Agent系统能获取到最新信息
         cache_service.invalidate_user_info(user_id)
