@@ -20,6 +20,7 @@ from app.core.agent.agent import agent_manager
 from app.utils.crop_avatar import crop_avatar
 from app.utils.gemini import ImagenGeneratedImage, text_to_image
 from app.core.config import global_config_loaded_from_config_yaml
+from app.utils.image_upload import process_image_upload
 from app.schemas.character_card import (
     CharacterCardExportRequest,
     CharacterCardImportRequest,
@@ -463,111 +464,13 @@ async def upload_avatar_preview(
     上传头像文件，返回URL供创建agent时使用
     """
     try:
-        if not file.content_type:
-            logger.error("File content type is required")
-            return APIResponse.error(
-                message="File content type is required",
-                data={
-                    "error_code": "FILE_CONTENT_TYPE_REQUIRED",
-                    "error_message": "File content type is required",
-                },
-            )
-
-        if not file.content_type.startswith("image/"):
-            logger.error(f"不支持的文件类型: {file.content_type}")
-            return APIResponse.error(message="Only image files are allowed")
-
-        max_size_bytes = (
-            global_config_loaded_from_config_yaml.app.limits.max_image_size_mb
-            * 1024
-            * 1024
+        # Use helper function to process image upload
+        return await process_image_upload(
+            file=file,
+            user_id=current_user.id,
+            base_path="avatars/tmp",
+            enable_cropping=True,
         )
-
-        file_data = await file.read()
-        file_size = len(file_data)
-        logger.debug(f"文件实际大小: {file_size} bytes")
-
-        if file_size > max_size_bytes:
-            logger.error(f"文件大小超出限制: {file_size} > {max_size_bytes}")
-            return APIResponse.error(message="File size exceeds 10MB limit")
-
-        if not file.filename:
-            logger.error("Filename is required")
-            return APIResponse.error(message="Filename is required")
-
-        if "." not in file.filename:
-            logger.error(f"文件名格式错误，缺少扩展名: {file.filename}")
-            return APIResponse.error(message="Invalid filename")
-
-        file_ext = file.filename.split(".")[-1].lower()
-        logger.debug(f"文件扩展名: {file_ext}")
-        allowed_extensions = [
-            ImageFormat.JPG,
-            ImageFormat.JPEG,
-            ImageFormat.PNG,
-            ImageFormat.WEBP,
-        ]
-        if file_ext not in allowed_extensions:
-            logger.error(
-                f"不支持的文件扩展名: {file_ext}，支持的格式: {allowed_extensions}"
-            )
-            return APIResponse.error(
-                message="Unsupported file type, only jpg, jpeg, png, webp formats are supported"
-            )
-
-        # Always compress PNG, and also compress if file is > 500KB.
-        # We might adjust the threshold value of 500KB in the future.
-        # The rationale is that on a smart phone, 500KB JPEG should be sufficient.
-        # PNG is a lossless format, so we can compress it to JPEG to save space.
-        if file_ext == ImageFormat.PNG or len(file_data) > 500 * 1024:
-            file_data = compress_png_to_jpeg(file_data)
-            file_ext = ImageFormat.JPEG
-            logger.debug(
-                f"Compressed PNG ({file_size} bytes) to JPEG ({len(file_data)} bytes)"
-            )
-
-        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-        unique_id = uuid.uuid4().hex[:8]
-        avatar_path = (
-            f"avatars/tmp/{current_user.id}/{timestamp}-{unique_id}.{file_ext}"
-        )
-        cropped_avatar_path = (
-            f"avatars/tmp/{current_user.id}/{timestamp}-{unique_id}-cropped.{file_ext}"
-        )
-
-        cropped_avatar = crop_avatar(file_data)
-
-        # Convert PIL Image to bytes for GCS upload
-        import io
-
-        cropped_avatar_bytes = io.BytesIO()
-        cropped_avatar.save(cropped_avatar_bytes, format=ImageFormat.JPEG)
-        cropped_avatar_bytes.seek(0)
-        cropped_avatar_data = cropped_avatar_bytes.getvalue()
-
-        url = upload_to_gcs(
-            file_data,
-            file.content_type,
-            global_config_loaded_from_config_yaml.gcs.bucket,
-            avatar_path,
-        )
-        cropped_avatar_url = upload_to_gcs(
-            cropped_avatar_data,
-            f"image/{ImageFormat.JPEG}",  # Cropped image is always JPEG
-            global_config_loaded_from_config_yaml.gcs.bucket,
-            cropped_avatar_path,
-        )
-        logger.debug(f"GCS上传成功，返回URL: {url} {cropped_avatar_url}")
-
-        response_data = {
-            "url": url,
-            "avatar_url": cropped_avatar_url,
-            "filename": file.filename,
-            "size": file_size,
-            "content_type": file.content_type,
-        }
-        return APIResponse.success(data=response_data)
-
     except ValueError as e:
         logger.error(f"文件验证错误: {str(e)}")
         logger.error(f"验证错误堆栈: {traceback.format_exc()}")

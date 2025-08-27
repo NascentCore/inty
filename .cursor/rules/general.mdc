@@ -14,3 +14,4 @@ alwaysApply: true
 * Do not write comments that repeat what's shown in the code
 * Do not use magic numbers, always define variable, constants, etc.
 * When logging, prefer logger.debug(), which is turned off by default and in prod
+* Do not write summary to README.md, i.e., do not create README.md to summarize your changes
