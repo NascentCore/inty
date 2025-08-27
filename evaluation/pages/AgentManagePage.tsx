@@ -207,8 +207,8 @@ export const AgentManagePage: React.FC = () => {
       if (avatarFile) {
         try {
           const uploadResult = await api.agents.uploadAvatar(avatarFile, true); // Enable cropping for avatar
-          avatarUrl = uploadResult.data?.avatar_url || uploadResult.data?.url;
-          backgroundUrl = uploadResult.data?.background_url || uploadResult.data?.url;
+          avatarUrl = uploadResult.avatar_url || uploadResult.url;
+          backgroundUrl = uploadResult.url;
           if (backgroundUrl) {
             backgroundImages = [backgroundUrl];
           }
@@ -276,7 +276,6 @@ export const AgentManagePage: React.FC = () => {
           if (backgroundUrl) {
             backgroundImages = [backgroundUrl];
           }
-          message.info(`上传结果: ${JSON.stringify(uploadResult)}`);
         } catch (uploadError) {
           logError(`头像上传失败，请重试，错误信息：${uploadError.message}`);
           return;
