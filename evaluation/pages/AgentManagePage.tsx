@@ -228,8 +228,6 @@ export const AgentManagePage: React.FC = () => {
         background_images: backgroundImages,
       };
 
-
-
       // 如果选择了自定义模型，添加LLM配置
       if (values.modelType === "custom") {
         agentData.llm_config = {
