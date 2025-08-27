@@ -206,9 +206,9 @@ export const AgentManagePage: React.FC = () => {
       // 如果有头像文件，先上传
       if (avatarFile) {
         try {
-          const uploadResult = await api.agents.uploadAvatar(avatarFile);
-          avatarUrl = uploadResult.avatar_url || uploadResult.data?.avatar_url;
-          backgroundUrl = uploadResult.url || uploadResult.data?.url;
+          const uploadResult = await api.agents.uploadAvatar(avatarFile, true); // Enable cropping for avatar
+          avatarUrl = uploadResult.data?.avatar_url || uploadResult.data?.url;
+          backgroundUrl = uploadResult.data?.background_url || uploadResult.data?.url;
           if (backgroundUrl) {
             backgroundImages = [backgroundUrl];
           }
@@ -270,12 +270,13 @@ export const AgentManagePage: React.FC = () => {
       // 如果有新头像文件，先上传
       if (editAvatarFile) {
         try {
-          const uploadResult = await api.agents.uploadAvatar(editAvatarFile);
-          avatarUrl = uploadResult.avatar_url || uploadResult.data?.avatar_url;
-          backgroundUrl = uploadResult.url || uploadResult.data?.url;
+          const uploadResult = await api.agents.uploadAvatar(editAvatarFile, true); // Enable cropping for avatar
+          avatarUrl = uploadResult.avatar_url || uploadResult.url;
+          backgroundUrl = uploadResult.url;
           if (backgroundUrl) {
             backgroundImages = [backgroundUrl];
           }
+          message.info(`上传结果: ${JSON.stringify(uploadResult)}`);
         } catch (uploadError) {
           logError(`头像上传失败，请重试，错误信息：${uploadError.message}`);
           return;

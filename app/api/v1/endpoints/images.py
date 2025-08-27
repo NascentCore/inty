@@ -5,7 +5,7 @@ Images endpoints for general image upload functionality.
 import traceback
 from typing import Any
 
-from fastapi import APIRouter, Depends, File, UploadFile
+from fastapi import APIRouter, Depends, File, UploadFile, Form
 from loguru import logger
 
 from app import schemas
@@ -25,7 +25,8 @@ router = APIRouter(prefix="/images", route_class=LoggerRoute)
     summary="Upload image and get the URL of the image",
 )
 async def upload_image(
-    request: ImageUploadRequest = Depends(),
+    file: UploadFile = File(...),
+    enable_cropping: bool = Form(False),
     current_user: schemas.User = Depends(deps.get_current_active_user),
 ) -> APIResponse[dict]:
     """
@@ -33,7 +34,8 @@ async def upload_image(
     This endpoint reuses the same logic as the agent avatar upload endpoint.
 
     Args:
-        request: The image upload request containing file and options
+        file: The uploaded image file
+        enable_cropping: Whether to enable avatar cropping (default: False)
         current_user: Current authenticated user
 
     Returns:
@@ -42,10 +44,10 @@ async def upload_image(
     try:
         # Use helper function to process image upload
         return await process_image_upload(
-            file=request.file,
+            file=file,
             user_id=current_user.id,
             base_path="images/uploads",
-            enable_cropping=request.enable_cropping,  # Use the request parameter
+            enable_cropping=enable_cropping,  # Use the direct parameter
         )
     except ValueError as e:
         logger.error(f"文件验证错误: {str(e)}")
