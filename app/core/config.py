@@ -80,6 +80,7 @@ class AppConfig:
         max_image_size_mb: int = 4
         free_user_image_gen_daily_limit: int = 4
         free_user_chat_total_limit: int = 100
+        image_compression_threshold_size_kb: int = 500
 
     limits: LimitsConfig = None
 
