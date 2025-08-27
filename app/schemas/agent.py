@@ -11,7 +11,7 @@ from app.schemas.user import User
 
 class AgentSortOption(str, Enum):
     """Agent sorting options"""
-    
+
     CREATED_ASC = "created_asc"
     CREATED_DESC = "created_desc"
     RANDOM = "random"
