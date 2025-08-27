@@ -6,10 +6,11 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      target: base-image
+      target: base
     ports:
       - "8000:8000"
     volumes:
+      # Mount code to enable hot reload.
       - ./app:/app
       - ./config.yaml:/config.yaml
       - ./alembic:/alembic
