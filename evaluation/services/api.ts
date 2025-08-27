@@ -348,8 +348,8 @@ export const agentApi = {
     }),
 
   // 上传头像
-  uploadAvatar: (file: File, enableCropping: boolean = true): Promise<any> =>
-    apiClient.upload("/images", file, { enable_cropping: enableCropping }),
+  uploadAvatar: (file: File, croppingAvatar: boolean = true): Promise<any> =>
+    apiClient.upload("/images", file, { cropping_avatar: croppingAvatar }),
 };
 
 // =============================================================================

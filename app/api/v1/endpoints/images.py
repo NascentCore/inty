@@ -25,7 +25,7 @@ router = APIRouter(prefix="/images", route_class=LoggerRoute)
 )
 async def upload_image(
     file: UploadFile = File(...),
-    enable_cropping: bool = Form(False),
+    cropping_avatar: bool = Form(False),
     current_user: schemas.User = Depends(deps.get_current_active_user),
 ) -> APIResponse[dict]:
     """
@@ -34,7 +34,7 @@ async def upload_image(
 
     Args:
         file: The uploaded image file
-        enable_cropping: Whether to enable avatar cropping (default: False)
+        cropping_avatar: Whether to enable avatar cropping (default: False)
         current_user: Current authenticated user
 
     Returns:
@@ -46,7 +46,7 @@ async def upload_image(
             file=file,
             user_id=current_user.id,
             base_path="images/uploads",
-            enable_cropping=enable_cropping,  # Use the direct parameter
+            cropping_avatar=cropping_avatar,  # Use the direct parameter
         )
     except ValueError as e:
         logger.error(f"文件验证错误: {str(e)}")

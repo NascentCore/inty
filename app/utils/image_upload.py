@@ -21,19 +21,19 @@ async def process_image_upload(
     file: UploadFile,
     user_id: str,
     base_path: str = "uploads/images",
-    enable_cropping: bool = False,
+    cropping_avatar: bool = False,
     max_size_mb: int = global_config_loaded_from_config_yaml.app.limits.max_image_size_mb,
 ) -> APIResponse[dict]:
     """
     Helper function to process image upload with validation, compression, and GCS upload.
-    
+
     Args:
         file: The uploaded file
         user_id: User ID for creating unique file paths
         base_path: Base path for file storage (e.g., "avatars/tmp", "uploads/images")
-        enable_cropping: Whether to enable avatar cropping (requires crop_avatar utility)
+        cropping_avatar: Whether to enable avatar cropping (requires crop_avatar utility)
         max_size_mb: Maximum file size in MB (overrides config if provided)
-    
+
     Returns:
         APIResponse with success/error status and data
     """
@@ -129,7 +129,7 @@ async def process_image_upload(
     response_data = { "url": url }
 
     # Handle cropping if enabled
-    if enable_cropping:
+    if cropping_avatar:
         cropped_avatar = crop_avatar(file_data)
 
         # Convert PIL Image to bytes for GCS upload

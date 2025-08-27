@@ -475,7 +475,7 @@ async def upload_avatar_preview(
             file=file,
             user_id=current_user.id,
             base_path="avatars/tmp",
-            enable_cropping=True,
+            cropping_avatar=True,
         )
     except ValueError as e:
         logger.error(f"文件验证错误: {str(e)}")
