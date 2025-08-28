@@ -923,7 +923,7 @@ export const ChatPage: React.FC = () => {
                         {isGuestMode ? "游客" : "用户"}
                       </Button>
                     </Tooltip>
-                    <Tooltip title="LangSmith">
+                    <Tooltip title="打开 LangSmith 监控">
                       <Button
                         icon={
                           <img
@@ -952,7 +952,7 @@ export const ChatPage: React.FC = () => {
                       />
                     </Tooltip>
 
-                    <Tooltip title="聊天历史">
+                    <Tooltip title="查看聊天历史">
                       <Button
                         icon={<HistoryOutlined />}
                         onClick={handleShowChatHistory}

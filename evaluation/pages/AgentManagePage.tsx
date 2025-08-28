@@ -333,7 +333,7 @@ export const AgentManagePage: React.FC = () => {
   const setCreateFormDefaults = () => {
     setTimeout(() => {
       const defaultValues = {
-        name: "新智能体",
+        name: "测试角色",
         gender: "FEMALE",
         visibility: "PRIVATE",
         modelType: "default",
