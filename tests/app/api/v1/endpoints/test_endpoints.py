@@ -31,7 +31,7 @@ def test_upload_avatar():
         files = {"file": ("test.png", f, "image/png")}
 
         response = requests.post(
-            f"{base_url}/api/v1/ai/agents/upload-avatar",
+            f"{base_url}/api/v1/images",
             headers=headers,
             files=files,
         )

@@ -1,7 +1,7 @@
 {
     "openapi": "3.1.0",
     "info": {
-        "title": "InTy",
+        "title": "inty-backend",
         "description": "InTy",
         "version": "1.0.2"
     },
@@ -145,52 +145,6 @@
                             "application/json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/User"
-                                }
-                            }
-                        }
-                    },
-                    "422": {
-                        "description": "Validation Error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/HTTPValidationError"
-                                }
-                            }
-                        }
-                    }
-                },
-                "security": [
-                    {
-                        "Bearer": []
-                    }
-                ]
-            }
-        },
-        "/api/v1/users/avatar": {
-            "post": {
-                "tags": [
-                    "users"
-                ],
-                "summary": "Upload Avatar",
-                "operationId": "upload_avatar_api_v1_users_avatar_post",
-                "requestBody": {
-                    "content": {
-                        "multipart/form-data": {
-                            "schema": {
-                                "$ref": "#/components/schemas/Body_upload_avatar_api_v1_users_avatar_post"
-                            }
-                        }
-                    },
-                    "required": true
-                },
-                "responses": {
-                    "200": {
-                        "description": "Successful Response",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/APIResponse_User_"
                                 }
                             }
                         }
@@ -515,7 +469,8 @@
         "/api/v1/ai/agents/me": {
             "get": {
                 "tags": [
-                    "agents"
+                    "agents",
+                    "characters"
                 ],
                 "summary": "Get list of user's created AI characters",
                 "description": "This endpoint is used by an registered user to list their created AI characters (agents as a misnomer)",
@@ -574,7 +529,8 @@
         "/api/v1/ai/agents/search": {
             "get": {
                 "tags": [
-                    "agents"
+                    "agents",
+                    "characters"
                 ],
                 "summary": "Used by inty-eval to list all public AI characters",
                 "description": "Search public AI agents\nSupport fuzzy search by name, description, category",
@@ -651,10 +607,11 @@
         "/api/v1/ai/agents/recommend": {
             "get": {
                 "tags": [
-                    "agents"
+                    "agents",
+                    "characters"
                 ],
                 "summary": "Recommend Agents",
-                "description": "Get recommended AI agents list (public and approved agents, ordered by creation time desc)",
+                "description": "Get recommended AI agents list (public and approved agents)\n\nSorting options:\n- created_desc: Most recent first (default)\n- created_asc: Oldest first \n- random: Random order",
                 "operationId": "recommend_agents_api_v1_ai_agents_recommend_get",
                 "security": [
                     {
@@ -688,6 +645,17 @@
                             "title": "Page Size"
                         },
                         "description": "Items per page, maximum 100"
+                    },
+                    {
+                        "name": "sort",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "$ref": "#/components/schemas/AgentSortOption",
+                            "description": "Sort order: created_asc, created_desc, random",
+                            "default": "created_desc"
+                        },
+                        "description": "Sort order: created_asc, created_desc, random"
                     }
                 ],
                 "responses": {
@@ -717,7 +685,8 @@
         "/api/v1/ai/agents/following": {
             "get": {
                 "tags": [
-                    "agents"
+                    "agents",
+                    "characters"
                 ],
                 "summary": "Get Following Agents",
                 "description": "Get current user's followed AI agents list",
@@ -783,7 +752,8 @@
         "/api/v1/ai/agents/": {
             "post": {
                 "tags": [
-                    "agents"
+                    "agents",
+                    "characters"
                 ],
                 "summary": "Create Agent",
                 "description": "Create new AI agent\n\n推荐使用角色卡字段构建AI角色：\n- personality: 角色性格特点 (推荐)\n- scenario: 背景设定 (推荐)\n- first_message: 开场白\n- message_example: 对话示例\n\n兼容性说明：\n- 仍支持legacy的prompt字段\n- 如果同时提供prompt和角色卡字段，将优先使用角色卡字段\n- 建议新创建的角色使用角色卡字段以获得更好的效果",
@@ -830,7 +800,8 @@
         "/api/v1/ai/agents/{agent_id}": {
             "get": {
                 "tags": [
-                    "agents"
+                    "agents",
+                    "characters"
                 ],
                 "summary": "Get public agent by ID",
                 "description": "Get public agent by ID, include pre-generated agents and user-created public agents",
@@ -876,7 +847,8 @@
             },
             "put": {
                 "tags": [
-                    "agents"
+                    "agents",
+                    "characters"
                 ],
                 "summary": "Update Agent",
                 "description": "Update AI agent",
@@ -932,7 +904,8 @@
             },
             "delete": {
                 "tags": [
-                    "agents"
+                    "agents",
+                    "characters"
                 ],
                 "summary": "Delete Agent",
                 "description": "Delete AI agent",
@@ -980,7 +953,8 @@
         "/api/v1/ai/agents/{agent_id}/follow": {
             "post": {
                 "tags": [
-                    "agents"
+                    "agents",
+                    "characters"
                 ],
                 "summary": "Follow Agent",
                 "description": "Follow AI agent",
@@ -1026,7 +1000,8 @@
             },
             "delete": {
                 "tags": [
-                    "agents"
+                    "agents",
+                    "characters"
                 ],
                 "summary": "Unfollow Agent",
                 "description": "Unfollow AI agent",
@@ -1074,7 +1049,8 @@
         "/api/v1/ai/agents/text-to-image": {
             "post": {
                 "tags": [
-                    "agents"
+                    "agents",
+                    "characters"
                 ],
                 "summary": "Generate images based on text description",
                 "description": "Generate background images based on prompt, save directly to GCS, return image URLs",
@@ -1121,7 +1097,8 @@
         "/api/v1/ai/agents/generate_background": {
             "post": {
                 "tags": [
-                    "agents"
+                    "agents",
+                    "characters"
                 ],
                 "summary": "Deprecated, use /text-to-image instead",
                 "description": "Generate background images based on prompt, save directly to GCS, return image URLs",
@@ -1166,294 +1143,11 @@
                 ]
             }
         },
-        "/api/v1/ai/agents/upload-avatar": {
-            "post": {
-                "tags": [
-                    "agents"
-                ],
-                "summary": "Inty-eval: Upload avatar image cropped from a generated image for an AI character",
-                "description": "Used by inty-eval to upload avatar image cropped from a generated image for an AI character",
-                "operationId": "upload_avatar_preview_api_v1_ai_agents_upload_avatar_post",
-                "requestBody": {
-                    "content": {
-                        "multipart/form-data": {
-                            "schema": {
-                                "$ref": "#/components/schemas/Body_upload_avatar_preview_api_v1_ai_agents_upload_avatar_post"
-                            }
-                        }
-                    },
-                    "required": true
-                },
-                "responses": {
-                    "200": {
-                        "description": "Successful Response",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/APIResponse_dict_"
-                                }
-                            }
-                        }
-                    },
-                    "422": {
-                        "description": "Validation Error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/HTTPValidationError"
-                                }
-                            }
-                        }
-                    }
-                },
-                "security": [
-                    {
-                        "Bearer": []
-                    }
-                ]
-            }
-        },
-        "/api/v1/ai/agents/{agent_id}/avatar": {
-            "post": {
-                "tags": [
-                    "agents"
-                ],
-                "summary": "Upload Agent Avatar",
-                "description": "上传AI角色头像",
-                "operationId": "upload_agent_avatar_api_v1_ai_agents__agent_id__avatar_post",
-                "security": [
-                    {
-                        "Bearer": []
-                    }
-                ],
-                "parameters": [
-                    {
-                        "name": "agent_id",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "string",
-                            "title": "Agent Id"
-                        }
-                    }
-                ],
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "multipart/form-data": {
-                            "schema": {
-                                "$ref": "#/components/schemas/Body_upload_agent_avatar_api_v1_ai_agents__agent_id__avatar_post"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "200": {
-                        "description": "Successful Response",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/APIResponse_Agent_"
-                                }
-                            }
-                        }
-                    },
-                    "422": {
-                        "description": "Validation Error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/HTTPValidationError"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/ai/agents/{agent_id}/background": {
-            "post": {
-                "tags": [
-                    "agents"
-                ],
-                "summary": "Upload Agent Background",
-                "description": "上传AI角色背景图",
-                "operationId": "upload_agent_background_api_v1_ai_agents__agent_id__background_post",
-                "security": [
-                    {
-                        "Bearer": []
-                    }
-                ],
-                "parameters": [
-                    {
-                        "name": "agent_id",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "string",
-                            "title": "Agent Id"
-                        }
-                    }
-                ],
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "multipart/form-data": {
-                            "schema": {
-                                "$ref": "#/components/schemas/Body_upload_agent_background_api_v1_ai_agents__agent_id__background_post"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "200": {
-                        "description": "Successful Response",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/APIResponse_Agent_"
-                                }
-                            }
-                        }
-                    },
-                    "422": {
-                        "description": "Validation Error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/HTTPValidationError"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/ai/agents/{agent_id}/set-background": {
-            "post": {
-                "tags": [
-                    "agents"
-                ],
-                "summary": "Set Current Background",
-                "description": "Set current background image from background images list",
-                "operationId": "set_current_background_api_v1_ai_agents__agent_id__set_background_post",
-                "security": [
-                    {
-                        "Bearer": []
-                    }
-                ],
-                "parameters": [
-                    {
-                        "name": "agent_id",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "string",
-                            "title": "Agent Id"
-                        }
-                    },
-                    {
-                        "name": "background_url",
-                        "in": "query",
-                        "required": true,
-                        "schema": {
-                            "type": "string",
-                            "description": "Background image URL to set as current",
-                            "title": "Background Url"
-                        },
-                        "description": "Background image URL to set as current"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Successful Response",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/APIResponse_Agent_"
-                                }
-                            }
-                        }
-                    },
-                    "422": {
-                        "description": "Validation Error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/HTTPValidationError"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/ai/agents/{agent_id}/save-backgrounds": {
-            "post": {
-                "tags": [
-                    "agents"
-                ],
-                "summary": "Save Background Images",
-                "description": "Save generated background images to agent's background images list",
-                "operationId": "save_background_images_api_v1_ai_agents__agent_id__save_backgrounds_post",
-                "security": [
-                    {
-                        "Bearer": []
-                    }
-                ],
-                "parameters": [
-                    {
-                        "name": "agent_id",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "string",
-                            "title": "Agent Id"
-                        }
-                    },
-                    {
-                        "name": "background_urls",
-                        "in": "query",
-                        "required": true,
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "type": "string"
-                            },
-                            "description": "List of background image URLs to save",
-                            "title": "Background Urls"
-                        },
-                        "description": "List of background image URLs to save"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Successful Response",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/APIResponse_Agent_"
-                                }
-                            }
-                        }
-                    },
-                    "422": {
-                        "description": "Validation Error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/HTTPValidationError"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
         "/api/v1/ai/agents/creator/{creator_id}/stats": {
             "get": {
                 "tags": [
-                    "agents"
+                    "agents",
+                    "characters"
                 ],
                 "summary": "Get Creator Agent Stats",
                 "description": "获取创建者的公共角色统计信息\n返回创建者创建的公共角色数量和所有公共角色的总关注数",
@@ -1502,7 +1196,8 @@
         "/api/v1/ai/agents/{agent_id}/prompt": {
             "get": {
                 "tags": [
-                    "agents"
+                    "agents",
+                    "characters"
                 ],
                 "summary": "Get Agent Prompt",
                 "description": "获取Agent的最终提示词",
@@ -1550,7 +1245,8 @@
         "/api/v1/ai/agents/{agent_id}/prompt/preview": {
             "get": {
                 "tags": [
-                    "agents"
+                    "agents",
+                    "characters"
                 ],
                 "summary": "Preview Agent Prompt",
                 "description": "预览Agent使用指定模版的提示词",
@@ -1968,6 +1664,54 @@
                         }
                     }
                 }
+            }
+        },
+        "/api/v1/images": {
+            "post": {
+                "tags": [
+                    "images",
+                    "resources"
+                ],
+                "summary": "Upload image and get the URL of the image",
+                "description": "Upload image file with validation, compression, and GCS storage",
+                "operationId": "upload_image_api_v1_images_post",
+                "requestBody": {
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Body_upload_image_api_v1_images_post"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/APIResponse_dict_"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ]
             }
         },
         "/api/v1/settings/": {
@@ -2980,32 +2724,6 @@
                 "type": "object",
                 "title": "APIResponse[UsageStatisticsResponse]"
             },
-            "APIResponse_User_": {
-                "properties": {
-                    "code": {
-                        "type": "integer",
-                        "title": "Code",
-                        "default": 200
-                    },
-                    "message": {
-                        "type": "string",
-                        "title": "Message",
-                        "default": "success"
-                    },
-                    "data": {
-                        "anyOf": [
-                            {
-                                "$ref": "#/components/schemas/User"
-                            },
-                            {
-                                "type": "null"
-                            }
-                        ]
-                    }
-                },
-                "type": "object",
-                "title": "APIResponse[User]"
-            },
             "APIResponse_VersionCheckResponse_": {
                 "properties": {
                     "code": {
@@ -3832,6 +3550,16 @@
                 "title": "AgentCreate",
                 "description": "创建AI角色\n\n推荐使用方式：\n1. 使用personality + scenario字段构建角色\n2. 添加first_message作为开场白\n3. 可选添加message_example展示对话风格\n\n兼容性说明：\n- 仍支持使用prompt字段 (legacy模式)\n- 优先级：角色卡字段 > prompt字段"
             },
+            "AgentSortOption": {
+                "type": "string",
+                "enum": [
+                    "created_asc",
+                    "created_desc",
+                    "random"
+                ],
+                "title": "AgentSortOption",
+                "description": "Agent sorting options"
+            },
             "AgentStatus": {
                 "type": "string",
                 "enum": [
@@ -4180,61 +3908,24 @@
                 "title": "AuthType",
                 "description": "认证类型"
             },
-            "Body_upload_agent_avatar_api_v1_ai_agents__agent_id__avatar_post": {
+            "Body_upload_image_api_v1_images_post": {
                 "properties": {
                     "file": {
                         "type": "string",
                         "format": "binary",
                         "title": "File"
+                    },
+                    "cropping_avatar": {
+                        "type": "boolean",
+                        "title": "Cropping Avatar",
+                        "default": false
                     }
                 },
                 "type": "object",
                 "required": [
                     "file"
                 ],
-                "title": "Body_upload_agent_avatar_api_v1_ai_agents__agent_id__avatar_post"
-            },
-            "Body_upload_agent_background_api_v1_ai_agents__agent_id__background_post": {
-                "properties": {
-                    "file": {
-                        "type": "string",
-                        "format": "binary",
-                        "title": "File"
-                    }
-                },
-                "type": "object",
-                "required": [
-                    "file"
-                ],
-                "title": "Body_upload_agent_background_api_v1_ai_agents__agent_id__background_post"
-            },
-            "Body_upload_avatar_api_v1_users_avatar_post": {
-                "properties": {
-                    "file": {
-                        "type": "string",
-                        "format": "binary",
-                        "title": "File"
-                    }
-                },
-                "type": "object",
-                "required": [
-                    "file"
-                ],
-                "title": "Body_upload_avatar_api_v1_users_avatar_post"
-            },
-            "Body_upload_avatar_preview_api_v1_ai_agents_upload_avatar_post": {
-                "properties": {
-                    "file": {
-                        "type": "string",
-                        "format": "binary",
-                        "title": "File"
-                    }
-                },
-                "type": "object",
-                "required": [
-                    "file"
-                ],
-                "title": "Body_upload_avatar_preview_api_v1_ai_agents_upload_avatar_post"
+                "title": "Body_upload_image_api_v1_images_post"
             },
             "Body_upload_report_image_api_v1_report_upload_image_post": {
                 "properties": {
