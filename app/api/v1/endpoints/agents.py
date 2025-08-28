@@ -137,7 +137,18 @@ async def get_following_agents(
     return schemas.APIResponse.success(data=pagination_data)
 
 
-@router.post("/", response_model=schemas.APIResponse[schemas.Agent])
+@router.post(
+    "",
+    response_model=schemas.APIResponse[schemas.Agent],
+    tags=["app", "inty-eval"],
+    summary="Create new AI agent",
+    description="Create new AI agent, used by app and inty-eval",
+)
+@router.post(
+    "/",
+    response_model=schemas.APIResponse[schemas.Agent],
+    deprecated=True,
+)
 async def create_agent(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
