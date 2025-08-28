@@ -230,10 +230,12 @@ class SubscriptionStatusResponse(BaseModel):
     """订阅状态响应"""
 
     is_subscribed: bool = Field(..., description="是否订阅")
+    subscription_status: str = Field(..., description="订阅详细状态：subscribed/subscribed_expiring/unsubscribed")
     has_ever_subscribed: bool = Field(False, description="是否曾经有过订阅记录")
     subscription: Optional[UserSubscription] = Field(None, description="订阅信息")
     plan: Optional[SubscriptionPlan] = Field(None, description="计划信息")
     remaining_days: Optional[int] = Field(None, description="剩余天数")
+    will_auto_renew: bool = Field(False, description="是否会自动续费")
     chat_limit_per_day: int = Field(-1, description="每日聊天次数限制")
     total_chat_limit: Optional[int] = Field(
         None, description="总聊天次数限制（免费用户）"
