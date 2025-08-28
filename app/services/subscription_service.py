@@ -410,7 +410,10 @@ class SubscriptionService:
             subscription_schema = UserSubscriptionSchema.model_validate(subscription)
 
             return PurchaseVerificationResponse(
-                is_valid=True, subscription=subscription_schema, message="订阅创建成功"
+                is_valid=True, 
+                is_verified=True, 
+                subscription=subscription_schema, 
+                message="订阅创建成功"
             )
 
         except Exception as e:

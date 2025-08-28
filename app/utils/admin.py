@@ -6,7 +6,7 @@ logger = logging.getLogger(__name__)
 SUPER_USER_EMAILS = [
     "anonymoussocialforreal@gmail.com",
     "arthurzhang0521@gmail.com",
-    "donggangcj@gmail.com",
+    # "donggangcj@gmail.com",
     "justicezyx@gmail.com",
     "zhiwei9001@gmail.com",
     "xheuyyuki@gmail.com",
