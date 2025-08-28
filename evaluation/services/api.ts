@@ -321,7 +321,7 @@ export const agentApi = {
 
   // 创建智能体 - 使用现有API
   create: (data: AgentCreateRequest): Promise<Agent> =>
-    apiClient.post("/ai/agents/", data),
+    apiClient.post("/ai/agents", data),
 
   // 更新智能体 - 使用现有API
   update: (

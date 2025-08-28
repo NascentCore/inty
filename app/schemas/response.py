@@ -56,10 +56,10 @@ class BusinessErrorCode:
         "error_code": "SUBSCRIPTION_REQUIRED",
         "message": "Subscription required",
     }
-    BACKGROUND_GENERATION_LIMIT_REACHED = {
+    IMAGE_GENERATION_LIMIT_REACHED = {
         "code": 10001002,
-        "error_code": "BACKGROUND_GENERATION_LIMIT_REACHED",
-        "message": "Background generation limit reached",
+        "error_code": "IMAGE_GENERATION_LIMIT_REACHED",
+        "message": "Image generation limit reached",
     }
     AGENT_CREATION_LIMIT_REACHED = {
         "code": 10001003,

@@ -47,15 +47,6 @@ subscription_service = SubscriptionService()
 
 
 @router.get(
-    "/",
-    response_model=schemas.APIResponse[List[schemas.Agent]],
-    # This cannot be distinguished from GET /api/v1/ai/agents/{agent_id} by stainless sdk generator.
-    # So we have to use /me instead.
-    deprecated=True,
-    include_in_schema=False,
-    # Use "/me" instead
-)
-@router.get(
     "/me",
     response_model=schemas.APIResponse[List[schemas.Agent]],
     summary="Get list of user's created AI characters",
@@ -146,7 +137,13 @@ async def get_following_agents(
     return schemas.APIResponse.success(data=pagination_data)
 
 
-@router.post("/", response_model=schemas.APIResponse[schemas.Agent])
+@router.post(
+    "",
+    response_model=schemas.APIResponse[schemas.Agent],
+    tags=["app", "inty-eval"],
+    summary="Create new AI agent",
+    description="Create new AI agent, used by app and inty-eval",
+)
 async def create_agent(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
@@ -329,12 +326,6 @@ def process_generated_images(generated_images: List[ImagenGeneratedImage]) -> di
 
 
 @router.post(
-    "/generate_background",
-    response_model=APIResponse[dict],
-    summary="Deprecated, use /text-to-image instead",
-    deprecated=True,
-)
-@router.post(
     "/text-to-image",
     response_model=APIResponse[dict],
     summary="Generate images based on text description",
@@ -358,7 +349,7 @@ async def generate_background(
 
         if not check_result[0]:
             return create_business_error_response(
-                error_info=BusinessErrorCode.BACKGROUND_GENERATION_LIMIT_REACHED,
+                error_info=BusinessErrorCode.IMAGE_GENERATION_LIMIT_REACHED,
                 extra_data={
                     "used_count": check_result[1],
                     "limit": check_result[2],

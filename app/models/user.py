@@ -50,6 +50,7 @@ class User(Base):
     readable_id = Column(
         String(8), unique=True, index=True, nullable=False, comment="用户可读ID"
     )
+    # TODO: Use SERIAL instead of string.
     nickname = Column(String, index=True, comment="用户昵称，可搜索")
     avatar = Column(String, comment="用户头像URL")
     email = Column(String, comment="邮箱地址")
