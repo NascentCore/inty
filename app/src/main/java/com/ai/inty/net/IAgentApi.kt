@@ -67,6 +67,6 @@ interface IAgentApi {
     suspend fun deleteAgent(@Path("agentId") agentId: String): HttpResult<AgentInfo>
 
     @Multipart
-    @POST("/api/v1/ai/agents/upload-avatar")
+    @POST("/api/v1/images")
     suspend fun uploadAvatar(@Part file: MultipartBody.Part): HttpResult<UploadAvatarResponse>
 }
