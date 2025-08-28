@@ -83,9 +83,12 @@ class MySettingActivity : BaseActivity() {
                         runCatching {
                             // Check file size before cropping - limit to 10MB
                             val fileSize = getFileSize(context, uri)
-                            val maxSizeBytes = 10 * 1024 * 1024 // 10MB in bytes
+                            // TODO: 使用 firebase remote config 配置应集中管理
+                            // https://firebase.google.com/docs/remote-config
+                            val maxSizeMB = 10
+                            val maxSizeBytes = maxSizeMB * 1024 * 1024 // 10MB in bytes
                             if (fileSize > maxSizeBytes) {
-                                val maxSizeMBStr = "10MB"
+                                val maxSizeMBStr = String.format("%dMB", maxSizeMB)
                                 val fileSizeMBStr =
                                     String.format("%.1fMB", fileSize / (1024.0 * 1024.0))
                                 val msg = String.format(

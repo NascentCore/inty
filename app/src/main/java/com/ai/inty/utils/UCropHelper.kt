@@ -13,7 +13,14 @@ import java.io.File
 
 object UCropHelper {
     fun getIntent(context: Context, srcUri: Uri, title: String): Intent {
-        val avatarTempFile = File(AppEnv.dirs.imagecache, "tmp.jpg")
+        // Use timestamp to create unique file names and avoid caching conflicts
+        val timestamp = System.currentTimeMillis()
+        // This is required, otherwise the preview will always be tmp.jpg
+        // So that the preview can be viewed after first modification,
+        // but the future update will always be stale.
+        val avatarTempFile = File(AppEnv.dirs.imagecache, "my_avatar_${timestamp}.jpg")
+        android.util.Log.d("UCropHelper", "Creating crop file: ${avatarTempFile.absolutePath}")
+        
         val uCropOptions = UCrop.Options()
         uCropOptions.apply {
             setCompressionFormat(Bitmap.CompressFormat.JPEG)
