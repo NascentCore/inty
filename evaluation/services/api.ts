@@ -306,7 +306,7 @@ export const agentApi = {
     type?: "public" | "private";
     skip?: number;
     limit?: number;
-  }): Promise<Agent[]> => apiClient.get("/ai/agents/", params),
+  }): Promise<Agent[]> => apiClient.get("/ai/agents/me", params),
 
   // 获取推荐智能体 - 使用现有API
   getRecommended: (): Promise<Agent[]> => apiClient.get("/ai/agents/recommend"),

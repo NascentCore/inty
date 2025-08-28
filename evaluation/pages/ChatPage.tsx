@@ -36,7 +36,6 @@ import {
   TeamOutlined,
   RedoOutlined,
   DeleteOutlined,
-  FileTextOutlined,
 } from "@ant-design/icons";
 import { useAgents } from "../hooks/useAgents";
 import api from "../services/api";
@@ -75,6 +74,7 @@ export const ChatPage: React.FC = () => {
   const [chatHistory, setChatHistory] = useState<ChatSession[]>([]);
   const [isGuestMode, setIsGuestMode] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -91,10 +91,7 @@ export const ChatPage: React.FC = () => {
     autoLoad: true,
   });
 
-  // 调试消息相关状态
-  const [debugModalVisible, setDebugModalVisible] = useState(false);
-  const [debugData, setDebugData] = useState<any>(null);
-  const [debugLoading, setDebugLoading] = useState(false);
+
 
   // 重新发送和删除消息相关状态
   const [resending, setResending] = useState<string | null>(null);
@@ -137,6 +134,67 @@ export const ChatPage: React.FC = () => {
       console.error("保存聊天历史失败:", error);
     }
   }, []);
+
+  // 显示聊天历史 - 拉取最新的聊天记录
+  const handleShowChatHistory = useCallback(async () => {
+    if (!selectedAgent?.id) {
+      message.warning("请先选择一个智能体");
+      return;
+    }
+
+    setHistoryLoading(true);
+    try {
+      // 调用 chatApi.getMessages() 拉取全部的聊天记录
+      const messagesData = await api.chat.getMessages(selectedAgent.id, {
+        page: 1,
+        size: 1000, // 设置较大的size来获取更多消息
+      });
+
+      if (messagesData.messages && messagesData.messages.length > 0) {
+        // 转换消息格式
+        const convertedMessages: ChatMessage[] = messagesData.messages.map(
+          (msg, index) => ({
+            id: `msg_history_${index}_${Date.now()}`,
+            role: msg.role,
+            content: msg.content,
+            timestamp: msg.timestamp,
+            remoteId: msg.id.toString(),
+          }),
+        );
+
+        // 更新当前会话的消息
+        setMessages(convertedMessages);
+
+        // 更新当前会话
+        if (currentSession) {
+          const updatedSession = {
+            ...currentSession,
+            messages: convertedMessages,
+          };
+          setCurrentSession(updatedSession);
+
+          // 更新本地历史记录
+          const updatedHistory = chatHistory.map((session) =>
+            session.id === currentSession.id ? updatedSession : session,
+          );
+          setChatHistory(updatedHistory);
+          saveChatHistory(updatedHistory);
+        }
+
+        message.success(`成功获取 ${convertedMessages.length} 条聊天记录`);
+      } else {
+        message.info("暂无聊天记录");
+      }
+
+      // 显示聊天历史模态框
+      setShowHistory(true);
+    } catch (error) {
+      console.error("获取聊天记录失败:", error);
+      message.error("获取聊天记录失败，请重试");
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, [selectedAgent?.id, currentSession, chatHistory, saveChatHistory]);
 
   // 初始化加载历史
   useEffect(() => {
@@ -521,22 +579,7 @@ export const ChatPage: React.FC = () => {
     [handleSendMessage],
   );
 
-  // 获取调试消息
-  const fetchDebugMessages = useCallback(async () => {
-    if (!selectedAgent?.id) return;
 
-    try {
-      setDebugLoading(true);
-      const result = await api.chat.getAgentDebugMessages(selectedAgent.id);
-      setDebugData(result);
-      setDebugModalVisible(true);
-    } catch (error) {
-      console.error("获取调试消息失败:", error);
-      message.error("获取调试消息失败");
-    } finally {
-      setDebugLoading(false);
-    }
-  }, [selectedAgent?.id]);
 
   // 重新发送消息
   const handleResendMessage = useCallback(
@@ -908,18 +951,12 @@ export const ChatPage: React.FC = () => {
                         }}
                       />
                     </Tooltip>
-                    <Tooltip title="查看提示词">
-                      <Button
-                        icon={<FileTextOutlined />}
-                        onClick={fetchDebugMessages}
-                        loading={debugLoading}
-                      />
-                    </Tooltip>
+
                     <Tooltip title="聊天历史">
                       <Button
                         icon={<HistoryOutlined />}
-                        onClick={() => setShowHistory(true)}
-                        disabled={chatHistory.length === 0}
+                        onClick={handleShowChatHistory}
+                        loading={historyLoading}
                       />
                     </Tooltip>
                     <Tooltip title="导出聊天记录">
@@ -1237,107 +1274,8 @@ export const ChatPage: React.FC = () => {
           </Col>
         </Row>
 
-        {/* 调试消息模态框 */}
-        <Modal
-          title="调试消息"
-          open={debugModalVisible}
-          onCancel={() => setDebugModalVisible(false)}
-          footer={[
-            <Button key="close" onClick={() => setDebugModalVisible(false)}>
-              关闭
-            </Button>,
-          ]}
-          width={800}
-          style={{ top: 50 }}
-        >
-          {debugData && debugData.debug_messages && (
-            <div style={{ maxHeight: "60vh", overflowY: "auto" }}>
-              {debugData.debug_messages.messages.map(
-                (msg: any, index: number) => (
-                  <div key={index} style={{ marginBottom: 16 }}>
-                    <h4
-                      style={{
-                        margin: "8px 0",
-                        fontSize: "14px",
-                        fontWeight: "bold",
-                        color:
-                          msg.type === "system"
-                            ? "#1890ff"
-                            : msg.type === "human"
-                              ? "#52c41a"
-                              : "#fa8c16",
-                      }}
-                    >
-                      {msg.type === "system"
-                        ? "系统消息"
-                        : msg.type === "human"
-                          ? "用户消息"
-                          : "AI回复"}
-                    </h4>
-                    <div
-                      style={{
-                        background:
-                          msg.type === "system"
-                            ? "#f0f8ff"
-                            : msg.type === "human"
-                              ? "#f6ffed"
-                              : "#fff7e6",
-                        padding: "12px",
-                        borderRadius: "6px",
-                        fontSize: "12px",
-                        lineHeight: "1.6",
-                        fontFamily:
-                          msg.type === "system" ? "monospace" : "inherit",
-                        whiteSpace: "pre-wrap",
-                        wordBreak: "break-word",
-                        border: `1px solid ${msg.type === "system" ? "#d4edda" : msg.type === "human" ? "#b7eb8f" : "#ffd591"}`,
-                      }}
-                    >
-                      {msg.content}
-                    </div>
-                  </div>
-                ),
-              )}
 
-              {/* 原始JSON数据显示 */}
-              <div
-                style={{
-                  marginTop: 24,
-                  paddingTop: 16,
-                  borderTop: "1px solid #f0f0f0",
-                }}
-              >
-                <h4
-                  style={{
-                    margin: "8px 0",
-                    fontSize: "14px",
-                    fontWeight: "bold",
-                    color: "#666",
-                  }}
-                >
-                  原始JSON数据
-                </h4>
-                <div
-                  style={{
-                    background: "#f5f5f5",
-                    padding: "12px",
-                    borderRadius: "6px",
-                    fontSize: "11px",
-                    lineHeight: "1.4",
-                    fontFamily: "monospace",
-                    whiteSpace: "pre-wrap",
-                    wordBreak: "break-word",
-                    border: "1px solid #e0e0e0",
-                    maxHeight: "300px",
-                    overflowY: "auto",
-                  }}
-                >
-                  {JSON.stringify(debugData.debug_messages.messages, null, 2)}
-                </div>
-              </div>
-            </div>
-          )}
-        </Modal>
+          
 
         {/* 聊天历史模态框 */}
         <Modal
@@ -1350,77 +1288,81 @@ export const ChatPage: React.FC = () => {
           open={showHistory}
           onCancel={() => setShowHistory(false)}
           footer={null}
-          width={800}
+          width={1000}
         >
-          <List
-            dataSource={chatHistory}
-            renderItem={(session) => (
-              <List.Item
-                key={session.id}
-                actions={[
-                  <Button
-                    key="load"
-                    type="link"
-                    onClick={() => {
-                      setCurrentSession(session);
-                      setMessages(session.messages);
-                      setShowHistory(false);
-                      message.success("已加载历史会话");
-                    }}
-                  >
-                    加载
-                  </Button>,
-                  <Button
-                    key="delete"
-                    type="link"
-                    danger
-                    onClick={() => {
-                      Modal.confirm({
-                        title: "确认删除",
-                        content: "确定要删除这个聊天历史吗？",
-                        okText: "确定",
-                        cancelText: "取消",
-                        onOk: () => {
-                          const updatedHistory = chatHistory.filter(
-                            (h) => h.id !== session.id,
-                          );
-                          setChatHistory(updatedHistory);
-                          saveChatHistory(updatedHistory);
-                          message.success("历史记录已删除");
-                        },
-                      });
-                    }}
-                  >
-                    删除
-                  </Button>,
-                ]}
-              >
-                <List.Item.Meta
-                  avatar={<Avatar icon={<MessageOutlined />} />}
-                  title={`与 ${session.agent_name} 的对话`}
-                  description={
-                    <div>
-                      <Text type="secondary">
-                        {session.messages.length} 条消息 | 创建时间:{" "}
-                        {new Date(session.created_at).toLocaleString()}
-                      </Text>
-                      {session.messages.length > 0 && (
-                        <div style={{ marginTop: 4 }}>
+          {messages.length === 0 ? (
+            <Empty
+              description="暂无聊天记录"
+              image={Empty.PRESENTED_IMAGE_SIMPLE}
+            />
+          ) : (
+              <div>
+                <div style={{ marginBottom: 16 }}>
+                  <Text strong>当前智能体: {selectedAgent?.name}</Text>
+                  <br />
+                  <Text type="secondary">共 {messages.length} 条消息</Text>
+                </div>
+
+                {/* 消息列表 */}
+                <List
+                  dataSource={messages}
+                  renderItem={(message, index) => (
+                    <List.Item key={message.id}>
+                      <List.Item.Meta
+                        avatar={
+                          <Avatar
+                            icon={message.role === "user" ? <UserOutlined /> : <RobotOutlined />}
+                            style={{
+                              backgroundColor: message.role === "user" ? "#1890ff" : "#52c41a"
+                            }}
+                          />
+                        }
+                        title={
+                          <Space>
+                            <Text strong>{message.role === "user" ? "用户" : "AI助手"}</Text>
                           <Text type="secondary" style={{ fontSize: "12px" }}>
-                            最后一条:{" "}
-                            {session.messages[
-                              session.messages.length - 1
-                            ]?.content?.slice(0, 50)}
-                            ...
+                            {new Date(message.timestamp).toLocaleString()}
                           </Text>
-                        </div>
-                      )}
-                    </div>
-                  }
+                          </Space>
+                        }
+                        description={
+                          <div style={{
+                            whiteSpace: "pre-wrap",
+                            wordBreak: "break-word",
+                            maxHeight: "200px",
+                            overflowY: "auto"
+                          }}>
+                            {message.content}
+                          </div>
+                        }
+                      />
+                    </List.Item>
+                  )}
                 />
-              </List.Item>
-            )}
-          />
+
+                {/* 原始JSON数据显示 */}
+                <div style={{ marginTop: 24, paddingTop: 16, borderTop: "1px solid #f0f0f0" }}>
+                  <h4 style={{ margin: "8px 0", fontSize: "14px", fontWeight: "bold", color: "#666" }}>
+                    原始JSON数据
+                  </h4>
+                  <div style={{
+                    background: "#f5f5f5",
+                    padding: "12px",
+                    borderRadius: "6px",
+                    fontSize: "11px",
+                    lineHeight: "1.4",
+                    fontFamily: "monospace",
+                    whiteSpace: "pre-wrap",
+                    wordBreak: "break-word",
+                    border: "1px solid #e0e0e0",
+                    maxHeight: "300px",
+                    overflowY: "auto"
+                  }}>
+                    {JSON.stringify(messages, null, 2)}
+                  </div>
+                </div>
+              </div>
+          )}
         </Modal>
       </Content>
     </Layout>
