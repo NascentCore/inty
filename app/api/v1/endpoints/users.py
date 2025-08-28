@@ -87,45 +87,6 @@ async def update_profile(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/avatar", response_model=APIResponse[User])
-async def upload_avatar(
-    file: UploadFile = File(...),
-    db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(deps.get_current_active_user),
-):
-    try:
-        file_data = await file.read()
-        avatar_path = user_service.generate_avatar_path(current_user.id, file.filename)
-        url = upload_to_gcs(
-            file_data,
-            file.content_type,
-            global_config_loaded_from_config_yaml.gcs.bucket,
-            avatar_path,
-        )
-
-        # 删除旧头像，但只有当它确实是存储在用户GCS bucket中的文件时才删除
-        old_avatar = current_user.avatar
-        if old_avatar and is_user_gcs_file(
-            old_avatar, global_config_loaded_from_config_yaml.gcs.bucket
-        ):
-            old_path = user_service.get_path_from_gcs_url(old_avatar)
-            if old_path:
-                delete_from_gcs(
-                    global_config_loaded_from_config_yaml.gcs.bucket, old_path
-                )
-                logger.debug(f"已删除旧头像: {old_avatar}")
-        elif old_avatar:
-            logger.debug(f"跳过删除非GCS头像: {old_avatar}")
-
-        user = await user_service.update_user(
-            db, current_user.id, UserUpdate(avatar=url)
-        )
-        return APIResponse.success(data=user)
-    except Exception as e:
-        logger.error(f"头像上传失败: {str(e)}")
-        return APIResponse.error(message=str(e))
-
-
 @router.post("/device/register", response_model=APIResponse)
 async def register_device_token(
     device_in: DeviceTokenRegister,
