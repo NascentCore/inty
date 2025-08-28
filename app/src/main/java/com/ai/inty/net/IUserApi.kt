@@ -9,6 +9,7 @@ import com.ai.inty.beans.TokenBean
 import com.ai.inty.beans.UserDeleteResponse
 import com.ai.inty.beans.UserDeletionCheckResponse
 import com.ai.inty.beans.UserProfile
+import com.ai.inty.beans.UploadAvatarResponse
 import com.architecture.httplib.core.HttpResult
 import com.therouter.inject.Singleton
 import okhttp3.MultipartBody
@@ -28,8 +29,8 @@ interface IUserApi {
     suspend fun loginByGoogle(@Body loginRequest: GoogleLoginRequest): HttpResult<GoogleLoginResponse>
 
     @Multipart
-    @POST("/api/v1/users/avatar")
-    suspend fun uploadAvatar(@Part file: MultipartBody.Part): HttpResult<UserProfile>
+    @POST("/api/v1/images")
+    suspend fun uploadAvatar(@Part file: MultipartBody.Part): HttpResult<UploadAvatarResponse>
 
     @POST("/api/v1/users/device/register")
     suspend fun regFCM(@Body reqq: TokenBean): HttpResult<Any>

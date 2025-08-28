@@ -63,6 +63,12 @@ class MySettingViewModel : BaseActivityViewModel() {
         launchWithNetCheck {
             if (_avatarChanged.value) {
                 val fileUri = _userProfile.value.avatar?.toUri()
+                
+                if (fileUri?.path == null) {
+                    showNetworkAwareError("Invalid avatar file")
+                    return@launchWithNetCheck
+                }
+                
                 val requestBody = File(
                     fileUri?.path ?: return@launchWithNetCheck
                 ).asRequestBody(contentType = "image/jpg".toMediaTypeOrNull())
@@ -72,7 +78,8 @@ class MySettingViewModel : BaseActivityViewModel() {
                 when (result) {
                     is HttpResult.Success -> {
                         _userProfile.value = _userProfile.value.copy(
-                            avatar = result.data.avatar
+                            // No cropping, just use the provided url.
+                            avatar = result.data.url
                         )
                         // Show success toast for avatar upload
                         viewModelScope.launch(Dispatchers.Main) {
@@ -104,11 +111,9 @@ class MySettingViewModel : BaseActivityViewModel() {
                 }
             }
 
-
             TheRouter.build(Constant.ACTION_USER_PROFILE_CHANGED).action()
 
             closeActivity()
-
         }
     }
 

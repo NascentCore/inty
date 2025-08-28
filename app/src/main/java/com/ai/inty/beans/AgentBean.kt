@@ -147,9 +147,8 @@ data class GenerateBackgroundResponse(
 
 @JsonClass(generateAdapter = true)
 data class UploadAvatarResponse(
+    @Json(name = "url")
     val url: String = "",
-    val filename: String = "",
-    val size: Long = 0,
-    @Json(name = "content_type")
-    val contentType: String = "",
+    @Json(name = "avatar_url")
+    val avatar_url: String = "",
 )

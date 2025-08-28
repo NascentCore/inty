@@ -26,3 +26,4 @@ version.properties
 /app/release/
 /app/debug/
 /app/local/
+/app/playdebug/
