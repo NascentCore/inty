@@ -148,6 +148,7 @@ async def get_following_agents(
     "/",
     response_model=schemas.APIResponse[schemas.Agent],
     deprecated=True,
+    include_in_schema=False,
 )
 async def create_agent(
     *,
