@@ -60,16 +60,16 @@ object AvatarManager {
 
     fun clearAllAvatarData() {
         clearGeneratedAvatarUrl()
-        EasyLog.log("AvatarManager: Cleared all avatar and background data")
+        EasyLog.log("AvatarManager: Cleared all avatar and background data", priority = EasyLog.DEBUG)
     }
 
     fun getCurrentAvatarUrl(): String? {
-        EasyLog.log("AvatarManager: Current avatar URL: $generatedAvatarUrl")
+        EasyLog.log("AvatarManager: Current avatar URL: $generatedAvatarUrl", priority = EasyLog.DEBUG)
         return generatedAvatarUrl
     }
 
     fun getCurrentAvatarUrls(): List<String> {
-        EasyLog.log("AvatarManager: Current avatar URLs: $generatedAvatarUrls")
+        EasyLog.log("AvatarManager: Current avatar URLs: $generatedAvatarUrls", priority = EasyLog.DEBUG)
         return generatedAvatarUrls
     }
 

@@ -73,6 +73,7 @@ object NetworkErrorHandler {
      * @return 用户友好的错误信息
      */
     private fun getErrorMessageFromException(exception: Exception): String {
+        EasyLog.log("getErrorMessageFromException = ${exception.message}")
         return when {
             exception.message?.contains("timeout", ignoreCase = true) == true ->
                 "Request timeout, please try again later"
@@ -91,7 +92,7 @@ object NetworkErrorHandler {
 
             // This is to work around the limitations of the error received from the server side.
             // As the server side does not allow enum like error cases.
-            exception.message?.contains("Daily image generation limit reached", ignoreCase = true) == true ->
+            exception.message?.contains("Image generation limit reached", ignoreCase = true) == true ->
                 exception.message!!
 
             else -> "Network request failed"

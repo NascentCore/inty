@@ -45,13 +45,13 @@ interface IAgentApi {
     @POST("/api/v1/ai/agents/")
     suspend fun createAgent(@Body request: CreateAgentRequest): HttpResult<AgentInfo>
 
-    @GET("/api/v1/ai/agents/")
+    @GET("/api/v1/ai/agents/me")
     suspend fun getUserCreatedAgents(
         @Query("skip") skip: Int,
         @Query("limit") limit: Int
     ): HttpResult<List<AgentInfo>>
 
-    @POST("/api/v1/ai/agents/generate_background")
+    @POST("/api/v1/ai/agents/text-to-image")
     suspend fun generateBackground(@Body request: GenerateBackgroundRequest): HttpResult<GenerateBackgroundResponse>
 
     @GET("/api/v1/ai/agents/{agentId}")
