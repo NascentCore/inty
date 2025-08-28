@@ -343,7 +343,7 @@ async def generate_background(
 
         if not check_result[0]:
             return create_business_error_response(
-                error_info=BusinessErrorCode.BACKGROUND_GENERATION_LIMIT_REACHED,
+                error_info=BusinessErrorCode.IMAGE_GENERATION_LIMIT_REACHED,
                 extra_data={
                     "used_count": check_result[1],
                     "limit": check_result[2],
