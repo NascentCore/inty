@@ -64,7 +64,7 @@ async def test_existing_apis():
 
         # 1. 测试智能体API
         print("\n📋 测试智能体API:")
-        agents = await tester.get("/agents/")
+        agents = await tester.get("/agents/me")
         print(
             f"  ✓ 获取智能体列表: {len(agents) if isinstance(agents, list) else 'Error'}"
         )
@@ -129,7 +129,7 @@ async def test_evaluation_apis():
         }
 
         # 先获取一些智能体ID
-        agents = await tester.get("/agents/")
+        agents = await tester.get("/agents/me")
         if agents and isinstance(agents, list) and len(agents) > 0:
             session_data["selected_agents"] = [agents[0]["id"]]
 
