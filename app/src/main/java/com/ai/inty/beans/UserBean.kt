@@ -3,6 +3,8 @@ package com.ai.inty.beans
 import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 
+// TODO: 替换为自动生成的数据类型
+
 @JsonClass(generateAdapter = true)
 data class CreateGuestReq(
     @Json(name = "device_id")
