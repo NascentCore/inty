@@ -47,15 +47,6 @@ subscription_service = SubscriptionService()
 
 
 @router.get(
-    "/",
-    response_model=schemas.APIResponse[List[schemas.Agent]],
-    # This cannot be distinguished from GET /api/v1/ai/agents/{agent_id} by stainless sdk generator.
-    # So we have to use /me instead.
-    deprecated=True,
-    include_in_schema=False,
-    # Use "/me" instead
-)
-@router.get(
     "/me",
     response_model=schemas.APIResponse[List[schemas.Agent]],
     summary="Get list of user's created AI characters",
@@ -328,12 +319,6 @@ def process_generated_images(generated_images: List[ImagenGeneratedImage]) -> di
     return {"image_uris": generated_uris, "rai_reasons": rai_reasons}
 
 
-@router.post(
-    "/generate_background",
-    response_model=APIResponse[dict],
-    summary="Deprecated, use /text-to-image instead",
-    deprecated=True,
-)
 @router.post(
     "/text-to-image",
     response_model=APIResponse[dict],
