@@ -42,7 +42,7 @@ interface IAgentApi {
     @DELETE("/api/v1/ai/agents/{agentId}/follow")
     suspend fun unfollowAgent(@Path("agentId") agentId: String): HttpResult<FollowResponse>
 
-    @POST("/api/v1/ai/agents/")
+    @POST("/api/v1/ai/agents")
     suspend fun createAgent(@Body request: CreateAgentRequest): HttpResult<AgentInfo>
 
     @GET("/api/v1/ai/agents/me")
