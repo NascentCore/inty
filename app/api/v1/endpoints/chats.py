@@ -1136,7 +1136,6 @@ async def update_agent_chat_settings(
 @router.get(
     "/agents/{agent_id}/settings",
     response_model=schemas.ChatSettings,
-    include_in_schema=False,
     tags=["inty"],
     summary="Get Agent Chat Settings",
     description="Get chat settings by Agent ID",
@@ -1449,5 +1448,3 @@ async def clear_agent_chat_messages(
         raise HTTPException(
             status_code=500, detail=f"Failed to clear messages: {str(e)}"
         )
-
-

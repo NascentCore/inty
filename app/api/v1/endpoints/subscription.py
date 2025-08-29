@@ -13,7 +13,6 @@ from app import schemas
 from app.api import deps
 from app.api.utils.logger_route import LoggerRoute
 from app.core.config import global_config_loaded_from_config_yaml
-from app.models.subscription import UserSubscription
 from app.schemas.response import APIResponse
 from app.schemas.subscription import (
     GooglePlayPurchaseRequest,
@@ -26,7 +25,10 @@ from app.schemas.subscription import (
     SubscriptionPlansResponse,
     SubscriptionStatusResponse,
     UsageStatisticsResponse,
+    UserSubscription,
 )
+# SQLAlchemy 模型需要用不同的别名
+from app.models.subscription import UserSubscription as UserSubscriptionModel
 from app.services.subscription_service import subscription_service
 
 router = APIRouter(prefix="/subscription", route_class=LoggerRoute)
@@ -430,8 +432,8 @@ async def process_manual_refund(
         if success:
             # 获取更新后的订阅信息
             result = await db.execute(
-                select(UserSubscription).where(
-                    UserSubscription.id == refund_request.subscription_id
+                select(UserSubscriptionModel).where(
+                    UserSubscriptionModel.id == refund_request.subscription_id
                 )
             )
             subscription = result.scalar_one_or_none()

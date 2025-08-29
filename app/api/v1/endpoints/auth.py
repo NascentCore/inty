@@ -20,6 +20,7 @@ from app.models import User
 from app.models.user import AuthType
 from app.schemas.auth import GuestResponse, LoginResponse, LoginUserResponse
 from app.schemas.response import APIResponse
+from app.services.subscription_service import subscription_service
 from app.services.user_service import create_guest_user, generate_next_readable_id
 
 router = APIRouter(prefix="/auth", route_class=LoggerRoute)
@@ -143,6 +144,21 @@ async def google_login(
 
         if existing_user and not existing_user.deleted_at:
             logger.debug(f"Google login user already exists: {existing_user.id}")
+            
+            # 尝试恢复孤立的订阅记录
+            try:
+                recovered_count = await subscription_service.recover_orphaned_subscriptions(
+                    db, 
+                    existing_user.id, 
+                    idinfo.get("email"), 
+                    idinfo["sub"]
+                )
+                if recovered_count > 0:
+                    logger.info(f"用户 {existing_user.id} 登录时恢复了 {recovered_count} 个订阅")
+            except Exception as e:
+                logger.error(f"用户 {existing_user.id} 恢复订阅失败: {str(e)}")
+                # 订阅恢复失败不影响登录流程
+            
             # 如果用户已存在且未被删除，直接返回 token
             access_token = create_access_token(existing_user.id)
             return APIResponse.success(
@@ -207,6 +223,20 @@ async def google_login(
         db.add(new_user)
         await db.commit()
         await db.refresh(new_user)
+
+        # 尝试恢复孤立的订阅记录（新用户也可能需要恢复之前的订阅）
+        try:
+            recovered_count = await subscription_service.recover_orphaned_subscriptions(
+                db, 
+                new_user.id, 
+                idinfo.get("email"), 
+                idinfo["sub"]
+            )
+            if recovered_count > 0:
+                logger.info(f"新用户 {new_user.id} 恢复了 {recovered_count} 个历史订阅")
+        except Exception as e:
+            logger.error(f"新用户 {new_user.id} 恢复订阅失败: {str(e)}")
+            # 订阅恢复失败不影响注册流程
 
         # 生成 token
         access_token = create_access_token(new_user.id)
