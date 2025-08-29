@@ -27,45 +27,25 @@ evaluation/start.sh
 INSERT INTO users (
     id,
     nickname,
-    avatar,
     email,
-    phone,
     gender,
     age_group,
     description,
-    auth_type,
-    system_language,
     is_active,
-    created_at,
-    updated_at,
-    device_id,
-    google_id,
     is_superuser,
-    readable_id,
-    deleted_at,
-    anonymized_at,
-    deletion_reason
+    auth_type,
+    readable_id
 ) VALUES (
     'user-01JWZ34Y4D1C92GD86A5R6EWYJ',
-    'dx',
-    NULL,
-    'test@examle.com',
-    NULL,
+    'admin',
+    'admin@sxwl.ai',
     'MALE',
     '18-24',
-    NULL,
+    'An admin user',
+    true,
+    true,
     'GOOGLE',
-    'zh',
-    true,
-    '2025-06-05 03:46:24.001931+00',
-    '2025-07-18 02:09:05.645221+00',
-    NULL,
-    'deleted_google_b5ebf227',
-    true,
-    '10000001',  -- Changed to a unique value
-    NULL,
-    '2025-07-18 02:09:10.275081+00',
-    '隐私关注'
+    '11111111'
 );
 ```
 
