@@ -212,53 +212,45 @@ private fun AgentInfoScreen(
                     .verticalScroll(rememberScrollState()),
             ) {
                 Spacer(Modifier.height(149.dp))
-                Text(
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    text = agent.name,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Color.White
-                )
-                Spacer(Modifier.height(5.dp))
                 Row(
+                    modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Spacer(Modifier.width(16.dp))
-                    Text(
-                        modifier = Modifier.widthIn(0.dp, 100.dp),
-                        text = stringResource(
-                            R.string.ID,
-                            agent.readableId.takeIf { it.isNotEmpty() } ?: agent.id),
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Light,
-                        color = Color.White.copy(0.55f),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                    Column(
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(
+                            modifier = Modifier.padding(start = 16.dp),
+                            text = agent.name,
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color.White
+                        )
+                        Spacer(Modifier.height(5.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Spacer(Modifier.width(16.dp))
+                            Text(
+                                modifier = Modifier.widthIn(0.dp, 100.dp),
+                                text = stringResource(
+                                    R.string.ID,
+                                    agent.readableId.takeIf { it.isNotEmpty() } ?: agent.id),
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Light,
+                                color = Color.White.copy(0.55f),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                    FollowButton(
+                        isFollowing = agent.isFollowed,
+                        onClick = { viewModel.followAgent(agent.id, context) }
                     )
-
+                    Spacer(Modifier.width(16.dp))
                 }
                 Spacer(Modifier.height(24.dp))
-
-                // 统计行
-                StatsRow(
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    connectorsCount = agent.connectorCount,
-                    followersCount = agent.followerCount,
-                    isFollowing = agent.isFollowed,
-                    onFollowClick = {
-                        viewModel.followAgent(agent.id, context)
-                    }
-                )
-
-                Spacer(Modifier.height(24.dp))
-                Text(
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    text = stringResource(R.string.info),
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Color.White
-                )
-                Spacer(Modifier.height(10.dp))
 
                 Column(
                     modifier = Modifier
@@ -379,67 +371,6 @@ private fun TagItem(text: String) {
             fontSize = 12.sp,
             fontWeight = FontWeight.Light,
             color = Color.White.copy(0.55f)
-        )
-    }
-}
-
-@Composable
-private fun StatsRow(
-    modifier: Modifier = Modifier,
-    connectorsCount: Int,
-    followersCount: Int,
-    isFollowing: Boolean,
-    onFollowClick: () -> Unit,
-) {
-    Row(
-        modifier = modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        // 左侧统计信息
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(32.dp)
-        ) {
-            // Connectors
-            StatItem(
-                count = connectorsCount,
-                label = "Connectors"
-            )
-
-            // Followers
-            StatItem(
-                count = followersCount,
-                label = "Followers"
-            )
-        }
-
-        // 右侧关注按钮
-        FollowButton(
-            isFollowing = isFollowing,
-            onClick = onFollowClick
-        )
-    }
-}
-
-@Composable
-private fun StatItem(
-    count: Int,
-    label: String,
-) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(
-            text = formatCount(count),
-            fontSize = 16.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = Color.White
-        )
-        Text(
-            text = label,
-            fontSize = 13.sp,
-            fontWeight = FontWeight.Normal,
-            color = Color.White
         )
     }
 }

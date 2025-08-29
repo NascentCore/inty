@@ -152,68 +152,24 @@ internal fun MyPage(
                     Spacer(Modifier.width(16.dp))
                 }
 
-                Spacer(Modifier.height(16.dp))
-
-                Text(
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    text = userProfile.description ?: stringResource(R.string.persona_placeholder),
-                    color = Color.White,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-
                 Spacer(Modifier.height(24.dp))
 
                 Row(
                     modifier = Modifier.padding(horizontal = 16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
-                        Text(
-                            text = "${userProfile.connectorCount}",
-                            color = Color.White,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Text(
-                            text = stringResource(R.string.connectors_full),
-                            color = Color.White,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Normal,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
 
-                    Spacer(Modifier.width(24.dp))
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
-                        Text(
-                            text = "${userProfile.followerCount}",
-                            color = Color.White,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Text(
-                            text = stringResource(R.string.followers_full),
-                            color = Color.White,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Normal,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
+                    Text(
+                        modifier = Modifier.weight(1f),
+                        text = userProfile.description ?: stringResource(R.string.persona_placeholder),
+                        color = Color.White,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
 
-                    Spacer(Modifier.weight(1f))
+                    Spacer(Modifier.width(8.dp))
 
                     AuthClickable(
                         onClick = {
@@ -229,7 +185,7 @@ internal fun MyPage(
                     }
                 }
 
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(24.dp))
 
                 // IntelliMate Premium 会员入口按钮
                 AuthClickable(
@@ -249,16 +205,6 @@ internal fun MyPage(
                 }
 
                 Spacer(Modifier.height(8.dp))
-
-                Text(
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    text = stringResource(R.string.app_name),
-                    color = Color.White,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
 
                 if (agents.isEmpty()) {
                     Spacer(Modifier.height(48.dp))

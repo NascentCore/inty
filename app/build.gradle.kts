@@ -165,6 +165,10 @@ android {
             // TODO: Use a different web client ID for debug builds.
             // buildConfigField("String", "WEB_CLIENT_ID", "\"debug_client_id_here\"")
 
+            // Disable code minification for debug builds
+            isMinifyEnabled = false
+            isShrinkResources = false
+
             versionNameSuffix = "-debug"
         }
         create("local") {
