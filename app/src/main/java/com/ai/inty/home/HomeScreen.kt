@@ -133,7 +133,7 @@ private fun ExpiredDialogLogic(mainViewModel: MainViewModel) {
     LifecycleResumeEffect(mainViewModel) {
         if (!vipStatue.isSubscribed && vipStatue.everSubscribed) {
             //未订阅状态，且曾经订阅过，表示已过期;如果app未曾提示过一次，则弹窗。有过提示记录，则不弹窗
-            if (!IntySetting.hasTipsVipExpired()) {
+            if (!IntySetting.hasTipsVipExpired() && IntySetting.isLogin() && !IntySetting.isGuestUser()) {
                 showExpiredDialog = true
             }
         }
