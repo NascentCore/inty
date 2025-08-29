@@ -1,11 +1,13 @@
 package com.ai.inty.billing
 
+import android.content.Context
+import com.google.android.gms.common.GoogleApiAvailability
 import com.inty.utils.log.EasyLog
 
 /**
  * 计费工具类
  */
-object BillingUtils {
+internal object BillingUtils {
 
     /**
      * 检查是否为模拟器
@@ -21,6 +23,45 @@ object BillingUtils {
             "generic"
         ))
                 || "google_sdk" == android.os.Build.PRODUCT)
+    }
+
+    /**
+     * 检查Google Play服务是否可用
+     */
+    fun isGooglePlayServicesAvailable(context: Context): Boolean {
+        val googleApiAvailability = GoogleApiAvailability.getInstance()
+        val resultCode = googleApiAvailability.isGooglePlayServicesAvailable(context)
+
+        EasyLog.log("BillingRepository BillingUtils - Google Play 服务检查结果: $resultCode")
+
+        when (resultCode) {
+            com.google.android.gms.common.ConnectionResult.SUCCESS -> {
+                EasyLog.log("BillingRepository BillingUtils - Google Play 服务可用")
+                return true
+            }
+
+            com.google.android.gms.common.ConnectionResult.SERVICE_MISSING -> {
+                EasyLog.log("BillingRepository BillingUtils - Google Play 服务缺失")
+            }
+
+            com.google.android.gms.common.ConnectionResult.SERVICE_VERSION_UPDATE_REQUIRED -> {
+                EasyLog.log("BillingRepository BillingUtils - Google Play 服务版本过低")
+            }
+
+            com.google.android.gms.common.ConnectionResult.SERVICE_DISABLED -> {
+                EasyLog.log("BillingRepository BillingUtils - Google Play 服务被禁用")
+            }
+
+            com.google.android.gms.common.ConnectionResult.SERVICE_INVALID -> {
+                EasyLog.log("BillingRepository BillingUtils - Google Play 服务无效")
+            }
+
+            else -> {
+                EasyLog.log("BillingRepository BillingUtils - Google Play 服务不可用，错误码: $resultCode")
+            }
+        }
+
+        return false
     }
 
     /**
@@ -41,39 +82,5 @@ object BillingUtils {
             "HKD" -> "HK$$numberPart"
             else -> price // 如果不知道货币代码，保持原样
         }
-    }
-
-    /**
-     * 检查计划列表是否有关键字段变化
-     */
-    fun checkPlansChanged(currentPlans: List<VipPlan>, newPlans: List<VipPlan>): Boolean {
-        // 如果数量不同，肯定有变化
-        if (currentPlans.size != newPlans.size) {
-            EasyLog.log("计划数量变化: ${currentPlans.size} -> ${newPlans.size}")
-            return true
-        }
-
-        // 逐个比较计划
-        for (i in currentPlans.indices) {
-            val current = currentPlans[i]
-            val new = newPlans[i]
-
-            // 检查关键字段是否变化
-            if (current.googleProductId != new.googleProductId ||
-                current.discountRate != new.discountRate ||
-                current.planType != new.planType ||
-                current.description != new.description
-            ) {
-                EasyLog.log("检测到计划变化:")
-                EasyLog.log("  googleProductId: ${current.googleProductId} -> ${new.googleProductId}")
-                EasyLog.log("  discountRate: ${current.discountRate} -> ${new.discountRate}")
-                EasyLog.log("  planType: ${current.planType} -> ${new.planType}")
-                EasyLog.log("  description: ${current.description} -> ${new.description}")
-                return true
-            }
-        }
-
-        EasyLog.log("所有计划的关键字段都无变化")
-        return false
     }
 } 

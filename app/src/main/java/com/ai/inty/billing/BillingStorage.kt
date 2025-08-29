@@ -7,7 +7,7 @@ import com.inty.utils.storage.IntySetting
 /**
  * 计费本地存储管理类
  */
-object BillingStorage {
+internal object BillingStorage {
 
     private const val KEY_VIP_STATUS = "vip_status"
     private const val KEY_SUBSCRIPTION_PLANS = "subscription_plans"
@@ -20,7 +20,7 @@ object BillingStorage {
             val json = MoshiUtils.toJson(vipStatus)
             IntySetting.setUserProfileData(KEY_VIP_STATUS, json)
         } catch (e: Exception) {
-            EasyLog.log("保存本地会员状态失败: ${e.message}")
+            EasyLog.log("BillingRepository BillingStorage 保存本地会员状态失败: ${e.message}")
         }
     }
 
@@ -35,7 +35,7 @@ object BillingStorage {
             try {
                 MoshiUtils.fromJson<VipStatus>(vipStatusStr) ?: VipStatus(isSubscribed = false)
             } catch (e: Exception) {
-                EasyLog.log("解析本地会员状态失败: ${e.message}")
+                EasyLog.log("BillingRepository BillingStorage 解析本地会员状态失败: ${e.message}")
                 VipStatus(isSubscribed = false)
             }
         }
@@ -54,8 +54,8 @@ object BillingStorage {
             val json = adapter.toJson(plans) ?: ""
             IntySetting.setUserProfileData(KEY_SUBSCRIPTION_PLANS, json)
         } catch (e: Exception) {
-            EasyLog.log("保存本地订阅计划失败: ${e.message}")
-            EasyLog.log("错误详情: ${e.stackTraceToString()}")
+            EasyLog.log("BillingRepository BillingStorage 保存本地订阅计划失败: ${e.message}")
+            EasyLog.log("BillingRepository BillingStorage 错误详情: ${e.stackTraceToString()}")
         }
     }
 
@@ -75,15 +75,15 @@ object BillingStorage {
                 val adapter = MoshiUtils.moshiBuild.adapter<List<VipPlan>>(type)
                 adapter.fromJson(plansStr) ?: emptyList()
             } catch (e: Exception) {
-                EasyLog.log("解析本地订阅计划失败: ${e.message}")
-                EasyLog.log("错误详情: ${e.stackTraceToString()}")
+                EasyLog.log("BillingRepository BillingStorage 解析本地订阅计划失败: ${e.message}")
+                EasyLog.log("BillingRepository BillingStorage 错误详情: ${e.stackTraceToString()}")
 
                 // 如果解析失败，清除损坏的缓存数据
                 try {
                     IntySetting.setUserProfileData(KEY_SUBSCRIPTION_PLANS, "")
-                    EasyLog.log("已清除损坏的订阅计划缓存数据")
+                    EasyLog.log("BillingRepository BillingStorage 已清除损坏的订阅计划缓存数据")
                 } catch (clearException: Exception) {
-                    EasyLog.log("清除缓存数据失败: ${clearException.message}")
+                    EasyLog.log("BillingRepository BillingStorage 清除缓存数据失败: ${clearException.message}")
                 }
 
                 emptyList()

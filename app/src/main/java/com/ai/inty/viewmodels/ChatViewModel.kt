@@ -6,13 +6,12 @@ import com.ai.inty.R
 import com.ai.inty.base.BaseActivityViewModel
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.beans.ChatSettingsReq
+import com.ai.inty.beans.ChatSettingsResponse
 import com.ai.inty.beans.ConversationItem
 import com.ai.inty.beans.MsgInfo
 import com.ai.inty.beans.SendMsgReq
 import com.ai.inty.beans.UserProfile
-import com.ai.inty.billing.BillingRepository
-import com.ai.inty.billing.BillingRepository.plansFlow
-import com.ai.inty.billing.BillingRepository.vipStatusFlow
+import com.ai.inty.billing.VipStatusHelper
 import com.ai.inty.net.IChatApi
 import com.ai.inty.utils.UserProfileManager
 import com.architecture.httplib.core.HttpResult
@@ -110,6 +109,8 @@ class ChatViewModel : BaseActivityViewModel() {
 
         // 查询新 agent 的消息
         queryMsgs()
+        //查询改聊天设置
+        getChatSetting()
     }
 
     fun updateAgentFollowState(agentId: String, isFollowed: Boolean) {
@@ -428,14 +429,17 @@ class ChatViewModel : BaseActivityViewModel() {
     }
 
     //获取聊天消息设置
-    fun getChatSetting() = launchWithNetCheck {
+    val chatSetting = MutableStateFlow<ChatSettingsResponse.ChatSettingRspData?>(null)
+    private fun getChatSetting() = launchWithNetCheck {
         val agentId = agentInfo.value?.id ?: return@launchWithNetCheck
         //有agent信息，才请求
         val result = chatApi.getChatSettings(agentId)
         when (result) {
             is HttpResult.Failure -> showNetworkAwareError(result.message)
             is HttpResult.Success -> {
-                val isPremiumMode = result.data.data?.premium_mode == true
+                val isPremiumMode = result.data.premium_mode == true
+                EasyLog.log("测试，获取聊天设置 ${result.data}")
+                chatSetting.update { result.data }
             }
         }
     }
@@ -449,10 +453,9 @@ class ChatViewModel : BaseActivityViewModel() {
         when (result) {
             is HttpResult.Failure -> showNetworkAwareError(result.message)
             is HttpResult.Success -> {
-                showNetworkAwareError(
-                    result.data.message
-                        ?: AppEnv.context.getString(R.string.custom_reply_successful)
-                )
+                showNetworkAwareError(AppEnv.context.getString(R.string.custom_reply_successful))
+                //要更新chatsetting
+                chatSetting.emit(result.data.data)
             }
         }
     }
@@ -477,13 +480,13 @@ class ChatViewModel : BaseActivityViewModel() {
 
         _isLoadingConversations.value = true
         EasyLog.log("loadConversations - page: ${currentConversationsPage + 1}")
-        
+
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val skip = currentConversationsPage * 20
                 val result = chatApi.getConversations(skip, 20)
                 EasyLog.log("loadConversations = $result")
-                
+
                 when (result) {
                     is HttpResult.Success -> {
                         val userInitiatedConversations = result.data
@@ -581,7 +584,7 @@ class ChatViewModel : BaseActivityViewModel() {
         currentConversationsPage = 0
         hasMoreConversations = true
         _isLoadingConversations.value = false
-        
+
         EasyLog.log("All data cleared for ChatViewModel ${hashCode()}")
     }
 
@@ -599,25 +602,8 @@ class ChatViewModel : BaseActivityViewModel() {
 
     //购买vip会员订阅，最低档
     fun purchaseFirstVip(activity: Activity) {
-
-        val currentPlans = plansFlow.value
-
-        if (currentPlans.isNotEmpty()) {
-            val selectedPlan = currentPlans[0]
-            EasyLog.log("purchaseFirstVip 准备购买订阅计划: ${selectedPlan.name} (${selectedPlan.googleProductId}) - ${selectedPlan.price}")
-
-            // 检查用户是否已经订阅
-            if (vipStatusFlow.value.isSubscribed) {
-                EasyLog.log("purchaseFirstVip 用户已经是订阅用户，无需重复购买", EasyLog.WARN)
-                showNetworkAwareError("User Already Subscribed !")
-                return
-            }
-
-            // 启动购买流程
-            BillingRepository.launchBillingFlow(activity, selectedPlan.googleProductId)
-        } else {
-            EasyLog.log("purchaseFirstVip 无可用会员订阅计划plan", EasyLog.WARN)
-            showNetworkAwareError("Chat Purchase No Vip Plan !")
+        VipStatusHelper.purchaseFirstVip(activity) { error ->
+            showNetworkAwareError(error)
         }
     }
 }

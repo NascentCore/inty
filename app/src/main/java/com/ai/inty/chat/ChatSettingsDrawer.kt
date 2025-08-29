@@ -55,7 +55,7 @@ fun ChatSettingsDrawer(
     onPremiumModeChange: (Boolean) -> Unit,
 ) {
     val context = LocalContext.current
-    val vipStatus = BillingRepository.vipStatusFlow.collectAsState().value
+    val vipStatus by BillingRepository.vipStatusFlow.collectAsState()
 
     // Keep talking二状态设置：默认跟随全局设置
     var agentKeepTalking by remember(agentInfo?.id) {

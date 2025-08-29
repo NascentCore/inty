@@ -5,9 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.ai.inty.R
 import com.ai.inty.base.BaseViewModel
 import com.ai.inty.base.ToastUtils
-import com.ai.inty.billing.BillingRepository
-import com.ai.inty.billing.BillingRepository.plansFlow
-import com.ai.inty.billing.BillingRepository.vipStatusFlow
+import com.ai.inty.billing.VipStatusHelper
 import com.ai.inty.net.IUserApi
 import com.architecture.httplib.core.HttpResult
 import com.inty.utils.AppEnv
@@ -69,15 +67,16 @@ class SettingViewModel : BaseViewModel() {
      * 切换高级模型设置
      */
     fun togglePremiumMode() {
-        val vipStatus = BillingRepository.vipStatusFlow.value
-        if (!vipStatus.isSubscribed) {
-            // 非会员，显示高级模型对话框
-            _dialogState.value = _dialogState.value.copy(showPremiumDialog = true)
-        } else {
-            val newValue = !_settingsState.value.premiumMode
-            IntySetting.setShowPremiumModel(newValue)
-            _settingsState.value = _settingsState.value.copy(premiumMode = newValue)
-        }
+        VipStatusHelper.checkVipStatus(
+            onVip = {
+                val newValue = !_settingsState.value.premiumMode
+                IntySetting.setShowPremiumModel(newValue)
+                _settingsState.value = _settingsState.value.copy(premiumMode = newValue)
+            },
+            onNotVip = {
+                _dialogState.value = _dialogState.value.copy(showPremiumDialog = true)
+            }
+        )
     }
 
     /**
@@ -104,24 +103,7 @@ class SettingViewModel : BaseViewModel() {
 
     //购买vip会员订阅，最低档
     fun purchaseFirstVip(activity: Activity) {
-
-        val currentPlans = plansFlow.value
-
-        if (currentPlans.isNotEmpty()) {
-            val selectedPlan = currentPlans[0]
-            EasyLog.log("purchaseFirstVip 准备购买订阅计划: ${selectedPlan.name} (${selectedPlan.googleProductId}) - ${selectedPlan.price}")
-
-            // 检查用户是否已经订阅
-            if (vipStatusFlow.value.isSubscribed) {
-                EasyLog.log("purchaseFirstVip 用户已经是订阅用户，无需重复购买", EasyLog.WARN)
-                return
-            }
-
-            // 启动购买流程
-            BillingRepository.launchBillingFlow(activity, selectedPlan.googleProductId)
-        } else {
-            EasyLog.log("purchaseFirstVip 无可用会员订阅计划plan", EasyLog.WARN)
-        }
+        VipStatusHelper.purchaseFirstVip(activity)
     }
 
 

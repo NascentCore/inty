@@ -18,6 +18,7 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -124,19 +125,21 @@ fun ChatMorePanel(
 
     //reply sheet
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    var replyStr by remember { mutableStateOf("") }
     var showDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(showSheet) {
         if (showSheet) sheetState.show() else sheetState.hide()
     }
     // VIP状态
-    val vipStatus = BillingRepository.vipStatusFlow.collectAsState().value
+    val vipStatus by BillingRepository.vipStatusFlow.collectAsState()
     val viewmodel = viewModel<ChatViewModel>()
+    val chatSetting by viewmodel.chatSetting.collectAsState()
+
+    val replyStr = remember { derivedStateOf { (chatSetting?.style_prompt ?: "") } }
     if (showSheet) {
         ReplyStyleSheet(
             sheetState = sheetState,
-            inputStr = replyStr,
+            inputStr = replyStr.value,
             hintStr = stringResource(R.string.reply_hint_str),
             onDismiss = {
                 showSheet = false

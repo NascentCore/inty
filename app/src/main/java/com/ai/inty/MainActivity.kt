@@ -23,6 +23,7 @@ import androidx.core.view.WindowCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.ai.inty.base.BaseActivity
+import com.ai.inty.billing.BillingDiagnosticHelper
 import com.ai.inty.billing.BillingRepository
 import com.ai.inty.home.HomeScreen
 import com.ai.inty.ui.theme.IntyTheme
@@ -94,12 +95,24 @@ class MainActivity : BaseActivity() {
         // Load user created agents
         mainViewModel.getUserCreatedAgents()
 
-        // 异步更新会员状态
-        mainViewModel.updatePlans()
-
-        // 初始化 BillingRepository 并获取数据
+        // 初始化 BillingRepository（在用户登录后）
         lifecycleScope.launch {
+            // 等待用户登录完成
+            delay(1000) // 给登录流程一些时间
+
+            // 执行billing诊断
+            val diagnosticReport =
+                BillingDiagnosticHelper.performBillingDiagnostic(this@MainActivity)
+            EasyLog.log("MainActivity - Billing诊断报告: $diagnosticReport")
+
             BillingRepository.initializeAndFetch(this@MainActivity)
+
+            // BillingRepository初始化完成后，再调用updatePlans
+            delay(500) // 给BillingRepository一些初始化时间
+            mainViewModel.updatePlans()
+
+            // 启动订阅状态监控
+            BillingRepository.startEnhancedSubscriptionMonitoring()
         }
 
         setContent {
@@ -232,6 +245,8 @@ class MainActivity : BaseActivity() {
         // 刷新关注列表和创建的角色列表
         mainViewModel.refreshFollowingListIfOnTab()
         mainViewModel.refreshCreatedAgentsListIfOnTab()
+        // 应用恢复时通知billing系统刷新状态
+        BillingRepository.notifyAppResumed()
     }
 
     override fun onDestroy() {

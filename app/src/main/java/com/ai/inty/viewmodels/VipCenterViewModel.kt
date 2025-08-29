@@ -5,6 +5,7 @@ import com.ai.inty.base.BaseViewModel
 import com.ai.inty.billing.BillingRepository
 import com.ai.inty.billing.VipPlan
 import com.ai.inty.billing.VipStatus
+import com.ai.inty.billing.VipStatusHelper
 import com.inty.utils.log.EasyLog
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -31,7 +32,7 @@ class VipCenterViewModel : BaseViewModel() {
         if (index >= 0 && index < currentPlans.size) {
             _selectedPlanIndex.value = index
             val selectedPlan = currentPlans[index]
-            EasyLog.log("选择订阅计划: ${selectedPlan.name} (${selectedPlan.googleProductId})")
+            EasyLog.log("BillingRepository VipViewModel 选择订阅计划: ${selectedPlan.name} (${selectedPlan.googleProductId})")
         }
     }
 
@@ -44,21 +45,12 @@ class VipCenterViewModel : BaseViewModel() {
 
         if (selectedIndex >= 0 && selectedIndex < currentPlans.size) {
             val selectedPlan = currentPlans[selectedIndex]
-            EasyLog.log("准备购买订阅计划: ${selectedPlan.name} (${selectedPlan.googleProductId}) - ${selectedPlan.price}")
-
-            // 检查用户是否已经订阅
-            if (vipStatusFlow.value.isSubscribed) {
-                EasyLog.log("用户已经是订阅用户，无需重复购买")
-                showNetworkAwareError("The user is already a subscribed user.")
-
-                return
+            VipStatusHelper.purchasePlan(activity, selectedPlan.googleProductId) { error ->
+                showNetworkAwareError(error)
             }
-
-            // 启动购买流程
-            BillingRepository.launchBillingFlow(activity, selectedPlan.googleProductId)
         } else {
             showNetworkAwareError("Error VipPlan Index: $selectedIndex")
-            EasyLog.log("无效的计划索引: $selectedIndex")
+            EasyLog.log("BillingRepository VipViewModel 无效的计划索引: $selectedIndex")
         }
     }
 
@@ -80,14 +72,14 @@ class VipCenterViewModel : BaseViewModel() {
      * 检查用户是否为会员
      */
     fun isUserSubscribed(): Boolean {
-        return vipStatusFlow.value.isSubscribed
+        return VipStatusHelper.isUserVip()
     }
 
     /**
      * 获取用户订阅信息
      */
     fun getUserSubscriptionInfo(): VipStatus {
-        return vipStatusFlow.value
+        return VipStatusHelper.getVipStatus()
     }
 
     /**

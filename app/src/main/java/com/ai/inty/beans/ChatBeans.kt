@@ -166,10 +166,29 @@ data class ChatSettingsResponse(
     val message: String? = null,
     val data: ChatSettingRspData? = null
 ) {
+    /**
+     * "language": "en",
+     *   "voice_enabled": true,
+     *   "style_prompt": "string",
+     *   "premium_mode": false,
+     *   "id": "string",
+     *   "user_id": "string",
+     *   "agent_id": "string",
+     *   "chat_id": "string",
+     *   "created_at": "2025-08-28T08:02:50.203Z",
+     *   "updated_at": "2025-08-28T08:02:50.203Z"
+     */
     data class ChatSettingRspData(
+        val id: String? = null,
+        val user_id: String? = null,
+        val agent_id: String? = null,
+        val chat_id: String? = null,
+        val created_at: String? = null,
+        val updated_at: String? = null,
         val language: String? = null,//聊天语言
+        val style_prompt: String? = null,//定制化回复风格reply
         val voice_enabled: Boolean? = null,//是否启用语音
-        val keep_talking: Boolean? = null,//连续回复
+        val keep_talking: Boolean? = null,//连续回复,似乎客户端实现，不需要接口字段
         val premium_mode: Boolean? = null,//是否会员模式
     )
 }

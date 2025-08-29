@@ -19,7 +19,7 @@ composeBom = "2025.07.00"
 
 # Google 服务
 firebaseBom = "34.0.0"
-billingKtx = "8.0.0"
+billingKtx = "7.0.0"
 googleServices = "4.4.3"
 firebaseCrashlytics = "3.0.5"
 firebasePerf = "2.0.0"

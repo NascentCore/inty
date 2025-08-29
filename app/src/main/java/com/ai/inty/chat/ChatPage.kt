@@ -91,7 +91,7 @@ internal fun ChatPage(
     var shouldShowButton by remember(agentInfo?.id) { mutableStateOf(agentKeepTalking) }
 
     // VIP状态
-    val vipStatus = BillingRepository.vipStatusFlow.collectAsState().value
+    val vipStatus by BillingRepository.vipStatusFlow.collectAsState()
 
     // Premium model二状态设置：默认跟随全局设置，但受VIP状态限制
     var agentPremiumModel by remember(agentInfo?.id, vipStatus.isSubscribed) {

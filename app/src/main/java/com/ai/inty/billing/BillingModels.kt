@@ -1,5 +1,7 @@
 package com.ai.inty.billing
 
+import com.android.billingclient.api.Purchase
+
 /**
  * 订阅状态数据类
  */
@@ -18,12 +20,24 @@ data class VipStatus(
 sealed class BillingEvent {
     object Connected : BillingEvent()
     object Disconnected : BillingEvent()
-    data class PurchaseSuccess(val purchase: com.android.billingclient.api.Purchase) :
-        BillingEvent()
-
+    data class PurchaseSuccess(val purchase: Purchase) : BillingEvent()
     data class PurchaseFailed(val code: Int, val message: String) : BillingEvent()
     data class SkuDetailsQueryFailed(val code: Int, val message: String) : BillingEvent()
+    data class InitializationFailed(val reason: String) : BillingEvent()
+    object AppResumed : BillingEvent()
+    data class SubscriptionStatusChanged(val oldStatus: VipStatus, val newStatus: VipStatus) :
+        BillingEvent()
 }
+
+/**
+ * BillingRepository初始化状态
+ */
+data class BillingInitState(
+    val isInitialized: Boolean = false,
+    val isConnected: Boolean = false,
+    val hasGooglePlayServices: Boolean = false,
+    val errorMessage: String? = null
+)
 
 /**
  * 会员计划数据类

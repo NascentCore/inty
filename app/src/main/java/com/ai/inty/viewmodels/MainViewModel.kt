@@ -37,6 +37,7 @@ import com.therouter.TheRouter
 import com.therouter.router.Navigator
 import com.therouter.router.action.interceptor.ActionInterceptor
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -521,14 +522,36 @@ class MainViewModel : BaseActivityViewModel() {
     fun updatePlans() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                EasyLog.log("开始更新会员状态...")
+                EasyLog.log("BillingRepository MainViewModel 开始更新会员状态...")
+
+                // 等待BillingRepository初始化完成
+                var retryCount = 0
+                while (!BillingRepository.isInitialized() && retryCount < 10) {
+                    delay(500) // 等待500ms
+                    retryCount++
+                }
+
+                if (!BillingRepository.isInitialized()) {
+                    EasyLog.log("BillingRepository MainViewModel BillingRepository 初始化超时，跳过更新")
+                    return@launch
+                }
+
+                // 检查BillingRepository是否已连接
+                if (!BillingRepository.isConnected()) {
+                    EasyLog.log("BillingRepository MainViewModel BillingRepository 未连接，跳过更新")
+                    return@launch
+                }
+                
                 BillingRepository.fetchRemote()
-                EasyLog.log("会员状态更新完成")
+                EasyLog.log("BillingRepository MainViewModel 会员状态更新完成")
             } catch (e: kotlinx.coroutines.CancellationException) {
-                EasyLog.log("Member status update cancelled: ${e.message}")
+                EasyLog.log("BillingRepository MainViewModel Member status update cancelled: ${e.message}")
                 // 协程被取消是正常情况，不需要特殊处理
             } catch (e: Exception) {
-                EasyLog.log("Member status update failed: ${e.message}", EasyLog.ERROR)
+                EasyLog.log(
+                    "BillingRepository MainViewModel Member status update failed: ${e.message}",
+                    EasyLog.ERROR
+                )
                 // 不影响主流程，静默处理
             }
         }
