@@ -17,11 +17,9 @@ local.properties
 /.vscode/
 /.kotlin/
 .claude
-keystore.properties
 bundletool.jar
 *.apks
 *.aab
-version.properties
 # Sometime Android Studio writes build outputs here.
 /app/release/
 /app/debug/
