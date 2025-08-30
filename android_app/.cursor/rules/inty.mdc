@@ -1,0 +1,139 @@
+---
+description: Inty App 开发规范
+globs: 
+alwaysApply: true
+---
+
+# Inty App 开发规范
+
+## 项目概述
+这是一个使用 Kotlin + Jetpack Compose 开发的 Android 应用，采用 MVVM 架构模式。
+
+## 技术栈
+- **语言**: Kotlin
+- **UI框架**: Jetpack Compose
+- **架构模式**: MVVM (Model-View-ViewModel)
+- **路由**: TheRouter
+- **网络**: Retrofit + OkHttp
+- **依赖注入**: KSP
+- **图片加载**: Coil
+- **推送**: Firebase Messaging
+- **构建工具**: Gradle (Kotlin DSL)
+
+## 指导意见
+
+- 尽量使用代码库内、经过封装的函数或者 API，而不是使用外部
+
+## 代码规范
+
+### 1. 包结构规范
+```
+com.ai.inty/
+├── base/           # 基础类
+├── beans/          # 数据模型
+├── chat/           # 聊天相关
+├── home/           # 首页相关
+├── net/            # 网络相关
+├── ui/             # UI 组件
+├── utils/          # 工具类
+├── viewmodels/     # ViewModel 类
+└── *.kt           # Activity 类
+```
+
+### 2. 命名规范
+- **类名**: 使用 PascalCase，如 `MainActivity`、`ChatViewModel`
+- **函数名**: 使用 camelCase，如 `onCreate`、`requestNotifyPermission`
+- **变量名**: 使用 camelCase，如 `mainViewModel`、`chatViewModel`
+- **常量**: 使用 UPPER_SNAKE_CASE，如 `ROUTE_MAIN`、`USER_HOST`
+- **包名**: 使用小写字母，如 `com.ai.inty.base`
+
+### 3. 文件组织
+- Activity 类直接放在主包下
+- ViewModel 类放在 `viewmodels` 包下
+- 基础类放在 `base` 包下
+- UI 组件放在 `ui` 包下
+- 数据模型放在 `beans` 包下
+
+### 4. Compose 规范
+- 使用 `@Composable` 注解标记可组合函数
+- 使用 `@Preview` 注解提供预览
+- 遵循 Compose 状态管理最佳实践
+- 使用 Material3 设计系统
+
+### 5. ViewModel 规范
+- 继承自 `BaseViewModel` 或 `BaseActivityViewModel`
+- 使用 `MutableStateFlow` 和 `StateFlow` 管理状态
+- 使用 `viewModelScope` 处理协程
+- 在 `viewmodels` 包下创建
+
+### 6. 路由规范
+- 使用 TheRouter 进行页面路由
+- 路由常量定义在 `Constant.kt` 中
+- 使用 `@Route` 注解标记路由页面
+- 使用 `@Autowired` 注解进行依赖注入
+
+### 7. 网络请求规范
+- 使用 Retrofit 进行网络请求
+- 网络相关代码放在 `net` 包下
+- 使用协程处理异步请求
+
+### 8. 日志规范
+- 使用 `EasyLog` 进行日志记录
+- 在关键操作处添加日志
+- 避免在生产环境输出敏感信息
+
+### 9. 权限处理
+- 使用 `ActivityResultContracts` 处理权限请求
+- 在需要时检查权限状态
+- 提供用户友好的权限说明
+
+### 10. 资源管理
+- 字符串资源放在 `res/values/strings.xml`
+- 颜色资源放在 `res/values/colors.xml`
+- 尺寸资源放在 `res/values/dimens.xml`
+
+## 最佳实践
+
+### 1. 错误处理
+- 使用 try-catch 块处理异常
+- 在 ViewModel 中统一处理错误
+- 向用户显示友好的错误信息
+
+### 2. 性能优化
+- 避免在 UI 线程执行耗时操作
+- 使用 `remember` 和 `derivedStateOf` 优化 Compose 性能
+- 合理使用 `LaunchedEffect` 和 `DisposableEffect`
+
+### 3. 代码质量
+- 保持函数简洁，单一职责
+- 添加必要的注释说明
+- 使用有意义的变量和函数名
+- 避免魔法数字，使用常量
+
+### 4. 测试
+- 为 ViewModel 编写单元测试
+- 为 UI 组件编写 Compose 测试
+- 使用 `@Preview` 进行 UI 预览测试
+
+## 模块化规范
+- `app`: 主应用模块
+- `utils`: 工具类模块
+- `network`: 网络请求模块
+- 模块间通过 `implementation` 依赖
+
+## 构建配置
+- 使用 Kotlin DSL 编写 Gradle 配置
+- 支持 debug 和 release 构建类型
+- 配置代码混淆和资源压缩
+- 使用 Firebase 服务
+
+## 安全规范
+- 敏感信息不硬编码在代码中
+- 使用 ProGuard 进行代码混淆
+- 网络请求使用 HTTPS
+- 合理处理用户权限
+
+## 版本控制
+- 使用有意义的提交信息
+- 遵循 Git Flow 工作流
+- 及时更新版本号和版本名 

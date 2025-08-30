@@ -1,0 +1,117 @@
+# This version talks to the dev backend.
+name: Build and release to Google Play Store
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'The environment to release to, corresponds to combination of Google Play track, app build type, and backend endpoints'
+        required: true
+        default: dev
+        type: environment
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - id: get-build-target
+        run: |
+          case "${{ inputs.environment }}" in
+            prod)
+              echo "target=bundleRelease" >> $GITHUB_OUTPUT
+              echo "track=internal" >> $GITHUB_OUTPUT
+              echo "aab=app/build/outputs/bundle/release/app-release.aab" >> $GITHUB_OUTPUT
+              ;;
+            *)
+              echo "target=bundlePlaydebug" >> $GITHUB_OUTPUT
+              echo "track=internal" >> $GITHUB_OUTPUT
+              echo "aab=app/build/outputs/bundle/playdebug/app-playdebug.aab" >> $GITHUB_OUTPUT
+              ;;
+          esac
+
+      - name: Write build summary
+        run: |
+          echo "## Build target" >> $GITHUB_STEP_SUMMARY
+          echo "target: ${{ steps.get-build-target.outputs.target }}" >> $GITHUB_STEP_SUMMARY
+          echo "track: ${{ steps.get-build-target.outputs.track }}" >> $GITHUB_STEP_SUMMARY
+
+      - uses: actions/checkout@v4
+        with:
+          # Some operations look for history, so we need to fetch full history.
+          fetch-depth: 0
+
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            .gradle
+            build
+            app/build
+            network/build
+            utils/build
+          # https://github.com/actions/cache/blob/main/examples.md#java---gradle
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}-
+
+      - name: Create keystore.properties
+        env:
+          KEYSTORE_PROPERTIES: ${{ secrets.KEYSTORE_PROPERTIES }}
+        run: |
+          echo "$KEYSTORE_PROPERTIES" > keystore.properties
+
+      - name: Create Google Play service account key
+        env:
+          GOOGLE_PLAY_SERVICE_ACCOUNT_KEY: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_KEY }}
+        run: |
+          echo "$GOOGLE_PLAY_SERVICE_ACCOUNT_KEY" > service-account-key.json
+
+      - name: Build Release AAB
+        run: |
+          ./gradlew clean ${{ steps.get-build-target.outputs.target }}
+
+      - id: get-version-info
+        run: |
+          echo "## Version information" >> $GITHUB_STEP_SUMMARY
+          ./gradlew printVersionInfo >> $GITHUB_STEP_SUMMARY
+          echo "version_name_with_suffix=$(./gradlew printVersionInfo | grep 'Version name with suffix:' | awk '{print $NF}')" >> $GITHUB_OUTPUT
+
+      - id: create-github-release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: "playstore-${{ inputs.environment }}-${{ steps.get-version-info.outputs.version_name_with_suffix }}"
+          draft: false
+          prerelease: false
+          files: |
+            ${{ steps.get-build-target.outputs.aab }}
+          generate_release_notes: true
+          make_latest: false
+          fail_on_unmatched_files: false
+
+      - id: upload-google-play
+        # https://github.com/r0adkll/upload-google-play
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_KEY }}
+          packageName: com.ai.intellimate
+          releaseName: "${{ inputs.environment }}-${{ steps.get-version-info.outputs.version_name_with_suffix }}"
+          releaseFiles: ${{ steps.get-build-target.outputs.aab }}
+          # https://developers.google.com/android-publisher/tracks#adding_and_modifying_apks
+          track: ${{ steps.get-build-target.outputs.track }}
+          status: draft
+          inAppUpdatePriority: 2
+          # TODO(yaxiong): Add dynamic release notes.
+          # whatsNewDirectory: distribution/whatsnew-dynamic
+
+      - name: Write summary
+        run: |
+          echo "## Release notes" >> $GITHUB_STEP_SUMMARY
+          echo "GitHub Release: ${{ steps.create-github-release.outputs.url }}" >> $GITHUB_STEP_SUMMARY
+          echo "Google Play release: ${{ steps.upload-google-play.outputs.internalSharingDownloadUrls }}" >> $GITHUB_STEP_SUMMARY

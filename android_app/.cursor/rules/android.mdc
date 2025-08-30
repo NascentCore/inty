@@ -1,0 +1,80 @@
+---
+description: 安卓开发通用规则
+globs: 
+alwaysApply: true
+---
+# Android App 项目通用规则
+
+> **Scope**: 仅对 Kotlin/Compose 代码生效（`*.kt`、`*.kts`）。
+
+---
+
+## 代码风格
+
+- **命名**：  
+  - ViewModel 类以 `XxxViewModel` 结尾；  
+  - Composable 函数以 `XxxScreen` 或 `XxxContent` 结尾；  
+  - 状态 Holder（data class）以 `XxxState` 结尾。  
+- **格式**：  
+  - 推荐使用 2 个空格缩进；  
+  - 每行最长 120 字符；  
+  - 函数参数列表若超 3 行，务必使用尾随逗号并另起一行缩进。
+
+---
+
+## 架构约束（MVVM）
+
+1. **ViewModel 生命周期**  
+   - 所有与 UI 相关的业务逻辑必须放在各自的 `ViewModel`；  
+   - 在 Compose 中通过 `val vm: XxxViewModel = viewModel()` 获取实例。  
+
+2. **State Hoisting**  
+   - `Composable` 内不直接持有可变状态，必须通过参数外部传入 `State<T>`；  
+   - UI 事件回调（如按钮点击）统一上报给 `ViewModel` 处理。
+
+3. **依赖注入**  
+   - 所有仓库/UseCase 通过 `ViewModel` 构造函数传入；  
+   - 禁止在 Composable 或业务逻辑中直接 `new` 出仓库或网络层实例。
+
+---
+
+## 国际化（i18n）
+
+- **禁止**在布局或 Composable 中硬编码字符串。  
+- **必须**使用：  
+  - 传统 View + XML：`context.getString(R.string.xxx)`；  
+  - Compose：`stringResource(id = R.string.xxx)`。  
+- **新增字符串**时，需在 `res/values/strings.xml` 以及各语言的 `res/values-xx/strings.xml` 中同时维护，不可遗漏。
+
+---
+
+## Compose 规范
+
+- UI 组件应拆分为最小可复用单元；  
+- 每个 `@Composable` 顶层函数前，添加简短的 KDoc 注释说明用途；  
+- 禁止在 Composable 内部执行耗时或阻塞操作，所有业务逻辑应在 `ViewModel` 中完成。
+- **Preview 规范**：
+  - 每个 `@Composable` 顶层函数都应该有对应的 `@Preview`；
+  - 只需要提供正常状态下的预览即可；
+  - 预览函数名以 `Preview` 结尾。
+
+### Preview 示例
+```kotlin
+@Preview(showBackground = true)
+@Composable
+fun ChatMessagePreview() {
+    ChatMessage(
+        message = "Hello, this is a test message",
+        isFromUser = true,
+        timestamp = "10:30 AM"
+    )
+}
+
+@Preview(showBackground = true)
+@Composable
+fun HomeScreenPreview() {
+    HomeScreen()
+}
+```
+
+---

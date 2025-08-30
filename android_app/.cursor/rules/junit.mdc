@@ -1,0 +1,9 @@
+---
+description:
+globs: *Test.kt
+alwaysApply: false
+---
+
+# Junit
+
+* Consider use JUnit's @ParameterizedTest

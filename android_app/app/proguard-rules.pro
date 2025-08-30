@@ -1,0 +1,84 @@
+# Add project specific ProGuard rules here.
+# You can control the set of applied configuration files using the
+# proguardFiles setting in build.gradle.
+#
+# For more details, see
+#   http://developer.android.com/guide/developing/tools/proguard.html
+
+# 保留注解信息
+-keepattributes *Annotation*
+-keepattributes SourceFile,LineNumberTable
+-keepattributes Signature
+-keepattributes Exceptions
+
+# 保留原生方法
+-keep class * {
+    native <methods>;
+}
+
+# 保留 Parcelable 实现
+-keep class * implements android.os.Parcelable {
+  public static final android.os.Parcelable$Creator *;
+}
+
+# 保留应用数据模型
+-keep class com.ai.inty.beans.** {
+    public *;
+}
+
+# 保留计费相关类
+-keep class com.ai.inty.billing.** {
+    public *;
+}
+-keep class com.ai.inty.billing.VipStatus { *; }
+-keep class com.ai.inty.billing.VipPlan { *; }
+-keep class com.ai.inty.billing.BillingEvent { *; }
+
+# 保留日志库
+-keep class com.tencent.mars.xlog.** { *; }
+
+# Retrofit 混淆规则
+-keepattributes Signature
+-keepattributes Exceptions
+-dontwarn retrofit2.**
+-keep class retrofit2.** { *; }
+-keepclasseswithmembers class * {
+    @retrofit2.http.* <methods>;
+}
+
+# Moshi 混淆规则
+-keep class com.squareup.moshi.** { *; }
+-keep class * extends com.squareup.moshi.JsonAdapter {
+    public static com.squareup.moshi.JsonAdapter create();
+}
+
+# 保留Kotlin反射相关类
+-keep class kotlin.reflect.** { *; }
+-keep class kotlin.Metadata { *; }
+
+# 保留数据类
+-keepclassmembers class * {
+    @com.squareup.moshi.* <methods>;
+}
+
+# TheRouter 混淆规则
+-keep class cn.therouter.** { *; }
+-keep class * implements cn.therouter.router.Route { *; }
+
+# Firebase 混淆规则
+-keep class com.google.firebase.** { *; }
+-keep class com.google.android.gms.** { *; }
+
+# Compose 混淆规则
+-keep class androidx.compose.** { *; }
+-keepclassmembers class androidx.compose.** {
+    *;
+}
+
+# MMKV 混淆规则
+-keep class com.tencent.mmkv.** { *; }
+
+# 保留 Compose 预览相关类
+-keep class androidx.compose.ui.tooling.preview.** { *; }
+
+
