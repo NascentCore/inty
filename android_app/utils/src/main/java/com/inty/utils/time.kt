@@ -1,4 +1,5 @@
 package com.inty.utils
+
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -58,5 +59,55 @@ fun formatTimestampToDateTime(timestampSeconds: String): String {
     } catch (e: Exception) {
         // 如果解析失败，返回原始字符串
         timestampSeconds
+    }
+}
+
+/**
+ * 将ISO 8601格式的时间字符串转换为毫秒时间戳
+ * @param isoTimeString ISO 8601格式的时间字符串，如："2025-09-01T06:03:15.383000Z"
+ * @return 毫秒时间戳，如果解析失败返回null
+ */
+fun parseIsoTimeToTimestamp(isoTimeString: String?): Long? {
+    return try {
+        isoTimeString ?: return null
+        val instant = Instant.parse(isoTimeString)
+        instant.toEpochMilli()
+    } catch (e: Exception) {
+        null
+    }
+}
+
+/**
+ * 将ISO 8601格式的时间字符串根据指定pattern格式化为时间字符串
+ * @param isoTimeString ISO 8601格式的时间字符串，如："2025-09-01T06:03:15.383000Z"
+ * @param pattern 时间格式pattern，默认为"yyyy-MM-dd"
+ * @return 格式化后的时间字符串，如果解析失败返回null
+ */
+fun formatIsoTimeToString(isoTimeString: String?, pattern: String = "yyyy-MM-dd"): String? {
+    return try {
+        isoTimeString ?: return null
+        val instant = Instant.parse(isoTimeString)
+        val localDateTime = instant.atZone(ZoneId.systemDefault())
+        localDateTime.format(DateTimeFormatter.ofPattern(pattern))
+    } catch (e: Exception) {
+        null
+    }
+}
+
+/**
+ * 将毫秒时间戳转换为标准pattern时间字符串
+ * @param timestampMillis 毫秒时间戳
+ * @param pattern 时间格式pattern，默认为"yyyy-MM-dd"
+ * @return 格式化后的时间字符串，如果解析失败返回null
+ */
+fun formatTimestampToString(timestampMillis: Long?, pattern: String = "yyyy-MM-dd"): String? {
+    return try {
+        timestampMillis ?: return null
+        if (timestampMillis <= 0) return null
+        val instant = Instant.ofEpochMilli(timestampMillis)
+        val localDateTime = instant.atZone(ZoneId.systemDefault())
+        localDateTime.format(DateTimeFormatter.ofPattern(pattern))
+    } catch (e: Exception) {
+        null
     }
 }

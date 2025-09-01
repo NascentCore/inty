@@ -80,6 +80,7 @@ fun VipCenterContent(
             Spacer(Modifier.height(110.dp))
 
             VipCenterHeader()
+
             VipCenterBenefits()
 
             Spacer(Modifier.height(32.dp))
@@ -157,6 +158,7 @@ private fun VipCenterHeader() {
             fontWeight = FontWeight.Medium,
             color = Color.White,
         )
+        Spacer(Modifier.height(10.dp))
     }
 }
 
@@ -165,12 +167,19 @@ private fun VipCenterHeader() {
  */
 @Composable
 private fun VipCenterBenefits() {
-    PremiumBenefitItem(stringResource(R.string.premium_benefit_unlimited))
-    PremiumBenefitItem(stringResource(R.string.premium_benefit_model))
-    PremiumBenefitItem(stringResource(R.string.premium_benefit_inspiration))
-    PremiumBenefitItem(stringResource(R.string.premium_benefit_customize))
-    PremiumBenefitItem(stringResource(R.string.premium_benefit_memory))
-    PremiumBenefitItem(stringResource(R.string.premium_benefit_newfeature))
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+    ) {
+        PremiumBenefitItem(stringResource(R.string.premium_benefit_unlimited))
+        PremiumBenefitItem(stringResource(R.string.premium_benefit_model))
+        PremiumBenefitItem(stringResource(R.string.premium_benefit_inspiration))
+        PremiumBenefitItem(stringResource(R.string.premium_benefit_customize))
+        PremiumBenefitItem(stringResource(R.string.premium_benefit_memory))
+        PremiumBenefitItem(stringResource(R.string.premium_benefit_newfeature))
+    }
+
 }
 
 @Preview(showBackground = true)
