@@ -47,6 +47,12 @@ assert os.getenv("LANGSMITH_PROJECT"), "LANGSMITH_PROJECT must be set"
 _vanilla_openai_client = OpenAI(
     base_url=global_config_loaded_from_config_yaml.agent.base_url,
     api_key=global_config_loaded_from_config_yaml.agent.api_key,
+    # Extra headers used for tracking on openrouter.ai.
+    default_headers={
+        # This appears as app name on openrouter.ai's activity page.
+        "HTTP-Referer": f"{global_config_loaded_from_config_yaml.app.name_for_openrouter}",  # Optional. Site URL for rankings on openrouter.ai.
+        "X-Title": global_config_loaded_from_config_yaml.app.name,  # Optional. Site title for rankings on openrouter.ai.
+    },
 )
 
 
@@ -64,7 +70,7 @@ def chat_completions(messages: list[dict[str, str]], **kwargs):
     return _vanilla_openai_client.chat.completions.create(messages=messages, **kwargs)
 
 
-def get_openai_client(labels: dict[str, str]):
+def get_openai_client(chat_name: str, labels: dict[str, str]):
     """
     Return an OpenAI client with LangSmith tracing.
     The ENV vars are required by langsmith.
@@ -73,9 +79,10 @@ def get_openai_client(labels: dict[str, str]):
     # Create OpenAI client and wrap it with LangSmith
     tracing_extra = {
         "metadata": labels,
-        "tags": ["openai", "langsmith"],
     }
-    _client = wrappers.wrap_openai(_vanilla_openai_client, tracing_extra=tracing_extra)
+    _client = wrappers.wrap_openai(
+        _vanilla_openai_client, chat_name=chat_name, tracing_extra=tracing_extra
+    )
 
     return _client
 

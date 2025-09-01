@@ -2,27 +2,18 @@ import asyncio
 import json
 import logging
 import time
-from app.utils.openai_client import ReasoningEffort
 from typing_extensions import deprecated
-import uuid
 from concurrent.futures import ThreadPoolExecutor
 from threading import Lock, RLock
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 
 from jinja2 import Template as Jinja2Template
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.runnables import Runnable, RunnableLambda
-from langchain_core.tools import Tool
-from langchain_google_community import GoogleSearchAPIWrapper
-from langchain_openai import ChatOpenAI
 from langchain_postgres import PostgresChatMessageHistory
 from langgraph.graph import MessagesState
 from langgraph.managed import RemainingSteps
-from langgraph.prebuilt import create_react_agent
-from langgraph.store.postgres import PostgresStore
-from langmem import create_manage_memory_tool, create_search_memory_tool
-from langsmith import tracing_context
 from openai import OpenAI
 from psycopg import Connection
 from psycopg_pool import ConnectionPool
@@ -32,7 +23,7 @@ from app.core.agent.prompt_template import prompt_template_manager
 from app.core.config import global_config_loaded_from_config_yaml
 from app.services.background_task_service import background_task_service
 from app.services.cache_service import cache_service
-from app.utils.openai_client import Role
+from app.utils.openai_client import get_openai_client, Role, _vanilla_openai_client
 
 logger = logging.getLogger(__name__)
 
@@ -174,15 +165,6 @@ conn = Connection.connect(
 table_name = "chat_history"
 PostgresChatMessageHistory.create_tables(conn, table_name)
 
-postgres_store = PostgresStore(
-    conn=conn,
-    index={
-        "dims": 768,
-        "embed": embed_texts,
-    },
-)
-postgres_store.setup()
-
 
 class Agent:
     """
@@ -302,25 +284,8 @@ class Agent:
         if presence_penalty is not None:
             chat_params["presence_penalty"] = presence_penalty
 
-        model = ChatOpenAI(**chat_params)
-
         # 构建动态提示词Runnable
         self.prompt_runnable = self._create_dynamic_prompt_runnable()
-
-        # 创建无状态的LangGraph Agent，使用自定义状态模式
-        # 移除了checkpointer，对话历史通过PostgresChatMessageHistory管理
-        self.agent = create_react_agent(
-            name=name,
-            model=model,
-            tools=[
-                # create_manage_memory_tool(namespace=('memories',name,'{user_id}')),
-                # create_search_memory_tool(namespace=('memories',name,'{user_id}'))
-                # google_search_tool
-            ],
-            prompt=self.prompt_runnable,
-            store=postgres_store,
-            state_schema=CustomAgentState,
-        )
 
     def _get_effective_main_prompt(self) -> str:
         return self.main_prompt or prompts.FRIENDLY_ROLEPLAY_PROMPT.main_prompt
@@ -814,8 +779,15 @@ class Agent:
                     user_id=user_id,
                     chat_settings=chat_settings,
                 )
-                labels = {"user_id": user_id}
+                user_name = self._extract_user_name_from_profile(user_profile)
+                labels = {
+                    "user_id": user_id,
+                    "user_name": user_name,
+                    "agent_id": self.agent_id,
+                    "agent_name": self.name,
+                }
                 config = {"configurable": labels}
+
                 messages: list[BaseMessage] = self.prompt_runnable.invoke(
                     state_data, config
                 ).messages
@@ -839,19 +811,23 @@ class Agent:
                 agent_invoke_start = time.time()
                 logger.debug(f"开始Agent推理 - Agent: {self.agent_id}")
 
-                from app.utils.openai_client import get_openai_client
-
-                response = get_openai_client(labels).chat.completions.create(
+                chat_name = f"{user_name}:{self.name}"
+                response = get_openai_client(
+                    chat_name=chat_name, labels=labels
+                ).chat.completions.create(
                     messages=openai_messages,
                     model=self.model_config.get("model", "openai/gpt-3.5-turbo"),
                     temperature=self.model_config.get("temperature", 0.5),
                     max_tokens=self.model_config.get("max_tokens", 1000),
                     top_p=self.model_config.get("top_p", 1.0),
-                    # This only works for Gemini models.
                     extra_body={
+                        # This only works for Gemini models.
                         "generation_config": {
                             "thinking_budget": 0,
                         },
+                        # This appears on Open Router Client User ID field.
+                        # can be used to track end user's usage.
+                        "user": user_id,
                     },
                 )
                 agent_invoke_time = time.time() - agent_invoke_start
@@ -1062,12 +1038,13 @@ class Agent:
                     config = {"configurable": {"user_id": user_id}}
 
                     # 收集完整的流式响应用于调试
-                    stream_messages = []
-                    for message_chunk, metadata in self.agent.stream(
-                        state_data, config, stream_mode="messages"
-                    ):
-                        stream_messages.append(message_chunk)
-                        yield message_chunk, metadata
+                    # TODO: 需要重新实现该 streaming 功能
+                    # stream_messages = []
+                    # for message_chunk, metadata in self.agent.stream(
+                    #     state_data, config, stream_mode="messages"
+                    # ):
+                    #     stream_messages.append(message_chunk)
+                    #     yield message_chunk, metadata
 
                     # 如果启用调试日志记录，保存完整的流式响应（异步后台处理）
                     logger.debug(

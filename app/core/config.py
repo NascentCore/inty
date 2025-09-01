@@ -90,6 +90,12 @@ class AppConfig:
         if self.limits is None:
             self.limits = self.LimitsConfig()
 
+    @property
+    def name_for_openrouter(self) -> str:
+        # https:// is required to make it recognized by open router.
+        # Normal string will be rejected by open router.
+        return f"https://{self.name}-{self.environment}"
+
 
 @dataclass
 class EmbeddingConfig:
