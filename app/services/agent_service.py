@@ -623,7 +623,7 @@ async def update_agent(
             raise HTTPException(status_code=404, detail="角色不存在")
 
         # 验证更新数据
-        update_data = agent_in.dict(exclude_unset=True)
+        update_data = agent_in.model_dump(exclude_unset=True)
         if not update_data:
             raise HTTPException(status_code=400, detail="No data provided for update")
 
