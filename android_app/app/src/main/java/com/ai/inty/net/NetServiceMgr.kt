@@ -273,7 +273,7 @@ object NetServiceMgr {
             "local" -> "http://${Constant.USER_HOST_LOCAL}/"
             "debug" -> "https://${Constant.USER_HOST_DEV}/"
             "playdebug" -> "https://${Constant.USER_HOST_DEV}/"
-            "release" -> "https://${Constant.USER_HOST_DEV}/"
+            "release" -> "https://${Constant.USER_HOST}/"
             else -> "https://${Constant.USER_HOST_DEV}/" // fallback to staging
         }
     }
