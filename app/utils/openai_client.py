@@ -8,8 +8,9 @@ Demo for using OpenAI SDK with LangSmith to track the usage of OpenAI API.
 
 from enum import StrEnum
 import os
+from typing_extensions import deprecated
 from openai import OpenAI
-from langsmith import wrappers
+from langsmith import traceable, wrappers
 
 
 from app.core.config import global_config_loaded_from_config_yaml
@@ -32,10 +33,25 @@ _vanilla_openai_client = OpenAI(
 )
 
 
+@deprecated(
+    "Demo function do not use, this is only for demo @traceable "
+    "This also mapps user->Human and assistant->AI"
+    "We want to have it logging the raw messages, but langsmith insists on"
+    "mapping user->Human and assistant->AI"
+)
+@traceable
+def chat_completions(messages: list[dict[str, str]], **kwargs):
+    """
+    Return an OpenAI client without LangSmith tracing.
+    """
+    return _vanilla_openai_client.chat.completions.create(messages=messages, **kwargs)
+
+
 def get_openai_client(labels: dict[str, str]):
     """
     Return an OpenAI client with LangSmith tracing.
     The ENV vars are required by langsmith.
+    This maps the role of the messages: user->Human and assistant->AI.
     """
     # Create OpenAI client and wrap it with LangSmith
     tracing_extra = {
