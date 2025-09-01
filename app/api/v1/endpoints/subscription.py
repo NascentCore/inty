@@ -35,15 +35,17 @@ router = APIRouter(prefix="/subscription", route_class=LoggerRoute)
 logger = logging.getLogger(__name__)
 
 
-@router.get("/plans", response_model=APIResponse[SubscriptionPlansResponse])
+@router.get(
+    "/plans",
+    response_model=APIResponse[SubscriptionPlansResponse],
+    summary="获取订阅计划列表及其他用户订阅信息",
+    description="现有订阅计划、用户订阅的内容、以及其他与用户订阅状态相关的信息",
+)
 async def get_subscription_plans(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
     current_user: schemas.User = Depends(deps.get_current_active_user),
 ) -> Any:
-    """
-    获取订阅计划列表
-    """
     try:
         # 获取所有激活的订阅计划
         plans = await subscription_service.get_subscription_plans(
