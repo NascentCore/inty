@@ -64,6 +64,10 @@ fun ChatMorePanel(
 
     val context = LocalContext.current
     var showSheet by remember { mutableStateOf(false) }
+    // VIP状态
+    val vipStatus by BillingRepository.vipStatusFlow.collectAsState()
+    //reply的vip拦截弹窗标记
+    var showDialog by remember { mutableStateOf(false) }
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -90,8 +94,12 @@ fun ChatMorePanel(
                         onClick = {
                             // 检查是否正式登录（非游客且已登录）
                             if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
-                                //已经登录，则弹出输入框sheet
-                                showSheet = true
+                                //已经登录，判断是否vip，是则弹出输入框sheet，否则弹拦截弹窗
+                                if (vipStatus.isSubscribed) {
+                                    showSheet = true
+                                } else {
+                                    showDialog = true
+                                }
                             } else {
                                 // 未登录或游客时跳转到登录页面
                                 TheRouter.build(Constant.ROUTE_LOGIN)
@@ -125,13 +133,10 @@ fun ChatMorePanel(
 
     //reply sheet
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    var showDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(showSheet) {
         if (showSheet) sheetState.show() else sheetState.hide()
     }
-    // VIP状态
-    val vipStatus by BillingRepository.vipStatusFlow.collectAsState()
     val viewmodel = viewModel<ChatViewModel>()
     val chatSetting by viewmodel.chatSetting.collectAsState()
 
@@ -145,13 +150,8 @@ fun ChatMorePanel(
                 showSheet = false
             },
             onSave = { str ->
-                //此时判断，是否是vip，如果不是，则弹出拦截弹窗，
-                if (vipStatus.isSubscribed) {
-                    //调用接口 save
-                    viewmodel.updateChatReplySettings(str.trim())
-                } else {
-                    showDialog = true
-                }
+                //调用接口 save
+                viewmodel.updateChatReplySettings(str.trim())
                 showSheet = false
             }
         )
