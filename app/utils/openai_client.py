@@ -6,12 +6,19 @@ Wrapper of OpenAI API, used to wrap the OpenAI API with LangSmith.
 Demo for using OpenAI SDK with LangSmith to track the usage of OpenAI API.
 """
 
+from enum import StrEnum
 import os
 from openai import OpenAI
 from langsmith import wrappers
 
 
 from app.core.config import global_config_loaded_from_config_yaml
+
+
+class Role(StrEnum):
+    USER = "user"
+    ASSISTANT = "assistant"
+    SYSTEM = "system"
 
 
 # These env vars has no arguments inputable to langchina api
@@ -31,7 +38,7 @@ def get_openai_client(labels: dict[str, str]):
     The ENV vars are required by langsmith.
     """
     # Create OpenAI client and wrap it with LangSmith
-    tracing_extra: TracingExtra = {
+    tracing_extra = {
         "metadata": labels,
         "tags": ["openai", "langsmith"],
     }
