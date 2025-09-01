@@ -7,6 +7,7 @@ from concurrent.futures import ThreadPoolExecutor
 from threading import Lock, RLock
 from typing import Any, Dict, List, Optional, Union
 
+from jinja2 import Template as Jinja2Template
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.runnables import Runnable, RunnableLambda
@@ -29,8 +30,6 @@ from app.core.agent.prompt_template import prompt_template_manager
 from app.core.config import global_config_loaded_from_config_yaml
 from app.services.background_task_service import background_task_service
 from app.services.cache_service import cache_service
-
-from jinja2 import Template as Jinja2Template
 
 logger = logging.getLogger(__name__)
 
@@ -453,7 +452,7 @@ class Agent:
                 system_messages.append(SystemMessage(content=user_profile))
 
             if is_char_user_created:
-                newline = '\n'
+                newline = "\n"
                 logger.debug(
                     f"用户创建的角色，添加辅助提示词: {newline.join(prompts.FRIENDLY_ROLEPLAY_PROMPT.auxiliary_prompts)}"
                 )
@@ -716,13 +715,17 @@ class Agent:
 
         Args:
             history_messages: 所有历史消息
-            max_messages: 最大消息数量
+            max_messages: 最大消息数量，如果为0则不进行截取，返回所有消息
 
         Returns:
             经过优化的历史消息列表
         """
         if not history_messages:
             return []
+
+        # 如果max_messages为0，返回所有消息
+        if max_messages == 0:
+            return history_messages
 
         # 如果消息数量不超过限制，直接返回
         if len(history_messages) <= max_messages:
@@ -781,7 +784,7 @@ class Agent:
                 # TODO: 建议取消截取，因为：目前原型产品状态的截取无明确价值；引入额外复杂性无意义。
                 # 待聊天记录过长才需要截取、记忆等复杂机制。
                 recent_history = self._get_relevant_history(
-                    history.messages, max_messages=15
+                    history.messages, max_messages=0
                 )
                 get_history_time = time.time() - get_history_start
                 logger.debug(
