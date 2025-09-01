@@ -162,8 +162,8 @@ android {
             // debug signingconfig，因此 keystore.properties 中 debug 签名配置无效。
             signingConfig = signingConfigs.getByName("dev")
 
-            // Use different web client ID for debug builds with dev signing profile
-            buildConfigField("String", "WEB_CLIENT_ID", "\"1034291688895-3hdi9alkn7901qk4ojvmpev72rstn371.apps.googleusercontent.com\"")
+            // TODO: Use a different web client ID for debug builds.
+            // buildConfigField("String", "WEB_CLIENT_ID", "\"debug_client_id_here\"")
 
             // Disable code minification for debug builds
             isMinifyEnabled = false
@@ -173,7 +173,6 @@ android {
         }
         create("local") {
             initWith(getByName("debug"))
-            // local build inherits debug's WEB_CLIENT_ID and dev signing profile
             versionNameSuffix = "-local"
         }
     }
