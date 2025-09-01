@@ -2,6 +2,7 @@ import asyncio
 import json
 import logging
 import time
+from typing_extensions import deprecated
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from threading import Lock, RLock
@@ -707,8 +708,11 @@ class Agent:
             )  # 失败结果缓存时间很短
             return user_info_text
 
+    # 特殊值，表示返回全部消息
+    MAX_MESSAGES_ALL = 0
+
     def _get_relevant_history(
-        self, history_messages: List[BaseMessage], max_messages: int = 10
+        self, history_messages: List[BaseMessage], max_messages: int = MAX_MESSAGES_ALL
     ) -> List[BaseMessage]:
         """
         获取相关的历史消息，进行智能截取和优化
@@ -724,7 +728,7 @@ class Agent:
             return []
 
         # 如果max_messages为0，返回所有消息
-        if max_messages == 0:
+        if max_messages == self.MAX_MESSAGES_ALL:
             return history_messages
 
         # 如果消息数量不超过限制，直接返回
@@ -783,22 +787,14 @@ class Agent:
                 get_history_start = time.time()
                 # TODO: 建议取消截取，因为：目前原型产品状态的截取无明确价值；引入额外复杂性无意义。
                 # 待聊天记录过长才需要截取、记忆等复杂机制。
-                recent_history = self._get_relevant_history(
-                    history.messages, max_messages=0
-                )
+                recent_history = self._get_relevant_history(history.messages)
                 get_history_time = time.time() - get_history_start
                 logger.debug(
                     f"历史消息获取耗时: {get_history_time:.3f}秒 - Agent: {self.agent_id}"
                 )
 
-                # 构建包含历史的完整消息列表
-                build_msg_start = time.time()
                 all_messages = recent_history + messages["messages"]
                 logger.debug(f"all_messages: {all_messages}")
-                build_msg_time = time.time() - build_msg_start
-                logger.debug(
-                    f"消息构建耗时: {build_msg_time:.3f}秒 - Agent: {self.agent_id}"
-                )
 
                 # 保存原始用户消息到历史记录
                 save_msg_start = time.time()
@@ -1063,6 +1059,7 @@ class Agent:
             )
             # 不中断正常聊天流程
 
+    @deprecated("替换为流式消息输出，需要调整大模型 API 调用，输出方式等")
     async def chat(
         self,
         user_id: str,
@@ -1098,6 +1095,7 @@ class Agent:
             logger.error(f"异步聊天失败 - Agent: {self.agent_id}, Error: {str(e)}")
             raise
 
+    # 此方法需要测试
     async def chat_stream(
         self, user_id: str, session_id: str, messages: dict[str, Any], db_session=None
     ):
@@ -1122,9 +1120,7 @@ class Agent:
                     )
 
                     # 获取相关的历史消息
-                    recent_history = self._get_relevant_history(
-                        history.messages, max_messages=10
-                    )
+                    recent_history = self._get_relevant_history(history.messages)
 
                     # 构建包含历史的完整消息列表
                     all_messages = recent_history + messages["messages"]
