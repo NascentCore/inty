@@ -211,7 +211,6 @@ internal class BillingPurchaseManager(
                 isSubscribed = true,
                 subscriptionId = purchase.products.firstOrNull(),
                 purchaseTime = purchase.purchaseTime,
-                expiryTime = 0L // 需要从服务器获取过期时间
             )
             vipStatusFlow.value = newStatus
             BillingStorage.saveLocalVipStatus(newStatus)

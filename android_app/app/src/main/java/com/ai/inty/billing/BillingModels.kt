@@ -8,11 +8,18 @@ import com.android.billingclient.api.Purchase
 data class VipStatus(
     val isSubscribed: Boolean,//是否订阅中的状态
     val subscriptionId: String? = null,//订阅的id
-    val purchaseTime: Long = 0L,//购买时间的时间戳
-    val expiryTime: Long = 0L,//过期时间的时间戳，
+    val purchaseTime: Long? = null,//购买时间的时间戳
+    val expiryTime: Long? = null,//过期时间的时间戳，
     val everSubscribed: Boolean = false,//是否曾经订阅过
     val previous_plan_id: String? = null,//上次订阅的sku的id
-)
+    val subscriptionStatus: String? = null,
+) {
+    companion object {
+        const val UI_SUBSCRIBED = "SUBSCRIBED"
+        const val UI_UNSUBSCRIBED = "UNSUBSCRIBED"
+        const val UI_SUBSCRIBED_EXPIRE_SOON = "SUBSCRIBED_EXPIRE_SOON"
+    }
+}
 
 /**
  * 计费事件

@@ -105,7 +105,7 @@ class MainActivity : BaseActivity() {
                 BillingDiagnosticHelper.performBillingDiagnostic(this@MainActivity)
             EasyLog.log("MainActivity - Billing诊断报告: $diagnosticReport")
 
-            BillingRepository.initializeAndFetch(this@MainActivity)
+            BillingRepository.initialize(this@MainActivity)
 
             // BillingRepository初始化完成后，再调用updatePlans
             delay(500) // 给BillingRepository一些初始化时间

@@ -3,6 +3,7 @@ package com.ai.inty.billing
 import com.ai.inty.net.ISubscriptionApi
 import com.architecture.httplib.core.HttpResult
 import com.inty.utils.log.EasyLog
+import com.inty.utils.parseIsoTimeToTimestamp
 import com.therouter.TheRouter
 import kotlinx.coroutines.flow.MutableStateFlow
 
@@ -23,7 +24,7 @@ internal class BillingRemoteManager(
      */
     suspend fun fetchRemote(isConnected: Boolean) {
         EasyLog.log("BillingRepository BillingRemoteManager - 开始获取远程数据")
-        
+
         runCatching { api.getSubscriptionPlans() }
             .onSuccess { result ->
                 when (result) {
@@ -34,8 +35,9 @@ internal class BillingRemoteManager(
                         // 更新会员状态
                         val isSubscribed = currentSubscription != null
                         val subscriptionId = currentSubscription?.planId
-                        val purchaseTime = currentSubscription?.startDate?.toLongOrNull() ?: 0L
-                        val expiryTime = currentSubscription?.endDate?.toLongOrNull() ?: 0L
+                        val purchaseTime =
+                            parseIsoTimeToTimestamp(currentSubscription?.startDate)
+                        val expiryTime = parseIsoTimeToTimestamp(currentSubscription?.endDate)
 
                         val vipStatus = VipStatus(
                             isSubscribed = isSubscribed,
@@ -43,10 +45,20 @@ internal class BillingRemoteManager(
                             purchaseTime = purchaseTime,
                             expiryTime = expiryTime,
                             everSubscribed = response.has_ever_subscribed,
-                            previous_plan_id = response.previous_plan_id
+                            previous_plan_id = response.previous_plan_id,
+                            // ACTIVE + auto_renew=true 是 "subscribed"；正常订阅，自动续费
+                            // ACTIVE + auto_renew=false 是"subscribed_expiring"；正常订阅，不自动续费
+                            // CANCELLED是"subscribed_expiring" 已取消但未到期
+                            // null 认为是未订阅
+                            subscriptionStatus = when {
+                                currentSubscription?.status == "ACTIVE" && currentSubscription.autoRenew == true -> VipStatus.UI_SUBSCRIBED
+                                currentSubscription?.status == "ACTIVE" && currentSubscription.autoRenew == false -> VipStatus.UI_SUBSCRIBED_EXPIRE_SOON
+                                currentSubscription?.status == "CANCELLED" -> VipStatus.UI_SUBSCRIBED_EXPIRE_SOON
+                                else -> VipStatus.UI_UNSUBSCRIBED
+                            }
                         )
 
-                        EasyLog.log("BillingRepository BillingRemoteManager 会员状态更新: isSubscribed=$isSubscribed, subscriptionId=$subscriptionId")
+                        EasyLog.log("BillingRepository BillingRemoteManager 会员状态更新:vipStatus:$vipStatus \n isSubscribed=$isSubscribed, subscriptionId=$subscriptionId")
 
                         // 保存到本地并更新Flow
                         BillingStorage.saveLocalVipStatus(vipStatus)
@@ -65,13 +77,9 @@ internal class BillingRemoteManager(
                             }
                         }
 
-                        EasyLog.log("BillingRepository BillingRemoteManager 订阅计划更新: 获取到 ${vipPlans.size} 个计划")
                         EasyLog.log(
-                            "BillingRepository BillingRemoteManager 订阅计划更新: 获取到 ${
-                                vipPlans.joinToString(
-                                    " ,, "
-                                )
-                            } 个计划"
+                            "BillingRepository BillingRemoteManager 订阅计划更新: 获取到 ${vipPlans.size} 个计划" +
+                                    "\n ${vipPlans.joinToString(" ,, ")}"
                         )
 
                         // 直接更新plansFlow，不进行复杂的变化检测
@@ -97,6 +105,7 @@ internal class BillingRemoteManager(
                     is kotlinx.coroutines.CancellationException -> {
                         EasyLog.log("BillingRepository BillingRemoteManager 获取订阅计划被取消: ${exception.message}")
                     }
+
                     else -> {
                         EasyLog.log("BillingRepository BillingRemoteManager 获取订阅计划异常: ${exception.message}")
                     }

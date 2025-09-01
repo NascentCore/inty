@@ -2,6 +2,7 @@ package com.ai.inty.home
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,6 +31,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -37,6 +39,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -44,6 +47,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -56,7 +60,10 @@ import com.ai.inty.base.IntyImage
 import com.ai.inty.base.noRippleClickable
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.beans.UserProfile
+import com.ai.inty.billing.BillingRepository
+import com.ai.inty.billing.VipStatus
 import com.ai.inty.utils.AuthClickable
+import com.inty.utils.formatTimestampToString
 import com.therouter.TheRouter
 
 /**
@@ -161,7 +168,8 @@ internal fun MyPage(
 
                     Text(
                         modifier = Modifier.weight(1f),
-                        text = userProfile.description ?: stringResource(R.string.persona_placeholder),
+                        text = userProfile.description
+                            ?: stringResource(R.string.persona_placeholder),
                         color = Color.White,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Medium,
@@ -188,21 +196,12 @@ internal fun MyPage(
                 Spacer(Modifier.height(24.dp))
 
                 // IntelliMate Premium 会员入口按钮
-                AuthClickable(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 12.dp),
-                    onClick = {
-                        TheRouter.build(Constant.ROUTE_VIP_CENTER).navigation(context)
-                    }
-                ) { authModifier ->
-                    Image(
-                        painter = painterResource(R.drawable.img_vip_banner),
-                        contentDescription = "vip banner",
-                        modifier = authModifier,
-                        contentScale = ContentScale.Crop
-                    )
-                }
+                // VIP状态
+                val vipStatus by BillingRepository.vipStatusFlow.collectAsState()
+                PremiumBanner(
+                    status = vipStatus.subscriptionStatus,
+                    expireTime = formatTimestampToString(vipStatus.expiryTime),
+                    onClick = { TheRouter.build(Constant.ROUTE_VIP_CENTER).navigation(context) })
 
                 Spacer(Modifier.height(8.dp))
 
@@ -457,6 +456,75 @@ private fun MyAgentCard(
             )
         }
     }
+}
+
+/**
+ * Premium Banner 组件
+ */
+@Preview
+@Composable
+internal fun PremiumBanner(
+    status: String? = "Activate Now",
+    expireTime: String? = null,
+    onClick: () -> Unit = {},
+) {
+    AuthClickable(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp),
+        onClick = onClick
+    ) { authModifier ->
+        Box(
+            modifier = authModifier
+        ) {
+            Image(
+                painter = painterResource(R.drawable.img_vip_banner),
+                contentDescription = "",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(120.dp)
+            )
+
+            Row(
+                Modifier
+                    .border(
+                        width = 0.5.dp,
+                        color = Color(0x61D523FF),
+                        shape = RoundedCornerShape(size = 12.dp)
+                    )
+                    .background(
+                        color = Color(0x33D216FF),
+                        shape = RoundedCornerShape(size = 12.dp)
+                    )
+                    .padding(horizontal = 8.dp)
+                    .align(BiasAlignment(-.8f, .65f)),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+
+            ) {
+                val str =
+                    if (status == null || status == VipStatus.UI_UNSUBSCRIBED) "Activate Now" else status
+                Text(
+                    text = str,
+                    fontSize = 11.sp,
+                    color = Color.White,
+                    textAlign = TextAlign.Center
+                )
+                //显示过期时间，BillingRemoteManager中subscriptionStatus有定义规则，UI_SUBSCRIBED表示有自动续订，所以不需要显示过期时间
+                if (expireTime.isNullOrEmpty().not() && status != VipStatus.UI_SUBSCRIBED) {
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = "expires on $expireTime",
+                        fontSize = 11.sp,
+                        color = Color.White,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+        }
+    }
+
 }
 
 

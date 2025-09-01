@@ -24,6 +24,13 @@ import kotlinx.coroutines.launch
  * 计费仓库主类
  */
 object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener {
+
+    private const val RECONNECT_DELAY_MS = 5000L
+    private const val DISCONNECT_RECONNECT_DELAY_MS = 1000L
+    private const val STATUS_REFRESH_DELAY_MS = 2000L
+    private const val TAG = "BillingRepository"
+
+
     private lateinit var billingClient: BillingClient
     private var isConnected = false
 
@@ -61,69 +68,107 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
     fun initialize(context: Context) {
         if (::billingClient.isInitialized) return
 
-        // 打印设备区域和货币信息
-        val locale = context.resources.configuration.locales[0]
-        val currency = java.util.Currency.getInstance(locale)
-        EasyLog.log("BillingRepository - 设备区域: ${locale.displayCountry} (${locale.country}), 货币: ${currency.displayName} (${currency.currencyCode})")
-
-        // 检查设备信息
-        EasyLog.log("BillingRepository - 设备信息:")
-        EasyLog.log("BillingRepository  制造商: ${android.os.Build.MANUFACTURER}")
-        EasyLog.log("BillingRepository  型号: ${android.os.Build.MODEL}")
-        EasyLog.log("BillingRepository  Android 版本: ${android.os.Build.VERSION.RELEASE}")
-        EasyLog.log("BillingRepository  API 级别: ${android.os.Build.VERSION.SDK_INT}")
-        EasyLog.log("BillingRepository  是否模拟器: ${BillingUtils.isEmulator()}")
+        logDeviceInfo(context)
 
         // 预检查Google Play服务
         val hasGooglePlayServices = BillingUtils.isGooglePlayServicesAvailable(context)
-        _initStateFlow.value =
-            _initStateFlow.value.copy(hasGooglePlayServices = hasGooglePlayServices)
+        updateInitState(hasGooglePlayServices = hasGooglePlayServices)
 
         if (!hasGooglePlayServices) {
-            EasyLog.log("BillingRepository - Google Play 服务不可用，跳过BillingClient初始化")
-            _initStateFlow.value = _initStateFlow.value.copy(
-                errorMessage = "Google Play 服务不可用"
-            )
-            eventScope.launch {
-                _eventFlow.emit(BillingEvent.InitializationFailed("Google Play 服务不可用"))
-            }
+            handleGooglePlayServicesUnavailable()
             return
         }
 
+        initializeBillingClient(context)
+        initializeManagers()
+        connectToPlayBilling()
+    }
+
+    /**
+     * 记录设备信息
+     */
+    private fun logDeviceInfo(context: Context) {
+        val locale = context.resources.configuration.locales[0]
+        val currency = java.util.Currency.getInstance(locale)
+        log("设备区域: ${locale.displayCountry} (${locale.country}), 货币: ${currency.displayName} (${currency.currencyCode})")
+        log("设备信息: ${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}, Android ${android.os.Build.VERSION.RELEASE}")
+        log("是否模拟器: ${BillingUtils.isEmulator()}")
+    }
+
+    /**
+     * 处理Google Play服务不可用的情况
+     */
+    private fun handleGooglePlayServicesUnavailable() {
+        log("Google Play 服务不可用，跳过BillingClient初始化")
+        updateInitState(errorMessage = "Google Play 服务不可用")
+        emitEvent(BillingEvent.InitializationFailed("Google Play 服务不可用"))
+    }
+
+    /**
+     * 初始化BillingClient
+     */
+    private fun initializeBillingClient(context: Context) {
         billingClient = BillingClient.newBuilder(context.applicationContext)
             .setListener(this)
             .enablePendingPurchases()
             .build()
+    }
 
-        // 初始化子管理器
+    /**
+     * 初始化子管理器
+     */
+    private fun initializeManagers() {
         priceManager = BillingPriceManager(billingClient, eventScope, _eventFlow, _plansFlow)
         purchaseManager =
             BillingPurchaseManager(billingClient, eventScope, _eventFlow, _vipStatusFlow)
         remoteManager = BillingRemoteManager(_vipStatusFlow, _plansFlow, priceManager)
+    }
 
-        connectToPlayBilling()
+    /**
+     * 更新初始化状态
+     */
+    private fun updateInitState(
+        isInitialized: Boolean = _initStateFlow.value.isInitialized,
+        isConnected: Boolean = _initStateFlow.value.isConnected,
+        hasGooglePlayServices: Boolean = _initStateFlow.value.hasGooglePlayServices,
+        errorMessage: String? = _initStateFlow.value.errorMessage
+    ) {
+        _initStateFlow.value = _initStateFlow.value.copy(
+            isInitialized = isInitialized,
+            isConnected = isConnected,
+            hasGooglePlayServices = hasGooglePlayServices,
+            errorMessage = errorMessage
+        )
+    }
+
+    /**
+     * 发送事件
+     */
+    private fun emitEvent(event: BillingEvent) {
+        eventScope.launch {
+            _eventFlow.emit(event)
+        }
+    }
+
+    /**
+     * 统一日志记录
+     */
+    private fun log(message: String, level: Int = EasyLog.INFO) {
+        EasyLog.log("$TAG - $message", level)
     }
 
     fun release() {
         if (::billingClient.isInitialized) {
             billingClient.endConnection()
             isConnected = false
-            EasyLog.log("BillingRepository - BillingClient 资源已释放")
+            log("BillingClient 资源已释放")
         }
         // 取消协程作用域
         eventScope.cancel()
     }
 
     private fun connectToPlayBilling() {
-        billingClient.startConnection(object : BillingClientStateListener {
-            override fun onBillingSetupFinished(billingResult: BillingResult) {
-                this@BillingRepository.onBillingSetupFinished(billingResult)
-            }
-
-            override fun onBillingServiceDisconnected() {
-                this@BillingRepository.onBillingServiceDisconnected()
-            }
-        })
+        billingClient.startConnection(this)
     }
 
     override fun onPurchasesUpdated(
@@ -131,72 +176,80 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
         purchases: MutableList<com.android.billingclient.api.Purchase>?,
     ) {
         purchaseManager.onPurchasesUpdated(billingResult, purchases)
-        EasyLog.log(
-            "BillingRepository 购买结果onPurchasesUpdated $billingResult, $purchases ",
-            EasyLog.INFO
-        )
+        log("购买结果onPurchasesUpdated $billingResult, $purchases", EasyLog.INFO)
     }
 
     override fun onBillingSetupFinished(billingResult: BillingResult) {
-        EasyLog.log("BillingRepository - BillingClient 连接结果: 响应码=${billingResult.responseCode}")
-        EasyLog.log("BillingRepository - 连接详情: ${billingResult.debugMessage}")
+        log("BillingClient 连接结果: 响应码=${billingResult.responseCode}")
+        log("连接详情: ${billingResult.debugMessage}")
 
         if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
-            isConnected = true
-            EasyLog.log("BillingRepository - BillingClient 连接成功 isReady:${billingClient.isReady} ,, connectState: ${billingClient.connectionState}")
-
-            // 更新初始化状态
-            _initStateFlow.value = _initStateFlow.value.copy(
-                isInitialized = true,
-                isConnected = true,
-                errorMessage = null
-            )
-
-            // 发送连接成功事件
-            eventScope.launch {
-                _eventFlow.emit(BillingEvent.Connected)
-            }
-
-            // 连接成功后，立即获取远程数据
-            eventScope.launch {
-                fetchRemote()
-            }
+            handleBillingSetupSuccess()
         } else {
-            EasyLog.log("BillingRepository - BillingClient 连接失败: ${billingResult.debugMessage}")
-            EasyLog.log("BillingRepository - 连接失败响应码: ${billingResult.responseCode}")
-
-            // 更新初始化状态
-            _initStateFlow.value = _initStateFlow.value.copy(
-                isInitialized = true,
-                isConnected = false,
-                errorMessage = "连接失败: ${billingResult.debugMessage}"
-            )
-
-            // 连接失败时，尝试重新连接（自动重连机制）
-            eventScope.launch {
-                delay(5000) // 等待5秒后重连
-                if (!isConnected) {
-                    EasyLog.log("BillingRepository - 尝试重新连接 BillingClient")
-                    connectToPlayBilling()
-                }
-            }
+            handleBillingSetupFailure(billingResult)
         }
+    }
+
+    /**
+     * 处理BillingClient连接成功
+     */
+    private fun handleBillingSetupSuccess() {
+        isConnected = true
+        log("BillingClient 连接成功 isReady:${billingClient.isReady}, connectState: ${billingClient.connectionState}")
+
+        // 更新初始化状态
+        updateInitState(
+            isInitialized = true,
+            isConnected = true,
+            errorMessage = null
+        )
+
+        // 发送连接成功事件
+        emitEvent(BillingEvent.Connected)
+
+        // 连接成功后，立即获取远程数据
+        eventScope.launch {
+            fetchRemote()
+        }
+    }
+
+    /**
+     * 处理BillingClient连接失败
+     */
+    private fun handleBillingSetupFailure(billingResult: BillingResult) {
+        log("BillingClient 连接失败: ${billingResult.debugMessage}")
+        log("连接失败响应码: ${billingResult.responseCode}")
+
+        // 更新初始化状态
+        updateInitState(
+            isInitialized = true,
+            isConnected = false,
+            errorMessage = "连接失败: ${billingResult.debugMessage}"
+        )
+
+        // 连接失败时，尝试重新连接（自动重连机制）
+        scheduleReconnect(RECONNECT_DELAY_MS)
     }
 
     override fun onBillingServiceDisconnected() {
         isConnected = false
-        EasyLog.log("BillingRepository - BillingClient 断开连接")
+        log("BillingClient 断开连接")
 
         // 发送断开连接事件
-        eventScope.launch {
-            _eventFlow.emit(BillingEvent.Disconnected)
-        }
+        emitEvent(BillingEvent.Disconnected)
 
         // 自动重连机制
+        scheduleReconnect(DISCONNECT_RECONNECT_DELAY_MS)
+    }
+
+    /**
+     * 安排重连
+     */
+    private fun scheduleReconnect(delayMs: Long) {
         eventScope.launch {
-            delay(1000) // 等待1秒后重连
+            delay(delayMs)
             if (!isConnected) {
-                EasyLog.log("BillingRepository - 自动重连 BillingClient")
+                log("尝试重新连接 BillingClient")
                 connectToPlayBilling()
             }
         }
@@ -204,7 +257,7 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
 
     suspend fun fetchRemote() {
         if (!::remoteManager.isInitialized) {
-            EasyLog.log("BillingRepository fetchRemote - remoteManager 未初始化，跳过远程数据获取")
+            log("remoteManager 未初始化，跳过远程数据获取")
             return
         }
         remoteManager.fetchRemote(isConnected)
@@ -240,23 +293,12 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
      * 手动触发价格更新
      */
     fun refreshPrices() {
-        EasyLog.log("BillingRepository 手动触发价格更新")
+        log("手动触发价格更新")
         if (isConnected) {
             priceManager.querySkuDetails(isConnected)
         } else {
-            EasyLog.log("BillingRepository BillingClient 未连接，无法更新价格")
+            log("BillingClient 未连接，无法更新价格")
         }
-    }
-
-    /**
-     * 初始化并获取数据
-     */
-    suspend fun initializeAndFetch(context: Context) {
-        // 1. 初始化 BillingClient
-        initialize(context)
-
-        // 2. 等待连接完成后再获取远程数据
-        // fetchRemote() 会在 onBillingSetupFinished 中自动调用
     }
 
     /**
@@ -273,35 +315,38 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
         eventScope.launch {
             _eventFlow.collect { event ->
                 when (event) {
-                    is BillingEvent.PurchaseSuccess -> {
-                        EasyLog.log("BillingRepository - 购买成功，刷新状态")
-                        delay(2000)
-                        refreshSubscriptionStatus()
-                    }
-
-                    is BillingEvent.Connected -> {
-                        EasyLog.log("BillingRepository - 连接成功，刷新状态")
-                        refreshSubscriptionStatus()
-                    }
-
-                    is BillingEvent.AppResumed -> {
-                        EasyLog.log("BillingRepository - 应用恢复，检查状态")
-                        refreshSubscriptionStatus()
-                    }
-
-                    else -> {
-                        // 其他事件不需要特殊处理
-                    }
+                    is BillingEvent.PurchaseSuccess -> handlePurchaseSuccess()
+                    is BillingEvent.Connected -> handleConnected()
+                    is BillingEvent.AppResumed -> handleAppResumed()
+                    else -> log("未处理事件: $event")
                 }
             }
         }
     }
 
     /**
-     * 监听订阅状态变化并自动刷新（保持向后兼容）
+     * 处理购买成功事件
      */
-    fun startSubscriptionStatusMonitoring() {
-        startEnhancedSubscriptionMonitoring()
+    private suspend fun handlePurchaseSuccess() {
+        log("购买成功，刷新状态")
+        delay(STATUS_REFRESH_DELAY_MS)
+        refreshSubscriptionStatus()
+    }
+
+    /**
+     * 处理连接成功事件
+     */
+    private suspend fun handleConnected() {
+        log("连接成功，刷新状态")
+        refreshSubscriptionStatus()
+    }
+
+    /**
+     * 处理应用恢复事件
+     */
+    private suspend fun handleAppResumed() {
+        log("应用恢复，检查状态")
+        refreshSubscriptionStatus()
     }
 
     /**
@@ -310,18 +355,18 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
     fun refreshSubscriptionStatus() {
         eventScope.launch {
             try {
-                EasyLog.log("BillingRepository - 开始刷新订阅状态")
+                log("开始刷新订阅状态")
                 val oldStatus = _vipStatusFlow.value
                 fetchRemote()
 
                 // 检查状态是否发生变化
                 val newStatus = _vipStatusFlow.value
                 if (oldStatus.isSubscribed != newStatus.isSubscribed) {
-                    EasyLog.log("BillingRepository - 订阅状态发生变化: ${oldStatus.isSubscribed} -> ${newStatus.isSubscribed}")
+                    log("订阅状态发生变化: ${oldStatus.isSubscribed} -> ${newStatus.isSubscribed}")
                     _eventFlow.emit(BillingEvent.SubscriptionStatusChanged(oldStatus, newStatus))
                 }
             } catch (e: Exception) {
-                EasyLog.log("BillingRepository - 刷新订阅状态失败: ${e.message}")
+                log("刷新订阅状态失败: ${e.message}")
             }
         }
     }
@@ -361,8 +406,6 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
      * 通知应用恢复
      */
     fun notifyAppResumed() {
-        eventScope.launch {
-            _eventFlow.emit(BillingEvent.AppResumed)
-        }
+        emitEvent(BillingEvent.AppResumed)
     }
 }
