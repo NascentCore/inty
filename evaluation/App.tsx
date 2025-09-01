@@ -10,6 +10,7 @@ import {
   MessageOutlined,
   BarChartOutlined,
   HistoryOutlined,
+  SearchOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
 } from "@ant-design/icons";
@@ -17,7 +18,7 @@ import { EvaluationPage } from "./pages/EvaluationPage";
 import { EvaluationHistoryPage } from "./pages/EvaluationHistoryPage";
 import { ChatPage } from "./pages/ChatPage";
 import AgentManagePage from "./pages/AgentManagePage";
-
+import PromptQueryPage from "./pages/PromptQueryPage";
 
 const { Sider, Content } = Layout;
 const { Title, Text } = Typography;
@@ -26,7 +27,8 @@ type PageKey =
   | "evaluation"
   | "history"
   | "chat"
-  | "agents";
+  | "agents"
+  | "prompt-query";
 
 interface NavigationItem {
   key: PageKey;
@@ -100,7 +102,12 @@ export const App: React.FC = () => {
       label: "智能体管理",
       description: "创建、编辑和管理智能体",
     },
-
+    {
+      key: "prompt-query",
+      icon: <SearchOutlined />,
+      label: "提示词查询",
+      description: "查询会话提示词和调试信息",
+    },
     {
       key: "evaluation",
       icon: <BarChartOutlined />,
@@ -130,7 +137,8 @@ export const App: React.FC = () => {
         return <ChatPage />;
       case "agents":
         return <AgentManagePage />;
-
+      case "prompt-query":
+        return <PromptQueryPage />;
       default:
         return null;
     }
