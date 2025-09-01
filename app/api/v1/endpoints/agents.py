@@ -37,8 +37,7 @@ from app.schemas.response import (
 from app.services import agent_service
 from app.services.character_card_service import character_card_service
 from app.services.subscription_service import SubscriptionService
-from app.utils.gcs import delete_from_gcs, is_user_gcs_file, upload_to_gcs
-from app.utils.image import compress_png_to_jpeg, ImageFormat, AspectRatio
+from app.utils.image import ImageFormat, AspectRatio
 
 router = APIRouter(prefix="/ai/agents", route_class=LoggerRoute)
 
@@ -328,7 +327,8 @@ def process_generated_images(generated_images: List[ImagenGeneratedImage]) -> di
 @router.post(
     "/text-to-image",
     response_model=APIResponse[dict],
-    summary="Generate images based on text description",
+    summary="[Deprecated, should move to /api/v1/images/text-to-image] Generate images based on text description",
+    deprecated=True,
 )
 async def generate_background(
     request: schemas.TextToImageRequest,

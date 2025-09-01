@@ -26,7 +26,6 @@ from app.schemas.user_deletion import (
     DeletionCheckResponse,
 )
 from app.services import user_service
-from app.utils.gcs import delete_from_gcs, is_user_gcs_file, upload_to_gcs
 
 router = APIRouter(prefix="/users", route_class=LoggerRoute)
 
