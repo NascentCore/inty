@@ -28,7 +28,7 @@ from app.utils.openai_client import (
     langchain_message_to_openai_message,
 )
 
-logger = logging.getLogger(__name__)
+from loguru import logger
 
 
 # 自定义Agent状态，继承MessagesState并添加用户信息
@@ -160,10 +160,11 @@ def get_connection_pool():
     return _connection_pool
 
 
+# TODO: 这个应该挪到 alembic 里执行
 # 初始化聊天历史表和记忆表
-conn = Connection.connect(
-    global_config_loaded_from_config_yaml.database.url, autocommit=True
-)
+pg_url = global_config_loaded_from_config_yaml.database.url
+logger.debug(f"初始化聊天历史表和记忆表, database url: {pg_url}")
+conn = Connection.connect(pg_url, autocommit=True)
 
 table_name = "chat_history"
 PostgresChatMessageHistory.create_tables(conn, table_name)
