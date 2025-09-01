@@ -209,9 +209,11 @@ private fun AgentInfoScreen(
             Column(
                 modifier = Modifier
                     .padding(innerPadding)
+                    .fillMaxSize()
                     .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.Bottom
             ) {
-                Spacer(Modifier.height(149.dp))
+                Spacer(Modifier.weight(1f))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
@@ -311,8 +313,7 @@ private fun AgentInfoScreen(
                 }
 
                 Spacer(Modifier.height(16.dp))
-
-                Spacer(Modifier.height(100.dp))
+                Spacer(Modifier.height(32.dp))
             }
         }
 
@@ -420,7 +421,7 @@ private fun FollowButton(
     }
 }
 
-@Preview
+@Preview(showBackground = true)
 @Composable
 private fun PreviewFollowButton() {
     Row(
