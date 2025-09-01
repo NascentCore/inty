@@ -1,6 +1,8 @@
 import io
+import io
 import logging
 import math
+from urllib.parse import urlparse
 from urllib.parse import urlparse
 import uuid
 from datetime import datetime
@@ -19,6 +21,13 @@ from app.core.config import global_config_loaded_from_config_yaml
 from app.models.agent import AgentVisibility
 from app.models.associations import agent_followers
 from app.services.cache_service import cache_service
+from app.services.character_card_service import (
+    validate_character_card_fields,
+    _validate_character_card_fields,
+)
+from app.utils.crop_avatar import crop_avatar
+from app.utils.gcs import download_from_gcs, upload_to_gcs
+from app.utils.image import compress_png_to_jpeg, ImageFormat
 from app.utils.crop_avatar import crop_avatar
 from app.utils.gcs import get_bucket_and_path_from_gcs_url
 
@@ -540,6 +549,33 @@ async def create_agent(
             # 图片处理失败不应该阻止Agent创建，使用原始数据
             processed_agent_data = agent_data
 
+        # 如果avatar为空但有background，则从background中裁剪出avatar
+        if (
+            not processed_agent_data.get("avatar")
+            or not processed_agent_data["avatar"].strip()
+        ) and processed_agent_data.get("background"):
+            logger.debug(
+                f"Agent avatar为空，尝试从background裁剪avatar - Agent ID: {agent_id}"
+            )
+            try:
+                cropped_avatar_url = await _crop_avatar_from_background(
+                    processed_agent_data["background"], agent_id, user_id
+                )
+                if cropped_avatar_url:
+                    processed_agent_data["avatar"] = cropped_avatar_url
+                    logger.info(
+                        f"成功从background裁剪avatar - Agent ID: {agent_id}, Avatar URL: {cropped_avatar_url}"
+                    )
+                else:
+                    logger.warning(
+                        f"从background裁剪avatar失败，使用默认头像 - Agent ID: {agent_id}"
+                    )
+            except Exception as e:
+                logger.error(
+                    f"从background裁剪avatar时发生异常 - Agent ID: {agent_id}, Error: {str(e)}"
+                )
+                # 裁剪失败不影响Agent创建，继续使用原始数据
+
         # 确保processed_agent_data是有效的字典
         if not isinstance(processed_agent_data, dict):
             logger.error(
@@ -590,6 +626,73 @@ async def create_agent(
         await db.rollback()
         logger.error(f"未知错误 - 创建角色: {str(e)}")
         raise HTTPException(status_code=500, detail="服务器内部错误")
+
+
+async def _crop_avatar_from_background(
+    background_url: str, agent_id: str, user_id: str
+) -> Optional[str]:
+    """
+    从 background 图片中裁剪出 avatar
+
+    Args:
+        background_url: 背景图片的URL
+        agent_id: 智能体ID
+        user_id: 用户ID
+
+    Returns:
+        裁剪后的avatar URL，如果失败则返回None
+    """
+    try:
+        logger.debug(f"开始从background裁剪avatar - Agent ID: {agent_id}")
+
+        # 下载背景图片
+        background_data = download_from_gcs(background_url)
+        if not background_data:
+            logger.warning(f"无法下载background图片: {background_url}")
+            return None
+
+        # 使用crop_avatar函数裁剪头像
+        cropped_avatar = crop_avatar(background_data)
+
+        # 将PIL Image转换为bytes
+        avatar_bytes = io.BytesIO()
+        cropped_avatar.save(avatar_bytes, format="JPEG", quality=90)
+        avatar_bytes.seek(0)
+        avatar_data = avatar_bytes.getvalue()
+
+        # 生成唯一的avatar文件路径，基于background_url的路径
+        # 从background_url中提取路径，去掉后缀，添加-cropped-avatar后缀
+        background_path = urlparse(background_url).path
+        # 去掉开头的斜杠
+        if background_path.startswith("/"):
+            background_path = background_path[1:]
+        # 去掉文件后缀
+        base_path = (
+            background_path.rsplit(".", 1)[0]
+            if "." in background_path
+            else background_path
+        )
+        # 添加-cropped-avatar.jpg后缀
+        avatar_file_path = f"{base_path}-cropped-avatar.jpg"
+
+        # 上传裁剪后的avatar到GCS
+        avatar_url = upload_to_gcs(
+            avatar_data,
+            "image/jpeg",
+            global_config_loaded_from_config_yaml.gcs.bucket,
+            avatar_file_path,
+        )
+
+        logger.debug(
+            f"成功从background裁剪avatar并上传 - Agent ID: {agent_id}, Avatar URL: {avatar_url}"
+        )
+        return avatar_url
+
+    except Exception as e:
+        logger.error(
+            f"从background裁剪avatar失败 - Agent ID: {agent_id}, Error: {str(e)}"
+        )
+        return None
 
 
 def _validate_character_card_fields(agent_in: schemas.AgentCreate):
