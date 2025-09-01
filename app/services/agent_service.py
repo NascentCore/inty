@@ -19,15 +19,21 @@ from app.schemas.agent import AgentSortOption
 from app.core.agent.agent import agent_manager
 from app.core.config import global_config_loaded_from_config_yaml
 from app.models.agent import AgentVisibility
+from app.models.agent import AgentVisibility
 from app.models.associations import agent_followers
 from app.services.cache_service import cache_service
-from app.services.character_card_service import (
-    validate_character_card_fields,
-    _validate_character_card_fields,
-)
 from app.utils.crop_avatar import crop_avatar
-from app.utils.gcs import download_from_gcs, upload_to_gcs
-from app.utils.image import compress_png_to_jpeg, ImageFormat
+from app.utils.gcs import (
+    append_filename_suffix,
+    download_from_gcs,
+    get_bucket_and_path_from_gcs_url,
+    upload_to_gcs,
+)
+from app.utils.image import (
+    compress_png_to_jpeg,
+    ImageFormat,
+    get_jpg_bytes_from_pil_image,
+)
 from app.utils.crop_avatar import crop_avatar
 from app.utils.gcs import get_bucket_and_path_from_gcs_url
 
@@ -628,9 +634,7 @@ async def create_agent(
         raise HTTPException(status_code=500, detail="服务器内部错误")
 
 
-async def _crop_avatar_from_background(
-    background_url: str, agent_id: str, user_id: str
-) -> Optional[str]:
+async def _crop_avatar_from_background(background_url: str) -> Optional[str]:
     """
     从 background 图片中裁剪出 avatar
 
@@ -642,57 +646,21 @@ async def _crop_avatar_from_background(
     Returns:
         裁剪后的avatar URL，如果失败则返回None
     """
-    try:
-        logger.debug(f"开始从background裁剪avatar - Agent ID: {agent_id}")
+    # 下载背景图片
+    background_data = download_from_gcs(background_url)
+    if not background_data:
+        logger.warning(f"无法下载background图片: {background_url}")
+        raise RuntimeError(f"无法下载background图片: {background_url}")
 
-        # 下载背景图片
-        background_data = download_from_gcs(background_url)
-        if not background_data:
-            logger.warning(f"无法下载background图片: {background_url}")
-            return None
+    cropped_avatar = crop_avatar(background_data)
+    avatar_data = get_jpg_bytes_from_pil_image(cropped_avatar, 90)
 
-        # 使用crop_avatar函数裁剪头像
-        cropped_avatar = crop_avatar(background_data)
+    bucket, background_gcs_path = get_bucket_and_path_from_gcs_url(background_url)
+    avatar_gcs_path = append_filename_suffix(background_gcs_path, "-cropped-avatar")
 
-        # 将PIL Image转换为bytes
-        avatar_bytes = io.BytesIO()
-        cropped_avatar.save(avatar_bytes, format="JPEG", quality=90)
-        avatar_bytes.seek(0)
-        avatar_data = avatar_bytes.getvalue()
-
-        # 生成唯一的avatar文件路径，基于background_url的路径
-        # 从background_url中提取路径，去掉后缀，添加-cropped-avatar后缀
-        background_path = urlparse(background_url).path
-        # 去掉开头的斜杠
-        if background_path.startswith("/"):
-            background_path = background_path[1:]
-        # 去掉文件后缀
-        base_path = (
-            background_path.rsplit(".", 1)[0]
-            if "." in background_path
-            else background_path
-        )
-        # 添加-cropped-avatar.jpg后缀
-        avatar_file_path = f"{base_path}-cropped-avatar.jpg"
-
-        # 上传裁剪后的avatar到GCS
-        avatar_url = upload_to_gcs(
-            avatar_data,
-            "image/jpeg",
-            global_config_loaded_from_config_yaml.gcs.bucket,
-            avatar_file_path,
-        )
-
-        logger.debug(
-            f"成功从background裁剪avatar并上传 - Agent ID: {agent_id}, Avatar URL: {avatar_url}"
-        )
-        return avatar_url
-
-    except Exception as e:
-        logger.error(
-            f"从background裁剪avatar失败 - Agent ID: {agent_id}, Error: {str(e)}"
-        )
-        return None
+    # 上传裁剪后的avatar到GCS
+    avatar_url = upload_to_gcs(avatar_data, ImageFormat.JPEG, bucket, avatar_gcs_path)
+    return avatar_url
 
 
 def _validate_character_card_fields(agent_in: schemas.AgentCreate):
@@ -938,7 +906,7 @@ def process_agent_image_urls(agent_data: dict, agent_id: str, user_id: str) -> d
                 try:
                     # 生成永久路径
                     # 从临时URL中提取文件扩展名
-                    _, temp_path = get_bucket_and_path_from_gcs_url(avatar_url)
+                    _, bucket, temp_path = get_bucket_and_bucket_and_path_from_gcs_url(avatar_url)
                     file_ext = temp_path.split(".")[-1] if "." in temp_path else "png"
                     permanent_path = generate_agent_avatar_path(
                         agent_id, f"avatar.{file_ext}"
