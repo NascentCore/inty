@@ -204,6 +204,66 @@ def add_ai_message(session_id: str, message: str) -> None:
         raise
 
 
+def query_messages(user_id: str, agent_id: str, limit: int = 20, offset: int = 0) -> List[Dict[str, Any]]:
+    """
+    Query messages by user_id and agent_id
+    """
+    ensure_table_initialized()
+    conn = get_chat_history_connection()
+
+    # 分页查询消息（按时间倒序，最新的在前）- 包括消息ID
+    messages_query = """
+        SELECT id, message, created_at
+        FROM chat_history 
+        ORDER BY created_at DESC
+        WHERE user_id = %s AND agent_id = %s
+    """
+    messages = []
+    with conn.cursor() as cur:
+        cur.execute(messages_query, (user_id, agent_id))
+        rows = cur.fetchall()
+
+        for row in rows:
+            message_id = row[0]
+            message_raw = row[1]
+            created_at = row[2]
+
+            # 处理消息数据，可能是字符串或已经是字典
+            if isinstance(message_raw, str):
+                message_data = json.loads(message_raw)
+            elif isinstance(message_raw, dict):
+                message_data = message_raw
+            else:
+                # 尝试转换为字符串再解析
+                message_data = json.loads(str(message_raw))
+
+            # 解析消息类型和内容
+            message_type = message_data.get("type", "human")
+            content = ""
+
+            if "data" in message_data and "content" in message_data["data"]:
+                content = message_data["data"]["content"]
+            elif "content" in message_data:
+                content = message_data["content"]
+
+            # 确定角色
+            role = (
+                "user"
+                if message_type in ["human", "HumanMessage"]
+                else "assistant"
+            )
+
+            messages.append(
+                {
+                    "id": message_id,  # 添加消息ID
+                    "role": role,
+                    "content": content,
+                    "timestamp": created_at.isoformat() if created_at else None,
+                }
+            )
+    return messages
+
+    
 def get_messages_paginated(
     session_id: str, limit: int = 20, offset: int = 0
 ) -> Dict[str, Any]:

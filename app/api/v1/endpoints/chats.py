@@ -169,8 +169,9 @@ async def cleanup_idle_agents(
     "/{chat_id}/detail",
     include_in_schema=False,
     tags=["unknown"],
-    summary="Get Chat Detail",
+    summary="[Deprecated, no one uses this] Get Chat Detail",
     description="Get chat details with paginated message records",
+    deprecated=True,
 )
 async def get_chat_detail(
     *,
@@ -237,7 +238,7 @@ async def get_chat_detail(
     tags=["unknown", "inty-eval"],
     include_in_schema=False,
     deprecated=True,
-    summary="Get Chat Detail for agent identified by agent_id",
+    summary="[Deprecated, use /api/v1/agents/{agent_id}] Get Chat Detail for agent identified by agent_id",
     description="Return the chat details by Agent ID with paginated message records",
 )
 async def get_agent_chat_detail(
