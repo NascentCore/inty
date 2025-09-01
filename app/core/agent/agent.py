@@ -2,6 +2,7 @@ import asyncio
 import json
 import logging
 import time
+from app.utils.openai_client import ReasoningEffort
 from typing_extensions import deprecated
 import uuid
 from concurrent.futures import ThreadPoolExecutor
@@ -846,6 +847,12 @@ class Agent:
                     temperature=self.model_config.get("temperature", 0.5),
                     max_tokens=self.model_config.get("max_tokens", 1000),
                     top_p=self.model_config.get("top_p", 1.0),
+                    # This only works for Gemini models.
+                    extra_body={
+                        "generation_config": {
+                            "thinking_budget": 0,
+                        },
+                    },
                 )
                 agent_invoke_time = time.time() - agent_invoke_start
                 logger.debug(

@@ -22,6 +22,23 @@ class Role(StrEnum):
     SYSTEM = "system"
 
 
+class ReasoningEffort(StrEnum):
+    """
+    Used to control how much reasoning token to produces during chat completions.
+    https://platform.openai.com/docs/api-reference/chat/create#chat_create-reasoning_effort
+    """
+
+    # https://ai.google.dev/gemini-api/docs/openai#thinking
+    # Only meaningful for Gemini models
+    NONE = "none"
+
+    # Below are listed in OpenAI SDK.
+    MINIMAL = "minimal"
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+
+
 # These env vars has no arguments inputable to langchina api
 assert os.getenv("LANGCHAIN_API_KEY"), "LANGCHAIN_API_KEY must be set"
 assert os.getenv("LANGSMITH_TRACING_V2"), "LANGSMITH_TRACING_V2 must be set"
