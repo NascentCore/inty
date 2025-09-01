@@ -711,7 +711,7 @@ class EvaluationService:
             包含回复内容和元数据的字典
         """
         try:
-            from langchain.schema import HumanMessage
+            from langchain_core.messages import HumanMessage
 
             # 获取智能体数据（用于创建Agent实例）
             agent_data = await agent_service.get_agent_for_chat(

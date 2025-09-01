@@ -3,25 +3,17 @@ import json
 import logging
 import time
 from typing_extensions import deprecated
-import uuid
 from concurrent.futures import ThreadPoolExecutor
 from threading import Lock, RLock
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 
 from jinja2 import Template as Jinja2Template
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.runnables import Runnable, RunnableLambda
-from langchain_core.tools import Tool
-from langchain_google_community import GoogleSearchAPIWrapper
-from langchain_openai import ChatOpenAI
 from langchain_postgres import PostgresChatMessageHistory
 from langgraph.graph import MessagesState
 from langgraph.managed import RemainingSteps
-from langgraph.prebuilt import create_react_agent
-from langgraph.store.postgres import PostgresStore
-from langmem import create_manage_memory_tool, create_search_memory_tool
-from langsmith import tracing_context
 from openai import OpenAI
 from psycopg import Connection
 from psycopg_pool import ConnectionPool
@@ -31,6 +23,10 @@ from app.core.agent.prompt_template import prompt_template_manager
 from app.core.config import global_config_loaded_from_config_yaml
 from app.services.background_task_service import background_task_service
 from app.services.cache_service import cache_service
+from app.utils.openai_client import (
+    get_openai_client,
+    langchain_message_to_openai_message,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -172,15 +168,6 @@ conn = Connection.connect(
 table_name = "chat_history"
 PostgresChatMessageHistory.create_tables(conn, table_name)
 
-postgres_store = PostgresStore(
-    conn=conn,
-    index={
-        "dims": 768,
-        "embed": embed_texts,
-    },
-)
-postgres_store.setup()
-
 
 class Agent:
     """
@@ -300,25 +287,8 @@ class Agent:
         if presence_penalty is not None:
             chat_params["presence_penalty"] = presence_penalty
 
-        model = ChatOpenAI(**chat_params)
-
         # 构建动态提示词Runnable
         self.prompt_runnable = self._create_dynamic_prompt_runnable()
-
-        # 创建无状态的LangGraph Agent，使用自定义状态模式
-        # 移除了checkpointer，对话历史通过PostgresChatMessageHistory管理
-        self.agent = create_react_agent(
-            name=name,
-            model=model,
-            tools=[
-                # create_manage_memory_tool(namespace=('memories',name,'{user_id}')),
-                # create_search_memory_tool(namespace=('memories',name,'{user_id}'))
-                # google_search_tool
-            ],
-            prompt=self.prompt_runnable,
-            store=postgres_store,
-            state_schema=CustomAgentState,
-        )
 
     def _get_effective_main_prompt(self) -> str:
         return self.main_prompt or prompts.FRIENDLY_ROLEPLAY_PROMPT.main_prompt
@@ -812,7 +782,25 @@ class Agent:
                     user_id=user_id,
                     chat_settings=chat_settings,
                 )
-                config = {"configurable": {"user_id": user_id}}
+                user_name = self._extract_user_name_from_profile(user_profile)
+                labels = {
+                    "user_id": user_id,
+                    "user_name": user_name,
+                    "agent_id": self.agent_id,
+                    "agent_name": self.name,
+                }
+                config = {"configurable": labels}
+
+                messages: list[BaseMessage] = self.prompt_runnable.invoke(
+                    state_data, config
+                ).messages
+
+                openai_messages = [
+                    langchain_message_to_openai_message(message, user_name, self.name)
+                    for message in messages
+                ]
+                logger.debug(f"openai_messages: {openai_messages}")
+
                 input_build_time = time.time() - input_build_start
                 logger.debug(
                     f"输入数据构建耗时: {input_build_time:.3f}秒 - Agent: {self.agent_id}"
@@ -821,7 +809,26 @@ class Agent:
                 # 调用agent进行对话
                 agent_invoke_start = time.time()
                 logger.debug(f"开始Agent推理 - Agent: {self.agent_id}")
-                response = self.agent.invoke(state_data, config)
+
+                chat_name = f"{user_name}:{self.name}"
+                response = get_openai_client(
+                    chat_name=chat_name, labels=labels
+                ).chat.completions.create(
+                    messages=openai_messages,
+                    model=self.model_config.get("model", "openai/gpt-3.5-turbo"),
+                    temperature=self.model_config.get("temperature", 0.5),
+                    max_tokens=self.model_config.get("max_tokens", 1000),
+                    top_p=self.model_config.get("top_p", 1.0),
+                    extra_body={
+                        # This only works for Gemini models.
+                        "generation_config": {
+                            "thinking_budget": 0,
+                        },
+                        # This appears on Open Router Client User ID field.
+                        # can be used to track end user's usage.
+                        "user": user_id,
+                    },
+                )
                 agent_invoke_time = time.time() - agent_invoke_start
                 logger.debug(
                     f"Agent推理耗时: {agent_invoke_time:.3f}秒 - Agent: {self.agent_id}"
@@ -829,16 +836,7 @@ class Agent:
 
                 # 处理响应
                 response_process_start = time.time()
-                ai_messages = [
-                    message
-                    for message in response.get("messages", [])
-                    if isinstance(message, AIMessage)
-                ]
-                response_text = (
-                    ai_messages[-1].content
-                    if ai_messages
-                    else "抱歉，我无法理解您的消息。请再试一次。"
-                )
+                response_text = response.choices[0].message.content
                 response_process_time = time.time() - response_process_start
                 logger.debug(
                     f"响应处理耗时: {response_process_time:.3f}秒 - Agent: {self.agent_id}"
@@ -850,101 +848,6 @@ class Agent:
                 save_response_time = time.time() - save_response_start
                 logger.debug(
                     f"AI响应保存耗时: {save_response_time:.3f}秒 - Agent: {self.agent_id}"
-                )
-
-                # 调试日志记录（异步后台处理）
-                logger.debug(
-                    f"优化版检查debug_logging配置: {global_config_loaded_from_config_yaml.agent.enable_debug_logging}"
-                )
-                if global_config_loaded_from_config_yaml.agent.enable_debug_logging:
-                    # 预处理格式化消息（保持与_save_debug_messages一致）
-                    try:
-                        # 获取格式化的提示词
-                        with tracing_context(enabled=False):
-                            formatted_prompt = self.prompt_runnable.invoke(state_data)
-
-                        if hasattr(formatted_prompt, "messages"):
-                            # 提取所有系统和用户消息
-                            formatted_messages = []
-                            for msg in formatted_prompt.messages:
-                                if hasattr(msg, "type") and hasattr(msg, "content"):
-                                    # 转换消息类型：system->system, human->user, ai->character
-                                    msg_type = msg.type
-                                    if msg_type == "human":
-                                        msg_type = "user"
-                                    elif msg_type == "ai":
-                                        msg_type = "character"
-                                    formatted_messages.append(
-                                        {"type": msg_type, "content": msg.content}
-                                    )
-                        else:
-                            # 回退到简单格式
-                            formatted_messages = [
-                                {"type": "system", "content": str(formatted_prompt)}
-                            ]
-
-                    except Exception as e:
-                        logger.error(f"预处理格式化消息失败: {str(e)}, 使用fallback")
-                        # 使用基础系统消息作为fallback
-                        formatted_messages = [
-                            {"type": "system", "content": "消息格式化失败"}
-                        ]
-
-                    # 添加AI响应消息
-                    ai_message = None
-                    for msg in response.get("messages", []):
-                        if hasattr(msg, "type") and hasattr(msg, "content"):
-                            if msg.type in ["ai", "assistant"]:
-                                # 转换AI消息类型为character
-                                ai_message = {
-                                    "type": "character",
-                                    "content": msg.content,
-                                }
-                        elif isinstance(msg, dict) and msg.get("type") in [
-                            "ai",
-                            "assistant",
-                        ]:
-                            # 转换AI消息类型为character
-                            ai_message = {
-                                "type": "character",
-                                "content": msg.get("content", str(msg)),
-                            }
-
-                    if ai_message:
-                        formatted_messages.append(ai_message)
-                    elif response_text:
-                        # AI响应转换为character类型
-                        formatted_messages.append(
-                            {"type": "character", "content": response_text}
-                        )
-
-                    # 准备调试数据（包含预格式化的完整消息）
-                    debug_data = {
-                        "formatted_messages": formatted_messages,  # 新增预格式化消息
-                        "input_data": {
-                            "messages": state_data.get("messages", []),
-                            "user_profile": state_data.get("user_profile", ""),
-                            "user_id": state_data.get("user_id", ""),
-                        },
-                        "response": response,
-                        "response_text": response_text,
-                    }
-
-                    # 提交到后台任务队列（非阻塞）
-                    background_task_service.submit_debug_save_task(
-                        user_id, session_id, self.agent_id, debug_data
-                    )
-                    logger.debug(
-                        f"优化版调试信息已提交到后台队列 - Agent: {self.agent_id}"
-                    )
-                else:
-                    logger.debug(
-                        f"优化版debug_logging未启用，跳过保存 - Agent: {self.agent_id}"
-                    )
-
-                total_time = time.time() - chat_start_time
-                logger.debug(
-                    f"聊天处理总耗时（优化版）: {total_time:.3f}秒 - Agent: {self.agent_id}"
                 )
 
                 return response_text
@@ -1134,12 +1037,13 @@ class Agent:
                     config = {"configurable": {"user_id": user_id}}
 
                     # 收集完整的流式响应用于调试
-                    stream_messages = []
-                    for message_chunk, metadata in self.agent.stream(
-                        state_data, config, stream_mode="messages"
-                    ):
-                        stream_messages.append(message_chunk)
-                        yield message_chunk, metadata
+                    # TODO: 需要重新实现该 streaming 功能
+                    # stream_messages = []
+                    # for message_chunk, metadata in self.agent.stream(
+                    #     state_data, config, stream_mode="messages"
+                    # ):
+                    #     stream_messages.append(message_chunk)
+                    #     yield message_chunk, metadata
 
                     # 如果启用调试日志记录，保存完整的流式响应（异步后台处理）
                     logger.debug(
