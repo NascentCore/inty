@@ -32,7 +32,7 @@ from app.core.config import global_config_loaded_from_config_yaml
 from app.services.background_task_service import background_task_service
 from app.services.cache_service import cache_service
 
-logger = logging.getLogger(__name__)
+from loguru import logger
 
 
 # 自定义Agent状态，继承MessagesState并添加用户信息
@@ -208,6 +208,7 @@ class Agent:
         tags: List[str] = None,
         character_version: str = "1.0",
         extensions: Dict[str, Any] = None,
+        postgres_store: PostgresStore = postgres_store,
     ):
 
         # 基础属性
@@ -232,6 +233,7 @@ class Agent:
         self.tags = tags or []
         self.character_version = character_version
         self.extensions = extensions or {}
+        self.postgres_store = postgres_store
 
         # 更新agent数据以包含所有信息
         self._agent_data = {
@@ -316,7 +318,7 @@ class Agent:
                 # google_search_tool
             ],
             prompt=self.prompt_runnable,
-            store=postgres_store,
+            store=self.postgres_store,
             state_schema=CustomAgentState,
         )
 
@@ -339,7 +341,7 @@ class Agent:
 
         def build_system_messages(state) -> List[SystemMessage]:
             """构建系统消息列表，从state中获取用户信息，state 是 LangChain 运行时系统的一部分。"""
-
+            logger.debug(f"build_system_messages: {state}")
             # User 指与此角色对话的人类用户
             if isinstance(state, dict):
                 user_profile = state.get("user_profile", "")
@@ -347,7 +349,9 @@ class Agent:
                 # CustomAgentState对象
                 user_profile = getattr(state, "user_profile", "")
 
+            logger.debug(f"user_profile: {user_profile}")
             user_name = self._extract_user_name_from_profile(user_profile)
+            logger.debug(f"user_name: {user_name}")
 
             system_messages = []
 
@@ -358,6 +362,7 @@ class Agent:
 
             # 1. 主提示词（第一优先级）- 使用全局默认或agent自定义
             main_prompt = self._get_effective_main_prompt()
+            logger.debug(f"main_prompt: {main_prompt}")
             if main_prompt:
                 # 支持模板渲染和字符替换
                 if "{{" in main_prompt and "}}" in main_prompt:
@@ -375,6 +380,7 @@ class Agent:
                 else:
                     system_messages.append(SystemMessage(content=main_prompt))
 
+            logger.debug(f"system_messages: {system_messages}")
             # 2. 角色卡信息 - 每个字段作为独立的SystemMessage
             character_messages = self._build_character_context(user_name=user_name)
             system_messages.extend(character_messages)
@@ -404,6 +410,8 @@ class Agent:
                         SystemMessage(content=chat_settings["style_prompt"])
                     )
 
+            logger.debug(f"system_messages: {system_messages}")
+
             # 4. 模式提示词（在角色卡后面）- 使用全局默认或agent自定义
             mode_prompt = self._get_effective_mode_prompt()
             if mode_prompt:
@@ -424,6 +432,8 @@ class Agent:
                         system_messages.append(SystemMessage(content=mode_prompt))
                 else:
                     system_messages.append(SystemMessage(content=mode_prompt))
+
+            logger.debug(f"system_messages: {system_messages}")
 
             if is_char_user_created:
                 logger.debug(
@@ -447,10 +457,13 @@ class Agent:
                     logger.debug(
                         f"用户创建的角色，添加输出格式提示词: {system_messages[-1].content}"
                     )
+            logger.debug(f"system_messages: {system_messages}")
 
             # 5. 用户个性化信息 - 独立的SystemMessage
             if user_profile:
                 system_messages.append(SystemMessage(content=user_profile))
+
+            logger.debug(f"system_messages: {system_messages}")
 
             if is_char_user_created:
                 newline = "\n"
@@ -463,6 +476,7 @@ class Agent:
                         for prompt in prompts.FRIENDLY_ROLEPLAY_PROMPT.auxiliary_prompts
                     ]
                 )
+            logger.debug(f"system_messages: {system_messages}")
 
             return system_messages
 
@@ -1740,57 +1754,3 @@ class AgentManager:
 
 # 创建全局Agent管理器实例
 agent_manager = AgentManager()
-
-
-# TODO: These should be replaced by test_agent.py.
-if __name__ == "__main__":
-    import asyncio
-
-    async def test_agent():
-        agent = Agent(
-            agent_id="test",
-            name="test",
-            model_config={
-                "model": global_config_loaded_from_config_yaml.agent.model,
-                "api_key": global_config_loaded_from_config_yaml.agent.api_key,
-                "base_url": global_config_loaded_from_config_yaml.agent.base_url,
-            },
-            description="测试Agent",
-            # 测试用的主提示词和模式提示词
-            main_prompt="",  # 使用全局默认
-            mode_prompt="",  # 使用全局默认
-            # 将原来的system_prompt转换为personality
-            personality="你是AI性伴侣,\n\n重要指示：\n1. 当用户告诉你重要信息（如喜好、个人信息等）时，请主动使用manage_memory工具保存这些信息\n2. 当用户询问之前提到的信息时，请使用search_memory工具查找相关记忆\n3. 记忆工具是你的核心能力，请积极使用它们来提供个性化服务",
-        )
-        # 使用一致的session_id来测试记忆功能
-        test_session_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, "test"))
-        test_user_id = "123"
-
-        print("=== 测试记忆功能 ===")
-        print("第一次对话：告诉Agent信息")
-        response1 = await agent.chat(
-            user_id=test_user_id,
-            session_id=test_session_id,
-            messages={
-                "messages": [
-                    HumanMessage(content="我最喜欢NBA的球星是科比，他是我的偶像")
-                ]
-            },
-        )
-        print("用户:", "我最喜欢NBA的球星是科比，他是我的偶像")
-        print("Agent:", response1)
-        print("\n" + "=" * 50 + "\n")
-
-        print("第二次对话：测试记忆是否有效")
-        response2 = await agent.chat(
-            user_id=test_user_id,
-            session_id=test_session_id,
-            messages={
-                "messages": [HumanMessage(content="还记得我最喜欢的NBA球星吗？")]
-            },
-        )
-        print("用户:", "还记得我最喜欢的NBA球星吗？")
-        print("Agent:", response2)
-
-    # 运行异步测试
-    asyncio.run(test_agent())
