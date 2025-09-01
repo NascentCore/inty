@@ -8,6 +8,7 @@ Demo for using OpenAI SDK with LangSmith to track the usage of OpenAI API.
 
 from enum import StrEnum
 import os
+from langchain_core.messages import BaseMessage
 from typing_extensions import deprecated
 from openai import OpenAI
 from langsmith import traceable, wrappers
@@ -20,6 +21,10 @@ class Role(StrEnum):
     USER = "user"
     ASSISTANT = "assistant"
     SYSTEM = "system"
+
+    # LangSmith expects "human" and "ai" as role names.
+    HUMAN = "human"
+    AI = "ai"
 
 
 class ReasoningEffort(StrEnum):
@@ -85,6 +90,27 @@ def get_openai_client(chat_name: str, labels: dict[str, str]):
     )
 
     return _client
+
+
+def langchain_message_to_openai_message(
+    message: BaseMessage, user_name: str, agent_name: str
+) -> dict[str, str]:
+    name = None
+    if message.type == Role.HUMAN.value:
+        role = Role.USER.value
+        name = user_name
+    elif message.type == Role.AI.value:
+        role = Role.ASSISTANT.value
+        name = agent_name
+    else:
+        role = message.type
+    res = {
+        "role": role,
+        "content": message.content,
+    }
+    if name:
+        res["name"] = name
+    return res
 
 
 if __name__ == "__main__":

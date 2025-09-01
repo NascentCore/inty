@@ -23,7 +23,10 @@ from app.core.agent.prompt_template import prompt_template_manager
 from app.core.config import global_config_loaded_from_config_yaml
 from app.services.background_task_service import background_task_service
 from app.services.cache_service import cache_service
-from app.utils.openai_client import get_openai_client, Role, _vanilla_openai_client
+from app.utils.openai_client import (
+    get_openai_client,
+    langchain_message_to_openai_message,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -791,13 +794,9 @@ class Agent:
                 messages: list[BaseMessage] = self.prompt_runnable.invoke(
                     state_data, config
                 ).messages
+
                 openai_messages = [
-                    {
-                        "role": (
-                            Role.USER.value if message.type == "human" else message.type
-                        ),
-                        "content": message.content,
-                    }
+                    langchain_message_to_openai_message(message, user_name, self.name)
                     for message in messages
                 ]
                 logger.debug(f"openai_messages: {openai_messages}")
