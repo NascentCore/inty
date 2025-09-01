@@ -821,7 +821,7 @@ class Agent:
                 openai_messages = [
                     {
                         "role": (
-                            Role.USER if message.type == "human" else Role.ASSISTANT
+                            Role.USER.value if message.type == "human" else message.type
                         ),
                         "content": message.content,
                     }
