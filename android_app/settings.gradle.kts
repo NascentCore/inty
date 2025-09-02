@@ -1,4 +1,6 @@
+enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 pluginManagement {
+    includeBuild("build-logic")
     repositories {
         google {
             content {
@@ -27,4 +29,3 @@ rootProject.name = "Inty"
 include(":app")
 include(":utils")
 include(":network")
-

@@ -1,0 +1,113 @@
+# Android 签名配置系统
+
+## 概述
+
+本项目使用JSON格式的配置文件来管理Android应用的签名密钥信息，通过`SignKeyConfig`类读取配置并提供给Gradle插件使用。
+
+## 修复说明
+
+已修复kotlinx-serialization版本兼容性问题，现在使用Gson进行JSON解析，确保与Kotlin 2.2.0兼容。
+
+## 配置文件
+
+### signing-config.json
+
+签名配置文件位于 `build-logic/sign/signing-config.json`，包含以下结构：
+
+```json
+{
+  "debug": {
+    "storeFile": "sign/key.jks",
+    "storePassword": "inty.sxwl.ai",
+    "keyAlias": "key0",
+    "keyPassword": "inty.sxwl.ai"
+  },
+  "release": {
+    "storeFile": "sign/release.jks",
+    "storePassword": "heartmate.inty.cc",
+    "keyAlias": "my-key-alias",
+    "keyPassword": "heartmate.inty.cc"
+  }
+}
+```
+
+## 使用方法
+
+### 在Gradle脚本中使用
+
+```kotlin
+// 在build.gradle.kts中
+import com.ai.plugins.SignKeyConfig
+
+android {
+    signingConfigs {
+        create("debug") {
+            storeFile = file(SignKeyConfig.DEBUG_STORE_FILE)
+            storePassword = SignKeyConfig.DEBUG_STORE_PASSWORD
+            keyAlias = SignKeyConfig.DEBUG_KEY_ALIAS
+            keyPassword = SignKeyConfig.DEBUG_KEY_PASSWORD
+        }
+        
+        create("release") {
+            storeFile = file(SignKeyConfig.RELEASE_STORE_FILE)
+            storePassword = SignKeyConfig.RELEASE_STORE_PASSWORD
+            keyAlias = SignKeyConfig.RELEASE_KEY_ALIAS
+            keyPassword = SignKeyConfig.RELEASE_KEY_PASSWORD
+        }
+    }
+    
+    buildTypes {
+        debug {
+            signingConfig = signingConfigs.getByName("debug")
+        }
+        release {
+            signingConfig = signingConfigs.getByName("release")
+        }
+    }
+}
+```
+
+## 可用的常量
+
+### Debug 签名配置
+
+- `SignKeyConfig.DEBUG_STORE_FILE` - 密钥库文件路径
+- `SignKeyConfig.DEBUG_STORE_PASSWORD` - 密钥库密码
+- `SignKeyConfig.DEBUG_KEY_ALIAS` - 密钥别名
+- `SignKeyConfig.DEBUG_KEY_PASSWORD` - 密钥密码
+
+### Release 签名配置
+
+- `SignKeyConfig.RELEASE_STORE_FILE` - 密钥库文件路径
+- `SignKeyConfig.RELEASE_STORE_PASSWORD` - 密钥库密码
+- `SignKeyConfig.RELEASE_KEY_ALIAS` - 密钥别名
+- `SignKeyConfig.RELEASE_KEY_PASSWORD` - 密钥密码
+
+## 技术实现
+
+- 使用Gson进行JSON解析，确保与Kotlin 2.2.0兼容
+- 懒加载机制，只在需要时读取配置
+- 错误处理，配置文件不存在时抛出异常
+- 类型安全的数据类定义
+
+## 安全注意事项
+
+1. **不要将签名配置文件提交到版本控制**：确保 `signing-config.json` 文件已添加到 `.gitignore`
+2. **密钥文件安全**：确保 `.jks` 文件也添加到 `.gitignore`
+3. **密码保护**：考虑使用环境变量或加密存储敏感信息
+
+## 故障排除
+
+如果遇到问题，请检查：
+
+1. 配置文件路径是否正确
+2. JSON格式是否有效
+3. 所有必需的字段是否都已填写
+4. 密钥文件是否存在
+
+## 依赖要求
+
+系统使用以下依赖：
+
+- `gson:2.13.1` - JSON解析
+- `kotlin-stdlib` - Kotlin标准库 
