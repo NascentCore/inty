@@ -59,7 +59,8 @@ fun ChatTopBar(
         Row(
             modifier = Modifier.background(
                 color = Color(33, 0, 0, 77),
-                shape = RoundedCornerShape(10.dp)
+shape = RoundedCornerShape(20.dp) // 使用较大的圆角半径，更接近胶囊形状
+
             ),
             verticalAlignment = Alignment.CenterVertically
         ) {
