@@ -1,4 +1,11 @@
-# InTy Backend
+# InTy
+
+```text
+IntelliMaate: Ultimate companionship, reimagined with AI
+
+Role-play with AI characters.
+Create your own IntelliMate, powered by carefully tuned AI agents, experience your own imagination.
+```
 
 [![Python Tests](https://github.com/NascentCore/inty-backend/actions/workflows/ci.yaml/badge.svg)](https://github.com/NascentCore/inty-backend/actions/workflows/ci.yaml)
 
