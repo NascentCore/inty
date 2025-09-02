@@ -90,7 +90,7 @@ fun IntyCircleImage(
     url: Any?,
     placeholderResID: Int,
     modifier: Modifier = Modifier,
-    alignment: Alignment = Alignment.Center,
+    alignment: Alignment = Alignment.TopCenter,
     contentScale: ContentScale = ContentScale.Crop,
     alpha: Float = DefaultAlpha,
     colorFilter: ColorFilter? = null,
