@@ -13,10 +13,6 @@ GCS_PRIVATE_HTTPS_PREFIX = "https://storage.cloud.google.com/"
 GCS_GS_PREFIX = "gs://"
 
 
-GCS_HTTPS_PREFIX = "https://storage.googleapis.com/"
-GCS_GS_PREFIX = "gs://"
-
-
 def upload_to_gcs(file_data, content_type, bucket_name, path):
     logger.info(f"=== 开始GCS上传 ===")
     logger.debug(f"文件大小: {len(file_data)} bytes")
