@@ -92,26 +92,20 @@ fun SubscriptionManagementScreen(
             modifier = Modifier.padding(innerPadding)
         ) {
             SubscriptionManagementContainer {
-                if (vipStatus.isSubscribed) {
-                    // 已订阅状态：显示取消订阅
-                    SubscriptionManagementItem(
-                        icon = R.drawable.icon_list_row_3,
-                        title = stringResource(R.string.cancel_subscription),
-                        onClick = {
-                            viewModel.navigateToGooglePlaySubscription()
-                        }
-                    )
-                } else {
-                    // 未订阅状态：显示恢复订阅
-                    SubscriptionManagementItem(
-                        icon = R.drawable.icon_list_row_1,
-                        title = stringResource(R.string.restore_subscription),
-                        onClick = {
-                            viewModel.navigateToGooglePlaySubscription()
-                        }
-                    )
-                }
-
+                SubscriptionManagementItem(
+                    icon = R.drawable.icon_list_row_3,
+                    title = stringResource(R.string.cancel_subscription),
+                    onClick = {
+                        viewModel.navigateToGooglePlaySubscription()
+                    }
+                );
+                SubscriptionManagementItem(
+                    icon = R.drawable.icon_list_row_1,
+                    title = stringResource(R.string.restore_subscription),
+                    onClick = {
+                        viewModel.navigateToGooglePlaySubscription()
+                    }
+                )
                 // 注释的代码保留，以备后用
                 // SubscriptionManagementDivider()
                 //
