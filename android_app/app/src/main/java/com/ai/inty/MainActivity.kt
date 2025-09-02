@@ -101,9 +101,9 @@ class MainActivity : BaseActivity() {
             delay(1000) // 给登录流程一些时间
 
             // 执行billing诊断
-            val diagnosticReport =
-                BillingDiagnosticHelper.performBillingDiagnostic(this@MainActivity)
-            EasyLog.log("MainActivity - Billing诊断报告: $diagnosticReport")
+//            val diagnosticReport =
+//                BillingDiagnosticHelper.performBillingDiagnostic(this@MainActivity)
+//            EasyLog.log("MainActivity - Billing诊断报告: $diagnosticReport")
 
             BillingRepository.initialize(this@MainActivity)
 

@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -200,6 +201,7 @@ internal fun MyPage(
                 val vipStatus by BillingRepository.vipStatusFlow.collectAsState()
                 PremiumBanner(
                     status = vipStatus.subscriptionStatus,
+                    purchaseTime = formatTimestampToString(vipStatus.purchaseTime),
                     expireTime = formatTimestampToString(vipStatus.expiryTime),
                     onClick = { TheRouter.build(Constant.ROUTE_VIP_CENTER).navigation(context) })
 
@@ -463,9 +465,10 @@ private fun MyAgentCard(
  */
 @Preview
 @Composable
-internal fun PremiumBanner(
+private fun PremiumBanner(
     status: String? = "Activate Now",
-    expireTime: String? = null,
+    purchaseTime: String? = null,//购买日期
+    expireTime: String? = null,//过期时间
     onClick: () -> Unit = {},
 ) {
     AuthClickable(
@@ -483,7 +486,7 @@ internal fun PremiumBanner(
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(120.dp)
+                    .heightIn(120.dp)
             )
 
             Row(
@@ -498,29 +501,25 @@ internal fun PremiumBanner(
                         shape = RoundedCornerShape(size = 12.dp)
                     )
                     .padding(horizontal = 8.dp)
-                    .align(BiasAlignment(-.8f, .65f)),
+                    .align(BiasAlignment(.95f, .1f)),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center
 
             ) {
+                //三种UI状态显示，1. 无有效订阅 显示Activate Now；2. 有效订阅 显示Since 日期；3. 有订阅快过期 显示Expires ON 日期
                 val str =
-                    if (status == null || status == VipStatus.UI_UNSUBSCRIBED) "Activate Now" else status
+                    when (status) {
+                        VipStatus.UI_SUBSCRIBED -> "Since $purchaseTime"
+                        VipStatus.UI_SUBSCRIBED_EXPIRE_SOON -> "EXPIRES ON $expireTime"
+                        else -> "Activate Now"
+                    }
+
                 Text(
                     text = str,
-                    fontSize = 11.sp,
+                    fontSize = 16.sp,
                     color = Color.White,
                     textAlign = TextAlign.Center
                 )
-                //显示过期时间，BillingRemoteManager中subscriptionStatus有定义规则，UI_SUBSCRIBED表示有自动续订，所以不需要显示过期时间
-                if (expireTime.isNullOrEmpty().not() && status != VipStatus.UI_SUBSCRIBED) {
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        text = "expires on $expireTime",
-                        fontSize = 11.sp,
-                        color = Color.White,
-                        textAlign = TextAlign.Center
-                    )
-                }
             }
         }
     }

@@ -34,6 +34,7 @@ import com.ai.inty.base.IntyImage
 import com.ai.inty.base.noRippleClickable
 import com.ai.inty.beans.UserProfile
 import com.ai.inty.billing.BillingRepository
+import com.ai.inty.billing.VipStatusHelper
 import com.ai.inty.chat.ChatPageContainer
 import com.ai.inty.ui.ChatDialogData
 import com.ai.inty.ui.ExpiredVipDialog
@@ -388,6 +389,8 @@ private fun MyTabContent(
     //确保更新用户信息，处理切换账号后的信息同步
     LifecycleResumeEffect(mainViewModel) {
         mainViewModel.getUserProfile()
+        //刷新订阅状态
+        VipStatusHelper.refreshSubscriptionStatus()
         onPauseOrDispose {
 
         }
