@@ -519,8 +519,7 @@ async def create_agent(
         # 生成可读ID
         readable_id = await generate_next_readable_id(db)
 
-        # 获取Agent数据
-        agent_data = agent_in.dict()
+        agent_data = agent_in.model_dump()
         logger.debug(f"原始Agent数据: {agent_data}")
 
         # 处理 llm_config 字段
@@ -530,6 +529,20 @@ async def create_agent(
                 agent_data["settings"] = {}
             agent_data["settings"]["llm_config"] = agent_data.pop("llm_config")
             logger.debug(f"处理llm_config后的数据: {agent_data}")
+
+        need_to_crop_avatar = not processed_agent_data.get(
+            "avatar", None
+        ) and processed_agent_data.get("background", None)
+        if need_to_crop_avatar:
+            logger.debug(
+                f"Agent avatar为空，尝试从background裁剪avatar - Agent ID: {agent_id}"
+            )
+            background_url = processed_agent_data["background"]
+            cropped_avatar_url = await _crop_avatar_from_background(background_url)
+            processed_agent_data["avatar"] = cropped_avatar_url
+            logger.debug(
+                f"成功从background裁剪avatar - Agent ID: {agent_id}, Avatar URL: {cropped_avatar_url}"
+            )
 
         # 处理图片URL：验证、复制临时文件到永久路径、删除临时文件
         try:
@@ -549,46 +562,19 @@ async def create_agent(
             # 图片处理失败不应该阻止Agent创建，使用原始数据
             processed_agent_data = agent_data
 
-        need_to_crop_avatar = not processed_agent_data.get(
-            "avatar", None
-        ) and processed_agent_data.get("background", None)
-        if need_to_crop_avatar:
-            logger.debug(
-                f"Agent avatar为空，尝试从background裁剪avatar - Agent ID: {agent_id}"
-            )
-            background_url = processed_agent_data["background"]
-            cropped_avatar_url = await _crop_avatar_from_background(background_url)
-            processed_agent_data["avatar"] = cropped_avatar_url
-            logger.debug(
-                f"成功从background裁剪avatar - Agent ID: {agent_id}, Avatar URL: {cropped_avatar_url}"
-            )
-
-        # 确保processed_agent_data是有效的字典
-        if not isinstance(processed_agent_data, dict):
-            logger.error(
-                f"processed_agent_data不是字典类型: {type(processed_agent_data)}, 值: {processed_agent_data}"
-            )
-            processed_agent_data = agent_data
-
         logger.debug(f"最终处理后的Agent数据: {processed_agent_data}")
 
-        try:
-            db_agent = models.Agent(
-                id=agent_id,
-                readable_id=readable_id,
-                **processed_agent_data,
-                creator_id=user_id,
-            )
-        except Exception as e:
-            logger.error(f"创建Agent模型实例失败: {str(e)}")
-            logger.error(f"Agent数据: {processed_agent_data}")
-            raise
+        db_agent = models.Agent(
+            id=agent_id,
+            readable_id=readable_id,
+            **processed_agent_data,
+            creator_id=user_id,
+        )
 
         db.add(db_agent)
         await db.commit()
         await db.refresh(db_agent)
 
-        # 重新查询以加载关系数据
         result = await db.execute(
             select(models.Agent)
             .options(selectinload(models.Agent.creator))
@@ -630,12 +616,11 @@ async def _crop_avatar_from_background(background_url: str) -> str:
         raise RuntimeError(f"无法下载background图片: {background_url}")
 
     cropped_avatar = crop_avatar(background_data)
-    avatar_data = get_jpg_bytes_from_pil_image(cropped_avatar, 90)
+    avatar_data = get_jpg_bytes_from_pil_image(cropped_avatar)
 
     bucket, background_gcs_path = get_bucket_and_path_from_gcs_url(background_url)
     avatar_gcs_path = append_filename_suffix(background_gcs_path, "-cropped-avatar")
 
-    # 上传裁剪后的avatar到GCS
     avatar_url = upload_to_gcs(avatar_data, ImageFormat.JPEG, bucket, avatar_gcs_path)
     return avatar_url
 
