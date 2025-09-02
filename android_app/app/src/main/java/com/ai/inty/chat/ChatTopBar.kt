@@ -26,11 +26,11 @@ import com.inty.utils.log.EasyLog
 import com.therouter.TheRouter
 
 
-private const val CHAT_TOP_BAR_AVATAR_SIZE = 33
-private const val CHAT_TOP_BAR_AVATAR_PADDING = 2
+private const val CHAT_TOP_BAR_AVATAR_SIZE = 30
+private const val CHAT_TOP_BAR_AVATAR_PADDING = 3
 private const val CHAT_TOP_BAR_CORNER_RADIUS = 20
 private val CHAT_TOP_BAR_BACKGROUND_COLOR = Color(33, 0, 0, 77)
-private const val CHAT_TOP_BAR_FOLLOW_BUTTON_SIZE = 26
+private const val CHAT_TOP_BAR_FOLLOW_BUTTON_SIZE = 20
 
 private const val BACK_BUTTON_SIZE = 24
 private const val MORE_BUTTON_SIZE = 20
@@ -68,21 +68,22 @@ fun ChatTopBar(
         }
 
         Row(
-            modifier = Modifier.background(
-                color = CHAT_TOP_BAR_BACKGROUND_COLOR,
-                shape = RoundedCornerShape(CHAT_TOP_BAR_CORNER_RADIUS.dp)
-            ),
+            modifier = Modifier
+                .background(
+                    color = CHAT_TOP_BAR_BACKGROUND_COLOR,
+                    shape = RoundedCornerShape(CHAT_TOP_BAR_CORNER_RADIUS.dp)
+                )
+                .noRippleClickable {
+                    TheRouter.build(Constant.ROUTE_AGENT_INFO)
+                        .withObject("agent", agentInfo)
+                        .navigation(context)
+                },
             verticalAlignment = Alignment.CenterVertically
         ) {
             IntyCircleImage(
                 modifier = Modifier
                     .padding(CHAT_TOP_BAR_AVATAR_PADDING.dp)
-                    .size(CHAT_TOP_BAR_AVATAR_SIZE.dp)
-                    .noRippleClickable {
-                        TheRouter.build(Constant.ROUTE_AGENT_INFO)
-                            .withObject("agent", agentInfo)
-                            .navigation(context)
-                    },
+                    .size(CHAT_TOP_BAR_AVATAR_SIZE.dp),
                 url = agentInfo.avatar,
                 placeholderResID = R.drawable.app_icon
             )

@@ -150,7 +150,9 @@ android {
             // This build is meant to be pushed to Google Play for debugging.
             // It talks to the dev backend, but app is built as release.
             initWith(getByName("release"))
-
+            // Disable code minification for debug builds
+            isMinifyEnabled = false
+            isShrinkResources = false
             versionNameSuffix = "-playdebug"
         }
         // TODO: Consider rename this to staging, meaning it's talking to the staging backend,
