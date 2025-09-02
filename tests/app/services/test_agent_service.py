@@ -1,12 +1,19 @@
 import io
+import pytest
+
 from PIL import Image
+
 from google.cloud import storage
-from loguru import logger
+
 from app.core.config import global_config_loaded_from_config_yaml
 from app.services.agent_service import _crop_avatar_from_background
 from app.utils.gcs import download_from_gcs, get_bucket_and_path_from_gcs_url
 
+from loguru import logger
 
+
+@pytest.mark.asyncio
+@pytest.mark.skip(reason="Do not have access to gcs")
 async def test_crop_avatar_from_background():
     bucket_name, path = get_bucket_and_path_from_gcs_url(
         "https://storage.googleapis.com/yx-test/Screenshot_20250815_213911-cropped-avatar.png")

@@ -549,32 +549,19 @@ async def create_agent(
             # 图片处理失败不应该阻止Agent创建，使用原始数据
             processed_agent_data = agent_data
 
-        # 如果avatar为空但有background，则从background中裁剪出avatar
-        if (
-            not processed_agent_data.get("avatar")
-            or not processed_agent_data["avatar"].strip()
-        ) and processed_agent_data.get("background"):
+        need_to_crop_avatar = not processed_agent_data.get(
+            "avatar", None
+        ) and processed_agent_data.get("background", None)
+        if need_to_crop_avatar:
             logger.debug(
                 f"Agent avatar为空，尝试从background裁剪avatar - Agent ID: {agent_id}"
             )
-            try:
-                cropped_avatar_url = await _crop_avatar_from_background(
-                    processed_agent_data["background"], agent_id, user_id
-                )
-                if cropped_avatar_url:
-                    processed_agent_data["avatar"] = cropped_avatar_url
-                    logger.info(
-                        f"成功从background裁剪avatar - Agent ID: {agent_id}, Avatar URL: {cropped_avatar_url}"
-                    )
-                else:
-                    logger.warning(
-                        f"从background裁剪avatar失败，使用默认头像 - Agent ID: {agent_id}"
-                    )
-            except Exception as e:
-                logger.error(
-                    f"从background裁剪avatar时发生异常 - Agent ID: {agent_id}, Error: {str(e)}"
-                )
-                # 裁剪失败不影响Agent创建，继续使用原始数据
+            background_url = processed_agent_data["background"]
+            cropped_avatar_url = await _crop_avatar_from_background(background_url)
+            processed_agent_data["avatar"] = cropped_avatar_url
+            logger.debug(
+                f"成功从background裁剪avatar - Agent ID: {agent_id}, Avatar URL: {cropped_avatar_url}"
+            )
 
         # 确保processed_agent_data是有效的字典
         if not isinstance(processed_agent_data, dict):
@@ -628,17 +615,13 @@ async def create_agent(
         raise HTTPException(status_code=500, detail="服务器内部错误")
 
 
-async def _crop_avatar_from_background(background_url: str) -> Optional[str]:
+async def _crop_avatar_from_background(background_url: str) -> str:
     """
     从 background 图片中裁剪出 avatar
-
     Args:
         background_url: 背景图片的URL
-        agent_id: 智能体ID
-        user_id: 用户ID
-
     Returns:
-        裁剪后的avatar URL，如果失败则返回None
+        裁剪后的avatar URL
     """
     # 下载背景图片
     background_data = download_from_gcs(background_url)
