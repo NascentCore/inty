@@ -146,7 +146,6 @@ internal fun ChatPage(
                     ChatTopBar(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(36.dp)
                             .padding(horizontal = 18.dp, vertical = 0.dp),
                         agentInfo = info,
                         showBackButton = showBackButton,
