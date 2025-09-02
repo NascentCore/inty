@@ -20,19 +20,10 @@ from app.models.agent import AgentVisibility
 from app.models.associations import agent_followers
 from app.services.cache_service import cache_service
 from app.utils.crop_avatar import crop_avatar
-from app.utils.gcs import (
-    append_filename_suffix,
-    download_from_gcs,
-    get_bucket_and_path_from_gcs_url,
-    upload_to_gcs,
-)
-from app.utils.image import (
-    compress_png_to_jpeg,
-    ImageFormat,
-    get_jpg_bytes_from_pil_image,
-)
+from app.utils.gcs import get_bucket_and_path_from_gcs_url
 
-logger = logging.getLogger(__name__)
+
+from loguru import logger
 
 
 async def generate_next_readable_id(db: AsyncSession) -> str:
@@ -844,7 +835,7 @@ def process_agent_image_urls(agent_data: dict, agent_id: str, user_id: str) -> d
                 try:
                     # 生成永久路径
                     # 从临时URL中提取文件扩展名
-                    bucket, temp_path = get_bucket_and_path_from_gcs_url(avatar_url)
+                    _, temp_path = get_bucket_and_path_from_gcs_url(avatar_url)
                     file_ext = temp_path.split(".")[-1] if "." in temp_path else "png"
                     permanent_path = generate_agent_avatar_path(
                         agent_id, f"avatar.{file_ext}"
@@ -966,9 +957,9 @@ def process_agent_image_urls(agent_data: dict, agent_id: str, user_id: str) -> d
         def cleanup_temp_files():
             for temp_url in temp_files_to_delete:
                 try:
-                    bucket, temp_path = get_bucket_and_path_from_gcs_url(temp_url)
+                    bucket_name, temp_path = get_bucket_and_path_from_gcs_url(temp_url)
                     if temp_path:
-                        deleted = delete_from_gcs(bucket, temp_path)
+                        deleted = delete_from_gcs(bucket_name, temp_path)
                         if deleted:
                             logger.debug(f"删除临时文件: {temp_url}")
                         else:
