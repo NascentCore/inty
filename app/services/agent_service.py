@@ -1,9 +1,4 @@
-import io
-import io
-import logging
 import math
-from urllib.parse import urlparse
-from urllib.parse import urlparse
 import uuid
 from datetime import datetime
 from typing import List, Optional
@@ -30,7 +25,6 @@ from app.utils.gcs import (
     upload_to_gcs,
 )
 from app.utils.image import (
-    compress_png_to_jpeg,
     ImageFormat,
     get_jpg_bytes_from_pil_image,
 )
@@ -906,7 +900,7 @@ def process_agent_image_urls(agent_data: dict, agent_id: str, user_id: str) -> d
                 try:
                     # 生成永久路径
                     # 从临时URL中提取文件扩展名
-                    _, bucket, temp_path = get_bucket_and_bucket_and_path_from_gcs_url(avatar_url)
+                    _, temp_path = get_bucket_and_path_from_gcs_url(avatar_url)
                     file_ext = temp_path.split(".")[-1] if "." in temp_path else "png"
                     permanent_path = generate_agent_avatar_path(
                         agent_id, f"avatar.{file_ext}"
