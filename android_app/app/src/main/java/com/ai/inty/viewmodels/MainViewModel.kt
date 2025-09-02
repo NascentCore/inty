@@ -150,13 +150,7 @@ class MainViewModel : BaseActivityViewModel() {
             EasyLog.log("MainViewModel - 使用缓存推荐agents: ${cachedAgents.size}个")
         }
 
-        // 从启动管理器获取缓存的关注agents
-        val cachedFollowingAgents = AppStartupManager.cachedFollowingAgents.value
-        if (cachedFollowingAgents.isNotEmpty()) {
-            followingAgents.clear()
-            followingAgents.addAll(cachedFollowingAgents)
-            EasyLog.log("MainViewModel - 使用缓存关注agents: ${cachedFollowingAgents.size}个")
-        }
+
     }
 
     private fun loadBusinessData() {
@@ -541,7 +535,7 @@ class MainViewModel : BaseActivityViewModel() {
                     EasyLog.log("BillingRepository MainViewModel BillingRepository 未连接，跳过更新")
                     return@launch
                 }
-                
+
                 BillingRepository.fetchRemote()
                 EasyLog.log("BillingRepository MainViewModel 会员状态更新完成")
             } catch (e: kotlinx.coroutines.CancellationException) {
@@ -559,70 +553,23 @@ class MainViewModel : BaseActivityViewModel() {
 
     fun getFollowingAgents() {
         EasyLog.log("getFollowingAgents - 开始加载关注agents")
-        currentFollowingAgentsPage = 1 //该项目，分页接口，page从1开始
+        currentFollowingAgentsPage = 1 // 分页从1开始
         hasMoreFollowingAgents = true
 
-        // 第一步：如果有缓存数据，先使用缓存数据快速展示
-        val cachedFollowingAgents = AppStartupManager.cachedFollowingAgents.value
-        if (cachedFollowingAgents.isNotEmpty()) {
-            followingAgents.clear()
-            followingAgents.addAll(cachedFollowingAgents)
-            EasyLog.log("getFollowingAgents - 使用缓存数据快速展示: ${cachedFollowingAgents.size}个")
-        }
+        // 清空现有数据，准备加载新数据
+        followingAgents.clear()
 
-        // 第二步：后台静默刷新数据（无论是否有缓存）
-        if (shouldUpdateFromNetwork()) {
-            EasyLog.log("getFollowingAgents - 后台静默刷新数据")
-            loadFollowingAgentsSilently()
-        } else {
-            EasyLog.log("getFollowingAgents - 跳过网络更新，使用缓存数据")
-        }
+        // 直接加载第一页数据
+        loadFollowingAgents()
     }
 
     fun loadMoreFollowingAgents() {
         if (!_isLoadingFollowingAgents.value && hasMoreFollowingAgents) {
+            EasyLog.log("loadMoreFollowingAgents - 开始加载第${currentFollowingAgentsPage + 1}页")
             currentFollowingAgentsPage++
             loadFollowingAgents()
-        }
-    }
-
-    /**
-     * 后台静默刷新关注agents数据
-     * 用于在进入页面时静默更新数据，不影响用户当前浏览
-     */
-    private fun loadFollowingAgentsSilently() {
-        if (_isLoadingFollowingAgents.value) return
-
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                EasyLog.log("loadFollowingAgentsSilently - 开始静默刷新第一页关注数据")
-                val result = agentApi.getFollowingAgents(2, 20) // 注意：这里使用page=2，因为API从1开始
-
-                when (result) {
-                    is HttpResult.Success -> {
-                        result.data.list?.let { agents ->
-                            if (agents.isNotEmpty()) {
-                                // 静默更新UI和缓存，不显示加载状态
-                                followingAgents.clear()
-                                followingAgents.addAll(agents)
-                                EasyLog.log("loadFollowingAgentsSilently - 静默更新成功: ${agents.size}个")
-
-                                // 更新缓存
-                                AgentCacheManager.cacheFollowingAgents(agents)
-                                AppStartupManager.updateCachedFollowingAgents(agents)
-                            } else {
-                                EasyLog.log("loadFollowingAgentsSilently - 第一页关注数据为空")
-                            }
-                        }
-                    }
-
-                    is HttpResult.Failure -> {
-                        EasyLog.log("loadFollowingAgentsSilently - 静默刷新失败: ${result.message}")
-                    }
-                }
-            } catch (e: Exception) {
-                EasyLog.log("loadFollowingAgentsSilently - 静默刷新异常: ${e.message}")
-            }
+        } else {
+            EasyLog.log("loadMoreFollowingAgents - 跳过加载: isLoading=${_isLoadingFollowingAgents.value}, hasMoreData=$hasMoreFollowingAgents")
         }
     }
 
@@ -630,11 +577,11 @@ class MainViewModel : BaseActivityViewModel() {
         if (_isLoadingFollowingAgents.value) return
 
         _isLoadingFollowingAgents.value = true
-        EasyLog.log("loadFollowingAgents - page: ${currentFollowingAgentsPage + 1}")
-        
+        EasyLog.log("loadFollowingAgents - page: $currentFollowingAgentsPage")
+
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val result = agentApi.getFollowingAgents(currentFollowingAgentsPage + 1, 20)
+                val result = agentApi.getFollowingAgents(currentFollowingAgentsPage, 20)
                 EasyLog.log("loadFollowingAgents = $result")
 
                 when (result) {
@@ -642,35 +589,47 @@ class MainViewModel : BaseActivityViewModel() {
                         result.data.list?.let { agents ->
                             if (agents.isEmpty()) {
                                 hasMoreFollowingAgents = false
-                                EasyLog.log("No more following agents to load")
+                                EasyLog.log("loadFollowingAgents - 第${currentFollowingAgentsPage}页数据为空，没有更多数据")
                             } else {
-                                followingAgents.addAll(agents)
-                                EasyLog.log("Added ${agents.size} following agents, total: ${followingAgents.size}")
-
-                                // 缓存第一页数据
-                                if (currentFollowingAgentsPage == 0) {
-                                    AgentCacheManager.cacheFollowingAgents(agents)
+                                // 第一页数据替换，其他页数据追加
+                                if (currentFollowingAgentsPage == 1) {
+                                    followingAgents.clear()
+                                    followingAgents.addAll(agents)
+                                    EasyLog.log("loadFollowingAgents - 替换第一页数据: ${agents.size}个，总计: ${followingAgents.size}个")
+                                } else {
+                                    followingAgents.addAll(agents)
+                                    EasyLog.log("loadFollowingAgents - 追加第${currentFollowingAgentsPage}页数据: ${agents.size}个，总计: ${followingAgents.size}个")
                                 }
+                            }
+                        } ?: run {
+                            EasyLog.log("loadFollowingAgents - 第${currentFollowingAgentsPage}页返回空列表")
+                            if (currentFollowingAgentsPage > 1) {
+                                hasMoreFollowingAgents = false
                             }
                         }
                     }
 
                     is HttpResult.Failure -> {
+                        EasyLog.log("loadFollowingAgents - 第${currentFollowingAgentsPage}页加载失败: ${result.message}")
                         // 如果加载失败，回退页码
-                        if (currentFollowingAgentsPage > 0) {
+                        if (currentFollowingAgentsPage > 1) {
                             currentFollowingAgentsPage--
                         }
-                        EasyLog.log("loadFollowingAgents failed: ${result.message}")
                     }
                 }
             } catch (e: Exception) {
+                EasyLog.log(
+                    "loadFollowingAgents - 第${currentFollowingAgentsPage}页加载异常: ${e.message}",
+                    EasyLog.ERROR
+                )
                 // 如果加载失败，回退页码
-                if (currentFollowingAgentsPage > 0) {
+                if (currentFollowingAgentsPage > 1) {
                     currentFollowingAgentsPage--
                 }
-                EasyLog.log("loadFollowingAgents exception: ${e.message}", EasyLog.ERROR)
             }
             _isLoadingFollowingAgents.value = false
+
+            EasyLog.log("loadFollowingAgents - 完成，当前列表大小: ${followingAgents.size}")
         }
     }
 

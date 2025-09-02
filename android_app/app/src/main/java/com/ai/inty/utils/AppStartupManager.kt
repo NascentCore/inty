@@ -4,7 +4,6 @@ import android.content.Context
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.beans.UserProfile
 import com.ai.inty.net.IAgentApi
-import com.ai.inty.net.IUserApi
 import com.ai.inty.net.IUserApi2
 import com.architecture.httplib.core.HttpResult
 import com.inty.utils.log.EasyLog
@@ -41,8 +40,7 @@ object AppStartupManager {
     private val _cachedAgents = MutableStateFlow<List<AgentInfo>>(emptyList())
     val cachedAgents: StateFlow<List<AgentInfo>> = _cachedAgents.asStateFlow()
 
-    private val _cachedFollowingAgents = MutableStateFlow<List<AgentInfo>>(emptyList())
-    val cachedFollowingAgents: StateFlow<List<AgentInfo>> = _cachedFollowingAgents.asStateFlow()
+
 
     // 预加载状态
     private val _preloadProgress = MutableStateFlow(0f)
@@ -138,12 +136,10 @@ object AppStartupManager {
         // 并行加载各种缓存数据
         val userProfileDeferred = startupScope.async { loadCachedUserProfile() }
         val agentsDeferred = startupScope.async { loadCachedAgents() }
-        val followingAgentsDeferred = startupScope.async { loadCachedFollowingAgents() }
 
         // 等待所有缓存数据加载完成
         _cachedUserProfile.value = userProfileDeferred.await()
         _cachedAgents.value = agentsDeferred.await()
-        _cachedFollowingAgents.value = followingAgentsDeferred.await()
 
         _startupState.value = StartupState.CacheLoaded
         _preloadProgress.value = 0.3f
@@ -156,7 +152,7 @@ object AppStartupManager {
     private suspend fun preloadNetworkData() {
         EasyLog.log("AppStartupManager - 开始预加载网络数据")
 
-        val totalTasks = 4
+        val totalTasks = 2  // 修复：实际只有2个任务
         val completedTasks = Mutex()
         var completedCount = 0
 
@@ -178,22 +174,6 @@ object AppStartupManager {
                     updateProgressSafely(progress)
                 }
             },
-            startupScope.async {
-                updateFollowingAgentsFromNetwork()
-                completedTasks.withLock {
-                    completedCount++
-                    val progress = 0.3f + (completedCount.toFloat() / totalTasks) * 0.7f
-                    updateProgressSafely(progress)
-                }
-            },
-            startupScope.async {
-//                preloadSystemMessages()
-                completedTasks.withLock {
-                    completedCount++
-                    val progress = 0.3f + (completedCount.toFloat() / totalTasks) * 0.7f
-                    updateProgressSafely(progress)
-                }
-            }
         )
 
         // 等待所有预加载任务完成
@@ -231,16 +211,7 @@ object AppStartupManager {
         }
     }
 
-    /**
-     * 加载缓存的关注agents
-     */
-    private suspend fun loadCachedFollowingAgents(): List<AgentInfo> {
-        return withContext(Dispatchers.IO) {
-            val cachedFollowingAgents = AgentCacheManager.getCachedFollowingAgents()
-            EasyLog.log("AppStartupManager - 加载缓存关注agents: ${cachedFollowingAgents.size}个")
-            cachedFollowingAgents
-        }
-    }
+
 
     /**
      * 从网络更新用户信息
@@ -311,97 +282,6 @@ object AppStartupManager {
         }
     }
 
-    /**
-     * 从网络更新关注agents
-     */
-    private suspend fun updateFollowingAgentsFromNetwork() {
-        // 检查登录状态和token
-        if (!IntySetting.isLogin() || IntySetting.getCurToken().isEmpty()) {
-            EasyLog.log("AppStartupManager - 未登录或token为空，跳过关注agents更新")
-            return
-        }
-
-        try {
-            val agentApi: IAgentApi = TheRouter.get(IAgentApi::class.java)
-                ?: throw IllegalStateException("IAgentApi not found")
-
-            val result = agentApi.getFollowingAgents(1, 100)
-            when (result) {
-                is HttpResult.Success -> {
-                    val agents = result.data.list ?: emptyList()
-                    AgentCacheManager.cacheFollowingAgents(agents)
-                    _cachedFollowingAgents.value = agents
-                    EasyLog.log("AppStartupManager - 更新关注agents成功: ${agents.size}个")
-                }
-
-                is HttpResult.Failure -> {
-                    EasyLog.log(
-                        "AppStartupManager - 更新关注agents失败: ${result.message}",
-                        EasyLog.WARN
-                    )
-                }
-            }
-        } catch (e: Exception) {
-            EasyLog.log("AppStartupManager - 更新关注agents异常: ${e.message}", EasyLog.ERROR)
-        }
-    }
-
-    /**
-     * 预加载系统消息
-     */
-    private suspend fun preloadSystemMessages() {
-        // 检查登录状态和token
-        if (!IntySetting.isLogin() || IntySetting.getCurToken().isEmpty()) {
-            EasyLog.log("AppStartupManager - 未登录或token为空，跳过系统消息预加载")
-            return
-        }
-
-        try {
-            val userApi: IUserApi = TheRouter.get(IUserApi::class.java)
-                ?: throw IllegalStateException("IUserApi not found")
-
-            val result = userApi.getSysMsgs(1, 10)
-            when (result) {
-                is HttpResult.Success -> {
-                    SystemMessageCacheManager.cacheSystemMessages(result.data.list)
-                    EasyLog.log("AppStartupManager - 预加载系统消息成功: ${result.data.list.size}条")
-                }
-
-                is HttpResult.Failure -> {
-                    EasyLog.log(
-                        "AppStartupManager - 预加载系统消息失败: ${result.message}",
-                        EasyLog.WARN
-                    )
-                }
-            }
-        } catch (e: Exception) {
-            EasyLog.log("AppStartupManager - 预加载系统消息异常: ${e.message}", EasyLog.ERROR)
-        }
-    }
-
-    /**
-     * 获取当前缓存状态
-     */
-    fun getCacheStatus(): CacheStatus {
-        return CacheStatus(
-            hasUserProfile = _cachedUserProfile.value != null,
-            hasAgents = _cachedAgents.value.isNotEmpty(),
-            hasFollowingAgents = _cachedFollowingAgents.value.isNotEmpty(),
-            startupState = _startupState.value
-        )
-    }
-
-    /**
-     * 清理缓存数据
-     */
-    fun clearCache() {
-        _cachedUserProfile.value = null
-        _cachedAgents.value = emptyList()
-        _cachedFollowingAgents.value = emptyList()
-        AgentCacheManager.clearCache()
-        SystemMessageCacheManager.clearCache()
-        EasyLog.log("AppStartupManager - 缓存数据已清理")
-    }
 
     /**
      * 更新缓存的推荐agents
@@ -411,21 +291,6 @@ object AppStartupManager {
         EasyLog.log("AppStartupManager - 更新缓存推荐agents: ${agents.size}个")
     }
 
-    /**
-     * 更新缓存的关注agents
-     */
-    fun updateCachedFollowingAgents(agents: List<AgentInfo>) {
-        _cachedFollowingAgents.value = agents
-        EasyLog.log("AppStartupManager - 更新缓存关注agents: ${agents.size}个")
-    }
 
-    /**
-     * 缓存状态数据类
-     */
-    data class CacheStatus(
-        val hasUserProfile: Boolean,
-        val hasAgents: Boolean,
-        val hasFollowingAgents: Boolean,
-        val startupState: StartupState
-    )
+
 }
