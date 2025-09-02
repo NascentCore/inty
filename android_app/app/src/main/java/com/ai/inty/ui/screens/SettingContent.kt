@@ -237,14 +237,8 @@ private fun SupportAndHelpSection(
         SettingDivider()
 
         // 订阅管理
-        val vipStatus by BillingRepository.vipStatusFlow.collectAsState()
         SettingNavigationItem(
             title = stringResource(R.string.settings_subscription_management),
-            subtitle = if (vipStatus.isSubscribed) {
-                stringResource(R.string.subscribed)
-            } else {
-                stringResource(R.string.unsubscribed)
-            },
             onClick = {
                 TheRouter.build(Constant.ROUTE_SUBSCRIPTION_MANAGEMENT).navigation(context)
             }
