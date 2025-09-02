@@ -8,6 +8,11 @@ from app.core.config import global_config_loaded_from_config_yaml
 logger = loguru.logger
 
 
+GCS_PUBLIC_HTTPS_PREFIX = "https://storage.googleapis.com/"
+GCS_PRIVATE_HTTPS_PREFIX = "https://storage.cloud.google.com/"
+GCS_GS_PREFIX = "gs://"
+
+
 def upload_to_gcs(file_data, content_type, bucket_name, path):
     logger.info(f"=== 开始GCS上传 ===")
     logger.debug(f"文件大小: {len(file_data)} bytes")
@@ -93,8 +98,7 @@ def copy_gcs_file(source_url: str, destination_path: str, bucket_name: str) -> s
         global_config_loaded_from_config_yaml.gcs.credentials
     )
 
-    # 解析源文件路径
-    source_path = get_path_from_gcs_url(source_url)
+    _, source_path = get_bucket_and_path_from_gcs_url(source_url)
     if not source_path:
         raise ValueError(f"Invalid GCS URL: {source_url}")
 
@@ -116,33 +120,27 @@ def copy_gcs_file(source_url: str, destination_path: str, bucket_name: str) -> s
     return destination_blob.public_url
 
 
-def get_path_from_gcs_url(url: str) -> str:
+def get_bucket_and_path_from_gcs_url(url: str) -> str:
     """从GCS URL中提取文件路径"""
-    if not url:
-        return ""
+    assert (
+        url.startswith(GCS_PUBLIC_HTTPS_PREFIX)
+        or url.startswith(GCS_GS_PREFIX)
+        or url.startswith(GCS_PRIVATE_HTTPS_PREFIX)
+    )
 
     # 处理两种URL格式：
     # 1. https://storage.googleapis.com/bucket/path
     # 2. gs://bucket/path
-    if url.startswith("gs://"):
-        # gs://bucket/path 格式
-        path = url[5:]  # 去掉 "gs://"
-        if "/" in path:
-            bucket_and_path = path.split("/", 1)
-            if len(bucket_and_path) == 2:
-                return bucket_and_path[1]
-    else:
-        # https://storage.googleapis.com/bucket/path 格式
-        parts = url.split(".com/")
-        if len(parts) >= 2:
-            path = parts[1]
-            # 去掉bucket名前缀
-            bucket = global_config_loaded_from_config_yaml.gcs.bucket
-            if path.startswith(bucket + "/"):
-                path = path[len(bucket) + 1 :]
-                return path
+    if url.startswith(GCS_GS_PREFIX):
+        url = url.removeprefix(GCS_GS_PREFIX)
 
-    return ""
+    if url.startswith(GCS_PUBLIC_HTTPS_PREFIX):
+        url = url.removeprefix(GCS_PUBLIC_HTTPS_PREFIX)
+
+    if url.startswith(GCS_PRIVATE_HTTPS_PREFIX):
+        url = url.removeprefix(GCS_PRIVATE_HTTPS_PREFIX)
+
+    return url.split("/", 1)
 
 
 def is_valid_gcs_url(url: str) -> bool:
@@ -168,7 +166,7 @@ def is_temp_gcs_path(url: str, user_id: str) -> bool:
     if not url:
         return False
 
-    path = get_path_from_gcs_url(url)
+    _, path = get_bucket_and_path_from_gcs_url(url)
     if not path:
         return False
 
@@ -199,13 +197,25 @@ def check_gcs_file_exists(bucket_name: str, path: str) -> bool:
         return False
 
 
-def is_user_gcs_file(url: str, bucket_name: str) -> bool:
-    """检查URL是否是用户GCS bucket中的有效文件"""
-    if not is_valid_gcs_url(url):
-        return False
+def download_from_gcs(url: str) -> bytes:
+    """从GCS下载文件"""
+    bucket_name, gcs_path = get_bucket_and_path_from_gcs_url(url)
+    assert gcs_path
 
-    path = get_path_from_gcs_url(url)
-    if not path:
-        return False
+    client = storage.Client.from_service_account_json(
+        global_config_loaded_from_config_yaml.gcs.credentials
+    )
+    bucket = client.bucket(bucket_name)
+    blob = bucket.blob(gcs_path)
+    logger.debug(f"下载GCS文件: {bucket_name}/{gcs_path}")
+    return blob.download_as_bytes()
 
-    return check_gcs_file_exists(bucket_name, path)
+
+def append_filename_suffix(gcs_path: str, suffix: str) -> str:
+    """在GCS路径的文件名后添加后缀，阅读测试了解期行为，a/b.c -> a/b<suffix>.c"""
+    DOT = "."
+    if DOT not in gcs_path:
+        return f"{gcs_path}{suffix}"
+    parts = gcs_path.split(".", 1)
+    assert len(parts) == 2
+    return f"{parts[0]}{suffix}.{parts[1]}"

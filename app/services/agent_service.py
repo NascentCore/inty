@@ -1,5 +1,7 @@
+import io
 import logging
 import math
+from urllib.parse import urlparse
 import uuid
 from datetime import datetime
 from typing import List, Optional
@@ -14,9 +16,21 @@ from app import models, schemas
 from app.schemas.agent import AgentSortOption
 from app.core.agent.agent import agent_manager
 from app.core.config import global_config_loaded_from_config_yaml
-from app.models.agent import AgentStatus, AgentVisibility
+from app.models.agent import AgentVisibility
 from app.models.associations import agent_followers
 from app.services.cache_service import cache_service
+from app.utils.crop_avatar import crop_avatar
+from app.utils.gcs import (
+    append_filename_suffix,
+    download_from_gcs,
+    get_bucket_and_path_from_gcs_url,
+    upload_to_gcs,
+)
+from app.utils.image import (
+    compress_png_to_jpeg,
+    ImageFormat,
+    get_jpg_bytes_from_pil_image,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -480,6 +494,7 @@ async def create_agent(
 ) -> models.Agent:
     """
     创建新的AI角色
+    如果 agent_in 没有 avatar，则自动为用户扣一个 avatar，crop_avatar()
     """
     try:
         # 验证必填字段
@@ -798,21 +813,6 @@ def generate_agent_background_path(agent_id: str, filename: str) -> str:
     return f"agents/{agent_id}/background-{timestamp}-{unique_id}.{ext}"
 
 
-def get_path_from_gcs_url(url: str) -> str:
-    """从GCS URL中提取文件路径"""
-    if not url:
-        return ""
-    parts = url.split(".com/")
-    if len(parts) < 2:
-        return ""
-    path = parts[1]
-    # 去掉bucket名前缀
-    bucket = global_config_loaded_from_config_yaml.gcs.bucket
-    if path.startswith(bucket + "/"):
-        path = path[len(bucket) + 1 :]
-    return path
-
-
 # TODO：这个过于复杂，应该直接往数据库插入数据而非拷贝 gcs 文件。
 def process_agent_image_urls(agent_data: dict, agent_id: str, user_id: str) -> dict:
     """
@@ -844,7 +844,7 @@ def process_agent_image_urls(agent_data: dict, agent_id: str, user_id: str) -> d
                 try:
                     # 生成永久路径
                     # 从临时URL中提取文件扩展名
-                    temp_path = get_path_from_gcs_url(avatar_url)
+                    bucket, temp_path = get_bucket_and_path_from_gcs_url(avatar_url)
                     file_ext = temp_path.split(".")[-1] if "." in temp_path else "png"
                     permanent_path = generate_agent_avatar_path(
                         agent_id, f"avatar.{file_ext}"
@@ -881,7 +881,7 @@ def process_agent_image_urls(agent_data: dict, agent_id: str, user_id: str) -> d
             if is_temp_gcs_path(background_url, user_id):
                 try:
                     # 生成永久路径
-                    temp_path = get_path_from_gcs_url(background_url)
+                    _, temp_path = get_bucket_and_path_from_gcs_url(background_url)
                     file_ext = temp_path.split(".")[-1] if "." in temp_path else "png"
                     permanent_path = generate_agent_background_path(
                         agent_id, f"background.{file_ext}"
@@ -921,7 +921,7 @@ def process_agent_image_urls(agent_data: dict, agent_id: str, user_id: str) -> d
                 if is_temp_gcs_path(photo_url, user_id):
                     try:
                         # 生成永久路径
-                        temp_path = get_path_from_gcs_url(photo_url)
+                        _, temp_path = get_bucket_and_path_from_gcs_url(photo_url)
                         file_ext = (
                             temp_path.split(".")[-1] if "." in temp_path else "png"
                         )
@@ -966,11 +966,9 @@ def process_agent_image_urls(agent_data: dict, agent_id: str, user_id: str) -> d
         def cleanup_temp_files():
             for temp_url in temp_files_to_delete:
                 try:
-                    temp_path = get_path_from_gcs_url(temp_url)
+                    bucket, temp_path = get_bucket_and_path_from_gcs_url(temp_url)
                     if temp_path:
-                        deleted = delete_from_gcs(
-                            global_config_loaded_from_config_yaml.gcs.bucket, temp_path
-                        )
+                        deleted = delete_from_gcs(bucket, temp_path)
                         if deleted:
                             logger.debug(f"删除临时文件: {temp_url}")
                         else:
