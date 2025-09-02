@@ -461,7 +461,7 @@ class ChatViewModel : BaseActivityViewModel() {
     }
 
     fun getConversations() {
-        EasyLog.log("getConversations - Loading first page")
+        EasyLog.log("getConversations - 开始加载第一页")
         currentConversationsPage = 0
         hasMoreConversations = true
         _conversations.value = emptyList()
@@ -470,8 +470,11 @@ class ChatViewModel : BaseActivityViewModel() {
 
     fun loadMoreConversations() {
         if (!_isLoadingConversations.value && hasMoreConversations) {
+            EasyLog.log("loadMoreConversations - 开始加载第${currentConversationsPage + 1}页")
             currentConversationsPage++
             loadConversations()
+        } else {
+            EasyLog.log("loadMoreConversations - 跳过加载: isLoading=${_isLoadingConversations.value}, hasMoreData=$hasMoreConversations")
         }
     }
 
@@ -479,13 +482,13 @@ class ChatViewModel : BaseActivityViewModel() {
         if (_isLoadingConversations.value) return
 
         _isLoadingConversations.value = true
-        EasyLog.log("loadConversations - page: ${currentConversationsPage + 1}")
+        EasyLog.log("loadConversations - 当前页索引: $currentConversationsPage, 显示页码: ${currentConversationsPage + 1}")
 
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val skip = currentConversationsPage * 20
                 val result = chatApi.getConversations(skip, 20)
-                EasyLog.log("loadConversations = $result")
+                EasyLog.log("loadConversations - skip: $skip, limit: 20, result: $result")
 
                 when (result) {
                     is HttpResult.Success -> {
@@ -493,39 +496,47 @@ class ChatViewModel : BaseActivityViewModel() {
 
                         if (userInitiatedConversations.isEmpty()) {
                             hasMoreConversations = false
-                            EasyLog.log("No more conversations to load")
+                            EasyLog.log("loadConversations - 第${currentConversationsPage + 1}页数据为空，没有更多数据")
                         } else {
                             if (currentConversationsPage == 0) {
                                 // 第一页，直接替换
                                 _conversations.value = userInitiatedConversations
+                                EasyLog.log("loadConversations - 替换第一页数据: ${userInitiatedConversations.size}个")
                             } else {
                                 // 后续页，追加到现有列表
                                 _conversations.value =
                                     _conversations.value + userInitiatedConversations
+                                EasyLog.log("loadConversations - 追加第${currentConversationsPage + 1}页数据: ${userInitiatedConversations.size}个，总计: ${_conversations.value.size}个")
                             }
-                            EasyLog.log("Added ${userInitiatedConversations.size} conversations, total: ${_conversations.value.size}")
                         }
                     }
 
                     is HttpResult.Failure -> {
+                        EasyLog.log(
+                            "loadConversations - 第${currentConversationsPage + 1}页加载失败: ${result.message}",
+                            priority = EasyLog.ERROR
+                        )
                         // 如果加载失败，回退页码
                         if (currentConversationsPage > 0) {
                             currentConversationsPage--
+                            EasyLog.log("loadConversations - 页码回退到: $currentConversationsPage")
                         }
-                        EasyLog.log(
-                            "loadConversations failed: ${result.message}",
-                            priority = EasyLog.ERROR
-                        )
                     }
                 }
             } catch (e: Exception) {
+                EasyLog.log(
+                    "loadConversations - 第${currentConversationsPage + 1}页加载异常: ${e.message}",
+                    priority = EasyLog.ERROR
+                )
                 // 如果加载失败，回退页码
                 if (currentConversationsPage > 0) {
                     currentConversationsPage--
+                    EasyLog.log("loadConversations - 页码回退到: $currentConversationsPage")
                 }
-                EasyLog.log("loadConversations exception: ${e.message}", priority = EasyLog.ERROR)
             }
             _isLoadingConversations.value = false
+
+            EasyLog.log("loadConversations - 完成，当前列表大小: ${_conversations.value.size}")
         }
     }
 
