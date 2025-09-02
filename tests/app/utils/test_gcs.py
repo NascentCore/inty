@@ -1,7 +1,8 @@
 from app.utils.gcs import append_filename_suffix, get_bucket_and_path_from_gcs_url
 from app.core.config import global_config_loaded_from_config_yaml
 
-def test_get_path_from_gcs_url():
+
+def test_get_bucket_and_path_from_gcs_url():
     old_bucket = global_config_loaded_from_config_yaml.gcs.bucket
     global_config_loaded_from_config_yaml.gcs.bucket = "test-bucket"
     assert (
