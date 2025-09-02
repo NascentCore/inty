@@ -1010,8 +1010,10 @@ export const AgentManagePage: React.FC = () => {
                           style={{
                             width: 80,
                             height: 80,
-                            objectFit: "cover",
+                            objectFit: "contain",
                             borderRadius: 6,
+                            backgroundColor: "#f5f5f5",
+                            border: "1px solid #e8e8e8",
                           }}
                         />
                       ))}
