@@ -17,7 +17,7 @@ from app.models.agent import AgentVisibility
 from app.models.agent import AgentVisibility
 from app.models.associations import agent_followers
 from app.services.cache_service import cache_service
-from app.utils.crop_avatar import crop_avatar
+from app.utils.crop_avatar import CROPPED_AVATAR_FILENAME_SUFFIX, crop_avatar
 from app.utils.gcs import (
     append_filename_suffix,
     download_from_gcs,
@@ -619,7 +619,9 @@ async def _crop_avatar_from_background(background_url: str) -> str:
     avatar_data = get_jpg_bytes_from_pil_image(cropped_avatar)
 
     bucket, background_gcs_path = get_bucket_and_path_from_gcs_url(background_url)
-    avatar_gcs_path = append_filename_suffix(background_gcs_path, "-cropped-avatar")
+    avatar_gcs_path = append_filename_suffix(
+        background_gcs_path, CROPPED_AVATAR_FILENAME_SUFFIX
+    )
 
     avatar_url = upload_to_gcs(avatar_data, ImageFormat.JPEG, bucket, avatar_gcs_path)
     return avatar_url

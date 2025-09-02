@@ -12,7 +12,7 @@ from loguru import logger
 
 from app.core.config import global_config_loaded_from_config_yaml
 from app.schemas.response import APIResponse
-from app.utils.crop_avatar import crop_avatar
+from app.utils.crop_avatar import CROPPED_AVATAR_FILENAME_SUFFIX, crop_avatar
 from app.utils.gcs import append_filename_suffix, upload_to_gcs
 from app.utils.image import (
     compress_png_to_jpeg,
@@ -139,7 +139,9 @@ async def process_image_upload(
         # Convert PIL Image to bytes for GCS upload
         jpg_data = get_jpg_bytes_from_pil_image(cropped_avatar)
 
-        cropped_file_gcs_path = append_filename_suffix(file_gcs_path, "-cropped-avatar")
+        cropped_file_gcs_path = append_filename_suffix(
+            file_gcs_path, CROPPED_AVATAR_FILENAME_SUFFIX
+        )
 
         cropped_avatar_url = upload_to_gcs(
             jpg_data,
