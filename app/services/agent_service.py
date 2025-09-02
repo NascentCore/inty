@@ -530,20 +530,6 @@ async def create_agent(
             agent_data["settings"]["llm_config"] = agent_data.pop("llm_config")
             logger.debug(f"处理llm_config后的数据: {agent_data}")
 
-        need_to_crop_avatar = not processed_agent_data.get(
-            "avatar", None
-        ) and processed_agent_data.get("background", None)
-        if need_to_crop_avatar:
-            logger.debug(
-                f"Agent avatar为空，尝试从background裁剪avatar - Agent ID: {agent_id}"
-            )
-            background_url = processed_agent_data["background"]
-            cropped_avatar_url = await _crop_avatar_from_background(background_url)
-            processed_agent_data["avatar"] = cropped_avatar_url
-            logger.debug(
-                f"成功从background裁剪avatar - Agent ID: {agent_id}, Avatar URL: {cropped_avatar_url}"
-            )
-
         # 处理图片URL：验证、复制临时文件到永久路径、删除临时文件
         try:
             processed_agent_data = process_agent_image_urls(
@@ -563,6 +549,20 @@ async def create_agent(
             processed_agent_data = agent_data
 
         logger.debug(f"最终处理后的Agent数据: {processed_agent_data}")
+
+        need_to_crop_avatar = not processed_agent_data.get(
+            "avatar", None
+        ) and processed_agent_data.get("background", None)
+        if need_to_crop_avatar:
+            logger.debug(
+                f"Agent avatar为空，尝试从background裁剪avatar - Agent ID: {agent_id}"
+            )
+            background_url = processed_agent_data["background"]
+            cropped_avatar_url = await _crop_avatar_from_background(background_url)
+            processed_agent_data["avatar"] = cropped_avatar_url
+            logger.debug(
+                f"成功从background裁剪avatar - Agent ID: {agent_id}, Avatar URL: {cropped_avatar_url}"
+            )
 
         db_agent = models.Agent(
             id=agent_id,

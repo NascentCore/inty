@@ -13,8 +13,12 @@ from loguru import logger
 from app.core.config import global_config_loaded_from_config_yaml
 from app.schemas.response import APIResponse
 from app.utils.crop_avatar import crop_avatar
-from app.utils.gcs import upload_to_gcs
-from app.utils.image import compress_png_to_jpeg, ImageFormat
+from app.utils.gcs import append_filename_suffix, upload_to_gcs
+from app.utils.image import (
+    compress_png_to_jpeg,
+    ImageFormat,
+    get_jpg_bytes_from_pil_image,
+)
 
 
 async def process_image_upload(
@@ -116,14 +120,14 @@ async def process_image_upload(
     # Generate unique file paths
     timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
     unique_id = uuid.uuid4().hex[:8]
-    file_path = f"{base_path}/{user_id}/{timestamp}-{unique_id}.{file_ext}"
+    file_gcs_path = f"{base_path}/{user_id}/{timestamp}-{unique_id}.{file_ext}"
 
     # Upload original file to GCS
     url = upload_to_gcs(
         file_data,
         file.content_type,
         global_config_loaded_from_config_yaml.gcs.bucket,
-        file_path,
+        file_gcs_path,
     )
 
     response_data = { "url": url }
@@ -133,18 +137,15 @@ async def process_image_upload(
         cropped_avatar = crop_avatar(file_data)
 
         # Convert PIL Image to bytes for GCS upload
-        cropped_avatar_bytes = io.BytesIO()
-        cropped_avatar.save(cropped_avatar_bytes, format=ImageFormat.JPEG)
-        cropped_avatar_bytes.seek(0)
-        cropped_avatar_data = cropped_avatar_bytes.getvalue()
+        jpg_data = get_jpg_bytes_from_pil_image(cropped_avatar)
 
-        cropped_file_path = f"{base_path}/{user_id}/{timestamp}-{unique_id}-cropped.{ImageFormat.JPEG}"
+        cropped_file_gcs_path = append_filename_suffix(file_gcs_path, "-cropped-avatar")
 
         cropped_avatar_url = upload_to_gcs(
-            cropped_avatar_data,
+            jpg_data,
             f"image/{ImageFormat.JPEG}",  # Cropped image is always JPEG
             global_config_loaded_from_config_yaml.gcs.bucket,
-            cropped_file_path,
+            cropped_file_gcs_path,
         )
 
         response_data["avatar_url"] = cropped_avatar_url
