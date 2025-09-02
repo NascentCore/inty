@@ -1,141 +1,346 @@
+#region 版本号统一管理 🔢
+
 [versions]
 # Android & Kotlin 核心版本
 agp = "8.12.2"
-kotlin = "2.2.0"
+kotlin = "2.2.10"
 coroutines = "1.10.2"
-ksp = "2.2.0-2.0.2"
+ksp = "2.2.10-2.0.2"
+androidDesugarJdkLibs = "2.1.5"
 
 # AndroidX 核心库
-coreKtx = "1.16.0"
-lifecycleRuntimeKtx = "2.9.2"
-activityCompose = "1.10.1"
-activity = "1.10.1"
+coreKtx = "1.17.0"
+activityKtx = "1.10.1"
 appcompat = "1.7.1"
-constraintlayout = "2.2.1"
-navigationCompose = "2.9.3"
+material = "1.12.0"
+constraintlayoutCompose = "1.1.1"
+
+# Jetpack Components
+lifecycleKtx = "2.9.3"
+navigation = "2.9.3"
+roomKtx = "2.7.2"
+pagingKtx = "3.3.6"
+workKtx = "2.10.3"
 
 # Compose 相关
-composeBom = "2025.07.00"
+composeBom = "2025.08.01"
+composeUI = "1.9.0"
+androidxComposeMaterial3Adaptive = "1.1.0"
+androidxComposeMaterial3AdaptiveNavigationSuite = "1.3.2"
 
-# Google 服务
-firebaseBom = "34.0.0"
-billingKtx = "7.0.0"
-googleServices = "4.4.3"
-firebaseCrashlytics = "3.0.5"
-firebasePerf = "2.0.0"
-credentialManager = "1.6.0-alpha04"
-googleIdentity = "1.1.1"
+# AndroidX 功能库
+biometric = "1.1.0"
+browser = "1.9.0"
+cameraX = "1.4.2"
+coreSplashscreen = "1.2.0-rc01"
+dataStore = "1.1.7"
+emoji2 = "1.5.0"
+exifinterface = "1.4.1"
+graphics = "1.0.1"
+media3 = "1.8.0"
+preference = "1.2.1"
+profileinstaller = "1.4.1"
+startup = "1.2.0"
+tracing = "1.3.0"
+webkit = "1.14.0"
 
-# 测试相关
-junit = "4.13.2"
-junitVersion = "1.3.0"
-espressoCore = "3.7.0"
+# Jetbrains 官方库
+kotlinxDatetime = "0.7.1"
+kotlinxSerializationJson = "1.9.0"
 
-# 第三方库
-chucker = "4.2.0"
-theRouter = "1.3.0"
-mmkv = "2.2.2"
-mars = "1.2.6"
+# 常用知名开源库
+accompanist = "0.37.3"
+coil = "3.3.0"
+gson = "2.13.1"
+moshi = "1.15.2"
+koin = "4.1.0"
+lottie = "6.6.7"
+ktor = "3.2.3"
+okhttp = "5.1.0"
 retrofit = "3.0.0"
+
+# Google & Firebase 相关
+googleServices = "4.4.3"
+firebaseBom = "34.1.0"
+firebaseCrashlytics = "3.0.6"
+firebasePerf = "2.0.1"
+googleIdentity = "1.1.1"
+credentialManager = "1.6.0-alpha05"
+billingKtx = "7.0.0"
+
+# 测试相关库
+espressoCore = "3.7.0"
+junit = "5.13.4"
+runner = "1.7.0"
+turbine = "1.2.1"
+uiautomator = "2.3.0"
+annotation = "1.9.1"
+monitor = "1.8.0"
+androidxJunit = "1.3.0"
+chucker = "4.2.0"
+leakcanary = "2.14"
+
+# 腾讯系库
+mmkv = "2.2.3"
+mars = "1.2.6"
+theRouter = "1.3.0"
+
+# 其他第三方库
+ucrop = "2.2.10"
 retrofitKotlinxSerializationJson = "1.0.0"
 retrofit2-kotlin-coroutines-adapter = "0.9.2"
-coil = "3.3.0"
-moshi = "1.15.2"
-ucrop = "2.2.10"
-material = "1.12.0"
+
+#endregion
+
+#region 定义依赖库 🚀
 
 [libraries]
-# ===== AndroidX 核心库 =====
+# ===== Android & Google & Jetbrains 官方库 =====
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
-androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycleRuntimeKtx" }
-androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
-androidx-activity = { group = "androidx.activity", name = "activity", version.ref = "activity" }
+androidx-activity-ktx = { group = "androidx.activity", name = "activity-ktx", version.ref = "activityKtx" }
 androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
-androidx-constraintlayout = { group = "androidx.constraintlayout", name = "constraintlayout", version.ref = "constraintlayout" }
-androidx-navigation-compose = { module = "androidx.navigation:navigation-compose", version.ref = "navigationCompose" }
+android-desugarJdkLibs = { group = "com.android.tools", name = "desugar_jdk_libs", version.ref = "androidDesugarJdkLibs" }
+google-material = { group = "com.google.android.material", name = "material", version.ref = "material" }
 
-# ===== Compose UI 库 =====
+# ===== AndroidX 功能库 =====
+androidx-biometric = { group = "androidx.biometric", name = "biometric", version.ref = "biometric" }
+androidx-browser = { group = "androidx.browser", name = "browser", version.ref = "browser" }
+androidx-core-splashscreen = { group = "androidx.core", name = "core-splashscreen", version.ref = "coreSplashscreen" }
+androidx-dataStore = { group = "androidx.datastore", name = "datastore", version.ref = "dataStore" }
+androidx-dataStore-preferences = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "dataStore" }
+androidx-emoji2 = { group = "androidx.emoji2", name = "emoji2", version.ref = "emoji2" }
+androidx-exifinterface = { group = "androidx.exifinterface", name = "exifinterface", version.ref = "exifinterface" }
+androidx-preference = { group = "androidx.preference", name = "preference-ktx", version.ref = "preference" }
+androidx-profileinstaller = { group = "androidx.profileinstaller", name = "profileinstaller", version.ref = "profileinstaller" }
+androidx-startup = { group = "androidx.startup", name = "startup-runtime", version.ref = "startup" }
+androidx-tracing = { group = "androidx.tracing", name = "tracing-ktx", version.ref = "tracing" }
+androidx-webkit = { group = "androidx.webkit", name = "webkit", version.ref = "webkit" }
+
+# ===== Media3 相关 =====
+androidx-media3 = { module = "androidx.media3:media3-exoplayer", version.ref = "media3" }
+androidx-media3-dash = { module = "androidx.media3:media3-exoplayer-dash", version.ref = "media3" }
+androidx-media3-hls = { module = "androidx.media3:media3-exoplayer-hls", version.ref = "media3" }
+androidx-media3-rtsp = { module = "androidx.media3:media3-exoplayer-rtsp", version.ref = "media3" }
+androidx-media3-midi = { module = "androidx.media3:media3-exoplayer-midi", version.ref = "media3" }
+androidx-media3-ima = { module = "androidx.media3:media3-exoplayer-ima", version.ref = "media3" }
+androidx-media3-ui = { module = "androidx.media3:media3-ui", version.ref = "media3" }
+androidx-media3-common = { module = "androidx.media3:media3-common", version.ref = "media3" }
+androidx-media3-effect = { module = "androidx.media3:media3-effect", version.ref = "media3" }
+androidx-media3-datasource-cronet = { module = "androidx.media3:media3-datasource-cronet", version.ref = "media3" }
+androidx-media3-datasource-okhttp = { module = "androidx.media3:media3-datasource-okhttp", version.ref = "media3" }
+
+# ===== CameraX 相关 =====
+androidx-camera-camera2 = { module = "androidx.camera:camera-camera2", version.ref = "cameraX" }
+androidx-camera-core = { module = "androidx.camera:camera-core", version.ref = "cameraX" }
+androidx-camera-extensions = { module = "androidx.camera:camera-extensions", version.ref = "cameraX" }
+androidx-camera-lifecycle = { module = "androidx.camera:camera-lifecycle", version.ref = "cameraX" }
+androidx-camera-mlkit-vision = { module = "androidx.camera:camera-mlkit-vision", version.ref = "cameraX" }
+androidx-camera-video = { module = "androidx.camera:camera-video", version.ref = "cameraX" }
+androidx-camera-view = { module = "androidx.camera:camera-view", version.ref = "cameraX" }
+
+# ===== Compose 相关 =====
+androidx-activity-graphics = { group = "androidx.graphics", name = "graphics-shapes", version.ref = "graphics" }
+androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityKtx" }
+androidx-constraintlayout-compose = { group = "androidx.constraintlayout", name = "constraintlayout-compose", version.ref = "constraintlayoutCompose" }
 androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
-androidx-ui = { group = "androidx.compose.ui", name = "ui" }
-androidx-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics" }
-androidx-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
-androidx-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
-androidx-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
-androidx-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
-androidx-material3 = { group = "androidx.compose.material3", name = "material3" }
+androidx-compose-ui = { group = "androidx.compose.ui", name = "ui" }
+androidx-compose-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics" }
+androidx-compose-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
+androidx-compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
+androidx-compose-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
+androidx-compose-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
+androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3" }
+androidx-compose-foundation = { group = "androidx.compose.foundation", name = "foundation" }
+androidx-compose-ui-util = { group = "androidx.compose.ui", name = "ui-util" }
+androidx-compose-foundation-layout = { group = "androidx.compose.foundation", name = "foundation-layout" }
+androidx-compose-material-iconsExtended = { group = "androidx.compose.material", name = "material-icons-extended" }
+androidx-compose-animation = { group = "androidx.compose.animation", name = "animation", version.ref = "composeUI" }
 
-# ===== Google 服务 =====
-firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebaseBom" }
-firebase-analytics = { module = "com.google.firebase:firebase-analytics" }
-firebase-messaging = { module = "com.google.firebase:firebase-messaging" }
-firebase-messaging-directboot = { module = "com.google.firebase:firebase-messaging-directboot" }
-firebase-crashlytics = { module = "com.google.firebase:firebase-crashlytics" }
-firebase-perf = { module = "com.google.firebase:firebase-perf" }
-billing-ktx = { group = "com.android.billingclient", name = "billing-ktx", version.ref = "billingKtx" }
-credential-manager = { group = "androidx.credentials", name = "credentials", version.ref = "credentialManager" }
-credential-play-service-auth = { group = "androidx.credentials", name = "credentials-play-services-auth", version.ref = "credentialManager" }
-google-identity = { group = "com.google.android.libraries.identity.googleid", name = "googleid", version.ref = "googleIdentity" }
+# ===== Jetpack 组件 =====
+androidx-lifecycle-livedata-ktx = { module = "androidx.lifecycle:lifecycle-livedata-ktx", version.ref = "lifecycleKtx" }
+androidx-lifecycle-viewmodel-ktx = { module = "androidx.lifecycle:lifecycle-viewmodel-ktx", version.ref = "lifecycleKtx" }
+androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycleKtx" }
+androidx-navigation-fragment-ktx = { group = "androidx.navigation", name = "navigation-fragment-ktx", version.ref = "navigation" }
+androidx-navigation-ui-ktx = { group = "androidx.navigation", name = "navigation-ui-ktx", version.ref = "navigation" }
+androidx-navigation-dynamic-features-fragment = { module = "androidx.navigation:navigation-dynamic-features-fragment", version.ref = "navigation" }
+androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigation" }
 
-# ===== 测试库 =====
-junit = { group = "junit", name = "junit", version.ref = "junit" }
-androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
-androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
+androidx-paging-compose = { module = "androidx.paging:paging-compose", version.ref = "pagingKtx" }
+androidx-lifecycle-runtimeCompose = { group = "androidx.lifecycle", name = "lifecycle-runtime-compose", version.ref = "lifecycleKtx" }
+androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycleKtx" }
+androidx-compose-material3-navigationSuite = { group = "androidx.compose.material3", name = "material3-adaptive-navigation-suite", version.ref = "androidxComposeMaterial3AdaptiveNavigationSuite" }
+androidx-compose-material3-adaptive = { group = "androidx.compose.material3.adaptive", name = "adaptive", version.ref = "androidxComposeMaterial3Adaptive" }
+androidx-compose-material3-adaptive-layout = { group = "androidx.compose.material3.adaptive", name = "adaptive-layout", version.ref = "androidxComposeMaterial3Adaptive" }
+androidx-compose-material3-adaptive-navigation = { group = "androidx.compose.material3.adaptive", name = "adaptive-navigation", version.ref = "androidxComposeMaterial3Adaptive" }
+androidx-compose-runtime-livedata = { group = "androidx.compose.runtime", name = "runtime-livedata", version.ref = "composeUI" }
 
-# ===== 腾讯系库 =====
-kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
-kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
-mmkv = { group = "com.tencent", name = "mmkv", version.ref = "mmkv" }
-mars-xlog = { group = "com.tencent.mars", name = "mars-xlog", version.ref = "mars" }
+androidx-room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "roomKtx" }
+androidx-room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "roomKtx" }
+androidx-room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "roomKtx" }
+androidx-room-paging = { group = "androidx.room", name = "room-paging", version.ref = "roomKtx" }
+androidx-room-migration = { group = "androidx.room", name = "room-migration", version.ref = "roomKtx" }
+androidx-paging-runtime-ktx = { module = "androidx.paging:paging-runtime-ktx", version.ref = "pagingKtx" }
+androidx-work-runtime-ktx = { module = "androidx.work:work-runtime-ktx", version.ref = "workKtx" }
+androidx-work-multiprocess = { module = "androidx.work:work-multiprocess", version.ref = "workKtx" }
 
-# ===== Square 网络库 =====
+# ===== Jetbrains 官方库 =====
+jetbrains-kotlin-stdlib = { module = "org.jetbrains.kotlin:kotlin-stdlib" }
+kotlin-stdlib = { group = "org.jetbrains.kotlin", name = "kotlin-stdlib-jdk8", version.ref = "kotlin" }
+kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }
+kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "coroutines" }
+kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "coroutines" }
+kotlinx-datetime = { group = "org.jetbrains.kotlinx", name = "kotlinx-datetime", version.ref = "kotlinxDatetime" }
+kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerializationJson" }
+
+# ===== 常用知名开源库 =====
+accompanist-permissions = { module = "com.google.accompanist:accompanist-permissions", version.ref = "accompanist" }
+
+# ===== 图片加载库 =====
+coil-kt = { group = "io.coil-kt.coil3", name = "coil", version.ref = "coil" }
+coil-network-okhttp = { group = "io.coil-kt.coil3", name = "coil-network-okhttp", version.ref = "coil" }
+coil-network-cache-control = { group = "io.coil-kt.coil3", name = "coil-network-cache-control", version.ref = "coil" }
+coil-kt-svg = { group = "io.coil-kt.coil3", name = "coil-svg", version.ref = "coil" }
+coil-kt-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil" }
+coil-kt-video = { group = "io.coil-kt.coil3", name = "coil-video", version.ref = "coil" }
+coil-kt-gif = { group = "io.coil-kt.coil3", name = "coil-gif", version.ref = "coil" }
+coil-kt-network = { group = "io.coil-kt.coil3", name = "coil-network-ktor3", version.ref = "coil" }
+
+# ===== 网络库 =====
+gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
+moshi = { module = "com.squareup.moshi:moshi-kotlin", version.ref = "moshi" }
+moshi-kotlin-codegen = { group = "com.squareup.moshi", name = "moshi-kotlin-codegen", version.ref = "moshi" }
+koin = { module = "io.insert-koin:koin-android", version.ref = "koin" }
+okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
+okhttp-logging = { group = "com.squareup.okhttp3", name = "logging-interceptor", version.ref = "okhttp" }
 retrofit-core = { group = "com.squareup.retrofit2", name = "retrofit", version.ref = "retrofit" }
+retrofit-converter-kotlin-serialization = { module = "com.squareup.retrofit2:converter-kotlinx-serialization", version.ref = "retrofit" }
+retrofit-moshi = { group = "com.squareup.retrofit2", name = "converter-moshi", version.ref = "retrofit" }
 retrofit-kotlin-serialization = { group = "com.jakewharton.retrofit", name = "retrofit2-kotlinx-serialization-converter", version.ref = "retrofitKotlinxSerializationJson" }
 retrofit2-kotlin-coroutines-adapter = { group = "com.jakewharton.retrofit", name = "retrofit2-kotlin-coroutines-adapter", version.ref = "retrofit2-kotlin-coroutines-adapter" }
-retrofit-moshi = { group = "com.squareup.retrofit2", name = "converter-moshi", version.ref = "retrofit" }
-moshi = { group = "com.squareup.moshi", name = "moshi", version.ref = "moshi" }
-moshi-kotlin = { group = "com.squareup.moshi", name = "moshi-kotlin", version.ref = "moshi" }
-moshi-kotlin-codegen = { group = "com.squareup.moshi", name = "moshi-kotlin-codegen", version.ref = "moshi" }
 
-# ===== 图片处理库 =====
-ucrop = { module = "com.github.yalantis:ucrop", version.ref = "ucrop" }
+# ===== Ktor 网络库 =====
+ktor-client-android = { module = "io.ktor:ktor-client-android", version.ref = "ktor" }
+ktor-client-content-negotiation = { module = "io.ktor:ktor-client-content-negotiation", version.ref = "ktor" }
+ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
+ktor-client-cio = { module = "io.ktor:ktor-client-cio", version.ref = "ktor" }
+ktor-client-logging = { module = "io.ktor:ktor-client-logging", version.ref = "ktor" }
+ktor-client-encoding = { module = "io.ktor:ktor-client-encoding", version.ref = "ktor" }
+ktor-client-android-jvm = { module = "io.ktor:ktor-client-android-jvm", version.ref = "ktor" }
+ktor-serialization-kotlinx-json = { group = "io.ktor", name = "ktor-serialization-kotlinx-json", version.ref = "ktor" }
 
-coil-kt-compose3 = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil" }
-coil-kt-network-okhttp3 = { group = "io.coil-kt.coil3", name = "coil-network-okhttp", version.ref = "coil" }
+# ===== 动画库 =====
+lottie-compose = { group = "com.airbnb.android", name = "lottie-compose", version.ref = "lottie" }
+
+# ===== Google & Firebase 相关 =====
+firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebaseBom" }
+firebase-analytics = { module = "com.google.firebase:firebase-analytics" }
+firebase-crashlytics = { module = "com.google.firebase:firebase-crashlytics" }
+firebase-messaging = { module = "com.google.firebase:firebase-messaging" }
+firebase-messaging-directboot = { module = "com.google.firebase:firebase-messaging-directboot" }
+firebase-perf = { module = "com.google.firebase:firebase-perf" }
+
+billing-client = { module = "com.android.billingclient:billing-ktx", version.ref = "billingKtx" }
+google-identity = { group = "com.google.android.libraries.identity.googleid", name = "googleid", version.ref = "googleIdentity" }
+credential-manager = { group = "androidx.credentials", name = "credentials", version.ref = "credentialManager" }
+credential-manager-play-services = { group = "androidx.credentials", name = "credentials-play-services-auth", version.ref = "credentialManager" }
+
+# ===== 测试相关库 =====
+junit = { group = "org.junit.jupiter", name = "junit-jupiter-api", version.ref = "junit" }
+androidx-monitor = { group = "androidx.test", name = "monitor", version.ref = "monitor" }
+androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
+androidx-junit = { group = "androidx.test.ext", name = "junit-ktx", version.ref = "androidxJunit" }
+turbine = { group = "app.cash.turbine", name = "turbine", version.ref = "turbine" }
+androidx-uiautomator = { group = "androidx.test.uiautomator", name = "uiautomator", version.ref = "uiautomator" }
+androidx-runner = { group = "androidx.test", name = "runner", version.ref = "runner" }
+androidx-annotation = { group = "androidx.annotation", name = "annotation", version.ref = "annotation" }
+chucker-library = { module = "com.github.chuckerteam.chucker:library", version.ref = "chucker" }
+chucker-no-op = { module = "com.github.chuckerteam.chucker:library-no-op", version.ref = "chucker" }
+leakcanary-android = { module = "com.squareup.leakcanary:leakcanary-android", version.ref = "leakcanary" }
+
+# ===== 腾讯系库 =====
+mmkv = { group = "com.tencent", name = "mmkv", version.ref = "mmkv" }
+mars-xlog = { group = "com.tencent.mars", name = "mars-xlog", version.ref = "mars" }
 
 # ===== 路由库 =====
 router = { module = "cn.therouter:router", version.ref = "theRouter" }
 therouter-apt = { module = "cn.therouter:apt", version.ref = "theRouter" }
 
-# ===== 调试工具 =====
-chucker-library = { module = "com.github.chuckerteam.chucker:library", version.ref = "chucker" }
-chucker-library-no-op = { module = "com.github.chuckerteam.chucker:library-no-op", version.ref = "chucker" }
+# ===== 图片处理库 =====
+ucrop = { module = "com.github.yalantis:ucrop", version.ref = "ucrop" }
 
-# ===== Material Design =====
-material = { group = "com.google.android.material", name = "material", version.ref = "material" }
+# ===== 用于 build-logic 的 classpath 配置 =====
+android-gradlePlugin = { group = "com.android.tools.build", name = "gradle", version.ref = "agp" }
+kotlin-gradlePlugin = { group = "org.jetbrains.kotlin", name = "kotlin-gradle-plugin", version.ref = "kotlin" }
+ksp-gradlePlugin = { group = "com.google.devtools.ksp", name = "com.google.devtools.ksp.gradle.plugin", version.ref = "ksp" }
+androidx-ext-junit = { group = "androidx.test.ext", name = "junit", version.ref = "androidxJunit" }
 
+#endregion
+
+#region 项目工程 kts 配置插件 plugin 🍵
 
 [plugins]
 # ===== 核心插件 =====
 android-application = { id = "com.android.application", version.ref = "agp" }
 android-library = { id = "com.android.library", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+kotlin-parcelize = { id = "org.jetbrains.kotlin.plugin.parcelize" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
+room = { id = "androidx.room", version.ref = "roomKtx" }
+android-test = { id = "com.android.test", version.ref = "agp" }
+android-dynamic-feature = { id = "com.android.dynamic-feature", version.ref = "agp" }
 
-# ===== 第三方插件 =====
-the-router = { id = "cn.therouter", version.ref = "theRouter" }
+# ===== 自定义的组件 plugin =====
+ai-android-application = { id = "ai.android.application" }
+ai-android-application-compose = { id = "ai.android.application.compose" }
+ai-android-application-flavor = { id = "ai.android.application.flavor" }
+ai-android-library = { id = "ai.android.library" }
+ai-android-library-compose = { id = "ai.android.library.compose" }
+ai-android-feature = { id = "ai.android.feature" }
+ai-android-feature-compose = { id = "ai.android.feature.compose" }
+ai-android-navigation-compose = { id = "ai.android.navigation.compose" }
+ai-jvm-library = { id = "ai.jvm.library" }
+ai-maven-publish = { id = "ai.maven.publish" }
 
-# ===== Google 服务插件 =====
+# ===== Google Services =====
 google-services = { id = "com.google.gms.google-services", version.ref = "googleServices" }
 firebase-crashlytics = { id = "com.google.firebase.crashlytics", version.ref = "firebaseCrashlytics" }
 firebase-perf = { id = "com.google.firebase.firebase-perf", version.ref = "firebasePerf" }
 
+# ===== 第三方插件 =====
+the-router = { id = "cn.therouter", version.ref = "theRouter" }
+
+#endregion
+
+#region 多个依赖库组成依赖包 🎒
+
 [bundles]
+# ===== 网络相关 =====
+okhttp = ["okhttp", "okhttp-logging"]
+retrofit = ["retrofit-core", "retrofit-converter-kotlin-serialization", "okhttp", "okhttp-logging"]
+
+# ===== Google & Firebase 相关 =====
+google-auth = ["google-identity", "credential-manager", "credential-manager-play-services"]
+firebase = ["firebase-bom", "firebase-analytics", "firebase-crashlytics", "firebase-messaging", "firebase-messaging-directboot", "firebase-perf"]
+
+# ===== 媒体相关 =====
+androidx-media3-bundle = ["androidx-media3", "androidx-media3-common", "androidx-media3-ui", "androidx-media3-hls", "androidx-media3-dash"]
+androidx-camera-bundle = ["androidx-camera-camera2", "androidx-camera-core", "androidx-camera-extensions", "androidx-camera-lifecycle", "androidx-camera-mlkit-vision", "androidx-camera-video", "androidx-camera-view"]
+
+# ===== 网络客户端 =====
+ktor-bundle = ["ktor-client-core", "ktor-client-cio", "ktor-client-content-negotiation", "ktor-client-logging", "ktor-client-encoding", "ktor-serialization-kotlinx-json"]
+
 # ===== 图片加载 =====
-coils3 = ["coil-kt-compose3", "coil-kt-network-okhttp3"]
+coil-bundle = ["coil-kt", "coil-network-okhttp", "coil-network-cache-control", "coil-kt-svg", "coil-kt-compose", "coil-kt-gif", "coil-kt-video", "coil-kt-network"]
+
+# ===== Compose 相关 =====
+compose-jetpack-bundle = ["androidx-activity-compose", "androidx-lifecycle-runtimeCompose", "androidx-lifecycle-viewmodel-compose", "androidx-navigation-compose", "androidx-compose-runtime-livedata"]
+compose-ui-bundle = ["androidx-compose-ui-util", "androidx-constraintlayout-compose", "androidx-compose-material-iconsExtended", "androidx-compose-foundation", "androidx-compose-foundation-layout", "androidx-compose-ui", "androidx-activity-graphics", "androidx-compose-ui-graphics", "androidx-compose-ui-tooling", "androidx-compose-ui-tooling-preview", "androidx-compose-material3"]
 
 # ===== JSON 序列化 =====
-moshi = ["moshi", "moshi-kotlin", "retrofit-moshi"]
+moshi = ["moshi", "retrofit-moshi"]
 
 # ===== 协程 =====
 coroutines = ["kotlinx-coroutines-core", "kotlinx-coroutines-android"]
@@ -144,4 +349,6 @@ coroutines = ["kotlinx-coroutines-core", "kotlinx-coroutines-android"]
 firebase-core = ["firebase-analytics", "firebase-messaging", "firebase-messaging-directboot", "firebase-crashlytics", "firebase-perf"]
 
 # ===== 身份验证 =====
-credentials = ["credential-manager", "credential-play-service-auth", "google-identity"]
+credentials = ["credential-manager", "credential-manager-play-services", "google-identity"]
+
+#endregion

@@ -1,0 +1,14 @@
+{
+  "debug": {
+    "storeFile": "sign/intellimate-release-key.jks",
+    "storePassword": "com.ai.intellimate",
+    "keyAlias": "dev",
+    "keyPassword": "intellimate"
+  },
+  "release": {
+    "storeFile": "sign/intellimate-release-key.jks",
+    "storePassword": "com.ai.intellimate",
+    "keyAlias": "intellimate-key-alias",
+    "keyPassword": "com.ai.intellimate"
+  }
+} 
