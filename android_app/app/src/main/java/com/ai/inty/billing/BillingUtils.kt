@@ -56,12 +56,54 @@ internal object BillingUtils {
                 EasyLog.log("BillingRepository BillingUtils - Google Play 服务无效")
             }
 
+            com.google.android.gms.common.ConnectionResult.SERVICE_UPDATING -> {
+                EasyLog.log("BillingRepository BillingUtils - Google Play 服务正在更新")
+            }
+
+            com.google.android.gms.common.ConnectionResult.TIMEOUT -> {
+                EasyLog.log("BillingRepository BillingUtils - Google Play 服务连接超时")
+            }
+
+            com.google.android.gms.common.ConnectionResult.INTERRUPTED -> {
+                EasyLog.log("BillingRepository BillingUtils - Google Play 服务连接被中断")
+            }
+
+            com.google.android.gms.common.ConnectionResult.INVALID_ACCOUNT -> {
+                EasyLog.log("BillingRepository BillingUtils - Google Play 账户无效")
+            }
+
+            com.google.android.gms.common.ConnectionResult.RESOLUTION_REQUIRED -> {
+                EasyLog.log("BillingRepository BillingUtils - Google Play 服务需要用户操作解决")
+            }
+
             else -> {
                 EasyLog.log("BillingRepository BillingUtils - Google Play 服务不可用，错误码: $resultCode")
             }
         }
 
         return false
+    }
+
+    /**
+     * 获取Google Play服务错误的详细描述
+     */
+    fun getGooglePlayServicesErrorDescription(context: Context): String {
+        val googleApiAvailability = GoogleApiAvailability.getInstance()
+        val resultCode = googleApiAvailability.isGooglePlayServicesAvailable(context)
+        
+        return when (resultCode) {
+            com.google.android.gms.common.ConnectionResult.SUCCESS -> "Google Play 服务正常"
+            com.google.android.gms.common.ConnectionResult.SERVICE_MISSING -> "Google Play 服务未安装"
+            com.google.android.gms.common.ConnectionResult.SERVICE_VERSION_UPDATE_REQUIRED -> "Google Play 服务版本过低，需要更新"
+            com.google.android.gms.common.ConnectionResult.SERVICE_DISABLED -> "Google Play 服务被禁用"
+            com.google.android.gms.common.ConnectionResult.SERVICE_INVALID -> "Google Play 服务无效"
+            com.google.android.gms.common.ConnectionResult.SERVICE_UPDATING -> "Google Play 服务正在更新"
+            com.google.android.gms.common.ConnectionResult.TIMEOUT -> "Google Play 服务连接超时"
+            com.google.android.gms.common.ConnectionResult.INTERRUPTED -> "Google Play 服务连接被中断"
+            com.google.android.gms.common.ConnectionResult.INVALID_ACCOUNT -> "Google Play 账户无效"
+            com.google.android.gms.common.ConnectionResult.RESOLUTION_REQUIRED -> "Google Play 服务需要用户操作解决"
+            else -> "Google Play 服务不可用 (错误码: $resultCode)"
+        }
     }
 
     /**

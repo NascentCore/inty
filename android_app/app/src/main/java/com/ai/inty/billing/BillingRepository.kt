@@ -6,6 +6,7 @@ import com.android.billingclient.api.BillingClient
 import com.android.billingclient.api.BillingClientStateListener
 import com.android.billingclient.api.BillingResult
 import com.android.billingclient.api.PurchasesUpdatedListener
+import com.inty.utils.AppEnv
 import com.inty.utils.log.EasyLog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -25,9 +26,7 @@ import kotlinx.coroutines.launch
  */
 object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener {
 
-    private const val RECONNECT_DELAY_MS = 5000L
     private const val DISCONNECT_RECONNECT_DELAY_MS = 1000L
-    private const val STATUS_REFRESH_DELAY_MS = 2000L
     private const val TAG = "BillingRepository"
 
 
@@ -228,7 +227,7 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
         )
 
         // 连接失败时，尝试重新连接（自动重连机制）
-        scheduleReconnect(RECONNECT_DELAY_MS)
+        smartReconnect(billingResult)
     }
 
     override fun onBillingServiceDisconnected() {
@@ -250,9 +249,50 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
             delay(delayMs)
             if (!isConnected) {
                 log("尝试重新连接 BillingClient")
-                connectToPlayBilling()
+
+                // 重新检查Google Play服务状态
+                val context: Context? = AppEnv.context
+                if (context != null && BillingUtils.isGooglePlayServicesAvailable(context)) {
+                    log("Google Play 服务可用，尝试重新连接")
+                    connectToPlayBilling()
+                } else {
+                    log("Google Play 服务仍不可用，跳过重连")
+                    // 如果Google Play服务不可用，尝试强制重新检查
+                    if (context != null) {
+                        forceCheckGooglePlayServices(context)
+                    }
+                }
             }
         }
+    }
+
+    /**
+     * 智能重连：根据错误类型选择不同的重连策略
+     */
+    private fun smartReconnect(billingResult: BillingResult) {
+        val delayMs = when (billingResult.responseCode) {
+            BillingClient.BillingResponseCode.SERVICE_UNAVAILABLE -> {
+                log("服务不可用，使用较长延迟重连: 10秒")
+                10000L
+            }
+
+            BillingClient.BillingResponseCode.NETWORK_ERROR -> {
+                log("网络错误，使用中等延迟重连: 5秒")
+                5000L
+            }
+
+            BillingClient.BillingResponseCode.BILLING_UNAVAILABLE -> {
+                log("计费不可用，使用更长延迟重连: 30秒")
+                30000L  // 增加到30秒，因为这种错误通常需要更长时间恢复
+            }
+
+            else -> {
+                log("其他错误，使用标准延迟重连: 5秒")
+                5000L
+            }
+        }
+        
+        scheduleReconnect(delayMs)
     }
 
     suspend fun fetchRemote() {
@@ -266,12 +306,67 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
     /**
      * 检查是否已连接
      */
-    fun isConnected(): Boolean = isConnected
+    fun isConnected(): Boolean {
+        // 双重检查：既检查内部状态，也检查BillingClient实际状态
+        val internalConnected = isConnected
+        val clientConnected = if (::billingClient.isInitialized) {
+            billingClient.connectionState == BillingClient.ConnectionState.CONNECTED
+        } else {
+            false
+        }
+
+        // 如果状态不一致，同步状态
+        if (internalConnected != clientConnected) {
+            log("状态不一致检测到: internalConnected=$internalConnected, clientConnected=$clientConnected")
+            isConnected = clientConnected
+        }
+
+        return isConnected
+    }
 
     /**
      * 检查是否已初始化
      */
     fun isInitialized(): Boolean = ::billingClient.isInitialized
+
+    /**
+     * 强制重新检查Google Play服务状态
+     */
+    fun forceCheckGooglePlayServices(context: Context): Boolean {
+        log("强制重新检查Google Play服务状态")
+        val hasGooglePlayServices = BillingUtils.isGooglePlayServicesAvailable(context)
+        updateInitState(hasGooglePlayServices = hasGooglePlayServices)
+
+        if (!hasGooglePlayServices) {
+            handleGooglePlayServicesUnavailable()
+            return false
+        }
+
+        return true
+    }
+
+    /**
+     * 强制重新连接
+     */
+    fun forceReconnect() {
+        log("强制重新连接BillingClient")
+        if (::billingClient.isInitialized) {
+            billingClient.endConnection()
+            isConnected = false
+            // 清理Flow状态，避免显示过期数据
+            _vipStatusFlow.value = VipStatus(isSubscribed = false)
+            _plansFlow.value = emptyList()
+            log("已清理所有状态，准备重新连接")
+        }
+
+        // 延迟重新初始化，给用户一个短暂的状态显示
+        eventScope.launch {
+            delay(500) // 减少延迟，避免用户看到"未订阅"状态太久
+            initializeBillingClient(AppEnv.context)
+            initializeManagers()
+            connectToPlayBilling()
+        }
+    }
 
     /**
      * 获取BillingClient连接状态
@@ -315,38 +410,22 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
         eventScope.launch {
             _eventFlow.collect { event ->
                 when (event) {
-                    is BillingEvent.PurchaseSuccess -> handlePurchaseSuccess()
-                    is BillingEvent.Connected -> handleConnected()
-                    is BillingEvent.AppResumed -> handleAppResumed()
+                    is BillingEvent.PurchaseSuccess -> {
+                        log("购买成功，刷新状态")
+                        refreshSubscriptionStatus()
+                    }
+                    is BillingEvent.Connected -> {
+                        log("连接成功，刷新状态")
+                        refreshSubscriptionStatus()
+                    }
+                    is BillingEvent.AppResumed -> {
+                        log("应用恢复，检查状态")
+                        refreshSubscriptionStatus()
+                    }
                     else -> log("未处理事件: $event")
                 }
             }
         }
-    }
-
-    /**
-     * 处理购买成功事件
-     */
-    private suspend fun handlePurchaseSuccess() {
-        log("购买成功，刷新状态")
-        delay(STATUS_REFRESH_DELAY_MS)
-        refreshSubscriptionStatus()
-    }
-
-    /**
-     * 处理连接成功事件
-     */
-    private suspend fun handleConnected() {
-        log("连接成功，刷新状态")
-        refreshSubscriptionStatus()
-    }
-
-    /**
-     * 处理应用恢复事件
-     */
-    private suspend fun handleAppResumed() {
-        log("应用恢复，检查状态")
-        refreshSubscriptionStatus()
     }
 
     /**
@@ -369,37 +448,6 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
                 log("刷新订阅状态失败: ${e.message}")
             }
         }
-    }
-
-    // ==================== 简化的公共API接口 ====================
-
-    /**
-     * 检查用户是否为VIP
-     */
-    fun isVip(): Boolean = vipStatusFlow.value.isSubscribed
-
-    /**
-     * 获取当前VIP状态
-     */
-    fun getVipStatus(): VipStatus = vipStatusFlow.value
-
-    /**
-     * 获取订阅计划列表
-     */
-    fun getPlans(): List<VipPlan> = plansFlow.value
-
-    /**
-     * 购买指定商品
-     */
-    fun purchase(activity: Activity, productId: String) {
-        launchBillingFlow(activity, productId)
-    }
-
-    /**
-     * 刷新状态
-     */
-    fun refresh() {
-        refreshSubscriptionStatus()
     }
 
     /**

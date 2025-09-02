@@ -199,14 +199,7 @@ internal class BillingPurchaseManager(
      */
     private fun handlePurchase(purchase: Purchase) {
         if (purchase.purchaseState == Purchase.PurchaseState.PURCHASED) {
-            if (!purchase.isAcknowledged) {
-                acknowledgePurchase(purchase)
-            }
-
-            // 调用后端验证订阅信息
-            verifySubscriptionWithServer(purchase)
-
-            // 更新会员状态为已订阅
+            // 先更新状态，如果后续确认失败再回滚
             val newStatus = VipStatus(
                 isSubscribed = true,
                 subscriptionId = purchase.products.firstOrNull(),
@@ -214,8 +207,17 @@ internal class BillingPurchaseManager(
             )
             vipStatusFlow.value = newStatus
             BillingStorage.saveLocalVipStatus(newStatus)
+            
+            if (!purchase.isAcknowledged) {
+                acknowledgePurchase(purchase)
+            }
+
+            // 调用后端验证订阅信息
+            verifySubscriptionWithServer(purchase)
         }
     }
+
+
 
     /**
      * 确认购买
@@ -227,9 +229,20 @@ internal class BillingPurchaseManager(
         billingClient.acknowledgePurchase(acknowledgePurchaseParams) { billingResult ->
             if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
                 EasyLog.log("BillingRepository BillingPurchaseManager - 购买确认成功")
+                // 确认成功，通知购买成功事件
+                eventScope.launch {
+                    eventFlow.emit(BillingEvent.PurchaseSuccess(purchase))
+                }
             } else {
                 EasyLog.log("BillingRepository BillingPurchaseManager - 购买确认失败: ${billingResult.debugMessage}")
                 showError("Purchase acknowledgment failed")
+                
+                // 购买确认失败，回滚订阅状态
+                val oldStatus = VipStatus(isSubscribed = false)
+                vipStatusFlow.value = oldStatus
+                BillingStorage.saveLocalVipStatus(oldStatus)
+                EasyLog.log("BillingRepository BillingPurchaseManager - 已回滚订阅状态")
+                
                 eventScope.launch {
                     eventFlow.emit(
                         BillingEvent.PurchaseFailed(
