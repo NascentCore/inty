@@ -2,13 +2,10 @@
 Agents endpoints for accessing agents for interactions.
 """
 
-from datetime import datetime
-from enum import StrEnum
 import traceback
 import uuid
 from typing import Any, List
 
-import vertexai
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -17,10 +14,8 @@ from app import schemas
 from app.api import deps
 from app.api.utils.logger_route import LoggerRoute
 from app.core.agent.agent import agent_manager
-from app.utils.crop_avatar import crop_avatar
 from app.utils.gemini import ImagenGeneratedImage, text_to_image
 from app.core.config import global_config_loaded_from_config_yaml
-from app.utils.image_upload import process_image_upload
 from app.schemas.character_card import (
     CharacterCardExportRequest,
     CharacterCardImportRequest,
@@ -136,6 +131,23 @@ async def get_following_agents(
     return schemas.APIResponse.success(data=pagination_data)
 
 
+########################################################
+# To test create agent API:
+# curl -X POST "http://localhost:8000/api/v1/ai/agents" \
+#   -H "Content-Type: application/json" \
+#   -H "Authorization: Bearer TOKEN" \
+#   -d '{
+#     "name": "Test Agent",
+#     "gender": "FEMALE",
+#     "visibility": "PRIVATE",
+#     "intro": "This is a test AI agent",
+#     "opening": "Hello! I am your AI assistant.",
+#     "main_prompt": "main_prompt",
+#     "personality": "personality",
+#     "mode_prompt": "mode_prompt",
+#     "background": "<background_image_url>"
+#   }'
+########################################################
 @router.post(
     "",
     response_model=schemas.APIResponse[schemas.Agent],
