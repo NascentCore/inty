@@ -1,7 +1,4 @@
-import io
-import logging
 import math
-from urllib.parse import urlparse
 import uuid
 from datetime import datetime
 from typing import List, Optional
@@ -17,8 +14,20 @@ from app.schemas.agent import AgentSortOption
 from app.core.agent.agent import agent_manager
 from app.core.config import global_config_loaded_from_config_yaml
 from app.models.agent import AgentVisibility
+from app.models.agent import AgentVisibility
 from app.models.associations import agent_followers
 from app.services.cache_service import cache_service
+from app.utils.crop_avatar import CROPPED_AVATAR_FILENAME_SUFFIX, crop_avatar
+from app.utils.gcs import (
+    append_filename_suffix,
+    download_from_gcs,
+    get_bucket_and_path_from_gcs_url,
+    upload_to_gcs,
+)
+from app.utils.image import (
+    ImageFormat,
+    get_jpg_bytes_from_pil_image,
+)
 from app.utils.crop_avatar import crop_avatar
 from app.utils.gcs import get_bucket_and_path_from_gcs_url
 
@@ -510,8 +519,7 @@ async def create_agent(
         # 生成可读ID
         readable_id = await generate_next_readable_id(db)
 
-        # 获取Agent数据
-        agent_data = agent_in.dict()
+        agent_data = agent_in.model_dump()
         logger.debug(f"原始Agent数据: {agent_data}")
 
         # 处理 llm_config 字段
@@ -540,32 +548,33 @@ async def create_agent(
             # 图片处理失败不应该阻止Agent创建，使用原始数据
             processed_agent_data = agent_data
 
-        # 确保processed_agent_data是有效的字典
-        if not isinstance(processed_agent_data, dict):
-            logger.error(
-                f"processed_agent_data不是字典类型: {type(processed_agent_data)}, 值: {processed_agent_data}"
-            )
-            processed_agent_data = agent_data
-
         logger.debug(f"最终处理后的Agent数据: {processed_agent_data}")
 
-        try:
-            db_agent = models.Agent(
-                id=agent_id,
-                readable_id=readable_id,
-                **processed_agent_data,
-                creator_id=user_id,
+        need_to_crop_avatar = not processed_agent_data.get(
+            "avatar", None
+        ) and processed_agent_data.get("background", None)
+        if need_to_crop_avatar:
+            logger.debug(
+                f"Agent avatar为空，尝试从background裁剪avatar - Agent ID: {agent_id}"
             )
-        except Exception as e:
-            logger.error(f"创建Agent模型实例失败: {str(e)}")
-            logger.error(f"Agent数据: {processed_agent_data}")
-            raise
+            background_url = processed_agent_data["background"]
+            cropped_avatar_url = await _crop_avatar_from_background(background_url)
+            processed_agent_data["avatar"] = cropped_avatar_url
+            logger.debug(
+                f"成功从background裁剪avatar - Agent ID: {agent_id}, Avatar URL: {cropped_avatar_url}"
+            )
+
+        db_agent = models.Agent(
+            id=agent_id,
+            readable_id=readable_id,
+            **processed_agent_data,
+            creator_id=user_id,
+        )
 
         db.add(db_agent)
         await db.commit()
         await db.refresh(db_agent)
 
-        # 重新查询以加载关系数据
         result = await db.execute(
             select(models.Agent)
             .options(selectinload(models.Agent.creator))
@@ -590,6 +599,32 @@ async def create_agent(
         await db.rollback()
         logger.error(f"未知错误 - 创建角色: {str(e)}")
         raise HTTPException(status_code=500, detail="服务器内部错误")
+
+
+async def _crop_avatar_from_background(background_url: str) -> str:
+    """
+    从 background 图片中裁剪出 avatar
+    Args:
+        background_url: 背景图片的URL
+    Returns:
+        裁剪后的avatar URL
+    """
+    # 下载背景图片
+    background_data = download_from_gcs(background_url)
+    if not background_data:
+        logger.warning(f"无法下载background图片: {background_url}")
+        raise RuntimeError(f"无法下载background图片: {background_url}")
+
+    cropped_avatar = crop_avatar(background_data)
+    avatar_data = get_jpg_bytes_from_pil_image(cropped_avatar)
+
+    bucket, background_gcs_path = get_bucket_and_path_from_gcs_url(background_url)
+    avatar_gcs_path = append_filename_suffix(
+        background_gcs_path, CROPPED_AVATAR_FILENAME_SUFFIX
+    )
+
+    avatar_url = upload_to_gcs(avatar_data, ImageFormat.JPEG, bucket, avatar_gcs_path)
+    return avatar_url
 
 
 def _validate_character_card_fields(agent_in: schemas.AgentCreate):

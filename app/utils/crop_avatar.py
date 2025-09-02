@@ -12,6 +12,8 @@ from pydantic import BaseModel
 import animeface
 
 
+CROPPED_AVATAR_FILENAME_SUFFIX = "-cropped-avatar"
+
 # Face detector (default): haarcascade_frontalface_default.xml
 # Face detector (fast Harr): haarcascade_frontalface_alt2.xml
 # Face detector (side view): haarcascade_profileface.xml
