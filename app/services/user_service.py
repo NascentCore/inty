@@ -196,20 +196,6 @@ def generate_avatar_path(user_id: str, filename: str) -> str:
     return f"avatars/{user_id}/avatar-{timestamp}-{unique_id}.{ext}"
 
 
-def get_path_from_gcs_url(url: str) -> str:
-    if not url:
-        return ""
-    parts = url.split(".com/")
-    if len(parts) < 2:
-        return ""
-    path = parts[1]
-    # Remove bucket name prefix
-    bucket = global_config_loaded_from_config_yaml.gcs.bucket
-    if path.startswith(bucket + "/"):
-        path = path[len(bucket) + 1 :]
-    return path
-
-
 async def register_device_token(
     db: AsyncSession, token: str, user_id: str
 ) -> DeviceToken:
