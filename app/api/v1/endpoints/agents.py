@@ -369,8 +369,8 @@ async def generate_background(
                 },
             )
 
-        # Construct GCS base path
-        gcs_base_path = f"backgrounds/tmp/{current_user.id}/{uuid.uuid4().hex}"
+        # Construct GCS base path - use unified directory instead of tmp
+        gcs_base_path = f"backgrounds/{current_user.id}/{uuid.uuid4().hex}"
         gcs_uri_base = (
             f"gs://{global_config_loaded_from_config_yaml.gcs.bucket}/{gcs_base_path}"
         )
