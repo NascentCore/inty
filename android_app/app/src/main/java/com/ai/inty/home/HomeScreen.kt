@@ -315,7 +315,7 @@ private fun ConversationsTabContent(
             TheRouter.build(Constant.ROUTE_SYS_MSGS).navigation(context)
         },
         onClickFollowingAgent = { agent ->
-            TheRouter.build(Constant.ROUTE_AGENT_INFO)
+            TheRouter.build(Constant.ROUTE_CHAT)
                 .withObject("agent", agent)
                 .navigation(context)
         },
