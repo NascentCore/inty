@@ -46,6 +46,7 @@ import com.ai.inty.R
 import com.ai.inty.base.IntyImage
 import com.ai.inty.base.noRippleClickable
 import com.ai.inty.beans.AgentInfo
+import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
 
 /**
@@ -184,7 +185,7 @@ fun RecommendPage(
                 }
 
                 // 检测是否滚动到底部
-                val reachedBottom = remember {
+                val reachedBottom by remember {
                     derivedStateOf {
                         val lastVisibleItem = gridState.layoutInfo.visibleItemsInfo.lastOrNull()
                         lastVisibleItem?.index != null && lastVisibleItem.index >= agents.size - 3
@@ -192,10 +193,10 @@ fun RecommendPage(
                 }
 
                 // 触发加载更多，添加防抖机制
-                LaunchedEffect(reachedBottom.value) {
-                    if (reachedBottom.value && agents.isNotEmpty() && !isLoading) {
+                LaunchedEffect(reachedBottom) {
+                    if (reachedBottom && agents.isNotEmpty() && !isLoading) {
                         // 添加延迟，避免快速滚动时重复触发
-                        kotlinx.coroutines.delay(100)
+                        delay(100)
                         onLoadMore()
                     }
                 }

@@ -437,8 +437,6 @@ class ChatViewModel : BaseActivityViewModel() {
         when (result) {
             is HttpResult.Failure -> showNetworkAwareError(result.message)
             is HttpResult.Success -> {
-                val isPremiumMode = result.data.premium_mode == true
-                EasyLog.log("测试，获取聊天设置 ${result.data}")
                 chatSetting.update { result.data }
             }
         }
