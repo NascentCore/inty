@@ -40,6 +40,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -155,17 +156,14 @@ class MainViewModel : BaseActivityViewModel() {
 
     private fun loadBusinessData() {
         // 检查是否需要从网络更新数据
-        if (shouldUpdateFromNetwork()) {
-            // 加载业务数据
-            getAgents() // 现在会先使用缓存，然后后台静默刷新
-            getUserProfile() // 从服务器获取最新信息并更新本地缓存
-            regFCM()
+        // 加载业务数据
+        getAgents() // 现在会先使用缓存，然后后台静默刷新
+        getUserProfile() // 从服务器获取最新信息并更新本地缓存
+        regFCM()
 //            getSysMsgs()//⚠️当前业务，暂时没有系统消息的交互入口 2025年8月26日
-            //检查app版本更新
-            checkAppVersion()
-        } else {
-            EasyLog.log("MainViewModel - 使用缓存数据，跳过网络请求")
-        }
+        //检查app版本更新
+        checkAppVersion()
+
     }
 
     /**
@@ -173,19 +171,7 @@ class MainViewModel : BaseActivityViewModel() {
      */
     private fun shouldUpdateFromNetwork(): Boolean {
         // 只有在已登录且有有效token的情况下才进行网络更新
-        if (!IntySetting.isLogin() || IntySetting.getCurToken().isEmpty()) {
-            EasyLog.log("MainViewModel - 未登录或token为空，跳过网络更新")
-            return false
-        }
-
-        // 如果缓存过期或没有缓存数据，则需要更新
-        val needUpdate = AgentCacheManager.isCacheExpired() ||
-                AppStartupManager.cachedAgents.value.isEmpty() ||
-                AppStartupManager.cachedUserProfile.value == null
-
-        EasyLog.log("MainViewModel - 网络更新检查: 缓存过期=${AgentCacheManager.isCacheExpired()}, 无缓存agents=${AppStartupManager.cachedAgents.value.isEmpty()}, 无缓存用户=${AppStartupManager.cachedUserProfile.value == null}, 需要更新=$needUpdate")
-
-        return needUpdate
+        return IntySetting.isLogin() && IntySetting.getCurToken().isEmpty()
     }
 
     fun getAgents() {
@@ -277,13 +263,12 @@ class MainViewModel : BaseActivityViewModel() {
 
 
     /**
-     * 加载agents数据（主要用于分页加载和强制刷新）
-     * 注意：第一页数据通常通过loadAgentsSilently()静默加载
+     * 加载agents数据
      */
     private fun loadAgents() {
         if (_isLoading.value) return
 
-        _isLoading.value = true
+        _isLoading.update { true }
         EasyLog.log("loadAgents - page: $currentPage")
         viewModelScope.launch(Dispatchers.IO) {
             try {
@@ -340,7 +325,7 @@ class MainViewModel : BaseActivityViewModel() {
                     currentPage--
                 }
             }
-            _isLoading.value = false
+            _isLoading.update { false }
 
             EasyLog.log("loadAgents - 完成，当前列表大小: ${agentList.size}")
         }

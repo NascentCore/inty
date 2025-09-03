@@ -341,12 +341,12 @@ private fun SuggestTabContent(
     mainViewModel: MainViewModel,
     context: Context,
 ) {
-    val isLoading = mainViewModel.isLoading.collectAsState()
+    val isLoading by mainViewModel.isLoading.collectAsState()
 
     RecommendPage(
         modifier = Modifier,
         agents = mainViewModel.agentList,
-        isLoading = isLoading.value,
+        isLoading = isLoading,
         onClickAgent = { agent ->
             TheRouter.build(Constant.ROUTE_CHAT)
                 .withObject("agent", agent)
