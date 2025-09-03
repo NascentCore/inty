@@ -58,7 +58,7 @@ internal class BillingPurchaseManager(
 
             BillingClient.BillingResponseCode.USER_CANCELED -> {
                 EasyLog.log("BillingRepository BillingPurchaseManager - 用户取消购买")
-                showError("purchases USER_CANCELED")
+//                showError("purchases USER_CANCELED")
                 // 用户取消不发送失败事件
             }
 
