@@ -69,8 +69,8 @@ dependencies {
     ksp(libs.therouter.apt)
 
     // ===== 项目模块 =====
-    implementation(project(":utils"))
-    implementation(project(":network"))
+    implementation(projects.library.utils)
+    implementation(projects.library.network)
 
     // ===== 调试工具 =====
     debugImplementation(libs.chucker.library)
