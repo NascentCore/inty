@@ -86,41 +86,11 @@ object VipStatusHelper {
         BillingRepository.launchBillingFlow(activity, productId)
     }
 
-    /**
-     * 检查VIP状态并显示相应UI
-     */
-    fun checkVipStatusForUI(
-        onVipAction: () -> Unit,
-        onNotVipAction: () -> Unit,
-        showPremiumDialog: () -> Unit = {}
-    ) {
-        checkVipStatus(
-            onVip = onVipAction,
-            onNotVip = {
-                showPremiumDialog()
-                onNotVipAction()
-            }
-        )
-    }
 
     /**
      * 刷新订阅状态
      */
     fun refreshSubscriptionStatus() {
         BillingRepository.refreshSubscriptionStatus()
-    }
-
-    /**
-     * 获取订阅计划列表
-     */
-    fun getPlans(): List<VipPlan> {
-        return BillingRepository.plansFlow.value
-    }
-
-    /**
-     * 检查是否有可用计划
-     */
-    fun hasAvailablePlans(): Boolean {
-        return BillingRepository.plansFlow.value.isNotEmpty()
     }
 }
