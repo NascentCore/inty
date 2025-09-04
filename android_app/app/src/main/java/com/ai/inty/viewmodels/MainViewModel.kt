@@ -160,7 +160,7 @@ class MainViewModel : BaseActivityViewModel() {
         getAgents() // 现在会先使用缓存，然后后台静默刷新
         getUserProfile() // 从服务器获取最新信息并更新本地缓存
         regFCM()
-//            getSysMsgs()//⚠️当前业务，暂时没有系统消息的交互入口 2025年8月26日
+        getSysMsgs()//⚠️当前业务，暂时没有系统消息的交互
         //检查app版本更新
         checkAppVersion()
 
