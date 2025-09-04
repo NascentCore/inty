@@ -171,7 +171,7 @@ class MainViewModel : BaseActivityViewModel() {
      */
     private fun shouldUpdateFromNetwork(): Boolean {
         // 只有在已登录且有有效token的情况下才进行网络更新
-        return IntySetting.isLogin() && IntySetting.getCurToken().isEmpty()
+        return IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()
     }
 
     fun getAgents() {
