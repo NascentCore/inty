@@ -6,8 +6,6 @@ import androidx.credentials.CredentialManager
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.GetCredentialResponse
 import androidx.credentials.exceptions.GetCredentialException
-import androidx.credentials.exceptions.NoCredentialException
-import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
@@ -109,30 +107,6 @@ object CredentialManagerHelper {
         } catch (e: Exception) {
             EasyLog.log("Error handling credential response: ${e.message}", EasyLog.ERROR)
             Result.failure(e)
-        }
-    }
-
-    /**
-     * 检查是否支持 Credential Manager
-     */
-    fun isCredentialManagerSupported(context: Context): Boolean {
-        return try {
-            val credentialManager = CredentialManager.create(context)
-            // 检查是否支持 Google ID 选项
-            true
-        } catch (e: Exception) {
-            EasyLog.log("Credential Manager not supported: ${e.message}", EasyLog.ERROR)
-            false
-        }
-    }
-
-    /**
-     * 获取错误消息
-     */
-    fun getErrorMessage(exception: GetCredentialException): String {
-        return when (exception) {
-            is NoCredentialException -> "没有可用的登录凭证"
-            else -> "登录失败: ${exception.message}"
         }
     }
 
