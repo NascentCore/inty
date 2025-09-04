@@ -124,36 +124,6 @@ fun SubscriptionManagementContainer(
     }
 }
 
-/**
- * 分隔线组件（注释状态，保留以备后用）
- */
-@Composable
-fun SubscriptionManagementDivider() {
-    // Spacer(Modifier.height(4.dp))
-    // Box(
-    //     modifier = Modifier
-    //         .fillMaxWidth()
-    //         .height(1.dp)
-    //         .background(
-    //             brush = Brush.horizontalGradient(
-    //                 colors = listOf(
-    //                     Color.Transparent,
-    //                     Color.White.copy(0.2f),
-    //                     Color.Transparent
-    //                 )
-    //             )
-    //         )
-    // )
-    // Spacer(Modifier.height(4.dp))
-    // // 兑换码（两种状态都显示）
-    // SubscriptionManagementItem(
-    //     icon = R.drawable.icon_list_row_2,
-    //     title = stringResource(R.string.redemption_code),
-    //     onClick = {
-    //         viewModel.navigateToGooglePlaySubscription()
-    //     }
-    // )
-}
 
 /**
  * 实际执行跳转逻辑的辅助函数，放置在Composable外部。
