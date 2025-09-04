@@ -193,30 +193,4 @@ object BillingErrorHandler {
         handleBillingError(billingResult, errorType = ErrorType.PRICE_QUERY)
     }
 
-    /**
-     * 处理购买错误
-     */
-    fun handlePurchaseError(billingResult: BillingResult) {
-        handleBillingError(billingResult, errorType = ErrorType.PURCHASE)
-    }
-
-    /**
-     * 处理连接错误
-     */
-    fun handleConnectionError(billingResult: BillingResult) {
-        handleBillingError(billingResult, errorType = ErrorType.CONNECTION)
-    }
-
-    /**
-     * 检查是否为可恢复的错误
-     */
-    fun isRecoverableError(billingResult: BillingResult): Boolean {
-        return when (billingResult.responseCode) {
-            BillingClient.BillingResponseCode.SERVICE_UNAVAILABLE,
-            BillingClient.BillingResponseCode.NETWORK_ERROR,
-            BillingClient.BillingResponseCode.SERVICE_DISCONNECTED -> true
-
-            else -> false
-        }
-    }
 }

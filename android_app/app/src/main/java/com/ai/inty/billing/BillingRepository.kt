@@ -291,7 +291,7 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
                 5000L
             }
         }
-        
+
         scheduleReconnect(delayMs)
     }
 
@@ -346,57 +346,6 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
     }
 
     /**
-     * 强制重新连接
-     */
-    fun forceReconnect() {
-        log("强制重新连接BillingClient")
-        if (::billingClient.isInitialized) {
-            billingClient.endConnection()
-            isConnected = false
-            // 清理Flow状态，避免显示过期数据
-            _vipStatusFlow.value = VipStatus(isSubscribed = false)
-            _plansFlow.value = emptyList()
-            log("已清理所有状态，准备重新连接")
-        }
-
-        // 延迟重新初始化，给用户一个短暂的状态显示
-        eventScope.launch {
-            delay(500) // 减少延迟，避免用户看到"未订阅"状态太久
-            initializeBillingClient(AppEnv.context)
-            initializeManagers()
-            connectToPlayBilling()
-        }
-    }
-
-    /**
-     * 获取BillingClient连接状态
-     */
-    fun getConnectionState(): String {
-        return if (::billingClient.isInitialized) {
-            when (billingClient.connectionState) {
-                0 -> "DISCONNECTED (0)"
-                1 -> "CONNECTING (1)"
-                2 -> "CONNECTED (2) ✅"
-                else -> "UNKNOWN (${billingClient.connectionState})"
-            }
-        } else {
-            "NOT_INITIALIZED"
-        }
-    }
-
-    /**
-     * 手动触发价格更新
-     */
-    fun refreshPrices() {
-        log("手动触发价格更新")
-        if (isConnected) {
-            priceManager.querySkuDetails(isConnected)
-        } else {
-            log("BillingClient 未连接，无法更新价格")
-        }
-    }
-
-    /**
      * 启动购买流程
      */
     fun launchBillingFlow(activity: Activity, productId: String) {
@@ -414,14 +363,17 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
                         log("购买成功，刷新状态")
                         refreshSubscriptionStatus()
                     }
+
                     is BillingEvent.Connected -> {
                         log("连接成功，刷新状态")
                         refreshSubscriptionStatus()
                     }
+
                     is BillingEvent.AppResumed -> {
                         log("应用恢复，检查状态")
                         refreshSubscriptionStatus()
                     }
+
                     else -> log("未处理事件: $event")
                 }
             }
