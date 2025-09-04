@@ -474,6 +474,7 @@ private fun PremiumBanner(
     AuthClickable(
         modifier = Modifier
             .fillMaxWidth()
+            .heightIn(120.dp)
             .padding(horizontal = 12.dp),
         onClick = onClick
     ) { authModifier ->
@@ -483,10 +484,8 @@ private fun PremiumBanner(
             Image(
                 painter = painterResource(R.drawable.img_vip_banner),
                 contentDescription = "",
-                contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(120.dp)
+                contentScale = ContentScale.FillWidth,
+                modifier = Modifier.matchParentSize()
             )
 
             Row(
