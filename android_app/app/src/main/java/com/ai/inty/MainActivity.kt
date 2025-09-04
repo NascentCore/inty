@@ -250,13 +250,8 @@ class MainActivity : BaseActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-
-        // 释放 BillingRepository 资源
-        BillingRepository.release()
-
         // 取消协程
         exitJob?.cancel()
-
         // Unregister broadcast receiver
         LocalBroadcastManager.getInstance(this).unregisterReceiver(followStateReceiver)
     }
