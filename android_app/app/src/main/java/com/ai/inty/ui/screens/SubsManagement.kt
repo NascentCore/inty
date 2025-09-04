@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.sp
 import com.ai.inty.R
 import com.ai.inty.base.noRippleClickable
 import com.ai.inty.billing.BillingRepository
+import com.ai.inty.ui.components.SettingDivider
 import com.ai.inty.ui.components.SubscriptionManagementContainer
 import com.ai.inty.ui.components.SubscriptionManagementItem
 import com.ai.inty.ui.components.openPlayStoreSubscriptions
@@ -98,7 +99,8 @@ fun SubscriptionManagementScreen(
                     onClick = {
                         viewModel.navigateToGooglePlaySubscription()
                     }
-                );
+                )
+                SettingDivider()
                 SubscriptionManagementItem(
                     icon = R.drawable.icon_list_row_1,
                     title = stringResource(R.string.restore_subscription),
@@ -106,17 +108,6 @@ fun SubscriptionManagementScreen(
                         viewModel.navigateToGooglePlaySubscription()
                     }
                 )
-                // 注释的代码保留，以备后用
-                // SubscriptionManagementDivider()
-                //
-                // // 兑换码（两种状态都显示）
-                // SubscriptionManagementItem(
-                //     icon = R.drawable.icon_list_row_2,
-                //     title = stringResource(R.string.redemption_code),
-                //     onClick = {
-                //         viewModel.navigateToGooglePlaySubscription()
-                //     }
-                // )
             }
         }
     }
