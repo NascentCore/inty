@@ -3,6 +3,7 @@ package com.ai.inty
 import android.app.Application
 import android.content.Context
 import com.ai.inty.base.initImageLoader
+import com.ai.inty.billing.BillingRepository
 import com.ai.inty.utils.AppStartupManager
 import com.ai.inty.utils.NetworkManager
 import com.inty.utils.AppEnv
@@ -41,5 +42,15 @@ class IntyApp : Application() {
 
         // 初始化应用启动管理器（优化启动流程）
         AppStartupManager.initialize(this)
+    }
+    
+    override fun onTerminate() {
+        super.onTerminate()
+        
+        // 应用退出时释放Billing连接
+        if (BillingRepository.isInitialized()) {
+            EasyLog.log("IntyApp - 应用退出，释放Billing连接")
+            BillingRepository.release()
+        }
     }
 }
