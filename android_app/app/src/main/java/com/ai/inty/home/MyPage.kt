@@ -485,7 +485,7 @@ private fun PremiumBanner(
                 painter = painterResource(R.drawable.img_vip_banner),
                 contentDescription = "",
                 contentScale = ContentScale.FillWidth,
-                modifier = Modifier.matchParentSize()
+                modifier = Modifier.fillMaxWidth()
             )
 
             Row(
