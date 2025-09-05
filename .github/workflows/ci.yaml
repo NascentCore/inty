@@ -10,15 +10,6 @@ on:
       - "test_requirements.txt"
       - ".github/workflows/ci.yaml"
 
-  pull_request:
-    branches:
-      - main
-    paths:
-      - "app/**/*.py"
-      - "requirements.txt"
-      - "test_requirements.txt"
-      - ".github/workflows/ci.yaml"
-
 env:
   PG_IMAGE: postgres:16
   PG_USER: postgres
