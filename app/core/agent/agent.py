@@ -288,9 +288,6 @@ class Agent:
         if presence_penalty is not None:
             chat_params["presence_penalty"] = presence_penalty
 
-        # 构建动态提示词Runnable
-        self.prompt_runnable = self._create_dynamic_prompt_runnable()
-
     def _get_effective_main_prompt(self) -> str:
         return self.main_prompt or prompts.FRIENDLY_ROLEPLAY_PROMPT.main_prompt
 
@@ -303,157 +300,145 @@ class Agent:
             or prompts.FRIENDLY_ROLEPLAY_PROMPT.output_format_prompt
         )
 
+    def build_system_messages(self, state) -> List[SystemMessage]:
+        """构建系统消息列表，从state中获取用户信息，state 是 LangChain 运行时系统的一部分。"""
+
+        # User 指与此角色对话的人类用户
+        if isinstance(state, dict):
+            user_profile = state.get("user_profile", "")
+        else:
+            # CustomAgentState对象
+            user_profile = getattr(state, "user_profile", "")
+
+        user_name = self._extract_user_name_from_profile(user_profile)
+
+        system_messages = []
+
+        # 如缺少任一默认提示词，则认为是用户创建的角色。
+        # 此为短期解决方案，未来任何对提示词组装机制的改造，都需要重新考虑这个判定的正确性。
+        is_char_user_created = not self.main_prompt or not self.mode_prompt
+        logger.debug(f"角色是否用户创建: {is_char_user_created}")
+
+        # 1. 主提示词（第一优先级）- 使用全局默认或agent自定义
+        main_prompt = self._get_effective_main_prompt()
+        if main_prompt:
+            # 支持模板渲染和字符替换
+            if "{{" in main_prompt and "}}" in main_prompt:
+                try:
+                    rendered_prompt = prompt_template_manager.render_system_prompt(
+                        system_prompt=main_prompt,
+                        agent_name=self.name,
+                        user_name=user_name,
+                        template_name="basic",
+                    )
+                    system_messages.append(SystemMessage(content=rendered_prompt))
+                except Exception as e:
+                    logger.error(f"主提示词模板渲染失败: {str(e)}，使用原始提示词")
+                    system_messages.append(SystemMessage(content=main_prompt))
+            else:
+                system_messages.append(SystemMessage(content=main_prompt))
+
+        # 2. 角色卡信息 - 每个字段作为独立的SystemMessage
+        character_messages = self._build_character_context(user_name=user_name)
+        system_messages.extend(character_messages)
+
+        # 3. Chat Settings 中的风格提示词
+        if hasattr(state, "chat_settings") and state.chat_settings:
+            if (
+                hasattr(state.chat_settings, "style_prompt")
+                and state.chat_settings.style_prompt
+            ):
+                system_messages.append(
+                    SystemMessage(content=state.chat_settings.style_prompt)
+                )
+        elif isinstance(state, dict) and state.get("chat_settings"):
+            chat_settings = state.get("chat_settings")
+            if hasattr(chat_settings, "style_prompt") and chat_settings.style_prompt:
+                system_messages.append(
+                    SystemMessage(content=chat_settings.style_prompt)
+                )
+            elif isinstance(chat_settings, dict) and chat_settings.get("style_prompt"):
+                system_messages.append(
+                    SystemMessage(content=chat_settings["style_prompt"])
+                )
+
+        # 4. 模式提示词（在角色卡后面）- 使用全局默认或agent自定义
+        mode_prompt = self._get_effective_mode_prompt()
+        if mode_prompt:
+            # 支持模板渲染和字符替换
+            if "{{" in mode_prompt and "}}" in mode_prompt:
+                try:
+                    rendered_prompt = prompt_template_manager.render_system_prompt(
+                        system_prompt=mode_prompt,
+                        agent_name=self.name,
+                        user_name=user_name,
+                        template_name="basic",
+                    )
+                    system_messages.append(SystemMessage(content=rendered_prompt))
+                except Exception as e:
+                    logger.error(f"模式提示词模板渲染失败: {str(e)}，使用原始提示词")
+                    system_messages.append(SystemMessage(content=mode_prompt))
+            else:
+                system_messages.append(SystemMessage(content=mode_prompt))
+
+        if is_char_user_created:
+            logger.debug(
+                f"用户创建的角色，添加输出格式提示词: {prompts.FRIENDLY_ROLEPLAY_PROMPT.output_format_prompt}"
+            )
+            output_format_prompt = self._get_effective_output_format_prompt()
+            if output_format_prompt:
+                if "{{" in output_format_prompt and "}}" in output_format_prompt:
+                    # TODO: render_system_prompt is over-engineered.
+                    # Consider replacing it with
+                    # Jinja2 template rendering render_template({"char": name_of_char, "user": name_of_user})
+                    template = Jinja2Template(output_format_prompt)
+                    rendered_prompt = template.render(char=self.name, user=user_name)
+                    system_messages.append(SystemMessage(content=rendered_prompt))
+                else:
+                    system_messages.append(SystemMessage(content=output_format_prompt))
+                logger.debug(
+                    f"用户创建的角色，添加输出格式提示词: {system_messages[-1].content}"
+                )
+
+        # 5. 用户个性化信息 - 独立的SystemMessage
+        if user_profile:
+            system_messages.append(SystemMessage(content=user_profile))
+
+        if is_char_user_created:
+            newline = "\n"
+            logger.debug(
+                f"用户创建的角色，添加辅助提示词: {newline.join(prompts.FRIENDLY_ROLEPLAY_PROMPT.auxiliary_prompts)}"
+            )
+            system_messages.extend(
+                [
+                    SystemMessage(content=prompt)
+                    for prompt in prompts.FRIENDLY_ROLEPLAY_PROMPT.auxiliary_prompts
+                ]
+            )
+
+        return system_messages
+
+    # 创建一个返回完整消息列表的函数
+    def create_full_message_list(self, state) -> List[BaseMessage]:
+        """创建包含所有系统消息和对话消息的完整消息列表"""
+        system_messages = self.build_system_messages(state)
+
+        # 处理both dict和CustomAgentState输入
+        if isinstance(state, dict):
+            messages = state.get("messages", [])
+        else:
+            messages = getattr(state, "messages", [])
+
+        full_messages = system_messages + messages
+        return full_messages
+
     def _create_dynamic_prompt_runnable(self) -> Runnable:
         """
         创建动态提示词 Runnable 用于输入给 LangChain React Agent 来生成发送给 LLM 的最终提示词。
         """
-
-        def build_system_messages(state) -> List[SystemMessage]:
-            """构建系统消息列表，从state中获取用户信息，state 是 LangChain 运行时系统的一部分。"""
-
-            # User 指与此角色对话的人类用户
-            if isinstance(state, dict):
-                user_profile = state.get("user_profile", "")
-            else:
-                # CustomAgentState对象
-                user_profile = getattr(state, "user_profile", "")
-
-            user_name = self._extract_user_name_from_profile(user_profile)
-
-            system_messages = []
-
-            # 如缺少任一默认提示词，则认为是用户创建的角色。
-            # 此为短期解决方案，未来任何对提示词组装机制的改造，都需要重新考虑这个判定的正确性。
-            is_char_user_created = not self.main_prompt or not self.mode_prompt
-            logger.debug(f"角色是否用户创建: {is_char_user_created}")
-
-            # 1. 主提示词（第一优先级）- 使用全局默认或agent自定义
-            main_prompt = self._get_effective_main_prompt()
-            if main_prompt:
-                # 支持模板渲染和字符替换
-                if "{{" in main_prompt and "}}" in main_prompt:
-                    try:
-                        rendered_prompt = prompt_template_manager.render_system_prompt(
-                            system_prompt=main_prompt,
-                            agent_name=self.name,
-                            user_name=user_name,
-                            template_name="basic",
-                        )
-                        system_messages.append(SystemMessage(content=rendered_prompt))
-                    except Exception as e:
-                        logger.error(f"主提示词模板渲染失败: {str(e)}，使用原始提示词")
-                        system_messages.append(SystemMessage(content=main_prompt))
-                else:
-                    system_messages.append(SystemMessage(content=main_prompt))
-
-            # 2. 角色卡信息 - 每个字段作为独立的SystemMessage
-            character_messages = self._build_character_context(user_name=user_name)
-            system_messages.extend(character_messages)
-
-            # 3. Chat Settings 中的风格提示词
-            if hasattr(state, "chat_settings") and state.chat_settings:
-                if (
-                    hasattr(state.chat_settings, "style_prompt")
-                    and state.chat_settings.style_prompt
-                ):
-                    system_messages.append(
-                        SystemMessage(content=state.chat_settings.style_prompt)
-                    )
-            elif isinstance(state, dict) and state.get("chat_settings"):
-                chat_settings = state.get("chat_settings")
-                if (
-                    hasattr(chat_settings, "style_prompt")
-                    and chat_settings.style_prompt
-                ):
-                    system_messages.append(
-                        SystemMessage(content=chat_settings.style_prompt)
-                    )
-                elif isinstance(chat_settings, dict) and chat_settings.get(
-                    "style_prompt"
-                ):
-                    system_messages.append(
-                        SystemMessage(content=chat_settings["style_prompt"])
-                    )
-
-            # 4. 模式提示词（在角色卡后面）- 使用全局默认或agent自定义
-            mode_prompt = self._get_effective_mode_prompt()
-            if mode_prompt:
-                # 支持模板渲染和字符替换
-                if "{{" in mode_prompt and "}}" in mode_prompt:
-                    try:
-                        rendered_prompt = prompt_template_manager.render_system_prompt(
-                            system_prompt=mode_prompt,
-                            agent_name=self.name,
-                            user_name=user_name,
-                            template_name="basic",
-                        )
-                        system_messages.append(SystemMessage(content=rendered_prompt))
-                    except Exception as e:
-                        logger.error(
-                            f"模式提示词模板渲染失败: {str(e)}，使用原始提示词"
-                        )
-                        system_messages.append(SystemMessage(content=mode_prompt))
-                else:
-                    system_messages.append(SystemMessage(content=mode_prompt))
-
-            if is_char_user_created:
-                logger.debug(
-                    f"用户创建的角色，添加输出格式提示词: {prompts.FRIENDLY_ROLEPLAY_PROMPT.output_format_prompt}"
-                )
-                output_format_prompt = self._get_effective_output_format_prompt()
-                if output_format_prompt:
-                    if "{{" in output_format_prompt and "}}" in output_format_prompt:
-                        # TODO: render_system_prompt is over-engineered.
-                        # Consider replacing it with
-                        # Jinja2 template rendering render_template({"char": name_of_char, "user": name_of_user})
-                        template = Jinja2Template(output_format_prompt)
-                        rendered_prompt = template.render(
-                            char=self.name, user=user_name
-                        )
-                        system_messages.append(SystemMessage(content=rendered_prompt))
-                    else:
-                        system_messages.append(
-                            SystemMessage(content=output_format_prompt)
-                        )
-                    logger.debug(
-                        f"用户创建的角色，添加输出格式提示词: {system_messages[-1].content}"
-                    )
-
-            # 5. 用户个性化信息 - 独立的SystemMessage
-            if user_profile:
-                system_messages.append(SystemMessage(content=user_profile))
-
-            if is_char_user_created:
-                newline = "\n"
-                logger.debug(
-                    f"用户创建的角色，添加辅助提示词: {newline.join(prompts.FRIENDLY_ROLEPLAY_PROMPT.auxiliary_prompts)}"
-                )
-                system_messages.extend(
-                    [
-                        SystemMessage(content=prompt)
-                        for prompt in prompts.FRIENDLY_ROLEPLAY_PROMPT.auxiliary_prompts
-                    ]
-                )
-
-            return system_messages
-
-        # 创建一个返回完整消息列表的函数
-        def create_full_message_list(state) -> List[BaseMessage]:
-            """创建包含所有系统消息和对话消息的完整消息列表"""
-            system_messages = build_system_messages(state)
-
-            # 处理both dict和CustomAgentState输入
-            if isinstance(state, dict):
-                messages = state.get("messages", [])
-            else:
-                messages = getattr(state, "messages", [])
-
-            full_messages = system_messages + messages
-            return full_messages
-
         # 创建动态prompt模板，直接返回分开的消息列表
         return RunnableLambda(
-            lambda state: {"messages": create_full_message_list(state)}
+            lambda state: {"messages": self.create_full_message_list(state)}
         ) | ChatPromptTemplate.from_messages(
             [MessagesPlaceholder(variable_name="messages")]
         )
@@ -790,11 +775,8 @@ class Agent:
                     "agent_id": self.agent_id,
                     "agent_name": self.name,
                 }
-                config = {"configurable": labels}
 
-                messages: list[BaseMessage] = self.prompt_runnable.invoke(
-                    state_data, config
-                ).messages
+                messages: list[BaseMessage] = self.create_full_message_list(state_data)
 
                 openai_messages = [
                     langchain_message_to_openai_message(message, user_name, self.name)
@@ -857,111 +839,6 @@ class Agent:
                     f"聊天处理失败（优化版） - Agent: {self.agent_id}, Session: {session_id}, Error: {str(e)}"
                 )
                 raise
-
-    def _save_debug_messages(
-        self, user_id: str, session_id: str, debug_data: dict, conn
-    ):
-        """
-        保存调试信息到数据库 - 包含发送给LLM的完整提示词
-
-        @deprecated: 此方法已弃用，现在使用 background_task_service.submit_debug_save_task()
-        进行异步后台保存，提高性能并避免阻塞主聊天流程。
-        新的实现确保了完整的动态提示词内容被保存。
-        """
-        logger.debug(
-            f"开始保存调试信息 - Agent: {self.agent_id}, User: {user_id}, Session: {session_id}"
-        )
-
-        try:
-            # 提取数据
-            input_data = debug_data.get("input_data", {})
-            response = debug_data.get("response", {})
-            response_text = debug_data.get("response_text", "")
-
-            # 构建消息链
-            try:
-                # 获取格式化的提示词
-                formatted_prompt = self.prompt_runnable.invoke(input_data)
-
-                if hasattr(formatted_prompt, "messages"):
-                    # 提取所有系统和用户消息
-                    messages = []
-                    for msg in formatted_prompt.messages:
-                        if hasattr(msg, "type") and hasattr(msg, "content"):
-                            # 转换消息类型：system->system, human->user, ai->character
-                            msg_type = msg.type
-                            if msg_type == "human":
-                                msg_type = "user"
-                            elif msg_type == "ai":
-                                msg_type = "character"
-                            messages.append({"type": msg_type, "content": msg.content})
-                else:
-                    # 回退到简单格式
-                    messages = [{"type": "system", "content": str(formatted_prompt)}]
-
-            except Exception as e:
-                logger.error(f"构建消息链失败: {str(e)}, 使用fallback")
-                # 使用基础提示词作为fallback
-                final_prompt = self._build_base_system_message(agent_name=self.name)
-                messages = [{"type": "system", "content": final_prompt}]
-
-            # 添加AI响应消息
-            ai_message = None
-            for msg in response.get("messages", []):
-                if hasattr(msg, "type") and hasattr(msg, "content"):
-                    if msg.type in ["ai", "assistant"]:
-                        # 转换AI消息类型为character
-                        ai_message = {"type": "character", "content": msg.content}
-                elif isinstance(msg, dict) and msg.get("type") in ["ai", "assistant"]:
-                    # 转换AI消息类型为character
-                    ai_message = {
-                        "type": "character",
-                        "content": msg.get("content", str(msg)),
-                    }
-
-            if ai_message:
-                messages.append(ai_message)
-            elif response_text:
-                # AI响应转换为character类型
-                messages.append({"type": "character", "content": response_text})
-
-            logger.debug(f"成功构建消息链，共{len(messages)}条消息")
-
-            # 保存到数据库
-            debug_data = {
-                "messages": messages,
-                "timestamp": time.time(),
-                "agent_id": self.agent_id,
-                "user_id": user_id,
-                "session_id": session_id,
-            }
-
-            query = """
-                UPDATE chats 
-                SET debug_messages = %s, updated_at = now()
-                WHERE user_id = %s AND agent_id = %s AND is_active = true
-            """
-
-            with conn.cursor() as cursor:
-                # 检查目标记录
-                check_query = "SELECT id FROM chats WHERE user_id = %s AND agent_id = %s AND is_active = true"
-                cursor.execute(check_query, (user_id, self.agent_id))
-                record_count = len(cursor.fetchall())
-
-                # 执行更新
-                cursor.execute(query, (json.dumps(debug_data), user_id, self.agent_id))
-                rows_affected = cursor.rowcount
-                conn.commit()
-
-            logger.debug(
-                f"保存调试信息成功 - Agent: {self.agent_id}, 找到记录: {record_count}, 影响行数: {rows_affected}"
-            )
-
-        except Exception as e:
-            logger.error(
-                f"保存调试信息失败 - Agent: {self.agent_id}, Session: {session_id}, Error: {str(e)}"
-            )
-            # 不中断正常聊天流程
 
     @deprecated("替换为流式消息输出，需要调整大模型 API 调用，输出方式等")
     async def chat(
@@ -1045,84 +922,6 @@ class Agent:
                     # ):
                     #     stream_messages.append(message_chunk)
                     #     yield message_chunk, metadata
-
-                    # 如果启用调试日志记录，保存完整的流式响应（异步后台处理）
-                    logger.debug(
-                        f"流式聊天检查debug_logging配置: {global_config_loaded_from_config_yaml.agent.enable_debug_logging}"
-                    )
-                    if global_config_loaded_from_config_yaml.agent.enable_debug_logging:
-                        # 预处理格式化消息（保持与_save_debug_messages一致）
-                        try:
-                            # 获取格式化的提示词
-                            formatted_prompt = self.prompt_runnable.invoke(state_data)
-
-                            if hasattr(formatted_prompt, "messages"):
-                                # 提取所有系统和用户消息
-                                formatted_messages = []
-                                for msg in formatted_prompt.messages:
-                                    if hasattr(msg, "type") and hasattr(msg, "content"):
-                                        # 转换消息类型：system->system, human->user, ai->character
-                                        msg_type = msg.type
-                                        if msg_type == "human":
-                                            msg_type = "user"
-                                        elif msg_type == "ai":
-                                            msg_type = "character"
-                                        formatted_messages.append(
-                                            {"type": msg_type, "content": msg.content}
-                                        )
-                            else:
-                                # 回退到简单格式
-                                formatted_messages = [
-                                    {"type": "system", "content": str(formatted_prompt)}
-                                ]
-
-                        except Exception as e:
-                            logger.error(
-                                f"流式聊天预处理格式化消息失败: {str(e)}, 使用fallback"
-                            )
-                            # 使用基础系统消息作为fallback
-                            formatted_messages = [
-                                {"type": "system", "content": "流式消息格式化失败"}
-                            ]
-
-                        # 处理流式响应文本
-                        response_text = "".join(
-                            [
-                                getattr(msg, "content", str(msg))
-                                for msg in stream_messages
-                                if hasattr(msg, "content")
-                            ]
-                        )
-
-                        # 添加AI响应消息
-                        if response_text:
-                            formatted_messages.append(
-                                {"type": "character", "content": response_text}
-                            )
-
-                        # 构建完整的调试数据，包含预格式化消息
-                        debug_data = {
-                            "formatted_messages": formatted_messages,  # 新增预格式化消息
-                            "input_data": {
-                                "messages": state_data.get("messages", []),
-                                "user_profile": state_data.get("user_profile", ""),
-                                "user_id": state_data.get("user_id", ""),
-                            },
-                            "response": {"messages": stream_messages},
-                            "response_text": response_text,
-                        }
-
-                        # 提交到后台任务队列（非阻塞）
-                        background_task_service.submit_debug_save_task(
-                            user_id, session_id, self.agent_id, debug_data
-                        )
-                        logger.debug(
-                            f"流式聊天调试信息已提交到后台队列 - Agent: {self.agent_id}"
-                        )
-                    else:
-                        logger.debug(
-                            f"流式聊天debug_logging未启用，跳过保存 - Agent: {self.agent_id}"
-                        )
                 except Exception as e:
                     logger.error(
                         f"流式聊天处理失败 - Agent: {self.agent_id}, Session: {session_id}, Error: {str(e)}"
