@@ -4,6 +4,7 @@ from typing import Any, Dict, List, Optional
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import global_config_loaded_from_config_yaml
 from app.models.system_settings import SettingCategory, SettingType, SystemSettings
 from app.services.cache_service import InMemoryCache
 
@@ -189,6 +190,10 @@ class SystemSettingsService:
             ),
             "chat_total_limit": await self.get_setting(
                 db, "free_user_chat_total_limit", 100
+            ),
+            "chat_24h_limit": await self.get_setting(
+                db, "free_user_chat_24h_limit", 
+                global_config_loaded_from_config_yaml.app.limits.free_user_chat_24h_limit
             ),
             "agent_creation_limit": await self.get_setting(
                 db, "free_user_agent_creation_limit", 6

@@ -240,6 +240,9 @@ class SubscriptionStatusResponse(BaseModel):
     total_chat_limit: Optional[int] = Field(
         None, description="总聊天次数限制（免费用户）"
     )
+    chat_24h_limit: Optional[int] = Field(
+        None, description="24小时内聊天次数限制（免费用户）"
+    )
     agent_creation_limit: int = Field(6, description="Agent创建数量限制")
     background_generation_limit_per_day: int = Field(
         3, description="每日背景图生成次数限制"
@@ -258,6 +261,10 @@ class UsageStatisticsResponse(BaseModel):
     total_chat_count: Optional[int] = Field(None, description="总聊天次数（免费用户）")
     total_chat_limit: Optional[int] = Field(
         None, description="总聊天次数限制（免费用户）"
+    )
+    chat_24h_count: Optional[int] = Field(None, description="24小时内聊天次数（免费用户）")
+    chat_24h_limit: Optional[int] = Field(
+        None, description="24小时内聊天次数限制（免费用户）"
     )
     agent_count: int = Field(0, description="创建的Agent数量")
     agent_limit: int = Field(6, description="Agent创建限制")

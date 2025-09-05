@@ -254,6 +254,7 @@ class SubscriptionService:
                     will_auto_renew=will_auto_renew,
                     chat_limit_per_day=subscription.plan.chat_limit_per_day,
                     total_chat_limit=None,  # 付费用户不使用总次数限制
+                    chat_24h_limit=None,  # 付费用户不使用24小时限制
                     agent_creation_limit=subscription.plan.agent_creation_limit,
                     background_generation_limit_per_day=getattr(
                         subscription.plan, "background_generation_limit_per_day", -1
@@ -294,6 +295,7 @@ class SubscriptionService:
                     will_auto_renew=False,
                     chat_limit_per_day=-1,  # 免费用户不限制每日聊天次数
                     total_chat_limit=free_limits["chat_total_limit"],
+                    chat_24h_limit=free_limits["chat_24h_limit"],
                     agent_creation_limit=free_limits["agent_creation_limit"],
                     background_generation_limit_per_day=free_limits[
                         "background_generation_limit"
@@ -751,6 +753,23 @@ class SubscriptionService:
                 )
                 total_chat_count = total_chat_count_result.scalar() or 0
 
+            # 获取用户24小时内聊天次数（免费用户需要）
+            chat_24h_count = None
+            if subscription_status.chat_24h_limit is not None:
+                now = datetime.now(timezone.utc)
+                hours_24_ago = now - timedelta(hours=24)
+                
+                chat_24h_count_result = await db.execute(
+                    select(func.sum(SubscriptionUsage.usage_count)).where(
+                        and_(
+                            SubscriptionUsage.user_id == user_id,
+                            SubscriptionUsage.usage_type == "chat",
+                            SubscriptionUsage.usage_date >= hours_24_ago,
+                        )
+                    )
+                )
+                chat_24h_count = chat_24h_count_result.scalar() or 0
+
             # 获取用户创建的Agent数量
             from app.models.agent import Agent
 
@@ -784,6 +803,8 @@ class SubscriptionService:
                 today_limit=subscription_status.chat_limit_per_day,
                 total_chat_count=total_chat_count,
                 total_chat_limit=subscription_status.total_chat_limit,
+                chat_24h_count=chat_24h_count,
+                chat_24h_limit=subscription_status.chat_24h_limit,
                 agent_count=agent_count,
                 agent_limit=subscription_status.agent_creation_limit,
                 usage_history=usage_history_schemas,
@@ -810,35 +831,39 @@ class SubscriptionService:
             # 获取订阅状态
             subscription_status = await self.get_user_subscription_status(db, user.id)
 
-            # 免费用户：检查总聊天次数限制
-            if subscription_status.total_chat_limit is not None:
-                chat_limit = subscription_status.total_chat_limit
+            # 免费用户：检查24小时聊天次数限制
+            if subscription_status.chat_24h_limit is not None:
+                chat_limit = subscription_status.chat_24h_limit
             elif not subscription_status.is_subscribed:
                 # 免费用户使用静态配置作为回退
                 chat_limit = (
-                    global_config_loaded_from_config_yaml.app.limits.free_user_chat_total_limit
+                    global_config_loaded_from_config_yaml.app.limits.free_user_chat_24h_limit
                 )
             else:
                 chat_limit = None
 
             if chat_limit is not None:
-                # 获取用户总聊天次数
-                total_chat_count_result = await db.execute(
+                # 获取过去24小时内的聊天次数
+                now = datetime.now(timezone.utc)
+                hours_24_ago = now - timedelta(hours=24)
+                
+                chat_24h_count_result = await db.execute(
                     select(func.sum(SubscriptionUsage.usage_count)).where(
                         and_(
                             SubscriptionUsage.user_id == user.id,
                             SubscriptionUsage.usage_type == "chat",
+                            SubscriptionUsage.usage_date >= hours_24_ago,
                         )
                     )
                 )
-                total_chat_count = total_chat_count_result.scalar() or 0
+                chat_24h_count = chat_24h_count_result.scalar() or 0
 
-                # 检查是否超出总限制
-                is_allowed = total_chat_count < chat_limit
+                # 检查是否超出24小时限制
+                is_allowed = chat_24h_count < chat_limit
 
                 return (
                     is_allowed,
-                    total_chat_count,
+                    chat_24h_count,
                     chat_limit,
                 )
 
