@@ -118,32 +118,6 @@ Friendly mode:
     - "I'm not sure if that's a good idea"
 """
 
-DEFAULT_MODE_PROMPT = FRIENDLY_MODE_PROMPT
-
-
-ROLEPLAY_OUTPUT_FORMAT_PROMPT = """
-Output Format:
-- Always use "you / {{user}}" when addressing the user.
-- All actions, expressions, psychology or scene descriptions must be enclosed in brackets ().
-- All dialogues must be enclosed in quotation marks ".
-- Include at least one short action/emotion cues, for example: (looks at you softly).
-- When the output can contain multiple dialogues, always keep the same pair of "".
-- Total length under 200 words.
-- Output all in 1 line.
-"""
-
-DEFAULT_OUTPUT_FORMAT_PROMPT = ROLEPLAY_OUTPUT_FORMAT_PROMPT
-
-
-ASK_FOR_NAME_PROMPT = """
-If the user has not provided their name, ask for it.
-You can ask for their name in whatever way you feel appropriate.
-A neutral question like "What's your name?" is fine.
-You can also implicitly ask for their name by saying something like:
-- "You haven't shared your name yet"
-- "I don't always ask for people's names, but when I do, that person must be very special"
-"""
-
 
 class StructuredPrompt(BaseModel):
     """
@@ -171,19 +145,6 @@ class StructuredPrompt(BaseModel):
     mode_prompt: str = Field(
         description="For further steering the assumed {{char}}'s conversational style and tone."
     )
-    output_format_prompt: str = Field(
-        # TODO: This field should be using JSON Schema for structured output to match the experience
-        # defined by the main prompt and mode prompt.
-        description="For appropriate formatting of the response for representation style."
-    )
-    sample_dialogues: list[str] = Field(
-        default_factory=list,
-        description="For sample dialogues that serve as examples for the LLM to follow.",
-    )
-    auxiliary_prompts: list[str] = Field(
-        default_factory=list,
-        description="For auxiliary prompts that serve certain purposes.",
-    )
 
     def assemble(self) -> list[dict]:
         """
@@ -192,22 +153,15 @@ class StructuredPrompt(BaseModel):
         return [
             {"role": "system", "content": self.main_prompt},
             {"role": "system", "content": self.mode_prompt},
-            {"role": "system", "content": self.output_format_prompt},
-            {"role": "system", "content": "\n".join(self.sample_dialogues)},
-            {"role": "system", "content": "\n".join(self.auxiliary_prompts)},
         ]
 
 
 ROMANTIC_ROLEPLAY_PROMPT = StructuredPrompt(
     main_prompt=ROLEPLAY_MAIN_PROMPT,
     mode_prompt=FLIRTING_MODE_PROMPT_20250902,
-    output_format_prompt=ROLEPLAY_OUTPUT_FORMAT_PROMPT,
-    auxiliary_prompts=[ASK_FOR_NAME_PROMPT],
 )
 
 FRIENDLY_ROLEPLAY_PROMPT = StructuredPrompt(
     main_prompt=ROLEPLAY_MAIN_PROMPT,
     mode_prompt=FRIENDLY_MODE_PROMPT,
-    output_format_prompt=ROLEPLAY_OUTPUT_FORMAT_PROMPT,
-    auxiliary_prompts=[ASK_FOR_NAME_PROMPT],
 )

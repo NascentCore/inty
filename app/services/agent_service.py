@@ -10,7 +10,7 @@ from sqlalchemy.orm import selectinload
 
 from app import models, schemas
 from app.schemas.agent import AgentSortOption
-from app.core.agent.agent import agent_manager
+from app.core.agent.agent_manager import agent_manager
 from app.models.agent import AgentVisibility
 from app.models.associations import agent_followers
 from app.services.cache_service import cache_service

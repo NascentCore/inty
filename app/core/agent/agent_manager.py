@@ -3,10 +3,24 @@ from threading import Lock
 import time
 import asyncio
 
+from langchain_postgres import PostgresChatMessageHistory
+from psycopg import Connection
+
 from app.core.agent.agent import Agent, get_agent_model_config
 
 from loguru import logger
 
+from app.core.config import global_config_loaded_from_config_yaml
+from app.models import chat_history
+
+
+# TODO: 这个应该挪到 alembic 里执行
+# 初始化聊天历史表和记忆表
+pg_url = global_config_loaded_from_config_yaml.database.url
+logger.debug(f"初始化聊天历史表和记忆表, database url: {pg_url}")
+conn = Connection.connect(pg_url, autocommit=True)
+
+PostgresChatMessageHistory.create_tables(conn, chat_history.TABLE_NAME)
 
 class AgentManager:
     def __init__(

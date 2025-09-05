@@ -15,10 +15,10 @@ from langchain_postgres import PostgresChatMessageHistory
 from langgraph.graph import MessagesState
 from langgraph.managed import RemainingSteps
 from openai import OpenAI
-from psycopg import Connection
 from psycopg_pool import ConnectionPool
 
 from app.core.agent import prompts
+from app.core.agent import prompt_template
 from app.core.agent import prompt_template
 from app.core.config import global_config_loaded_from_config_yaml
 from app.models import chat_history
@@ -143,14 +143,6 @@ def get_connection_pool():
             f"初始化数据库连接池: min_size={global_config_loaded_from_config_yaml.database.pool_size // 4}, max_size={global_config_loaded_from_config_yaml.database.pool_size}"
         )
     return _connection_pool
-
-
-# TODO: 这个应该挪到 alembic 里执行
-# 初始化聊天历史表和记忆表
-pg_url = global_config_loaded_from_config_yaml.database.url
-logger.debug(f"初始化聊天历史表和记忆表, database url: {pg_url}")
-conn = Connection.connect(pg_url, autocommit=True)
-PostgresChatMessageHistory.create_tables(conn, chat_history.TABLE_NAME)
 
 
 class Agent:
@@ -336,27 +328,13 @@ class Agent:
         # 4. 模式提示词（在角色卡后面）- 使用全局默认或agent自定义
         mode_prompt = self._get_effective_mode_prompt()
         rendered_prompt = prompt_template.render_prompt_jinja2_template(
-            tmpl=mode_prompt, char=self.name, user=user_name
+            mode_prompt, self.name, user_name
         )
-        system_messages.append(SystemMessage(content=rendered_prompt))
+        if rendered_prompt:
+            system_messages.append(SystemMessage(content=rendered_prompt))
 
         if user_profile:
             system_messages.append(SystemMessage(content=user_profile))
-
-        if is_char_user_created:
-            output_format_prompt = self._get_effective_output_format_prompt()
-            rendered_prompt = prompt_template.render_prompt_jinja2_template(
-                tmpl=output_format_prompt, char=self.name, user=user_name
-            )
-            system_messages.append(SystemMessage(content=rendered_prompt))
-
-        if is_char_user_created:
-            system_messages.extend(
-                [
-                    SystemMessage(content=prompt)
-                    for prompt in prompts.ROMANTIC_ROLEPLAY_PROMPT.auxiliary_prompts
-                ]
-            )
 
         return system_messages
 
