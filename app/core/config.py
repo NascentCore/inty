@@ -1,12 +1,11 @@
 import os
 import sys
-
 from dataclasses import Field, dataclass
 from pathlib import Path
 from typing import List, Optional
 
-from loguru import logger
 import yaml
+from loguru import logger
 from pydantic import AnyHttpUrl
 
 
@@ -80,6 +79,7 @@ class AppConfig:
         max_image_size_mb: int = 4
         free_user_image_gen_daily_limit: int = 4
         free_user_chat_total_limit: int = 100
+        free_user_chat_24h_limit: int = 3
         image_compression_threshold_size_kb: int = 500
 
     limits: LimitsConfig = None
