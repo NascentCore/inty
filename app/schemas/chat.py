@@ -142,6 +142,7 @@ class Chat(ChatInDB):
     last_message_time: Optional[datetime] = None
     agent_name: Optional[str] = None
     agent_avatar: Optional[str] = None
+    agent_is_deleted: Optional[bool] = None
     settings: Optional[ChatSettings] = None
 
 
