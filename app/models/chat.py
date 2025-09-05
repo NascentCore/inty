@@ -62,6 +62,7 @@ class Chat(Base):
         self._last_message_time = None
         self._agent_name = None
         self._agent_avatar = None
+        self._agent_is_deleted = None
 
     @property
     def last_message(self):
@@ -94,3 +95,11 @@ class Chat(Base):
     @agent_avatar.setter
     def agent_avatar(self, value):
         self._agent_avatar = value
+
+    @property
+    def agent_is_deleted(self):
+        return getattr(self, "_agent_is_deleted", None)
+
+    @agent_is_deleted.setter
+    def agent_is_deleted(self, value):
+        self._agent_is_deleted = value
