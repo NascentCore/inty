@@ -200,7 +200,7 @@ class StructuredPrompt(BaseModel):
 
 ROMANTIC_ROLEPLAY_PROMPT = StructuredPrompt(
     main_prompt=ROLEPLAY_MAIN_PROMPT,
-    mode_prompt=FLIRTING_MODE_PROMPT,
+    mode_prompt=FLIRTING_MODE_PROMPT_20250902,
     output_format_prompt=ROLEPLAY_OUTPUT_FORMAT_PROMPT,
     auxiliary_prompts=[ASK_FOR_NAME_PROMPT],
 )
