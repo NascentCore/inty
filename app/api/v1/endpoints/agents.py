@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app import schemas
 from app.api import deps
 from app.api.utils.logger_route import LoggerRoute
-from app.core.agent.agent import agent_manager
+from app.core.agent.agent_manager import agent_manager
 from app.utils.gemini import ImagenGeneratedImage, text_to_image
 from app.core.config import global_config_loaded_from_config_yaml
 from app.schemas.character_card import (

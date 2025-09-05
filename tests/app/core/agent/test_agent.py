@@ -5,7 +5,7 @@ from langchain_core.messages import HumanMessage
 
 from app.core.agent import prompts
 from app.core.agent.agent import Agent
-from app.core.agent.personalities import EVERYONE_HATES_YOU, EVERYONE_LIKES_YOU
+from app.core.agent.personalities import EVERYONE_HATES_YOU
 from app.core.agent.prompt_template import prompt_template_manager
 from app.core.config import global_config_loaded_from_config_yaml
 
@@ -60,7 +60,7 @@ class TestAgentChat:
             model_config=self.model_config,
             description="Test agent for unit testing",
             personality=EVERYONE_HATES_YOU.to_prompt(),
-            main_prompt=prompts.CHAT_SYS_PROMPT,
+            main_prompt=prompts.GENERAL_CHAT_MAIN_PROMPT,
             mode_prompt=prompts.HELPFUL_MODE_PROMPT,
         )
 
@@ -75,9 +75,9 @@ class TestAgentChat:
 
 def test_render_system_prompt():
     rendered_prompt = prompt_template_manager.render_system_prompt(
-        system_prompt=f"{{ char }} is a helpful AI assistant of {{ user }}.",
+        system_prompt="{{ char }} and {{ user }}",
         agent_name="Agent",
         user_name="User",
         template_name="basic",
     )
-    assert rendered_prompt == "Agent is a helpful AI assistant of User."
+    assert rendered_prompt == "Agent and User"

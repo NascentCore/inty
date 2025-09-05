@@ -15,12 +15,13 @@ from langchain_postgres import PostgresChatMessageHistory
 from langgraph.graph import MessagesState
 from langgraph.managed import RemainingSteps
 from openai import OpenAI
-from psycopg import Connection
 from psycopg_pool import ConnectionPool
 
 from app.core.agent import prompts
+from app.core.agent import prompt_template
 from app.core.agent.prompt_template import prompt_template_manager
 from app.core.config import global_config_loaded_from_config_yaml
+from app.models import chat_history
 from app.services.background_task_service import background_task_service
 from app.services.cache_service import cache_service
 from app.utils.openai_client import (
@@ -158,16 +159,6 @@ def get_connection_pool():
             f"初始化数据库连接池: min_size={global_config_loaded_from_config_yaml.database.pool_size // 4}, max_size={global_config_loaded_from_config_yaml.database.pool_size}"
         )
     return _connection_pool
-
-
-# TODO: 这个应该挪到 alembic 里执行
-# 初始化聊天历史表和记忆表
-pg_url = global_config_loaded_from_config_yaml.database.url
-logger.debug(f"初始化聊天历史表和记忆表, database url: {pg_url}")
-conn = Connection.connect(pg_url, autocommit=True)
-
-table_name = "chat_history"
-PostgresChatMessageHistory.create_tables(conn, table_name)
 
 
 class Agent:
@@ -322,21 +313,10 @@ class Agent:
         # 1. 主提示词（第一优先级）- 使用全局默认或agent自定义
         main_prompt = self._get_effective_main_prompt()
         if main_prompt:
-            # 支持模板渲染和字符替换
-            if "{{" in main_prompt and "}}" in main_prompt:
-                try:
-                    rendered_prompt = prompt_template_manager.render_system_prompt(
-                        system_prompt=main_prompt,
-                        agent_name=self.name,
-                        user_name=user_name,
-                        template_name="basic",
-                    )
-                    system_messages.append(SystemMessage(content=rendered_prompt))
-                except Exception as e:
-                    logger.error(f"主提示词模板渲染失败: {str(e)}，使用原始提示词")
-                    system_messages.append(SystemMessage(content=main_prompt))
-            else:
-                system_messages.append(SystemMessage(content=main_prompt))
+            rendered_prompt = prompt_template.render_prompt_jinja2_template(
+                main_prompt, self.name, user_name
+            )
+            system_messages.append(SystemMessage(content=rendered_prompt))
 
         # 2. 角色卡信息 - 每个字段作为独立的SystemMessage
         character_messages = self._build_character_context(user_name=user_name)
@@ -364,46 +344,14 @@ class Agent:
 
         # 4. 模式提示词（在角色卡后面）- 使用全局默认或agent自定义
         mode_prompt = self._get_effective_mode_prompt()
-        if mode_prompt:
-            # 支持模板渲染和字符替换
-            if "{{" in mode_prompt and "}}" in mode_prompt:
-                try:
-                    rendered_prompt = prompt_template_manager.render_system_prompt(
-                        system_prompt=mode_prompt,
-                        agent_name=self.name,
-                        user_name=user_name,
-                        template_name="basic",
-                    )
-                    system_messages.append(SystemMessage(content=rendered_prompt))
-                except Exception as e:
-                    logger.error(f"模式提示词模板渲染失败: {str(e)}，使用原始提示词")
-                    system_messages.append(SystemMessage(content=mode_prompt))
-            else:
-                system_messages.append(SystemMessage(content=mode_prompt))
+        rendered_prompt = prompt_template.render_prompt_jinja2_template(
+            mode_prompt, self.name, user_name
+        )
+        if rendered_prompt:
+            system_messages.append(SystemMessage(content=rendered_prompt))
 
         if user_profile:
             system_messages.append(SystemMessage(content=user_profile))
-
-        if is_char_user_created:
-            output_format_prompt = self._get_effective_output_format_prompt()
-            if output_format_prompt:
-                if "{{" in output_format_prompt and "}}" in output_format_prompt:
-                    # TODO: render_system_prompt is over-engineered.
-                    # Consider replacing it with
-                    # Jinja2 template rendering render_template({"char": name_of_char, "user": name_of_user})
-                    template = Jinja2Template(output_format_prompt)
-                    rendered_prompt = template.render(char=self.name, user=user_name)
-                    system_messages.append(SystemMessage(content=rendered_prompt))
-                else:
-                    system_messages.append(SystemMessage(content=output_format_prompt))
-
-        if is_char_user_created:
-            system_messages.extend(
-                [
-                    SystemMessage(content=prompt)
-                    for prompt in prompts.ROMANTIC_ROLEPLAY_PROMPT.auxiliary_prompts
-                ]
-            )
 
         return system_messages
 
@@ -685,7 +633,7 @@ class Agent:
                 # 创建历史记录对象
                 history_start = time.time()
                 history = PostgresChatMessageHistory(
-                    table_name, session_id, sync_connection=conn_local
+                    chat_history.TABLE_NAME, session_id, sync_connection=conn_local
                 )
                 history_init_time = time.time() - history_start
                 logger.debug(
@@ -850,7 +798,7 @@ class Agent:
             with pool.connection() as conn_local:
                 try:
                     history = PostgresChatMessageHistory(
-                        table_name, session_id, sync_connection=conn_local
+                        chat_history.TABLE_NAME, session_id, sync_connection=conn_local
                     )
 
                     # 获取相关的历史消息

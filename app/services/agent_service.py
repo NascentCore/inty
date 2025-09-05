@@ -10,7 +10,7 @@ from sqlalchemy.orm import selectinload
 
 from app import models, schemas
 from app.schemas.agent import AgentSortOption
-from app.core.agent.agent import agent_manager
+from app.core.agent.agent_manager import agent_manager
 from app.models.agent import AgentVisibility
 from app.models.associations import agent_followers
 from app.services.cache_service import cache_service
@@ -809,8 +809,6 @@ async def delete_agent(db: AsyncSession, db_agent: models.Agent) -> models.Agent
             f"未知错误 - 逻辑删除角色 {db_agent.id if db_agent else 'unknown'}: {str(e)}"
         )
         raise HTTPException(status_code=500, detail="服务器内部错误")
-
-
 
 
 def process_agent_image_urls(agent_data: dict, agent_id: str = None, user_id: str = None) -> dict:
