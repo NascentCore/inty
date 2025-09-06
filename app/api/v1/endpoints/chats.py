@@ -395,8 +395,6 @@ async def agent_chat_completions(
         logger.debug(f"简化Agent验证: {agent_id}")
 
         # 简化查询，只获取基本字段
-        from sqlalchemy import select
-
         result = await db.execute(
             select(models.Agent.id, models.Agent.name).where(
                 models.Agent.id == agent_id
@@ -454,7 +452,7 @@ async def agent_chat_completions(
         # 构建LangChain消息格式
         messages = {"messages": [HumanMessage(content=last_user_message)]}
         msg_process_time = time.time() - msg_process_start
-        logger.info(f"消息处理耗时: {msg_process_time:.3f}秒")
+        logger.debug(f"消息处理耗时: {msg_process_time:.3f}秒")
 
         # 获取或创建Agent实例 - 需要加载完整数据
         agent_get_start = time.time()
@@ -469,7 +467,7 @@ async def agent_chat_completions(
         # 从AgentManager缓存获取Agent实例
         agent = await agent_manager.get_agent(agent_data)
         agent_get_time = time.time() - agent_get_start
-        logger.info(
+        logger.debug(
             f"Agent实例获取成功: {agent_data['name']}, 耗时: {agent_get_time:.3f}秒"
         )
 
@@ -584,10 +582,10 @@ async def agent_chat_completions(
                 logger.info(f"响应包含语音URL: {audio_url}")
 
             total_request_time = time.time() - request_start_time
-            logger.info(
+            logger.debug(
                 f"聊天请求处理成功: agent_id={agent_id}, response_length={len(response_content)}, 总耗时: {total_request_time:.3f}秒"
             )
-            return {
+            data = {
                 "id": f"chatcmpl-{uuid.uuid4().hex[:12]}",
                 "object": "chat.completion",
                 "created": int(time.time()),
@@ -600,6 +598,7 @@ async def agent_chat_completions(
                     + len(response_content.split()),
                 },
             }
+            return schemas.APIResponse.success(data=data)
 
     except Exception as e:
         logger.error(f"聊天请求处理失败: {str(e)}")
