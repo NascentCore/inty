@@ -13,16 +13,29 @@ object NetworkErrorHandler {
      * @param errorMessage 原始错误信息
      * @param showToast 显示 Toast 的回调函数
      * @param logError 是否记录错误日志
+     * @param requestUrl 请求URL（可选）
+     * @param requestMethod 请求方法（可选）
+     * @param statusCode HTTP状态码（可选）
      */
     fun handleNetworkError(
         errorMessage: String,
         showToast: (String) -> Unit,
         logError: Boolean = true,
+        requestUrl: String? = null,
+        requestMethod: String? = null,
+        statusCode: Int? = null,
     ) {
         val networkManager = NetworkManager.getInstance()
 
         if (logError) {
-            EasyLog.log("Network error: $errorMessage", priority = EasyLog.ERROR)
+            val logMessage = buildString {
+                append("HTTP Request Failed")
+                if (requestMethod != null) append(" [$requestMethod]")
+                if (requestUrl != null) append(" $requestUrl")
+                if (statusCode != null) append(" -> $statusCode")
+                append(": $errorMessage")
+            }
+            EasyLog.log(logMessage, priority = EasyLog.ERROR)
         }
 
         // 只有在网络连接正常时才显示错误提示
@@ -42,15 +55,28 @@ object NetworkErrorHandler {
      * @param exception 网络异常
      * @param showToast 显示 Toast 的回调函数
      * @param logError 是否记录错误日志
+     * @param requestUrl 请求URL（可选）
+     * @param requestMethod 请求方法（可选）
+     * @param operation 操作名称（可选）
      */
     fun handleNetworkException(
         isNetworkConnected: Boolean,
         exception: Exception,
         showToast: (String) -> Unit,
         logError: Boolean = true,
+        requestUrl: String? = null,
+        requestMethod: String? = null,
+        operation: String? = null,
     ) {
         if (logError) {
-            EasyLog.log("Network exception: ${exception.message}", priority = EasyLog.ERROR)
+            val logMessage = buildString {
+                append("Network Exception")
+                if (operation != null) append(" during $operation")
+                if (requestMethod != null) append(" [$requestMethod]")
+                if (requestUrl != null) append(" $requestUrl")
+                append(": ${exception.message}")
+            }
+            EasyLog.log(logMessage, priority = EasyLog.ERROR)
             EasyLog.log(exception)
         }
 
