@@ -358,7 +358,7 @@ async def get_agent_chat_messages(
 
 
 @router.post(
-    "/agents/{agent_id}/chat/completions/v2",
+    "/agents/{agent_id}/chat/completions",
     response_model=schemas.APIResponse[dict],
 )
 async def agent_chat_completions(
