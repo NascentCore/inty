@@ -81,4 +81,11 @@
 # 保留 Compose 预览相关类
 -keep class androidx.compose.ui.tooling.preview.** { *; }
 
+# Ktor 调试检测器相关规则
+-dontwarn java.lang.management.ManagementFactory
+-dontwarn java.lang.management.RuntimeMXBean
+-dontwarn java.lang.management.**
 
+# Ktor 相关规则
+-keep class io.ktor.** { *; }
+-dontwarn io.ktor.**
