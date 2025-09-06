@@ -452,7 +452,6 @@ async def get_recommended_agents_paginated(
             and_(
                 models.Agent.visibility == AgentVisibility.PUBLIC,
                 models.Agent.deleted_at.is_(None),
-                # models.Agent.status == AgentStatus.APPROVED
             )
         )
 

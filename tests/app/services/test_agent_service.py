@@ -1,3 +1,4 @@
+from datetime import datetime
 import io
 import pytest
 
@@ -11,7 +12,7 @@ from app.services.agent_service import (
     _process_agent_update_data,
 )
 from app.utils.gcs import download_from_gcs, get_bucket_and_path_from_gcs_url
-from app import schemas, models
+from app.schemas.agent import ModelConfig, Agent, AgentUpdate
 
 from loguru import logger
 
@@ -45,21 +46,21 @@ def test_process_agent_update_data():
     """测试 _process_agent_update_data 函数处理 llm_config 更新"""
 
     # 创建模拟的数据库对象，使用 Pydantic model
-    db_agent = models.Agent(
+    db_agent = Agent(
         id="test-agent-id",
         readable_id="10000001",
         name="Test Agent",
         gender="FEMALE",
-        status=models.AgentStatus.ACTIVE,
         settings={},
         intro="Original intro",
+        created_at=datetime.now(),
     )
 
     # 创建更新请求
-    update_request = schemas.AgentUpdate(
+    update_request = AgentUpdate(
         name="Updated Agent",
         intro="Updated intro",
-        llm_config=schemas.ModelConfig(model="gpt-4", temperature=0.7, max_tokens=2000),
+        llm_config=ModelConfig(model="gpt-4", temperature=0.7, max_tokens=2000),
     )
 
     # 调用函数
@@ -71,3 +72,37 @@ def test_process_agent_update_data():
     assert db_agent.settings["llm_config"]["model"] == "gpt-4"
     assert db_agent.settings["llm_config"]["temperature"] == 0.7
     assert db_agent.settings["llm_config"]["max_tokens"] == 2000
+
+
+def test_process_agent_update_data_with_null_llm_config():
+    """测试 _process_agent_update_data 函数处理 llm_config 为 null 的情况"""
+
+    # 创建模拟的数据库对象，包含现有的 llm_config
+    db_agent = Agent(
+        id="test-agent-id",
+        readable_id="10000001",
+        name="Test Agent",
+        gender="FEMALE",
+        settings={
+            "llm_config": {"model": "gpt-4", "temperature": 0.7, "max_tokens": 2000}
+        },
+        intro="Original intro",
+        created_at=datetime.now(),
+    )
+
+    # 创建更新请求，llm_config 为 None
+    update_request = AgentUpdate(
+        name="Updated Agent",
+        intro="Updated intro",
+        llm_config={},
+    )
+
+    # 调用函数
+    _process_agent_update_data(update_request, db_agent)
+
+    # 验证结果
+    assert db_agent.name == "Updated Agent"
+    assert db_agent.intro == "Updated intro"
+    # 验证 llm_config 已被删除
+    assert "llm_config" in db_agent.settings
+    assert db_agent.settings["llm_config"] == {}
