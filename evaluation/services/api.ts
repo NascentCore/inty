@@ -696,7 +696,7 @@ export const chatApi = {
       total_tokens: number;
     };
   }> =>
-    apiClient.post(`/chats/agents/${agentId}/chat/completions`, {
+    apiClient.post(`/chats/agents/${agentId}/chat/completions/v2`, {
       messages,
       stream,
       model: "chatbot",
