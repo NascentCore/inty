@@ -10,6 +10,7 @@ from app.core.config import global_config_loaded_from_config_yaml
 from app.services.agent_service import _crop_avatar_from_background
 from app.utils.gcs import download_from_gcs, get_bucket_and_path_from_gcs_url
 from app.schemas.agent import AgentUpdate, ModelConfig
+from app.services.agent_service import _update_agent_in_db
 
 from loguru import logger
 
@@ -58,8 +59,17 @@ def test_update_agent_in_db():
         ),
     )
 
-    # Import and call the function
-    from app.services.agent_service import _update_agent_in_db
+    _update_agent_in_db(agent_update, agent_in_db)
+
+    # Verify agent attributes were updated
+    assert agent_in_db.name == "Updated Agent"
+    assert agent_in_db.personality == "New personality"
+    assert agent_in_db.settings["existing_setting"] == "value"
+    assert agent_in_db.settings["llm_config"]["model"] == "anthropic/claude-3.5-sonnet"
+    assert agent_in_db.settings["llm_config"]["temperature"] == 0.7
+    assert agent_in_db.settings["llm_config"]["max_tokens"] == 2048
+
+    agent_update = AgentUpdate(llm_config=None)
 
     _update_agent_in_db(agent_update, agent_in_db)
 
@@ -72,10 +82,5 @@ def test_update_agent_in_db():
         "personality": "New personality",
         "settings": {
             "existing_setting": "value",
-            "llm_config": {
-                "max_tokens": 2048,
-                "model": "anthropic/claude-3.5-sonnet",
-                "temperature": 0.7,
-            },
         },
-    }
+    }, "llm_config should be removed"
