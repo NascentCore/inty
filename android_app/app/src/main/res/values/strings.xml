@@ -225,7 +225,7 @@
     <string name="delete_character_confirm">Are you sure you want to delete "%s"? This action cannot be undone.</string>
 
     <!-- VIP Dialog -->
-    <string name="heartmate_premium">HeartMate Premium</string>
+    <string name="premium">IntelliMate Premium</string>
     <string name="auto_renews_cancel">Auto–renews, cancel anytime</string>
     <string name="more_information">More Information</string>
 
@@ -299,7 +299,7 @@
     <string name="greater_than_symbol">&gt;</string>
     <string name="star_symbol">★</string>
     <string name="visibility_required_title_full">Visibility *</string>
-    <string name="heartmate_premium_full">HeartMate Premium</string>
+    <string name="premium_full">IntelliMate Premium</string>
     <string name="become_a_premium">Become a Premium Member</string>
     <string name="auto_renews_cancel_full">Auto-renews, cancel anytime</string>
     <string name="more_information_full">More Information</string>

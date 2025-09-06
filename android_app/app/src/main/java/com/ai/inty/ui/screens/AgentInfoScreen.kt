@@ -58,35 +58,8 @@ import com.ai.inty.viewmodels.AgentInfoViewModel
 import com.inty.utils.storage.IntySetting
 import com.therouter.TheRouter
 
-/**
- *                    .::::.
- *                  .::::::::.
- *                 :::::::::::      HeartMate App
- *             ..:::::::::::'
- *           '::::::::::::'
- *             .::::::::::
- *        '::::::::::::::..
- *             ..::::::::::::.
- *           ``::::::::::::::::
- *            ::::``:::::::::'        .:::.
- *           ::::'   ':::::'       .::::::::.
- *         .::::'      ::::     .:::::::'::::.
- *        .:::'       :::::  .:::::::::' ':::::.
- *       .::'        :::::.:::::::::'      ':::::.
- *      .::'         ::::::::::::::'         ``::::.
- *  ...:::           ::::::::::::'              ``::.
- * ```` ':.          ':::::::::'                  ::::..
- *                    '.:::::'                    ':'````..
- *
- * You may think you know what the following code does.
- * But you don't. Trust me.
- * Fiddle with it, and you'll spend many a sleepless
- * night cursing the moment you thought you'd be clever
- * enough to "optimize" the code below.
- * Now close this file and go play with something else.
- *
- *                     ---Created by HeartMate on 2025/9/1.
- */
+
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun AiAgentInfoScreen(
