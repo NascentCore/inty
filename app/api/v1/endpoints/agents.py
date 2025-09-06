@@ -286,6 +286,7 @@ async def update_agent(
     """
     Update AI agent
     """
+    # TODO: 需要检查当前用户是否是 agent creator
     agent = await agent_service.get_agent(db, agent_id=agent_id)
     if not agent:
         raise HTTPException(status_code=404, detail="Agent not found")

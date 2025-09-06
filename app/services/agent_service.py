@@ -29,6 +29,64 @@ from app.utils.image import (
 from loguru import logger
 
 
+def _process_agent_update_data(
+    agent_in: schemas.AgentUpdate, db_agent_current: models.Agent
+) -> None:
+    """
+    将当前对象按照更新请求进行更新。
+
+    Args:
+        agent_in: 更新请求对象
+        db_agent_current: 数据库中的当前智能体对象
+    """
+    update_data = agent_in.model_dump(exclude_unset=True)
+    if not update_data:
+        return
+
+    if "name" in update_data and (
+        not update_data["name"] or not update_data["name"].strip()
+    ):
+        raise ValueError(f"Agent name cannot be empty, got '{update_data['name']}'")
+
+    # TODO：此处应该删除，实际兼容方式应该是修改数据库数据，而非在代码层面兼容
+    # 稍后修改。
+    # 处理prompt到personality的转换（向后兼容）
+    if (
+        "prompt" in update_data
+        and update_data["prompt"]
+        and update_data["prompt"].strip()
+    ):
+        # 如果没有提供personality或personality为空，则使用prompt的值
+        if "personality" not in update_data or not (
+            update_data.get("personality") and update_data["personality"].strip()
+        ):
+            logger.debug(f"将prompt转换为personality以保持向后兼容")
+            update_data["personality"] = update_data["prompt"]
+
+    # 处理 llm_config 字段 - 将其移动到 settings 中
+    if "llm_config" in update_data:
+        llm_config = update_data.pop("llm_config")
+        # 确保 settings 字段存在
+        if db_agent_current.settings is None:
+            db_agent_current.settings = {}
+        elif not isinstance(db_agent_current.settings, dict):
+            db_agent_current.settings = {}
+
+        if llm_config is not None:
+            # 更新 settings 中的 llm_config
+            db_agent_current.settings = {
+                **db_agent_current.settings,
+                "llm_config": llm_config,
+            }
+        else:
+            # 如果 llm_config 为 None，则删除现有配置
+            if "llm_config" in db_agent_current.settings:
+                del db_agent_current.settings["llm_config"]
+
+    for field, value in update_data.items():
+        setattr(db_agent_current, field, value)
+
+
 async def generate_next_readable_id(db: AsyncSession) -> str:
     """
     Generate next readable ID for agent, starting from 10000000
@@ -318,7 +376,6 @@ async def get_recommended_agents(
                 and_(
                     models.Agent.visibility == AgentVisibility.PUBLIC,
                     models.Agent.deleted_at.is_(None),
-                    # models.Agent.status == AgentStatus.APPROVED
                 )
             )
             .group_by(models.Agent.id)
@@ -425,7 +482,6 @@ async def get_recommended_agents_paginated(
                 and_(
                     models.Agent.visibility == AgentVisibility.PUBLIC,
                     models.Agent.deleted_at.is_(None),
-                    # models.Agent.status == AgentStatus.APPROVED
                 )
             )
             .group_by(models.Agent.id)
@@ -518,10 +574,12 @@ async def create_agent(
 
         # 处理 llm_config 字段
         if "llm_config" in agent_data:
-            # 将 llm_config 移动到 settings 中
-            if "settings" not in agent_data or agent_data["settings"] is None:
-                agent_data["settings"] = {}
-            agent_data["settings"]["llm_config"] = agent_data.pop("llm_config")
+            llm_config = agent_data.pop("llm_config")
+            # 只有当 llm_config 不为 None 时才添加到 settings 中
+            if llm_config is not None:
+                if "settings" not in agent_data or agent_data["settings"] is None:
+                    agent_data["settings"] = {}
+                agent_data["settings"]["llm_config"] = llm_config
             logger.debug(f"处理llm_config后的数据: {agent_data}")
 
         # 处理图片URL：验证、复制临时文件到永久路径、删除临时文件
@@ -657,46 +715,8 @@ async def update_agent(
         if not db_agent:
             raise HTTPException(status_code=404, detail="角色不存在")
 
-        # 验证更新数据
-        update_data = agent_in.model_dump(exclude_unset=True)
-        if not update_data:
-            raise HTTPException(status_code=400, detail="No data provided for update")
-
-        # 验证名称不为空（如果提供了名称）
-        if "name" in update_data and (
-            not update_data["name"] or not update_data["name"].strip()
-        ):
-            raise HTTPException(status_code=400, detail="Agent name cannot be empty")
-
-        # 处理prompt到personality的转换（向后兼容）
-        if (
-            "prompt" in update_data
-            and update_data["prompt"]
-            and update_data["prompt"].strip()
-        ):
-            # 如果没有提供personality或personality为空，则使用prompt的值
-            if "personality" not in update_data or not (
-                update_data.get("personality") and update_data["personality"].strip()
-            ):
-                logger.debug(f"将prompt转换为personality以保持向后兼容")
-                update_data["personality"] = update_data["prompt"]
-
-        # 处理 llm_config 字段 - 将其移动到 settings 中
-        if "llm_config" in update_data:
-            llm_config = update_data.pop("llm_config")
-            if llm_config is not None:
-                # 确保 settings 字段存在
-                if db_agent.settings is None:
-                    db_agent.settings = {}
-                elif not isinstance(db_agent.settings, dict):
-                    db_agent.settings = {}
-
-                # 更新 settings 中的 llm_config
-                db_agent.settings = {**db_agent.settings, "llm_config": llm_config}
-
-        # 更新其他字段
-        for field, value in update_data.items():
-            setattr(db_agent, field, value)
+        # 处理更新数据
+        _process_agent_update_data(agent_in, db_agent)
 
         await db.commit()
         await db.refresh(db_agent)
@@ -809,8 +829,6 @@ async def delete_agent(db: AsyncSession, db_agent: models.Agent) -> models.Agent
             f"未知错误 - 逻辑删除角色 {db_agent.id if db_agent else 'unknown'}: {str(e)}"
         )
         raise HTTPException(status_code=500, detail="服务器内部错误")
-
-
 
 
 def process_agent_image_urls(agent_data: dict, agent_id: str = None, user_id: str = None) -> dict:
@@ -1105,7 +1123,6 @@ async def search_agents(
         base_conditions = [
             models.Agent.visibility == AgentVisibility.PUBLIC,
             models.Agent.deleted_at.is_(None),
-            # models.Agent.status == AgentStatus.APPROVED  # 如果需要只搜索已审核的
         ]
 
         # 如果有搜索条件，添加OR条件

@@ -228,7 +228,7 @@ export const AgentManagePage: React.FC = () => {
 
 
 
-      // 如果选择了自定义模型，添加LLM配置
+      // 根据模型类型处理LLM配置
       if (values.modelType === "custom") {
         agentData.llm_config = {
           model: values.model,
@@ -238,6 +238,9 @@ export const AgentManagePage: React.FC = () => {
           frequency_penalty: values.frequency_penalty,
           presence_penalty: values.presence_penalty,
         };
+      } else {
+        // 选择默认模型时，显式设置为null
+        agentData.llm_config = null;
       }
 
       await api.agents.create(agentData);
@@ -290,7 +293,7 @@ export const AgentManagePage: React.FC = () => {
         background_images: backgroundImages,
       };
 
-      // 如果选择了自定义模型，添加LLM配置
+      // 根据模型类型处理LLM配置
       if (values.modelType === "custom") {
         updateData.llm_config = {
           model: values.model,
@@ -300,6 +303,9 @@ export const AgentManagePage: React.FC = () => {
           frequency_penalty: values.frequency_penalty,
           presence_penalty: values.presence_penalty,
         };
+      } else {
+        // 选择默认模型时，显式清除配置
+        updateData.llm_config = null;
       }
       await api.agents.update(currentAgent.id, updateData);
       message.success("智能体更新成功");

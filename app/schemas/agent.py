@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field, field_serializer, field_validator
 
-from app.models.agent import AgentStatus, AgentVisibility
+from app.models.agent import AgentVisibility
 from app.models.user import Gender
 from app.schemas.user import User
 
@@ -152,7 +152,6 @@ class AgentInDB(AgentBase):
 
     id: str
     readable_id: str
-    status: AgentStatus
     creator_id: Optional[str] = None
     created_at: datetime
     updated_at: Optional[datetime] = None

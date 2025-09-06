@@ -6,8 +6,12 @@ from PIL import Image
 from google.cloud import storage
 
 from app.core.config import global_config_loaded_from_config_yaml
-from app.services.agent_service import _crop_avatar_from_background
+from app.services.agent_service import (
+    _crop_avatar_from_background,
+    _process_agent_update_data,
+)
 from app.utils.gcs import download_from_gcs, get_bucket_and_path_from_gcs_url
+from app import schemas, models
 
 from loguru import logger
 
@@ -35,3 +39,35 @@ async def test_crop_avatar_from_background():
     jpe_data = download_from_gcs(cropped_avatar_url)
     image = Image.open(io.BytesIO(jpe_data))
     image.show()
+
+
+def test_process_agent_update_data():
+    """测试 _process_agent_update_data 函数处理 llm_config 更新"""
+
+    # 创建模拟的数据库对象，使用 Pydantic model
+    db_agent = models.Agent(
+        id="test-agent-id",
+        readable_id="10000001",
+        name="Test Agent",
+        gender="FEMALE",
+        status=models.AgentStatus.ACTIVE,
+        settings={},
+        intro="Original intro",
+    )
+
+    # 创建更新请求
+    update_request = schemas.AgentUpdate(
+        name="Updated Agent",
+        intro="Updated intro",
+        llm_config=schemas.ModelConfig(model="gpt-4", temperature=0.7, max_tokens=2000),
+    )
+
+    # 调用函数
+    _process_agent_update_data(update_request, db_agent)
+
+    # 验证结果
+    assert db_agent.name == "Updated Agent"
+    assert db_agent.intro == "Updated intro"
+    assert db_agent.settings["llm_config"]["model"] == "gpt-4"
+    assert db_agent.settings["llm_config"]["temperature"] == 0.7
+    assert db_agent.settings["llm_config"]["max_tokens"] == 2000

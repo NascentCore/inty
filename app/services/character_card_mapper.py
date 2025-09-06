@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Optional
 
 from loguru import logger
 
-from app.models.agent import AgentStatus, AgentVisibility
+from app.models.agent import AgentVisibility
 from app.models.user import Gender
 from app.schemas.character_card import CharacterCardDataV2, CharacterCardV2
 
@@ -60,7 +60,6 @@ class CharacterCardMapper:
             ),
             "prompt": self._build_system_prompt(data),
             "visibility": AgentVisibility.PRIVATE,  # 导入的角色卡默认为私有
-            "status": AgentStatus.PENDING,
             "creator_id": user_id,
             "category": self._extract_category_from_tags(data.tags),
             # 角色卡特定字段

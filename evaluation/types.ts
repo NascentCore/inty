@@ -17,7 +17,7 @@ export interface Agent {
   description?: string;
   created_at?: string;
   updated_at?: string;
-  llm_config?: LLMConfig;
+  llm_config?: LLMConfig | null;
 }
 
 // LLM 配置
@@ -43,7 +43,7 @@ export interface AgentCreateRequest {
   avatar?: string;
   background?: string;
   background_images?: string[];
-  llm_config?: LLMConfig;
+  llm_config?: LLMConfig | null;
 }
 
 // 更新智能体请求
@@ -59,7 +59,7 @@ export interface AgentUpdateRequest {
   avatar?: string;
   background?: string;
   background_images?: string[];
-  llm_config?: LLMConfig;
+  llm_config?: LLMConfig | null;
 }
 
 // 聊天消息

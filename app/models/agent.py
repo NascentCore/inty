@@ -11,14 +11,6 @@ from app.models.associations import agent_followers
 from app.models.user import Gender
 
 
-class AgentStatus(StrEnum):
-    """AI角色状态"""
-
-    PENDING = "PENDING"
-    APPROVED = "APPROVED"
-    REJECTED = "REJECTED"
-
-
 class AgentVisibility(StrEnum):
     """AI 角色可见性"""
 
@@ -47,7 +39,6 @@ class Agent(Base):
     )
     photos = Column(JSON)
     category = Column(String)
-    status = Column(Enum(AgentStatus, name="agentstatus"), default=AgentStatus.PENDING)
     created_at = Column(DateTime(timezone=True), server_default=sa.text("now()"))
     updated_at = Column(DateTime(timezone=True), onupdate=sa.text("now()"))
     deleted_at = Column(DateTime(timezone=True), nullable=True)
