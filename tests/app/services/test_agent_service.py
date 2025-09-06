@@ -62,12 +62,21 @@ def test_update_agent_in_db():
     _update_agent_in_db(agent_update, agent_in_db)
 
     # Verify agent attributes were updated
-    assert agent_in_db.name == "Updated Agent"
-    assert agent_in_db.personality == "New personality"
-    assert agent_in_db.settings["existing_setting"] == "value"
-    assert agent_in_db.settings["llm_config"]["model"] == "anthropic/claude-3.5-sonnet"
-    assert agent_in_db.settings["llm_config"]["temperature"] == 0.7
-    assert agent_in_db.settings["llm_config"]["max_tokens"] == 2048
+    agent_in_db_dict = {
+        k: v for k, v in agent_in_db.__dict__.items() if not k.startswith("_")
+    }
+    assert agent_in_db_dict == {
+        "name": "Updated Agent",
+        "personality": "New personality",
+        "settings": {
+            "existing_setting": "value",
+            "llm_config": {
+                "max_tokens": 2048,
+                "model": "anthropic/claude-3.5-sonnet",
+                "temperature": 0.7,
+            },
+        },
+    }
 
     agent_update = AgentUpdate(llm_config=None)
 
