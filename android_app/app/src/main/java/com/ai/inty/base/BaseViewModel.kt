@@ -42,11 +42,22 @@ open class BaseViewModel : ViewModel() {
      * 显示网络感知的错误提示
      * 在无网络情况下不会显示错误 Toast
      * @param errorMessage 错误信息
+     * @param requestUrl 请求URL（可选）
+     * @param requestMethod 请求方法（可选）
+     * @param statusCode HTTP状态码（可选）
      */
-    fun showNetworkAwareError(errorMessage: String) {
+    fun showNetworkAwareError(
+        errorMessage: String,
+        requestUrl: String? = null,
+        requestMethod: String? = null,
+        statusCode: Int? = null,
+    ) {
         NetworkErrorHandler.handleNetworkError(
             errorMessage = errorMessage,
-            showToast = { message -> showSnackbar(message) }
+            showToast = { message -> showSnackbar(message) },
+            requestUrl = requestUrl,
+            requestMethod = requestMethod,
+            statusCode = statusCode,
         )
     }
 
@@ -54,12 +65,23 @@ open class BaseViewModel : ViewModel() {
      * 处理网络异常
      * 在无网络情况下不会显示错误 Toast
      * @param exception 网络异常
+     * @param requestUrl 请求URL（可选）
+     * @param requestMethod 请求方法（可选）
+     * @param operation 操作名称（可选）
      */
-    fun handleNetworkException(exception: Exception) {
+    fun handleNetworkException(
+        exception: Exception,
+        requestUrl: String? = null,
+        requestMethod: String? = null,
+        operation: String? = null,
+    ) {
         NetworkErrorHandler.handleNetworkException(
             isNetworkConnected = NetworkManager.getInstance().isNetworkConnected(),
             exception = exception,
-            showToast = { message -> showSnackbar(message) }
+            showToast = { message -> showSnackbar(message) },
+            requestUrl = requestUrl,
+            requestMethod = requestMethod,
+            operation = operation,
         )
     }
 
