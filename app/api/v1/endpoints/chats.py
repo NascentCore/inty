@@ -601,10 +601,9 @@ async def agent_chat_completions(
                 logger.info(f"响应包含语音URL: {audio_url}")
 
             total_request_time = time.time() - request_start_time
-            logger.info(
-                f"聊天请求处理成功: agent_id={agent_id}, response_length={len(response_content)}, 总耗时: {total_request_time:.3f}秒"
-            )
-            return {
+
+            # 构建符合客户端期望的响应格式 (HttpResult<SendMsgResponse>)
+            response_data = {
                 "id": f"chatcmpl-{uuid.uuid4().hex[:12]}",
                 "object": "chat.completion",
                 "created": int(time.time()),
@@ -617,6 +616,14 @@ async def agent_chat_completions(
                     + len(response_content.split()),
                 },
             }
+
+            # 包装成客户端期望的HttpResult格式
+            response = {"code": 200, "message": "success", "data": response_data}
+
+            logger.info(
+                f"聊天请求处理成功: agent_id={agent_id}, response={response}, 总耗时: {total_request_time:.3f}秒"
+            )
+            return response
 
     except Exception as e:
         logger.error(f"聊天请求处理失败: {str(e)}")
@@ -748,7 +755,8 @@ async def agent_chat_fast_response(
             f"极速聊天响应完成: agent_id={agent_id}, response_length={len(response_content)}"
         )
 
-        return {
+        # 构建符合客户端期望的响应格式 (HttpResult<SendMsgResponse>)
+        response_data = {
             "id": f"chatcmpl-{uuid.uuid4().hex[:12]}",
             "object": "chat.completion",
             "created": int(time.time()),
@@ -762,6 +770,9 @@ async def agent_chat_fast_response(
             "response_type": "fast",
             "voice_enabled": chat_settings.voice_enabled,
         }
+
+        # 包装成客户端期望的HttpResult格式
+        return {"code": 200, "message": "success", "data": response_data}
 
     except Exception as e:
         logger.error(f"极速聊天请求失败: {str(e)}")
