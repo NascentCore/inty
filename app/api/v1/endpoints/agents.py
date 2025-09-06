@@ -509,7 +509,14 @@ async def get_creator_agent_stats(
 
 # TODO: Needs to disable this endpoint in production environment.
 # https://github.com/NascentCore/inty-backend/issues/43
-@router.get("/{agent_id}/prompt", response_model=schemas.APIResponse[dict])
+@router.get(
+    "/{agent_id}/prompt",
+    response_model=schemas.APIResponse[dict],
+    deprecated=True,
+    include_in_schema=False,
+    summary="Deprecated, used for evaluation?",
+    description="Deprecated, used for evaluation?",
+)
 async def get_agent_prompt(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
@@ -570,7 +577,14 @@ async def get_agent_prompt(
         return schemas.APIResponse.error(message="Failed to get prompts")
 
 
-@router.get("/{agent_id}/prompt/preview", response_model=schemas.APIResponse[dict])
+@router.get(
+    "/{agent_id}/prompt/preview",
+    response_model=schemas.APIResponse[dict],
+    deprecated=True,
+    include_in_schema=False,
+    summary="Deprecated, used for evaluation?",
+    description="Deprecated, used for evaluation?",
+)
 async def preview_agent_prompt(
     *,
     db: AsyncSession = Depends(deps.get_async_db),

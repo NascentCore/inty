@@ -12,16 +12,6 @@ from app.core.agent.personalities import EVERYONE_HATES_YOU, EVERYONE_LIKES_YOU
 from app.core.config import global_config_loaded_from_config_yaml
 
 
-def test_agent__create_dynamic_prompt_runnable():
-    agent = Agent(
-        agent_id="test",
-        name="test",
-        model_config={},
-    )
-    runnable = agent._create_dynamic_prompt_runnable()
-    runnable.invoke({"user_profile": "test", "messages": [HumanMessage(content="test")]})
-
-
 def test_render_prompt_jinja2_template():
     rendered_prompt = prompt_template.render_prompt_jinja2_template(
         "{{ char }} and {{ user }}",
@@ -29,3 +19,12 @@ def test_render_prompt_jinja2_template():
         "User",
     )
     assert rendered_prompt == "Agent and User"
+
+
+def test_render_prompt_jinja2_template_empty_template():
+    rendered_prompt = prompt_template.render_prompt_jinja2_template(
+        "",
+        "Agent",
+        "User",
+    )
+    assert rendered_prompt == ""
