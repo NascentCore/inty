@@ -9,6 +9,8 @@ from loguru import logger
 from pydantic import AnyHttpUrl
 
 
+GEMINI_2_5_FLASH = "google/gemini-2.5-flash"
+
 @dataclass
 class LoggingConfig:
     level: str = "INFO"
@@ -106,7 +108,7 @@ class EmbeddingConfig:
 
 @dataclass
 class AgentConfig:
-    model: str = "google/gemini-2.5-flash"
+    model: str = GEMINI_2_5_FLASH
     base_url: str = "https://openrouter.ai/api/v1"
     api_key: str = "<fill-in-config.yaml>"
     temperature: float = 0.5
