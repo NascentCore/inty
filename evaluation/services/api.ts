@@ -33,6 +33,9 @@ class ApiClient {
   private headers: Record<string, string>;
 
   constructor(baseURL: string) {
+    if (baseURL.endsWith("/")) {
+      baseURL = baseURL.slice(0, -1);
+    }
     this.baseURL = baseURL;
     // This is the default headers for all requests.
     // Some API endpoints needs different content header, like upload avatar,
@@ -45,10 +48,20 @@ class ApiClient {
   private async request<T>(
     endpoint: string,
     options: RequestInit = {},
+    version: string = "v1",
   ): Promise<T> {
-    let url = `${this.baseURL}${endpoint}`;
-    if (endpoint.startsWith("http")) {
-      url = endpoint;
+    if (endpoint.startsWith("/")) {
+      endpoint = endpoint.slice(1);
+    }
+    let url = endpoint
+    if (!endpoint.startsWith("http")) {
+      if (version === "v1") {
+        url = `${this.baseURL}/api/v1/${endpoint}`;
+      } else if (version === "v2") {
+        url = `${this.baseURL}/api/v2/${endpoint}`;
+      } else {
+        throw new Error(`Invalid version: ${version}`);
+      }
     }
 
     const config: RequestInit = {
