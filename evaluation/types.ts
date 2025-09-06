@@ -59,7 +59,7 @@ export interface AgentUpdateRequest {
   avatar?: string;
   background?: string;
   background_images?: string[];
-  llm_config?: LLMConfig;
+  llm_config?: LLMConfig | null;
 }
 
 // 聊天消息

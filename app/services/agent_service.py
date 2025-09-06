@@ -685,6 +685,7 @@ async def update_agent(
         if "llm_config" in update_data:
             llm_config = update_data.pop("llm_config")
             if llm_config is not None:
+                logger.debug(f"llm_config不为空，更新settings中的llm_config")
                 # 确保 settings 字段存在
                 if db_agent.settings is None:
                     db_agent.settings = {}
@@ -693,10 +694,23 @@ async def update_agent(
 
                 # 更新 settings 中的 llm_config
                 db_agent.settings = {**db_agent.settings, "llm_config": llm_config}
+            else:
+                if db_agent.settings and "llm_config" in db_agent.settings:
+                    db_agent.settings.pop("llm_config")
+                    # Tell SQLAlchemy that the settings field has been modified
+                    from sqlalchemy.orm.attributes import flag_modified
+
+                    flag_modified(db_agent, "settings")
 
         # 更新其他字段
         for field, value in update_data.items():
             setattr(db_agent, field, value)
+
+        # logger.debug(f"更新后的Agent数据: {db_agent.model_dump()}")
+        # Put this statement here caused failure:
+        # greenlet_spawn has not been called; can't call await_only() here.
+        # Was IO attempted in an unexpected place?
+        # (Background on this error at: https://sqlalche.me/e/20/xd2s)
 
         await db.commit()
         await db.refresh(db_agent)
@@ -809,8 +823,6 @@ async def delete_agent(db: AsyncSession, db_agent: models.Agent) -> models.Agent
             f"未知错误 - 逻辑删除角色 {db_agent.id if db_agent else 'unknown'}: {str(e)}"
         )
         raise HTTPException(status_code=500, detail="服务器内部错误")
-
-
 
 
 def process_agent_image_urls(agent_data: dict, agent_id: str = None, user_id: str = None) -> dict:
