@@ -1048,214 +1048,6 @@
                 }
             }
         },
-        "/api/v1/ai/agents/text-to-image": {
-            "post": {
-                "tags": [
-                    "agents",
-                    "characters"
-                ],
-                "summary": "Generate images based on text description",
-                "description": "Generate background images based on prompt, save directly to GCS, return image URLs",
-                "operationId": "generate_background_api_v1_ai_agents_text_to_image_post",
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/TextToImageRequest"
-                            }
-                        }
-                    },
-                    "required": true
-                },
-                "responses": {
-                    "200": {
-                        "description": "Successful Response",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/APIResponse_dict_"
-                                }
-                            }
-                        }
-                    },
-                    "422": {
-                        "description": "Validation Error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/HTTPValidationError"
-                                }
-                            }
-                        }
-                    }
-                },
-                "security": [
-                    {
-                        "Bearer": []
-                    }
-                ]
-            }
-        },
-        "/api/v1/ai/agents/creator/{creator_id}/stats": {
-            "get": {
-                "tags": [
-                    "agents",
-                    "characters"
-                ],
-                "summary": "Get Creator Agent Stats",
-                "description": "获取创建者的公共角色统计信息\n返回创建者创建的公共角色数量和所有公共角色的总关注数",
-                "operationId": "get_creator_agent_stats_api_v1_ai_agents_creator__creator_id__stats_get",
-                "deprecated": true,
-                "security": [
-                    {
-                        "Bearer": []
-                    }
-                ],
-                "parameters": [
-                    {
-                        "name": "creator_id",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "string",
-                            "title": "Creator Id"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Successful Response",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/APIResponse_CreatorAgentStats_"
-                                }
-                            }
-                        }
-                    },
-                    "422": {
-                        "description": "Validation Error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/HTTPValidationError"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/ai/agents/{agent_id}/prompt": {
-            "get": {
-                "tags": [
-                    "agents",
-                    "characters"
-                ],
-                "summary": "Get Agent Prompt",
-                "description": "获取Agent的最终提示词",
-                "operationId": "get_agent_prompt_api_v1_ai_agents__agent_id__prompt_get",
-                "security": [
-                    {
-                        "Bearer": []
-                    }
-                ],
-                "parameters": [
-                    {
-                        "name": "agent_id",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "string",
-                            "title": "Agent Id"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Successful Response",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/APIResponse_dict_"
-                                }
-                            }
-                        }
-                    },
-                    "422": {
-                        "description": "Validation Error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/HTTPValidationError"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/ai/agents/{agent_id}/prompt/preview": {
-            "get": {
-                "tags": [
-                    "agents",
-                    "characters"
-                ],
-                "summary": "Preview Agent Prompt",
-                "description": "预览Agent使用指定模版的提示词",
-                "operationId": "preview_agent_prompt_api_v1_ai_agents__agent_id__prompt_preview_get",
-                "security": [
-                    {
-                        "Bearer": []
-                    }
-                ],
-                "parameters": [
-                    {
-                        "name": "agent_id",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "string",
-                            "title": "Agent Id"
-                        }
-                    },
-                    {
-                        "name": "template_name",
-                        "in": "query",
-                        "required": false,
-                        "schema": {
-                            "type": "string",
-                            "description": "Template name to use",
-                            "default": "default",
-                            "title": "Template Name"
-                        },
-                        "description": "Template name to use"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Successful Response",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/APIResponse_dict_"
-                                }
-                            }
-                        }
-                    },
-                    "422": {
-                        "description": "Validation Error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/HTTPValidationError"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
         "/api/v1/chats/": {
             "get": {
                 "tags": [
@@ -1501,64 +1293,6 @@
                 }
             }
         },
-        "/api/v1/chats/agents/{agent_id}/chat/completions": {
-            "post": {
-                "tags": [
-                    "chats"
-                ],
-                "summary": "Agent Chat Completions",
-                "description": "基于Agent ID的OpenAI风格聊天接口\n如果用户还没有和该Agent创建会话，则自动创建",
-                "operationId": "agent_chat_completions_api_v1_chats_agents__agent_id__chat_completions_post",
-                "security": [
-                    {
-                        "Bearer": []
-                    }
-                ],
-                "parameters": [
-                    {
-                        "name": "agent_id",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "string",
-                            "title": "Agent Id"
-                        }
-                    }
-                ],
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/ChatCompletionRequest"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "200": {
-                        "description": "Successful Response",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/APIResponse_dict_"
-                                }
-                            }
-                        }
-                    },
-                    "422": {
-                        "description": "Validation Error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/HTTPValidationError"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
         "/api/v1/chats/agents/{agent_id}/chat/fast": {
             "post": {
                 "tags": [
@@ -1602,6 +1336,113 @@
                                     "type": "object",
                                     "additionalProperties": true,
                                     "title": "Response Agent Chat Fast Response Api V1 Chats Agents  Agent Id  Chat Fast Post"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/chats/agents/{agent_id}/settings": {
+            "get": {
+                "tags": [
+                    "chats",
+                    "inty"
+                ],
+                "summary": "Get Agent Chat Settings",
+                "description": "Get chat settings by Agent ID",
+                "operationId": "get_agent_chat_settings_api_v1_chats_agents__agent_id__settings_get",
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "agent_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "title": "Agent Id"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ChatSettings"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/chat/completions/{agent_id}": {
+            "post": {
+                "tags": [
+                    "chat"
+                ],
+                "summary": "Agent Chat Completions",
+                "description": "基于Agent ID的OpenAI风格聊天接口\n如果用户还没有和该Agent创建会话，则自动创建",
+                "operationId": "agent_chat_completions_api_v1_chat_completions__agent_id__post",
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "agent_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "title": "Agent Id"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ChatCompletionRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/APIResponse_dict_"
                                 }
                             }
                         }
@@ -1744,8 +1585,8 @@
                 "tags": [
                     "subscription"
                 ],
-                "summary": "Get Subscription Plans",
-                "description": "获取订阅计划列表",
+                "summary": "获取订阅计划列表及其他用户订阅信息",
+                "description": "现有订阅计划、用户订阅的内容、以及其他与用户订阅状态相关的信息",
                 "operationId": "get_subscription_plans_api_v1_subscription_plans_get",
                 "responses": {
                     "200": {
@@ -2304,32 +2145,6 @@
                 },
                 "type": "object",
                 "title": "APIResponse[Agent]"
-            },
-            "APIResponse_CreatorAgentStats_": {
-                "properties": {
-                    "code": {
-                        "type": "integer",
-                        "title": "Code",
-                        "default": 200
-                    },
-                    "message": {
-                        "type": "string",
-                        "title": "Message",
-                        "default": "success"
-                    },
-                    "data": {
-                        "anyOf": [
-                            {
-                                "$ref": "#/components/schemas/CreatorAgentStats"
-                            },
-                            {
-                                "type": "null"
-                            }
-                        ]
-                    }
-                },
-                "type": "object",
-                "title": "APIResponse[CreatorAgentStats]"
             },
             "APIResponse_DeletionCheckResponse_": {
                 "properties": {
@@ -3970,6 +3785,17 @@
                         ],
                         "title": "Agent Avatar"
                     },
+                    "agent_is_deleted": {
+                        "anyOf": [
+                            {
+                                "type": "boolean"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Agent Is Deleted"
+                    },
                     "settings": {
                         "anyOf": [
                             {
@@ -4126,30 +3952,6 @@
                 ],
                 "title": "ChatSettings",
                 "description": "聊天设置"
-            },
-            "CreatorAgentStats": {
-                "properties": {
-                    "creator_id": {
-                        "type": "string",
-                        "title": "Creator Id"
-                    },
-                    "public_agents_count": {
-                        "type": "integer",
-                        "title": "Public Agents Count"
-                    },
-                    "total_public_agents_follows": {
-                        "type": "integer",
-                        "title": "Total Public Agents Follows"
-                    }
-                },
-                "type": "object",
-                "required": [
-                    "creator_id",
-                    "public_agents_count",
-                    "total_public_agents_follows"
-                ],
-                "title": "CreatorAgentStats",
-                "description": "创建者的公共角色统计信息"
             },
             "DeletionCheckResponse": {
                 "properties": {
@@ -5360,6 +5162,11 @@
                         "title": "Is Subscribed",
                         "description": "是否订阅"
                     },
+                    "subscription_status": {
+                        "type": "string",
+                        "title": "Subscription Status",
+                        "description": "订阅详细状态：subscribed/subscribed_expiring/unsubscribed"
+                    },
                     "has_ever_subscribed": {
                         "type": "boolean",
                         "title": "Has Ever Subscribed",
@@ -5400,6 +5207,12 @@
                         "title": "Remaining Days",
                         "description": "剩余天数"
                     },
+                    "will_auto_renew": {
+                        "type": "boolean",
+                        "title": "Will Auto Renew",
+                        "description": "是否会自动续费",
+                        "default": false
+                    },
                     "chat_limit_per_day": {
                         "type": "integer",
                         "title": "Chat Limit Per Day",
@@ -5417,6 +5230,18 @@
                         ],
                         "title": "Total Chat Limit",
                         "description": "总聊天次数限制（免费用户）"
+                    },
+                    "chat_24h_limit": {
+                        "anyOf": [
+                            {
+                                "type": "integer"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Chat 24H Limit",
+                        "description": "24小时内聊天次数限制（免费用户）"
                     },
                     "agent_creation_limit": {
                         "type": "integer",
@@ -5447,7 +5272,8 @@
                 },
                 "type": "object",
                 "required": [
-                    "is_subscribed"
+                    "is_subscribed",
+                    "subscription_status"
                 ],
                 "title": "SubscriptionStatusResponse",
                 "description": "订阅状态响应"
@@ -5528,60 +5354,6 @@
                 ],
                 "title": "TargetType"
             },
-            "TextToImageRequest": {
-                "properties": {
-                    "prompt": {
-                        "type": "string",
-                        "title": "Prompt",
-                        "description": "Text description of the image, typically a list of comma separated keywords/tags/properties"
-                    },
-                    "negative_prompt": {
-                        "anyOf": [
-                            {
-                                "type": "string"
-                            },
-                            {
-                                "type": "null"
-                            }
-                        ],
-                        "title": "Negative Prompt",
-                        "description": "Negative prompt to avoid generating images with certain features, e.g. 'blurry, low quality, explicit, NSFW'"
-                    },
-                    "enhance_prompt": {
-                        "anyOf": [
-                            {
-                                "type": "boolean"
-                            },
-                            {
-                                "type": "null"
-                            }
-                        ],
-                        "title": "Enhance Prompt",
-                        "description": "Whether to enhance the prompt to improve the quality of the image. The default is True for backward comaptibility. This enhancement is different than the underlying imagen API's own enhancement. This parameter is also required to allow this api to be used as a text-to-image wrapper. As a wrapper, we'll not want to apply enhancement to the prompt. ",
-                        "default": true
-                    },
-                    "count": {
-                        "type": "integer",
-                        "maximum": 4.0,
-                        "minimum": 1.0,
-                        "title": "Count",
-                        "description": "Number of images to generate",
-                        "default": 4
-                    }
-                },
-                "type": "object",
-                "required": [
-                    "prompt"
-                ],
-                "title": "TextToImageRequest",
-                "description": "Text to image request",
-                "example": {
-                    "count": 2,
-                    "enhance_prompt": true,
-                    "negative_prompt": "blurry, low quality, explicit, NSFW",
-                    "prompt": "A beautiful mountain landscape with sunset"
-                }
-            },
             "UsageStatisticsResponse": {
                 "properties": {
                     "today_chat_count": {
@@ -5619,6 +5391,30 @@
                         ],
                         "title": "Total Chat Limit",
                         "description": "总聊天次数限制（免费用户）"
+                    },
+                    "chat_24h_count": {
+                        "anyOf": [
+                            {
+                                "type": "integer"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Chat 24H Count",
+                        "description": "24小时内聊天次数（免费用户）"
+                    },
+                    "chat_24h_limit": {
+                        "anyOf": [
+                            {
+                                "type": "integer"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Chat 24H Limit",
+                        "description": "24小时内聊天次数限制（免费用户）"
                     },
                     "agent_count": {
                         "type": "integer",

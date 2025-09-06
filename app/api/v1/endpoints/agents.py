@@ -44,6 +44,7 @@ subscription_service = SubscriptionService()
     "/",
     response_model=schemas.APIResponse[List[schemas.Agent]],
     deprecated=True,
+    include_in_schema=False,
     summary="[Deprecated, use /me, kept for v1.0.3 compatibility]",
 )
 @router.get(
@@ -363,6 +364,7 @@ def process_generated_images(generated_images: List[ImagenGeneratedImage]) -> di
     response_model=APIResponse[dict],
     summary="[Deprecated, use /api/v1/images/text-to-image instead] Generate images based on text description",
     deprecated=True,
+    include_in_schema=False,
 )
 async def generate_background(
     request: schemas.TextToImageRequest,
@@ -485,6 +487,7 @@ async def generate_background(
     "/creator/{creator_id}/stats",
     # Not used by anyone
     deprecated=True,
+    include_in_schema=False,
     response_model=schemas.APIResponse[schemas.CreatorAgentStats],
 )
 async def get_creator_agent_stats(
