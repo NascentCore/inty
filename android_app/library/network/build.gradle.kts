@@ -12,7 +12,9 @@ android {
 dependencies {
     // ===== 调试工具 =====
     debugImplementation(libs.chucker.library)
+    "localImplementation"(libs.chucker.library)
     releaseImplementation(libs.chucker.no.op)
+    "playdebugImplementation"(libs.chucker.no.op)
 
     // ===== JSON 序列化 =====
     ksp(libs.moshi.kotlin.codegen)
