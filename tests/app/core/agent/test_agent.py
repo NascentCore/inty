@@ -39,12 +39,15 @@ def test_agent_chat_happy_path():
         mode_prompt=prompts.HELPFUL_MODE_PROMPT,
     )
 
-    state = {"messages": [HumanMessage(content="Who are you?")]}
+    state = {
+        "messages": [HumanMessage(content="Who are you?")],
+        "user_profile": "Name: Test User",
+    }
     messages = agent.build_system_messages(state)
 
     assert messages == [
         SystemMessage(
-            content="Write Test Agent's next reply in a general chat between Test Agent and None."
+            content="Write Test Agent's next reply in a general chat between Test Agent and Test User."
         ),
         SystemMessage(
             content="personality: you are hated by everyone, you are always sad, "
@@ -52,6 +55,9 @@ def test_agent_chat_happy_path():
             "personality traits: arrogant, condescending, disrespectful, rude"
         ),
         SystemMessage(content="Respond in a helpful manner."),
+        SystemMessage(
+            content="Name: Test User", additional_kwargs={}, response_metadata={}
+        ),
     ]
 
 
