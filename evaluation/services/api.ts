@@ -42,6 +42,53 @@ class ApiClient {
     };
   }
 
+  // Helper method to get v2 API base URL
+  private getV2BaseURL(): string {
+    return this.baseURL.replace("/api/v1", "/api/v2");
+  }
+
+  // Helper method to make v2 API requests
+  async requestV2<T>(
+    endpoint: string,
+    options: RequestInit = {},
+  ): Promise<T> {
+    const v2BaseURL = this.getV2BaseURL();
+    const url = `${v2BaseURL}${endpoint}`;
+    
+    // Make the request directly without going through this.request()
+    const config: RequestInit = {
+      ...options,
+      headers: {
+        ...this.headers,
+        ...options.headers,
+      },
+    };
+
+    // 添加认证token
+    const token = this.getAuthToken();
+    if (token) {
+      config.headers = {
+        ...config.headers,
+        Authorization: `Bearer ${token}`,
+      };
+    }
+
+    try {
+      const response = await fetch(url, config);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      logError(`API request failed: ${error}`);
+      throw error;
+    }
+  }
+
   private async request<T>(
     endpoint: string,
     options: RequestInit = {},
@@ -664,7 +711,7 @@ export const chatApi = {
     created_at: string;
   }> => apiClient.post("/chats/", data),
 
-  // 使用现有的OpenAI兼容API发送消息 - 这是核心聊天接口
+  // 使用v2 OpenAI兼容API发送消息 - 这是核心聊天接口
   sendMessage: (
     agentId: string,
     messages: Array<{

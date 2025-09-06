@@ -12,6 +12,7 @@ import pytest
 
 # 测试配置
 BASE_URL = "http://localhost:8000/api/v1"
+V2_BASE_URL = "http://localhost:8000/api/v2"
 TEST_USER_ID = "test_user_123"
 
 
@@ -97,18 +98,20 @@ async def test_existing_apis():
                 }
 
                 try:
-                    chat_response = await tester.post(
-                        f"/chats/agents/{agent_id}/chat/completions", message_data
+                    # Test v2 API for chat completions
+                    v2_tester = APITester(V2_BASE_URL)
+                    chat_response = await v2_tester.post(
+                        f"/chat/completions/{agent_id}", message_data
                     )
                     if chat_response and "choices" in chat_response:
                         response_content = chat_response["choices"][0]["message"][
                             "content"
                         ]
-                        print(f"  ✓ 发送消息成功: {response_content[:50]}...")
+                        print(f"  ✓ 发送消息成功 (v2 API): {response_content[:50]}...")
                     else:
-                        print("  ❌ 发送消息失败")
+                        print("  ❌ 发送消息失败 (v2 API)")
                 except Exception as e:
-                    print(f"  ❌ 发送消息异常: {str(e)}")
+                    print(f"  ❌ 发送消息异常 (v2 API): {str(e)}")
 
 
 async def test_evaluation_apis():
