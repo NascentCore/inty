@@ -26,93 +26,6 @@ class QuestionParserService:
         return QuestionParserService._parse_json(content)
 
     @staticmethod
-    def _parse_txt(content: bytes) -> List[str]:
-        """解析TXT文件"""
-        try:
-            # 尝试不同的编码
-            text = None
-            for encoding in ["utf-8", "gbk", "gb2312", "latin-1"]:
-                try:
-                    text = content.decode(encoding)
-                    break
-                except UnicodeDecodeError:
-                    continue
-
-            if text is None:
-                raise ValueError("无法识别文件编码")
-
-            # 按行分割，过滤空行
-            lines = [line.strip() for line in text.split("\n") if line.strip()]
-
-            if not lines:
-                raise ValueError("文件为空或无有效问题")
-
-            # 简单的问题验证
-            questions = []
-            for i, line in enumerate(lines, 1):
-                # 移除行号（如果存在）
-                line = QuestionParserService._remove_line_number(line)
-
-                if len(line) < 5:
-                    logger.warning(f"第{i}行问题过短，已跳过: {line}")
-                    continue
-
-                questions.append(line)
-
-            if not questions:
-                raise ValueError("没有找到有效的问题")
-
-            return questions
-
-        except Exception as e:
-            raise ValueError(f"TXT文件解析失败: {str(e)}")
-
-    @staticmethod
-    def _parse_csv(content: bytes) -> List[str]:
-        """解析CSV文件"""
-        try:
-            # 解码内容
-            text = None
-            for encoding in ["utf-8", "gbk", "gb2312"]:
-                try:
-                    text = content.decode(encoding)
-                    break
-                except UnicodeDecodeError:
-                    continue
-
-            if text is None:
-                raise ValueError("无法识别文件编码")
-
-            # 使用CSV reader
-            csv_file = io.StringIO(text)
-            reader = csv.reader(csv_file)
-
-            questions = []
-            for row_num, row in enumerate(reader, 1):
-                if not row:  # 空行
-                    continue
-
-                # 取第一列作为问题，如果有多列则合并
-                if len(row) == 1:
-                    question = row[0].strip()
-                else:
-                    # 可能是多列格式，尝试找到问题列
-                    question = QuestionParserService._extract_question_from_row(row)
-
-                if question and len(question) >= 5:
-                    questions.append(question)
-                else:
-                    logger.warning(f"第{row_num}行无效问题，已跳过: {row}")
-
-            if not questions:
-                raise ValueError("CSV文件中没有找到有效的问题")
-
-            return questions
-
-        except Exception as e:
-            raise ValueError(f"CSV文件解析失败: {str(e)}")
-
-    @staticmethod
     def _parse_json(content: bytes) -> List[str]:
         """解析JSON文件"""
         try:
@@ -168,28 +81,6 @@ class QuestionParserService:
             raise ValueError(f"JSON格式错误: {str(e)}")
         except Exception as e:
             raise ValueError(f"JSON文件解析失败: {str(e)}")
-
-    @staticmethod
-    def _auto_parse(content: bytes) -> List[str]:
-        """自动检测并解析文件格式"""
-
-        # 尝试JSON格式
-        try:
-            return QuestionParserService._parse_json(content)
-        except:
-            pass
-
-        # 尝试CSV格式
-        try:
-            return QuestionParserService._parse_csv(content)
-        except:
-            pass
-
-        # 最后尝试TXT格式
-        try:
-            return QuestionParserService._parse_txt(content)
-        except Exception as e:
-            raise ValueError(f"无法识别文件格式，解析失败: {str(e)}")
 
     @staticmethod
     def _remove_line_number(line: str) -> str:

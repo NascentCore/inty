@@ -19,8 +19,9 @@ from psycopg import Connection
 from psycopg_pool import ConnectionPool
 
 from app.core.agent import prompts
-from app.core.agent.prompt_template import prompt_template_manager
+from app.core.agent import prompt_template
 from app.core.config import global_config_loaded_from_config_yaml
+from app.models import chat_history
 from app.services.background_task_service import background_task_service
 from app.services.cache_service import cache_service
 from app.utils.openai_client import (
@@ -95,22 +96,6 @@ def get_agent_model_config(agent_data: dict) -> dict:
 
     return model_config
 
-
-# 初始化自定义的embedding服务
-client = OpenAI(
-    base_url=global_config_loaded_from_config_yaml.embedding.base_url,
-    api_key=global_config_loaded_from_config_yaml.embedding.api_key,
-)
-
-
-def embed_texts(texts: list[str]) -> list[list[float]]:
-    response = client.embeddings.create(
-        model=global_config_loaded_from_config_yaml.embedding.model,
-        input=texts,
-    )
-    return [e.embedding for e in response.data]
-
-
 # 全局连接池
 _connection_pool = None
 _sync_engine = None
@@ -165,9 +150,7 @@ def get_connection_pool():
 pg_url = global_config_loaded_from_config_yaml.database.url
 logger.debug(f"初始化聊天历史表和记忆表, database url: {pg_url}")
 conn = Connection.connect(pg_url, autocommit=True)
-
-table_name = "chat_history"
-PostgresChatMessageHistory.create_tables(conn, table_name)
+PostgresChatMessageHistory.create_tables(conn, chat_history.TABLE_NAME)
 
 
 class Agent:
@@ -321,22 +304,10 @@ class Agent:
 
         # 1. 主提示词（第一优先级）- 使用全局默认或agent自定义
         main_prompt = self._get_effective_main_prompt()
-        if main_prompt:
-            # 支持模板渲染和字符替换
-            if "{{" in main_prompt and "}}" in main_prompt:
-                try:
-                    rendered_prompt = prompt_template_manager.render_system_prompt(
-                        system_prompt=main_prompt,
-                        agent_name=self.name,
-                        user_name=user_name,
-                        template_name="basic",
-                    )
-                    system_messages.append(SystemMessage(content=rendered_prompt))
-                except Exception as e:
-                    logger.error(f"主提示词模板渲染失败: {str(e)}，使用原始提示词")
-                    system_messages.append(SystemMessage(content=main_prompt))
-            else:
-                system_messages.append(SystemMessage(content=main_prompt))
+        rendered_prompt = prompt_template.render_prompt_jinja2_template(
+            tmpl=main_prompt, char=self.name, user=user_name
+        )
+        system_messages.append(SystemMessage(content=rendered_prompt))
 
         # 2. 角色卡信息 - 每个字段作为独立的SystemMessage
         character_messages = self._build_character_context(user_name=user_name)
@@ -364,38 +335,20 @@ class Agent:
 
         # 4. 模式提示词（在角色卡后面）- 使用全局默认或agent自定义
         mode_prompt = self._get_effective_mode_prompt()
-        if mode_prompt:
-            # 支持模板渲染和字符替换
-            if "{{" in mode_prompt and "}}" in mode_prompt:
-                try:
-                    rendered_prompt = prompt_template_manager.render_system_prompt(
-                        system_prompt=mode_prompt,
-                        agent_name=self.name,
-                        user_name=user_name,
-                        template_name="basic",
-                    )
-                    system_messages.append(SystemMessage(content=rendered_prompt))
-                except Exception as e:
-                    logger.error(f"模式提示词模板渲染失败: {str(e)}，使用原始提示词")
-                    system_messages.append(SystemMessage(content=mode_prompt))
-            else:
-                system_messages.append(SystemMessage(content=mode_prompt))
+        rendered_prompt = prompt_template.render_prompt_jinja2_template(
+            tmpl=mode_prompt, char=self.name, user=user_name
+        )
+        system_messages.append(SystemMessage(content=rendered_prompt))
 
         if user_profile:
             system_messages.append(SystemMessage(content=user_profile))
 
         if is_char_user_created:
             output_format_prompt = self._get_effective_output_format_prompt()
-            if output_format_prompt:
-                if "{{" in output_format_prompt and "}}" in output_format_prompt:
-                    # TODO: render_system_prompt is over-engineered.
-                    # Consider replacing it with
-                    # Jinja2 template rendering render_template({"char": name_of_char, "user": name_of_user})
-                    template = Jinja2Template(output_format_prompt)
-                    rendered_prompt = template.render(char=self.name, user=user_name)
-                    system_messages.append(SystemMessage(content=rendered_prompt))
-                else:
-                    system_messages.append(SystemMessage(content=output_format_prompt))
+            rendered_prompt = prompt_template.render_prompt_jinja2_template(
+                tmpl=output_format_prompt, char=self.name, user=user_name
+            )
+            system_messages.append(SystemMessage(content=rendered_prompt))
 
         if is_char_user_created:
             system_messages.extend(
@@ -421,93 +374,34 @@ class Agent:
         full_messages = system_messages + messages
         return full_messages
 
-    def _create_dynamic_prompt_runnable(self) -> Runnable:
-        """
-        创建动态提示词 Runnable 用于输入给 LangChain React Agent 来生成发送给 LLM 的最终提示词。
-        """
-        # 创建动态prompt模板，直接返回分开的消息列表
-        return RunnableLambda(
-            lambda state: {"messages": self.create_full_message_list(state)}
-        ) | ChatPromptTemplate.from_messages(
-            [MessagesPlaceholder(variable_name="messages")]
-        )
-
-    def _render_character_field_template(
-        self, content: str, user_name: str = None
-    ) -> str:
-        """渲染角色字段模板"""
-        if "{{" in content and "}}" in content:
-            try:
-                from app.core.agent.prompt_template import prompt_template_manager
-
-                rendered_content = prompt_template_manager.render_system_prompt(
-                    system_prompt=content,
-                    agent_name=self.name,
-                    user_name=user_name,
-                    template_name="basic",
-                )
-                return rendered_content
-            except Exception as e:
-                logger.error(f"角色字段模板渲染失败: {str(e)}，使用原始内容")
-                return content
-        else:
-            return content
-
     def _build_character_context(self, user_name: str = None) -> List[SystemMessage]:
         """
         构建角色卡上下文信息，每个字段作为独立的system message，支持模板渲染
         """
         context_messages = []
 
-        # 性格特征 - 独立的SystemMessage
         if self.personality:
-            content = self._render_character_field_template(self.personality, user_name)
-            context_messages.append(SystemMessage(content=content))
-
-        # 场景设定 - 独立的SystemMessage
-        if self.scenario:
-            content = self._render_character_field_template(self.scenario, user_name)
-            context_messages.append(SystemMessage(content=content))
-
-        # 对话示例 - 独立的SystemMessage
-        if self.message_example:
-            content = self._render_character_field_template(
-                self.message_example, user_name
+            rendered_prompt = prompt_template.render_prompt_jinja2_template(
+                tmpl=self.personality, char=self.name, user=user_name
             )
-            context_messages.append(SystemMessage(content=content))
+            context_messages.append(SystemMessage(content=rendered_prompt))
 
-        # 标签信息 - 独立的SystemMessage
+        if self.scenario:
+            rendered_prompt = prompt_template.render_prompt_jinja2_template(
+                tmpl=self.scenario, char=self.name, user=user_name
+            )
+            context_messages.append(SystemMessage(content=rendered_prompt))
+
+        if self.message_example:
+            rendered_prompt = prompt_template.render_prompt_jinja2_template(
+                tmpl=self.message_example, char=self.name, user=user_name
+            )
+            context_messages.append(SystemMessage(content=rendered_prompt))
+
         if self.tags:
-            tags_str = ", ".join(self.tags)
-            content = self._render_character_field_template(tags_str, user_name)
-            context_messages.append(SystemMessage(content=content))
+            context_messages.append(SystemMessage(content=", ".join(self.tags)))
 
         return context_messages
-
-    def _apply_character_substitution(
-        self, text: str, agent_name: str = None, user_name: str = None
-    ) -> str:
-        """
-        应用字符/用户名替换
-
-        Args:
-            text: 要处理的文本
-            agent_name: 智能体/角色名
-            user_name: 用户名
-
-        Returns:
-            应用替换后的文本
-        """
-        if not text:
-            return text
-
-        try:
-            return prompt_template_manager._perform_character_substitution(
-                text, agent_name or self.name, user_name or "[User]"
-            )
-        except Exception as e:
-            logger.error(f"字符替换失败: {str(e)}，返回原文本")
-            return text
 
     def _extract_user_name_from_profile(self, user_profile: str) -> str:
         """
@@ -541,26 +435,6 @@ class Agent:
             logger.error(f"提取用户名失败: {str(e)}")
 
         return None
-
-    def _build_additional_character_context(self) -> str:
-        """
-        构建额外的角色卡上下文信息（避免与基础提示词重复）
-        仅包含对话示例和标签信息，因为性格和场景已经在基础提示词中了
-        """
-        context_parts = []
-
-        # 对话示例
-        if self.message_example:
-            context_parts.append(f"[对话风格参考]\n{self.message_example}")
-
-        # 标签信息（用于角色行为指导）
-        if self.tags:
-            context_parts.append(f"[角色标签]\n{', '.join(self.tags)}")
-
-        if context_parts:
-            return "\n\n".join(context_parts)
-
-        return ""
 
     def _update_last_used(self):
         """线程安全地更新最后使用时间"""
@@ -721,7 +595,7 @@ class Agent:
                 # 创建历史记录对象
                 history_start = time.time()
                 history = PostgresChatMessageHistory(
-                    table_name, session_id, sync_connection=conn_local
+                    chat_history.TABLE_NAME, session_id, sync_connection=conn_local
                 )
                 history_init_time = time.time() - history_start
                 logger.debug(
@@ -865,71 +739,6 @@ class Agent:
             logger.error(f"异步聊天失败 - Agent: {self.agent_id}, Error: {str(e)}")
             raise
 
-    # 此方法需要测试
-    async def chat_stream(
-        self, user_id: str, session_id: str, messages: dict[str, Any], db_session=None
-    ):
-        """
-        异步流式聊天方法
-
-        移除了LangGraph checkpointer，改为通过PostgresChatMessageHistory管理对话历史。
-        支持流式响应输出，历史消息会被智能截取并注入到当前对话上下文中。
-        """
-        self._update_last_used()
-
-        def _stream_generator():
-            # 获取用户profile信息
-            user_profile = self._get_user_profile_sync(user_id)
-
-            # 从连接池获取连接
-            pool = get_connection_pool()
-            with pool.connection() as conn_local:
-                try:
-                    history = PostgresChatMessageHistory(
-                        table_name, session_id, sync_connection=conn_local
-                    )
-
-                    # 获取相关的历史消息
-                    recent_history = self._get_relevant_history(history.messages)
-
-                    # 构建包含历史的完整消息列表
-                    all_messages = recent_history + messages["messages"]
-
-                    # 构建自定义状态数据，包含历史消息和用户profile
-                    state_data = CustomAgentState(
-                        messages=all_messages,
-                        user_profile=user_profile or "",
-                        user_id=user_id,
-                    )
-                    config = {"configurable": {"user_id": user_id}}
-
-                    # 收集完整的流式响应用于调试
-                    # TODO: 需要重新实现该 streaming 功能
-                    # stream_messages = []
-                    # for message_chunk, metadata in self.agent.stream(
-                    #     state_data, config, stream_mode="messages"
-                    # ):
-                    #     stream_messages.append(message_chunk)
-                    #     yield message_chunk, metadata
-                except Exception as e:
-                    logger.error(
-                        f"流式聊天处理失败 - Agent: {self.agent_id}, Session: {session_id}, Error: {str(e)}"
-                    )
-                    raise
-
-        # 在线程池中执行生成器
-        loop = asyncio.get_event_loop()
-        try:
-            # 使用异步迭代器包装同步生成器
-            generator = await loop.run_in_executor(
-                self._executor, lambda: list(_stream_generator())
-            )
-            for item in generator:
-                yield item
-        except Exception as e:
-            logger.error(f"异步流式聊天失败 - Agent: {self.agent_id}, Error: {str(e)}")
-            raise
-
     def get_final_prompt(self) -> str:
         """
         获取最终渲染的提示词
@@ -970,41 +779,6 @@ class Agent:
             if mode_prompt:
                 fallback_parts.append(mode_prompt)
             return "\n\n".join(fallback_parts) if fallback_parts else "AI助手"
-
-    def get_character_info(self) -> Dict[str, Any]:
-        """
-        获取角色卡信息
-
-        Returns:
-            包含角色卡信息的字典
-        """
-        return {
-            "personality": self.personality,
-            "scenario": self.scenario,
-            "message_example": self.message_example,
-            "creator_notes": self.creator_notes,
-            "tags": self.tags,
-            "character_version": self.character_version,
-            "extensions": self.extensions,
-        }
-
-    def get_template_info(self) -> Dict[str, Any]:
-        """
-        获取Agent信息
-
-        Returns:
-            包含Agent基础信息的字典
-        """
-        return {
-            "main_prompt": self.main_prompt,
-            "mode_prompt": self.mode_prompt,
-            "agent_data": self._agent_data.copy(),
-            "template_system": {
-                "available_templates": prompt_template_manager.list_templates(),
-                "supports_character_substitution": True,
-                "substitution_variables": ["char", "user", "agent_name", "user_name"],
-            },
-        }
 
     def cleanup(self):
         """清理资源"""
@@ -1378,22 +1152,6 @@ class AgentManager:
             if agent_id in self.agents:
                 agent = self.agents[agent_id]
                 return agent.get_final_prompt()
-        return None
-
-    def get_agent_template_info(self, agent_id: str) -> Optional[Dict[str, Any]]:
-        """
-        获取指定Agent的模版信息
-
-        Args:
-            agent_id: Agent ID
-
-        Returns:
-            包含模版信息的字典，如果Agent不存在则返回None
-        """
-        with self._read_lock:
-            if agent_id in self.agents:
-                agent = self.agents[agent_id]
-                return agent.get_template_info()
         return None
 
     def stop(self):
