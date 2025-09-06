@@ -301,6 +301,7 @@ class ChatViewModel : BaseActivityViewModel() {
                         }
 
                         is HttpResult.Failure -> {
+                            showNetworkAwareError(result.message)
                             // 错误恢复：确保状态正确
                             _isWaitingForReply.value = false
                         }
@@ -316,6 +317,7 @@ class ChatViewModel : BaseActivityViewModel() {
             } catch (e: Exception) {
                 EasyLog.log("Unexpected error in sendMsg: ${e.message}", priority = EasyLog.ERROR)
                 _isWaitingForReply.value = false
+                showNetworkAwareError("An unexpected error occurred while sending message")
             } finally {
                 // 确保状态在最后被正确重置
                 if (_isWaitingForReply.value) {
