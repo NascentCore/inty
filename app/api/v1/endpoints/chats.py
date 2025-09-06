@@ -381,7 +381,7 @@ async def agent_chat_completions(
         import time
 
         request_start_time = time.time()
-        logger.info(
+        logger.debug(
             f"开始处理聊天请求 - Agent ID: {agent_id}, User ID: {current_user.id}"
         )
         logger.debug(f"请求参数: {request.dict()}")
@@ -389,22 +389,6 @@ async def agent_chat_completions(
         logger.debug(
             f"request.messages数量: {len(request.messages) if request.messages else 0}"
         )
-
-        # 检查用户聊天次数限制
-        # is_allowed, used_count, daily_limit = await subscription_service.check_chat_limit(
-        #     db, current_user.id
-        # )
-
-        # if not is_allowed:
-        #     raise HTTPException(
-        #         status_code=429,  # Too Many Requests
-        #         detail={
-        #             "message": "今日聊天次数已达上限",
-        #             "used_count": used_count,
-        #             "daily_limit": daily_limit,
-        #             "error_code": "CHAT_LIMIT_EXCEEDED"
-        #         }
-        #     )
 
         # 优化：简化Agent验证，在创建Agent实例时验证
         agent_query_start = time.time()

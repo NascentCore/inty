@@ -301,13 +301,6 @@ class ChatViewModel : BaseActivityViewModel() {
                         }
 
                         is HttpResult.Failure -> {
-showNetworkAwareError(
-        errorMessage = result.message,
-        requestUrl = "/api/v2/chats/agents/${agent.id}/chat/completions",
-        requestMethod = "POST",
-        statusCode = result.code
-)
-
                             // 错误恢复：确保状态正确
                             _isWaitingForReply.value = false
                         }
@@ -323,13 +316,6 @@ showNetworkAwareError(
             } catch (e: Exception) {
                 EasyLog.log("Unexpected error in sendMsg: ${e.message}", priority = EasyLog.ERROR)
                 _isWaitingForReply.value = false
-handleNetworkException(
-        exception = e,
-        requestUrl = "/api/v2/chats/agents/{agent_id}/chat/completions",
-        requestMethod = "POST",
-        operation = "send message"
-)
-
             } finally {
                 // 确保状态在最后被正确重置
                 if (_isWaitingForReply.value) {
