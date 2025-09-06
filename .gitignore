@@ -4,7 +4,6 @@ __pycache__/
 *$py.class
 *.so
 .Python
-env/
 build/
 develop-eggs/
 dist/
@@ -129,8 +128,6 @@ celerybeat.pid
 # Environments
 .env
 .venv
-venv/
-ENV/
 .python-version
 
 # 前端相关
@@ -160,8 +157,6 @@ yarn.lock
 
 # 日志文件
 *.log
-logs/
-log/
 
 # 媒体和静态文件（根据需要调整）
 /media/
