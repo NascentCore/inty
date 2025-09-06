@@ -715,6 +715,9 @@ async def update_agent(
         if not db_agent:
             raise HTTPException(status_code=404, detail="角色不存在")
 
+        # 确保agent对象附加到当前session
+        db.add(db_agent)
+
         # 处理更新数据
         _process_agent_update_data(agent_in, db_agent)
         logger.debug(f"处理更新数据后的Agent数据: {db_agent.model_dump()}")
