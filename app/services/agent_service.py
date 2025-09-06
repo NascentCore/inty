@@ -647,6 +647,57 @@ def _validate_character_card_fields(agent_in: schemas.AgentCreate):
         )
 
 
+def _update_agent_in_db(agent_in: schemas.AgentUpdate, db_agent: models.Agent):
+    # 验证更新数据
+    update_data = agent_in.model_dump(exclude_unset=True)
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No data provided for update")
+
+    # 验证名称不为空（如果提供了名称）
+    if "name" in update_data and (
+        not update_data["name"] or not update_data["name"].strip()
+    ):
+        raise HTTPException(status_code=400, detail="Agent name cannot be empty")
+
+    # 处理prompt到personality的转换（向后兼容）
+    if (
+        "prompt" in update_data
+        and update_data["prompt"]
+        and update_data["prompt"].strip()
+    ):
+        # 如果没有提供personality或personality为空，则使用prompt的值
+        if "personality" not in update_data or not (
+            update_data.get("personality") and update_data["personality"].strip()
+        ):
+            logger.debug(f"将prompt转换为personality以保持向后兼容")
+            update_data["personality"] = update_data["prompt"]
+
+    # 处理 llm_config 字段 - 将其移动到 settings 中
+    if "llm_config" in update_data:
+        llm_config = update_data.pop("llm_config")
+        if llm_config is not None:
+            logger.debug(f"llm_config不为空，更新settings中的llm_config")
+            # 确保 settings 字段存在
+            if db_agent.settings is None:
+                db_agent.settings = {}
+            elif not isinstance(db_agent.settings, dict):
+                db_agent.settings = {}
+
+            # 更新 settings 中的 llm_config
+            db_agent.settings = {**db_agent.settings, "llm_config": llm_config}
+        else:
+            if db_agent.settings and "llm_config" in db_agent.settings:
+                db_agent.settings.pop("llm_config")
+                # Tell SQLAlchemy that the settings field has been modified
+                from sqlalchemy.orm.attributes import flag_modified
+
+                flag_modified(db_agent, "settings")
+
+    # 更新其他字段
+    for field, value in update_data.items():
+        setattr(db_agent, field, value)
+
+
 async def update_agent(
     db: AsyncSession, db_agent: models.Agent, agent_in: schemas.AgentUpdate
 ) -> models.Agent:
@@ -657,46 +708,13 @@ async def update_agent(
         if not db_agent:
             raise HTTPException(status_code=404, detail="角色不存在")
 
-        # 验证更新数据
-        update_data = agent_in.model_dump(exclude_unset=True)
-        if not update_data:
-            raise HTTPException(status_code=400, detail="No data provided for update")
+        _update_agent_in_db(agent_in, db_agent)
 
-        # 验证名称不为空（如果提供了名称）
-        if "name" in update_data and (
-            not update_data["name"] or not update_data["name"].strip()
-        ):
-            raise HTTPException(status_code=400, detail="Agent name cannot be empty")
-
-        # 处理prompt到personality的转换（向后兼容）
-        if (
-            "prompt" in update_data
-            and update_data["prompt"]
-            and update_data["prompt"].strip()
-        ):
-            # 如果没有提供personality或personality为空，则使用prompt的值
-            if "personality" not in update_data or not (
-                update_data.get("personality") and update_data["personality"].strip()
-            ):
-                logger.debug(f"将prompt转换为personality以保持向后兼容")
-                update_data["personality"] = update_data["prompt"]
-
-        # 处理 llm_config 字段 - 将其移动到 settings 中
-        if "llm_config" in update_data:
-            llm_config = update_data.pop("llm_config")
-            if llm_config is not None:
-                # 确保 settings 字段存在
-                if db_agent.settings is None:
-                    db_agent.settings = {}
-                elif not isinstance(db_agent.settings, dict):
-                    db_agent.settings = {}
-
-                # 更新 settings 中的 llm_config
-                db_agent.settings = {**db_agent.settings, "llm_config": llm_config}
-
-        # 更新其他字段
-        for field, value in update_data.items():
-            setattr(db_agent, field, value)
+        # logger.debug(f"更新后的Agent数据: {db_agent.model_dump()}")
+        # Put this statement here caused failure:
+        # greenlet_spawn has not been called; can't call await_only() here.
+        # Was IO attempted in an unexpected place?
+        # (Background on this error at: https://sqlalche.me/e/20/xd2s)
 
         await db.commit()
         await db.refresh(db_agent)
@@ -809,8 +827,6 @@ async def delete_agent(db: AsyncSession, db_agent: models.Agent) -> models.Agent
             f"未知错误 - 逻辑删除角色 {db_agent.id if db_agent else 'unknown'}: {str(e)}"
         )
         raise HTTPException(status_code=500, detail="服务器内部错误")
-
-
 
 
 def process_agent_image_urls(agent_data: dict, agent_id: str = None, user_id: str = None) -> dict:

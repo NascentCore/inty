@@ -226,8 +226,6 @@ export const AgentManagePage: React.FC = () => {
         background_images: backgroundImages,
       };
 
-
-
       // 如果选择了自定义模型，添加LLM配置
       if (values.modelType === "custom") {
         agentData.llm_config = {
@@ -301,6 +299,12 @@ export const AgentManagePage: React.FC = () => {
           presence_penalty: values.presence_penalty,
         };
       }
+
+      if (values.modelType === "default") {
+        // 选择默认模型时，显式设置为null
+        updateData.llm_config = null;
+      }
+
       await api.agents.update(currentAgent.id, updateData);
       message.success("智能体更新成功");
       setEditModalVisible(false);
