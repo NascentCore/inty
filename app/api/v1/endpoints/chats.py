@@ -82,19 +82,6 @@ async def delete_chat(
     return chat
 
 
-# OpenAI style message model
-class ChatMessage(BaseModel):
-    role: str  # "user" or "assistant"
-    content: str
-
-
-class ChatCompletionRequest(BaseModel):
-    messages: List[ChatMessage]
-    stream: bool = False
-    model: str = "chatbot"
-    language: str = "zh"  # 添加语言字段，默认中文
-
-
 @router.get(
     "/agents/status",
     deprecated=True,

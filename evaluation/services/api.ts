@@ -32,9 +32,7 @@ class ApiClient {
   private baseURL: string;
   private headers: Record<string, string>;
 
-  constructor(
-    baseURL: string = process.env.REACT_APP_API_BASE_URL || "/api/v1",
-  ) {
+  constructor(baseURL: string) {
     this.baseURL = baseURL;
     // This is the default headers for all requests.
     // Some API endpoints needs different content header, like upload avatar,
@@ -249,7 +247,7 @@ class ApiClient {
 }
 
 // 创建API客户端实例
-const apiClient = new ApiClient();
+const apiClient = new ApiClient(process.env.REACT_APP_API_BASE_URL);
 
 // =============================================================================
 // 评测会话API
@@ -696,7 +694,7 @@ export const chatApi = {
       total_tokens: number;
     };
   }> =>
-    apiClient.post(`/chats/agents/${agentId}/chat/completions/v2`, {
+    apiClient.post(`http://localhost:8000/api/v2/chat/completions/${agentId}`, {
       messages,
       stream,
       model: "chatbot",
