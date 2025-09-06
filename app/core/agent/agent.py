@@ -20,7 +20,6 @@ from psycopg_pool import ConnectionPool
 
 from app.core.agent import prompts
 from app.core.agent import prompt_template
-from app.core.agent.prompt_template import prompt_template_manager
 from app.core.config import global_config_loaded_from_config_yaml
 from app.models import chat_history
 from app.services.background_task_service import background_task_service
@@ -379,22 +378,9 @@ class Agent:
         self, content: str, user_name: str = None
     ) -> str:
         """渲染角色字段模板"""
-        if "{{" in content and "}}" in content:
-            try:
-                from app.core.agent.prompt_template import prompt_template_manager
-
-                rendered_content = prompt_template_manager.render_system_prompt(
-                    system_prompt=content,
-                    agent_name=self.name,
-                    user_name=user_name,
-                    template_name="basic",
-                )
-                return rendered_content
-            except Exception as e:
-                logger.error(f"角色字段模板渲染失败: {str(e)}，使用原始内容")
-                return content
-        else:
-            return content
+        return prompt_template.render_prompt_jinja2_template(
+            tmpl=content, char=self.name, user=user_name
+        )
 
     def _build_character_context(self, user_name: str = None) -> List[SystemMessage]:
         """
@@ -402,28 +388,26 @@ class Agent:
         """
         context_messages = []
 
-        # 性格特征 - 独立的SystemMessage
         if self.personality:
-            content = self._render_character_field_template(self.personality, user_name)
-            context_messages.append(SystemMessage(content=content))
-
-        # 场景设定 - 独立的SystemMessage
-        if self.scenario:
-            content = self._render_character_field_template(self.scenario, user_name)
-            context_messages.append(SystemMessage(content=content))
-
-        # 对话示例 - 独立的SystemMessage
-        if self.message_example:
-            content = self._render_character_field_template(
-                self.message_example, user_name
+            rendered_prompt = prompt_template.render_prompt_jinja2_template(
+                tmpl=self.personality, char=self.name, user=user_name
             )
-            context_messages.append(SystemMessage(content=content))
+            context_messages.append(SystemMessage(content=rendered_prompt))
 
-        # 标签信息 - 独立的SystemMessage
+        if self.scenario:
+            rendered_prompt = prompt_template.render_prompt_jinja2_template(
+                tmpl=self.scenario, char=self.name, user=user_name
+            )
+            context_messages.append(SystemMessage(content=rendered_prompt))
+
+        if self.message_example:
+            rendered_prompt = prompt_template.render_prompt_jinja2_template(
+                tmpl=self.message_example, char=self.name, user=user_name
+            )
+            context_messages.append(SystemMessage(content=rendered_prompt))
+
         if self.tags:
-            tags_str = ", ".join(self.tags)
-            content = self._render_character_field_template(tags_str, user_name)
-            context_messages.append(SystemMessage(content=content))
+            context_messages.append(SystemMessage(content=", ".join(self.tags)))
 
         return context_messages
 
@@ -815,11 +799,6 @@ class Agent:
             "main_prompt": self.main_prompt,
             "mode_prompt": self.mode_prompt,
             "agent_data": self._agent_data.copy(),
-            "template_system": {
-                "available_templates": prompt_template_manager.list_templates(),
-                "supports_character_substitution": True,
-                "substitution_variables": ["char", "user", "agent_name", "user_name"],
-            },
         }
 
     def cleanup(self):
