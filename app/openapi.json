@@ -1293,66 +1293,6 @@
                 }
             }
         },
-        "/api/v1/chats/agents/{agent_id}/chat/fast": {
-            "post": {
-                "tags": [
-                    "chats"
-                ],
-                "summary": "Agent Chat Fast Response",
-                "description": "极速聊天响应接口\n立即返回AI文本回复，语音异步生成",
-                "operationId": "agent_chat_fast_response_api_v1_chats_agents__agent_id__chat_fast_post",
-                "security": [
-                    {
-                        "Bearer": []
-                    }
-                ],
-                "parameters": [
-                    {
-                        "name": "agent_id",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "string",
-                            "title": "Agent Id"
-                        }
-                    }
-                ],
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/ChatCompletionRequest"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "200": {
-                        "description": "Successful Response",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "additionalProperties": true,
-                                    "title": "Response Agent Chat Fast Response Api V1 Chats Agents  Agent Id  Chat Fast Post"
-                                }
-                            }
-                        }
-                    },
-                    "422": {
-                        "description": "Validation Error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/HTTPValidationError"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
         "/api/v1/chats/agents/{agent_id}/settings": {
             "get": {
                 "tags": [
