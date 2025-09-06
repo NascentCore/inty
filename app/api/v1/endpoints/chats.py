@@ -366,7 +366,6 @@ async def get_agent_chat_messages(
     summary="Agent Chat Completions replaced by /chat/completions/{agent_id}",
     description="基于Agent ID的OpenAI风格聊天接口，已弃用，请使用 /chat/completions/{agent_id} 代替",
 )
-# The following code is copied from tag:v1.0.3
 async def agent_chat_completions(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
@@ -377,6 +376,7 @@ async def agent_chat_completions(
     """
     基于Agent ID的OpenAI风格聊天接口
     如果用户还没有和该Agent创建会话，则自动创建
+    The following code is copied from tag:v1.0.3
     """
     try:
         import time
