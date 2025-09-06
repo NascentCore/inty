@@ -28,9 +28,10 @@ from app.services.voice_cache_service import voice_cache_service
 from app.services.voice_cleanup_service import voice_cleanup_service
 from app.services.voice_service import voice_service
 
-router = APIRouter(prefix="/chats", route_class=LoggerRoute)
+from loguru import logger
 
-logger = logging.getLogger(__name__)
+# TODO: Prefix should be /chat instead of /chats.
+router = APIRouter(prefix="/chats", route_class=LoggerRoute)
 
 
 @router.get("/", response_model=List[schemas.Chat])
@@ -360,6 +361,10 @@ async def get_agent_chat_messages(
 @router.post(
     "/agents/{agent_id}/chat/completions",
     response_model=schemas.APIResponse[dict],
+    deprecated=True,
+    include_in_schema=False,
+    summary="Agent Chat Completions replaced by /chat/completions/{agent_id}",
+    description="基于Agent ID的OpenAI风格聊天接口，已弃用，请使用 /chat/completions/{agent_id} 代替",
 )
 async def agent_chat_completions(
     *,
