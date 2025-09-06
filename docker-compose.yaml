@@ -17,6 +17,7 @@ services:
       - ./alembic.ini:/alembic.ini
       - ./.secrets:/.secrets
       - ./start.sh:/start.sh
+      - ./scripts:/scripts
     depends_on:
       pgvector:
         condition: service_healthy
