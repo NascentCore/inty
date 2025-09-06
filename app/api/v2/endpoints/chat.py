@@ -1,23 +1,88 @@
 import asyncio
+import json
 import uuid
+
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
-from langchain_core.messages.human import HumanMessage
-from loguru import logger
-from sqlalchemy.ext.asyncio.session import AsyncSession
-from sqlalchemy.sql import select
+from langchain_core.messages import HumanMessage
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import models, schemas
 from app.api import deps
 from app.api.utils.logger_route import LoggerRoute
-from app.api.v1.endpoints.chats import generate_chat_stream
 from app.core.agent.agent import agent_manager
 from app.schemas.chat import ChatCompletionRequest
 from app.schemas.response import BusinessErrorCode, create_business_error_response
-from app.services import agent_service, chat_history_service, chat_service, subscription_service, voice_service
+from app.services import agent_service, chat_history_service, chat_service
+from app.services.chat_service import generate_session_id
+from app.services.subscription_service import subscription_service
+from app.services.voice_service import voice_service
 
+from loguru import logger
 
 router = APIRouter(prefix="/chat", route_class=LoggerRoute)
+
+
+async def generate_chat_stream(
+    agent,
+    messages: dict,
+    user_id: str,
+    session_id: str,
+    chat_id: str,
+    model_name: str,
+    db_session: AsyncSession = None,
+    agent_id: str = None,
+    last_user_message: str = None,
+):
+    """
+    Generate streaming chat response (async version)
+    """
+    try:
+        # Use Agent's async chat_stream method
+        async for message_chunk, metadata in agent.chat_stream(
+            user_id=user_id,
+            session_id=session_id,
+            messages=messages,
+            db_session=db_session,
+        ):
+            # Check message chunk type, only send AI messages
+            if hasattr(message_chunk, "content") and message_chunk.content:
+                chunk_data = {
+                    "id": f"chatcmpl-{uuid.uuid4().hex[:12]}",
+                    "object": "chat.completion.chunk",
+                    "created": int(time.time()),
+                    "model": model_name,
+                    "choices": [
+                        {
+                            "index": 0,
+                            "delta": {
+                                "role": "assistant",
+                                "content": message_chunk.content,
+                            },
+                            "finish_reason": None,
+                        }
+                    ],
+                }
+                yield f"data: {json.dumps(chunk_data, ensure_ascii=False)}\n\n"
+
+        # Send end marker
+        end_chunk = {
+            "id": f"chatcmpl-{uuid.uuid4().hex[:12]}",
+            "object": "chat.completion.chunk",
+            "created": int(time.time()),
+            "model": model_name,
+            "choices": [{"index": 0, "delta": {}, "finish_reason": "stop"}],
+        }
+        yield f"data: {json.dumps(end_chunk, ensure_ascii=False)}\n\n"
+        yield "data: [DONE]\n\n"
+
+    except Exception as e:
+        logger.error(f"Streaming chat failed: {str(e)}")
+        error_chunk = {
+            "error": {"message": f"Chat failed: {str(e)}", "type": "server_error"}
+        }
+        yield f"data: {json.dumps(error_chunk, ensure_ascii=False)}\n\n"
 
 
 @router.post(
@@ -135,7 +200,7 @@ async def agent_chat_completions(
 
         # 使用统一的session_id生成规则
         session_id_start = time.time()
-        session_id = chat_service.generate_session_id(chat.id)
+        session_id = generate_session_id(chat.id)
         session_id_time = time.time() - session_id_start
         logger.debug(f"Session ID生成耗时: {session_id_time:.3f}秒")
 
