@@ -290,7 +290,7 @@ async def update_agent(
     agent = await agent_service.get_agent(db, agent_id=agent_id)
     if not agent:
         raise HTTPException(status_code=404, detail="Agent not found")
-    agent = await agent_service.update_agent(db, db_agent=agent, agent_in=agent_in)
+    agent = await agent_service.update_agent(db, agent, agent_in)
     return agent
 
 

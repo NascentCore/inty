@@ -1,3 +1,4 @@
+import asyncio
 import math
 import uuid
 from typing import List, Optional
@@ -716,6 +717,7 @@ async def update_agent(
 
         # 处理更新数据
         _process_agent_update_data(agent_in, db_agent)
+        logger.debug(f"处理更新数据后的Agent数据: {db_agent.model_dump()}")
 
         await db.commit()
         await db.refresh(db_agent)
@@ -746,16 +748,26 @@ async def update_agent(
                 "extensions": updated_agent.extensions or {},
             }
 
-            reload_success = await agent_manager.reload_agent(
-                updated_agent.id, agent_data
-            )
-            if reload_success:
-                logger.debug(f"Agent {updated_agent.id} 缓存重载成功")
-            else:
-                logger.warning(f"Agent {updated_agent.id} 缓存重载失败")
+            # 使用 asyncio.create_task 在后台异步执行重载，避免阻塞
+            async def reload_agent_task():
+                try:
+                    reload_success = await agent_manager.reload_agent(
+                        updated_agent.id, agent_data
+                    )
+                    if reload_success:
+                        logger.debug(f"Agent {updated_agent.id} 缓存重载成功")
+                    else:
+                        logger.warning(f"Agent {updated_agent.id} 缓存重载失败")
+                except Exception as e:
+                    logger.error(
+                        f"重载Agent缓存时发生错误 {updated_agent.id}: {str(e)}"
+                    )
+
+            # 创建后台任务，不等待完成
+            asyncio.create_task(reload_agent_task())
 
         except Exception as e:
-            logger.error(f"重载Agent缓存时发生错误 {updated_agent.id}: {str(e)}")
+            logger.error(f"创建Agent重载任务时发生错误 {updated_agent.id}: {str(e)}")
             # 注意：这里不抛出异常，因为数据库更新已经成功了
 
         return updated_agent

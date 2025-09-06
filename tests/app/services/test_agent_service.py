@@ -94,7 +94,7 @@ def test_process_agent_update_data_with_null_llm_config():
     update_request = AgentUpdate(
         name="Updated Agent",
         intro="Updated intro",
-        llm_config={},
+        llm_config=None,
     )
 
     # 调用函数
@@ -104,5 +104,4 @@ def test_process_agent_update_data_with_null_llm_config():
     assert db_agent.name == "Updated Agent"
     assert db_agent.intro == "Updated intro"
     # 验证 llm_config 已被删除
-    assert "llm_config" in db_agent.settings
-    assert db_agent.settings["llm_config"] == {}
+    assert "llm_config" not in db_agent.settings

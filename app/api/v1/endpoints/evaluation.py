@@ -521,7 +521,7 @@ async def update_evaluation_agent(
             raise HTTPException(status_code=403, detail="无权修改此智能体")
 
         updated_agent = await agent_service.update_agent(
-            db=db, agent_id=agent_id, agent_in=agent_in
+            db=db, db_agent=agent, agent_in=agent_in
         )
 
         logger.info(f"用户 {current_user.id} 更新智能体: {agent_id}")
