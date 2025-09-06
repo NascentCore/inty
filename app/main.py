@@ -16,7 +16,6 @@ from app.core.config import global_config_loaded_from_config_yaml
 
 from app.api.deps import get_async_db
 from app.api.v1.api import api_router
-from app.api.v2.api import api_router as v2_api_router
 from app.core.agent.agent import agent_manager
 from app.core.firebase import init_firebase
 from app.core.logging import init_logger
@@ -76,7 +75,6 @@ app.add_exception_handler(SQLAlchemyError, sqlalchemy_exception_handler)
 app.add_exception_handler(ValidationError, validation_error_handler)
 
 app.include_router(api_router)
-app.include_router(v2_api_router)
 
 # 配置静态文件服务 - 用于评测系统前端
 import os
