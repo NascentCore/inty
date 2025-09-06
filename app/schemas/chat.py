@@ -146,12 +146,17 @@ class Chat(ChatInDB):
     settings: Optional[ChatSettings] = None
 
 
-class ChatCompletionRequest(BaseModel):
-    """聊天完成请求模型"""
+# OpenAI style message model
+class ChatMessage(BaseModel):
+    role: str  # "user" or "assistant"
+    content: str
 
-    messages: List[dict]
+
+class ChatCompletionRequest(BaseModel):
+    messages: List[ChatMessage]
     stream: bool = False
-    language: str = "zh"  # 语言
+    model: str = "chatbot"
+    language: str = "zh"  # 添加语言字段，默认中文
 
 
 class ChatCompletionResponse(BaseModel):

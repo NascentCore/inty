@@ -18,7 +18,7 @@ import retrofit2.http.Query
 
 @Singleton
 interface IChatApi {
-    @POST("/api/v1/chats/agents/{agent_id}/chat/completions")
+    @POST("/api/v1/chat/completions/{agent_id}")
     suspend fun sendMsg(@Path("agent_id") agent_id: String, @Body req: SendMsgReq): HttpResult<SendMsgResponse>
 
     @GET("/api/v1/chats/agents/{agent_id}/messages")
