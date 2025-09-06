@@ -17,7 +17,7 @@ from app.schemas.response import BusinessErrorCode, create_business_error_respon
 from app.services import agent_service, chat_history_service, chat_service, subscription_service, voice_service
 
 
-router = APIRouter(prefix="/chats", route_class=LoggerRoute)
+router = APIRouter(prefix="/chat", route_class=LoggerRoute)
 
 
 @router.post(
