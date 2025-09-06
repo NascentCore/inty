@@ -17,12 +17,16 @@ from app.schemas.response import BusinessErrorCode, create_business_error_respon
 from app.services import agent_service, chat_history_service, chat_service, subscription_service, voice_service
 
 
-router = APIRouter(prefix="/chats/agents", route_class=LoggerRoute)
+router = APIRouter(prefix="/chats", route_class=LoggerRoute)
 
 
 @router.post(
-    "/{agent_id}/chat/completions",
+    "/completions/{agent_id}",
     response_model=schemas.APIResponse[dict],
+    summary="Generate chat completion for an agent",
+    description=("Generate chat completion for an agent, "
+                 "if the user has not created a chat with the agent, "
+                 "it will be automatically created"),
 )
 async def agent_chat_completions(
     *,
