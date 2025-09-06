@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import global_config_loaded_from_config_yaml
 
 from app.api.deps import get_async_db
-from app.api.v1.api import api_router
+from app.api.v1.router import api_router
 from app.core.agent.agent import agent_manager
 from app.core.firebase import init_firebase
 from app.core.logging import init_logger
