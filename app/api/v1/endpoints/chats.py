@@ -16,6 +16,7 @@ from app import models, schemas
 from app.api import deps
 from app.api.utils.logger_route import LoggerRoute
 from app.core.agent.agent import agent_manager
+from app.core.chat import generate_chat_stream
 from app.core.config import global_config_loaded_from_config_yaml
 from app.schemas.chat import ChatCompletionRequest
 from app.schemas.response import BusinessErrorCode, create_business_error_response
@@ -370,7 +371,7 @@ async def get_agent_chat_messages(
 
 
 @router.post(
-    "/agents/{agent_id}/chat/completions",
+    "/agents/{agent_id}/chat/completions/v2",
     response_model=schemas.APIResponse[dict],
 )
 async def agent_chat_completions(
@@ -1302,67 +1303,6 @@ async def get_agent_debug_messages(
         raise HTTPException(
             status_code=500, detail=f"Failed to get debug messages: {str(e)}"
         )
-
-
-async def generate_chat_stream(
-    agent,
-    messages: dict,
-    user_id: str,
-    session_id: str,
-    chat_id: str,
-    model_name: str,
-    db_session: AsyncSession = None,
-    agent_id: str = None,
-    last_user_message: str = None,
-):
-    """
-    Generate streaming chat response (async version)
-    """
-    try:
-        # Use Agent's async chat_stream method
-        async for message_chunk, metadata in agent.chat_stream(
-            user_id=user_id,
-            session_id=session_id,
-            messages=messages,
-            db_session=db_session,
-        ):
-            # Check message chunk type, only send AI messages
-            if hasattr(message_chunk, "content") and message_chunk.content:
-                chunk_data = {
-                    "id": f"chatcmpl-{uuid.uuid4().hex[:12]}",
-                    "object": "chat.completion.chunk",
-                    "created": int(time.time()),
-                    "model": model_name,
-                    "choices": [
-                        {
-                            "index": 0,
-                            "delta": {
-                                "role": "assistant",
-                                "content": message_chunk.content,
-                            },
-                            "finish_reason": None,
-                        }
-                    ],
-                }
-                yield f"data: {json.dumps(chunk_data, ensure_ascii=False)}\n\n"
-
-        # Send end marker
-        end_chunk = {
-            "id": f"chatcmpl-{uuid.uuid4().hex[:12]}",
-            "object": "chat.completion.chunk",
-            "created": int(time.time()),
-            "model": model_name,
-            "choices": [{"index": 0, "delta": {}, "finish_reason": "stop"}],
-        }
-        yield f"data: {json.dumps(end_chunk, ensure_ascii=False)}\n\n"
-        yield "data: [DONE]\n\n"
-
-    except Exception as e:
-        logger.error(f"Streaming chat failed: {str(e)}")
-        error_chunk = {
-            "error": {"message": f"Chat failed: {str(e)}", "type": "server_error"}
-        }
-        yield f"data: {json.dumps(error_chunk, ensure_ascii=False)}\n\n"
 
 
 @router.post(

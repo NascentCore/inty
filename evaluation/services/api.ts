@@ -48,7 +48,10 @@ class ApiClient {
     endpoint: string,
     options: RequestInit = {},
   ): Promise<T> {
-    const url = `${this.baseURL}${endpoint}`;
+    let url = `${this.baseURL}${endpoint}`;
+    if (endpoint.startsWith("http")) {
+      url = endpoint;
+    }
 
     const config: RequestInit = {
       ...options,
