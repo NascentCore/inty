@@ -66,7 +66,7 @@ def test_render_system_prompt():
 
 
 def test_render_prompt_jinja2_template():
-    rendered_prompt = prompt_template.render_prompt_jinja2_template(
+    rendered_prompt = prompt_template_manager._perform_character_substitution(
         "{{ char }} and {{ user }}",
         "Agent",
         "User",

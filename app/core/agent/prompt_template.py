@@ -263,9 +263,9 @@ Remember: You are {{ char }} talking to {{ user }}."""
             variables.update(custom_variables)
 
         # Perform character substitution on the system_prompt itself first
-        if agent_name and user_name:
+        if agent_name:
             rendered_system_prompt = self._perform_character_substitution(
-                system_prompt, agent_name, user_name
+                system_prompt, agent_name, user_name or "None"
             )
             variables["system_prompt"] = rendered_system_prompt
 
