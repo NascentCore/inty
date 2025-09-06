@@ -374,14 +374,6 @@ class Agent:
         full_messages = system_messages + messages
         return full_messages
 
-    def _render_character_field_template(
-        self, content: str, user_name: str = None
-    ) -> str:
-        """渲染角色字段模板"""
-        return prompt_template.render_prompt_jinja2_template(
-            tmpl=content, char=self.name, user=user_name
-        )
-
     def _build_character_context(self, user_name: str = None) -> List[SystemMessage]:
         """
         构建角色卡上下文信息，每个字段作为独立的system message，支持模板渲染
@@ -788,19 +780,6 @@ class Agent:
                 fallback_parts.append(mode_prompt)
             return "\n\n".join(fallback_parts) if fallback_parts else "AI助手"
 
-    def get_template_info(self) -> Dict[str, Any]:
-        """
-        获取Agent信息
-
-        Returns:
-            包含Agent基础信息的字典
-        """
-        return {
-            "main_prompt": self.main_prompt,
-            "mode_prompt": self.mode_prompt,
-            "agent_data": self._agent_data.copy(),
-        }
-
     def cleanup(self):
         """清理资源"""
         if hasattr(self, "_executor"):
@@ -1173,22 +1152,6 @@ class AgentManager:
             if agent_id in self.agents:
                 agent = self.agents[agent_id]
                 return agent.get_final_prompt()
-        return None
-
-    def get_agent_template_info(self, agent_id: str) -> Optional[Dict[str, Any]]:
-        """
-        获取指定Agent的模版信息
-
-        Args:
-            agent_id: Agent ID
-
-        Returns:
-            包含模版信息的字典，如果Agent不存在则返回None
-        """
-        with self._read_lock:
-            if agent_id in self.agents:
-                agent = self.agents[agent_id]
-                return agent.get_template_info()
         return None
 
     def stop(self):
