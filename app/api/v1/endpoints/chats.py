@@ -381,7 +381,7 @@ async def agent_chat_completions(
         import time
 
         request_start_time = time.time()
-        logger.debug(
+        logger.info(
             f"开始处理聊天请求 - Agent ID: {agent_id}, User ID: {current_user.id}"
         )
         logger.debug(f"请求参数: {request.dict()}")
@@ -390,11 +390,29 @@ async def agent_chat_completions(
             f"request.messages数量: {len(request.messages) if request.messages else 0}"
         )
 
+        # 检查用户聊天次数限制
+        # is_allowed, used_count, daily_limit = await subscription_service.check_chat_limit(
+        #     db, current_user.id
+        # )
+
+        # if not is_allowed:
+        #     raise HTTPException(
+        #         status_code=429,  # Too Many Requests
+        #         detail={
+        #             "message": "今日聊天次数已达上限",
+        #             "used_count": used_count,
+        #             "daily_limit": daily_limit,
+        #             "error_code": "CHAT_LIMIT_EXCEEDED"
+        #         }
+        #     )
+
         # 优化：简化Agent验证，在创建Agent实例时验证
         agent_query_start = time.time()
         logger.debug(f"简化Agent验证: {agent_id}")
 
         # 简化查询，只获取基本字段
+        from sqlalchemy import select
+
         result = await db.execute(
             select(models.Agent.id, models.Agent.name).where(
                 models.Agent.id == agent_id
@@ -406,9 +424,9 @@ async def agent_chat_completions(
             raise HTTPException(status_code=404, detail="Agent not found")
 
         agent_query_time = time.time() - agent_query_start
-        logger.debug(f"Agent验证成功: {agent_basic[1]}, 耗时: {agent_query_time:.3f}秒")
+        logger.info(f"Agent验证成功: {agent_basic[1]}, 耗时: {agent_query_time:.3f}秒")
         # 添加日志记录传入的agent_id
-        logger.debug(f"请求的Agent ID: {agent_id}")
+        logger.info(f"请求的Agent ID: {agent_id}")
 
         # 获取或创建与该Agent的唯一会话
         chat_session_start = time.time()
@@ -419,7 +437,7 @@ async def agent_chat_completions(
             db=db, user_id=current_user.id, agent_id=agent_id
         )
         chat_session_time = time.time() - chat_session_start
-        logger.debug(
+        logger.info(
             f"聊天会话获取成功: chat_id={chat.id}, agent_id={chat.agent_id}, 耗时: {chat_session_time:.3f}秒"
         )
 
@@ -432,7 +450,7 @@ async def agent_chat_completions(
             )
 
         # 记录实际使用的agent_id
-        logger.debug(f"实际聊天的Agent ID: {chat.agent_id}")
+        logger.info(f"实际聊天的Agent ID: {chat.agent_id}")
 
         # 获取最后一条用户消息
         msg_process_start = time.time()
@@ -452,7 +470,7 @@ async def agent_chat_completions(
         # 构建LangChain消息格式
         messages = {"messages": [HumanMessage(content=last_user_message)]}
         msg_process_time = time.time() - msg_process_start
-        logger.debug(f"消息处理耗时: {msg_process_time:.3f}秒")
+        logger.info(f"消息处理耗时: {msg_process_time:.3f}秒")
 
         # 获取或创建Agent实例 - 需要加载完整数据
         agent_get_start = time.time()
@@ -467,7 +485,7 @@ async def agent_chat_completions(
         # 从AgentManager缓存获取Agent实例
         agent = await agent_manager.get_agent(agent_data)
         agent_get_time = time.time() - agent_get_start
-        logger.debug(
+        logger.info(
             f"Agent实例获取成功: {agent_data['name']}, 耗时: {agent_get_time:.3f}秒"
         )
 
@@ -475,28 +493,9 @@ async def agent_chat_completions(
         session_id_start = time.time()
         session_id = generate_session_id(chat.id)
         session_id_time = time.time() - session_id_start
-        logger.debug(f"Session ID生成耗时: {session_id_time:.3f}秒")
-
-        # 检查用户聊天次数限制
-        is_allowed, used_count, daily_limit = (
-            await subscription_service.check_chat_limit(db, current_user)
-        )
-
-        if not is_allowed:
-            # 在返回错误前，先保存用户消息到聊天历史
-            try:
-                chat_history_service.add_user_message(session_id, last_user_message)
-                logger.debug(f"用户消息已保存到历史记录: {session_id}")
-            except Exception as e:
-                logger.warning(f"保存用户消息失败: {str(e)}")
-
-            return create_business_error_response(
-                error_info=BusinessErrorCode.SUBSCRIPTION_REQUIRED,
-                extra_data={"used_count": used_count, "daily_limit": daily_limit},
-            )
+        logger.info(f"Session ID生成耗时: {session_id_time:.3f}秒")
 
         if request.stream:
-            logger.debug(f"开始流式聊天处理: session_id={session_id}")
             return StreamingResponse(
                 generate_chat_stream(
                     agent=agent,
@@ -516,35 +515,28 @@ async def agent_chat_completions(
                 },
             )
         else:
-            logger.debug(f"开始非流式聊天处理: session_id={session_id}")
+            # 非流式聊天（异步）
             chat_processing_start = time.time()
+            logger.debug(f"开始Agent聊天处理: session_id={session_id}")
 
-            # 并行获取聊天设置和AI回复
+            # 先获取聊天设置，再处理AI回复
             try:
-                settings_task = asyncio.create_task(
-                    chat_service.get_or_create_chat_settings(
-                        db, chat.id, current_user.id, agent_id
-                    )
+                import asyncio
+
+                # 先获取或创建聊天设置
+                chat_settings = await chat_service.get_or_create_chat_settings(
+                    db, chat.id, current_user.id, agent_id
                 )
 
-                # 先获取设置，然后传递给AI任务
-                chat_settings = await settings_task
-                logger.debug(f"chat_settings: {chat_settings.__dict__}")
-
-                ai_task = asyncio.create_task(
-                    agent.chat(
-                        user_id=current_user.id,
-                        session_id=session_id,
-                        messages=messages,
-                        db_session=db,
-                        chat_settings=chat_settings,
-                    )
+                # 然后处理AI回复
+                response_content = await agent.chat(
+                    user_id=current_user.id,
+                    session_id=session_id,
+                    messages=messages,
+                    db_session=db,
                 )
-
-                # 等待任务完成
-                response_content = await ai_task
                 chat_processing_time = time.time() - chat_processing_start
-                logger.debug(
+                logger.info(
                     f"Agent聊天响应成功: {response_content[:100]}..., 耗时: {chat_processing_time:.3f}秒"
                 )
                 logger.debug(
@@ -562,7 +554,7 @@ async def agent_chat_completions(
                 if chat_settings.voice_enabled:
                     # 使用Agent的voice_id字段
                     agent_voice_id = agent_data.get("voice_id")
-                    logger.debug(
+                    logger.info(
                         f"开始语音生成: voice_id={agent_voice_id}, text_length={len(response_content)}, language={request.language}"
                     )
 
@@ -572,7 +564,7 @@ async def agent_chat_completions(
                         language=request.language,
                         db=db,
                     )
-                    logger.debug(f"语音自动生成成功: {audio_url}")
+                    logger.info(f"语音自动生成成功: {audio_url}")
                 else:
                     logger.debug("语音未启用，跳过语音生成")
 
@@ -605,13 +597,13 @@ async def agent_chat_completions(
             # 如果生成了语音，添加到响应中
             if audio_url:
                 message["audio_url"] = audio_url
-                logger.debug(f"响应包含语音URL: {audio_url}")
+                logger.info(f"响应包含语音URL: {audio_url}")
 
             total_request_time = time.time() - request_start_time
-            logger.debug(
+            logger.info(
                 f"聊天请求处理成功: agent_id={agent_id}, response_length={len(response_content)}, 总耗时: {total_request_time:.3f}秒"
             )
-            data = {
+            return {
                 "id": f"chatcmpl-{uuid.uuid4().hex[:12]}",
                 "object": "chat.completion",
                 "created": int(time.time()),
@@ -624,7 +616,6 @@ async def agent_chat_completions(
                     + len(response_content.split()),
                 },
             }
-            return schemas.APIResponse.success(data=data)
 
     except Exception as e:
         logger.error(f"聊天请求处理失败: {str(e)}")

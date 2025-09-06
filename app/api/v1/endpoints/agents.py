@@ -41,6 +41,12 @@ subscription_service = SubscriptionService()
 
 
 @router.get(
+    "/",
+    response_model=schemas.APIResponse[List[schemas.Agent]],
+    deprecated=True,
+    summary="[Deprecated, use /me, kept for v1.0.3 compatibility]",
+)
+@router.get(
     "/me",
     response_model=schemas.APIResponse[List[schemas.Agent]],
     summary="Get list of user's created AI characters",
@@ -148,6 +154,14 @@ async def get_following_agents(
 #     "background": "<background_image_url>"
 #   }'
 ########################################################
+@router.post(
+    "/",
+    response_model=schemas.APIResponse[schemas.Agent],
+    deprecated=True,
+    include_in_schema=False,
+    summary="Deprecated, use /api/v1/ai/agents instead, kept for v1.0.3 compatibility",
+    description="Deprecated, use /api/v1/ai/agents instead, kept for v1.0.3 compatibility",
+)
 @router.post(
     "",
     response_model=schemas.APIResponse[schemas.Agent],
@@ -337,9 +351,17 @@ def process_generated_images(generated_images: List[ImagenGeneratedImage]) -> di
 
 
 @router.post(
+    "/generate_background",
+    response_model=APIResponse[dict],
+    deprecated=True,
+    include_in_schema=False,
+    summary="Deprecated, use /generate_background instead",
+    description="Deprecated, use /generate_background instead",
+)
+@router.post(
     "/text-to-image",
     response_model=APIResponse[dict],
-    summary="[Deprecated, should move to /api/v1/images/text-to-image] Generate images based on text description",
+    summary="[Deprecated, use /api/v1/images/text-to-image instead] Generate images based on text description",
     deprecated=True,
 )
 async def generate_background(
