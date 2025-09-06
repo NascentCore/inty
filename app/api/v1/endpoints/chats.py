@@ -408,9 +408,9 @@ async def agent_chat_completions(
             raise HTTPException(status_code=404, detail="Agent not found")
 
         agent_query_time = time.time() - agent_query_start
-        logger.info(f"Agent验证成功: {agent_basic[1]}, 耗时: {agent_query_time:.3f}秒")
+        logger.debug(f"Agent验证成功: {agent_basic[1]}, 耗时: {agent_query_time:.3f}秒")
         # 添加日志记录传入的agent_id
-        logger.info(f"请求的Agent ID: {agent_id}")
+        logger.debug(f"请求的Agent ID: {agent_id}")
 
         # 获取或创建与该Agent的唯一会话
         chat_session_start = time.time()
@@ -421,7 +421,7 @@ async def agent_chat_completions(
             db=db, user_id=current_user.id, agent_id=agent_id
         )
         chat_session_time = time.time() - chat_session_start
-        logger.info(
+        logger.debug(
             f"聊天会话获取成功: chat_id={chat.id}, agent_id={chat.agent_id}, 耗时: {chat_session_time:.3f}秒"
         )
 
@@ -434,7 +434,7 @@ async def agent_chat_completions(
             )
 
         # 记录实际使用的agent_id
-        logger.info(f"实际聊天的Agent ID: {chat.agent_id}")
+        logger.debug(f"实际聊天的Agent ID: {chat.agent_id}")
 
         # 获取最后一条用户消息
         msg_process_start = time.time()
