@@ -157,8 +157,6 @@ yarn.lock
 
 # 日志文件
 *.log
-logs/
-log/
 
 # 媒体和静态文件（根据需要调整）
 /media/
