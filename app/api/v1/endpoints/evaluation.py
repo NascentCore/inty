@@ -251,7 +251,7 @@ async def parse_questions_file(
             raise HTTPException(status_code=400, detail="文件大小不能超过10MB")
 
         # 验证文件类型
-        allowed_types = [".txt", ".csv", ".json"]
+        allowed_types = [".json"]
         if not any(file.filename.lower().endswith(ext) for ext in allowed_types):
             raise HTTPException(
                 status_code=400,
