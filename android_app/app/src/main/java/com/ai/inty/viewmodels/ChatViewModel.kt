@@ -30,7 +30,8 @@ import kotlinx.coroutines.launch
 // app 请求聊天记录（/agents/{agent_id}/messages
 // backednf 创建对话（如果是首次对话）
 // backend 返回对话 ID
-// app 请求聊天回复（/agents/{agent_id}/chat/completions
+// app 请求聊天回复（/api/v1/chat/completions/{agent_id}）
+
 // 操作什么数据，支持什么 UI？Model 是 beans
 // View 是各类 page/activity。
 class ChatViewModel : BaseActivityViewModel() {
