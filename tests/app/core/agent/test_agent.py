@@ -1,11 +1,12 @@
 import uuid
 import pytest
 
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import HumanMessage, SystemMessage
 
 from app.core.agent import prompt_template, prompts
 from app.core.agent.agent import Agent
 from app.core.agent.personalities import EVERYONE_HATES_YOU
+from app.core.agent import prompt_template
 from app.core.agent.prompt_template import prompt_template_manager
 from app.core.config import global_config_loaded_from_config_yaml
 

@@ -20,8 +20,6 @@ var/
 .installed.cfg
 *.egg
 MANIFEST
-node_modules
-mydocs
 
 # PyInstaller
 #  Usually these files are written by a python script from a template

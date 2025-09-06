@@ -87,9 +87,9 @@ EVERYONE_LIKES_YOU = Personality(
 
 EVERYONE_HATES_YOU = Personality(
     descriptions=[
-        "you are hated by everyone",
-        "you are always sad",
-        "you are radiating negative energy",
+        "{{ char }} is hated by everyone",
+        "{{ char }} is always sad",
+        "{{ char }} is radiating negative energy",
     ],
     traits=[
         traits.ARROGANT,
