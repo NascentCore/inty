@@ -381,7 +381,7 @@ async def agent_chat_completions(
         import time
 
         request_start_time = time.time()
-        logger.debug(
+        logger.info(
             f"开始处理聊天请求 - Agent ID: {agent_id}, User ID: {current_user.id}"
         )
         logger.debug(f"请求参数: {request.dict()}")
@@ -390,11 +390,29 @@ async def agent_chat_completions(
             f"request.messages数量: {len(request.messages) if request.messages else 0}"
         )
 
+        # 检查用户聊天次数限制
+        # is_allowed, used_count, daily_limit = await subscription_service.check_chat_limit(
+        #     db, current_user.id
+        # )
+
+        # if not is_allowed:
+        #     raise HTTPException(
+        #         status_code=429,  # Too Many Requests
+        #         detail={
+        #             "message": "今日聊天次数已达上限",
+        #             "used_count": used_count,
+        #             "daily_limit": daily_limit,
+        #             "error_code": "CHAT_LIMIT_EXCEEDED"
+        #         }
+        #     )
+
         # 优化：简化Agent验证，在创建Agent实例时验证
         agent_query_start = time.time()
         logger.debug(f"简化Agent验证: {agent_id}")
 
         # 简化查询，只获取基本字段
+        from sqlalchemy import select
+
         result = await db.execute(
             select(models.Agent.id, models.Agent.name).where(
                 models.Agent.id == agent_id
@@ -406,9 +424,9 @@ async def agent_chat_completions(
             raise HTTPException(status_code=404, detail="Agent not found")
 
         agent_query_time = time.time() - agent_query_start
-        logger.debug(f"Agent验证成功: {agent_basic[1]}, 耗时: {agent_query_time:.3f}秒")
+        logger.info(f"Agent验证成功: {agent_basic[1]}, 耗时: {agent_query_time:.3f}秒")
         # 添加日志记录传入的agent_id
-        logger.debug(f"请求的Agent ID: {agent_id}")
+        logger.info(f"请求的Agent ID: {agent_id}")
 
         # 获取或创建与该Agent的唯一会话
         chat_session_start = time.time()
@@ -419,7 +437,7 @@ async def agent_chat_completions(
             db=db, user_id=current_user.id, agent_id=agent_id
         )
         chat_session_time = time.time() - chat_session_start
-        logger.debug(
+        logger.info(
             f"聊天会话获取成功: chat_id={chat.id}, agent_id={chat.agent_id}, 耗时: {chat_session_time:.3f}秒"
         )
 
@@ -432,7 +450,7 @@ async def agent_chat_completions(
             )
 
         # 记录实际使用的agent_id
-        logger.debug(f"实际聊天的Agent ID: {chat.agent_id}")
+        logger.info(f"实际聊天的Agent ID: {chat.agent_id}")
 
         # 获取最后一条用户消息
         msg_process_start = time.time()
@@ -452,7 +470,7 @@ async def agent_chat_completions(
         # 构建LangChain消息格式
         messages = {"messages": [HumanMessage(content=last_user_message)]}
         msg_process_time = time.time() - msg_process_start
-        logger.debug(f"消息处理耗时: {msg_process_time:.3f}秒")
+        logger.info(f"消息处理耗时: {msg_process_time:.3f}秒")
 
         # 获取或创建Agent实例 - 需要加载完整数据
         agent_get_start = time.time()
@@ -467,7 +485,7 @@ async def agent_chat_completions(
         # 从AgentManager缓存获取Agent实例
         agent = await agent_manager.get_agent(agent_data)
         agent_get_time = time.time() - agent_get_start
-        logger.debug(
+        logger.info(
             f"Agent实例获取成功: {agent_data['name']}, 耗时: {agent_get_time:.3f}秒"
         )
 
@@ -582,10 +600,10 @@ async def agent_chat_completions(
                 logger.info(f"响应包含语音URL: {audio_url}")
 
             total_request_time = time.time() - request_start_time
-            logger.debug(
+            logger.info(
                 f"聊天请求处理成功: agent_id={agent_id}, response_length={len(response_content)}, 总耗时: {total_request_time:.3f}秒"
             )
-            data = {
+            return {
                 "id": f"chatcmpl-{uuid.uuid4().hex[:12]}",
                 "object": "chat.completion",
                 "created": int(time.time()),
@@ -598,7 +616,6 @@ async def agent_chat_completions(
                     + len(response_content.split()),
                 },
             }
-            return schemas.APIResponse.success(data=data)
 
     except Exception as e:
         logger.error(f"聊天请求处理失败: {str(e)}")
