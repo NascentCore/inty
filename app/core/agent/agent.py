@@ -343,21 +343,6 @@ class Agent:
         if user_profile:
             system_messages.append(SystemMessage(content=user_profile))
 
-        if is_char_user_created:
-            output_format_prompt = self._get_effective_output_format_prompt()
-            rendered_prompt = prompt_template.render_prompt_jinja2_template(
-                tmpl=output_format_prompt, char=self.name, user=user_name
-            )
-            system_messages.append(SystemMessage(content=rendered_prompt))
-
-        if is_char_user_created:
-            system_messages.extend(
-                [
-                    SystemMessage(content=prompt)
-                    for prompt in prompts.ROMANTIC_ROLEPLAY_PROMPT.auxiliary_prompts
-                ]
-            )
-
         return system_messages
 
     # 创建一个返回完整消息列表的函数
