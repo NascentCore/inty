@@ -27,21 +27,15 @@ jobs:
         path: |
           ~/.gradle/caches
           ~/.gradle/wrapper
-          .gradle
-          build
-          app/build
-          network/build
-          utils/build
+          android_app/.gradle
+          android_app/build
+          android_app/app/build
+          android_app/network/build
+          android_app/utils/build
         # https://github.com/actions/cache/blob/main/examples.md#java---gradle
         key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}-${{ github.sha }}
         restore-keys: |
           ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}-
-
-    - name: Create keystore.properties
-      env:
-        KEYSTORE_PROPERTIES: ${{ secrets.KEYSTORE_PROPERTIES }}
-      run: |
-        echo "$KEYSTORE_PROPERTIES" > keystore.properties
 
     - name: Create Google Play service account key
       env:
@@ -51,10 +45,12 @@ jobs:
 
     - name: Build APK
       run: |
+        cd android_app
         ./gradlew assembleDebug --stacktrace --info
 
     - id: gen-release-info
       run: |
+        cd android_app
         echo "version_name_with_commit_id=$(./gradlew printVersionWithSuffix | grep 'Version Name with Suffix: ' | awk -F': ' '{print $2}')" >> $GITHUB_OUTPUT
         echo "release_name=$(./gradlew printVersionWithSuffix | grep 'Version Name with Suffix: ' | awk -F': ' '{print $2}' | sed 's/ (/-/; s/)//')" >> $GITHUB_OUTPUT
 
@@ -66,7 +62,7 @@ jobs:
         draft: false
         prerelease: false
         files: |
-          app/build/outputs/apk/debug/app-debug.apk
+          android_app/app/build/outputs/apk/debug/app-debug.apk
         generate_release_notes: true
         make_latest: true
         fail_on_unmatched_files: false
