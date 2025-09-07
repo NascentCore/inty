@@ -25,7 +25,7 @@ from app.models import chat_history
 from app.services.background_task_service import background_task_service
 from app.services.cache_service import cache_service
 from app.utils.openai_client import (
-    get_openai_client,
+    create_openai_client,
     langchain_message_to_openai_message,
 )
 
@@ -642,7 +642,7 @@ class Agent:
                 logger.debug(f"开始Agent推理 - Agent: {self.agent_id}")
 
                 chat_name = f"{user_name}:{self.name}"
-                response = get_openai_client(
+                response = create_openai_client(
                     chat_name=chat_name, labels=labels
                 ).chat.completions.create(
                     messages=openai_messages,

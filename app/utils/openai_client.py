@@ -77,7 +77,7 @@ def chat_completions(messages: list[dict[str, str]], **kwargs):
     return _create_openai_client().chat.completions.create(messages=messages, **kwargs)
 
 
-def get_openai_client(chat_name: str, labels: dict[str, str]):
+def create_openai_client(chat_name: str, labels: dict[str, str]):
     """
     Return an OpenAI client with LangSmith tracing.
     The ENV vars are required by langsmith.
@@ -88,7 +88,12 @@ def get_openai_client(chat_name: str, labels: dict[str, str]):
         "metadata": labels,
     }
     _client = wrappers.wrap_openai(
-        _create_openai_client(), chat_name=chat_name, tracing_extra=tracing_extra
+        # Create a new OpenAI client for each call to avoid nested traces on langsmith.
+        # If this becomes a performance bottleneck, we need to cache the client.
+        # TODO: Monitor performance.
+        _create_openai_client(),
+        chat_name=chat_name,
+        tracing_extra=tracing_extra,
     )
 
     return _client
@@ -122,7 +127,7 @@ if __name__ == "__main__":
     from dotenv import load_dotenv
 
     load_dotenv()
-    client = get_openai_client()
+    client = create_openai_client()
     response = client.chat.completions.create(
         model="openai/gpt-3.5-turbo",
         messages=[{"role": "user", "content": "Hello, world!"}],
