@@ -53,6 +53,11 @@ app = FastAPI(
         if global_config_loaded_from_config_yaml.app.debug
         else {}
     ),
+    contact={
+        "name": "InTy",
+        "url": "http://inty.cc/",
+        "email": "dev@inty.cc",
+    },
 )
 
 # Set all CORS enabled origins
