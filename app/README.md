@@ -9,6 +9,8 @@ stl init
 pip install git+ssh://git@github.com/NascentCore/inty-python.git/
 ```
 
+<https://app.stainless.com/inty/inty/overview> Stainless OpenAPI SDK generation project.
+
 ### Python SDK
 
 ```bash
