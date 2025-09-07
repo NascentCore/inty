@@ -6,6 +6,7 @@
 brew install stainless-api/tap/stl
 stl auth login
 stl init
+pip install git+ssh://git@github.com/NascentCore/inty-python.git/
 ```
 
 ## Deployment
