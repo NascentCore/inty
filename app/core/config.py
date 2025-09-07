@@ -24,7 +24,9 @@ class LoggingConfig:
 
 @dataclass
 class SecurityConfig:
-    secret_key: str = "dummy-secret-key"
+    # This config cannot be changed after it's deployed, otherwise the existing tokens will be invalid.
+    # This is because the token is encrypted using this secret key.
+    secret_key: str = "your-secret-key-here"
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 60 * 24 * 7  # 7 days
 
