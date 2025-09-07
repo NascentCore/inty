@@ -9,6 +9,11 @@ from loguru import logger
 from pydantic import AnyHttpUrl
 
 
+# All config classes' fields should have default values.
+# These default value allow more this to be used without an actual config file.
+# Since config object is used as a global singleton, most code depends on it,
+# but does not actually use the config values, so a default value is OK.
+
 GEMINI_2_5_FLASH = "google/gemini-2.5-flash"
 
 @dataclass
@@ -126,8 +131,8 @@ class AgentConfig:
 
 @dataclass
 class GCSConfig:
-    bucket: str
-    credentials: str
+    bucket: str = "inty"
+    credentials: str = "inty-backend-key.json"
 
 
 @dataclass
