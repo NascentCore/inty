@@ -1,6 +1,4 @@
-import sys
-import types
-from datetime import timedelta, datetime, timezone
+from datetime import timedelta, datetime
 from jose import jwt
 
 from app.core import security
