@@ -10,7 +10,6 @@ import type {
   Agent,
   AgentCreateRequest,
   AgentUpdateRequest,
-  AgentVisibility,
 } from "../types";
 
 interface UseAgentsOptions {
@@ -51,7 +50,6 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
     autoLoad = true,
     enableCache = true,
     cacheKey = `agents_cache_${type}`,
-    useRecommended = false,
   } = options;
 
   // 状态管理
@@ -126,52 +124,25 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
           }
         }
 
-        // 从API获取数据 - 使用现有的agents API
-        let data: Agent[];
+        let response = await api.inty.api.v1.ai.agents.list();
+        let data = response.data;
+        console.log("agent data:", data);
 
-        if (useRecommended) {
-          // 使用推荐API
-          data = await api.agents.getRecommended();
-        } else {
-          // 使用普通列表API，现有API不支持type参数，获取所有
-          let apiResponse = await api.agents.list({ limit: 100 });
-
-          // 处理可能的API响应格式问题
-          if (
-            apiResponse &&
-            typeof apiResponse === "object" &&
-            "data" in apiResponse &&
-            Array.isArray(apiResponse.data)
-          ) {
-            console.log("处理inty-backend API响应格式");
-            data = apiResponse.data;
-          } else if (Array.isArray(apiResponse)) {
-            data = apiResponse;
-          } else {
-            console.error("Unexpected API response format:", apiResponse);
-            data = [];
-          }
-
-          // 前端过滤type（如果现有API不支持的话）
-          if (type !== "all" && Array.isArray(data)) {
-            data = data.filter((agent) => {
-              if (type === "public")
-                return (
-                  agent.visibility === "PUBLIC" || agent.visibility === "public"
-                );
-              if (type === "private")
-                return (
-                  agent.visibility === "PRIVATE" ||
-                  agent.visibility === "private"
-                );
-              return true;
-            });
-          }
+        if (type !== "all" && Array.isArray(data)) {
+          data = data.filter((agent) => {
+            if (type === "public")
+              return (
+                agent.visibility === "PUBLIC"
+              );
+            if (type === "private")
+              return (
+                agent.visibility === "PRIVATE"
+              );
+            return true;
+          });
         }
 
         setAgents(data);
-
-        // 更新缓存
         setCachedData(data);
 
         if (forceRefresh) {
