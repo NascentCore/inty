@@ -184,4 +184,5 @@ inty-firebase-key.json
 *.png
 *.jpeg
 *.jpg
+*.webp
 /.secrets/

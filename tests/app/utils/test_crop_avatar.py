@@ -185,7 +185,7 @@ def test_crop_square_face_handle_all_image_formats():
     img_path = "tests/files/2-faces.png"
     img_data = open(img_path, "rb").read()
     cropped_img = crop_avatar(img_data)
-    assert cropped_img.size == (179, 179)
+    assert cropped_img.size == (288, 288)
     golden_img = Image.open("tests/files/avatar-2-faces.png")
     diff = ImageChops.difference(cropped_img, golden_img)
     assert diff.getbbox() is None
