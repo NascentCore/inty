@@ -29,7 +29,7 @@ from app.schemas.subscription import (
 )
 # SQLAlchemy 模型需要用不同的别名
 from app.models.subscription import UserSubscription as UserSubscriptionModel
-from app.services.subscription_service import subscription_service
+from app.services.global_services import subscription_service
 
 router = APIRouter(prefix="/subscription", route_class=LoggerRoute)
 logger = logging.getLogger(__name__)

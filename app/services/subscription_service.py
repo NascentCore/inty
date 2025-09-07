@@ -1778,9 +1778,3 @@ class SubscriptionService:
         else:
             # 基本数据类型（str, int, float, bool, None）
             return data
-
-
-from app.services.global_services import google_play_service
-
-# 全局实例
-subscription_service = SubscriptionService(google_play_service)
