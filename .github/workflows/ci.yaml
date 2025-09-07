@@ -67,6 +67,10 @@ jobs:
           echo "  port: 5432" >> config.yaml
           echo "  user: postgres" >> config.yaml
 
+      - name: Create inty-backend-key.json
+        run: |
+          echo "{}" > inty-backend-key.json
+
       - name: Test Alembic versions
         run: |          
           alembic upgrade head
