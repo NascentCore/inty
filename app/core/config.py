@@ -38,11 +38,11 @@ class SecurityConfig:
 
 @dataclass
 class DatabaseSettings:
-    host: str
-    port: int
-    user: str
-    password: str
-    db: str
+    host: str = "localhost"
+    port: int = 5432
+    user: str = "postgres"
+    password: str = "sxwl666!"
+    db: str = "inty"
     pool_size: int = 50
     max_overflow: int = 20
     pool_timeout: int = 10
@@ -77,6 +77,7 @@ class AppConfig:
     name: str = "inty-backend"
     debug: bool = True
     debug_messages: bool = True
+    # DEPRECATED: Do not use.
     api_v1_prefix: str = "/api/v1"
     backend_cors_origins: List[AnyHttpUrl] = None
     version: str = "1.0.2"
@@ -137,15 +138,15 @@ class GCSConfig:
 
 @dataclass
 class FirebaseConfig:
-    service_account_path: str
+    service_account_path: str = "inty-firebase-key.json"
 
 
 @dataclass
 class GooglePlayConfig:
     """Google Play配置"""
 
-    service_account_key: str  # 服务账号密钥JSON字符串
-    package_name: str  # 应用包名
+    service_account_key: str = "inty-backend-key.json"
+    package_name: str = "com.ai.intellimate"
     webhook_secret: Optional[str] = None  # Webhook密钥（可选）
     # 版本检查相关配置
     enable_version_check: bool = True  # 是否启用版本检查
@@ -162,7 +163,7 @@ class GooglePlayConfig:
 class ElevenLabsConfig:
     """ElevenLabs语音生成配置"""
 
-    api_key: str
+    api_key: str = "<fill-in-key>"
     model: str = "eleven_multilingual_v2"
     voice_id: str = "JBFqnCBsd6RMkjVDRZzb"  # 默认语音ID
     output_format: str = "mp3_44100_128"
