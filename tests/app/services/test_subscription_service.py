@@ -6,6 +6,7 @@ from sqlalchemy.sql import Select
 from datetime import datetime, timezone
 
 from app.schemas.user import User
+from app.services.google_play_service import GooglePlayService
 from app.services.subscription_service import SubscriptionService
 from app.models.agent import Agent
 from app.schemas.subscription import SubscriptionStatusResponse
@@ -19,12 +20,13 @@ class TestSubscriptionService:
     async def test_check_agent_creation_limit_success(self):
         """Test successful agent creation limit check for subscribed user"""
         # Arrange
+        mock_google_play_service = AsyncMock(spec=GooglePlayService)
         mock_db = AsyncMock(spec=AsyncSession)
         mock_subscription_status = MagicMock(spec=SubscriptionStatusResponse)
         mock_subscription_status.agent_creation_limit = 5
 
         # Mock the subscription status call
-        subscription_service = SubscriptionService()
+        subscription_service = SubscriptionService(mock_google_play_service)
         subscription_service.get_user_subscription_status = AsyncMock(
             return_value=mock_subscription_status
         )
@@ -70,8 +72,9 @@ class TestSubscriptionService:
     @pytest.mark.asyncio
     async def test_check_image_gen_limit_success_superuser(self):
         """Test successful image generation limit check for superuser"""
+        mock_google_play_service = AsyncMock(spec=GooglePlayService)
 
-        subscription_service = SubscriptionService()
+        subscription_service = SubscriptionService(mock_google_play_service)
         user = User(
             id="user-123",
             readable_id="user123",
@@ -93,12 +96,13 @@ class TestSubscriptionService:
     async def test_check_agent_creation_limit_free_user(self):
         """Test agent creation limit check for free user who has exceeded the limit"""
         # Arrange
+        mock_google_play_service = AsyncMock(spec=GooglePlayService)
         mock_db = AsyncMock(spec=AsyncSession)
         mock_subscription_status = MagicMock(spec=SubscriptionStatusResponse)
         mock_subscription_status.agent_creation_limit = 4  # Free user limit
 
         # Mock the subscription status call
-        subscription_service = SubscriptionService()
+        subscription_service = SubscriptionService(mock_google_play_service)
         subscription_service.get_user_subscription_status = AsyncMock(
             return_value=mock_subscription_status
         )

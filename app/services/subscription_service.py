@@ -37,15 +37,19 @@ from app.schemas.subscription import (
 )
 from app.schemas.subscription import UserSubscription as UserSubscriptionSchema
 from app.schemas.subscription import UserSubscriptionCreate
-from app.services.google_play_service import google_play_service
+from app.services.google_play_service import GooglePlayService, google_play_service
 from app.services.superuser_check import SUPERUSER_LIMIT_CHECK_RESULT, is_superuser
 from app.services.system_settings_service import system_settings_service
 
-logger = logging.getLogger(__name__)
+from loguru import logger
 
 
 class SubscriptionService:
     """订阅服务"""
+
+    def __init__(self, google_play_service: GooglePlayService):
+        """初始化订阅服务，使用注入方便测试"""
+        self.google_play_service = google_play_service
 
     async def get_subscription_plans(
         self, db: AsyncSession, include_inactive: bool = False
@@ -235,7 +239,7 @@ class SubscriptionService:
                 # 判断订阅的详细状态
                 subscription_status = "subscribed"
                 will_auto_renew = subscription.auto_renew
-                
+
                 if subscription.status == SubscriptionStatus.CANCELLED:
                     subscription_status = "subscribed_expiring"  # 已取消但未到期
                     will_auto_renew = False
@@ -331,8 +335,10 @@ class SubscriptionService:
                 )
 
             # 调用Google Play API验证购买
-            is_valid, purchase_info = google_play_service.verify_subscription_purchase(
-                purchase_request.product_id, purchase_request.purchase_token
+            is_valid, purchase_info = (
+                self.google_play_service.verify_subscription_purchase(
+                    purchase_request.product_id, purchase_request.purchase_token
+                )
             )
 
             if not is_valid:
@@ -363,7 +369,7 @@ class SubscriptionService:
 
             # 检查用户是否有已取消但未到期的订阅
             current_subscription = await self.get_user_current_subscription(db, user_id)
-            
+
             if current_subscription and current_subscription.status == SubscriptionStatus.CANCELLED:
                 # 如果是重新订阅同一个计划，恢复现有订阅
                 if current_subscription.plan_id == plan.id:
@@ -371,24 +377,24 @@ class SubscriptionService:
                     current_subscription.auto_renew = True
                     current_subscription.google_play_purchase_token = purchase_request.purchase_token
                     current_subscription.google_play_order_id = purchase_request.order_id
-                    
+
                     # 更新订阅时间信息
                     if purchase_info.get("start_time"):
                         current_subscription.start_date = purchase_info.get("start_time")
                     if purchase_info.get("expiry_time"):
                         current_subscription.end_date = purchase_info.get("expiry_time")
-                    
+
                     # 更新元数据
                     extra_data = current_subscription.extra_data or {}
                     extra_data["resubscribed_at"] = datetime.now(timezone.utc).isoformat()
                     extra_data["google_play_info"] = self._make_json_serializable(purchase_info)
                     current_subscription.extra_data = extra_data
-                    
+
                     await db.commit()
                     await db.refresh(current_subscription)
-                    
+
                     logger.info(f"恢复已取消的订阅 - 用户: {user_id}, 订阅: {current_subscription.id}")
-                    
+
                     # 重新查询订阅记录以确保关联对象被正确加载
                     result = await db.execute(
                         select(UserSubscription)
@@ -463,7 +469,7 @@ class SubscriptionService:
                 logger.info(f"新订阅创建成功 - 用户: {user_id}, 订阅: {subscription.id}")
 
             # 确认购买（向Google Play发送确认）
-            google_play_service.acknowledge_subscription(
+            self.google_play_service.acknowledge_subscription(
                 purchase_request.product_id, purchase_request.purchase_token
             )
 
@@ -514,7 +520,7 @@ class SubscriptionService:
                 # 尝试在Google Play端取消订阅
                 try:
                     if subscription.google_play_purchase_token and subscription.plan:
-                        google_play_service.cancel_subscription(
+                        self.google_play_service.cancel_subscription(
                             subscription.plan.google_play_product_id,
                             subscription.google_play_purchase_token,
                         )
@@ -587,7 +593,7 @@ class SubscriptionService:
                 google_play_success = False
                 try:
                     if subscription.google_play_purchase_token and subscription.plan:
-                        google_play_service.cancel_subscription(
+                        self.google_play_service.cancel_subscription(
                             subscription.plan.google_play_product_id,
                             subscription.google_play_purchase_token,
                         )
@@ -758,7 +764,7 @@ class SubscriptionService:
             if subscription_status.chat_24h_limit is not None:
                 now = datetime.now(timezone.utc)
                 hours_24_ago = now - timedelta(hours=24)
-                
+
                 chat_24h_count_result = await db.execute(
                     select(func.sum(SubscriptionUsage.usage_count)).where(
                         and_(
@@ -846,7 +852,7 @@ class SubscriptionService:
                 # 获取过去24小时内的聊天次数
                 now = datetime.now(timezone.utc)
                 hours_24_ago = now - timedelta(hours=24)
-                
+
                 chat_24h_count_result = await db.execute(
                     select(func.sum(SubscriptionUsage.usage_count)).where(
                         and_(
@@ -1101,7 +1107,7 @@ class SubscriptionService:
                 try:
                     # 使用Google Play API验证购买
                     is_valid, purchase_info = (
-                        google_play_service.verify_subscription_purchase(
+                        self.google_play_service.verify_subscription_purchase(
                             plan.google_play_product_id, purchase_token
                         )
                     )
@@ -1301,7 +1307,7 @@ class SubscriptionService:
 
             # 确认购买（向Google Play发送确认）
             try:
-                google_play_service.acknowledge_subscription(
+                self.google_play_service.acknowledge_subscription(
                     plan.google_play_product_id, purchase_token
                 )
             except Exception as e:
@@ -1345,7 +1351,7 @@ class SubscriptionService:
 
             if notification_type in [1, 2, 4, 7]:  # 恢复、续费、购买、重启
                 subscription.status = SubscriptionStatus.ACTIVE
-                
+
                 # 恢复或重启时重新启用自动续费
                 if notification_type in [1, 7]:  # SUBSCRIPTION_RECOVERED, SUBSCRIPTION_RESTARTED
                     subscription.auto_renew = True
@@ -1375,7 +1381,7 @@ class SubscriptionService:
                 return  # 退款处理包含了commit，直接返回
 
             # 获取最新的订阅信息
-            latest_info = google_play_service.get_subscription_details(
+            latest_info = self.google_play_service.get_subscription_details(
                 subscription.plan.google_play_product_id,
                 subscription.google_play_purchase_token,
             )
@@ -1633,7 +1639,7 @@ class SubscriptionService:
         """
         try:
             recovered_count = 0
-            
+
             # 查找使用相同邮箱的其他用户的活跃订阅
             if email:
                 email_users_result = await db.execute(
@@ -1646,7 +1652,7 @@ class SubscriptionService:
                     )
                 )
                 email_users = email_users_result.scalars().all()
-                
+
                 # 查找这些用户的活跃订阅
                 for old_user in email_users:
                     subscriptions_result = await db.execute(
@@ -1662,12 +1668,12 @@ class SubscriptionService:
                         )
                     )
                     subscriptions = subscriptions_result.scalars().all()
-                    
+
                     # 转移订阅到当前用户
                     for subscription in subscriptions:
                         old_user_id = subscription.user_id
                         subscription.user_id = user_id
-                        
+
                         # 更新元数据记录恢复信息
                         extra_data = subscription.extra_data or {}
                         extra_data["recovered_subscription"] = {
@@ -1677,10 +1683,10 @@ class SubscriptionService:
                             "user_email": email
                         }
                         subscription.extra_data = self._make_json_serializable(extra_data)
-                        
+
                         recovered_count += 1
                         logger.info(f"恢复订阅记录: {subscription.id} 从用户 {old_user_id} 到用户 {user_id}")
-            
+
             # 查找使用相同Google ID的其他用户的活跃订阅
             if google_id:
                 google_users_result = await db.execute(
@@ -1693,16 +1699,16 @@ class SubscriptionService:
                     )
                 )
                 google_users = google_users_result.scalars().all()
-                
+
                 # 查找这些用户的活跃订阅（避免重复处理已通过邮箱处理的用户）
                 processed_user_ids = set()
                 if email:
                     processed_user_ids.update([u.id for u in email_users])
-                
+
                 for old_user in google_users:
                     if old_user.id in processed_user_ids:
                         continue  # 已经通过邮箱处理过
-                        
+
                     subscriptions_result = await db.execute(
                         select(UserSubscription).where(
                             and_(
@@ -1716,12 +1722,12 @@ class SubscriptionService:
                         )
                     )
                     subscriptions = subscriptions_result.scalars().all()
-                    
+
                     # 转移订阅到当前用户
                     for subscription in subscriptions:
                         old_user_id = subscription.user_id
                         subscription.user_id = user_id
-                        
+
                         # 更新元数据记录恢复信息
                         extra_data = subscription.extra_data or {}
                         extra_data["recovered_subscription"] = {
@@ -1731,16 +1737,16 @@ class SubscriptionService:
                             "google_id": google_id
                         }
                         subscription.extra_data = self._make_json_serializable(extra_data)
-                        
+
                         recovered_count += 1
                         logger.info(f"恢复订阅记录: {subscription.id} 从用户 {old_user_id} 到用户 {user_id}")
-            
+
             if recovered_count > 0:
                 await db.commit()
                 logger.info(f"用户 {user_id} 恢复了 {recovered_count} 个订阅记录")
-            
+
             return recovered_count
-            
+
         except Exception as e:
             await db.rollback()
             logger.error(f"恢复孤立订阅失败: {str(e)}")
@@ -1775,4 +1781,4 @@ class SubscriptionService:
 
 
 # 全局实例
-subscription_service = SubscriptionService()
+subscription_service = SubscriptionService(google_play_service)
