@@ -651,7 +651,3 @@ class GooglePlayService:
         except Exception as e:
             logger.warning(f"版本代码比较失败，将客户端版本视为需要更新: {e}")
             return True  # 如果比较失败，保守起见要求更新
-
-
-# 全局实例
-google_play_service = GooglePlayService()

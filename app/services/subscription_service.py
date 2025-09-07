@@ -37,7 +37,7 @@ from app.schemas.subscription import (
 )
 from app.schemas.subscription import UserSubscription as UserSubscriptionSchema
 from app.schemas.subscription import UserSubscriptionCreate
-from app.services.google_play_service import GooglePlayService, google_play_service
+from app.services.google_play_service import GooglePlayService
 from app.services.superuser_check import SUPERUSER_LIMIT_CHECK_RESULT, is_superuser
 from app.services.system_settings_service import system_settings_service
 
@@ -1779,6 +1779,8 @@ class SubscriptionService:
             # 基本数据类型（str, int, float, bool, None）
             return data
 
+
+from app.services.global_services import google_play_service
 
 # 全局实例
 subscription_service = SubscriptionService(google_play_service)
