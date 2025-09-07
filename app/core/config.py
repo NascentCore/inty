@@ -38,11 +38,11 @@ class SecurityConfig:
 
 @dataclass
 class DatabaseSettings:
-    host: str
-    port: int
-    user: str
-    password: str
-    db: str
+    host: str = "localhost"
+    port: int = 5432
+    user: str = "postgres"
+    password: str = "sxwl666!"
+    db: str = "inty"
     pool_size: int = 50
     max_overflow: int = 20
     pool_timeout: int = 10
@@ -77,6 +77,7 @@ class AppConfig:
     name: str = "inty-backend"
     debug: bool = True
     debug_messages: bool = True
+    # DEPRECATED: Do not use.
     api_v1_prefix: str = "/api/v1"
     backend_cors_origins: List[AnyHttpUrl] = None
     version: str = "1.0.2"

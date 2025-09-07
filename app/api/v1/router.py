@@ -15,7 +15,9 @@ from app.api.v1.endpoints import (
     version,
 )
 
-api_router = APIRouter(prefix="/api/v1")
+API_V1_PREFIX = "/api/v1"
+
+api_router = APIRouter(prefix=API_V1_PREFIX)
 
 api_router.include_router(auth.router, tags=["auth"])
 api_router.include_router(users.router, tags=["users"])

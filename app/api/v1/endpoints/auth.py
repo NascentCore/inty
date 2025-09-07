@@ -6,12 +6,12 @@ from fastapi import APIRouter, Depends
 from fastapi.security import OAuth2PasswordBearer
 from google.auth.transport import requests as google_requests
 from google.oauth2 import id_token
-from loguru import logger
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import schemas
 from app.api.utils.logger_route import LoggerRoute
+from app.api.v1.router import API_V1_PREFIX
 from app.core.config import global_config_loaded_from_config_yaml
 from app.core.security import create_access_token
 from app.core.uuid import uid
@@ -23,70 +23,10 @@ from app.schemas.response import APIResponse
 from app.services.subscription_service import subscription_service
 from app.services.user_service import create_guest_user, generate_next_readable_id
 
+from loguru import logger
+
 router = APIRouter(prefix="/auth", route_class=LoggerRoute)
-oauth2_scheme = OAuth2PasswordBearer(
-    tokenUrl=f"{global_config_loaded_from_config_yaml.app.api_v1_prefix}/auth/login"
-)
-
-
-# @router.post("/register", response_model=schemas.Token)
-# async def register(
-#     *,
-#     db: Session = Depends(get_db),
-#     user_in: schemas.UserCreate,
-# ) -> Any:
-#     """注册新用户"""
-#     try:
-#         # 处理手机号注册
-#         user = register_user(db, user_in)
-#         access_token = create_access_token(user.id)
-#         return {
-#             "code": 200,
-#             "message": "success",
-#             "data": {
-#                 "token": access_token,
-#                 "user": {
-#                     "id": user.id,
-#                     "nickname": user.nickname,
-#                     "avatar": user.avatar,
-#                     "email": user.email,
-#                     "phone": user.phone,
-#                     "auth_type": user.auth_type,
-#                     "is_new_user": True
-#                 }
-#             }
-#         }
-#     except Exception as e:
-#         logger.error(f"注册失败: {str(e)}")
-#         logger.error(f"错误堆栈: {traceback.format_exc()}")
-#         raise HTTPException(
-#             status_code=400,
-#             detail=str(e)
-#         )
-
-
-# @router.post("/login", response_model=schemas.Token)
-# def login(
-#     *,
-#     db: Session = Depends(get_db),
-#     login_in: schemas.LoginRequest,
-# ) -> Any:
-#     """
-#     用户登录
-#     """
-#     user = get_user_by_phone(db, login_in.phone)
-#     if not user:
-#         raise HTTPException(
-#             status_code=status.HTTP_401_UNAUTHORIZED,
-#             detail="Incorrect phone number or verification code",
-#         )
-#     # TODO: 验证验证码
-#     access_token = create_access_token(user.id)
-#     return {
-#         "access_token": access_token,
-#         "token_type": "bearer",
-#         "user": user
-#     }
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{API_V1_PREFIX}/auth/login")
 
 
 @router.post("/guest", response_model=APIResponse[GuestResponse])
