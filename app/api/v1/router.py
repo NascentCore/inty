@@ -14,8 +14,8 @@ from app.api.v1.endpoints import (
     users,
     version,
 )
+from app.core.config import API_V1_PREFIX
 
-API_V1_PREFIX = "/api/v1"
 
 api_router = APIRouter(prefix=API_V1_PREFIX)
 

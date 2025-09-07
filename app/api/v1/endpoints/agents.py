@@ -22,8 +22,6 @@ from app.schemas.character_card import (
     CharacterCardImportResponse,
     CharacterCardValidationResponse,
 )
-
-# 移除未使用的导入
 from app.schemas.response import (
     APIResponse,
     BusinessErrorCode,
@@ -31,13 +29,11 @@ from app.schemas.response import (
 )
 from app.services import agent_service
 from app.services.character_card_service import character_card_service
-from app.services.subscription_service import SubscriptionService
+from app.services.subscription_service import subscription_service
 from app.utils.image import ImageFormat, AspectRatio
 
-router = APIRouter(prefix="/ai/agents", route_class=LoggerRoute)
 
-# 创建订阅服务实例
-subscription_service = SubscriptionService()
+router = APIRouter(prefix="/ai/agents", route_class=LoggerRoute)
 
 
 @router.get(

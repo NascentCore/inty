@@ -11,8 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import schemas
 from app.api.utils.logger_route import LoggerRoute
-from app.api.v1.router import API_V1_PREFIX
-from app.core.config import global_config_loaded_from_config_yaml
+from app.core.config import global_config_loaded_from_config_yaml, API_V1_PREFIX
 from app.core.security import create_access_token
 from app.core.uuid import uid
 from app.db.session import get_async_db
