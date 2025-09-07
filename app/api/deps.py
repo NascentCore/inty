@@ -14,7 +14,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing_extensions import deprecated
 
 from app import models, schemas
-from app.api.v1.router import API_V1_PREFIX
 from app.core import security
 from app.core.config import global_config_loaded_from_config_yaml
 from app.db.base import SessionLocal
@@ -24,7 +23,7 @@ from app.schemas.token import TokenPayload
 
 from loguru import logger
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{API_V1_PREFIX}/auth/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
 
 @deprecated("Use app.db.session get_async_db instead")

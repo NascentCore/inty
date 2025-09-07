@@ -15,6 +15,7 @@ from pydantic import AnyHttpUrl
 # but does not actually use the config values, so a default value is OK.
 
 GEMINI_2_5_FLASH = "google/gemini-2.5-flash"
+API_V1_PREFIX = "/api/v1"
 
 @dataclass
 class LoggingConfig:

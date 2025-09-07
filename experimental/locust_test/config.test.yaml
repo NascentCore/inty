@@ -1,7 +1,6 @@
 app:
   name: "InTy"
   debug: true
-  api_v1_prefix: "/api/v1"
   backend_cors_origins: ["http://localhost:3000", "http://localhost:8000"]
 
 security:
