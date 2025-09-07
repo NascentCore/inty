@@ -17,6 +17,14 @@ pip install git+ssh://git@github.com/NascentCore/inty-python.git/
 * Models are types reused throughout the SDKs
 * Resources are a collection actual artifacts used in Client code.
 
+There are 3 phases on Stainless:
+
+1. Generate SDK, pushed to Stainless' internal github repo
+2. Push to our own repo from Stainless' internal github repo
+3. [Do not use] Push to language specific registry (pip/npm/maven)
+
+<img width="800" height="1150" alt="image" src="https://github.com/user-attachments/assets/8c9c6098-921f-4c7e-a409-bc460805424c" />
+
 ### Python SDK
 
 ```bash
