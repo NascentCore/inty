@@ -29,7 +29,7 @@ from app.schemas.response import (
 )
 from app.services import agent_service
 from app.services.character_card_service import character_card_service
-from app.services.subscription_service import subscription_service
+from app.services.global_services import subscription_service
 from app.utils.image import ImageFormat, AspectRatio
 
 

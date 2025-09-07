@@ -18,6 +18,7 @@ from app.models.subscription import SubscriptionStatus, UserSubscription
 from app.models.user import AuthType, DeviceToken
 from app.schemas import UserUpdate
 from app.services.cache_service import cache_service
+from app.services.global_services import subscription_service
 
 logger = logging.getLogger(__name__)
 
@@ -318,9 +319,6 @@ async def delete_user_account(
 
         if not user:
             return {"success": False, "message": "用户不存在", "user_id": user_id}
-
-        # 获取用户当前订阅状态
-        from app.services.subscription_service import subscription_service
 
         subscription_status_response = (
             await subscription_service.get_user_subscription_status(db, user_id)

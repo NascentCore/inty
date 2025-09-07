@@ -23,7 +23,7 @@ from app.schemas.response import BusinessErrorCode, create_business_error_respon
 from app.services import agent_service, chat_history_service, chat_service
 from app.services.async_voice_service import async_voice_service
 from app.services.chat_service import generate_session_id
-from app.services.subscription_service import subscription_service
+from app.services.global_services import subscription_service
 from app.services.voice_cache_service import voice_cache_service
 from app.services.voice_cleanup_service import voice_cleanup_service
 from app.services.voice_service import voice_service
