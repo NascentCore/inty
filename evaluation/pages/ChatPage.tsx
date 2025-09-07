@@ -39,7 +39,6 @@ import {
 } from "@ant-design/icons";
 import { useAgents } from "../hooks/useAgents";
 import api from "../services/api";
-import intyClient from "../services/api";
 import type { Agent, ChatMessage } from "../types";
 import VoicePlayer from "../components/common/VoicePlayer";
 
