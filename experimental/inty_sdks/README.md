@@ -4,7 +4,17 @@
 
 ```bash
 pip install git+ssh://git@github.com/NascentCore/inty-python.git/
+python experimental/inty_sdks/example.py
 ```
 
-Typescript
-Kotlin
+## Typescript
+
+```bash
+cd experimental/inty_sdks
+npm install git+ssh://git@github.com:NascentCore/inty-typescript.git
+npx ts-node example.ts
+```
+
+## Kotlin
+
+TODO: Add details

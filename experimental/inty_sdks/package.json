@@ -1,0 +1,27 @@
+{
+  "name": "inty-backend",
+  "version": "1.0.0",
+  "description": "```text IntelliMaate: Ultimate companionship, reimagined with AI",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs",
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/NascentCore/inty-backend.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/NascentCore/inty-backend/issues"
+  },
+  "homepage": "https://github.com/NascentCore/inty-backend#readme",
+  "dependencies": {
+    "dotenv": "^17.2.2"
+  }
+}
