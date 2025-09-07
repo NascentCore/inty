@@ -143,6 +143,8 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
         }
 
         setAgents(data);
+
+        // 更新缓存
         setCachedData(data);
 
         if (forceRefresh) {
