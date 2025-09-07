@@ -9,6 +9,14 @@ stl init
 pip install git+ssh://git@github.com/NascentCore/inty-python.git/
 ```
 
+* <https://app.stainless.com/inty/inty/overview> Stainless OpenAPI SDK generation project.
+
+[Stainless core concepts](https://www.stainless.com/docs/guides/configure#core-concepts)
+
+* Methods are invoked for actual APIs [defined in YAML](stainless.yml)
+* Models are types reused throughout the SDKs
+* Resources are a collection actual artifacts used in Client code.
+
 ### Python SDK
 
 ```bash
