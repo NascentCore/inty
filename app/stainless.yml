@@ -1,0 +1,202 @@
+# yaml-language-server: $schema=https://app.stainless.com/config.schema.json
+
+organization:
+  # Name of your organization or company, used to determine the name of the client
+  # and headings.
+  name: inty
+  # Link to your API documentation.
+  docs: ''
+  # Contact email for bug reports, questions, and support requests.
+  contact: ''
+
+# `targets` define the output targets and their customization options, such as
+# whether to emit the Node SDK and what it's package name should be.
+targets:
+  python:
+    package_name: inty
+    production_repo: null
+    publish:
+      pypi: false
+
+# `environments` are a map of the name of the environment (e.g. "sandbox",
+# "production") to the corresponding url to use.
+environments:
+  production: https://api.example.com
+
+# `resources` define the structure and organization for your API, such as how
+# methods and models are grouped together and accessed. See the [configuration
+# guide] for more information.
+#
+# [configuration guide]: https://www.stainless.com/docs/guides/configure#resources
+resources:
+  api:
+    # Subresources define resources that are nested within another for more powerful
+    # logical groupings, e.g. `cards.payments`.
+    subresources:
+      v1:
+        methods:
+          list_notifications: get /api/v1/notifications/
+          upload_image: post /api/v1/images
+        subresources:
+          auth:
+            # Configure the methods defined in this resource. Each key in the object is the
+            # name of the method and the value is either an endpoint (for example, `get /foo`)
+            # or an object with more detail.
+            #
+            # [reference]: https://www.stainless.com/docs/reference/config#method
+            methods:
+              create_guest: post /api/v1/auth/guest
+            subresources:
+              google:
+                methods:
+                  login: post /api/v1/auth/google/login
+          users:
+            methods:
+              delete_account: post /api/v1/users/delete-account
+            subresources:
+              profile:
+                # Configure the models--named types--defined in the resource. Each key in the
+                # object is the name of the model and the value is either the name of a schema in
+                # `#/components/schemas` or an object with more detail.
+                #
+                # [reference]: https://www.stainless.com/docs/reference/config#model
+                models:
+                  gender: '#/components/schemas/Gender'
+                  user: '#/components/schemas/User'
+                methods:
+                  retrieve: get /api/v1/users/profile
+                  update: put /api/v1/users/profile
+              device:
+                models:
+                  api_response: '#/components/schemas/APIResponse'
+                methods:
+                  register: post /api/v1/users/device/register
+              deletion:
+                methods:
+                  check_eligibility: get /api/v1/users/deletion/check
+          report:
+            models:
+              api_response_dict: '#/components/schemas/APIResponse_dict_'
+            methods:
+              upload_image: post /api/v1/report/upload-image
+              create: post /api/v1/report/
+          ai:
+            subresources:
+              agents:
+                models:
+                  api_response_agent: '#/components/schemas/APIResponse_Agent_'
+                  api_response_pagination_data_agent: '#/components/schemas/APIResponse_PaginationData_Agent__'
+                  agent: '#/components/schemas/Agent'
+                  agent_visibility: '#/components/schemas/AgentVisibility'
+                  model_config: '#/components/schemas/ModelConfig'
+                methods:
+                  list: get /api/v1/ai/agents/me
+                  search: get /api/v1/ai/agents/search
+                  recommend: get /api/v1/ai/agents/recommend
+                  following: get /api/v1/ai/agents/following
+                  create: post /api/v1/ai/agents
+                  retrieve: get /api/v1/ai/agents/{agent_id}
+                  update: put /api/v1/ai/agents/{agent_id}
+                  delete: delete /api/v1/ai/agents/{agent_id}
+                  follow_agent: post /api/v1/ai/agents/{agent_id}/follow
+                  unfollow_agent: delete /api/v1/ai/agents/{agent_id}/follow
+          settings:
+            models:
+              settings: '#/components/schemas/Settings'
+            methods:
+              retrieve: get /api/v1/settings/
+              update: put /api/v1/settings/
+          subscription:
+            models:
+              api_response_subscription_status: '#/components/schemas/APIResponse_SubscriptionStatusResponse_'
+              api_response_usage_statistics: '#/components/schemas/APIResponse_UsageStatisticsResponse_'
+              user_subscription: '#/components/schemas/UserSubscription'
+            methods:
+              list_plans: get /api/v1/subscription/plans
+              get_status: get /api/v1/subscription/status
+              get_usage: get /api/v1/subscription/usage
+              verify: post /api/v1/subscription/verify
+              webhook: post /api/v1/subscription/webhook
+            subresources:
+              admin:
+                methods:
+                  process_refund: post /api/v1/subscription/admin/refund
+                subresources:
+                  plans:
+                    models:
+                      subscription_plan: '#/components/schemas/SubscriptionPlan'
+                      subscription_plan_type: '#/components/schemas/SubscriptionPlanType'
+                    methods:
+                      create: post /api/v1/subscription/admin/plans
+                      list: get /api/v1/subscription/admin/plans
+                  users:
+                    methods:
+                      get_subscription_status: get
+                        /api/v1/subscription/admin/users/{user_id}/subscription
+                      get_usage_statistics: get /api/v1/subscription/admin/users/{user_id}/usage
+          version:
+            methods:
+              check: post /api/v1/version/check
+          chats:
+            models:
+              chat: '#/components/schemas/Chat'
+            methods:
+              list: get /api/v1/chats/
+              create: post /api/v1/chats/
+              delete: delete /api/v1/chats/{chat_id}
+              create_completion: post /api/v1/chat/completions/{agent_id}
+            subresources:
+              agents:
+                models:
+                  chat_settings: '#/components/schemas/ChatSettings'
+                methods:
+                  get_messages: get /api/v1/chats/agents/{agent_id}/messages
+                  get_settings: get /api/v1/chats/agents/{agent_id}/settings
+
+  $client:
+    methods:
+      health_check: get /
+
+settings:
+  # All generated integration tests that hit the prism mock http server are marked
+  # as skipped. Removing this setting or setting it to false enables tests, but
+  # doing so may result in test failures due to bugs in the test server.
+  #
+  # [prism mock http server]: https://stoplight.io/open-source/prism
+  disable_mock_tests: true
+  license: Apache-2.0
+
+# `client_settings` define settings for the API client, such as extra constructor
+# arguments (used for authentication), retry behavior, idempotency, etc.
+client_settings:
+  opts:
+    api_key:
+      type: string
+      nullable: false
+      auth:
+        security_scheme: Bearer
+      description: "
+
+        \            输入格式为: your_token
+
+        \            注意: 不需要Bearer前缀
+
+        \            "
+      read_env: INTY_API_KEY
+
+security:
+  - Bearer: []
+
+# `readme` is used to configure the code snippets that will be rendered in the
+# README.md of various SDKs. In particular, you can change the `headline`
+# snippet's endpoint and the arguments to call it with.
+readme:
+  example_requests:
+    default:
+      type: request
+      endpoint: post /api/v1/auth/guest
+      params: {}
+    headline:
+      type: request
+      endpoint: post /api/v1/auth/guest
+      params: {}

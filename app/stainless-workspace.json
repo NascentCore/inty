@@ -1,0 +1,10 @@
+{
+  "project": "inty",
+  "openapi_spec": "./openapi.json",
+  "stainless_config": "./stainless.yml",
+  "targets": {
+    "python": {
+      "output_path": "./sdk"
+    }
+  }
+}
