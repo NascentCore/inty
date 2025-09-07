@@ -1,5 +1,24 @@
 # App
 
+## Stainless OpenAPI generator
+
+```bash
+brew install stainless-api/tap/stl
+stl auth login
+stl init
+pip install git+ssh://git@github.com/NascentCore/inty-python.git/
+```
+
+### Python SDK
+
+```bash
+pip install git+ssh://git@github.com/NascentCore/inty-python.git/
+```
+
+### Typescript
+
+### Kotlin
+
 ## Deployment
 
 * Run [deploy_prd.yml](../.github/workflows/deploy_prd.yml) to deploy the app to production server
