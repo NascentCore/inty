@@ -73,4 +73,4 @@ jobs:
 
       - name: Run python tests
         run: |
-          PYTHONPATH=$(pwd) pytest app/ -v --tb=short -s
+          pytest tests/ -v --tb=short -s
