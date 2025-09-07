@@ -49,16 +49,18 @@ assert os.getenv("LANGCHAIN_API_KEY"), "LANGCHAIN_API_KEY must be set"
 assert os.getenv("LANGSMITH_TRACING_V2"), "LANGSMITH_TRACING_V2 must be set"
 assert os.getenv("LANGSMITH_PROJECT"), "LANGSMITH_PROJECT must be set"
 
-_vanilla_openai_client = OpenAI(
-    base_url=global_config_loaded_from_config_yaml.agent.base_url,
-    api_key=global_config_loaded_from_config_yaml.agent.api_key,
-    # Extra headers used for tracking on openrouter.ai.
-    default_headers={
-        # This appears as app name on openrouter.ai's activity page.
-        "HTTP-Referer": f"{global_config_loaded_from_config_yaml.app.name_for_openrouter}",  # Optional. Site URL for rankings on openrouter.ai.
-        "X-Title": global_config_loaded_from_config_yaml.app.name,  # Optional. Site title for rankings on openrouter.ai.
-    },
-)
+
+def _create_openai_client():
+    return OpenAI(
+        base_url=global_config_loaded_from_config_yaml.agent.base_url,
+        api_key=global_config_loaded_from_config_yaml.agent.api_key,
+        # Extra headers used for tracking on openrouter.ai.
+        default_headers={
+            # This appears as app name on openrouter.ai's activity page.
+            "HTTP-Referer": f"{global_config_loaded_from_config_yaml.app.name_for_openrouter}",  # Optional. Site URL for rankings on openrouter.ai.
+            "X-Title": global_config_loaded_from_config_yaml.app.name,  # Optional. Site title for rankings on openrouter.ai.
+        },
+    )
 
 
 @deprecated(
@@ -72,7 +74,7 @@ def chat_completions(messages: list[dict[str, str]], **kwargs):
     """
     Return an OpenAI client without LangSmith tracing.
     """
-    return _vanilla_openai_client.chat.completions.create(messages=messages, **kwargs)
+    return _create_openai_client().chat.completions.create(messages=messages, **kwargs)
 
 
 def get_openai_client(chat_name: str, labels: dict[str, str]):
@@ -86,7 +88,7 @@ def get_openai_client(chat_name: str, labels: dict[str, str]):
         "metadata": labels,
     }
     _client = wrappers.wrap_openai(
-        _vanilla_openai_client, chat_name=chat_name, tracing_extra=tracing_extra
+        _create_openai_client(), chat_name=chat_name, tracing_extra=tracing_extra
     )
 
     return _client
