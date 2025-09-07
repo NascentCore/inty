@@ -138,15 +138,15 @@ class GCSConfig:
 
 @dataclass
 class FirebaseConfig:
-    service_account_path: str
+    service_account_path: str = "inty-firebase-key.json"
 
 
 @dataclass
 class GooglePlayConfig:
     """Google Play配置"""
 
-    service_account_key: str  # 服务账号密钥JSON字符串
-    package_name: str  # 应用包名
+    service_account_key: str = "inty-backend-key.json"
+    package_name: str = "com.ai.intellimate"
     webhook_secret: Optional[str] = None  # Webhook密钥（可选）
     # 版本检查相关配置
     enable_version_check: bool = True  # 是否启用版本检查
@@ -163,7 +163,7 @@ class GooglePlayConfig:
 class ElevenLabsConfig:
     """ElevenLabs语音生成配置"""
 
-    api_key: str
+    api_key: str = "<fill-in-key>"
     model: str = "eleven_multilingual_v2"
     voice_id: str = "JBFqnCBsd6RMkjVDRZzb"  # 默认语音ID
     output_format: str = "mp3_44100_128"
