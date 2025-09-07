@@ -237,10 +237,15 @@ class ApiClient {
 }
 
 // 创建API客户端实例
-const apiClient = new ApiClient(process.env.REACT_APP_API_BASE_URL);
+const apiClient = new ApiClient(REACT_APP_API_BASE_URL);
+
+console.log("REACT_APP_API_BASE_URL:", REACT_APP_API_BASE_URL);
+console.log("INTY_BASE_URL:", INTY_BASE_URL);
+console.log("INTY_API_KEY:", INTY_API_KEY);
+
 const intyClient = new Inty({
-  baseURL: process.env.INTY_BASE_URL ?? localIntyBaseURL,
-  apiKey: process.env.INTY_API_KEY ?? adminToken,
+  baseURL: INTY_BASE_URL,
+  apiKey: INTY_API_KEY,
 });
 
 // =============================================================================

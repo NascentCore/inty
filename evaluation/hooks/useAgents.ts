@@ -110,6 +110,7 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
   // 加载智能体列表
   const loadAgents = useCallback(
     async (forceRefresh: boolean = false) => {
+      console.log("loadAgents called with forceRefresh:", forceRefresh);
       try {
         setLoading(true);
         setError(null);
@@ -120,6 +121,7 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
           if (cachedData) {
             setAgents(cachedData);
             setLoading(false);
+            console.log("cachedData:", cachedData);
             return;
           }
         }
@@ -141,6 +143,7 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
             return true;
           });
         }
+        console.log("agent data after filtering:", data);
 
         setAgents(data);
 
@@ -148,9 +151,7 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
         setCachedData(data);
 
         if (forceRefresh) {
-          message.success(
-            `${type === "private" ? "私有" : "公共"}智能体列表已刷新`,
-          );
+          message.success(`智能体列表已刷新`);
         }
       } catch (error) {
         handleError(error, "获取智能体列表失败");

@@ -31,6 +31,15 @@ done
 cd "$(dirname "$0")"
 
 export REACT_APP_API_BASE_URL="$BACKEND_URL"
+echo "Setting REACT_APP_API_BASE_URL to $REACT_APP_API_BASE_URL"
+
+# Remove api/v1 suffix from BACKEND_URL
+BACKEND_BASE_URL=${BACKEND_URL%api/v1}
+export INTY_BASE_URL=$BACKEND_BASE_URL
+export INTY_API_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3ODQzNjAyMjAsInN1YiI6InVzZXItMDFKV1ozNFk0RDFDOTJHRDg2QTVSNkVXWUoifQ.vsYKRvrCfxWgJ5wkTjAYby3RrIOm6P-9VbcCg4msjlM"
+
+echo "Setting INTY_BASE_URL to $INTY_BASE_URL"
+echo "Setting INTY_API_KEY to $INTY_API_KEY"
 
 if ! command -v npm &> /dev/null
 then
