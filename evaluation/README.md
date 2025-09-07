@@ -225,7 +225,7 @@ ARG REACT_APP_API_BASE_URL=https://dev.inty.sxwl.ai/api/v1
 ARG REACT_APP_ENV=production
 ```
 
-2. **开发环境变量**
+1. **开发环境变量**
 
 ```bash
 # .env文件
@@ -234,63 +234,6 @@ REACT_APP_ENV=development
 ```
 
 ### Vite配置 (vite.config.ts)
-
-```typescript
-export default defineConfig({
-  // 环境变量配置
-  define: {
-    'process.env.REACT_APP_API_BASE_URL': JSON.stringify(process.env.REACT_APP_API_BASE_URL)
-  },
-  
-  // 开发服务器配置
-  server: {
-    port: 3000,
-    host: true,
-    proxy: {
-      '/api': {
-        target: 'http://localhost:8000',
-        changeOrigin: true,
-        secure: false
-      }
-    }
-  }
-});
-```
-
-### Docker配置
-
-1. **多阶段构建配置**
-
-```dockerfile
-# 构建阶段
-FROM node:18-alpine AS builder
-ARG REACT_APP_API_BASE_URL
-ENV REACT_APP_API_BASE_URL=$REACT_APP_API_BASE_URL
-
-# 生产阶段
-FROM nginx:alpine
-COPY --from=builder /app/dist /usr/share/nginx/html
-```
-
-2. **Nginx配置 (nginx.conf)**
-
-```nginx
-server {
-    listen 80;
-    root /usr/share/nginx/html;
-    index index.html;
-    
-    # 健康检查端点
-    location /health {
-        return 200 'OK';
-    }
-    
-    # SPA路由支持
-    location / {
-        try_files $uri $uri/ /index.html;
-    }
-}
-```
 
 ### 调试工具和命令
 
