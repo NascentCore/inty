@@ -4,7 +4,10 @@
   "stainless_config": "./stainless.yml",
   "targets": {
     "python": {
-      "output_path": "./sdk"
+      "output_path": "./inty-python"
+    },
+    "typescript": {
+      "output_path": "./inty-typescript"
     }
   }
 }

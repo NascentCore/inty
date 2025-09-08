@@ -186,3 +186,7 @@ inty-firebase-key.json
 *.jpg
 *.webp
 /.secrets/
+
+# stainless output sdks
+/app/inty-python/
+/app/inty-typescript/
