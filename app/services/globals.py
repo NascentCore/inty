@@ -1,6 +1,7 @@
+from app.external_services.globals import android_publisher_service
 from app.services.google_play_service import GooglePlayService
 from app.services.subscription_service import SubscriptionService
 
 
-google_play_service = GooglePlayService()
+google_play_service = GooglePlayService(android_publisher_service)
 subscription_service = SubscriptionService(google_play_service)

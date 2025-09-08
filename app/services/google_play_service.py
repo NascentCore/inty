@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from typing import Any, Dict, Optional, Tuple
 
 from google.oauth2 import service_account
-from googleapiclient.discovery import build
+from googleapiclient.discovery import Resource, build
 from googleapiclient.errors import HttpError
 
 from app.core.config import global_config_loaded_from_config_yaml
@@ -15,51 +15,12 @@ from loguru import logger
 class GooglePlayService:
     """Google Play Developer API服务"""
 
-    def __init__(self):
+    def __init__(self, android_publisher_service: Resource):
         """初始化Google Play服务"""
-        self.service = None
+        self.service = android_publisher_service
         self.package_name = (
             global_config_loaded_from_config_yaml.google_play.package_name
         )
-        self._initialize_service()
-
-    def _initialize_service(self):
-        """初始化Google Play Developer API服务"""
-        try:
-            # 获取服务账号凭据
-            service_account_key = (
-                global_config_loaded_from_config_yaml.google_play.service_account_key
-            )
-
-            # 检查是否为文件路径还是JSON字符串
-            if service_account_key.endswith(".json"):
-                # 如果是文件路径，读取文件内容
-                from pathlib import Path
-
-                key_path = Path(service_account_key)
-                if not key_path.exists():
-                    raise FileNotFoundError(
-                        f"服务账号密钥文件不存在: {service_account_key}"
-                    )
-
-                with open(key_path, "r") as f:
-                    service_account_info = json.load(f)
-            else:
-                # 如果是JSON字符串，直接解析
-                service_account_info = json.loads(service_account_key)
-
-            credentials = service_account.Credentials.from_service_account_info(
-                service_account_info,
-                scopes=["https://www.googleapis.com/auth/androidpublisher"],
-            )
-
-            self.service = build("androidpublisher", "v3", credentials=credentials)
-            logger.info("Google Developer API（订阅服务）初始化成功")
-
-        except Exception as e:
-            logger.error(
-                f"Google Developer API（订阅服务）初始化失败，仍继续启动，订阅服务失效，异常: {str(e)}"
-            )
 
     def verify_subscription_purchase(
         self, product_id: str, purchase_token: str
