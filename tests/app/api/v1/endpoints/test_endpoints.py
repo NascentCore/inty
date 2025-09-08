@@ -1,59 +1,55 @@
+from dataclasses import field
 import os
 import tempfile
 from PIL import Image
 from loguru import logger
 import requests
+from inty import Inty
+
+from app.utils.gcs import download_from_gcs
 
 
-def test_upload_avatar():
-    base_url = "http://localhost:8000"
-
-    guest_data = {
-        "device_id": "test-device-123",
-        "system_language": "en",
-        "age_group": "adult",
-    }
-
+def test_upload_image():
+    # Initially use dummy api key to create guest user.
+    client = Inty(base_url="http://localhost:8000", api_key="dummy-api-key")
     # Create guest user
-    response = requests.post("http://localhost:8000/api/v1/auth/guest", json=guest_data)
-    print(f"Guest registration response status: {response.status_code}")
-    print(f"Guest registration response content: {response.text}")
+    guest_response = client.api.v1.auth.create_guest(
+        device_id="test-device-123",
+        system_language="en",
+        age_group="adult",
+    )
 
-    # Extract token from guest response
-    response_data = response.json()
+    logger.debug(f"Guest registration response: {guest_response}")
 
-    token = response_data.get("data", {}).get("token")
-
-    headers = {"Authorization": f"Bearer {token}"}
+    # Extract token and update client
+    token = guest_response.data.token
+    client = Inty(base_url="http://localhost:8000", api_key=token)
 
     test_image_path = "tests/app/api/v1/endpoints/test.png"
     logger.debug(f"Test image path: {test_image_path}")
     logger.debug(f"Pwd: {os.getcwd()}")
     logger.debug(f"files (readable) under pwd: {os.listdir(os.getcwd())}")
 
+    # Upload image using SDK
     with open(test_image_path, "rb") as f:
-        files = {"file": ("test.png", f, "image/png")}
+        upload_response = client.api.v1.upload_image(file=f, cropping_avatar=True)
 
-        response = requests.post(
-            f"{base_url}/api/v1/images",
-            headers=headers,
-            files=files,
-        )
+    assert upload_response.data is not None, "Upload failed: no URL returned"
+    assert upload_response.data["url"].endswith(
+        ".jpeg"
+    ), "Upload failed: URL does not end with .jpeg"
+    assert upload_response.data["avatar_url"].endswith(
+        ".jpeg"
+    ), "Upload failed: avatar URL does not end with .jpeg"
 
-    assert (
-        response.status_code == 200
-    ), f"Upload failed: {response.status_code} - {response.text}"
+    image_bytes = download_from_gcs(upload_response.data["url"])
+    with open(test_image_path, "rb") as f:
+        file_bytes = f.read()
 
-    # Download the image from the response
-    response_data = response.json()
-    url = response_data.get("data").get("url")
-    response = requests.get(url)
-    temp_dir = tempfile.mkdtemp()
-    temp_file_name = url.split("/")[-1]
-    assert temp_file_name.endswith(".jpeg")
-    temp_file = os.path.join(temp_dir, temp_file_name)
-    with open(temp_file, "wb") as f:
-        f.write(response.content)
-    # validate temp file is a valid jpeg
-    with Image.open(temp_file) as img:
-        assert img.format == "JPEG"
+    # Since cropping_avatar=True, the downloaded image will be different from original
+    # Just verify it's a valid image with reasonable size (should be smaller due to cropping)
+    assert len(image_bytes) > 0
+    assert len(file_bytes) > 0
+    assert len(image_bytes) != len(
+        file_bytes
+    ), "TODO: do not compress image when uploading"

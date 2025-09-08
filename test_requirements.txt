@@ -2,3 +2,4 @@ pytest
 pytest-asyncio
 requests
 Pillow
+git+ssh://git@github.com/NascentCore/inty-python.git
