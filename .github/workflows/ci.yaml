@@ -90,5 +90,6 @@ jobs:
       - name: Run python tests
         run: |
           ./start.sh &
-          sleep 20
+          # Wait for the server to start. If the time is too short, it needs to be increased.
+          sleep 5
           pytest tests/ -v -s

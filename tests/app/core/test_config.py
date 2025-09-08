@@ -162,7 +162,7 @@ class TestAppConfig:
         """Test AppConfig default values"""
         config = AppConfig()
         assert config.name == "inty-backend"
-        assert config.debug is True
+        assert config.debug is False
         assert config.debug_messages is True
         assert config.api_v1_prefix == "/api/v1"
         assert config.backend_cors_origins == ["http://localhost:3000"]
@@ -209,9 +209,6 @@ class TestEmbeddingConfig:
         assert config.base_url == "https://custom-api.com/v1"
         assert config.api_key == "custom-api-key"
         assert config.model == "custom-model"
-
-
-
 
 
 class TestAgentConfig:
@@ -479,7 +476,7 @@ class TestLoadConfig:
             config = load_config(temp_config_path)
             # Should use defaults for missing sections
             assert config.app.name == "inty-backend"
-            assert config.app.debug is True
+            assert config.app.debug is False
             assert config.logging.level == "INFO"
             assert config.verification.code_expire_minutes == 5
         finally:
