@@ -10,6 +10,14 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.Modifier
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import android.content.Intent
+import android.content.Context
+import com.ai.inty.base.noRippleClickable
+import androidx.core.net.toUri
+
 
 /**
  * 文本样式工具类
@@ -25,14 +33,13 @@ object TextStyleUtils {
      * @param fontSize 字体大小
      * @return 格式化后的AnnotatedString
      */
-    fun createUnderlinedText(
+    fun createLinkText(
         text: String,
-        color: Color = Color.White,
         fontSize: TextUnit = 12.sp,
     ): AnnotatedString = buildAnnotatedString {
         withStyle(
             SpanStyle(
-                color = color,
+                color = Color.White,
                 fontSize = fontSize,
                 textDecoration = TextDecoration.Underline
             )
@@ -40,6 +47,36 @@ object TextStyleUtils {
             append(text)
         }
     }
+
+    /**
+     * Helper function to create clickable text that opens a URL
+     */
+    @Composable
+    fun BuildLink(
+        context: Context,
+        text: String,
+        url: String,
+        fontSize: TextUnit = 12.sp
+    ) = Text(
+        text = buildAnnotatedString {
+            withStyle(
+                SpanStyle(
+                    color = Color.White,
+                    fontSize = fontSize,
+                    textDecoration = TextDecoration.Underline
+                )
+            ) {
+                append(text)
+            }
+        },
+        modifier = Modifier.noRippleClickable(onClick = {
+            val intent = Intent(
+                Intent.ACTION_VIEW,
+                url.toUri()
+            )
+            context.startActivity(intent)
+        })
+    )
 
     /**
      * 创建带样式的文本
