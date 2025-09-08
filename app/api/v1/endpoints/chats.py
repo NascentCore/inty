@@ -729,7 +729,6 @@ async def get_voice_info(
 
 @router.put(
     "/agents/{agent_id}/settings",
-    include_in_schema=False,
     tags=["inty"],
     summary="Update Agent Chat Settings",
     description="Update chat settings by Agent ID",
@@ -829,7 +828,10 @@ async def update_agent_chat_settings(
     response_model=schemas.ChatSettings,
     tags=["inty"],
     summary="Get Agent Chat Settings",
-    description="Get chat settings by Agent ID",
+    description=(
+        "Get chat settings by Agent ID, bause we only support 1 chat per agent, "
+        "so we do not use chat_id to get settings"
+    ),
 )
 async def get_agent_chat_settings(
     *,
