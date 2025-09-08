@@ -12,15 +12,15 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import func
 
+from app.external_services.gcs_service import GCSService
 from app.models.voice_cache import VoiceCache
-from app.services.gcs_service import GCSService
 
 
 class VoiceCacheService:
     """语音缓存服务"""
 
-    def __init__(self):
-        self.gcs_service = GCSService()
+    def __init__(self, gcs_service: GCSService):
+        self.gcs_service = gcs_service
         self.cache_ttl_days = 30  # 缓存保留30天
 
     def _generate_content_hash(
@@ -451,7 +451,3 @@ class VoiceCacheService:
             logger.error(f"清理无效缓存失败: {str(e)}")
             await db.rollback()
             return 0
-
-
-# 创建全局实例
-voice_cache_service = VoiceCacheService()

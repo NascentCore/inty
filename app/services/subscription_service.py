@@ -1,7 +1,4 @@
-import json
-import logging
 import uuid
-from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -13,7 +10,6 @@ from app import schemas
 from app.core.config import global_config_loaded_from_config_yaml
 from app.models.subscription import (
     SubscriptionPlan,
-    SubscriptionPlanType,
     SubscriptionStatus,
     SubscriptionTransaction,
     SubscriptionUsage,
@@ -31,15 +27,15 @@ from app.schemas.subscription import SubscriptionPlan as SubscriptionPlanSchema
 from app.schemas.subscription import (
     SubscriptionPlanCreate,
     SubscriptionStatusResponse,
-    SubscriptionTransactionCreate,
-    SubscriptionUsageCreate,
     UsageStatisticsResponse,
 )
 from app.schemas.subscription import UserSubscription as UserSubscriptionSchema
-from app.schemas.subscription import UserSubscriptionCreate
-from app.services.google_play_service import GooglePlayService
-from app.services.superuser_check import SUPERUSER_LIMIT_CHECK_RESULT, is_superuser
-from app.services.system_settings_service import system_settings_service
+from app.external_services.google_play_service import GooglePlayService
+from app.core.user_privilege.superuser_check import (
+    SUPERUSER_LIMIT_CHECK_RESULT,
+    is_superuser,
+)
+from app.services.system_settings_service import SystemSettingsService
 
 from loguru import logger
 
@@ -47,9 +43,14 @@ from loguru import logger
 class SubscriptionService:
     """订阅服务"""
 
-    def __init__(self, google_play_service: GooglePlayService):
+    def __init__(
+        self,
+        google_play_service: GooglePlayService,
+        system_settings_service: SystemSettingsService,
+    ):
         """初始化订阅服务，使用注入方便测试"""
         self.google_play_service = google_play_service
+        self.system_settings_service = system_settings_service
 
     async def get_subscription_plans(
         self, db: AsyncSession, include_inactive: bool = False
@@ -287,7 +288,9 @@ class SubscriptionService:
                     )
 
                 # 从动态配置获取免费用户限制
-                free_limits = await system_settings_service.get_free_user_limits(db)
+                free_limits = await self.system_settings_service.get_free_user_limits(
+                    db
+                )
 
                 return SubscriptionStatusResponse(
                     is_subscribed=False,

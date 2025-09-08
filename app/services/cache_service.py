@@ -1,11 +1,10 @@
 import asyncio
-import json
 import logging
 import time
 from threading import RLock
 from typing import Any, Dict, Optional
 
-logger = logging.getLogger(__name__)
+from loguru import logger
 
 
 class InMemoryCache:
@@ -203,7 +202,3 @@ class CacheService:
         self.session_cache.clear()
         self.agent_cache.clear()
         logger.info("所有缓存已清空")
-
-
-# 全局缓存服务实例
-cache_service = CacheService()

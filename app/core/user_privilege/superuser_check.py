@@ -25,10 +25,10 @@ def is_superuser(user: schemas.User) -> bool:
 
 
 # This is a constant to mean there is no limit.
-SUPERUSER_DAILY_LIMIT = -1
+_SUPERUSER_DAILY_LIMIT = -1
 
 # This is a constant to mean the server does not count usage for superusers.
-SUPERUSER_USAGE = -1
+_SUPERUSER_USAGE = -1
 
 # This is a constant to mean the server does not apply any limit for superusers.
 # One should call the above is_superuser() to check if a user is a superuser.
@@ -36,4 +36,4 @@ SUPERUSER_USAGE = -1
 # Example:
 # if is_superuser(user):
 #     return SUPERUSER_LIMIT_CHECK_RESULT
-SUPERUSER_LIMIT_CHECK_RESULT = [True, SUPERUSER_USAGE, SUPERUSER_DAILY_LIMIT]
+SUPERUSER_LIMIT_CHECK_RESULT = [True, _SUPERUSER_USAGE, _SUPERUSER_DAILY_LIMIT]

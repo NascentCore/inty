@@ -1,17 +1,13 @@
 import json
-import logging
-from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 import psycopg
-from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
+from langchain_core.messages import AIMessage, HumanMessage
 from langchain_postgres import PostgresChatMessageHistory
 
 from app.core.config import global_config_loaded_from_config_yaml
-from app.models.chat_history import TABLE_NAME as CHAT_HISTORY_TABLE_NAME
-from app.utils.langchain import LCChatHistory
 
-logger = logging.getLogger(__name__)
+from loguru import logger
 
 
 def _parse_message_content(message_raw) -> Dict[str, str]:

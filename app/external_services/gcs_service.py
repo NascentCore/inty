@@ -3,7 +3,6 @@ GCS文件上传服务
 专门用于处理语音文件和其他媒体文件的上传
 """
 
-import uuid
 from datetime import datetime
 from typing import Optional
 

@@ -26,7 +26,7 @@ from app.schemas.user_deletion import (
     DeletionCheckResponse,
 )
 from app.services import user_service
-from app.services.global_services import subscription_service
+from app.services.globals import subscription_service
 
 router = APIRouter(prefix="/users", route_class=LoggerRoute)
 

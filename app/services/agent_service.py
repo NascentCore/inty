@@ -10,10 +10,10 @@ from sqlalchemy.orm import selectinload
 
 from app import models, schemas
 from app.schemas.agent import AgentSortOption
-from app.core.agent.agent import agent_manager
+from app.core.agent.agent import AgentManager
 from app.models.agent import AgentVisibility
 from app.models.associations import agent_followers
-from app.services.cache_service import cache_service
+from app.services.cache_service import CacheService
 from app.utils.crop_avatar import CROPPED_AVATAR_FILENAME_SUFFIX, crop_avatar
 from app.utils.gcs import (
     append_filename_suffix,
@@ -127,7 +127,9 @@ async def get_agent(
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-async def get_agent_for_chat(db: AsyncSession, agent_id: str) -> Optional[dict]:
+async def get_agent_for_chat(
+    db: AsyncSession, agent_id: str, cache_service: CacheService
+) -> Optional[dict]:
     """
     获取聊天专用的轻量级Agent数据（高性能版本）
     只查询聊天必需的字段，避免复杂的联表查询
@@ -699,7 +701,10 @@ def _update_agent_in_db(agent_in: schemas.AgentUpdate, db_agent: models.Agent):
 
 
 async def update_agent(
-    db: AsyncSession, db_agent: models.Agent, agent_in: schemas.AgentUpdate
+    db: AsyncSession,
+    db_agent: models.Agent,
+    agent_in: schemas.AgentUpdate,
+    agent_manager: AgentManager,
 ) -> models.Agent:
     """
     更新AI角色

@@ -18,7 +18,7 @@ from app.schemas.system_settings import (
     SystemSettingsListResponse,
     SystemSettingUpdateRequest,
 )
-from app.services.system_settings_service import system_settings_service
+from app.services.globals import system_settings_service
 
 router = APIRouter(prefix="/admin", route_class=LoggerRoute)
 

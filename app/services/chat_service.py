@@ -1,5 +1,3 @@
-import json
-import logging
 import uuid
 from typing import List, Optional
 
@@ -11,9 +9,9 @@ from sqlalchemy.orm import selectinload
 
 from app import models, schemas
 from app.services import chat_history_service
-from app.services.cache_service import cache_service
+from app.services.globals import cache_service
 
-logger = logging.getLogger(__name__)
+from loguru import logger
 
 
 def generate_session_id(chat_id: str) -> str:
@@ -968,5 +966,3 @@ async def save_debug_messages(
         logger.error(f"保存调试信息失败，session_id: {session_id}, 错误: {str(e)}")
         await db.rollback()
         # 不抛出异常，避免影响正常的聊天流程
-
-

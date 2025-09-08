@@ -1,7 +1,6 @@
 """评测会话管理服务"""
 
 import asyncio
-import json
 import logging
 import uuid
 from datetime import datetime
@@ -18,19 +17,25 @@ from app.models.evaluation import (
     EvaluationSession,
     EvaluationStatus,
 )
-from app.models.user import User
 from app.services import agent_service, chat_service
+from app.services.cache_service import CacheService
 from app.services.scoring_service import ScoringService
 
-logger = logging.getLogger(__name__)
+from loguru import logger
 
 
 class EvaluationService:
     """评测服务 - 负责管理评测会话的生命周期"""
 
-    def __init__(self, db: AsyncSession):
+    def __init__(
+        self,
+        db: AsyncSession,
+        scoring_service: ScoringService,
+        cache_service: CacheService,
+    ):
         self.db = db
-        self.scoring_service = ScoringService()
+        self.scoring_service = scoring_service
+        self.cache_service = cache_service
         self._active_sessions: Dict[str, Dict] = {}  # 内存中的活跃会话状态
 
     async def create_session(
@@ -715,7 +720,7 @@ class EvaluationService:
 
             # 获取智能体数据（用于创建Agent实例）
             agent_data = await agent_service.get_agent_for_chat(
-                self.db, agent_id=agent_id
+                self.db, agent_id=agent_id, cache_service=self.cache_service
             )
             if not agent_data:
                 raise ValueError(f"无法获取智能体数据: {agent_id}")

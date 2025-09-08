@@ -2,15 +2,13 @@ import base64
 import json
 import os
 import tempfile
-from io import BytesIO
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, Optional
 
 from fastapi import HTTPException, UploadFile
 from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.uuid import uid
 from app.models.agent import Agent
 from app.schemas.character_card import (
     CharacterCardImportRequest,
@@ -420,7 +418,3 @@ class CharacterCardService:
         if existing_agent:
             await agent_service.delete_agent(existing_agent.id, user_id, db)
             logger.info(f"删除现有Agent: {existing_agent.id}")
-
-
-# 创建服务实例
-character_card_service = CharacterCardService()

@@ -199,7 +199,3 @@ class SystemSettingsService:
                 db, "free_user_agent_creation_limit", 6
             ),
         }
-
-
-# 创建全局实例
-system_settings_service = SystemSettingsService()

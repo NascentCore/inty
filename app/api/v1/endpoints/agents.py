@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app import schemas
 from app.api import deps
 from app.api.utils.logger_route import LoggerRoute
-from app.core.agent.agent import agent_manager
+from app.services.globals import agent_manager
 from app.utils.gemini import ImagenGeneratedImage, text_to_image
 from app.core.config import global_config_loaded_from_config_yaml
 from app.schemas.character_card import (
@@ -28,8 +28,7 @@ from app.schemas.response import (
     create_business_error_response,
 )
 from app.services import agent_service
-from app.services.character_card_service import character_card_service
-from app.services.global_services import subscription_service
+from app.services.globals import character_card_service, subscription_service
 from app.utils.image import ImageFormat, AspectRatio
 
 
@@ -286,7 +285,9 @@ async def update_agent(
     agent = await agent_service.get_agent(db, agent_id=agent_id)
     if not agent:
         raise HTTPException(status_code=404, detail="Agent not found")
-    agent = await agent_service.update_agent(db, db_agent=agent, agent_in=agent_in)
+    agent = await agent_service.update_agent(
+        db, db_agent=agent, agent_in=agent_in, agent_manager=agent_manager
+    )
     return agent
 
 

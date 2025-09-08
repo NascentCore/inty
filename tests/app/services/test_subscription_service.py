@@ -6,7 +6,7 @@ from sqlalchemy.sql import Select
 from datetime import datetime, timezone
 
 from app.schemas.user import User
-from app.services.google_play_service import GooglePlayService
+from app.external_services.google_play_service import GooglePlayService
 from app.services.subscription_service import SubscriptionService
 from app.models.agent import Agent
 from app.schemas.subscription import SubscriptionStatusResponse

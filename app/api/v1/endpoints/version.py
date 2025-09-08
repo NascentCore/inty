@@ -8,7 +8,7 @@ from app.api import deps
 from app.api.utils.logger_route import LoggerRoute
 from app.schemas.response import APIResponse
 from app.schemas.version import VersionCheckResponse
-from app.services.global_services import google_play_service
+from app.services.globals import google_play_service
 
 router = APIRouter(prefix="/version", route_class=LoggerRoute)
 logger = logging.getLogger(__name__)

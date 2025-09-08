@@ -3,7 +3,7 @@ Check if a user has privilege to access premium features.
 """
 
 from app import models, schemas
-from app.services.superuser_check import is_superuser
+from app.core.user_privilege.superuser_check import is_superuser
 
 
 def is_eligible_for_premium(

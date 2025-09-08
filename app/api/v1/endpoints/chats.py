@@ -9,15 +9,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app import models, schemas
 from app.api import deps
 from app.api.utils.logger_route import LoggerRoute
-from app.core.agent.agent import agent_manager
 from app.core.chat import generate_chat_stream
 from app.core.config import global_config_loaded_from_config_yaml
 from app.schemas.chat import ChatCompletionRequest
 from app.schemas.response import BusinessErrorCode, create_business_error_response
 from app.services import agent_service, chat_history_service, chat_service
 from app.services.chat_service import generate_session_id
-from app.services.global_services import subscription_service
-from app.services.voice_service import voice_service
+from app.services.globals import (
+    agent_manager,
+    cache_service,
+    subscription_service,
+    voice_service,
+)
 from app.core.user_privilege.premium_check import is_eligible_for_premium
 
 from loguru import logger
@@ -470,7 +473,9 @@ async def agent_chat_completions(
         logger.debug(f"准备获取Agent实例: {chat.agent_id}")
 
         # 使用高性能的聊天专用Agent获取方法
-        agent_data = await agent_service.get_agent_for_chat(db, agent_id=chat.agent_id)
+        agent_data = await agent_service.get_agent_for_chat(
+            db, agent_id=chat.agent_id, cache_service=cache_service
+        )
         if not agent_data:
             logger.error(f"Agent数据未找到: {chat.agent_id}")
             raise HTTPException(status_code=404, detail="Agent not found")
@@ -643,7 +648,9 @@ async def generate_message_voice(
     """
     try:
         # 使用高性能的聊天专用Agent获取方法
-        agent_data = await agent_service.get_agent_for_chat(db, agent_id=agent_id)
+        agent_data = await agent_service.get_agent_for_chat(
+            db, agent_id=agent_id, cache_service=cache_service
+        )
         if not agent_data:
             raise HTTPException(status_code=404, detail="Agent not found")
 

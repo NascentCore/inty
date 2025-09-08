@@ -19,7 +19,7 @@ from app.models import User
 from app.models.user import AuthType
 from app.schemas.auth import GuestResponse, LoginResponse, LoginUserResponse
 from app.schemas.response import APIResponse
-from app.services.global_services import subscription_service
+from app.services.globals import subscription_service
 from app.services.user_service import create_guest_user, generate_next_readable_id
 
 from loguru import logger

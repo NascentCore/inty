@@ -23,7 +23,7 @@ from app import models
 from app.core.agent import prompt_template, prompts
 from app.core.config import global_config_loaded_from_config_yaml
 from app.models import chat_history
-from app.services.cache_service import cache_service
+from app.services.cache_service import CacheService
 from app.utils.openai_client import (
     create_openai_client,
     langchain_message_to_openai_message,
@@ -167,6 +167,7 @@ class Agent:
         tags: List[str] = None,
         character_version: str = "1.0",
         extensions: Dict[str, Any] = None,
+        cache_service: CacheService = None,
     ):
 
         # 基础属性
@@ -194,6 +195,8 @@ class Agent:
         self.tags = tags or []
         self.character_version = character_version
         self.extensions = extensions or {}
+
+        self.cache_service = cache_service
 
         # 更新agent数据以包含所有信息
         self._agent_data = {
@@ -391,7 +394,7 @@ class Agent:
         同步获取用户profile信息（优化版本 - 使用全局缓存）
         """
         # 先检查全局缓存
-        cached_user_info = cache_service.get_user_info(user_id)
+        cached_user_info = self.cache_service.get_user_info(user_id)
         if cached_user_info is not None:
             logger.debug(f"从全局缓存获取用户信息: {user_id}")
             return cached_user_info
@@ -400,7 +403,7 @@ class Agent:
         if user_id in self._user_info_cache:
             user_info = self._user_info_cache[user_id]
             # 同时更新到全局缓存
-            cache_service.set_user_info(user_id, user_info)
+            self.cache_service.set_user_info(user_id, user_info)
             return user_info
 
         try:
@@ -424,7 +427,7 @@ class Agent:
                     user_info_text = ""
                     # 缓存空结果，避免重复查询
                     self._user_info_cache[user_id] = user_info_text
-                    cache_service.set_user_info(
+                    self.cache_service.set_user_info(
                         user_id, user_info_text, ttl=60
                     )  # 空结果缓存时间短
                     return user_info_text
@@ -452,7 +455,7 @@ class Agent:
 
                 # 同时更新本地和全局缓存
                 self._user_info_cache[user_id] = user_info_text
-                cache_service.set_user_info(user_id, user_info_text)
+                self.cache_service.set_user_info(user_id, user_info_text)
 
                 if user_info_text:
                     logger.debug(
@@ -465,7 +468,7 @@ class Agent:
             logger.error(f"获取用户 {user_id} 基本信息失败: {str(e)}")
             user_info_text = ""
             self._user_info_cache[user_id] = user_info_text
-            cache_service.set_user_info(
+            self.cache_service.set_user_info(
                 user_id, user_info_text, ttl=30
             )  # 失败结果缓存时间很短
             return user_info_text
@@ -736,11 +739,13 @@ class Agent:
 
 
 class AgentManager:
+
     def __init__(
         self,
         max_agents: int = 50,
         cleanup_interval: int = 3600,
         max_idle_time: int = 7200,
+        cache_service: CacheService = None,
     ):
         """
         初始化Agent管理器
@@ -754,6 +759,7 @@ class AgentManager:
         self.max_agents = max_agents
         self.cleanup_interval = cleanup_interval
         self.max_idle_time = max_idle_time
+        self.cache_service = cache_service
 
         # 使用读写锁提升并发性能
         self._read_lock = Lock()
@@ -910,6 +916,7 @@ class AgentManager:
                         tags=agent_data.get("tags", []),
                         character_version=agent_data.get("character_version", "1.0"),
                         extensions=agent_data.get("extensions", {}),
+                        cache_service=self.cache_service,
                     )
 
                     # 验证创建的Agent实例的agent_id
@@ -1077,6 +1084,7 @@ class AgentManager:
                         tags=agent_data.get("tags", []),
                         character_version=agent_data.get("character_version", "1.0"),
                         extensions=agent_data.get("extensions", {}),
+                        cache_service=self.cache_service,
                     )
 
                     self.agents[agent_id] = agent
@@ -1136,7 +1144,3 @@ class AgentManager:
                 logger.error(f"关闭连接池失败: {str(e)}")
 
         logger.info("Agent管理器已停止")
-
-
-# 创建全局Agent管理器实例
-agent_manager = AgentManager()

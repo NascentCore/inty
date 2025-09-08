@@ -6,24 +6,24 @@
 import asyncio
 import hashlib
 import re
-import uuid
-from io import BytesIO
 from typing import Any, Dict, List, Optional
 
 import aiohttp
-from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import global_config_loaded_from_config_yaml
-from app.services.gcs_service import GCSService
+from app.external_services.gcs_service import GCSService
+from app.services.voice_cache_service import VoiceCacheService
 
+from loguru import logger
 
 class VoiceService:
     """语音生成服务"""
 
-    def __init__(self):
+    def __init__(self, gcs_service: GCSService, voice_cache_service: VoiceCacheService):
         self.config = global_config_loaded_from_config_yaml.elevenlabs
-        self.gcs_service = GCSService()
+        self.gcs_service = gcs_service
+        self.voice_cache_service = voice_cache_service
         self.base_url = "https://api.elevenlabs.io/v1"
 
     def _clean_text_for_voice(self, text: str) -> str:
@@ -122,9 +122,7 @@ class VoiceService:
             cached_url = None
             if db:
                 logger.debug("检查语音缓存")
-                from app.services.voice_cache_service import voice_cache_service
-
-                cached_url = await voice_cache_service.get_cached_voice(
+                cached_url = await self.voice_cache_service.get_cached_voice(
                     db, text, voice_id, model, language
                 )
                 if cached_url:
@@ -172,10 +170,8 @@ class VoiceService:
             # 异步保存到缓存，不阻塞返回
             if audio_url:
                 logger.debug("异步保存到语音缓存")
-                from app.services.voice_cache_service import voice_cache_service
-
                 asyncio.create_task(
-                    voice_cache_service.save_voice_cache(
+                    self.voice_cache_service.save_voice_cache(
                         None,
                         text,
                         voice_id,
@@ -315,7 +311,3 @@ class VoiceService:
         except Exception as e:
             logger.error(f"获取语音信息异常: {str(e)}")
             return None
-
-
-# 创建全局实例
-voice_service = VoiceService()

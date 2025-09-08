@@ -16,8 +16,11 @@ from app.core.config import global_config_loaded_from_config_yaml
 
 from app.api.deps import get_async_db
 from app.api.v1.router import api_router
-from app.core.agent.agent import agent_manager
-from app.core.firebase import init_firebase
+from app.services.globals import (
+    agent_manager,
+    cache_service,
+)
+from app.external_services.firebase import init_firebase
 from app.core.logging import init_logger
 from app.middleware.error_handler import (
     jwt_exception_handler,
@@ -55,7 +58,7 @@ app = FastAPI(
     ),
     contact={
         "name": "InTy",
-        "url": "http://inty.cc/",
+        "url": "http://app.inty.cc/",
         "email": "dev@inty.cc",
     },
 )
@@ -152,7 +155,7 @@ async def _preload_database_connections():
         logger.info("连接池预热完成")
 
         # 4. 启动缓存清理任务
-        from app.services.cache_service import cache_service
+        from app.services.globals import cache_service
 
         await cache_service.start_cleanup_task()
         logger.info("缓存服务启动完成")
@@ -181,7 +184,9 @@ async def _preload_popular_agent_data(db: AsyncSession):
         for agent_db in popular_agents:
             try:
                 # 使用轻量级方法预加载数据（这会自动缓存）
-                agent_data = await agent_service.get_agent_for_chat(db, agent_db.id)
+                agent_data = await agent_service.get_agent_for_chat(
+                    db, agent_db.id, cache_service
+                )
                 if agent_data:
                     preloaded_count += 1
                     logger.debug(f"预加载Agent数据: {agent_data['name']}")
@@ -230,11 +235,10 @@ async def shutdown_event():
         logger.info("Agent管理器已停止")
 
         # 停止缓存服务
-        from app.services.cache_service import cache_service
+        from app.services.globals import cache_service
 
         cache_service.stop_cleanup_task()
         logger.info("缓存服务已停止")
-
     except Exception as e:
         logger.error(f"应用关闭过程中出错: {str(e)}")
 
