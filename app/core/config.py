@@ -76,7 +76,9 @@ class VerificationConfig:
 @dataclass
 class AppConfig:
     name: str = "inty-backend"
-    debug: bool = True
+    # The app tolerates more failures, and does more logging in the debug mode.
+    debug: bool = False
+    # DEPRECATED: Do not use.
     debug_messages: bool = True
     # DEPRECATED: Do not use.
     api_v1_prefix: str = "/api/v1"

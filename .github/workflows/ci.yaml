@@ -69,6 +69,9 @@ jobs:
 
       - name: Populate config.yaml for Alembic
         run: |
+          echo "app:" >> config.yaml
+          # Enable debug mode for testing.
+          echo "  debug: true" >> config.yaml
           echo "database:" >> config.yaml
           echo "  db: ${{ env.PG_DB }}" >> config.yaml
           echo "  host: localhost" >> config.yaml
