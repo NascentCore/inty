@@ -7,7 +7,7 @@ from app.utils.gcs import download_from_gcs
 from loguru import logger
 
 
-@pytest.mark.skip(reason="Skipping upload image test on CI")
+@pytest.mark.noci
 def test_upload_image():
     # Initially use dummy api key to create guest user.
     client = Inty(base_url="http://localhost:8000", api_key="dummy-api-key")
