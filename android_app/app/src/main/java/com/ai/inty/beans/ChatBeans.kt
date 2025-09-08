@@ -108,10 +108,20 @@ data class ConversationItem(
     val updatedAt: Any? = null,
     @Json(name = "user_id")
     val userId: String = "",
+    @Json(name = "agent_is_deleted")
+    val isDeleted: Boolean = false,//标记该agent是否已经被删除（针对自建agent场景）
     val isNew: Boolean = !IntySetting.isConversationReaded(agentId, lastMessage)
 ) {
     fun getShowTime(): String {
         return convertUtcToLocal(createdAt)
+    }
+
+    fun convertToAgentInfo(): AgentInfo {
+        return AgentInfo(
+            avatar = agentAvatar,
+            id = agentId,
+            name = agentName,
+        ).also { info -> info.isDeleted = this.isDeleted }
     }
 }
 
