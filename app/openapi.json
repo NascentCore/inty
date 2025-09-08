@@ -1365,7 +1365,7 @@
                     "inty"
                 ],
                 "summary": "Get Agent Chat Settings",
-                "description": "Get chat settings by Agent ID",
+                "description": "Get chat settings by Agent ID, bause we only support 1 chat per agent, so we do not use chat_id to get settings",
                 "operationId": "get_agent_chat_settings_api_v1_chats_agents__agent_id__settings_get",
                 "security": [
                     {
@@ -6119,7 +6119,7 @@
                 "type": "http",
                 "scheme": "bearer",
                 "bearerFormat": "JWT",
-                "description": "\n            输入格式为: your_token\n            注意: 不需要Bearer前缀\n            "
+                "description": "\n            输入格式为: your_token\n            注意: 不需要Bearer前缀\n           "
             }
         }
     }

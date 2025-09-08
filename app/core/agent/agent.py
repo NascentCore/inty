@@ -4,7 +4,7 @@ import logging
 import time
 from concurrent.futures import ThreadPoolExecutor
 from threading import Lock, RLock
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, TypedDict
 
 from jinja2 import Template as Jinja2Template
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
@@ -19,6 +19,7 @@ from psycopg_pool import ConnectionPool
 from sqlalchemy import text
 from typing_extensions import deprecated
 
+from app import models
 from app.core.agent import prompt_template, prompts
 from app.core.config import global_config_loaded_from_config_yaml
 from app.models import chat_history
@@ -29,13 +30,7 @@ from app.utils.openai_client import (
     langchain_message_to_openai_message,
 )
 
-
-# 自定义Agent状态，继承MessagesState并添加用户信息
-class CustomAgentState(MessagesState):
-    user_profile: str = ""
-    user_id: str = ""
-    chat_settings: Optional[Dict] = None
-    remaining_steps: RemainingSteps
+from loguru import logger
 
 
 def get_agent_model_config(agent_data: dict) -> dict:
@@ -186,6 +181,9 @@ class Agent:
 
         # 主提示词和模式提示词属性
         self.main_prompt = main_prompt
+        # mode_prompt has 2 versions: free and premium.
+        # free is the default and is for free users.
+        # premium is for users with premium subscription.
         self.mode_prompt = mode_prompt
         self.output_format_prompt = output_format_prompt
 
@@ -277,81 +275,47 @@ class Agent:
             or prompts.ROMANTIC_ROLEPLAY_PROMPT.output_format_prompt
         )
 
-    def build_system_messages(self, state) -> List[SystemMessage]:
+    def build_system_messages(
+        self, user_profile: str, chat_settings: models.chat_settings.ChatSettings
+    ) -> List[SystemMessage]:
         """构建系统消息列表，从state中获取用户信息，state 是 LangChain 运行时系统的一部分。"""
-
-        # User 指与此角色对话的人类用户
-        if isinstance(state, dict):
-            user_profile = state.get("user_profile", "")
-        else:
-            # CustomAgentState对象
-            user_profile = getattr(state, "user_profile", "")
-
         user_name = self._extract_user_name_from_profile(user_profile)
 
         system_messages = []
 
         # 如缺少任一默认提示词，则认为是用户创建的角色。
         # 此为短期解决方案，未来任何对提示词组装机制的改造，都需要重新考虑这个判定的正确性。
-        is_char_user_created = not self.main_prompt or not self.mode_prompt
-        logger.debug(f"角色是否用户创建: {is_char_user_created}")
+        # 目前不考虑这个区分，未来可能要做一些变化。
+        # is_char_user_created = not self.main_prompt or not self.mode_prompt
+        # logger.debug(f"角色是否用户创建: {is_char_user_created}")
 
-        # 1. 主提示词（第一优先级）- 使用全局默认或agent自定义
         main_prompt = self._get_effective_main_prompt()
-        rendered_prompt = prompt_template.render_prompt_jinja2_template(
+        rendered_main_prompt = prompt_template.render_prompt_jinja2_template(
             tmpl=main_prompt, char=self.name, user=user_name
         )
-        system_messages.append(SystemMessage(content=rendered_prompt))
+        system_messages.append(SystemMessage(content=rendered_main_prompt))
 
-        # 2. 角色卡信息 - 每个字段作为独立的SystemMessage
         character_messages = self._build_character_context(user_name=user_name)
         system_messages.extend(character_messages)
 
-        # 3. Chat Settings 中的风格提示词
-        if hasattr(state, "chat_settings") and state.chat_settings:
-            if (
-                hasattr(state.chat_settings, "style_prompt")
-                and state.chat_settings.style_prompt
-            ):
-                system_messages.append(
-                    SystemMessage(content=state.chat_settings.style_prompt)
-                )
-        elif isinstance(state, dict) and state.get("chat_settings"):
-            chat_settings = state.get("chat_settings")
-            if hasattr(chat_settings, "style_prompt") and chat_settings.style_prompt:
-                system_messages.append(
-                    SystemMessage(content=chat_settings.style_prompt)
-                )
-            elif isinstance(chat_settings, dict) and chat_settings.get("style_prompt"):
-                system_messages.append(
-                    SystemMessage(content=chat_settings["style_prompt"])
-                )
-
-        # 4. 模式提示词（在角色卡后面）- 使用全局默认或agent自定义
-        mode_prompt = self._get_effective_mode_prompt()
-        rendered_prompt = prompt_template.render_prompt_jinja2_template(
+        if chat_settings and chat_settings.premium_mode:
+            logger.debug(f"Using premium mode prompt: {chat_settings.premium_mode}")
+            mode_prompt = prompts.ROMANTIC_ROLEPLAY_PROMPT.mode_prompt
+        else:
+            logger.debug(f"Using normal mode prompt")
+            mode_prompt = self._get_effective_mode_prompt()
+        rendered_mode_prompt = prompt_template.render_prompt_jinja2_template(
             tmpl=mode_prompt, char=self.name, user=user_name
         )
-        system_messages.append(SystemMessage(content=rendered_prompt))
+        system_messages.append(SystemMessage(content=rendered_mode_prompt))
+
+        if chat_settings and chat_settings.style_prompt:
+            system_messages.append(SystemMessage(content=chat_settings.style_prompt))
 
         if user_profile:
             system_messages.append(SystemMessage(content=user_profile))
 
         return system_messages
-
-    # 创建一个返回完整消息列表的函数
-    def create_full_message_list(self, state) -> List[BaseMessage]:
-        """创建包含所有系统消息和对话消息的完整消息列表"""
-        system_messages = self.build_system_messages(state)
-
-        # 处理both dict和CustomAgentState输入
-        if isinstance(state, dict):
-            messages = state.get("messages", [])
-        else:
-            messages = getattr(state, "messages", [])
-
-        full_messages = system_messages + messages
-        return full_messages
 
     def _build_character_context(self, user_name: str = None) -> List[SystemMessage]:
         """
@@ -420,6 +384,7 @@ class Agent:
         with self._last_used_lock:
             self.last_used = time.time()
 
+    @deprecated("Should be moved to user service")
     def _get_user_profile_sync(self, user_id: str) -> str:
         """
         同步获取用户profile信息（优化版本 - 使用全局缓存）
@@ -550,9 +515,9 @@ class Agent:
         self,
         user_id: str,
         session_id: str,
-        messages: dict[str, Any],
+        messages: List[HumanMessage],
         user_profile: str = None,
-        chat_settings=None,
+        chat_settings: models.chat_settings.ChatSettings = None,
     ) -> str:
         """
         优化版同步聊天方法，接受预计算的参数
@@ -598,23 +563,21 @@ class Agent:
                     f"用户消息保存耗时: {save_msg_time:.3f}秒 - Agent: {self.agent_id}"
                 )
 
-                # 构建自定义状态数据
                 input_build_start = time.time()
-                state_data = CustomAgentState(
-                    messages=all_messages,
-                    user_profile=user_profile or "",
-                    user_id=user_id,
-                    chat_settings=chat_settings,
-                )
                 user_name = self._extract_user_name_from_profile(user_profile)
                 labels = {
                     "user_id": user_id,
                     "user_name": user_name,
                     "agent_id": self.agent_id,
                     "agent_name": self.name,
+                    "chat_settings": chat_settings,
                 }
 
-                messages: list[BaseMessage] = self.create_full_message_list(state_data)
+                system_messages = self.build_system_messages(
+                    user_profile, chat_settings
+                )
+
+                messages: list[BaseMessage] = system_messages + all_messages
 
                 openai_messages = [
                     langchain_message_to_openai_message(message, user_name, self.name)
@@ -694,11 +657,10 @@ class Agent:
         self,
         user_id: str,
         session_id: str,
-        messages: dict[str, Any],
-        db_session=None,
-        chat_settings=None,
+        messages: List[HumanMessage],
+        chat_settings: models.chat_settings.ChatSettings = None,
     ) -> str:
-        """异步聊天方法（优化版本）"""
+        """封装了一个 sync 版本的聊天函数，通过将其运行在 event loop executor 里"""
         logger.debug(f"开始聊天处理 - Agent: {self.agent_id}, Session: {session_id}")
 
         self._update_last_used()
