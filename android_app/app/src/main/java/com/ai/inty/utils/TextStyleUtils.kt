@@ -33,13 +33,14 @@ object TextStyleUtils {
      * @param fontSize 字体大小
      * @return 格式化后的AnnotatedString
      */
-    fun createLinkText(
+    fun createUnderlinedText(
         text: String,
+        color: Color = Color.White,
         fontSize: TextUnit = 12.sp,
     ): AnnotatedString = buildAnnotatedString {
         withStyle(
             SpanStyle(
-                color = Color.White,
+                color = color,
                 fontSize = fontSize,
                 textDecoration = TextDecoration.Underline
             )
