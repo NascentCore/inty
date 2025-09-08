@@ -251,10 +251,6 @@ async def shutdown_event():
 
 
 def custom_openapi():
-    # 只在debug模式下提供OpenAPI schema
-    if not global_config_loaded_from_config_yaml.app.debug:
-        return None
-
     if app.openapi_schema:
         return app.openapi_schema
 
