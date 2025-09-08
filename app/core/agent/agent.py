@@ -192,6 +192,9 @@ class Agent:
 
         # 主提示词和模式提示词属性
         self.main_prompt = main_prompt
+        # mode_prompt has 2 versions: free and premium.
+        # free is the default and is for free users.
+        # premium is for users with premium subscription.
         self.mode_prompt = mode_prompt
         self.output_format_prompt = output_format_prompt
 
@@ -624,7 +627,9 @@ class Agent:
                     "agent_name": self.name,
                 }
 
-                messages: list[BaseMessage] = self.create_full_message_list(state_data)
+                system_messages = self.build_system_messages(state_data)
+
+                messages: list[BaseMessage] = system_messages + all_messages
 
                 openai_messages = [
                     langchain_message_to_openai_message(message, user_name, self.name)
