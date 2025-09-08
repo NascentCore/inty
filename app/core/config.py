@@ -154,6 +154,8 @@ class GooglePlayConfig:
     min_supported_version: int = 1  # 最低支持版本代码
     release_track: str = "production"  # 发布轨道：internal/closed/open/production
     fallback_tracks: List[str] = None  # 备用轨道列表
+    # 新增版本检查配置
+    max_major_version_gap: int = 10  # Major版本号最大差距，超过则强制更新
 
     def __post_init__(self):
         if self.fallback_tracks is None:

@@ -2,7 +2,6 @@ import asyncio
 import json
 import logging
 import time
-from typing_extensions import deprecated
 from concurrent.futures import ThreadPoolExecutor
 from threading import Lock, RLock
 from typing import Any, Dict, List, Optional
@@ -14,12 +13,14 @@ from langchain_core.runnables import Runnable, RunnableLambda
 from langchain_postgres import PostgresChatMessageHistory
 from langgraph.graph import MessagesState
 from langgraph.managed import RemainingSteps
+from loguru import logger
 from openai import OpenAI
 from psycopg import Connection
 from psycopg_pool import ConnectionPool
+from sqlalchemy import text
+from typing_extensions import deprecated
 
-from app.core.agent import prompts
-from app.core.agent import prompt_template
+from app.core.agent import prompt_template, prompts
 from app.core.config import global_config_loaded_from_config_yaml
 from app.models import chat_history
 from app.services.background_task_service import background_task_service
@@ -28,8 +29,6 @@ from app.utils.openai_client import (
     create_openai_client,
     langchain_message_to_openai_message,
 )
-
-from loguru import logger
 
 
 # 自定义Agent状态，继承MessagesState并添加用户信息
@@ -95,6 +94,7 @@ def get_agent_model_config(agent_data: dict) -> dict:
             model_config["model"] = global_config_loaded_from_config_yaml.agent.model
 
     return model_config
+
 
 # 全局连接池
 _connection_pool = None
@@ -445,8 +445,6 @@ class Agent:
 
         try:
             # 使用全局同步数据库引擎（避免重复创建）
-            from sqlalchemy import text
-
             sync_engine = get_sync_engine()
 
             with sync_engine.connect() as conn:
@@ -567,8 +565,6 @@ class Agent:
 
         跳过用户信息获取，使用传入的预计算值
         """
-        chat_start_time = time.time()
-
         # 从连接池获取连接
         pool_start = time.time()
         pool = get_connection_pool()
