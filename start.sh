@@ -29,6 +29,6 @@ if [ "$DEV" = true ]; then
   python scripts/init_admin_user.py
   uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 else
-  echo "Starting in production mode..."
+  echo "Starting in normal mode without reloading..."
   uvicorn app.main:app --host 0.0.0.0 --port 8000
 fi
