@@ -1294,6 +1294,71 @@
             }
         },
         "/api/v1/chats/agents/{agent_id}/settings": {
+            "put": {
+                "tags": [
+                    "chats",
+                    "inty"
+                ],
+                "summary": "Update Agent Chat Settings",
+                "description": "Update chat settings by Agent ID",
+                "operationId": "update_agent_chat_settings_api_v1_chats_agents__agent_id__settings_put",
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "agent_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "title": "Agent Id"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ChatSettingsUpdate"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "anyOf": [
+                                        {
+                                            "$ref": "#/components/schemas/APIResponse_ChatSettings_"
+                                        },
+                                        {
+                                            "$ref": "#/components/schemas/APIResponse_dict_"
+                                        }
+                                    ],
+                                    "title": "Response Update Agent Chat Settings Api V1 Chats Agents  Agent Id  Settings Put"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
             "get": {
                 "tags": [
                     "chats",
@@ -2085,6 +2150,32 @@
                 },
                 "type": "object",
                 "title": "APIResponse[Agent]"
+            },
+            "APIResponse_ChatSettings_": {
+                "properties": {
+                    "code": {
+                        "type": "integer",
+                        "title": "Code",
+                        "default": 200
+                    },
+                    "message": {
+                        "type": "string",
+                        "title": "Message",
+                        "default": "success"
+                    },
+                    "data": {
+                        "anyOf": [
+                            {
+                                "$ref": "#/components/schemas/ChatSettings"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
+                    }
+                },
+                "type": "object",
+                "title": "APIResponse[ChatSettings]"
             },
             "APIResponse_DeletionCheckResponse_": {
                 "properties": {
@@ -3892,6 +3983,57 @@
                 ],
                 "title": "ChatSettings",
                 "description": "聊天设置"
+            },
+            "ChatSettingsUpdate": {
+                "properties": {
+                    "language": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Language"
+                    },
+                    "voice_enabled": {
+                        "anyOf": [
+                            {
+                                "type": "boolean"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Voice Enabled"
+                    },
+                    "style_prompt": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Style Prompt"
+                    },
+                    "premium_mode": {
+                        "anyOf": [
+                            {
+                                "type": "boolean"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Premium Mode"
+                    }
+                },
+                "type": "object",
+                "title": "ChatSettingsUpdate",
+                "description": "更新聊天设置"
             },
             "DeletionCheckResponse": {
                 "properties": {
@@ -5902,6 +6044,21 @@
                         "type": "boolean",
                         "title": "Force Update",
                         "description": "是否强制更新"
+                    },
+                    "force_update_reasons": {
+                        "anyOf": [
+                            {
+                                "items": {
+                                    "type": "string"
+                                },
+                                "type": "array"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Force Update Reasons",
+                        "description": "强制更新的具体原因列表"
                     },
                     "minimum_version": {
                         "type": "string",
