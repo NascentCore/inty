@@ -33,14 +33,6 @@ from app.utils.openai_client import (
 from loguru import logger
 
 
-# 自定义Agent状态，继承MessagesState并添加用户信息
-class CustomAgentState(TypedDict):
-    # TODO: Change this into an object.
-    user_profile: Optional[str] = None
-    # 对应 app 端聊天页面 settings 内的内容。
-    chat_settings: Optional[models.chat_settings.ChatSettings] = None
-
-
 def get_agent_model_config(agent_data: dict) -> dict:
     """
     获取Agent的模型配置，按优先级：
@@ -311,8 +303,10 @@ class Agent:
         system_messages.extend(character_messages)
 
         if chat_settings and chat_settings.premium_mode:
+            logger.debug(f"Using premium mode prompt: {chat_settings.premium_mode}")
             mode_prompt = prompts.ROMANTIC_ROLEPLAY_PROMPT.mode_prompt
         else:
+            logger.debug(f"Using normal mode prompt")
             mode_prompt = self._get_effective_mode_prompt()
         rendered_mode_prompt = prompt_template.render_prompt_jinja2_template(
             tmpl=mode_prompt, char=self.name, user=user_name

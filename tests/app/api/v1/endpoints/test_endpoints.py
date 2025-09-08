@@ -24,7 +24,7 @@ def test_upload_image():
     token = guest_response.data.token
     client = Inty(base_url="http://localhost:8000", api_key=token)
 
-    test_image_path = "tests/app/api/v1/endpoints/test.png"
+    test_image_path = "tests/files/test.jpg"
     logger.debug(f"Test image path: {test_image_path}")
     logger.debug(f"Pwd: {os.getcwd()}")
     logger.debug(f"files (readable) under pwd: {os.listdir(os.getcwd())}")
@@ -35,11 +35,11 @@ def test_upload_image():
 
     assert upload_response.data is not None, "Upload failed: no URL returned"
     assert upload_response.data["url"].endswith(
-        ".jpeg"
-    ), "Upload failed: URL does not end with .jpeg"
+        ".jpg"
+    ), "Upload failed: URL does not end with .jpg"
     assert upload_response.data["avatar_url"].endswith(
-        ".jpeg"
-    ), "Upload failed: avatar URL does not end with .jpeg"
+        ".jpg"
+    ), "Upload failed: avatar URL does not end with .jpg"
 
     image_bytes = download_from_gcs(upload_response.data["url"])
     with open(test_image_path, "rb") as f:
@@ -49,6 +49,6 @@ def test_upload_image():
     # Just verify it's a valid image with reasonable size (should be smaller due to cropping)
     assert len(image_bytes) > 0
     assert len(file_bytes) > 0
-    assert len(image_bytes) != len(
+    assert len(image_bytes) == len(
         file_bytes
-    ), "TODO: do not compress image when uploading"
+    ), "Downloaded image should be the same size as original"

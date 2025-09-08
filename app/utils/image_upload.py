@@ -109,6 +109,8 @@ async def process_image_upload(
     # We might adjust the threshold value of 500KB in the future.
     # The rationale is that on a smart phone, 500KB JPEG should be sufficient.
     # PNG is a lossless format, so we can compress it to JPEG to save space.
+    # TODO: Explicitly add parameter compress_image in request body to control this.
+    # Not always compress png files.
     compression_threshold_size_bytes = global_config_loaded_from_config_yaml.app.limits.image_compression_threshold_size_kb * 1024
     if file_ext == ImageFormat.PNG or len(file_data) > compression_threshold_size_bytes:
         file_data = compress_png_to_jpeg(file_data)

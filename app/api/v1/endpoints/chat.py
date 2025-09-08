@@ -46,6 +46,9 @@ async def agent_chat_completions(
     基于Agent ID的OpenAI风格聊天接口
     如果用户还没有和该Agent创建会话，则自动创建
     """
+    if request.stream:
+        raise HTTPException(status_code=400, detail="Stream is not supported")
+
     try:
         import time
 
@@ -164,135 +167,106 @@ async def agent_chat_completions(
                 extra_data={"used_count": used_count, "daily_limit": daily_limit},
             )
 
-        if request.stream:
-            logger.debug(f"开始流式聊天处理: session_id={session_id}")
-            return StreamingResponse(
-                generate_chat_stream(
-                    agent=agent,
-                    messages=messages,
-                    user_id=current_user.id,
-                    session_id=session_id,
-                    chat_id=chat.id,
-                    model_name=request.model,
-                    db_session=db,
-                    agent_id=agent_id,
-                    last_user_message=last_user_message,
-                ),
-                media_type="text/event-stream",
-                headers={
-                    "Cache-Control": "no-cache",
-                    "Connection": "keep-alive",
+        logger.debug(f"开始非流式聊天处理: session_id={session_id}")
+        chat_processing_start = time.time()
+
+        settings_task = asyncio.create_task(
+            chat_service.get_or_create_chat_settings(
+                db, chat.id, current_user.id, agent_id
+            )
+        )
+
+        # 先获取设置，然后传递给AI任务
+        chat_settings = await settings_task
+        logger.debug(f"chat_settings: {chat_settings.__dict__}")
+
+        ai_task = asyncio.create_task(
+            agent.chat(
+                user_id=current_user.id,
+                session_id=session_id,
+                messages=messages,
+                chat_settings=chat_settings,
+            )
+        )
+
+        # 等待任务完成
+        response_content = await ai_task
+        chat_processing_time = time.time() - chat_processing_start
+        logger.debug(
+            f"Agent聊天响应成功: {response_content[:100]}..., 耗时: {chat_processing_time:.3f}秒"
+        )
+        logger.debug(f"聊天设置获取成功: voice_enabled={chat_settings.voice_enabled}")
+
+        # 语音生成逻辑 - 根据chat_settings.voice_enabled决定是否自动播放
+        audio_url = None
+        try:
+            # 语音自动播放逻辑：chat_settings.voice_enabled = true 时自动生成语音
+            if chat_settings.voice_enabled:
+                # 使用Agent的voice_id字段
+                agent_voice_id = agent_data.get("voice_id")
+                logger.debug(
+                    f"开始语音生成: voice_id={agent_voice_id}, text_length={len(response_content)}, language={request.language}"
+                )
+
+                audio_url = await voice_service.generate_voice(
+                    text=response_content,
+                    voice_id=agent_voice_id,
+                    language=request.language,
+                    db=db,
+                )
+                logger.debug(f"语音自动生成成功: {audio_url}")
+            else:
+                logger.debug("语音未启用，跳过语音生成")
+
+        except Exception as e:
+            logger.error(f"语音生成失败: {str(e)}")
+            logger.exception("语音生成异常详细信息:")
+            # 语音生成失败不影响聊天功能
+
+        # 记录聊天使用情况
+        try:
+            logger.debug(f"记录聊天使用情况: user_id={current_user.id}")
+            await subscription_service.record_usage(
+                db,
+                current_user.id,
+                "chat",
+                1,
+                extra_data={
+                    "agent_id": agent_id,
+                    "message_length": len(last_user_message),
                 },
             )
-        else:
-            logger.debug(f"开始非流式聊天处理: session_id={session_id}")
-            chat_processing_start = time.time()
+            logger.debug("聊天使用情况记录成功")
+        except Exception as e:
+            logger.warning(f"记录聊天使用情况失败: {str(e)}")
 
-            # 并行获取聊天设置和AI回复
-            try:
-                settings_task = asyncio.create_task(
-                    chat_service.get_or_create_chat_settings(
-                        db, chat.id, current_user.id, agent_id
-                    )
-                )
+        # 构建响应消息
+        logger.debug("构建聊天响应消息")
+        message = {"role": "assistant", "content": response_content}
 
-                # 先获取设置，然后传递给AI任务
-                chat_settings = await settings_task
-                logger.debug(f"chat_settings: {chat_settings.__dict__}")
+        # 如果生成了语音，添加到响应中
+        if audio_url:
+            message["audio_url"] = audio_url
+            logger.debug(f"响应包含语音URL: {audio_url}")
 
-                ai_task = asyncio.create_task(
-                    agent.chat(
-                        user_id=current_user.id,
-                        session_id=session_id,
-                        messages=messages,
-                        chat_settings=chat_settings,
-                    )
-                )
-
-                # 等待任务完成
-                response_content = await ai_task
-                chat_processing_time = time.time() - chat_processing_start
-                logger.debug(
-                    f"Agent聊天响应成功: {response_content[:100]}..., 耗时: {chat_processing_time:.3f}秒"
-                )
-                logger.debug(
-                    f"聊天设置获取成功: voice_enabled={chat_settings.voice_enabled}"
-                )
-
-            except Exception as e:
-                logger.error(f"Agent聊天处理失败: {str(e)}")
-                raise
-
-            # 语音生成逻辑 - 根据chat_settings.voice_enabled决定是否自动播放
-            audio_url = None
-            try:
-                # 语音自动播放逻辑：chat_settings.voice_enabled = true 时自动生成语音
-                if chat_settings.voice_enabled:
-                    # 使用Agent的voice_id字段
-                    agent_voice_id = agent_data.get("voice_id")
-                    logger.debug(
-                        f"开始语音生成: voice_id={agent_voice_id}, text_length={len(response_content)}, language={request.language}"
-                    )
-
-                    audio_url = await voice_service.generate_voice(
-                        text=response_content,
-                        voice_id=agent_voice_id,
-                        language=request.language,
-                        db=db,
-                    )
-                    logger.debug(f"语音自动生成成功: {audio_url}")
-                else:
-                    logger.debug("语音未启用，跳过语音生成")
-
-            except Exception as e:
-                logger.error(f"语音生成失败: {str(e)}")
-                logger.exception("语音生成异常详细信息:")
-                # 语音生成失败不影响聊天功能
-
-            # 记录聊天使用情况
-            try:
-                logger.debug(f"记录聊天使用情况: user_id={current_user.id}")
-                await subscription_service.record_usage(
-                    db,
-                    current_user.id,
-                    "chat",
-                    1,
-                    extra_data={
-                        "agent_id": agent_id,
-                        "message_length": len(last_user_message),
-                    },
-                )
-                logger.debug("聊天使用情况记录成功")
-            except Exception as e:
-                logger.warning(f"记录聊天使用情况失败: {str(e)}")
-
-            # 构建响应消息
-            logger.debug("构建聊天响应消息")
-            message = {"role": "assistant", "content": response_content}
-
-            # 如果生成了语音，添加到响应中
-            if audio_url:
-                message["audio_url"] = audio_url
-                logger.debug(f"响应包含语音URL: {audio_url}")
-
-            total_request_time = time.time() - request_start_time
-            logger.debug(
-                f"聊天请求处理成功: agent_id={agent_id}, response_length={len(response_content)}, 总耗时: {total_request_time:.3f}秒"
-            )
-            data = {
-                "id": f"chatcmpl-{uuid.uuid4().hex[:12]}",
-                "object": "chat.completion",
-                "created": int(time.time()),
-                "model": request.model,
-                "choices": [{"index": 0, "message": message, "finish_reason": "stop"}],
-                "usage": {
-                    "prompt_tokens": len(last_user_message.split()),
-                    "completion_tokens": len(response_content.split()),
-                    "total_tokens": len(last_user_message.split())
-                    + len(response_content.split()),
-                },
-            }
-            return schemas.APIResponse.success(data=data)
+        total_request_time = time.time() - request_start_time
+        logger.debug(
+            f"聊天请求处理成功: agent_id={agent_id}, response_length={len(response_content)}, 总耗时: {total_request_time:.3f}秒"
+        )
+        data = {
+            "id": f"chatcmpl-{uuid.uuid4().hex[:12]}",
+            "object": "chat.completion",
+            "created": int(time.time()),
+            "model": request.model,
+            "choices": [{"index": 0, "message": message, "finish_reason": "stop"}],
+            "usage": {
+                "prompt_tokens": len(last_user_message.split()),
+                "completion_tokens": len(response_content.split()),
+                "total_tokens": len(last_user_message.split())
+                + len(response_content.split()),
+            },
+        }
+        return schemas.APIResponse.success(data=data)
 
     except Exception as e:
         logger.error(f"聊天请求处理失败: {str(e)}")

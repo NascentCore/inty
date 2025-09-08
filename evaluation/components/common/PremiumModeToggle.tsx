@@ -45,26 +45,28 @@ export const PremiumModeToggle: React.FC<PremiumModeToggleProps> = ({
     if (!agentId) return;
     
     setLoading(true);
-    setError(null);
+    setError(null); // Clear any previous errors when user retries
     
     try {
-      // Note: The current API doesn't have an update settings endpoint
-      // This is a read-only display for now
       console.log("Premium mode toggle requested:", checked);
       
-      // For now, just update local state
+      // Call the actual API to update chat settings
+      await api.chat.updateAgentSettings(agentId, {
+        premium_mode: checked
+      });
+
+      // Update local state only after successful API call
       setPremiumMode(checked);
       
       if (onToggle) {
         onToggle(checked);
       }
-      
-      // TODO: Implement actual API call when backend supports updating chat settings
-      // await api.inty.api.v1.chats.agents.updateSettings(agentId, { premium_mode: checked });
-      
+
     } catch (err) {
       console.error("Failed to update premium mode:", err);
       setError("Failed to update premium mode");
+      // Don't update local state if API call failed
+      // Button remains clickable for retry
     } finally {
       setLoading(false);
     }
@@ -94,12 +96,14 @@ export const PremiumModeToggle: React.FC<PremiumModeToggleProps> = ({
     return (
       <Tooltip title={`Premium Mode Error: ${error}`}>
         <Button
-          type="default"
+          type={premiumMode ? "primary" : "default"}
           danger
-          disabled
+          onClick={() => handleToggle(!premiumMode)}
+          loading={loading}
+          disabled={disabled}
           style={{ width: '80px' }}
         >
-          Premium
+          {premiumMode ? "Premium" : "Standard"}
         </Button>
       </Tooltip>
     );

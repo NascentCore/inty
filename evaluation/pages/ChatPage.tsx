@@ -32,7 +32,6 @@ import {
   ClockCircleOutlined,
   ReloadOutlined,
   HistoryOutlined,
-  TeamOutlined,
   RedoOutlined,
   DeleteOutlined,
 } from "@ant-design/icons";
@@ -72,7 +71,6 @@ export const ChatPage: React.FC = () => {
   const [inputValue, setInputValue] = useState("");
   const [sending, setSending] = useState(false);
   const [chatHistory, setChatHistory] = useState<ChatSession[]>([]);
-  const [isGuestMode, setIsGuestMode] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [historyLoading, setHistoryLoading] = useState(false);
 
@@ -914,18 +912,10 @@ export const ChatPage: React.FC = () => {
                       agentId={selectedAgent.id}
                       onToggle={(enabled) => {
                         console.log("Premium mode toggled:", enabled);
-                        // TODO: Implement actual toggle functionality when backend supports it
+                        // Premium mode has been successfully updated via API
+                        // The component handles the API call internally
                       }}
                     />
-                    <Tooltip title="切换游客模式">
-                      <Button
-                        icon={<TeamOutlined />}
-                        type={isGuestMode ? "primary" : "default"}
-                        onClick={() => setIsGuestMode(!isGuestMode)}
-                      >
-                        {isGuestMode ? "游客" : "用户"}
-                      </Button>
-                    </Tooltip>
                     <Tooltip title="打开 LangSmith 监控">
                       <Button
                         icon={
