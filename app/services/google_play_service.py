@@ -54,11 +54,12 @@ class GooglePlayService:
             )
 
             self.service = build("androidpublisher", "v3", credentials=credentials)
-            logger.info("Google Play Developer API服务初始化成功")
+            logger.info("Google Developer API（订阅服务）初始化成功")
 
         except Exception as e:
-            logger.error(f"Google Play Developer API服务初始化失败: {str(e)}")
-            raise
+            logger.error(
+                f"Google Developer API（订阅服务）初始化失败，仍继续启动，订阅服务失效，异常: {str(e)}"
+            )
 
     def verify_subscription_purchase(
         self, product_id: str, purchase_token: str
