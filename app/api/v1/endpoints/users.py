@@ -26,6 +26,7 @@ from app.schemas.user_deletion import (
     DeletionCheckResponse,
 )
 from app.services import user_service
+from app.services.global_services import subscription_service
 
 router = APIRouter(prefix="/users", route_class=LoggerRoute)
 
@@ -135,7 +136,6 @@ async def check_deletion_eligibility(
 
 @router.post("/delete-account", response_model=APIResponse[AccountDeletionResponse])
 async def delete_user_account(
-    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(deps.get_current_active_user),
     request: Optional[AccountDeletionRequest] = None,
@@ -152,8 +152,8 @@ async def delete_user_account(
         deletion_result = await user_service.delete_user_account(
             db=db,
             user_id=current_user.id,
+            subscription_service=subscription_service,
             deletion_reason=deletion_reason,
-            processor_id=current_user.id,
         )
 
         if not deletion_result["success"]:

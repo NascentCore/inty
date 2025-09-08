@@ -1,4 +1,3 @@
-import logging
 import traceback
 import uuid
 from datetime import UTC, datetime
@@ -18,9 +17,10 @@ from app.models.subscription import SubscriptionStatus, UserSubscription
 from app.models.user import AuthType, DeviceToken
 from app.schemas import UserUpdate
 from app.services.cache_service import cache_service
-from app.services.global_services import subscription_service
+from app.services.subscription_service import SubscriptionService
 
-logger = logging.getLogger(__name__)
+
+from loguru import logger
 
 
 async def generate_next_readable_id(db: AsyncSession) -> str:
@@ -291,8 +291,8 @@ async def check_user_can_delete_account(
 async def delete_user_account(
     db: AsyncSession,
     user_id: str,
+    subscription_service: SubscriptionService,
     deletion_reason: str = "用户主动删除",
-    processor_id: Optional[str] = None,
 ) -> dict:
     """
     删除用户账户
