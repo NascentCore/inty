@@ -584,6 +584,7 @@ class Agent:
                     "user_name": user_name,
                     "agent_id": self.agent_id,
                     "agent_name": self.name,
+                    "chat_settings": chat_settings,
                 }
 
                 system_messages = self.build_system_messages(
