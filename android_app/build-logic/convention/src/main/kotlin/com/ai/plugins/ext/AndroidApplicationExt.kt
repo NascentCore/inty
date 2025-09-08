@@ -96,12 +96,12 @@ internal fun ApplicationExtension.commonAppConfig(project: Project) {
             // It talks to the dev backend, but app is built as release.
             initWith(getByName("release"))
 
-            versionNameSuffix = "-playdebug"
+            versionNameSuffix = "-${getGitCommitInfo()}-$name"
         }
 
         create("local") {
             initWith(getByName("debug"))
-            versionNameSuffix = "-local"
+            versionNameSuffix = "-${getGitCommitInfo()}-$name"
         }
     }
 
