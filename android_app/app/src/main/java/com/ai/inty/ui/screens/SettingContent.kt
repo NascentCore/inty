@@ -205,8 +205,8 @@ private fun SupportAndHelpSection(
             title = stringResource(R.string.terms_of_use),
             onClick = {
                 val intent = Intent(
-                    Intent.ACTION_VIEW,
-                    context.getString(R.string.settings_str_user_agreement).toUri()
+                    Intent.ACTION_VIEW, context.getString(R.string.url_user_agreement).toUri()
+
                 )
                 context.startActivity(intent)
             }
@@ -219,8 +219,7 @@ private fun SupportAndHelpSection(
             title = stringResource(R.string.privacy_policy),
             onClick = {
                 val intent = Intent(
-                    Intent.ACTION_VIEW,
-                    Uri.parse(context.getString(R.string.settings_str_privacy_policy))
+                    Intent.ACTION_VIEW, context.getString(R.string.url_privacy_policy).toUri()
                 )
                 context.startActivity(intent)
             }

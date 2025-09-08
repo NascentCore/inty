@@ -32,9 +32,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.TextUnit
 import androidx.core.net.toUri
 import com.ai.inty.R
 import com.ai.inty.base.noRippleClickable
@@ -133,7 +137,6 @@ internal fun GoogleLoginButton(
                 fontSize = 14.sp,
                 fontWeight = FontWeight.SemiBold
             )
-
             if (isLoading) {
                 CircularProgressIndicator(
                     modifier = Modifier.size(24.dp),
@@ -151,61 +154,57 @@ internal fun GoogleLoginButton(
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun PolicyText() {
+internal fun PolicyText() {
     val context = LocalContext.current
     val baseTextStyle = TextStyle(
-        color = Color.White.copy(alpha = 0.35f),
+        color = Color.White.copy(alpha = 0.6f),
         fontSize = 12.sp,
         fontWeight = FontWeight.Normal,
-        textAlign = TextAlign.Center
     )
+
+    
 
     Column(
         modifier = Modifier,
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(
-            text = stringResource(R.string.by_continuing_agree_full),
-            style = baseTextStyle
-        )
+            Text(
+                text = stringResource(R.string.by_continuing_agree_full),
+                style = baseTextStyle
+            )
 
         Spacer(Modifier.height(4.dp))
 
-        Row {
-            Text(
-                text = TextStyleUtils.createUnderlinedText(stringResource(R.string.terms_of_use)),
-                fontSize = 12.sp,
-                color = Color.White,
-                modifier = Modifier.noRippleClickable(onClick = {
-                    val intent = Intent(
-                        Intent.ACTION_VIEW,
-                        context.getString(R.string.settings_str_user_agreement).toUri()
-                    )
-                    context.startActivity(intent)
-                })
-            )
+            Row {
+                TextStyleUtils.BuildLink(
+                    context = context,
+                    text = stringResource(R.string.terms_of_use),
+                    url = context.getString(R.string.url_user_agreement)
+                )
 
-            Text(
-                text = stringResource(R.string.and_symbol),
-                color = Color.White.copy(alpha = 0.6f),
-                fontSize = 12.sp
-            )
+                Text(
+                    text = buildAnnotatedString {
+                        withStyle(
+                            SpanStyle(
+                                color = baseTextStyle.color,
+                                fontSize = baseTextStyle.fontSize,
+                                fontWeight = baseTextStyle.fontWeight
+                            )
+                        ) {
+                            append(" and ")
+                        }
+                    }
+                )
 
-            Text(
-                text = TextStyleUtils.createUnderlinedText(stringResource(R.string.privacy_policy)),
-                fontSize = 12.sp,
-                color = Color.White,
-                modifier = Modifier.noRippleClickable(onClick = {
-                    val intent = Intent(
-                        Intent.ACTION_VIEW,
-                        context.getString(R.string.settings_str_privacy_policy).toUri()
-                    )
-                    context.startActivity(intent)
-                })
-            )
+                TextStyleUtils.BuildLink(
+                    context = context,
+                    text = stringResource(R.string.privacy_policy),
+                    url = context.getString(R.string.url_privacy_policy)
+                )
+            }
         }
     }
-}
 
 // Preview 函数
 @Preview(showBackground = true)
@@ -244,5 +243,6 @@ private fun GoogleLoginButtonPreview() {
 @Preview(showBackground = true)
 @Composable
 private fun PolicyTextPreview() {
+    PolicyText()
     PolicyText()
 }
