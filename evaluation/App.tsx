@@ -17,6 +17,7 @@ import { EvaluationPage } from "./pages/EvaluationPage";
 import { EvaluationHistoryPage } from "./pages/EvaluationHistoryPage";
 import { ChatPage } from "./pages/ChatPage";
 import AgentManagePage from "./pages/AgentManagePage";
+import { PremiumModeToggle } from "./components/common/PremiumModeToggle";
 
 
 const { Sider, Content } = Layout;
@@ -324,11 +325,25 @@ export const App: React.FC = () => {
             background: "inherit",
           }}
         >
+          {/* Premium Mode Toggle */}
+          {!collapsed && (
+            <div
+              style={{
+                padding: "12px 16px",
+                borderTop: "1px solid #f0f0f0",
+              }}
+            >
+              <PremiumModeToggle
+                disabled={true}
+              />
+            </div>
+          )}
+
           {/* 底部信息 */}
           {!collapsed && (
             <div
               style={{
-                padding: "16px 24px",
+                padding: "8px 24px 16px 24px",
                 textAlign: "center",
                 borderTop: "1px solid #f0f0f0",
               }}

@@ -792,6 +792,18 @@ export const chatApi = {
       `/chats/agents/${agentId}/messages/${messageId}/voice?language=${language}`,
       {},
     ),
+
+  // 更新智能体聊天设置
+  updateAgentSettings: (
+    agentId: string,
+    settings: {
+      premium_mode?: boolean;
+      language?: string;
+      voice_enabled?: boolean;
+      style_prompt?: string;
+    }
+  ): Promise<any> =>
+    apiClient.put(`/chats/agents/${agentId}/settings`, settings),
 };
 
 // =============================================================================
