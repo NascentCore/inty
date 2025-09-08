@@ -1,15 +1,9 @@
-import asyncio
-import json
-import logging
-import time
 import uuid
-from typing import Any, List, Optional, Union
+from typing import Any, List, Union
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from langchain_core.messages import HumanMessage
-from pydantic import BaseModel
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import models, schemas
@@ -21,11 +15,8 @@ from app.core.config import global_config_loaded_from_config_yaml
 from app.schemas.chat import ChatCompletionRequest
 from app.schemas.response import BusinessErrorCode, create_business_error_response
 from app.services import agent_service, chat_history_service, chat_service
-from app.services.async_voice_service import async_voice_service
 from app.services.chat_service import generate_session_id
 from app.services.global_services import subscription_service
-from app.services.voice_cache_service import voice_cache_service
-from app.services.voice_cleanup_service import voice_cleanup_service
 from app.services.voice_service import voice_service
 
 from loguru import logger
@@ -729,7 +720,6 @@ async def get_voice_info(
 
 @router.put(
     "/agents/{agent_id}/settings",
-    include_in_schema=False,
     tags=["inty"],
     summary="Update Agent Chat Settings",
     description="Update chat settings by Agent ID",
