@@ -436,7 +436,12 @@ class ChatViewModel : BaseActivityViewModel() {
         //有agent信息，才请求
         val result = chatApi.getChatSettings(agentId)
         when (result) {
-            is HttpResult.Failure -> showNetworkAwareError(result.message)
+            is HttpResult.Failure -> {
+                //此设置，暂时不用toast显示
+                EasyLog.log(result.message)
+//                showNetworkAwareError(result.message)
+            }
+
             is HttpResult.Success -> {
                 chatSetting.update { result.data }
             }
@@ -602,6 +607,7 @@ class ChatViewModel : BaseActivityViewModel() {
         _userProfile.value = userProfile
     }
 
+    //本地userInfo的更新，而非接口
     fun updateUserInfo() {
         if (UserProfileManager.hasUserProfile()) {
             _userProfile.value = UserProfileManager.getUserProfile()

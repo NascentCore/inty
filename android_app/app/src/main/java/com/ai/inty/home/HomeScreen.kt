@@ -303,8 +303,9 @@ private fun ConversationsTabContent(
         },
         onClickConversationItem = { conversation ->
             chatViewModel.setConversationReaded(conversation)
+            //从会话列表 跳转到聊天页面，
             TheRouter.build(Constant.ROUTE_CHAT)
-                .withObject("agent_id", conversation.agentId)
+                .withObject("agent", conversation.convertToAgentInfo())
                 .navigation(context)
         },
         onClickSysMsg = {
