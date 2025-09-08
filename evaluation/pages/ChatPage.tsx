@@ -29,18 +29,17 @@ import {
   UserOutlined,
   ClearOutlined,
   DownloadOutlined,
-  MessageOutlined,
   ClockCircleOutlined,
   ReloadOutlined,
   HistoryOutlined,
-  TeamOutlined,
   RedoOutlined,
   DeleteOutlined,
 } from "@ant-design/icons";
 import { useAgents } from "../hooks/useAgents";
 import api from "../services/api";
-import type { Agent, ChatMessage } from "../types";
+import type { Agent } from "../types";
 import VoicePlayer from "../components/common/VoicePlayer";
+import { PremiumModeToggle } from "../components/common/PremiumModeToggle";
 
 const { Content } = Layout;
 const { Text, Paragraph } = Typography;
@@ -72,13 +71,12 @@ export const ChatPage: React.FC = () => {
   const [inputValue, setInputValue] = useState("");
   const [sending, setSending] = useState(false);
   const [chatHistory, setChatHistory] = useState<ChatSession[]>([]);
-  const [isGuestMode, setIsGuestMode] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [historyLoading, setHistoryLoading] = useState(false);
 
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<any>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   // 智能体数据
   const {
@@ -208,6 +206,8 @@ export const ChatPage: React.FC = () => {
       setSending(true);
 
       try {
+        const currentSettings = await api.inty.api.v1.chats.agents.getSettings(agent.id);
+        console.log(`智能体 ${agent.name} 的当前聊天设置:`, currentSettings);
         // 先尝试获取现有的聊天详情和消息历史
         const chatData = await api.chat.getChatDetail(agent.id, {
           page: 1,
@@ -222,7 +222,7 @@ export const ChatPage: React.FC = () => {
             content: msg.content,
             timestamp: msg.created_at,
             sender_type: msg.sender_type,
-            remoteId: msg.id || `remote_${index}`, // 添加远程消息ID
+            remoteId: `remote_${index}`, // 添加远程消息ID
           }),
         );
 
@@ -494,12 +494,12 @@ export const ChatPage: React.FC = () => {
         } catch (error) {
           console.error("清空聊天记录失败:", error);
           let errorMessage = "清空聊天记录失败，请重试。";
-          let errorDetail: any = null;
+          let errorDetail: unknown = null;
 
           // Check if it's our custom ApiError
           if (error instanceof Error && "errorData" in error) {
             // Use 'in' operator for type narrowing
-            const apiError = error as any; // Cast to any to access errorData
+            const apiError = error as { errorData: unknown; message: string }; // Cast to access errorData
             errorMessage = apiError.message;
             errorDetail = apiError.errorData;
           } else if (error instanceof Error) {
@@ -511,7 +511,7 @@ export const ChatPage: React.FC = () => {
             content: (
               <div>
                 <p>{errorMessage}</p>
-                {errorDetail && (
+                {errorDetail ? (
                   <div>
                     <p>后端返回详情:</p>
                     <pre
@@ -525,10 +525,10 @@ export const ChatPage: React.FC = () => {
                         borderRadius: "4px",
                       }}
                     >
-                      {JSON.stringify(errorDetail, null, 2)}
+                      {JSON.stringify(errorDetail as Record<string, unknown>, null, 2)}
                     </pre>
                   </div>
-                )}
+                ) : null}
               </div>
             ),
             okText: "关闭",
@@ -855,31 +855,25 @@ export const ChatPage: React.FC = () => {
                               <div style={{ marginTop: 4 }}>
                                 {agent.gender && (
                                   <Tag
-                                    size="small"
                                     color={
-                                      agent.gender === "男"
+                                      agent.gender === "MALE"
                                         ? "blue"
-                                        : agent.gender === "女"
+                                        : agent.gender === "FEMALE"
                                           ? "pink"
                                           : "default"
                                     }
                                   >
-                                    {agent.gender}
+                                    {agent.gender === "MALE" ? "男" : agent.gender === "FEMALE" ? "女" : "其他"}
                                   </Tag>
                                 )}
                                 <Tag
-                                  size="small"
                                   color={
-                                    agent.visibility === "PUBLIC" ||
-                                      agent.visibility === "public"
+                                    agent.visibility === "PUBLIC"
                                       ? "green"
                                       : "orange"
                                   }
                                 >
-                                  {agent.visibility === "PUBLIC" ||
-                                    agent.visibility === "public"
-                                    ? "公开"
-                                    : "私有"}
+                                  {agent.visibility === "PUBLIC" ? "公开" : "私有"}
                                 </Tag>
                               </div>
                             </div>
@@ -914,15 +908,14 @@ export const ChatPage: React.FC = () => {
                 }
                 extra={
                   <Space>
-                    <Tooltip title="切换游客模式">
-                      <Button
-                        icon={<TeamOutlined />}
-                        type={isGuestMode ? "primary" : "default"}
-                        onClick={() => setIsGuestMode(!isGuestMode)}
-                      >
-                        {isGuestMode ? "游客" : "用户"}
-                      </Button>
-                    </Tooltip>
+                    <PremiumModeToggle
+                      agentId={selectedAgent.id}
+                      onToggle={(enabled) => {
+                        console.log("Premium mode toggled:", enabled);
+                        // Premium mode has been successfully updated via API
+                        // The component handles the API call internally
+                      }}
+                    />
                     <Tooltip title="打开 LangSmith 监控">
                       <Button
                         icon={
@@ -1306,7 +1299,7 @@ export const ChatPage: React.FC = () => {
                 {/* 消息列表 */}
                 <List
                   dataSource={messages}
-                  renderItem={(message, index) => (
+                  renderItem={(message) => (
                     <List.Item key={message.id}>
                       <List.Item.Meta
                         avatar={
