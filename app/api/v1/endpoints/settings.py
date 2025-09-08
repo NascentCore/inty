@@ -9,9 +9,10 @@ from sqlalchemy.orm import Session
 from app import schemas
 from app.api import deps
 from app.api.utils.logger_route import LoggerRoute
-from app.services import create_settings, get_settings, update_settings
+from app.services.settings_service import create_settings, get_settings, update_settings
 
-logger = logging.getLogger(__name__)
+from loguru import logger
+
 router = APIRouter(prefix="/settings", route_class=LoggerRoute)
 
 

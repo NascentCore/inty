@@ -1,3 +1,4 @@
+from unittest.mock import AsyncMock
 import uuid
 import pytest
 import psycopg2
@@ -9,6 +10,7 @@ from sqlalchemy.orm import sessionmaker
 
 from app.models import Base
 from app.models.user import User, AuthType
+from app.services.subscription_service import SubscriptionService
 from app.services.user_service import delete_user_account
 
 
@@ -62,12 +64,13 @@ class TestUserDeletion:
             assert created_user.deleted_at is None
             assert created_user.deletion_reason is None
 
+            mock_subscription_service = AsyncMock(spec=SubscriptionService)
             # Step 2: Call the real delete_user_account function
             deletion_result = await delete_user_account(
                 db=session,
                 user_id=user_id,
+                subscription_service=mock_subscription_service,
                 deletion_reason="Test deletion with real function",
-                processor_id="test_processor_real",
             )
 
             # Step 3: Verify deletion result
@@ -86,9 +89,13 @@ class TestUserDeletion:
             assert deleted_user.deleted_at is not None  # Should have deletion timestamp
             assert deleted_user.deletion_reason == "Test deletion with real function"
 
-            print(f"✅ Real function test passed successfully!")
-            print(f"   - User ID: {deleted_user.id}")
-            print(f"   - Deletion Time: {deleted_user.deleted_at}")
+            assert (
+                mock_subscription_service.get_user_subscription_status.call_count == 1
+            )
+            assert (
+                mock_subscription_service.cancel_user_subscriptions_for_deletion.call_count
+                == 1
+            )
 
             # Clean up - delete the test user
             await session.delete(deleted_user)
