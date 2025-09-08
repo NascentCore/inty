@@ -647,14 +647,18 @@ class Agent:
                 logger.debug(f"开始Agent推理 - Agent: {self.agent_id}")
 
                 chat_name = f"{user_name}:{self.name}"
+                default_model = global_config_loaded_from_config_yaml.agent.model
+                default_temperature = global_config_loaded_from_config_yaml.agent.temperature
+                default_max_tokens = global_config_loaded_from_config_yaml.agent.max_tokens
+                default_top_p = global_config_loaded_from_config_yaml.agent.top_p
                 response = create_openai_client(
                     chat_name=chat_name, labels=labels
                 ).chat.completions.create(
                     messages=openai_messages,
-                    model=self.model_config.get("model", "openai/gpt-3.5-turbo"),
-                    temperature=self.model_config.get("temperature", 0.5),
-                    max_tokens=self.model_config.get("max_tokens", 1000),
-                    top_p=self.model_config.get("top_p", 1.0),
+                    model=self.model_config.get("model", default_model),
+                    temperature=self.model_config.get("temperature", default_temperature),
+                    max_tokens=self.model_config.get("max_tokens", default_max_tokens),
+                    top_p=self.model_config.get("top_p", default_top_p),
                     extra_body={
                         # This only works for Gemini models.
                         "generation_config": {
