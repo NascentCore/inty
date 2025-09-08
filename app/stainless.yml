@@ -14,14 +14,21 @@ organization:
 targets:
   python:
     package_name: inty
-    production_repo: null
+    production_repo: NascentCore/inty-python
     publish:
       pypi: false
+  typescript:
+    package_name: inty
+    production_repo: NascentCore/inty-typescript
+    publish:
+      npm: false
+    options:
+      mcp_server: false
 
 # `environments` are a map of the name of the environment (e.g. "sandbox",
 # "production") to the corresponding url to use.
 environments:
-  production: https://api.example.com
+  production: https://app.inty.cc
 
 # `resources` define the structure and organization for your API, such as how
 # methods and models are grouped together and accessed. See the [configuration
@@ -131,8 +138,7 @@ resources:
                       list: get /api/v1/subscription/admin/plans
                   users:
                     methods:
-                      get_subscription_status: get
-                        /api/v1/subscription/admin/users/{user_id}/subscription
+                      get_subscription_status: get /api/v1/subscription/admin/users/{user_id}/subscription
                       get_usage_statistics: get /api/v1/subscription/admin/users/{user_id}/usage
           version:
             methods:
