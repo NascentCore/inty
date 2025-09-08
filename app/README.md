@@ -25,6 +25,8 @@ There are 3 phases on Stainless:
 
 <img width="800" height="1150" alt="image" src="https://github.com/user-attachments/assets/8c9c6098-921f-4c7e-a409-bc460805424c" />
 
+stainless.yml matches stainless studio's configs.
+
 ### Python SDK
 
 ```bash
