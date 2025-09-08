@@ -1,6 +1,7 @@
 import os
 import tempfile
 from PIL import Image
+from loguru import logger
 import requests
 
 
@@ -26,6 +27,9 @@ def test_upload_avatar():
     headers = {"Authorization": f"Bearer {token}"}
 
     test_image_path = "tests/app/api/v1/endpoints/test.png"
+    logger.debug(f"Test image path: {test_image_path}")
+    logger.debug(f"Pwd: {os.getcwd()}")
+    logger.debug(f"files (readable) under pwd: {os.listdir(os.getcwd())}")
 
     with open(test_image_path, "rb") as f:
         files = {"file": ("test.png", f, "image/png")}
