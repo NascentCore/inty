@@ -39,7 +39,7 @@ async def check_version(
 
         # 调用Google Play服务检查版本
         version_check_result = google_play_service.check_version_requirement(
-            client_version_code
+            client_version_code, app_version_name
         )
 
         # 转换为响应模型

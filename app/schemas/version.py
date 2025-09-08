@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import List, Optional
 from pydantic import BaseModel, Field
 
 
@@ -17,6 +17,7 @@ class VersionCheckResponse(BaseModel):
     latest_version_code: Optional[int] = Field(None, description="最新版本代码")
     update_required: bool = Field(..., description="是否需要更新")
     force_update: bool = Field(..., description="是否强制更新")
+    force_update_reasons: Optional[List[str]] = Field(None, description="强制更新的具体原因列表")
     minimum_version: str = Field(..., description="最低支持版本")
     changelog: Optional[str] = Field(None, description="更新日志")
     download_url: str = Field(..., description="下载链接")
