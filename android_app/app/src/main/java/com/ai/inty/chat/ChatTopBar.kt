@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -20,10 +21,11 @@ import com.ai.inty.Constant
 import com.ai.inty.R
 import com.ai.inty.base.IntyCircleImage
 import com.ai.inty.base.IntyImage
+import com.ai.inty.base.ToastUtils
 import com.ai.inty.base.noRippleClickable
 import com.ai.inty.beans.AgentInfo
-import com.inty.utils.log.EasyLog
 import com.therouter.TheRouter
+import kotlinx.coroutines.launch
 
 
 private const val CHAT_TOP_BAR_AVATAR_SIZE = 30
@@ -49,6 +51,7 @@ fun ChatTopBar(
     onFollowAgent: ((String) -> Unit)? = null,
 ) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
     Row(
         modifier = modifier,
@@ -74,9 +77,16 @@ fun ChatTopBar(
                     shape = RoundedCornerShape(CHAT_TOP_BAR_CORNER_RADIUS.dp)
                 )
                 .noRippleClickable {
-                    TheRouter.build(Constant.ROUTE_AGENT_INFO)
-                        .withObject("agent", agentInfo)
-                        .navigation(context)
+                    scope.launch {
+                        //如果是已经删除的agent，则不可点击，并提示
+                        if (agentInfo.isDeleted) {
+                            ToastUtils.showToast(R.string.str_agent_is_deleted)
+                        } else {
+                            TheRouter.build(Constant.ROUTE_AGENT_INFO)
+                                .withObject("agent", agentInfo)
+                                .navigation(context)
+                        }
+                    }
                 },
             verticalAlignment = Alignment.CenterVertically
         ) {
