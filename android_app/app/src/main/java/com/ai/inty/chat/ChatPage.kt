@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -28,6 +29,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
@@ -37,6 +39,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.ai.inty.Constant
 import com.ai.inty.R
+import com.ai.inty.base.ToastUtils
 import com.ai.inty.billing.BillingRepository
 import com.ai.inty.ui.AdvancedModelChatDialog
 import com.ai.inty.ui.ChatDialogData
@@ -152,14 +155,28 @@ internal fun ChatPage(
                         onBack = onBack,
                         onClickMore = {
                             scope.launch {
-                                if (drawerState.value == DrawerValue.Closed) {
-                                    drawerState.value = DrawerValue.Open
+                                //如果是已经删除的agent，则不可点击，并提示
+                                if (agentInfo?.isDeleted == true) {
+                                    ToastUtils.showToast(R.string.str_agent_is_deleted)
                                 } else {
-                                    drawerState.value = DrawerValue.Closed
+                                    if (drawerState.value == DrawerValue.Closed) {
+                                        drawerState.value = DrawerValue.Open
+                                    } else {
+                                        drawerState.value = DrawerValue.Closed
+                                    }
                                 }
                             }
                         },
-                        onFollowAgent = onFollowAgent
+                        onFollowAgent = { agentId ->
+                            scope.launch {
+                                //如果是已经删除的agent，则不可点击，并提示
+                                if (agentInfo?.isDeleted == true) {
+                                    ToastUtils.showToast(R.string.str_agent_is_deleted)
+                                } else {
+                                    onFollowAgent?.invoke(agentId)
+                                }
+                            }
+                        }
                     )
                 }
 
@@ -170,20 +187,26 @@ internal fun ChatPage(
                     PremiumModelTag(
                         isPremiumModel = agentPremiumModel,
                         onClick = {
-                            // 检查VIP状态
-                            if (!vipStatus.isSubscribed) {
-                                // 如果不是VIP，显示高级模型的弹窗
-                                showPremiumDialog = true
-                            } else {
-                                // 如果是VIP，打开聊天设置抽屉，让用户手动设置开关
-                                scope.launch {
-                                    if (drawerState.value == DrawerValue.Closed) {
-                                        drawerState.value = DrawerValue.Open
+                            scope.launch {
+                                //如果是已经删除的agent，则不可点击，并提示
+                                if (agentInfo?.isDeleted == true) {
+                                    ToastUtils.showToast(R.string.str_agent_is_deleted)
+                                } else {
+                                    // 检查VIP状态
+                                    if (!vipStatus.isSubscribed) {
+                                        // 如果不是VIP，显示高级模型的弹窗
+                                        showPremiumDialog = true
                                     } else {
-                                        drawerState.value = DrawerValue.Closed
+                                        // 如果是VIP，打开聊天设置抽屉，让用户手动设置开关
+                                        if (drawerState.value == DrawerValue.Closed) {
+                                            drawerState.value = DrawerValue.Open
+                                        } else {
+                                            drawerState.value = DrawerValue.Closed
+                                        }
                                     }
                                 }
                             }
+
                         }
                     )
                     Spacer(Modifier.height(8.dp))
@@ -303,20 +326,39 @@ internal fun ChatPage(
 
                 // 输入框区域
                 Column {
-                    // Keep talking 按钮
-                    KeepTalkingButton(
-                        visible = shouldShowButton,
-                        onClick = { chatViewModel.sendKeepTalkingMessage() }
-                    )
+                    //如果是已经删除的agent，则不可点击，并提示
+                    if (agentInfo?.isDeleted == true) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(48.dp)
+                                .padding(horizontal = 16.dp)
+                                .clip(RoundedCornerShape(24.dp))
+                                .background(Color(0x9937303D)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = stringResource(R.string.str_agent_is_deleted),
+                                color = Color.Red
+                            )
+                        }
 
-                    // 输入框
-                    ChatInput(
-                        chatViewModel = chatViewModel,
-                        onSendMessage = { chatViewModel.sendMsg() },
-                        onToggleMorePanel = { showMorePanel = !showMorePanel },
-                        showMorePanel = showMorePanel,
-                        bottomPadding = bottomPadding
-                    )
+                    } else {
+                        // Keep talking 按钮
+                        KeepTalkingButton(
+                            visible = shouldShowButton,
+                            onClick = { chatViewModel.sendKeepTalkingMessage() }
+                        )
+                        // 输入框
+                        ChatInput(
+                            chatViewModel = chatViewModel,
+                            onSendMessage = { chatViewModel.sendMsg() },
+                            onToggleMorePanel = { showMorePanel = !showMorePanel },
+                            showMorePanel = showMorePanel,
+                            bottomPadding = bottomPadding
+                        )
+                    }
+
                 }
             }
         }
