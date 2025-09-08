@@ -1,14 +1,13 @@
-from dataclasses import field
 import os
-import tempfile
-from PIL import Image
-from loguru import logger
-import requests
-from inty import Inty
+import pytest
 
+from inty import Inty
 from app.utils.gcs import download_from_gcs
 
+from loguru import logger
 
+
+@pytest.mark.skip(reason="Skipping upload image test on CI")
 def test_upload_image():
     # Initially use dummy api key to create guest user.
     client = Inty(base_url="http://localhost:8000", api_key="dummy-api-key")
