@@ -3,7 +3,7 @@
 ## Python
 
 ```bash
-pip install git+ssh://git@github.com/NascentCore/inty-python.git/
+pip install git+https://github.com/NascentCore/inty-python.git
 python experimental/inty_sdks/example.py
 ```
 
@@ -11,7 +11,7 @@ python experimental/inty_sdks/example.py
 
 ```bash
 cd experimental/inty_sdks
-npm install git+ssh://git@github.com:NascentCore/inty-typescript.git
+npm install git+https://github.com/NascentCore/inty-typescript.git
 npx ts-node example.ts
 ```
 
