@@ -55,7 +55,7 @@ app = FastAPI(
     ),
     contact={
         "name": "InTy",
-        "url": "http://inty.cc/",
+        "url": "http://app.inty.cc/",
         "email": "dev@inty.cc",
     },
 )
@@ -251,10 +251,6 @@ async def shutdown_event():
 
 
 def custom_openapi():
-    # 只在debug模式下提供OpenAPI schema
-    if not global_config_loaded_from_config_yaml.app.debug:
-        return None
-
     if app.openapi_schema:
         return app.openapi_schema
 

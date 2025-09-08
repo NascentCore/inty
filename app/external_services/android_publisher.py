@@ -18,7 +18,9 @@ ANDROID_PUBLISHER_SERVICE_NAME = "androidpublisher"
 ANDROID_PUBLISHER_SERVICE_VERSION = "v3"
 
 
-def create_android_publisher_service(service_account_key: Union[str, os.PathLike]) -> Resource:
+def create_android_publisher_service(
+    service_account_key: Union[str, os.PathLike],
+) -> Resource:
     """
     Return an Android publisher service.
     """
@@ -40,4 +42,8 @@ def create_android_publisher_service(service_account_key: Union[str, os.PathLike
         scopes=[ANDROID_PUBLISHER_SCOPE],
     )
 
-    return build(ANDROID_PUBLISHER_SERVICE_NAME, ANDROID_PUBLISHER_SERVICE_VERSION, credentials=credentials)
+    return build(
+        ANDROID_PUBLISHER_SERVICE_NAME,
+        ANDROID_PUBLISHER_SERVICE_VERSION,
+        credentials=credentials,
+    )
