@@ -12,5 +12,6 @@ except Exception as e:
     logger.error(f"Failed to create Android publisher service: {e}")
     if debug:
         logger.error("Failure ignored in debug mode")
+        android_publisher_service = None
     else:
         raise e
