@@ -1,12 +1,22 @@
 # Inty-eval（角色评测工具）
 
-这是一个使用 React/TypeScript 构建的 Web 应用程序，用于评估 AI 角色、管理提示和显示聊天交互。
+这是一个使用 React/TypeScript 构建的运行于浏览器内的 Web 应用程序，用于评估 AI 角色、管理提示和显示聊天交互。
 
 ```
 git clone https://github.com/NascentCore/inty-backend.git
 cd inty-backend
+
+# 默认对接 https://dev.inty.sxwl.ai/api/v1
+# 打开 http://localhost:3000/
 evaluation/start.sh
-# Open http://localhost:3000/
+
+# 如果需要对接本地运行的后端服务
+# 会在数据库内初始化超级用户
+docker compose up --build
+
+# 指向本地服务
+# 打开 http://localhost:3000/
+evaluation/start.sh --backend-url http://localhost:8000/api/v1
 ```
 
 ## langsmith 上查看大模型调用请求
