@@ -1,6 +1,6 @@
 # Privilege management
 
-APIs for managing user's priviliges:
+APIs for managing user's privileges:
 
-* Superusers
-* Subscribed users
+* Superusers have whatever privileges available to any users
+* Subscribed users have defined list of privileges

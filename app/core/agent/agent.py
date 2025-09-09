@@ -4,7 +4,7 @@ import logging
 import time
 from concurrent.futures import ThreadPoolExecutor
 from threading import Lock, RLock
-from typing import Any, Dict, List, Optional, TypedDict
+from typing import Any, Dict, List, Optional
 
 from jinja2 import Template as Jinja2Template
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
@@ -283,9 +283,11 @@ class Agent:
 
         system_messages = []
 
-        # 如缺少任一默认提示词，则认为是用户创建的角色。
+        # 过往逻辑：如缺少任一默认提示词，则认为是用户创建的角色。
         # 此为短期解决方案，未来任何对提示词组装机制的改造，都需要重新考虑这个判定的正确性。
-        # 目前不考虑这个区分，未来可能要做一些变化。
+        # 目前不考虑这个区分，未来可能要做一些变化，目前的重点是预置角色而非用户自创角色，
+        # 因此不做更深的考虑。由于预置角色也可能没有 mode_prompt，因此无法精确判断。
+        # 而应该检查角色的 creator 字段是否是普通用户。
         # is_char_user_created = not self.main_prompt or not self.mode_prompt
         # logger.debug(f"角色是否用户创建: {is_char_user_created}")
 
