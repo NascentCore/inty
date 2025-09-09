@@ -71,6 +71,9 @@ class Agent(Base):
     character_version = Column(String, nullable=True)  # 版本号
     extensions = Column(JSON, nullable=True)  # 扩展数据
 
+    # 语音相关字段
+    opening_audio_url = Column(String, nullable=True)  # 预生成的开场白语音URL
+
     # 外键
     creator_id = Column(String, ForeignKey("users.id"))
 

@@ -193,7 +193,7 @@ async def create_chat(
                 )
                 if existing_messages.get("total", 0) == 0:
                     chat_history_service.add_agent_opening_message(
-                        session_id, agent.opening
+                        session_id, agent.opening, agent.opening_audio_url
                     )
                     logger.debug(f"添加Agent开场白成功 - Session ID: {session_id}")
                 else:
@@ -437,25 +437,28 @@ async def get_or_create_chat_by_agent(
                     session_id=session_id, limit=1, offset=0
                 )
                 if existing_messages.get("total", 0) == 0:
-                    # 获取agent开场白
+                    # 获取agent开场白和语音URL
                     agent_opening = None
+                    opening_audio_url = None
                     if cached_agent:
                         agent_opening = cached_agent.get("opening")
+                        opening_audio_url = cached_agent.get("opening_audio_url")
                     else:
                         # 如果缓存中没有开场白，从数据库查询
                         agent_result = await db.execute(
-                            select(models.Agent.opening).where(
+                            select(models.Agent.opening, models.Agent.opening_audio_url).where(
                                 models.Agent.id == agent_id
                             )
                         )
                         agent_info = agent_result.first()
                         if agent_info:
                             agent_opening = agent_info[0]
+                            opening_audio_url = agent_info[1]
 
                     # 如果有开场白，添加到聊天历史
                     if agent_opening:
                         chat_history_service.add_agent_opening_message(
-                            session_id, agent_opening
+                            session_id, agent_opening, opening_audio_url
                         )
                         logger.debug(
                             f"为已存在的空聊天会话添加Agent开场白成功 - Session ID: {session_id}"
@@ -497,12 +500,13 @@ async def get_or_create_chat_by_agent(
             agent_name = cached_agent.get("name")
             agent_avatar = cached_agent.get("avatar")
             agent_opening = cached_agent.get("opening")
+            opening_audio_url = cached_agent.get("opening_audio_url")
             logger.debug(f"从缓存获取Agent信息: {agent_name}")
         else:
             # 数据库查询Agent信息
             agent_result = await db.execute(
                 select(
-                    models.Agent.name, models.Agent.avatar, models.Agent.opening, models.Agent.deleted_at
+                    models.Agent.name, models.Agent.avatar, models.Agent.opening, models.Agent.opening_audio_url, models.Agent.deleted_at
                 ).where(models.Agent.id == agent_id)
             )
             agent_info = agent_result.first()
@@ -510,11 +514,11 @@ async def get_or_create_chat_by_agent(
                 logger.error(f"Agent不存在: {agent_id}")
                 raise HTTPException(status_code=404, detail="Agent不存在")
 
-            agent_name, agent_avatar, agent_opening, agent_deleted_at = agent_info
+            agent_name, agent_avatar, agent_opening, opening_audio_url, agent_deleted_at = agent_info
             # 缓存Agent信息
             cache_service.set_agent_config(
                 agent_id,
-                {"name": agent_name, "avatar": agent_avatar, "opening": agent_opening},
+                {"name": agent_name, "avatar": agent_avatar, "opening": agent_opening, "opening_audio_url": opening_audio_url},
             )
             logger.debug(f"验证Agent存在 - Agent ID: {agent_id}, Name: {agent_name}")
 
@@ -549,7 +553,7 @@ async def get_or_create_chat_by_agent(
                 )
                 if existing_messages.get("total", 0) == 0:
                     chat_history_service.add_agent_opening_message(
-                        session_id, agent_opening
+                        session_id, agent_opening, opening_audio_url
                     )
                     logger.debug(f"添加Agent开场白成功 - Session ID: {session_id}")
                 else:

@@ -80,12 +80,32 @@ def get_chat_history(session_id: str) -> PostgresChatMessageHistory:
     return PostgresChatMessageHistory("chat_history", session_id, sync_connection=conn)
 
 
-def add_agent_opening_message(session_id: str, opening_message: str) -> None:
+def add_agent_opening_message(session_id: str, opening_message: str, audio_url: Optional[str] = None) -> None:
     """添加Agent开场白到聊天历史"""
     try:
-        history = get_chat_history(session_id)
-        history.add_messages([AIMessage(content=opening_message)])
-        logger.debug(f"添加开场白到会话 {session_id}: {opening_message}")
+        conn = get_chat_history_connection()
+        
+        # 构建AIMessage的JSON格式数据
+        message_data = {
+            "type": "ai",
+            "data": {"content": opening_message}
+        }
+        
+        # 直接插入到数据库，包含audio_url
+        insert_query = """
+            INSERT INTO chat_history (session_id, message, audio_url, created_at)
+            VALUES (%s, %s, %s, NOW())
+        """
+        
+        with conn.cursor() as cur:
+            cur.execute(insert_query, (
+                session_id, 
+                json.dumps(message_data),
+                audio_url
+            ))
+            
+        logger.debug(f"添加开场白到会话 {session_id}: {opening_message}, audio_url: {audio_url}")
+        
     except Exception as e:
         logger.error(f"添加开场白失败 {session_id}: {str(e)}")
         raise
@@ -209,9 +229,9 @@ def get_messages_paginated(
             cur.execute(count_query, (session_id,))
             total_count = cur.fetchone()[0]
 
-        # 分页查询消息（按时间倒序，最新的在前）- 包括消息ID
+        # 分页查询消息（按时间倒序，最新的在前）- 包括消息ID和audio_url
         messages_query = """
-            SELECT id, message, created_at
+            SELECT id, message, created_at, audio_url
             FROM chat_history 
             WHERE session_id = %s 
             ORDER BY created_at DESC 
@@ -225,10 +245,11 @@ def get_messages_paginated(
 
             for row in rows:
                 try:
-                    # 提取消息ID、消息数据和创建时间
+                    # 提取消息ID、消息数据、创建时间和audio_url
                     message_id = row[0]
                     message_raw = row[1]
                     created_at = row[2]
+                    audio_url = row[3]
 
                     # 处理消息数据，可能是字符串或已经是字典
                     if isinstance(message_raw, str):
@@ -260,6 +281,7 @@ def get_messages_paginated(
                             "id": message_id,  # 添加消息ID
                             "role": role,
                             "content": content,
+                            "audio_url": audio_url,  # 添加audio_url字段
                             "timestamp": created_at.isoformat() if created_at else None,
                         }
                     )
@@ -399,6 +421,57 @@ async def get_message_content(session_id: str, message_id: str) -> Optional[str]
     except Exception as e:
         logger.error(f"获取消息内容失败 {session_id}, {message_id}: {str(e)}")
         return None
+
+
+def update_message_audio_url(session_id: str, message_id: str, audio_url: str) -> bool:
+    """
+    更新指定消息的audio_url字段
+
+    Args:
+        session_id: 会话ID
+        message_id: 消息ID（数据库的真实ID）
+        audio_url: 语音文件URL
+
+    Returns:
+        bool: 更新是否成功
+    """
+    try:
+        conn = get_chat_history_connection()
+
+        # 尝试将message_id转换为整数
+        try:
+            db_message_id = int(message_id)
+        except ValueError:
+            logger.warning(f"无法解析消息ID为整数: {message_id}")
+            return False
+
+        # 更新指定消息的audio_url
+        update_query = """
+            UPDATE chat_history 
+            SET audio_url = %s 
+            WHERE session_id = %s AND id = %s
+        """
+
+        with conn.cursor() as cur:
+            cur.execute(update_query, (audio_url, session_id, db_message_id))
+            updated_rows = cur.rowcount
+
+            if updated_rows > 0:
+                logger.debug(
+                    f"成功更新消息audio_url: session_id={session_id}, message_id={db_message_id}, audio_url={audio_url}"
+                )
+                return True
+            else:
+                logger.warning(
+                    f"消息未找到，无法更新audio_url: session_id={session_id}, message_id={db_message_id}"
+                )
+                return False
+
+    except Exception as e:
+        logger.error(
+            f"更新消息audio_url失败: session_id={session_id}, message_id={message_id}, audio_url={audio_url}, 错误: {str(e)}"
+        )
+        return False
 
 
 def clear_messages_after_id(session_id: str, message_id: int) -> Dict[str, Any]:

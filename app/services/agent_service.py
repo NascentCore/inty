@@ -25,8 +25,53 @@ from app.utils.image import (
     ImageFormat,
     get_jpg_bytes_from_pil_image,
 )
+from app.services.voice_service import VoiceService
+from app.core.config import global_config_loaded_from_config_yaml
 
 from loguru import logger
+
+
+async def generate_agent_opening_voice(
+    agent: models.Agent, db: AsyncSession
+) -> Optional[str]:
+    """
+    为Agent生成开场白语音并返回音频URL
+    """
+    try:
+        if not agent.opening or not agent.opening.strip():
+            logger.debug(f"Agent {agent.id} 没有开场白文本，跳过语音生成")
+            return None
+        
+        # 确定使用的voice_id：优先使用agent的voice_id，否则使用配置文件默认值
+        voice_id_to_use = agent.voice_id or global_config_loaded_from_config_yaml.elevenlabs.voice_id
+        
+        if not voice_id_to_use:
+            logger.debug(f"Agent {agent.id} 和配置文件都没有voice_id，跳过语音生成")
+            return None
+
+        logger.debug(f"Agent {agent.id} 使用voice_id: {voice_id_to_use} (来源: {'Agent' if agent.voice_id else '配置文件'})")
+
+        voice_service = VoiceService()
+        
+        # 生成开场白语音
+        audio_url = await voice_service.generate_voice(
+            text=agent.opening,
+            voice_id=voice_id_to_use
+        )
+        
+        if audio_url:
+            # 更新agent的opening_audio_url字段
+            agent.opening_audio_url = audio_url
+            await db.commit()
+            logger.debug(f"成功为Agent {agent.id} 生成开场白语音: {audio_url}")
+            return audio_url
+        else:
+            logger.warning(f"Agent {agent.id} 开场白语音生成失败，未返回URL")
+            return None
+            
+    except Exception as e:
+        logger.error(f"为Agent {agent.id} 生成开场白语音失败: {str(e)}")
+        return None
 
 
 async def generate_next_readable_id(db: AsyncSession) -> str:
@@ -569,6 +614,12 @@ async def create_agent(
         await db.commit()
         await db.refresh(db_agent)
 
+        # 异步生成开场白语音（不阻塞Agent创建）
+        try:
+            await generate_agent_opening_voice(db_agent, db)
+        except Exception as e:
+            logger.warning(f"Agent {db_agent.id} 创建后语音生成失败，将在后续使用时生成: {str(e)}")
+
         result = await db.execute(
             select(models.Agent)
             .options(selectinload(models.Agent.creator))
@@ -708,16 +759,23 @@ async def update_agent(
         if not db_agent:
             raise HTTPException(status_code=404, detail="角色不存在")
 
-        _update_agent_in_db(agent_in, db_agent)
+        # 检查是否需要重新生成开场白语音
+        update_data = agent_in.model_dump(exclude_unset=True)
+        should_regenerate_voice = (
+            "opening" in update_data or "voice_id" in update_data
+        )
 
-        # logger.debug(f"更新后的Agent数据: {db_agent.model_dump()}")
-        # Put this statement here caused failure:
-        # greenlet_spawn has not been called; can't call await_only() here.
-        # Was IO attempted in an unexpected place?
-        # (Background on this error at: https://sqlalche.me/e/20/xd2s)
+        _update_agent_in_db(agent_in, db_agent)
 
         await db.commit()
         await db.refresh(db_agent)
+
+        # 如果开场白文本或语音ID发生变化，重新生成语音
+        if should_regenerate_voice:
+            try:
+                await generate_agent_opening_voice(db_agent, db)
+            except Exception as e:
+                logger.warning(f"Agent {db_agent.id} 更新后语音重新生成失败: {str(e)}")
 
         # 重新查询以加载关系数据
         result = await db.execute(
