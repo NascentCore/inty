@@ -52,7 +52,7 @@ def include_object(object, name, type_, reflected, compare_to):
     if type_ == "table":
         # Add any table names here that should be ignored
         excluded_tables = {
-            "chat_history",  # LangChain Postgres table
+            # No excluded tables currently
         }
         if name in excluded_tables:
             return False

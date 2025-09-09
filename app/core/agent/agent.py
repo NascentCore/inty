@@ -15,7 +15,6 @@ from langgraph.graph import MessagesState
 from langgraph.managed import RemainingSteps
 from loguru import logger
 from openai import OpenAI
-from psycopg import Connection
 from psycopg_pool import ConnectionPool
 from sqlalchemy import text
 from typing_extensions import deprecated
@@ -145,12 +144,7 @@ def get_connection_pool():
     return _connection_pool
 
 
-# TODO: 这个应该挪到 alembic 里执行
-# 初始化聊天历史表和记忆表
-pg_url = global_config_loaded_from_config_yaml.database.url
-logger.debug(f"初始化聊天历史表和记忆表, database url: {pg_url}")
-conn = Connection.connect(pg_url, autocommit=True)
-PostgresChatMessageHistory.create_tables(conn, chat_history.TABLE_NAME)
+# chat_history表现在由Alembic迁移管理，不需要手动初始化
 
 
 class Agent:
