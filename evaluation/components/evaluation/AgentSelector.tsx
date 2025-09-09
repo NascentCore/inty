@@ -19,6 +19,7 @@ import {
   Badge,
   Row,
   Col,
+  message,
 } from "antd";
 import {
   UserOutlined,
@@ -138,6 +139,9 @@ export const AgentSelector: React.FC<AgentSelectorProps> = ({
             showZero
             style={{ backgroundColor: "#52c41a" }}
           />
+          <span style={{ color: "#666", fontSize: "14px" }}>
+            (共 {filteredAgents.length} 个)
+          </span>
         </Space>
       }
       extra={
@@ -254,6 +258,7 @@ export const AgentSelector: React.FC<AgentSelectorProps> = ({
                 }
                 actions={[
                   <Tooltip
+                    key="checkbox-tooltip"
                     title={
                       isSelected
                         ? "取消选择"
@@ -327,7 +332,7 @@ export const AgentSelector: React.FC<AgentSelectorProps> = ({
                         </p>
                       )}
                       <div style={{ fontSize: "12px", color: "#999" }}>
-                        创建时间: {new Date(agent.created_at).toLocaleString()}
+                        创建时间: {agent.created_at ? new Date(agent.created_at).toLocaleString() : "未知"}
                       </div>
                     </div>
                   }
