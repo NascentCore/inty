@@ -170,32 +170,39 @@ async def agent_chat_completions(
         logger.debug(f"开始非流式聊天处理: session_id={session_id}")
         chat_processing_start = time.time()
 
-        settings_task = asyncio.create_task(
-            chat_service.get_or_create_chat_settings(
-                db, chat.id, current_user.id, agent_id
+        # 并行获取聊天设置和AI回复
+        try:
+            settings_task = asyncio.create_task(
+                chat_service.get_or_create_chat_settings(
+                    db, chat.id, current_user.id, agent_id
+                )
             )
-        )
 
-        # 先获取设置，然后传递给AI任务
-        chat_settings = await settings_task
-        logger.debug(f"chat_settings: {chat_settings.__dict__}")
+            # 先获取设置，然后传递给AI任务
+            chat_settings = await settings_task
+            logger.debug(f"chat_settings: {chat_settings.__dict__}")
 
-        ai_task = asyncio.create_task(
-            agent.chat(
-                user_id=current_user.id,
-                session_id=session_id,
-                messages=messages,
-                chat_settings=chat_settings,
+            ai_task = asyncio.create_task(
+                agent.chat(
+                    user_id=current_user.id,
+                    session_id=session_id,
+                    messages=messages,
+                    chat_settings=chat_settings,
+                )
             )
-        )
 
-        # 等待任务完成
-        response_content = await ai_task
-        chat_processing_time = time.time() - chat_processing_start
-        logger.debug(
-            f"Agent聊天响应成功: {response_content[:100]}..., 耗时: {chat_processing_time:.3f}秒"
-        )
-        logger.debug(f"聊天设置获取成功: voice_enabled={chat_settings.voice_enabled}")
+            # 等待任务完成
+            response_content = await ai_task
+            chat_processing_time = time.time() - chat_processing_start
+            logger.debug(
+                f"Agent聊天响应成功: {response_content[:100]}..., 耗时: {chat_processing_time:.3f}秒"
+            )
+            logger.debug(
+                f"聊天设置获取成功: voice_enabled={chat_settings.voice_enabled}"
+            )
+        except Exception as e:
+            logger.error(f"Agent聊天处理失败: {str(e)}")
+            raise
 
         # 语音生成逻辑 - 根据chat_settings.voice_enabled决定是否自动播放
         audio_url = None
