@@ -156,6 +156,7 @@ class AgentInDB(AgentBase):
     creator_id: Optional[str] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
+    deleted_at: Optional[datetime] = None
 
     @field_serializer("created_at")
     def serialize_created_at(self, created_at: datetime) -> int:
@@ -168,6 +169,13 @@ class AgentInDB(AgentBase):
         if updated_at is None:
             return None
         return int(updated_at.timestamp())
+
+    @field_serializer("deleted_at")
+    def serialize_deleted_at(self, deleted_at: Optional[datetime]) -> Optional[int]:
+        """序列化删除时间为时间戳"""
+        if deleted_at is None:
+            return None
+        return int(deleted_at.timestamp())
 
     class Config:
         from_attributes = True

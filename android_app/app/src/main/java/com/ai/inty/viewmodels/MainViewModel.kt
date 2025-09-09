@@ -576,6 +576,11 @@ class MainViewModel : BaseActivityViewModel() {
                                 hasMoreFollowingAgents = false
                                 EasyLog.log("loadFollowingAgents - 第${currentFollowingAgentsPage}页数据为空，没有更多数据")
                             } else {
+                                // 设置isDeleted标志
+                                agents.forEach { agent ->
+                                    agent.isDeleted = agent.deletedAt != null
+                                }
+                                
                                 // 第一页数据替换，其他页数据追加
                                 if (currentFollowingAgentsPage == 1) {
                                     followingAgents.clear()
