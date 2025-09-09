@@ -21,7 +21,6 @@ from app.core.config import global_config_loaded_from_config_yaml
 from app.schemas.chat import ChatCompletionRequest
 from app.schemas.response import BusinessErrorCode, create_business_error_response
 from app.services import agent_service, chat_history_service, chat_service
-from app.services.async_voice_service import async_voice_service
 from app.services.chat_service import generate_session_id
 from app.services.global_services import subscription_service
 from app.services.voice_cache_service import voice_cache_service
