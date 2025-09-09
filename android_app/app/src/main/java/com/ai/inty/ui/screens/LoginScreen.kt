@@ -52,7 +52,6 @@ internal fun LoginScreen(
     val context = LocalContext.current
     var lastClickTime by remember { mutableLongStateOf(0L) }
     var isLoading by remember { mutableStateOf(false) }
-    var selected by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
 
     // 使用新的 Credential Manager 登录
@@ -162,22 +161,15 @@ internal fun LoginScreen(
             // Google 登录按钮
             GoogleLoginButton(
                 isLoading = isLoading,
-                isSelected = selected,
                 onLoginClick = {
-                    if (selected) {
-                        performGoogleSignIn()
-                    } else {
-                        coroutineScope.launch {
-                            ToastUtils.showToast(context.getString(R.string.toast_check_terms_privacy))
-                        }
-                    }
+                    performGoogleSignIn()
                 }
             )
 
             Spacer(modifier = Modifier.height(24.dp))
 
             // 隐私政策文本
-            PolicyText(selected, { selected = it })
+            PolicyText()
 
             Spacer(modifier = Modifier.height(60.dp))
         }

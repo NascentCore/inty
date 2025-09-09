@@ -101,7 +101,6 @@ internal fun WelcomeSubtitle() {
 @Composable
 internal fun GoogleLoginButton(
     isLoading: Boolean,
-    isSelected: Boolean,
     onLoginClick: () -> Unit
 ) {
     Button(
@@ -151,10 +150,7 @@ internal fun GoogleLoginButton(
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-internal fun PolicyText(
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
-) {
+internal fun PolicyText() {
     val context = LocalContext.current
     val baseTextStyle = TextStyle(
         color = Color.White.copy(alpha = 0.35f),
@@ -163,62 +159,50 @@ internal fun PolicyText(
         textAlign = TextAlign.Center
     )
 
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Image(
-            painter = painterResource(
-                if (checked) R.drawable.checked else R.drawable.check_no
-            ),
-            contentDescription = null,
-            modifier = Modifier.clickable { onCheckedChange(!checked) }
+    Column(
+        modifier = Modifier,
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = stringResource(R.string.by_continuing_agree_full),
+            style = baseTextStyle
         )
 
-        Spacer(Modifier.width(8.dp))
+        Spacer(Modifier.height(4.dp))
 
-        Column(
-            modifier = Modifier,
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
+        Row {
             Text(
-                text = stringResource(R.string.by_continuing_agree_full),
-                style = baseTextStyle
+                text = TextStyleUtils.createUnderlinedText(stringResource(R.string.terms_of_use)),
+                fontSize = 12.sp,
+                color = Color.White,
+                modifier = Modifier.noRippleClickable(onClick = {
+                    val intent = Intent(
+                        Intent.ACTION_VIEW,
+                        context.getString(R.string.settings_str_user_agreement).toUri()
+                    )
+                    context.startActivity(intent)
+                })
             )
 
-            Spacer(Modifier.height(4.dp))
+            Text(
+                text = stringResource(R.string.and_symbol),
+                color = Color.White.copy(alpha = 0.6f),
+                fontSize = 12.sp
+            )
 
-            Row {
-                Text(
-                    text = TextStyleUtils.createUnderlinedText(stringResource(R.string.terms_of_use)),
-                    fontSize = 12.sp,
-                    color = Color.White,
-                    modifier = Modifier.noRippleClickable(onClick = {
-                        val intent = Intent(
-                            Intent.ACTION_VIEW,
-                            context.getString(R.string.settings_str_user_agreement).toUri()
-                        )
-                        context.startActivity(intent)
-                    })
-                )
-
-                Text(
-                    text = stringResource(R.string.and_symbol),
-                    color = Color.White.copy(alpha = 0.6f),
-                    fontSize = 12.sp
-                )
-
-                Text(
-                    text = TextStyleUtils.createUnderlinedText(stringResource(R.string.privacy_policy)),
-                    fontSize = 12.sp,
-                    color = Color.White,
-                    modifier = Modifier.noRippleClickable(onClick = {
-                        val intent = Intent(
-                            Intent.ACTION_VIEW,
-                            context.getString(R.string.settings_str_privacy_policy).toUri()
-                        )
-                        context.startActivity(intent)
-                    })
-                )
-            }
+            Text(
+                text = TextStyleUtils.createUnderlinedText(stringResource(R.string.privacy_policy)),
+                fontSize = 12.sp,
+                color = Color.White,
+                modifier = Modifier.noRippleClickable(onClick = {
+                    val intent = Intent(
+                        Intent.ACTION_VIEW,
+                        context.getString(R.string.settings_str_privacy_policy).toUri()
+                    )
+                    context.startActivity(intent)
+                })
+            )
         }
     }
 }
@@ -253,7 +237,6 @@ private fun WelcomeSubtitlePreview() {
 private fun GoogleLoginButtonPreview() {
     GoogleLoginButton(
         isLoading = false,
-        isSelected = true,
         onLoginClick = {}
     )
 }
@@ -261,8 +244,5 @@ private fun GoogleLoginButtonPreview() {
 @Preview(showBackground = true)
 @Composable
 private fun PolicyTextPreview() {
-    PolicyText(
-        checked = true,
-        onCheckedChange = {}
-    )
+    PolicyText()
 }
