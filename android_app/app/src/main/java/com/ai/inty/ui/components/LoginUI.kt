@@ -37,7 +37,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
 
-
 import com.ai.inty.R
 import com.ai.inty.base.noRippleClickable
 import com.ai.inty.utils.TextStyleUtils
@@ -173,10 +172,7 @@ internal fun PolicyText() {
 
         Spacer(Modifier.height(4.dp))
 
-        PolicyRow(
-            context = context,
-            fontSize = 12.sp
-        )
+        PolicyRow(context = context, fontSize = 12.sp)
     }
 }
 
