@@ -18,6 +18,7 @@ from app.services import agent_service, chat_history_service, chat_service
 from app.services.chat_service import generate_session_id
 from app.services.global_services import subscription_service
 from app.services.voice_service import voice_service
+from app.core.user_privilege.premium_check import is_eligible_for_premium
 
 from loguru import logger
 
@@ -767,29 +768,26 @@ async def update_agent_chat_settings(
             db=db, chat_id=chat.id, user_id=current_user.id, agent_id=agent_id
         )
 
+        subscription_status = await subscription_service.get_user_subscription_status(
+            db, current_user.id
+        )
+
         # Check if trying to update style_prompt and if user has subscription
-        if settings_update.style_prompt is not None:
-            subscription_status = (
-                await subscription_service.get_user_subscription_status(
-                    db, current_user.id
-                )
+        # style_prompt is only available for subscribed users or superusers
+        if settings_update.style_prompt and not is_eligible_for_premium(
+            current_user, subscription_status
+        ):
+            return create_business_error_response(
+                error_info=BusinessErrorCode.SUBSCRIPTION_REQUIRED
             )
-            if not subscription_status.is_subscribed:
-                return create_business_error_response(
-                    error_info=BusinessErrorCode.SUBSCRIPTION_REQUIRED
-                )
 
         # Check if trying to update premium_mode and if user has subscription
-        if settings_update.premium_mode is not None and settings_update.premium_mode:
-            subscription_status = (
-                await subscription_service.get_user_subscription_status(
-                    db, current_user.id
-                )
+        if settings_update.premium_mode and not is_eligible_for_premium(
+            current_user, subscription_status
+        ):
+            return create_business_error_response(
+                error_info=BusinessErrorCode.SUBSCRIPTION_REQUIRED
             )
-            if not subscription_status.is_subscribed:
-                return create_business_error_response(
-                    error_info=BusinessErrorCode.SUBSCRIPTION_REQUIRED
-                )
 
         # Then update settings
         settings = await chat_service.update_chat_settings(
@@ -819,7 +817,10 @@ async def update_agent_chat_settings(
     response_model=schemas.ChatSettings,
     tags=["inty"],
     summary="Get Agent Chat Settings",
-    description="Get chat settings by Agent ID",
+    description=(
+        "Get chat settings by Agent ID, bause we only support 1 chat per agent, "
+        "so we do not use chat_id to get settings"
+    ),
 )
 async def get_agent_chat_settings(
     *,
