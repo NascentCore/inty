@@ -255,9 +255,7 @@ fun AutoRenewalNotice(
             fontSize = 12.sp,
             color = Color.White
         )
-
-PolicyRow(context = LocalContext.current, fontSize = 12.sp)
-
+        PolicyRow(context = LocalContext.current, fontSize = 12.sp)
     }
 }
 

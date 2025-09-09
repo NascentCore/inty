@@ -1,9 +1,10 @@
 package com.ai.inty.ui.components
 
 import android.content.Context
-
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.ui.Modifier
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -25,7 +26,8 @@ fun PolicyRow(
     fontSize: TextUnit,
 ) { 
     Row(
-        modifier = Modifier,
+        // 占据全部宽度，这样下面的居中显示才有意义
+        modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
     ) {
