@@ -998,12 +998,14 @@ async def get_user_followed_agents(
             .where(
                 and_(
                     agent_followers.c.user_id == user_id,
-                    models.Agent.deleted_at.is_(None),
+                    # models.Agent.deleted_at.is_(None),
                 )
             )
         )
         count_result = await db.execute(count_query)
         total = count_result.scalar()
+
+        logger.debug(f"total agents followed by user {user_id}: {total}")
 
         # 获取分页数据
         # 首先获取用户关注的未删除agent IDs
@@ -1017,7 +1019,7 @@ async def get_user_followed_agents(
             .where(
                 and_(
                     agent_followers.c.user_id == user_id,
-                    models.Agent.deleted_at.is_(None),
+                    # models.Agent.deleted_at.is_(None),
                 )
             )
             .offset(skip)
@@ -1025,6 +1027,8 @@ async def get_user_followed_agents(
         )
         followed_result = await db.execute(followed_agents_query)
         followed_agent_ids = [row[0] for row in followed_result]
+
+        logger.debug(f"followed agent ids: {followed_agent_ids}")
 
         if not followed_agent_ids:
             agents = []
@@ -1042,7 +1046,7 @@ async def get_user_followed_agents(
                 .where(
                     and_(
                         models.Agent.id.in_(followed_agent_ids),
-                        models.Agent.deleted_at.is_(None),
+                        # models.Agent.deleted_at.is_(None),
                     )
                 )
                 .group_by(models.Agent.id)
