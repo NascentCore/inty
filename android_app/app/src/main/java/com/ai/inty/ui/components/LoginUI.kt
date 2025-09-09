@@ -40,6 +40,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.TextUnit
 import androidx.core.net.toUri
+
+
 import com.ai.inty.R
 import com.ai.inty.base.noRippleClickable
 import com.ai.inty.utils.TextStyleUtils
@@ -162,8 +164,6 @@ internal fun PolicyText() {
         fontWeight = FontWeight.Normal,
     )
 
-    
-
     Column(
         modifier = Modifier,
         verticalArrangement = Arrangement.Center,
@@ -176,33 +176,10 @@ internal fun PolicyText() {
 
         Spacer(Modifier.height(4.dp))
 
-            Row {
-                TextStyleUtils.BuildLink(
-                    context = context,
-                    text = stringResource(R.string.terms_of_use),
-                    url = context.getString(R.string.url_user_agreement)
-                )
-
-                Text(
-                    text = buildAnnotatedString {
-                        withStyle(
-                            SpanStyle(
-                                color = baseTextStyle.color,
-                                fontSize = baseTextStyle.fontSize,
-                                fontWeight = baseTextStyle.fontWeight
-                            )
-                        ) {
-                            append(" and ")
-                        }
-                    }
-                )
-
-                TextStyleUtils.BuildLink(
-                    context = context,
-                    text = stringResource(R.string.privacy_policy),
-                    url = context.getString(R.string.url_privacy_policy)
-                )
-            }
+            PolicyRow(
+                context = context,
+                fontSize = 12.sp
+            )
         }
     }
 

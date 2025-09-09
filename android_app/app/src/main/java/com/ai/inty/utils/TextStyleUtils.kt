@@ -57,7 +57,7 @@ object TextStyleUtils {
         context: Context,
         text: String,
         url: String,
-        fontSize: TextUnit = 12.sp
+        fontSize: TextUnit,
     ) = Text(
         text = buildAnnotatedString {
             withStyle(
