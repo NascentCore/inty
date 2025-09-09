@@ -20,6 +20,7 @@ import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -63,6 +64,16 @@ internal fun ChatPage(
 
     LaunchedEffect(chatViewModel) {
         chatViewModel.queryMsgs()
+        // 初始化语音服务
+        chatViewModel.initVoiceService(context)
+    }
+    
+    // 页面生命周期管理：离开页面时重置播放状态
+    DisposableEffect(chatViewModel) {
+        onDispose {
+            EasyLog.log("ChatPage disposed, resetting voice playback")
+            chatViewModel.resetVoicePlayback()
+        }
     }
 
     val density = LocalDensity.current
