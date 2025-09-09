@@ -3,8 +3,8 @@
 这是一个使用 React/TypeScript 构建的运行于浏览器内的 Web 应用程序，用于评估 AI 角色、管理提示和显示聊天交互。
 
 ```
-git clone https://github.com/NascentCore/inty-backend.git
-cd inty-backend
+git clone https://github.com/NascentCore/inty.git
+cd inty
 
 # 默认对接 https://dev.inty.sxwl.ai/api/v1
 # 打开 http://localhost:3000/
