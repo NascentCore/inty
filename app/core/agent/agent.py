@@ -23,7 +23,6 @@ from app import models
 from app.core.agent import prompt_template, prompts
 from app.core.config import global_config_loaded_from_config_yaml
 from app.models import chat_history
-from app.services.background_task_service import background_task_service
 from app.services.cache_service import cache_service
 from app.utils.openai_client import (
     create_openai_client,
