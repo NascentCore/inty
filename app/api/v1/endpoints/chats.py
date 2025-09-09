@@ -526,7 +526,6 @@ async def agent_chat_completions(
                     user_id=current_user.id,
                     session_id=session_id,
                     messages=messages,
-                    db_session=db,
                 )
                 chat_processing_time = time.time() - chat_processing_start
                 logger.info(
