@@ -155,8 +155,10 @@ internal fun ChatPage(
                         onBack = onBack,
                         onClickMore = {
                             scope.launch {
-                                //如果是已经删除的agent，则点击无响应，仅显示文案
-                                if (agentInfo?.isDeleted != true) {
+                                //如果是已经删除的agent，则不可点击，并提示
+                                if (agentInfo?.isDeleted == true) {
+                                    ToastUtils.showToast(R.string.str_agent_is_deleted)
+                                } else {
                                     if (drawerState.value == DrawerValue.Closed) {
                                         drawerState.value = DrawerValue.Open
                                     } else {
@@ -336,8 +338,8 @@ internal fun ChatPage(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = stringResource(R.string.str_agent_is_deleted),
-                                color = Color.Gray
+                                text = stringResource(R.string.str_chat_disabled),
+                                color = Color(0x8CFFFFFF),
                             )
                         }
 
