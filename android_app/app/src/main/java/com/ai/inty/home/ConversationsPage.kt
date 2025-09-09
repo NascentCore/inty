@@ -481,15 +481,26 @@ fun ConversationItem(
 
         // 内容区域
         Column(modifier = Modifier.weight(1f)) {
-            Text(
-                modifier = Modifier.height(22.dp),
-                text = conversation.agentName,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = Color.White,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    modifier = Modifier.height(22.dp),
+                    text = conversation.agentName,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color.White,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                if (conversation.isDeleted) {
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        text = "(deleted)",
+                        fontSize = 15.sp,
+                        color = Color(0x8CFFFFFF),
+                    )
+                }
+            }
+
             Spacer(Modifier.height(4.dp))
             Text(
                 modifier = Modifier.height(22.dp),
