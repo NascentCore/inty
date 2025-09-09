@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """
 Script to compress PNG avatar images to JPEG format and update database records.
+TODO: 添加补充开场白语音的功能
+TODO：这个文件就是给 AI 角色补充元数据的工具
 """
 
 import argparse
