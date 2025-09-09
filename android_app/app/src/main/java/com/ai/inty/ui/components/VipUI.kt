@@ -245,63 +245,17 @@ fun PurchaseButton(
 fun AutoRenewalNotice(
     modifier: Modifier = Modifier
 ) {
-    Column(modifier = modifier) {
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
         Text(
             text = stringResource(R.string.premium_autorenew),
             fontSize = 12.sp,
-            color = Color.White,
-            modifier = Modifier.align(Alignment.CenterHorizontally)
+            color = Color.White
         )
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            val context = LocalContext.current
-
-            val policyStr = buildAnnotatedString {
-                withStyle(SpanStyle(textDecoration = TextDecoration.Underline)) {
-                    append(stringResource(R.string.privacy_policy))
-                }
-            }
-            Text(
-                text = policyStr,
-                fontSize = 12.sp,
-                color = Color.White.copy(alpha = 0.6f),
-                modifier = Modifier.noRippleClickable {
-                    val intent = Intent(
-                        Intent.ACTION_VIEW,
-                        context.getString(R.string.settings_str_privacy_policy).toUri()
-                    )
-                    context.startActivity(intent)
-                }
-            )
-
-            Text(
-                text = stringResource(R.string.and),
-                color = Color.White.copy(alpha = 0.6f),
-                fontSize = 12.sp
-            )
-
-            val termsOfUse = buildAnnotatedString {
-                withStyle(SpanStyle(textDecoration = TextDecoration.Underline)) {
-                    append(stringResource(R.string.terms_of_use))
-                }
-            }
-            Text(
-                text = termsOfUse,
-                fontSize = 12.sp,
-                color = Color.White.copy(alpha = 0.6f),
-                modifier = Modifier.noRippleClickable {
-                    val intent = Intent(
-                        Intent.ACTION_VIEW,
-                        context.getString(R.string.settings_str_user_agreement).toUri()
-                    )
-                    context.startActivity(intent)
-                }
-            )
-        }
+        PolicyRow(context = LocalContext.current, fontSize = 12.sp)
     }
 }
 

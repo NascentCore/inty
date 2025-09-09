@@ -36,9 +36,11 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
+
 import com.ai.inty.R
 import com.ai.inty.base.noRippleClickable
 import com.ai.inty.utils.TextStyleUtils
+import com.ai.inty.ui.components.PolicyRow
 
 /**
  * 登录页面关闭按钮组件
@@ -133,7 +135,6 @@ internal fun GoogleLoginButton(
                 fontSize = 14.sp,
                 fontWeight = FontWeight.SemiBold
             )
-
             if (isLoading) {
                 CircularProgressIndicator(
                     modifier = Modifier.size(24.dp),
@@ -171,39 +172,7 @@ internal fun PolicyText() {
 
         Spacer(Modifier.height(4.dp))
 
-        Row {
-            Text(
-                text = TextStyleUtils.createUnderlinedText(stringResource(R.string.terms_of_use)),
-                fontSize = 12.sp,
-                color = Color.White,
-                modifier = Modifier.noRippleClickable(onClick = {
-                    val intent = Intent(
-                        Intent.ACTION_VIEW,
-                        context.getString(R.string.settings_str_user_agreement).toUri()
-                    )
-                    context.startActivity(intent)
-                })
-            )
-
-            Text(
-                text = stringResource(R.string.and_symbol),
-                color = Color.White.copy(alpha = 0.6f),
-                fontSize = 12.sp
-            )
-
-            Text(
-                text = TextStyleUtils.createUnderlinedText(stringResource(R.string.privacy_policy)),
-                fontSize = 12.sp,
-                color = Color.White,
-                modifier = Modifier.noRippleClickable(onClick = {
-                    val intent = Intent(
-                        Intent.ACTION_VIEW,
-                        context.getString(R.string.settings_str_privacy_policy).toUri()
-                    )
-                    context.startActivity(intent)
-                })
-            )
-        }
+        PolicyRow(context = context, fontSize = 12.sp)
     }
 }
 

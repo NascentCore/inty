@@ -206,7 +206,8 @@ private fun SupportAndHelpSection(
             onClick = {
                 val intent = Intent(
                     Intent.ACTION_VIEW,
-                    context.getString(R.string.settings_str_user_agreement).toUri()
+                    context.getString(R.string.url_user_agreement).toUri()
+
                 )
                 context.startActivity(intent)
             }
@@ -220,7 +221,7 @@ private fun SupportAndHelpSection(
             onClick = {
                 val intent = Intent(
                     Intent.ACTION_VIEW,
-                    Uri.parse(context.getString(R.string.settings_str_privacy_policy))
+                    context.getString(R.string.url_privacy_policy).toUri()
                 )
                 context.startActivity(intent)
             }
