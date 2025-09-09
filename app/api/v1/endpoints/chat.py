@@ -28,6 +28,7 @@ from app.services.voice_service import voice_service
 from loguru import logger
 
 router = APIRouter(prefix="/chat", route_class=LoggerRoute)
+
 @router.post(
     "/completions/{agent_id}",
     response_model=schemas.APIResponse[dict],

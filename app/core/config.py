@@ -128,6 +128,7 @@ class AgentConfig:
     top_k: int = 50
     frequency_penalty: float = 0.0
     presence_penalty: float = 0.0
+    # DEPRECATED: Do not use.
     enable_debug_logging: bool = False  # 是否启用调试日志记录功能
     vertex_image_model: str = "imagen-4.0-fast-generate-preview-06-06"
     langchain_api_key: str = "<fill-in-key>"
@@ -136,6 +137,7 @@ class AgentConfig:
 @dataclass
 class GCSConfig:
     bucket: str = "inty"
+    # 与 GooglePlayConfig.service_account_key 相同
     credentials: str = "inty-backend-key.json"
 
 
@@ -147,7 +149,7 @@ class FirebaseConfig:
 @dataclass
 class GooglePlayConfig:
     """Google Play配置"""
-
+    # 与 GCSConfig.credentials 相同
     service_account_key: str = "inty-backend-key.json"
     package_name: str = "com.ai.intellimate"
     webhook_secret: Optional[str] = None  # Webhook密钥（可选）

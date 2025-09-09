@@ -8,17 +8,8 @@ app:
     free_user_chat_total_limit: 100
     free_user_chat_24h_limit: 50
 
-security:
-  secret_key: "your-secret-key-here"
-  algorithm: "HS256"
-  access_token_expire_minutes: 10080
-
 database:
   host: "localhost"
-  port: 5432
-  user: "postgres"
-  password: "sxwl666!"
-  db: "inty_db"
 
 google_oauth:
   client_id: "your-google-client-id"
@@ -29,8 +20,6 @@ verification:
   code_expire_minutes: 5
 
 agent:
-  model: "ep-20250210154211-js9rc"
-  base_url: "https://ark.cn-beijing.volces.com/api/v3"
   api_key: "ff9ed2dd-cdf0-40d4-b4ec-d3aa19e2bd0b"
   temperature: 0.5
   max_tokens: 1000
@@ -42,13 +31,13 @@ agent:
 
 gcs:
   bucket: "your-gcs-bucket"
-  credentials: "path/to/your/service-account-key.json"
+  credentials: ".secrets/gcs-service-account-key.json"
 
 firebase:
-  service_account_path: "path/to/your/firebase-service-account-key.json"
+  service_account_path: ".secrets/inty-firebase-key.json"
 
 google_play:
-  service_account_key: "your-google-play-service-account-key-json"
+  service_account_key: "".secrets/google-play-service-account-key.json""
   package_name: "your.app.package.name"
   webhook_secret: "your-webhook-secret"
 
