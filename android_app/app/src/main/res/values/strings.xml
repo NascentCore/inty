@@ -237,14 +237,14 @@
 
     <!-- VIP Components -->
     <string name="save_percentage">Save %d%%</string>
-    <string name="no_subscription_plans">暂无订阅计划信息</string>
+    <string name="no_subscription_plans">No subscription plans</string>
 
     <!-- Agent Info -->
     <string name="gender_tag_format">#%s</string>
 
     <!-- Toast Messages -->
-    <string name="toast_google_play_unavailable">无法打开 Google Play 商店。</string>
-    <string name="toast_navigation_failed">跳转失败，请稍后再试。</string>
+    <string name="toast_google_play_unavailable">Failed to open Google Play Store.</string>
+    <string name="toast_navigation_failed">Navigation failed, please try again later.</string>
     <string name="toast_crop_failed">Crop failed: %s</string>
     <string name="toast_invalid_image_url">Invalid image URL</string>
     <string name="toast_no_avatar_image">No avatar image to crop</string>
@@ -264,7 +264,7 @@
     <string name="content_desc_vip_banner">vip banner</string>
     <string name="content_desc_generated_avatar">Generated Avatar</string>
     <string name="content_desc_generated_avatar_index">Generated Avatar %d</string>
-    <string name="content_desc_swipe_guide">滑动引导手势</string>
+    <string name="content_desc_swipe_guide">Swipe guide gesture</string>
     <string name="content_desc_selected_avatar">Selected Avatar</string>
     <string name="content_desc_face_edit">Face edit</string>
     <string name="content_desc_back">back</string>
