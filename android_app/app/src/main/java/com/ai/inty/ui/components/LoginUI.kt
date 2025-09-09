@@ -45,6 +45,7 @@ import androidx.core.net.toUri
 import com.ai.inty.R
 import com.ai.inty.base.noRippleClickable
 import com.ai.inty.utils.TextStyleUtils
+import com.ai.inty.ui.components.PolicyRow
 
 /**
  * 登录页面关闭按钮组件
@@ -156,7 +157,6 @@ internal fun GoogleLoginButton(
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun PolicyText() {
-internal fun PolicyText() {
     val context = LocalContext.current
     val baseTextStyle = TextStyle(
         color = Color.White.copy(alpha = 0.6f),
@@ -169,19 +169,19 @@ internal fun PolicyText() {
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-            Text(
-                text = stringResource(R.string.by_continuing_agree_full),
-                style = baseTextStyle
-            )
+        Text(
+            text = stringResource(R.string.by_continuing_agree_full),
+            style = baseTextStyle
+        )
 
         Spacer(Modifier.height(4.dp))
 
-            PolicyRow(
-                context = context,
-                fontSize = 12.sp
-            )
-        }
+        PolicyRow(
+            context = context,
+            fontSize = 12.sp
+        )
     }
+}
 
 // Preview 函数
 @Preview(showBackground = true)
