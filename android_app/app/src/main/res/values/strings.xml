@@ -327,5 +327,5 @@
     <string name="str_upgrade_content">We\'ve made some important improvements to make your IntelliMate experience even better! To ensure you have access to the latest features and security updates, please update your app now. This update is required to continue using IntelliMate.</string>
     <string name="str_upgrade_now">Update Now</string>
 
-    <string name="str_agent_is_deleted">Agent is Deleted</string>
+    <string name="str_agent_is_deleted">Character is no longer available</string>
 </resources>
