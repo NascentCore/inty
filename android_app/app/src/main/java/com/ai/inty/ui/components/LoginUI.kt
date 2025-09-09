@@ -159,9 +159,10 @@ internal fun GoogleLoginButton(
 internal fun PolicyText() {
     val context = LocalContext.current
     val baseTextStyle = TextStyle(
-        color = Color.White.copy(alpha = 0.6f),
+        color = Color.White.copy(alpha = 0.35f),
         fontSize = 12.sp,
         fontWeight = FontWeight.Normal,
+        textAlign = TextAlign.Center
     )
 
     Column(
@@ -220,6 +221,5 @@ private fun GoogleLoginButtonPreview() {
 @Preview(showBackground = true)
 @Composable
 private fun PolicyTextPreview() {
-    PolicyText()
     PolicyText()
 }
