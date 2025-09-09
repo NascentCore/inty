@@ -16,6 +16,7 @@ Base = declarative_base()
 from app.models.agent import Agent
 from app.models.associations import agent_followers
 from app.models.chat import Chat
+from app.models.chat_history import ChatHistory
 from app.models.chat_settings import ChatSettings
 from app.models.evaluation import (
     EvaluationInteraction,

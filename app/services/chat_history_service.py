@@ -71,33 +71,11 @@ def get_chat_history_connection():
     return _connection
 
 
-# 初始化chat_history表
-def init_chat_history_table():
-    """初始化chat_history表"""
-    try:
-        conn = get_chat_history_connection()
-        LCChatHistory.create_tables(conn, CHAT_HISTORY_TABLE_NAME)
-        logger.info("chat_history表已初始化")
-    except Exception as e:
-        logger.error(f"初始化chat_history表失败: {str(e)}")
-        # 不抛出异常，因为表可能已经存在
-
-
-# 延迟初始化，避免在导入时就连接数据库
-_table_initialized = False
-
-
-def ensure_table_initialized():
-    """确保表已初始化"""
-    global _table_initialized
-    if not _table_initialized:
-        init_chat_history_table()
-        _table_initialized = True
+# chat_history表现在由Alembic迁移管理，不需要手动初始化
 
 
 def get_chat_history(session_id: str) -> PostgresChatMessageHistory:
     """获取聊天历史"""
-    ensure_table_initialized()
     conn = get_chat_history_connection()
     return PostgresChatMessageHistory("chat_history", session_id, sync_connection=conn)
 
@@ -131,7 +109,6 @@ def get_last_message(session_id: str) -> Optional[str]:
 def get_last_message_with_timestamp(session_id: str) -> Optional[Dict[str, Any]]:
     """获取最近一条消息内容和时间戳"""
     try:
-        ensure_table_initialized()
         conn = get_chat_history_connection()
 
         # 查询最近一条消息
@@ -219,7 +196,6 @@ def get_messages_paginated(
         包含消息列表和分页信息的字典
     """
     try:
-        ensure_table_initialized()
         conn = get_chat_history_connection()
 
         # 查询总消息数
@@ -359,7 +335,6 @@ def clear_session(session_id: str) -> None:
         session_id: 会话ID
     """
     try:
-        ensure_table_initialized()
         conn = get_chat_history_connection()
 
         # 删除指定会话的所有消息
@@ -391,7 +366,6 @@ async def get_message_content(session_id: str, message_id: str) -> Optional[str]
         消息内容，如果找不到则返回None
     """
     try:
-        ensure_table_initialized()
         conn = get_chat_history_connection()
 
         # 尝试将message_id转换为整数
@@ -439,7 +413,6 @@ def clear_messages_after_id(session_id: str, message_id: int) -> Dict[str, Any]:
         包含删除结果的字典
     """
     try:
-        ensure_table_initialized()
         conn = get_chat_history_connection()
 
         # 首先验证指定的消息是否存在
@@ -552,7 +525,6 @@ def clear_messages_after_timestamp(session_id: str, timestamp: str) -> Dict[str,
         包含删除结果的字典
     """
     try:
-        ensure_table_initialized()
         conn = get_chat_history_connection()
         from datetime import datetime
 
