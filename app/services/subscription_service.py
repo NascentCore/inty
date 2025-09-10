@@ -11,6 +11,10 @@ from sqlalchemy.orm import selectinload
 
 from app import schemas
 from app.core.config import global_config_loaded_from_config_yaml
+from app.core.user_privilege.superuser_check import (
+    SUPERUSER_LIMIT_CHECK_RESULT,
+    is_superuser,
+)
 from app.models.subscription import (
     SubscriptionPlan,
     SubscriptionPlanType,
@@ -38,7 +42,7 @@ from app.schemas.subscription import (
 from app.schemas.subscription import UserSubscription as UserSubscriptionSchema
 from app.schemas.subscription import UserSubscriptionCreate
 from app.services.google_play_service import GooglePlayService
-from app.services.superuser_check import SUPERUSER_LIMIT_CHECK_RESULT, is_superuser
+
 from app.services.system_settings_service import system_settings_service
 
 from loguru import logger
