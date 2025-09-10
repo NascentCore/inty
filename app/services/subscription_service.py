@@ -34,8 +34,7 @@ from app.schemas.subscription import (
     UsageStatisticsResponse,
 )
 from app.schemas.subscription import UserSubscription as UserSubscriptionSchema
-from app.schemas.subscription import UserSubscriptionCreate
-from app.external_services.globals import GooglePlayService
+from app.external_services.google_play_service import GooglePlayService
 
 from app.services.system_settings_service import system_settings_service
 
