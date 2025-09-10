@@ -11,9 +11,9 @@ import retrofit2.http.POST
 
 @Singleton
 interface ICommonApi {
-    @POST("/api/v1/report/")
+    @POST("/api/v1/report")
     suspend fun report(@Body req: ReportReq): ReportResponse
 
-    @POST("api/v1/version/check/")
+    @POST("api/v1/version/check")
     suspend fun checkAppUpgrade(): HttpResult<AppVersionRsp>
 }
