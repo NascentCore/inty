@@ -22,6 +22,7 @@ done
 
 # Run database migrations
 echo "Starting database migrations..."
+export PYTHONPATH=.
 alembic upgrade head
 
 if [ "$DEV" = true ]; then

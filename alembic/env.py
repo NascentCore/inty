@@ -1,28 +1,21 @@
-from logging.config import fileConfig
 import sys
 from pathlib import Path
 import yaml
-
-# 将项目根目录添加到Python路径
-ROOT_DIR = Path(__file__).resolve().parent.parent
-sys.path.append(str(ROOT_DIR))
 
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 
 from alembic import context
 
+from logging.config import fileConfig
+
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
 
-# 读取config.yaml文件
-with open(ROOT_DIR / "config.yaml", "r") as f:
-    yaml_config = yaml.safe_load(f)
+from app.core.config import global_config_loaded_from_config_yaml
 
-# 从yaml配置中获取数据库配置
-db_config = yaml_config["database"]
-db_url = f"postgresql://{db_config['user']}:{db_config['password']}@{db_config['host']}:{db_config['port']}/{db_config['db']}"
+db_url = global_config_loaded_from_config_yaml.database.url
 
 # 设置数据库URL
 config.set_main_option("sqlalchemy.url", db_url)
@@ -32,7 +25,7 @@ config.set_main_option("sqlalchemy.url", db_url)
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# 导入所有模型
+# 导入所有模型，app/models/__init__.py 会将所有表定义连同 base 一起导入
 from app.models import Base
 
 target_metadata = Base.metadata

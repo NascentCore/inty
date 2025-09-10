@@ -1293,6 +1293,75 @@
                 }
             }
         },
+        "/api/v1/chats/agents/{agent_id}/messages/{message_id}/voice": {
+            "post": {
+                "tags": [
+                    "chats",
+                    "inty",
+                    "voice"
+                ],
+                "summary": "Generate Message Voice",
+                "description": "Generate voice for a message",
+                "operationId": "generate_message_voice_api_v1_chats_agents__agent_id__messages__message_id__voice_post",
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "agent_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "title": "Agent Id"
+                        }
+                    },
+                    {
+                        "name": "message_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "title": "Message Id"
+                        }
+                    },
+                    {
+                        "name": "language",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "description": "语言代码",
+                            "default": "zh",
+                            "title": "Language"
+                        },
+                        "description": "语言代码"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {}
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/chats/agents/{agent_id}/settings": {
             "put": {
                 "tags": [
@@ -1365,7 +1434,7 @@
                     "inty"
                 ],
                 "summary": "Get Agent Chat Settings",
-                "description": "Get chat settings by Agent ID",
+                "description": "Get chat settings by Agent ID, bause we only support 1 chat per agent, so we do not use chat_id to get settings",
                 "operationId": "get_agent_chat_settings_api_v1_chats_agents__agent_id__settings_get",
                 "security": [
                     {
@@ -2756,6 +2825,17 @@
                         ],
                         "title": "Opening"
                     },
+                    "opening_audio_url": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Opening Audio Url"
+                    },
                     "visibility": {
                         "$ref": "#/components/schemas/AgentVisibility",
                         "default": "PUBLIC"
@@ -3002,6 +3082,17 @@
                         ],
                         "title": "Updated At"
                     },
+                    "deleted_at": {
+                        "anyOf": [
+                            {
+                                "type": "integer"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Deleted At"
+                    },
                     "is_followed": {
                         "type": "boolean",
                         "title": "Is Followed",
@@ -3130,6 +3221,17 @@
                             }
                         ],
                         "title": "Opening"
+                    },
+                    "opening_audio_url": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Opening Audio Url"
                     },
                     "visibility": {
                         "$ref": "#/components/schemas/AgentVisibility",
@@ -3473,6 +3575,17 @@
                             }
                         ],
                         "title": "Opening"
+                    },
+                    "opening_audio_url": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Opening Audio Url"
                     },
                     "visibility": {
                         "anyOf": [
@@ -4690,12 +4803,6 @@
             },
             "PurchaseVerificationResponse": {
                 "properties": {
-                    "is_valid": {
-                        "type": "boolean",
-                        "title": "Is Valid",
-                        "description": "是否有效，使用 is_verified 代替",
-                        "deprecated": true
-                    },
                     "is_verified": {
                         "type": "boolean",
                         "title": "Is Verified",
@@ -4732,7 +4839,6 @@
                 },
                 "type": "object",
                 "required": [
-                    "is_valid",
                     "is_verified",
                     "message"
                 ],
