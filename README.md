@@ -19,6 +19,14 @@ InTy 是一个基于 FastAPI 和 PostgreSQL 的 AI 聊天应用后端，集成�
 * 增加新的 http api paths
 * 增加新的 数据库表格
 
+## 快速开始
+
+```bash
+git clone ...
+cd ...
+git submodule update --init --recursive
+```
+
 ## 使用 Docker 容器本地运行后端服务和 Android app（适用于 app 开发者）
 
 1. 访问 <https://docs.docker.com/desktop/setup/install/mac-install/> 安装 Docker Desktop。
