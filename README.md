@@ -1,7 +1,7 @@
 # InTy
 
 ```text
-IntelliMaate: Ultimate companionship, reimagined with AI
+IntelliMate: Ultimate companionship, reimagined with AI
 
 Role-play with AI characters.
 Create your own IntelliMate, powered by carefully tuned AI agents, experience your own imagination.
