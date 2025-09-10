@@ -12,9 +12,18 @@ class Chain(
 ) {
 
     fun proceed(tag: String, message: Any, priority: Int, vararg args: Any) {
-        val next = Chain(interceptors, index + 1)// new Chain every time to avoid multi-thread problem(index is val)
+        val next = Chain(
+            interceptors,
+            index + 1
+        )// new Chain every time to avoid multi-thread problem(index is val)
         try {
-            (interceptors.getOrNull(index) as? Interceptor<Any>)?.log(tag, message, priority, next, *args)
+            (interceptors.getOrNull(index) as? Interceptor<Any>)?.log(
+                tag,
+                message,
+                priority,
+                next,
+                *args
+            )
         } catch (e: Exception) {
             Log.d("ata_Chain", "Chain.proceed[$tag, $message, $priority, $args]: e=${e}")
             e.printStackTrace()

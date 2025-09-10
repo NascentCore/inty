@@ -106,14 +106,13 @@ class MoshiResultTypeAdapterFactory(private val httpWrapper: HttpWrapper?) : Jso
                         //根据不同服务器后台HTTP 报文字段 解析映射出code +msg + data
                         httpWrapper.getStatusCodeKey() -> {
                             val errorNum = reader.readJsonValue()
-                            if (errorNum is Number) {
-                                errcode = errorNum.toInt()
-                            } else if (errorNum is String) {
-                                errcode = errorNum.toIntOrNull()
-                            } else {
-                                errcode = -1
+                            errcode = when (errorNum) {
+                                is Number -> errorNum.toInt()
+                                is String -> errorNum.toIntOrNull()
+                                else -> -1
                             }
                         }
+
                         httpWrapper.getErrorMsgKey() -> msg = reader.nextString()
                         httpWrapper.getDataKey() -> {
                             // 处理返回 data = "" 的问题
@@ -134,6 +133,7 @@ class MoshiResultTypeAdapterFactory(private val httpWrapper: HttpWrapper?) : Jso
 //                            }
 
                         }
+
                         else -> reader.skipValue()
                     }
                 }
@@ -147,9 +147,9 @@ class MoshiResultTypeAdapterFactory(private val httpWrapper: HttpWrapper?) : Jso
                     errcode = -1 // Assign a default error code if not present
                 }
 
-                if (httpWrapper.isRequestSuccess(errcode)){
+                if (httpWrapper.isRequestSuccess(errcode)) {
                     return data as T
-                }else{
+                } else {
                     throw BusinessException(errcode, msg)
                 }
 
@@ -161,14 +161,12 @@ class MoshiResultTypeAdapterFactory(private val httpWrapper: HttpWrapper?) : Jso
         }
 
 
-
         /**
          * Encodes the given value with the given writer.
          * 后面再说吧
          *
          */
-        override fun toJson(writer: JsonWriter, value: T?): Unit = TODO("Not yet implemented")
-
+        override fun toJson(writer: JsonWriter, value: T?) {}
 
 
     }

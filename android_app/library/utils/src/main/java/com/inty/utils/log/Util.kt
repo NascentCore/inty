@@ -1,20 +1,12 @@
 package com.inty.utils.log
 
-/**
- * print method call stack
- */
-fun getCallStack(blackList: List<String>): List<String> {
-    return Thread.currentThread()
-        .stackTrace.drop(3)
-        .filter { it.className !in blackList }
-        .map { "${it.className}.${it.methodName}(${it.fileName}:${it.lineNumber})" }
-}
-
 
 /**
  * Print [Iterable] POJO in which you interested defined by [map]
  */
-fun <T> Iterable<T>.log(map: (T) -> String) = fold(StringBuilder("[")) { acc: StringBuilder, t: T -> acc.append("\t${map(t)},") }.append("]").toString()
+fun <T> Iterable<T>.log(map: (T) -> String) =
+    fold(StringBuilder("[")) { acc: StringBuilder, t: T -> acc.append("\t${map(t)},") }.append("]")
+        .toString()
 
 
 /**
@@ -35,4 +27,3 @@ fun <K, V> Map<K, V?>.log(space: Int = 0): String {
         sb.append("\n${indent}}")
     }.toString()
 }
-
