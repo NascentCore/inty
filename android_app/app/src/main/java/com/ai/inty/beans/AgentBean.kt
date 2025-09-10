@@ -22,6 +22,7 @@ data class AgentInfo(
     val isFollowed: Boolean = false,
     val name: String = "",
     val opening: String = "",
+    val opening_audio_url: String = "",//开场白音频url
     @Json(name = "voice_preview")
     val voicePreview: String = "",
     @Json(name = "created_at")

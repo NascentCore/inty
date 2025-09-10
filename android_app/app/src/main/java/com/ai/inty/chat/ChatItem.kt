@@ -8,34 +8,40 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ai.inty.audio.AudioInfo
+import com.ai.inty.audio.OpeningPlayState
 import com.ai.inty.audio.VoicePlayer
 import com.ai.inty.beans.MsgInfo
 import com.ai.inty.utils.ChatTextFormatter
+import com.ai.inty.viewmodels.ChatViewModel
 import com.inty.utils.log.EasyLog
 
 /**
  * 聊天消息项目组件
  */
 @Composable
-fun ChatItem(item: MsgInfo) {
+fun ChatItem(item: MsgInfo, index: Int) {
     runCatching {
         when (item.role) {
             "assistant" -> {
-                ChatItemAI(item)
+                ChatItemAI(item, index == 0)
             }
 
             "user" -> {
@@ -70,40 +76,47 @@ fun ChatItem(item: MsgInfo) {
  * AI消息显示组件
  */
 @Composable
-private fun ChatItemAI(item: MsgInfo) {
+private fun ChatItemAI(item: MsgInfo, isOpening: Boolean = false) {
     runCatching {
-        Row {
-            Box(
-                modifier = Modifier
-                    .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
-                    .padding(12.dp, 13.dp)
-                    .widthIn(1.dp, 300.dp)
-            ) {
-                if (item.content == "loading_animation") {
-                    LoadingAnimation()
-                } else {
-                    Column(
-                        verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(
-                            8.dp
-                        )
-                    ) {// 语音播放器（仅对AI消息显示）
-                        if (item.content.isNotEmpty()) {
-                            // 为每个消息生成唯一的测试URL，避免状态混乱
-                            val audioInfo = AudioInfo(
-                                url = "http://demo.fengxianqi.com/audio/static/opus.opus?msgId=${item.msgId}", // 添加消息ID参数
-                                title = "语音消息",
-                                artist = "AI助手",
-                                messageId = item.msgId,
-                                agentId = null // MsgInfo中没有agentId字段，暂时设为null
-                            )
-
-                            VoicePlayer(
-                                audioInfo = audioInfo,
-                                autoPlay = false,
-                                showProgress = true,
-                                compact = true
-                            )
+        Column {
+            //播放器按钮
+            if (item.content.isNotEmpty()) {
+                // 为每个消息生成唯一的测试URL，避免状态混乱
+                val audioInfo = AudioInfo(
+                    url = item.audio_url ?: "",
+                    title = "Voice Message",
+                    artist = "AI Agent",
+                    messageId = item.msgId,
+                    agentId = null // MsgInfo中没有agentId字段，暂时设为null
+                )
+                val viewModel = viewModel<ChatViewModel>()
+                val agentInfo by viewModel.agentInfo.collectAsState()
+                val played = OpeningPlayState.agentOpeningPlayed(agentInfo?.id ?: "")
+                VoicePlayer(
+                    audioInfo = audioInfo,
+                    autoPlay = isOpening && played.not(),
+                    modifier = Modifier
+                        .height(26.dp)
+                        .widthIn(48.dp)
+                        .offset(y = 10.dp),
+                    onPlayStateChange = { played ->
+                        agentInfo?.id?.let { id ->
+                            if (played) OpeningPlayState.openingPlayedAsync(id)
                         }
+                    }
+                )
+            }
+            //消息
+            Row {
+                Box(
+                    modifier = Modifier
+                        .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+                        .padding(12.dp, 13.dp)
+                        .widthIn(1.dp, 300.dp)
+                ) {
+                    if (item.content == "loading_animation") {
+                        LoadingAnimation()
+                    } else {
                         // 消息文本
                         StyledMessageText(
                             text = item.content,
@@ -114,9 +127,14 @@ private fun ChatItemAI(item: MsgInfo) {
                         )
                     }
                 }
+                Spacer(
+                    modifier = Modifier
+                        .widthIn(80.dp)
+                        .weight(1f)
+                )
             }
-            Spacer(modifier = Modifier.widthIn(80.dp).weight(1f))
         }
+
     }.onFailure { e ->
         EasyLog.log("Error rendering AI chat item: ${e.message}", priority = EasyLog.ERROR)
         // 渲染失败时显示简化版本
@@ -200,7 +218,7 @@ private fun ChatItemUser(item: MsgInfo) {
 @Composable
 private fun StyledMessageText(
     text: String,
-    fontSize: androidx.compose.ui.unit.TextUnit,
+    fontSize: TextUnit,
     fontWeight: FontWeight,
     normalColor: Color,
     actionColor: Color,

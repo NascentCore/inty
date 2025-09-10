@@ -80,11 +80,13 @@ data class QueryMsgsResponse(
 // }
 @JsonClass(generateAdapter = true)
 data class MsgInfo(
-    val id: String = "",
+    val id: String = "",//服务端对应的消息id
     val content: String = "",
     val role: String = "",
     //本地创建一个msgId，临时用于消息标记
     val msgId: String = "${System.nanoTime()}_${role}_${content.hashCode()}",
+    val audio_url: String? = null,//音频文件的url
+    val timestamp: String? = null,//消息时间戳
 ) {
     // 提供一个生成唯一 msgId 的方法,⚠️，其实此处生成也不是最佳方案，msgId应该服务端生成。
     // 因为这里接口反序列化时候，List<msgInfo>创建msgInfo对象会很快，难保id不重复。
@@ -202,3 +204,13 @@ data class ChatSettingsResponse(
         val premium_mode: Boolean? = null,//是否会员模式
     )
 }
+
+
+data class MsgVoiceRsp(
+    val audio_url: String? = null,
+    val message_id: String? = null,
+    val voice_id: String? = null,
+    val language: String? = null,
+    val cached: Boolean = false,
+    val generation_time: String? = null,
+)
