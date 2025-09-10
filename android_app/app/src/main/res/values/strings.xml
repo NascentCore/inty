@@ -21,7 +21,7 @@
     <string name="settings_auto_play_audio">Auto-play voice messages</string>
     <string name="settings_email_support">Email Support</string>
     <string name="settings_email_inty">IntelliMate@inty.cc</string>
-    <string name="settings_about">About</string>
+    <string name="settings_about">Version</string>
     <string name="logout">Log out</string>
     <string name="crop_image">Crop Image</string>
     <string name="sys_notify_title">System Notification</string>
