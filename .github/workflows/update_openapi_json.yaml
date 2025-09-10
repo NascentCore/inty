@@ -70,6 +70,7 @@ jobs:
 
       - name: Update openapi.json
         run: |
+          # docker compose up -d caching is difficult to setup, so use start.sh instead.
           ./start.sh &
           sleep 5
           curl -o app/openapi.json http://localhost:8000/openapi.json
