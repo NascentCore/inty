@@ -10,7 +10,6 @@ from app.services.google_play_service import GooglePlayService
 from app.services.subscription_service import SubscriptionService
 from app.models.agent import Agent
 from app.schemas.subscription import SubscriptionStatusResponse
-from app.services.superuser_check import SUPERUSER_LIMIT_CHECK_RESULT
 
 
 class TestSubscriptionService:
