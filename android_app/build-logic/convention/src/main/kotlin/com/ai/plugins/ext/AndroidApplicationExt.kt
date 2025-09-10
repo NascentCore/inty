@@ -95,8 +95,7 @@ internal fun ApplicationExtension.commonAppConfig(project: Project) {
             // This build is meant to be pushed to Google Play for debugging.
             // It talks to the dev backend, but app is built as release.
             initWith(getByName("release"))
-            isMinifyEnabled = false
-            isShrinkResources = false
+
             versionNameSuffix = "-${getGitCommitInfo()}-$name"
         }
 
