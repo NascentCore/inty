@@ -93,4 +93,11 @@ dependencies {
 
     // ===== 图片处理 =====
     api(libs.ucrop)
+
+    // ===== Media3 音频播放 =====
+    implementation(libs.androidx.media3.datasource.okhttp)
+    implementation(libs.bundles.androidx.media3.bundle)
+    
+    // ===== compose ui bundle =====
+    implementation(libs.bundles.compose.ui.bundle)
 }

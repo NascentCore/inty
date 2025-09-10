@@ -3,6 +3,7 @@ package com.ai.inty.chat
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -20,6 +21,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.ai.inty.audio.AudioInfo
+import com.ai.inty.audio.VoicePlayer
 import com.ai.inty.beans.MsgInfo
 import com.ai.inty.utils.ChatTextFormatter
 import com.inty.utils.log.EasyLog
@@ -79,13 +82,39 @@ private fun ChatItemAI(item: MsgInfo) {
                 if (item.content == "loading_animation") {
                     LoadingAnimation()
                 } else {
-                    StyledMessageText(
-                        text = item.content,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Normal,
-                        normalColor = Color.White,
-                        actionColor = Color.White.copy(0.55f)
-                    )
+                    Column(
+                        verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(
+                            8.dp
+                        )
+                    ) {
+                        // 消息文本
+                        StyledMessageText(
+                            text = item.content,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Normal,
+                            normalColor = Color.White,
+                            actionColor = Color.White.copy(0.55f)
+                        )
+
+                        // 语音播放器（仅对AI消息显示）
+                        if (item.content != "loading_animation" && item.content.isNotEmpty()) {
+                            // 为每个消息生成唯一的测试URL，避免状态混乱
+                            val audioInfo = AudioInfo(
+                                url = "http://demo.fengxianqi.com/audio/static/opus.opus?msgId=${item.msgId}", // 添加消息ID参数
+                                title = "语音消息",
+                                artist = "AI助手",
+                                messageId = item.msgId,
+                                agentId = null // MsgInfo中没有agentId字段，暂时设为null
+                            )
+
+                            VoicePlayer(
+                                audioInfo = audioInfo,
+                                autoPlay = false,
+                                showProgress = true,
+                                compact = true
+                            )
+                        }
+                    }
                 }
             }
             Spacer(
