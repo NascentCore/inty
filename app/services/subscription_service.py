@@ -1,7 +1,4 @@
-import json
-import logging
 import uuid
-from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -17,7 +14,6 @@ from app.core.user_privilege.superuser_check import (
 )
 from app.models.subscription import (
     SubscriptionPlan,
-    SubscriptionPlanType,
     SubscriptionStatus,
     SubscriptionTransaction,
     SubscriptionUsage,
@@ -35,13 +31,10 @@ from app.schemas.subscription import SubscriptionPlan as SubscriptionPlanSchema
 from app.schemas.subscription import (
     SubscriptionPlanCreate,
     SubscriptionStatusResponse,
-    SubscriptionTransactionCreate,
-    SubscriptionUsageCreate,
     UsageStatisticsResponse,
 )
 from app.schemas.subscription import UserSubscription as UserSubscriptionSchema
-from app.schemas.subscription import UserSubscriptionCreate
-from app.services.google_play_service import GooglePlayService
+from app.external_services.google_play_service import GooglePlayService
 
 from app.services.system_settings_service import system_settings_service
 

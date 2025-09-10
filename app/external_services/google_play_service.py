@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from typing import Any, Dict, Optional, Tuple
 
 from google.oauth2 import service_account
-from googleapiclient.discovery import build
+from googleapiclient.discovery import Resource, build
 from googleapiclient.errors import HttpError
 
 from app.core.config import global_config_loaded_from_config_yaml
@@ -16,50 +16,12 @@ from loguru import logger
 class GooglePlayService:
     """Google Play Developer API服务"""
 
-    def __init__(self):
+    def __init__(self, android_publisher_service: Resource):
         """初始化Google Play服务"""
-        self.service = None
+        self.service = android_publisher_service
         self.package_name = (
             global_config_loaded_from_config_yaml.google_play.package_name
         )
-        self._initialize_service()
-
-    def _initialize_service(self):
-        """初始化Google Play Developer API服务"""
-        try:
-            # 获取服务账号凭据
-            service_account_key = (
-                global_config_loaded_from_config_yaml.google_play.service_account_key
-            )
-
-            # 检查是否为文件路径还是JSON字符串
-            if service_account_key.endswith(".json"):
-                # 如果是文件路径，读取文件内容
-                from pathlib import Path
-
-                key_path = Path(service_account_key)
-                if not key_path.exists():
-                    raise FileNotFoundError(
-                        f"服务账号密钥文件不存在: {service_account_key}"
-                    )
-
-                with open(key_path, "r") as f:
-                    service_account_info = json.load(f)
-            else:
-                # 如果是JSON字符串，直接解析
-                service_account_info = json.loads(service_account_key)
-
-            credentials = service_account.Credentials.from_service_account_info(
-                service_account_info,
-                scopes=["https://www.googleapis.com/auth/androidpublisher"],
-            )
-
-            self.service = build("androidpublisher", "v3", credentials=credentials)
-            logger.info("Google Play Developer API服务初始化成功")
-
-        except Exception as e:
-            logger.error(f"Google Play Developer API服务初始化失败: {str(e)}")
-            raise
 
     def verify_subscription_purchase(
         self, product_id: str, purchase_token: str
@@ -577,7 +539,7 @@ class GooglePlayService:
 
             # 强制更新检查：扩展多种检查条件
             force_update_reasons = []
-            
+
             # 1. 检查是否低于最低支持版本
             try:
                 min_supported_version_code = int(
@@ -593,7 +555,7 @@ class GooglePlayService:
                 reason = f"版本代码低于最低支持版本: {client_version_code} < {min_supported_version_code}"
                 force_update_reasons.append(reason)
                 logger.info(f"最低版本检查触发强制更新: {reason}")
-            
+
             # 2. 检查Major版本号差距
             if client_version_name and latest_version_name:
                 major_force_update, major_reason = self._check_major_version_gap_requirement(
@@ -601,7 +563,7 @@ class GooglePlayService:
                 )
                 if major_force_update:
                     force_update_reasons.append(major_reason)
-            
+
             force_update = len(force_update_reasons) > 0
 
             result = {
@@ -670,7 +632,6 @@ class GooglePlayService:
             logger.warning(f"版本代码比较失败，将客户端版本视为需要更新: {e}")
             return True  # 如果比较失败，保守起见要求更新
 
-
     def _parse_semantic_version(self, version_name: str) -> Optional[Tuple[int, int, int]]:
         """
         解析语义化版本号 (major.minor.patch)
@@ -684,23 +645,23 @@ class GooglePlayService:
         try:
             if not version_name:
                 return None
-            
+
             # 使用正则表达式匹配 major.minor.patch 格式
             pattern = r'^(\d+)\.(\d+)\.(\d+)'
             match = re.match(pattern, version_name.strip())
-            
+
             if not match:
                 logger.debug(f"版本名称不符合语义化版本格式: {version_name}")
                 return None
-            
+
             major = int(match.group(1))
             minor = int(match.group(2))
             patch = int(match.group(3))
-            
+
             logger.debug(f"成功解析版本名称 {version_name}: major={major}, minor={minor}, patch={patch}")
-            
+
             return (major, minor, patch)
-            
+
         except ValueError as e:
             logger.debug(f"版本名称解析失败: {version_name}, 错误: {e}")
             return None
@@ -708,43 +669,42 @@ class GooglePlayService:
             logger.warning(f"版本名称解析异常: {version_name}, 错误: {e}")
             return None
 
-
     def _check_major_version_gap_requirement(self, client_version_name: str, latest_version_name: str) -> Tuple[bool, str]:
         """
         检查Major和Minor版本号差距是否超过配置的限制
-        
+
         Args:
             client_version_name: 客户端版本名称
             latest_version_name: 最新版本名称
-            
+
         Returns:
             Tuple[bool, str]: (是否需要强制更新, 原因说明)
         """
         try:
             config = global_config_loaded_from_config_yaml.google_play
             max_minor_gap = config.max_minor_version_gap
-            
+
             # 解析客户端版本
             client_version = self._parse_semantic_version(client_version_name)
             if not client_version:
                 logger.debug(f"无法解析客户端版本名称: {client_version_name}")
                 return False, "客户端版本名称格式无效，跳过版本检查"
-            
+
             # 解析最新版本
             latest_version = self._parse_semantic_version(latest_version_name)
             if not latest_version:
                 logger.debug(f"无法解析最新版本名称: {latest_version_name}")
                 return False, "最新版本名称格式无效，跳过版本检查"
-            
+
             client_major, client_minor, _ = client_version
             latest_major, latest_minor, _ = latest_version
-            
+
             # 检查Major版本是否小于最新版本
             if client_major < latest_major:
                 reason = f"Major版本低于最新版本: {client_major} < {latest_major}"
                 logger.info(f"Major版本检查触发强制更新: {reason}")
                 return True, reason
-            
+
             # 检查Minor版本差距（只在Major版本相同时检查）
             if client_major == latest_major:
                 minor_gap = latest_minor - client_minor
@@ -752,13 +712,20 @@ class GooglePlayService:
                     reason = f"Minor版本号差距过大: {minor_gap} > {max_minor_gap}限制"
                     logger.info(f"Minor版本差距检查触发强制更新: {reason}")
                     return True, reason
-                
-                logger.debug(f"版本检查: 客户端={client_version_name}, 最新={latest_version_name}, Minor差距={minor_gap}")
-                return False, f"版本差距在允许范围内: Minor差距={minor_gap} <= {max_minor_gap}"
-            
-            logger.debug(f"版本检查: 客户端={client_version_name}, 最新={latest_version_name}")
+
+                logger.debug(
+                    f"版本检查: 客户端={client_version_name}, 最新={latest_version_name}, Minor差距={minor_gap}"
+                )
+                return (
+                    False,
+                    f"版本差距在允许范围内: Minor差距={minor_gap} <= {max_minor_gap}",
+                )
+
+            logger.debug(
+                f"版本检查: 客户端={client_version_name}, 最新={latest_version_name}"
+            )
             return False, f"Major版本号相同或客户端更新，无需强制更新"
-            
+
         except Exception as e:
             logger.warning(f"版本差距检查失败: {e}")
             return False, f"版本差距检查异常: {str(e)}"
