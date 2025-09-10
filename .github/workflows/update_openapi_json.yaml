@@ -1,23 +1,12 @@
-name: CI
+# Update app/openapi.json when any of the app/api/v1/endpoints/ endpoint is changed.
 
 on:
   push:
     branches:
       - main
     paths:
-      - "app/**/*.py"
-      - "requirements.txt"
-      - "test_requirements.txt"
-      - ".github/workflows/ci.yaml"
-
-  pull_request:
-    branches:
-      - main
-    paths:
-      - "app/**/*.py"
-      - "requirements.txt"
-      - "test_requirements.txt"
-      - ".github/workflows/ci.yaml"
+      - "app/api/v1/endpoints/**/*.py"
+      - ".github/workflows/update_openapi_json.yaml"
 
 env:
   PG_IMAGE: postgres:16
@@ -26,8 +15,13 @@ env:
   PG_DB: inty
 
 jobs:
-  test:
+  update-openapi-json:
     runs-on: ubuntu-latest
+
+    permissions:
+      # Update file and commit
+      contents: write
+
     services:
       pgsql:
         image: postgres:16
@@ -44,16 +38,13 @@ jobs:
       - uses: actions/setup-python@v4
         with:
           python-version: 3.12
-          # This does not seem to work: https://github.com/actions/setup-python/issues/330
-          # Keep for posterity, we do want to use this such that we do not need to manage cache ourselves.
-          # cache: 'pip'
 
       # Based on https://adamj.eu/tech/2023/11/02/github-actions-faster-python-virtual-environments/
       - uses: actions/cache@v4
         with:
           path: .venv
           # Unique key for the cache
-          key: ${{ runner.os }}-venv-${{ hashFiles('requirements.txt', 'test_requirements.txt') }}
+          key: ${{ runner.os }}-venv-${{ hashFiles('requirements.txt') }}
           restore-keys: |
             ${{ runner.os }}-venv-
   
@@ -62,12 +53,11 @@ jobs:
           python -m venv .venv
           source .venv/bin/activate
           python -m pip install -r requirements.txt
-          python -m pip install -r test_requirements.txt
           # https://stackoverflow.com/a/74669486
           echo "$VIRTUAL_ENV/bin" >> $GITHUB_PATH
           echo "VIRTUAL_ENV=$VIRTUAL_ENV" >> $GITHUB_ENV
 
-      - name: Populate config.yaml for Alembic
+      - name: Populate config.yaml
         run: |
           echo "app:" >> config.yaml
           # Enable debug mode for testing.
@@ -79,15 +69,20 @@ jobs:
           echo "  port: 5432" >> config.yaml
           echo "  user: postgres" >> config.yaml
 
-      - name: Create inty-backend-key.json
+      - name: Update openapi.json
         run: |
-          echo "{}" > inty-backend-key.json
-      - name: Run python tests
-        run: |
-          # alembic upgrade head no need to run, as start.sh already includes it
           ./start.sh &
-          # Wait for the server to start. If the time is too short, it needs to be increased.
           sleep 5
-          # noci marker is defined in pytest.ini
-          # applied on test functions with noci marker will be skipped on CI
-          pytest tests/ -m "not noci" -v -s
+          curl -o app/openapi.json http://localhost:8000/openapi.json
+
+      - name: Commit and push
+        run: |
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+          git add app/openapi.json
+          git commit -m "Update openapi.json"
+          git push
