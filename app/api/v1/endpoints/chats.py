@@ -4,6 +4,7 @@ from typing import Any, List, Union
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from langchain_core.messages import HumanMessage
+from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import models, schemas
@@ -19,8 +20,6 @@ from app.services.chat_service import generate_session_id
 from app.services.global_services import subscription_service
 from app.services.voice_service import voice_service
 from app.core.user_privilege.premium_check import is_eligible_for_premium
-
-from loguru import logger
 
 # TODO: Prefix should be /chat instead of /chats.
 router = APIRouter(prefix="/chats", route_class=LoggerRoute)
@@ -624,7 +623,7 @@ async def agent_chat_completions(
 
 @router.post(
     "/agents/{agent_id}/messages/{message_id}/voice",
-    include_in_schema=False,
+    include_in_schema=True,
     tags=["inty", "voice"],
     summary="Generate Message Voice",
     description="Generate voice for a message",
@@ -673,6 +672,20 @@ async def generate_message_voice(
             raise HTTPException(status_code=500, detail="Voice generation failed")
 
         logger.debug(f"按需语音生成成功: {audio_url}")
+
+        # 更新chat_history中对应消息的audio_url
+        # 使用try-except确保更新失败不影响API响应
+        try:
+            update_success = chat_history_service.update_message_audio_url(
+                session_id=session_id, message_id=message_id, audio_url=audio_url
+            )
+            if update_success:
+                logger.debug(f"成功更新消息{message_id}的audio_url到chat_history")
+            else:
+                logger.warning(f"更新消息{message_id}的audio_url到chat_history失败")
+        except Exception as e:
+            logger.error(f"更新chat_history的audio_url时发生异常: {str(e)}")
+            # 继续执行，不影响API响应
 
         return {
             "audio_url": audio_url,

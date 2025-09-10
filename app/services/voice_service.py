@@ -6,6 +6,7 @@
 import asyncio
 import hashlib
 import re
+import ssl
 import uuid
 from io import BytesIO
 from typing import Any, Dict, List, Optional
@@ -25,6 +26,40 @@ class VoiceService:
         self.config = global_config_loaded_from_config_yaml.elevenlabs
         self.gcs_service = GCSService()
         self.base_url = "https://api.elevenlabs.io/v1"
+        self.ssl_context = self._create_ssl_context()
+
+    def _create_ssl_context(self) -> Optional[ssl.SSLContext]:
+        """
+        创建SSL上下文，处理证书验证问题
+        
+        Returns:
+            SSL上下文对象，如果配置为跳过验证则返回None
+        """
+        try:
+            # 检查配置中是否有SSL相关设置
+            ssl_verify = getattr(self.config, 'ssl_verify', True)
+            
+            if not ssl_verify:
+                logger.warning("SSL证书验证已禁用，这在生产环境中是不安全的")
+                return False  # aiohttp中False表示不验证SSL
+            
+            # 创建默认SSL上下文
+            ssl_context = ssl.create_default_context()
+            
+            # 在开发环境中，如果遇到证书问题，可以降低安全要求
+            env = getattr(global_config_loaded_from_config_yaml, 'environment', 'production')
+            if env in ['development', 'dev', 'local']:
+                logger.info("开发环境：使用宽松的SSL配置")
+                ssl_context.check_hostname = False
+                ssl_context.verify_mode = ssl.CERT_NONE
+                return ssl_context
+            
+            return ssl_context
+            
+        except Exception as e:
+            logger.error(f"创建SSL上下文失败: {str(e)}")
+            # 出现错误时，使用默认SSL设置
+            return ssl.create_default_context()
 
     def _clean_text_for_voice(self, text: str) -> str:
         """
@@ -230,7 +265,9 @@ class VoiceService:
                 f"ElevenLabs API请求数据: voice_id={voice_id}, model={model}, text_length={len(text)}"
             )
 
-            async with aiohttp.ClientSession() as session:
+            # 创建连接器，使用SSL配置
+            connector = aiohttp.TCPConnector(ssl=self.ssl_context)
+            async with aiohttp.ClientSession(connector=connector) as session:
                 async with session.post(url, json=data, headers=headers) as response:
                     logger.debug(f"ElevenLabs API响应状态: {response.status}")
                     if response.status == 200:

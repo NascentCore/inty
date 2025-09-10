@@ -67,6 +67,7 @@ class AgentBase(BaseModel):
     settings: Optional[Dict[str, Any]] = None
     intro: Optional[str] = None
     opening: Optional[str] = None
+    opening_audio_url: Optional[str] = None
     visibility: AgentVisibility = AgentVisibility.PUBLIC
     photos: Optional[List[str]] = None
     category: Optional[str] = None
