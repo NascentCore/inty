@@ -1,6 +1,6 @@
 import os
 import sys
-from dataclasses import Field, dataclass
+from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional
 
@@ -159,7 +159,7 @@ class GooglePlayConfig:
     release_track: str = "production"  # 发布轨道：internal/closed/open/production
     fallback_tracks: List[str] = None  # 备用轨道列表
     # 新增版本检查配置
-    max_major_version_gap: int = 10  # Major版本号最大差距，超过则强制更新
+    max_minor_version_gap: int = 10  # Minor版本号最大差距，超过则强制更新
 
     def __post_init__(self):
         if self.fallback_tracks is None:
