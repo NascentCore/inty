@@ -3,7 +3,7 @@
 ## 重要事项
 
 * [Google Play internal app sharing](https://play.google.com/console/internal-app-sharing)
-  使用你的内测 Google 账户打开该链接，即可上传测试文件。
+  使用你的内测 Google 账户打开该链接，即可上传签名的 aab 文件。
 * [Google Play 内测轨道 App 页面](https://play.google.com/store/apps/details?id=com.ai.intellimate&hl=en-US&ah=EmlT1IB-9hWsv_1I4B8Go9FEIFc)
 * 须手动升级（[官方文档](https://play.google.com/apps/internaltest/4701704785767590286)表示可以自动升级，但实际上没有效果）
   * 可能与 App 还未发布有关
