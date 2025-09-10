@@ -17,8 +17,8 @@
     <string name="ID">ID:%s</string>
     <string name="no_agent">Create your own characters now!</string>
     <string name="settings">Settings</string>
-    <string name="settings_keep_talking">Show "Keep Talking" button</string>
-    <string name="settings_auto_play_audio">Auto-play voice messages</string>
+    <string name="settings_keep_talking">Show "Keep Talking" Button</string>
+    <string name="settings_auto_play_audio">Auto-play Voice</string>
     <string name="settings_email_support">Email Support</string>
     <string name="settings_email_inty">IntelliMate@inty.cc</string>
     <string name="settings_about">Version</string>
@@ -118,7 +118,7 @@
     <string name="premium_benefit_unlimited">Unlimited messages</string>
     <string name="premium_benefit_model">Premium model usage</string>
     <string name="premium_benefit_inspiration">extra chat inspiration</string>
-    <string name="premium_benefit_customize">customize better ai responses</string>
+    <string name="premium_benefit_customize">customize conversation style</string>
     <string name="premium_benefit_memory">chat memory</string>
     <string name="premium_benefit_newfeature">experience new features</string>
     <string name="premium_sku_monthly">Monthly</string>
@@ -137,7 +137,7 @@
     <string name="redemption_code">Redemption Code</string>
     <string name="cancel_subscription">Cancel Subscription</string>
     <string name="you_are_not_vip">You are not vip</string>
-    <string name="settings_premium_model">Premium model</string>
+    <string name="settings_premium_model">Premium Model</string>
 
     <string name="settings_str_delete_account">Delete My Account</string>
     <string name="url_user_agreement">https://app.termly.io/policy-viewer/policy.html?policyUUID=97416d63-aebb-4ea5-b990-eccc5aa6cff1</string>
@@ -320,9 +320,9 @@
     <string name="email_support">Email Support</string>
     <string name="support_email">support@inty.com</string>
     <string name="about">About</string>
-    <string name="custom_reply_style">Custom reply style</string>
-    <string name="custom_reply_successful">Custom reply Successful</string>
-    <string name="reply_hint_str">You can enter some keywords to customize the AI\'s reply style, so that the AI will always communicate with you in the tone you want.</string>
+    <string name="custom_reply_style">Customize Conversation Style</string>
+    <string name="custom_reply_successful">Style Updated</string>
+    <string name="reply_hint_str">Customize the AI\'s reply style, like tone, language, else.</string>
     <string name="str_upgrade_required">Update Required</string>
     <string name="str_upgrade_content">We\'ve made some important improvements to make your IntelliMate experience even better! To ensure you have access to the latest features and security updates, please update your app now. This update is required to continue using IntelliMate.</string>
     <string name="str_upgrade_now">Update Now</string>
