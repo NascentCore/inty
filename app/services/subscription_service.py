@@ -331,7 +331,6 @@ class SubscriptionService:
 
             if not plan:
                 return PurchaseVerificationResponse(
-                    is_valid=False,
                     is_verified=False,
                     subscription=None,
                     message="未找到对应的订阅计划",
@@ -347,7 +346,6 @@ class SubscriptionService:
 
             if not is_valid:
                 return PurchaseVerificationResponse(
-                    is_valid=False,
                     is_verified=False,
                     subscription=None,
                     message="Google Play购买验证失败",
@@ -364,7 +362,6 @@ class SubscriptionService:
 
             if existing_subscription.scalar_one_or_none():
                 return PurchaseVerificationResponse(
-                    is_valid=False,
                     is_verified=False,
                     subscription=None,
                     message="该购买令牌已被使用",
@@ -481,17 +478,15 @@ class SubscriptionService:
             subscription_schema = UserSubscriptionSchema.model_validate(subscription)
 
             return PurchaseVerificationResponse(
-                is_valid=True, 
-                is_verified=True, 
-                subscription=subscription_schema, 
-                message="订阅验证成功"
+                is_verified=True,
+                subscription=subscription_schema,
+                message="订阅验证成功",
             )
 
         except Exception as e:
             await db.rollback()
             logger.error(f"验证购买并创建订阅失败: {str(e)}")
             return PurchaseVerificationResponse(
-                is_valid=False,
                 is_verified=False,
                 subscription=None,
                 message="服务器内部错误",
