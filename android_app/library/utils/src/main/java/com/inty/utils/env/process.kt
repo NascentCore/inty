@@ -1,28 +1,11 @@
 package com.inty.utils.env
 
 import android.annotation.SuppressLint
-import android.app.Activity
-import android.app.ActivityManager
 import android.app.Application
 import android.content.Context
 import android.os.Build
 import android.text.TextUtils
 import com.inty.utils.AppEnv
-
-
-@SuppressLint("NewApi")
-fun getCurrentActivityName(context: Context): String? {
-    val am = context.getSystemService(Activity.ACTIVITY_SERVICE) as ActivityManager
-
-
-    // get the info from the currently running task
-    val taskInfo = am.getRunningTasks(1)
-    if (taskInfo == null || taskInfo.size == 0) {
-        return ""
-    }
-    val componentInfo = taskInfo[0].topActivity
-    return componentInfo!!.className
-}
 
 
 /**

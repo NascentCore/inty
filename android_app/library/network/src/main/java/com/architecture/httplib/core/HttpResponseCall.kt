@@ -75,7 +75,12 @@ internal class HttpResponseCall<S : Any>(
 
                         callback.onResponse(
                             this@HttpResponseCall,
-                            Response.success(HttpResult.Failure("response body is null", HttpResult.ErrorCode.EmptyResponse.value))
+                            Response.success(
+                                HttpResult.Failure(
+                                    "response body is null",
+                                    HttpResult.ErrorCode.EmptyResponse.value
+                                )
+                            )
                         )
 
                     }
@@ -122,15 +127,15 @@ internal class HttpResponseCall<S : Any>(
 //
 //
 //                    } else {
-                        //没有Error Body 的情况
-                        callback.onResponse(
-                            this@HttpResponseCall,
-                            Response.success(
-                                HttpResult.Failure(
-                                    error?.string() ?: "Message is empty.", code
-                                )
+                    //没有Error Body 的情况
+                    callback.onResponse(
+                        this@HttpResponseCall,
+                        Response.success(
+                            HttpResult.Failure(
+                                error?.string() ?: "Message is empty.", code
                             )
                         )
+                    )
 
 //                    }
                 }
@@ -169,7 +174,7 @@ internal class HttpResponseCall<S : Any>(
 
                     //尽量拓展完整一点
                     else -> {
-                        HttpResult.Failure(throwable.message ?: "unknow error",-2)
+                        HttpResult.Failure(throwable.message ?: "unknow error", -2)
                     }
 
                 }

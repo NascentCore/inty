@@ -1,22 +1,18 @@
 package com.inty.utils
 
 import android.annotation.SuppressLint
-import android.app.Activity
 import android.content.Context
 import android.provider.Settings
 import com.inty.utils.env.getCurrentProcessName
 import com.inty.utils.storage.IntySetting
 import java.io.File
-import java.lang.ref.WeakReference
 import java.util.Locale
 
 @SuppressLint("StaticFieldLeak")
 object AppEnv {
-    private const val DEFAULT_CHANNEL = "offical"
-
-    var topActivity: WeakReference<Activity>? = null
 
     lateinit var context: Context
+
     // Build types are defined in build.gradle.kts.
     var buildType: String = "debug"
     var testEnv = false
@@ -36,9 +32,7 @@ object AppEnv {
     val locale by lazy {
         Locale.getDefault()
     }
-    val isZh by lazy {
-        (locale.language == "zh")
-    }
+
 
     val DeviceID: String by lazy {
         var id = IntySetting.getDeviceID()
@@ -56,6 +50,7 @@ class DirsEnv {
     companion object {
         const val TAG = "DirsEnv"
     }
+
     val rootDir: File by lazy {
         val tmp = AppEnv.context.getExternalFilesDir("ata")!!
         tmp.mkdirs()
@@ -72,18 +67,6 @@ class DirsEnv {
         makeDir("logs")
     }
 
-    val audioInput: String by lazy {
-        makeDir("audio_input")
-    }
-
-    val audioCache: String by lazy {
-        makeDir("audio_cache")
-    }
-
-    val download: String by lazy {
-        makeDir("download")
-    }
-
     fun makeDir(dirName: String): String {
         val dir = File(rootDir, dirName)
         dir.mkdirs()
@@ -91,4 +74,3 @@ class DirsEnv {
         return dir.absolutePath
     }
 }
-

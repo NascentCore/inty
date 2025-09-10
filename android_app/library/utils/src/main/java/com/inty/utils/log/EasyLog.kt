@@ -2,6 +2,7 @@ package com.inty.utils.log
 
 import android.os.Build
 import com.inty.utils.log.interceptor.ListInterceptor
+import com.inty.utils.log.interceptor.LogcatInterceptor
 import com.inty.utils.log.interceptor.MapInterceptor
 import java.util.regex.Pattern
 
@@ -87,7 +88,8 @@ object EasyLog {
      */
     fun log(message: Any, priority: Int = VERBOSE, vararg args: Any) {
         chain.proceed(createTag(), message, priority, *args)
-        onetimeInterceptor?.takeIf { it.get() != null }?.also { removeInterceptor(it.get()) } // remove one time interceptor
+        onetimeInterceptor?.takeIf { it.get() != null }
+            ?.also { removeInterceptor(it.get()) } // remove one time interceptor
     }
 
     /**
@@ -99,7 +101,8 @@ object EasyLog {
     fun <T> list(message: Iterable<T>, priority: Int = VERBOSE, map: ((T) -> String)? = null) {
         interceptor(ListInterceptor(map))
         chain.proceed(createTag(), message, priority)
-        onetimeInterceptor?.takeIf { it.get() != null }?.also { removeInterceptor(it.get()) } // remove one time interceptor
+        onetimeInterceptor?.takeIf { it.get() != null }
+            ?.also { removeInterceptor(it.get()) } // remove one time interceptor
     }
 
     /**
@@ -110,7 +113,8 @@ object EasyLog {
     fun <K, V> map(message: Map<K, V>, priority: Int = VERBOSE) {
         interceptor(MapInterceptor<K, V>())
         chain.proceed(createTag(), message, priority)
-        onetimeInterceptor?.takeIf { it.get() != null }?.also { removeInterceptor(it.get()) } // remove one time interceptor
+        onetimeInterceptor?.takeIf { it.get() != null }
+            ?.also { removeInterceptor(it.get()) } // remove one time interceptor
     }
 
     /**
@@ -131,7 +135,11 @@ object EasyLog {
     /**
      * Add [Interceptor] at [index] for customizing log process
      */
-    fun <T> addInterceptor(index: Int, interceptor: Interceptor<T>, isLoggable: (T) -> Boolean = { true }) {
+    fun <T> addInterceptor(
+        index: Int,
+        interceptor: Interceptor<T>,
+        isLoggable: (T) -> Boolean = { true }
+    ) {
         interceptors.add(index, interceptor.apply { this.isLoggable = isLoggable })
     }
 
@@ -176,5 +184,13 @@ object EasyLog {
         } else {
             tag.substring(0, MAX_TAG_LENGTH)
         }
+    }
+}
+
+
+fun EasyLog.defaultInit() {
+    EasyLog.apply {
+        addInterceptor(LogcatInterceptor())
+//        addInterceptor(FileInterceptor())
     }
 }

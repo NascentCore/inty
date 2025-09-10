@@ -225,7 +225,6 @@ object IntySetting {
     }
 
 
-
     private var isLoggingOut = false
 
     fun logout() {

@@ -16,7 +16,7 @@ package com.architecture.httplib.core
  *
  *
  * 注意Http 的状态码和我们的业务定义的Code 码不是一回事，业务定义的Code码完全是自由定义的，不要混淆了
- * 
+ *
  *
  * https://github.com/AnyLifeZLB
  * @author anylife.zlb@gmail.com
@@ -33,34 +33,5 @@ sealed class HttpResult<out T : Any> {
 
     //各种失败，异常全部到这里来吧
     data class Failure(val message: String, val code: Int) : HttpResult<Nothing>()
-
-
-    fun toEventParam(): HashMap<String, String> {
-        val eventParam = HashMap<String, String>()
-        when (this) {
-            is Success -> {
-                eventParam["result"] = "success"
-            }
-            is Failure -> {
-                eventParam["result"] = "failed"
-                eventParam["failed_reason"] = code.toString()
-            }
-        }
-        return eventParam
-    }
-
-    fun toEventParam2(): HashMap<String, String> {
-        val eventParam = HashMap<String, String>()
-        when (this) {
-            is Success -> {
-                eventParam["result"] = "success"
-            }
-            is Failure -> {
-                eventParam["result"] = "warning"
-                eventParam["failed_reason"] = code.toString()
-            }
-        }
-        return eventParam
-    }
 
 }
