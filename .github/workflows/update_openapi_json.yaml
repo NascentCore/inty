@@ -1,7 +1,7 @@
 # Update app/openapi.json when any of the app/api/v1/endpoints/ endpoint is changed.
 
 on:
-  push:
+  pull_request:
     branches:
       - main
     paths:
