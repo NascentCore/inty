@@ -67,7 +67,7 @@ internal fun ChatPage(
         // 初始化语音服务
         chatViewModel.initVoiceService(context)
     }
-    
+
     // 页面生命周期管理：离开页面时重置播放状态
     DisposableEffect(chatViewModel) {
         onDispose {
@@ -289,7 +289,7 @@ internal fun ChatPage(
                                     runCatching {
                                         //明确数据边界
                                         if (index < items.size) {
-                                            ChatItem(item)
+                                            ChatItem(item, index)
                                         }
                                         Spacer(Modifier.height(16.dp))
                                     }.onFailure { e ->

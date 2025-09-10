@@ -62,7 +62,7 @@ class ChatViewModel : BaseActivityViewModel() {
     // 防抖机制：避免快速点击发送按钮
     private var lastSendTime = 0L
     private val SEND_DEBOUNCE_TIME = 1000L // 1秒防抖
-    
+
     // 语音服务
     private var agentVoiceService: AgentVoiceService? = null
     private var audioCacheManager: AudioCacheManager? = null
@@ -121,11 +121,13 @@ class ChatViewModel : BaseActivityViewModel() {
         queryMsgs()
         //查询改聊天设置
         getChatSetting()
-        
+
         // 播放Agent开场白（如果启用自动播放）
         playAgentOpening(agentInfo)
     }
-    
+
+    //region 语音播报相关
+
     /**
      * 初始化语音服务
      */
@@ -134,12 +136,12 @@ class ChatViewModel : BaseActivityViewModel() {
             agentVoiceService = AgentVoiceService.getInstance(context)
             audioCacheManager = AudioCacheManager.getInstance(context)
             EasyLog.log("Voice service initialized")
-            
+
             // 预加载测试音频文件
             preloadTestAudio()
         }
     }
-    
+
     /**
      * 预加载测试音频文件
      */
@@ -154,7 +156,7 @@ class ChatViewModel : BaseActivityViewModel() {
             }
         }
     }
-    
+
     /**
      * 播放Agent开场白
      */
@@ -166,48 +168,50 @@ class ChatViewModel : BaseActivityViewModel() {
                     EasyLog.log("Auto play audio is disabled, skipping opening playback")
                     return@launch
                 }
-                
+
                 // 获取开场白文本
                 val openingText = agentInfo.opening.ifEmpty {
                     agentInfo.intro.ifEmpty {
                         "你好，我是${agentInfo.name}，很高兴与你聊天！"
                     }
                 }
-                
+
                 // 播放开场白
                 agentVoiceService?.playAgentOpening(
                     agentId = agentInfo.id,
                     openingText = openingText,
                     autoPlay = true
                 )
-                
+
                 EasyLog.log("Playing agent opening for: ${agentInfo.name}")
             } catch (e: Exception) {
                 EasyLog.log("Failed to play agent opening: ${e.message}", EasyLog.ERROR)
             }
         }
     }
-    
+
     /**
      * 停止语音播放
      */
     fun stopVoicePlayback() {
         agentVoiceService?.stopAllPlayback()
     }
-    
+
     /**
      * 暂停语音播放（页面离开时调用）
      */
     fun pauseVoicePlayback() {
         agentVoiceService?.pausePlayback()
     }
-    
+
     /**
      * 重置语音播放状态（页面切换时调用）
      */
     fun resetVoicePlayback() {
         agentVoiceService?.resetForPageChange()
     }
+
+    //endregion
 
     fun updateAgentFollowState(agentId: String, isFollowed: Boolean) {
         EasyLog.log("ChatViewModel updateAgentFollowState - agentId: $agentId, isFollowed: $isFollowed")

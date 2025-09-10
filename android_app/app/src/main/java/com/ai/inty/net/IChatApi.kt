@@ -4,6 +4,7 @@ import com.ai.inty.beans.AgentInfo
 import com.ai.inty.beans.ChatSettingsReq
 import com.ai.inty.beans.ChatSettingsResponse
 import com.ai.inty.beans.ConversationItem
+import com.ai.inty.beans.MsgVoiceRsp
 import com.ai.inty.beans.QueryMsgsResponse
 import com.ai.inty.beans.SendMsgReq
 import com.ai.inty.beans.SendMsgResponse
@@ -20,7 +21,6 @@ import retrofit2.http.Query
 interface IChatApi {
     @POST("/api/v1/chat/completions/{agent_id}")
     suspend fun sendMsg(@Path("agent_id") agent_id: String, @Body req: SendMsgReq): HttpResult<SendMsgResponse>
-
     @GET("/api/v1/chats/agents/{agent_id}/messages")
     suspend fun getMsgs(@Path("agent_id") agent_id: String, @Query("limit")limit: Int, @Query("offset") offset: Int, @Query("order") order: String = "desc"): HttpResult<QueryMsgsResponse>
 
@@ -38,4 +38,8 @@ interface IChatApi {
         @Path("agent_id") agent_id: String,
         @Body req: ChatSettingsReq
     ): HttpResult<ChatSettingsResponse>
+
+
+    @POST("/api/v1/chats/agents/{agent_id}/messages/{message_id}/voice")
+    suspend fun fetchMsgVoice(@Path("agent_id") agent_id: String, @Path("message_id") message_id: String, ): HttpResult<MsgVoiceRsp>
 }
