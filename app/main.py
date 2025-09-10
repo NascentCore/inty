@@ -138,12 +138,6 @@ async def _preload_database_connections():
         sync_engine = get_sync_engine()
         logger.info("同步数据库引擎预初始化完成")
 
-        # 2. 预初始化chat_history表结构
-        from app.services.chat_history_service import init_chat_history_table
-
-        init_chat_history_table()
-        logger.info("chat_history表预初始化完成")
-
         # 3. 预热连接池 - 执行一些轻量级查询来预热连接
         with pool.connection() as conn:
             with conn.cursor() as cur:
