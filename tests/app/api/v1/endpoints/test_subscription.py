@@ -3,6 +3,7 @@ from inty import Inty
 from loguru import logger
 
 
+@pytest.mark.noci
 def test_get_subscription_usage():
     """Test getting subscription usage statistics"""
     # Create client with dummy API key to create guest user
