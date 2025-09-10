@@ -70,7 +70,6 @@ class MySettingActivity : BaseActivity() {
                                 imageUri?.let { imageUriReal ->
                                     viewModel.setAvatar(imageUriReal)
                                 }
-//                            EasyLog.log("select $imageUri")//日志log内部的format可能异常
                             }
                         }.onFailure { e -> e.printStackTrace() }
                     }

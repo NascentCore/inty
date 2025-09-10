@@ -17,8 +17,8 @@
     <string name="ID">ID:%s</string>
     <string name="no_agent">Create your own characters now!</string>
     <string name="settings">Settings</string>
-    <string name="settings_keep_talking">Show "Keep Talking" Button</string>
-    <string name="settings_auto_play_audio">Auto-play Voice</string>
+    <string name="settings_keep_talking">Show Keep Talking Button</string>
+    <string name="settings_auto_play_audio">Auto-play Audio</string>
     <string name="settings_email_support">Email Support</string>
     <string name="settings_email_inty">IntelliMate@inty.cc</string>
     <string name="settings_about">Version</string>
@@ -232,8 +232,8 @@
     <!-- Chat -->
     <string name="play_button">▶</string>
     <string name="empty_parentheses">()</string>
-    <string name="my_chat_persona">My Chat Persona</string>
-    <string name="chat_settings">Chat Settings</string>
+    <string name="chat_settings_my_persona_title">My Persona</string>
+    <string name="chat_settings_settings_title">Settings</string>
 
     <!-- VIP Components -->
     <string name="save_percentage">Save %d%%</string>
@@ -305,8 +305,6 @@
     <string name="more_information_full">More Information</string>
     <string name="play_button_symbol">▶</string>
     <string name="empty_parentheses_symbol">()</string>
-    <string name="my_chat_persona_full">My Chat Persona</string>
-    <string name="chat_settings_full">Chat Settings</string>
     <string name="connectors_full">Connectors</string>
     <string name="followers_full">Followers</string>
     <string name="edit_button">Edit</string>
@@ -327,6 +325,6 @@
     <string name="str_upgrade_content">We\'ve made some important improvements to make your IntelliMate experience even better! To ensure you have access to the latest features and security updates, please update your app now. This update is required to continue using IntelliMate.</string>
     <string name="str_upgrade_now">Update Now</string>
 
-    <string name="str_chat_disabled">chat disabled</string>
-    <string name="str_agent_is_deleted">Character is no longer available.</string>
+    <string name="str_chat_disabled">Chat unavailable</string>
+    <string name="str_agent_is_deleted">Character is no longer available</string>
 </resources>
