@@ -87,6 +87,8 @@ fun ChatSettingsDrawer(
         onPauseOrDispose { }
     }
 
+    val horizontalPadding = 16
+
     MyModalNavigationDrawer(
         modifier = Modifier,
         drawerState = drawerState,
@@ -116,7 +118,7 @@ fun ChatSettingsDrawer(
 
                 Column(
                     modifier = Modifier
-                        .padding(horizontal = 16.dp)
+                        .padding(horizontal = horizontalPadding.dp)
                         .fillMaxWidth()
                         .border(
                             brush = Brush.linearGradient(
@@ -138,6 +140,7 @@ fun ChatSettingsDrawer(
                     MySettingItem(
                         key = "Name",
                         value = userProfile.value.nickname,
+                        horizontalPadding = horizontalPadding,
                         onClick = {
                             // 检查是否正式登录（非游客且已登录）
                             if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
@@ -154,6 +157,7 @@ fun ChatSettingsDrawer(
                     MySettingItem(
                         key = "Pronoun",
                         value = userProfile.value.pronouns(),
+                        horizontalPadding = horizontalPadding,
                         onClick = {
                             // 检查是否正式登录（非游客且已登录）
                             if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
@@ -170,6 +174,7 @@ fun ChatSettingsDrawer(
                     MySettingItem(
                         key = "Intro",
                         value = userProfile.value.description ?: "Edit",
+                        horizontalPadding = horizontalPadding,
                         onClick = {
                             // 检查是否正式登录（非游客且已登录）
                             if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
@@ -199,7 +204,7 @@ fun ChatSettingsDrawer(
 
                 Column(
                     modifier = Modifier
-                        .padding(horizontal = 16.dp)
+                        .padding(horizontal = horizontalPadding.dp)
                         .fillMaxWidth()
                         .border(
                             brush = Brush.linearGradient(
@@ -223,7 +228,7 @@ fun ChatSettingsDrawer(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(56.dp)
-                                .padding(horizontal = 16.dp)
+                                .padding(horizontal = horizontalPadding.dp)
                                 .noRippleClickable {
                                     // 检查是否正式登录（非游客且已登录）
                                     if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
@@ -260,7 +265,7 @@ fun ChatSettingsDrawer(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(56.dp)
-                                .padding(horizontal = 16.dp)
+                                .padding(horizontal = horizontalPadding.dp)
                                 .noRippleClickable {
                                     // 检查是否正式登录（非游客且已登录）
                                     if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
@@ -305,7 +310,7 @@ fun ChatSettingsDrawer(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(56.dp)
-                                .padding(horizontal = 16.dp)
+                                .padding(horizontal = horizontalPadding.dp)
                                 .noRippleClickable {
                                     // 检查是否正式登录（非游客且已登录）
                                     if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
