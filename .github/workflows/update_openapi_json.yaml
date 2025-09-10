@@ -9,7 +9,6 @@ on:
       - ".github/workflows/update_openapi_json.yaml"
 
 env:
-  PG_IMAGE: postgres:16
   PG_USER: postgres
   PG_PASSWORD: sxwl666!
   PG_DB: inty
