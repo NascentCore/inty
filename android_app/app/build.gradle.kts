@@ -100,4 +100,8 @@ dependencies {
     
     // ===== compose ui bundle =====
     implementation(libs.bundles.compose.ui.bundle)
+    
+    // ===== Inty Kotlin SDK =====
+    implementation(files("libs/inty-kotlin-core-0.1.0.jar"))
+    implementation(files("libs/inty-kotlin-client-okhttp-0.1.0.jar"))
 }
