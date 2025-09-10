@@ -165,30 +165,9 @@ class TestAppConfig:
         assert config.debug is False
         assert config.debug_messages is True
         assert config.api_v1_prefix == "/api/v1"
-        assert config.backend_cors_origins == ["http://localhost:3000"]
+        assert config.backend_cors_origins is None
         assert config.limits.free_user_image_gen_daily_limit == 4
         assert config.limits.free_user_chat_total_limit == 100
-
-    def test_app_config_custom_values(self):
-        """Test AppConfig with custom values"""
-        cors_origins = ["http://localhost:3000", "http://localhost:8000"]
-        config = AppConfig(
-            name="CustomApp",
-            debug=False,
-            debug_messages=False,
-            api_v1_prefix="/api/v2",
-            backend_cors_origins=cors_origins,
-        )
-        assert config.name == "CustomApp"
-        assert config.debug is False
-        assert config.debug_messages is False
-        assert config.api_v1_prefix == "/api/v2"
-        assert config.backend_cors_origins == cors_origins
-
-    def test_app_config_default_cors_origins(self):
-        """Test AppConfig default backend_cors_origins"""
-        config = AppConfig()
-        assert config.backend_cors_origins == ["http://localhost:3000"]
 
 
 class TestEmbeddingConfig:

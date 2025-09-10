@@ -1,0 +1,78 @@
+# Update app/openapi.json when any of the app/api/v1/endpoints/ endpoint is changed.
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "app/api/v1/endpoints/**/*.py"
+      - ".github/workflows/update_openapi_json.yaml"
+
+env:
+  PG_USER: postgres
+  PG_PASSWORD: sxwl666!
+  PG_DB: inty
+
+jobs:
+  update-openapi-json:
+    runs-on: ubuntu-latest
+
+    permissions:
+      # Update file and commit
+      contents: write
+
+    services:
+      pgsql:
+        image: postgres:16
+        ports:
+          - 5432:5432
+        env:
+          POSTGRES_USER: ${{ env.PG_USER }}
+          POSTGRES_PASSWORD: ${{ env.PG_PASSWORD }}
+          POSTGRES_DB: ${{ env.PG_DB }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: 3.12
+
+      # Based on https://adamj.eu/tech/2023/11/02/github-actions-faster-python-virtual-environments/
+      - uses: actions/cache@v4
+        with:
+          path: .venv
+          # Unique key for the cache
+          key: ${{ runner.os }}-venv-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-venv-
+  
+      - name: Install dependencies
+        run: |
+          python -m venv .venv
+          source .venv/bin/activate
+          python -m pip install -r requirements.txt
+          # https://stackoverflow.com/a/74669486
+          echo "$VIRTUAL_ENV/bin" >> $GITHUB_PATH
+          echo "VIRTUAL_ENV=$VIRTUAL_ENV" >> $GITHUB_ENV
+
+      - name: Update openapi.json
+        run: |
+          # Use dev environment config.yaml
+          cp config.yaml.example config.yaml
+          # docker compose up -d caching is difficult to setup, so use start.sh instead.
+          ./start.sh &
+          sleep 5
+          curl -o app/openapi.json http://localhost:8000/openapi.json
+
+      - name: Commit and push
+        run: |
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+          git add app/openapi.json
+          git commit -m "Update openapi.json"
+          git push

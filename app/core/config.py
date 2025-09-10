@@ -10,9 +10,12 @@ from pydantic import AnyHttpUrl
 
 
 # All config classes' fields should have default values.
-# These default value allow more this to be used without an actual config file.
+# These default value allow this to be used without an actual config file.
 # Since config object is used as a global singleton, most code depends on it,
 # but does not actually use the config values, so a default value is OK.
+#
+# All default values should be assumed to be used in production environment.
+# config.yaml.example is a sample for development environment.
 
 GEMINI_2_5_FLASH = "google/gemini-2.5-flash"
 API_V1_PREFIX = "/api/v1"
@@ -98,8 +101,6 @@ class AppConfig:
     limits: LimitsConfig = None
 
     def __post_init__(self):
-        if self.backend_cors_origins is None:
-            self.backend_cors_origins = ["http://localhost:3000"]
         if self.limits is None:
             self.limits = self.LimitsConfig()
 

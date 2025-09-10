@@ -20,7 +20,6 @@ on:
       - ".github/workflows/ci.yaml"
 
 env:
-  PG_IMAGE: postgres:16
   PG_USER: postgres
   PG_PASSWORD: sxwl666!
   PG_DB: inty
@@ -30,6 +29,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       pgsql:
+        # Cannot access env var here. So use hardcoded image.
         image: postgres:16
         ports:
           - 5432:5432
@@ -82,13 +82,9 @@ jobs:
       - name: Create inty-backend-key.json
         run: |
           echo "{}" > inty-backend-key.json
-
-      - name: Test Alembic versions
-        run: |          
-          alembic upgrade head
-
       - name: Run python tests
         run: |
+          # alembic upgrade head no need to run, as start.sh already includes it
           ./start.sh &
           # Wait for the server to start. If the time is too short, it needs to be increased.
           sleep 5
