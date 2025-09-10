@@ -6,10 +6,9 @@ import com.ai.inty.beans.GoogleLoginRequest
 import com.ai.inty.beans.GoogleLoginResponse
 import com.ai.inty.beans.SysMsgResponse
 import com.ai.inty.beans.TokenBean
+import com.ai.inty.beans.UploadAvatarResponse
 import com.ai.inty.beans.UserDeleteResponse
 import com.ai.inty.beans.UserDeletionCheckResponse
-import com.ai.inty.beans.UserProfile
-import com.ai.inty.beans.UploadAvatarResponse
 import com.architecture.httplib.core.HttpResult
 import com.therouter.inject.Singleton
 import okhttp3.MultipartBody
@@ -35,7 +34,7 @@ interface IUserApi {
     @POST("/api/v1/users/device/register")
     suspend fun regFCM(@Body reqq: TokenBean): HttpResult<Any>
 
-    @GET("/api/v1/notifications/")
+    @GET("/api/v1/notifications")
     suspend fun getSysMsgs(
         @Query("page") page: Int,
         @Query("page_size") pageSize: Int
@@ -49,4 +48,3 @@ interface IUserApi {
     suspend fun userDeleteAccount(): HttpResult<UserDeleteResponse>
 
 }
-
