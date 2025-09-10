@@ -13,9 +13,9 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  STAINLESS_ORG: YOUR_ORG
-  STAINLESS_PROJECT: YOUR_PROJECT
-  OAS_PATH: YOUR_OAS_PATH
+  STAINLESS_ORG: inty
+  STAINLESS_PROJECT: inty
+  OAS_PATH: app/openapi.json
 
 jobs:
   preview:
