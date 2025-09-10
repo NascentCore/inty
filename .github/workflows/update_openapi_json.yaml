@@ -74,7 +74,7 @@ jobs:
           # so use start.sh directly to launch the server.
           ./start.sh &
           sleep 10
-          curl -o app/openapi.json http://localhost:8000/openapi.json
+          curl http://localhost:8000/openapi.json | python -m json.tool >app/openapi.json
 
       - name: Commit and push
         run: |
