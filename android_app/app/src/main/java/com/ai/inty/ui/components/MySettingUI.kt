@@ -127,23 +127,28 @@ fun MySettingScreen(
 
             Spacer(Modifier.height(46.dp))
 
+            val horizontalPadding = 16
+
             // 设置项区域
             SettingSection {
                 MySettingItem(
                     key = "Name",
                     value = userProfile.nickname,
+                    horizontalPadding = horizontalPadding,
                     onClick = onClickName
                 )
                 SettingDivider()
                 MySettingItem(
                     key = "My Pronouns",
                     value = userProfile.pronouns(),
+                    horizontalPadding = horizontalPadding,
                     onClick = onClickPronouns
                 )
                 SettingDivider()
                 MySettingItem(
                     key = "My Persona",
                     value = userProfile.description ?: "",
+                    horizontalPadding = horizontalPadding,
                     onClick = onClickPersona
                 )
             }
@@ -199,12 +204,13 @@ fun MySettingItem(
     value: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    horizontalPadding: Int,
 ) {
     Row(
         modifier = modifier
             .fillMaxWidth()
             .height(48.dp)
-            .padding(horizontal = 12.dp)
+            .padding(horizontal = horizontalPadding.dp)
             .noRippleClickable { onClick() },
         verticalAlignment = Alignment.CenterVertically
     ) {
