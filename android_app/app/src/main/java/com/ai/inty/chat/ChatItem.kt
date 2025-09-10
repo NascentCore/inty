@@ -86,18 +86,8 @@ private fun ChatItemAI(item: MsgInfo) {
                         verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(
                             8.dp
                         )
-                    ) {
-                        // 消息文本
-                        StyledMessageText(
-                            text = item.content,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Normal,
-                            normalColor = Color.White,
-                            actionColor = Color.White.copy(0.55f)
-                        )
-
-                        // 语音播放器（仅对AI消息显示）
-                        if (item.content != "loading_animation" && item.content.isNotEmpty()) {
+                    ) {// 语音播放器（仅对AI消息显示）
+                        if (item.content.isNotEmpty()) {
                             // 为每个消息生成唯一的测试URL，避免状态混乱
                             val audioInfo = AudioInfo(
                                 url = "http://demo.fengxianqi.com/audio/static/opus.opus?msgId=${item.msgId}", // 添加消息ID参数
@@ -114,14 +104,18 @@ private fun ChatItemAI(item: MsgInfo) {
                                 compact = true
                             )
                         }
+                        // 消息文本
+                        StyledMessageText(
+                            text = item.content,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Normal,
+                            normalColor = Color.White,
+                            actionColor = Color.White.copy(0.55f)
+                        )
                     }
                 }
             }
-            Spacer(
-                modifier = Modifier
-                    .widthIn(80.dp)
-                    .weight(1f)
-            )
+            Spacer(modifier = Modifier.widthIn(80.dp).weight(1f))
         }
     }.onFailure { e ->
         EasyLog.log("Error rendering AI chat item: ${e.message}", priority = EasyLog.ERROR)
