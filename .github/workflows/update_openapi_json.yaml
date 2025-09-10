@@ -62,11 +62,11 @@ jobs:
           # Enable debug mode for testing.
           echo "  debug: true" >> config.yaml
           echo "database:" >> config.yaml
-          echo "  db: ${{ env.PG_DB }}" >> config.yaml
           echo "  host: localhost" >> config.yaml
-          echo "  password: ${{ env.PG_PASSWORD }}" >> config.yaml
           echo "  port: 5432" >> config.yaml
-          echo "  user: postgres" >> config.yaml
+          echo "  user: ${{ env.PG_USER }}" >> config.yaml
+          echo "  password: ${{ env.PG_PASSWORD }}" >> config.yaml
+          echo "  db: ${{ env.PG_DB }}" >> config.yaml
 
       - name: Update openapi.json
         run: |
