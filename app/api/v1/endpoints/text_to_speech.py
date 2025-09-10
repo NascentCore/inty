@@ -11,4 +11,5 @@ router = APIRouter(prefix="/text-to-speech", route_class=LoggerRoute)
     description="Generate voice for a message"
 )
 async def generate_message_voice(...):
+    # TODO: 将生成语音的 API /chats/agents/{agent_id}/messages/{message_id}/voice 转移到此处
     pass
