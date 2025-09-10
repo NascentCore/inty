@@ -4,3 +4,6 @@
 [submodule "sdks/python"]
 	path = sdks/python
 	url = git@github.com:NascentCore/inty-python.git
+[submodule "sdks/kotlin"]
+	path = sdks/kotlin
+	url = git@github.com:NascentCore/inty-kotlin.git
