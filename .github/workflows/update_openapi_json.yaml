@@ -62,7 +62,8 @@ jobs:
         run: |
           # Use dev environment config.yaml
           cp config.yaml.example config.yaml
-          # docker compose up -d caching is difficult to setup, so use start.sh instead.
+          # docker compose up -d docker build caching is difficult to setup
+          # so use start.sh directly to launch the server.
           ./start.sh &
           sleep 10
           curl -o app/openapi.json http://localhost:8000/openapi.json
