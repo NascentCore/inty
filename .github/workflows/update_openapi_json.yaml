@@ -64,7 +64,7 @@ jobs:
           cp config.yaml.example config.yaml
           # docker compose up -d caching is difficult to setup, so use start.sh instead.
           ./start.sh &
-          sleep 5
+          sleep 10
           curl -o app/openapi.json http://localhost:8000/openapi.json
 
       - name: Commit and push
