@@ -34,7 +34,7 @@ interface IUserApi {
     @POST("/api/v1/users/device/register")
     suspend fun regFCM(@Body reqq: TokenBean): HttpResult<Any>
 
-    @GET("/api/v1/notifications")
+    @GET("/api/v1/notifications/")
     suspend fun getSysMsgs(
         @Query("page") page: Int,
         @Query("page_size") pageSize: Int
