@@ -6,6 +6,7 @@ import com.ai.inty.beans.CreateGuestReq
 import com.ai.inty.net.IUserApi
 import com.ai.inty.net.IUserApi2
 import com.ai.inty.net.getBaseUrl
+import com.ai.inty.net.INTY_CLIENT_SUCCESS_CODE
 import com.ai.inty.utils.AppStartupManager
 import com.ai.inty.utils.UserProfileManager
 import com.architecture.httplib.core.HttpResult
@@ -114,6 +115,10 @@ class SplashViewModel : BaseActivityViewModel() {
         EasyLog.log("Creating guest account with inty-sdk...")
         
         // 创建临时 inty client 来创建游客账号
+        // 首次创建游客账户不需要有效的 API key，游客账户创建完成后，
+        // 会设置全局 API key，后续 inty client 会使用全局 API key（还未验证）。
+        //
+        // 已经登录的用户会在本地缓存 API key，后续 inty client 会使用本地缓存的 API key。
         val intyClient = IntyOkHttpClient.builder()
             .apiKey("")
             .baseUrl(getBaseUrl())
@@ -128,16 +133,11 @@ class SplashViewModel : BaseActivityViewModel() {
 
         EasyLog.log("createGuestWithIntySdk result: $response")
 
-        if (response.code() == 0L) {
-            val data = response.data()
-            if (data != null) {
-                IntySetting.login(true, data.guestId(), data.token())
-                EasyLog.log("Guest created successfully with inty-sdk: ${data.guestId()}")
-                onLoginSuccess()
-            } else {
-                EasyLog.log("Guest creation failed with inty-sdk: data is null", EasyLog.ERROR)
-                _initState.value = InitState.Failed
-            }
+        if (response.code() == INTY_CLIENT_SUCCESS_CODE) {
+            val data = response.data()!!
+            IntySetting.login(true, data.guestId(), data.token())
+            EasyLog.log("Guest created successfully with inty-sdk: ${data.guestId()}")
+            onLoginSuccess()
         } else {
             EasyLog.log("Guest creation failed with inty-sdk: ${response.message()}", EasyLog.ERROR)
             _initState.value = InitState.Failed

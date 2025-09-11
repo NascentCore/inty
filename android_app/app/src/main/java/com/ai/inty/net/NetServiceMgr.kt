@@ -361,3 +361,7 @@ fun getIntyClient(): IntyClient {
         .baseUrl(getBaseUrl())
         .build()
 }
+
+// Inty 后端会在 response body 提供 code，来表示实际的业务错误信息
+// 这个 code 与 http status code 无关
+const val INTY_CLIENT_SUCCESS_CODE = 200L
