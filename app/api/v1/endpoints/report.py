@@ -26,10 +26,13 @@ from app.utils.gcs import upload_to_gcs
 router = APIRouter(prefix="/report", route_class=LoggerRoute)
 
 
+# TODO: Remove this endpoint.
 @router.post(
     "/upload-image",
     response_model=APIResponse[dict],
-    summary="Upload image for report",
+    deprecated=True,
+    include_in_schema=False,
+    summary="[Deprecated, use /api/v1/report/upload-image instead] Upload image for report",
     description="Used by app to upload image in their report of app content: AI characters, images, etc.",
 )
 async def upload_report_image(
@@ -93,7 +96,7 @@ async def create_report(
         return APIResponse.error(message=str(e))
 
 
-# TODO: Move this under admin path.
+# TODO: Remove this endpoint.
 @router.get(
     "/",
     response_model=APIResponse[ReportsList],
