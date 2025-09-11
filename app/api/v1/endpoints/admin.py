@@ -177,6 +177,8 @@ async def update_system_setting(
 @router.get(
     "/system-settings/free-user-limits",
     response_model=APIResponse[FreeUserLimitsResponse],
+    deprecated=True,
+    include_in_schema=False,
 )
 async def get_free_user_limits(
     db: AsyncSession = Depends(get_async_db),
@@ -201,7 +203,12 @@ async def get_free_user_limits(
         return APIResponse.error(message="Failed to get free user limits")
 
 
-@router.post("/system-settings/clear-cache", response_model=APIResponse[dict])
+@router.post(
+    "/system-settings/clear-cache",
+    response_model=APIResponse[dict],
+    deprecated=True,
+    include_in_schema=False,
+)
 async def clear_system_settings_cache(
     key: str = None, current_user: schemas.User = Depends(get_current_superuser)
 ):
