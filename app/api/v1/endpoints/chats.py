@@ -1,6 +1,7 @@
 import uuid
 from typing import Any, List, Union
 
+from app.services.resource_service import delete_resource
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from langchain_core.messages import HumanMessage
@@ -25,7 +26,12 @@ from app.core.user_privilege.premium_check import is_eligible_for_premium
 router = APIRouter(prefix="/chats", route_class=LoggerRoute)
 
 
-@router.get("/", response_model=List[schemas.Chat])
+@router.get(
+    "/",
+    response_model=List[schemas.Chat],
+    summary="Get current user's chat list",
+    description="Get current user's chat list",
+)
 async def list_chats(
     db: AsyncSession = Depends(deps.get_async_db),
     # Start index of the query, 0-based
@@ -43,7 +49,12 @@ async def list_chats(
     return chats
 
 
-@router.post("/", response_model=schemas.Chat)
+@router.post(
+    "/",
+    response_model=schemas.Chat,
+    summary="Create new chat",
+    description="Create new chat",
+)
 async def create_chat(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
@@ -57,7 +68,12 @@ async def create_chat(
     return chat
 
 
-@router.delete("/{chat_id}", response_model=schemas.Chat)
+@router.delete(
+    "/{chat_id}",
+    response_model=schemas.Chat,
+    summary="Delete chat",
+    description="Delete chat",
+)
 async def delete_chat(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
@@ -147,6 +163,7 @@ async def cleanup_idle_agents(
 
 @router.get(
     "/{chat_id}/detail",
+    deprecated=True,
     include_in_schema=False,
     tags=["unknown"],
     summary="Get Chat Detail",
@@ -639,7 +656,6 @@ async def agent_chat_completions(
 
 @router.post(
     "/agents/{agent_id}/messages/{message_id}/voice",
-    include_in_schema=True,
     tags=["inty", "voice"],
     summary="Generate Message Voice",
     description="Generate voice for a message",
@@ -722,6 +738,7 @@ async def generate_message_voice(
 
 @router.get(
     "/voices/{voice_id}",
+    deprecated=True,
     include_in_schema=False,
     tags=["inty", "voice"],
     summary="Get Voice Info",
@@ -749,6 +766,8 @@ async def get_voice_info(
 
 @router.put(
     "/agents/{agent_id}/settings",
+    deprecated=True,
+    include_in_schema=False,
     tags=["inty"],
     summary="Update Agent Chat Settings",
     description="Update chat settings by Agent ID",
@@ -843,10 +862,12 @@ async def update_agent_chat_settings(
 @router.get(
     "/agents/{agent_id}/settings",
     response_model=schemas.ChatSettings,
+    deprecated=True,
+    include_in_schema=False,
     tags=["inty"],
     summary="Get Agent Chat Settings",
     description=(
-        "Get chat settings by Agent ID, bause we only support 1 chat per agent, "
+        "[Deprecated, use /chats/{chat_id}/settings instead] Get chat settings by Agent ID, bause we only support 1 chat per agent, "
         "so we do not use chat_id to get settings"
     ),
 )
@@ -901,10 +922,11 @@ async def get_agent_chat_settings(
 @router.delete(
     "/agents/{agent_id}/chats",
     response_model=schemas.ChatDeletionResponse,
+    deprecated=True,
     include_in_schema=False,
     tags=["inty"],
     summary="Delete Agent Chats",
-    description="Delete all chats by Agent ID",
+    description="[Deprecated, use /chats/{chat_id} instead] Delete all chats by Agent ID",
 )
 async def delete_agent_chats(
     *,
@@ -951,6 +973,7 @@ async def delete_agent_chats(
 
 @router.get(
     "/agents/{agent_id}/debug-messages",
+    deprecated=True,
     include_in_schema=False,
     tags=["inty-eval"],
     summary="Get Agent Debug Messages",
