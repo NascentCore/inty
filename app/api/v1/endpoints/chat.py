@@ -246,6 +246,14 @@ async def agent_chat_completions(
         except Exception as e:
             logger.warning(f"记录聊天使用情况失败: {str(e)}")
 
+        # 获取最新AI消息的真实ID
+        try:
+            latest_message_id = chat_history_service.get_latest_ai_message_id(session_id)
+            message_id = str(latest_message_id) if latest_message_id else f"chatcmpl-{uuid.uuid4().hex[:12]}"
+        except Exception as e:
+            logger.warning(f"获取最新消息ID失败: {str(e)}")
+            message_id = f"chatcmpl-{uuid.uuid4().hex[:12]}"
+
         # 构建响应消息
         logger.debug("构建聊天响应消息")
         message = {"role": "assistant", "content": response_content}
@@ -260,7 +268,7 @@ async def agent_chat_completions(
             f"聊天请求处理成功: agent_id={agent_id}, response_length={len(response_content)}, 总耗时: {total_request_time:.3f}秒"
         )
         data = {
-            "id": f"chatcmpl-{uuid.uuid4().hex[:12]}",
+            "id": message_id,  # 使用真实的消息ID
             "object": "chat.completion",
             "created": int(time.time()),
             "model": request.model,

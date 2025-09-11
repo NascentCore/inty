@@ -590,11 +590,19 @@ async def agent_chat_completions(
                 message["audio_url"] = audio_url
                 logger.info(f"响应包含语音URL: {audio_url}")
 
+            # 获取最新AI消息的真实ID
+            try:
+                latest_message_id = chat_history_service.get_latest_ai_message_id(session_id)
+                message_id = str(latest_message_id) if latest_message_id else f"chatcmpl-{uuid.uuid4().hex[:12]}"
+            except Exception as e:
+                logger.warning(f"获取最新消息ID失败: {str(e)}")
+                message_id = f"chatcmpl-{uuid.uuid4().hex[:12]}"
+
             total_request_time = time.time() - request_start_time
 
             # 构建符合客户端期望的响应格式 (HttpResult<SendMsgResponse>)
             response_data = {
-                "id": f"chatcmpl-{uuid.uuid4().hex[:12]}",
+                "id": message_id,  # 使用真实的消息ID
                 "object": "chat.completion",
                 "created": int(time.time()),
                 "model": request.model,

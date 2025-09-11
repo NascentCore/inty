@@ -199,15 +199,75 @@ def add_user_message(session_id: str, message: str) -> None:
         raise
 
 
-def add_ai_message(session_id: str, message: str) -> None:
-    """添加AI消息到聊天历史"""
+def add_ai_message(session_id: str, message: str, agent_id: Optional[str] = None) -> Optional[int]:
+    """添加AI消息到聊天历史，返回插入的消息ID"""
     try:
-        history = get_chat_history(session_id)
-        history.add_messages([AIMessage(content=message)])
-        logger.debug(f"添加AI消息到会话 {session_id}: {message}")
+        conn = get_chat_history_connection()
+        
+        # 构建AIMessage的JSON格式数据
+        message_data = {
+            "type": "ai",
+            "data": {"content": message}
+        }
+        
+        # 构建meta_data
+        meta_data = None
+        if agent_id:
+            meta_data = {
+                "agentId": agent_id,
+                "isOpening": False
+            }
+        
+        # 直接插入到数据库，包含meta_data，并返回插入的ID
+        insert_query = """
+            INSERT INTO chat_history (session_id, message, meta_data, created_at)
+            VALUES (%s, %s, %s, NOW())
+            RETURNING id
+        """
+        
+        with conn.cursor() as cur:
+            cur.execute(insert_query, (
+                session_id, 
+                json.dumps(message_data),
+                json.dumps(meta_data) if meta_data else None
+            ))
+            inserted_id = cur.fetchone()[0]
+            
+        logger.debug(f"添加AI消息到会话 {session_id}: {message}, ID: {inserted_id}")
+        return inserted_id
+        
     except Exception as e:
         logger.error(f"添加AI消息失败 {session_id}: {str(e)}")
         raise
+
+
+def get_latest_ai_message_id(session_id: str) -> Optional[int]:
+    """获取会话中最新的AI消息ID"""
+    try:
+        conn = get_chat_history_connection()
+        
+        # 查询最新的AI消息ID
+        query = """
+            SELECT id
+            FROM chat_history 
+            WHERE session_id = %s 
+            AND message->>'type' = 'ai'
+            ORDER BY created_at DESC, id DESC
+            LIMIT 1
+        """
+        
+        with conn.cursor() as cur:
+            cur.execute(query, (session_id,))
+            row = cur.fetchone()
+            
+            if row:
+                return row[0]
+            else:
+                return None
+                
+    except Exception as e:
+        logger.error(f"获取最新AI消息ID失败 {session_id}: {str(e)}")
+        return None
 
 
 def get_messages_paginated(
