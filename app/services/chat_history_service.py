@@ -80,7 +80,7 @@ def get_chat_history(session_id: str) -> PostgresChatMessageHistory:
     return PostgresChatMessageHistory("chat_history", session_id, sync_connection=conn)
 
 
-def add_agent_opening_message(session_id: str, opening_message: str, audio_url: Optional[str] = None) -> None:
+def add_agent_opening_message(session_id: str, opening_message: str, audio_url: Optional[str] = None, agent_id: Optional[str] = None) -> None:
     """添加Agent开场白到聊天历史"""
     try:
         conn = get_chat_history_connection()
@@ -91,17 +91,26 @@ def add_agent_opening_message(session_id: str, opening_message: str, audio_url: 
             "data": {"content": opening_message}
         }
         
-        # 直接插入到数据库，包含audio_url
+        # 构建meta_data
+        meta_data = None
+        if agent_id:
+            meta_data = {
+                "agentId": agent_id,
+                "isOpening": True
+            }
+        
+        # 直接插入到数据库，包含audio_url和meta_data
         insert_query = """
-            INSERT INTO chat_history (session_id, message, audio_url, created_at)
-            VALUES (%s, %s, %s, NOW())
+            INSERT INTO chat_history (session_id, message, audio_url, meta_data, created_at)
+            VALUES (%s, %s, %s, %s, NOW())
         """
         
         with conn.cursor() as cur:
             cur.execute(insert_query, (
                 session_id, 
                 json.dumps(message_data),
-                audio_url
+                audio_url,
+                json.dumps(meta_data) if meta_data else None
             ))
             
         logger.debug(f"添加开场白到会话 {session_id}: {opening_message}, audio_url: {audio_url}")
@@ -229,9 +238,9 @@ def get_messages_paginated(
             cur.execute(count_query, (session_id,))
             total_count = cur.fetchone()[0]
 
-        # 分页查询消息（按时间倒序，最新的在前）- 包括消息ID和audio_url
+        # 分页查询消息（按时间倒序，最新的在前）- 包括消息ID、audio_url和meta_data
         messages_query = """
-            SELECT id, message, created_at, audio_url
+            SELECT id, message, created_at, audio_url, meta_data
             FROM chat_history 
             WHERE session_id = %s 
             ORDER BY created_at DESC 
@@ -245,11 +254,12 @@ def get_messages_paginated(
 
             for row in rows:
                 try:
-                    # 提取消息ID、消息数据、创建时间和audio_url
+                    # 提取消息ID、消息数据、创建时间、audio_url和meta_data
                     message_id = row[0]
                     message_raw = row[1]
                     created_at = row[2]
                     audio_url = row[3]
+                    meta_data_raw = row[4]
 
                     # 处理消息数据，可能是字符串或已经是字典
                     if isinstance(message_raw, str):
@@ -276,12 +286,21 @@ def get_messages_paginated(
                         else "assistant"
                     )
 
+                    # 处理meta_data
+                    meta_data = None
+                    if meta_data_raw:
+                        if isinstance(meta_data_raw, str):
+                            meta_data = json.loads(meta_data_raw)
+                        elif isinstance(meta_data_raw, dict):
+                            meta_data = meta_data_raw
+
                     messages.append(
                         {
                             "id": message_id,  # 添加消息ID
                             "role": role,
                             "content": content,
                             "audio_url": audio_url,  # 添加audio_url字段
+                            "meta_data": meta_data,  # 添加meta_data字段
                             "timestamp": created_at.isoformat() if created_at else None,
                         }
                     )

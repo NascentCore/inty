@@ -193,7 +193,7 @@ async def create_chat(
                 )
                 if existing_messages.get("total", 0) == 0:
                     chat_history_service.add_agent_opening_message(
-                        session_id, agent.opening, agent.opening_audio_url
+                        session_id, agent.opening, agent.opening_audio_url, agent.id
                     )
                     logger.debug(f"添加Agent开场白成功 - Session ID: {session_id}")
                 else:
@@ -458,7 +458,7 @@ async def get_or_create_chat_by_agent(
                     # 如果有开场白，添加到聊天历史
                     if agent_opening:
                         chat_history_service.add_agent_opening_message(
-                            session_id, agent_opening, opening_audio_url
+                            session_id, agent_opening, opening_audio_url, agent_id
                         )
                         logger.debug(
                             f"为已存在的空聊天会话添加Agent开场白成功 - Session ID: {session_id}"
@@ -553,7 +553,7 @@ async def get_or_create_chat_by_agent(
                 )
                 if existing_messages.get("total", 0) == 0:
                     chat_history_service.add_agent_opening_message(
-                        session_id, agent_opening, opening_audio_url
+                        session_id, agent_opening, opening_audio_url, agent_id
                     )
                     logger.debug(f"添加Agent开场白成功 - Session ID: {session_id}")
                 else:
