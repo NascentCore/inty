@@ -101,7 +101,7 @@ fun ReportScreen(
 
             // 举报描述
             ReportDescriptionContainer(
-                title = stringResource(R.string.report_description_full),
+                title = stringResource(R.string.report_description),
                 description = description,
                 onDescriptionChange = onDescriptionChange,
                 placeholder = stringResource(R.string.please_fill_feedback_full)
