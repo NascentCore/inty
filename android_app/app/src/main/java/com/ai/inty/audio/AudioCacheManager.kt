@@ -11,6 +11,7 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
 import java.security.MessageDigest
+import java.util.concurrent.TimeUnit
 
 /**
  * 音频缓存管理器
@@ -19,31 +20,31 @@ import java.security.MessageDigest
 class AudioCacheManager private constructor(
     private val context: Context
 ) {
-    
+
     companion object {
         @Volatile
         private var INSTANCE: AudioCacheManager? = null
-        
+
         fun getInstance(context: Context): AudioCacheManager {
             return INSTANCE ?: synchronized(this) {
                 INSTANCE ?: AudioCacheManager(context.applicationContext).also { INSTANCE = it }
             }
         }
-        
+
         private const val CACHE_DIR_NAME = "audio_cache"
         private const val MAX_CACHE_SIZE = 50 * 1024 * 1024L // 50MB
         private const val MAX_MEMORY_CACHE_SIZE = 20 // 最多缓存20个音频文件
     }
-    
+
     private val httpClient = OkHttpClient.Builder()
-        .connectTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
-        .readTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
-        .writeTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+        .connectTimeout(10, TimeUnit.SECONDS)
+        .readTimeout(30, TimeUnit.SECONDS)
+        .writeTimeout(30, TimeUnit.SECONDS)
         .build()
-    
+
     // 内存缓存
     private val memoryCache = LruCache<String, ByteArray>(MAX_MEMORY_CACHE_SIZE)
-    
+
     // 缓存目录
     private val cacheDir: File by lazy {
         File(context.cacheDir, CACHE_DIR_NAME).apply {
@@ -52,20 +53,20 @@ class AudioCacheManager private constructor(
             }
         }
     }
-    
+
     /**
      * 获取音频数据（优先从缓存获取）
      */
     suspend fun getAudioData(url: String): ByteArray? = withContext(Dispatchers.IO) {
         try {
             val cacheKey = generateCacheKey(url)
-            
+
             // 1. 尝试从内存缓存获取
             memoryCache.get(cacheKey)?.let { data ->
                 EasyLog.log("Audio loaded from memory cache: $url")
                 return@withContext data
             }
-            
+
             // 2. 尝试从本地文件缓存获取
             val cachedFile = getCachedFile(cacheKey)
             if (cachedFile.exists()) {
@@ -75,7 +76,7 @@ class AudioCacheManager private constructor(
                 EasyLog.log("Audio loaded from file cache: $url")
                 return@withContext data
             }
-            
+
             // 3. 从网络下载
             val data = downloadAudio(url)
             if (data != null) {
@@ -85,26 +86,26 @@ class AudioCacheManager private constructor(
                 saveToFile(cachedFile, data)
                 EasyLog.log("Audio downloaded and cached: $url")
             }
-            
+
             data
         } catch (e: Exception) {
             EasyLog.log("Failed to get audio data: ${e.message}", EasyLog.ERROR)
             null
         }
     }
-    
+
     /**
      * 预加载音频数据
      */
     suspend fun preloadAudio(url: String) = withContext(Dispatchers.IO) {
         try {
             val cacheKey = generateCacheKey(url)
-            
+
             // 如果已经缓存，直接返回
             if (memoryCache.get(cacheKey) != null || getCachedFile(cacheKey).exists()) {
                 return@withContext
             }
-            
+
             // 下载并缓存
             val data = downloadAudio(url)
             if (data != null) {
@@ -116,7 +117,7 @@ class AudioCacheManager private constructor(
             EasyLog.log("Failed to preload audio: ${e.message}", EasyLog.ERROR)
         }
     }
-    
+
     /**
      * 检查音频是否已缓存
      */
@@ -124,7 +125,7 @@ class AudioCacheManager private constructor(
         val cacheKey = generateCacheKey(url)
         return memoryCache.get(cacheKey) != null || getCachedFile(cacheKey).exists()
     }
-    
+
     /**
      * 获取缓存文件路径
      */
@@ -133,7 +134,7 @@ class AudioCacheManager private constructor(
         val cachedFile = getCachedFile(cacheKey)
         return if (cachedFile.exists()) cachedFile.absolutePath else null
     }
-    
+
     /**
      * 清理缓存
      */
@@ -141,20 +142,20 @@ class AudioCacheManager private constructor(
         try {
             // 清理内存缓存
             memoryCache.evictAll()
-            
+
             // 清理文件缓存
             cacheDir.listFiles()?.forEach { file ->
                 if (file.isFile) {
                     file.delete()
                 }
             }
-            
+
             EasyLog.log("Audio cache cleared")
         } catch (e: Exception) {
             EasyLog.log("Failed to clear cache: ${e.message}", EasyLog.ERROR)
         }
     }
-    
+
     /**
      * 清理过期缓存
      */
@@ -162,19 +163,19 @@ class AudioCacheManager private constructor(
         try {
             val currentTime = System.currentTimeMillis()
             val maxAge = 7 * 24 * 60 * 60 * 1000L // 7天
-            
+
             cacheDir.listFiles()?.forEach { file ->
                 if (file.isFile && currentTime - file.lastModified() > maxAge) {
                     file.delete()
                 }
             }
-            
+
             EasyLog.log("Expired audio cache cleaned")
         } catch (e: Exception) {
             EasyLog.log("Failed to clean expired cache: ${e.message}", EasyLog.ERROR)
         }
     }
-    
+
     /**
      * 获取缓存大小
      */
@@ -187,7 +188,7 @@ class AudioCacheManager private constructor(
             0L
         }
     }
-    
+
     /**
      * 生成缓存键
      */
@@ -196,14 +197,14 @@ class AudioCacheManager private constructor(
         val hash = digest.digest(url.toByteArray())
         return hash.joinToString("") { "%02x".format(it) }
     }
-    
+
     /**
      * 获取缓存文件
      */
     private fun getCachedFile(cacheKey: String): File {
         return File(cacheDir, "$cacheKey.opus")
     }
-    
+
     /**
      * 从网络下载音频
      */
@@ -212,7 +213,7 @@ class AudioCacheManager private constructor(
             val request = Request.Builder()
                 .url(url)
                 .build()
-            
+
             httpClient.newCall(request).execute().use { response ->
                 if (response.isSuccessful) {
                     response.body?.bytes()
@@ -226,7 +227,7 @@ class AudioCacheManager private constructor(
             null
         }
     }
-    
+
     /**
      * 保存数据到文件
      */

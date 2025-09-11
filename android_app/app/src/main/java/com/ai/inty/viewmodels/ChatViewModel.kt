@@ -4,8 +4,7 @@ import android.app.Activity
 import android.content.Context
 import androidx.lifecycle.viewModelScope
 import com.ai.inty.R
-import com.ai.inty.audio.AgentVoiceService
-import com.ai.inty.audio.AudioCacheManager
+import com.ai.inty.audio.AudioManager
 import com.ai.inty.base.BaseActivityViewModel
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.beans.ChatSettingsReq
@@ -63,9 +62,8 @@ class ChatViewModel : BaseActivityViewModel() {
     private var lastSendTime = 0L
     private val SEND_DEBOUNCE_TIME = 1000L // 1秒防抖
 
-    // 语音服务
-    private var agentVoiceService: AgentVoiceService? = null
-    private var audioCacheManager: AudioCacheManager? = null
+    // 音频管理器
+    private var audioManager: AudioManager? = null
 
     // 防重复请求机制
     private var isQueryingMsgs = false
@@ -101,7 +99,7 @@ class ChatViewModel : BaseActivityViewModel() {
             lastQueryAgentId = null
             isQueryingMsgs = false
             // 停止语音播放
-            agentVoiceService?.stopAllPlayback()
+            audioManager?.stopAllPlayback()
             return
         }
 
@@ -122,93 +120,65 @@ class ChatViewModel : BaseActivityViewModel() {
         //查询改聊天设置
         getChatSetting()
 
-        // 播放Agent开场白（如果启用自动播放）
-        playAgentOpening(agentInfo)
+        // 开场白播放逻辑已移至ChatItem中的VoicePlayer处理
+        // 不再在ChatViewModel中播放Agent开场白
     }
 
     //region 语音播报相关
 
     /**
-     * 初始化语音服务
+     * 初始化音频管理器
      */
     fun initVoiceService(context: Context) {
-        if (agentVoiceService == null) {
-            agentVoiceService = AgentVoiceService.getInstance(context)
-            audioCacheManager = AudioCacheManager.getInstance(context)
-            EasyLog.log("Voice service initialized")
-
-            // 预加载测试音频文件
-            preloadTestAudio()
+        if (audioManager == null) {
+            audioManager = AudioManager.getInstance(context, viewModelScope)
+            EasyLog.log("Audio manager initialized")
         }
     }
 
-    /**
-     * 预加载测试音频文件
-     */
-    private fun preloadTestAudio() {
-        viewModelScope.launch {
-            try {
-                val testUrl = "http://demo.fengxianqi.com/audio/static/opus.opus"
-                audioCacheManager?.preloadAudio(testUrl)
-                EasyLog.log("Test audio preloaded successfully")
-            } catch (e: Exception) {
-                EasyLog.log("Failed to preload test audio: ${e.message}", EasyLog.ERROR)
-            }
-        }
-    }
-
-    /**
-     * 播放Agent开场白
-     */
-    private fun playAgentOpening(agentInfo: AgentInfo) {
-        viewModelScope.launch {
-            try {
-                // 检查是否启用自动播放
-                if (!IntySetting.isAutoPlayAudio()) {
-                    EasyLog.log("Auto play audio is disabled, skipping opening playback")
-                    return@launch
-                }
-
-                // 获取开场白文本
-                val openingText = agentInfo.opening.ifEmpty {
-                    agentInfo.intro.ifEmpty {
-                        "你好，我是${agentInfo.name}，很高兴与你聊天！"
-                    }
-                }
-
-                // 播放开场白
-                agentVoiceService?.playAgentOpening(
-                    agentId = agentInfo.id,
-                    openingText = openingText,
-                    autoPlay = true
-                )
-
-                EasyLog.log("Playing agent opening for: ${agentInfo.name}")
-            } catch (e: Exception) {
-                EasyLog.log("Failed to play agent opening: ${e.message}", EasyLog.ERROR)
-            }
-        }
-    }
 
     /**
      * 停止语音播放
      */
     fun stopVoicePlayback() {
-        agentVoiceService?.stopAllPlayback()
+        audioManager?.stopAllPlayback()
     }
 
     /**
      * 暂停语音播放（页面离开时调用）
      */
     fun pauseVoicePlayback() {
-        agentVoiceService?.pausePlayback()
+        audioManager?.pausePlayback()
     }
 
     /**
      * 重置语音播放状态（页面切换时调用）
      */
     fun resetVoicePlayback() {
-        agentVoiceService?.resetForPageChange()
+        audioManager?.resetForPageChange()
+    }
+
+    //endregion
+
+    //region TTS相关功能
+
+    /**
+     * 更新消息的音频URL（供AudioManager回调使用）
+     */
+    fun updateMessageAudioUrl(messageId: String, audioUrl: String) {
+        EasyLog.log("updateMessageAudioUrl: messageId=$messageId, audioUrl=$audioUrl")
+        _msgs.update { currentMsgs ->
+            val updatedMsgs = currentMsgs.map { msg ->
+                if (msg.localMsgId == messageId) {
+                    EasyLog.log("Found matching message: ${msg.localMsgId}, updating audio_url from ${msg.audio_url} to $audioUrl")
+                    msg.copy(audio_url = audioUrl)
+                } else {
+                    msg
+                }
+            }
+            EasyLog.log("Updated messages count: ${updatedMsgs.size}")
+            updatedMsgs
+        }
     }
 
     //endregion
@@ -263,7 +233,7 @@ class ChatViewModel : BaseActivityViewModel() {
                         is HttpResult.Success -> {
                             // 去重处理：基于内容和角色的组合去重，同时考虑时间戳
                             val uniqueMessages = result.data.messages.distinctBy { msg ->
-                                "${msg.role}_${msg.content}_${msg.msgId}"
+                                "${msg.role}_${msg.content}_${msg.localMsgId}"
                             }
                             _msgs.update { uniqueMessages }
                             EasyLog.log("Successfully loaded ${uniqueMessages.size} unique messages for agent ${agent.id} (original: ${result.data.messages.size})")

@@ -37,11 +37,11 @@ import com.inty.utils.log.EasyLog
  * 聊天消息项目组件
  */
 @Composable
-fun ChatItem(item: MsgInfo, index: Int) {
+fun ChatItem(item: MsgInfo) {
     runCatching {
         when (item.role) {
             "assistant" -> {
-                ChatItemAI(item, index == 0)
+                ChatItemAI(item)
             }
 
             "user" -> {
@@ -76,34 +76,51 @@ fun ChatItem(item: MsgInfo, index: Int) {
  * AI消息显示组件
  */
 @Composable
-private fun ChatItemAI(item: MsgInfo, isOpening: Boolean = false) {
+private fun ChatItemAI(item: MsgInfo) {
     runCatching {
         Column {
             //播放器按钮
             if (item.content.isNotEmpty()) {
+                val viewModel = viewModel<ChatViewModel>()
+                val agentInfo by viewModel.agentInfo.collectAsState()
+
                 // 为每个消息生成唯一的测试URL，避免状态混乱
                 val audioInfo = AudioInfo(
                     url = item.audio_url ?: "",
                     title = "Voice Message",
                     artist = "AI Agent",
-                    messageId = item.msgId,
-                    agentId = null // MsgInfo中没有agentId字段，暂时设为null
+                    messageId = item.localMsgId, // 使用localMsgId，包含_assistant_标识，用于播放状态管理
+                    agentId = agentInfo?.id // 使用当前agent的ID
                 )
-                val viewModel = viewModel<ChatViewModel>()
-                val agentInfo by viewModel.agentInfo.collectAsState()
-                val played = OpeningPlayState.agentOpeningPlayed(agentInfo?.id ?: "")
+
+                val hasPlayedOpening = OpeningPlayState.agentOpeningPlayed(agentInfo?.id ?: "")
+
+                // 检查当前消息列表是否只有开场白消息
+                val allMessages by viewModel.msgs.collectAsState()
+                val isOnlyOpeningMessage =
+                    allMessages.size == 1 && allMessages.firstOrNull()?.isOpening() == true
+
+                val shouldAutoPlay =
+                    item.isOpening() && hasPlayedOpening.not() && isOnlyOpeningMessage
+
                 VoicePlayer(
                     audioInfo = audioInfo,
-                    autoPlay = isOpening && played.not(),
+                    autoPlay = shouldAutoPlay,
                     modifier = Modifier
                         .height(26.dp)
                         .widthIn(48.dp)
                         .offset(y = 10.dp),
-                    onPlayStateChange = { played ->
+                    onPlayStateChange = { isPlaying ->
                         agentInfo?.id?.let { id ->
-                            if (played) OpeningPlayState.openingPlayedAsync(id)
+                            if (isPlaying) OpeningPlayState.openingPlayedAsync(id)
                         }
-                    }
+                    },
+                    onTtsGenerated = { audioUrl ->
+                        // TTS生成成功，更新消息的音频URL
+                        // 使用localMsgId进行匹配，因为ChatViewModel中使用的是localMsgId
+                        viewModel.updateMessageAudioUrl(item.localMsgId, audioUrl)
+                    },
+                    serverMessageId = item.id // 传递服务器端ID用于TTS生成
                 )
             }
             //消息
