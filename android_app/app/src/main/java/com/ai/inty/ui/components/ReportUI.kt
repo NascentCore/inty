@@ -289,6 +289,8 @@ fun SaveBtn(
             .background(
                 brush = Brush.linearGradient(
                     colors = if (isSubmitting) {
+                        // TODO：需要优化视觉设计
+                        // https://github.com/NascentCore/inty/issues/436
                         listOf(Color(0xFF666666), Color(0xFF888888))
                     } else {
                         listOf(Color(0xFFC122FF), Color(0xFFFF905D))
