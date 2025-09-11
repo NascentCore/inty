@@ -1,4 +1,5 @@
 # Update app/openapi.json when any of the app/api/v1/endpoints/ endpoint is changed.
+name: Update openapi.json when endpoints are changed
 
 on:
   push:
