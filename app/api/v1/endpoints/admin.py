@@ -78,6 +78,8 @@ async def get_all_system_settings(
 @router.get(
     "/system-settings/category/{category}",
     response_model=APIResponse[SystemSettingsListResponse],
+    deprecated=True,
+    include_in_schema=False,
 )
 async def get_settings_by_category(
     category: SettingCategory,
