@@ -1006,7 +1006,7 @@
                 "tags": [
                     "chats"
                 ],
-                "summary": "List Chats",
+                "summary": "Get current user's chat list",
                 "description": "Get current user's chat list",
                 "operationId": "list_chats_api_v1_chats__get",
                 "security": [
@@ -1067,7 +1067,7 @@
                 "tags": [
                     "chats"
                 ],
-                "summary": "Create Chat",
+                "summary": "Create new chat",
                 "description": "Create new chat",
                 "operationId": "create_chat_api_v1_chats__post",
                 "security": [
@@ -1114,7 +1114,7 @@
                 "tags": [
                     "chats"
                 ],
-                "summary": "Delete Chat",
+                "summary": "Delete chat",
                 "description": "Delete chat",
                 "operationId": "delete_chat_api_v1_chats__chat_id__delete",
                 "security": [
@@ -1299,120 +1299,6 @@
                         "content": {
                             "application/json": {
                                 "schema": {}
-                            }
-                        }
-                    },
-                    "422": {
-                        "description": "Validation Error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/HTTPValidationError"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/chats/agents/{agent_id}/settings": {
-            "put": {
-                "tags": [
-                    "chats",
-                    "inty"
-                ],
-                "summary": "Update Agent Chat Settings",
-                "description": "Update chat settings by Agent ID",
-                "operationId": "update_agent_chat_settings_api_v1_chats_agents__agent_id__settings_put",
-                "security": [
-                    {
-                        "Bearer": []
-                    }
-                ],
-                "parameters": [
-                    {
-                        "name": "agent_id",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "string",
-                            "title": "Agent Id"
-                        }
-                    }
-                ],
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/ChatSettingsUpdate"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "200": {
-                        "description": "Successful Response",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "anyOf": [
-                                        {
-                                            "$ref": "#/components/schemas/APIResponse_ChatSettings_"
-                                        },
-                                        {
-                                            "$ref": "#/components/schemas/APIResponse_dict_"
-                                        }
-                                    ],
-                                    "title": "Response Update Agent Chat Settings Api V1 Chats Agents  Agent Id  Settings Put"
-                                }
-                            }
-                        }
-                    },
-                    "422": {
-                        "description": "Validation Error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/HTTPValidationError"
-                                }
-                            }
-                        }
-                    }
-                }
-            },
-            "get": {
-                "tags": [
-                    "chats",
-                    "inty"
-                ],
-                "summary": "Get Agent Chat Settings",
-                "description": "Get chat settings by Agent ID, bause we only support 1 chat per agent, so we do not use chat_id to get settings",
-                "operationId": "get_agent_chat_settings_api_v1_chats_agents__agent_id__settings_get",
-                "security": [
-                    {
-                        "Bearer": []
-                    }
-                ],
-                "parameters": [
-                    {
-                        "name": "agent_id",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "string",
-                            "title": "Agent Id"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Successful Response",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/ChatSettings"
-                                }
                             }
                         }
                     },
@@ -2172,32 +2058,6 @@
                 },
                 "type": "object",
                 "title": "APIResponse[Agent]"
-            },
-            "APIResponse_ChatSettings_": {
-                "properties": {
-                    "code": {
-                        "type": "integer",
-                        "title": "Code",
-                        "default": 200
-                    },
-                    "message": {
-                        "type": "string",
-                        "title": "Message",
-                        "default": "success"
-                    },
-                    "data": {
-                        "anyOf": [
-                            {
-                                "$ref": "#/components/schemas/ChatSettings"
-                            },
-                            {
-                                "type": "null"
-                            }
-                        ]
-                    }
-                },
-                "type": "object",
-                "title": "APIResponse[ChatSettings]"
             },
             "APIResponse_DeletionCheckResponse_": {
                 "properties": {
@@ -4035,57 +3895,6 @@
                 ],
                 "title": "ChatSettings",
                 "description": "\u804a\u5929\u8bbe\u7f6e"
-            },
-            "ChatSettingsUpdate": {
-                "properties": {
-                    "language": {
-                        "anyOf": [
-                            {
-                                "type": "string"
-                            },
-                            {
-                                "type": "null"
-                            }
-                        ],
-                        "title": "Language"
-                    },
-                    "voice_enabled": {
-                        "anyOf": [
-                            {
-                                "type": "boolean"
-                            },
-                            {
-                                "type": "null"
-                            }
-                        ],
-                        "title": "Voice Enabled"
-                    },
-                    "style_prompt": {
-                        "anyOf": [
-                            {
-                                "type": "string"
-                            },
-                            {
-                                "type": "null"
-                            }
-                        ],
-                        "title": "Style Prompt"
-                    },
-                    "premium_mode": {
-                        "anyOf": [
-                            {
-                                "type": "boolean"
-                            },
-                            {
-                                "type": "null"
-                            }
-                        ],
-                        "title": "Premium Mode"
-                    }
-                },
-                "type": "object",
-                "title": "ChatSettingsUpdate",
-                "description": "\u66f4\u65b0\u804a\u5929\u8bbe\u7f6e"
             },
             "DeletionCheckResponse": {
                 "properties": {
