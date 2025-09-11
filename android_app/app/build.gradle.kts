@@ -43,6 +43,19 @@ android {
     buildFeatures {
         buildConfig = true
     }
+
+    packaging {
+        resources {
+            // 解决 META-INF 文件冲突问题
+            // inty-sdk 包含了多个相同的文件
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            excludes += "/META-INF/DEPENDENCIES"
+            excludes += "/META-INF/LICENSE"
+            excludes += "/META-INF/LICENSE.txt"
+            excludes += "/META-INF/NOTICE"
+            excludes += "/META-INF/NOTICE.txt"
+        }
+    }
 }
 
 TheRouter {
@@ -100,4 +113,7 @@ dependencies {
     
     // ===== compose ui bundle =====
     implementation(libs.bundles.compose.ui.bundle)
+    
+    // ===== Inty SDK =====
+    implementation("com.inty.api:inty-kotlin:0.2.0")
 }

@@ -40,11 +40,6 @@ class SplashViewModel : BaseActivityViewModel() {
             ?: throw IllegalStateException("IUserApi2 not found in TheRouter")
     }
 
-    private val intyClient: IntyClient by lazy {
-        TheRouter.get(IntyClient::class.java)
-            ?: throw IllegalStateException("IntyClient not found in TheRouter")
-    }
-
     private val _initState = MutableStateFlow(InitState.Loading)
     val initState = _initState.asStateFlow()
 
