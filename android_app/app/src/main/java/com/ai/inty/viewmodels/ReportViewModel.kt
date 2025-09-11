@@ -6,7 +6,8 @@ import com.ai.inty.base.BaseActivityViewModel
 import com.ai.inty.beans.ReportItem
 import com.inty.api.client.okhttp.IntyOkHttpClient
 import com.inty.api.models.api.v1.report.ReportCreateParams
-import com.inty.api.models.api.v1.report.ReportUploadImageParams
+import com.inty.api.models.api.v1.V1UploadImageParams
+import com.inty.api.core.MultipartField
 import com.inty.utils.log.EasyLog
 import com.ai.inty.net.getBaseUrl
 import com.ai.inty.net.INTY_CLIENT_SUCCESS_CODE
@@ -15,6 +16,17 @@ import com.inty.utils.AppEnv
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import androidx.core.net.toUri
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
+import java.io.InputStream
+import java.util.UUID
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.MultipartBody
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody
+import okhttp3.Response
+import org.json.JSONObject
 
 class ReportViewModel : BaseActivityViewModel() {
 
@@ -25,6 +37,12 @@ class ReportViewModel : BaseActivityViewModel() {
         IntyOkHttpClient.builder()
             .apiKey(IntySetting.getCurToken())
             .baseUrl(getBaseUrl())
+            .build()
+    }
+    
+    // 自定义 OkHttp 客户端用于大文件上传
+    private val customOkHttpClient by lazy {
+        OkHttpClient.Builder()
             .build()
     }
 
@@ -90,29 +108,16 @@ class ReportViewModel : BaseActivityViewModel() {
 
         launchWithNetCheck {
             val uploadedImageUrls = mutableListOf<String>()
-            for (imageUri in localImages) {
-                val uri = imageUri.toUri()
-                val inputStream = AppEnv.context.contentResolver.openInputStream(uri)
-                inputStream?.let { stream ->
-                    val uploadParams = ReportUploadImageParams.builder()
-                        .file(stream)
-                        .build()
-                    
-                    val uploadResult = intyClient.api().v1().report().uploadImage(uploadParams)
-                    if (uploadResult.code() != INTY_CLIENT_SUCCESS_CODE) {
-                        EasyLog.log("Image upload failed with code: ${uploadResult.code()}", EasyLog.ERROR)
-                        continue
+                for (imageUri in localImages) {
+                    val uri = imageUri.toUri()
+                    val inputStream = AppEnv.context.contentResolver.openInputStream(uri)
+                    inputStream?.let { stream ->
+                        val uploadedUrl = uploadImageWithIntySdk(stream)
+                        if (uploadedUrl != null) {
+                            uploadedImageUrls.add(uploadedUrl)
+                        }
                     }
-
-                    val dataValue = uploadResult._data()
-                    val url = dataValue.asString()
-                    if (url == null) {
-                        EasyLog.log("Upload response data is not a string: $dataValue", EasyLog.WARN)
-                        continue
-                    }
-                    uploadedImageUrls.add(url)
                 }
-            }
 
             val reportParams = ReportCreateParams.builder()
                 .reasonIds(selectIDS.map { it.toLong() })
@@ -142,6 +147,43 @@ class ReportViewModel : BaseActivityViewModel() {
 
     fun onAddImage(imageUri: Uri) {
         localImages.add(imageUri.toString())
+    }
+
+    private fun uploadImageWithIntySdk(inputStream: InputStream): String? {
+        // 使用 V1UploadImageParams 构建 multipart 参数
+        val uploadParams = V1UploadImageParams.builder()
+            .file(
+                MultipartField.builder<InputStream>()
+                    .value(inputStream)
+                    .contentType("image/jpeg")
+                    .filename("report-image.jpg")
+                    .build()
+            )
+            .croppingAvatar(false)
+            .build()
+        
+        EasyLog.log("Uploading image using inty_sdk V1UploadImageParams")
+
+        val uploadResult = intyClient.api().v1().uploadImage(uploadParams)
+        if (uploadResult.code() != INTY_CLIENT_SUCCESS_CODE) {
+            EasyLog.log("Image upload failed with code: ${uploadResult.code()}", EasyLog.ERROR)
+            return null
+        }
+
+        val dataValue = uploadResult._data()
+        EasyLog.log("Upload response data: $dataValue")
+        
+        // 从 Data 的 additionalProperties 中提取 URL
+        val data = uploadResult.data()
+        if (data == null) {
+            EasyLog.log("No data found in response", EasyLog.WARN)
+            return null
+        }
+        
+        // 从 Data 的 additionalProperties 中提取 URL
+        val additionalProperties = data._additionalProperties()
+        val urlValue = additionalProperties["url"]
+        return urlValue?.asString()
     }
 
 }
