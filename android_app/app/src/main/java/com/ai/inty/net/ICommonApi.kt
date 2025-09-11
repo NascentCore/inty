@@ -15,5 +15,5 @@ interface ICommonApi {
     suspend fun report(@Body req: ReportReq): ReportResponse
 
     @POST("api/v1/version/check")
-    suspend fun checkAppUpgrade(): HttpResult<AppVersionRsp>
+    suspend fun checkAppUpgrade(): HttpResult<AppVersionRsp.AppVersionData>
 }
