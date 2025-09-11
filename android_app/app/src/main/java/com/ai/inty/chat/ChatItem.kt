@@ -80,7 +80,7 @@ private fun ChatItemAI(item: MsgInfo) {
     runCatching {
         Column {
             //播放器按钮
-            if (item.content.isNotEmpty()) {
+            if (item.content.isNotEmpty() && item.content != "loading_animation") {
                 val viewModel = viewModel<ChatViewModel>()
                 val agentInfo by viewModel.agentInfo.collectAsState()
 
@@ -109,7 +109,7 @@ private fun ChatItemAI(item: MsgInfo) {
                     modifier = Modifier
                         .height(26.dp)
                         .widthIn(48.dp)
-                        .offset(y = 10.dp),
+                        .offset(y = 5.dp),
                     onPlayStateChange = { isPlaying ->
                         agentInfo?.id?.let { id ->
                             if (isPlaying) OpeningPlayState.openingPlayedAsync(id)

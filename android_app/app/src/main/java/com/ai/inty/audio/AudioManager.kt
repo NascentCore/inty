@@ -53,16 +53,10 @@ class AudioManager private constructor(
         autoPlay: Boolean = false,
         isManualClick: Boolean = false,
         onTtsGenerated: ((String) -> Unit)? = null,
+        onTtsFailed: ((String) -> Unit)? = null,
         serverMessageId: String? = null // 服务器端消息ID，用于TTS生成
     ) {
-        EasyLog.log("=== AudioManager.playMessageVoice ===")
-        EasyLog.log("messageId: $messageId")
-        EasyLog.log("audioUrl: $audioUrl")
-        EasyLog.log("agentId: $agentId")
-        EasyLog.log("autoPlay: $autoPlay")
-        EasyLog.log("isManualClick: $isManualClick")
-        EasyLog.log("IntySetting.isAutoPlayAudio(): ${IntySetting.isAutoPlayAudio()}")
-        
+
         // 检查是否启用自动播放
         // 手动点击时不受自动播放设置影响
         // 开场白消息的自动播放不受用户设置影响（业务逻辑必需）
@@ -96,6 +90,7 @@ class AudioManager private constructor(
                 },
                 onError = { error ->
                     EasyLog.log("TTS generation failed: $error", EasyLog.ERROR)
+                    onTtsFailed?.invoke(error)
                 }
             )
         } else {
@@ -122,7 +117,11 @@ class AudioManager private constructor(
         )
 
         EasyLog.log("Playing message voice for message: $messageId")
-        playbackManager.playAudio(audioInfo, autoPlay = autoPlay)
+        
+        // 确保在主线程上调用ExoPlayer
+        scope.launch {
+            playbackManager.playAudio(audioInfo, autoPlay = autoPlay)
+        }
     }
 
 
@@ -131,7 +130,9 @@ class AudioManager private constructor(
      */
     fun stopAllPlayback() {
         EasyLog.log("Stopping all voice playback")
-        playbackManager.stopPlayback()
+        scope.launch {
+            playbackManager.stopPlayback()
+        }
     }
 
     /**
@@ -139,7 +140,9 @@ class AudioManager private constructor(
      */
     fun pausePlayback() {
         EasyLog.log("Pausing voice playback")
-        playbackManager.pausePlayback()
+        scope.launch {
+            playbackManager.pausePlayback()
+        }
     }
 
     /**
@@ -147,7 +150,9 @@ class AudioManager private constructor(
      */
     fun resumePlayback() {
         EasyLog.log("Resuming voice playback")
-        playbackManager.resumePlayback()
+        scope.launch {
+            playbackManager.resumePlayback()
+        }
     }
 
     /**
@@ -155,7 +160,9 @@ class AudioManager private constructor(
      */
     fun resetForPageChange() {
         EasyLog.log("Resetting voice playback for page change")
-        playbackManager.resetForPageChange()
+        scope.launch {
+            playbackManager.resetForPageChange()
+        }
     }
 
     /**
