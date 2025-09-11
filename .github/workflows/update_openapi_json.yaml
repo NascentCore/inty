@@ -21,6 +21,7 @@ jobs:
     permissions:
       # Update file and commit
       contents: write
+      pull-requests: write
 
     services:
       pgsql:
