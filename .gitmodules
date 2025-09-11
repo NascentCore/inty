@@ -4,6 +4,6 @@
 [submodule "sdks/python"]
 	path = sdks/python
 	url = git@github.com:NascentCore/inty-python.git
-[submodule "sdks/kotlin"]
-	path = sdks/kotlin
+[submodule "android_app/library/inty_sdk"]
+	path = android_app/library/inty_sdk
 	url = git@github.com:NascentCore/inty-kotlin.git

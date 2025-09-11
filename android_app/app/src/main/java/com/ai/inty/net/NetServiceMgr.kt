@@ -28,8 +28,23 @@ import retrofit2.converter.moshi.MoshiConverterFactory
 import java.net.InetAddress
 import java.util.concurrent.TimeUnit
 
+/**
+ * 获取基础URL
+ * 根据构建类型返回对应的API基础URL
+ */
+fun getBaseUrl(): String {
+    return when (AppEnv.buildType) {
+        "local" -> "http://${Constant.USER_HOST_LOCAL}/"
+        "debug" -> "https://${Constant.USER_HOST_DEV}/"
+        "playdebug" -> "https://${Constant.USER_HOST_DEV}/"
+        "release" -> "https://${Constant.USER_HOST}/"
+        else -> "https://${Constant.USER_HOST_DEV}/" // fallback to staging
+    }
+}
+
 class AuthInterceptor : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
+        EasyLog.log("AuthInterceptor - getCurToken: ${IntySetting.getCurToken()}")
         val request =
             chain.request()
                 .newBuilder()
@@ -269,13 +284,7 @@ object NetServiceMgr {
     }
 
     fun baseUrl(): String {
-        return when (AppEnv.buildType) {
-            "local" -> "http://${Constant.USER_HOST_LOCAL}/"
-            "debug" -> "https://${Constant.USER_HOST_DEV}/"
-            "playdebug" -> "https://${Constant.USER_HOST_DEV}/"
-            "release" -> "https://${Constant.USER_HOST}/"
-            else -> "https://${Constant.USER_HOST_DEV}/" // fallback to staging
-        }
+        return getBaseUrl()
     }
 
     val retrofitNormal: Retrofit
@@ -341,3 +350,7 @@ fun getReportApi(): ICommonApi {
 fun getSubscriptionApi(): ISubscriptionApi {
     return NetServiceMgr.retrofitNormal.create(ISubscriptionApi::class.java)
 }
+
+// Inty 后端会在 response body 提供 code，来表示实际的业务错误信息
+// 这个 code 与 http status code 无关
+const val INTY_CLIENT_SUCCESS_CODE = 200L
