@@ -35,7 +35,12 @@ async def get_current_superuser(
     return current_user
 
 
-@router.get("/system-settings", response_model=APIResponse[SystemSettingsListResponse])
+@router.get(
+    "/system-settings",
+    response_model=APIResponse[SystemSettingsListResponse],
+    deprecated=True,
+    include_in_schema=False,
+)
 async def get_all_system_settings(
     db: AsyncSession = Depends(get_async_db),
     current_user: schemas.User = Depends(get_current_superuser),
@@ -121,7 +126,12 @@ async def get_settings_by_category(
         return APIResponse.error(message="Failed to get category settings")
 
 
-@router.put("/system-settings/{key}", response_model=APIResponse[SystemSetting])
+@router.put(
+    "/system-settings/{key}",
+    response_model=APIResponse[SystemSetting],
+    deprecated=True,
+    include_in_schema=False,
+)
 async def update_system_setting(
     key: str,
     request: SystemSettingUpdateRequest,
@@ -177,6 +187,8 @@ async def update_system_setting(
 @router.get(
     "/system-settings/free-user-limits",
     response_model=APIResponse[FreeUserLimitsResponse],
+    deprecated=True,
+    include_in_schema=False,
 )
 async def get_free_user_limits(
     db: AsyncSession = Depends(get_async_db),
@@ -201,7 +213,12 @@ async def get_free_user_limits(
         return APIResponse.error(message="Failed to get free user limits")
 
 
-@router.post("/system-settings/clear-cache", response_model=APIResponse[dict])
+@router.post(
+    "/system-settings/clear-cache",
+    response_model=APIResponse[dict],
+    deprecated=True,
+    include_in_schema=False,
+)
 async def clear_system_settings_cache(
     key: str = None, current_user: schemas.User = Depends(get_current_superuser)
 ):
