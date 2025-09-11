@@ -16,17 +16,7 @@ import com.inty.utils.AppEnv
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import androidx.core.net.toUri
-import java.io.ByteArrayInputStream
-import java.io.ByteArrayOutputStream
 import java.io.InputStream
-import java.util.UUID
-import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.MultipartBody
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.RequestBody
-import okhttp3.Response
-import org.json.JSONObject
 
 class ReportViewModel : BaseActivityViewModel() {
 
@@ -39,15 +29,9 @@ class ReportViewModel : BaseActivityViewModel() {
             .baseUrl(getBaseUrl())
             .build()
     }
-    
-    // 自定义 OkHttp 客户端用于大文件上传
-    private val customOkHttpClient by lazy {
-        OkHttpClient.Builder()
-            .build()
-    }
 
     // Hard-coded list of report reasons
-    private val _reasons = MutableStateFlow<List<ReportItem>>(
+    private val _reasons = MutableStateFlow(
         listOf(
             ReportItem(
                 id = 1,
