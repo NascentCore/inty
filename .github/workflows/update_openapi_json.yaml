@@ -78,6 +78,8 @@ jobs:
           curl http://localhost:8000/openapi.json | python -m json.tool >app/openapi.json
 
       - name: Create pull request if there are changes
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           if [ -z "$(git status --porcelain)" ]; then
             echo "No changes to commit"
