@@ -9,9 +9,9 @@ alwaysApply: true
 ## General instructions
 
 * Be concise
+* Do not summarize your actions when you are done
 * When there is multiple options, choose the simplest one
   Do not try to implement multiple options
-* Do not write markdown to describe things you implemented
 * Follow RFC2119 <https://datatracker.ietf.org/doc/html/rfc2119>
 * Do not write comments that repeat what's shown in the code
 * Do not use magic numbers, always define variable, constants, etc.

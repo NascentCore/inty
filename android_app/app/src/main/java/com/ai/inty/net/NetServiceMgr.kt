@@ -15,6 +15,10 @@ import com.squareup.moshi.DefaultIfNullFactory
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import com.therouter.inject.ServiceProvider
+import com.inty.api.client.IntyClient
+import com.inty.api.client.IntyClientAsync
+import com.inty.api.client.okhttp.IntyOkHttpClient
+import com.inty.api.client.okhttp.IntyOkHttpClientAsync
 import okhttp3.ConnectionPool
 import okhttp3.Dns
 import okhttp3.Interceptor
@@ -27,6 +31,20 @@ import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
 import java.net.InetAddress
 import java.util.concurrent.TimeUnit
+
+/**
+ * 获取基础URL
+ * 根据构建类型返回对应的API基础URL
+ */
+fun getBaseUrl(): String {
+    return when (AppEnv.buildType) {
+        "local" -> "http://${Constant.USER_HOST_LOCAL}/"
+        "debug" -> "https://${Constant.USER_HOST_DEV}/"
+        "playdebug" -> "https://${Constant.USER_HOST_DEV}/"
+        "release" -> "https://${Constant.USER_HOST}/"
+        else -> "https://${Constant.USER_HOST_DEV}/" // fallback to staging
+    }
+}
 
 class AuthInterceptor : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
@@ -269,13 +287,7 @@ object NetServiceMgr {
     }
 
     fun baseUrl(): String {
-        return when (AppEnv.buildType) {
-            "local" -> "http://${Constant.USER_HOST_LOCAL}/"
-            "debug" -> "https://${Constant.USER_HOST_DEV}/"
-            "playdebug" -> "https://${Constant.USER_HOST_DEV}/"
-            "release" -> "https://${Constant.USER_HOST}/"
-            else -> "https://${Constant.USER_HOST_DEV}/" // fallback to staging
-        }
+        return getBaseUrl()
     }
 
     val retrofitNormal: Retrofit
@@ -341,3 +353,21 @@ fun getReportApi(): ICommonApi {
 fun getSubscriptionApi(): ISubscriptionApi {
     return NetServiceMgr.retrofitNormal.create(ISubscriptionApi::class.java)
 }
+
+// 返回类型是与实际类型不一致，需要在 ServiceProvider 注解里添加类型声明
+@ServiceProvider(IntyClient::class)
+fun getIntyClient(): IntyClient {
+    return IntyOkHttpClient.builder()
+        .apiKey(IntySetting.getCurToken())
+        .baseUrl(getBaseUrl())
+        .build()
+}
+
+@ServiceProvider(IntyClientAsync::class)
+fun getIntyClientAsync(): IntyClientAsync {
+    return IntyOkHttpClientAsync.builder()
+        .apiKey(IntySetting.getCurToken())
+        .baseUrl(getBaseUrl())
+        .build()
+}
+

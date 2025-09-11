@@ -8,6 +8,9 @@ import com.ai.inty.net.IUserApi2
 import com.ai.inty.utils.AppStartupManager
 import com.ai.inty.utils.UserProfileManager
 import com.architecture.httplib.core.HttpResult
+import com.inty.api.client.IntyClient
+import com.inty.api.client.okhttp.IntyOkHttpClient
+import com.inty.api.models.api.v1.auth.AuthCreateGuestParams
 import com.inty.utils.AppEnv
 import com.inty.utils.log.EasyLog
 import com.inty.utils.storage.IntySetting
@@ -33,6 +36,11 @@ class SplashViewModel : BaseActivityViewModel() {
     private val userApi2: IUserApi2 by lazy {
         TheRouter.get(IUserApi2::class.java)
             ?: throw IllegalStateException("IUserApi2 not found in TheRouter")
+    }
+
+    private val intyClient: IntyClient by lazy {
+        TheRouter.get(IntyClient::class.java)
+            ?: throw IllegalStateException("IntyClient not found in TheRouter")
     }
 
     private val _initState = MutableStateFlow(InitState.Loading)
@@ -97,6 +105,37 @@ class SplashViewModel : BaseActivityViewModel() {
                 EasyLog.log("Guest creation failed: ${result.message}", EasyLog.ERROR)
                 _initState.value = InitState.Failed
             }
+        }
+    }
+
+    /**
+     * 使用 inty-sdk 创建guest用户，并自动登录
+     */
+    private suspend fun createGuestWithIntySdk() {
+        EasyLog.log("Creating guest account with inty-sdk...")
+            
+        val response = intyClient.api().v1().auth().createGuest(
+            AuthCreateGuestParams.builder()
+                .deviceId(AppEnv.DeviceID)
+                .systemLanguage(AppEnv.locale.language)
+                .build()
+        )
+        
+        EasyLog.log("createGuestWithIntySdk result: $response")
+        
+        if (response.code() == 0L) {
+            val data = response.data()
+            if (data != null) {
+                IntySetting.login(true, data.guestId(), data.token())
+                EasyLog.log("Guest created successfully with inty-sdk: ${data.guestId()}")
+                onLoginSuccess()
+            } else {
+                EasyLog.log("Guest creation failed with inty-sdk: data is null", EasyLog.ERROR)
+                _initState.value = InitState.Failed
+            }
+        } else {
+            EasyLog.log("Guest creation failed with inty-sdk: ${response.message()}", EasyLog.ERROR)
+            _initState.value = InitState.Failed
         }
     }
 
