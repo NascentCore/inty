@@ -1,7 +1,6 @@
 plugins {
     alias(libs.plugins.ai.android.application)
     alias(libs.plugins.ai.android.application.compose)
-//    alias(libs.plugins.ai.android.application.flavor)
     alias(libs.plugins.ai.android.navigation.compose)
 
     alias(libs.plugins.kotlin.serialization)
@@ -11,7 +10,6 @@ plugins {
     alias(libs.plugins.ksp)
 
     id("therouter")
-
 }
 
 tasks.register("printVersionInfo") {
