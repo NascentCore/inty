@@ -19,8 +19,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -36,7 +36,7 @@ import kotlinx.coroutines.delay
 
 /**
  * 语音播放器组件
- * 企业级UI设计，支持播放控制、进度显示、状态指示
+ * 简化版本，只负责UI显示，业务逻辑由AudioManager处理
  */
 @Composable
 fun VoicePlayer(
@@ -44,98 +44,90 @@ fun VoicePlayer(
     modifier: Modifier = Modifier,
     onPlayStateChange: ((Boolean) -> Unit)? = null,
     autoPlay: Boolean = false,
+    onTtsGenerated: ((String) -> Unit)? = null, // TTS生成成功回调
 ) {
     val context = LocalContext.current
-    val audioManager = remember { AudioPlaybackManager.getInstance(context) }
+    val audioManager = remember {
+        AudioManager.getInstance(
+            context,
+            kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main)
+        )
+    }
 
     // 使用消息ID作为状态标识
     val messageId = audioInfo.messageId ?: audioInfo.url
 
+    // 监听播放状态
+    val duration by audioManager.duration.collectAsState()
+    val isLoading by audioManager.isLoading.collectAsState()
+    var isGeneratingTts by remember(messageId) { mutableStateOf(false) }
+
+    // 监听TTS生成状态
+    LaunchedEffect(messageId) {
+        while (true) {
+            isGeneratingTts = audioManager.isGeneratingTtsForMessage(messageId)
+            kotlinx.coroutines.delay(100) // 每100ms检查一次
+        }
+    }
+
     // 本地状态
     var isPlaying by remember(messageId) { mutableStateOf(false) }
-    var isLoading by remember(messageId) { mutableStateOf(false) }
     var hasError by remember(messageId) { mutableStateOf(false) }
-    var currentPosition by remember(messageId) { mutableLongStateOf(0L) }
-    var duration by remember(messageId) { mutableLongStateOf(0L) }
 
-    // 监听播放状态变化 - 使用更精确的状态管理
+    // 监听播放状态变化
     LaunchedEffect(messageId) {
-        // 监听全局播放状态
-        audioManager.playbackState.collect { globalState ->
+        audioManager.playbackState.collect { state ->
             val currentAudioInfo = audioManager.getCurrentAudioInfo()
-            // 优先使用messageId判断，避免URL参数导致的判断错误
             val isCurrentMessage = currentAudioInfo?.messageId == messageId
 
-            EasyLog.log("VoicePlayer[$messageId] state update: globalState=$globalState, isCurrentMessage=$isCurrentMessage")
-
             if (isCurrentMessage) {
-                // 只有当前播放的消息才更新状态
-                isPlaying = globalState == PlaybackState.PLAYING
-                isLoading = globalState == PlaybackState.BUFFERING
-                hasError = globalState == PlaybackState.ERROR
+                isPlaying = state == PlaybackState.PLAYING
+                hasError = state == PlaybackState.ERROR
                 onPlayStateChange?.invoke(isPlaying)
-                EasyLog.log("VoicePlayer[$messageId] updated state: isPlaying=$isPlaying, isLoading=$isLoading, hasError=$hasError")
             } else {
-                // 非当前消息保持停止状态
-                if (isPlaying || isLoading) {
-                    isPlaying = false
-                    isLoading = false
-                    hasError = false
-                    EasyLog.log("VoicePlayer[$messageId] reset state (not current message)")
-                }
+                isPlaying = false
+                hasError = false
             }
         }
     }
 
-    // 监听播放进度
-    LaunchedEffect(messageId) {
-        audioManager.currentPosition.collect { position ->
-            val currentAudioInfo = audioManager.getCurrentAudioInfo()
-            if (currentAudioInfo?.messageId == messageId) {
-                currentPosition = position
-            }
-        }
-    }
-
-    // 监听音频时长
-    LaunchedEffect(messageId) {
-        audioManager.duration.collect { dur ->
-            val currentAudioInfo = audioManager.getCurrentAudioInfo()
-            if (currentAudioInfo?.messageId == messageId) {
-                duration = dur
-            }
-        }
-    }
-
-    // 自动播放
+    // 自动播放（仅开场白消息）
     LaunchedEffect(audioInfo.url, autoPlay) {
         if (autoPlay && !isPlaying && !hasError) {
-            delay(100) // 短暂延迟确保UI准备就绪
-            audioManager.playAudio(audioInfo, autoPlay = true)
-        }
-    }
-
-    // 错误处理
-    LaunchedEffect(messageId) {
-        audioManager.error.collect { error ->
-            val currentAudioInfo = audioManager.getCurrentAudioInfo()
-            if (currentAudioInfo?.messageId == messageId) {
-                hasError = error != null
-                if (error != null) {
-                    EasyLog.log("VoicePlayer error: $error", EasyLog.ERROR)
-                }
-            }
+            delay(100)
+            EasyLog.log("VoicePlayer auto playing opening message: $messageId")
+            audioManager.playMessageVoice(
+                messageId = messageId,
+                audioUrl = audioInfo.url,
+                agentId = audioInfo.agentId ?: "",
+                autoPlay = true,
+                isManualClick = false, // 自动播放
+                onTtsGenerated = onTtsGenerated
+            )
         }
     }
 
     ChatVoicePlayer(
         isPlaying = isPlaying,
-        isLoading = isLoading,
+        isLoading = isLoading || isGeneratingTts,
         hasError = hasError,
         duration = duration,
+        isGeneratingTts = isGeneratingTts,
         onPlayPause = {
-            EasyLog.log("CompactVoicePlayer clicked: isPlaying=$isPlaying, messageId=$messageId")
-            audioManager.playAudio(audioInfo, autoPlay = true)
+            EasyLog.log("VoicePlayer clicked: isPlaying=$isPlaying, messageId=$messageId, audioUrl=${audioInfo.url}")
+
+            if (isPlaying) {
+                audioManager.pausePlayback()
+            } else {
+                audioManager.playMessageVoice(
+                    messageId = messageId,
+                    audioUrl = audioInfo.url,
+                    agentId = audioInfo.agentId ?: "",
+                    autoPlay = true, // 手动点击时也需要播放
+                    isManualClick = true, // 标记为手动点击
+                    onTtsGenerated = onTtsGenerated
+                )
+            }
         },
         modifier = modifier
     )
@@ -150,6 +142,7 @@ private fun ChatVoicePlayer(
     isLoading: Boolean,
     hasError: Boolean,
     duration: Long,
+    isGeneratingTts: Boolean = false,
     onPlayPause: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -188,7 +181,7 @@ private fun ChatVoicePlayer(
                 else -> {
                     Icon(
                         imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                        contentDescription = if (isPlaying) "Pause" else "Play",
+                        contentDescription = if (isPlaying) "Pause" else if (isGeneratingTts) "Generating" else "Play",
                         tint = Color.White,
                         modifier = Modifier.size(16.dp)
                     )

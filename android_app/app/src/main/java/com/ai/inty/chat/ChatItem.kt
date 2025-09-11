@@ -37,11 +37,11 @@ import com.inty.utils.log.EasyLog
  * 聊天消息项目组件
  */
 @Composable
-fun ChatItem(item: MsgInfo, index: Int) {
+fun ChatItem(item: MsgInfo) {
     runCatching {
         when (item.role) {
             "assistant" -> {
-                ChatItemAI(item, index == 0)
+                ChatItemAI(item)
             }
 
             "user" -> {
@@ -81,28 +81,34 @@ private fun ChatItemAI(item: MsgInfo, isOpening: Boolean = false) {
         Column {
             //播放器按钮
             if (item.content.isNotEmpty()) {
+                val viewModel = viewModel<ChatViewModel>()
+                val agentInfo by viewModel.agentInfo.collectAsState()
+
                 // 为每个消息生成唯一的测试URL，避免状态混乱
                 val audioInfo = AudioInfo(
                     url = item.audio_url ?: "",
                     title = "Voice Message",
                     artist = "AI Agent",
-                    messageId = item.msgId,
-                    agentId = null // MsgInfo中没有agentId字段，暂时设为null
+                    messageId = item.id,
+                    agentId = agentInfo?.id // 使用当前agent的ID
                 )
-                val viewModel = viewModel<ChatViewModel>()
-                val agentInfo by viewModel.agentInfo.collectAsState()
-                val played = OpeningPlayState.agentOpeningPlayed(agentInfo?.id ?: "")
+
+                val hasPlayedOpening = OpeningPlayState.agentOpeningPlayed(agentInfo?.id ?: "")
                 VoicePlayer(
                     audioInfo = audioInfo,
-                    autoPlay = isOpening && played.not(),
+                    autoPlay = isOpening && hasPlayedOpening.not(),
                     modifier = Modifier
                         .height(26.dp)
                         .widthIn(48.dp)
                         .offset(y = 10.dp),
-                    onPlayStateChange = { played ->
+                    onPlayStateChange = { isPlaying ->
                         agentInfo?.id?.let { id ->
-                            if (played) OpeningPlayState.openingPlayedAsync(id)
+                            if (isPlaying) OpeningPlayState.openingPlayedAsync(id)
                         }
+                    },
+                    onTtsGenerated = { audioUrl ->
+                        // TTS生成成功，更新消息的音频URL
+                        viewModel.updateMessageAudioUrl(item.id, audioUrl)
                     }
                 )
             }

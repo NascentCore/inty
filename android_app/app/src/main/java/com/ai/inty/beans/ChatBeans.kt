@@ -83,13 +83,16 @@ data class MsgInfo(
     val id: String = "",//服务端对应的消息id
     val content: String = "",
     val role: String = "",
-    //本地创建一个msgId，临时用于消息标记
-    val msgId: String = "${System.nanoTime()}_${role}_${content.hashCode()}",
+    val meta_data: MsgMetaData? = null,//附带数据
     val audio_url: String? = null,//音频文件的url
     val timestamp: String? = null,//消息时间戳
+    //本地创建一个msgId，临时用于消息标记
+    val localMsgId: String = "${System.nanoTime()}_${role}_${content.hashCode()}",
 ) {
-    // 提供一个生成唯一 msgId 的方法,⚠️，其实此处生成也不是最佳方案，msgId应该服务端生成。
-    // 因为这里接口反序列化时候，List<msgInfo>创建msgInfo对象会很快，难保id不重复。
+    data class MsgMetaData(
+        val agentId: String? = null,
+        val isOpening: Boolean = false,
+    )
 }
 
 @JsonClass(generateAdapter = true)

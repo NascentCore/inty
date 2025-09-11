@@ -6,6 +6,7 @@ import android.media.AudioFocusRequest
 import android.media.AudioManager
 import android.os.Build
 import androidx.annotation.RequiresApi
+import androidx.core.content.getSystemService
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
@@ -30,9 +31,7 @@ import androidx.media3.common.AudioAttributes as Media3AudioAttributes
  * 企业级音频播放管理器
  * 基于Media3实现，支持Opus格式，提供完整的音频焦点管理和播放控制
  */
-class AudioPlaybackManager private constructor(
-    private val context: Context
-) : Player.Listener {
+class AudioPlaybackManager private constructor(private val context: Context) : Player.Listener {
 
     companion object {
         @Volatile
@@ -47,7 +46,7 @@ class AudioPlaybackManager private constructor(
 
     // 播放器相关
     private var exoPlayer: ExoPlayer? = null
-    private val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+    private val audioManager = context.getSystemService<AudioManager>()
     private var audioFocusRequest: AudioFocusRequest? = null
 
     // 状态管理
@@ -72,7 +71,7 @@ class AudioPlaybackManager private constructor(
 
     // 当前播放的音频信息
     private var currentAudioInfo: AudioInfo? = null
-    
+
     // 缓存管理器
     private val cacheManager = AudioCacheManager.getInstance(context)
 
@@ -86,7 +85,7 @@ class AudioPlaybackManager private constructor(
     private fun initializePlayer() {
         try {
             EasyLog.log("=== Initializing AudioPlaybackManager ===")
-            
+
             // 创建OkHttp数据源工厂，支持缓存
             val okHttpClient = OkHttpClient.Builder()
                 .connectTimeout(10, TimeUnit.SECONDS)
@@ -141,25 +140,25 @@ class AudioPlaybackManager private constructor(
             EasyLog.log("Auto play: $autoPlay")
             EasyLog.log("Current audio info: ${currentAudioInfo?.messageId}")
             EasyLog.log("Is currently playing: ${isPlaying()}")
-            
+
             // 检查是否是同一个音频（优先使用messageId判断）
             val isSameAudio = currentAudioInfo?.messageId == audioInfo.messageId
-            
+
             EasyLog.log("Is same audio: $isSameAudio (current: ${currentAudioInfo?.messageId}, new: ${audioInfo.messageId})")
-            
+
             if (isSameAudio && isPlaying()) {
                 // 如果是同一个音频且正在播放，则暂停
                 EasyLog.log("Same audio playing, pausing...")
                 pausePlayback()
                 return
             }
-            
+
             // 停止当前播放（如果不是同一个音频）
             if (!isSameAudio) {
                 EasyLog.log("Different audio, stopping current playback...")
                 stopPlayback()
             }
-            
+
             // 请求音频焦点
             EasyLog.log("Requesting audio focus...")
             if (!requestAudioFocus()) {
@@ -187,11 +186,11 @@ class AudioPlaybackManager private constructor(
                 EasyLog.log("Audio not cached, using original URL")
                 MediaItem.fromUri(audioInfo.url)
             }
-            
+
             EasyLog.log("Setting media item and preparing...")
             exoPlayer?.setMediaItem(mediaItem)
             exoPlayer?.prepare()
-            
+
             // 等待准备完成
             EasyLog.log("Waiting for player to be ready...")
             // 注意：这里不等待，让Player.Listener处理状态变化
@@ -254,7 +253,7 @@ class AudioPlaybackManager private constructor(
             EasyLog.log("Failed to stop playback: ${e.message}", EasyLog.ERROR)
         }
     }
-    
+
     /**
      * 重置播放器状态（播放完成后调用）
      */
@@ -317,12 +316,12 @@ class AudioPlaybackManager private constructor(
             }
             .build()
 
-        return audioManager.requestAudioFocus(audioFocusRequest!!) == AudioManager.AUDIOFOCUS_REQUEST_GRANTED
+        return audioManager?.requestAudioFocus(audioFocusRequest!!) == AudioManager.AUDIOFOCUS_REQUEST_GRANTED
     }
 
     @Suppress("DEPRECATION")
     private fun requestAudioFocusLegacy(): Boolean {
-        return audioManager.requestAudioFocus(
+        return audioManager?.requestAudioFocus(
             { focusChange -> handleAudioFocusChange(focusChange) },
             AudioManager.STREAM_MUSIC,
             AudioManager.AUDIOFOCUS_GAIN
@@ -338,14 +337,17 @@ class AudioPlaybackManager private constructor(
                 EasyLog.log("Audio focus gained")
                 resumePlayback()
             }
+
             AudioManager.AUDIOFOCUS_LOSS -> {
                 EasyLog.log("Audio focus lost permanently")
                 pausePlayback()
             }
+
             AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> {
                 EasyLog.log("Audio focus lost temporarily")
                 pausePlayback()
             }
+
             AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> {
                 EasyLog.log("Audio focus lost, can duck")
                 // 降低音量而不是暂停
@@ -361,11 +363,11 @@ class AudioPlaybackManager private constructor(
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 audioFocusRequest?.let { request ->
-                    audioManager.abandonAudioFocusRequest(request)
+                    audioManager?.abandonAudioFocusRequest(request)
                 }
             } else {
                 @Suppress("DEPRECATION")
-                audioManager.abandonAudioFocus { }
+                audioManager?.abandonAudioFocus { }
             }
             audioFocusRequest = null
         } catch (e: Exception) {
@@ -400,9 +402,9 @@ class AudioPlaybackManager private constructor(
     // Player.Listener 实现
     override fun onPlaybackStateChanged(playbackState: Int) {
         super.onPlaybackStateChanged(playbackState)
-        
+
         EasyLog.log("=== onPlaybackStateChanged: $playbackState ===")
-        
+
         when (playbackState) {
             Player.STATE_IDLE -> {
                 EasyLog.log("Player state: IDLE")
@@ -410,11 +412,13 @@ class AudioPlaybackManager private constructor(
                 _isLoading.value = false
                 stopPositionUpdate()
             }
+
             Player.STATE_BUFFERING -> {
                 EasyLog.log("Player state: BUFFERING")
                 _playbackState.value = PlaybackState.BUFFERING
                 _isLoading.value = true
             }
+
             Player.STATE_READY -> {
                 EasyLog.log("Player state: READY")
                 _playbackState.value = PlaybackState.READY
@@ -422,13 +426,14 @@ class AudioPlaybackManager private constructor(
                 _duration.value = exoPlayer?.duration ?: 0L
                 startPositionUpdate()
             }
+
             Player.STATE_ENDED -> {
                 EasyLog.log("Player state: ENDED - 播放完成，释放资源")
                 _playbackState.value = PlaybackState.ENDED
                 _isLoading.value = false
                 stopPositionUpdate()
                 abandonAudioFocus()
-                
+
                 // 播放完成后自动释放资源
                 scope.launch {
                     delay(100) // 短暂延迟确保UI更新完成
@@ -440,9 +445,9 @@ class AudioPlaybackManager private constructor(
 
     override fun onIsPlayingChanged(isPlaying: Boolean) {
         super.onIsPlayingChanged(isPlaying)
-        
+
         EasyLog.log("=== onIsPlayingChanged: $isPlaying ===")
-        
+
         if (isPlaying) {
             EasyLog.log("Player started playing")
             _playbackState.value = PlaybackState.PLAYING
@@ -498,7 +503,7 @@ class AudioPlaybackManager private constructor(
         val position = _currentPosition.value
         return if (duration > 0) (position.toFloat() / duration.toFloat()) else 0f
     }
-    
+
     /**
      * 重置播放器状态（页面切换时调用）
      */
