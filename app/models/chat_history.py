@@ -17,6 +17,7 @@ class ChatHistory(Base):
     session_id = Column(UUID(as_uuid=True), nullable=False, index=True)
     message = Column(JSONB, nullable=False)
     audio_url = Column(String, nullable=True)
+    meta_data = Column(JSONB, nullable=True)
     created_at = Column(
         DateTime(timezone=True), 
         nullable=False, 
