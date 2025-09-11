@@ -52,6 +52,7 @@ fun ReportScreen(
     images: List<String>,
     onClickAddImage: () -> Unit,
     onSave: () -> Unit,
+    isSubmitting: Boolean = false,
 ) {
     val focusManager = LocalFocusManager.current
 
@@ -117,7 +118,7 @@ fun ReportScreen(
 
             Spacer(Modifier.height(60.dp))
 
-            SaveBtn(onSave = onSave)
+            SaveBtn(onSave = onSave, isSubmitting = isSubmitting)
             Spacer(Modifier.height(60.dp))
         }
 

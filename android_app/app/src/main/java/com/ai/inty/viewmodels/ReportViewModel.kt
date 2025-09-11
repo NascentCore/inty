@@ -95,6 +95,10 @@ class ReportViewModel : BaseActivityViewModel() {
 
     var localImages = mutableStateSetOf<String>()
     var remoteImages = mutableStateSetOf<String>()
+    
+    // 提交状态
+    private val _isSubmitting = MutableStateFlow(false)
+    val isSubmitting = _isSubmitting.asStateFlow()
 
     fun setDescription(text: String) {
         _description.value = text
@@ -105,42 +109,54 @@ class ReportViewModel : BaseActivityViewModel() {
             showSnackbar("Please select at least one reason")
             return
         }
+        
+        // 如果正在提交，直接返回
+        if (_isSubmitting.value) {
+            return
+        }
 
+        _isSubmitting.value = true
+        
         launchWithNetCheck {
-            val uploadedImageUrls = mutableListOf<String>()
-                for (imageUri in localImages) {
-                    val uri = imageUri.toUri()
-                    val inputStream = AppEnv.context.contentResolver.openInputStream(uri)
-                    inputStream?.let { stream ->
-                        val uploadedUrl = uploadImageWithIntySdk(stream)
-                        if (uploadedUrl != null) {
-                            uploadedImageUrls.add(uploadedUrl)
+            try {
+                val uploadedImageUrls = mutableListOf<String>()
+                    for (imageUri in localImages) {
+                        val uri = imageUri.toUri()
+                        val inputStream = AppEnv.context.contentResolver.openInputStream(uri)
+                        inputStream?.let { stream ->
+                            val uploadedUrl = uploadImageWithIntySdk(stream)
+                            if (uploadedUrl != null) {
+                                uploadedImageUrls.add(uploadedUrl)
+                            }
                         }
                     }
+
+                val reportParams = ReportCreateParams.builder()
+                    .reasonIds(selectIDS.map { it.toLong() })
+                    .targetId(targetID)
+                    .targetType(
+                        if (targetType == "USER") {
+                            ReportCreateParams.TargetType.USER
+                        } else {
+                            ReportCreateParams.TargetType.AGENT
+                        }
+                    )
+                    .description(description.value.trim())
+                    .imageUrls(uploadedImageUrls + remoteImages.toList())
+                    .build()
+
+                val result = intyClient.api().v1().report().create(reportParams)
+                if (result.code() != INTY_CLIENT_SUCCESS_CODE) {
+                    EasyLog.log("Report creation failed with code: ${result.code()}", EasyLog.ERROR)
+                    showSnackbar(result.message() ?: "Report creation failed")
+                } else {
+                    EasyLog.log("Report created successfully: $result")
+                    showSnackbar("Report sent")
+                    closeActivity()
                 }
-
-            val reportParams = ReportCreateParams.builder()
-                .reasonIds(selectIDS.map { it.toLong() })
-                .targetId(targetID)
-                .targetType(
-                    if (targetType == "USER") {
-                        ReportCreateParams.TargetType.USER
-                    } else {
-                        ReportCreateParams.TargetType.AGENT
-                    }
-                )
-                .description(description.value.trim())
-                .imageUrls(uploadedImageUrls + remoteImages.toList())
-                .build()
-
-            val result = intyClient.api().v1().report().create(reportParams)
-            if (result.code() != INTY_CLIENT_SUCCESS_CODE) {
-                EasyLog.log("Report creation failed with code: ${result.code()}", EasyLog.ERROR)
-                showSnackbar(result.message() ?: "Report creation failed")
-            } else {
-                EasyLog.log("Report created successfully: $result")
-                showSnackbar("Report sent")
-                closeActivity()
+            } finally {
+                // 无论成功还是失败，都要重置提交状态
+                _isSubmitting.value = false
             }
         }
     }
