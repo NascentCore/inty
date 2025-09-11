@@ -19,8 +19,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -58,9 +58,9 @@ fun VoicePlayer(
     // 使用消息ID作为状态标识
     val messageId = audioInfo.messageId ?: audioInfo.url
 
-    // 监听播放状态
-    val duration by audioManager.duration.collectAsState()
-    val isLoading by audioManager.isLoading.collectAsState()
+    // 本地状态 - 每个消息独立管理
+    var duration by remember(messageId) { mutableLongStateOf(0L) }
+    var isLoading by remember(messageId) { mutableStateOf(false) }
     var isGeneratingTts by remember(messageId) { mutableStateOf(false) }
 
     // 监听TTS生成状态
@@ -75,7 +75,7 @@ fun VoicePlayer(
     var isPlaying by remember(messageId) { mutableStateOf(false) }
     var hasError by remember(messageId) { mutableStateOf(false) }
 
-    // 监听播放状态变化
+    // 监听播放状态变化 - 只监听当前消息的状态
     LaunchedEffect(messageId) {
         audioManager.playbackState.collect { state ->
             val currentAudioInfo = audioManager.getCurrentAudioInfo()
@@ -86,10 +86,24 @@ fun VoicePlayer(
             if (isCurrentMessage) {
                 isPlaying = state == PlaybackState.PLAYING
                 hasError = state == PlaybackState.ERROR
+                isLoading = state == PlaybackState.BUFFERING
                 onPlayStateChange?.invoke(isPlaying)
             } else {
                 isPlaying = false
                 hasError = false
+                isLoading = false
+            }
+        }
+    }
+
+    // 监听时长变化 - 只监听当前消息的时长
+    LaunchedEffect(messageId) {
+        audioManager.duration.collect { globalDuration ->
+            val currentAudioInfo = audioManager.getCurrentAudioInfo()
+            val isCurrentMessage = currentAudioInfo?.messageId == messageId
+            
+            if (isCurrentMessage) {
+                duration = globalDuration
             }
         }
     }
