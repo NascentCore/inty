@@ -193,7 +193,7 @@
 
     <!-- Report -->
     <string name="npc_asterisk">NPC *</string>
-    <string name="report_description">Report description *</string>
+    <string name="report_description">Report description</string>
     <string name="please_fill_feedback">Please fill in the feedback content…</string>
     <string name="character_count_format">%d/400</string>
     <string name="image_evidence">Image evidence</string>

@@ -12,27 +12,6 @@ data class ReportItem(
     val id: Int = 0
 )
 
-
-@JsonClass(generateAdapter = true)
-data class ReportReq(
-    val description: String = "",
-    @Json(name = "image_urls")
-    val imageUrls: List<String?> = listOf(),
-    @Json(name = "reason_ids")
-    val reasonIds: List<Int> = listOf(),
-    @Json(name = "target_id")
-    val targetId: String,
-    @Json(name = "target_type")
-    val targetType: String = "USER"
-)
-
-@JsonClass(generateAdapter = true)
-data class ReportResponse(
-    val code: Int = 0,
-    val message: String = "",
-    val data: String? = null
-)
-
 /**
  * 检查App版本号，判断更新与否，强制更新与否的接口返回
  */

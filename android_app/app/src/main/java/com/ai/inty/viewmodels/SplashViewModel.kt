@@ -177,5 +177,4 @@ class SplashViewModel : BaseActivityViewModel() {
             }
         }
     }
-
 }
