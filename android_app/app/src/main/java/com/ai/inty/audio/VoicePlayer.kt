@@ -45,6 +45,7 @@ fun VoicePlayer(
     onPlayStateChange: ((Boolean) -> Unit)? = null,
     autoPlay: Boolean = false,
     onTtsGenerated: ((String) -> Unit)? = null, // TTS生成成功回调
+    serverMessageId: String? = null, // 服务器端消息ID，用于TTS生成
 ) {
     val context = LocalContext.current
     val audioManager = remember {
@@ -80,6 +81,8 @@ fun VoicePlayer(
             val currentAudioInfo = audioManager.getCurrentAudioInfo()
             val isCurrentMessage = currentAudioInfo?.messageId == messageId
 
+            EasyLog.log("VoicePlayer state change: messageId=$messageId, state=$state, isCurrentMessage=$isCurrentMessage, currentAudioInfo=${currentAudioInfo?.messageId}")
+
             if (isCurrentMessage) {
                 isPlaying = state == PlaybackState.PLAYING
                 hasError = state == PlaybackState.ERROR
@@ -92,19 +95,38 @@ fun VoicePlayer(
     }
 
     // 自动播放（仅开场白消息）
-    LaunchedEffect(audioInfo.url, autoPlay) {
+    LaunchedEffect(autoPlay) {
+        EasyLog.log("=== VoicePlayer LaunchedEffect ===")
+        EasyLog.log("autoPlay: $autoPlay")
+        EasyLog.log("audioUrl: ${audioInfo.url}")
+        EasyLog.log("isPlaying: $isPlaying")
+        EasyLog.log("hasError: $hasError")
+        EasyLog.log("messageId: $messageId")
+        
         if (autoPlay && !isPlaying && !hasError) {
-            delay(100)
-            EasyLog.log("VoicePlayer auto playing opening message: $messageId")
-            audioManager.playMessageVoice(
-                messageId = messageId,
-                audioUrl = audioInfo.url,
-                agentId = audioInfo.agentId ?: "",
-                autoPlay = true,
-                isManualClick = false, // 自动播放
-                onTtsGenerated = onTtsGenerated
-            )
+            EasyLog.log("VoicePlayer conditions met, starting auto play...")
+            // 增加延迟，确保组件完全初始化
+            delay(200)
+            
+            // 再次检查状态，确保条件仍然满足
+            if (autoPlay && !isPlaying && !hasError) {
+                EasyLog.log("VoicePlayer auto playing opening message: $messageId, audioUrl: ${audioInfo.url}")
+                audioManager.playMessageVoice(
+                    messageId = messageId, // 使用localMsgId用于播放状态管理
+                    audioUrl = audioInfo.url,
+                    agentId = audioInfo.agentId ?: "",
+                    autoPlay = true,
+                    isManualClick = false, // 自动播放
+                    onTtsGenerated = onTtsGenerated,
+                    serverMessageId = serverMessageId // 传递服务器端ID用于TTS生成
+                )
+            } else {
+                EasyLog.log("VoicePlayer auto play conditions no longer met after delay: autoPlay=$autoPlay, isPlaying=$isPlaying, hasError=$hasError")
+            }
+        } else {
+            EasyLog.log("VoicePlayer auto play conditions not met: autoPlay=$autoPlay, isPlaying=$isPlaying, hasError=$hasError")
         }
+        EasyLog.log("=== End VoicePlayer LaunchedEffect ===")
     }
 
     ChatVoicePlayer(
@@ -120,12 +142,13 @@ fun VoicePlayer(
                 audioManager.pausePlayback()
             } else {
                 audioManager.playMessageVoice(
-                    messageId = messageId,
+                    messageId = messageId, // 使用localMsgId用于播放状态管理
                     audioUrl = audioInfo.url,
                     agentId = audioInfo.agentId ?: "",
                     autoPlay = true, // 手动点击时也需要播放
                     isManualClick = true, // 标记为手动点击
-                    onTtsGenerated = onTtsGenerated
+                    onTtsGenerated = onTtsGenerated,
+                    serverMessageId = serverMessageId // 传递服务器端ID用于TTS生成
                 )
             }
         },

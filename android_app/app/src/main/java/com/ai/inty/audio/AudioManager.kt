@@ -4,9 +4,7 @@ import android.content.Context
 import com.inty.utils.log.EasyLog
 import com.inty.utils.storage.IntySetting
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 /**
@@ -34,12 +32,7 @@ class AudioManager private constructor(
     private val cacheManager = AudioCacheManager.getInstance(context)
     private val ttsManager = TtsManager.getInstance(context, scope)
 
-    // 业务状态管理
-    private val _isPlayingOpening = MutableStateFlow(false)
-    val isPlayingOpening: StateFlow<Boolean> = _isPlayingOpening.asStateFlow()
-
-    private val _currentPlayingAgent = MutableStateFlow<String?>(null)
-    val currentPlayingAgent: StateFlow<String?> = _currentPlayingAgent.asStateFlow()
+    // 业务状态管理（开场白状态管理已移至消息级别处理）
 
     // 播放状态代理
     val playbackState: StateFlow<PlaybackState> = playbackManager.playbackState
@@ -48,64 +41,6 @@ class AudioManager private constructor(
     val isLoading: StateFlow<Boolean> = playbackManager.isLoading
     val error: StateFlow<String?> = playbackManager.error
 
-    /**
-     * 播放Agent开场白
-     */
-    fun playAgentOpening(
-        agentId: String,
-        audioUrl: String,
-        autoPlay: Boolean = true
-    ) {
-        // 检查是否启用自动播放
-        if (!autoPlay || !IntySetting.isAutoPlayAudio()) {
-            EasyLog.log("Auto play audio is disabled, skipping opening playback")
-            return
-        }
-
-        // 检查是否正在播放其他Agent的开场白
-        if (_isPlayingOpening.value && _currentPlayingAgent.value != agentId) {
-            EasyLog.log("Another agent opening is playing, stopping current playback")
-            stopCurrentOpening()
-        }
-
-        val audioInfo = AudioInfo(
-            url = audioUrl,
-            title = "opening",
-            artist = "AI",
-            messageId = "opening_$agentId",
-            agentId = agentId
-        )
-
-        EasyLog.log("Playing agent opening for agent: $agentId")
-
-        _isPlayingOpening.value = true
-        _currentPlayingAgent.value = agentId
-
-        // 播放开场白
-        playbackManager.playAudio(audioInfo, autoPlay = true)
-
-        // 监听播放结束
-        scope.launch {
-            while (_isPlayingOpening.value) {
-                val state = playbackManager.playbackState.value
-                val currentAudioInfo = playbackManager.getCurrentAudioInfo()
-
-                if (state == PlaybackState.ENDED ||
-                    state == PlaybackState.ERROR ||
-                    currentAudioInfo?.agentId != agentId
-                ) {
-                    break
-                }
-
-                kotlinx.coroutines.delay(500)
-            }
-
-            // 播放结束，清理状态
-            _isPlayingOpening.value = false
-            _currentPlayingAgent.value = null
-            EasyLog.log("Agent opening playback finished for agent: $agentId")
-        }
-    }
 
     /**
      * 播放消息语音
@@ -117,31 +52,46 @@ class AudioManager private constructor(
         agentId: String,
         autoPlay: Boolean = false,
         isManualClick: Boolean = false,
-        onTtsGenerated: ((String) -> Unit)? = null
+        onTtsGenerated: ((String) -> Unit)? = null,
+        serverMessageId: String? = null // 服务器端消息ID，用于TTS生成
     ) {
-        // 检查是否启用自动播放（只有在自动播放且用户禁用了自动播放时才跳过）
+        EasyLog.log("=== AudioManager.playMessageVoice ===")
+        EasyLog.log("messageId: $messageId")
+        EasyLog.log("audioUrl: $audioUrl")
+        EasyLog.log("agentId: $agentId")
+        EasyLog.log("autoPlay: $autoPlay")
+        EasyLog.log("isManualClick: $isManualClick")
+        EasyLog.log("IntySetting.isAutoPlayAudio(): ${IntySetting.isAutoPlayAudio()}")
+        
+        // 检查是否启用自动播放
         // 手动点击时不受自动播放设置影响
+        // 开场白消息的自动播放不受用户设置影响（业务逻辑必需）
         if (autoPlay && !isManualClick && !IntySetting.isAutoPlayAudio()) {
-            EasyLog.log("Auto play audio is disabled, skipping message voice playback")
-            return
+            // 检查是否是开场白消息，如果是则允许播放
+            // 开场白消息的localMsgId通常包含_assistant_标识
+            val isOpeningMessage = messageId.contains("_assistant_")
+            if (!isOpeningMessage) {
+                EasyLog.log("Auto play audio is disabled, skipping message voice playback")
+                return
+            } else {
+                EasyLog.log("Opening message detected (messageId contains '_assistant_'), allowing auto play despite user setting")
+            }
         }
 
-        // 如果正在播放开场白，先停止
-        if (_isPlayingOpening.value) {
-            EasyLog.log("Stopping opening playback to play message voice")
-            stopCurrentOpening()
-        }
+        // 开场白状态管理已移至消息级别，不再需要特殊处理
 
         // 如果audioUrl为空，生成TTS
         if (audioUrl.isNullOrEmpty()) {
-            EasyLog.log("Audio URL is empty, generating TTS for message: $messageId")
+            val ttsMessageId = serverMessageId ?: messageId
+            EasyLog.log("Audio URL is empty, generating TTS for message: $messageId (serverId: $ttsMessageId)")
             ttsManager.generateMessageVoice(
-                messageId = messageId,
+                messageId = ttsMessageId, // 使用服务器端ID进行TTS生成
                 agentId = agentId,
                 onSuccess = { generatedUrl ->
                     EasyLog.log("TTS generated successfully: $generatedUrl")
                     onTtsGenerated?.invoke(generatedUrl)
                     // 使用生成的URL播放
+                    EasyLog.log("Playing TTS generated audio: messageId=$messageId, generatedUrl=$generatedUrl, autoPlay=$autoPlay")
                     playMessageWithUrl(messageId, generatedUrl, agentId, autoPlay)
                 },
                 onError = { error ->
@@ -175,17 +125,6 @@ class AudioManager private constructor(
         playbackManager.playAudio(audioInfo, autoPlay = autoPlay)
     }
 
-    /**
-     * 停止当前开场白播放
-     */
-    fun stopCurrentOpening() {
-        if (_isPlayingOpening.value) {
-            EasyLog.log("Stopping current opening playback")
-            playbackManager.stopPlayback()
-            _isPlayingOpening.value = false
-            _currentPlayingAgent.value = null
-        }
-    }
 
     /**
      * 停止所有语音播放
@@ -193,8 +132,6 @@ class AudioManager private constructor(
     fun stopAllPlayback() {
         EasyLog.log("Stopping all voice playback")
         playbackManager.stopPlayback()
-        _isPlayingOpening.value = false
-        _currentPlayingAgent.value = null
     }
 
     /**
@@ -219,16 +156,14 @@ class AudioManager private constructor(
     fun resetForPageChange() {
         EasyLog.log("Resetting voice playback for page change")
         playbackManager.resetForPageChange()
-        _isPlayingOpening.value = false
-        _currentPlayingAgent.value = null
     }
 
     /**
      * 检查是否正在播放指定Agent的语音
      */
     fun isPlayingAgentVoice(agentId: String): Boolean {
-        return _currentPlayingAgent.value == agentId &&
-                (playbackManager.isPlaying() || _isPlayingOpening.value)
+        val currentAudioInfo = playbackManager.getCurrentAudioInfo()
+        return currentAudioInfo?.agentId == agentId && playbackManager.isPlaying()
     }
 
     /**

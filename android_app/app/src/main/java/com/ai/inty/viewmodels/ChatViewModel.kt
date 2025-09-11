@@ -120,8 +120,8 @@ class ChatViewModel : BaseActivityViewModel() {
         //查询改聊天设置
         getChatSetting()
 
-        // 播放Agent开场白（如果启用自动播放）
-        playAgentOpening(agentInfo)
+        // 开场白播放逻辑已移至ChatItem中的VoicePlayer处理
+        // 不再在ChatViewModel中播放Agent开场白
     }
 
     //region 语音播报相关
@@ -136,23 +136,6 @@ class ChatViewModel : BaseActivityViewModel() {
         }
     }
 
-    /**
-     * 播放Agent开场白
-     */
-    private fun playAgentOpening(agentInfo: AgentInfo) {
-        try {
-            // 播放开场白
-            audioManager?.playAgentOpening(
-                agentId = agentInfo.id,
-                audioUrl = agentInfo.opening_audio_url,
-                autoPlay = true
-            )
-
-            EasyLog.log("Playing agent opening for: ${agentInfo.name}")
-        } catch (e: Exception) {
-            EasyLog.log("Failed to play agent opening: ${e.message}", EasyLog.ERROR)
-        }
-    }
 
     /**
      * 停止语音播放
@@ -183,14 +166,18 @@ class ChatViewModel : BaseActivityViewModel() {
      * 更新消息的音频URL（供AudioManager回调使用）
      */
     fun updateMessageAudioUrl(messageId: String, audioUrl: String) {
+        EasyLog.log("updateMessageAudioUrl: messageId=$messageId, audioUrl=$audioUrl")
         _msgs.update { currentMsgs ->
-            currentMsgs.map { msg ->
+            val updatedMsgs = currentMsgs.map { msg ->
                 if (msg.localMsgId == messageId) {
+                    EasyLog.log("Found matching message: ${msg.localMsgId}, updating audio_url from ${msg.audio_url} to $audioUrl")
                     msg.copy(audio_url = audioUrl)
                 } else {
                     msg
                 }
             }
+            EasyLog.log("Updated messages count: ${updatedMsgs.size}")
+            updatedMsgs
         }
     }
 

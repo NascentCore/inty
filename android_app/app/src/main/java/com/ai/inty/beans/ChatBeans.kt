@@ -85,10 +85,19 @@ data class MsgInfo(
     val role: String = "",
     val meta_data: MsgMetaData? = null,//附带数据
     val audio_url: String? = null,//音频文件的url
-    val timestamp: String? = null,//消息时间戳
+    val timestamp: String? = null,//消息时间戳 2025-09-11T03:58:29.077875+00:00
     //本地创建一个msgId，临时用于消息标记
     val localMsgId: String = "${System.nanoTime()}_${role}_${content.hashCode()}",
 ) {
+
+    fun isOpening(): Boolean {
+        return meta_data?.isOpening == true
+    }
+
+    fun agentId(): String? {
+        return meta_data?.agentId
+    }
+
     data class MsgMetaData(
         val agentId: String? = null,
         val isOpening: Boolean = false,

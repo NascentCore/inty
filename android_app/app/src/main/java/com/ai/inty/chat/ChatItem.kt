@@ -76,7 +76,7 @@ fun ChatItem(item: MsgInfo) {
  * AI消息显示组件
  */
 @Composable
-private fun ChatItemAI(item: MsgInfo, isOpening: Boolean = false) {
+private fun ChatItemAI(item: MsgInfo) {
     runCatching {
         Column {
             //播放器按钮
@@ -89,14 +89,23 @@ private fun ChatItemAI(item: MsgInfo, isOpening: Boolean = false) {
                     url = item.audio_url ?: "",
                     title = "Voice Message",
                     artist = "AI Agent",
-                    messageId = item.id,
+                    messageId = item.localMsgId, // 使用localMsgId，包含_assistant_标识，用于播放状态管理
                     agentId = agentInfo?.id // 使用当前agent的ID
                 )
 
                 val hasPlayedOpening = OpeningPlayState.agentOpeningPlayed(agentInfo?.id ?: "")
+
+                // 检查当前消息列表是否只有开场白消息
+                val allMessages by viewModel.msgs.collectAsState()
+                val isOnlyOpeningMessage =
+                    allMessages.size == 1 && allMessages.firstOrNull()?.isOpening() == true
+
+                val shouldAutoPlay =
+                    item.isOpening() && hasPlayedOpening.not() && isOnlyOpeningMessage
+
                 VoicePlayer(
                     audioInfo = audioInfo,
-                    autoPlay = isOpening && hasPlayedOpening.not(),
+                    autoPlay = shouldAutoPlay,
                     modifier = Modifier
                         .height(26.dp)
                         .widthIn(48.dp)
@@ -108,8 +117,10 @@ private fun ChatItemAI(item: MsgInfo, isOpening: Boolean = false) {
                     },
                     onTtsGenerated = { audioUrl ->
                         // TTS生成成功，更新消息的音频URL
-                        viewModel.updateMessageAudioUrl(item.id, audioUrl)
-                    }
+                        // 使用localMsgId进行匹配，因为ChatViewModel中使用的是localMsgId
+                        viewModel.updateMessageAudioUrl(item.localMsgId, audioUrl)
+                    },
+                    serverMessageId = item.id // 传递服务器端ID用于TTS生成
                 )
             }
             //消息
