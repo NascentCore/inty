@@ -341,10 +341,6 @@ fun getChatApi(): IChatApi {
     return NetServiceMgr.retrofitNoWrapper.create(IChatApi::class.java)
 }
 
-@ServiceProvider
-fun getReportApi(): ICommonApi {
-    return NetServiceMgr.retrofitNormal.create(ICommonApi::class.java)
-}
 
 @ServiceProvider
 fun getSubscriptionApi(): ISubscriptionApi {

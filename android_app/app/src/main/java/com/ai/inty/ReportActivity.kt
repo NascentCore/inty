@@ -68,6 +68,7 @@ private fun ReportContent(
     val selectIDs = viewModel.selectIDS
     val description = viewModel.description.collectAsState()
     val localImages = viewModel.localImages
+    val isSubmitting = viewModel.isSubmitting.collectAsState()
 
     val galleryLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.GetContent()
@@ -99,6 +100,7 @@ private fun ReportContent(
         onSave = {
             viewModel.submit()
         },
+        isSubmitting = isSubmitting.value,
         onBack = onBack
     )
 }

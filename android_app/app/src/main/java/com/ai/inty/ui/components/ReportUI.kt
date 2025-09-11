@@ -277,7 +277,10 @@ fun ReportImageEvidenceContainer(
  * 保存按钮组件
  */
 @Composable
-fun SaveBtn(onSave: () -> Unit) {
+fun SaveBtn(
+    onSave: () -> Unit,
+    isSubmitting: Boolean = false
+) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -285,21 +288,38 @@ fun SaveBtn(onSave: () -> Unit) {
             .height(50.dp)
             .background(
                 brush = Brush.linearGradient(
-                    colors = listOf(Color(0xFFC122FF), Color(0xFFFF905D))
+                    colors = if (isSubmitting) {
+                        // TODO：需要优化视觉设计
+                        // https://github.com/NascentCore/inty/issues/436
+                        listOf(Color(0xFF666666), Color(0xFF888888))
+                    } else {
+                        listOf(Color(0xFFC122FF), Color(0xFFFF905D))
+                    }
                 ),
                 shape = RoundedCornerShape(25.dp)
             )
             .noRippleClickable {
-                onSave()
+                if (!isSubmitting) {
+                    onSave()
+                }
             }
     ) {
-        Text(
-            modifier = Modifier.align(Alignment.Center),
-            text = stringResource(R.string.submit_button),
-            fontSize = 16.sp,
-            fontWeight = FontWeight.Normal,
-            color = Color.White,
-        )
+        if (isSubmitting) {
+            // 显示加载动画
+            androidx.compose.material3.CircularProgressIndicator(
+                modifier = Modifier.align(Alignment.Center),
+                color = Color.White,
+                strokeWidth = 2.dp
+            )
+        } else {
+            Text(
+                modifier = Modifier.align(Alignment.Center),
+                text = stringResource(R.string.submit_button),
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Normal,
+                color = Color.White,
+            )
+        }
     }
 }
 

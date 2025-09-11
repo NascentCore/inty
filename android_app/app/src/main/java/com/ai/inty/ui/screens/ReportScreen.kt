@@ -52,6 +52,7 @@ fun ReportScreen(
     images: List<String>,
     onClickAddImage: () -> Unit,
     onSave: () -> Unit,
+    isSubmitting: Boolean = false,
 ) {
     val focusManager = LocalFocusManager.current
 
@@ -100,7 +101,7 @@ fun ReportScreen(
 
             // 举报描述
             ReportDescriptionContainer(
-                title = stringResource(R.string.report_description_full),
+                title = stringResource(R.string.report_description),
                 description = description,
                 onDescriptionChange = onDescriptionChange,
                 placeholder = stringResource(R.string.please_fill_feedback_full)
@@ -117,7 +118,7 @@ fun ReportScreen(
 
             Spacer(Modifier.height(60.dp))
 
-            SaveBtn(onSave = onSave)
+            SaveBtn(onSave = onSave, isSubmitting = isSubmitting)
             Spacer(Modifier.height(60.dp))
         }
 

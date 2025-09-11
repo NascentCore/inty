@@ -193,7 +193,7 @@
 
     <!-- Report -->
     <string name="npc_asterisk">NPC *</string>
-    <string name="report_description">Report description *</string>
+    <string name="report_description">Report description</string>
     <string name="please_fill_feedback">Please fill in the feedback content…</string>
     <string name="character_count_format">%d/400</string>
     <string name="image_evidence">Image evidence</string>
@@ -276,7 +276,6 @@
     <string name="by_continuing_agree_full">By continuing, you agree to IntelliMate\'s</string>
     <string name="and_symbol">&amp;</string>
     <string name="npc_asterisk_full">NPC *</string>
-    <string name="report_description_full">Report description *</string>
     <string name="please_fill_feedback_full">Please fill in the feedback content…</string>
     <string name="character_count_format_full">%d/400</string>
     <string name="image_evidence_full">Image evidence</string>
