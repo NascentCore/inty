@@ -270,6 +270,77 @@ def get_latest_ai_message_id(session_id: str) -> Optional[int]:
         return None
 
 
+def get_latest_ai_message_info(session_id: str) -> Optional[Dict[str, Any]]:
+    """获取会话中最新AI消息的完整信息"""
+    try:
+        conn = get_chat_history_connection()
+        
+        # 查询最新的AI消息完整信息
+        query = """
+            SELECT id, message, created_at, audio_url, meta_data
+            FROM chat_history 
+            WHERE session_id = %s 
+            AND message->>'type' = 'ai'
+            ORDER BY created_at DESC, id DESC
+            LIMIT 1
+        """
+        
+        with conn.cursor() as cur:
+            cur.execute(query, (session_id,))
+            row = cur.fetchone()
+            
+            if row:
+                message_id = row[0]
+                message_raw = row[1]
+                created_at = row[2]
+                audio_url = row[3]
+                meta_data_raw = row[4]
+                
+                # 解析消息内容
+                content = ""
+                try:
+                    if isinstance(message_raw, str):
+                        message_data = json.loads(message_raw)
+                    elif isinstance(message_raw, dict):
+                        message_data = message_raw
+                    else:
+                        message_data = json.loads(str(message_raw))
+                    
+                    if "data" in message_data and "content" in message_data["data"]:
+                        content = message_data["data"]["content"]
+                    elif "content" in message_data:
+                        content = message_data["content"]
+                        
+                except (json.JSONDecodeError, TypeError, KeyError) as e:
+                    logger.warning(f"解析AI消息内容失败: {str(e)}")
+                    content = str(message_raw) if message_raw else ""
+                
+                # 处理meta_data
+                meta_data = None
+                if meta_data_raw:
+                    try:
+                        if isinstance(meta_data_raw, str):
+                            meta_data = json.loads(meta_data_raw)
+                        elif isinstance(meta_data_raw, dict):
+                            meta_data = meta_data_raw
+                    except (json.JSONDecodeError, TypeError) as e:
+                        logger.warning(f"解析meta_data失败: {str(e)}")
+                        
+                return {
+                    "id": message_id,
+                    "content": content,
+                    "audio_url": audio_url,
+                    "meta_data": meta_data,
+                    "timestamp": created_at.isoformat() if created_at else None,
+                }
+            else:
+                return None
+                
+    except Exception as e:
+        logger.error(f"获取最新AI消息信息失败 {session_id}: {str(e)}")
+        return None
+
+
 def get_messages_paginated(
     session_id: str, limit: int = 20, offset: int = 0
 ) -> Dict[str, Any]:

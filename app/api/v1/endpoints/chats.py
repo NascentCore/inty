@@ -590,19 +590,27 @@ async def agent_chat_completions(
                 message["audio_url"] = audio_url
                 logger.info(f"响应包含语音URL: {audio_url}")
 
-            # 获取最新AI消息的真实ID
+            # 获取最新AI消息的完整信息
             try:
-                latest_message_id = chat_history_service.get_latest_ai_message_id(session_id)
-                message_id = str(latest_message_id) if latest_message_id else f"chatcmpl-{uuid.uuid4().hex[:12]}"
+                latest_message_info = chat_history_service.get_latest_ai_message_info(session_id)
             except Exception as e:
-                logger.warning(f"获取最新消息ID失败: {str(e)}")
-                message_id = f"chatcmpl-{uuid.uuid4().hex[:12]}"
+                logger.warning(f"获取最新消息信息失败: {str(e)}")
+                latest_message_info = None
+
+            # 添加消息的完整信息（id, meta_data, timestamp等）
+            if latest_message_info:
+                message["id"] = latest_message_info["id"]
+                message["meta_data"] = latest_message_info["meta_data"]
+                message["timestamp"] = latest_message_info["timestamp"]
+                # 如果数据库中有audio_url，使用数据库的，否则使用新生成的
+                if latest_message_info["audio_url"]:
+                    message["audio_url"] = latest_message_info["audio_url"]
 
             total_request_time = time.time() - request_start_time
 
             # 构建符合客户端期望的响应格式 (HttpResult<SendMsgResponse>)
             response_data = {
-                "id": message_id,  # 使用真实的消息ID
+                "id": f"chatcmpl-{uuid.uuid4().hex[:12]}",  # 保持随机生成的外层ID
                 "object": "chat.completion",
                 "created": int(time.time()),
                 "model": request.model,
