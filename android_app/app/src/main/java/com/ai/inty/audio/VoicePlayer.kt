@@ -14,6 +14,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.ReportGmailerrorred
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -23,6 +24,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -33,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.inty.utils.log.EasyLog
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 /**
  * 语音播放器组件
@@ -48,6 +51,7 @@ fun VoicePlayer(
     serverMessageId: String? = null, // 服务器端消息ID，用于TTS生成
 ) {
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
     val audioManager = remember {
         AudioManager.getInstance(
             context,
@@ -62,11 +66,20 @@ fun VoicePlayer(
     var duration by remember(messageId) { mutableLongStateOf(0L) }
     var isLoading by remember(messageId) { mutableStateOf(false) }
     var isGeneratingTts by remember(messageId) { mutableStateOf(false) }
+    var isUserClicked by remember(messageId) { mutableStateOf(false) } // 用户是否点击过
+    var ttsGenerationFailed by remember(messageId) { mutableStateOf(false) } // TTS生成是否失败
+    
+    // 防抖状态
+    var isClickDebounced by remember(messageId) { mutableStateOf(false) }
 
     // 监听TTS生成状态
     LaunchedEffect(messageId) {
         while (true) {
-            isGeneratingTts = audioManager.isGeneratingTtsForMessage(messageId)
+            // 只有当用户没有手动设置TTS状态时，才从AudioManager获取状态
+            // 这样可以避免轮询覆盖用户点击后的立即状态
+            if (!isUserClicked) {
+                isGeneratingTts = audioManager.isGeneratingTtsForMessage(messageId)
+            }
             kotlinx.coroutines.delay(100) // 每100ms检查一次
         }
     }
@@ -86,11 +99,19 @@ fun VoicePlayer(
             if (isCurrentMessage) {
                 isPlaying = state == PlaybackState.PLAYING
                 hasError = state == PlaybackState.ERROR
-                isLoading = state == PlaybackState.BUFFERING
+                // 如果用户点击过且正在缓冲，显示loading
+                isLoading = state == PlaybackState.BUFFERING && isUserClicked
+                
+                // 播放完成后重置用户点击状态
+                if (state == PlaybackState.ENDED) {
+                    isUserClicked = false
+                }
+                
                 onPlayStateChange?.invoke(isPlaying)
             } else {
                 isPlaying = false
                 hasError = false
+                // 非当前消息不显示loading，除非正在生成TTS
                 isLoading = false
             }
         }
@@ -149,19 +170,64 @@ fun VoicePlayer(
         hasError = hasError,
         duration = duration,
         isGeneratingTts = isGeneratingTts,
+        isUserClicked = isUserClicked,
+        ttsGenerationFailed = ttsGenerationFailed,
         onPlayPause = {
             EasyLog.log("VoicePlayer clicked: isPlaying=$isPlaying, messageId=$messageId, audioUrl=${audioInfo.url}")
+            EasyLog.log("Click debounce state: isClickDebounced=$isClickDebounced, isGeneratingTts=$isGeneratingTts")
+
+            // 防抖检查：如果正在防抖期或正在生成TTS，则忽略点击
+            // 但TTS失败状态可以重新点击
+            if ((isClickDebounced || isGeneratingTts) && !ttsGenerationFailed) {
+                EasyLog.log("Click ignored due to debounce or TTS generation")
+                return@ChatVoicePlayer
+            }
+
+            // 设置防抖状态
+            isClickDebounced = true
+            coroutineScope.launch {
+                // 防抖延迟：500ms
+                delay(500)
+                isClickDebounced = false
+                EasyLog.log("Click debounce reset for messageId: $messageId")
+            }
 
             if (isPlaying) {
                 audioManager.pausePlayback()
             } else {
+                // 立即显示loading状态
+                isUserClicked = true
+                ttsGenerationFailed = false // 重置失败状态
+                
+                // 如果audioUrl为空，立即显示TTS生成loading
+                if (audioInfo.url.isEmpty()) {
+                    EasyLog.log("Audio URL is empty, showing TTS generation loading immediately")
+                    isGeneratingTts = true // 立即显示TTS生成状态
+                } else {
+                    EasyLog.log("Audio URL exists, showing audio loading")
+                    isLoading = true // 立即显示音频加载状态
+                }
+                
                 audioManager.playMessageVoice(
                     messageId = messageId, // 使用localMsgId用于播放状态管理
                     audioUrl = audioInfo.url,
                     agentId = audioInfo.agentId ?: "",
                     autoPlay = true, // 手动点击时也需要播放
                     isManualClick = true, // 标记为手动点击
-                    onTtsGenerated = onTtsGenerated,
+                    onTtsGenerated = { generatedUrl ->
+                        // TTS生成成功，重置状态并继续播放
+                        isGeneratingTts = false
+                        ttsGenerationFailed = false
+                        isUserClicked = false // 重置用户点击状态，允许轮询接管
+                        onTtsGenerated?.invoke(generatedUrl)
+                    },
+                    onTtsFailed = { error ->
+                        // TTS生成失败，显示错误状态
+                        EasyLog.log("TTS generation failed: $error", EasyLog.ERROR)
+                        isGeneratingTts = false
+                        ttsGenerationFailed = true
+                        isUserClicked = false // 重置用户点击状态，允许轮询接管
+                    },
                     serverMessageId = serverMessageId // 传递服务器端ID用于TTS生成
                 )
             }
@@ -180,6 +246,8 @@ private fun ChatVoicePlayer(
     hasError: Boolean,
     duration: Long,
     isGeneratingTts: Boolean = false,
+    isUserClicked: Boolean = false,
+    ttsGenerationFailed: Boolean = false,
     onPlayPause: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -198,14 +266,7 @@ private fun ChatVoicePlayer(
             contentAlignment = Alignment.Center
         ) {
             when {
-                isLoading -> {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(12.dp),
-                        strokeWidth = 1.dp,
-                        color = Color.White
-                    )
-                }
-
+                // 优先显示错误状态
                 hasError -> {
                     Icon(
                         imageVector = Icons.Default.Error,
@@ -214,11 +275,31 @@ private fun ChatVoicePlayer(
                         modifier = Modifier.size(16.dp)
                     )
                 }
+                
+                // 显示TTS生成失败状态（⚠️图标）
+                ttsGenerationFailed -> {
+                    Icon(
+                        imageVector = Icons.Default.ReportGmailerrorred,
+                        contentDescription = "TTS Failed",
+                        tint = Color.Yellow,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+                
+                // 显示loading状态：TTS生成中或音频加载中
+                isGeneratingTts || isLoading -> {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(12.dp),
+                        strokeWidth = 1.dp,
+                        color = Color.White
+                    )
+                }
 
+                // 正常播放状态
                 else -> {
                     Icon(
                         imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                        contentDescription = if (isPlaying) "Pause" else if (isGeneratingTts) "Generating" else "Play",
+                        contentDescription = if (isPlaying) "Pause" else "Play",
                         tint = Color.White,
                         modifier = Modifier.size(16.dp)
                     )

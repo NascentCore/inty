@@ -53,6 +53,7 @@ class AudioManager private constructor(
         autoPlay: Boolean = false,
         isManualClick: Boolean = false,
         onTtsGenerated: ((String) -> Unit)? = null,
+        onTtsFailed: ((String) -> Unit)? = null,
         serverMessageId: String? = null // 服务器端消息ID，用于TTS生成
     ) {
 
@@ -89,6 +90,7 @@ class AudioManager private constructor(
                 },
                 onError = { error ->
                     EasyLog.log("TTS generation failed: $error", EasyLog.ERROR)
+                    onTtsFailed?.invoke(error)
                 }
             )
         } else {
@@ -115,7 +117,11 @@ class AudioManager private constructor(
         )
 
         EasyLog.log("Playing message voice for message: $messageId")
-        playbackManager.playAudio(audioInfo, autoPlay = autoPlay)
+        
+        // 确保在主线程上调用ExoPlayer
+        scope.launch {
+            playbackManager.playAudio(audioInfo, autoPlay = autoPlay)
+        }
     }
 
 
@@ -124,7 +130,9 @@ class AudioManager private constructor(
      */
     fun stopAllPlayback() {
         EasyLog.log("Stopping all voice playback")
-        playbackManager.stopPlayback()
+        scope.launch {
+            playbackManager.stopPlayback()
+        }
     }
 
     /**
@@ -132,7 +140,9 @@ class AudioManager private constructor(
      */
     fun pausePlayback() {
         EasyLog.log("Pausing voice playback")
-        playbackManager.pausePlayback()
+        scope.launch {
+            playbackManager.pausePlayback()
+        }
     }
 
     /**
@@ -140,7 +150,9 @@ class AudioManager private constructor(
      */
     fun resumePlayback() {
         EasyLog.log("Resuming voice playback")
-        playbackManager.resumePlayback()
+        scope.launch {
+            playbackManager.resumePlayback()
+        }
     }
 
     /**
@@ -148,7 +160,9 @@ class AudioManager private constructor(
      */
     fun resetForPageChange() {
         EasyLog.log("Resetting voice playback for page change")
-        playbackManager.resetForPageChange()
+        scope.launch {
+            playbackManager.resetForPageChange()
+        }
     }
 
     /**
