@@ -55,14 +55,7 @@ class AudioManager private constructor(
         onTtsGenerated: ((String) -> Unit)? = null,
         serverMessageId: String? = null // 服务器端消息ID，用于TTS生成
     ) {
-        EasyLog.log("=== AudioManager.playMessageVoice ===")
-        EasyLog.log("messageId: $messageId")
-        EasyLog.log("audioUrl: $audioUrl")
-        EasyLog.log("agentId: $agentId")
-        EasyLog.log("autoPlay: $autoPlay")
-        EasyLog.log("isManualClick: $isManualClick")
-        EasyLog.log("IntySetting.isAutoPlayAudio(): ${IntySetting.isAutoPlayAudio()}")
-        
+
         // 检查是否启用自动播放
         // 手动点击时不受自动播放设置影响
         // 开场白消息的自动播放不受用户设置影响（业务逻辑必需）

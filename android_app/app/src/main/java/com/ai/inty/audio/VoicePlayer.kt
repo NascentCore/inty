@@ -101,7 +101,7 @@ fun VoicePlayer(
         audioManager.duration.collect { globalDuration ->
             val currentAudioInfo = audioManager.getCurrentAudioInfo()
             val isCurrentMessage = currentAudioInfo?.messageId == messageId
-            
+
             if (isCurrentMessage) {
                 duration = globalDuration
             }
@@ -116,14 +116,14 @@ fun VoicePlayer(
         EasyLog.log("isPlaying: $isPlaying")
         EasyLog.log("hasError: $hasError")
         EasyLog.log("messageId: $messageId")
-        
+
         if (autoPlay && !isPlaying && !hasError) {
             EasyLog.log("VoicePlayer conditions met, starting auto play...")
             // 增加延迟，确保组件完全初始化
             delay(200)
-            
+
             // 再次检查状态，确保条件仍然满足
-            if (autoPlay && !isPlaying && !hasError) {
+            if (!isPlaying && !hasError) {
                 EasyLog.log("VoicePlayer auto playing opening message: $messageId, audioUrl: ${audioInfo.url}")
                 audioManager.playMessageVoice(
                     messageId = messageId, // 使用localMsgId用于播放状态管理
