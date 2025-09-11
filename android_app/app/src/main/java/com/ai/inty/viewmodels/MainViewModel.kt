@@ -580,7 +580,7 @@ class MainViewModel : BaseActivityViewModel() {
                                 agents.forEach { agent ->
                                     agent.isDeleted = agent.deletedAt != null
                                 }
-                                
+
                                 // 第一页数据替换，其他页数据追加
                                 if (currentFollowingAgentsPage == 1) {
                                     followingAgents.clear()
@@ -1069,7 +1069,7 @@ class MainViewModel : BaseActivityViewModel() {
         val result = commonApi.checkAppUpgrade()
         when (result) {
             is HttpResult.Success -> {
-                val rsp = result.data.data ?: return@launchWithNetCheck
+                val rsp = result.data
                 if (rsp.update_required && rsp.force_update) {
                     //有更新，且需要强制更新
                     needForceUpgrade.emit(rsp)
