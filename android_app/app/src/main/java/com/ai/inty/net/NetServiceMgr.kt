@@ -46,6 +46,7 @@ fun getBaseUrl(): String {
 
 class AuthInterceptor : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
+        EasyLog.log("AuthInterceptor - getCurToken: ${IntySetting.getCurToken()}")
         val request =
             chain.request()
                 .newBuilder()
