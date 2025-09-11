@@ -15,8 +15,6 @@ import com.squareup.moshi.DefaultIfNullFactory
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import com.therouter.inject.ServiceProvider
-import com.inty.api.client.IntyClient
-import com.inty.api.client.okhttp.IntyOkHttpClient
 import okhttp3.ConnectionPool
 import okhttp3.Dns
 import okhttp3.Interceptor
