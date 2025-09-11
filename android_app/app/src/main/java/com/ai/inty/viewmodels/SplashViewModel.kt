@@ -60,7 +60,7 @@ class SplashViewModel : BaseActivityViewModel() {
                     onLoginSuccess()
                 } else {
                     EasyLog.log("No login found, creating guest account")
-                    createGuest()
+                    createGuestWithIntySdk()
                 }
             } catch (e: Exception) {
                 EasyLog.log("Initialization failed: ${e.message}", EasyLog.ERROR)
@@ -84,6 +84,7 @@ class SplashViewModel : BaseActivityViewModel() {
     /**
      * 创建guest用户，并自动登录
      */
+    @Deprecated("使用 createGuestWithIntySdk() 替代", ReplaceWith("createGuestWithIntySdk()"))
     private suspend fun createGuest() {
         EasyLog.log("Creating guest account...")
         val result = userApi.createGuest(
@@ -108,9 +109,6 @@ class SplashViewModel : BaseActivityViewModel() {
         }
     }
 
-    /**
-     * 使用 inty-sdk 创建guest用户，并自动登录
-     */
     private suspend fun createGuestWithIntySdk() {
         EasyLog.log("Creating guest account with inty-sdk...")
             
