@@ -27,6 +27,18 @@ cd ...
 git submodule update --init --recursive
 ```
 
+如果搞坏了 git submodule，比如下面这样 submodule 里有了改动，可以重置 git submodule：
+
+<img width="480" height="436" alt="image" src="https://github.com/user-attachments/assets/23852e45-cfe6-4686-9282-c138d40bf96f" />
+
+```bash
+# 删除已有的 submodule
+git submodule deinit -f .
+
+# 重新拉取 submodule 代码
+git submodule update --init
+```
+
 ## 使用 Docker 容器本地运行后端服务和 Android app（适用于 app 开发者）
 
 1. 访问 <https://docs.docker.com/desktop/setup/install/mac-install/> 安装 Docker Desktop。
