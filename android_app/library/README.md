@@ -1,5 +1,14 @@
 # Library
 
+## 快速开始
+
+创建 Client 必须提供 API key，但是 CreateGuest 实际上接受空 API key。
+
+```kotlin
+client = ...().apiKey("")
+client.createGuest()
+```
+
 ## inty-sdk 总结
 
 `inty-sdk` 包含 3 个核心子模块（及其他模块）

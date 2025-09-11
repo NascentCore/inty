@@ -5,6 +5,7 @@ import com.ai.inty.base.BaseActivityViewModel
 import com.ai.inty.beans.CreateGuestReq
 import com.ai.inty.net.IUserApi
 import com.ai.inty.net.IUserApi2
+import com.ai.inty.net.getBaseUrl
 import com.ai.inty.utils.AppStartupManager
 import com.ai.inty.utils.UserProfileManager
 import com.architecture.httplib.core.HttpResult
@@ -111,16 +112,22 @@ class SplashViewModel : BaseActivityViewModel() {
 
     private suspend fun createGuestWithIntySdk() {
         EasyLog.log("Creating guest account with inty-sdk...")
-            
+        
+        // 创建临时 inty client 来创建游客账号
+        val intyClient = IntyOkHttpClient.builder()
+            .apiKey("")
+            .baseUrl(getBaseUrl())
+            .build()
+
         val response = intyClient.api().v1().auth().createGuest(
             AuthCreateGuestParams.builder()
                 .deviceId(AppEnv.DeviceID)
                 .systemLanguage(AppEnv.locale.language)
                 .build()
         )
-        
+
         EasyLog.log("createGuestWithIntySdk result: $response")
-        
+
         if (response.code() == 0L) {
             val data = response.data()
             if (data != null) {
