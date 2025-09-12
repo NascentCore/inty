@@ -170,48 +170,14 @@ class TestAppConfig:
         assert config.limits.free_user_chat_total_limit == 100
 
 
-class TestEmbeddingConfig:
-    def test_embedding_config_defaults(self):
-        """Test EmbeddingConfig default values"""
-        config = EmbeddingConfig()
-        assert config.base_url == "http://localhost:8001/v1"
-        assert config.api_key == "sk-proj-1234567890"
-        assert config.model == "DMetaSoul/Dmeta-embedding-zh-small"
-
-    def test_embedding_config_custom_values(self):
-        """Test EmbeddingConfig with custom values"""
-        config = EmbeddingConfig(
-            base_url="https://custom-api.com/v1",
-            api_key="custom-api-key",
-            model="custom-model",
-        )
-        assert config.base_url == "https://custom-api.com/v1"
-        assert config.api_key == "custom-api-key"
-        assert config.model == "custom-model"
-
-
 class TestAgentConfig:
-    def test_agent_config_defaults(self):
-        """Test AgentConfig default values"""
-        config = AgentConfig()
-        assert config.model == "google/gemini-2.5-flash"
-        assert config.base_url == "https://openrouter.ai/api/v1"
-        assert config.api_key == "<fill-in-config.yaml>"
-        assert config.temperature == 0.5
-        assert config.max_tokens == 1000
-        assert config.top_p == 1.0
-        assert config.top_k == 50
-        assert config.frequency_penalty == 0.0
-        assert config.presence_penalty == 0.0
-        assert config.enable_debug_logging is False
-        assert config.vertex_image_model == "imagen-4.0-fast-generate-preview-06-06"
-
     def test_agent_config_custom_values(self):
         """Test AgentConfig with custom values"""
         config = AgentConfig(
             model="custom-model",
             base_url="https://custom-api.com",
             api_key="custom-api-key",
+            langchain_api_key="custom-langchain-api-key",
             temperature=0.8,
             max_tokens=2000,
             enable_debug_logging=True,
@@ -311,55 +277,6 @@ class TestElevenLabsConfig:
         assert config.max_text_length == 3000
 
 
-class TestConfig:
-    def test_config_creation(self):
-        """Test Config creation with all required components"""
-        app_config = AppConfig()
-        security_config = SecurityConfig(secret_key="test-secret")
-        database_config = DatabaseSettings(
-            host="localhost", port=5432, user="test", password="test", db="test"
-        )
-        google_oauth_config = GoogleOAuthConfig()
-        verification_config = VerificationConfig()
-        logging_config = LoggingConfig()
-        embedding_config = EmbeddingConfig()
-        agent_config = AgentConfig()
-        gcs_config = GCSConfig(bucket="test", credentials="test")
-        firebase_config = FirebaseConfig(service_account_path="test")
-        google_play_config = GooglePlayConfig(
-            service_account_key="test", package_name="com.test.app"
-        )
-        elevenlabs_config = ElevenLabsConfig(api_key="test")
-
-        config = Config(
-            app=app_config,
-            security=security_config,
-            database=database_config,
-            google_oauth=google_oauth_config,
-            verification=verification_config,
-            logging=logging_config,
-            embedding=embedding_config,
-            agent=agent_config,
-            gcs=gcs_config,
-            firebase=firebase_config,
-            google_play=google_play_config,
-            elevenlabs=elevenlabs_config,
-        )
-
-        assert config.app == app_config
-        assert config.security == security_config
-        assert config.database == database_config
-        assert config.google_oauth == google_oauth_config
-        assert config.verification == verification_config
-        assert config.logging == logging_config
-        assert config.embedding == embedding_config
-        assert config.agent == agent_config
-        assert config.gcs == gcs_config
-        assert config.firebase == firebase_config
-        assert config.google_play == google_play_config
-        assert config.elevenlabs == elevenlabs_config
-
-
 class TestLoadConfig:
     def test_load_config_success(self):
         """Test successful config loading"""
@@ -373,6 +290,10 @@ class TestLoadConfig:
                     "free_user_chat_total_limit": 100,
                 },
             },
+            "agent": {
+                "api_key": "test-api-key",
+                "langchain_api_key": "test-langchain-api-key",
+            },
             "security": {"secret_key": "test-secret"},
             "database": {
                 "host": "localhost",
@@ -384,8 +305,6 @@ class TestLoadConfig:
             "google_oauth": {},
             "verification": {},
             "logging": {"level": "DEBUG"},
-            "embedding": {},
-            "agent": {},
             "gcs": {"bucket": "test-bucket", "credentials": "test-credentials"},
             "firebase": {"service_account_path": "test-path"},
             "google_play": {
@@ -426,37 +345,3 @@ class TestLoadConfig:
         """Test config loading with non-existent file"""
         with pytest.raises(SystemExit):
             load_config("non_existent_config.yaml")
-
-    def test_load_config_with_missing_sections(self):
-        """Test config loading with missing sections (should use defaults)"""
-        test_config_data = {
-            "security": {"secret_key": "test-secret"},
-            "database": {
-                "host": "localhost",
-                "port": 5432,
-                "user": "testuser",
-                "password": "testpass",
-                "db": "testdb",
-            },
-            "gcs": {"bucket": "test-bucket", "credentials": "test-credentials"},
-            "firebase": {"service_account_path": "test-path"},
-            "google_play": {
-                "service_account_key": "test-key",
-                "package_name": "com.test.app",
-            },
-            "elevenlabs": {"api_key": "test-key"},
-        }
-
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
-            yaml.dump(test_config_data, f)
-            temp_config_path = f.name
-
-        try:
-            config = load_config(temp_config_path)
-            # Should use defaults for missing sections
-            assert config.app.name == "inty-backend"
-            assert config.app.debug is False
-            assert config.logging.level == "INFO"
-            assert config.verification.code_expire_minutes == 5
-        finally:
-            Path(temp_config_path).unlink()

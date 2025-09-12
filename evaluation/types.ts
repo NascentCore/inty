@@ -5,12 +5,12 @@ export interface Agent {
   id: string;
   name: string;
   gender: "MALE" | "FEMALE" | "OTHER";
-  intro: string;
-  opening: string;
+  intro?: string;
+  opening?: string;
   visibility: "PUBLIC" | "PRIVATE";
-  main_prompt: string;
-  personality: string;
-  mode_prompt: string;
+  main_prompt?: string;
+  personality?: string;
+  mode_prompt?: string;
   avatar?: string;
   background?: string;
   background_images?: string[];
@@ -34,12 +34,12 @@ export interface LLMConfig {
 export interface AgentCreateRequest {
   name: string;
   gender: "MALE" | "FEMALE" | "OTHER";
-  intro: string;
-  opening: string;
+  intro?: string;
+  opening?: string;
   visibility: "PUBLIC" | "PRIVATE";
-  main_prompt: string;
-  personality: string;
-  mode_prompt: string;
+  main_prompt?: string;
+  personality?: string;
+  mode_prompt?: string;
   avatar?: string;
   background?: string;
   background_images?: string[];

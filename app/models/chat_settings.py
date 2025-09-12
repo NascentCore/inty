@@ -1,3 +1,4 @@
+from enum import StrEnum
 import sqlalchemy as sa
 from sqlalchemy import Boolean, Column, DateTime, ForeignKey, String, Text, Index
 from sqlalchemy.orm import relationship
@@ -15,7 +16,7 @@ class ChatSettings(Base):
     id = Column(String, primary_key=True, index=True)
     language = Column(String, default="en")
     voice_enabled = Column(Boolean, default=True)  # 个性化语音自动播放开关
-    keep_talking = Column(Boolean, default=True)  # DEPRECATED: 该功能已弃用，保留字段仅为向后兼容
+    keep_talking = Column(Boolean, default=True)
     style_prompt = Column(Text, nullable=True, comment="风格提示词，仅订阅用户可设置")
     # 对应的，App chat settings 中使用的名字是 premium model (vs mode)
     # 实际 backend 这里的实现仅仅是提示词的变化。
@@ -35,3 +36,6 @@ class ChatSettings(Base):
 
     chat_id = Column(String, ForeignKey("chats.id"))
     chat = relationship("Chat", back_populates="settings")
+
+    # TODO: 增加 mode，enum (vanila, standard, premium)
+    # TODO: 增加 features，list[str] (keep_talking, style_prompt, auto_play_voice)
