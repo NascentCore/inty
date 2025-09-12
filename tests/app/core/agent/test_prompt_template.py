@@ -1,15 +1,4 @@
-from langchain_core.messages import HumanMessage
-from app.core.agent.agent import Agent
-import uuid
-from unittest.mock import MagicMock, patch
-
-import pytest
-from langchain_core.messages import HumanMessage
-
-from app.core.agent import prompt_template, prompts
-from app.core.agent.agent import Agent
-from app.core.agent.personalities import EVERYONE_HATES_YOU, EVERYONE_LIKES_YOU
-from app.core.config import global_config_loaded_from_config_yaml
+from app.core.agent import prompt_template
 
 
 def test_render_prompt_jinja2_template():

@@ -1,4 +1,4 @@
-from app.core.agent.personalities import EVERYONE_LIKES_YOU
+from app.core.prompting.personalities import EVERYONE_LIKES_YOU
 
 
 def test_personality_to_prompt():

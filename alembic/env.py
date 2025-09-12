@@ -1,56 +1,20 @@
-import sys
-from pathlib import Path
-import yaml
-
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 
 from alembic import context
 
-from logging.config import fileConfig
-
-# this is the Alembic Config object, which provides
-# access to the values within the .ini file in use.
-config = context.config
-
 from app.core.config import global_config_loaded_from_config_yaml
-
-db_url = global_config_loaded_from_config_yaml.database.url
-
-# 设置数据库URL
-config.set_main_option("sqlalchemy.url", db_url)
-
-# Interpret the config file for Python logging.
-# This line sets up loggers basically.
-if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
 
 # 导入所有模型，app/models/__init__.py 会将所有表定义连同 base 一起导入
 from app.models import Base
 
 target_metadata = Base.metadata
-
-# other values from the config, defined by the needs of env.py,
-# can be acquired:
-# my_important_option = config.get_main_option("my_important_option")
-# ... etc.
-
-
-def include_object(object, name, type_, reflected, compare_to):
-    """
-    Filter which objects Alembic should include in its operations.
-    This allows us to exclude tables that are not managed by Alembic.
-    """
-    # Exclude tables that are not managed by Alembic
-    if type_ == "table":
-        # Add any table names here that should be ignored
-        excluded_tables = {
-            # No excluded tables currently
-        }
-        if name in excluded_tables:
-            return False
-
-    return True
+db_url = global_config_loaded_from_config_yaml.database.url
+# this is the Alembic Config object, which provides
+# access to the values within the .ini file in use.
+config = context.config
+# 设置数据库URL
+config.set_main_option("sqlalchemy.url", db_url)
 
 
 def run_migrations_offline() -> None:
@@ -71,7 +35,6 @@ def run_migrations_offline() -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
-        include_object=include_object,
     )
 
     with context.begin_transaction():
@@ -94,7 +57,6 @@ def run_migrations_online() -> None:
         context.configure(
             connection=connection,
             target_metadata=target_metadata,
-            include_object=include_object,
         )
 
         with context.begin_transaction():

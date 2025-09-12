@@ -1,7 +1,6 @@
 from pydantic import BaseModel
 
-from app.core.agent import traits
-from app.core.agent.traits import Trait
+from app.core.prompting import traits
 
 
 class Personality(BaseModel):
@@ -34,7 +33,7 @@ class Personality(BaseModel):
     # so that users can immediately relate to the personality,
     # after these traits are revealed to them.
     # As documented in description, there is a gap between descriptions and traits.
-    traits: list[Trait]
+    traits: list[traits.Trait]
 
     # TODO: Add a list of key dimensions of personality.
     # It's a higher level regulation pattern layered on top of the traits.
