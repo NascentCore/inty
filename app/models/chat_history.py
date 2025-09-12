@@ -5,11 +5,13 @@ from sqlalchemy import Column, String, Integer, DateTime, UUID
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.sql import func
 
-from app.models import Base
+from app.db.base_class import Base
+
+TABLE_NAME = "chat_history"
 
 
 class ChatHistory(Base):
-    __tablename__ = "chat_history"
+    __tablename__ = TABLE_NAME
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     session_id = Column(UUID(as_uuid=True), nullable=False, index=True)
