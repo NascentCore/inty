@@ -15,3 +15,19 @@ Based on [AGENTS.md](https://agents.md/)
 - `scripts/` 运维、运营脚本
 - `devops/` Inty IntelliMate 运维相关代码
 - `docs/` 文档
+
+## Alembic
+
+Use the following to deprecate SqlAlchemey table column
+
+```python
+@property
+def col_to_deprecate(self):
+  warnings.warn(...)
+  return self._col_to_deprecate
+
+@col_to_deprecate.setter
+def col_to_deprecate(self, value):
+  warnings.warn(...)
+  self._col_to_deprecate = value
+```
