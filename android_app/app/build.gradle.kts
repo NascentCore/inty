@@ -115,5 +115,5 @@ dependencies {
     implementation(libs.bundles.compose.ui.bundle)
     
     // ===== Inty SDK =====
-    implementation("com.inty.api:inty-kotlin:0.2.0")
+    implementation("com.inty.api:inty-kotlin:0.3.0")
 }
