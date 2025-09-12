@@ -1,3 +1,5 @@
+from typing import List
+import warnings
 import sqlalchemy as sa
 from sqlalchemy import (
     Boolean,
@@ -9,9 +11,11 @@ from sqlalchemy import (
     UniqueConstraint,
 )
 from sqlalchemy.dialects.postgresql import JSON
+from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
+
 
 from app.models import Base
 
@@ -24,9 +28,16 @@ class Chat(Base):
     id = Column(String, primary_key=True, index=True)
     user_id = Column(String, ForeignKey("users.id"), nullable=False)
     agent_id = Column(String, ForeignKey("agents.id"), nullable=False)
+
+    # Why need this? Should deleted_at is not None enough?
     is_active = Column(Boolean, default=True)
 
+    system_messages = Column(
+        ARRAY(String), comment="System messages to be used for the chat"
+    )
+
     # 调试功能字段（通过全局配置控制是否启用）
+    # DEPRECATED: This field is not needed anymore.
     debug_messages = Column(
         JSON,
         nullable=True,
@@ -63,6 +74,22 @@ class Chat(Base):
         self._agent_name = None
         self._agent_avatar = None
         self._agent_is_deleted = None
+
+    @property
+    def debug_messages(self):
+        warnings.warn(
+            "debug_messages is deprecated and will be removed in the future. Use system_messages instead.",
+            DeprecationWarning,
+        )
+        return self._debug_messages
+
+    @debug_messages.setter
+    def debug_messages(self, value):
+        warnings.warn(
+            "debug_messages is deprecated and will be removed in the future. Use system_messages instead.",
+            DeprecationWarning,
+        )
+        self._debug_messages = value
 
     @property
     def last_message(self):

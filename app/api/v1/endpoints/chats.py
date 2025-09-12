@@ -1,6 +1,8 @@
 import uuid
 from typing import Any, List, Union
 
+from pydantic import BaseModel, Field
+
 from app.services.resource_service import delete_resource
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
@@ -22,15 +24,23 @@ from app.services.global_services import subscription_service
 from app.services.voice_service import voice_service
 from app.core.user_privilege.premium_check import is_eligible_for_premium
 
-# TODO: Prefix should be /chat instead of /chats.
+
 router = APIRouter(prefix="/chats", route_class=LoggerRoute)
 
 
 @router.get(
-    "/",
+    "/me",
     response_model=List[schemas.Chat],
     summary="Get current user's chat list",
-    description="Get current user's chat list",
+    description="Get current user's chats list",
+)
+@router.get(
+    "/",
+    response_model=List[schemas.Chat],
+    deprecated=True,
+    include_in_schema=False,
+    summary="[Deprecated, use /me instead, kept for v1.0.3 compatibility]",
+    description="Get current user's chats list",
 )
 async def list_chats(
     db: AsyncSession = Depends(deps.get_async_db),
@@ -49,11 +59,27 @@ async def list_chats(
     return chats
 
 
+class CreateChatRequest(BaseModel):
+    agent_id: str
+
+    system_messages: List[str] = Field(
+        ..., description="System messages to be used for the chat"
+    )
+
+
+@router.post(
+    "",
+    response_model=schemas.Chat,
+    summary="Create new chat",
+    description="Create a new chat",
+)
 @router.post(
     "/",
     response_model=schemas.Chat,
-    summary="Create new chat",
-    description="Create new chat",
+    deprecated=True,
+    include_in_schema=False,
+    summary="[Deprecated, use POST /api/v1/chats instead, kept for v1.0.3 compatibility]",
+    description="Create a new chat",
 )
 async def create_chat(
     *,

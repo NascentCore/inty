@@ -128,7 +128,7 @@ class ChatBase(BaseModel):
 
 
 class ChatCreate(ChatBase):
-    """创建聊天"""
+    """DEPRECATED: Use CreateChatRequest in api/v1/endpoints/chats.py instead"""
 
     agent_id: str
 
