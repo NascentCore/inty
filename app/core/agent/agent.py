@@ -13,7 +13,7 @@ from typing_extensions import deprecated
 from app.models.chat_settings import ChatSettings
 from app.core.agent import prompt_template, prompts
 from app.core.config import global_config_loaded_from_config_yaml
-from app.core.prompting.prompting import pick_prompt
+from app.core.prompting.prompting import SystemPromptingMode, pick_prompt
 from app.models import chat_history
 from app.services.cache_service import cache_service
 from app.utils.openai_client import (
@@ -293,8 +293,8 @@ class Agent:
         character_messages = self._build_character_context(user_name=user_name)
         system_messages.extend(character_messages)
 
-        if chat_settings and chat_settings.premium_mode:
-            # TODO: Consider remove this 
+        if chat_settings and chat_settings.sys_pmt_mode != SystemPromptingMode.UNSET:
+            # TODO: Consider remove this
             logger.debug(
                 f"Using premium mode prompt because of chat_settings.premium_mode: {chat_settings.premium_mode}"
             )

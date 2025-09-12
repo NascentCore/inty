@@ -12,6 +12,8 @@ class SystemPromptingMode(StrEnum):
 
     该生成提示词。
     """
+    # 指未设置系统提示词模式，调用者须自己决定采用何种方式来处理。
+    UNSET = "unset"
 
     # 指使用角色指定的提示词（无论是否空白）不进行任何额外的处理。
     STATIC = "static"
@@ -22,11 +24,12 @@ class SystemPromptingMode(StrEnum):
     # 指强制替换已有的提示词，如聊天风格提示词会替换为暧昧模式（Flirting）模式。
     OVERRIDE = "override"
 
-        
+
 def pick_prompt(sys_pmt_mode: SystemPromptingMode, default: str, configured: Optional[str] = None, override: Optional[str] = None) -> str:
     """
     Pick a prompt from a list of prompts.
     """
+    assert sys_pmt_mode != SystemPromptingMode.UNSET, "sys_pmt_mode is unset 无法处理"
     if sys_pmt_mode == SystemPromptingMode.STATIC:
         # 指使用角色指定的提示词（无论是否空白）不进行任何额外的处理。
         return configured
