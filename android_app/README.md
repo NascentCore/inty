@@ -3,6 +3,14 @@
 [![Build release APK and AAB](https://github.com/NascentCore/inty-app/actions/workflows/ci.yaml/badge.svg)](https://github.com/NascentCore/inty-app/actions/workflows/ci.yaml)
 [![Build and release debug APK](https://github.com/NascentCore/inty-app/actions/workflows/debug_release.yaml/badge.svg)](https://github.com/NascentCore/inty-app/actions/workflows/debug_release.yaml)
 
+## Repo 初始化
+
+```bash
+# 同步 android_app/library/inty_sdk git module
+# 不要进入这个目录修改
+git submodule update --init --recursive
+```
+
 ## Figma
 
 下载 SF font：https://developer.apple.com/fonts/ 下载后安装
