@@ -690,13 +690,6 @@ def _validate_character_card_fields(agent_in: schemas.AgentCreate):
         f"创建Agent字段使用情况 - character_card: {has_character_card}, prompt: {has_prompt}"
     )
 
-    # 如果既没有角色卡信息也没有prompt，抛出错误
-    if not has_character_card and not has_prompt:
-        raise HTTPException(
-            status_code=400,
-            detail="请提供角色设定信息：建议使用personality(性格)和scenario(背景)字段，或使用prompt字段",
-        )
-
 
 def _update_agent_in_db(agent_in: schemas.AgentUpdate, db_agent: models.Agent):
     # 验证更新数据

@@ -341,11 +341,6 @@ export const AgentManagePage: React.FC = () => {
         gender: "FEMALE",
         visibility: "PRIVATE",
         modelType: "default",
-        intro: "这是一个AI角色，具有独特的性格和特点。",
-        opening: "你好！很高兴认识你，我是你的AI助手。",
-        main_prompt: "你是一个友好、专业的AI助手，能够帮助用户解决各种问题。请保持礼貌、耐心，并根据用户的需求提供有用的建议。",
-        personality: "我是一个AI助手，具有以下特点：\n- 友好和善\n- 专业可靠\n- 乐于助人\n- 知识渊博\n- 耐心细致",
-        mode_prompt: "在对话中，我会：\n- 保持积极正面的态度\n- 提供准确有用的信息\n- 根据用户需求调整回答方式\n- 保持对话的连贯性和趣味性"
       };
       createForm.setFieldsValue(defaultValues);
     }, 100);
@@ -493,22 +488,20 @@ export const AgentManagePage: React.FC = () => {
         name="intro"
         label="角色简介"
         rules={[
-          { required: true, message: "请输入角色简介" },
-          { min: 1, max: 5000, message: "角色简介长度为1-5000个字符" },
+          { max: 5000, message: "角色简介长度不能超过5000个字符" },
         ]}
       >
-        <TextArea rows={3} placeholder="请输入角色简介" />
+        <TextArea rows={3} placeholder="请输入角色简介（可选）" />
       </Form.Item>
 
       <Form.Item
         name="opening"
         label="开场白"
         rules={[
-          { required: true, message: "请输入开场白" },
-          { min: 1, max: 5000, message: "开场白长度为1-5000个字符" },
+          { max: 5000, message: "开场白长度不能超过5000个字符" },
         ]}
       >
-        <TextArea rows={3} placeholder="请输入开场白" />
+        <TextArea rows={3} placeholder="请输入开场白（可选）" />
       </Form.Item>
 
       {/* 提示词配置 */}
@@ -518,33 +511,30 @@ export const AgentManagePage: React.FC = () => {
         name="main_prompt"
         label="主提示词"
         rules={[
-          { required: true, message: "请输入主提示词" },
-          { min: 1, max: 50000, message: "主提示词长度为1-50000个字符" },
+          { max: 50000, message: "主提示词长度不能超过50000个字符" },
         ]}
       >
-        <TextArea rows={5} placeholder="请输入主提示词" />
+        <TextArea rows={5} placeholder="请输入主提示词（可选）" />
       </Form.Item>
 
       <Form.Item
         name="personality"
         label="角色信息"
         rules={[
-          { required: true, message: "请输入角色信息" },
-          { min: 1, max: 50000, message: "角色信息长度为1-50000个字符" },
+          { max: 50000, message: "角色信息长度不能超过50000个字符" },
         ]}
       >
-        <TextArea rows={4} placeholder="请输入角色信息" />
+        <TextArea rows={4} placeholder="请输入角色信息（可选）" />
       </Form.Item>
 
       <Form.Item
         name="mode_prompt"
         label="聊天模式"
         rules={[
-          { required: true, message: "请输入聊天模式" },
-          { min: 1, max: 50000, message: "聊天模式长度为1-50000个字符" },
+          { max: 50000, message: "聊天模式长度不能超过50000个字符" },
         ]}
       >
-        <TextArea rows={4} placeholder="请输入聊天模式" />
+        <TextArea rows={4} placeholder="请输入聊天模式（可选）" />
       </Form.Item>
 
       {/* 模型配置 */}

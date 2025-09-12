@@ -18,7 +18,9 @@ from pydantic import AnyHttpUrl
 # config.yaml.example is a sample for development environment.
 
 GEMINI_2_5_FLASH = "google/gemini-2.5-flash"
+OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 API_V1_PREFIX = "/api/v1"
+
 
 @dataclass
 class LoggingConfig:
@@ -84,7 +86,7 @@ class AppConfig:
     # DEPRECATED: Do not use.
     debug_messages: bool = True
     # DEPRECATED: Do not use.
-    api_v1_prefix: str = "/api/v1"
+    api_v1_prefix: str = API_V1_PREFIX
     backend_cors_origins: List[AnyHttpUrl] = None
     version: str = "1.0.2"
     environment: str = "dev"
@@ -120,9 +122,10 @@ class EmbeddingConfig:
 
 @dataclass
 class AgentConfig:
+    api_key: str
+    langchain_api_key: str
     model: str = GEMINI_2_5_FLASH
-    base_url: str = "https://openrouter.ai/api/v1"
-    api_key: str = "<fill-in-config.yaml>"
+    base_url: str = OPENROUTER_BASE_URL
     temperature: float = 0.5
     max_tokens: int = 1000
     top_p: float = 1.0
@@ -131,20 +134,18 @@ class AgentConfig:
     presence_penalty: float = 0.0
     # DEPRECATED: Do not use.
     enable_debug_logging: bool = False  # 是否启用调试日志记录功能
-    vertex_image_model: str = "imagen-4.0-fast-generate-preview-06-06"
-    langchain_api_key: str = "<fill-in-key>"
-
+    vertex_image_model: str = "imagen-4.0-fast-generate-001"
 
 @dataclass
 class GCSConfig:
-    bucket: str = "inty"
+    bucket: str
     # 与 GooglePlayConfig.service_account_key 相同
-    credentials: str = "inty-backend-key.json"
+    credentials: str
 
 
 @dataclass
 class FirebaseConfig:
-    service_account_path: str = "inty-firebase-key.json"
+    service_account_path: str
 
 
 @dataclass
@@ -170,8 +171,7 @@ class GooglePlayConfig:
 @dataclass
 class ElevenLabsConfig:
     """ElevenLabs语音生成配置"""
-
-    api_key: str = "<fill-in-key>"
+    api_key: str
     model: str = "eleven_multilingual_v2"
     voice_id: str = "JBFqnCBsd6RMkjVDRZzb"  # 默认语音ID
     output_format: str = "mp3_44100_128"
@@ -226,7 +226,27 @@ def load_config(path: str) -> Config:
     )
 
 
+def _validate_config(config: Config):
+    """Validate config values"""
+    if not config.agent.api_key:
+        raise ValueError("agent.api_key is required")
+    if not config.agent.langchain_api_key:
+        raise ValueError("agent.langchain_api_key is required")
+    if not config.gcs.bucket:
+        raise ValueError("gcs.bucket is required")
+    if not config.gcs.credentials:
+        raise ValueError("gcs.credentials is required")
+    if not config.firebase.service_account_path:
+        raise ValueError("firebase.service_account_path is required")
+    if not config.google_play.service_account_key:
+        raise ValueError("google_play.service_account_key is required")
+    if not config.elevenlabs.api_key:
+        raise ValueError("elevenlabs.api_key is required")
+
+
 global_config_loaded_from_config_yaml = load_config("config.yaml")
+_validate_config(global_config_loaded_from_config_yaml)
+
 
 # 设置 LangSmith 环境变量用于支持 tracing，因为其只支持从环境变量读取设置，而非依赖注入。
 os.environ["LANGSMITH_TRACING_V2"] = "true"

@@ -13,9 +13,9 @@ from typing_extensions import deprecated
 from openai import OpenAI
 from langsmith import traceable, wrappers
 
-
 from app.core.config import global_config_loaded_from_config_yaml
 
+from loguru import logger
 
 class Role(StrEnum):
     USER = "user"
@@ -45,9 +45,14 @@ class ReasoningEffort(StrEnum):
 
 
 # These env vars has no arguments inputable to langchina api
-assert os.getenv("LANGCHAIN_API_KEY"), "LANGCHAIN_API_KEY must be set"
-assert os.getenv("LANGSMITH_TRACING_V2"), "LANGSMITH_TRACING_V2 must be set"
-assert os.getenv("LANGSMITH_PROJECT"), "LANGSMITH_PROJECT must be set"
+def _warn_env_var(env_var: str):
+    if not os.getenv(env_var):
+        logger.warning(f"{env_var} is not set")
+
+
+_warn_env_var("LANGCHAIN_API_KEY")
+_warn_env_var("LANGSMITH_TRACING_V2")
+_warn_env_var("LANGSMITH_PROJECT")
 
 
 def _create_openai_client():
