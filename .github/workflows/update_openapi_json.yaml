@@ -6,7 +6,7 @@ on:
     branches:
       - main
     paths:
-      - "app/api/v1/endpoints/**/*.py"
+      - "app/api/**/*.py"
       - ".github/workflows/update_openapi_json.yaml"
 
 env:
