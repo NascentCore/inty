@@ -3,11 +3,14 @@
   "openapi_spec": "./openapi.json",
   "stainless_config": "./stainless.yml",
   "targets": {
+    "kotlin": {
+      "output_path": "./sdks/kotlin"
+    }
     "python": {
-      "output_path": "./inty-python"
+      "output_path": "./sdks/python"
     },
     "typescript": {
-      "output_path": "./inty-typescript"
+      "output_path": "./sdks/typescript"
     }
   }
 }
