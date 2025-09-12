@@ -7,18 +7,6 @@ from sqlalchemy.sql import func
 from app.models import Base
 
 
-class ChatSettingsMode(StrEnum):
-    VANILLA = "vanilla"
-    STANDARD = "standard"
-    PREMIUM = "premium"
-
-
-class ChatSettingsFeature(StrEnum):
-    KEEP_TALKING = "keep_talking"
-    STYLE_PROMPT = "style_prompt"
-    AUTO_PLAY_VOICE = "auto_play_voice"
-
-
 class ChatSettings(Base):
     """聊天设置模型"""
 
