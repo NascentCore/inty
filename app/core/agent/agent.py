@@ -1,27 +1,19 @@
 import asyncio
-import json
-import logging
 import time
 from concurrent.futures import ThreadPoolExecutor
 from threading import Lock, RLock
 from typing import Any, Dict, List, Optional
 
-from jinja2 import Template as Jinja2Template
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_core.runnables import Runnable, RunnableLambda
 from langchain_postgres import PostgresChatMessageHistory
-from langgraph.graph import MessagesState
-from langgraph.managed import RemainingSteps
-from loguru import logger
-from openai import OpenAI
 from psycopg_pool import ConnectionPool
 from sqlalchemy import text
 from typing_extensions import deprecated
 
-from app import models
+from app.models.chat_settings import ChatSettings
 from app.core.agent import prompt_template, prompts
 from app.core.config import global_config_loaded_from_config_yaml
+from app.core.prompting.prompting import pick_prompt
 from app.models import chat_history
 from app.services.cache_service import cache_service
 from app.utils.openai_client import (
@@ -275,7 +267,7 @@ class Agent:
         )
 
     def build_system_messages(
-        self, user_profile: str, chat_settings: models.chat_settings.ChatSettings
+        self, user_profile: str, chat_settings: ChatSettings
     ) -> List[SystemMessage]:
         """构建系统消息列表，从state中获取用户信息，state 是 LangChain 运行时系统的一部分。"""
         user_name = self._extract_user_name_from_profile(user_profile)
@@ -290,7 +282,9 @@ class Agent:
         # is_char_user_created = not self.main_prompt or not self.mode_prompt
         # logger.debug(f"角色是否用户创建: {is_char_user_created}")
 
-        main_prompt = self._get_effective_main_prompt()
+        sys_pmt_mode = chat_settings.sys_pmt_mode
+
+        main_prompt = pick_prompt(sys_pmt_mode, self.main_prompt, self.mode_prompt)
         rendered_main_prompt = prompt_template.render_prompt_jinja2_template(
             tmpl=main_prompt, char=self.name, user=user_name
         )
@@ -300,7 +294,10 @@ class Agent:
         system_messages.extend(character_messages)
 
         if chat_settings and chat_settings.premium_mode:
-            logger.debug(f"Using premium mode prompt: {chat_settings.premium_mode}")
+            # TODO: Consider remove this 
+            logger.debug(
+                f"Using premium mode prompt because of chat_settings.premium_mode: {chat_settings.premium_mode}"
+            )
             mode_prompt = prompts.ROMANTIC_ROLEPLAY_PROMPT.mode_prompt
         else:
             logger.debug(f"Using normal mode prompt")
@@ -518,7 +515,7 @@ class Agent:
         session_id: str,
         messages: List[HumanMessage],
         user_profile: str = None,
-        chat_settings: models.chat_settings.ChatSettings = None,
+        chat_settings: ChatSettings = None,
     ) -> str:
         """
         优化版同步聊天方法，接受预计算的参数
@@ -659,7 +656,7 @@ class Agent:
         user_id: str,
         session_id: str,
         messages: List[HumanMessage],
-        chat_settings: models.chat_settings.ChatSettings = None,
+        chat_settings: ChatSettings = None,
     ) -> str:
         """封装了一个 sync 版本的聊天函数，通过将其运行在 event loop executor 里"""
         logger.debug(f"开始聊天处理 - Agent: {self.agent_id}, Session: {session_id}")

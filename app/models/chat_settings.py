@@ -4,6 +4,7 @@ from sqlalchemy import Boolean, Column, DateTime, ForeignKey, String, Text, Inde
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
+from app.core.prompting.prompting import SystemPromptingMode
 from app.models import Base
 
 
