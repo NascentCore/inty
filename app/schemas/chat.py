@@ -104,14 +104,11 @@ class ChatSettingsInDB(ChatSettingsBase):
         #     id = Column(Integer, primary_key=True)
         #     name = Column(String)
         #     email = Column(String)
-
         # class UserSchema(BaseModel):
         #     model_config = ConfigDict(from_attributes=True)
-
         #     id: int
         #     name: str
         #     email: str
-
         # # 可以直接从 SQLAlchemy 对象创建 Pydantic 模型
         # user_obj = session.query(UserModel).first()
         # user_schema = UserSchema.model_validate(user_obj)  # 自动映射属性
