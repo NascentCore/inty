@@ -95,6 +95,26 @@ class ChatSettingsInDB(ChatSettingsBase):
     updated_at: Optional[datetime] = None
 
     class Config:
+        # 当设置为 True 时，Pydantic 可以从具有属性的对象（如 SQLAlchemy 模型实例）创建模型实例
+        # 允许从 ORM 对象直接转换为 Pydantic 模型，而不需要手动映射每个字段
+        # 在 FastAPI 中，通常需要将数据库模型转换为 API 响应模型
+        # 例如，从 SQLAlchemy 模型创建 Pydantic 模型
+        # class UserModel(Base):
+        #     __tablename__ = "users"
+        #     id = Column(Integer, primary_key=True)
+        #     name = Column(String)
+        #     email = Column(String)
+
+        # class UserSchema(BaseModel):
+        #     model_config = ConfigDict(from_attributes=True)
+
+        #     id: int
+        #     name: str
+        #     email: str
+
+        # # 可以直接从 SQLAlchemy 对象创建 Pydantic 模型
+        # user_obj = session.query(UserModel).first()
+        # user_schema = UserSchema.model_validate(user_obj)  # 自动映射属性
         from_attributes = True
 
 
@@ -210,5 +230,3 @@ class ClearMessagesResponse(BaseModel):
     target_message: Optional[dict] = None  # 目标消息信息（当使用message_id时）
     deleted_time_range: Optional[dict] = None  # 删除的时间范围
     cutoff_timestamp: Optional[str] = None  # 截止时间戳（当使用timestamp时）
-
-
