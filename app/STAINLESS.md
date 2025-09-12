@@ -12,8 +12,19 @@
    [inty-kotlin](https://github.com/NascentCore/inty-kotlin)
    [inty-python](https://github.com/NascentCore/inty-python)
    [inty-typescript](https://github.com/NascentCore/inty-typescript)
+   更新产生的 Pull Request 需要手动合并到代码库，如 https://github.com/NascentCore/inty-kotlin/pull/3
    TODO: 此处 stainless 会启动这 3 个代码库上的 release 工作流，但是其中个别工作流会失败（release docker）导致无法自动提交 pull request；
    需要手动提交
-4. 提交 openapi.json 更新的 pull request
-5. 更新 inty-kotlin submodule [android_app/library/inty_sdk](android_app/library/inty_sdk),
+5. 合并前面创建的改动 app/openapi.json 的 pull request；如：https://github.com/NascentCore/inty/pull/448
+6. 更新 inty-kotlin submodule [android_app/library/inty_sdk](android_app/library/inty_sdk),
    该 module 来自 [inty-kotlin](https://github.com/NascentCore/inty-kotlin)
+   ```bash
+   cd android_app/library/inty_sdk
+   git checkout main
+   git pull
+   cd ...
+   git commit -m "更新 kotlin sdk"
+   git push
+   ```
+   创建 PR 并合并
+7. 更新 Android app 依赖到新的 kotlin sdk 版本 `android_app/app/build.gradle.kts`；如：https://github.com/NascentCore/inty/pull/453
