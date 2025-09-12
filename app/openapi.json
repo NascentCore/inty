@@ -1001,14 +1001,14 @@
                 }
             }
         },
-        "/api/v1/chats/": {
+        "/api/v1/chats/me": {
             "get": {
                 "tags": [
                     "chats"
                 ],
                 "summary": "Get current user's chat list",
-                "description": "Get current user's chat list",
-                "operationId": "list_chats_api_v1_chats__get",
+                "description": "Get current user's chats list",
+                "operationId": "list_chats_api_v1_chats_me_get",
                 "security": [
                     {
                         "Bearer": []
@@ -1046,7 +1046,7 @@
                                     "items": {
                                         "$ref": "#/components/schemas/Chat"
                                     },
-                                    "title": "Response List Chats Api V1 Chats  Get"
+                                    "title": "Response List Chats Api V1 Chats Me Get"
                                 }
                             }
                         }
@@ -1062,28 +1062,25 @@
                         }
                     }
                 }
-            },
+            }
+        },
+        "/api/v1/chats": {
             "post": {
                 "tags": [
                     "chats"
                 ],
                 "summary": "Create new chat",
-                "description": "Create new chat",
-                "operationId": "create_chat_api_v1_chats__post",
-                "security": [
-                    {
-                        "Bearer": []
-                    }
-                ],
+                "description": "Create a new chat",
+                "operationId": "create_chat_api_v1_chats_post",
                 "requestBody": {
-                    "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
                                 "$ref": "#/components/schemas/ChatCreate"
                             }
                         }
-                    }
+                    },
+                    "required": true
                 },
                 "responses": {
                     "200": {
@@ -1106,7 +1103,12 @@
                             }
                         }
                     }
-                }
+                },
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ]
             }
         },
         "/api/v1/chats/{chat_id}": {
@@ -3803,7 +3805,7 @@
                     "agent_id"
                 ],
                 "title": "ChatCreate",
-                "description": "\u521b\u5efa\u804a\u5929"
+                "description": "DEPRECATED: Use CreateChatRequest in api/v1/endpoints/chats.py instead"
             },
             "ChatMessage": {
                 "properties": {
