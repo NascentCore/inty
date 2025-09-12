@@ -67,24 +67,10 @@ jobs:
           echo "$VIRTUAL_ENV/bin" >> $GITHUB_PATH
           echo "VIRTUAL_ENV=$VIRTUAL_ENV" >> $GITHUB_ENV
 
-      - name: Populate config.yaml for Alembic
-        run: |
-          echo "app:" >> config.yaml
-          # Enable debug mode for testing.
-          echo "  debug: true" >> config.yaml
-          echo "database:" >> config.yaml
-          echo "  db: ${{ env.PG_DB }}" >> config.yaml
-          echo "  host: localhost" >> config.yaml
-          echo "  password: ${{ env.PG_PASSWORD }}" >> config.yaml
-          echo "  port: 5432" >> config.yaml
-          echo "  user: postgres" >> config.yaml
-
-      - name: Create inty-backend-key.json
-        run: |
-          echo "{}" > inty-backend-key.json
       - name: Run python tests
         run: |
-          # alembic upgrade head no need to run, as start.sh already includes it
+          cp config.yaml.example config.yaml
+          # alembic upgrade head: no need to run, as start.sh already includes it
           ./start.sh &
           # Wait for the server to start. If the time is too short, it needs to be increased.
           sleep 5
