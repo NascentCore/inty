@@ -86,6 +86,7 @@ class MainViewModel : BaseActivityViewModel() {
     private var _isLoading = MutableStateFlow(false)
     val isLoading = _isLoading.asStateFlow()
     private var hasMoreData = true
+    private var loadedPages = mutableSetOf<Int>()
 
     // Pagination state for user created agents
     private var currentUserAgentsPage = 0
@@ -181,6 +182,7 @@ class MainViewModel : BaseActivityViewModel() {
         EasyLog.log("getAgents - 开始加载推荐agents")
         currentPage = 1
         hasMoreData = true
+        loadedPages.clear()
 
         // 第一步：如果有缓存数据，先使用缓存数据快速展示
         val cachedAgents = AppStartupManager.cachedAgents.value
@@ -207,6 +209,7 @@ class MainViewModel : BaseActivityViewModel() {
         EasyLog.log("refreshAgents - Force refresh from network")
         currentPage = 1
         hasMoreData = true
+        loadedPages.clear()
         agentList.clear()
         loadAgents()
     }
@@ -304,8 +307,12 @@ class MainViewModel : BaseActivityViewModel() {
                     // 设置第一个agent给chatViewModel
                     chatViewModel?.setAgentInfo(agentList.firstOrNull())
                     
-                    // 设置当前页数
+                    // 设置当前页数和标记已加载的页面
                     currentPage = pageCount
+                    loadedPages.clear()
+                    for (i in 1..pageCount) {
+                        loadedPages.add(i)
+                    }
                 }
             } catch (e: Exception) {
                 EasyLog.log("loadInitialPagesSilently - 静默加载异常: ${e.message}")
@@ -320,6 +327,22 @@ class MainViewModel : BaseActivityViewModel() {
             loadAgents()
         } else {
             EasyLog.log("loadMoreAgents - 跳过加载: isLoading=${_isLoading.value}, hasMoreData=$hasMoreData")
+        }
+    }
+
+    /**
+     * 预加载下一页数据
+     * 当用户滚动到当前页时，开始预加载下一页
+     */
+    fun preloadNextPage() {
+        val nextPage = currentPage + 1
+        if (!_isLoading.value && hasMoreData && !loadedPages.contains(nextPage)) {
+            EasyLog.log("preloadNextPage - 开始预加载第${nextPage}页")
+            loadedPages.add(nextPage)
+            currentPage = nextPage
+            loadAgents()
+        } else {
+            EasyLog.log("preloadNextPage - 跳过预加载: isLoading=${_isLoading.value}, hasMoreData=$hasMoreData, pageLoaded=${loadedPages.contains(nextPage)}")
         }
     }
 
@@ -359,6 +382,9 @@ class MainViewModel : BaseActivityViewModel() {
                                     agentList.addAll(agents)
                                     EasyLog.log("loadAgents - 追加第${currentPage}页数据: ${agents.size}个，总计: ${agentList.size}个")
                                 }
+                                
+                                // 标记当前页为已加载
+                                loadedPages.add(currentPage)
                             }
                         } ?: run {
                             EasyLog.log("loadAgents - 第${currentPage}页返回空列表")

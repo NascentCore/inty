@@ -210,7 +210,16 @@ fun RecommendPage(
                     }
                 }
 
-                // 检测是否滚动到底部
+                // 检测是否滚动到当前页的末尾（触发预加载下一页）
+                val shouldPreloadNext by remember {
+                    derivedStateOf {
+                        val lastVisibleItem = gridState.layoutInfo.visibleItemsInfo.lastOrNull()
+                        // 当滚动到当前页的80%时开始预加载下一页
+                        lastVisibleItem?.index != null && lastVisibleItem.index >= (agents.size * 0.8).toInt()
+                    }
+                }
+
+                // 检测是否滚动到底部（传统加载更多逻辑）
                 val reachedBottom by remember {
                     derivedStateOf {
                         val lastVisibleItem = gridState.layoutInfo.visibleItemsInfo.lastOrNull()
@@ -218,7 +227,16 @@ fun RecommendPage(
                     }
                 }
 
-                // 触发加载更多，添加防抖机制
+                // 触发预加载下一页
+                LaunchedEffect(shouldPreloadNext) {
+                    if (shouldPreloadNext && agents.isNotEmpty() && !isLoading) {
+                        // 添加延迟，避免快速滚动时重复触发
+                        delay(100)
+                        onLoadMore()
+                    }
+                }
+
+                // 触发加载更多（保留原有逻辑作为备用）
                 LaunchedEffect(reachedBottom) {
                     if (reachedBottom && agents.isNotEmpty() && !isLoading) {
                         // 添加延迟，避免快速滚动时重复触发
