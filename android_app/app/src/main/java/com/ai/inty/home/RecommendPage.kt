@@ -1,5 +1,8 @@
 package com.ai.inty.home
 
+import kotlinx.coroutines.delay
+import kotlin.math.roundToInt
+
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -18,6 +21,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -30,9 +34,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.layout.ContentScale
-import coil3.compose.AsyncImagePainter
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
@@ -45,13 +49,12 @@ import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+
 import com.ai.inty.R
 import com.ai.inty.base.IntyImage
 import com.ai.inty.base.noRippleClickable
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.utils.calculateOptimalContentScale
-import kotlinx.coroutines.delay
-import kotlin.math.roundToInt
 
 /**
  * 推荐的ai伴侣
@@ -286,9 +289,10 @@ fun CharacterCard(
     } else {
         ContentScale.Crop // 默认值，当图片尺寸未知时
     }
-    
     Box(
-        modifier = modifier.size(width, height)
+        modifier = modifier
+            .size(width, height)
+            .clip(RoundedCornerShape(12.dp))
     ) {
         IntyImage(
             modifier = Modifier.fillMaxSize(),
