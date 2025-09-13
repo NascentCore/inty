@@ -283,7 +283,7 @@ private fun MessageTabContent(
             lastSysMsg?.let { sysMsg ->
                 item {
                     AuthClickable(onClick = onClickSysMsg) { authModifier ->
-                        ChatItem(
+                        ChatHistoryItem(
                             modifier = authModifier
                                 .fillMaxWidth()
                                 .background(color = Color(0x3378599A)),
@@ -307,7 +307,7 @@ private fun MessageTabContent(
                         key = { index, conversion -> "${conversion.agentId}_$index" }
                     ) { index, conversion ->
                         AuthClickable(onClick = { onClickConversationItem(conversion) }) { authModifier ->
-                            ChatItem(
+                            ChatHistoryItem(
                                 modifier = authModifier.fillMaxWidth(),
                                 conversation = conversion
                             )
@@ -472,7 +472,7 @@ val CHAT_ITEM_LAST_MESSAGE_FONT_SIZE = 14.sp
 val COLOR_SEMI_TRANS_WHITE = Color(0x8CFFFFFF)
 
 @Composable
-fun ChatItem(
+fun ChatHistoryItem(
     modifier: Modifier,
     conversation: ConversationItem,
     placeholderID: Int = R.drawable.app_icon,
@@ -702,5 +702,88 @@ fun LongPressUnfollowItem(
                 }
             }
         }
+    }
+}
+
+// Common constants for ActivityItem
+val ACTIVITY_ITEM_HEIGHT = 88.dp
+val ACTIVITY_ITEM_AVATAR_SIZE = 56.dp
+val ACTIVITY_ITEM_LEFT_PADDING = 16.dp
+val ACTIVITY_ITEM_RIGHT_PADDING = 13.dp
+val ACTIVITY_ITEM_AVATAR_TO_CONTENT_PADDING = 14.dp
+val ACTIVITY_ITEM_NAME_HEIGHT = 22.dp
+val ACTIVITY_ITEM_NAME_FONT_SIZE = 15.sp
+val ACTIVITY_ITEM_SUBTITLE_HEIGHT = 22.dp
+val ACTIVITY_ITEM_SUBTITLE_FONT_SIZE = 14.sp
+val ACTIVITY_ITEM_NAME_TO_SUBTITLE_PADDING = 4.dp
+val ACTIVITY_ITEM_TIMESTAMP_FONT_SIZE = 12.sp
+
+/**
+ * 通用活动项组件，提取了 ChatHistoryItem 和 FollowingAgentItem 的公共部分
+ */
+@Composable
+fun ActivityItem(
+    modifier: Modifier,
+    avatarUrl: String?,
+    name: String,
+    subtitle: String? = null,
+    timestamp: String? = null,
+    rightContent: @Composable (() -> Unit)? = null,
+    placeholderID: Int = R.drawable.app_icon,
+) {
+    Row(
+        modifier = modifier.height(ACTIVITY_ITEM_HEIGHT),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Spacer(Modifier.width(ACTIVITY_ITEM_LEFT_PADDING))
+
+        // 头像
+        IntyImage(
+            modifier = Modifier.size(ACTIVITY_ITEM_AVATAR_SIZE),
+            model = avatarUrl,
+            placeholder = painterResource(placeholderID)
+        )
+
+        Spacer(Modifier.width(ACTIVITY_ITEM_AVATAR_TO_CONTENT_PADDING))
+
+        // 内容区域
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                modifier = Modifier.height(ACTIVITY_ITEM_NAME_HEIGHT),
+                text = name,
+                fontSize = ACTIVITY_ITEM_NAME_FONT_SIZE,
+                fontWeight = FontWeight.SemiBold,
+                color = Color.White,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            
+            if (subtitle != null) {
+                Spacer(Modifier.height(ACTIVITY_ITEM_NAME_TO_SUBTITLE_PADDING))
+                Text(
+                    modifier = Modifier.height(ACTIVITY_ITEM_SUBTITLE_HEIGHT),
+                    text = subtitle,
+                    fontSize = ACTIVITY_ITEM_SUBTITLE_FONT_SIZE,
+                    color = Color.White.copy(0.55f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+
+        // 右侧信息
+        if (rightContent != null) {
+            rightContent()
+        } else if (timestamp != null) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = timestamp,
+                    fontSize = ACTIVITY_ITEM_TIMESTAMP_FONT_SIZE,
+                    color = Color.White.copy(0.55f),
+                )
+            }
+        }
+        
+        Spacer(Modifier.width(ACTIVITY_ITEM_RIGHT_PADDING))
     }
 }
