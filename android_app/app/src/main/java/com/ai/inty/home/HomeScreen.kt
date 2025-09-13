@@ -206,7 +206,7 @@ private fun handleTabSelection(
 @Composable
 private fun HomeContent(
     selectedTab: HomeTabIndex,
-    selectedConversationsTab: ConversationsPageTab,
+    selectedConversationsTab: ActivityPageSubTab,
     mainViewModel: MainViewModel,
     chatViewModel: ChatViewModel,
     viewModelFactory: ViewModelProvider.Factory,
@@ -282,7 +282,7 @@ private fun ChatTabContent(
 private fun ConversationsTabContent(
     mainViewModel: MainViewModel,
     chatViewModel: ChatViewModel,
-    selectedConversationsTab: ConversationsPageTab,
+    selectedConversationsTab: ActivityPageSubTab,
     context: Context,
 ) {
     val conversations by chatViewModel.conversations.collectAsState()
@@ -291,7 +291,7 @@ private fun ConversationsTabContent(
     val isLoadingConversations by chatViewModel.isLoadingConversations.collectAsState()
     val isLoadingFollowingAgents by mainViewModel.isLoadingFollowingAgents.collectAsState()
 
-    ConversationsPage(
+    ActivityPage(
         modifier = Modifier,
         selectedTab = selectedConversationsTab,
         conversations = conversations,

@@ -58,7 +58,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-enum class ConversationsPageTab {
+enum class ActivityPageSubTab {
     TabMessage,
     TabFollowing
 }
@@ -67,13 +67,13 @@ enum class ConversationsPageTab {
  * 主页面第二个tab，会话列表页面，包含关注和聊天列表
  */
 @Composable
-fun ConversationsPage(
+fun ActivityPage(
     modifier: Modifier,
-    selectedTab: ConversationsPageTab,
+    selectedTab: ActivityPageSubTab,
     conversations: List<ConversationItem>,
     followingAgents: List<AgentInfo>,
     lastSysMsg: SysMsgItem?,
-    onSelectTab: (ConversationsPageTab) -> Unit,
+    onSelectTab: (ActivityPageSubTab) -> Unit,
     onClickConversationItem: (ConversationItem) -> Unit,
     onClickSysMsg: () -> Unit,
     onClickFollowingAgent: (AgentInfo) -> Unit,
@@ -84,14 +84,11 @@ fun ConversationsPage(
     onLoadMoreFollowingAgents: (() -> Unit)? = null,
 ) {
     Box(modifier = modifier) {
-        // 背景图片
         IntyImage(
             modifier = Modifier.align(Alignment.TopEnd),
             model = R.drawable.notify_header_bg
         )
-
-        // 主内容
-        ConversationsPageContent(
+        Content(
             selectedTab = selectedTab,
             conversations = conversations,
             followingAgents = followingAgents,
@@ -109,16 +106,15 @@ fun ConversationsPage(
     }
 }
 
-/**
- * 会话页面主内容
- */
+val TAB_CONTENT_SPACER_HEIGHT = 22.dp
+
 @Composable
-private fun ConversationsPageContent(
-    selectedTab: ConversationsPageTab,
+private fun Content(
+    selectedTab: ActivityPageSubTab,
     conversations: List<ConversationItem>,
     followingAgents: List<AgentInfo>,
     lastSysMsg: SysMsgItem?,
-    onSelectTab: (ConversationsPageTab) -> Unit,
+    onSelectTab: (ActivityPageSubTab) -> Unit,
     onClickConversationItem: (ConversationItem) -> Unit,
     onClickSysMsg: () -> Unit,
     onClickFollowingAgent: (AgentInfo) -> Unit,
@@ -137,17 +133,15 @@ private fun ConversationsPageContent(
         Column(modifier = Modifier.fillMaxSize()) {
             Spacer(Modifier.height(innerPadding.calculateTopPadding() + 28.dp))
 
-            // Tab选择器
-            ConversationsTabSelector(
+            SubTabSelector(
                 selectedTab = selectedTab,
                 onSelectTab = onSelectTab
             )
 
-            Spacer(Modifier.height(22.dp))
+            Spacer(Modifier.height(TAB_CONTENT_SPACER_HEIGHT))
 
-            // 内容区域
             when (selectedTab) {
-                ConversationsPageTab.TabMessage -> {
+                ActivityPageSubTab.TabMessage -> {
                     MessageTabContent(
                         conversations = conversations,
                         lastSysMsg = lastSysMsg,
@@ -158,7 +152,7 @@ private fun ConversationsPageContent(
                     )
                 }
 
-                ConversationsPageTab.TabFollowing -> {
+                ActivityPageSubTab.TabFollowing -> {
                     FollowingTabContent(
                         followingAgents = followingAgents,
                         onClickAgent = onClickFollowingAgent,
@@ -172,52 +166,51 @@ private fun ConversationsPageContent(
     }
 }
 
-/**
- * Tab选择器组件
- */
 @Composable
-private fun ConversationsTabSelector(
-    selectedTab: ConversationsPageTab,
-    onSelectTab: (ConversationsPageTab) -> Unit,
+private fun SubTabSelector(
+    selectedTab: ActivityPageSubTab,
+    onSelectTab: (ActivityPageSubTab) -> Unit,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.Center,
     ) {
-        ConversationsPageTabItem(
+        ActivityPageSubTabItem(
             modifier = Modifier.noRippleClickable {
-                onSelectTab(ConversationsPageTab.TabMessage)
+                onSelectTab(ActivityPageSubTab.TabMessage)
             },
             text = stringResource(R.string.tab_message),
-            isSelected = selectedTab == ConversationsPageTab.TabMessage
+            isSelected = selectedTab == ActivityPageSubTab.TabMessage
         )
 
         Spacer(Modifier.width(15.dp))
 
-        ConversationsPageTabItem(
+        ActivityPageSubTabItem(
             modifier = Modifier.noRippleClickable {
-                onSelectTab(ConversationsPageTab.TabFollowing)
+                onSelectTab(ActivityPageSubTab.TabFollowing)
             },
             text = stringResource(R.string.tab_following),
-            isSelected = selectedTab == ConversationsPageTab.TabFollowing
+            isSelected = selectedTab == ActivityPageSubTab.TabFollowing
         )
     }
 }
 
-/**
- * Tab项组件
- */
+val TAB_ITEM_WIDTH = 120.dp
+val TAB_ITEM_HEIGHT = 38.dp
+val COLOR_ORANGE = Color(0xFFFF905D)
+val COLOR_PURPLE = Color(0xFFC122FF)
+
 @Composable
-fun ConversationsPageTabItem(
+fun ActivityPageSubTabItem(
     modifier: Modifier,
     text: String,
     isSelected: Boolean,
 ) {
-    Column(modifier = modifier.size(120.dp, 38.dp)) {
+    Column(modifier = modifier.size(TAB_ITEM_WIDTH, TAB_ITEM_HEIGHT)) {
         if (isSelected) {
             val colorStops = arrayOf(
-                0.0f to Color(0xFFFF905D),
-                1.0f to Color(0xFFC122FF)
+                0.0f to COLOR_ORANGE,
+                1.0f to COLOR_PURPLE
             )
             val brush = Brush.horizontalGradient(colorStops = colorStops)
 
@@ -290,7 +283,7 @@ private fun MessageTabContent(
             lastSysMsg?.let { sysMsg ->
                 item {
                     AuthClickable(onClick = onClickSysMsg) { authModifier ->
-                        ConversationItem(
+                        ChatItem(
                             modifier = authModifier
                                 .fillMaxWidth()
                                 .background(color = Color(0x3378599A)),
@@ -314,7 +307,7 @@ private fun MessageTabContent(
                         key = { index, conversion -> "${conversion.agentId}_$index" }
                     ) { index, conversion ->
                         AuthClickable(onClick = { onClickConversationItem(conversion) }) { authModifier ->
-                            ConversationItem(
+                            ChatItem(
                                 modifier = authModifier.fillMaxWidth(),
                                 conversation = conversion
                             )
@@ -455,35 +448,45 @@ private fun FollowingTabContent(
     }
 }
 
-/**
- * 会话项组件
- */
+val CHAT_ITEM_HEIGHT = 88.dp
+val CHARACTER_AVATAR_SIZE = 56.dp
+val CHARACTER_NAME_HEIGHT = 22.dp
+val CHARACTER_LAST_MESSAGE_HEIGHT = 22.dp
+val CHARACTER_INITIAL_FOLLOW_DATE_FONT_SIZE = 12.sp
+val CHARACTER_NEW_MESSAGE_DOT_HEIGHT = 22.dp
+val CHARACTER_DELETED_TEXT_FONT_SIZE = 15.sp
+val CHARACTER_NAME_TO_DELETED_TEXT_PADDING = 4.dp
+val CHARACTER_DELETED_TEXT_TO_LAST_MESSAGE_PADDING = 4.dp
+val CHARACTER_LAST_MESSAGE_TO_INITIAL_FOLLOW_DATE_PADDING = 4.dp
+val CHARACTER_INITIAL_FOLLOW_DATE_TO_NEW_MESSAGE_DOT_PADDING = 4.dp
+val CHARACTER_NEW_MESSAGE_DOT_TO_RIGHT_PADDING = 13.dp
+
 @Composable
-fun ConversationItem(
+fun ChatItem(
     modifier: Modifier,
     conversation: ConversationItem,
     placeholderID: Int = R.drawable.app_icon,
 ) {
     Row(
-        modifier = modifier.height(88.dp),
+        modifier = modifier.height(CHAT_ITEM_HEIGHT),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Spacer(Modifier.width(16.dp))
 
         // 头像
         IntyImage(
-            modifier = Modifier.size(56.dp),
+            modifier = Modifier.size(CHARACTER_AVATAR_SIZE),
             model = conversation.agentAvatar,
             placeholder = painterResource(placeholderID)
         )
 
-        Spacer(Modifier.width(14.dp))
+        Spacer(Modifier.width(CHARACTER_NAME_TO_DELETED_TEXT_PADDING))
 
         // 内容区域
         Column(modifier = Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    modifier = Modifier.height(22.dp),
+                    modifier = Modifier.height(CHARACTER_NAME_HEIGHT),
                     text = conversation.agentName,
                     fontSize = 15.sp,
                     fontWeight = FontWeight.SemiBold,
@@ -492,18 +495,18 @@ fun ConversationItem(
                     overflow = TextOverflow.Ellipsis
                 )
                 if (conversation.isDeleted) {
-                    Spacer(Modifier.width(4.dp))
+                    Spacer(Modifier.width(CHARACTER_DELETED_TEXT_TO_LAST_MESSAGE_PADDING))
                     Text(
                         text = "(deleted)",
-                        fontSize = 15.sp,
+                        fontSize = CHARACTER_DELETED_TEXT_FONT_SIZE,
                         color = Color(0x8CFFFFFF),
                     )
                 }
             }
 
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(CHARACTER_LAST_MESSAGE_TO_INITIAL_FOLLOW_DATE_PADDING))
             Text(
-                modifier = Modifier.height(22.dp),
+                modifier = Modifier.height(CHARACTER_LAST_MESSAGE_HEIGHT),
                 text = conversation.lastMessage,
                 fontSize = 14.sp,
                 color = Color.White.copy(0.55f),
@@ -516,12 +519,12 @@ fun ConversationItem(
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
                 text = conversation.getShowTime(),
-                fontSize = 12.sp,
+                fontSize = CHARACTER_INITIAL_FOLLOW_DATE_FONT_SIZE,
                 color = Color.White.copy(0.55f),
             )
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(CHARACTER_INITIAL_FOLLOW_DATE_TO_NEW_MESSAGE_DOT_PADDING))
             Box(
-                modifier = Modifier.height(22.dp),
+                modifier = Modifier.height(CHARACTER_NEW_MESSAGE_DOT_HEIGHT),
                 contentAlignment = Alignment.Center,
             ) {
                 if (conversation.isNew) {
@@ -529,9 +532,18 @@ fun ConversationItem(
                 }
             }
         }
-        Spacer(Modifier.width(13.dp))
+        Spacer(Modifier.width(CHARACTER_NEW_MESSAGE_DOT_TO_RIGHT_PADDING))
     }
 }
+
+val FOLLOWING_AGENT_ITEM_HEIGHT = 88.dp
+val FOLLOWING_AGENT_AVATAR_SIZE = 56.dp
+val FOLLOWING_AGENT_NAME_TO_LAST_MESSAGE_PADDING = 14.dp
+val FOLLOWING_AGENT_NAME_HEIGHT = 22.dp
+val FOLLOWING_AGENT_LAST_MESSAGE_HEIGHT = 22.dp
+val FOLLOWING_AGENT_LAST_MESSAGE_TO_INITIAL_FOLLOW_DATE_PADDING = 4.dp
+val FOLLOWING_AGENT_INITIAL_FOLLOW_DATE_FONT_SIZE = 12.sp
+val FOLLOWING_AGENT_INITIAL_FOLLOW_DATE_TO_RIGHT_PADDING = 13.dp
 
 /**
  * 关注代理项组件
@@ -542,24 +554,24 @@ fun FollowingAgentItem(
     agent: AgentInfo,
 ) {
     Row(
-        modifier = modifier.height(88.dp),
+        modifier = modifier.height(FOLLOWING_AGENT_ITEM_HEIGHT),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Spacer(Modifier.width(16.dp))
 
         // 头像
         IntyImage(
-            modifier = Modifier.size(56.dp),
+            modifier = Modifier.size(FOLLOWING_AGENT_AVATAR_SIZE),
             model = agent.avatar,
             placeholder = painterResource(R.drawable.app_icon)
         )
 
-        Spacer(Modifier.width(14.dp))
+        Spacer(Modifier.width(FOLLOWING_AGENT_NAME_TO_LAST_MESSAGE_PADDING))
 
         // 内容区域
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                modifier = Modifier.height(22.dp),
+                modifier = Modifier.height(FOLLOWING_AGENT_NAME_HEIGHT),
                 text = agent.name,
                 fontSize = 15.sp,
                 fontWeight = FontWeight.SemiBold,
@@ -567,9 +579,9 @@ fun FollowingAgentItem(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(FOLLOWING_AGENT_LAST_MESSAGE_TO_INITIAL_FOLLOW_DATE_PADDING))
             Text(
-                modifier = Modifier.height(22.dp),
+                modifier = Modifier.height(FOLLOWING_AGENT_LAST_MESSAGE_HEIGHT),
                 text = agent.opening,
                 fontSize = 14.sp,
                 color = Color.White.copy(0.55f),
@@ -582,13 +594,19 @@ fun FollowingAgentItem(
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
                 text = formatTimestampToDateTime(agent.createdAt),
-                fontSize = 12.sp,
+                fontSize = FOLLOWING_AGENT_INITIAL_FOLLOW_DATE_FONT_SIZE,
                 color = Color.White.copy(0.55f),
             )
         }
-        Spacer(Modifier.width(13.dp))
+        Spacer(Modifier.width(FOLLOWING_AGENT_INITIAL_FOLLOW_DATE_TO_RIGHT_PADDING))
     }
 }
+
+val LONG_PRESS_UNFOLLOW_ITEM_PADDING = 16.dp
+val LONG_PRESS_UNFOLLOW_ITEM_PADDING_HORIZONTAL = 20.dp
+val LONG_PRESS_UNFOLLOW_ITEM_PADDING_VERTICAL = 2.dp
+val LONG_PRESS_UNFOLLOW_ITEM_TEXT_FONT_SIZE = 16.sp
+val LONG_PRESS_UNFOLLOW_ITEM_SHAPE = 8.dp
 
 /**
  * 长按取消关注项组件
@@ -609,7 +627,7 @@ fun LongPressUnfollowItem(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(Color(0xFF1C1523))
-                .padding(16.dp),
+                .padding(LONG_PRESS_UNFOLLOW_ITEM_PADDING),
             contentAlignment = Alignment.Center
         ) {
             CircularProgressIndicator(
@@ -647,11 +665,11 @@ fun LongPressUnfollowItem(
                 onDismissRequest = { showPopup = false },
                 offset = longPressOffset,
                 containerColor = Color(0xFF2A1F2E),
-                shape = RoundedCornerShape(8.dp)
+                shape = RoundedCornerShape(LONG_PRESS_UNFOLLOW_ITEM_SHAPE)
             ) {
                 Row(
                     modifier = Modifier
-                        .padding(horizontal = 20.dp, vertical = 2.dp)
+                        .padding(horizontal = LONG_PRESS_UNFOLLOW_ITEM_PADDING_HORIZONTAL, vertical = LONG_PRESS_UNFOLLOW_ITEM_PADDING_VERTICAL)
                         .clickable(onClick = {
                             showPopup = false
                             isDeleting = true
@@ -663,12 +681,13 @@ fun LongPressUnfollowItem(
                             }
                         }),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(LONG_PRESS_UNFOLLOW_ITEM_PADDING_HORIZONTAL)
                 ) {
                     Text(
                         text = stringResource(R.string.unfollow),
                         color = Color.White,
-                        style = MaterialTheme.typography.bodyMedium
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontSize = LONG_PRESS_UNFOLLOW_ITEM_TEXT_FONT_SIZE
                     )
                 }
             }

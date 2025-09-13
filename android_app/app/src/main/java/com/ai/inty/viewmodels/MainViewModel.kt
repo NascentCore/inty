@@ -17,7 +17,7 @@ import com.ai.inty.beans.SysMsgItem
 import com.ai.inty.beans.TokenBean
 import com.ai.inty.beans.UserProfile
 import com.ai.inty.billing.BillingRepository
-import com.ai.inty.home.ConversationsPageTab
+import com.ai.inty.home.ActivityPageSubTab
 import com.ai.inty.net.IAgentApi
 import com.ai.inty.net.ICommonApi
 import com.ai.inty.net.IUserApi
@@ -99,7 +99,7 @@ class MainViewModel : BaseActivityViewModel() {
     private val _selectedTab = MutableStateFlow(HomeTabIndex.Chat)
     val selectedTab = _selectedTab.asStateFlow()
 
-    private val _selectedConversationsTab = MutableStateFlow(ConversationsPageTab.TabMessage)
+    private val _selectedConversationsTab = MutableStateFlow(ActivityPageSubTab.TabMessage)
     val selectedConversationsTab = _selectedConversationsTab.asStateFlow()
 
     private val _currentChatPageIndex = MutableStateFlow(0)
@@ -338,7 +338,7 @@ class MainViewModel : BaseActivityViewModel() {
                 chatViewModel?.getConversations()
 //                getSysMsgs()
                 // 如果切换到对话页面且当前选中关注列表，则刷新关注列表
-                if (_selectedConversationsTab.value == ConversationsPageTab.TabFollowing) {
+                if (_selectedConversationsTab.value == ActivityPageSubTab.TabFollowing) {
                     EasyLog.log("Switching to Conversations tab while following tab is selected - refreshing following agents")
                     getFollowingAgents()
                 }
@@ -360,10 +360,10 @@ class MainViewModel : BaseActivityViewModel() {
         chatViewModel.setAgentInfo(agentList.firstOrNull())
     }
 
-    fun onSelectConversationsTab(tab: ConversationsPageTab) {
+    fun onSelectConversationsTab(tab: ActivityPageSubTab) {
         _selectedConversationsTab.value = tab
         when (tab) {
-            ConversationsPageTab.TabFollowing -> {
+            ActivityPageSubTab.TabFollowing -> {
                 // 每次切换到关注列表时都刷新
                 EasyLog.log("Switching to following tab - refreshing following agents")
                 getFollowingAgents()
@@ -732,7 +732,7 @@ class MainViewModel : BaseActivityViewModel() {
     fun refreshFollowingListIfOnTab() {
         EasyLog.log("refreshFollowingListIfOnTab - selectedTab: ${_selectedTab.value}, selectedConversationsTab: ${_selectedConversationsTab.value}")
         if (_selectedTab.value == HomeTabIndex.Conversation &&
-            _selectedConversationsTab.value == ConversationsPageTab.TabFollowing
+            _selectedConversationsTab.value == ActivityPageSubTab.TabFollowing
         ) {
             EasyLog.log("Refreshing following agents due to follow state change")
             getFollowingAgents()
