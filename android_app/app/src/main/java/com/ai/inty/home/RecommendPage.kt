@@ -293,6 +293,8 @@ fun calculateOptimalRoundedCornerShapeSize(width: Dp, height: Dp): Dp {
     return (width + height) * percentage
 }
 
+const val CHARACTER_CARD_TEXT_PADDING = 16.dp
+
 @Composable
 fun CharacterCard(
     modifier: Modifier = Modifier,
@@ -341,7 +343,7 @@ fun CharacterCard(
         Text(
             modifier = Modifier
                 .align(Alignment.BottomStart)
-                .padding(12.dp),
+                .padding(CHARACTER_CARD_TEXT_PADDING),
             text = agentInfo.name,
             fontSize = 14.sp,
             fontWeight = FontWeight.SemiBold,
