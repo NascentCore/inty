@@ -302,8 +302,8 @@ val CHARACTER_CARD_TEXT_PADDING = 16.dp
 fun CharacterCard(
     modifier: Modifier = Modifier,
     agentInfo: AgentInfo,
-    width: Dp = 165.dp,
-    height: Dp = 220.dp
+    width: Dp,
+    height: Dp,
 ) {
     
     // 状态来存储图片尺寸
