@@ -83,7 +83,7 @@ object AppStartupManager {
     /**
      * 初始化启动管理器
      */
-    fun initialize(context: Context) {
+    fun initialize(@Suppress("UNUSED_PARAMETER") context: Context) {
         EasyLog.log("AppStartupManager - 开始初始化")
         _startupState.value = StartupState.Initializing
 
