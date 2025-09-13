@@ -332,7 +332,7 @@ fun CharacterCard(
     ) {
         IntyImage(
             modifier = Modifier.fillMaxSize(),
-            model = agentInfo.avatar,
+            model = agentInfo.background,
             placeholder = painterResource(R.drawable.app_icon),
             error = painterResource(R.drawable.app_icon),
             contentScale = optimalContentScale,
