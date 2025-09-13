@@ -1,6 +1,6 @@
 package com.ai.inty.home
 
-import android.content.res.Configuration
+import android.annotation.SuppressLint
 import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
 
@@ -66,7 +66,7 @@ private fun calculateSpacerWidth(containerWidth: Int): Int {
     return (containerWidth * spacerPercentage).toInt()
 }
 
-private fun getCharacterCardSize(containerWidth: Int): Pair<Int, Int> {
+private fun getCharacterCardSize(containerWidth: Int): AspectRatio {
     // Portrait aspect ratio
     val portraitAspectRatio = AspectRatio(9, 16)
     val spacerPercentage = 0.03f
@@ -74,9 +74,10 @@ private fun getCharacterCardSize(containerWidth: Int): Pair<Int, Int> {
     val columnCount = 2
     val subContainerWidth = (containerWidth - (columnCount + 1) * spacerWidth) / columnCount
     val subContainerHeight = getHeightByWidth(subContainerWidth, portraitAspectRatio)
-    return Pair(subContainerWidth, subContainerHeight)
+    return AspectRatio(subContainerWidth, subContainerHeight)
 }
 
+@SuppressLint("ConfigurationScreenWidthHeight")
 @Composable
 fun RecommendPage(
     modifier: Modifier,
@@ -228,7 +229,7 @@ fun RecommendPage(
 
                 // Calculate dynamic spacing based on container width
                 val containerWidth = LocalConfiguration.current.screenWidthDp
-                val characterCardWidth, characterCardHeight = getCharacterCardSize(containerWidth)
+                val characterCardSize = getCharacterCardSize(containerWidth)
                 val spacerWidth = calculateSpacerWidth(containerWidth)
                 val spacerHeight = getHeightByWidth(spacerWidth, PORTRAIT_ASPECT_RATIO)
                 
@@ -255,8 +256,8 @@ fun RecommendPage(
                                             onClickAgent(agent)
                                         },
                                     agentInfo = agent,
-                                    width = characterCardWidth.dp,
-                                    height = characterCardHeight.dp
+                                    width = characterCardSize.width.dp,
+                                    height = characterCardSize.height.dp
                                 )
                             }
                         }
