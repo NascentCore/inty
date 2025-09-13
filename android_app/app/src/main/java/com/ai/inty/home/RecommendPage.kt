@@ -61,8 +61,17 @@ import com.ai.inty.utils.AspectRatio
 import com.ai.inty.utils.getHeightByWidth
 import com.ai.inty.utils.CHARACTER_CARD_ASPECT_RATIO
 
+// 一个父容器内多个分布式子容器之间的间距相对父容器的比例
+const val SPACER_PERCENTAGE = 0.02f
+const val CHARACTERS_PER_PAGE = 10
+const val INITIAL_PAGE_COUNT = 3
+// 预加载下一页的缓冲区数量
+// 当前已经加载但是还未被显示的角色数量
+const val CHARACTERS_BUFFER_COUNT = 30
+const val COLUMN_COUNT = 2
+
 private fun calculateSpacerWidth(containerWidth: Int): Int {
-    val spacerPercentage = 0.03f
+    val spacerPercentage = SPACER_PERCENTAGE
     return (containerWidth * spacerPercentage).toInt()
 }
 
@@ -210,29 +219,11 @@ fun RecommendPage(
                     }
                 }
 
-                // 检测是否滚动到当前页的末尾（触发预加载下一页）
-                val shouldPreloadNext by remember {
-                    derivedStateOf {
-                        val lastVisibleItem = gridState.layoutInfo.visibleItemsInfo.lastOrNull()
-                        // 当滚动到当前页的80%时开始预加载下一页
-                        lastVisibleItem?.index != null && lastVisibleItem.index >= (agents.size * 0.8).toInt()
-                    }
-                }
-
                 // 检测是否滚动到底部（传统加载更多逻辑）
                 val reachedBottom by remember {
                     derivedStateOf {
                         val lastVisibleItem = gridState.layoutInfo.visibleItemsInfo.lastOrNull()
-                        lastVisibleItem?.index != null && lastVisibleItem.index >= agents.size - 3
-                    }
-                }
-
-                // 触发预加载下一页
-                LaunchedEffect(shouldPreloadNext) {
-                    if (shouldPreloadNext && agents.isNotEmpty() && !isLoading) {
-                        // 添加延迟，避免快速滚动时重复触发
-                        delay(100)
-                        onLoadMore()
+                        lastVisibleItem?.index != null && lastVisibleItem.index >= agents.size - CHARACTERS_BUFFER_COUNT
                     }
                 }
 
@@ -258,7 +249,7 @@ fun RecommendPage(
                         start = 16.dp,
                         end = 16.dp
                     ),
-                    columns = GridCells.Fixed(2),
+                    columns = GridCells.Fixed(COLUMN_COUNT),
                     horizontalArrangement = Arrangement.spacedBy(spacerWidth.dp),
                     verticalArrangement = Arrangement.spacedBy(spacerHeight.dp),
                 ) {
