@@ -395,11 +395,9 @@ class MainViewModel : BaseActivityViewModel() {
                             "getUserProfile failure: ${result.message}",
                             priority = EasyLog.ERROR
                         )
-//                        showNetworkAwareError(result.message)
                     }
                 }
             } catch (e: retrofit2.HttpException) {
-                // 专门处理HTTP异常
                 EasyLog.log(
                     "getUserProfile HTTP Exception: ${e.code()} - ${e.message()}",
                     EasyLog.ERROR

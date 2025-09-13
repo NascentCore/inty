@@ -11,4 +11,4 @@ fun getWidthByHeight(height: Int, aspectRatio: AspectRatio): Int {
 }
 
 val PORTRAIT_ASPECT_RATIO = AspectRatio(9, 16)
-val CHARACTER_CARD_ASPECT_RATIO = AspectRatio(9, 15)
+val CHARACTER_CARD_ASPECT_RATIO = AspectRatio(5, 6)
