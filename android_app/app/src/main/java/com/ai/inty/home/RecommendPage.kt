@@ -34,6 +34,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -55,10 +56,30 @@ import com.ai.inty.base.IntyImage
 import com.ai.inty.base.noRippleClickable
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.utils.calculateOptimalContentScale
+import com.ai.inty.utils.AspectRatio
+import com.ai.inty.utils.getHeightByWidth
 
-/**
- * 推荐的ai伴侣
- */
+private fun calculateSpacerWidth(containerWidth: Int): Dp {
+    val spacerPercentage = 0.03f
+    return (containerWidth * spacerPercentage).dp
+}
+
+private fun calculateSpacerHeight(containerHeight: Int): Dp {
+    val spacerPercentage = 0.03f
+    return (containerHeight * spacerPercentage).dp
+}
+
+private fun getCharacterCardSize(containerWidth: Int): Pair<Int, Int> {
+    // Portrait aspect ratio
+    val portraitAspectRatio = AspectRatio(9, 16)
+    val spacerPercentage = 0.03f
+    val spacerWidth = containerWidth * spacerPercentage
+    val columnCount = 2
+    val subContainerWidth = (containerWidth - (columnCount + 1) * spacerWidth) / columnCount
+    val subContainerHeight = getHeightByWidth(subContainerWidth, portraitAspectRatio)
+    return Pair(subContainerWidth, subContainerHeight)
+}
+
 @Composable
 fun RecommendPage(
     modifier: Modifier,
@@ -208,6 +229,12 @@ fun RecommendPage(
                     }
                 }
 
+                // Calculate dynamic spacing based on container width
+                val containerWidth = LocalConfiguration.current.screenWidthDp
+                val spacerWidth = calculateSpacerWidth(containerWidth)
+                val containerHeight = LocalConfiguration.current.screenHeightDp
+                val spacerHeight = calculateSpacerHeight(containerHeight)
+                
                 LazyVerticalGrid(
                     state = gridState,
                     modifier = Modifier.padding(
@@ -216,8 +243,8 @@ fun RecommendPage(
                         end = 16.dp
                     ),
                     columns = GridCells.Fixed(2),
-                    horizontalArrangement = Arrangement.spacedBy(13.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(spacerWidth),
+                    verticalArrangement = Arrangement.spacedBy(spacerHeight),
                 ) {
                     runCatching {
                         if (agents.isNotEmpty()) {
