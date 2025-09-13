@@ -40,6 +40,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.Velocity
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ai.inty.R
@@ -217,14 +218,15 @@ fun RecommendPage(
                             itemsIndexed(
                                 items = agents,
                                 key = { index, agent -> "${agent.id}_$index" }
-                            ) { index, agent ->
+                            ) { _, agent ->
                                 CharacterCard(
                                     modifier = Modifier
-                                        .size(165.dp, 220.dp)
                                         .noRippleClickable {
                                             onClickAgent(agent)
                                         },
-                                    agentInfo = agent
+                                    agentInfo = agent,
+                                    width = 165.dp,
+                                    height = 220.dp
                                 )
                             }
                         }
@@ -259,11 +261,13 @@ fun RecommendPage(
 
 @Composable
 fun CharacterCard(
-    modifier: Modifier,
-    agentInfo: AgentInfo
+    modifier: Modifier = Modifier,
+    agentInfo: AgentInfo,
+    width: Dp = 165.dp,
+    height: Dp = 220.dp
 ) {
     Box(
-        modifier = modifier.size(165.dp, 220.dp)
+        modifier = modifier.size(width, height)
     ) {
         IntyImage(
             modifier = Modifier.fillMaxSize(),
