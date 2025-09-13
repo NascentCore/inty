@@ -104,13 +104,13 @@ Uploading key is under app signing settings:
 
 1. Home (HomeTabIndex.Home) - The main chat interface where users can interact with AI agents
    * 聊天：用户左右滑动浏览推荐的 AI 角色
-1. Activity (HomeTabIndex.Activity) - Shows conversation history and system messages
+2. Activity (HomeTabIndex.Activity) - Shows conversation history and system messages
    * 聊天历史和关注角色
-1. Create (HomeTabIndex.Create) - Special tab that navigates to role creation or login
+3. Create (HomeTabIndex.Create) - Special tab that navigates to role creation or login
    * 创建 AI 角色
-1. Explore (HomeTabIndex.Explore) - Recommendation page showing suggested AI agents
+4. Explore (HomeTabIndex.Explore) - Recommendation page showing suggested AI agents
    * AI 角色浏览
-1. My (HomeTabIndex.My) - User profile and personal settings page
+5. My (HomeTabIndex.My) - User profile and personal settings page
    * 我的：设置、创建的角色列表等
 
 ## 🏗️ 架构设计
