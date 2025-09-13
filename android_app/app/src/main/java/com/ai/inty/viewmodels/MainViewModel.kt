@@ -45,9 +45,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 
-const val CHARACTER_PER_PAGE = 10
-const val INITIAL_PAGE_COUNT = 3
-
 enum class HomeTabIndex {
     Chat,
     Conversation,
@@ -221,7 +218,7 @@ class MainViewModel : BaseActivityViewModel() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 EasyLog.log("loadAgentsSilently - 开始静默刷新第一页数据")
-                val result = agentApi.recommendAgents(1, CHARACTER_PER_PAGE)
+                val result = agentApi.recommendAgents(1, 10)
 
                 when (result) {
                     is HttpResult.Success -> {
@@ -230,7 +227,7 @@ class MainViewModel : BaseActivityViewModel() {
                                 // 静默更新UI和缓存，不显示加载状态
                                 agentList.clear()
                                 agentList.addAll(agents)
-                                EasyLog.log("loadAgentsSilently - 静默更新成功: ${agents.size}个", priority = EasyLog.DEBUG)
+                                EasyLog.log("loadAgentsSilently - 静默更新成功: ${agents.size}个")
 
                                 // 更新缓存
                                 AgentCacheManager.cacheAgents(agents)
@@ -239,32 +236,30 @@ class MainViewModel : BaseActivityViewModel() {
                                 // 设置第一个agent给chatViewModel
                                 chatViewModel?.setAgentInfo(agentList.firstOrNull())
                             } else {
-                                EasyLog.log("loadAgentsSilently - 第一页数据为空", priority = EasyLog.DEBUG)
+                                EasyLog.log("loadAgentsSilently - 第一页数据为空")
                             }
                         }
                     }
 
                     is HttpResult.Failure -> {
-                        EasyLog.log("loadAgentsSilently - 静默刷新失败: ${result.message}", priority = EasyLog.DEBUG)
+                        EasyLog.log("loadAgentsSilently - 静默刷新失败: ${result.message}")
                     }
                 }
             } catch (e: Exception) {
-                EasyLog.log("loadAgentsSilently - 静默刷新异常: ${e.message}", priority = EasyLog.DEBUG)
+                EasyLog.log("loadAgentsSilently - 静默刷新异常: ${e.message}")
             }
         }
     }
 
-
     fun loadMoreAgents() {
         if (!_isLoading.value && hasMoreData) {
-            EasyLog.log("loadMoreAgents - 开始加载第${currentPage + 1}页", priority = EasyLog.DEBUG)
+            EasyLog.log("loadMoreAgents - 开始加载第${currentPage + 1}页")
             currentPage++
             loadAgents()
         } else {
-            EasyLog.log("loadMoreAgents - 跳过加载: isLoading=${_isLoading.value}, hasMoreData=$hasMoreData", priority = EasyLog.DEBUG)
+            EasyLog.log("loadMoreAgents - 跳过加载: isLoading=${_isLoading.value}, hasMoreData=$hasMoreData")
         }
     }
-
 
 
     /**
@@ -313,12 +308,22 @@ class MainViewModel : BaseActivityViewModel() {
 
                     is HttpResult.Failure -> {
                         EasyLog.log("loadAgents - 第${currentPage}页加载失败: ${result.message}")
-                        hasMoreData = false
+                        // 如果加载失败，回退页码
+                        if (currentPage > 1) {
+                            currentPage--
+                        }
+                        // 如果是第一页失败，可能需要重新加载
+                        if (currentPage == 1) {
+                            EasyLog.log("loadAgents - 第一页加载失败，可能需要重新加载")
+                        }
                     }
                 }
             } catch (e: Exception) {
                 EasyLog.log("loadAgents - 第${currentPage}页加载异常: ${e.message}")
-                hasMoreData = false
+                // 如果加载失败，回退页码
+                if (currentPage > 1) {
+                    currentPage--
+                }
             }
             _isLoading.update { false }
 
@@ -395,9 +400,12 @@ class MainViewModel : BaseActivityViewModel() {
                             "getUserProfile failure: ${result.message}",
                             priority = EasyLog.ERROR
                         )
+//                        showNetworkAwareError(result.message)
                     }
                 }
             } catch (e: retrofit2.HttpException) {
+                // 专门处理HTTP异常
+                val errorMessage = handleHttpException(e, "user")
                 EasyLog.log(
                     "getUserProfile HTTP Exception: ${e.code()} - ${e.message()}",
                     EasyLog.ERROR
