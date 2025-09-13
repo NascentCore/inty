@@ -8,7 +8,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "start": "vite --mode production",
+    "start": "npm run build-sdk && vite --mode production",
+    "build-sdk": "cd inty_sdk && ./scripts/bootstrap --silent && (test -f ./node_modules/.bin/tsc-multi || (echo 'tsc-multi binary missing, reinstalling...' && yarn add tsc-multi@https://github.com/stainless-api/tsc-multi/releases/download/v1.1.9/tsc-multi.tgz --force)) && yarn build",
     "type-check": "tsc --noEmit",
     "lint:check": "eslint . --ext .ts,.tsx",
     "lint:format": "npx prettier --write \"**/*.{ts,tsx}\"",
@@ -17,7 +18,7 @@
   "dependencies": {
     "@ant-design/icons": "^5.2.6",
     "antd": "^5.12.0",
-    "inty": "git+ssh://git@github.com:NascentCore/inty-typescript.git",
+    "inty": "file:./inty_sdk",
     "prettier": "^3.6.2",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
