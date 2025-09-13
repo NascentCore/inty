@@ -67,7 +67,6 @@ const val CHARACTERS_PER_PAGE = 10
 const val INITIAL_PAGE_COUNT = 3
 // 预加载下一页的缓冲区数量
 // 当前已经加载但是还未被显示的角色数量
-const val CHARACTERS_BUFFER_COUNT = 30
 const val COLUMN_COUNT = 2
 
 private fun calculateSpacerWidth(containerWidth: Int): Int {
@@ -219,15 +218,15 @@ fun RecommendPage(
                     }
                 }
 
-                // 检测是否滚动到底部（传统加载更多逻辑）
+                // 检测是否滚动到底部
                 val reachedBottom by remember {
                     derivedStateOf {
                         val lastVisibleItem = gridState.layoutInfo.visibleItemsInfo.lastOrNull()
-                        lastVisibleItem?.index != null && lastVisibleItem.index >= agents.size - CHARACTERS_BUFFER_COUNT
+                        lastVisibleItem?.index != null && lastVisibleItem.index >= agents.size - 3
                     }
                 }
 
-                // 触发加载更多（保留原有逻辑作为备用）
+                // 触发加载更多，添加防抖机制
                 LaunchedEffect(reachedBottom) {
                     if (reachedBottom && agents.isNotEmpty() && !isLoading) {
                         // 添加延迟，避免快速滚动时重复触发

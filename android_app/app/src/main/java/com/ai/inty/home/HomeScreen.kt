@@ -354,7 +354,7 @@ private fun SuggestTabContent(
                 .navigation(context)
         },
         onLoadMore = {
-            mainViewModel.preloadNextPage()
+            mainViewModel.loadMoreAgents()
         },
         onRefresh = {
             mainViewModel.refreshAgents()
