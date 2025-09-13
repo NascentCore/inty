@@ -336,7 +336,6 @@ class MainViewModel : BaseActivityViewModel() {
         when (_selectedTab.value) {
             HomeTabIndex.Conversation -> {
                 chatViewModel?.getConversations()
-//                getSysMsgs()
                 // 如果切换到对话页面且当前选中关注列表，则刷新关注列表
                 if (_selectedConversationsTab.value == ActivityPageSubTab.TabFollowing) {
                     EasyLog.log("Switching to Conversations tab while following tab is selected - refreshing following agents")
