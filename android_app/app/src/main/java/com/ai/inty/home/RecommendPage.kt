@@ -265,6 +265,12 @@ fun RecommendPage(
     }
 }
 
+const val ROUNDED_CORNER_SHAPE_PERCENTAGE = 0.03f
+fun calculateOptimalRoundedCornerShapeSize(width: Dp, height: Dp): Dp {
+    val percentage = ROUNDED_CORNER_SHAPE_PERCENTAGE
+    return (width + height) * percentage
+}
+
 @Composable
 fun CharacterCard(
     modifier: Modifier = Modifier,
@@ -272,6 +278,7 @@ fun CharacterCard(
     width: Dp = 165.dp,
     height: Dp = 220.dp
 ) {
+    
     // 状态来存储图片尺寸
     var imageWidth by remember { mutableStateOf<Int?>(null) }
     var imageHeight by remember { mutableStateOf<Int?>(null) }
@@ -289,10 +296,12 @@ fun CharacterCard(
     } else {
         ContentScale.Crop // 默认值，当图片尺寸未知时
     }
+
+    val roundedCornerShapeSize = calculateOptimalRoundedCornerShapeSize(width, height)
     Box(
         modifier = modifier
             .size(width, height)
-            .clip(RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(roundedCornerShapeSize))
     ) {
         IntyImage(
             modifier = Modifier.fillMaxSize(),
