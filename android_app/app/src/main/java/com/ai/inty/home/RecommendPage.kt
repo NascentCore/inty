@@ -59,7 +59,7 @@ import com.ai.inty.beans.AgentInfo
 import com.ai.inty.utils.calculateOptimalContentScale
 import com.ai.inty.utils.AspectRatio
 import com.ai.inty.utils.getHeightByWidth
-import com.ai.inty.utils.PORTRAIT_ASPECT_RATIO
+import com.ai.inty.utils.CHARACTER_CARD_ASPECT_RATIO
 
 private fun calculateSpacerWidth(containerWidth: Int): Int {
     val spacerPercentage = 0.03f
@@ -68,7 +68,7 @@ private fun calculateSpacerWidth(containerWidth: Int): Int {
 
 private fun getCharacterCardSize(containerWidth: Int): AspectRatio {
     // Portrait aspect ratio
-    val portraitAspectRatio = AspectRatio(9, 16)
+    val portraitAspectRatio = CHARACTER_CARD_ASPECT_RATIO
     val spacerPercentage = 0.03f
     val spacerWidth = (containerWidth * spacerPercentage).toInt()
     val columnCount = 2
@@ -231,7 +231,7 @@ fun RecommendPage(
                 val containerWidth = LocalConfiguration.current.screenWidthDp
                 val characterCardSize = getCharacterCardSize(containerWidth)
                 val spacerWidth = calculateSpacerWidth(containerWidth)
-                val spacerHeight = getHeightByWidth(spacerWidth, PORTRAIT_ASPECT_RATIO)
+                val spacerHeight = getHeightByWidth(spacerWidth, CHARACTER_CARD_ASPECT_RATIO)
                 
                 LazyVerticalGrid(
                     state = gridState,
