@@ -37,6 +37,7 @@ import api, { logError } from "../services/api";
 import modelCacheService from "../services/modelCache";
 import type { Agent, AgentCreateRequest, OpenRouterModel } from "../types";
 import LLMConfigForm from "../components/common/LLMConfigForm";
+import { AgentCreateParams, AgentUpdateParams } from "inty_sdk/src/resources/api/v1/ai";
 
 const { TextArea } = Input;
 const { Search } = Input;
@@ -211,7 +212,7 @@ export const AgentManagePage: React.FC = () => {
 
       setSaveLoading(true);
 
-      const agentData: AgentCreateRequest = {
+      const agentData: AgentCreateParams = {
         ...values,
       };
 
@@ -262,7 +263,7 @@ export const AgentManagePage: React.FC = () => {
       const values = await editForm.validateFields();
       setSaveLoading(true);
 
-      const updateData = {
+      const updateData: AgentUpdateParams = {
         ...values,
       };
 
