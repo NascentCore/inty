@@ -727,8 +727,8 @@ val ACTIVITY_ITEM_ADDITIONAL_CONTENT_PADDING = 4.dp
 @Composable
 fun ActivityItem(
     modifier: Modifier,
-    name: String,
     avatarUrl: String,
+    name: String,
     subtitle: String,
     rightText: String,
     rightAdditionalContent: @Composable (() -> Unit)? = null,
@@ -760,18 +760,16 @@ fun ActivityItem(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
-            
-            if (subtitle != null) {
-                Spacer(Modifier.height(ACTIVITY_ITEM_NAME_TO_SUBTITLE_PADDING))
-                Text(
-                    modifier = Modifier.height(ACTIVITY_ITEM_SUBTITLE_HEIGHT),
-                    text = subtitle,
-                    fontSize = ACTIVITY_ITEM_SUBTITLE_FONT_SIZE,
-                    color = Color.White.copy(0.55f),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
+
+            Spacer(Modifier.height(ACTIVITY_ITEM_NAME_TO_SUBTITLE_PADDING))
+            Text(
+                modifier = Modifier.height(ACTIVITY_ITEM_SUBTITLE_HEIGHT),
+                text = subtitle,
+                fontSize = ACTIVITY_ITEM_SUBTITLE_FONT_SIZE,
+                color = Color.White.copy(0.55f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
         }
 
         // 右侧信息
