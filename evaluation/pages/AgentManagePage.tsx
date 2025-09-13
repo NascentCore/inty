@@ -301,8 +301,7 @@ export const AgentManagePage: React.FC = () => {
       setEditAvatarPreview("");
       loadAgents();
     } catch (error) {
-
-      message.error("更新智能体失败，请重试");
+      message.error("更新智能体失败，error: ${error}");
     } finally {
       setSaveLoading(false);
     }
