@@ -71,7 +71,6 @@ fun HomeScreen(
 ) {
     val selectedTab = mainViewModel.selectedTab.collectAsState()
     val selectedConversationsTab = mainViewModel.selectedConversationsTab.collectAsState()
-    val agentList = mainViewModel.agentList
     val context = LocalContext.current
 
     Scaffold(
