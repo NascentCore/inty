@@ -1,5 +1,9 @@
 package com.ai.inty.home
 
+import android.annotation.SuppressLint
+import kotlinx.coroutines.delay
+import kotlin.math.roundToInt
+
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -18,6 +22,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -29,8 +34,11 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
@@ -40,18 +48,36 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.Velocity
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+
 import com.ai.inty.R
 import com.ai.inty.base.IntyImage
 import com.ai.inty.base.noRippleClickable
 import com.ai.inty.beans.AgentInfo
-import kotlinx.coroutines.delay
-import kotlin.math.roundToInt
+import com.ai.inty.utils.calculateOptimalContentScale
+import com.ai.inty.utils.AspectRatio
+import com.ai.inty.utils.getHeightByWidth
+import com.ai.inty.utils.CHARACTER_CARD_ASPECT_RATIO
 
-/**
- * 推荐的ai伴侣
- */
+private fun calculateSpacerWidth(containerWidth: Int): Int {
+    val spacerPercentage = 0.03f
+    return (containerWidth * spacerPercentage).toInt()
+}
+
+private fun getCharacterCardSize(containerWidth: Int): AspectRatio {
+    // Portrait aspect ratio
+    val portraitAspectRatio = CHARACTER_CARD_ASPECT_RATIO
+    val spacerPercentage = 0.03f
+    val spacerWidth = (containerWidth * spacerPercentage).toInt()
+    val columnCount = 2
+    val subContainerWidth = (containerWidth - (columnCount + 1) * spacerWidth) / columnCount
+    val subContainerHeight = getHeightByWidth(subContainerWidth, portraitAspectRatio)
+    return AspectRatio(subContainerWidth, subContainerHeight)
+}
+
+@SuppressLint("ConfigurationScreenWidthHeight")
 @Composable
 fun RecommendPage(
     modifier: Modifier,
@@ -201,6 +227,12 @@ fun RecommendPage(
                     }
                 }
 
+                // Calculate dynamic spacing based on container width
+                val containerWidth = LocalConfiguration.current.screenWidthDp
+                val characterCardSize = getCharacterCardSize(containerWidth)
+                val spacerWidth = calculateSpacerWidth(containerWidth)
+                val spacerHeight = getHeightByWidth(spacerWidth, CHARACTER_CARD_ASPECT_RATIO)
+                
                 LazyVerticalGrid(
                     state = gridState,
                     modifier = Modifier.padding(
@@ -209,22 +241,23 @@ fun RecommendPage(
                         end = 16.dp
                     ),
                     columns = GridCells.Fixed(2),
-                    horizontalArrangement = Arrangement.spacedBy(13.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(spacerWidth.dp),
+                    verticalArrangement = Arrangement.spacedBy(spacerHeight.dp),
                 ) {
                     runCatching {
                         if (agents.isNotEmpty()) {
                             itemsIndexed(
                                 items = agents,
                                 key = { index, agent -> "${agent.id}_$index" }
-                            ) { index, agent ->
-                                RecommendPageItem(
+                            ) { _, agent ->
+                                CharacterCard(
                                     modifier = Modifier
-                                        .size(165.dp, 220.dp)
                                         .noRippleClickable {
                                             onClickAgent(agent)
                                         },
-                                    agentInfo = agent
+                                    agentInfo = agent,
+                                    width = characterCardSize.width.dp,
+                                    height = characterCardSize.height.dp
                                 )
                             }
                         }
@@ -257,24 +290,63 @@ fun RecommendPage(
     }
 }
 
+const val ROUNDED_CORNER_SHAPE_PERCENTAGE = 0.03f
+fun calculateOptimalRoundedCornerShapeSize(width: Dp, height: Dp): Dp {
+    val percentage = ROUNDED_CORNER_SHAPE_PERCENTAGE
+    return (width + height) * percentage
+}
+
+val CHARACTER_CARD_TEXT_PADDING = 16.dp
+
 @Composable
-fun RecommendPageItem(
-    modifier: Modifier,
-    agentInfo: AgentInfo
+fun CharacterCard(
+    modifier: Modifier = Modifier,
+    agentInfo: AgentInfo,
+    width: Dp,
+    height: Dp,
 ) {
+    
+    // 状态来存储图片尺寸
+    var imageWidth by remember { mutableStateOf<Int?>(null) }
+    var imageHeight by remember { mutableStateOf<Int?>(null) }
+    
+    // 计算最佳的 ContentScale
+    val currentImageWidth = imageWidth
+    val currentImageHeight = imageHeight
+    val optimalContentScale = if (currentImageWidth != null && currentImageHeight != null && currentImageWidth > 0 && currentImageHeight > 0) {
+        calculateOptimalContentScale(
+            containerWidth = width.value.roundToInt(),
+            containerHeight = height.value.roundToInt(),
+            imageWidth = currentImageWidth,
+            imageHeight = currentImageHeight
+        )
+    } else {
+        ContentScale.Crop // 默认值，当图片尺寸未知时
+    }
+
+    val roundedCornerShapeSize = calculateOptimalRoundedCornerShapeSize(width, height)
     Box(
-        modifier = modifier.size(165.dp, 220.dp)
+        modifier = modifier
+            .size(width, height)
+            .clip(RoundedCornerShape(roundedCornerShapeSize))
     ) {
         IntyImage(
             modifier = Modifier.fillMaxSize(),
             model = agentInfo.avatar,
             placeholder = painterResource(R.drawable.app_icon),
             error = painterResource(R.drawable.app_icon),
+            contentScale = optimalContentScale,
+            onSuccess = { state ->
+                // 当图片加载成功时，获取图片尺寸
+                val drawable = state.painter
+                imageWidth = drawable.intrinsicSize.width.toInt()
+                imageHeight = drawable.intrinsicSize.height.toInt()
+            }
         )
         Text(
             modifier = Modifier
                 .align(Alignment.BottomStart)
-                .padding(12.dp),
+                .padding(CHARACTER_CARD_TEXT_PADDING),
             text = agentInfo.name,
             fontSize = 14.sp,
             fontWeight = FontWeight.SemiBold,
