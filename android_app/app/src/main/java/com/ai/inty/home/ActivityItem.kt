@@ -31,7 +31,7 @@ fun ActivityItem(
     ) {
         Spacer(Modifier.width(ACTIVITY_ITEM_LEFT_PADDING))
 
-        // 头像
+        // TODO: 头像，应该重用 chatTopBar 里的 avatar 显示组件
         IntyImage(
             modifier = Modifier.size(ACTIVITY_ITEM_AVATAR_SIZE),
             model = avatarUrl,
