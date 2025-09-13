@@ -21,13 +21,26 @@ from app.models import Base
 
 
 class Chat(Base):
-    """聊天模型"""
+    """
+    存储用户和Agent的聊天会话的设定信息，具体聊天消息存储于 chat_history 表
+    可以保存 user & agent ID，用户进行聊天时，查询 user agent 信息，构建 system messages
+    进行聊天。
 
+    也可以保存 system messages，聊天时，直接将 system messages & chat messages。
+    """
     __tablename__ = "chats"
 
     id = Column(String, primary_key=True, index=True)
-    user_id = Column(String, ForeignKey("users.id"), nullable=False)
-    agent_id = Column(String, ForeignKey("agents.id"), nullable=False)
+    name = Column(String, nullable=True, comment="Chat name")
+    user_id = Column(
+        String, ForeignKey("users.id"), nullable=False, comment="The ID of the user"
+    )
+    agent_id = Column(
+        String,
+        ForeignKey("agents.id"),
+        nullable=False,
+        comment="The ID of the agent chatting with the user",
+    )
 
     # Why need this? Should deleted_at is not None enough?
     is_active = Column(Boolean, default=True)

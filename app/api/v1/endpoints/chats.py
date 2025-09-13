@@ -16,7 +16,7 @@ from app.api.utils.logger_route import LoggerRoute
 from app.core.agent.agent import agent_manager
 from app.core.chat import generate_chat_stream
 from app.core.config import global_config_loaded_from_config_yaml
-from app.schemas.chat import ChatCompletionRequest
+from app.schemas.chat import ChatCompletionRequest, ChatCreate
 from app.schemas.response import BusinessErrorCode, create_business_error_response
 from app.services import agent_service, chat_history_service, chat_service
 from app.services.chat_service import generate_session_id
@@ -59,14 +59,6 @@ async def list_chats(
     return chats
 
 
-class CreateChatRequest(BaseModel):
-    agent_id: str
-
-    system_messages: List[str] = Field(
-        ..., description="System messages to be used for the chat"
-    )
-
-
 @router.post(
     "",
     response_model=schemas.Chat,
@@ -84,7 +76,7 @@ class CreateChatRequest(BaseModel):
 async def create_chat(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
-    chat_in: schemas.ChatCreate,
+    chat_in: ChatCreate,
     current_user: schemas.User = Depends(deps.get_current_active_user),
 ) -> Any:
     """

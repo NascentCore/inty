@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import List, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.models.message import MessageType, SenderType
 
@@ -131,6 +131,10 @@ class ChatCreate(ChatBase):
     """DEPRECATED: Use CreateChatRequest in api/v1/endpoints/chats.py instead"""
 
     agent_id: str
+    system_messages: List[str] = Field(
+        ..., description="System messages to be used for the chat"
+    )
+    name: Optional[str] = None
 
 
 class ChatUpdate(ChatBase):

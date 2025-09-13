@@ -177,7 +177,7 @@ async def create_chat(
         if not agent:
             raise HTTPException(status_code=404, detail="Agent not found")
 
-        db_chat = models.Chat(id=chat_id, **chat_in.dict(), user_id=user_id)
+        db_chat = models.Chat(id=chat_id, **chat_in.model_dump(), user_id=user_id)
 
         db.add(db_chat)
         await db.commit()
@@ -972,5 +972,3 @@ async def save_debug_messages(
         logger.error(f"保存调试信息失败，session_id: {session_id}, 错误: {str(e)}")
         await db.rollback()
         # 不抛出异常，避免影响正常的聊天流程
-
-
