@@ -15,3 +15,7 @@ Based on [AGENTS.md](https://agents.md/)
 - `scripts/` 运维、运营脚本
 - `devops/` Inty IntelliMate 运维相关代码
 - `docs/` 文档
+
+## Android App
+
+- 只支持 portrait 显示；不支持 landscape 显示，无需在改动时考虑兼容 landscape 显示。

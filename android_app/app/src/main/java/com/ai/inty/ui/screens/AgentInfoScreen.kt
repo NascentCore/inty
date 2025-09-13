@@ -53,6 +53,7 @@ import com.ai.inty.base.AntiClick
 import com.ai.inty.base.IntyImage
 import com.ai.inty.base.noRippleClickable
 import com.ai.inty.beans.AgentInfo
+import com.ai.inty.chat.AgentBackground
 import com.ai.inty.ui.theme.BackGround
 import com.ai.inty.viewmodels.AgentInfoViewModel
 import com.inty.utils.storage.IntySetting
@@ -98,85 +99,90 @@ internal fun AiAgentInfoScreen(
     var showBottomSheet by remember { mutableStateOf(false) }
     val bottomSheetState = rememberModalBottomSheetState()
 
-    Scaffold(
-        modifier = Modifier.fillMaxSize(),
-        containerColor = Color.Transparent,
-        topBar = {
-            CenterAlignedTopAppBar(
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors()
-                    .copy(containerColor = Color.Transparent),
-                title = {
-                },
-                navigationIcon = {
-                    Image(
-                        modifier = Modifier
-                            .padding(horizontal = 12.dp)
-                            .noRippleClickable {
-                                onBack()
-                            },
-                        painter = painterResource(R.drawable.back),
-                        contentDescription = null,
-                    )
-
-                },
-                actions = {
-                    Image(
-                        modifier = Modifier
-                            .padding(horizontal = 12.dp)
-                            .noRippleClickable {
-                                showBottomSheet = true
-                            },
-                        painter = painterResource(R.drawable.icon_more2),
-                        contentDescription = null,
-                    )
-                }
-            )
-        },
-    ) { innerPadding ->
-        IntyImage(
-            modifier = Modifier.fillMaxWidth(),
-            model = if (LocalInspectionMode.current) R.drawable.img_one_body_dialog else agent.avatar,
+    Box(modifier = Modifier.fillMaxSize()) {
+        // 角色背景图片
+        AgentBackground(
+            agentInfo = agent,
+            modifier = Modifier.fillMaxSize(),
+            showGradients = false  // 角色主页不需要渐变遮罩
         )
-        Column {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(160.dp)
-                    .background(
-                        brush = Brush.verticalGradient(
-                            listOf(
-                                Color(0xFF000000),
-                                Color(0x00000000)
+        
+        Scaffold(
+            modifier = Modifier.fillMaxSize(),
+            containerColor = Color.Transparent,
+            topBar = {
+                CenterAlignedTopAppBar(
+                    colors = TopAppBarDefaults.centerAlignedTopAppBarColors()
+                        .copy(containerColor = Color.Transparent),
+                    title = {
+                    },
+                    navigationIcon = {
+                        Image(
+                            modifier = Modifier
+                                .padding(horizontal = 12.dp)
+                                .noRippleClickable {
+                                    onBack()
+                                },
+                            painter = painterResource(R.drawable.back),
+                            contentDescription = null,
+                        )
+
+                    },
+                    actions = {
+                        Image(
+                            modifier = Modifier
+                                .padding(horizontal = 12.dp)
+                                .noRippleClickable {
+                                    showBottomSheet = true
+                                },
+                            painter = painterResource(R.drawable.icon_more2),
+                            contentDescription = null,
+                        )
+                    }
+                )
+            },
+        ) { innerPadding ->
+            Column {
+                // 顶部渐变遮罩
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(160.dp)
+                        .background(
+                            brush = Brush.verticalGradient(
+                                listOf(
+                                    Color(0xFF000000),
+                                    Color(0x00000000)
+                                )
                             )
                         )
-                    )
-            )
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-            )
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(
-                        brush = Brush.verticalGradient(
-                            listOf(
-                                Color(0x00000000),
-                                BackGround.copy(.3f),
-                                BackGround.copy(.7f),
-                                BackGround.copy(.9f),
-                                BackGround, BackGround,
-                            ),
-                            endY = 900f
-                        )
-                    )
-            ) {
-                Column(
+                )
+                Box(
                     modifier = Modifier
-                        .padding(innerPadding)
-                        .verticalScroll(rememberScrollState()),
+                        .fillMaxWidth()
+                        .weight(1f)
+                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(
+                            brush = Brush.verticalGradient(
+                                listOf(
+                                    Color(0x00000000),
+                                    BackGround.copy(.3f),
+                                    BackGround.copy(.7f),
+                                    BackGround.copy(.9f),
+                                    BackGround, BackGround,
+                                ),
+                                endY = 900f
+                            )
+                        )
                 ) {
+                    Column(
+                        modifier = Modifier
+                            .padding(innerPadding)
+                            .verticalScroll(rememberScrollState()),
+                    ) {
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -296,6 +302,7 @@ internal fun AiAgentInfoScreen(
                     }
 
                     Spacer(Modifier.height(60.dp))
+                    }
                 }
             }
         }
