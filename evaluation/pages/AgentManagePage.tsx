@@ -192,6 +192,18 @@ export const AgentManagePage: React.FC = () => {
     return false;
   };
 
+  // helper function to assign llm_config from form values
+  const assignLlmConfig = (values: any) => {
+    return {
+      model: values.model,
+      temperature: values.temperature,
+      max_tokens: values.max_tokens,
+      top_p: values.top_p,
+      frequency_penalty: values.frequency_penalty,
+      presence_penalty: values.presence_penalty,
+    };
+  };
+
   // 创建智能体
   const handleCreateAgent = async () => {
     try {
@@ -199,9 +211,9 @@ export const AgentManagePage: React.FC = () => {
 
       setSaveLoading(true);
 
-      let avatarUrl = "";
-      let backgroundUrl = "";
-      let backgroundImages: string[] = [];
+      const agentData: AgentCreateRequest = {
+        ...values,
+      };
 
       // 如果有头像文件，先上传
       if (avatarFile) {
@@ -213,46 +225,30 @@ export const AgentManagePage: React.FC = () => {
           if (uploadResult.code !== 200) {
             throw new Error("头像上传失败");
           }
-          avatarUrl = uploadResult.data.avatar_url
-          backgroundUrl = uploadResult.data.url
-          if (backgroundUrl) {
-            backgroundImages = [backgroundUrl];
-          }
+          agentData.avatar = uploadResult.data.avatar_url
+          agentData.background = uploadResult.data.url
+          agentData.background_images = [uploadResult.data.url];
         } catch (e: any) {
           logError(`头像上传失败: ${e.message}`);
           return;
         }
       }
 
-      const agentData: AgentCreateRequest = {
-        ...values,
-        avatar: avatarUrl,
-        background: backgroundUrl,
-        background_images: backgroundImages,
-      };
-
       // 如果选择了自定义模型，添加LLM配置
       if (values.modelType === "custom") {
-        agentData.llm_config = {
-          model: values.model,
-          temperature: values.temperature,
-          max_tokens: values.max_tokens,
-          top_p: values.top_p,
-          frequency_penalty: values.frequency_penalty,
-          presence_penalty: values.presence_penalty,
-        };
+        agentData.llm_config = assignLlmConfig(values);
       }
 
-      await api.agents.create(agentData);
+      await api.inty.api.v1.ai.agents.create(agentData);
       message.success("智能体创建成功");
+
       setCreateModalVisible(false);
       createForm.resetFields();
       setAvatarFile(null);
       setAvatarPreview("");
       loadAgents(true);
     } catch (error) {
-
-      message.error("创建智能体失败，请重试");
+      message.error("创建智能体失败，error: ${error}");
     } finally {
       setSaveLoading(false);
     }
@@ -266,9 +262,9 @@ export const AgentManagePage: React.FC = () => {
       const values = await editForm.validateFields();
       setSaveLoading(true);
 
-      let avatarUrl = currentAgent.avatar || "";
-      let backgroundUrl = currentAgent.background || "";
-      let backgroundImages = currentAgent.background_images || [];
+      const updateData = {
+        ...values,
+      };
 
       // 如果有新头像文件，先上传
       if (editAvatarFile) {
@@ -277,34 +273,18 @@ export const AgentManagePage: React.FC = () => {
             file: editAvatarFile,
             cropping_avatar: true
           });
-          // Extract URLs from the response data
-          const responseData = uploadResult.data!;
-          avatarUrl = responseData.avatar_url;
-          backgroundUrl = responseData.url;
-          backgroundImages = [backgroundUrl];
+          updateData.avatar = uploadResult.data.avatar_url;
+          updateData.background = uploadResult.data.url;
+          updateData.background_images = [uploadResult.data.url];
         } catch (uploadError: any) {
           logError(`头像上传失败，请重试，错误信息：${uploadError.message}`);
           return;
         }
       }
 
-      const updateData = {
-        ...values,
-        avatar: avatarUrl,
-        background: backgroundUrl,
-        background_images: backgroundImages,
-      };
-
       // 如果选择了自定义模型，添加LLM配置
       if (values.modelType === "custom") {
-        updateData.llm_config = {
-          model: values.model,
-          temperature: values.temperature,
-          max_tokens: values.max_tokens,
-          top_p: values.top_p,
-          frequency_penalty: values.frequency_penalty,
-          presence_penalty: values.presence_penalty,
-        };
+        updateData.llm_config = assignLlmConfig(values);
       }
 
       if (values.modelType === "default") {
