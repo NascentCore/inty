@@ -90,8 +90,8 @@ export const AgentManagePage: React.FC = () => {
 
       setLoading(true);
       try {
-        const response = await api.agents.list({
-          limit: 100, // 先获取所有数据，前端分页
+        const response = await api.inty.api.v1.ai.agents.list({
+          limit: 1000, // 先获取所有数据，前端分页
         });
 
         let filteredAgents = response || [];
