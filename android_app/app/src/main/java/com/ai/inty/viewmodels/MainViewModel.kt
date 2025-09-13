@@ -26,6 +26,7 @@ import com.ai.inty.net.IUserApi2
 import com.ai.inty.utils.AgentCacheManager
 import com.ai.inty.utils.AppStartupManager
 import com.ai.inty.utils.CredentialManagerHelper.clearCredentialState
+import com.ai.inty.utils.ImagePreloadManager
 import com.ai.inty.utils.SystemMessageCacheManager
 import com.ai.inty.utils.UserProfileManager
 import com.architecture.httplib.core.HttpResult
@@ -281,6 +282,10 @@ class MainViewModel : BaseActivityViewModel() {
                     // 更新当前页码和是否有更多数据
                     currentPage = pageCount
                     hasMoreData = hasMoreDataFound
+                    
+                    // 预加载角色图片
+                    EasyLog.log("loadInitialPagesSilently - 开始预加载角色图片")
+                    ImagePreloadManager.preloadAllAgentImages(allAgents)
                 } else {
                     EasyLog.log("loadInitialPagesSilently - 所有页面数据为空")
                 }
@@ -351,6 +356,10 @@ class MainViewModel : BaseActivityViewModel() {
                                 agentList.addAll(agents)
                                 currentPage = page
                                 EasyLog.log("preloadNextPage - 第${page}页预加载成功: ${agents.size}个，总计: ${agentList.size}个")
+                                
+                                // 预加载角色图片
+                                EasyLog.log("preloadNextPage - 开始预加载第${page}页角色图片")
+                                ImagePreloadManager.preloadAllAgentImages(agents)
                             } else {
                                 hasMoreData = false
                                 EasyLog.log("preloadNextPage - 第${page}页数据为空，没有更多数据")
@@ -408,6 +417,10 @@ class MainViewModel : BaseActivityViewModel() {
                                 
                                 // 标记页面已加载
                                 loadedPages.add(currentPage)
+                                
+                                // 预加载角色图片
+                                EasyLog.log("loadAgents - 开始预加载第${currentPage}页角色图片")
+                                ImagePreloadManager.preloadAllAgentImages(agents)
                             }
                         } ?: run {
                             EasyLog.log("loadAgents - 第${currentPage}页返回空列表")

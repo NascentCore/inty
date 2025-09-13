@@ -6,6 +6,7 @@ import com.ai.inty.beans.UserProfile
 import com.ai.inty.net.IAgentApi
 import com.ai.inty.net.IUserApi2
 import com.architecture.httplib.core.HttpResult
+import com.ai.inty.utils.ImagePreloadManager
 import com.inty.utils.log.EasyLog
 import com.inty.utils.storage.IntySetting
 import com.therouter.TheRouter
@@ -294,6 +295,10 @@ object AppStartupManager {
                 AgentCacheManager.cacheAgents(allAgents)
                 _cachedAgents.value = allAgents
                 EasyLog.log("AppStartupManager - 更新推荐agents成功: ${allAgents.size}个")
+                
+                // 预加载角色图片
+                EasyLog.log("AppStartupManager - 开始预加载角色图片")
+                ImagePreloadManager.preloadAllAgentImages(allAgents)
             }
         } catch (e: Exception) {
             EasyLog.log("AppStartupManager - 更新推荐agents异常: ${e.message}", EasyLog.ERROR)

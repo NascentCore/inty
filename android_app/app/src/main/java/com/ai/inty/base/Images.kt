@@ -22,10 +22,12 @@ import coil3.memory.MemoryCache
 import coil3.request.ImageRequest
 import com.inty.utils.AppEnv
 
+// Global ImageLoader instance for preloading
+private var _globalImageLoader: ImageLoader? = null
 
 fun initImageLoader() {
     val context = AppEnv.context
-    ImageLoader.Builder(context)
+    _globalImageLoader = ImageLoader.Builder(context)
         .memoryCache {
             MemoryCache.Builder()
                 .maxSizePercent(context, 0.25)
@@ -38,6 +40,10 @@ fun initImageLoader() {
                 .build()
         }
         .build()
+}
+
+fun getGlobalImageLoader(): ImageLoader {
+    return _globalImageLoader ?: throw IllegalStateException("ImageLoader not initialized. Call initImageLoader() first.")
 }
 
 
