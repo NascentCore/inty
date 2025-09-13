@@ -68,9 +68,9 @@ npm i --no-audit --no-fund --loglevel=error --no-progress
 if [ ! -d "inty_sdk/dist" ]; then
     log "Installing inty SDK dependencies..."
     pushd inty_sdk
-    npm i --no-audit --no-fund --loglevel=error --no-progress
+    yarn install --silent
     log "Building inty SDK..."
-    npm run build
+    yarn build
     popd
 fi
 
