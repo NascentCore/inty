@@ -63,8 +63,6 @@ import com.ai.inty.utils.CHARACTER_CARD_ASPECT_RATIO
 
 // 一个父容器内多个分布式子容器之间的间距相对父容器的比例
 const val SPACER_PERCENTAGE = 0.02f
-const val CHARACTERS_PER_PAGE = 10
-const val INITIAL_PAGE_COUNT = 3
 // 预加载下一页的缓冲区数量
 // 当前已经加载但是还未被显示的角色数量
 const val COLUMN_COUNT = 2
@@ -239,7 +237,6 @@ fun RecommendPage(
                 val containerWidth = LocalConfiguration.current.screenWidthDp
                 val characterCardSize = getCharacterCardSize(containerWidth)
                 val spacerWidth = calculateSpacerWidth(containerWidth)
-                val spacerHeight = getHeightByWidth(spacerWidth, CHARACTER_CARD_ASPECT_RATIO)
                 
                 LazyVerticalGrid(
                     state = gridState,
@@ -250,7 +247,7 @@ fun RecommendPage(
                     ),
                     columns = GridCells.Fixed(COLUMN_COUNT),
                     horizontalArrangement = Arrangement.spacedBy(spacerWidth.dp),
-                    verticalArrangement = Arrangement.spacedBy(spacerHeight.dp),
+                    verticalArrangement = Arrangement.spacedBy(spacerWidth.dp),
                 ) {
                     runCatching {
                         if (agents.isNotEmpty()) {

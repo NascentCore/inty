@@ -46,6 +46,7 @@ import kotlinx.coroutines.withContext
 
 
 const val CHARACTER_PER_PAGE = 10
+const val INITIAL_PAGE_COUNT = 3
 
 enum class HomeTabIndex {
     Chat,
