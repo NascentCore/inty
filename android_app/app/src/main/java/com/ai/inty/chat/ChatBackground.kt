@@ -29,8 +29,8 @@ import androidx.compose.ui.unit.dp
 import com.ai.inty.base.IntyImage
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.utils.getChatBackground
+import com.ai.inty.utils.calculateOptimalContentScale
 import kotlin.math.roundToInt
-import kotlin.math.abs
 import coil3.compose.AsyncImagePainter
 
 
@@ -79,8 +79,8 @@ fun AgentBackground(
     
     // 计算最佳的 ContentScale
     val optimalContentScale = calculateOptimalContentScale(
-        screenWidth = imageWidthDp,
-        screenHeight = imageHeightDp,
+        containerWidth = imageWidthDp,
+        containerHeight = imageHeightDp,
         imageWidth = imageWidth,
         imageHeight = imageHeight
     )

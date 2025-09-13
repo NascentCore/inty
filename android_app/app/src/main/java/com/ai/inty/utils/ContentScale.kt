@@ -14,17 +14,14 @@ import kotlin.math.abs
  * @param imageHeight 图片高度（像素）
  * @return 最佳的 ContentScale
  */
-private fun calculateOptimalContentScale(
-    screenWidth: Int,
-    screenHeight: Int,
-    imageWidth: Int?,
-    imageHeight: Int?
+fun calculateOptimalContentScale(
+    containerWidth: Int,
+    containerHeight: Int,
+    imageWidth: Int,
+    imageHeight: Int
 ): ContentScale {
     // 如果没有图片尺寸信息，使用默认的 Crop
-    if (imageWidth == null || imageHeight == null || imageWidth <= 0 || imageHeight <= 0) {
-        return ContentScale.Crop
-    }
-    val screenAspectRatio = screenWidth.toFloat() / screenHeight.toFloat()
+    val screenAspectRatio = containerWidth.toFloat() / containerHeight.toFloat()
     val imageAspectRatio = imageWidth.toFloat() / imageHeight.toFloat()
     return when {
         // 如果屏幕和图片宽高比非常接近（差异小于5%），使用 Fit 显示完整图片
