@@ -218,7 +218,7 @@ fun RecommendPage(
                                 items = agents,
                                 key = { index, agent -> "${agent.id}_$index" }
                             ) { index, agent ->
-                                RecommendPageItem(
+                                CharacterCard(
                                     modifier = Modifier
                                         .size(165.dp, 220.dp)
                                         .noRippleClickable {
@@ -258,7 +258,7 @@ fun RecommendPage(
 }
 
 @Composable
-fun RecommendPageItem(
+fun CharacterCard(
     modifier: Modifier,
     agentInfo: AgentInfo
 ) {
