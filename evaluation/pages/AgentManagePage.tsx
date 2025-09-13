@@ -206,15 +206,20 @@ export const AgentManagePage: React.FC = () => {
       // 如果有头像文件，先上传
       if (avatarFile) {
         try {
-          const uploadResult = await api.agents.uploadAvatar(avatarFile, true); // Enable cropping for avatar
-          avatarUrl = uploadResult.avatar_url || uploadResult.url;
-          backgroundUrl = uploadResult.url;
+          const uploadResult = await api.inty.api.v1.uploadImage({
+            file: avatarFile,
+            cropping_avatar: true
+          });
+          if (uploadResult.code !== 200) {
+            throw new Error("头像上传失败");
+          }
+          avatarUrl = uploadResult.data.avatar_url
+          backgroundUrl = uploadResult.data.url
           if (backgroundUrl) {
             backgroundImages = [backgroundUrl];
           }
-
-        } catch (uploadError) {
-          logError("头像上传失败:", uploadError);
+        } catch (e: any) {
+          logError(`头像上传失败: ${e.message}`);
           return;
         }
       }
@@ -268,9 +273,14 @@ export const AgentManagePage: React.FC = () => {
       // 如果有新头像文件，先上传
       if (editAvatarFile) {
         try {
-          const uploadResult = await api.agents.uploadAvatar(editAvatarFile, true); // Enable cropping for avatar
-          avatarUrl = uploadResult.avatar_url || uploadResult.url;
-          backgroundUrl = uploadResult.url;
+          const uploadResult = await api.inty.api.v1.uploadImage({
+            file: editAvatarFile,
+            cropping_avatar: true
+          });
+          // Extract URLs from the response data
+          const responseData = uploadResult.data as any;
+          avatarUrl = responseData?.avatar_url || responseData?.url || "";
+          backgroundUrl = responseData?.url || "";
           if (backgroundUrl) {
             backgroundImages = [backgroundUrl];
           }
