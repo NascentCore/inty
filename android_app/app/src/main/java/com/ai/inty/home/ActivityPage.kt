@@ -468,7 +468,8 @@ val CHAT_ITEM_DELETED_TEXT_TO_LAST_MESSAGE_PADDING = 4.dp
 val CHAT_ITEM_LAST_MESSAGE_TO_INITIAL_FOLLOW_DATE_PADDING = 4.dp
 val CHAT_ITEM_INITIAL_FOLLOW_DATE_TO_NEW_MESSAGE_DOT_PADDING = 4.dp
 val CHAT_ITEM_NEW_MESSAGE_DOT_TO_RIGHT_PADDING = 13.dp
-
+val CHAT_ITEM_LAST_MESSAGE_FONT_SIZE = 14.sp
+val COLOR_SEMI_TRANS_WHITE = Color(0x8CFFFFFF)
 
 @Composable
 fun ChatItem(
@@ -504,11 +505,11 @@ fun ChatItem(
                     overflow = TextOverflow.Ellipsis
                 )
                 if (conversation.isDeleted) {
-                    Spacer(Modifier.width(CHARACTER_DELETED_TEXT_TO_LAST_MESSAGE_PADDING))
+                    Spacer(Modifier.width(CHAT_ITEM_DELETED_TEXT_TO_LAST_MESSAGE_PADDING))
                     Text(
                         text = "(deleted)",
                         fontSize = CHAT_ITEM_DELETED_TEXT_FONT_SIZE,
-                        color = Color(0x8CFFFFFF),
+                        color = COLOR_SEMI_TRANS_WHITE,
                     )
                 }
             }
@@ -517,8 +518,8 @@ fun ChatItem(
             Text(
                 modifier = Modifier.height(CHAT_ITEM_LAST_MESSAGE_HEIGHT),
                 text = conversation.lastMessage,
-                fontSize = 14.sp,
-                color = Color.White.copy(0.55f),
+                fontSize = CHAT_ITEM_LAST_MESSAGE_FONT_SIZE,
+                color = COLOR_SEMI_TRANS_WHITE,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -529,7 +530,7 @@ fun ChatItem(
             Text(
                 text = conversation.getShowTime(),
                 fontSize = CHAT_ITEM_INITIAL_FOLLOW_DATE_FONT_SIZE,
-                color = Color.White.copy(0.55f),
+                color = COLOR_SEMI_TRANS_WHITE,
             )
             Spacer(Modifier.height(CHAT_ITEM_INITIAL_FOLLOW_DATE_TO_NEW_MESSAGE_DOT_PADDING))
             Box(
@@ -541,7 +542,7 @@ fun ChatItem(
                 }
             }
         }
-        Spacer(Modifier.width(CHARACTER_NEW_MESSAGE_DOT_TO_RIGHT_PADDING))
+        Spacer(Modifier.width(CHAT_ITEM_NEW_MESSAGE_DOT_TO_RIGHT_PADDING))
     }
 }
 
