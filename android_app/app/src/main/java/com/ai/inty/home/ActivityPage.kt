@@ -263,7 +263,7 @@ private fun MessageTabContent(
             val lastVisibleItem = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
 
             // 当滚动到倒数第3项时触发加载更多
-            totalItems > 0 && lastVisibleItem >= totalItems - 3 && !isLoading
+            totalItems > 0 && lastVisibleItem >= totalItems - ACTIVITY_ITEM_BUFFER_COUNT && !isLoading
         }
     }
 
@@ -372,6 +372,8 @@ private fun EmptyContentUI() {
     }
 }
 
+const val ACTIVITY_ITEM_BUFFER_COUNT = 3
+
 /**
  * 关注Tab内容
  */
@@ -393,7 +395,7 @@ private fun FollowingTabContent(
             val lastVisibleItem = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
 
             // 当滚动到倒数第3项时触发加载更多
-            totalItems > 0 && lastVisibleItem >= totalItems - 3 && !isLoading
+            totalItems > 0 && lastVisibleItem >= totalItems - ACTIVITY_ITEM_BUFFER_COUNT && !isLoading
         }
     }
 
