@@ -266,8 +266,8 @@ export const AgentManagePage: React.FC = () => {
       const values = await editForm.validateFields();
       setSaveLoading(true);
 
-      let avatarUrl = currentAgent.avatar;
-      let backgroundUrl = currentAgent.background;
+      let avatarUrl = currentAgent.avatar || "";
+      let backgroundUrl = currentAgent.background || "";
       let backgroundImages = currentAgent.background_images || [];
 
       // 如果有新头像文件，先上传
@@ -278,15 +278,12 @@ export const AgentManagePage: React.FC = () => {
             cropping_avatar: true
           });
           // Extract URLs from the response data
-          const responseData = uploadResult.data as any;
-          avatarUrl = responseData?.avatar_url || responseData?.url || "";
-          backgroundUrl = responseData?.url || "";
-          if (backgroundUrl) {
-            backgroundImages = [backgroundUrl];
-          }
-        } catch (uploadError) {
-          const errorMessage = uploadError instanceof Error ? uploadError.message : String(uploadError);
-          logError(`头像上传失败，请重试，错误信息：${errorMessage}`);
+          const responseData = uploadResult.data!;
+          avatarUrl = responseData.avatar_url;
+          backgroundUrl = responseData.url;
+          backgroundImages = [backgroundUrl];
+        } catch (uploadError: any) {
+          logError(`头像上传失败，请重试，错误信息：${uploadError.message}`);
           return;
         }
       }
