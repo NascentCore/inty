@@ -1,5 +1,6 @@
 package com.ai.inty.home
 
+import android.content.res.Configuration
 import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
 
@@ -227,6 +228,7 @@ fun RecommendPage(
 
                 // Calculate dynamic spacing based on container width
                 val containerWidth = LocalConfiguration.current.screenWidthDp
+                val characterCardWidth, characterCardHeight = getCharacterCardSize(containerWidth)
                 val spacerWidth = calculateSpacerWidth(containerWidth)
                 val spacerHeight = getHeightByWidth(spacerWidth, PORTRAIT_ASPECT_RATIO)
                 
@@ -253,8 +255,8 @@ fun RecommendPage(
                                             onClickAgent(agent)
                                         },
                                     agentInfo = agent,
-                                    width = 165.dp,
-                                    height = 220.dp
+                                    width = characterCardWidth.dp,
+                                    height = characterCardHeight.dp
                                 )
                             }
                         }
@@ -293,7 +295,7 @@ fun calculateOptimalRoundedCornerShapeSize(width: Dp, height: Dp): Dp {
     return (width + height) * percentage
 }
 
-const val CHARACTER_CARD_TEXT_PADDING = 16.dp
+val CHARACTER_CARD_TEXT_PADDING = 16.dp
 
 @Composable
 fun CharacterCard(
