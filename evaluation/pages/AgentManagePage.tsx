@@ -93,31 +93,37 @@ export const AgentManagePage: React.FC = () => {
         const response = await api.inty.api.v1.ai.agents.list({
           limit: 1000, // 先获取所有数据，前端分页
         });
+        console.log("response:", response);
 
-        let filteredAgents = response || [];
+        // Extract agents from the paginated response
+        let filteredAgents = response?.data || [];
+        console.log("filteredAgents:", filteredAgents);
 
         // 搜索筛选
         if (searchText) {
           filteredAgents = filteredAgents.filter(
-            (agent) =>
+            (agent: Agent) =>
               agent.name.toLowerCase().includes(searchText.toLowerCase()) ||
               agent.intro?.toLowerCase().includes(searchText.toLowerCase()),
           );
         }
+        console.log("filteredAgents:", filteredAgents);
 
         // 可见性筛选
         if (visibilityFilter !== "all") {
           filteredAgents = filteredAgents.filter(
-            (agent) => agent.visibility === visibilityFilter.toUpperCase(),
+            (agent: Agent) => agent.visibility === visibilityFilter.toUpperCase(),
           );
         }
+        console.log("filteredAgents:", filteredAgents);
 
         // 性别筛选
         if (genderFilter !== "all") {
           filteredAgents = filteredAgents.filter(
-            (agent) => agent.gender === genderFilter.toUpperCase(),
+            (agent: Agent) => agent.gender === genderFilter.toUpperCase(),
           );
         }
+        console.log("filteredAgents:", filteredAgents);
 
         setAgents(filteredAgents);
         setPagination((prev) => ({
@@ -125,8 +131,7 @@ export const AgentManagePage: React.FC = () => {
           total: filteredAgents.length,
         }));
       } catch (error) {
-        console.error("加载智能体列表失败:", error);
-        message.error("加载智能体列表失败");
+        message.error("加载智能体列表失败, error: ${error}");
       } finally {
         setLoading(false);
       }
