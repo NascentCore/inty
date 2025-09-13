@@ -9,3 +9,5 @@ fun getHeightByWidth(width: Int, aspectRatio: AspectRatio): Int {
 fun getWidthByHeight(height: Int, aspectRatio: AspectRatio): Int {
     return height * aspectRatio.width / aspectRatio.height
 }
+
+val PORTRAIT_ASPECT_RATIO = AspectRatio(9, 16)
