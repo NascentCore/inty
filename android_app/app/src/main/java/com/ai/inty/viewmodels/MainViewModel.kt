@@ -207,8 +207,9 @@ class MainViewModel : BaseActivityViewModel() {
      */
     fun refreshAgents() {
         EasyLog.log("refreshAgents - Force refresh from network")
-        currentPage = 1
+        currentPage = 0  // 重置为0，这样loadAgents会加载第1页
         hasMoreData = true
+        // TODO：刷新后，本地数据不应该丢掉，仍应该保留，比如图片数据，这样避免重复请求角色的信息
         loadedPages.clear()
         agentList.clear()
         loadAgents()
@@ -354,10 +355,11 @@ class MainViewModel : BaseActivityViewModel() {
         if (_isLoading.value) return
 
         _isLoading.update { true }
-        EasyLog.log("loadAgents - page: $currentPage")
+        val pageToLoad = if (currentPage == 0) 1 else currentPage
+        EasyLog.log("loadAgents - page: $pageToLoad")
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val result = agentApi.recommendAgents(currentPage, 10)
+                val result = agentApi.recommendAgents(pageToLoad, 10)
                 EasyLog.log("loadAgents - API响应: $result")
 
                 when (result) {
@@ -365,11 +367,12 @@ class MainViewModel : BaseActivityViewModel() {
                         result.data.list?.let { agents ->
                             if (agents.isEmpty()) {
                                 hasMoreData = false
-                                EasyLog.log("loadAgents - 第${currentPage}页数据为空，没有更多数据")
+                                EasyLog.log("loadAgents - 第${pageToLoad}页数据为空，没有更多数据")
                             } else {
                                 // 第一页数据替换，其他页数据追加
-                                if (currentPage == 1) {
+                                if (pageToLoad == 1) {
                                     // 确保清空列表，避免与缓存数据重复
+                                    // TODO：刷新后，本地数据不应该丢掉，仍应该保留，比如图片数据，这样避免重复请求角色的信息
                                     agentList.clear()
                                     agentList.addAll(agents)
                                     EasyLog.log("loadAgents - 替换第一页数据: ${agents.size}个，总计: ${agentList.size}个")
@@ -380,27 +383,28 @@ class MainViewModel : BaseActivityViewModel() {
                                     chatViewModel?.setAgentInfo(agentList.firstOrNull())
                                 } else {
                                     agentList.addAll(agents)
-                                    EasyLog.log("loadAgents - 追加第${currentPage}页数据: ${agents.size}个，总计: ${agentList.size}个")
+                                    EasyLog.log("loadAgents - 追加第${pageToLoad}页数据: ${agents.size}个，总计: ${agentList.size}个")
                                 }
                                 
-                                // 标记当前页为已加载
-                                loadedPages.add(currentPage)
+                                // 更新当前页数和标记已加载
+                                currentPage = pageToLoad
+                                loadedPages.add(pageToLoad)
                             }
                         } ?: run {
-                            EasyLog.log("loadAgents - 第${currentPage}页返回空列表")
-                            if (currentPage > 1) {
+                            EasyLog.log("loadAgents - 第${pageToLoad}页返回空列表")
+                            if (pageToLoad > 1) {
                                 hasMoreData = false
                             }
                         }
                     }
 
                     is HttpResult.Failure -> {
-                        EasyLog.log("loadAgents - 第${currentPage}页加载失败: ${result.message}")
+                        EasyLog.log("loadAgents - 第${pageToLoad}页加载失败: ${result.message}")
                         hasMoreData = false
                     }
                 }
             } catch (e: Exception) {
-                EasyLog.log("loadAgents - 第${currentPage}页加载异常: ${e.message}")
+                EasyLog.log("loadAgents - 第${pageToLoad}页加载异常: ${e.message}")
                 hasMoreData = false
             }
             _isLoading.update { false }
