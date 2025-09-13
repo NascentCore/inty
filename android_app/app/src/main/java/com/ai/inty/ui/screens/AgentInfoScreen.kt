@@ -100,7 +100,6 @@ internal fun AiAgentInfoScreen(
     val bottomSheetState = rememberModalBottomSheetState()
 
     Box(modifier = Modifier.fillMaxSize()) {
-        // 角色背景图片
         AgentBackground(
             agentInfo = agent,
             modifier = Modifier.fillMaxSize(),
