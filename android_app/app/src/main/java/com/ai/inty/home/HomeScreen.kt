@@ -358,8 +358,8 @@ private fun SuggestTabContent(
         onRefresh = {
             mainViewModel.refreshAgents()
         },
-        onPreloadCheck = {
-            mainViewModel.checkAndPreloadIfNeeded()
+        onPreloadCheck = { currentViewedPage ->
+            mainViewModel.checkAndPreloadIfNeeded(currentViewedPage)
         }
     )
 }

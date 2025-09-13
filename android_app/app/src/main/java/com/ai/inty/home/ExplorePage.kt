@@ -92,7 +92,7 @@ fun RecommendPage(
     onClickAgent: (AgentInfo) -> Unit,
     onLoadMore: () -> Unit = {},
     onRefresh: () -> Unit = {},
-    onPreloadCheck: () -> Unit = {},
+    onPreloadCheck: (Int) -> Unit = {},
 ) {
     // 下拉刷新状态
     var pullOffset by remember { mutableFloatStateOf(0f) }
@@ -250,7 +250,10 @@ fun RecommendPage(
                 LaunchedEffect(shouldPreload) {
                     if (shouldPreload) {
                         delay(100)
-                        onPreloadCheck()
+                        // 计算当前查看的页面并传递给预加载函数
+                        val lastVisibleItem = gridState.layoutInfo.visibleItemsInfo.lastOrNull()
+                        val currentViewedPage = (lastVisibleItem?.index ?: 0) / 10 + 1
+                        onPreloadCheck(currentViewedPage)
                     }
                 }
 

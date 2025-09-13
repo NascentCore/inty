@@ -308,15 +308,20 @@ class MainViewModel : BaseActivityViewModel() {
     /**
      * 检查是否需要预加载更多页面
      * 当剩余页面少于阈值时，自动预加载下一页
+     * @param currentViewedPage 当前用户正在查看的页面（从UI传入）
      */
-    fun checkAndPreloadIfNeeded() {
+    fun checkAndPreloadIfNeeded(currentViewedPage: Int = -1) {
         if (!_isLoading.value && hasMoreData) {
             val remainingPages = calculateRemainingPages()
             if (remainingPages < PRELOAD_THRESHOLD_PAGES) {
-                val nextPage = currentPage + 1
-                if (!loadedPages.contains(nextPage)) {
-                    EasyLog.log("checkAndPreloadIfNeeded - 剩余页面不足，预加载第${nextPage}页")
-                    preloadNextPage(nextPage)
+                // 如果传入了当前查看的页面，使用它来计算预加载目标
+                // 否则使用当前已加载的最后一页
+                val basePage = if (currentViewedPage > 0) currentViewedPage else currentPage
+                val targetPage = basePage + 3 // 预加载当前页面+3页，确保有2页缓冲
+                
+                if (!loadedPages.contains(targetPage)) {
+                    EasyLog.log("checkAndPreloadIfNeeded - 剩余页面不足，预加载第${targetPage}页（基于查看页面${basePage}）")
+                    preloadNextPage(targetPage)
                 }
             }
         }
