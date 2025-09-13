@@ -169,14 +169,7 @@ PATH="/Users/yzhao/Library/Android/sdk/platform-tools:$PATH"
    # 编辑 keystore.properties 填入实际的签名信息
    ```
 
-3. **环境设置**
-
-   ```bash
-   # 设置 Java 环境 (构建必需)
-   export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
-   ```
-
-4. **构建项目**
+3**构建项目**
 
    ```bash
    # 构建调试 APK
@@ -215,20 +208,7 @@ echo "keystore.properties" >> .gitignore  # 已配置
 * **Debug**（默认）: 开发构建，包含调试工具，Android 自带构建类型；后端指向共享的开发环境
 * **Local**：继承自 Debug 指向本地运行的后端
 * **Release**: 生产构建，用于分发，Android 自带构建类型；后端指向生成环境
-* **Playdebug**：继承自 Release 指向共享的开发环境
-
-### 🧪 测试
-
-```bash
-# 单元测试
-./gradlew test
-
-# 仪器测试  
-./gradlew connectedAndroidTest
-
-# 特定测试类
-./gradlew test --tests "com.ai.inty.ExampleUnitTest"
-```
+* **PlayDebug**：继承自 Release 指向共享的开发环境
 
 ### 关键开发工具
 
@@ -249,14 +229,6 @@ EasyLog.log("发生错误", EasyLog.ERROR)
 ```
 
 <img width="960" height="1040" alt="image" src="https://github.com/user-attachments/assets/2ec97c47-07f0-4cfb-85b4-57dba7222925" />
-
-#### 状态管理
-
-```kotlin
-// 使用 StateFlow 实现响应式 UI
-private val _messages = MutableStateFlow<List<Message>>(emptyList())
-val messages = _messages.asStateFlow()
-```
 
 ## 🔧 配置
 
@@ -292,52 +264,6 @@ val messages = _messages.asStateFlow()
    # 获取发布密钥库 SHA-1  
    keytool -list -v -keystore sign/my-release-key.jks -alias my-key-alias
    ```
-
-## 🔒 隐私与安全
-
-### 隐私功能
-
-* **无广告跟踪**: 明确禁用广告 ID 收集
-* **数据最小化**: 仅收集必要的用户数据
-* **安全存储**: 本地数据的 MMKV 加密
-* **仅 HTTPS**: 所有网络通信加密
-
-### 安全措施
-
-* 发布构建中的 ProGuard 混淆
-* 使用安全密钥库签名的 APK/AAB
-* Firebase 安全规则实现
-* 输入验证和清理
-
-## 🚀 部署
-
-### Play Store 发布
-
-1. **构建发布版 AAB**
-
-   ```bash
-   ./gradlew bundleRelease
-   ```
-
-2. **上传到 Play 控制台**
-   * 导航到 Google Play 控制台
-   * 从 `app/build/outputs/bundle/release/` 上传 AAB 文件
-   * 填写发布说明和元数据
-
-3. **Play Store 要求**
-   * 目标 SDK 34+ (Android 14)
-   * 需要应用包格式
-   * 隐私政策和数据安全声明
-   * 内容评级问卷
-
-### 版本管理
-
-版本信息自动管理：
-
-* `versionCode`: 取自 git commit count
-* `versionName`: 语义版本控制 (例如 1.0.1)
-* 调试构建包含 git 提交哈希: `1.0.1 (d799932)`
-* `bundletool dump manifest --bundle app/playdebug/app-playdebug.aab | grep versionCode` 查看 aab 版本信息
 
 ## 参考
 
