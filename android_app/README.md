@@ -3,9 +3,29 @@
 [![Build release APK and AAB](https://github.com/NascentCore/inty-app/actions/workflows/ci.yaml/badge.svg)](https://github.com/NascentCore/inty-app/actions/workflows/ci.yaml)
 [![Build and release debug APK](https://github.com/NascentCore/inty-app/actions/workflows/debug_release.yaml/badge.svg)](https://github.com/NascentCore/inty-app/actions/workflows/debug_release.yaml)
 
+```text
+IntelliMate: Ultimate companionship, reimagined with AI
+Role-play with AI characters.
+Create your own IntelliMate, powered by carefully tuned AI agents,
+experience your own imagination.
+```
+
+## Overview
+
+* Kotlin+Jetpack Compose
+* Local development setup: <https://g.co/gemini/share/e068464e9dbd>
+* [Daily release for testing](https://github.com/NascentCore/inty-app/releases)
+   * 国内手机需要安装 Google 套件才能使用 Google 登录功能
+* 将模拟器界面始终置于桌面前方，方便操作观察
+  <img width="480" height="1678" alt="image" src="https://github.com/user-attachments/assets/cbd3f10f-f028-4103-a5f6-c997ba8b9eb9" />
+* cmd+↑（放大模拟器设备界面）cmd+↓ （缩小模拟器设备界面）
+* [adb shell monkey](https://developer.android.com/studio/test/other-testing-tools/monkey)
+
 ## Repo 初始化
 
 ```bash
+git clone git@github.com:NascentCore/inty.git
+cd inty/android_app
 # 同步 android_app/library/inty_sdk git module
 # 不要进入这个目录修改
 git submodule update --init --recursive
@@ -33,7 +53,7 @@ keytool -keystore sign/intellimate-release-key.jks -list -v \
 ```
 
 Any new key must create an associated OAuth Client ID on Google Cloud.
-And added to firebase fingerpints.
+And added to firebase finger-pints.
 Then it can be used to sign the apk/aab to use Sign in with Google.
 
 There are 2 keys used locally: dev, uploading.
@@ -53,17 +73,6 @@ Google Cloud project and Firebase project is associated through the
 `alien-paratext-461204-i9` project ID as well.
 
 <img width="1514" height="1234" alt="image" src="https://github.com/user-attachments/assets/1d46e813-d3fd-48bb-adca-90a95691dc69" />
-
-## Description
-
-IntelliMate: Ultimate companionship, reimagined with AI
-
-Role-play with AI characters. Create your own IntelliMate, powered by carefully tuned AI agents, experience your own imagination. 
-
-* 将模拟器界面始终置于桌面前方，方便操作观察
-  <img width="480" height="1678" alt="image" src="https://github.com/user-attachments/assets/cbd3f10f-f028-4103-a5f6-c997ba8b9eb9" />
-* cmd+↑（放大模拟器设备界面）cmd+↓ （缩小模拟器设备界面）
-* [adb shell monkey](https://developer.android.com/studio/test/other-testing-tools/monkey)
 
 ## 注意 ⚠️
 
@@ -91,44 +100,7 @@ Uploading key is under app signing settings:
 如需上传 aab，确保 versioncode，versioncode 来源于当前分支至 HEAD 为止的 commit 数量，
 因此，如有必要，则需要写入新的 commit 来增加 version code。
 
-## Overview
-
-* Kotlin+Jetpack Compose
-* Local development setup: <https://g.co/gemini/share/e068464e9dbd>
-* [Daily release for testing](https://github.com/NascentCore/inty-app/releases)
-  * 国内手机需要安装 Google 套件才能使用 Google 登录功能
-
-### ✨ 核心功能
-
-5 个底 tab，从左到右依次为：
-
-1. Home (HomeTabIndex.Home) - The main chat interface where users can interact with AI agents
-   * 聊天：用户左右滑动浏览推荐的 AI 角色
-2. Activity (HomeTabIndex.Activity) - Shows conversation history and system messages
-   * 聊天历史和关注角色
-3. Create (HomeTabIndex.Create) - Special tab that navigates to role creation or login
-   * 创建 AI 角色
-4. Explore (HomeTabIndex.Explore) - Recommendation page showing suggested AI agents
-   * AI 角色浏览
-5. My (HomeTabIndex.My) - User profile and personal settings page
-   * 我的：设置、创建的角色列表等
-
 ## 🏗️ 架构设计
-
-### 技术栈
-
-* **开发语言**: 100% Kotlin
-* **UI 框架**: Jetpack Compose + Material3 设计
-* **架构模式**: MVVM (Model-View-ViewModel)
-* **导航框架**: TheRouter (基于 URL 的路由)
-* **网络层**: Retrofit + OkHttp，自定义 HttpResult 封装
-* **状态管理**: StateFlow + MMKV 持久化
-* **图片加载**: Coil3 异步加载
-* **依赖注入**: TheRouter 的 @Singleton 和 @Autowired
-
-## 🚀 快速开始
-
-### 连接本地运行后端
 
 **本机**运行后端，其端口位于`http://localhost:8000`；Android Studio，启动模拟器、或 USB 连接手机；需要使用 `adb` 命令行工具将本地服务端口映射到模拟器、手机上。
 
@@ -152,53 +124,12 @@ PATH="/Users/yzhao/Library/Android/sdk/platform-tools:$PATH"
 
 <img width="600" height="1408" alt="image" src="https://github.com/user-attachments/assets/47cd8996-afef-41a4-b039-383e5bf167cf" />
 
-### 设置步骤
-
-1. **克隆仓库**
-
-   ```bash
-   git clone https://github.com/NascentCore/inty-app.git
-   cd inty-app
-   ```
-
 2. **配置签名**
 
-   ```bash
-   # 复制模板并填入您的密钥库详细信息
-   cp keystore.properties.template keystore.properties
-   # 编辑 keystore.properties 填入实际的签名信息
-   ```
-
-3**构建项目**
-
-   ```bash
-   # 构建调试 APK
-   ./gradlew assembleDebug
-   
-   # 构建发布版 AAB (用于 Play Store)
-   ./gradlew bundleRelease
-   
-   # 运行测试
-   ./gradlew test
-   
-   # 清理构建
-   ./gradlew clean
-   ```
-
-### 配置文件
-
-#### 必需文件
-
-* `keystore.properties` - 签名配置 (从模板创建)
-
-* `app/google-services.json` - Firebase 配置
-* `local.properties` - SDK 路径配置
-
-#### 重要：安全设置
-
 ```bash
-# 确保 keystore.properties 配置正确
-echo "keystore.properties" >> .gitignore  # 已配置
+# 复制模板并填入您的密钥库详细信息
+cp keystore.properties.template keystore.properties
+# 编辑 keystore.properties 填入实际的签名信息
 ```
 
 ## 🛠️ 开发指南
@@ -210,17 +141,7 @@ echo "keystore.properties" >> .gitignore  # 已配置
 * **Release**: 生产构建，用于分发，Android 自带构建类型；后端指向生成环境
 * **PlayDebug**：继承自 Release 指向共享的开发环境
 
-### 关键开发工具
-
-#### 网络调试
-
-```kotlin
-// Chucker 集成 (仅调试构建)
-debugImplementation("com.github.chuckerteam.chucker:library:3.5.2")
-releaseImplementation("com.github.chuckerteam.chucker:library-no-op:3.5.2")
-```
-
-#### 日志系统
+### 日志系统
 
 ```kotlin
 // 使用 EasyLog 自定义日志
@@ -257,13 +178,13 @@ EasyLog.log("发生错误", EasyLog.ERROR)
 
 2. **SHA-1 指纹**
 
-   ```bash
-   # 获取调试密钥库 SHA-1
-   keytool -list -v -keystore sign/key.jks -alias key0
-   
-   # 获取发布密钥库 SHA-1  
-   keytool -list -v -keystore sign/my-release-key.jks -alias my-key-alias
-   ```
+```bash
+# 获取调试密钥库 SHA-1
+keytool -list -v -keystore sign/key.jks -alias key0
+
+# 获取发布密钥库 SHA-1  
+keytool -list -v -keystore sign/my-release-key.jks -alias my-key-alias
+```
 
 ## 参考
 
