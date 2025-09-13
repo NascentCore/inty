@@ -29,6 +29,8 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.layout.ContentScale
+import coil3.compose.AsyncImagePainter
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -47,6 +49,7 @@ import com.ai.inty.R
 import com.ai.inty.base.IntyImage
 import com.ai.inty.base.noRippleClickable
 import com.ai.inty.beans.AgentInfo
+import com.ai.inty.utils.calculateOptimalContentScale
 import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
 
@@ -266,6 +269,24 @@ fun CharacterCard(
     width: Dp = 165.dp,
     height: Dp = 220.dp
 ) {
+    // 状态来存储图片尺寸
+    var imageWidth by remember { mutableStateOf<Int?>(null) }
+    var imageHeight by remember { mutableStateOf<Int?>(null) }
+    
+    // 计算最佳的 ContentScale
+    val currentImageWidth = imageWidth
+    val currentImageHeight = imageHeight
+    val optimalContentScale = if (currentImageWidth != null && currentImageHeight != null && currentImageWidth > 0 && currentImageHeight > 0) {
+        calculateOptimalContentScale(
+            containerWidth = width.value.roundToInt(),
+            containerHeight = height.value.roundToInt(),
+            imageWidth = currentImageWidth,
+            imageHeight = currentImageHeight
+        )
+    } else {
+        ContentScale.Crop // 默认值，当图片尺寸未知时
+    }
+    
     Box(
         modifier = modifier.size(width, height)
     ) {
@@ -274,6 +295,13 @@ fun CharacterCard(
             model = agentInfo.avatar,
             placeholder = painterResource(R.drawable.app_icon),
             error = painterResource(R.drawable.app_icon),
+            contentScale = optimalContentScale,
+            onSuccess = { state ->
+                // 当图片加载成功时，获取图片尺寸
+                val drawable = state.painter
+                imageWidth = drawable.intrinsicSize.width.toInt()
+                imageHeight = drawable.intrinsicSize.height.toInt()
+            }
         )
         Text(
             modifier = Modifier
