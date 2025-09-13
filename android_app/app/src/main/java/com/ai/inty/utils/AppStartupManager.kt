@@ -247,6 +247,9 @@ object AppStartupManager {
         }
     }
 
+    /**
+     * 从网络更新推荐agents
+     */
     private suspend fun updateAgentsFromNetwork() {
         // 检查登录状态和token
         if (!IntySetting.isLogin() || IntySetting.getCurToken().isEmpty()) {
