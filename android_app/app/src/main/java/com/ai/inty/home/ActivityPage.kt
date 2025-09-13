@@ -322,7 +322,7 @@ private fun MessageTabContent(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(80.dp),
+                            .height(LOAD_MORE_INDICATOR_HEIGHT),
                         contentAlignment = Alignment.Center
                     ) {
                         CircularProgressIndicator(
@@ -340,6 +340,11 @@ private fun MessageTabContent(
     }
 }
 
+val LOAD_MORE_INDICATOR_HEIGHT = 80.dp
+val EMPTY_CONTENT_IMAGE_TO_TEXT_PADDING = 16.dp
+val EMPTY_CONTENT_TEXT_PADDING_HORIZONTAL = 16.dp
+val EMPTY_CONTENT_TEXT_FONT_SIZE = 14.sp
+
 @Composable
 private fun EmptyContentUI() {
     Column(
@@ -351,15 +356,15 @@ private fun EmptyContentUI() {
 
         IntyImage(model = R.drawable.group2085655908)
 
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(EMPTY_CONTENT_IMAGE_TO_TEXT_PADDING))
 
         Text(
             modifier = Modifier
-                .padding(horizontal = 16.dp)
+                .padding(horizontal = EMPTY_CONTENT_TEXT_PADDING_HORIZONTAL)
                 .align(Alignment.CenterHorizontally),
             text = stringResource(R.string.no_agent),
             color = Color.White.copy(0.55f),
-            fontSize = 14.sp,
+            fontSize = EMPTY_CONTENT_TEXT_FONT_SIZE,
             fontWeight = FontWeight.Normal,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
@@ -432,7 +437,7 @@ private fun FollowingTabContent(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(80.dp),
+                            .height(LOAD_MORE_INDICATOR_HEIGHT),
                         contentAlignment = Alignment.Center
                     ) {
                         CircularProgressIndicator(
@@ -449,17 +454,21 @@ private fun FollowingTabContent(
 }
 
 val CHAT_ITEM_HEIGHT = 88.dp
+val CHAT_ITEM_PADDING = 16.dp
+val CHAT_ITEM_AVATAR_SIZE = 56.dp
 val CHARACTER_AVATAR_SIZE = 56.dp
-val CHARACTER_NAME_HEIGHT = 22.dp
-val CHARACTER_LAST_MESSAGE_HEIGHT = 22.dp
-val CHARACTER_INITIAL_FOLLOW_DATE_FONT_SIZE = 12.sp
-val CHARACTER_NEW_MESSAGE_DOT_HEIGHT = 22.dp
-val CHARACTER_DELETED_TEXT_FONT_SIZE = 15.sp
-val CHARACTER_NAME_TO_DELETED_TEXT_PADDING = 4.dp
-val CHARACTER_DELETED_TEXT_TO_LAST_MESSAGE_PADDING = 4.dp
-val CHARACTER_LAST_MESSAGE_TO_INITIAL_FOLLOW_DATE_PADDING = 4.dp
-val CHARACTER_INITIAL_FOLLOW_DATE_TO_NEW_MESSAGE_DOT_PADDING = 4.dp
-val CHARACTER_NEW_MESSAGE_DOT_TO_RIGHT_PADDING = 13.dp
+val CHAT_ITEM_NAME_HEIGHT = 22.dp
+val CHAT_ITEM_NAME_FONT_SIZE = 15.sp
+val CHAT_ITEM_LAST_MESSAGE_HEIGHT = 22.dp
+val CHAT_ITEM_INITIAL_FOLLOW_DATE_FONT_SIZE = 12.sp
+val CHAT_ITEM_NEW_MESSAGE_DOT_HEIGHT = 22.dp
+val CHAT_ITEM_DELETED_TEXT_FONT_SIZE = 15.sp
+val CHAT_ITEM_NAME_TO_DELETED_TEXT_PADDING = 4.dp
+val CHAT_ITEM_DELETED_TEXT_TO_LAST_MESSAGE_PADDING = 4.dp
+val CHAT_ITEM_LAST_MESSAGE_TO_INITIAL_FOLLOW_DATE_PADDING = 4.dp
+val CHAT_ITEM_INITIAL_FOLLOW_DATE_TO_NEW_MESSAGE_DOT_PADDING = 4.dp
+val CHAT_ITEM_NEW_MESSAGE_DOT_TO_RIGHT_PADDING = 13.dp
+
 
 @Composable
 fun ChatItem(
@@ -471,24 +480,24 @@ fun ChatItem(
         modifier = modifier.height(CHAT_ITEM_HEIGHT),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Spacer(Modifier.width(16.dp))
+        Spacer(Modifier.width(CHAT_ITEM_PADDING))
 
         // 头像
         IntyImage(
-            modifier = Modifier.size(CHARACTER_AVATAR_SIZE),
+            modifier = Modifier.size(CHAT_ITEM_AVATAR_SIZE),
             model = conversation.agentAvatar,
             placeholder = painterResource(placeholderID)
         )
 
-        Spacer(Modifier.width(CHARACTER_NAME_TO_DELETED_TEXT_PADDING))
+        Spacer(Modifier.width(CHAT_ITEM_NAME_TO_DELETED_TEXT_PADDING))
 
         // 内容区域
         Column(modifier = Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    modifier = Modifier.height(CHARACTER_NAME_HEIGHT),
+                    modifier = Modifier.height(CHAT_ITEM_NAME_HEIGHT),
                     text = conversation.agentName,
-                    fontSize = 15.sp,
+                    fontSize = CHAT_ITEM_NAME_FONT_SIZE,
                     fontWeight = FontWeight.SemiBold,
                     color = Color.White,
                     maxLines = 1,
@@ -498,15 +507,15 @@ fun ChatItem(
                     Spacer(Modifier.width(CHARACTER_DELETED_TEXT_TO_LAST_MESSAGE_PADDING))
                     Text(
                         text = "(deleted)",
-                        fontSize = CHARACTER_DELETED_TEXT_FONT_SIZE,
+                        fontSize = CHAT_ITEM_DELETED_TEXT_FONT_SIZE,
                         color = Color(0x8CFFFFFF),
                     )
                 }
             }
 
-            Spacer(Modifier.height(CHARACTER_LAST_MESSAGE_TO_INITIAL_FOLLOW_DATE_PADDING))
+            Spacer(Modifier.height(CHAT_ITEM_LAST_MESSAGE_TO_INITIAL_FOLLOW_DATE_PADDING))
             Text(
-                modifier = Modifier.height(CHARACTER_LAST_MESSAGE_HEIGHT),
+                modifier = Modifier.height(CHAT_ITEM_LAST_MESSAGE_HEIGHT),
                 text = conversation.lastMessage,
                 fontSize = 14.sp,
                 color = Color.White.copy(0.55f),
@@ -519,12 +528,12 @@ fun ChatItem(
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
                 text = conversation.getShowTime(),
-                fontSize = CHARACTER_INITIAL_FOLLOW_DATE_FONT_SIZE,
+                fontSize = CHAT_ITEM_INITIAL_FOLLOW_DATE_FONT_SIZE,
                 color = Color.White.copy(0.55f),
             )
-            Spacer(Modifier.height(CHARACTER_INITIAL_FOLLOW_DATE_TO_NEW_MESSAGE_DOT_PADDING))
+            Spacer(Modifier.height(CHAT_ITEM_INITIAL_FOLLOW_DATE_TO_NEW_MESSAGE_DOT_PADDING))
             Box(
-                modifier = Modifier.height(CHARACTER_NEW_MESSAGE_DOT_HEIGHT),
+                modifier = Modifier.height(CHAT_ITEM_NEW_MESSAGE_DOT_HEIGHT),
                 contentAlignment = Alignment.Center,
             ) {
                 if (conversation.isNew) {
