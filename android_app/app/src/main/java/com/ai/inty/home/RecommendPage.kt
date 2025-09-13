@@ -73,7 +73,7 @@ private fun getCharacterCardSize(containerWidth: Int): Pair<Int, Int> {
     // Portrait aspect ratio
     val portraitAspectRatio = AspectRatio(9, 16)
     val spacerPercentage = 0.03f
-    val spacerWidth = containerWidth * spacerPercentage
+    val spacerWidth = (containerWidth * spacerPercentage).toInt()
     val columnCount = 2
     val subContainerWidth = (containerWidth - (columnCount + 1) * spacerWidth) / columnCount
     val subContainerHeight = getHeightByWidth(subContainerWidth, portraitAspectRatio)
