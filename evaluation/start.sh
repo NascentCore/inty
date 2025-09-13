@@ -65,6 +65,15 @@ fi
 log "Installing Node Modules..."
 npm i --no-audit --no-fund --loglevel=error --no-progress
 
+if [ ! -d "inty_sdk/dist" ]; then
+    log "Installing inty SDK dependencies..."
+    pushd inty_sdk
+    npm i --no-audit --no-fund --loglevel=error --no-progress
+    log "Building inty SDK..."
+    npm run build
+    popd
+fi
+
 # Check if :3000 is already in use
 if lsof -i :3000; then
     log "Try to kill the process using port 3000 ..."
