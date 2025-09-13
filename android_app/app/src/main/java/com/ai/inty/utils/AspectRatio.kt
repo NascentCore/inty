@@ -1,9 +1,11 @@
-public data class AspectRatio(val width: Int, val height: Int)
+package com.ai.inty.utils
 
-public fun getHeightByWidth(width: Int, aspectRatio: AspectRatio): Int {
+data class AspectRatio(val width: Int, val height: Int)
+
+fun getHeightByWidth(width: Int, aspectRatio: AspectRatio): Int {
     return width * aspectRatio.height / aspectRatio.width
 }
 
-public fun getWidthByHeight(height: Int, aspectRatio: AspectRatio): Int {
+fun getWidthByHeight(height: Int, aspectRatio: AspectRatio): Int {
     return height * aspectRatio.width / aspectRatio.height
 }
