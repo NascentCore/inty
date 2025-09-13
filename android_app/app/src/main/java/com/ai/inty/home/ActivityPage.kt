@@ -413,7 +413,7 @@ private fun FollowingTabContent(
                 itemsIndexed(
                     items = followingAgents,
                     key = { index, agent -> "${agent.id}_$index" }
-                ) { index, agent ->
+                ) { _, agent ->
                     if (onUnfollowAgent != null) {
                         LongPressUnfollowItem(
                             agent = agent,
