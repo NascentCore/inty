@@ -13,6 +13,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -261,21 +262,38 @@ object AppStartupManager {
             val agentApi: IAgentApi = TheRouter.get(IAgentApi::class.java)
                 ?: throw IllegalStateException("IAgentApi not found")
 
-            val result = agentApi.recommendAgents(1, 10)
-            when (result) {
-                is HttpResult.Success -> {
-                    val agents = result.data.list ?: emptyList()
-                    AgentCacheManager.cacheAgents(agents)
-                    _cachedAgents.value = agents
-                    EasyLog.log("AppStartupManager - 更新推荐agents成功: ${agents.size}个")
+            // 预加载3页数据
+            val deferredResults = mutableListOf<Deferred<HttpResult<com.ai.inty.beans.AgentInfoResponse>>>()
+            for (page in 1..3) {
+                val deferred = startupScope.async { agentApi.recommendAgents(page, 10) }
+                deferredResults.add(deferred)
+            }
+            
+            // 等待所有页面加载完成
+            val results = deferredResults.map { it.await() }
+            
+            // 合并所有页面的数据
+            val allAgents = mutableListOf<com.ai.inty.beans.AgentInfo>()
+            results.forEachIndexed { index, result ->
+                when (result) {
+                    is HttpResult.Success -> {
+                        result.data.list?.let { agents ->
+                            if (agents.isNotEmpty()) {
+                                allAgents.addAll(agents)
+                                EasyLog.log("AppStartupManager - 第${index + 1}页加载成功: ${agents.size}个")
+                            }
+                        }
+                    }
+                    is HttpResult.Failure -> {
+                        EasyLog.log("AppStartupManager - 第${index + 1}页加载失败: ${result.message}")
+                    }
                 }
-
-                is HttpResult.Failure -> {
-                    EasyLog.log(
-                        "AppStartupManager - 更新推荐agents失败: ${result.message}",
-                        EasyLog.WARN
-                    )
-                }
+            }
+            
+            if (allAgents.isNotEmpty()) {
+                AgentCacheManager.cacheAgents(allAgents)
+                _cachedAgents.value = allAgents
+                EasyLog.log("AppStartupManager - 更新推荐agents成功: ${allAgents.size}个")
             }
         } catch (e: Exception) {
             EasyLog.log("AppStartupManager - 更新推荐agents异常: ${e.message}", EasyLog.ERROR)

@@ -357,6 +357,9 @@ private fun SuggestTabContent(
         },
         onRefresh = {
             mainViewModel.refreshAgents()
+        },
+        onPreloadCheck = {
+            mainViewModel.checkAndPreloadIfNeeded()
         }
     )
 }
@@ -416,7 +419,7 @@ private fun MyTabContent(
                 onSuccess = {
                     // 删除成功，列表会自动更新
                 },
-                onError = { errorMessage ->
+                onError = { _ ->
                     // 错误处理已在ViewModel中完成
                 }
             )

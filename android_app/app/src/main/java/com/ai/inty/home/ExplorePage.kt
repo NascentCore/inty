@@ -92,6 +92,7 @@ fun RecommendPage(
     onClickAgent: (AgentInfo) -> Unit,
     onLoadMore: () -> Unit = {},
     onRefresh: () -> Unit = {},
+    onPreloadCheck: () -> Unit = {},
 ) {
     // 下拉刷新状态
     var pullOffset by remember { mutableFloatStateOf(0f) }
@@ -224,12 +225,32 @@ fun RecommendPage(
                     }
                 }
 
+                // 检测是否需要预加载（当剩余页面少于2页时）
+                val shouldPreload by remember {
+                    derivedStateOf {
+                        val lastVisibleItem = gridState.layoutInfo.visibleItemsInfo.lastOrNull()
+                        val charactersPerPage = 10
+                        val totalPages = (agents.size + charactersPerPage - 1) / charactersPerPage
+                        val currentPage = (lastVisibleItem?.index ?: 0) / charactersPerPage + 1
+                        val remainingPages = totalPages - currentPage + 1
+                        remainingPages < 2 && agents.isNotEmpty() && !isLoading
+                    }
+                }
+
                 // 触发加载更多，添加防抖机制
                 LaunchedEffect(reachedBottom) {
                     if (reachedBottom && agents.isNotEmpty() && !isLoading) {
                         // 添加延迟，避免快速滚动时重复触发
                         delay(100)
                         onLoadMore()
+                    }
+                }
+
+                // 触发预加载检查
+                LaunchedEffect(shouldPreload) {
+                    if (shouldPreload) {
+                        delay(100)
+                        onPreloadCheck()
                     }
                 }
 

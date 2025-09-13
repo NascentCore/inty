@@ -11,6 +11,7 @@ import com.ai.inty.R
 import com.ai.inty.base.BaseActivityViewModel
 import com.ai.inty.base.ToastUtils
 import com.ai.inty.beans.AgentInfo
+import com.ai.inty.beans.AgentInfoResponse
 import com.ai.inty.beans.AppVersionRsp
 import com.ai.inty.beans.CreateAgentRequest
 import com.ai.inty.beans.SysMsgItem
@@ -43,6 +44,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.async
+import kotlinx.coroutines.Deferred
 
 
 enum class HomeTabIndex {
@@ -83,6 +86,13 @@ class MainViewModel : BaseActivityViewModel() {
     private var _isLoading = MutableStateFlow(false)
     val isLoading = _isLoading.asStateFlow()
     private var hasMoreData = true
+    
+    // Preloading state
+    private var loadedPages = mutableSetOf<Int>()
+    private var totalPages = 0
+    private val CHARACTERS_PER_PAGE = 10
+    private val INITIAL_PAGE_COUNT = 3
+    private val PRELOAD_THRESHOLD_PAGES = 2 // Preload when less than 2 pages remaining
 
     // Pagination state for user created agents
     private var currentUserAgentsPage = 0
@@ -178,6 +188,7 @@ class MainViewModel : BaseActivityViewModel() {
         EasyLog.log("getAgents - 开始加载推荐agents")
         currentPage = 1
         hasMoreData = true
+        loadedPages.clear()
 
         // 第一步：如果有缓存数据，先使用缓存数据快速展示
         val cachedAgents = AppStartupManager.cachedAgents.value
@@ -188,10 +199,10 @@ class MainViewModel : BaseActivityViewModel() {
             chatViewModel?.setAgentInfo(agentList.firstOrNull())
         }
 
-        // 第二步：后台静默刷新数据（无论是否有缓存）
+        // 第二步：后台静默预加载3页数据
         if (shouldUpdateFromNetwork()) {
-            EasyLog.log("getAgents - 后台静默刷新数据")
-            loadAgentsSilently()
+            EasyLog.log("getAgents - 后台静默预加载3页数据")
+            loadInitialPagesSilently(INITIAL_PAGE_COUNT)
         } else {
             EasyLog.log("getAgents - 跳过网络更新，使用缓存数据")
         }
@@ -204,49 +215,77 @@ class MainViewModel : BaseActivityViewModel() {
         EasyLog.log("refreshAgents - Force refresh from network")
         currentPage = 1
         hasMoreData = true
+        loadedPages.clear()
         agentList.clear()
         loadAgents()
     }
 
     /**
-     * 后台静默刷新数据
-     * 用于在进入页面时静默更新数据，不影响用户当前浏览
+     * 后台静默预加载多页数据
+     * 用于在进入页面时静默预加载多页数据，提供更好的用户体验
      */
-    private fun loadAgentsSilently() {
+    private fun loadInitialPagesSilently(pageCount: Int) {
         if (_isLoading.value) return
 
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                EasyLog.log("loadAgentsSilently - 开始静默刷新第一页数据")
-                val result = agentApi.recommendAgents(1, 10)
-
-                when (result) {
-                    is HttpResult.Success -> {
-                        result.data.list?.let { agents ->
-                            if (agents.isNotEmpty()) {
-                                // 静默更新UI和缓存，不显示加载状态
-                                agentList.clear()
-                                agentList.addAll(agents)
-                                EasyLog.log("loadAgentsSilently - 静默更新成功: ${agents.size}个")
-
-                                // 更新缓存
-                                AgentCacheManager.cacheAgents(agents)
-                                AppStartupManager.updateCachedAgents(agents)
-
-                                // 设置第一个agent给chatViewModel
-                                chatViewModel?.setAgentInfo(agentList.firstOrNull())
-                            } else {
-                                EasyLog.log("loadAgentsSilently - 第一页数据为空")
+                EasyLog.log("loadInitialPagesSilently - 开始静默预加载${pageCount}页数据")
+                
+                // 并行加载多页数据
+                val deferredResults = mutableListOf<Deferred<HttpResult<AgentInfoResponse>>>()
+                for (page in 1..pageCount) {
+                    val deferred = async { agentApi.recommendAgents(page, CHARACTERS_PER_PAGE) }
+                    deferredResults.add(deferred)
+                    loadedPages.add(page)
+                }
+                
+                // 等待所有页面加载完成
+                val results = deferredResults.map { it.await() }
+                
+                // 合并所有页面的数据
+                val allAgents = mutableListOf<AgentInfo>()
+                var hasMoreDataFound = true
+                
+                results.forEachIndexed { index, result ->
+                    when (result) {
+                        is HttpResult.Success -> {
+                            result.data.list?.let { agents ->
+                                if (agents.isNotEmpty()) {
+                                    allAgents.addAll(agents)
+                                    EasyLog.log("loadInitialPagesSilently - 第${index + 1}页加载成功: ${agents.size}个")
+                                } else {
+                                    hasMoreDataFound = false
+                                    EasyLog.log("loadInitialPagesSilently - 第${index + 1}页数据为空")
+                                }
                             }
                         }
-                    }
-
-                    is HttpResult.Failure -> {
-                        EasyLog.log("loadAgentsSilently - 静默刷新失败: ${result.message}")
+                        is HttpResult.Failure -> {
+                            EasyLog.log("loadInitialPagesSilently - 第${index + 1}页加载失败: ${result.message}")
+                        }
                     }
                 }
+                
+                if (allAgents.isNotEmpty()) {
+                    // 静默更新UI和缓存，不显示加载状态
+                    agentList.clear()
+                    agentList.addAll(allAgents)
+                    EasyLog.log("loadInitialPagesSilently - 静默预加载成功: ${allAgents.size}个")
+
+                    // 更新缓存
+                    AgentCacheManager.cacheAgents(allAgents)
+                    AppStartupManager.updateCachedAgents(allAgents)
+
+                    // 设置第一个agent给chatViewModel
+                    chatViewModel?.setAgentInfo(agentList.firstOrNull())
+                    
+                    // 更新当前页码和是否有更多数据
+                    currentPage = pageCount
+                    hasMoreData = hasMoreDataFound
+                } else {
+                    EasyLog.log("loadInitialPagesSilently - 所有页面数据为空")
+                }
             } catch (e: Exception) {
-                EasyLog.log("loadAgentsSilently - 静默刷新异常: ${e.message}")
+                EasyLog.log("loadInitialPagesSilently - 静默预加载异常: ${e.message}")
             }
         }
     }
@@ -258,6 +297,75 @@ class MainViewModel : BaseActivityViewModel() {
             loadAgents()
         } else {
             EasyLog.log("loadMoreAgents - 跳过加载: isLoading=${_isLoading.value}, hasMoreData=$hasMoreData")
+        }
+    }
+    
+    /**
+     * 检查是否需要预加载更多页面
+     * 当剩余页面少于阈值时，自动预加载下一页
+     */
+    fun checkAndPreloadIfNeeded() {
+        if (!_isLoading.value && hasMoreData) {
+            val remainingPages = calculateRemainingPages()
+            if (remainingPages < PRELOAD_THRESHOLD_PAGES) {
+                val nextPage = currentPage + 1
+                if (!loadedPages.contains(nextPage)) {
+                    EasyLog.log("checkAndPreloadIfNeeded - 剩余页面不足，预加载第${nextPage}页")
+                    preloadNextPage(nextPage)
+                }
+            }
+        }
+    }
+    
+    /**
+     * 计算剩余可显示的页面数
+     */
+    private fun calculateRemainingPages(): Int {
+        val totalLoadedCharacters = agentList.size
+        val charactersPerPage = CHARACTERS_PER_PAGE
+        val remainingCharacters = totalLoadedCharacters - (totalLoadedCharacters / charactersPerPage) * charactersPerPage
+        return if (remainingCharacters > 0) {
+            (totalLoadedCharacters / charactersPerPage) + 1
+        } else {
+            totalLoadedCharacters / charactersPerPage
+        }
+    }
+    
+    /**
+     * 预加载指定页面
+     */
+    private fun preloadNextPage(page: Int) {
+        if (_isLoading.value || loadedPages.contains(page)) return
+        
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                EasyLog.log("preloadNextPage - 开始预加载第${page}页")
+                loadedPages.add(page)
+                
+                val result = agentApi.recommendAgents(page, CHARACTERS_PER_PAGE)
+                when (result) {
+                    is HttpResult.Success -> {
+                        result.data.list?.let { agents ->
+                            if (agents.isNotEmpty()) {
+                                // 追加到现有列表
+                                agentList.addAll(agents)
+                                currentPage = page
+                                EasyLog.log("preloadNextPage - 第${page}页预加载成功: ${agents.size}个，总计: ${agentList.size}个")
+                            } else {
+                                hasMoreData = false
+                                EasyLog.log("preloadNextPage - 第${page}页数据为空，没有更多数据")
+                            }
+                        }
+                    }
+                    is HttpResult.Failure -> {
+                        EasyLog.log("preloadNextPage - 第${page}页预加载失败: ${result.message}")
+                        loadedPages.remove(page)
+                    }
+                }
+            } catch (e: Exception) {
+                EasyLog.log("preloadNextPage - 第${page}页预加载异常: ${e.message}")
+                loadedPages.remove(page)
+            }
         }
     }
 
@@ -272,7 +380,7 @@ class MainViewModel : BaseActivityViewModel() {
         EasyLog.log("loadAgents - page: $currentPage")
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val result = agentApi.recommendAgents(currentPage, 10)
+                val result = agentApi.recommendAgents(currentPage, CHARACTERS_PER_PAGE)
                 EasyLog.log("loadAgents - API响应: $result")
 
                 when (result) {
@@ -297,6 +405,9 @@ class MainViewModel : BaseActivityViewModel() {
                                     agentList.addAll(agents)
                                     EasyLog.log("loadAgents - 追加第${currentPage}页数据: ${agents.size}个，总计: ${agentList.size}个")
                                 }
+                                
+                                // 标记页面已加载
+                                loadedPages.add(currentPage)
                             }
                         } ?: run {
                             EasyLog.log("loadAgents - 第${currentPage}页返回空列表")
@@ -404,7 +515,6 @@ class MainViewModel : BaseActivityViewModel() {
                 }
             } catch (e: retrofit2.HttpException) {
                 // 专门处理HTTP异常
-                val errorMessage = handleHttpException(e, "user")
                 EasyLog.log(
                     "getUserProfile HTTP Exception: ${e.code()} - ${e.message()}",
                     EasyLog.ERROR
