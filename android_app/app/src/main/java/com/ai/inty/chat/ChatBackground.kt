@@ -78,12 +78,18 @@ fun AgentBackground(
     var imageHeight by remember { mutableStateOf<Int?>(null) }
     
     // 计算最佳的 ContentScale
-    val optimalContentScale = calculateOptimalContentScale(
-        containerWidth = imageWidthDp,
-        containerHeight = imageHeightDp,
-        imageWidth = imageWidth,
-        imageHeight = imageHeight
-    )
+    val currentImageWidth = imageWidth
+    val currentImageHeight = imageHeight
+    val optimalContentScale = if (currentImageWidth != null && currentImageHeight != null && currentImageWidth > 0 && currentImageHeight > 0) {
+        calculateOptimalContentScale(
+            containerWidth = imageWidthDp,
+            containerHeight = imageHeightDp,
+            imageWidth = currentImageWidth,
+            imageHeight = currentImageHeight
+        )
+    } else {
+        ContentScale.Crop // 默认值，当图片尺寸未知时
+    }
 
     Box(modifier = modifier) {
         Column(
