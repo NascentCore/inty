@@ -58,15 +58,11 @@ import com.ai.inty.beans.AgentInfo
 import com.ai.inty.utils.calculateOptimalContentScale
 import com.ai.inty.utils.AspectRatio
 import com.ai.inty.utils.getHeightByWidth
+import com.ai.inty.utils.PORTRAIT_ASPECT_RATIO
 
-private fun calculateSpacerWidth(containerWidth: Int): Dp {
+private fun calculateSpacerWidth(containerWidth: Int): Int {
     val spacerPercentage = 0.03f
-    return (containerWidth * spacerPercentage).dp
-}
-
-private fun calculateSpacerHeight(containerHeight: Int): Dp {
-    val spacerPercentage = 0.03f
-    return (containerHeight * spacerPercentage).dp
+    return (containerWidth * spacerPercentage).toInt()
 }
 
 private fun getCharacterCardSize(containerWidth: Int): Pair<Int, Int> {
@@ -232,8 +228,7 @@ fun RecommendPage(
                 // Calculate dynamic spacing based on container width
                 val containerWidth = LocalConfiguration.current.screenWidthDp
                 val spacerWidth = calculateSpacerWidth(containerWidth)
-                val containerHeight = LocalConfiguration.current.screenHeightDp
-                val spacerHeight = calculateSpacerHeight(containerHeight)
+                val spacerHeight = getHeightByWidth(spacerWidth, PORTRAIT_ASPECT_RATIO)
                 
                 LazyVerticalGrid(
                     state = gridState,
@@ -243,8 +238,8 @@ fun RecommendPage(
                         end = 16.dp
                     ),
                     columns = GridCells.Fixed(2),
-                    horizontalArrangement = Arrangement.spacedBy(spacerWidth),
-                    verticalArrangement = Arrangement.spacedBy(spacerHeight),
+                    horizontalArrangement = Arrangement.spacedBy(spacerWidth.dp),
+                    verticalArrangement = Arrangement.spacedBy(spacerHeight.dp),
                 ) {
                     runCatching {
                         if (agents.isNotEmpty()) {
