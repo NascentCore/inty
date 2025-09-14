@@ -24,6 +24,11 @@ targets:
       npm: false
     options:
       mcp_server: false
+  kotlin:
+    reverse_domain: com.inty.api
+    production_repo: NascentCore/inty-kotlin
+    publish:
+      maven: false
 
 # `environments` are a map of the name of the environment (e.g. "sandbox",
 # "production") to the corresponding url to use.
@@ -85,7 +90,6 @@ resources:
             models:
               api_response_dict: '#/components/schemas/APIResponse_dict_'
             methods:
-              upload_image: post /api/v1/report/upload-image
               create: post /api/v1/report/
           ai:
             subresources:
@@ -157,7 +161,7 @@ resources:
                   chat_settings: '#/components/schemas/ChatSettings'
                 methods:
                   get_messages: get /api/v1/chats/agents/{agent_id}/messages
-                  get_settings: get /api/v1/chats/agents/{agent_id}/settings
+                  generate_message_voice: post /api/v1/chats/agents/{agent_id}/messages/{message_id}/voice
 
   $client:
     methods:
