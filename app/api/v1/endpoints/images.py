@@ -3,8 +3,10 @@ Images endpoints for general image upload functionality.
 """
 
 import traceback
+from typing import Any
 
 from fastapi import APIRouter, Depends, File, UploadFile, Form
+from loguru import logger
 
 from app import schemas
 from app.api import deps
@@ -12,14 +14,7 @@ from app.api.utils.logger_route import LoggerRoute
 from app.schemas.response import APIResponse
 from app.utils.image_upload import process_image_upload
 
-from loguru import logger
-router = APIRouter(
-    prefix="/images",
-    route_class=LoggerRoute,
-    tags=["images"],
-    summary="For general image upload functionality",
-    description="Use these APIs to upload images, and get the URL of the image",
-)
+router = APIRouter(prefix="/images", route_class=LoggerRoute)
 
 
 @router.post(
