@@ -31,8 +31,16 @@ from app.schemas.subscription import (
 from app.models.subscription import UserSubscription as UserSubscriptionModel
 from app.services.global_services import subscription_service
 
-router = APIRouter(prefix="/subscription", route_class=LoggerRoute)
-logger = logging.getLogger(__name__)
+from loguru import logger
+
+
+router = APIRouter(
+    prefix="/subscription",
+    route_class=LoggerRoute,
+    tags=["subscription"],
+    summary="For managing user subscriptions",
+    description="Use these APIs to get and update user subscriptions",
+)
 
 
 @router.get(

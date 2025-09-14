@@ -27,7 +27,16 @@ from app.services.voice_service import voice_service
 
 from loguru import logger
 
-router = APIRouter(prefix="/chat", route_class=LoggerRoute)
+router = APIRouter(
+    prefix="/chat",
+    route_class=LoggerRoute,
+    tags=["chat"],
+    summary="For directly chatting with an agent",
+    description=(
+        "Use these APIs to directly chat with an agent."
+        "This is not for managing chat sessions."
+    )
+)
 
 @router.post(
     "/completions/{agent_id}",

@@ -28,7 +28,11 @@ from app.schemas.user_deletion import (
 from app.services import user_service
 from app.services.global_services import subscription_service
 
-router = APIRouter(prefix="/users", route_class=LoggerRoute)
+router = APIRouter(
+    prefix="/users",
+    route_class=LoggerRoute,
+    tags=["users"],
+)
 
 
 @router.get("/profile", response_model=User)
