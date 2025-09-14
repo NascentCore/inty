@@ -112,7 +112,7 @@ async def recommend_agents(
     page_size: int = Query(10, ge=1, le=100, description="Items per page, maximum 100"),
     sort: schemas.AgentSortOption = Query(schemas.AgentSortOption.CREATED_DESC, description="Sort order: created_asc, created_desc, random"),
     # TODO: Fill in the implementation. 目前还没有使用该参数，因为还没有实现推荐算法。
-    # 目前不会影响 app 端正常使用。
+    # 目前不会影响 app 端正常使用。详情查看：https://github.com/NascentCore/inty/issues/484
     # 实现原理：
     # SELECT * FROM (
     # SELECT *, md5(id || 'sort.sort_seed') as hash 
