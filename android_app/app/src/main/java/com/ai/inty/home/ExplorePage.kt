@@ -247,9 +247,9 @@ fun RecommendPage(
                 modifier = Modifier.padding(
                     bottom = BottomNavigationBarHeight,
                     // Left padding
-                    start = spacerWidth,
+                    start = spacerWidth.dp,
                     // Right padding
-                    end = spacerWidth
+                    end = spacerWidth.dp,
                 ),
                 columns = GridCells.Fixed(COLUMN_COUNT),
                 horizontalArrangement = Arrangement.spacedBy(spacerWidth.dp),
