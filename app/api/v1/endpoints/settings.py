@@ -13,7 +13,14 @@ from app.services.settings_service import create_settings, get_settings, update_
 
 from loguru import logger
 
-router = APIRouter(prefix="/settings", route_class=LoggerRoute)
+
+router = APIRouter(
+    prefix="/settings",
+    route_class=LoggerRoute,
+    tags=["settings"],
+    summary="For managing user settings",
+    description="Use these APIs to get and update user settings",
+)
 
 
 @router.get("/", response_model=schemas.Settings)

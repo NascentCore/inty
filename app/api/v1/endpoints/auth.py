@@ -24,11 +24,26 @@ from app.services.user_service import create_guest_user, generate_next_readable_
 
 from loguru import logger
 
-router = APIRouter(prefix="/auth", route_class=LoggerRoute)
+router = APIRouter(
+    prefix="/auth",
+    route_class=LoggerRoute,
+    tags=["auth"],
+    summary="For authentication",
+    description="App uses these APIs to authenticate users and get access token",
+)
+
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{API_V1_PREFIX}/auth/login")
 
-
-@router.post("/guest", response_model=APIResponse[GuestResponse])
+@router.post(
+    "/guest",
+    response_model=APIResponse[GuestResponse],
+    summary="Create guest account using device id",
+    description=(
+        "App uses this API to create guest account using device id."
+        "This is to prevent unauthorized access to the app."
+        "Device id is a unique identifier for the device."
+    ),
+)
 async def create_guest(
     *,
     db: AsyncSession = Depends(get_async_db),
