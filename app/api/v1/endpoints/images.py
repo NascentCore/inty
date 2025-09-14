@@ -44,12 +44,14 @@ async def upload_image(
         # Use helper function to process image upload
         # Use avatars directory for unified storage, similar to backgrounds
         base_path = f"avatars/{current_user.id}" if cropping_avatar else "images/uploads"
-        return await process_image_upload(
+        result = await process_image_upload(
             file=file,
             user_id=current_user.id,
             base_path=base_path,
             cropping_avatar=cropping_avatar,  # Use the direct parameter
         )
+        result.data = result.data.model_dump()
+        return result
     except ValueError as e:
         logger.error(f"文件验证错误: {str(e)}")
         logger.error(f"验证错误堆栈: {traceback.format_exc()}")
