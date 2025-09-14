@@ -11,11 +11,19 @@ from app.schemas.user import User
 
 class AgentSortOption(str, Enum):
     """Agent sorting options"""
-
+    # Ascending order of the creation time, oldest to the newest
     CREATED_ASC = "created_asc"
+    # Descending order of the creation time, newest to the oldest
     CREATED_DESC = "created_desc"
+    # Random order, use sort_seed to ensure consistent order
     RANDOM = "random"
 
+
+class AgentSortConfig(BaseModel):
+    """Agent sorting config"""
+
+    sort: AgentSortOption = Field(default=AgentSortOption.RANDOM, description="sort option")
+    sort_seed: str = Field(default="", description="Sort seed, used to ensure consistent order for the random sort option")
 
 class ModelConfig(BaseModel):
     """AI模型配置"""
