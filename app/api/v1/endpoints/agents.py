@@ -187,7 +187,6 @@ async def get_following_agents(
 @router.post(
     "",
     response_model=schemas.APIResponse[schemas.Agent],
-    tags=["app", "inty-eval"],
     summary="Create new AI agent",
     description="Create new AI agent, used by app and inty-eval",
 )
