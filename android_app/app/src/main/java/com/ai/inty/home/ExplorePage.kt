@@ -50,6 +50,10 @@ import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.platform.LocalDensity
 
 import com.ai.inty.R
 import com.ai.inty.base.IntyImage
@@ -59,12 +63,16 @@ import com.ai.inty.utils.calculateOptimalContentScale
 import com.ai.inty.utils.AspectRatio
 import com.ai.inty.utils.getHeightByWidth
 import com.ai.inty.utils.CHARACTER_CARD_ASPECT_RATIO
+import com.ai.inty.home.BottomNavigationBarHeight
 
 // 一个父容器内多个分布式子容器之间的间距相对父容器的比例
 const val SPACER_PERCENTAGE = 0.02f
 // 预加载下一页的缓冲区数量
 // 当前已经加载但是还未被显示的角色数量
 const val COLUMN_COUNT = 2
+// TODO: 改为使用比例，乘以屏幕宽度
+// 水平方向的padding，包括左侧和右侧
+val HorizontalPadding = 12.dp
 
 private fun calculateSpacerWidth(containerWidth: Int): Int {
     val spacerPercentage = SPACER_PERCENTAGE
@@ -233,13 +241,15 @@ fun RecommendPage(
             val containerWidth = LocalConfiguration.current.screenWidthDp
             val characterCardSize = getCharacterCardSize(containerWidth)
             val spacerWidth = calculateSpacerWidth(containerWidth)
-            
+
             LazyVerticalGrid(
                 state = gridState,
                 modifier = Modifier.padding(
-                    bottom = 80.dp,
-                    start = 16.dp,
-                    end = 16.dp
+                    bottom = BottomNavigationBarHeight,
+                    // Left padding
+                    start = HorizontalPadding,
+                    // Right padding
+                    end = HorizontalPadding
                 ),
                 columns = GridCells.Fixed(COLUMN_COUNT),
                 horizontalArrangement = Arrangement.spacedBy(spacerWidth.dp),
