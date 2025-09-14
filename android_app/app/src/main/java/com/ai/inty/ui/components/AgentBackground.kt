@@ -1,4 +1,4 @@
-package com.ai.inty.chat
+package com.ai.inty.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -33,18 +33,6 @@ import com.ai.inty.utils.calculateOptimalContentScale
 import kotlin.math.roundToInt
 import coil3.compose.AsyncImagePainter
 
-
-@Composable
-fun ChatBackground(
-    agentInfo: AgentInfo?,
-    modifier: Modifier = Modifier,
-) {
-    AgentBackground(
-        agentInfo = agentInfo,
-        modifier = modifier,
-        showGradients = true
-    )
-}
 
 /**
  * 通用角色背景组件
@@ -149,19 +137,6 @@ fun AgentBackground(
             )
         }
     }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun ChatBackgroundPreview() {
-    val mockAgent = AgentInfo(
-        id = "test",
-        name = "Test Agent",
-        avatar = "",
-        background = "",
-        intro = "Test introduction"
-    )
-    ChatBackground(agentInfo = mockAgent)
 }
 
 @Preview(showBackground = true)

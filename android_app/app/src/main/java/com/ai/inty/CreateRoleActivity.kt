@@ -80,7 +80,7 @@ import com.ai.inty.base.noRippleClickable
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.beans.CreateAgentRequest
 import com.ai.inty.net.IAgentApi
-import com.ai.inty.ui.theme.BackGround
+import com.ai.inty.ui.theme.DarkPurple
 import com.ai.inty.ui.theme.IntyTheme
 import com.ai.inty.utils.AvatarManager
 import com.ai.inty.viewmodels.MainViewModel
@@ -461,8 +461,8 @@ private fun CreateRolePage(
     }
 
     Scaffold(
-        modifier = modifier.background(BackGround),
-        containerColor = BackGround,
+        modifier = modifier.background(DarkPurple),
+        containerColor = DarkPurple,
         topBar = {
             CenterAlignedTopAppBar(
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors()

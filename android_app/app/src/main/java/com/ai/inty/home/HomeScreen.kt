@@ -39,7 +39,8 @@ import com.ai.inty.chat.ChatPageContainer
 import com.ai.inty.ui.ChatDialogData
 import com.ai.inty.ui.ExpiredVipDialog
 import com.ai.inty.ui.components.ForceUpgradeDialog
-import com.ai.inty.ui.theme.BackGround
+import com.ai.inty.ui.theme.DarkPurple
+import com.ai.inty.ui.theme.DarkPurple
 import com.ai.inty.viewmodels.ChatViewModel
 import com.ai.inty.viewmodels.HomeTabIndex
 import com.ai.inty.viewmodels.MainViewModel
@@ -76,11 +77,11 @@ fun HomeScreen(
     Scaffold(
         modifier = modifier
             .fillMaxSize()
-            .background(BackGround)
+            .background(DarkPurple)
             .navigationBarsPadding(),
         containerColor = Color.Transparent,
         bottomBar = {
-            HomeBottomBar(
+            AppBottomNavigationBar(
                 modifier = Modifier,
                 selectedTab = selectedTab.value.ordinal,
                 onSelectTab = { tabIndex ->
@@ -441,11 +442,15 @@ private fun handleFollowAgent(agentId: String, mainViewModel: MainViewModel) {
     }
 }
 
+val BottomNavigationBarHeight = 48.dp
+val BottomNavigationBarPadding = 0.dp
+val BottomNavigationBarItemSize = 42.dp
+
 /**
  * 底部导航栏
  */
 @Composable
-private fun HomeBottomBar(
+private fun AppBottomNavigationBar(
     modifier: Modifier,
     selectedTab: Int,
     onSelectTab: (Int) -> Unit,
@@ -453,9 +458,9 @@ private fun HomeBottomBar(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .background(BackGround)
-            .height(80.dp)
-            .padding(bottom = 32.dp),
+            .background(DarkPurple)
+            .height(BottomNavigationBarHeight)
+            .padding(bottom = BottomNavigationBarPadding),
         verticalAlignment = Alignment.CenterVertically
     ) {
         MAIN_TAB_LIST.forEachIndexed { index, tab ->
@@ -485,7 +490,7 @@ private fun BottomBarItem(
     Box(modifier = modifier) {
         IntyImage(
             modifier = Modifier
-                .size(42.dp)
+                .size(BottomNavigationBarItemSize)
                 .align(Alignment.Center),
             model = if (selected) tabInfo.selectedImage else tabInfo.normalImage
         )

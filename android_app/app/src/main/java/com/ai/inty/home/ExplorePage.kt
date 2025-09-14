@@ -24,7 +24,6 @@ import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -51,6 +50,10 @@ import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.platform.LocalDensity
 
 import com.ai.inty.R
 import com.ai.inty.base.IntyImage
@@ -60,12 +63,15 @@ import com.ai.inty.utils.calculateOptimalContentScale
 import com.ai.inty.utils.AspectRatio
 import com.ai.inty.utils.getHeightByWidth
 import com.ai.inty.utils.CHARACTER_CARD_ASPECT_RATIO
+import com.ai.inty.home.BottomNavigationBarHeight
 
-// 一个父容器内多个分布式子容器之间的间距相对父容器的比例
-const val SPACER_PERCENTAGE = 0.02f
+// 一个父容器内多个分布式子容器之间及与父容器边缘的间距相对父容器的比例
+// 水平方向的padding，包括左侧和右侧，子容器上下左右之间的间距
+const val SPACER_PERCENTAGE = 0.012f
 // 预加载下一页的缓冲区数量
 // 当前已经加载但是还未被显示的角色数量
 const val COLUMN_COUNT = 2
+
 
 private fun calculateSpacerWidth(containerWidth: Int): Int {
     val spacerPercentage = SPACER_PERCENTAGE
@@ -181,114 +187,113 @@ fun RecommendPage(
             }
         }
 
-        Scaffold(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color.Transparent)
-                .offset { IntOffset(0, animatedOffset.roundToInt()) },
-            containerColor = Color.Transparent
-        ) { innerPadding ->
+                .offset { IntOffset(0, animatedOffset.roundToInt()) }
+        ) {
+            Spacer(Modifier.height(28.dp))
 
-            Column {
-                Spacer(Modifier.height(innerPadding.calculateTopPadding() + 28.dp))
+            Row(
+                modifier = Modifier.padding(24.dp, 0.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IntyImage(
+                    model = R.drawable.popular1
+                )
+                Spacer(Modifier.width(7.dp))
+                IntyImage(
+                    model = R.drawable.popular
+                )
+            }
 
-                Row(
-                    modifier = Modifier.padding(24.dp, 0.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    IntyImage(
-                        model = R.drawable.popular1
-                    )
-                    Spacer(Modifier.width(7.dp))
-                    IntyImage(
-                        model = R.drawable.popular
-                    )
+            Spacer(Modifier.height(30.dp))
+
+            val gridState = rememberLazyGridState()
+
+            // 检测是否在顶部
+            remember {
+                derivedStateOf {
+                    gridState.firstVisibleItemIndex == 0 && gridState.firstVisibleItemScrollOffset == 0
                 }
+            }
 
-                Spacer(Modifier.height(30.dp))
-
-                val gridState = rememberLazyGridState()
-
-                // 检测是否在顶部
-                remember {
-                    derivedStateOf {
-                        gridState.firstVisibleItemIndex == 0 && gridState.firstVisibleItemScrollOffset == 0
-                    }
+            // 检测是否滚动到底部
+            val reachedBottom by remember {
+                derivedStateOf {
+                    val lastVisibleItem = gridState.layoutInfo.visibleItemsInfo.lastOrNull()
+                    lastVisibleItem?.index != null && lastVisibleItem.index >= agents.size - 3
                 }
+            }
 
-                // 检测是否滚动到底部
-                val reachedBottom by remember {
-                    derivedStateOf {
-                        val lastVisibleItem = gridState.layoutInfo.visibleItemsInfo.lastOrNull()
-                        lastVisibleItem?.index != null && lastVisibleItem.index >= agents.size - 3
-                    }
+            // 触发加载更多，添加防抖机制
+            LaunchedEffect(reachedBottom) {
+                if (reachedBottom && agents.isNotEmpty() && !isLoading) {
+                    // 添加延迟，避免快速滚动时重复触发
+                    delay(100)
+                    onLoadMore()
                 }
+            }
 
-                // 触发加载更多，添加防抖机制
-                LaunchedEffect(reachedBottom) {
-                    if (reachedBottom && agents.isNotEmpty() && !isLoading) {
-                        // 添加延迟，避免快速滚动时重复触发
-                        delay(100)
-                        onLoadMore()
-                    }
-                }
+            // Calculate dynamic spacing based on container width
+            val containerWidth = LocalConfiguration.current.screenWidthDp
+            val characterCardSize = getCharacterCardSize(containerWidth)
+            // 用于角色卡上下左右的间距
+            val spacerWidth = calculateSpacerWidth(containerWidth)
 
-                // Calculate dynamic spacing based on container width
-                val containerWidth = LocalConfiguration.current.screenWidthDp
-                val characterCardSize = getCharacterCardSize(containerWidth)
-                val spacerWidth = calculateSpacerWidth(containerWidth)
-                
-                LazyVerticalGrid(
-                    state = gridState,
-                    modifier = Modifier.padding(
-                        bottom = innerPadding.calculateBottomPadding() + 80.dp,
-                        start = 16.dp,
-                        end = 16.dp
-                    ),
-                    columns = GridCells.Fixed(COLUMN_COUNT),
-                    horizontalArrangement = Arrangement.spacedBy(spacerWidth.dp),
-                    verticalArrangement = Arrangement.spacedBy(spacerWidth.dp),
-                ) {
-                    runCatching {
-                        if (agents.isNotEmpty()) {
-                            itemsIndexed(
-                                items = agents,
-                                key = { index, agent -> "${agent.id}_$index" }
-                            ) { _, agent ->
-                                CharacterCard(
-                                    modifier = Modifier
-                                        .noRippleClickable {
-                                            onClickAgent(agent)
-                                        },
-                                    agentInfo = agent,
-                                    width = characterCardSize.width.dp,
-                                    height = characterCardSize.height.dp
-                                )
-                            }
-                        }
-                    }.onFailure { it.printStackTrace() }
-
-
-                    // 加载更多指示器
-                    if (isLoading && agents.isNotEmpty()) {
-                        item {
-                            Box(
+            LazyVerticalGrid(
+                state = gridState,
+                modifier = Modifier.padding(
+                    bottom = BottomNavigationBarHeight,
+                    // Left padding
+                    start = spacerWidth.dp,
+                    // Right padding
+                    end = spacerWidth.dp,
+                ),
+                columns = GridCells.Fixed(COLUMN_COUNT),
+                horizontalArrangement = Arrangement.spacedBy(spacerWidth.dp),
+                verticalArrangement = Arrangement.spacedBy(spacerWidth.dp),
+            ) {
+                runCatching {
+                    if (agents.isNotEmpty()) {
+                        itemsIndexed(
+                            items = agents,
+                            key = { index, agent -> "${agent.id}_$index" }
+                        ) { _, agent ->
+                            CharacterCard(
                                 modifier = Modifier
-                                    .size(165.dp, 60.dp)
-                                    .padding(16.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(24.dp),
-                                    color = Color.White.copy(0.7f)
-                                )
-                            }
+                                    .noRippleClickable {
+                                        onClickAgent(agent)
+                                    },
+                                agentInfo = agent,
+                                width = characterCardSize.width.dp,
+                                height = characterCardSize.height.dp
+                            )
                         }
                     }
+                }.onFailure { it.printStackTrace() }
 
+
+                // 加载更多指示器
+                if (isLoading && agents.isNotEmpty()) {
                     item {
-                        Spacer(Modifier.height(16.dp))
+                        Box(
+                            modifier = Modifier
+                                .size(165.dp, 60.dp)
+                                .padding(16.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                color = Color.White.copy(0.7f)
+                            )
+                        }
                     }
+                }
+
+                item {
+                    Spacer(Modifier.height(16.dp))
                 }
             }
         }

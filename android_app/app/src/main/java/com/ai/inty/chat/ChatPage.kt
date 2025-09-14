@@ -1,5 +1,7 @@
 package com.ai.inty.chat
 
+import kotlinx.coroutines.launch
+
 import android.app.Activity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -38,6 +40,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+
 import com.ai.inty.Constant
 import com.ai.inty.R
 import com.ai.inty.base.ToastUtils
@@ -49,7 +52,12 @@ import com.ai.inty.viewmodels.ChatViewModel
 import com.inty.utils.log.EasyLog
 import com.inty.utils.storage.IntySetting
 import com.therouter.TheRouter
-import kotlinx.coroutines.launch
+import com.ai.inty.ui.components.AgentBackground
+import com.ai.inty.home.BottomNavigationBarHeight
+
+
+// The spacer from the bottom of the chat input to what ever that flows underneath it.
+val ChatInputBottomSpacerHeight = 8.dp
 
 @Composable
 internal fun ChatPage(
@@ -86,9 +94,9 @@ internal fun ChatPage(
 
     // 动态计算底部间距
     val bottomPadding = when {
-        showBackButton -> 10.dp // 独立聊天页面：固定10dp
-        isKeyboardVisible -> 10.dp // 首页聊天页面，键盘呼出时：10dp
-        else -> 90.dp // 首页聊天页面，无键盘时：90dp（给底部tab留出更多间隔）
+        showBackButton -> ChatInputBottomSpacerHeight // 独立聊天页面：固定
+        isKeyboardVisible -> ChatInputBottomSpacerHeight // 首页聊天页面，键盘呼出时
+        else -> BottomNavigationBarHeight + ChatInputBottomSpacerHeight // 首页聊天页面，无键盘时
     }
 
     // Keep talking二状态设置：默认跟随全局设置
@@ -136,7 +144,10 @@ internal fun ChatPage(
             }
     ) {
         // 背景
-        ChatBackground(agentInfo = agentInfo)
+        AgentBackground(
+            agentInfo = agentInfo,
+            showGradients = true
+        )
 
         val drawerState = remember { mutableStateOf(DrawerValue.Closed) }
         val scope = rememberCoroutineScope()

@@ -21,7 +21,7 @@ import com.ai.inty.base.ToastUtils
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.chat.ChatPage
 import com.ai.inty.net.IAgentApi
-import com.ai.inty.ui.theme.BackGround
+import com.ai.inty.ui.theme.DarkPurple
 import com.ai.inty.ui.theme.IntyTheme
 import com.ai.inty.viewmodels.ChatViewModel
 import com.architecture.httplib.core.HttpResult
@@ -122,7 +122,7 @@ class ChatActivity : BaseActivity() {
                 ChatPage(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(BackGround)
+                        .background(DarkPurple)
                         .imePadding()
                         .navigationBarsPadding(),
                     chatViewModel = chatViewModel,

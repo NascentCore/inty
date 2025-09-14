@@ -63,7 +63,7 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.ai.inty.base.BaseActivity
 import com.ai.inty.base.noRippleClickable
-import com.ai.inty.ui.theme.BackGround
+import com.ai.inty.ui.theme.DarkPurple
 import com.ai.inty.ui.theme.IntyTheme
 import com.ai.inty.utils.AvatarManager
 import com.ai.inty.viewmodels.AvatarGenerateViewModel
@@ -118,8 +118,8 @@ private fun AvatarGeneratePage(
     }
 
     Scaffold(
-        modifier = modifier.background(BackGround),
-        containerColor = BackGround,
+        modifier = modifier.background(DarkPurple),
+        containerColor = DarkPurple,
         topBar = {
             CenterAlignedTopAppBar(
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors()
