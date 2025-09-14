@@ -609,8 +609,44 @@
                             "default": "created_desc"
                         },
                         "description": "Sort order: created_asc, created_desc, random"
+                    },
+                    {
+                        "name": "index",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "default": 1,
+                            "title": "Index"
+                        }
+                    },
+                    {
+                        "name": "count",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "maximum": 100,
+                            "minimum": 1,
+                            "default": 10,
+                            "title": "Count"
+                        }
                     }
                 ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AgentSortConfig",
+                                "default": {
+                                    "sort": "random",
+                                    "sort_seed": ""
+                                }
+                            }
+                        }
+                    }
+                },
                 "responses": {
                     "200": {
                         "description": "Successful Response",
@@ -3263,6 +3299,24 @@
                 ],
                 "title": "AgentCreate",
                 "description": "\u521b\u5efaAI\u89d2\u8272\n\n\u63a8\u8350\u4f7f\u7528\u65b9\u5f0f\uff1a\n1. \u4f7f\u7528personality + scenario\u5b57\u6bb5\u6784\u5efa\u89d2\u8272\n2. \u6dfb\u52a0first_message\u4f5c\u4e3a\u5f00\u573a\u767d\n3. \u53ef\u9009\u6dfb\u52a0message_example\u5c55\u793a\u5bf9\u8bdd\u98ce\u683c\n\n\u517c\u5bb9\u6027\u8bf4\u660e\uff1a\n- \u4ecd\u652f\u6301\u4f7f\u7528prompt\u5b57\u6bb5 (legacy\u6a21\u5f0f)\n- \u4f18\u5148\u7ea7\uff1a\u89d2\u8272\u5361\u5b57\u6bb5 > prompt\u5b57\u6bb5"
+            },
+            "AgentSortConfig": {
+                "properties": {
+                    "sort": {
+                        "$ref": "#/components/schemas/AgentSortOption",
+                        "description": "sort option",
+                        "default": "random"
+                    },
+                    "sort_seed": {
+                        "type": "string",
+                        "title": "Sort Seed",
+                        "description": "Sort seed, used to ensure consistent order for the random sort option",
+                        "default": ""
+                    }
+                },
+                "type": "object",
+                "title": "AgentSortConfig",
+                "description": "Agent sorting config"
             },
             "AgentSortOption": {
                 "type": "string",
