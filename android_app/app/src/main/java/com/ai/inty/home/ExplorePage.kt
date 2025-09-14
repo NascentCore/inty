@@ -51,6 +51,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.platform.LocalDensity
@@ -337,11 +338,11 @@ fun CharacterCard(
     val roundedCornerShapeSize = calculateOptimalRoundedCornerShapeSize(width, height)
     Box(
         modifier = modifier
-            .size(width, height)
+            .width(width)
             .clip(RoundedCornerShape(roundedCornerShapeSize))
     ) {
         IntyImage(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.fillMaxWidth(),
             model = agentInfo.background,
             placeholder = painterResource(R.drawable.app_icon),
             error = painterResource(R.drawable.app_icon),
