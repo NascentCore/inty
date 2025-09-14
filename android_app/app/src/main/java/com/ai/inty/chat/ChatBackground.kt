@@ -24,6 +24,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.ai.inty.base.IntyImage
@@ -47,8 +48,11 @@ fun ChatBackground(
 }
 
 /**
- * 通用角色背景组件
- * 可用于聊天页面、角色主页等需要角色背景的地方
+ * 角色背景
+ * 用于聊天页面、角色主页等将角色形象作为背景展示前景其他内容。
+ * 前景内容包括：
+ * 聊天页面的消息（主题）、输入（底部）、top bar（左上方）、设置（右上方）
+ * 角色主页的简介、开场白等
  */
 @Composable
 fun AgentBackground(
@@ -56,40 +60,36 @@ fun AgentBackground(
     modifier: Modifier = Modifier,
     showGradients: Boolean = true,
 ) {
+    /* 工作机制：
+     * 获得当前显示区域的大小
+     * ？获取图片尺寸，如果图片尚未加载，则显示 placeholder
+     * 获取图片后，根据图片尺寸，决定最佳 scale
+     */
     val density = LocalDensity.current
     val configuration = LocalConfiguration.current
+    // TODO: 这里是否应该查询 chat 界面显示范围的大小，而非 window
+    val containerSize = LocalWindowInfo.current.containerSize
 
-    var imageWidthDp by remember {
-        mutableIntStateOf(configuration.screenWidthDp)
+    var screenWidth by remember {
+        mutableIntStateOf(containerSize.width)
     }
-    var imageHeightDp by remember {
-        mutableIntStateOf(configuration.screenHeightDp)
+    var screenHeight by remember {
+        mutableIntStateOf(containerSize.height)
     }
 
-    if (configuration.screenWidthDp > imageWidthDp) {
-        imageWidthDp = configuration.screenWidthDp
-    }
-    if (configuration.screenHeightDp > imageHeightDp) {
-        imageHeightDp = configuration.screenHeightDp
-    }
+    screenWidth = containerSize.width
+    screenHeight =  containerSize.height
 
     // 状态来存储图片尺寸
     var imageWidth by remember { mutableStateOf<Int?>(null) }
     var imageHeight by remember { mutableStateOf<Int?>(null) }
     
-    // 计算最佳的 ContentScale
-    val currentImageWidth = imageWidth
-    val currentImageHeight = imageHeight
-    val optimalContentScale = if (currentImageWidth != null && currentImageHeight != null && currentImageWidth > 0 && currentImageHeight > 0) {
-        calculateOptimalContentScale(
-            containerWidth = imageWidthDp,
-            containerHeight = imageHeightDp,
-            imageWidth = currentImageWidth,
-            imageHeight = currentImageHeight
-        )
-    } else {
-        ContentScale.Crop // 默认值，当图片尺寸未知时
-    }
+    val optimalContentScale = calculateOptimalContentScale(
+        containerWidth = screenWidth,
+        containerHeight = screenHeight,
+        imageWidth = imageWidth,
+        imageHeight = imageHeight
+    )
 
     Box(modifier = modifier) {
         Column(
@@ -97,17 +97,17 @@ fun AgentBackground(
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState(), false)
                 .onSizeChanged {
-                    val newHeight = with(density) {
-                        it.height.toDp().value.roundToInt()
+                    screenWidth = with(density) {
+                        it.width.toDp().value.roundToInt()
                     }
-                    if (newHeight > imageHeightDp) {
-                        imageHeightDp = newHeight
+                    screenHeight = with(density) {
+                        it.height.toDp().value.roundToInt()
                     }
                 }
         ) {
             IntyImage(
                 modifier = Modifier
-                    .size(imageWidthDp.dp, imageHeightDp.dp),
+                    .size(screenWidth.dp, screenHeight.dp),
                 model = agentInfo?.getChatBackground(),
                 alignment = Alignment.TopCenter,
                 contentScale = optimalContentScale,
@@ -193,7 +193,7 @@ fun AspectRatioComparisonExample() {
         "屏幕 1:1 (1.0) + 图片 4:3 (1.33) → FillHeight (填充高度)",
         "屏幕 4:3 (1.33) + 图片 1:1 (1.0) → FillWidth (填充宽度)"
     )
-    
+
     // 这里可以添加实际的 UI 展示
     // 为了简化，这里只是概念展示
 }

@@ -17,9 +17,13 @@ import kotlin.math.abs
 fun calculateOptimalContentScale(
     containerWidth: Int,
     containerHeight: Int,
-    imageWidth: Int,
-    imageHeight: Int
+    imageWidth: Int?,
+    imageHeight: Int?,
 ): ContentScale {
+    // 图片可能还在加载中，因此需要等待
+    if (imageWidth == null || imageHeight == null) {
+        return ContentScale.Crop
+    }
     val screenAspectRatio = containerWidth.toFloat() / containerHeight.toFloat()
     val imageAspectRatio = imageWidth.toFloat() / imageHeight.toFloat()
     return when {

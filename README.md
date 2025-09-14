@@ -304,3 +304,7 @@ docker run -p 8000:8000 -v $(pwd)/config.yaml:/app/config.yaml inty-backend
 * **Google Play Developer API** - 订阅管理
 * **Firebase Cloud Messaging** - 消息推送
 * **ElevenLabs API** - 高质量语音合成服务
+
+## Android 入门
+
+[Android UI modifier](https://developer.android.com/develop/ui/compose/modifiers)
