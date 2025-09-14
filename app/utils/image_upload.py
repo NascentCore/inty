@@ -119,8 +119,7 @@ async def process_image_upload(
     original_file_data = file_data
     original_file_ext = file_ext
     original_content_type = file.content_type
-    result = ImageUploadResponse()
-    
+
     # Compress PNG and large files
     # Always compress PNG, and also compress if file is > 500KB.
     # We might adjust the threshold value of 500KB in the future.
@@ -149,14 +148,14 @@ async def process_image_upload(
         global_config_loaded_from_config_yaml.gcs.bucket,
         file_gcs_path,
     )
-    result.url = url
+    result = ImageUploadResponse(url=url)
     logger.debug(f"图片 上传 GCS 成功，返回URL: {url}")
 
     # If image was compressed and it's not an avatar, also upload uncompressed version
     if was_compressed:
         # Generate path for uncompressed image
         uncompressed_file_gcs_path = f"{base_path}/{user_id}/{timestamp}-{unique_id}-original.{original_file_ext}"
-        
+
         # Upload uncompressed file to GCS
         uncompressed_url = upload_to_gcs(
             original_file_data,
