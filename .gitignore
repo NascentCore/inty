@@ -190,3 +190,11 @@ inty-firebase-key.json
 # stainless output sdks
 /app/inty-python/
 /app/inty-typescript/
+
+# android app: sometime Android Studio writes build outputs in non-standard location.
+# Thoses standard locations are already ignored under android_app/.gitignore.
+# But sometimes due to our limited understanding of Android Studio,
+# the output is written in non-standard locations.
+# So we ignore them here.
+*.aab
+*.apk
