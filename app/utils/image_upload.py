@@ -104,6 +104,11 @@ async def process_image_upload(
             }
         )
 
+    # Store original file data before compression
+    original_file_data = file_data
+    original_file_ext = file_ext
+    original_content_type = file.content_type
+    
     # Compress PNG and large files
     # Always compress PNG, and also compress if file is > 500KB.
     # We might adjust the threshold value of 500KB in the future.
@@ -112,9 +117,11 @@ async def process_image_upload(
     # TODO: Explicitly add parameter compress_image in request body to control this.
     # Not always compress png files.
     compression_threshold_size_bytes = global_config_loaded_from_config_yaml.app.limits.image_compression_threshold_size_kb * 1024
+    was_compressed = False
     if file_ext == ImageFormat.PNG or len(file_data) > compression_threshold_size_bytes:
         file_data = compress_png_to_jpeg(file_data)
         file_ext = ImageFormat.JPEG
+        was_compressed = True
         logger.debug(
             f"Compressed PNG ({file_size} bytes) to JPEG ({len(file_data)} bytes)"
         )
@@ -124,7 +131,6 @@ async def process_image_upload(
     unique_id = uuid.uuid4().hex[:8]
     file_gcs_path = f"{base_path}/{user_id}/{timestamp}-{unique_id}.{file_ext}"
 
-    # Upload original file to GCS
     url = upload_to_gcs(
         file_data,
         file.content_type,
@@ -133,6 +139,22 @@ async def process_image_upload(
     )
 
     response_data = { "url": url }
+    
+    # If image was compressed and it's not an avatar, also upload uncompressed version
+    if was_compressed:
+        # Generate path for uncompressed image
+        uncompressed_file_gcs_path = f"{base_path}/{user_id}/{timestamp}-{unique_id}-uncompressed.{original_file_ext}"
+        
+        # Upload uncompressed file to GCS
+        uncompressed_url = upload_to_gcs(
+            original_file_data,
+            original_content_type,
+            global_config_loaded_from_config_yaml.gcs.bucket,
+            uncompressed_file_gcs_path,
+        )
+        
+        response_data["uncompressed_url"] = uncompressed_url
+        logger.debug(f"Uploaded uncompressed image: {uncompressed_url}")
 
     # Handle cropping if enabled
     if cropping_avatar:
