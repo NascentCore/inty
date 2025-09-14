@@ -3,6 +3,7 @@ from datetime import datetime
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
+from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api import deps
@@ -22,16 +23,7 @@ from app.schemas.response import APIResponse, PaginationData
 from app.services import report_service
 from app.utils.gcs import upload_to_gcs
 
-from loguru import logger
-
-
-router = APIRouter(
-    prefix="/report",
-    route_class=LoggerRoute,
-    tags=["report"],
-    summary="For reporting app content",
-    description="Used by app to report app content: AI characters, images, etc.",
-)
+router = APIRouter(prefix="/report", route_class=LoggerRoute)
 
 
 # TODO: Remove this endpoint.

@@ -13,16 +13,9 @@ from app.services.evaluation_service import EvaluationService
 from app.services.question_parser_service import QuestionParserService
 from app.services.scoring_service import ScoringService
 
-from loguru import logger
+logger = logging.getLogger(__name__)
 
-
-router = APIRouter(
-    prefix="/evaluation",
-    route_class=LoggerRoute,
-    tags=["evaluation"],
-    summary="Used by inty-eval for evaluating the chat system",
-    description="Used by inty-eval for evaluating the chat system",
-)
+router = APIRouter(prefix="/evaluation", route_class=LoggerRoute)
 
 
 @router.get("/sessions", response_model=List[schemas.EvaluationSessionResponse])

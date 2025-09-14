@@ -10,16 +10,8 @@ from app.schemas.response import APIResponse
 from app.schemas.version import VersionCheckResponse
 from app.external_services.globals import google_play_service
 
-from loguru import logger
-
-
-router = APIRouter(
-    prefix="/version",
-    route_class=LoggerRoute,
-    tags=["version"],
-    summary="For checking the app version",
-    description="App use this API to check if it needs to update.",
-)
+router = APIRouter(prefix="/version", route_class=LoggerRoute)
+logger = logging.getLogger(__name__)
 
 
 @router.post("/check", response_model=APIResponse[VersionCheckResponse])

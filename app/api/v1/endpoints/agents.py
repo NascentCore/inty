@@ -34,16 +34,8 @@ from app.services.character_card_service import character_card_service
 from app.services.global_services import subscription_service
 from app.utils.image import ImageFormat, AspectRatio
 
-from loguru import logger
 
-
-router = APIRouter(
-    prefix="/ai/agents",
-    route_class=LoggerRoute,
-    tags=["agents"],
-    summary="For managing AI agents",
-    description="Used by app to manage AI agents",
-)
+router = APIRouter(prefix="/ai/agents", route_class=LoggerRoute)
 
 
 @router.get(
@@ -195,6 +187,7 @@ async def get_following_agents(
 @router.post(
     "",
     response_model=schemas.APIResponse[schemas.Agent],
+    tags=["app", "inty-eval"],
     summary="Create new AI agent",
     description="Create new AI agent, used by app and inty-eval",
 )
