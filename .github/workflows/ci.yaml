@@ -85,7 +85,6 @@ jobs:
         if:
           github.event_name == 'pull_request'
         run: |
-          cp config.yaml.example config.yaml
           # alembic upgrade head: no need to run, as start.sh already includes it
           ./start.sh &
           # Wait for the server to start. If the time is too short, it needs to be increased.
