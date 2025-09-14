@@ -39,4 +39,4 @@ class TestProcessImageUpload:
             base_path=base_path,
             cropping_avatar=cropping_avatar
         )
-        assert result.success is True
+        assert result.code is 200
