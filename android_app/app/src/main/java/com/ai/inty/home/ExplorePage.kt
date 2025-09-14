@@ -67,7 +67,7 @@ import com.ai.inty.home.BottomNavigationBarHeight
 
 // 一个父容器内多个分布式子容器之间及与父容器边缘的间距相对父容器的比例
 // 水平方向的padding，包括左侧和右侧，子容器上下左右之间的间距
-const val SPACER_PERCENTAGE = 0.02f
+const val SPACER_PERCENTAGE = 0.012f
 // 预加载下一页的缓冲区数量
 // 当前已经加载但是还未被显示的角色数量
 const val COLUMN_COUNT = 2
