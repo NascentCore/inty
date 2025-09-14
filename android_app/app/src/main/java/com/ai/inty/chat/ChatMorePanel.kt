@@ -45,7 +45,7 @@ import com.ai.inty.billing.BillingRepository
 import com.ai.inty.ui.ChatDialogData
 import com.ai.inty.ui.PremiumChatDialog
 import com.ai.inty.ui.ReplyStyleSheet
-import com.ai.inty.ui.theme.BackGround
+import com.ai.inty.ui.theme.DarkPurple
 import com.ai.inty.viewmodels.ChatViewModel
 import com.inty.utils.storage.IntySetting
 import com.therouter.TheRouter
@@ -85,7 +85,7 @@ fun ChatMorePanel(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(color = BackGround)
+                        .background(color = DarkPurple)
                 ) {
                     Spacer(Modifier.width(16.dp))
                     MorePanelItem(

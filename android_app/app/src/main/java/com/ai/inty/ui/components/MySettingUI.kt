@@ -48,7 +48,7 @@ import com.ai.inty.base.IntySmallTextField2
 import com.ai.inty.base.noRippleClickable
 import com.ai.inty.beans.GENDER
 import com.ai.inty.beans.UserProfile
-import com.ai.inty.ui.theme.BackGround
+import com.ai.inty.ui.theme.DarkPurple
 
 /**
  * 编辑类型枚举
@@ -87,7 +87,7 @@ fun MySettingScreen(
     onSave: () -> Unit = {},
 ) {
     Scaffold(
-        modifier = Modifier.background(BackGround),
+        modifier = Modifier.background(DarkPurple),
         topBar = {
             CenterAlignedTopAppBar(
                 title = {

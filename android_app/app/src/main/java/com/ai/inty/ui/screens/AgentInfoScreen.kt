@@ -38,7 +38,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -47,15 +46,15 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+
 import com.ai.inty.Constant
 import com.ai.inty.R
 import com.ai.inty.base.AntiClick
-import com.ai.inty.base.IntyImage
 import com.ai.inty.base.noRippleClickable
 import com.ai.inty.beans.AgentInfo
-import com.ai.inty.chat.AgentBackground
-import com.ai.inty.ui.theme.BackGround
+import com.ai.inty.ui.theme.DarkPurple
 import com.ai.inty.viewmodels.AgentInfoViewModel
+import com.ai.inty.ui.components.AgentBackground
 import com.inty.utils.storage.IntySetting
 import com.therouter.TheRouter
 
@@ -140,10 +139,10 @@ internal fun AiAgentInfoScreen(
                             brush = Brush.verticalGradient(
                                 listOf(
                                     Color(0x00000000),
-                                    BackGround.copy(.3f),
-                                    BackGround.copy(.7f),
-                                    BackGround.copy(.9f),
-                                    BackGround, BackGround,
+                                    DarkPurple.copy(.3f),
+                                    DarkPurple.copy(.7f),
+                                    DarkPurple.copy(.9f),
+                                    DarkPurple, DarkPurple,
                                 ),
                                 endY = 900f
                             )
@@ -284,7 +283,7 @@ internal fun AiAgentInfoScreen(
         ModalBottomSheet(
             onDismissRequest = { showBottomSheet = false },
             sheetState = bottomSheetState,
-            containerColor = BackGround,
+            containerColor = DarkPurple,
             contentColor = Color.White
         ) {
             BottomSheetContent(

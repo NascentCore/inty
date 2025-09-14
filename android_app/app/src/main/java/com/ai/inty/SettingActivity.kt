@@ -9,7 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Modifier
 import com.ai.inty.base.BaseActivity
 import com.ai.inty.ui.screens.SettingContent
-import com.ai.inty.ui.theme.BackGround
+import com.ai.inty.ui.theme.DarkPurple
 import com.ai.inty.ui.theme.IntyTheme
 import com.ai.inty.viewmodels.MainViewModel
 import com.therouter.TheRouter
@@ -31,7 +31,7 @@ class SettingActivity : BaseActivity() {
                 SettingContent(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(BackGround),
+                        .background(DarkPurple),
                     onBack = {
                         finish()
                     },

@@ -9,7 +9,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.ai.inty.base.BaseActivity
 import com.ai.inty.ui.screens.SubscriptionManagementScreen
-import com.ai.inty.ui.theme.BackGround
+import com.ai.inty.ui.theme.DarkPurple
 import com.ai.inty.ui.theme.IntyTheme
 import com.ai.inty.viewmodels.SubsManageViewModel
 import com.therouter.router.Route
@@ -46,7 +46,7 @@ private fun SubsManageContent(
     SubscriptionManagementScreen(
         modifier = Modifier
             .fillMaxSize()
-            .background(BackGround),
+            .background(DarkPurple),
         onBack = onBack,
         viewModel = viewModel
     )
