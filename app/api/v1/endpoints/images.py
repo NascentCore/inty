@@ -14,7 +14,11 @@ from app.api.utils.logger_route import LoggerRoute
 from app.schemas.response import APIResponse
 from app.utils.image_upload import process_image_upload
 
-router = APIRouter(prefix="/images", route_class=LoggerRoute)
+router = APIRouter(
+    prefix="/images",
+    route_class=LoggerRoute,
+    tags=["images"],
+)
 
 
 @router.post(

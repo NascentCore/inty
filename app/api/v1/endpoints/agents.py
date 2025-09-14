@@ -35,7 +35,11 @@ from app.services.global_services import subscription_service
 from app.utils.image import ImageFormat, AspectRatio
 
 
-router = APIRouter(prefix="/ai/agents", route_class=LoggerRoute)
+router = APIRouter(
+    prefix="/ai/agents",
+    route_class=LoggerRoute,
+    tags=["agents"],
+)
 
 
 @router.get(
