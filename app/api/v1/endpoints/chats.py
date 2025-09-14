@@ -1,11 +1,9 @@
 import uuid
 from typing import Any, List, Union
 
-from app.services.resource_service import delete_resource
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from langchain_core.messages import HumanMessage
-from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import models, schemas
@@ -22,8 +20,19 @@ from app.services.global_services import subscription_service
 from app.services.voice_service import voice_service
 from app.core.user_privilege.premium_check import is_eligible_for_premium
 
-# TODO: Prefix should be /chat instead of /chats.
-router = APIRouter(prefix="/chats", route_class=LoggerRoute)
+from loguru import logger
+
+
+router = APIRouter(
+    prefix="/chats",
+    route_class=LoggerRoute,
+    tags=["chats"],
+    summary="For managing chat sessions not directly for the chat process",
+    description=(
+        "Use these APIs to create, list, delete chat sessions, etc."
+        "Direct chatting is through /chat/completions/{agent_id}."
+    )
+)
 
 
 @router.get(
