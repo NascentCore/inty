@@ -8,9 +8,11 @@ from typing import Any, List
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from loguru import logger
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import schemas
+from app.schemas.agent import AgentSortConfig
 from app.api import deps
 from app.api.utils.logger_route import LoggerRoute
 from app.core.agent.agent import agent_manager
@@ -90,6 +92,16 @@ async def search_agents(
     return schemas.APIResponse.success(data=pagination_data)
 
 
+class RecommendAgentsRequest(BaseModel):
+    """
+    替换掉现有的参数
+    """
+    
+    index: int = Query(1, ge=1, description="0-index, the starting index of the recommended agents list")
+    count: int = Query(10, ge=1, le=100, description="count of recommended agents, app should balance between smoothness and loading speed")
+    sort_config: AgentSortConfig = Query(AgentSortConfig(), description="sort method and sort seed")
+
+
 @router.get(
     "/recommend",
     response_model=schemas.APIResponse[schemas.PaginationData[schemas.Agent]],
@@ -99,6 +111,19 @@ async def recommend_agents(
     page: int = Query(1, ge=1, description="Page number, starting from 1"),
     page_size: int = Query(10, ge=1, le=100, description="Items per page, maximum 100"),
     sort: schemas.AgentSortOption = Query(schemas.AgentSortOption.CREATED_DESC, description="Sort order: created_asc, created_desc, random"),
+    # TODO: Fill in the implementation. 目前还没有使用该参数，因为还没有实现推荐算法。
+    # 目前不会影响 app 端正常使用。详情查看：https://github.com/NascentCore/inty/issues/484
+    # 实现原理：
+    # SELECT * FROM (
+    # SELECT *, md5(id || 'sort.sort_seed') as hash 
+    # FROM agents
+    # ) ORDER BY hash;
+    # app 需要记录 sort seed，每次请求新的推荐列表时，要提供新的 sort seed；
+    # 以下这些场景下，需要生成新的 sort seed：
+    # 1. Home 页 featured 列表每次 app 重新启动时
+    # 2. Explore 页每次顶部下拉刷新推荐列表
+    # 然后每次请求 /recommends 要提供这个 sort seed，否则会返回相同的推荐列表。
+    request: RecommendAgentsRequest = Depends(RecommendAgentsRequest),
     current_user: schemas.User = Depends(deps.get_current_active_user),
 ) -> Any:
     """
