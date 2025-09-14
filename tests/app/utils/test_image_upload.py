@@ -16,6 +16,7 @@ class TestProcessImageUpload:
     """Test cases for process_image_upload function."""
 
     @pytest.mark.asyncio
+    @pytest.mark.noci
     async def test_upload_png_file_returns_compressed_and_uncompressed_urls(self):
         """
         Test that uploading a PNG file returns both compressed and uncompressed URLs.
