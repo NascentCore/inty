@@ -65,14 +65,13 @@ import com.ai.inty.utils.getHeightByWidth
 import com.ai.inty.utils.CHARACTER_CARD_ASPECT_RATIO
 import com.ai.inty.home.BottomNavigationBarHeight
 
-// 一个父容器内多个分布式子容器之间的间距相对父容器的比例
+// 一个父容器内多个分布式子容器之间及与父容器边缘的间距相对父容器的比例
+// 水平方向的padding，包括左侧和右侧，子容器上下左右之间的间距
 const val SPACER_PERCENTAGE = 0.02f
 // 预加载下一页的缓冲区数量
 // 当前已经加载但是还未被显示的角色数量
 const val COLUMN_COUNT = 2
-// TODO: 改为使用比例，乘以屏幕宽度
-// 水平方向的padding，包括左侧和右侧
-val HorizontalPadding = 12.dp
+
 
 private fun calculateSpacerWidth(containerWidth: Int): Int {
     val spacerPercentage = SPACER_PERCENTAGE
@@ -240,6 +239,7 @@ fun RecommendPage(
             // Calculate dynamic spacing based on container width
             val containerWidth = LocalConfiguration.current.screenWidthDp
             val characterCardSize = getCharacterCardSize(containerWidth)
+            // 用于角色卡上下左右的间距
             val spacerWidth = calculateSpacerWidth(containerWidth)
 
             LazyVerticalGrid(
@@ -247,9 +247,9 @@ fun RecommendPage(
                 modifier = Modifier.padding(
                     bottom = BottomNavigationBarHeight,
                     // Left padding
-                    start = HorizontalPadding,
+                    start = spacerWidth,
                     // Right padding
-                    end = HorizontalPadding
+                    end = spacerWidth
                 ),
                 columns = GridCells.Fixed(COLUMN_COUNT),
                 horizontalArrangement = Arrangement.spacedBy(spacerWidth.dp),
