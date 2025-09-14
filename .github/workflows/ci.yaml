@@ -70,6 +70,10 @@ jobs:
           echo "$VIRTUAL_ENV/bin" >> $GITHUB_PATH
           echo "VIRTUAL_ENV=$VIRTUAL_ENV" >> $GITHUB_ENV
 
+      - name: Write config file
+        run: |
+          cp config.yaml.example config.yaml
+
       - name: Run python tests
         run: |
           # noci marker is defined in pytest.ini
