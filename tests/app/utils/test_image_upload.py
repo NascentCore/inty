@@ -12,14 +12,14 @@ from app.utils.image_upload import process_image_upload
 from app.schemas.response import APIResponse
 
 
-class TestProcessImageUpload:
-    """Test cases for process_image_upload function."""
+class TestUploadImage:
+    """Test cases for upload_image function."""
 
     @pytest.mark.asyncio
     @pytest.mark.noci
     async def test_upload_png_file_returns_compressed_and_uncompressed_urls(self):
         """
-        Test that uploading a PNG file returns both compressed and uncompressed URLs.
+        Test that uploading a PNG file returns both compressed and original URLs.
         This is the happy case where compression occurs and both versions are saved.
         """
         test_file_path = "tests/files/test.png"

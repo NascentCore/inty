@@ -9,6 +9,7 @@ from typing import Optional
 
 from fastapi import UploadFile
 from loguru import logger
+from pydantic import BaseModel
 
 from app.core.config import global_config_loaded_from_config_yaml
 from app.schemas.response import APIResponse
@@ -21,13 +22,23 @@ from app.utils.image import (
 )
 
 
+class ImageUploadResponse(BaseModel):
+    """Image upload response"""
+    # Uploaded compressed image
+    url: str
+    # Uploaded original image
+    original_url: Optional[str] = None
+    # Uploaded avatar image
+    avatar_url: Optional[str] = None
+
+
 async def process_image_upload(
     file: UploadFile,
     user_id: str,
     base_path: str = "uploads/images",
     cropping_avatar: bool = False,
     max_size_mb: int = global_config_loaded_from_config_yaml.app.limits.max_image_size_mb,
-) -> APIResponse[dict]:
+) -> APIResponse[ImageUploadResponse]:
     """
     Helper function to process image upload with validation, compression, and GCS upload.
 
@@ -108,6 +119,7 @@ async def process_image_upload(
     original_file_data = file_data
     original_file_ext = file_ext
     original_content_type = file.content_type
+    result = ImageUploadResponse()
     
     # Compress PNG and large files
     # Always compress PNG, and also compress if file is > 500KB.
@@ -137,13 +149,13 @@ async def process_image_upload(
         global_config_loaded_from_config_yaml.gcs.bucket,
         file_gcs_path,
     )
+    result.url = url
+    logger.debug(f"图片 上传 GCS 成功，返回URL: {url}")
 
-    response_data = { "url": url }
-    
     # If image was compressed and it's not an avatar, also upload uncompressed version
     if was_compressed:
         # Generate path for uncompressed image
-        uncompressed_file_gcs_path = f"{base_path}/{user_id}/{timestamp}-{unique_id}-uncompressed.{original_file_ext}"
+        uncompressed_file_gcs_path = f"{base_path}/{user_id}/{timestamp}-{unique_id}-original.{original_file_ext}"
         
         # Upload uncompressed file to GCS
         uncompressed_url = upload_to_gcs(
@@ -152,9 +164,8 @@ async def process_image_upload(
             global_config_loaded_from_config_yaml.gcs.bucket,
             uncompressed_file_gcs_path,
         )
-        
-        response_data["uncompressed_url"] = uncompressed_url
-        logger.debug(f"Uploaded uncompressed image: {uncompressed_url}")
+        logger.debug(f"Uploaded original image: {uncompressed_url}")
+        result.original_url = uncompressed_url
 
     # Handle cropping if enabled
     if cropping_avatar:
@@ -173,10 +184,7 @@ async def process_image_upload(
             global_config_loaded_from_config_yaml.gcs.bucket,
             cropped_file_gcs_path,
         )
+        logger.debug(f"扣脸图片上传 GCS 成功,返回URL: {cropped_avatar_url}")
+        result.avatar_url = cropped_avatar_url
 
-        response_data["avatar_url"] = cropped_avatar_url
-        logger.debug(f"扣脸图片上传 GCS 成功,返回URL: {url} {cropped_avatar_url}")
-
-    logger.debug(f"Avatar 上传 GCS 成功，返回URL: {url}")
-
-    return APIResponse.success(data=response_data)
+    return APIResponse.success(data=result)
