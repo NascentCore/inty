@@ -131,7 +131,6 @@ async def process_image_upload(
     unique_id = uuid.uuid4().hex[:8]
     file_gcs_path = f"{base_path}/{user_id}/{timestamp}-{unique_id}.{file_ext}"
 
-    # Upload compressed file to GCS
     url = upload_to_gcs(
         file_data,
         file.content_type,
