@@ -26,6 +26,9 @@ env:
 
 jobs:
   test:
+    permissions:
+      contents: write
+
     runs-on: ubuntu-latest
     services:
       pgsql:
@@ -69,11 +72,28 @@ jobs:
 
       - name: Run python tests
         run: |
+          # noci marker is defined in pytest.ini
+          # applied on test functions with noci marker will be skipped on CI
+          pytest tests/ -m "not noci" -v -s
+
+      - name: Update openapi.json
+        # Only run this step if triggered by a pull request
+        if:
+          github.event_name == 'pull_request'
+        run: |
           cp config.yaml.example config.yaml
           # alembic upgrade head: no need to run, as start.sh already includes it
           ./start.sh &
           # Wait for the server to start. If the time is too short, it needs to be increased.
           sleep 5
-          # noci marker is defined in pytest.ini
-          # applied on test functions with noci marker will be skipped on CI
-          pytest tests/ -m "not noci" -v -s
+          curl -o app/openapi.json http://localhost:8000/openapi.json
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+          # Commit to the current feature branch of this pull request
+          git add app/openapi.json
+          git commit -m "Update openapi.json"
+          git push origin HEAD
