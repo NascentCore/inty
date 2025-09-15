@@ -1,17 +1,17 @@
 import logging
-from typing import Any, Optional
+from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Header
+from fastapi import APIRouter, Depends, Header, HTTPException
 
 from app import schemas
 from app.api import deps
 from app.api.utils.logger_route import LoggerRoute
+from app.external_services.globals import google_play_service
 from app.schemas.response import APIResponse
 from app.schemas.version import VersionCheckResponse
-from app.external_services.globals import google_play_service
 
 router = APIRouter(prefix="/version", route_class=LoggerRoute)
-logger = logging.getLogger(__name__)
+from loguru import logger
 
 
 @router.post("/check", response_model=APIResponse[VersionCheckResponse])
@@ -20,8 +20,8 @@ async def check_version(
     app_version_code: int = Header(
         ..., alias="appVersionCode", description="应用版本代码"
     ),
-    app_version_name: Optional[str] = Header(
-        None, alias="appVersionName", description="应用版本名称（可选）"
+    app_version_name: str = Header(
+        "", alias="appVersionName", description="应用版本名称（可选）"
     ),
     current_user: schemas.User = Depends(deps.get_current_active_user),
 ) -> Any:
@@ -35,11 +35,11 @@ async def check_version(
     try:
         # 直接使用注入的版本参数
         client_version_code = app_version_code
-        version_name = app_version_name or "unknown"
+        version_name = app_version_name if app_version_name else "unknown"
 
         # 调用Google Play服务检查版本
         version_check_result = google_play_service.check_version_requirement(
-            client_version_code, app_version_name
+            client_version_code, version_name
         )
 
         # 转换为响应模型
