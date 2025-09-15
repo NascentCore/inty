@@ -112,24 +112,30 @@ private fun ChatItemAI(item: MsgInfo) {
                     agentId = agentInfo?.id // 使用当前agent的ID
                 )
 
-                val hasPlayedOpening = OpeningPlayState.agentOpeningPlayed(agentInfo?.id ?: "")
-
                 // 检查当前消息列表是否只有开场白消息
                 val allMessages by viewModel.msgs.collectAsState()
                 val isOnlyOpeningMessage =
                     allMessages.size == 1 && allMessages.firstOrNull()?.isOpening() == true
 
-                val shouldAutoPlay =
-                    item.isOpening() && hasPlayedOpening.not() && isOnlyOpeningMessage
+                // 检查开场白是否已播放过
+                val hasPlayedOpening = OpeningPlayState.agentOpeningPlayed(agentInfo?.id ?: "")
+
+                // 开场白自动播放逻辑：只有开场白消息且未播放过
+                val shouldAutoPlay = item.isOpening() && isOnlyOpeningMessage && !hasPlayedOpening
 
                 VoicePlayer(
                     audioInfo = audioInfo,
                     autoPlay = shouldAutoPlay,
                     modifier = Modifier.widthIn(38.dp),
                     onPlayStateChange = { isPlaying ->
-                        agentInfo?.id?.let { id ->
-                            if (isPlaying) OpeningPlayState.openingPlayedAsync(id)
+                        // 播放状态变化回调，记录开场白播放状态
+                        if (isPlaying && item.isOpening()) {
+                            agentInfo?.id?.let { agentId ->
+                                OpeningPlayState.openingPlayedAsync(agentId)
+                                EasyLog.log("音频LOG测试 Marked opening as played for agent: $agentId")
+                            }
                         }
+                        EasyLog.log("音频LOG测试 VoicePlayer play state changed: $isPlaying for message: ${item.localMsgId}")
                     },
                     onTtsGenerated = { audioUrl ->
                         // TTS生成成功，更新消息的音频URL
