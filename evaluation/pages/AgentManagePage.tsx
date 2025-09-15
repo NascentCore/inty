@@ -49,7 +49,7 @@ const { Option } = Select;
 
 export const AgentManagePage: React.FC = () => {
   // 使用 useAgents hook
-  const { agents, loading, loadAgents: loadAgentsFromHook } = useAgents({
+  const { loading } = useAgents({
     type: "all",
     autoLoad: false, // 手动控制加载
   });
@@ -95,7 +95,6 @@ export const AgentManagePage: React.FC = () => {
         setPagination((prev) => ({ ...prev, current: 1 }));
       }
 
-      setLoading(true);
       try {
         const response = await api.inty.api.v1.ai.agents.list({
           limit: 100, // 先获取所有数据，前端分页
@@ -110,36 +109,61 @@ export const AgentManagePage: React.FC = () => {
           } as Agent;
         });
 
-      // 搜索筛选
-      if (searchText) {
-        filteredAgents = filteredAgents.filter(
-          (agent) =>
-            agent.name.toLowerCase().includes(searchText.toLowerCase()) ||
-            agent.intro?.toLowerCase().includes(searchText.toLowerCase()),
-        );
-      }
+        // 搜索筛选
+        if (searchText) {
+          filteredAgents = filteredAgents.filter(
+            (agent) =>
+              agent.name.toLowerCase().includes(searchText.toLowerCase()) ||
+              agent.intro?.toLowerCase().includes(searchText.toLowerCase()),
+          );
+        }
 
-      // 可见性筛选
-      if (visibilityFilter !== "all") {
-        filteredAgents = filteredAgents.filter(
-          (agent) => agent.visibility === visibilityFilter.toUpperCase(),
-        );
-      }
+        // 可见性筛选
+        if (visibilityFilter !== "all") {
+          filteredAgents = filteredAgents.filter(
+            (agent) => agent.visibility === visibilityFilter.toUpperCase(),
+          );
+        }
 
-      // 性别筛选
-      if (genderFilter !== "all") {
-        filteredAgents = filteredAgents.filter(
-          (agent) => agent.gender === genderFilter.toUpperCase(),
-        );
-      }
+        // 性别筛选
+        if (genderFilter !== "all") {
+          filteredAgents = filteredAgents.filter(
+            (agent) => agent.gender === genderFilter.toUpperCase(),
+          );
+        }
 
-      setLocalAgents(filteredAgents);
-      setPagination((prev) => ({
-        ...prev,
-        total: filteredAgents.length,
-      }));
+        setLocalAgents(filteredAgents);
+        setPagination((prev) => ({
+          ...prev,
+          total: filteredAgents.length,
+        }));
+      } catch (error) {
+        console.error("加载智能体列表失败:", error);
+        message.error("加载智能体列表失败");
+      }
+    },
+    [searchText, visibilityFilter, genderFilter],
+  );
+
+  // 加载模型列表
+  const loadModels = useCallback(async () => {
+    setModelsLoading(true);
+    try {
+      const models = await modelCacheService.getOpenRouterModels();
+      setOpenRouterModels(models);
+    } catch (error) {
+      console.error("加载模型列表失败:", error);
+      message.error("加载模型列表失败");
+    } finally {
+      setModelsLoading(false);
     }
-  }, [agents, searchText, visibilityFilter, genderFilter]);
+  }, []);
+
+  // 刷新模型列表
+  const handleRefreshModels = useCallback(() => {
+    loadModels();
+    message.success("正在刷新模型列表...");
+  }, [loadModels]);
 
   useEffect(() => {
     loadAgents();
