@@ -15,6 +15,7 @@ sys.path.insert(0, str(parent_dir))
 from loguru import logger
 from sqlalchemy.orm import Session
 
+from app.core.security import create_access_token
 from app.db.base import SessionLocal
 from app.models.user import AuthType, Gender, User
 
@@ -56,16 +57,22 @@ def create_admin_user():
         existing_user = db.query(User).filter(User.id == admin_user.id).first()
         if existing_user:
             logger.info(f"User with ID {admin_user.id} already exists, skipping...")
-            continue
+        else:
+            logger.info(f"User with ID {admin_user.id} does not exist, creating...")
+            # Add to database
+            db.add(admin_user)
+            db.commit()
+            logger.info(f"User with ID {admin_user.id} created successfully!")
 
-        # Add to database
-        db.add(admin_user)
-        db.commit()
+        # Generate access token for the admin user
+        access_token = create_access_token(subject=admin_user.id)
 
         logger.info("Admin user created successfully!")
         logger.info(f"User ID: {admin_user.id}")
         logger.info(f"Email: {admin_user.email}")
         logger.info(f"Readable ID: {admin_user.readable_id}")
+        logger.info(f"Access Token: {access_token}")
+        logger.info("-" * 80)
 
 
 if __name__ == "__main__":
