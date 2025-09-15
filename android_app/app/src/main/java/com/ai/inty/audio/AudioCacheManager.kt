@@ -63,7 +63,7 @@ class AudioCacheManager private constructor(
 
             // 1. 尝试从内存缓存获取
             memoryCache.get(cacheKey)?.let { data ->
-                EasyLog.log("Audio loaded from memory cache: $url")
+                EasyLog.log("音频LOG测试 Audio loaded from memory cache: $url")
                 return@withContext data
             }
 
@@ -73,7 +73,7 @@ class AudioCacheManager private constructor(
                 val data = cachedFile.readBytes()
                 // 存入内存缓存
                 memoryCache.put(cacheKey, data)
-                EasyLog.log("Audio loaded from file cache: $url")
+                EasyLog.log("音频LOG测试 Audio loaded from file cache: $url")
                 return@withContext data
             }
 
@@ -84,12 +84,12 @@ class AudioCacheManager private constructor(
                 memoryCache.put(cacheKey, data)
                 // 存入文件缓存
                 saveToFile(cachedFile, data)
-                EasyLog.log("Audio downloaded and cached: $url")
+                EasyLog.log("音频LOG测试 Audio downloaded and cached: $url")
             }
 
             data
         } catch (e: Exception) {
-            EasyLog.log("Failed to get audio data: ${e.message}", EasyLog.ERROR)
+            EasyLog.log("音频LOG测试 Failed to get audio data: ${e.message}", EasyLog.ERROR)
             null
         }
     }
@@ -111,10 +111,10 @@ class AudioCacheManager private constructor(
             if (data != null) {
                 memoryCache.put(cacheKey, data)
                 saveToFile(getCachedFile(cacheKey), data)
-                EasyLog.log("Audio preloaded: $url")
+                EasyLog.log("音频LOG测试 Audio preloaded: $url")
             }
         } catch (e: Exception) {
-            EasyLog.log("Failed to preload audio: ${e.message}", EasyLog.ERROR)
+            EasyLog.log("音频LOG测试 Failed to preload audio: ${e.message}", EasyLog.ERROR)
         }
     }
 
@@ -150,9 +150,9 @@ class AudioCacheManager private constructor(
                 }
             }
 
-            EasyLog.log("Audio cache cleared")
+            EasyLog.log("音频LOG测试 Audio cache cleared")
         } catch (e: Exception) {
-            EasyLog.log("Failed to clear cache: ${e.message}", EasyLog.ERROR)
+            EasyLog.log("音频LOG测试 Failed to clear cache: ${e.message}", EasyLog.ERROR)
         }
     }
 
@@ -170,9 +170,9 @@ class AudioCacheManager private constructor(
                 }
             }
 
-            EasyLog.log("Expired audio cache cleaned")
+            EasyLog.log("音频LOG测试 Expired audio cache cleaned")
         } catch (e: Exception) {
-            EasyLog.log("Failed to clean expired cache: ${e.message}", EasyLog.ERROR)
+            EasyLog.log("音频LOG测试 Failed to clean expired cache: ${e.message}", EasyLog.ERROR)
         }
     }
 
@@ -218,12 +218,12 @@ class AudioCacheManager private constructor(
                 if (response.isSuccessful) {
                     response.body?.bytes()
                 } else {
-                    EasyLog.log("Failed to download audio: ${response.code}", EasyLog.ERROR)
+                    EasyLog.log("音频LOG测试 Failed to download audio: ${response.code}", EasyLog.ERROR)
                     null
                 }
             }
         } catch (e: Exception) {
-            EasyLog.log("Failed to download audio: ${e.message}", EasyLog.ERROR)
+            EasyLog.log("音频LOG测试 Failed to download audio: ${e.message}", EasyLog.ERROR)
             null
         }
     }
@@ -237,7 +237,7 @@ class AudioCacheManager private constructor(
                 fos.write(data)
             }
         } catch (e: IOException) {
-            EasyLog.log("Failed to save audio to file: ${e.message}", EasyLog.ERROR)
+            EasyLog.log("音频LOG测试 Failed to save audio to file: ${e.message}", EasyLog.ERROR)
         }
     }
 }

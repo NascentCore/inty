@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -123,8 +122,7 @@ private fun ChatItemAI(item: MsgInfo) {
                     autoPlay = shouldAutoPlay,
                     modifier = Modifier
                         .height(26.dp)
-                        .widthIn(48.dp)
-                        .offset(y = 5.dp),
+                        .widthIn(48.dp),
                     onPlayStateChange = { isPlaying ->
                         agentInfo?.id?.let { id ->
                             if (isPlaying) OpeningPlayState.openingPlayedAsync(id)
