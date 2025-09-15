@@ -30,6 +30,7 @@ import {
 } from "@ant-design/icons";
 import api from "../../services/api";
 import type { Voice } from "../../types";
+import VoicePreviewPlayer from "./VoicePreviewPlayer";
 
 const { Search } = Input;
 const { Option } = Select;
@@ -190,6 +191,32 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
               {voice.category}
             </Tag>
           )}
+
+          {/* 预览播放按钮 */}
+          <div 
+            style={{ 
+              marginTop: 8,
+              padding: '4px 0',
+              borderTop: '1px solid #f0f0f0',
+            }}
+            onClick={(e) => e.stopPropagation()} // 阻止事件冒泡，避免触发选择
+          >
+            <VoicePreviewPlayer
+              previewUrl={voice.preview_url}
+              voiceName={voice.name}
+              size="small"
+              style={{
+                width: '100%',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                height: '28px',
+                borderRadius: '4px',
+                backgroundColor: voice.preview_url ? '#f6ffed' : '#fafafa',
+                border: voice.preview_url ? '1px solid #d9f7be' : '1px solid #f0f0f0',
+              }}
+            />
+          </div>
 
           {voice.description && (
             <div
