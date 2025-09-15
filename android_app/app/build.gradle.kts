@@ -79,6 +79,7 @@ dependencies {
 
     // ===== 路由 =====
     implementation(libs.router)
+    implementation(libs.androidx.runtime.saveable)
     ksp(libs.therouter.apt)
 
     // ===== 项目模块 =====
