@@ -101,4 +101,5 @@ jobs:
           # Commit to the current feature branch of this pull request
           git add app/openapi.json
           git commit -m "Update openapi.json"
-          git push origin HEAD
+          # Push to the head ref of the pull request
+          git push origin HEAD:refs/heads/${{ github.head_ref }}
