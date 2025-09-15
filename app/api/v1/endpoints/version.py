@@ -2,6 +2,7 @@ import logging
 from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, Header, HTTPException
+from loguru import logger
 
 from app import schemas
 from app.api import deps
@@ -11,8 +12,6 @@ from app.schemas.response import APIResponse
 from app.schemas.version import VersionCheckResponse
 
 router = APIRouter(prefix="/version", route_class=LoggerRoute)
-from loguru import logger
-
 
 @router.post("/check", response_model=APIResponse[VersionCheckResponse])
 async def check_version(
