@@ -777,6 +777,21 @@ async def update_agent(
         )
         updated_agent = result.scalar_one()
 
+        # 清除相关缓存，确保更新立即生效
+        try:
+            from app.services.cache_service import cache_service
+
+            # 清除 agent 配置缓存
+            cache_service.invalidate_agent_config(updated_agent.id)
+            logger.debug(f"已清除Agent {updated_agent.id} 的配置缓存")
+
+            # 清除可能相关的会话缓存（包含 agent 信息的会话）
+            # 这里我们无法直接清除特定 agent 的会话缓存，但会话缓存 TTL 较短（5分钟），影响有限
+
+        except Exception as e:
+            logger.error(f"清除Agent缓存时发生错误 {updated_agent.id}: {str(e)}")
+            # 注意：这里不抛出异常，因为数据库更新已经成功了
+
         # 重新加载Agent实例到AgentManager缓存中
         try:
             agent_data = {
