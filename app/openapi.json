@@ -1360,7 +1360,6 @@
                 "summary": "Update Chat Settings by Agent ID",
                 "description": "We do not use chat_id to get settings, because we only support 1 chat per agent.TODO: We should switch to /chats/{chat_id}/settings",
                 "operationId": "update_agent_chat_settings_api_v1_chats_agents__agent_id__settings_put",
-                "deprecated": true,
                 "security": [
                     {
                         "Bearer": []
@@ -1402,6 +1401,53 @@
                                         }
                                     ],
                                     "title": "Response Update Agent Chat Settings Api V1 Chats Agents  Agent Id  Settings Put"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "get": {
+                "tags": [
+                    "chats",
+                    "inty"
+                ],
+                "summary": "Get Agent Chat Settings",
+                "description": "[Deprecated, use /chats/{chat_id}/settings instead] Get chat settings by Agent ID, bause we only support 1 chat per agent, so we do not use chat_id to get settings",
+                "operationId": "get_agent_chat_settings_api_v1_chats_agents__agent_id__settings_get",
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "agent_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "title": "Agent Id"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ChatSettings"
                                 }
                             }
                         }
