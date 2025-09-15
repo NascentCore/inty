@@ -2202,28 +2202,6 @@
                     }
                 ]
             }
-        },
-        "/": {
-            "get": {
-                "summary": "Root",
-                "description": "\u5065\u5eb7\u68c0\u67e5\u63a5\u53e3",
-                "operationId": "root__get",
-                "responses": {
-                    "200": {
-                        "description": "Successful Response",
-                        "content": {
-                            "application/json": {
-                                "schema": {}
-                            }
-                        }
-                    }
-                },
-                "security": [
-                    {
-                        "Bearer": []
-                    }
-                ]
-            }
         }
     },
     "components": {
