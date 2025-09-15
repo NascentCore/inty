@@ -31,7 +31,11 @@ export const logError = (msg: string) => {
 
 const adminToken =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3ODQzNjAyMjAsInN1YiI6InVzZXItMDFKV1ozNFk0RDFDOTJHRDg2QTVSNkVXWUoifQ.vsYKRvrCfxWgJ5wkTjAYby3RrIOm6P-9VbcCg4msjlM";
-const localIntyBaseURL = "http://localhost:8000";
+
+const adminTokens = {
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTg0OTY0NTksInN1YiI6InVzZXItMDAxIn0.oyBJ_BQ5SsEzBiLlBrF3xcfCq4vprAiwn9dhebZU7Lo",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTg0OTY0NTksInN1YiI6InVzZXItMDFKV1ozNFk0RDFDOTJHRDg2QTVSNkVXWUoifQ.2gBnU8peKgYA9oVX_qTY9T3aGa4ZzqnhBaXl5tFO2Wc",
+};
 
 class ApiClient {
   private baseURL: string;
