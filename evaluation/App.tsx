@@ -20,6 +20,8 @@ import AgentManagePage from "./pages/AgentManagePage";
 import { PremiumModeToggle } from "./components/common/PremiumModeToggle";
 import { UserInfoDisplay } from "./components/common/UserInfoDisplay";
 import { useAuth } from "./components/auth/AuthProvider";
+import { UserSwitchProvider, useUserSwitch } from "./components/auth/UserSwitchProvider";
+import { setAdminTokenGetter } from "./services/api";
 
 
 const { Sider, Content } = Layout;
@@ -38,7 +40,8 @@ interface NavigationItem {
   description: string;
 }
 
-export const App: React.FC = () => {
+// 内部应用组件，需要被UserSwitchProvider包装
+const AppContent: React.FC = () => {
   // 状态管理
   const [currentPage, setCurrentPage] = useState<PageKey>(() => {
     // GEMINI: 从 localStorage 读取上次访问的页面，如果不存在则默认为 "evaluation"
@@ -50,6 +53,17 @@ export const App: React.FC = () => {
 
   // 获取用户信息
   const { user, loading: userLoading } = useAuth();
+
+  // 获取用户切换信息
+  const { currentUser } = useUserSwitch();
+
+  // 连接用户切换与API客户端
+  useEffect(() => {
+    if (currentUser) {
+      setAdminTokenGetter(() => currentUser.token);
+      console.log(`🔄 切换到用户: ${currentUser.name} (${currentUser.id})`);
+    }
+  }, [currentUser]);
 
   // GEMINI: 将当前页面保存到 localStorage
   useEffect(() => {
@@ -397,5 +411,14 @@ export const App: React.FC = () => {
         </Content>
       </Layout>
     </Layout>
+  );
+};
+
+// 主应用组件，包含所有Provider
+export const App: React.FC = () => {
+  return (
+    <UserSwitchProvider>
+      <AppContent />
+    </UserSwitchProvider>
   );
 };

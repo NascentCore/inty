@@ -4,13 +4,15 @@
  */
 
 import React from "react";
-import { Avatar, Dropdown, Typography, Space, Badge, Tooltip } from "antd";
+import { Avatar, Dropdown, Typography, Space, Badge, Tooltip, Divider } from "antd";
 import {
   UserOutlined,
   SettingOutlined,
   CrownOutlined,
+    UserSwitchOutlined,
 } from "@ant-design/icons";
 import { UserProfile } from "../../hooks/useUser";
+import { UserSwitcher } from "./UserSwitcher";
 
 const { Text } = Typography;
 
@@ -72,6 +74,23 @@ export const UserInfoDisplay: React.FC<UserInfoDisplayProps> = ({
   // 下拉菜单项
   const menuItems = [
     {
+          key: "user-switcher",
+          label: (
+              <div style={{ padding: "8px 0" }}>
+                  <div style={{ marginBottom: "8px" }}>
+                      <Text strong style={{ fontSize: "12px", color: "#666" }}>
+                          切换管理员用户
+                      </Text>
+                  </div>
+                  <UserSwitcher />
+              </div>
+          ),
+          disabled: true, // 禁用点击，因为UserSwitcher有自己的点击处理
+      },
+      {
+          type: "divider" as const,
+      },
+      {
       key: "profile",
       icon: <UserOutlined />,
       label: "个人资料",

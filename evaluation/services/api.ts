@@ -5,6 +5,7 @@
 import type {
   Agent,
   AgentCreateRequest,
+  AgentUpdateRequest,
   EvaluationSession,
   EvaluationSessionCreateRequest,
   EvaluationResult,
@@ -19,6 +20,14 @@ import type {
 import { message } from "antd";
 import { Inty } from "inty";
 
+// 定义请求选项类型
+interface RequestOptions {
+  method?: string;
+  headers?: Record<string, string>;
+  body?: string | FormData;
+  signal?: AbortSignal;
+}
+
 // =============================================================================
 // 基础API配置
 // =============================================================================
@@ -29,12 +38,22 @@ export const logError = (msg: string) => {
   message.error(msg);
 };
 
-const adminToken =
+// 默认管理员token（向后兼容）
+const defaultAdminToken =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3ODQzNjAyMjAsInN1YiI6InVzZXItMDFKV1ozNFk0RDFDOTJHRDg2QTVSNkVXWUoifQ.vsYKRvrCfxWgJ5wkTjAYby3RrIOm6P-9VbcCg4msjlM";
 
-const adminTokens = {
+// 管理员token列表（用于用户切换）- 导出供其他组件使用
+export const adminTokens = [
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTg0OTY0NTksInN1YiI6InVzZXItMDAxIn0.oyBJ_BQ5SsEzBiLlBrF3xcfCq4vprAiwn9dhebZU7Lo",
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTg0OTY0NTksInN1YiI6InVzZXItMDFKV1ozNFk0RDFDOTJHRDg2QTVSNkVXWUoifQ.2gBnU8peKgYA9oVX_qTY9T3aGa4ZzqnhBaXl5tFO2Wc",
+];
+
+// 获取当前管理员token的函数
+let getCurrentAdminToken = () => defaultAdminToken;
+
+// 设置获取当前管理员token的函数（由UserSwitchProvider调用）
+export const setAdminTokenGetter = (tokenGetter: () => string) => {
+  getCurrentAdminToken = tokenGetter;
 };
 
 class ApiClient {
@@ -53,11 +72,11 @@ class ApiClient {
 
   private async request<T>(
     endpoint: string,
-    options: RequestInit = {},
+    options: RequestOptions = {},
   ): Promise<T> {
     const url = `${this.baseURL}${endpoint}`;
 
-    const config: RequestInit = {
+    const config: RequestOptions = {
       ...options,
       headers: {
         ...this.headers,
@@ -80,7 +99,7 @@ class ApiClient {
 
     config.headers = {
       ...config.headers,
-      Authorization: `Bearer ${adminToken}`,
+      Authorization: `Bearer ${getCurrentAdminToken()}`,
     };
 
     try {
@@ -174,7 +193,7 @@ class ApiClient {
   async get<T>(
     endpoint: string,
     params?: Record<string, any>,
-    options?: RequestInit,
+    options?: RequestOptions,
   ): Promise<T> {
     let finalEndpoint = endpoint;
 
@@ -241,16 +260,22 @@ class ApiClient {
 }
 
 // 创建API客户端实例
-const apiClient = new ApiClient(REACT_APP_API_BASE_URL);
+const apiClient = new ApiClient(
+  (globalThis as any).REACT_APP_API_BASE_URL || "http://localhost:8000/api/v1"
+);
 
-console.log("REACT_APP_API_BASE_URL:", REACT_APP_API_BASE_URL);
-console.log("INTY_BASE_URL:", INTY_BASE_URL);
-console.log("INTY_API_KEY:", INTY_API_KEY);
+console.log("REACT_APP_API_BASE_URL:", (globalThis as any).REACT_APP_API_BASE_URL);
+console.log("INTY_BASE_URL:", (globalThis as any).INTY_BASE_URL);
+console.log("INTY_API_KEY:", (globalThis as any).INTY_API_KEY);
 
-const intyClient = new Inty({
-  baseURL: INTY_BASE_URL,
-  apiKey: INTY_API_KEY,
+// 创建动态Inty客户端的函数
+const createIntyClient = () => new Inty({
+  baseURL: (globalThis as any).INTY_BASE_URL || "http://localhost:8000",
+  apiKey: getCurrentAdminToken(),
 });
+
+// 默认Inty客户端（向后兼容）
+const intyClient = createIntyClient();
 
 // =============================================================================
 // 评测会话API
@@ -423,7 +448,7 @@ export const scoringApi = {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000); // 5秒超时
 
-      const models = await apiClient.get("/evaluation/models", undefined, {
+      const models = await apiClient.get<ScoringModel[]>("/evaluation/models", undefined, {
         signal: controller.signal,
       });
 
@@ -865,5 +890,6 @@ export default {
   chat: chatApi,
   users: userApi,
   inty: intyClient,
+  createIntyClient,
   WebSocketManager,
 };

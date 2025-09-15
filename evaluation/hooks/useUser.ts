@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useCallback } from "react";
-import { Inty } from "inty";
+import api from "../services/api";
 import type { User } from "inty/resources/api/v1/users/profile";
 
 // 使用 inty_sdk 的 User 类型
@@ -17,11 +17,7 @@ interface UseUserReturn {
   refreshUser: () => Promise<void>;
 }
 
-// 创建 Inty 客户端实例
-const intyClient = new Inty({
-  apiKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3ODQzNjAyMjAsInN1YiI6InVzZXItMDFKV1ozNFk0RDFDOTJHRDg2QTVSNkVXWUoifQ.vsYKRvrCfxWgJ5wkTjAYby3RrIOm6P-9VbcCg4msjlM",
-  baseURL: "http://localhost:8000",
-});
+// 使用动态客户端创建函数
 
 export const useUser = (): UseUserReturn => {
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -34,6 +30,8 @@ export const useUser = (): UseUserReturn => {
       setLoading(true);
       setError(null);
       
+        // 使用动态客户端创建函数
+        const intyClient = api.createIntyClient();
       const userProfile = await intyClient.api.v1.users.profile.retrieve();
       setUser(userProfile);
     } catch (err: unknown) {
