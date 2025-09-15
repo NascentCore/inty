@@ -2107,33 +2107,6 @@
                 }
             }
         },
-        "/api/v1/text-to-speech/messages/{message_id}": {
-            "post": {
-                "tags": [
-                    "text_to_speech",
-                    "inty",
-                    "voice"
-                ],
-                "summary": "Generate speech for a chat message",
-                "description": "Generate voice for a message",
-                "operationId": "generate_message_voice_api_v1_text_to_speech_messages__message_id__post",
-                "responses": {
-                    "200": {
-                        "description": "Successful Response",
-                        "content": {
-                            "application/json": {
-                                "schema": {}
-                            }
-                        }
-                    }
-                },
-                "security": [
-                    {
-                        "Bearer": []
-                    }
-                ]
-            }
-        },
         "/api/v1/text-to-speech/list-voices": {
             "get": {
                 "tags": [
