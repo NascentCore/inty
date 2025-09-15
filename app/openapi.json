@@ -2213,7 +2213,9 @@
                         "description": "Successful Response",
                         "content": {
                             "application/json": {
-                                "schema": {}
+                                "schema": {
+                                    "$ref": "#/components/schemas/APIResponse_HealthCheckData_"
+                                }
                             }
                         }
                     }
@@ -2382,6 +2384,32 @@
                 },
                 "type": "object",
                 "title": "APIResponse[GuestResponse]"
+            },
+            "APIResponse_HealthCheckData_": {
+                "properties": {
+                    "code": {
+                        "type": "integer",
+                        "title": "Code",
+                        "default": 200
+                    },
+                    "message": {
+                        "type": "string",
+                        "title": "Message",
+                        "default": "success"
+                    },
+                    "data": {
+                        "anyOf": [
+                            {
+                                "$ref": "#/components/schemas/HealthCheckData"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
+                    }
+                },
+                "type": "object",
+                "title": "APIResponse[HealthCheckData]"
             },
             "APIResponse_List_Agent__": {
                 "properties": {
@@ -4438,6 +4466,25 @@
                 },
                 "type": "object",
                 "title": "HTTPValidationError"
+            },
+            "HealthCheckData": {
+                "properties": {
+                    "app_name": {
+                        "type": "string",
+                        "title": "App Name"
+                    },
+                    "version": {
+                        "type": "string",
+                        "title": "Version"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "app_name",
+                    "version"
+                ],
+                "title": "HealthCheckData",
+                "description": "\u5065\u5eb7\u68c0\u67e5\u6570\u636e\u7ed3\u6784"
             },
             "LoginResponse": {
                 "properties": {
