@@ -91,7 +91,7 @@ jobs:
           ./start.sh &
           # Wait for the server to start. If the time is too short, it needs to be increased.
           sleep 10
-          curl -o app/openapi.json http://localhost:8000/openapi.json
+          curl http://localhost:8000/openapi.json | python -m json.tool >app/openapi.json
           if [ -z "$(git status --porcelain)" ]; then
             echo "No changes to commit"
             exit 0
