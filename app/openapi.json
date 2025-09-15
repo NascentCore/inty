@@ -3,7 +3,7 @@
     "info": {
         "title": "inty-backend",
         "description": "InTy",
-        "version": "1.0.2"
+        "version": "1.1.0"
     },
     "paths": {
         "/api/v1/auth/guest": {
@@ -1351,6 +1351,74 @@
                 }
             }
         },
+        "/api/v1/chats/agents/{agent_id}/settings": {
+            "put": {
+                "tags": [
+                    "chats",
+                    "inty"
+                ],
+                "summary": "Update Chat Settings by Agent ID",
+                "description": "We do not use chat_id to get settings, because we only support 1 chat per agent.TODO: We should switch to /chats/{chat_id}/settings",
+                "operationId": "update_agent_chat_settings_api_v1_chats_agents__agent_id__settings_put",
+                "deprecated": true,
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "agent_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "title": "Agent Id"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ChatSettingsUpdate"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "anyOf": [
+                                        {
+                                            "$ref": "#/components/schemas/APIResponse_ChatSettings_"
+                                        },
+                                        {
+                                            "$ref": "#/components/schemas/APIResponse_dict_"
+                                        }
+                                    ],
+                                    "title": "Response Update Agent Chat Settings Api V1 Chats Agents  Agent Id  Settings Put"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/chat/completions/{agent_id}": {
             "post": {
                 "tags": [
@@ -2241,6 +2309,32 @@
                 },
                 "type": "object",
                 "title": "APIResponse[Agent]"
+            },
+            "APIResponse_ChatSettings_": {
+                "properties": {
+                    "code": {
+                        "type": "integer",
+                        "title": "Code",
+                        "default": 200
+                    },
+                    "message": {
+                        "type": "string",
+                        "title": "Message",
+                        "default": "success"
+                    },
+                    "data": {
+                        "anyOf": [
+                            {
+                                "$ref": "#/components/schemas/ChatSettings"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
+                    }
+                },
+                "type": "object",
+                "title": "APIResponse[ChatSettings]"
             },
             "APIResponse_DeletionCheckResponse_": {
                 "properties": {
@@ -4096,6 +4190,57 @@
                 ],
                 "title": "ChatSettings",
                 "description": "\u804a\u5929\u8bbe\u7f6e"
+            },
+            "ChatSettingsUpdate": {
+                "properties": {
+                    "language": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Language"
+                    },
+                    "voice_enabled": {
+                        "anyOf": [
+                            {
+                                "type": "boolean"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Voice Enabled"
+                    },
+                    "style_prompt": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Style Prompt"
+                    },
+                    "premium_mode": {
+                        "anyOf": [
+                            {
+                                "type": "boolean"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Premium Mode"
+                    }
+                },
+                "type": "object",
+                "title": "ChatSettingsUpdate",
+                "description": "\u66f4\u65b0\u804a\u5929\u8bbe\u7f6e"
             },
             "DeletionCheckResponse": {
                 "properties": {

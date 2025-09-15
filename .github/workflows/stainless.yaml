@@ -7,8 +7,6 @@ on:
       - synchronize
       - reopened
       - closed
-    paths:
-      - "app/openapi.json"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number }}

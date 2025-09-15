@@ -5,7 +5,7 @@
   "targets": {
     "kotlin": {
       "output_path": "./sdks/kotlin"
-    }
+    },
     "python": {
       "output_path": "./sdks/python"
     },
