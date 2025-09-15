@@ -1,0 +1,17 @@
+{
+    "editor.foldingStrategy": "indentation",
+    "java.configuration.updateBuildConfiguration": "interactive",
+    "[python]": {
+        "editor.formatOnType": true,
+        "editor.defaultFormatter": "ms-python.black-formatter",
+        "diffEditor.ignoreTrimWhitespace": false,
+        "editor.codeActionsOnSave": {
+            "source.organizeImports": "explicit"
+        },
+        "editor.formatOnSave": true
+    },
+    "isort.args": [
+        "--profile",
+        "black"
+    ],
+}
