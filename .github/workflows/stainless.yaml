@@ -16,7 +16,7 @@ env:
   STAINLESS_ORG: inty
   STAINLESS_PROJECT: inty
   OAS_PATH: app/openapi.json
-  # CONFIG_PATH: app/stainless.yml
+  CONFIG_PATH: app/stainless.yml
 
 jobs:
   preview:
@@ -38,7 +38,7 @@ jobs:
           org: ${{ env.STAINLESS_ORG }}
           project: ${{ env.STAINLESS_PROJECT }}
           oas_path: ${{ env.OAS_PATH }}
-          # config_path: ${{ env.CONFIG_PATH }}
+          config_path: ${{ env.CONFIG_PATH }}
 
   merge:
     if: github.event.action == 'closed' && github.event.pull_request.merged == true
@@ -59,4 +59,4 @@ jobs:
           org: ${{ env.STAINLESS_ORG }}
           project: ${{ env.STAINLESS_PROJECT }}
           oas_path: ${{ env.OAS_PATH }}
-          # config_path: ${{ env.CONFIG_PATH }}
+          config_path: ${{ env.CONFIG_PATH }}
