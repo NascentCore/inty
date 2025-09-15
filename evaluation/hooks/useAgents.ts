@@ -37,7 +37,6 @@ interface UseAgentsReturn {
     data: Partial<AgentUpdateRequest> & { avatar?: File },
   ) => Promise<Agent | null>;
   deleteAgent: (agentId: string) => Promise<boolean>;
-  deployAgent: (agentId: string, adminPassword: string) => Promise<boolean>;
 
   // 辅助方法
   getAgentById: (id: string) => Agent | undefined;
@@ -297,31 +296,6 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
     [clearCache, handleError],
   );
 
-  // 部署智能体
-  const deployAgent = useCallback(
-    async (agentId: string, adminPassword: string): Promise<boolean> => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        const result = await api.agents.deploy(agentId, adminPassword);
-
-        if (result.success) {
-          message.success(result.message);
-          return true;
-        } else {
-          throw new Error(result.message);
-        }
-      } catch (error) {
-        handleError(error, "部署智能体失败");
-        return false;
-      } finally {
-        setLoading(false);
-      }
-    },
-    [handleError],
-  );
-
   // 辅助方法
   const getAgentById = useCallback(
     (id: string): Agent | undefined => {
@@ -362,7 +336,6 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
     createAgent,
     updateAgent,
     deleteAgent,
-    deployAgent,
 
     // 辅助方法
     getAgentById,
