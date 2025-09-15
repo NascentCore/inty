@@ -54,15 +54,16 @@ async def generate_agent_opening_voice(
         voice_service = VoiceService()
 
         # 生成开场白语音
-        audio_url = await voice_service.generate_voice(
+        voice_result = await voice_service.generate_voice(
             text=agent.opening, voice_id=voice_id_to_use
         )
 
-        if audio_url:
+        if voice_result:
+            audio_url, audio_duration = voice_result
             # 更新agent的opening_audio_url字段
             agent.opening_audio_url = audio_url
             await db.commit()
-            logger.debug(f"成功为Agent {agent.id} 生成开场白语音: {audio_url}")
+            logger.debug(f"成功为Agent {agent.id} 生成开场白语音: {audio_url}, 时长: {audio_duration:.2f}秒")
             return audio_url
         else:
             logger.warning(f"Agent {agent.id} 开场白语音生成失败，未返回URL")
