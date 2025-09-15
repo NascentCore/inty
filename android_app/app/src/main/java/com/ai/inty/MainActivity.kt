@@ -91,6 +91,9 @@ class MainActivity : BaseActivity() {
 
         mainViewModel.setChatViewModel(chatViewModel)
 
+// Load agents once at app startup
+mainViewModel.getAgents()
+
         // Load user created agents
         mainViewModel.getUserCreatedAgents()
 

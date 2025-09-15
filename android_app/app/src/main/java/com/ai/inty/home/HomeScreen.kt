@@ -343,6 +343,9 @@ private fun SuggestTabContent(
 ) {
     val isLoading by mainViewModel.isLoading.collectAsState()
 
+// Load agents only once at startup, not on every tab switch
+LaunchedEffect(Unit) { mainViewModel.loadAgentsIfNeeded() }
+
     RecommendPage(
         modifier = Modifier,
         agents = mainViewModel.agentList,

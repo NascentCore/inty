@@ -83,6 +83,9 @@ class MainViewModel : BaseActivityViewModel() {
     private var _isLoading = MutableStateFlow(false)
     val isLoading = _isLoading.asStateFlow()
     private var hasMoreData = true
+    
+    // 标记agents是否已经在应用启动时加载过
+    private var agentsLoadedAtStartup = false
 
     // Pagination state for user created agents
     private var currentUserAgentsPage = 0
@@ -176,6 +179,22 @@ class MainViewModel : BaseActivityViewModel() {
 
     fun getAgents() {
         EasyLog.log("getAgents - 开始加载推荐agents")
+// 如果agents已经在启动时加载过，只使用缓存数据，不进行网络刷新
+if (agentsLoadedAtStartup) {
+    EasyLog.log("getAgents - agents已在启动时加载，仅使用缓存数据")
+    val cachedAgents = AppStartupManager.cachedAgents.value
+    if (cachedAgents.isNotEmpty() && agentList.isEmpty()) {
+        agentList.clear()
+        agentList.addAll(cachedAgents)
+        EasyLog.log("getAgents - 使用缓存数据: ${cachedAgents.size}个")
+        chatViewModel?.setAgentInfo(agentList.firstOrNull())
+    }
+    return
+}
+
+// 首次加载：标记为已加载，并执行完整的加载流程
+agentsLoadedAtStartup = true
+
         currentPage = 1
         hasMoreData = true
 
@@ -188,7 +207,8 @@ class MainViewModel : BaseActivityViewModel() {
             chatViewModel?.setAgentInfo(agentList.firstOrNull())
         }
 
-        // 第二步：后台静默刷新数据（无论是否有缓存）
+        // 第二步：后台静默刷新数据（仅在启动时执行一次）
+
         if (shouldUpdateFromNetwork()) {
             EasyLog.log("getAgents - 后台静默刷新数据")
             loadAgentsSilently()
@@ -196,6 +216,27 @@ class MainViewModel : BaseActivityViewModel() {
             EasyLog.log("getAgents - 跳过网络更新，使用缓存数据")
         }
     }
+
+/** 加载agents数据（仅在需要时调用，不会重复加载） */
+fun loadAgentsIfNeeded() {
+    EasyLog.log("loadAgentsIfNeeded - 检查是否需要加载agents")
+    if (!agentsLoadedAtStartup) {
+        EasyLog.log("loadAgentsIfNeeded - 首次加载agents")
+        getAgents()
+    } else {
+        EasyLog.log("loadAgentsIfNeeded - agents已加载，跳过")
+        // 确保UI有数据展示，即使已经加载过
+        if (agentList.isEmpty()) {
+            val cachedAgents = AppStartupManager.cachedAgents.value
+            if (cachedAgents.isNotEmpty()) {
+                agentList.clear()
+                agentList.addAll(cachedAgents)
+                EasyLog.log("loadAgentsIfNeeded - 使用缓存数据填充UI: ${cachedAgents.size}个")
+                chatViewModel?.setAgentInfo(agentList.firstOrNull())
+            }
+        }
+    }
+}
 
     /**
      * 强制刷新agents数据（用于下拉刷新）
