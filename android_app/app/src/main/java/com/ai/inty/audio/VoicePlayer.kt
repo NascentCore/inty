@@ -75,12 +75,19 @@ fun VoicePlayer(
     // 监听TTS生成状态
     LaunchedEffect(messageId) {
         while (true) {
-            // 只有当用户没有手动设置TTS状态时，才从AudioManager获取状态
-            // 这样可以避免轮询覆盖用户点击后的立即状态
-            if (!isUserClicked) {
-                isGeneratingTts = audioManager.isGeneratingTtsForMessage(messageId)
+            // 从AudioManager获取TTS生成状态
+            val managerTtsState = audioManager.isGeneratingTtsForMessage(messageId)
+            
+            // 如果AudioManager显示正在生成TTS，则更新本地状态
+            if (managerTtsState) {
+                isGeneratingTts = true
             }
-            kotlinx.coroutines.delay(100) // 每100ms检查一次
+            // 如果AudioManager显示不在生成TTS，且用户没有手动设置状态，则更新本地状态
+            else if (!isUserClicked) {
+                isGeneratingTts = false
+            }
+            
+            delay(100) // 每100ms检查一次
         }
     }
 
@@ -176,10 +183,15 @@ fun VoicePlayer(
             EasyLog.log("VoicePlayer clicked: isPlaying=$isPlaying, messageId=$messageId, audioUrl=${audioInfo.url}")
             EasyLog.log("Click debounce state: isClickDebounced=$isClickDebounced, isGeneratingTts=$isGeneratingTts")
 
-            // 防抖检查：如果正在防抖期或正在生成TTS，则忽略点击
-            // 但TTS失败状态可以重新点击
-            if ((isClickDebounced || isGeneratingTts) && !ttsGenerationFailed) {
-                EasyLog.log("Click ignored due to debounce or TTS generation")
+            // 防抖检查：防止快速重复点击
+            if (isClickDebounced) {
+                EasyLog.log("Click ignored due to debounce")
+                return@ChatVoicePlayer
+            }
+
+            // 如果正在生成TTS且不是失败状态，则阻止点击
+            if (isGeneratingTts && !ttsGenerationFailed) {
+                EasyLog.log("Click ignored due to TTS generation in progress")
                 return@ChatVoicePlayer
             }
 
