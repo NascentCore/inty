@@ -50,10 +50,9 @@ import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.navigationBars
-import androidx.compose.foundation.layout.padding
-import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.ui.unit.times
 
 import com.ai.inty.R
 import com.ai.inty.base.IntyImage
@@ -68,9 +67,12 @@ import com.ai.inty.home.BottomNavigationBarHeight
 // 一个父容器内多个分布式子容器之间及与父容器边缘的间距相对父容器的比例
 // 水平方向的padding，包括左侧和右侧，子容器上下左右之间的间距
 const val SPACER_PERCENTAGE = 0.012f
+const val HORIZONTAL_PADDING_MULTIPLIER = 1.8
 // 预加载下一页的缓冲区数量
 // 当前已经加载但是还未被显示的角色数量
 const val COLUMN_COUNT = 2
+val TitleHeight = 40.dp // 标题栏高度，文字居中显示，未预留与标题下方内容间距。
+val TitleLeftPadding = 24.dp // 标题栏内显示内容距离左侧边缘间距，用于与标题下方内容垂直对齐。
 
 
 private fun calculateSpacerWidth(containerWidth: Int): Int {
@@ -93,6 +95,7 @@ private fun getCharacterCardSize(containerWidth: Int): AspectRatio {
 @Composable
 fun RecommendPage(
     modifier: Modifier,
+    innerPadding: PaddingValues,
     agents: List<AgentInfo>,
     isLoading: Boolean = false,
     onClickAgent: (AgentInfo) -> Unit,
@@ -192,11 +195,13 @@ fun RecommendPage(
                 .fillMaxSize()
                 .background(Color.Transparent)
                 .offset { IntOffset(0, animatedOffset.roundToInt()) }
+                // 允许留出顶部系统工具栏如日期/时间/信号强度等。
+                .padding(top = innerPadding.calculateTopPadding())
         ) {
-            Spacer(Modifier.height(28.dp))
-
             Row(
-                modifier = Modifier.padding(24.dp, 0.dp),
+                modifier = Modifier
+                    .height(TitleHeight)
+                    .padding(start = TitleLeftPadding),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IntyImage(
@@ -208,7 +213,8 @@ fun RecommendPage(
                 )
             }
 
-            Spacer(Modifier.height(30.dp))
+
+
 
             val gridState = rememberLazyGridState()
 
@@ -247,9 +253,9 @@ fun RecommendPage(
                 modifier = Modifier.padding(
                     bottom = BottomNavigationBarHeight,
                     // Left padding
-                    start = spacerWidth.dp,
+                    start = HORIZONTAL_PADDING_MULTIPLIER * spacerWidth.dp,
                     // Right padding
-                    end = spacerWidth.dp,
+                    end = HORIZONTAL_PADDING_MULTIPLIER * spacerWidth.dp,
                 ),
                 columns = GridCells.Fixed(COLUMN_COUNT),
                 horizontalArrangement = Arrangement.spacedBy(spacerWidth.dp),
@@ -337,11 +343,11 @@ fun CharacterCard(
     val roundedCornerShapeSize = calculateOptimalRoundedCornerShapeSize(width, height)
     Box(
         modifier = modifier
-            .size(width, height)
+            .width(width)
             .clip(RoundedCornerShape(roundedCornerShapeSize))
     ) {
         IntyImage(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.fillMaxWidth(),
             model = agentInfo.background,
             placeholder = painterResource(R.drawable.app_icon),
             error = painterResource(R.drawable.app_icon),

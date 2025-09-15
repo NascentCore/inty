@@ -89,14 +89,15 @@ fun HomeScreen(
                 }
             )
         }
-    ) { _ ->
+    ) { innerPadding ->
         HomeContent(
             selectedTab = selectedTab.value,
             selectedConversationsTab = selectedConversationsTab.value,
             mainViewModel = mainViewModel,
             chatViewModel = chatViewModel,
             viewModelFactory = viewModelFactory,
-            context = context
+            context = context,
+            innerPadding = innerPadding
         )
 
         ExpiredDialogLogic(mainViewModel)
@@ -212,6 +213,7 @@ private fun HomeContent(
     chatViewModel: ChatViewModel,
     viewModelFactory: ViewModelProvider.Factory,
     context: Context,
+    innerPadding: androidx.compose.foundation.layout.PaddingValues,
 ) {
     when (selectedTab) {
         HomeTabIndex.Chat -> {
@@ -237,7 +239,8 @@ private fun HomeContent(
         HomeTabIndex.Explore -> {
             SuggestTabContent(
                 mainViewModel = mainViewModel,
-                context = context
+                context = context,
+                innerPadding = innerPadding
             )
         }
 
@@ -341,11 +344,13 @@ private fun ConversationsTabContent(
 private fun SuggestTabContent(
     mainViewModel: MainViewModel,
     context: Context,
+    innerPadding: androidx.compose.foundation.layout.PaddingValues,
 ) {
     val isLoading by mainViewModel.isLoading.collectAsState()
 
     RecommendPage(
         modifier = Modifier,
+        innerPadding = innerPadding,
         agents = mainViewModel.agentList,
         isLoading = isLoading,
         onClickAgent = { agent ->
