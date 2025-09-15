@@ -564,7 +564,7 @@
                     "characters"
                 ],
                 "summary": "Recommend Agents",
-                "description": "Get recommended AI agents list (public and approved agents)\n\nSorting options:\n- created_desc: Most recent first (default)\n- created_asc: Oldest first \n- random: Random order",
+                "description": "Get recommended AI agents list (public and approved agents)\n\nSorting options:\n- created_desc: Most recent first (default)\n- created_asc: Oldest first\n- random: Random order",
                 "operationId": "recommend_agents_api_v1_ai_agents_recommend_get",
                 "security": [
                     {
@@ -609,8 +609,44 @@
                             "default": "created_desc"
                         },
                         "description": "Sort order: created_asc, created_desc, random"
+                    },
+                    {
+                        "name": "index",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "default": 1,
+                            "title": "Index"
+                        }
+                    },
+                    {
+                        "name": "count",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "maximum": 100,
+                            "minimum": 1,
+                            "default": 10,
+                            "title": "Count"
+                        }
                     }
                 ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AgentSortConfig",
+                                "default": {
+                                    "sort": "random",
+                                    "sort_seed": ""
+                                }
+                            }
+                        }
+                    }
+                },
                 "responses": {
                     "200": {
                         "description": "Successful Response",
@@ -1957,6 +1993,153 @@
                 }
             }
         },
+        "/api/v1/text-to-speech/messages/{message_id}": {
+            "post": {
+                "tags": [
+                    "text_to_speech",
+                    "inty",
+                    "voice"
+                ],
+                "summary": "Generate speech for a chat message",
+                "description": "Generate voice for a message",
+                "operationId": "generate_message_voice_api_v1_text_to_speech_messages__message_id__post",
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {}
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/text-to-speech/list-voices": {
+            "get": {
+                "tags": [
+                    "text_to_speech",
+                    "voice"
+                ],
+                "summary": "\u83b7\u53d6\u97f3\u8272\u5217\u8868",
+                "description": "\u83b7\u53d6 ElevenLabs \u53ef\u7528\u97f3\u8272\u5217\u8868\uff0c\u652f\u6301\u641c\u7d22\u548c\u8fc7\u6ee4\u529f\u80fd",
+                "operationId": "list_voices_api_v1_text_to_speech_list_voices_get",
+                "parameters": [
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "description": "\u641c\u7d22\u97f3\u8272\u540d\u79f0\u5173\u952e\u8bcd",
+                            "title": "Search"
+                        },
+                        "description": "\u641c\u7d22\u97f3\u8272\u540d\u79f0\u5173\u952e\u8bcd"
+                    },
+                    {
+                        "name": "page_size",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "type": "integer",
+                                    "maximum": 100,
+                                    "minimum": 1
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "description": "\u6bcf\u9875\u8fd4\u56de\u7ed3\u679c\u6570\uff0c\u9ed8\u8ba410\uff0c\u6700\u5927100",
+                            "default": 10,
+                            "title": "Page Size"
+                        },
+                        "description": "\u6bcf\u9875\u8fd4\u56de\u7ed3\u679c\u6570\uff0c\u9ed8\u8ba410\uff0c\u6700\u5927100"
+                    },
+                    {
+                        "name": "voice_type",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "description": "\u97f3\u8272\u7c7b\u578b\u8fc7\u6ee4 (\u5982: personal, community)",
+                            "title": "Voice Type"
+                        },
+                        "description": "\u97f3\u8272\u7c7b\u578b\u8fc7\u6ee4 (\u5982: personal, community)"
+                    },
+                    {
+                        "name": "category",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "description": "\u97f3\u8272\u5206\u7c7b\u8fc7\u6ee4 (\u5982: premade, cloned)",
+                            "title": "Category"
+                        },
+                        "description": "\u97f3\u8272\u5206\u7c7b\u8fc7\u6ee4 (\u5982: premade, cloned)"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "additionalProperties": true
+                                    },
+                                    "title": "Response List Voices Api V1 Text To Speech List Voices Get"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ]
+            }
+        },
         "/": {
             "get": {
                 "summary": "Root",
@@ -3263,6 +3446,24 @@
                 ],
                 "title": "AgentCreate",
                 "description": "\u521b\u5efaAI\u89d2\u8272\n\n\u63a8\u8350\u4f7f\u7528\u65b9\u5f0f\uff1a\n1. \u4f7f\u7528personality + scenario\u5b57\u6bb5\u6784\u5efa\u89d2\u8272\n2. \u6dfb\u52a0first_message\u4f5c\u4e3a\u5f00\u573a\u767d\n3. \u53ef\u9009\u6dfb\u52a0message_example\u5c55\u793a\u5bf9\u8bdd\u98ce\u683c\n\n\u517c\u5bb9\u6027\u8bf4\u660e\uff1a\n- \u4ecd\u652f\u6301\u4f7f\u7528prompt\u5b57\u6bb5 (legacy\u6a21\u5f0f)\n- \u4f18\u5148\u7ea7\uff1a\u89d2\u8272\u5361\u5b57\u6bb5 > prompt\u5b57\u6bb5"
+            },
+            "AgentSortConfig": {
+                "properties": {
+                    "sort": {
+                        "$ref": "#/components/schemas/AgentSortOption",
+                        "description": "sort option",
+                        "default": "random"
+                    },
+                    "sort_seed": {
+                        "type": "string",
+                        "title": "Sort Seed",
+                        "description": "Sort seed, used to ensure consistent order for the random sort option",
+                        "default": ""
+                    }
+                },
+                "type": "object",
+                "title": "AgentSortConfig",
+                "description": "Agent sorting config"
             },
             "AgentSortOption": {
                 "type": "string",
