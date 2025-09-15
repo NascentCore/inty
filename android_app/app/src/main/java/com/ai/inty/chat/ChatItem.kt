@@ -1,7 +1,11 @@
 package com.ai.inty.chat
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -20,6 +24,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
@@ -32,6 +38,15 @@ import com.ai.inty.beans.MsgInfo
 import com.ai.inty.utils.ChatTextFormatter
 import com.ai.inty.viewmodels.ChatViewModel
 import com.inty.utils.log.EasyLog
+
+/**
+ * 复制文本到剪贴板；这是用于测试功能。
+ */
+private fun debugOnlyCopyToClipboard(context: Context, text: String) {
+    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+    val clip = ClipData.newPlainText("Message", text)
+    clipboard.setPrimaryClip(clip)
+}
 
 /**
  * 聊天消息项目组件
@@ -125,11 +140,19 @@ private fun ChatItemAI(item: MsgInfo) {
             }
             //消息
             Row {
+                val context = LocalContext.current
                 Box(
                     modifier = Modifier
                         .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
                         .padding(12.dp, 13.dp)
                         .widthIn(1.dp, 300.dp)
+                        .pointerInput(item.content) {
+                            detectTapGestures(
+                                onLongPress = {
+                                    debugOnlyCopyToClipboard(context, item.content)
+                                }
+                            )
+                        }
                 ) {
                     if (item.content == "loading_animation") {
                         LoadingAnimation()
@@ -156,11 +179,19 @@ private fun ChatItemAI(item: MsgInfo) {
         EasyLog.log("Error rendering AI chat item: ${e.message}", priority = EasyLog.ERROR)
         // 渲染失败时显示简化版本
         Row {
+            val context = LocalContext.current
             Box(
                 modifier = Modifier
                     .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
                     .padding(12.dp, 13.dp)
                     .widthIn(1.dp, 300.dp)
+                    .pointerInput(item.content) {
+                        detectTapGestures(
+                            onLongPress = {
+                                debugOnlyCopyToClipboard(context, item.content)
+                            }
+                        )
+                    }
             ) {
                 Text(
                     text = item.content.ifEmpty { "Message content is empty" },
@@ -189,11 +220,19 @@ private fun ChatItemUser(item: MsgInfo) {
                     .widthIn(80.dp)
                     .weight(1f)
             )
+            val context = LocalContext.current
             Box(
                 modifier = Modifier
                     .background(Color.White.copy(alpha = 0.6f), RoundedCornerShape(12.dp))
                     .padding(12.dp, 13.dp)
                     .widthIn(1.dp, 300.dp)
+                    .pointerInput(item.content) {
+                        detectTapGestures(
+                            onLongPress = {
+                                debugOnlyCopyToClipboard(context, item.content)
+                            }
+                        )
+                    }
             ) {
                 StyledMessageText(
                     text = item.content,
@@ -213,11 +252,19 @@ private fun ChatItemUser(item: MsgInfo) {
                     .widthIn(80.dp)
                     .weight(1f)
             )
+            val context = LocalContext.current
             Box(
                 modifier = Modifier
                     .background(Color.White.copy(alpha = 0.6f), RoundedCornerShape(12.dp))
                     .padding(12.dp, 13.dp)
                     .widthIn(1.dp, 300.dp)
+                    .pointerInput(item.content) {
+                        detectTapGestures(
+                            onLongPress = {
+                                debugOnlyCopyToClipboard(context, item.content)
+                            }
+                        )
+                    }
             ) {
                 Text(
                     text = item.content.ifEmpty { "Message content is empty" },
