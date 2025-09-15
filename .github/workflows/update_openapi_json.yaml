@@ -9,6 +9,8 @@ on:
       - "app/api/**/*.py"
       - ".github/workflows/update_openapi_json.yaml"
 
+  workflow_dispatch:
+
 env:
   PG_USER: postgres
   PG_PASSWORD: sxwl666!
