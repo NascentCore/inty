@@ -36,17 +36,17 @@ jobs:
           POSTGRES_DB: ${{ env.PG_DB }}
 
     steps:
-      - id: committer-token
-        # https://github.com/marketplace/actions/create-github-app-token#use-app-token-with-actionscheckout
-        uses: actions/create-github-app-token@v2
-        with:
-          app-id: ${{ vars.WORKFLOW_COMMITTER_APP_ID }}
-          private-key: ${{ secrets.WORKFLOW_COMMITTER_APP_SECRET }}
+      # - id: committer-token
+      #   # https://github.com/marketplace/actions/create-github-app-token#use-app-token-with-actionscheckout
+      #   uses: actions/create-github-app-token@v2
+      #   with:
+      #     app-id: ${{ vars.WORKFLOW_COMMITTER_APP_ID }}
+      #     private-key: ${{ secrets.WORKFLOW_COMMITTER_APP_SECRET }}
 
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: ${{ steps.committer-token.outputs.token }}
+          # token: ${{ steps.committer-token.outputs.token }}
 
       - uses: actions/setup-python@v4
         with:
