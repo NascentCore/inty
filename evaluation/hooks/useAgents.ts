@@ -128,7 +128,7 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
 
         let response = await api.inty.api.v1.ai.agents.list();
         let data = response.data;
-        console.log("agent data:", data);
+        console.log("agent data:", data, "total:", data?.length);
 
         if (type !== "all" && Array.isArray(data)) {
           data = data.filter((agent) => {
