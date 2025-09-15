@@ -27,6 +27,7 @@ env:
 jobs:
   test:
     permissions:
+      # 用于向 feature branch 提交改动
       contents: write
 
     runs-on: ubuntu-latest
