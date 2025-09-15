@@ -34,17 +34,32 @@ export const logError = (msg: string) => {
 const adminToken =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3ODQzNjAyMjAsInN1YiI6InVzZXItMDFKV1ozNFk0RDFDOTJHRDg2QTVSNkVXWUoifQ.vsYKRvrCfxWgJ5wkTjAYby3RrIOm6P-9VbcCg4msjlM";
 
-// 环境变量定义
-const REACT_APP_API_BASE_URL = "http://localhost:8000";
-const INTY_BASE_URL = "http://localhost:8000";
-const INTY_API_KEY = adminToken;
+// 环境变量定义 - Vite define方式
+declare const REACT_APP_API_BASE_URL: string;
+declare const INTY_BASE_URL: string;
+declare const INTY_API_KEY: string;
+
+// 使用Vite define定义的全局常量，如果未定义则使用默认值
+const API_BASE_URL = typeof REACT_APP_API_BASE_URL !== 'undefined' ? REACT_APP_API_BASE_URL : "http://localhost:8000";
+const BASE_URL = typeof INTY_BASE_URL !== 'undefined' ? INTY_BASE_URL : "http://localhost:8000";
+const API_KEY = typeof INTY_API_KEY !== 'undefined' ? INTY_API_KEY : adminToken;
+
+// 调试信息
+console.log('🔧 Environment Variables Check:');
+console.log('  REACT_APP_API_BASE_URL defined:', typeof REACT_APP_API_BASE_URL !== 'undefined');
+console.log('  REACT_APP_API_BASE_URL value:', typeof REACT_APP_API_BASE_URL !== 'undefined' ? REACT_APP_API_BASE_URL : 'undefined');
+console.log('  Final API_BASE_URL:', API_BASE_URL);
+console.log('  Final BASE_URL:', BASE_URL);
 
 class ApiClient {
   private baseURL: string;
+  private apiPrefix: string;
   private headers: Record<string, string>;
 
-  constructor(baseURL: string) {
+  constructor(baseURL: string, apiPrefix: string = '/api/v1') {
     this.baseURL = baseURL;
+    // 如果baseURL已经包含api/v1，则不使用apiPrefix
+    this.apiPrefix = baseURL.includes('/api/v1') ? '' : apiPrefix;
     // This is the default headers for all requests.
     // Some API endpoints needs different content header, like upload avatar,
     // needs multipart/form-data.
@@ -57,7 +72,13 @@ class ApiClient {
     endpoint: string,
     options: any = {},
   ): Promise<T> {
-    const url = `${this.baseURL}${endpoint}`;
+    // 自动添加API前缀，如果endpoint已经包含/api/则不添加
+    const fullEndpoint = endpoint.startsWith('/api/') 
+      ? endpoint 
+      : `${this.apiPrefix}${endpoint}`;
+    
+    const url = `${this.baseURL}${fullEndpoint}`;
+    
 
     const config: any = {
       ...options,
@@ -125,26 +146,11 @@ class ApiClient {
       if (contentType && contentType.includes("application/json")) {
         const result = await response.json();
 
-        // Log the complete response from backend
-        console.log("=== FULL BACKEND RESPONSE ===");
-        console.log("Endpoint:", endpoint);
-        console.log("HTTP Status:", response.status, response.statusText);
-        console.log("Content-Type:", contentType);
-        console.log("Response Headers:", Object.fromEntries(response.headers.entries()));
-        console.log("Raw Response Body:", result);
-
         // Check if it's APIResponse format
         if (result && typeof result === "object" && "code" in result) {
-          console.log("APIResponse Structure:");
-          console.log("  - code:", result.code);
-          console.log("  - message:", result.message);
-          console.log("  - data:", result.data);
-
           if (result.code === 200) {
-            console.log("✅ Success Response - returning data field");
             return result.data;
           } else {
-            console.log("❌ Error Response - throwing exception");
             throw new ApiError(
               result.message || "API Error",
               response.status,
@@ -153,17 +159,9 @@ class ApiClient {
             );
           }
         } else {
-          console.log("⚠️ Non-APIResponse format - returning raw result");
           return result;
         }
       } else {
-        // Log non-JSON responses
-        console.log("=== NON-JSON RESPONSE ===");
-        console.log("Endpoint:", endpoint);
-        console.log("HTTP Status:", response.status, response.statusText);
-        console.log("Content-Type:", contentType);
-        console.log("Response Headers:", Object.fromEntries(response.headers.entries()));
-        console.log("Response is not JSON, returning response object");
         return response as any;
       }
     } catch (error) {
@@ -243,15 +241,12 @@ class ApiClient {
 }
 
 // 创建API客户端实例
-const apiClient = new ApiClient(REACT_APP_API_BASE_URL);
+const apiClient = new ApiClient(API_BASE_URL);
 
-console.log("REACT_APP_API_BASE_URL:", REACT_APP_API_BASE_URL);
-console.log("INTY_BASE_URL:", INTY_BASE_URL);
-console.log("INTY_API_KEY:", INTY_API_KEY);
 
 const intyClient = new Inty({
-  baseURL: INTY_BASE_URL,
-  apiKey: INTY_API_KEY,
+  baseURL: BASE_URL,
+  apiKey: API_KEY,
 });
 
 // =============================================================================
@@ -307,37 +302,37 @@ export const evaluationSessionApi = {
 // =============================================================================
 
 export const agentApi = {
-  // 获取智能体列表 - 使用现有的agents API（注意路径是 /api/v1/ai/agents）
+  // 获取智能体列表 - API前缀由ApiClient自动处理
   list: (params?: {
     type?: "public" | "private";
     skip?: number;
     limit?: number;
-  }): Promise<Agent[]> => apiClient.get("/api/v1/ai/agents/me", params),
+  }): Promise<Agent[]> => apiClient.get("/ai/agents/me", params),
 
   // 获取推荐智能体 - 使用现有API
-  getRecommended: (): Promise<Agent[]> => apiClient.get("/api/v1/ai/agents/recommend"),
+  getRecommended: (): Promise<Agent[]> => apiClient.get("/ai/agents/recommend"),
 
   // 搜索智能体 - 使用现有API
   search: (query: string): Promise<Agent[]> =>
-    apiClient.get("/api/v1/ai/agents/search", { q: query }),
+    apiClient.get("/ai/agents/search", { q: query }),
 
   // 获取智能体详情 - 使用现有API
   get: (agentId: string): Promise<Agent> =>
-    apiClient.get(`/api/v1/ai/agents/${agentId}`),
+    apiClient.get(`/ai/agents/${agentId}`),
 
   // 创建智能体 - 使用现有API
   create: (data: AgentCreateRequest): Promise<Agent> =>
-    apiClient.post("/api/v1/ai/agents", data),
+    apiClient.post("/ai/agents", data),
 
   // 更新智能体 - 使用现有API
   update: (
     agentId: string,
     data: Partial<AgentUpdateRequest>,
-  ): Promise<Agent> => apiClient.put(`/api/v1/ai/agents/${agentId}`, data),
+  ): Promise<Agent> => apiClient.put(`/ai/agents/${agentId}`, data),
 
   // 删除智能体 - 使用现有API
   delete: (agentId: string): Promise<{ message: string }> =>
-    apiClient.delete(`/api/v1/ai/agents/${agentId}`),
+    apiClient.delete(`/ai/agents/${agentId}`),
 
   // 部署智能体到生产环境 - 如果存在的话
   deploy: (
@@ -349,13 +344,13 @@ export const agentApi = {
     agent_id: string;
     deploy_time: string;
   }> =>
-    apiClient.post(`/api/v1/ai/agents/${agentId}/deploy`, {
+    apiClient.post(`/ai/agents/${agentId}/deploy`, {
       admin_password: adminPassword,
     }),
 
   // 上传头像
   uploadAvatar: (file: File, croppingAvatar: boolean = true): Promise<any> =>
-    apiClient.upload("/api/v1/images", file, { cropping_avatar: croppingAvatar }),
+    apiClient.upload("/images", file, { cropping_avatar: croppingAvatar }),
 };
 
 // =============================================================================
@@ -498,7 +493,7 @@ export const scoringApi = {
       name: string;
       description?: string;
     }[]
-  > => apiClient.get("/api/v1/ai/agents/models/openrouter"),
+  > => apiClient.get("/ai/agents/models/openrouter"),
 };
 
 // =============================================================================
@@ -512,7 +507,7 @@ export const voiceApi = {
     page_size?: number;
     voice_type?: string;
     category?: string;
-  }): Promise<Voice[]> => apiClient.get("/api/v1/text-to-speech/list-voices", params),
+  }): Promise<Voice[]> => apiClient.get("/text-to-speech/list-voices", params),
 };
 
 // =============================================================================
