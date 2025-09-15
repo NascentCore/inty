@@ -82,13 +82,14 @@ jobs:
 
       - name: Update openapi.json
         # Only run this step if triggered by a pull request
+        # If we do this, then we do not need to run this again after pushing.
         if:
           github.event_name == 'pull_request'
         run: |
           # alembic upgrade head: no need to run, as start.sh already includes it
           ./start.sh &
           # Wait for the server to start. If the time is too short, it needs to be increased.
-          sleep 5
+          sleep 10
           curl -o app/openapi.json http://localhost:8000/openapi.json
           if [ -z "$(git status --porcelain)" ]; then
             echo "No changes to commit"
