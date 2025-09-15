@@ -1,7 +1,6 @@
 import uuid
 from typing import Any, List, Union
 
-from app.services.resource_service import delete_resource
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from langchain_core.messages import HumanMessage
@@ -14,13 +13,14 @@ from app.api.utils.logger_route import LoggerRoute
 from app.core.agent.agent import agent_manager
 from app.core.chat import generate_chat_stream
 from app.core.config import global_config_loaded_from_config_yaml
+from app.core.user_privilege.premium_check import is_eligible_for_premium
 from app.schemas.chat import ChatCompletionRequest
 from app.schemas.response import BusinessErrorCode, create_business_error_response
 from app.services import agent_service, chat_history_service, chat_service
 from app.services.chat_service import generate_session_id
 from app.services.global_services import subscription_service
+from app.services.resource_service import delete_resource
 from app.services.voice_service import voice_service
-from app.core.user_privilege.premium_check import is_eligible_for_premium
 
 # TODO: Prefix should be /chat instead of /chats.
 router = APIRouter(prefix="/chats", route_class=LoggerRoute)
@@ -773,10 +773,12 @@ async def get_voice_info(
 @router.put(
     "/agents/{agent_id}/settings",
     deprecated=True,
-    include_in_schema=False,
     tags=["inty"],
-    summary="Update Agent Chat Settings",
-    description="Update chat settings by Agent ID",
+    summary="Update Chat Settings by Agent ID",
+    description=(
+        "We do not use chat_id to get settings, because we only support 1 chat per agent."
+        "TODO: We should switch to /chats/{chat_id}/settings"
+    ),
     response_model=Union[
         # TODO: Why do we use union here?
         schemas.APIResponse[schemas.ChatSettings],
