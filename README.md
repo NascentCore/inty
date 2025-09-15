@@ -71,6 +71,19 @@ git submodule update --init
 ./start.sh --dev
 ```
 
+## 更新 openapi.json
+
+```bash
+# 调用脚本更新 app/openapi.json
+export PYTHONPATH=.
+python scripts/generate_openapi_json.py
+
+# 根据 app/openapi.json 更新 app/stainless.yml
+# 包括增加新的 API endpoint、删除 openapi.json 中被删除的 API endpoint 等等
+```
+
+然后，创建 Pull Request，等待 app.stainless.com 启动更新
+
 ## 系统架构
 
 ```ascii
