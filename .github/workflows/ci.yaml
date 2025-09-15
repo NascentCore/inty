@@ -22,7 +22,7 @@ on:
 env:
   PG_USER: postgres
   PG_PASSWORD: sxwl666!
-  PG_DB: inty
+  PG_DB: inty-test
 
 jobs:
   test:
