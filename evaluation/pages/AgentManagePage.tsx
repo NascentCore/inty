@@ -39,6 +39,7 @@ import LLMConfigForm from "../components/common/LLMConfigForm";
 import VoiceSelector from "../components/common/VoiceSelector";
 import { useAgents } from "../hooks/useAgents";
 import AgentInfoDisplay from "../components/common/AgentInfoDisplay";
+import { generateRandomName } from "../utils/nameGenerator";
 
 const { TextArea } = Input;
 const { Search } = Input;
@@ -328,15 +329,31 @@ export const AgentManagePage: React.FC = () => {
   // 设置创建表单的默认值
   const setCreateFormDefaults = () => {
     setTimeout(() => {
+      const gender = "FEMALE";
+      const randomName = generateRandomName(gender as 'MALE' | 'FEMALE' | 'OTHER');
       const defaultValues = {
-        name: "测试角色",
-        gender: "FEMALE",
+        name: randomName,
+        gender: gender,
         visibility: "PRIVATE",
         modelType: "default",
         voice_id: undefined,
       };
       createForm.setFieldsValue(defaultValues);
     }, 100);
+  };
+
+  // 随机生成角色名字
+  const generateRandomNameForForm = () => {
+    const currentGender = createForm.getFieldValue('gender') || 'FEMALE';
+    const randomName = generateRandomName(currentGender as 'MALE' | 'FEMALE' | 'OTHER');
+    createForm.setFieldValue('name', randomName);
+  };
+
+  // 随机生成角色名字（编辑表单）
+  const generateRandomNameForEditForm = () => {
+    const currentGender = editForm.getFieldValue('gender') || 'FEMALE';
+    const randomName = generateRandomName(currentGender as 'MALE' | 'FEMALE' | 'OTHER');
+    editForm.setFieldValue('name', randomName);
   };
 
   // 显示编辑模态框
@@ -393,7 +410,10 @@ export const AgentManagePage: React.FC = () => {
   };
 
   // 渲染表单字段
-  const renderAgentForm = (form: typeof createForm, isEdit = false) => (
+  const renderAgentForm = (form: typeof createForm, isEdit = false) => {
+    const generateRandomName = isEdit ? generateRandomNameForEditForm : generateRandomNameForForm;
+
+    return (
     <>
       {/* 头像上传 */}
       <Form.Item label="形像">
@@ -449,7 +469,18 @@ export const AgentManagePage: React.FC = () => {
               { min: 1, max: 50, message: "角色名称长度为1-50个字符" },
             ]}
           >
-            <Input placeholder="请输入角色名称" />
+              <Input
+                placeholder="请输入角色名称"
+                suffix={
+                  <Button
+                    type="text"
+                    size="small"
+                    icon={<ReloadOutlined />}
+                    onClick={generateRandomName}
+                    title="随机生成英文名字"
+                  />
+                }
+              />
           </Form.Item>
         </Col>
         <Col span={12}>
@@ -549,7 +580,8 @@ export const AgentManagePage: React.FC = () => {
         onRefresh={handleRefreshModels}
       />
     </>
-  );
+    );
+  };
 
   return (
     <div style={{ padding: "24px", background: "#f0f2f5", minHeight: "100vh" }}>
