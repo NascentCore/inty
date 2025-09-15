@@ -1,17 +1,36 @@
 /**
- * 简化的应用初始化组件
- * 由于使用硬编码token，仅提供基本的应用初始化状态
+ * 应用初始化组件
+ * 提供用户认证上下文和应用初始化状态
  */
 
-import React, { useEffect, useState, ReactNode } from "react";
+import React, { useEffect, useState, ReactNode, createContext, useContext } from "react";
 import { Spin } from "antd";
+import { useUser, UserProfile } from "../../hooks/useUser";
+
+interface AuthContextType {
+  user: UserProfile | null;
+  loading: boolean;
+  error: string | null;
+  refreshUser: () => Promise<void>;
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export const useAuth = (): AuthContextType => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
+  return context;
+};
 
 interface AuthProviderProps {
   children: ReactNode;
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [isLoading, setIsLoading] = useState(true);
+  const [isAppLoading, setIsAppLoading] = useState(true);
+  const { user, loading: userLoading, error, refreshUser } = useUser();
 
   // 组件挂载时初始化应用状态
   useEffect(() => {
@@ -26,7 +45,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       } catch (error) {
         console.error("应用初始化失败:", error);
       } finally {
-        setIsLoading(false);
+        setIsAppLoading(false);
       }
     };
 
@@ -34,7 +53,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   // 显示加载状态
-  if (isLoading) {
+  if (isAppLoading || userLoading) {
     return (
       <div
         style={{
@@ -47,12 +66,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }}
       >
         <Spin size="large" />
-        <div style={{ color: "#666" }}>正在初始化应用...</div>
+        <div style={{ color: "#666" }}>
+          {isAppLoading ? "正在初始化应用..." : "正在加载用户信息..."}
+        </div>
       </div>
     );
   }
 
-  return <>{children}</>;
+  const contextValue: AuthContextType = {
+    user,
+    loading: userLoading,
+    error,
+    refreshUser,
+  };
+
+  return (
+    <AuthContext.Provider value={contextValue}>
+      {children}
+    </AuthContext.Provider>
+  );
 };
 
 export default AuthProvider;

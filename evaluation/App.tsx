@@ -18,6 +18,8 @@ import { EvaluationHistoryPage } from "./pages/EvaluationHistoryPage";
 import { ChatPage } from "./pages/ChatPage";
 import AgentManagePage from "./pages/AgentManagePage";
 import { PremiumModeToggle } from "./components/common/PremiumModeToggle";
+import { UserInfoDisplay } from "./components/common/UserInfoDisplay";
+import { useAuth } from "./components/auth/AuthProvider";
 
 
 const { Sider, Content } = Layout;
@@ -45,6 +47,9 @@ export const App: React.FC = () => {
   });
   const [collapsed, setCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+
+  // 获取用户信息
+  const { user, loading: userLoading } = useAuth();
 
   // GEMINI: 将当前页面保存到 localStorage
   useEffect(() => {
@@ -364,11 +369,26 @@ export const App: React.FC = () => {
           minHeight: "100vh",
         }}
       >
+        {/* 页面头部 - 用户信息显示 */}
+        <div
+          style={{
+            background: "#fff",
+            borderBottom: "1px solid #f0f0f0",
+            padding: "12px 24px",
+            display: "flex",
+            justifyContent: "flex-end",
+            alignItems: "center",
+            boxShadow: "0 1px 4px rgba(0, 0, 0, 0.04)",
+          }}
+        >
+          <UserInfoDisplay user={user} loading={userLoading} />
+        </div>
+
         {/* 页面内容 */}
         <Content
           style={{
             background: "#f0f2f5",
-            minHeight: "100vh",
+            minHeight: "calc(100vh - 64px)",
             overflow: "auto",
             position: "relative",
           }}
