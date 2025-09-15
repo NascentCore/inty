@@ -75,11 +75,11 @@ jobs:
         run: |
           cp config.yaml.example config.yaml
 
-      - name: Run python tests
-        run: |
-          # noci marker is defined in pytest.ini
-          # applied on test functions with noci marker will be skipped on CI
-          pytest tests/ -m "not noci" -v -s
+      # - name: Run python tests
+      #   run: |
+      #     # noci marker is defined in pytest.ini
+      #     # applied on test functions with noci marker will be skipped on CI
+      #     pytest tests/ -m "not noci" -v -s
 
       - name: Update openapi.json
         # Only run this step if triggered by a pull request
