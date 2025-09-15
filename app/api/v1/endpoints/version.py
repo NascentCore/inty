@@ -1,5 +1,5 @@
 import logging
-from typing import Any
+from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, Header, HTTPException
 
@@ -20,8 +20,8 @@ async def check_version(
     app_version_code: int = Header(
         ..., alias="appVersionCode", description="应用版本代码"
     ),
-    app_version_name: str = Header(
-        "", alias="appVersionName", description="应用版本名称（可选）"
+    app_version_name: Optional[str] = Header(
+        None, alias="appVersionName", description="应用版本名称（可选）"
     ),
     current_user: schemas.User = Depends(deps.get_current_active_user),
 ) -> Any:
