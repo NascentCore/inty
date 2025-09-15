@@ -5,6 +5,7 @@
 import type {
   Agent,
   AgentCreateRequest,
+  AgentUpdateRequest,
   EvaluationSession,
   EvaluationSessionCreateRequest,
   EvaluationResult,
@@ -15,6 +16,7 @@ import type {
   EvaluationStats,
   ExportRequest,
   ComparisonResult,
+  Voice,
 } from "../types";
 import { message } from "antd";
 import { Inty } from "inty";
@@ -31,7 +33,11 @@ export const logError = (msg: string) => {
 
 const adminToken =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3ODQzNjAyMjAsInN1YiI6InVzZXItMDFKV1ozNFk0RDFDOTJHRDg2QTVSNkVXWUoifQ.vsYKRvrCfxWgJ5wkTjAYby3RrIOm6P-9VbcCg4msjlM";
-const localIntyBaseURL = "http://localhost:8000";
+
+// 环境变量定义
+const REACT_APP_API_BASE_URL = "http://localhost:8000";
+const INTY_BASE_URL = "http://localhost:8000";
+const INTY_API_KEY = adminToken;
 
 class ApiClient {
   private baseURL: string;
@@ -49,11 +55,11 @@ class ApiClient {
 
   private async request<T>(
     endpoint: string,
-    options: RequestInit = {},
+    options: any = {},
   ): Promise<T> {
     const url = `${this.baseURL}${endpoint}`;
 
-    const config: RequestInit = {
+    const config: any = {
       ...options,
       headers: {
         ...this.headers,
@@ -170,7 +176,7 @@ class ApiClient {
   async get<T>(
     endpoint: string,
     params?: Record<string, any>,
-    options?: RequestInit,
+    options?: any,
   ): Promise<T> {
     let finalEndpoint = endpoint;
 
@@ -301,37 +307,37 @@ export const evaluationSessionApi = {
 // =============================================================================
 
 export const agentApi = {
-  // 获取智能体列表 - 使用现有的agents API（注意路径是 /ai/agents）
+  // 获取智能体列表 - 使用现有的agents API（注意路径是 /api/v1/ai/agents）
   list: (params?: {
     type?: "public" | "private";
     skip?: number;
     limit?: number;
-  }): Promise<Agent[]> => apiClient.get("/ai/agents/me", params),
+  }): Promise<Agent[]> => apiClient.get("/api/v1/ai/agents/me", params),
 
   // 获取推荐智能体 - 使用现有API
-  getRecommended: (): Promise<Agent[]> => apiClient.get("/ai/agents/recommend"),
+  getRecommended: (): Promise<Agent[]> => apiClient.get("/api/v1/ai/agents/recommend"),
 
   // 搜索智能体 - 使用现有API
   search: (query: string): Promise<Agent[]> =>
-    apiClient.get("/ai/agents/search", { q: query }),
+    apiClient.get("/api/v1/ai/agents/search", { q: query }),
 
   // 获取智能体详情 - 使用现有API
   get: (agentId: string): Promise<Agent> =>
-    apiClient.get(`/ai/agents/${agentId}`),
+    apiClient.get(`/api/v1/ai/agents/${agentId}`),
 
   // 创建智能体 - 使用现有API
   create: (data: AgentCreateRequest): Promise<Agent> =>
-    apiClient.post("/ai/agents", data),
+    apiClient.post("/api/v1/ai/agents", data),
 
   // 更新智能体 - 使用现有API
   update: (
     agentId: string,
     data: Partial<AgentUpdateRequest>,
-  ): Promise<Agent> => apiClient.put(`/ai/agents/${agentId}`, data),
+  ): Promise<Agent> => apiClient.put(`/api/v1/ai/agents/${agentId}`, data),
 
   // 删除智能体 - 使用现有API
   delete: (agentId: string): Promise<{ message: string }> =>
-    apiClient.delete(`/ai/agents/${agentId}`),
+    apiClient.delete(`/api/v1/ai/agents/${agentId}`),
 
   // 部署智能体到生产环境 - 如果存在的话
   deploy: (
@@ -343,13 +349,13 @@ export const agentApi = {
     agent_id: string;
     deploy_time: string;
   }> =>
-    apiClient.post(`/ai/agents/${agentId}/deploy`, {
+    apiClient.post(`/api/v1/ai/agents/${agentId}/deploy`, {
       admin_password: adminPassword,
     }),
 
   // 上传头像
   uploadAvatar: (file: File, croppingAvatar: boolean = true): Promise<any> =>
-    apiClient.upload("/images", file, { cropping_avatar: croppingAvatar }),
+    apiClient.upload("/api/v1/images", file, { cropping_avatar: croppingAvatar }),
 };
 
 // =============================================================================
@@ -424,7 +430,7 @@ export const scoringApi = {
       });
 
       clearTimeout(timeoutId);
-      return models;
+      return models as ScoringModel[];
     } catch (error) {
       console.warn("获取评分模型失败，使用默认模型列表:", error);
 
@@ -492,7 +498,21 @@ export const scoringApi = {
       name: string;
       description?: string;
     }[]
-  > => apiClient.get("/ai/agents/models/openrouter"),
+  > => apiClient.get("/api/v1/ai/agents/models/openrouter"),
+};
+
+// =============================================================================
+// 音色管理API
+// =============================================================================
+
+export const voiceApi = {
+  // 获取音色列表
+  listVoices: (params?: {
+    search?: string;
+    page_size?: number;
+    voice_type?: string;
+    category?: string;
+  }): Promise<Voice[]> => apiClient.get("/api/v1/text-to-speech/list-voices", params),
 };
 
 // =============================================================================
@@ -860,6 +880,7 @@ export default {
   stats: statsApi,
   chat: chatApi,
   users: userApi,
+  voices: voiceApi,
   inty: intyClient,
   WebSocketManager,
 };

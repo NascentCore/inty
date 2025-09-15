@@ -15,6 +15,7 @@ export interface Agent {
   background?: string;
   background_images?: string[];
   description?: string;
+  voice_id?: string;
   created_at?: string;
   updated_at?: string;
   llm_config?: LLMConfig;
@@ -43,6 +44,7 @@ export interface AgentCreateRequest {
   avatar?: string;
   background?: string;
   background_images?: string[];
+  voice_id?: string;
   llm_config?: LLMConfig;
 }
 
@@ -59,6 +61,7 @@ export interface AgentUpdateRequest {
   avatar?: string;
   background?: string;
   background_images?: string[];
+  voice_id?: string;
   llm_config?: LLMConfig | null;
 }
 
@@ -251,4 +254,29 @@ export interface PaginatedResponse<T = any> {
   page: number;
   size: number;
   has_more: boolean;
+}
+
+// 音色接口
+export interface Voice {
+  voice_id: string;
+  name: string;
+  category?: string;
+  description?: string;
+  settings?: {
+    stability?: number;
+    similarity_boost?: number;
+    style?: number;
+    use_speaker_boost?: boolean;
+  };
+  samples?: Array<{
+    sample_id: string;
+    file_name: string;
+    mime_type: string;
+    size_bytes?: number;
+    hash?: string;
+  }>;
+  labels?: Record<string, string>;
+  preview_url?: string;
+  available_for_tiers?: string[];
+  high_quality_base_model_ids?: string[];
 }

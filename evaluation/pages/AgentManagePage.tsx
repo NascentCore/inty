@@ -37,6 +37,7 @@ import api, { logError } from "../services/api";
 import modelCacheService from "../services/modelCache";
 import type { Agent, AgentCreateRequest, OpenRouterModel } from "../types";
 import LLMConfigForm from "../components/common/LLMConfigForm";
+import VoiceSelector from "../components/common/VoiceSelector";
 
 const { TextArea } = Input;
 const { Search } = Input;
@@ -224,6 +225,7 @@ export const AgentManagePage: React.FC = () => {
         avatar: avatarUrl,
         background: backgroundUrl,
         background_images: backgroundImages,
+        voice_id: values.voice_id,
       };
 
       // 如果选择了自定义模型，添加LLM配置
@@ -286,6 +288,7 @@ export const AgentManagePage: React.FC = () => {
         avatar: avatarUrl,
         background: backgroundUrl,
         background_images: backgroundImages,
+        voice_id: values.voice_id,
       };
 
       // 如果选择了自定义模型，添加LLM配置
@@ -341,6 +344,7 @@ export const AgentManagePage: React.FC = () => {
         gender: "FEMALE",
         visibility: "PRIVATE",
         modelType: "default",
+        voice_id: undefined,
       };
       createForm.setFieldsValue(defaultValues);
     }, 100);
@@ -362,6 +366,7 @@ export const AgentManagePage: React.FC = () => {
         main_prompt: agent.main_prompt,
         personality: agent.personality,
         mode_prompt: agent.mode_prompt,
+        voice_id: agent.voice_id,
 
         modelType: agent.llm_config ? "custom" : "default",
         // 明确设置LLM配置字段，避免字段名不匹配问题
@@ -502,6 +507,17 @@ export const AgentManagePage: React.FC = () => {
         ]}
       >
         <TextArea rows={3} placeholder="请输入开场白（可选）" />
+      </Form.Item>
+
+      {/* 音色设置 */}
+      <Divider>音色设置</Divider>
+
+      <Form.Item
+        name="voice_id"
+        label="角色音色"
+        tooltip="选择角色的语音音色，用于文字转语音功能"
+      >
+        <VoiceSelector placeholder="请选择角色音色（可选）" />
       </Form.Item>
 
       {/* 提示词配置 */}
@@ -892,6 +908,10 @@ export const AgentManagePage: React.FC = () => {
                     {currentAgent.updated_at
                       ? new Date(currentAgent.updated_at).toLocaleString()
                       : "无"}
+                  </p>
+                  <p>
+                    <strong>音色ID:</strong>{" "}
+                    {currentAgent.voice_id || "未设置"}
                   </p>
                 </Col>
               </Row>
