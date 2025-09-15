@@ -52,6 +52,12 @@ def create_admin_user():
     db: Session = SessionLocal()
 
     for admin_user in ADMIN_USERS:
+        # Check if user already exists
+        existing_user = db.query(User).filter(User.id == admin_user.id).first()
+        if existing_user:
+            logger.info(f"User with ID {admin_user.id} already exists, skipping...")
+            continue
+
         # Add to database
         db.add(admin_user)
         db.commit()
