@@ -125,9 +125,7 @@ private fun ChatItemAI(item: MsgInfo) {
                 VoicePlayer(
                     audioInfo = audioInfo,
                     autoPlay = shouldAutoPlay,
-                    modifier = Modifier
-                        .height(26.dp)
-                        .widthIn(48.dp),
+                    modifier = Modifier.widthIn(38.dp),
                     onPlayStateChange = { isPlaying ->
                         agentInfo?.id?.let { id ->
                             if (isPlaying) OpeningPlayState.openingPlayedAsync(id)
