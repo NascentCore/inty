@@ -11,6 +11,7 @@ import type {
   AgentCreateRequest,
   AgentUpdateRequest,
 } from "../types";
+import type { AgentVisibility } from "../inty_sdk/src/resources/api/v1/ai/agents";
 
 interface UseAgentsOptions {
   type?: "public" | "private" | "all";
@@ -78,7 +79,7 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
     }
 
     return null;
-  }, [enableCache, cacheKey]);
+  }, [enableCache, cacheKey, CACHE_EXPIRY]);
 
   const setCachedData = useCallback(
     (data: Agent[]) => {
@@ -126,9 +127,13 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
           }
         }
 
-        let response = await api.inty.api.v1.ai.agents.list();
+        let response = await api.inty.api.v1.ai.agents.list({
+          // 增加限制以获取更多智能体；后端限制最多 1000 个，这是分页设计；以后需要调整
+          limit: 1000,
+          skip: 0
+        });
         let data = response.data;
-        console.log("agent data:", data);
+        console.log("agent data:", data, "total:", data?.length);
 
         if (type !== "all" && Array.isArray(data)) {
           data = data.filter((agent) => {
@@ -145,10 +150,10 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
         }
         console.log("agent data after filtering:", data);
 
-        setAgents(data);
+        setAgents((data || []) as unknown as Agent[]);
 
         // 更新缓存
-        setCachedData(data);
+        setCachedData((data || []) as unknown as Agent[]);
 
         if (forceRefresh) {
           message.success(`智能体列表已刷新`);
@@ -344,7 +349,7 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
     if (autoLoad) {
       loadAgents();
     }
-  }, [type]);
+  }, [type, autoLoad, loadAgents]);
 
   return {
     // 状态
