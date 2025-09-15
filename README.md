@@ -72,13 +72,8 @@ git submodule update --init
 ## 使用 uvicorn 运行后端服务（面向后端开发者）
 
 ```bash
-python --version # Must be at least 3.12
-
-# 只启动数据库
-docker compose up -d pgvector
-
-# 启动后端服务
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 --log-level debug
+# 使用脚本启动，提供代码文件热加载
+./start.sh --dev
 ```
 
 ## 系统架构
