@@ -290,7 +290,7 @@ class HealthCheckData(BaseModel):
     version: str
 
 
-@app.get("/", response_model=APIResponse[HealthCheckData])
+@app.get("/", response_model=APIResponse[HealthCheckData], include_in_schema=False)
 async def root():
     """健康检查接口"""
     return APIResponse.success(
