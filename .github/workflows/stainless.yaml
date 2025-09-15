@@ -7,8 +7,6 @@ on:
       - synchronize
       - reopened
       - closed
-    # paths:
-    #   - "app/openapi.json"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
@@ -30,7 +28,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 2
 
       - name: Run preview builds
         uses: stainless-api/upload-openapi-spec-action/preview@v1
