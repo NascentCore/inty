@@ -1,5 +1,6 @@
 # To run this code you need to install the following dependencies:
 # pip install google-genai
+# 来自 https://aistudio.google.com/generate-speech，然后 选择右上角的 get code
 
 import base64
 import mimetypes
