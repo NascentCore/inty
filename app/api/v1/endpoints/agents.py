@@ -12,12 +12,11 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import schemas
-from app.schemas.agent import AgentSortConfig
 from app.api import deps
 from app.api.utils.logger_route import LoggerRoute
 from app.core.agent.agent import agent_manager
-from app.utils.gemini import ImagenGeneratedImage, text_to_image
 from app.core.config import global_config_loaded_from_config_yaml
+from app.schemas.agent import AgentSortConfig
 from app.schemas.character_card import (
     CharacterCardExportRequest,
     CharacterCardImportRequest,
@@ -32,8 +31,8 @@ from app.schemas.response import (
 from app.services import agent_service
 from app.services.character_card_service import character_card_service
 from app.services.global_services import subscription_service
-from app.utils.image import ImageFormat, AspectRatio
-
+from app.utils.gemini import ImagenGeneratedImage, text_to_image
+from app.utils.image import AspectRatio, ImageFormat
 
 router = APIRouter(prefix="/ai/agents", route_class=LoggerRoute)
 
@@ -96,10 +95,21 @@ class RecommendAgentsRequest(BaseModel):
     """
     替换掉现有的参数
     """
-    
-    index: int = Query(1, ge=1, description="0-index, the starting index of the recommended agents list")
-    count: int = Query(10, ge=1, le=100, description="count of recommended agents, app should balance between smoothness and loading speed")
-    sort_config: AgentSortConfig = Query(AgentSortConfig(), description="sort method and sort seed")
+
+    index: int = Query(
+        1,
+        ge=1,
+        description="0-index, the starting index of the recommended agents list",
+    )
+    count: int = Query(
+        10,
+        ge=1,
+        le=100,
+        description="count of recommended agents, app should balance between smoothness and loading speed",
+    )
+    sort_config: AgentSortConfig = Query(
+        AgentSortConfig(), description="sort method and sort seed"
+    )
 
 
 @router.get(
@@ -110,12 +120,15 @@ async def recommend_agents(
     db: AsyncSession = Depends(deps.get_async_db),
     page: int = Query(1, ge=1, description="Page number, starting from 1"),
     page_size: int = Query(10, ge=1, le=100, description="Items per page, maximum 100"),
-    sort: schemas.AgentSortOption = Query(schemas.AgentSortOption.CREATED_DESC, description="Sort order: created_asc, created_desc, random"),
+    sort: schemas.AgentSortOption = Query(
+        schemas.AgentSortOption.CREATED_DESC,
+        description="Sort order: created_asc, created_desc, random",
+    ),
     # TODO: Fill in the implementation. 目前还没有使用该参数，因为还没有实现推荐算法。
     # 目前不会影响 app 端正常使用。详情查看：https://github.com/NascentCore/inty/issues/484
     # 实现原理：
     # SELECT * FROM (
-    # SELECT *, md5(id || 'sort.sort_seed') as hash 
+    # SELECT *, md5(id || 'sort.sort_seed') as hash
     # FROM agents
     # ) ORDER BY hash;
     # app 需要记录 sort seed，每次请求新的推荐列表时，要提供新的 sort seed；
@@ -128,14 +141,18 @@ async def recommend_agents(
 ) -> Any:
     """
     Get recommended AI agents list (public and approved agents)
-    
+
     Sorting options:
     - created_desc: Most recent first (default)
-    - created_asc: Oldest first 
+    - created_asc: Oldest first
     - random: Random order
     """
     pagination_data = await agent_service.get_recommended_agents_paginated(
-        db, page=page, page_size=page_size, sort_by=sort, current_user_id=current_user.id
+        db,
+        page=page,
+        page_size=page_size,
+        sort_by=sort,
+        current_user_id=current_user.id,
     )
     return schemas.APIResponse.success(data=pagination_data)
 
@@ -311,6 +328,10 @@ async def update_agent(
     agent = await agent_service.get_agent(db, agent_id=agent_id)
     if not agent:
         raise HTTPException(status_code=404, detail="Agent not found")
+
+    if not agent.voice_id and not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Permission denied")
+
     agent = await agent_service.update_agent(db, db_agent=agent, agent_in=agent_in)
     return agent
 

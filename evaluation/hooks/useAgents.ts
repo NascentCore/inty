@@ -184,6 +184,11 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
           }
         }
 
+        // 确保voice_id字段被正确处理
+        if (data.voice_id) {
+          agentData.voice_id = data.voice_id;
+        }
+
         const newAgent = await api.agents.create(agentData);
 
         // 更新本地状态
@@ -231,6 +236,11 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
             message.error("头像上传失败");
             return null;
           }
+        }
+
+        // 确保voice_id字段被正确处理
+        if (data.voice_id !== undefined) {
+          updateData.voice_id = data.voice_id;
         }
 
         const updatedAgent = await api.agents.update(agentId, updateData);

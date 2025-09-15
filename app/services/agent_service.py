@@ -3,17 +3,20 @@ import uuid
 from typing import List, Optional
 
 from fastapi import HTTPException
+from loguru import logger
 from sqlalchemy import and_, desc, func, or_, select, text
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app import models, schemas
-from app.schemas.agent import AgentSortOption
 from app.core.agent.agent import agent_manager
+from app.core.config import global_config_loaded_from_config_yaml
 from app.models.agent import AgentVisibility
 from app.models.associations import agent_followers
+from app.schemas.agent import AgentSortOption
 from app.services.cache_service import cache_service
+from app.services.voice_service import VoiceService
 from app.utils.crop_avatar import CROPPED_AVATAR_FILENAME_SUFFIX, crop_avatar
 from app.utils.gcs import (
     append_filename_suffix,
@@ -21,14 +24,7 @@ from app.utils.gcs import (
     get_bucket_and_path_from_gcs_url,
     upload_to_gcs,
 )
-from app.utils.image import (
-    ImageFormat,
-    get_jpg_bytes_from_pil_image,
-)
-from app.services.voice_service import VoiceService
-from app.core.config import global_config_loaded_from_config_yaml
-
-from loguru import logger
+from app.utils.image import ImageFormat, get_jpg_bytes_from_pil_image
 
 
 async def generate_agent_opening_voice(
@@ -41,24 +37,27 @@ async def generate_agent_opening_voice(
         if not agent.opening or not agent.opening.strip():
             logger.debug(f"Agent {agent.id} 没有开场白文本，跳过语音生成")
             return None
-        
+
         # 确定使用的voice_id：优先使用agent的voice_id，否则使用配置文件默认值
-        voice_id_to_use = agent.voice_id or global_config_loaded_from_config_yaml.elevenlabs.voice_id
-        
+        voice_id_to_use = (
+            agent.voice_id or global_config_loaded_from_config_yaml.elevenlabs.voice_id
+        )
+
         if not voice_id_to_use:
             logger.debug(f"Agent {agent.id} 和配置文件都没有voice_id，跳过语音生成")
             return None
 
-        logger.debug(f"Agent {agent.id} 使用voice_id: {voice_id_to_use} (来源: {'Agent' if agent.voice_id else '配置文件'})")
+        logger.debug(
+            f"Agent {agent.id} 使用voice_id: {voice_id_to_use} (来源: {'Agent' if agent.voice_id else '配置文件'})"
+        )
 
         voice_service = VoiceService()
-        
+
         # 生成开场白语音
         audio_url = await voice_service.generate_voice(
-            text=agent.opening,
-            voice_id=voice_id_to_use
+            text=agent.opening, voice_id=voice_id_to_use
         )
-        
+
         if audio_url:
             # 更新agent的opening_audio_url字段
             agent.opening_audio_url = audio_url
@@ -68,7 +67,7 @@ async def generate_agent_opening_voice(
         else:
             logger.warning(f"Agent {agent.id} 开场白语音生成失败，未返回URL")
             return None
-            
+
     except Exception as e:
         logger.error(f"为Agent {agent.id} 生成开场白语音失败: {str(e)}")
         return None
@@ -618,7 +617,9 @@ async def create_agent(
         try:
             await generate_agent_opening_voice(db_agent, db)
         except Exception as e:
-            logger.warning(f"Agent {db_agent.id} 创建后语音生成失败，将在后续使用时生成: {str(e)}")
+            logger.warning(
+                f"Agent {db_agent.id} 创建后语音生成失败，将在后续使用时生成: {str(e)}"
+            )
 
         result = await db.execute(
             select(models.Agent)
@@ -754,9 +755,7 @@ async def update_agent(
 
         # 检查是否需要重新生成开场白语音
         update_data = agent_in.model_dump(exclude_unset=True)
-        should_regenerate_voice = (
-            "opening" in update_data or "voice_id" in update_data
-        )
+        should_regenerate_voice = "opening" in update_data or "voice_id" in update_data
 
         _update_agent_in_db(agent_in, db_agent)
 
@@ -792,6 +791,7 @@ async def update_agent(
                 "message_example": updated_agent.message_example or "",
                 "creator_notes": updated_agent.creator_notes or "",
                 "tags": updated_agent.tags or [],
+                "voice_id": updated_agent.voice_id or "",
                 "character_version": updated_agent.character_version or "",
                 "extensions": updated_agent.extensions or {},
             }
@@ -880,16 +880,18 @@ async def delete_agent(db: AsyncSession, db_agent: models.Agent) -> models.Agent
         raise HTTPException(status_code=500, detail="服务器内部错误")
 
 
-def process_agent_image_urls(agent_data: dict, agent_id: str = None, user_id: str = None) -> dict:
+def process_agent_image_urls(
+    agent_data: dict, agent_id: str = None, user_id: str = None
+) -> dict:
     """
     验证Agent创建时的图片URL，确保URL有效性
-    
+
     现在的实现非常简洁：只验证URL的有效性，不进行任何文件操作。
     背景图片和头像都使用统一目录存储，无需复制或移动。
 
     Args:
         agent_data: Agent数据字典
-        agent_id: Agent ID (已弃用，保留以兼容现有调用)  
+        agent_id: Agent ID (已弃用，保留以兼容现有调用)
         user_id: 用户ID (已弃用，保留以兼容现有调用)
 
     Returns:
@@ -920,7 +922,9 @@ def process_agent_image_urls(agent_data: dict, agent_id: str = None, user_id: st
             processed_data["background"] = None
 
     # 验证相册图片URLs
-    if agent_data.get("background_images") and isinstance(agent_data["background_images"], list):
+    if agent_data.get("background_images") and isinstance(
+        agent_data["background_images"], list
+    ):
         valid_photos = []
         for photo_url in agent_data["background_images"]:
             if is_valid_gcs_url(photo_url):
