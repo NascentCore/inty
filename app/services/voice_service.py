@@ -4,9 +4,13 @@
 """
 
 import asyncio
+import base64
 import hashlib
+import io
 import re
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
+
+from mutagen.mp3 import MP3
 
 from elevenlabs.client import ElevenLabs
 from elevenlabs import VoiceSettings
@@ -24,7 +28,6 @@ class VoiceService:
         self.config = global_config_loaded_from_config_yaml.elevenlabs
         self.gcs_service = GCSService()
         self.client = ElevenLabs(api_key=self.config.api_key)
-
 
     def _clean_text_for_voice(self, text: str) -> str:
         """
@@ -46,10 +49,6 @@ class VoiceService:
 
         cleaned_text = text
 
-        # 移除 *号包裹的内容（心理描写）
-        # 匹配 *...* 格式的内容
-        cleaned_text = re.sub(r"\*[^*]*\*", "", cleaned_text)
-
         # 移除中文括号包裹的内容（动作描写）
         # 匹配 （...） 格式的内容
         cleaned_text = re.sub(r"（[^）]*）", "", cleaned_text)
@@ -70,7 +69,7 @@ class VoiceService:
         language: str = "zh",
         model: Optional[str] = None,
         db: Optional[AsyncSession] = None,
-    ) -> Optional[str]:
+    ) -> Optional[Tuple[str, float]]:
         """
         生成语音并上传到GCS
 
@@ -82,7 +81,7 @@ class VoiceService:
             db: 数据库会话，用于缓存查询
 
         Returns:
-            语音文件的GCS URL，失败返回None
+            语音文件的GCS URL和音频时长(秒)的元组，失败返回None
         """
         if not self.config.enabled:
             logger.warning("ElevenLabs语音生成已禁用")
@@ -135,12 +134,14 @@ class VoiceService:
 
             # 生成语音文件
             logger.debug("调用ElevenLabs API")
-            audio_data = await self._call_elevenlabs_api(
+            audio_result = await self._call_elevenlabs_api(
                 text, voice_id, model, language
             )
-            if not audio_data:
+            if not audio_result:
                 logger.error("ElevenLabs API返回空数据")
                 return None
+            
+            audio_data, duration = audio_result
 
             logger.debug(
                 f"ElevenLabs API调用成功，音频数据大小: {len(audio_data)} bytes"
@@ -187,8 +188,8 @@ class VoiceService:
                 )
                 logger.debug("语音缓存保存任务已启动")
 
-            logger.debug(f"语音生成成功: {file_name}")
-            return audio_url
+            logger.debug(f"语音生成成功: {file_name}, 时长: {duration:.2f}秒")
+            return (audio_url, duration)
 
         except Exception as e:
             logger.error(f"语音生成失败: {str(e)}")
@@ -197,12 +198,12 @@ class VoiceService:
 
     async def _call_elevenlabs_api(
         self, text: str, voice_id: str, model: str, language: str
-    ) -> Optional[bytes]:
+    ) -> Optional[Tuple[bytes, float]]:
         """
         调用ElevenLabs API生成语音
 
         Returns:
-            音频数据的字节流
+            音频数据的字节流和时长(秒)的元组
         """
         try:
             logger.debug(
@@ -210,10 +211,7 @@ class VoiceService:
             )
 
             # 创建语音设置
-            voice_settings = VoiceSettings(
-                stability=0.5,
-                similarity_boost=0.5
-            )
+            voice_settings = VoiceSettings(stability=0.5, similarity_boost=0.5)
 
             # 准备参数
             kwargs = {
@@ -229,14 +227,17 @@ class VoiceService:
             if "turbo" in model.lower() and "multilingual" in model.lower():
                 kwargs["language_code"] = language
 
-            # 调用官方SDK
-            audio_stream = self.client.text_to_speech.convert(**kwargs)
-            audio_data = b"".join(audio_stream)
+            # 调用官方SDK的convert_with_timestamps方法
+            response = self.client.text_to_speech.convert_with_timestamps(**kwargs)
             
-            logger.debug(
-                f"ElevenLabs API调用成功，音频大小: {len(audio_data)} bytes"
-            )
-            return audio_data
+            # 从base64解码音频数据
+            audio_data = base64.b64decode(response.audio_base_64)
+            
+            # 计算音频时长
+            duration = self._calculate_audio_duration(audio_data)
+            
+            logger.debug(f"ElevenLabs API调用成功，音频大小: {len(audio_data)} bytes, 时长: {duration:.2f}秒")
+            return (audio_data, duration)
 
         except Exception as e:
             logger.error(f"ElevenLabs API调用异常: {str(e)}")
@@ -256,12 +257,32 @@ class VoiceService:
 
         return file_name
 
+    def _calculate_audio_duration(self, audio_data: bytes) -> float:
+        """
+        计算音频数据的时长
+        
+        Args:
+            audio_data: 音频字节数据
+            
+        Returns:
+            音频时长（秒）
+        """
+        try:
+            # 使用mutagen计算MP3时长，从字节数据
+            audio_file = io.BytesIO(audio_data)
+            audio = MP3(audio_file)
+            duration_seconds = audio.info.length
+            return duration_seconds
+        except Exception as e:
+            logger.error(f"计算音频时长失败: {str(e)}")
+            return 0.0
+
     async def get_available_voices(
         self,
         search: Optional[str] = None,
         page_size: Optional[int] = 10,
         voice_type: Optional[str] = None,
-        category: Optional[str] = None
+        category: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
         """
         获取可用的语音列表，支持搜索和过滤
@@ -279,16 +300,16 @@ class VoiceService:
             # 使用 ElevenLabs SDK 的搜索功能
             kwargs = {}
             if page_size is not None:
-                kwargs['page_size'] = page_size
+                kwargs["page_size"] = page_size
             if search is not None:
-                kwargs['search'] = search
+                kwargs["search"] = search
             if voice_type is not None:
-                kwargs['voice_type'] = voice_type
+                kwargs["voice_type"] = voice_type
             if category is not None:
-                kwargs['category'] = category
-            
+                kwargs["category"] = category
+
             logger.debug(f"获取语音列表，参数: {kwargs}")
-            
+
             # 调用 ElevenLabs voices search API
             if kwargs:
                 # 使用搜索功能
@@ -296,13 +317,13 @@ class VoiceService:
             else:
                 # 获取所有语音
                 voices_response = self.client.voices.get_all()
-            
+
             # 转换为字典格式以保持兼容性
             voices_list = [voice.model_dump() for voice in voices_response.voices]
-            
+
             logger.debug(f"获取到 {len(voices_list)} 个语音")
             return voices_list
-            
+
         except Exception as e:
             logger.error(f"获取语音列表异常: {str(e)}")
             logger.exception("获取语音列表异常详细信息:")

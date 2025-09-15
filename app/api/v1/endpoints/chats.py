@@ -566,13 +566,17 @@ async def agent_chat_completions(
                         f"开始语音生成: voice_id={agent_voice_id}, text_length={len(response_content)}, language={request.language}"
                     )
 
-                    audio_url = await voice_service.generate_voice(
+                    voice_result = await voice_service.generate_voice(
                         text=response_content,
                         voice_id=agent_voice_id,
                         language=request.language,
                         db=db,
                     )
-                    logger.info(f"语音自动生成成功: {audio_url}")
+                    if voice_result:
+                        audio_url, audio_duration = voice_result
+                        logger.info(f"语音自动生成成功: {audio_url}, 时长: {audio_duration:.2f}秒")
+                    else:
+                        audio_url, audio_duration = None, None
                 else:
                     logger.debug("语音未启用，跳过语音生成")
 
@@ -696,20 +700,21 @@ async def generate_message_voice(
 
         # 使用Agent的voice_id生成语音
         agent_voice_id = agent_data.get("voice_id")
-        audio_url = await voice_service.generate_voice(
+        voice_result = await voice_service.generate_voice(
             text=message_content, voice_id=agent_voice_id, language=language, db=db
         )
 
-        if not audio_url:
+        if not voice_result:
             raise HTTPException(status_code=500, detail="Voice generation failed")
-
-        logger.debug(f"按需语音生成成功: {audio_url}")
+        
+        audio_url, audio_duration = voice_result
+        logger.debug(f"按需语音生成成功: {audio_url}, 时长: {audio_duration:.2f}秒")
 
         # 更新chat_history中对应消息的audio_url
         # 使用try-except确保更新失败不影响API响应
         try:
             update_success = chat_history_service.update_message_audio_url(
-                session_id=session_id, message_id=message_id, audio_url=audio_url
+                session_id=session_id, message_id=message_id, audio_url=audio_url, audio_duration=audio_duration
             )
             if update_success:
                 logger.debug(f"成功更新消息{message_id}的audio_url到chat_history")

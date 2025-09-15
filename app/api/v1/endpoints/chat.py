@@ -205,6 +205,7 @@ async def agent_chat_completions(
 
         # 语音生成逻辑 - 根据chat_settings.voice_enabled决定是否自动播放
         audio_url = None
+        audio_duration = None
         try:
             # 语音自动播放逻辑：chat_settings.voice_enabled = true 时自动生成语音
             if chat_settings.voice_enabled:
@@ -214,13 +215,15 @@ async def agent_chat_completions(
                     f"开始语音生成: voice_id={agent_voice_id}, text_length={len(response_content)}, language={request.language}"
                 )
 
-                audio_url = await voice_service.generate_voice(
+                voice_result = await voice_service.generate_voice(
                     text=response_content,
                     voice_id=agent_voice_id,
                     language=request.language,
                     db=db,
                 )
-                logger.debug(f"语音自动生成成功: {audio_url}")
+                if voice_result:
+                    audio_url, audio_duration = voice_result
+                    logger.debug(f"语音自动生成成功: {audio_url}, 时长: {audio_duration:.2f}秒")
             else:
                 logger.debug("语音未启用，跳过语音生成")
 

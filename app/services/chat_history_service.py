@@ -76,7 +76,7 @@ def get_chat_history(session_id: str) -> PostgresChatMessageHistory:
     return PostgresChatMessageHistory("chat_history", session_id, sync_connection=conn)
 
 
-def add_agent_opening_message(session_id: str, opening_message: str, audio_url: Optional[str] = None, agent_id: Optional[str] = None) -> None:
+def add_agent_opening_message(session_id: str, opening_message: str, audio_url: Optional[str] = None, agent_id: Optional[str] = None, audio_duration: Optional[float] = None) -> None:
     """添加Agent开场白到聊天历史"""
     try:
         conn = get_chat_history_connection()
@@ -89,11 +89,13 @@ def add_agent_opening_message(session_id: str, opening_message: str, audio_url: 
         
         # 构建meta_data
         meta_data = None
-        if agent_id:
-            meta_data = {
-                "agentId": agent_id,
-                "isOpening": True
-            }
+        if agent_id or audio_duration is not None:
+            meta_data = {}
+            if agent_id:
+                meta_data["agentId"] = agent_id
+                meta_data["isOpening"] = True
+            if audio_duration is not None:
+                meta_data["audioDuration"] = audio_duration
         
         # 直接插入到数据库，包含audio_url和meta_data
         insert_query = """
@@ -195,7 +197,7 @@ def add_user_message(session_id: str, message: str) -> None:
         raise
 
 
-def add_ai_message(session_id: str, message: str, agent_id: Optional[str] = None) -> Optional[int]:
+def add_ai_message(session_id: str, message: str, agent_id: Optional[str] = None, audio_duration: Optional[float] = None) -> Optional[int]:
     """添加AI消息到聊天历史，返回插入的消息ID"""
     try:
         conn = get_chat_history_connection()
@@ -208,11 +210,13 @@ def add_ai_message(session_id: str, message: str, agent_id: Optional[str] = None
         
         # 构建meta_data
         meta_data = None
-        if agent_id:
-            meta_data = {
-                "agentId": agent_id,
-                "isOpening": False
-            }
+        if agent_id or audio_duration is not None:
+            meta_data = {}
+            if agent_id:
+                meta_data["agentId"] = agent_id
+                meta_data["isOpening"] = False
+            if audio_duration is not None:
+                meta_data["audioDuration"] = audio_duration
         
         # 直接插入到数据库，包含meta_data，并返回插入的ID
         insert_query = """
@@ -569,14 +573,15 @@ async def get_message_content(session_id: str, message_id: str) -> Optional[str]
         return None
 
 
-def update_message_audio_url(session_id: str, message_id: str, audio_url: str) -> bool:
+def update_message_audio_url(session_id: str, message_id: str, audio_url: str, audio_duration: Optional[float] = None) -> bool:
     """
-    更新指定消息的audio_url字段
+    更新指定消息的audio_url字段和音频时长
 
     Args:
         session_id: 会话ID
         message_id: 消息ID（数据库的真实ID）
         audio_url: 语音文件URL
+        audio_duration: 音频时长（秒）
 
     Returns:
         bool: 更新是否成功
@@ -591,27 +596,40 @@ def update_message_audio_url(session_id: str, message_id: str, audio_url: str) -
             logger.warning(f"无法解析消息ID为整数: {message_id}")
             return False
 
-        # 更新指定消息的audio_url
-        update_query = """
-            UPDATE chat_history 
-            SET audio_url = %s 
-            WHERE session_id = %s AND id = %s
-        """
+        # 更新指定消息的audio_url和meta_data中的audioDuration
+        if audio_duration is not None:
+            # 获取当前meta_data，并添加audioDuration
+            update_query = """
+                UPDATE chat_history 
+                SET audio_url = %s,
+                    meta_data = COALESCE(meta_data, '{}'::jsonb) || %s::jsonb
+                WHERE session_id = %s AND id = %s
+            """
+            duration_json = json.dumps({"audioDuration": audio_duration})
+            with conn.cursor() as cur:
+                cur.execute(update_query, (audio_url, duration_json, session_id, db_message_id))
+                updated_rows = cur.rowcount
+        else:
+            # 只更新audio_url
+            update_query = """
+                UPDATE chat_history 
+                SET audio_url = %s 
+                WHERE session_id = %s AND id = %s
+            """
+            with conn.cursor() as cur:
+                cur.execute(update_query, (audio_url, session_id, db_message_id))
+                updated_rows = cur.rowcount
 
-        with conn.cursor() as cur:
-            cur.execute(update_query, (audio_url, session_id, db_message_id))
-            updated_rows = cur.rowcount
-
-            if updated_rows > 0:
-                logger.debug(
-                    f"成功更新消息audio_url: session_id={session_id}, message_id={db_message_id}, audio_url={audio_url}"
-                )
-                return True
-            else:
-                logger.warning(
-                    f"消息未找到，无法更新audio_url: session_id={session_id}, message_id={db_message_id}"
-                )
-                return False
+        if updated_rows > 0:
+            logger.debug(
+                f"成功更新消息audio_url: session_id={session_id}, message_id={db_message_id}, audio_url={audio_url}"
+            )
+            return True
+        else:
+            logger.warning(
+                f"消息未找到，无法更新audio_url: session_id={session_id}, message_id={db_message_id}"
+            )
+            return False
 
     except Exception as e:
         logger.error(
