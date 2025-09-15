@@ -168,10 +168,6 @@ resources:
             methods:
               list_voices: get /api/v1/text-to-speech/list-voices
 
-  $client:
-    methods:
-      health_check: get /
-
 settings:
   # All generated integration tests that hit the prism mock http server are marked
   # as skipped. Removing this setting or setting it to false enables tests, but
