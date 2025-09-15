@@ -39,9 +39,6 @@ jobs:
           org: ${{ env.STAINLESS_ORG }}
           project: ${{ env.STAINLESS_PROJECT }}
           oas_path: ${{ env.OAS_PATH }}
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          fail_on: error
-          make_comment: true
 
   merge:
     if: github.event.action == 'closed' && github.event.pull_request.merged == true
@@ -62,6 +59,3 @@ jobs:
           org: ${{ env.STAINLESS_ORG }}
           project: ${{ env.STAINLESS_PROJECT }}
           oas_path: ${{ env.OAS_PATH }}
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          fail_on: error
-          make_comment: true
