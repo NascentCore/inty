@@ -166,7 +166,6 @@ resources:
                   get_settings: get /api/v1/chats/agents/{agent_id}/settings
           text_to_speech:
             methods:
-              generate_speech: post /api/v1/text-to-speech/messages/{message_id}
               list_voices: get /api/v1/text-to-speech/list-voices
 
   $client:
