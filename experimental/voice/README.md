@@ -5,6 +5,10 @@
 `uv run --no-project gemini.py` You might need to install additional deps.
 This will write out a `.wav` file that can be played.
 
+官方示例代码
+<img width="380" height="358" alt="image" src="https://github.com/user-attachments/assets/ed3b97fe-0e2c-49ef-8bda-2b588b5d5a34" />
+
+
 ## ElevenLabs Demo
 
 Using ElevenLabs API to turn text into speech.
