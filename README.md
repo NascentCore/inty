@@ -84,6 +84,9 @@ python scripts/generate_openapi_json.py
 
 然后，创建 Pull Request，等待 app.stainless.com 启动更新
 
+<img width="480" height="932" alt="image" src="https://github.com/user-attachments/assets/5ba171a1-c387-404d-9ab2-c81c1c85ef74" />
+
+
 ## 系统架构
 
 ```ascii
