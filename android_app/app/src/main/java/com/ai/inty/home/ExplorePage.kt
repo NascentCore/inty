@@ -71,8 +71,8 @@ const val HORIZONTAL_PADDING_MULTIPLIER = 1.8
 // 预加载下一页的缓冲区数量
 // 当前已经加载但是还未被显示的角色数量
 const val COLUMN_COUNT = 2
-val TitleHeight = 40.dp
-val TitleLeftPadding = 24.dp
+val TitleHeight = 40.dp // 标题栏高度，文字居中显示，未预留与标题下方内容间距。
+val TitleLeftPadding = 24.dp // 标题栏内显示内容距离左侧边缘间距，用于与标题下方内容垂直对齐。
 
 
 private fun calculateSpacerWidth(containerWidth: Int): Int {
@@ -213,7 +213,8 @@ fun RecommendPage(
                 )
             }
 
-            Spacer(Modifier.height(10.dp))
+
+
 
             val gridState = rememberLazyGridState()
 
