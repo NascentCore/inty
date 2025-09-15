@@ -44,7 +44,7 @@ import kotlinx.coroutines.delay
 @Composable
 fun VoicePlayer(
     audioInfo: AudioInfo,
-    modifier: Modifier= Modifier,
+    modifier: Modifier = Modifier,
     onPlayStateChange: ((Boolean) -> Unit)? = null,
     autoPlay: Boolean = false,
     onTtsGenerated: ((String) -> Unit)? = null, // TTS生成成功回调
@@ -286,10 +286,10 @@ private fun ChatVoicePlayer(
 ) {
     Row(
         modifier = modifier
-            .clip(RoundedCornerShape(20.dp))
+            .clip(RoundedCornerShape(topEnd = 10.dp, topStart = 10.dp, bottomEnd = 10.dp))
             .background(Color(0xFF44354F))
             .clickable { onPlayPause() }
-            .padding(horizontal = 4.dp, vertical = 2.dp),
+            .padding(horizontal = 8.dp, vertical = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center
     ) {
@@ -304,6 +304,7 @@ private fun ChatVoicePlayer(
                     Icon(
                         painter = painterResource(R.drawable.ic_warning_voice),
                         contentDescription = "Error",
+                        tint = Color.White,
                         modifier = Modifier.size(16.dp)
                     )
                 }
@@ -313,6 +314,7 @@ private fun ChatVoicePlayer(
                     Icon(
                         painter = painterResource(R.drawable.ic_warning_voice),
                         contentDescription = "TTS Failed",
+                        tint = Color.White,
                         modifier = Modifier.size(16.dp)
                     )
                 }

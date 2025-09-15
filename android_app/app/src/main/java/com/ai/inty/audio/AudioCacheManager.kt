@@ -54,45 +54,6 @@ class AudioCacheManager private constructor(
         }
     }
 
-    /**
-     * 获取音频数据（优先从缓存获取）
-     */
-    suspend fun getAudioData(url: String): ByteArray? = withContext(Dispatchers.IO) {
-        try {
-            val cacheKey = generateCacheKey(url)
-
-            // 1. 尝试从内存缓存获取
-            memoryCache.get(cacheKey)?.let { data ->
-                EasyLog.log("音频LOG测试 Audio loaded from memory cache: $url")
-                return@withContext data
-            }
-
-            // 2. 尝试从本地文件缓存获取
-            val cachedFile = getCachedFile(cacheKey)
-            if (cachedFile.exists()) {
-                val data = cachedFile.readBytes()
-                // 存入内存缓存
-                memoryCache.put(cacheKey, data)
-                EasyLog.log("音频LOG测试 Audio loaded from file cache: $url")
-                return@withContext data
-            }
-
-            // 3. 从网络下载
-            val data = downloadAudio(url)
-            if (data != null) {
-                // 存入内存缓存
-                memoryCache.put(cacheKey, data)
-                // 存入文件缓存
-                saveToFile(cachedFile, data)
-                EasyLog.log("音频LOG测试 Audio downloaded and cached: $url")
-            }
-
-            data
-        } catch (e: Exception) {
-            EasyLog.log("音频LOG测试 Failed to get audio data: ${e.message}", EasyLog.ERROR)
-            null
-        }
-    }
 
     /**
      * 预加载音频数据

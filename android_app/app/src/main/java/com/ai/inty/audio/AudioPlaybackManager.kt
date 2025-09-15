@@ -184,6 +184,15 @@ class AudioPlaybackManager private constructor(private val context: Context) : P
                 }
             } else {
                 EasyLog.log("音频LOG测试 Audio not cached, using original URL")
+                // 异步预加载音频到缓存
+                scope.launch {
+                    try {
+                        cacheManager.preloadAudio(audioInfo.url)
+                        EasyLog.log("音频LOG测试 Audio preloaded to cache: ${audioInfo.url}")
+                    } catch (e: Exception) {
+                        EasyLog.log("音频LOG测试 Failed to preload audio: ${e.message}", EasyLog.ERROR)
+                    }
+                }
                 MediaItem.fromUri(audioInfo.url)
             }
 

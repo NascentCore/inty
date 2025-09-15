@@ -55,6 +55,9 @@ class TtsManager private constructor(
         onSuccess: (String) -> Unit,
         onError: (String) -> Unit
     ) {
+        EasyLog.log("音频LOG测试 TtsManager.generateMessageVoice called: messageId=$messageId, agentId=$agentId")
+        EasyLog.log("音频LOG测试 Current generating TTS messages: ${_isGeneratingTts.value}")
+        
         // 检查是否正在生成
         if (_isGeneratingTts.value.contains(messageId)) {
             EasyLog.log("音频LOG测试 TTS already generating for message: $messageId")
