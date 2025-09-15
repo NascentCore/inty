@@ -563,8 +563,8 @@
                     "agents",
                     "characters"
                 ],
-                "summary": "Recommend Agents",
-                "description": "Get recommended AI agents list (public and approved agents)\n\nSorting options:\n- created_desc: Most recent first (default)\n- created_asc: Oldest first\n- random: Random order",
+                "summary": "Get recommended AI agents list",
+                "description": "Get recommended AI agents list (public and approved agents), sort_seed is required when sort is random, which is used to ensure deterministic order for the random sort option",
                 "operationId": "recommend_agents_api_v1_ai_agents_recommend_get",
                 "security": [
                     {
@@ -611,42 +611,18 @@
                         "description": "Sort order: created_asc, created_desc, random"
                     },
                     {
-                        "name": "index",
+                        "name": "sort_seed",
                         "in": "query",
                         "required": false,
                         "schema": {
-                            "type": "integer",
-                            "minimum": 1,
-                            "default": 1,
-                            "title": "Index"
-                        }
-                    },
-                    {
-                        "name": "count",
-                        "in": "query",
-                        "required": false,
-                        "schema": {
-                            "type": "integer",
-                            "maximum": 100,
-                            "minimum": 1,
-                            "default": 10,
-                            "title": "Count"
-                        }
+                            "type": "string",
+                            "description": "sort seed [not yet used]",
+                            "default": "",
+                            "title": "Sort Seed"
+                        },
+                        "description": "sort seed [not yet used]"
                     }
                 ],
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/AgentSortConfig",
-                                "default": {
-                                    "sort": "random",
-                                    "sort_seed": ""
-                                }
-                            }
-                        }
-                    }
-                },
                 "responses": {
                     "200": {
                         "description": "Successful Response",
@@ -1360,7 +1336,6 @@
                 "summary": "Update Chat Settings by Agent ID",
                 "description": "We do not use chat_id to get settings, because we only support 1 chat per agent.TODO: We should switch to /chats/{chat_id}/settings",
                 "operationId": "update_agent_chat_settings_api_v1_chats_agents__agent_id__settings_put",
-                "deprecated": true,
                 "security": [
                     {
                         "Bearer": []
@@ -1402,6 +1377,53 @@
                                         }
                                     ],
                                     "title": "Response Update Agent Chat Settings Api V1 Chats Agents  Agent Id  Settings Put"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "get": {
+                "tags": [
+                    "chats",
+                    "inty"
+                ],
+                "summary": "Get Agent Chat Settings",
+                "description": "[Deprecated, use /chats/{chat_id}/settings instead] Get chat settings by Agent ID, bause we only support 1 chat per agent, so we do not use chat_id to get settings",
+                "operationId": "get_agent_chat_settings_api_v1_chats_agents__agent_id__settings_get",
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "agent_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "title": "Agent Id"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ChatSettings"
                                 }
                             }
                         }
@@ -2059,33 +2081,6 @@
                         }
                     }
                 }
-            }
-        },
-        "/api/v1/text-to-speech/messages/{message_id}": {
-            "post": {
-                "tags": [
-                    "text_to_speech",
-                    "inty",
-                    "voice"
-                ],
-                "summary": "Generate speech for a chat message",
-                "description": "Generate voice for a message",
-                "operationId": "generate_message_voice_api_v1_text_to_speech_messages__message_id__post",
-                "responses": {
-                    "200": {
-                        "description": "Successful Response",
-                        "content": {
-                            "application/json": {
-                                "schema": {}
-                            }
-                        }
-                    }
-                },
-                "security": [
-                    {
-                        "Bearer": []
-                    }
-                ]
             }
         },
         "/api/v1/text-to-speech/list-voices": {
@@ -3540,24 +3535,6 @@
                 ],
                 "title": "AgentCreate",
                 "description": "\u521b\u5efaAI\u89d2\u8272\n\n\u63a8\u8350\u4f7f\u7528\u65b9\u5f0f\uff1a\n1. \u4f7f\u7528personality + scenario\u5b57\u6bb5\u6784\u5efa\u89d2\u8272\n2. \u6dfb\u52a0first_message\u4f5c\u4e3a\u5f00\u573a\u767d\n3. \u53ef\u9009\u6dfb\u52a0message_example\u5c55\u793a\u5bf9\u8bdd\u98ce\u683c\n\n\u517c\u5bb9\u6027\u8bf4\u660e\uff1a\n- \u4ecd\u652f\u6301\u4f7f\u7528prompt\u5b57\u6bb5 (legacy\u6a21\u5f0f)\n- \u4f18\u5148\u7ea7\uff1a\u89d2\u8272\u5361\u5b57\u6bb5 > prompt\u5b57\u6bb5"
-            },
-            "AgentSortConfig": {
-                "properties": {
-                    "sort": {
-                        "$ref": "#/components/schemas/AgentSortOption",
-                        "description": "sort option",
-                        "default": "random"
-                    },
-                    "sort_seed": {
-                        "type": "string",
-                        "title": "Sort Seed",
-                        "description": "Sort seed, used to ensure consistent order for the random sort option",
-                        "default": ""
-                    }
-                },
-                "type": "object",
-                "title": "AgentSortConfig",
-                "description": "Agent sorting config"
             },
             "AgentSortOption": {
                 "type": "string",

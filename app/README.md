@@ -6,7 +6,6 @@
 brew install stainless-api/tap/stl
 stl auth login
 stl init
-pip install git+ssh://git@github.com/NascentCore/inty-python.git/
 ```
 
 * <https://app.stainless.com/inty/inty/overview> Stainless OpenAPI SDK generation project.
@@ -42,7 +41,8 @@ pip install git+ssh://git@github.com/NascentCore/inty-python.git/
 
 ## Deployment
 
-* Run [deploy_prd.yml](../.github/workflows/deploy_prd.yml) to deploy the app to production server
+* Run [build_and_deploy.yml](../.github/workflows/build_and_deploy.yml)
+  to deploy the app to production server
 * Open Google Cloud Console, login with `it@sxwl.ai` (or your own account)
 * Open Compute Engine, and find `dev-intance`
 * `/etc/nginx/conf.d/sxwl.ai.conf` has the host's nginx config

@@ -91,30 +91,15 @@ async def search_agents(
     return schemas.APIResponse.success(data=pagination_data)
 
 
-class RecommendAgentsRequest(BaseModel):
-    """
-    替换掉现有的参数
-    """
-
-    index: int = Query(
-        1,
-        ge=1,
-        description="0-index, the starting index of the recommended agents list",
-    )
-    count: int = Query(
-        10,
-        ge=1,
-        le=100,
-        description="count of recommended agents, app should balance between smoothness and loading speed",
-    )
-    sort_config: AgentSortConfig = Query(
-        AgentSortConfig(), description="sort method and sort seed"
-    )
-
-
 @router.get(
     "/recommend",
     response_model=schemas.APIResponse[schemas.PaginationData[schemas.Agent]],
+    summary="Get recommended AI agents list",
+    description=(
+        "Get recommended AI agents list (public and approved agents), "
+        "sort_seed is required when sort is random, "
+        "which is used to ensure deterministic order for the random sort option"
+    ),
 )
 async def recommend_agents(
     db: AsyncSession = Depends(deps.get_async_db),
@@ -136,7 +121,7 @@ async def recommend_agents(
     # 1. Home 页 featured 列表每次 app 重新启动时
     # 2. Explore 页每次顶部下拉刷新推荐列表
     # 然后每次请求 /recommends 要提供这个 sort seed，否则会返回相同的推荐列表。
-    request: RecommendAgentsRequest = Depends(RecommendAgentsRequest),
+    sort_seed: str = Query("", description="sort seed [not yet used]"),
     current_user: schemas.User = Depends(deps.get_current_active_user),
 ) -> Any:
     """

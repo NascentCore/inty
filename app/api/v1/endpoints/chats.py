@@ -772,7 +772,6 @@ async def get_voice_info(
 
 @router.put(
     "/agents/{agent_id}/settings",
-    deprecated=True,
     tags=["inty"],
     summary="Update Chat Settings by Agent ID",
     description=(
@@ -870,8 +869,6 @@ async def update_agent_chat_settings(
 @router.get(
     "/agents/{agent_id}/settings",
     response_model=schemas.ChatSettings,
-    deprecated=True,
-    include_in_schema=False,
     tags=["inty"],
     summary="Get Agent Chat Settings",
     description=(
