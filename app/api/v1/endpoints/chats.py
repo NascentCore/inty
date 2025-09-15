@@ -730,6 +730,7 @@ async def generate_message_voice(
             "voice_id": agent_voice_id
             or global_config_loaded_from_config_yaml.elevenlabs.voice_id,
             "language": language,
+            "audio_duration": audio_duration,  # 音频时长（秒）
             "cached": False,  # 这里可以后续实现缓存检测
             "generation_time": None,  # 可以记录生成时间
         }
