@@ -35,7 +35,7 @@ async def check_version(
     try:
         # 直接使用注入的版本参数
         client_version_code = app_version_code
-        version_name = app_version_name if app_version_name else "unknown"
+        version_name = app_version_name or "unknown"
 
         # 调用Google Play服务检查版本
         version_check_result = google_play_service.check_version_requirement(
