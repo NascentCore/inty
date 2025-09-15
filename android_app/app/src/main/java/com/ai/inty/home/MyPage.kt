@@ -42,6 +42,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -314,6 +315,7 @@ private fun MyAgentCard(
 
     Box(
         modifier = modifier.size(165.dp, 220.dp)
+            .clip(RoundedCornerShape(12.dp))
     ) {
         IntyImage(
             modifier = Modifier.fillMaxSize(),
