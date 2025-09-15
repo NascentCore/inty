@@ -94,36 +94,20 @@ export const AgentManagePage: React.FC = () => {
         setPagination((prev) => ({ ...prev, current: 1 }));
       }
 
-      // 使用 useAgents hook 的 loadAgents
-      await loadAgentsFromHook(true);
-    },
-    [loadAgentsFromHook],
-  );
+      setLoading(true);
+      try {
+        const response = await api.inty.api.v1.ai.agents.list({
+          limit: 100, // 先获取所有数据，前端分页
+        });
 
-  // 加载模型列表
-  const loadModels = useCallback(async () => {
-    setModelsLoading(true);
-    try {
-      const models = await modelCacheService.getOpenRouterModels();
-      setOpenRouterModels(models);
-    } catch (error) {
-      console.error("加载模型列表失败:", error);
-      message.error("加载模型列表失败");
-    } finally {
-      setModelsLoading(false);
-    }
-  }, []);
-
-  // 刷新模型列表
-  const handleRefreshModels = useCallback(() => {
-    loadModels();
-    message.success("正在刷新模型列表...");
-  }, [loadModels]);
-
-  // 监听 agents 变化，应用筛选
-  useEffect(() => {
-    if (agents.length > 0) {
-      let filteredAgents = agents || [];
+        let filteredAgents = (response.data || []).map((agent: unknown) => {
+          const agentObj = agent as Record<string, unknown>;
+          return {
+            ...agentObj,
+            gender: agentObj.gender as "MALE" | "FEMALE" | "OTHER",
+            visibility: agentObj.visibility as "PUBLIC" | "PRIVATE",
+          } as Agent;
+        });
 
       // 搜索筛选
       if (searchText) {
@@ -209,9 +193,10 @@ export const AgentManagePage: React.FC = () => {
       // 如果有头像文件，先上传
       if (avatarFile) {
         try {
-          const uploadResult = await api.agents.uploadAvatar(avatarFile, true); // Enable cropping for avatar
-          avatarUrl = uploadResult.avatar_url || uploadResult.url;
-          backgroundUrl = uploadResult.url;
+          const uploadResult = await api.inty.api.v1.uploadImage({ file: avatarFile, cropping_avatar: true }); // Enable cropping for avatar
+          const data = uploadResult.data as Record<string, unknown>;
+          avatarUrl = (data?.avatar_url as string) || (data?.url as string);
+          backgroundUrl = data?.url as string;
           if (backgroundUrl) {
             backgroundImages = [backgroundUrl];
           }
@@ -243,7 +228,7 @@ export const AgentManagePage: React.FC = () => {
         };
       }
 
-      await api.agents.create(agentData);
+      await api.inty.api.v1.ai.agents.create(agentData);
       message.success("智能体创建成功");
       setCreateModalVisible(false);
       createForm.resetFields();
@@ -273,9 +258,10 @@ export const AgentManagePage: React.FC = () => {
       // 如果有新头像文件，先上传
       if (editAvatarFile) {
         try {
-          const uploadResult = await api.agents.uploadAvatar(editAvatarFile, true); // Enable cropping for avatar
-          avatarUrl = uploadResult.avatar_url || uploadResult.url;
-          backgroundUrl = uploadResult.url;
+          const uploadResult = await api.inty.api.v1.uploadImage({ file: editAvatarFile, cropping_avatar: true }); // Enable cropping for avatar
+          const data = uploadResult.data as Record<string, unknown>;
+          avatarUrl = (data?.avatar_url as string) || (data?.url as string);
+          backgroundUrl = data?.url as string;
           if (backgroundUrl) {
             backgroundImages = [backgroundUrl];
           }
@@ -311,7 +297,7 @@ export const AgentManagePage: React.FC = () => {
         updateData.llm_config = null;
       }
 
-      await api.agents.update(currentAgent.id, updateData);
+      await api.inty.api.v1.ai.agents.update(currentAgent.id, updateData);
       message.success("智能体更新成功");
       setEditModalVisible(false);
       setCurrentAgent(null);
@@ -330,7 +316,7 @@ export const AgentManagePage: React.FC = () => {
   // 删除智能体
   const handleDeleteAgent = async (agent: Agent) => {
     try {
-      await api.agents.delete(agent.id);
+      await api.inty.api.v1.ai.agents.delete(agent.id);
       message.success("智能体删除成功");
       loadAgents();
     } catch (error) {
