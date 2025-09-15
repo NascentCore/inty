@@ -66,6 +66,7 @@ fun VoicePlayer(
     var isLoading by remember(messageId) { mutableStateOf(false) }
     var isGeneratingTts by remember(messageId) { mutableStateOf(false) }
     var ttsGenerationFailed by remember(messageId) { mutableStateOf(false) } // TTS生成是否失败
+    var userClickedRecently by remember(messageId) { mutableStateOf(false) } // 用户最近是否点击过
 
     // 监听TTS生成状态
     LaunchedEffect(messageId) {
@@ -73,12 +74,21 @@ fun VoicePlayer(
             // 从AudioManager获取TTS生成状态
             val managerTtsState = audioManager.isGeneratingTtsForMessage(messageId)
 
-            // 同步TTS生成状态
-            isGeneratingTts = managerTtsState
+            // 同步TTS生成状态，但不要覆盖用户刚刚设置的loading状态
+            // 只有当AudioManager确实开始生成TTS时才更新状态
+            if (managerTtsState) {
+                isGeneratingTts = true
+                userClickedRecently = false // TTS开始生成，清除用户点击标志
+            } else if (isGeneratingTts && !managerTtsState && !userClickedRecently) {
+                // 只有当之前确实在生成TTS且现在完成且用户没有最近点击时才更新
+                isGeneratingTts = false
+            }
 
             // 如果TTS生成完成且之前失败过，重置失败状态
+            // 注意：只有在用户重新点击时才重置失败状态，避免自动重置
             if (!managerTtsState && ttsGenerationFailed) {
-                ttsGenerationFailed = false
+                // 不自动重置失败状态，让用户手动重试
+                // ttsGenerationFailed = false
             }
 
             delay(100) // 每100ms检查一次
@@ -104,9 +114,22 @@ fun VoicePlayer(
                 hasError = state == PlaybackState.ERROR
 
                 // 显示loading状态：正在缓冲或正在生成TTS
-                isLoading = state == PlaybackState.BUFFERING || isGeneratingTts
+                // 只有当AudioManager确实在缓冲时才更新loading状态
+                if (state == PlaybackState.BUFFERING) {
+                    isLoading = true
+                } else if (state != PlaybackState.BUFFERING && isLoading) {
+                    // 只有当之前确实在缓冲且现在不是缓冲状态时才更新
+                    isLoading = false
+                }
 
-                EasyLog.log("音频LOG测试 VoicePlayer state updated: messageId=$messageId, isPlaying=$isPlaying (was: $wasPlaying), state=$state, isLoading=$isLoading")
+                // 当播放开始时，清除TTS生成状态和用户点击标志
+                if (state == PlaybackState.PLAYING) {
+                    isGeneratingTts = false
+                    userClickedRecently = false
+                    EasyLog.log("音频LOG测试 Playback started, clearing TTS generation state")
+                }
+
+                EasyLog.log("音频LOG测试 VoicePlayer state updated: messageId=$messageId, isPlaying=$isPlaying (was: $wasPlaying), state=$state, isLoading=$isLoading, isGeneratingTts=$isGeneratingTts")
 
                 // 只有在播放状态真正改变时才调用回调
                 if (wasPlaying != isPlaying) {
@@ -208,14 +231,19 @@ fun VoicePlayer(
 
                 // 重置失败状态
                 ttsGenerationFailed = false
+                
+                // 设置用户点击标志，保护loading状态不被过早重置
+                userClickedRecently = true
 
                 // 立即显示loading状态
                 if (audioInfo.url.isEmpty()) {
                     EasyLog.log("音频LOG测试 Audio URL is empty, showing TTS generation loading immediately")
-                    // TTS状态会通过轮询自动更新
+                    // 立即设置TTS生成状态为true，显示loading
+                    isGeneratingTts = true
                 } else {
                     EasyLog.log("音频LOG测试 Audio URL exists, will show loading when buffering starts")
-                    // 播放状态会通过轮询自动更新
+                    // 立即设置loading状态为true
+                    isLoading = true
                 }
 
                 audioManager.playMessageVoice(
