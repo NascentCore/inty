@@ -65,10 +65,10 @@ class AudioManager private constructor(
             // 开场白消息的localMsgId通常包含_assistant_标识
             val isOpeningMessage = messageId.contains("_assistant_")
             if (!isOpeningMessage) {
-                EasyLog.log("Auto play audio is disabled, skipping message voice playback")
+                EasyLog.log("音频LOG测试 Auto play audio is disabled, skipping message voice playback")
                 return
             } else {
-                EasyLog.log("Opening message detected (messageId contains '_assistant_'), allowing auto play despite user setting")
+                EasyLog.log("音频LOG测试 Opening message detected (messageId contains '_assistant_'), allowing auto play despite user setting")
             }
         }
 
@@ -77,19 +77,19 @@ class AudioManager private constructor(
         // 如果audioUrl为空，生成TTS
         if (audioUrl.isNullOrEmpty()) {
             val ttsMessageId = serverMessageId ?: messageId
-            EasyLog.log("Audio URL is empty, generating TTS for message: $messageId (serverId: $ttsMessageId)")
+            EasyLog.log("音频LOG测试 Audio URL is empty, generating TTS for message: $messageId (serverId: $ttsMessageId)")
             ttsManager.generateMessageVoice(
                 messageId = ttsMessageId, // 使用服务器端ID进行TTS生成
                 agentId = agentId,
                 onSuccess = { generatedUrl ->
-                    EasyLog.log("TTS generated successfully: $generatedUrl")
+                    EasyLog.log("音频LOG测试 TTS generated successfully: $generatedUrl")
                     onTtsGenerated?.invoke(generatedUrl)
                     // 使用生成的URL播放
-                    EasyLog.log("Playing TTS generated audio: messageId=$messageId, generatedUrl=$generatedUrl, autoPlay=$autoPlay")
+                    EasyLog.log("音频LOG测试 Playing TTS generated audio: messageId=$messageId, generatedUrl=$generatedUrl, autoPlay=$autoPlay")
                     playMessageWithUrl(messageId, generatedUrl, agentId, autoPlay)
                 },
                 onError = { error ->
-                    EasyLog.log("TTS generation failed: $error", EasyLog.ERROR)
+                    EasyLog.log("音频LOG测试 TTS generation failed: $error", EasyLog.ERROR)
                     onTtsFailed?.invoke(error)
                 }
             )
@@ -116,7 +116,7 @@ class AudioManager private constructor(
             agentId = agentId
         )
 
-        EasyLog.log("Playing message voice for message: $messageId")
+        EasyLog.log("音频LOG测试 Playing message voice for message: $messageId")
         
         // 确保在主线程上调用ExoPlayer
         scope.launch {
@@ -129,7 +129,7 @@ class AudioManager private constructor(
      * 停止所有语音播放
      */
     fun stopAllPlayback() {
-        EasyLog.log("Stopping all voice playback")
+        EasyLog.log("音频LOG测试 Stopping all voice playback")
         scope.launch {
             playbackManager.stopPlayback()
         }
@@ -139,7 +139,7 @@ class AudioManager private constructor(
      * 暂停语音播放
      */
     fun pausePlayback() {
-        EasyLog.log("Pausing voice playback")
+        EasyLog.log("音频LOG测试 Pausing voice playback")
         scope.launch {
             playbackManager.pausePlayback()
         }
@@ -149,7 +149,7 @@ class AudioManager private constructor(
      * 恢复语音播放
      */
     fun resumePlayback() {
-        EasyLog.log("Resuming voice playback")
+        EasyLog.log("音频LOG测试 Resuming voice playback")
         scope.launch {
             playbackManager.resumePlayback()
         }
@@ -159,7 +159,7 @@ class AudioManager private constructor(
      * 重置播放状态（页面切换时调用）
      */
     fun resetForPageChange() {
-        EasyLog.log("Resetting voice playback for page change")
+        EasyLog.log("音频LOG测试 Resetting voice playback for page change")
         scope.launch {
             playbackManager.resetForPageChange()
         }
@@ -220,7 +220,7 @@ class AudioManager private constructor(
      * 释放资源
      */
     fun release() {
-        EasyLog.log("Releasing AudioManager")
+        EasyLog.log("音频LOG测试 Releasing AudioManager")
         stopAllPlayback()
         playbackManager.release()
         ttsManager.cancelAllGenerations()

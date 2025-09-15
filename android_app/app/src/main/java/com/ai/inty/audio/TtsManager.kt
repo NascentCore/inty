@@ -57,7 +57,7 @@ class TtsManager private constructor(
     ) {
         // 检查是否正在生成
         if (_isGeneratingTts.value.contains(messageId)) {
-            EasyLog.log("TTS already generating for message: $messageId")
+            EasyLog.log("音频LOG测试 TTS already generating for message: $messageId")
             return
         }
 
@@ -66,7 +66,7 @@ class TtsManager private constructor(
 
         scope.launch(Dispatchers.IO) {
             try {
-                EasyLog.log("Generating TTS for message: $messageId, agent: $agentId")
+                EasyLog.log("音频LOG测试 Generating TTS for message: $messageId, agent: $agentId")
 
                 val response = chatApi.fetchMsgVoice(agentId, messageId)
 
@@ -74,21 +74,21 @@ class TtsManager private constructor(
                     is HttpResult.Success -> {
                         val audioUrl = response.data.audio_url
                         if (audioUrl != null && audioUrl.isNotEmpty()) {
-                            EasyLog.log("TTS generated successfully: $audioUrl")
+                            EasyLog.log("音频LOG测试 TTS generated successfully: $audioUrl")
                             onSuccess(audioUrl)
                         } else {
-                            EasyLog.log("TTS generation returned empty audio_url", EasyLog.ERROR)
+                            EasyLog.log("音频LOG测试 TTS generation returned empty audio_url", EasyLog.ERROR)
                             onError("TTS生成失败：返回空音频URL")
                         }
                     }
 
                     is HttpResult.Failure -> {
-                        EasyLog.log("TTS generation failed: ${response.message}", EasyLog.ERROR)
+                        EasyLog.log("音频LOG测试 TTS generation failed: ${response.message}", EasyLog.ERROR)
                         onError("TTS生成失败：${response.message}")
                     }
                 }
             } catch (e: Exception) {
-                EasyLog.log("TTS generation exception: ${e.message}", EasyLog.ERROR)
+                EasyLog.log("音频LOG测试 TTS generation exception: ${e.message}", EasyLog.ERROR)
                 onError("TTS生成异常：${e.message}")
             } finally {
                 // 从生成队列中移除

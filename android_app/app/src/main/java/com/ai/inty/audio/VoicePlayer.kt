@@ -24,7 +24,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -34,8 +33,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.inty.utils.log.EasyLog
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
 /**
  * 语音播放器组件
@@ -51,11 +51,10 @@ fun VoicePlayer(
     serverMessageId: String? = null, // 服务器端消息ID，用于TTS生成
 ) {
     val context = LocalContext.current
-    val coroutineScope = rememberCoroutineScope()
     val audioManager = remember {
         AudioManager.getInstance(
             context,
-            kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main)
+            CoroutineScope(Dispatchers.Main)
         )
     }
 
@@ -66,27 +65,22 @@ fun VoicePlayer(
     var duration by remember(messageId) { mutableLongStateOf(0L) }
     var isLoading by remember(messageId) { mutableStateOf(false) }
     var isGeneratingTts by remember(messageId) { mutableStateOf(false) }
-    var isUserClicked by remember(messageId) { mutableStateOf(false) } // 用户是否点击过
     var ttsGenerationFailed by remember(messageId) { mutableStateOf(false) } // TTS生成是否失败
-    
-    // 防抖状态
-    var isClickDebounced by remember(messageId) { mutableStateOf(false) }
 
     // 监听TTS生成状态
     LaunchedEffect(messageId) {
         while (true) {
             // 从AudioManager获取TTS生成状态
             val managerTtsState = audioManager.isGeneratingTtsForMessage(messageId)
-            
-            // 如果AudioManager显示正在生成TTS，则更新本地状态
-            if (managerTtsState) {
-                isGeneratingTts = true
+
+            // 同步TTS生成状态
+            isGeneratingTts = managerTtsState
+
+            // 如果TTS生成完成且之前失败过，重置失败状态
+            if (!managerTtsState && ttsGenerationFailed) {
+                ttsGenerationFailed = false
             }
-            // 如果AudioManager显示不在生成TTS，且用户没有手动设置状态，则更新本地状态
-            else if (!isUserClicked) {
-                isGeneratingTts = false
-            }
-            
+
             delay(100) // 每100ms检查一次
         }
     }
@@ -101,25 +95,34 @@ fun VoicePlayer(
             val currentAudioInfo = audioManager.getCurrentAudioInfo()
             val isCurrentMessage = currentAudioInfo?.messageId == messageId
 
-            EasyLog.log("VoicePlayer state change: messageId=$messageId, state=$state, isCurrentMessage=$isCurrentMessage, currentAudioInfo=${currentAudioInfo?.messageId}")
+            EasyLog.log("音频LOG测试 VoicePlayer state change: messageId=$messageId, state=$state, isCurrentMessage=$isCurrentMessage, currentAudioInfo=${currentAudioInfo?.messageId}")
 
             if (isCurrentMessage) {
+                // 更准确的状态判断
+                val wasPlaying = isPlaying
                 isPlaying = state == PlaybackState.PLAYING
                 hasError = state == PlaybackState.ERROR
-                // 如果用户点击过且正在缓冲，显示loading
-                isLoading = state == PlaybackState.BUFFERING && isUserClicked
-                
-                // 播放完成后重置用户点击状态
-                if (state == PlaybackState.ENDED) {
-                    isUserClicked = false
+
+                // 显示loading状态：正在缓冲或正在生成TTS
+                isLoading = state == PlaybackState.BUFFERING || isGeneratingTts
+
+                EasyLog.log("音频LOG测试 VoicePlayer state updated: messageId=$messageId, isPlaying=$isPlaying (was: $wasPlaying), state=$state, isLoading=$isLoading")
+
+                // 只有在播放状态真正改变时才调用回调
+                if (wasPlaying != isPlaying) {
+                    onPlayStateChange?.invoke(isPlaying)
                 }
-                
-                onPlayStateChange?.invoke(isPlaying)
             } else {
+                // 非当前消息重置状态
+                val wasPlaying = isPlaying
                 isPlaying = false
                 hasError = false
-                // 非当前消息不显示loading，除非正在生成TTS
                 isLoading = false
+
+                // 如果从播放状态变为非当前消息，调用回调
+                if (wasPlaying) {
+                    onPlayStateChange?.invoke(false)
+                }
             }
         }
     }
@@ -138,21 +141,21 @@ fun VoicePlayer(
 
     // 自动播放（仅开场白消息）
     LaunchedEffect(autoPlay) {
-        EasyLog.log("=== VoicePlayer LaunchedEffect ===")
-        EasyLog.log("autoPlay: $autoPlay")
-        EasyLog.log("audioUrl: ${audioInfo.url}")
-        EasyLog.log("isPlaying: $isPlaying")
-        EasyLog.log("hasError: $hasError")
-        EasyLog.log("messageId: $messageId")
+        EasyLog.log("音频LOG测试 === VoicePlayer LaunchedEffect ===")
+        EasyLog.log("音频LOG测试 autoPlay: $autoPlay")
+        EasyLog.log("音频LOG测试 audioUrl: ${audioInfo.url}")
+        EasyLog.log("音频LOG测试 isPlaying: $isPlaying")
+        EasyLog.log("音频LOG测试 hasError: $hasError")
+        EasyLog.log("音频LOG测试 messageId: $messageId")
 
         if (autoPlay && !isPlaying && !hasError) {
-            EasyLog.log("VoicePlayer conditions met, starting auto play...")
+            EasyLog.log("音频LOG测试 VoicePlayer conditions met, starting auto play...")
             // 增加延迟，确保组件完全初始化
             delay(200)
 
             // 再次检查状态，确保条件仍然满足
             if (!isPlaying && !hasError) {
-                EasyLog.log("VoicePlayer auto playing opening message: $messageId, audioUrl: ${audioInfo.url}")
+                EasyLog.log("音频LOG测试 VoicePlayer auto playing opening message: $messageId, audioUrl: ${audioInfo.url}")
                 audioManager.playMessageVoice(
                     messageId = messageId, // 使用localMsgId用于播放状态管理
                     audioUrl = audioInfo.url,
@@ -163,12 +166,12 @@ fun VoicePlayer(
                     serverMessageId = serverMessageId // 传递服务器端ID用于TTS生成
                 )
             } else {
-                EasyLog.log("VoicePlayer auto play conditions no longer met after delay: autoPlay=$autoPlay, isPlaying=$isPlaying, hasError=$hasError")
+                EasyLog.log("音频LOG测试 VoicePlayer auto play conditions no longer met after delay: autoPlay=$autoPlay, isPlaying=$isPlaying, hasError=$hasError")
             }
         } else {
-            EasyLog.log("VoicePlayer auto play conditions not met: autoPlay=$autoPlay, isPlaying=$isPlaying, hasError=$hasError")
+            EasyLog.log("音频LOG测试 VoicePlayer auto play conditions not met: autoPlay=$autoPlay, isPlaying=$isPlaying, hasError=$hasError")
         }
-        EasyLog.log("=== End VoicePlayer LaunchedEffect ===")
+        EasyLog.log("音频LOG测试 === End VoicePlayer LaunchedEffect ===")
     }
 
     ChatVoicePlayer(
@@ -177,49 +180,44 @@ fun VoicePlayer(
         hasError = hasError,
         duration = duration,
         isGeneratingTts = isGeneratingTts,
-        isUserClicked = isUserClicked,
         ttsGenerationFailed = ttsGenerationFailed,
         onPlayPause = {
-            EasyLog.log("VoicePlayer clicked: isPlaying=$isPlaying, messageId=$messageId, audioUrl=${audioInfo.url}")
-            EasyLog.log("Click debounce state: isClickDebounced=$isClickDebounced, isGeneratingTts=$isGeneratingTts")
-
-            // 防抖检查：防止快速重复点击
-            if (isClickDebounced) {
-                EasyLog.log("Click ignored due to debounce")
-                return@ChatVoicePlayer
-            }
+            val currentAudioInfo = audioManager.getCurrentAudioInfo()
+            EasyLog.log("音频LOG测试 VoicePlayer clicked: isPlaying=$isPlaying, messageId=$messageId, audioUrl=${audioInfo.url}")
+            EasyLog.log("音频LOG测试 Current audio info: ${currentAudioInfo?.messageId}, isCurrentMessage: ${currentAudioInfo?.messageId == messageId}")
 
             // 如果正在生成TTS且不是失败状态，则阻止点击
             if (isGeneratingTts && !ttsGenerationFailed) {
-                EasyLog.log("Click ignored due to TTS generation in progress")
+                EasyLog.log("音频LOG测试 Click ignored due to TTS generation in progress")
                 return@ChatVoicePlayer
             }
 
-            // 设置防抖状态
-            isClickDebounced = true
-            coroutineScope.launch {
-                // 防抖延迟：500ms
-                delay(500)
-                isClickDebounced = false
-                EasyLog.log("Click debounce reset for messageId: $messageId")
-            }
+            val isCurrentMessage = currentAudioInfo?.messageId == messageId
 
             if (isPlaying) {
+                // 暂停播放
+                EasyLog.log("音频LOG测试 Pausing playback for message: $messageId")
                 audioManager.pausePlayback()
+            } else if (isCurrentMessage && !isPlaying) {
+                // 恢复播放（当前消息已加载但未播放）
+                EasyLog.log("音频LOG测试 Resuming playback for message: $messageId")
+                audioManager.resumePlayback()
             } else {
+                // 开始播放新消息
+                EasyLog.log("音频LOG测试 Starting playback for message: $messageId")
+
+                // 重置失败状态
+                ttsGenerationFailed = false
+
                 // 立即显示loading状态
-                isUserClicked = true
-                ttsGenerationFailed = false // 重置失败状态
-                
-                // 如果audioUrl为空，立即显示TTS生成loading
                 if (audioInfo.url.isEmpty()) {
-                    EasyLog.log("Audio URL is empty, showing TTS generation loading immediately")
-                    isGeneratingTts = true // 立即显示TTS生成状态
+                    EasyLog.log("音频LOG测试 Audio URL is empty, showing TTS generation loading immediately")
+                    // TTS状态会通过轮询自动更新
                 } else {
-                    EasyLog.log("Audio URL exists, showing audio loading")
-                    isLoading = true // 立即显示音频加载状态
+                    EasyLog.log("音频LOG测试 Audio URL exists, will show loading when buffering starts")
+                    // 播放状态会通过轮询自动更新
                 }
-                
+
                 audioManager.playMessageVoice(
                     messageId = messageId, // 使用localMsgId用于播放状态管理
                     audioUrl = audioInfo.url,
@@ -227,18 +225,14 @@ fun VoicePlayer(
                     autoPlay = true, // 手动点击时也需要播放
                     isManualClick = true, // 标记为手动点击
                     onTtsGenerated = { generatedUrl ->
-                        // TTS生成成功，重置状态并继续播放
-                        isGeneratingTts = false
-                        ttsGenerationFailed = false
-                        isUserClicked = false // 重置用户点击状态，允许轮询接管
+                        // TTS生成成功，继续播放
+                        EasyLog.log("音频LOG测试 TTS generated successfully, continuing playback")
                         onTtsGenerated?.invoke(generatedUrl)
                     },
                     onTtsFailed = { error ->
                         // TTS生成失败，显示错误状态
-                        EasyLog.log("TTS generation failed: $error", EasyLog.ERROR)
-                        isGeneratingTts = false
+                        EasyLog.log("音频LOG测试 TTS generation failed: $error", EasyLog.ERROR)
                         ttsGenerationFailed = true
-                        isUserClicked = false // 重置用户点击状态，允许轮询接管
                     },
                     serverMessageId = serverMessageId // 传递服务器端ID用于TTS生成
                 )
@@ -258,7 +252,6 @@ private fun ChatVoicePlayer(
     hasError: Boolean,
     duration: Long,
     isGeneratingTts: Boolean = false,
-    isUserClicked: Boolean = false,
     ttsGenerationFailed: Boolean = false,
     onPlayPause: () -> Unit,
     modifier: Modifier = Modifier,
@@ -287,7 +280,7 @@ private fun ChatVoicePlayer(
                         modifier = Modifier.size(16.dp)
                     )
                 }
-                
+
                 // 显示TTS生成失败状态（⚠️图标）
                 ttsGenerationFailed -> {
                     Icon(
@@ -297,7 +290,7 @@ private fun ChatVoicePlayer(
                         modifier = Modifier.size(16.dp)
                     )
                 }
-                
+
                 // 显示loading状态：TTS生成中或音频加载中
                 isGeneratingTts || isLoading -> {
                     CircularProgressIndicator(
