@@ -1,18 +1,17 @@
 import logging
 from typing import Any, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Header
+from fastapi import APIRouter, Depends, Header, HTTPException
+from loguru import logger
 
 from app import schemas
 from app.api import deps
 from app.api.utils.logger_route import LoggerRoute
+from app.external_services.globals import google_play_service
 from app.schemas.response import APIResponse
 from app.schemas.version import VersionCheckResponse
-from app.external_services.globals import google_play_service
 
 router = APIRouter(prefix="/version", route_class=LoggerRoute)
-logger = logging.getLogger(__name__)
-
 
 @router.post("/check", response_model=APIResponse[VersionCheckResponse])
 async def check_version(
@@ -39,7 +38,7 @@ async def check_version(
 
         # 调用Google Play服务检查版本
         version_check_result = google_play_service.check_version_requirement(
-            client_version_code, app_version_name
+            client_version_code, version_name
         )
 
         # 转换为响应模型
