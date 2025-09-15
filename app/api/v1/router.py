@@ -11,11 +11,11 @@ from app.api.v1.endpoints import (
     report,
     settings,
     subscription,
+    text_to_speech,
     users,
     version,
 )
 from app.core.config import API_V1_PREFIX
-
 
 api_router = APIRouter(prefix=API_V1_PREFIX)
 
@@ -59,3 +59,4 @@ api_router.include_router(
     include_in_schema=False,
 )
 api_router.include_router(version.router, tags=["version"])
+api_router.include_router(text_to_speech.router, tags=["text_to_speech"])

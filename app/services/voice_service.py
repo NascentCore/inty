@@ -6,12 +6,10 @@
 import asyncio
 import hashlib
 import re
-import ssl
-import uuid
-from io import BytesIO
 from typing import Any, Dict, List, Optional
 
-import aiohttp
+from elevenlabs.client import ElevenLabs
+from elevenlabs import VoiceSettings
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -25,41 +23,8 @@ class VoiceService:
     def __init__(self):
         self.config = global_config_loaded_from_config_yaml.elevenlabs
         self.gcs_service = GCSService()
-        self.base_url = "https://api.elevenlabs.io/v1"
-        self.ssl_context = self._create_ssl_context()
+        self.client = ElevenLabs(api_key=self.config.api_key)
 
-    def _create_ssl_context(self) -> Optional[ssl.SSLContext]:
-        """
-        创建SSL上下文，处理证书验证问题
-        
-        Returns:
-            SSL上下文对象，如果配置为跳过验证则返回None
-        """
-        try:
-            # 检查配置中是否有SSL相关设置
-            ssl_verify = getattr(self.config, 'ssl_verify', True)
-            
-            if not ssl_verify:
-                logger.warning("SSL证书验证已禁用，这在生产环境中是不安全的")
-                return False  # aiohttp中False表示不验证SSL
-            
-            # 创建默认SSL上下文
-            ssl_context = ssl.create_default_context()
-            
-            # 在开发环境中，如果遇到证书问题，可以降低安全要求
-            env = getattr(global_config_loaded_from_config_yaml, 'environment', 'production')
-            if env in ['development', 'dev', 'local']:
-                logger.info("开发环境：使用宽松的SSL配置")
-                ssl_context.check_hostname = False
-                ssl_context.verify_mode = ssl.CERT_NONE
-                return ssl_context
-            
-            return ssl_context
-            
-        except Exception as e:
-            logger.error(f"创建SSL上下文失败: {str(e)}")
-            # 出现错误时，使用默认SSL设置
-            return ssl.create_default_context()
 
     def _clean_text_for_voice(self, text: str) -> str:
         """
@@ -239,49 +204,39 @@ class VoiceService:
         Returns:
             音频数据的字节流
         """
-        url = f"{self.base_url}/text-to-speech/{voice_id}"
-
-        headers = {
-            "Accept": "audio/mpeg",
-            "Content-Type": "application/json",
-            "xi-api-key": self.config.api_key,
-        }
-
-        data = {
-            "text": text,
-            "model_id": model,
-            "output_format": self.config.output_format,
-            "voice_settings": {"stability": 0.5, "similarity_boost": 0.5},
-        }
-
-        # 注意：eleven_multilingual_v2 模型不支持 language_code 参数
-        # 只有特定模型才支持 language_code 参数
-        if "turbo" in model.lower() and "multilingual" in model.lower():
-            data["language_code"] = language
-
         try:
-            logger.debug(f"ElevenLabs API请求URL: {url}")
             logger.debug(
                 f"ElevenLabs API请求数据: voice_id={voice_id}, model={model}, text_length={len(text)}"
             )
 
-            # 创建连接器，使用SSL配置
-            connector = aiohttp.TCPConnector(ssl=self.ssl_context)
-            async with aiohttp.ClientSession(connector=connector) as session:
-                async with session.post(url, json=data, headers=headers) as response:
-                    logger.debug(f"ElevenLabs API响应状态: {response.status}")
-                    if response.status == 200:
-                        audio_data = await response.read()
-                        logger.debug(
-                            f"ElevenLabs API调用成功，音频大小: {len(audio_data)} bytes"
-                        )
-                        return audio_data
-                    else:
-                        error_text = await response.text()
-                        logger.error(
-                            f"ElevenLabs API调用失败: {response.status} - {error_text}"
-                        )
-                        return None
+            # 创建语音设置
+            voice_settings = VoiceSettings(
+                stability=0.5,
+                similarity_boost=0.5
+            )
+
+            # 准备参数
+            kwargs = {
+                "text": text,
+                "voice_id": voice_id,
+                "model_id": model,
+                "output_format": self.config.output_format,
+                "voice_settings": voice_settings,
+            }
+
+            # 注意：eleven_multilingual_v2 模型不支持 language_code 参数
+            # 只有特定模型才支持 language_code 参数
+            if "turbo" in model.lower() and "multilingual" in model.lower():
+                kwargs["language_code"] = language
+
+            # 调用官方SDK
+            audio_stream = self.client.text_to_speech.convert(**kwargs)
+            audio_data = b"".join(audio_stream)
+            
+            logger.debug(
+                f"ElevenLabs API调用成功，音频大小: {len(audio_data)} bytes"
+            )
+            return audio_data
 
         except Exception as e:
             logger.error(f"ElevenLabs API调用异常: {str(e)}")
@@ -301,29 +256,56 @@ class VoiceService:
 
         return file_name
 
-    async def get_available_voices(self) -> List[Dict[str, Any]]:
+    async def get_available_voices(
+        self,
+        search: Optional[str] = None,
+        page_size: Optional[int] = 10,
+        voice_type: Optional[str] = None,
+        category: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
         """
-        获取可用的语音列表
+        获取可用的语音列表，支持搜索和过滤
+
+        Args:
+            search: 搜索音色名称
+            page_size: 每页结果数
+            voice_type: 音色类型过滤
+            category: 音色分类过滤
 
         Returns:
             语音列表
         """
-        url = f"{self.base_url}/voices"
-
-        headers = {"Accept": "application/json", "xi-api-key": self.config.api_key}
-
         try:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(url, headers=headers) as response:
-                    if response.status == 200:
-                        data = await response.json()
-                        return data.get("voices", [])
-                    else:
-                        logger.error(f"获取语音列表失败: {response.status}")
-                        return []
-
+            # 使用 ElevenLabs SDK 的搜索功能
+            kwargs = {}
+            if page_size is not None:
+                kwargs['page_size'] = page_size
+            if search is not None:
+                kwargs['search'] = search
+            if voice_type is not None:
+                kwargs['voice_type'] = voice_type
+            if category is not None:
+                kwargs['category'] = category
+            
+            logger.debug(f"获取语音列表，参数: {kwargs}")
+            
+            # 调用 ElevenLabs voices search API
+            if kwargs:
+                # 使用搜索功能
+                voices_response = self.client.voices.search(**kwargs)
+            else:
+                # 获取所有语音
+                voices_response = self.client.voices.get_all()
+            
+            # 转换为字典格式以保持兼容性
+            voices_list = [voice.model_dump() for voice in voices_response.voices]
+            
+            logger.debug(f"获取到 {len(voices_list)} 个语音")
+            return voices_list
+            
         except Exception as e:
             logger.error(f"获取语音列表异常: {str(e)}")
+            logger.exception("获取语音列表异常详细信息:")
             return []
 
     async def get_voice_info(self, voice_id: str) -> Optional[Dict[str, Any]]:
@@ -336,19 +318,9 @@ class VoiceService:
         Returns:
             语音信息
         """
-        url = f"{self.base_url}/voices/{voice_id}"
-
-        headers = {"Accept": "application/json", "xi-api-key": self.config.api_key}
-
         try:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(url, headers=headers) as response:
-                    if response.status == 200:
-                        return await response.json()
-                    else:
-                        logger.error(f"获取语音信息失败: {response.status}")
-                        return None
-
+            voice = self.client.voices.get(voice_id)
+            return voice.model_dump()
         except Exception as e:
             logger.error(f"获取语音信息异常: {str(e)}")
             return None

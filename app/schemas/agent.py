@@ -11,6 +11,7 @@ from app.schemas.user import User
 
 class AgentSortOption(str, Enum):
     """Agent sorting options"""
+
     # Ascending order of the creation time, oldest to the newest
     CREATED_ASC = "created_asc"
     # Descending order of the creation time, newest to the oldest
@@ -22,8 +23,14 @@ class AgentSortOption(str, Enum):
 class AgentSortConfig(BaseModel):
     """Agent sorting config"""
 
-    sort: AgentSortOption = Field(default=AgentSortOption.RANDOM, description="sort option")
-    sort_seed: str = Field(default="", description="Sort seed, used to ensure consistent order for the random sort option")
+    sort: AgentSortOption = Field(
+        default=AgentSortOption.RANDOM, description="sort option"
+    )
+    sort_seed: str = Field(
+        default="",
+        description="Sort seed, used to ensure consistent order for the random sort option",
+    )
+
 
 class ModelConfig(BaseModel):
     """AI模型配置"""
@@ -151,6 +158,7 @@ class AgentUpdate(AgentBase):
     tags: Optional[List[str]] = None
     character_version: Optional[str] = None
     extensions: Optional[Dict[str, Any]] = None
+    voice_id: Optional[str] = None
 
     # 模型配置
     llm_config: Optional[ModelConfig] = None
