@@ -11,10 +11,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.ReportGmailerrorred
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -30,8 +28,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.ai.inty.R
 import com.inty.utils.log.EasyLog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -44,7 +44,7 @@ import kotlinx.coroutines.delay
 @Composable
 fun VoicePlayer(
     audioInfo: AudioInfo,
-    modifier: Modifier = Modifier,
+    modifier: Modifier= Modifier,
     onPlayStateChange: ((Boolean) -> Unit)? = null,
     autoPlay: Boolean = false,
     onTtsGenerated: ((String) -> Unit)? = null, // TTS生成成功回调
@@ -79,7 +79,7 @@ fun VoicePlayer(
             if (managerTtsState) {
                 isGeneratingTts = true
                 userClickedRecently = false // TTS开始生成，清除用户点击标志
-            } else if (isGeneratingTts && !managerTtsState && !userClickedRecently) {
+            } else if (isGeneratingTts && !userClickedRecently) {
                 // 只有当之前确实在生成TTS且现在完成且用户没有最近点击时才更新
                 isGeneratingTts = false
             }
@@ -117,7 +117,7 @@ fun VoicePlayer(
                 // 只有当AudioManager确实在缓冲时才更新loading状态
                 if (state == PlaybackState.BUFFERING) {
                     isLoading = true
-                } else if (state != PlaybackState.BUFFERING && isLoading) {
+                } else if (isLoading) {
                     // 只有当之前确实在缓冲且现在不是缓冲状态时才更新
                     isLoading = false
                 }
@@ -198,6 +198,7 @@ fun VoicePlayer(
     }
 
     ChatVoicePlayer(
+        modifier = modifier,
         isPlaying = isPlaying,
         isLoading = isLoading || isGeneratingTts,
         hasError = hasError,
@@ -221,7 +222,7 @@ fun VoicePlayer(
                 // 暂停播放
                 EasyLog.log("音频LOG测试 Pausing playback for message: $messageId")
                 audioManager.pausePlayback()
-            } else if (isCurrentMessage && !isPlaying) {
+            } else if (isCurrentMessage) {
                 // 恢复播放（当前消息已加载但未播放）
                 EasyLog.log("音频LOG测试 Resuming playback for message: $messageId")
                 audioManager.resumePlayback()
@@ -231,7 +232,7 @@ fun VoicePlayer(
 
                 // 重置失败状态
                 ttsGenerationFailed = false
-                
+
                 // 设置用户点击标志，保护loading状态不被过早重置
                 userClickedRecently = true
 
@@ -266,7 +267,6 @@ fun VoicePlayer(
                 )
             }
         },
-        modifier = modifier
     )
 }
 
@@ -289,7 +289,7 @@ private fun ChatVoicePlayer(
             .clip(RoundedCornerShape(20.dp))
             .background(Color(0xFF44354F))
             .clickable { onPlayPause() }
-            .padding(vertical = 2.dp),
+            .padding(horizontal = 4.dp, vertical = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center
     ) {
@@ -302,9 +302,8 @@ private fun ChatVoicePlayer(
                 // 优先显示错误状态
                 hasError -> {
                     Icon(
-                        imageVector = Icons.Default.Error,
+                        painter = painterResource(R.drawable.ic_warning_voice),
                         contentDescription = "Error",
-                        tint = Color.Red,
                         modifier = Modifier.size(16.dp)
                     )
                 }
@@ -312,9 +311,8 @@ private fun ChatVoicePlayer(
                 // 显示TTS生成失败状态（⚠️图标）
                 ttsGenerationFailed -> {
                     Icon(
-                        imageVector = Icons.Default.ReportGmailerrorred,
+                        painter = painterResource(R.drawable.ic_warning_voice),
                         contentDescription = "TTS Failed",
-                        tint = Color.Yellow,
                         modifier = Modifier.size(16.dp)
                     )
                 }
@@ -352,6 +350,13 @@ private fun ChatVoicePlayer(
                 color = Color.White,
                 fontSize = 12.sp,
                 lineHeight = 12.sp
+            )
+        } else if (ttsGenerationFailed) {
+            Text(
+                text = "Failed to play",
+                color = Color.White,
+                fontSize = 12.sp,
+                lineHeight = 12.sp,
             )
         }
     }

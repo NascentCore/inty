@@ -4,8 +4,12 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -15,6 +19,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -312,20 +317,19 @@ private fun StyledMessageText(
  */
 @Composable
 private fun LoadingAnimation() {
-    val infiniteTransition =
-        androidx.compose.animation.core.rememberInfiniteTransition(label = "loading")
+    val infiniteTransition = rememberInfiniteTransition(label = "loading")
 
     Row(
-        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(4.dp),
-        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
         repeat(3) { index ->
             val delay = index * 200
             val dotAlpha by infiniteTransition.animateFloat(
                 initialValue = 0.3f,
                 targetValue = 1.0f,
-                animationSpec = androidx.compose.animation.core.infiniteRepeatable(
-                    animation = androidx.compose.animation.core.tween(600, delayMillis = delay)
+                animationSpec = infiniteRepeatable(
+                    animation = tween(600, delayMillis = delay)
                 ), label = "dot_alpha_$index"
             )
 
@@ -334,7 +338,7 @@ private fun LoadingAnimation() {
                     .size(6.dp)
                     .background(
                         color = Color.White.copy(dotAlpha * 0.7f),
-                        shape = androidx.compose.foundation.shape.CircleShape
+                        shape = CircleShape
                     )
             )
         }
