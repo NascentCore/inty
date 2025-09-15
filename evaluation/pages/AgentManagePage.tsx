@@ -30,7 +30,6 @@ import {
   RobotOutlined,
   CameraOutlined,
   ReloadOutlined,
-  SyncOutlined,
 } from "@ant-design/icons";
 import type { UploadProps } from "antd";
 import api, { logError } from "../services/api";
@@ -38,6 +37,7 @@ import modelCacheService from "../services/modelCache";
 import type { Agent, AgentCreateRequest, OpenRouterModel } from "../types";
 import LLMConfigForm from "../components/common/LLMConfigForm";
 import VoiceSelector from "../components/common/VoiceSelector";
+import { useAgents } from "../hooks/useAgents";
 
 const { TextArea } = Input;
 const { Search } = Input;
@@ -46,9 +46,14 @@ const { Option } = Select;
 // 类型已在 types.ts 中定义
 
 export const AgentManagePage: React.FC = () => {
+  // 使用 useAgents hook
+  const { agents, loading, loadAgents: loadAgentsFromHook } = useAgents({
+    type: "all",
+    autoLoad: false, // 手动控制加载
+  });
+
   // 状态管理
-  const [agents, setAgents] = useState<Agent[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [localAgents, setLocalAgents] = useState<Agent[]>([]);
   const [createModalVisible, setCreateModalVisible] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [detailModalVisible, setDetailModalVisible] = useState(false);
@@ -88,50 +93,10 @@ export const AgentManagePage: React.FC = () => {
         setPagination((prev) => ({ ...prev, current: 1 }));
       }
 
-      setLoading(true);
-      try {
-        const response = await api.agents.list({
-          limit: 100, // 先获取所有数据，前端分页
-        });
-
-        let filteredAgents = response || [];
-
-        // 搜索筛选
-        if (searchText) {
-          filteredAgents = filteredAgents.filter(
-            (agent) =>
-              agent.name.toLowerCase().includes(searchText.toLowerCase()) ||
-              agent.intro?.toLowerCase().includes(searchText.toLowerCase()),
-          );
-        }
-
-        // 可见性筛选
-        if (visibilityFilter !== "all") {
-          filteredAgents = filteredAgents.filter(
-            (agent) => agent.visibility === visibilityFilter.toUpperCase(),
-          );
-        }
-
-        // 性别筛选
-        if (genderFilter !== "all") {
-          filteredAgents = filteredAgents.filter(
-            (agent) => agent.gender === genderFilter.toUpperCase(),
-          );
-        }
-
-        setAgents(filteredAgents);
-        setPagination((prev) => ({
-          ...prev,
-          total: filteredAgents.length,
-        }));
-      } catch (error) {
-        console.error("加载智能体列表失败:", error);
-        message.error("加载智能体列表失败");
-      } finally {
-        setLoading(false);
-      }
+      // 使用 useAgents hook 的 loadAgents
+      await loadAgentsFromHook(true);
     },
-    [searchText, visibilityFilter, genderFilter],
+    [loadAgentsFromHook],
   );
 
   // 加载模型列表
@@ -153,6 +118,42 @@ export const AgentManagePage: React.FC = () => {
     loadModels();
     message.success("正在刷新模型列表...");
   }, [loadModels]);
+
+  // 监听 agents 变化，应用筛选
+  useEffect(() => {
+    if (agents.length > 0) {
+      let filteredAgents = agents || [];
+
+      // 搜索筛选
+      if (searchText) {
+        filteredAgents = filteredAgents.filter(
+          (agent) =>
+            agent.name.toLowerCase().includes(searchText.toLowerCase()) ||
+            agent.intro?.toLowerCase().includes(searchText.toLowerCase()),
+        );
+      }
+
+      // 可见性筛选
+      if (visibilityFilter !== "all") {
+        filteredAgents = filteredAgents.filter(
+          (agent) => agent.visibility === visibilityFilter.toUpperCase(),
+        );
+      }
+
+      // 性别筛选
+      if (genderFilter !== "all") {
+        filteredAgents = filteredAgents.filter(
+          (agent) => agent.gender === genderFilter.toUpperCase(),
+        );
+      }
+
+      setLocalAgents(filteredAgents);
+      setPagination((prev) => ({
+        ...prev,
+        total: filteredAgents.length,
+      }));
+    }
+  }, [agents, searchText, visibilityFilter, genderFilter]);
 
   useEffect(() => {
     loadAgents();
@@ -215,7 +216,8 @@ export const AgentManagePage: React.FC = () => {
           }
 
         } catch (uploadError) {
-          logError("头像上传失败:", uploadError);
+          logError("头像上传失败");
+          console.error("头像上传失败:", uploadError);
           return;
         }
       }
@@ -400,7 +402,7 @@ export const AgentManagePage: React.FC = () => {
     const { current, pageSize } = pagination;
     const startIndex = (current - 1) * pageSize;
     const endIndex = startIndex + pageSize;
-    return agents.slice(startIndex, endIndex);
+    return localAgents.slice(startIndex, endIndex);
   };
 
   // 渲染表单字段
@@ -621,7 +623,7 @@ export const AgentManagePage: React.FC = () => {
       {/* 智能体列表 */}
       <Card>
         <Spin spinning={loading}>
-          {agents.length === 0 ? (
+          {localAgents.length === 0 ? (
             <Empty description="暂无智能体数据" />
           ) : (
             <>
@@ -650,14 +652,14 @@ export const AgentManagePage: React.FC = () => {
                         </div>
                       }
                       actions={[
-                        <Tooltip title="角色详情">
+                        <Tooltip key="detail" title="角色详情">
                           <Button
                             type="text"
                             icon={<EyeOutlined />}
                             onClick={() => showDetailModal(agent)}
                           />
                         </Tooltip>,
-                        <Tooltip title="编辑">
+                        <Tooltip key="edit" title="编辑">
                           <Button
                             type="text"
                             icon={<EditOutlined />}
@@ -665,6 +667,7 @@ export const AgentManagePage: React.FC = () => {
                           />
                         </Tooltip>,
                         <Popconfirm
+                          key="delete"
                           title="确定要删除这个智能体吗？"
                           onConfirm={() => handleDeleteAgent(agent)}
                           okText="确定"
@@ -700,7 +703,6 @@ export const AgentManagePage: React.FC = () => {
                               {agent.name}
                             </span>
                             <Tag
-                              size="small"
                               color={
                                 agent.visibility === "PUBLIC"
                                   ? "green"
@@ -731,7 +733,6 @@ export const AgentManagePage: React.FC = () => {
                             </p>
                             <div style={{ marginTop: 8 }}>
                               <Tag
-                                size="small"
                                 color={
                                   agent.gender === "MALE"
                                     ? "blue"
