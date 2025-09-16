@@ -33,11 +33,12 @@ git submodule deinit -f .
 # 重新拉取 submodule 代码
 git submodule update --init --recursive
 ```
+
 ### Git Submodule 回滚
 
 找到修改的 commit，然后在 submodule 目录内 checkout 该 commit
 
-<img width="1196" height="236" alt="image" src="https://github.com/user-attachments/assets/a3b34dad-45f4-43d0-b1fb-c066f8397bd2" />
+<img width="960" height="236" alt="image" src="https://github.com/user-attachments/assets/a3b34dad-45f4-43d0-b1fb-c066f8397bd2" />
 
 ```bash
 # 以 sdks/python 为例
@@ -60,6 +61,10 @@ popd
 git commit -m "更新 sdks/python submodule"
 git push
 ```
+
+### 同步 git submodules
+
+`git submodule sync`
 
 ## 使用 Docker 容器本地运行后端服务和 Android app（适用于 app 开发者）
 
