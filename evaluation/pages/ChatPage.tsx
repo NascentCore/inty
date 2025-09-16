@@ -998,12 +998,7 @@ export const ChatPage: React.FC = () => {
                     backgroundBlendMode: "multiply", // Blend mode for better visibility
                   }}
                 >
-                  {messages.length === 0 ? (
-                    <Empty
-                      description="还没有聊天记录，开始对话吧！"
-                      image={Empty.PRESENTED_IMAGE_SIMPLE}
-                    />
-                  ) : (
+                  {messages.length > 0 && (
                     <List
                       dataSource={messages}
                       renderItem={(message) => (
