@@ -146,11 +146,18 @@ private fun ChatItemAI(item: MsgInfo) {
                 )
             }
             //消息
+            val msgShape = if (item.content.isNotEmpty() && item.content != "loading_animation")
+                RoundedCornerShape(
+                    topEnd = 12.dp,
+                    bottomStart = 12.dp,
+                    bottomEnd = 12.dp
+                ) else RoundedCornerShape(12.dp)
+
             Row {
                 val context = LocalContext.current
                 Box(
                     modifier = Modifier
-                        .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+                        .background(Color.Black.copy(alpha = 0.5f), msgShape)
                         .padding(12.dp, 13.dp)
                         .widthIn(1.dp, 300.dp)
                         .pointerInput(item.content) {

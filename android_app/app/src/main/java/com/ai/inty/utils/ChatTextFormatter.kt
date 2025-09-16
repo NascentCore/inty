@@ -4,6 +4,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
@@ -44,7 +45,8 @@ object ChatTextFormatter {
                         color = italicColor,
                         fontSize = fontSize,
                         fontWeight = fontWeight,
-                        fontStyle = FontStyle.Italic
+                        fontStyle = FontStyle.Italic,
+                        fontFamily = FontFamily.Default
                     )
                 ) {
                     append(text[currentIndex])
@@ -58,7 +60,8 @@ object ChatTextFormatter {
                         color = italicColor,
                         fontSize = fontSize,
                         fontWeight = fontWeight,
-                        fontStyle = FontStyle.Italic
+                        fontStyle = FontStyle.Italic,
+                        fontFamily = FontFamily.Default
                     )
                 ) {
                     append(text.substring(currentIndex, endIndex))
@@ -70,7 +73,8 @@ object ChatTextFormatter {
                         color = italicColor,
                         fontSize = fontSize,
                         fontWeight = fontWeight,
-                        fontStyle = FontStyle.Italic
+                        fontStyle = FontStyle.Italic,
+                        fontFamily = FontFamily.Default
                     )
                 ) {
                     append(text[endIndex])
@@ -78,17 +82,24 @@ object ChatTextFormatter {
                 currentIndex = endIndex + 1
                 pairIndex++
             } else {
-                // 普通文本
+                // 普通文本 - 按字符串片段添加而不是逐字符，避免破坏emoji
+                val nextBracketIndex = if (pairIndex < bracketPairs.size) {
+                    bracketPairs[pairIndex].first
+                } else {
+                    text.length
+                }
+                
                 withStyle(
                     SpanStyle(
                         color = normalColor,
                         fontSize = fontSize,
-                        fontWeight = fontWeight
+                        fontWeight = fontWeight,
+                        fontFamily = FontFamily.Default
                     )
                 ) {
-                    append(text[currentIndex])
+                    append(text.substring(currentIndex, nextBracketIndex))
                 }
-                currentIndex++
+                currentIndex = nextBracketIndex
             }
         }
     }
