@@ -1,10 +1,28 @@
 # Inty Evaluation（inty-eval/角色评测工具）
 
+这是一个使用 React/TypeScript 构建的运行于浏览器内的 Web 应用程序，用于评估 AI 角色、管理提示和显示聊天交互。
+
 **出于安全性和维护成本考虑：inty-eval 使用本地运行，不提供共享的服务器部署**
 * **共享的服务器部署需要比较复杂的部署维护：静态 html+nginx（nginx 有密码保护）**
 * **共享的服务器部署存在长期维护成本**
 
-这是一个使用 React/TypeScript 构建的运行于浏览器内的 Web 应用程序，用于评估 AI 角色、管理提示和显示聊天交互。
+## 使用步骤
+
+1. 注册登录 GitHub，@yaxiong 邀请 sxwl.ai Email 加入 [NascentCore 组织](https://github.com/orgs/NascentCore)
+   <img width="680" height="326" alt="image" src="https://github.com/user-attachments/assets/a4255e17-e51c-4244-8138-89cb1b3b4d65" />
+2. 下载安装 [github desktop](https://desktop.github.com/download/)；
+   <img width="800" height="1152" alt="image" src="https://github.com/user-attachments/assets/3cb0721e-aaa3-4bfb-896a-f29eaa5acbb3" />
+3. 下载安装 [node.js](https://nodejs.org/en/download/)
+   <img width="680" height="1136" alt="image" src="https://github.com/user-attachments/assets/1eeba49f-f249-4451-ae84-781ab24fd960" />
+4. 使用上述账户登录，通过网页认证，详情按屏幕提示操作
+5. 克隆 inty 代码库
+   <img width="600" height="1182" alt="image" src="https://github.com/user-attachments/assets/5c878ad4-b75c-43ce-92fb-349066c2b497" />
+6. `cmd-space terminal` 打开命令行
+   <img width="480" height="270" alt="image" src="https://github.com/user-attachments/assets/3cea99fd-2dc2-48f6-9efd-6928be881685" />
+   下载安装 yarn：`npm install -g corepack`，在 Terminal 输入 `yarn` 验证使用
+7. `cd Documents/GitHub/inty` 然后 `evaluation/start.sh`
+
+## 开发步骤
 
 ```bash
 git clone https://github.com/NascentCore/inty.git
