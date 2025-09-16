@@ -28,6 +28,20 @@ docker compose up pgvector -d
 evaluation/start.sh --backend-url http://localhost:8000/api/v1
 ```
 
+## 更新 inty sdk submodule
+
+```bash
+pushd evaluation/inty_sdk
+git checkout main
+git pull
+popd
+git commit -a -m '更新 evaluation/inty_sdk submodule'
+# 更新 evaluation/package-lock.json
+evaluation/start.sh
+git commit -a -m '更新 package-lock.json'
+git push
+```
+
 ## langsmith 上查看大模型调用请求
 
 点击单角色聊天的 langsmith 标志；如请求没有显示，则需要刷新页面
