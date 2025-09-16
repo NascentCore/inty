@@ -235,7 +235,7 @@ async def create_agent(
 
 @router.get(
     "/{agent_id}",
-    response_model=schemas.Agent,
+    response_model=APIResponse[schemas.Agent],
     operation_id="get_public_agent_by_id",
     summary="Get public agent by ID",
     description="Get public agent by ID, include pre-generated agents and user-created public agents",
@@ -254,7 +254,7 @@ async def get_agent(
     )
     if not agent:
         raise HTTPException(status_code=404, detail="Agent not found")
-    return agent
+    return APIResponse.success(data=agent)
 
 
 @router.post("/{agent_id}/follow", response_model=schemas.APIResponse[dict])
@@ -299,7 +299,7 @@ async def unfollow_agent(
         return schemas.APIResponse.error(message="Failed to unfollow")
 
 
-@router.put("/{agent_id}", response_model=schemas.Agent)
+@router.put("/{agent_id}", response_model=APIResponse[schemas.Agent])
 async def update_agent(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
@@ -318,7 +318,7 @@ async def update_agent(
         raise HTTPException(status_code=403, detail="Permission denied")
 
     agent = await agent_service.update_agent(db, db_agent=agent, agent_in=agent_in)
-    return agent
+    return APIResponse.success(data=agent)
 
 
 @router.delete("/{agent_id}", response_model=schemas.APIResponse[schemas.Agent])

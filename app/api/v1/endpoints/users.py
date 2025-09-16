@@ -31,7 +31,7 @@ from app.services.global_services import subscription_service
 router = APIRouter(prefix="/users", route_class=LoggerRoute)
 
 
-@router.get("/profile", response_model=User)
+@router.get("/profile", response_model=APIResponse[User])
 async def get_profile(
     current_user: User = Depends(deps.get_current_active_user),
     db: AsyncSession = Depends(get_async_db),
@@ -65,10 +65,10 @@ async def get_profile(
         "connector_count": connector_count,
     }
 
-    return User(**user_dict)
+    return APIResponse.success(data=User(**user_dict))
 
 
-@router.put("/profile", response_model=User)
+@router.put("/profile", response_model=APIResponse[User])
 async def update_profile(
     *,
     db: AsyncSession = Depends(get_async_db),
@@ -80,11 +80,11 @@ async def update_profile(
     """
     try:
         user = await user_service.update_user(db, current_user.id, user_in)
-        return user
+        return APIResponse.success(data=user)
     except Exception as e:
         logger.error(f"更新用户信息失败: {str(e)}")
         logger.error(f"错误堆栈: {traceback.format_exc()}")
-        raise HTTPException(status_code=500, detail=str(e))
+        return APIResponse.error(message=str(e))
 
 
 @router.post("/device/register", response_model=APIResponse)
@@ -176,7 +176,7 @@ async def delete_user_account(
 
 
 # TODO: Move this to admin router, and do not include the router in production.
-@router.get("", response_model=UserList, include_in_schema=False)
+@router.get("", response_model=APIResponse[UserList], include_in_schema=False)
 async def get_all_users(
     *,
     db: AsyncSession = Depends(get_async_db),
@@ -202,11 +202,9 @@ async def get_all_users(
             f"当前页记录数: {len(result['items'])}"
         )
 
-        return UserList(**result)
+        return APIResponse.success(data=UserList(**result))
 
     except Exception as e:
         logger.error(f"获取所有用户失败: {str(e)}")
         logger.error(f"错误堆栈: {traceback.format_exc()}")
-        raise HTTPException(
-            status_code=500, detail=f"Failed to get user list: {str(e)}"
-        )
+        return APIResponse.error(message=f"Failed to get user list: {str(e)}")

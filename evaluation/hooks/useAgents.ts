@@ -19,6 +19,8 @@ interface UseAgentsOptions {
   enableCache?: boolean;
   cacheKey?: string;
   useRecommended?: boolean; // 是否使用推荐API
+  pageSize?: number; // 分页大小
+  enablePagination?: boolean; // 是否启用分页
 }
 
 interface UseAgentsReturn {
@@ -26,9 +28,18 @@ interface UseAgentsReturn {
   agents: Agent[];
   loading: boolean;
   error: string | null;
+  
+  // 分页信息
+  total: number;
+  currentPage: number;
+  pageSize: number;
+  totalPages: number;
+  hasMore: boolean;
 
   // 操作
   loadAgents: (forceRefresh?: boolean) => Promise<void>;
+  loadPage: (page: number) => Promise<void>;
+  loadMore: () => Promise<void>;
   createAgent: (
     data: AgentCreateRequest & { avatar?: File },
   ) => Promise<Agent | null>;
@@ -50,12 +61,20 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
     autoLoad = true,
     enableCache = true,
     cacheKey = `agents_cache_${type}`,
+    pageSize = 20, // 默认每页 20 条
+    enablePagination = false, // 默认禁用后端分页，使用前端分页
   } = options;
 
   // 状态管理
   const [agents, setAgents] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // 分页状态
+  const [total, setTotal] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
 
   // 缓存管理
   const CACHE_EXPIRY = 30 * 60 * 1000; // 30分钟过期
@@ -126,13 +145,21 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
           }
         }
 
-        let response = await api.inty.api.v1.ai.agents.list({
-          // 增加限制以获取更多智能体；后端限制最多 1000 个，这是分页设计；以后需要调整
-          limit: 1000,
-          skip: 0
+        const response = await api.agents.list({
+          type: type === "all" ? "public" : type,
+          page: currentPage,
+          page_size: enablePagination ? pageSize : 1000 // 如果禁用分页，则一次获取所有数据
         });
-        let data = response.data;
-        console.log("agent data:", data, "total:", data?.length);
+        console.log("agent response:", response, "total:", response?.total);
+
+        // 更新分页信息
+        const responseTotal = response?.total || 0;
+        const responseTotalPages = response?.total_pages || 0;
+        setTotal(responseTotal);
+        setTotalPages(responseTotalPages);
+        setHasMore(currentPage < responseTotalPages);
+
+        let data = response?.list || [];
 
         if (type !== "all" && Array.isArray(data)) {
           data = data.filter((agent) => {
@@ -149,7 +176,13 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
         }
         console.log("agent data after filtering:", data);
 
-        setAgents((data || []) as unknown as Agent[]);
+        if (enablePagination && currentPage > 1) {
+          // 分页模式下，加载更多数据时追加到现有列表
+          setAgents(prev => [...prev, ...(data || []) as unknown as Agent[]]);
+        } else {
+          // 非分页模式或第一页，替换整个列表
+          setAgents((data || []) as unknown as Agent[]);
+        }
 
         // 更新缓存
         setCachedData((data || []) as unknown as Agent[]);
@@ -163,7 +196,27 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
         setLoading(false);
       }
     },
-    [type, getCachedData, setCachedData, handleError],
+    [type, getCachedData, setCachedData, handleError, currentPage, pageSize, enablePagination],
+  );
+
+  // 加载指定页面
+  const loadPage = useCallback(
+    async (page: number) => {
+      if (page === currentPage) return;
+      setCurrentPage(page);
+      await loadAgents(true);
+    },
+    [currentPage, loadAgents],
+  );
+
+  // 加载更多数据（用于无限滚动）
+  const loadMore = useCallback(
+    async () => {
+      if (!hasMore || loading) return;
+      setCurrentPage(prev => prev + 1);
+      await loadAgents(false);
+    },
+    [hasMore, loading, loadAgents],
   );
 
   // 创建智能体
@@ -197,6 +250,7 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
 
         // 更新本地状态
         setAgents((prev) => [newAgent, ...prev]);
+        setTotal(prev => prev + 1);
 
         // 清理缓存
         clearCache();
@@ -280,6 +334,7 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
 
         // 更新本地状态
         setAgents((prev) => prev.filter((agent) => agent.id !== agentId));
+        setTotal(prev => Math.max(0, prev - 1));
 
         // 清理缓存
         clearCache();
@@ -321,18 +376,29 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
   // 类型变化时重新加载
   useEffect(() => {
     if (autoLoad) {
+      setCurrentPage(1); // 重置页码
+      setAgents([]); // 清空现有数据
       loadAgents();
     }
-  }, [type, autoLoad, loadAgents]);
+  }, [type, autoLoad]);
 
   return {
     // 状态
     agents,
     loading,
     error,
+    
+    // 分页信息
+    total,
+    currentPage,
+    pageSize,
+    totalPages,
+    hasMore,
 
     // 操作
     loadAgents,
+    loadPage,
+    loadMore,
     createAgent,
     updateAgent,
     deleteAgent,

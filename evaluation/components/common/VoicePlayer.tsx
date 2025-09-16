@@ -126,6 +126,11 @@ export const VoicePlayer: React.FC<VoicePlayerProps> = ({
   // 生成语音
   const generateVoice = async (): Promise<string> => {
     try {
+      // 检查是否是临时ID
+      if (messageId.startsWith("assistant_") || messageId.startsWith("msg_")) {
+        throw new Error("消息正在处理中，请稍后再试");
+      }
+
       setIsLoading(true);
       setHasError(false);
 
@@ -277,8 +282,14 @@ export const VoicePlayer: React.FC<VoicePlayerProps> = ({
     return <SoundOutlined />;
   };
 
+  // 检查是否是临时ID
+  const isTemporaryId = messageId.startsWith("assistant_") || messageId.startsWith("msg_");
+
   // 获取提示文本
   const getTooltip = () => {
+    if (isTemporaryId) {
+      return "消息正在处理中，请稍后再试";
+    }
     if (isLoading) {
       return "正在生成语音...";
     }
@@ -298,9 +309,9 @@ export const VoicePlayer: React.FC<VoicePlayerProps> = ({
         size={size}
         icon={getIcon()}
         onClick={handleClick}
-        disabled={isLoading}
+        disabled={isLoading || isTemporaryId}
         style={{
-          color: hasError ? "#ff4d4f" : isPlaying ? "#1890ff" : "#666",
+          color: isTemporaryId ? "#999" : hasError ? "#ff4d4f" : isPlaying ? "#1890ff" : "#666",
           ...style,
         }}
       >

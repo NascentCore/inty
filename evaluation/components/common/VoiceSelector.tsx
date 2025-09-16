@@ -59,12 +59,17 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
   const loadVoices = useCallback(async (forceRefresh = false, search = "", category = "all") => {
     setLoading(true);
     try {
-      const params: any = {};
+      const params: any = {
+        page: 1,
+        page_size: 100, // ElevenLabs API 最大支持 100
+      };
       if (search) params.search = search;
       if (category !== "all") params.category = category;
       
-      const voiceList = await api.voices.listVoices(params);
-      setVoices(voiceList || []);
+      const response = await api.voices.listVoices(params);
+      // 处理分页结构
+      const voiceList = response?.list || [];
+      setVoices(voiceList);
       
       if (forceRefresh) {
         message.success("音色列表已刷新");
@@ -106,6 +111,23 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
   const selectedVoice = useMemo(() => {
     return voices.find(voice => voice.voice_id === value);
   }, [voices, value]);
+
+  // 如果当前选中的音色不在列表中，需要单独获取
+  useEffect(() => {
+    if (value && !selectedVoice) {
+      // 如果当前选中的音色不在列表中，尝试获取该音色的详细信息
+      const fetchSelectedVoice = async () => {
+        try {
+          // 这里可以调用单个音色获取接口，或者重新加载音色列表
+          // 暂时通过重新加载来解决
+          loadVoices(false, searchText, categoryFilter);
+        } catch (error) {
+          console.error("获取选中音色失败:", error);
+        }
+      };
+      fetchSelectedVoice();
+    }
+  }, [value, selectedVoice, loadVoices, searchText, categoryFilter]);
 
   // 获取音色分类列表
   const categories = useMemo(() => {

@@ -95,8 +95,8 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
       setLoading(true);
 
       const params: any = {
-        skip: (pagination.current - 1) * pagination.pageSize,
-        limit: pagination.pageSize,
+        page: pagination.current,
+        page_size: pagination.pageSize,
       };
 
       if (statusFilter) {
@@ -113,9 +113,13 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
       }
 
       const response = await api.sessions.list(params);
-      const sessionsData = Array.isArray(response)
-        ? response
-        : response.items || [];
+      const sessionsData = response.list || [];
+
+      // 更新分页信息
+      setPagination(prev => ({
+        ...prev,
+        total: response.total || 0,
+      }));
 
       // 为每个会话加载统计信息
       const sessionsWithStats = await Promise.all(

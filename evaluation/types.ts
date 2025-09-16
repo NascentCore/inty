@@ -256,6 +256,22 @@ export interface PaginatedResponse<T = any> {
   has_more: boolean;
 }
 
+// 新的分页数据结构（与后端一致）
+export interface PaginationData<T = any> {
+  list: T[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+}
+
+// API 响应通用格式（与后端一致）
+export interface APIResponse<T = any> {
+  code: number;
+  message: string;
+  data: T;
+}
+
 // 音色接口
 export interface Voice {
   voice_id: string;

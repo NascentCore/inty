@@ -33,7 +33,15 @@ class APITester:
         url = f"{self.base_url}{endpoint}"
         async with self.session.get(url, params=params) as response:
             if response.status == 200:
-                return await response.json()
+                result = await response.json()
+                # 处理 APIResponse 格式
+                if (
+                    isinstance(result, dict)
+                    and "code" in result
+                    and result.get("code") == 200
+                ):
+                    return result["data"]
+                return result
             else:
                 print(f"GET {endpoint} failed: {response.status}")
                 return {}
@@ -44,8 +52,12 @@ class APITester:
         async with self.session.post(url, json=data) as response:
             if response.status in [200, 201]:
                 result = await response.json()
-                # 仅对聊天接口处理 APIResponse 格式
-                if "chat/completions" in endpoint and isinstance(result, dict) and "data" in result and result.get("code") == 200:
+                # 处理 APIResponse 格式
+                if (
+                    isinstance(result, dict)
+                    and "code" in result
+                    and result.get("code") == 200
+                ):
                     return result["data"]
                 return result
             else:
@@ -64,7 +76,7 @@ async def test_existing_apis():
 
         # 1. 测试智能体API
         print("\n📋 测试智能体API:")
-        agents = await tester.get("/agents/me")
+        agents = await tester.get("/ai/agents/me")
         print(
             f"  ✓ 获取智能体列表: {len(agents) if isinstance(agents, list) else 'Error'}"
         )
@@ -73,7 +85,7 @@ async def test_existing_apis():
             agent_id = agents[0].get("id")
             if agent_id:
                 # 测试获取智能体详情
-                agent_detail = await tester.get(f"/agents/{agent_id}")
+                agent_detail = await tester.get(f"/ai/agents/{agent_id}")
                 print(f"  ✓ 获取智能体详情: {agent_detail.get('name', 'Error')}")
 
         # 2. 测试聊天API
@@ -129,7 +141,7 @@ async def test_evaluation_apis():
         }
 
         # 先获取一些智能体ID
-        agents = await tester.get("/agents/me")
+        agents = await tester.get("/ai/agents/me")
         if agents and isinstance(agents, list) and len(agents) > 0:
             session_data["selected_agents"] = [agents[0]["id"]]
 

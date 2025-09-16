@@ -47,9 +47,21 @@ const { Option } = Select;
 
 export const AgentManagePage: React.FC = () => {
   // 使用 useAgents hook
-  const { agents, loading, loadAgents: loadAgentsFromHook } = useAgents({
+  const { 
+    agents, 
+    loading, 
+    total,
+    currentPage,
+    pageSize,
+    totalPages,
+    hasMore,
+    loadAgents: loadAgentsFromHook,
+    loadPage 
+  } = useAgents({
     type: "all",
-    autoLoad: false, // 手动控制加载
+    autoLoad: true, // 启用自动加载
+    pageSize: 12, // 每页12个智能体
+    enablePagination: false, // 禁用后端分页，使用前端分页
   });
 
   // 状态管理
@@ -65,12 +77,21 @@ export const AgentManagePage: React.FC = () => {
   const [visibilityFilter, setVisibilityFilter] = useState<string>("all");
   const [genderFilter, setGenderFilter] = useState<string>("all");
 
-  // 分页
+  // 前端分页状态
   const [pagination, setPagination] = useState({
     current: 1,
     pageSize: 12,
     total: 0,
   });
+  
+  // 分页处理函数
+  const handlePageChange = useCallback((page: number, pageSize?: number) => {
+    setPagination(prev => ({
+      ...prev,
+      current: page,
+      pageSize: pageSize || prev.pageSize,
+    }));
+  }, []);
 
   // 表单和文件上传
   const [createForm] = Form.useForm();
@@ -87,17 +108,10 @@ export const AgentManagePage: React.FC = () => {
   const [modelsLoading, setModelsLoading] = useState(false);
 
   // 加载智能体列表
-  const loadAgents = useCallback(
-    async (reset = false) => {
-      if (reset) {
-        setPagination((prev) => ({ ...prev, current: 1 }));
-      }
-
-      // 使用 useAgents hook 的 loadAgents
-      await loadAgentsFromHook(true);
-    },
-    [loadAgentsFromHook],
-  );
+  // 刷新智能体列表
+  const refreshAgents = useCallback(async () => {
+    await loadAgentsFromHook(true);
+  }, [loadAgentsFromHook]);
 
   // 加载模型列表
   const loadModels = useCallback(async () => {
@@ -148,17 +162,17 @@ export const AgentManagePage: React.FC = () => {
       }
 
       setLocalAgents(filteredAgents);
-      setPagination((prev) => ({
+      setPagination(prev => ({
         ...prev,
+        current: 1, // 筛选后重置到第一页
         total: filteredAgents.length,
       }));
     }
   }, [agents, searchText, visibilityFilter, genderFilter]);
 
   useEffect(() => {
-    loadAgents();
     loadModels(); // 加载模型列表
-  }, [loadAgents, loadModels]);
+  }, [loadModels]);
 
   // 处理头像上传
   const handleAvatarChange: UploadProps["beforeUpload"] = (file) => {
@@ -248,7 +262,7 @@ export const AgentManagePage: React.FC = () => {
       createForm.resetFields();
       setAvatarFile(null);
       setAvatarPreview("");
-      loadAgents(true);
+      refreshAgents();
     } catch (error) {
 
       message.error("创建智能体失败，请重试");
@@ -317,7 +331,7 @@ export const AgentManagePage: React.FC = () => {
       editForm.resetFields();
       setEditAvatarFile(null);
       setEditAvatarPreview("");
-      loadAgents();
+      refreshAgents();
     } catch (error) {
 
       message.error("更新智能体失败，请重试");
@@ -331,7 +345,7 @@ export const AgentManagePage: React.FC = () => {
     try {
       await api.agents.delete(agent.id);
       message.success("智能体删除成功");
-      loadAgents();
+      refreshAgents();
     } catch (error) {
       console.error("删除智能体失败:", error);
       message.error("删除智能体失败，请重试");
@@ -577,7 +591,7 @@ export const AgentManagePage: React.FC = () => {
                 style={{ width: 300 }}
                 value={searchText}
                 onChange={(e) => setSearchText(e.target.value)}
-                onSearch={() => loadAgents(true)}
+                onSearch={refreshAgents}
               />
               <Select
                 placeholder="筛选可见性"
@@ -602,7 +616,7 @@ export const AgentManagePage: React.FC = () => {
               </Select>
               <Button
                 icon={<ReloadOutlined />}
-                onClick={() => loadAgents(true)}
+                onClick={refreshAgents}
               >
                 刷新
               </Button>
@@ -767,13 +781,7 @@ export const AgentManagePage: React.FC = () => {
                   showTotal={(total, range) =>
                     `第 ${range[0]}-${range[1]} 条，共 ${total} 条`
                   }
-                  onChange={(page, pageSize) => {
-                    setPagination({
-                      current: page,
-                      pageSize,
-                      total: pagination.total,
-                    });
-                  }}
+                  onChange={handlePageChange}
                 />
               </div>
             </>

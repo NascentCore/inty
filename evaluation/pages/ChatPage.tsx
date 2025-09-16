@@ -144,13 +144,13 @@ export const ChatPage: React.FC = () => {
     try {
       // 调用 chatApi.getMessages() 拉取全部的聊天记录
       const messagesData = await api.chat.getMessages(selectedAgent.id, {
-        page: 1,
-        size: 1000, // 设置较大的size来获取更多消息
+        limit: 1000, // 设置较大的limit来获取更多消息
+        offset: 0,
       });
 
-      if (messagesData.messages && messagesData.messages.length > 0) {
+      if (messagesData.list && messagesData.list.length > 0) {
         // 转换消息格式
-        const convertedMessages: ChatMessage[] = messagesData.messages.map(
+        const convertedMessages: ChatMessage[] = messagesData.list.map(
           (msg, index) => ({
             id: `msg_history_${index}_${Date.now()}`,
             role: msg.role,
@@ -209,15 +209,17 @@ export const ChatPage: React.FC = () => {
         const currentSettings = await api.inty.api.v1.chats.agents.getSettings(agent.id);
         console.log(`智能体 ${agent.name} 的当前聊天设置:`, currentSettings);
         // 先尝试获取现有的聊天详情和消息历史
+        console.log(`正在获取智能体 ${agent.id} 的聊天详情...`);
         const chatData = await api.chat.getChatDetail(agent.id, {
-          page: 1,
-          size: 100,
+          limit: 100,
+          offset: 0,
         });
+        console.log(`聊天详情获取成功:`, chatData);
 
         // 转换消息格式
         const convertedMessages: ChatMessage[] = chatData.messages.map(
           (msg, index) => ({
-            id: `msg_${chatData.chat.id}_${index}_${Date.now()}`,
+            id: `msg_${chatData.chat_info.id}_${index}_${Date.now()}`,
             role: msg.sender_type === "USER" ? "user" : "assistant",
             content: msg.content,
             timestamp: msg.created_at,
@@ -228,11 +230,11 @@ export const ChatPage: React.FC = () => {
 
         // 创建会话对象
         const session: ChatSession = {
-          id: chatData.chat.id,
+          id: chatData.chat_info.id,
           agent_id: agent.id,
           agent_name: agent.name,
           messages: convertedMessages,
-          created_at: chatData.chat.created_at,
+          created_at: chatData.chat_info.created_at,
         };
 
         setCurrentSession(session);
@@ -278,11 +280,11 @@ export const ChatPage: React.FC = () => {
         // 后台尝试获取历史消息，但不影响当前操作
         try {
           const historyData = await api.chat.getMessages(agent.id, {
-            page: 1,
-            size: 100,
+            limit: 100,
+            offset: 0,
           });
-          if (historyData.messages && historyData.messages.length > 0) {
-            const convertedMessages: ChatMessage[] = historyData.messages.map(
+          if (historyData.list && historyData.list.length > 0) {
+            const convertedMessages: ChatMessage[] = historyData.list.map(
               (msg, index) => ({
                 id: `msg_history_${index}_${Date.now()}`,
                 role: msg.role, // 直接使用API返回的role字段（'user' 或 'assistant'）
@@ -360,23 +362,31 @@ export const ChatPage: React.FC = () => {
       // 发送成功后，刷新聊天记录以获取真实的消息ID
       try {
         // 等待一小段时间确保后端处理完成
-        await new Promise((resolve) => setTimeout(resolve, 500));
+        await new Promise((resolve) => setTimeout(resolve, 1000));
 
+        console.log("开始刷新聊天记录以获取真实消息ID...");
+        
         // 重新获取最新的聊天记录
         const refreshedData = await api.chat.getMessages(selectedAgent.id, {
-          page: 1,
-          size: 100,
+          limit: 100,
+          offset: 0,
         });
 
-        if (refreshedData.messages && refreshedData.messages.length > 0) {
-          const refreshedMessages: ChatMessage[] = refreshedData.messages.map(
-            (msg, index) => ({
-              id: `msg_refreshed_${index}_${Date.now()}`,
-              role: msg.role,
-              content: msg.content,
-              timestamp: msg.timestamp,
-              remoteId: msg.id ? String(msg.id) : `remote_${index}`,
-            }),
+        console.log("获取到的聊天记录:", refreshedData);
+
+        if (refreshedData.list && refreshedData.list.length > 0) {
+          const refreshedMessages: ChatMessage[] = refreshedData.list.map(
+            (msg, index) => {
+              const messageId = msg.id ? String(msg.id) : `msg_${index}_${Date.now()}`;
+              console.log(`消息 ${index}: ID=${msg.id}, remoteId=${messageId}, role=${msg.role}`);
+              return {
+                id: `msg_refreshed_${index}_${Date.now()}`,
+                role: msg.role,
+                content: msg.content,
+                timestamp: msg.timestamp,
+                remoteId: messageId,
+              };
+            },
           );
 
           // 更新消息列表（最新的在底部）
@@ -396,10 +406,12 @@ export const ChatPage: React.FC = () => {
           setChatHistory(updatedHistory);
           saveChatHistory(updatedHistory);
 
-          console.log("已刷新聊天记录，获取到真实消息ID");
+          console.log("已刷新聊天记录，获取到真实消息ID，最新消息的remoteId:", refreshedMessages[refreshedMessages.length - 1]?.remoteId);
+        } else {
+          console.warn("刷新后没有获取到消息列表");
         }
       } catch (refreshError) {
-        console.warn("刷新聊天记录失败，但消息发送成功:", refreshError);
+        console.error("刷新聊天记录失败，但消息发送成功:", refreshError);
 
         // 如果刷新失败，仍然保留原来的逻辑
         const updatedSession = {
@@ -454,22 +466,22 @@ export const ChatPage: React.FC = () => {
         try {
           // 先获取当前消息列表，找到第一个可用的消息ID
           const currentMessages = await api.chat.getMessages(selectedAgent.id, {
-            page: 1,
-            size: 10,
+            limit: 10,
+            offset: 0,
           });
           console.log(`currentMessages: ${JSON.stringify(currentMessages)}`);
 
-          if (currentMessages.messages && currentMessages.messages.length >= 2) {
+          if (currentMessages.list && currentMessages.list.length >= 2) {
             // 消息顺序是最新到最旧，找出目前消息列表中倒数第 2 个用户消息的 ID
-            const firstUserMsgId = currentMessages.messages[currentMessages.messages.length - 2].id;
+            const firstUserMsgId = currentMessages.list[currentMessages.list.length - 2].id;
             console.log(`firstUserMsgId: ${firstUserMsgId}`);
             await api.chat.clearMessages(selectedAgent.id, firstUserMsgId.toString());
           }
           const refreshedMessages = await api.chat.getMessages(selectedAgent.id, {
-            page: 1,
-            size: 100,
+            limit: 100,
+            offset: 0,
           });
-          const convertedMessages: ChatMessage[] = (refreshedMessages.messages || []).map(msg => ({
+          const convertedMessages: ChatMessage[] = (refreshedMessages.list || []).map(msg => ({
             id: msg.id.toString(), // 转换number到string
             role: msg.role,
             content: msg.content,
@@ -1125,11 +1137,7 @@ export const ChatPage: React.FC = () => {
                                   {/* 语音播放按钮 - 只对AI回复且有真实消息ID的消息显示 */}
                                   {message.role === "assistant" &&
                                     message.remoteId &&
-                                    !message.remoteId.startsWith(
-                                      "assistant_",
-                                    ) &&
                                     !message.remoteId.startsWith("error_") &&
-                                    !message.remoteId.startsWith("remote_") &&
                                     selectedAgent && (
                                       <VoicePlayer
                                         agentId={selectedAgent.id}

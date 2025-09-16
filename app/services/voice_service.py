@@ -129,7 +129,8 @@ class VoiceService:
                 if cached_url:
                     logger.debug(f"使用缓存的语音文件: {cached_url}")
                     # 访问统计已经在get_cached_voice中异步更新了，这里不需要重复更新
-                    return cached_url
+                    # 返回元组格式以保持一致性，duration使用0.0作为占位符
+                    return (cached_url, 0.0)
                 logger.debug("未找到缓存，开始新的语音生成")
 
             # 生成语音文件

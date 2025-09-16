@@ -11,9 +11,8 @@ import type {
   EvaluationResult,
   EvaluationTemplate,
   EvaluationTemplateCreateRequest,
+  PaginationData,
   ScoringModel,
-  QuestionFileUpload,
-  EvaluationStats,
   ExportRequest,
   ComparisonResult,
   Voice,
@@ -258,13 +257,18 @@ export const evaluationSessionApi = {
   create: (data: EvaluationSessionCreateRequest): Promise<EvaluationSession> =>
     apiClient.post("/evaluation/sessions", data),
 
-  // 获取评测会话列表
+  // 获取评测会话列表（使用新的分页格式）
   list: (params?: {
-    skip?: number;
-    limit?: number;
+    page?: number;
+    page_size?: number;
     status?: string;
-  }): Promise<EvaluationSession[]> =>
-    apiClient.get("/evaluation/sessions", params),
+  }): Promise<{
+    list: EvaluationSession[];
+    total: number;
+    page: number;
+    page_size: number;
+    total_pages: number;
+  }> => apiClient.get("/evaluation/sessions", params),
 
   // 获取评测会话详情
   get: (sessionId: string): Promise<EvaluationSession> =>
@@ -302,39 +306,64 @@ export const evaluationSessionApi = {
 // =============================================================================
 
 export const agentApi = {
-  // 获取智能体列表 - API前缀由ApiClient自动处理
+  // 获取智能体列表 - 使用评测系统的智能体API，返回分页数据
   list: (params?: {
     type?: "public" | "private";
-    skip?: number;
-    limit?: number;
-  }): Promise<Agent[]> => apiClient.get("/ai/agents/me", params),
+    page?: number;
+    page_size?: number;
+  }): Promise<{
+    list: Agent[];
+    total: number;
+    page: number;
+    page_size: number;
+    total_pages: number;
+  }> => apiClient.get("/evaluation/agents", params),
 
-  // 获取推荐智能体 - 使用现有API
-  getRecommended: (): Promise<Agent[]> => apiClient.get("/ai/agents/recommend"),
+  // 获取推荐智能体 - 使用现有API，返回分页数据
+  getRecommended: (params?: {
+    page?: number;
+    page_size?: number;
+    sort?: string;
+    sort_seed?: string;
+  }): Promise<{
+    list: Agent[];
+    total: number;
+    page: number;
+    page_size: number;
+    total_pages: number;
+  }> => apiClient.get("/ai/agents/recommend", params),
 
-  // 搜索智能体 - 使用现有API
-  search: (query: string): Promise<Agent[]> =>
-    apiClient.get("/ai/agents/search", { q: query }),
+  // 搜索智能体 - 使用现有API，返回分页数据
+  search: (query: string, params?: {
+    page?: number;
+    page_size?: number;
+  }): Promise<{
+    list: Agent[];
+    total: number;
+    page: number;
+    page_size: number;
+    total_pages: number;
+  }> => apiClient.get("/ai/agents/search", { q: query, ...params }),
 
   // 获取智能体详情 - 使用现有API
   get: (agentId: string): Promise<Agent> =>
     apiClient.get(`/ai/agents/${agentId}`),
 
-  // 创建智能体 - 使用现有API
+  // 创建智能体 - 使用评测系统的智能体API
   create: (data: AgentCreateRequest): Promise<Agent> =>
-    apiClient.post("/ai/agents", data),
+    apiClient.post("/evaluation/agents", data),
 
-  // 更新智能体 - 使用现有API
+  // 更新智能体 - 使用评测系统的智能体API
   update: (
     agentId: string,
     data: Partial<AgentUpdateRequest>,
-  ): Promise<Agent> => apiClient.put(`/ai/agents/${agentId}`, data),
+  ): Promise<Agent> => apiClient.put(`/evaluation/agents/${agentId}`, data),
 
-  // 删除智能体 - 使用现有API
-  delete: (agentId: string): Promise<{ message: string }> =>
-    apiClient.delete(`/ai/agents/${agentId}`),
+  // 删除智能体 - 使用评测系统的智能体API
+  delete: (agentId: string): Promise<{ success: boolean; message: string }> =>
+    apiClient.delete(`/evaluation/agents/${agentId}`),
 
-  // 部署智能体到生产环境 - 如果存在的话
+  // 部署智能体到生产环境 - 使用评测系统的智能体API
   deploy: (
     agentId: string,
     adminPassword: string,
@@ -344,7 +373,7 @@ export const agentApi = {
     agent_id: string;
     deploy_time: string;
   }> =>
-    apiClient.post(`/ai/agents/${agentId}/deploy`, {
+    apiClient.post(`/evaluation/agents/${agentId}/deploy`, {
       admin_password: adminPassword,
     }),
 
@@ -358,13 +387,18 @@ export const agentApi = {
 // =============================================================================
 
 export const templateApi = {
-  // 获取模板列表
+  // 获取模板列表（使用新的分页格式）
   list: (params?: {
     include_public?: boolean;
-    skip?: number;
-    limit?: number;
-  }): Promise<EvaluationTemplate[]> =>
-    apiClient.get("/evaluation/templates", params),
+    page?: number;
+    page_size?: number;
+  }): Promise<{
+    list: EvaluationTemplate[];
+    total: number;
+    page: number;
+    page_size: number;
+    total_pages: number;
+  }> => apiClient.get("/evaluation/templates", params),
 
   // 创建模板
   create: (
@@ -384,7 +418,7 @@ export const templateApi = {
     apiClient.put(`/evaluation/templates/${templateId}`, data),
 
   // 删除模板
-  delete: (templateId: string): Promise<{ message: string }> =>
+  delete: (templateId: string): Promise<{ success: boolean; message: string }> =>
     apiClient.delete(`/evaluation/templates/${templateId}`),
 };
 
@@ -394,8 +428,13 @@ export const templateApi = {
 
 export const questionApi = {
   // 解析问题文件
-  parseFile: (file: File): Promise<QuestionFileUpload> =>
-    apiClient.upload("/evaluation/questions/parse", file),
+  parseFile: (file: File): Promise<{
+    questions: string[];
+    total_count: number;
+    valid_count: number;
+    duplicates_removed: number;
+    warnings: string[];
+  }> => apiClient.upload("/evaluation/questions/parse", file),
 
   // 验证问题列表
   validate: (
@@ -482,8 +521,8 @@ export const scoringApi = {
     criteria: string,
   ): Promise<{
     is_valid: boolean;
-    issues: string[];
-    suggestions: string[];
+    errors: string[];
+    warnings: string[];
   }> => apiClient.post("/evaluation/scoring-criteria/validate", { criteria }),
 
   // 获取OpenRouter完整模型列表
@@ -504,10 +543,11 @@ export const voiceApi = {
   // 获取音色列表
   listVoices: (params?: {
     search?: string;
+    page?: number;
     page_size?: number;
     voice_type?: string;
     category?: string;
-  }): Promise<Voice[]> => apiClient.get("/text-to-speech/list-voices", params),
+  }): Promise<PaginationData<Voice>> => apiClient.get("/text-to-speech/list-voices", params),
 };
 
 // =============================================================================
@@ -516,8 +556,16 @@ export const voiceApi = {
 
 export const statsApi = {
   // 获取统计信息
-  get: (days?: number): Promise<EvaluationStats> =>
-    apiClient.get("/evaluation/stats", { days }),
+  get: (days?: number): Promise<{
+    total_sessions: number;
+    completed_sessions: number;
+    running_sessions: number;
+    failed_sessions: number;
+    average_score: number | null;
+    success_rate: number | null;
+    total_tests: number;
+    total_agents_tested: number;
+  }> => apiClient.get("/evaluation/stats", { days }),
 
   // 导出评测结果
   export: (
@@ -719,54 +767,53 @@ export const chatApi = {
   getChatDetail: (
     agentId: string,
     params?: {
-      page?: number;
-      size?: number;
+      limit?: number;
+      offset?: number;
     },
   ): Promise<{
-    chat: {
+    chat_info: {
       id: string;
       agent_id: string;
+      agent_name: string;
+      agent_avatar?: string;
       user_id: string;
-      is_active: boolean;
       created_at: string;
       updated_at: string;
-    };
-    agent: {
-      id: string;
-      name: string;
-      avatar?: string;
-      description?: string;
     };
     messages: Array<{
       content: string;
       sender_type: "USER" | "AI";
       created_at: string;
     }>;
-    total: number;
-    page: number;
-    size: number;
-    has_more: boolean;
+    pagination: {
+      total: number;
+      limit: number;
+      offset: number;
+      page: number;
+      has_more: boolean;
+      total_pages: number;
+    };
   }> => apiClient.get(`/chats/agents/${agentId}/detail`, params),
 
   // 获取轻量级消息列表
   getMessages: (
     agentId: string,
     params?: {
-      page?: number;
-      size?: number;
+      limit?: number;
+      offset?: number;
+      order?: "asc" | "desc";
     },
   ): Promise<{
-    messages: Array<{
+    list: Array<{
       id: number;
       role: "user" | "assistant";
       content: string;
       timestamp: string;
     }>;
     total: number;
-    limit: number;
-    offset: number;
-    has_more: boolean;
     page: number;
+    page_size: number;
+    total_pages: number;
   }> => apiClient.get(`/chats/agents/${agentId}/messages`, params),
 
   // 清除聊天消息 - 注意：API 期望单个 message_id 而不是数组
@@ -849,8 +896,8 @@ export const userApi = {
     skip?: number;
     limit?: number;
     search?: string;
-  }): Promise<
-    Array<{
+  }): Promise<{
+    users: Array<{
       id: string;
       readable_id: string;
       nickname: string;
@@ -858,8 +905,9 @@ export const userApi = {
       email?: string;
       phone?: string;
       created_at?: string;
-    }>
-  > => apiClient.get("/users", params),
+    }>;
+    total: number;
+  }> => apiClient.get("/users", params),
 };
 
 // =============================================================================
