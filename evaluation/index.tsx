@@ -7,7 +7,7 @@ import ReactDOM from "react-dom/client";
 import { ConfigProvider } from "antd";
 import zhCN from "antd/locale/zh_CN";
 import { App } from "./App";
-import { AuthProvider } from "./components/auth/AuthProvider";
+import { LoadingProvider } from "./components/common/LoadingProvider";
 import "./styles/index.css";
 
 // 全局配置
@@ -30,9 +30,9 @@ const root = ReactDOM.createRoot(
 root.render(
   <React.StrictMode>
     <ConfigProvider {...appConfig}>
-      <AuthProvider>
+      <LoadingProvider>
         <App />
-      </AuthProvider>
+      </LoadingProvider>
     </ConfigProvider>
   </React.StrictMode>,
 );
