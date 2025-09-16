@@ -75,6 +75,7 @@ resources:
                 models:
                   gender: '#/components/schemas/Gender'
                   user: '#/components/schemas/User'
+                  api_response_user: '#/components/schemas/APIResponse_User_'
                 methods:
                   retrieve: get /api/v1/users/profile
                   update: put /api/v1/users/profile
@@ -114,6 +115,7 @@ resources:
           settings:
             models:
               settings: '#/components/schemas/Settings'
+              api_response_settings: '#/components/schemas/APIResponse_Settings_'
             methods:
               retrieve: get /api/v1/settings/
               update: put /api/v1/settings/
@@ -159,12 +161,16 @@ resources:
               agents:
                 models:
                   chat_settings: '#/components/schemas/ChatSettings'
+                  api_response_chat_settings: '#/components/schemas/APIResponse_ChatSettings_'
+                  api_response_pagination_data_chat_message: '#/components/schemas/APIResponse_PaginationData_ChatMessage__'
                 methods:
                   get_messages: get /api/v1/chats/agents/{agent_id}/messages
                   generate_message_voice: post /api/v1/chats/agents/{agent_id}/messages/{message_id}/voice
                   update_settings: put /api/v1/chats/agents/{agent_id}/settings
                   get_settings: get /api/v1/chats/agents/{agent_id}/settings
           text_to_speech:
+            models:
+              api_response_pagination_data_dict: '#/components/schemas/APIResponse_PaginationData_Dict_str__Any___'
             methods:
               list_voices: get /api/v1/text-to-speech/list-voices
 

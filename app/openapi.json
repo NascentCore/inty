@@ -109,7 +109,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/User"
+                                    "$ref": "#/components/schemas/APIResponse_User_"
                                 }
                             }
                         }
@@ -144,7 +144,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/User"
+                                    "$ref": "#/components/schemas/APIResponse_User_"
                                 }
                             }
                         }
@@ -795,7 +795,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/Agent"
+                                    "$ref": "#/components/schemas/APIResponse_Agent_"
                                 }
                             }
                         }
@@ -852,7 +852,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/Agent"
+                                    "$ref": "#/components/schemas/APIResponse_Agent_"
                                 }
                             }
                         }
@@ -1240,7 +1240,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "title": "Response Get Agent Chat Messages Api V1 Chats Agents  Agent Id  Messages Get"
+                                    "$ref": "#/components/schemas/APIResponse_PaginationData_ChatMessage__"
                                 }
                             }
                         }
@@ -1310,7 +1310,9 @@
                         "description": "Successful Response",
                         "content": {
                             "application/json": {
-                                "schema": {}
+                                "schema": {
+                                    "$ref": "#/components/schemas/APIResponse_dict_"
+                                }
                             }
                         }
                     },
@@ -1561,7 +1563,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/Settings"
+                                    "$ref": "#/components/schemas/APIResponse_Settings_"
                                 }
                             }
                         }
@@ -1596,7 +1598,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/Settings"
+                                    "$ref": "#/components/schemas/APIResponse_Settings_"
                                 }
                             }
                         }
@@ -2112,25 +2114,31 @@
                         "description": "\u641c\u7d22\u97f3\u8272\u540d\u79f0\u5173\u952e\u8bcd"
                     },
                     {
+                        "name": "page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "description": "\u9875\u7801\uff0c\u4ece1\u5f00\u59cb",
+                            "default": 1,
+                            "title": "Page"
+                        },
+                        "description": "\u9875\u7801\uff0c\u4ece1\u5f00\u59cb"
+                    },
+                    {
                         "name": "page_size",
                         "in": "query",
                         "required": false,
                         "schema": {
-                            "anyOf": [
-                                {
-                                    "type": "integer",
-                                    "maximum": 100,
-                                    "minimum": 1
-                                },
-                                {
-                                    "type": "null"
-                                }
-                            ],
-                            "description": "\u6bcf\u9875\u8fd4\u56de\u7ed3\u679c\u6570\uff0c\u9ed8\u8ba410\uff0c\u6700\u5927100",
-                            "default": 10,
+                            "type": "integer",
+                            "maximum": 100,
+                            "minimum": 1,
+                            "description": "\u6bcf\u9875\u8fd4\u56de\u7ed3\u679c\u6570\uff0c\u9ed8\u8ba420\uff0c\u6700\u5927100\uff08ElevenLabs\u9650\u5236\uff09",
+                            "default": 20,
                             "title": "Page Size"
                         },
-                        "description": "\u6bcf\u9875\u8fd4\u56de\u7ed3\u679c\u6570\uff0c\u9ed8\u8ba410\uff0c\u6700\u5927100"
+                        "description": "\u6bcf\u9875\u8fd4\u56de\u7ed3\u679c\u6570\uff0c\u9ed8\u8ba420\uff0c\u6700\u5927100\uff08ElevenLabs\u9650\u5236\uff09"
                     },
                     {
                         "name": "voice_type",
@@ -2175,12 +2183,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "type": "array",
-                                    "items": {
-                                        "type": "object",
-                                        "additionalProperties": true
-                                    },
-                                    "title": "Response List Voices Api V1 Text To Speech List Voices Get"
+                                    "$ref": "#/components/schemas/APIResponse_PaginationData_Dict_str__Any___"
                                 }
                             }
                         }
@@ -2499,6 +2502,58 @@
                 "type": "object",
                 "title": "APIResponse[PaginationData[Agent]]"
             },
+            "APIResponse_PaginationData_ChatMessage__": {
+                "properties": {
+                    "code": {
+                        "type": "integer",
+                        "title": "Code",
+                        "default": 200
+                    },
+                    "message": {
+                        "type": "string",
+                        "title": "Message",
+                        "default": "success"
+                    },
+                    "data": {
+                        "anyOf": [
+                            {
+                                "$ref": "#/components/schemas/PaginationData_ChatMessage_"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
+                    }
+                },
+                "type": "object",
+                "title": "APIResponse[PaginationData[ChatMessage]]"
+            },
+            "APIResponse_PaginationData_Dict_str__Any___": {
+                "properties": {
+                    "code": {
+                        "type": "integer",
+                        "title": "Code",
+                        "default": 200
+                    },
+                    "message": {
+                        "type": "string",
+                        "title": "Message",
+                        "default": "success"
+                    },
+                    "data": {
+                        "anyOf": [
+                            {
+                                "$ref": "#/components/schemas/PaginationData_Dict_str__Any__"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
+                    }
+                },
+                "type": "object",
+                "title": "APIResponse[PaginationData[Dict[str, Any]]]"
+            },
             "APIResponse_PurchaseVerificationResponse_": {
                 "properties": {
                     "code": {
@@ -2550,6 +2605,32 @@
                 },
                 "type": "object",
                 "title": "APIResponse[RefundResponse]"
+            },
+            "APIResponse_Settings_": {
+                "properties": {
+                    "code": {
+                        "type": "integer",
+                        "title": "Code",
+                        "default": 200
+                    },
+                    "message": {
+                        "type": "string",
+                        "title": "Message",
+                        "default": "success"
+                    },
+                    "data": {
+                        "anyOf": [
+                            {
+                                "$ref": "#/components/schemas/Settings"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
+                    }
+                },
+                "type": "object",
+                "title": "APIResponse[Settings]"
             },
             "APIResponse_SubscriptionPlan_": {
                 "properties": {
@@ -2654,6 +2735,32 @@
                 },
                 "type": "object",
                 "title": "APIResponse[UsageStatisticsResponse]"
+            },
+            "APIResponse_User_": {
+                "properties": {
+                    "code": {
+                        "type": "integer",
+                        "title": "Code",
+                        "default": 200
+                    },
+                    "message": {
+                        "type": "string",
+                        "title": "Message",
+                        "default": "success"
+                    },
+                    "data": {
+                        "anyOf": [
+                            {
+                                "$ref": "#/components/schemas/User"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
+                    }
+                },
+                "type": "object",
+                "title": "APIResponse[User]"
             },
             "APIResponse_VersionCheckResponse_": {
                 "properties": {
@@ -4057,19 +4164,64 @@
             },
             "ChatMessage": {
                 "properties": {
-                    "role": {
-                        "type": "string",
-                        "title": "Role"
+                    "id": {
+                        "anyOf": [
+                            {
+                                "type": "integer"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Id"
                     },
                     "content": {
                         "type": "string",
                         "title": "Content"
+                    },
+                    "role": {
+                        "type": "string",
+                        "title": "Role"
+                    },
+                    "audio_url": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Audio Url"
+                    },
+                    "meta_data": {
+                        "anyOf": [
+                            {
+                                "additionalProperties": true,
+                                "type": "object"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Meta Data"
+                    },
+                    "timestamp": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Timestamp"
                     }
                 },
                 "type": "object",
                 "required": [
-                    "role",
-                    "content"
+                    "content",
+                    "role"
                 ],
                 "title": "ChatMessage"
             },
@@ -4816,6 +4968,75 @@
                 },
                 "type": "object",
                 "title": "PaginationData[Agent]"
+            },
+            "PaginationData_ChatMessage_": {
+                "properties": {
+                    "list": {
+                        "items": {
+                            "$ref": "#/components/schemas/ChatMessage"
+                        },
+                        "type": "array",
+                        "title": "List",
+                        "default": []
+                    },
+                    "total": {
+                        "type": "integer",
+                        "title": "Total",
+                        "default": 0
+                    },
+                    "page": {
+                        "type": "integer",
+                        "title": "Page",
+                        "default": 1
+                    },
+                    "page_size": {
+                        "type": "integer",
+                        "title": "Page Size",
+                        "default": 10
+                    },
+                    "total_pages": {
+                        "type": "integer",
+                        "title": "Total Pages",
+                        "default": 0
+                    }
+                },
+                "type": "object",
+                "title": "PaginationData[ChatMessage]"
+            },
+            "PaginationData_Dict_str__Any__": {
+                "properties": {
+                    "list": {
+                        "items": {
+                            "additionalProperties": true,
+                            "type": "object"
+                        },
+                        "type": "array",
+                        "title": "List",
+                        "default": []
+                    },
+                    "total": {
+                        "type": "integer",
+                        "title": "Total",
+                        "default": 0
+                    },
+                    "page": {
+                        "type": "integer",
+                        "title": "Page",
+                        "default": 1
+                    },
+                    "page_size": {
+                        "type": "integer",
+                        "title": "Page Size",
+                        "default": 10
+                    },
+                    "total_pages": {
+                        "type": "integer",
+                        "title": "Total Pages",
+                        "default": 0
+                    }
+                },
+                "type": "object",
+                "title": "PaginationData[Dict[str, Any]]"
             },
             "PurchaseVerificationRequest": {
                 "properties": {
