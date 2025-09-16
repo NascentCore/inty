@@ -1,4 +1,8 @@
-# Evaluation（Inty 角色评测工具）
+# Inty Evaluation（inty-eval/角色评测工具）
+
+**出于安全性和维护成本考虑：inty-eval 使用本地运行，不提供共享的服务器部署**
+* **共享的服务器部署需要比较复杂的部署维护：静态 html+nginx（nginx 有密码保护）**
+* **共享的服务器部署存在长期维护成本**
 
 这是一个使用 React/TypeScript 构建的运行于浏览器内的 Web 应用程序，用于评估 AI 角色、管理提示和显示聊天交互。
 
