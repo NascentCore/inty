@@ -31,7 +31,7 @@ git submodule update --init --recursive
 git submodule deinit -f .
 
 # 重新拉取 submodule 代码
-git submodule update --init
+git submodule update --init --recursive
 ```
 ### Git Submodule 回滚
 
@@ -45,6 +45,20 @@ pushd sdks/python
 git checkout <上面的回滚的 commit>
 popd
 git commit -a -m "回滚 sdks/python sumbodule"
+```
+
+[Git Module 使用指南](https://www.atlassian.com/git/articles/core-concept-workflows-and-tips)
+
+### 更新 Git submodule 到最新的代码分支
+
+```bash
+# 以更新 sdks/python 为例
+pushd sdks/python
+git checkout main
+git pull
+popd
+git commit -m "更新 sdks/python submodule"
+git push
 ```
 
 ## 使用 Docker 容器本地运行后端服务和 Android app（适用于 app 开发者）

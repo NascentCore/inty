@@ -1,12 +1,14 @@
-[submodule "sdks/typescript"]
-	path = sdks/typescript
-	url = git@github.com:NascentCore/inty-typescript.git
 [submodule "sdks/python"]
 	path = sdks/python
 	url = git@github.com:NascentCore/inty-python.git
+	ignore = dirty
 [submodule "android_app/library/inty_sdk"]
 	path = android_app/library/inty_sdk
 	url = git@github.com:NascentCore/inty-kotlin.git
+	ignore = dirty
 [submodule "evaluation/inty_sdk"]
 	path = evaluation/inty_sdk
 	url = git@github.com:NascentCore/inty-typescript.git
+	# 本地 submodule 与远程分支不同步时，会显示 dirty，如临时生成的编译文件等等
+	# 下面的指示进行忽略
+	ignore = dirty
