@@ -19,15 +19,18 @@
 3. 下载安装 [node.js](https://nodejs.org/en/download/)
 
    <img width="680" height="1136" alt="image" src="https://github.com/user-attachments/assets/1eeba49f-f249-4451-ae84-781ab24fd960" />
-4. 使用上述账户登录，通过网页认证，详情按屏幕提示操作
-5. 克隆 inty 代码库
+4. 下载安装 [brew](https://brew.sh/)
+
+   <img width="680" height="1046" alt="image" src="https://github.com/user-attachments/assets/dd51b1ad-bc92-45d3-b575-3d6a19a7f744" />
+5. 使用上述账户登录，通过网页认证，详情按屏幕提示操作
+6. 克隆 inty 代码库
 
    <img width="600" height="1182" alt="image" src="https://github.com/user-attachments/assets/5c878ad4-b75c-43ce-92fb-349066c2b497" />
-6. `cmd-space terminal` 打开命令行
+7. `cmd-space terminal` 打开终端
 
    <img width="480" height="270" alt="image" src="https://github.com/user-attachments/assets/3cea99fd-2dc2-48f6-9efd-6928be881685" />
    下载安装 yarn：`npm install -g corepack`，在 Terminal 输入 `yarn` 验证使用
-7. `cd Documents/GitHub/inty` 然后 `evaluation/start.sh`
+8. `cd Documents/GitHub/inty` 然后 `evaluation/start.sh`；如果系统提示权限，点
 
 ## 开发步骤
 
