@@ -21,7 +21,8 @@
    <img width="680" height="1136" alt="image" src="https://github.com/user-attachments/assets/1eeba49f-f249-4451-ae84-781ab24fd960" />
 4. 下载安装 [brew](https://brew.sh/)
 
-   <img width="680" height="1046" alt="image" src="https://github.com/user-attachments/assets/dd51b1ad-bc92-45d3-b575-3d6a19a7f744" />
+   <img width="680" height="716" alt="image" src="https://github.com/user-attachments/assets/261e1fb2-3cc4-4612-9428-5a65a5edb74b" />
+   <img width="680" height="658" alt="image" src="https://github.com/user-attachments/assets/de4eafac-b0e4-4cbf-9675-056ddc3055b3" />
 5. 使用上述账户登录，通过网页认证，详情按屏幕提示操作
 6. 克隆 inty 代码库
 
