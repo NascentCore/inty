@@ -134,7 +134,7 @@ async def list_reports(
         items = [ReportOut.model_validate(obj, from_attributes=True) for obj in items]
         total_pages = (total + page_size - 1) // page_size if page_size else 1
         pagination = PaginationData[ReportOut](
-            list=items,
+            items=items,
             total=total,
             page=page,
             page_size=page_size,

@@ -515,7 +515,7 @@ async def get_recommended_agents_paginated(
         total_pages = math.ceil(total / page_size) if total > 0 else 1
 
         return schemas.PaginationData[schemas.Agent](
-            list=agents,
+            items=agents,
             total=total,
             page=page,
             page_size=page_size,
@@ -1127,7 +1127,7 @@ async def get_user_followed_agents(
         total_pages = math.ceil(total / page_size) if total > 0 else 1
 
         return schemas.PaginationData[schemas.Agent](
-            list=agents,
+            items=agents,
             total=total,
             page=page,
             page_size=page_size,
@@ -1246,7 +1246,7 @@ async def search_agents(
         total_pages = math.ceil(total / page_size) if total > 0 else 1
 
         return schemas.PaginationData[schemas.Agent](
-            list=agents,
+            items=agents,
             total=total,
             page=page,
             page_size=page_size,

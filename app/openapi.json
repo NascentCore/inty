@@ -4937,12 +4937,12 @@
             },
             "PaginationData_Agent_": {
                 "properties": {
-                    "list": {
+                    "items": {
                         "items": {
                             "$ref": "#/components/schemas/Agent"
                         },
                         "type": "array",
-                        "title": "List",
+                        "title": "Items",
                         "default": []
                     },
                     "total": {
@@ -4971,12 +4971,12 @@
             },
             "PaginationData_ChatMessage_": {
                 "properties": {
-                    "list": {
+                    "items": {
                         "items": {
                             "$ref": "#/components/schemas/ChatMessage"
                         },
                         "type": "array",
-                        "title": "List",
+                        "title": "Items",
                         "default": []
                     },
                     "total": {
@@ -5005,13 +5005,13 @@
             },
             "PaginationData_Dict_str__Any__": {
                 "properties": {
-                    "list": {
+                    "items": {
                         "items": {
                             "additionalProperties": true,
                             "type": "object"
                         },
                         "type": "array",
-                        "title": "List",
+                        "title": "Items",
                         "default": []
                     },
                     "total": {

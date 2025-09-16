@@ -83,7 +83,7 @@ async def list_notifications(
 
         # 构建分页响应
         pagination = NotificationList(
-            list=items,
+            items=items,
             total=total,
             page=page,
             page_size=page_size,
@@ -194,7 +194,7 @@ async def list_templates(
 
         # 构建分页响应
         pagination = PaginationData[NotificationTemplateItem](
-            list=items,
+            items=items,
             total=total,
             page=page,
             page_size=page_size,

@@ -65,7 +65,7 @@ async def list_voices(
 
     # 构建分页数据
     pagination_data = PaginationData(
-        list=voices,
+        items=voices,
         total=total,
         page=page,
         page_size=page_size,

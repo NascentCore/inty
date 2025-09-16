@@ -21,7 +21,12 @@ from app.schemas.chat import (
     ChatMessage,
     MessagesPagination,
 )
-from app.schemas.response import APIResponse, BusinessErrorCode, create_business_error_response, PaginationData
+from app.schemas.response import (
+    APIResponse,
+    BusinessErrorCode,
+    PaginationData,
+    create_business_error_response,
+)
 from app.services import agent_service, chat_history_service, chat_service
 from app.services.chat_service import generate_session_id
 from app.services.global_services import subscription_service
@@ -109,12 +114,14 @@ async def get_agent_status(
     """
     Get Agent manager status
     """
-    return APIResponse.success(data={
-        "active_agents": agent_manager.get_agent_count(),
-        "max_agents": agent_manager.max_agents,
-        "cleanup_interval": agent_manager.cleanup_interval,
-        "max_idle_time": agent_manager.max_idle_time,
-    })
+    return APIResponse.success(
+        data={
+            "active_agents": agent_manager.get_agent_count(),
+            "max_agents": agent_manager.max_agents,
+            "cleanup_interval": agent_manager.cleanup_interval,
+            "max_idle_time": agent_manager.max_idle_time,
+        }
+    )
 
 
 @router.post(
@@ -134,11 +141,13 @@ async def initialize_agents(
     """
     try:
         await agent_manager.initialize_popular_agents(db)
-        return APIResponse.success(data={
-            "status": "success",
-            "message": "Common Agents initialization completed",
-            "active_agents": agent_manager.get_agent_count(),
-        })
+        return APIResponse.success(
+            data={
+                "status": "success",
+                "message": "Common Agents initialization completed",
+                "active_agents": agent_manager.get_agent_count(),
+            }
+        )
     except Exception as e:
         return APIResponse.error(message=f"Initialization failed: {str(e)}")
 
@@ -160,12 +169,14 @@ async def cleanup_idle_agents(
         old_count = agent_manager.get_agent_count()
         agent_manager._cleanup_idle_agents()
         new_count = agent_manager.get_agent_count()
-        return APIResponse.success(data={
-            "status": "success",
-            "message": "Idle Agents cleanup completed",
-            "cleaned_count": old_count - new_count,
-            "remaining_agents": new_count,
-        })
+        return APIResponse.success(
+            data={
+                "status": "success",
+                "message": "Idle Agents cleanup completed",
+                "cleaned_count": old_count - new_count,
+                "remaining_agents": new_count,
+            }
+        )
     except Exception as e:
         return APIResponse.error(message=f"Cleanup failed: {str(e)}")
 
@@ -235,9 +246,7 @@ async def get_chat_detail(
         return APIResponse.success(data=chat_detail)
 
     except Exception as e:
-        return APIResponse.error(
-            message=f"Failed to get chat details: {str(e)}"
-        )
+        return APIResponse.error(message=f"Failed to get chat details: {str(e)}")
 
 
 @router.get(
@@ -312,9 +321,7 @@ async def get_agent_chat_detail(
         return APIResponse.success(data=chat_detail)
 
     except Exception as e:
-        return APIResponse.error(
-            message=f"Failed to get chat details: {str(e)}"
-        )
+        return APIResponse.error(message=f"Failed to get chat details: {str(e)}")
 
 
 @router.get(
@@ -375,21 +382,24 @@ async def get_agent_chat_messages(
         chat_messages = [
             ChatMessage(**message) for message in messages_data["messages"]
         ]
-        
+
         # Create PaginationData with proper structure
         pagination_data = PaginationData[ChatMessage](
-            list=chat_messages,
+            items=chat_messages,
             total=messages_data["total"],
             page=messages_data["page"],
             page_size=messages_data["limit"],
-            total_pages=(messages_data["total"] + messages_data["limit"] - 1) // messages_data["limit"] if messages_data["limit"] > 0 else 1,
+            total_pages=(
+                (messages_data["total"] + messages_data["limit"] - 1)
+                // messages_data["limit"]
+                if messages_data["limit"] > 0
+                else 1
+            ),
         )
         return APIResponse.success(data=pagination_data)
 
     except Exception as e:
-        return APIResponse.error(
-            message=f"Failed to get message records: {str(e)}"
-        )
+        return APIResponse.error(message=f"Failed to get message records: {str(e)}")
 
 
 @router.post(
@@ -600,7 +610,9 @@ async def agent_chat_completions(
                     )
                     if voice_result:
                         audio_url, audio_duration = voice_result
-                        logger.info(f"语音自动生成成功: {audio_url}, 时长: {audio_duration:.2f}秒")
+                        logger.info(
+                            f"语音自动生成成功: {audio_url}, 时长: {audio_duration:.2f}秒"
+                        )
                     else:
                         audio_url, audio_duration = None, None
                 else:
@@ -639,7 +651,11 @@ async def agent_chat_completions(
 
             # 获取最新AI消息的完整信息
             try:
-                latest_message_info = await chat_history_service.get_latest_ai_message_info(db, session_id)
+                latest_message_info = (
+                    await chat_history_service.get_latest_ai_message_info(
+                        db, session_id
+                    )
+                )
             except Exception as e:
                 logger.warning(f"获取最新消息信息失败: {str(e)}")
                 latest_message_info = None
@@ -733,7 +749,7 @@ async def generate_message_voice(
 
         if not voice_result:
             raise HTTPException(status_code=500, detail="Voice generation failed")
-        
+
         audio_url, audio_duration = voice_result
         logger.debug(f"按需语音生成成功: {audio_url}, 时长: {audio_duration:.2f}秒")
 
@@ -741,7 +757,11 @@ async def generate_message_voice(
         # 使用try-except确保更新失败不影响API响应
         try:
             update_success = await chat_history_service.update_message_audio_url(
-                db=db, session_id=session_id, message_id=message_id, audio_url=audio_url, audio_duration=audio_duration
+                db=db,
+                session_id=session_id,
+                message_id=message_id,
+                audio_url=audio_url,
+                audio_duration=audio_duration,
             )
             if update_success:
                 logger.debug(f"成功更新消息{message_id}的audio_url到chat_history")
@@ -751,16 +771,18 @@ async def generate_message_voice(
             logger.error(f"更新chat_history的audio_url时发生异常: {str(e)}")
             # 继续执行，不影响API响应
 
-        return APIResponse.success(data={
-            "audio_url": audio_url,
-            "message_id": message_id,
-            "voice_id": agent_voice_id
-            or global_config_loaded_from_config_yaml.elevenlabs.voice_id,
-            "language": language,
-            "audio_duration": audio_duration,  # 音频时长（秒）
-            "cached": False,  # 这里可以后续实现缓存检测
-            "generation_time": None,  # 可以记录生成时间
-        })
+        return APIResponse.success(
+            data={
+                "audio_url": audio_url,
+                "message_id": message_id,
+                "voice_id": agent_voice_id
+                or global_config_loaded_from_config_yaml.elevenlabs.voice_id,
+                "language": language,
+                "audio_duration": audio_duration,  # 音频时长（秒）
+                "cached": False,  # 这里可以后续实现缓存检测
+                "generation_time": None,  # 可以记录生成时间
+            }
+        )
 
     except Exception as e:
         logger.error(f"按需语音生成失败: {str(e)}")
@@ -990,7 +1012,9 @@ async def delete_agent_chats(
             f"删除结果: {result}"
         )
 
-        return APIResponse.success(data={"success": True, "message": "聊天记录删除成功", "data": result})
+        return APIResponse.success(
+            data={"success": True, "message": "聊天记录删除成功", "data": result}
+        )
 
     except HTTPException:
         raise
@@ -1039,27 +1063,33 @@ async def get_agent_debug_messages(
 
         if not chat:
             # 如果没有聊天会话，返回空的调试信息
-            return APIResponse.success(data={
-                "chat_id": None,
-                "agent_id": agent_id,
-                "agent_name": agent_db.name,
-                "debug_messages": None,
-                "message": "No chat session found with this agent",
-            })
+            return APIResponse.success(
+                data={
+                    "chat_id": None,
+                    "agent_id": agent_id,
+                    "agent_name": agent_db.name,
+                    "debug_messages": None,
+                    "message": "No chat session found with this agent",
+                }
+            )
 
         # 返回调试信息
-        return APIResponse.success(data={
-            "chat_id": chat.id,
-            "agent_id": chat.agent_id,
-            "agent_name": chat.agent_name or agent_db.name,
-            "debug_messages": chat.debug_messages,
-            "last_updated": chat.updated_at.isoformat() if chat.updated_at else None,
-            "message": (
-                "Debug messages retrieved successfully"
-                if chat.debug_messages
-                else "No debug messages available"
-            ),
-        })
+        return APIResponse.success(
+            data={
+                "chat_id": chat.id,
+                "agent_id": chat.agent_id,
+                "agent_name": chat.agent_name or agent_db.name,
+                "debug_messages": chat.debug_messages,
+                "last_updated": (
+                    chat.updated_at.isoformat() if chat.updated_at else None
+                ),
+                "message": (
+                    "Debug messages retrieved successfully"
+                    if chat.debug_messages
+                    else "No debug messages available"
+                ),
+            }
+        )
 
     except HTTPException:
         raise

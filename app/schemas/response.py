@@ -8,7 +8,7 @@ T = TypeVar("T")
 class PaginationData(BaseModel, Generic[T]):
     """分页数据结构"""
 
-    list: List[T] = []  # 数据列表
+    items: List[T] = []  # 数据列表
     total: int = 0  # 总记录数
     page: int = 1  # 当前页码
     page_size: int = 10  # 每页数量

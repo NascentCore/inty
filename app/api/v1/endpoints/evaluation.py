@@ -60,7 +60,7 @@ async def get_evaluation_sessions(
 
         # 创建分页数据
         pagination_data = PaginationData[schemas.EvaluationSessionResponse](
-            list=sessions,
+            items=sessions,
             total=total,
             page=page,
             page_size=page_size,
@@ -523,7 +523,7 @@ async def get_evaluation_agents(
 
         # 创建分页数据
         pagination_data = PaginationData[schemas.Agent](
-            list=agents,
+            items=agents,
             total=total,
             page=page,
             page_size=page_size,
@@ -795,7 +795,7 @@ async def get_evaluation_templates(
 
         # 创建分页数据
         pagination_data = PaginationData[schemas.EvaluationTemplateResponse](
-            list=templates,
+            items=templates,
             total=total,
             page=page,
             page_size=page_size,
