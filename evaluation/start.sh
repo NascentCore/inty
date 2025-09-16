@@ -63,6 +63,8 @@ then
 fi
 
 pushd inty_sdk
+# 由于未知原因，tsc-multi 无法被 yarn install 安装，所以手动安装
+yarn add -D tsc-multi@https://github.com/stainless-api/tsc-multi/releases/download/v1.1.9/tsc-multi.tgz
 yarn install
 yarn build
 popd
