@@ -100,8 +100,8 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
   }, [cacheKey]);
 
   // 错误处理
-  const handleError = useCallback((error: any, defaultMessage: string) => {
-    const errorMessage = error?.message || defaultMessage;
+  const handleError = useCallback((error: unknown, defaultMessage: string) => {
+    const errorMessage = (error as Error)?.message || defaultMessage;
     setError(errorMessage);
     message.error(errorMessage);
     console.error(defaultMessage, error);
@@ -193,7 +193,8 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
           agentData.voice_id = data.voice_id;
         }
 
-        const newAgent = await api.agents.create(agentData);
+        const response = await api.inty.api.v1.ai.agents.create(agentData);
+        const newAgent = response.data as unknown as Agent;
 
         // 更新本地状态
         setAgents((prev) => [newAgent, ...prev]);
@@ -247,7 +248,7 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
           updateData.voice_id = data.voice_id;
         }
 
-        const updatedAgent = await api.agents.update(agentId, updateData);
+        const updatedAgent = await api.inty.api.v1.ai.agents.update(agentId, updateData) as unknown as Agent;
 
         // 更新本地状态
         setAgents((prev) =>
@@ -276,7 +277,7 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
         setLoading(true);
         setError(null);
 
-        await api.agents.delete(agentId);
+        await api.inty.api.v1.ai.agents.delete(agentId);
 
         // 更新本地状态
         setAgents((prev) => prev.filter((agent) => agent.id !== agentId));

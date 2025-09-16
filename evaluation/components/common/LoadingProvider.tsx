@@ -1,16 +1,16 @@
 /**
- * 简化的应用初始化组件
- * 由于使用硬编码token，仅提供基本的应用初始化状态
+ * 应用加载状态管理组件
+ * 提供应用初始化时的加载状态和UI
  */
 
 import React, { useEffect, useState, ReactNode } from "react";
 import { Spin } from "antd";
 
-interface AuthProviderProps {
+interface LoadingProviderProps {
   children: ReactNode;
 }
 
-export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+export const LoadingProvider: React.FC<LoadingProviderProps> = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   // 组件挂载时初始化应用状态
@@ -55,4 +55,4 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   return <>{children}</>;
 };
 
-export default AuthProvider;
+export default LoadingProvider;
