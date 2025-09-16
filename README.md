@@ -49,6 +49,18 @@ git commit -a -m "回滚 sdks/python sumbodule"
 
 [Git Module 使用指南](https://www.atlassian.com/git/articles/core-concept-workflows-and-tips)
 
+### 更新 Git submodule 到最新的代码分支
+
+```bash
+# 以更新 sdks/python 为例
+pushd sdks/python
+git checkout main
+git pull
+popd
+git commit -m "更新 sdks/python submodule"
+git push
+```
+
 ## 使用 Docker 容器本地运行后端服务和 Android app（适用于 app 开发者）
 
 1. 访问 <https://docs.docker.com/desktop/setup/install/mac-install/> 安装 Docker Desktop。
