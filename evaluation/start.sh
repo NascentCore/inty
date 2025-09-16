@@ -62,6 +62,11 @@ then
     esac
 fi
 
+pushd inty_sdk
+yarn install
+yarn build
+popd
+
 log "Installing Node Modules..."
 npm i --no-audit --no-fund --loglevel=error --no-progress
 
