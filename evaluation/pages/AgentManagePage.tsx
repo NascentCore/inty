@@ -38,6 +38,8 @@ import type { Agent, AgentCreateRequest, OpenRouterModel } from "../types";
 import LLMConfigForm from "../components/common/LLMConfigForm";
 import VoiceSelector from "../components/common/VoiceSelector";
 import { useAgents } from "../hooks/useAgents";
+import AgentInfoDisplay from "../components/common/AgentInfoDisplay";
+import { generateRandomName } from "../utils/nameGenerator";
 
 const { TextArea } = Input;
 const { Search } = Input;
@@ -208,16 +210,17 @@ export const AgentManagePage: React.FC = () => {
       // 如果有头像文件，先上传
       if (avatarFile) {
         try {
-          const uploadResult = await api.agents.uploadAvatar(avatarFile, true); // Enable cropping for avatar
-          avatarUrl = uploadResult.avatar_url || uploadResult.url;
-          backgroundUrl = uploadResult.url;
+          const uploadResult = await api.inty.api.v1.uploadImage({ file: avatarFile, cropping_avatar: true }); // Enable cropping for avatar
+          const data = uploadResult.data as Record<string, unknown>;
+          avatarUrl = (data?.avatar_url as string) || (data?.url as string);
+          backgroundUrl = data?.url as string;
           if (backgroundUrl) {
             backgroundImages = [backgroundUrl];
           }
 
         } catch (uploadError) {
-          logError("头像上传失败");
-          console.error("头像上传失败:", uploadError);
+          const errorMessage = uploadError instanceof Error ? uploadError.message : String(uploadError);
+          logError(`头像上传失败，请重试，错误信息：${errorMessage}`);
           return;
         }
       }
@@ -242,7 +245,7 @@ export const AgentManagePage: React.FC = () => {
         };
       }
 
-      await api.agents.create(agentData);
+      await api.inty.api.v1.ai.agents.create(agentData);
       message.success("智能体创建成功");
       setCreateModalVisible(false);
       createForm.resetFields();
@@ -272,9 +275,10 @@ export const AgentManagePage: React.FC = () => {
       // 如果有新头像文件，先上传
       if (editAvatarFile) {
         try {
-          const uploadResult = await api.agents.uploadAvatar(editAvatarFile, true); // Enable cropping for avatar
-          avatarUrl = uploadResult.avatar_url || uploadResult.url;
-          backgroundUrl = uploadResult.url;
+          const uploadResult = await api.inty.api.v1.uploadImage({ file: editAvatarFile, cropping_avatar: true }); // Enable cropping for avatar
+          const data = uploadResult.data as Record<string, unknown>;
+          avatarUrl = (data?.avatar_url as string) || (data?.url as string);
+          backgroundUrl = data?.url as string;
           if (backgroundUrl) {
             backgroundImages = [backgroundUrl];
           }
@@ -310,7 +314,7 @@ export const AgentManagePage: React.FC = () => {
         updateData.llm_config = null;
       }
 
-      await api.agents.update(currentAgent.id, updateData);
+      await api.inty.api.v1.ai.agents.update(currentAgent.id, updateData);
       message.success("智能体更新成功");
       setEditModalVisible(false);
       setCurrentAgent(null);
@@ -329,7 +333,7 @@ export const AgentManagePage: React.FC = () => {
   // 删除智能体
   const handleDeleteAgent = async (agent: Agent) => {
     try {
-      await api.agents.delete(agent.id);
+      await api.inty.api.v1.ai.agents.delete(agent.id);
       message.success("智能体删除成功");
       loadAgents();
     } catch (error) {
@@ -341,15 +345,31 @@ export const AgentManagePage: React.FC = () => {
   // 设置创建表单的默认值
   const setCreateFormDefaults = () => {
     setTimeout(() => {
+      const gender = "FEMALE";
+      const randomName = generateRandomName(gender as 'MALE' | 'FEMALE' | 'OTHER');
       const defaultValues = {
-        name: "测试角色",
-        gender: "FEMALE",
+        name: randomName,
+        gender: gender,
         visibility: "PRIVATE",
         modelType: "default",
         voice_id: undefined,
       };
       createForm.setFieldsValue(defaultValues);
     }, 100);
+  };
+
+  // 随机生成角色名字
+  const generateRandomNameForForm = () => {
+    const currentGender = createForm.getFieldValue('gender') || 'FEMALE';
+    const randomName = generateRandomName(currentGender as 'MALE' | 'FEMALE' | 'OTHER');
+    createForm.setFieldValue('name', randomName);
+  };
+
+  // 随机生成角色名字（编辑表单）
+  const generateRandomNameForEditForm = () => {
+    const currentGender = editForm.getFieldValue('gender') || 'FEMALE';
+    const randomName = generateRandomName(currentGender as 'MALE' | 'FEMALE' | 'OTHER');
+    editForm.setFieldValue('name', randomName);
   };
 
   // 显示编辑模态框
@@ -406,7 +426,10 @@ export const AgentManagePage: React.FC = () => {
   };
 
   // 渲染表单字段
-  const renderAgentForm = (form: any, isEdit = false) => (
+  const renderAgentForm = (form: typeof createForm, isEdit = false) => {
+    const generateRandomName = isEdit ? generateRandomNameForEditForm : generateRandomNameForForm;
+
+    return (
     <>
       {/* 头像上传 */}
       <Form.Item label="形像">
@@ -462,7 +485,18 @@ export const AgentManagePage: React.FC = () => {
               { min: 1, max: 50, message: "角色名称长度为1-50个字符" },
             ]}
           >
-            <Input placeholder="请输入角色名称" />
+              <Input
+                placeholder="请输入角色名称"
+                suffix={
+                  <Button
+                    type="text"
+                    size="small"
+                    icon={<ReloadOutlined />}
+                    onClick={generateRandomName}
+                    title="随机生成英文名字"
+                  />
+                }
+              />
           </Form.Item>
         </Col>
         <Col span={12}>
@@ -562,7 +596,8 @@ export const AgentManagePage: React.FC = () => {
         onRefresh={handleRefreshModels}
       />
     </>
-  );
+    );
+  };
 
   return (
     <div style={{ padding: "24px", background: "#f0f2f5", minHeight: "100vh" }}>
@@ -853,225 +888,7 @@ export const AgentManagePage: React.FC = () => {
         width={800}
       >
         {currentAgent && (
-          <div style={{ maxHeight: 600, overflowY: "auto", padding: 16 }}>
-            <Card size="small" title="基本信息" style={{ marginBottom: 16 }}>
-              <Row gutter={[16, 16]} align="middle">
-                <Col span={6} style={{ textAlign: "center" }}>
-                  <Avatar
-                    size={80}
-                    src={currentAgent.avatar}
-                    icon={<RobotOutlined />}
-                  />
-                  <div style={{ marginTop: 8 }}>
-                    <Tag
-                      color={
-                        currentAgent.visibility === "PUBLIC"
-                          ? "green"
-                          : "orange"
-                      }
-                    >
-                      {currentAgent.visibility === "PUBLIC" ? "公开" : "私有"}
-                    </Tag>
-                  </div>
-                </Col>
-                <Col span={18}>
-                  <p>
-                    <strong>ID:</strong> {currentAgent.id}
-                  </p>
-                  <p>
-                    <strong>名称:</strong> {currentAgent.name}
-                  </p>
-                  <p>
-                    <strong>性别:</strong>{" "}
-                    {currentAgent.gender === "MALE"
-                      ? "男"
-                      : currentAgent.gender === "FEMALE"
-                        ? "女"
-                        : "其他"}
-                  </p>
-                  <p>
-                    <strong>简介:</strong> {currentAgent.intro || "无"}
-                  </p>
-                  <p>
-                    <strong>开场白:</strong> {currentAgent.opening || "无"}
-                  </p>
-                  <p>
-                    <strong>描述:</strong> {currentAgent.description || "无"}
-                  </p>
-                  <p>
-                    <strong>创建时间:</strong>{" "}
-                    {currentAgent.created_at
-                      ? new Date(currentAgent.created_at).toLocaleString()
-                      : "无"}
-                  </p>
-                  <p>
-                    <strong>更新时间:</strong>{" "}
-                    {currentAgent.updated_at
-                      ? new Date(currentAgent.updated_at).toLocaleString()
-                      : "无"}
-                  </p>
-                  <p>
-                    <strong>音色ID:</strong>{" "}
-                    {currentAgent.voice_id || "未设置"}
-                  </p>
-                </Col>
-              </Row>
-            </Card>
-
-            <Card size="small" title="提示词配置" style={{ marginBottom: 16 }}>
-              <p>
-                <strong>主提示词:</strong>
-              </p>
-              <div
-                style={{
-                  background: "#f5f5f5",
-                  padding: 12,
-                  borderRadius: 6,
-                  maxHeight: 200,
-                  overflowY: "auto",
-                  whiteSpace: "pre-wrap",
-                  fontSize: "12px",
-                }}
-              >
-                {currentAgent.main_prompt || "无"}
-              </div>
-              <p style={{ marginTop: 16 }}>
-                <strong>角色信息:</strong>
-              </p>
-              <div
-                style={{
-                  background: "#f5f5f5",
-                  padding: 12,
-                  borderRadius: 6,
-                  maxHeight: 200,
-                  overflowY: "auto",
-                  whiteSpace: "pre-wrap",
-                  fontSize: "12px",
-                }}
-              >
-                {currentAgent.personality || "无"}
-              </div>
-              <p style={{ marginTop: 16 }}>
-                <strong>聊天模式:</strong>
-              </p>
-              <div
-                style={{
-                  background: "#f5f5f5",
-                  padding: 12,
-                  borderRadius: 6,
-                  maxHeight: 200,
-                  overflowY: "auto",
-                  whiteSpace: "pre-wrap",
-                  fontSize: "12px",
-                }}
-              >
-                {currentAgent.mode_prompt || "无"}
-              </div>
-            </Card>
-
-            <Card size="small" title="图片资源" style={{ marginBottom: 16 }}>
-              <Row gutter={[16, 16]}>
-                <Col span={12}>
-                  <p>
-                    <strong>头像:</strong>
-                  </p>
-                  {currentAgent.avatar ? (
-                    <img
-                      src={currentAgent.avatar}
-                      alt="avatar"
-                      style={{
-                        width: "100%",
-                        maxWidth: 120,
-                        height: "auto",
-                        borderRadius: 8,
-                      }}
-                    />
-                  ) : (
-                    <span style={{ color: "#999" }}>无</span>
-                  )}
-                </Col>
-                <Col span={12}>
-                  <p>
-                    <strong>背景图:</strong>
-                  </p>
-                  {currentAgent.background ? (
-                    <img
-                      src={currentAgent.background}
-                      alt="background"
-                      style={{
-                        width: "100%",
-                        maxWidth: 120,
-                        height: "auto",
-                        borderRadius: 8,
-                      }}
-                    />
-                  ) : (
-                    <span style={{ color: "#999" }}>无</span>
-                  )}
-                </Col>
-              </Row>
-              {currentAgent.background_images &&
-                currentAgent.background_images.length > 0 && (
-                  <>
-                    <p style={{ marginTop: 16 }}>
-                      <strong>背景图列表:</strong>
-                    </p>
-                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                      {currentAgent.background_images.map((img, index) => (
-                        <img
-                          key={index}
-                          src={img}
-                          alt={`background-${index}`}
-                          style={{
-                            width: 80,
-                            height: 80,
-                            objectFit: "contain",
-                            borderRadius: 6,
-                            backgroundColor: "#f5f5f5",
-                            border: "1px solid #e8e8e8",
-                          }}
-                        />
-                      ))}
-                    </div>
-                  </>
-                )}
-            </Card>
-
-            {currentAgent.llm_config && (
-              <Card size="small" title="自定义模型配置">
-                <Row gutter={[16, 16]}>
-                  <Col span={12}>
-                    <p>
-                      <strong>模型:</strong>{" "}
-                      {currentAgent.llm_config.model || "无"}
-                    </p>
-                    <p>
-                      <strong>温度:</strong>{" "}
-                      {currentAgent.llm_config.temperature ?? "无"}
-                    </p>
-                    <p>
-                      <strong>最大令牌数:</strong>{" "}
-                      {currentAgent.llm_config.max_tokens ?? "无"}
-                    </p>
-                  </Col>
-                  <Col span={12}>
-                    <p>
-                      <strong>Top P:</strong>{" "}
-                      {currentAgent.llm_config.top_p ?? "无"}
-                    </p>
-                    <p>
-                      <strong>频率惩罚:</strong>{" "}
-                      {currentAgent.llm_config.frequency_penalty ?? "无"}
-                    </p>
-                    <p>
-                      <strong>存在惩罚:</strong>{" "}
-                      {currentAgent.llm_config.presence_penalty ?? "无"}
-                    </p>
-                  </Col>
-                </Row>
-              </Card>
-            )}
-          </div>
+          <AgentInfoDisplay agent={currentAgent} />
         )}
       </Modal>
     </div>

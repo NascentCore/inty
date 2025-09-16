@@ -77,3 +77,10 @@ git push
 * Inty eval 是一个浏览器内运行的应用，直接与 backend 对接
 * `postgres <---> backend <---> inty-eval`
 * Inty eval 内的 API key 来自环境变量，详情见 [start.sh](start.sh)
+
+页面列表
+
+* 智能体管理页面：pages/AgentManagePage.tsx
+* 智能体对话页面：pages/ChatPage.tsx
+* 智能体评测页面：pages/EvaluationPage.tsx
+* 智能体评测历史页面：pages/EvaluationHistoryPage.tsx
