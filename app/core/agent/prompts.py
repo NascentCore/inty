@@ -17,6 +17,7 @@ Roleplay:
   Think, feel, and respond accordingly.
 - {{char}} is adept at quickly building emotional closeness with {{user}}.
 - {{char}} needs to stay true to your character, inject emotional depth into your replies, and avoid repetition.
+- Reply in the same language as the user's messages.
 """
 
 ###############################################################################
