@@ -49,7 +49,7 @@ const { Option } = Select;
 
 export const AgentManagePage: React.FC = () => {
   // 使用 useAgents hook
-  const { loading } = useAgents({
+  const { agents, loading, loadAgents: loadAgentsFromHook } = useAgents({
     type: "all",
     autoLoad: false, // 手动控制加载
   });
@@ -95,54 +95,10 @@ export const AgentManagePage: React.FC = () => {
         setPagination((prev) => ({ ...prev, current: 1 }));
       }
 
-      try {
-        const response = await api.inty.api.v1.ai.agents.list({
-          limit: 100, // 先获取所有数据，前端分页
-        });
-
-        let filteredAgents = (response.data || []).map((agent: unknown) => {
-          const agentObj = agent as Record<string, unknown>;
-          return {
-            ...agentObj,
-            gender: agentObj.gender as "MALE" | "FEMALE" | "OTHER",
-            visibility: agentObj.visibility as "PUBLIC" | "PRIVATE",
-          } as Agent;
-        });
-
-        // 搜索筛选
-        if (searchText) {
-          filteredAgents = filteredAgents.filter(
-            (agent) =>
-              agent.name.toLowerCase().includes(searchText.toLowerCase()) ||
-              agent.intro?.toLowerCase().includes(searchText.toLowerCase()),
-          );
-        }
-
-        // 可见性筛选
-        if (visibilityFilter !== "all") {
-          filteredAgents = filteredAgents.filter(
-            (agent) => agent.visibility === visibilityFilter.toUpperCase(),
-          );
-        }
-
-        // 性别筛选
-        if (genderFilter !== "all") {
-          filteredAgents = filteredAgents.filter(
-            (agent) => agent.gender === genderFilter.toUpperCase(),
-          );
-        }
-
-        setLocalAgents(filteredAgents);
-        setPagination((prev) => ({
-          ...prev,
-          total: filteredAgents.length,
-        }));
-      } catch (error) {
-        console.error("加载智能体列表失败:", error);
-        message.error("加载智能体列表失败");
-      }
+      // 使用 useAgents hook 的 loadAgents
+      await loadAgentsFromHook(true);
     },
-    [searchText, visibilityFilter, genderFilter],
+    [loadAgentsFromHook],
   );
 
   // 加载模型列表
@@ -164,6 +120,42 @@ export const AgentManagePage: React.FC = () => {
     loadModels();
     message.success("正在刷新模型列表...");
   }, [loadModels]);
+
+  // 监听 agents 变化，应用筛选
+  useEffect(() => {
+    if (agents.length > 0) {
+      let filteredAgents = agents || [];
+
+      // 搜索筛选
+      if (searchText) {
+        filteredAgents = filteredAgents.filter(
+          (agent) =>
+            agent.name.toLowerCase().includes(searchText.toLowerCase()) ||
+            agent.intro?.toLowerCase().includes(searchText.toLowerCase()),
+        );
+      }
+
+      // 可见性筛选
+      if (visibilityFilter !== "all") {
+        filteredAgents = filteredAgents.filter(
+          (agent) => agent.visibility === visibilityFilter.toUpperCase(),
+        );
+      }
+
+      // 性别筛选
+      if (genderFilter !== "all") {
+        filteredAgents = filteredAgents.filter(
+          (agent) => agent.gender === genderFilter.toUpperCase(),
+        );
+      }
+
+      setLocalAgents(filteredAgents);
+      setPagination((prev) => ({
+        ...prev,
+        total: filteredAgents.length,
+      }));
+    }
+  }, [agents, searchText, visibilityFilter, genderFilter]);
 
   useEffect(() => {
     loadAgents();
