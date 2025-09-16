@@ -251,7 +251,7 @@ async def agent_chat_completions(
 
         # 获取最新AI消息的完整信息
         try:
-            latest_message_info = chat_history_service.get_latest_ai_message_info(session_id)
+            latest_message_info = await chat_history_service.get_latest_ai_message_info(db, session_id)
         except Exception as e:
             logger.warning(f"获取最新消息信息失败: {str(e)}")
             latest_message_info = None

@@ -613,7 +613,7 @@ async def agent_chat_completions(
 
             # 获取最新AI消息的完整信息
             try:
-                latest_message_info = chat_history_service.get_latest_ai_message_info(session_id)
+                latest_message_info = await chat_history_service.get_latest_ai_message_info(db, session_id)
             except Exception as e:
                 logger.warning(f"获取最新消息信息失败: {str(e)}")
                 latest_message_info = None
@@ -692,7 +692,7 @@ async def generate_message_voice(
         # 从聊天历史中获取消息内容
         session_id = generate_session_id(chat.id)
         message_content = await chat_history_service.get_message_content(
-            session_id=session_id, message_id=message_id
+            db=db, session_id=session_id, message_id=message_id
         )
 
         if not message_content:
@@ -713,8 +713,8 @@ async def generate_message_voice(
         # 更新chat_history中对应消息的audio_url
         # 使用try-except确保更新失败不影响API响应
         try:
-            update_success = chat_history_service.update_message_audio_url(
-                session_id=session_id, message_id=message_id, audio_url=audio_url, audio_duration=audio_duration
+            update_success = await chat_history_service.update_message_audio_url(
+                db=db, session_id=session_id, message_id=message_id, audio_url=audio_url, audio_duration=audio_duration
             )
             if update_success:
                 logger.debug(f"成功更新消息{message_id}的audio_url到chat_history")

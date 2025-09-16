@@ -1,13 +1,14 @@
 import json
 from typing import Any, Dict, List, Optional
 
-import psycopg
 from langchain_core.messages import HumanMessage
 from langchain_postgres import PostgresChatMessageHistory
+from loguru import logger
+from sqlalchemy import select, update, desc, func, and_
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import global_config_loaded_from_config_yaml
-
-from loguru import logger
+from app.models.chat_history import ChatHistory
 
 
 def _parse_message_content(message_raw) -> Dict[str, str]:
@@ -48,15 +49,15 @@ def _parse_message_content(message_raw) -> Dict[str, str]:
         return {"content": str(message_raw) if message_raw else "", "role": "unknown"}
 
 
-# 全局连接，避免重复创建
+# Keep the legacy connection function for PostgresChatMessageHistory compatibility
 _connection = None
 
-
-# 获取数据库连接
 def get_chat_history_connection():
+    """Legacy function for PostgresChatMessageHistory - keep for backward compatibility"""
     global _connection
     if _connection is None or _connection.closed:
         try:
+            import psycopg
             _connection = psycopg.connect(
                 global_config_loaded_from_config_yaml.database.url, autocommit=True
             )
@@ -76,11 +77,16 @@ def get_chat_history(session_id: str) -> PostgresChatMessageHistory:
     return PostgresChatMessageHistory("chat_history", session_id, sync_connection=conn)
 
 
-def add_agent_opening_message(session_id: str, opening_message: str, audio_url: Optional[str] = None, agent_id: Optional[str] = None, audio_duration: Optional[float] = None) -> None:
+async def add_agent_opening_message(
+    db: AsyncSession,
+    session_id: str,
+    opening_message: str,
+    audio_url: Optional[str] = None,
+    agent_id: Optional[str] = None,
+    audio_duration: Optional[float] = None
+) -> None:
     """添加Agent开场白到聊天历史"""
     try:
-        conn = get_chat_history_connection()
-        
         # 构建AIMessage的JSON格式数据
         message_data = {
             "type": "ai",
@@ -97,24 +103,22 @@ def add_agent_opening_message(session_id: str, opening_message: str, audio_url: 
             if audio_duration is not None:
                 meta_data["audioDuration"] = audio_duration
         
-        # 直接插入到数据库，包含audio_url和meta_data
-        insert_query = """
-            INSERT INTO chat_history (session_id, message, audio_url, meta_data, created_at)
-            VALUES (%s, %s, %s, %s, NOW())
-        """
+        # 使用ORM创建新记录
+        chat_history = ChatHistory(
+            session_id=session_id,
+            message=message_data,
+            audio_url=audio_url,
+            meta_data=meta_data
+        )
         
-        with conn.cursor() as cur:
-            cur.execute(insert_query, (
-                session_id, 
-                json.dumps(message_data),
-                audio_url,
-                json.dumps(meta_data) if meta_data else None
-            ))
+        db.add(chat_history)
+        await db.commit()
             
         logger.debug(f"添加开场白到会话 {session_id}: {opening_message}, audio_url: {audio_url}")
         
     except Exception as e:
         logger.error(f"添加开场白失败 {session_id}: {str(e)}")
+        await db.rollback()
         raise
 
 
@@ -197,11 +201,15 @@ def add_user_message(session_id: str, message: str) -> None:
         raise
 
 
-def add_ai_message(session_id: str, message: str, agent_id: Optional[str] = None, audio_duration: Optional[float] = None) -> Optional[int]:
+async def add_ai_message(
+    db: AsyncSession,
+    session_id: str,
+    message: str,
+    agent_id: Optional[str] = None,
+    audio_duration: Optional[float] = None
+) -> Optional[int]:
     """添加AI消息到聊天历史，返回插入的消息ID"""
     try:
-        conn = get_chat_history_connection()
-        
         # 构建AIMessage的JSON格式数据
         message_data = {
             "type": "ai",
@@ -218,123 +226,94 @@ def add_ai_message(session_id: str, message: str, agent_id: Optional[str] = None
             if audio_duration is not None:
                 meta_data["audioDuration"] = audio_duration
         
-        # 直接插入到数据库，包含meta_data，并返回插入的ID
-        insert_query = """
-            INSERT INTO chat_history (session_id, message, meta_data, created_at)
-            VALUES (%s, %s, %s, NOW())
-            RETURNING id
-        """
+        # 使用ORM创建新记录
+        chat_history = ChatHistory(
+            session_id=session_id,
+            message=message_data,
+            meta_data=meta_data
+        )
         
-        with conn.cursor() as cur:
-            cur.execute(insert_query, (
-                session_id, 
-                json.dumps(message_data),
-                json.dumps(meta_data) if meta_data else None
-            ))
-            inserted_id = cur.fetchone()[0]
+        db.add(chat_history)
+        await db.commit()
+        await db.refresh(chat_history)  # 获取生成的ID
             
-        logger.debug(f"添加AI消息到会话 {session_id}: {message}, ID: {inserted_id}")
-        return inserted_id
+        logger.debug(f"添加AI消息到会话 {session_id}: {message}, ID: {chat_history.id}")
+        return chat_history.id
         
     except Exception as e:
         logger.error(f"添加AI消息失败 {session_id}: {str(e)}")
+        await db.rollback()
         raise
 
 
-def get_latest_ai_message_id(session_id: str) -> Optional[int]:
+async def get_latest_ai_message_id(db: AsyncSession, session_id: str) -> Optional[int]:
     """获取会话中最新的AI消息ID"""
     try:
-        conn = get_chat_history_connection()
+        # 使用ORM查询最新的AI消息ID
+        stmt = (
+            select(ChatHistory.id)
+            .where(
+                and_(
+                    ChatHistory.session_id == session_id,
+                    ChatHistory.message["type"].astext == "ai"
+                )
+            )
+            .order_by(desc(ChatHistory.created_at), desc(ChatHistory.id))
+            .limit(1)
+        )
         
-        # 查询最新的AI消息ID
-        query = """
-            SELECT id
-            FROM chat_history 
-            WHERE session_id = %s 
-            AND message->>'type' = 'ai'
-            ORDER BY created_at DESC, id DESC
-            LIMIT 1
-        """
+        result = await db.execute(stmt)
+        row = result.first()
         
-        with conn.cursor() as cur:
-            cur.execute(query, (session_id,))
-            row = cur.fetchone()
-            
-            if row:
-                return row[0]
-            else:
-                return None
+        return row[0] if row else None
                 
     except Exception as e:
         logger.error(f"获取最新AI消息ID失败 {session_id}: {str(e)}")
         return None
 
 
-def get_latest_ai_message_info(session_id: str) -> Optional[Dict[str, Any]]:
+async def get_latest_ai_message_info(db: AsyncSession, session_id: str) -> Optional[Dict[str, Any]]:
     """获取会话中最新AI消息的完整信息"""
     try:
-        conn = get_chat_history_connection()
+        # 使用ORM查询最新的AI消息完整信息
+        stmt = (
+            select(ChatHistory)
+            .where(
+                and_(
+                    ChatHistory.session_id == session_id,
+                    ChatHistory.message["type"].astext == "ai"
+                )
+            )
+            .order_by(desc(ChatHistory.created_at), desc(ChatHistory.id))
+            .limit(1)
+        )
         
-        # 查询最新的AI消息完整信息
-        query = """
-            SELECT id, message, created_at, audio_url, meta_data
-            FROM chat_history 
-            WHERE session_id = %s 
-            AND message->>'type' = 'ai'
-            ORDER BY created_at DESC, id DESC
-            LIMIT 1
-        """
+        result = await db.execute(stmt)
+        chat_history = result.scalar_one_or_none()
         
-        with conn.cursor() as cur:
-            cur.execute(query, (session_id,))
-            row = cur.fetchone()
-            
-            if row:
-                message_id = row[0]
-                message_raw = row[1]
-                created_at = row[2]
-                audio_url = row[3]
-                meta_data_raw = row[4]
-                
-                # 解析消息内容
-                content = ""
-                try:
-                    if isinstance(message_raw, str):
-                        message_data = json.loads(message_raw)
-                    elif isinstance(message_raw, dict):
-                        message_data = message_raw
-                    else:
-                        message_data = json.loads(str(message_raw))
-                    
-                    if "data" in message_data and "content" in message_data["data"]:
-                        content = message_data["data"]["content"]
-                    elif "content" in message_data:
-                        content = message_data["content"]
+        if chat_history:
+            # 解析消息内容
+            content = ""
+            try:
+                message_data = chat_history.message
+                if "data" in message_data and "content" in message_data["data"]:
+                    content = message_data["data"]["content"]
+                elif "content" in message_data:
+                    content = message_data["content"]
                         
-                except (json.JSONDecodeError, TypeError, KeyError) as e:
-                    logger.warning(f"解析AI消息内容失败: {str(e)}")
-                    content = str(message_raw) if message_raw else ""
-                
-                # 处理meta_data
-                meta_data = None
-                if meta_data_raw:
-                    try:
-                        if isinstance(meta_data_raw, str):
-                            meta_data = json.loads(meta_data_raw)
-                        elif isinstance(meta_data_raw, dict):
-                            meta_data = meta_data_raw
-                    except (json.JSONDecodeError, TypeError) as e:
-                        logger.warning(f"解析meta_data失败: {str(e)}")
+            except (TypeError, KeyError) as e:
+                logger.warning(f"解析AI消息内容失败: {str(e)}")
+                content = str(chat_history.message) if chat_history.message else ""
                         
-                return {
-                    "id": message_id,
-                    "content": content,
-                    "audio_url": audio_url,
-                    "meta_data": meta_data,
-                    "timestamp": created_at.isoformat() if created_at else None,
-                }
-            else:
-                return None
+            return {
+                "id": chat_history.id,
+                "content": content,
+                "audio_url": chat_history.audio_url,
+                "meta_data": chat_history.meta_data,
+                "timestamp": chat_history.created_at.isoformat() if chat_history.created_at else None,
+            }
+        else:
+            return None
                 
     except Exception as e:
         logger.error(f"获取最新AI消息信息失败 {session_id}: {str(e)}")
@@ -526,11 +505,12 @@ def clear_session(session_id: str) -> None:
         raise
 
 
-async def get_message_content(session_id: str, message_id: str) -> Optional[str]:
+async def get_message_content(db: AsyncSession, session_id: str, message_id: str) -> Optional[str]:
     """
     根据消息ID获取消息内容
 
     Args:
+        db: 数据库会话
         session_id: 会话ID
         message_id: 消息ID（数据库的真实ID）
 
@@ -538,8 +518,6 @@ async def get_message_content(session_id: str, message_id: str) -> Optional[str]
         消息内容，如果找不到则返回None
     """
     try:
-        conn = get_chat_history_connection()
-
         # 尝试将message_id转换为整数
         try:
             db_message_id = int(message_id)
@@ -547,37 +525,47 @@ async def get_message_content(session_id: str, message_id: str) -> Optional[str]
             logger.warning(f"无法解析消息ID为整数: {message_id}")
             return None
 
-        # 根据数据库ID直接查询消息
-        query = """
-            SELECT id, message, created_at
-            FROM chat_history 
-            WHERE session_id = %s AND id = %s
-        """
-
-        with conn.cursor() as cur:
-            cur.execute(query, (session_id, db_message_id))
-            row = cur.fetchone()
-
-            if row:
-                # 解析消息内容
-                parsed = _parse_message_content(row[1])
-                return parsed["content"]
-            else:
-                logger.warning(
-                    f"消息未找到: session_id={session_id}, message_id={db_message_id}"
+        # 使用ORM查询消息
+        stmt = (
+            select(ChatHistory)
+            .where(
+                and_(
+                    ChatHistory.session_id == session_id,
+                    ChatHistory.id == db_message_id
                 )
-                return None
+            )
+        )
+        
+        result = await db.execute(stmt)
+        chat_history = result.scalar_one_or_none()
+
+        if chat_history:
+            # 解析消息内容
+            parsed = _parse_message_content(chat_history.message)
+            return parsed["content"]
+        else:
+            logger.warning(
+                f"消息未找到: session_id={session_id}, message_id={db_message_id}"
+            )
+            return None
 
     except Exception as e:
         logger.error(f"获取消息内容失败 {session_id}, {message_id}: {str(e)}")
         return None
 
 
-def update_message_audio_url(session_id: str, message_id: str, audio_url: str, audio_duration: Optional[float] = None) -> bool:
+async def update_message_audio_url(
+    db: AsyncSession,
+    session_id: str,
+    message_id: str,
+    audio_url: str,
+    audio_duration: Optional[float] = None
+) -> bool:
     """
     更新指定消息的audio_url字段和音频时长
 
     Args:
+        db: 数据库会话
         session_id: 会话ID
         message_id: 消息ID（数据库的真实ID）
         audio_url: 语音文件URL
@@ -587,8 +575,6 @@ def update_message_audio_url(session_id: str, message_id: str, audio_url: str, a
         bool: 更新是否成功
     """
     try:
-        conn = get_chat_history_connection()
-
         # 尝试将message_id转换为整数
         try:
             db_message_id = int(message_id)
@@ -596,29 +582,39 @@ def update_message_audio_url(session_id: str, message_id: str, audio_url: str, a
             logger.warning(f"无法解析消息ID为整数: {message_id}")
             return False
 
-        # 更新指定消息的audio_url和meta_data中的audioDuration
+        # 构建更新语句
         if audio_duration is not None:
-            # 获取当前meta_data，并添加audioDuration
-            update_query = """
-                UPDATE chat_history 
-                SET audio_url = %s,
-                    meta_data = COALESCE(meta_data, '{}'::jsonb) || %s::jsonb
-                WHERE session_id = %s AND id = %s
-            """
-            duration_json = json.dumps({"audioDuration": audio_duration})
-            with conn.cursor() as cur:
-                cur.execute(update_query, (audio_url, duration_json, session_id, db_message_id))
-                updated_rows = cur.rowcount
+            # 使用SQLAlchemy的JSONB操作更新audio_url和meta_data
+            stmt = (
+                update(ChatHistory)
+                .where(
+                    and_(
+                        ChatHistory.session_id == session_id,
+                        ChatHistory.id == db_message_id
+                    )
+                )
+                .values(
+                    audio_url=audio_url,
+                    meta_data=func.coalesce(ChatHistory.meta_data, func.cast({}, type_=ChatHistory.meta_data.type)).op("||")({"audioDuration": audio_duration})
+                )
+            )
         else:
             # 只更新audio_url
-            update_query = """
-                UPDATE chat_history 
-                SET audio_url = %s 
-                WHERE session_id = %s AND id = %s
-            """
-            with conn.cursor() as cur:
-                cur.execute(update_query, (audio_url, session_id, db_message_id))
-                updated_rows = cur.rowcount
+            stmt = (
+                update(ChatHistory)
+                .where(
+                    and_(
+                        ChatHistory.session_id == session_id,
+                        ChatHistory.id == db_message_id
+                    )
+                )
+                .values(audio_url=audio_url)
+            )
+
+        result = await db.execute(stmt)
+        await db.commit()
+        
+        updated_rows = result.rowcount
 
         if updated_rows > 0:
             logger.debug(
@@ -635,6 +631,7 @@ def update_message_audio_url(session_id: str, message_id: str, audio_url: str, a
         logger.error(
             f"更新消息audio_url失败: session_id={session_id}, message_id={message_id}, audio_url={audio_url}, 错误: {str(e)}"
         )
+        await db.rollback()
         return False
 
 
