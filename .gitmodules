@@ -1,6 +1,3 @@
-[submodule "sdks/typescript"]
-	path = sdks/typescript
-	url = git@github.com:NascentCore/inty-typescript.git
 [submodule "sdks/python"]
 	path = sdks/python
 	url = git@github.com:NascentCore/inty-python.git
