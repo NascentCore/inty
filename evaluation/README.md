@@ -11,15 +11,20 @@
 ## 使用步骤
 
 1. 注册登录 GitHub，@yaxiong 邀请 sxwl.ai Email 加入 [NascentCore 组织](https://github.com/orgs/NascentCore)
+
    <img width="680" height="326" alt="image" src="https://github.com/user-attachments/assets/a4255e17-e51c-4244-8138-89cb1b3b4d65" />
-2. 下载安装 [github desktop](https://desktop.github.com/download/)；
+2. 下载安装 [github desktop](https://desktop.github.com/download/)
+
    <img width="800" height="1152" alt="image" src="https://github.com/user-attachments/assets/3cb0721e-aaa3-4bfb-896a-f29eaa5acbb3" />
 3. 下载安装 [node.js](https://nodejs.org/en/download/)
+
    <img width="680" height="1136" alt="image" src="https://github.com/user-attachments/assets/1eeba49f-f249-4451-ae84-781ab24fd960" />
 4. 使用上述账户登录，通过网页认证，详情按屏幕提示操作
 5. 克隆 inty 代码库
+
    <img width="600" height="1182" alt="image" src="https://github.com/user-attachments/assets/5c878ad4-b75c-43ce-92fb-349066c2b497" />
 6. `cmd-space terminal` 打开命令行
+
    <img width="480" height="270" alt="image" src="https://github.com/user-attachments/assets/3cea99fd-2dc2-48f6-9efd-6928be881685" />
    下载安装 yarn：`npm install -g corepack`，在 Terminal 输入 `yarn` 验证使用
 7. `cd Documents/GitHub/inty` 然后 `evaluation/start.sh`
