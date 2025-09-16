@@ -14,8 +14,14 @@ from app.core.agent.agent import agent_manager
 from app.core.chat import generate_chat_stream
 from app.core.config import global_config_loaded_from_config_yaml
 from app.core.user_privilege.premium_check import is_eligible_for_premium
-from app.schemas.chat import ChatCompletionRequest
-from app.schemas.response import BusinessErrorCode, create_business_error_response
+from app.schemas.chat import (
+    ChatCompletionRequest,
+    ChatDetailResponse,
+    ChatInfo,
+    ChatMessage,
+    MessagesPagination,
+)
+from app.schemas.response import APIResponse, BusinessErrorCode, create_business_error_response, PaginationData
 from app.services import agent_service, chat_history_service, chat_service
 from app.services.chat_service import generate_session_id
 from app.services.global_services import subscription_service
@@ -92,6 +98,7 @@ async def delete_chat(
 
 @router.get(
     "/agents/status",
+    response_model=APIResponse[dict],
     deprecated=True,
     include_in_schema=False,
     description="No record of who is using this",
@@ -102,16 +109,17 @@ async def get_agent_status(
     """
     Get Agent manager status
     """
-    return {
+    return APIResponse.success(data={
         "active_agents": agent_manager.get_agent_count(),
         "max_agents": agent_manager.max_agents,
         "cleanup_interval": agent_manager.cleanup_interval,
         "max_idle_time": agent_manager.max_idle_time,
-    }
+    })
 
 
 @router.post(
     "/agents/initialize",
+    response_model=APIResponse[dict],
     deprecated=True,
     include_in_schema=False,
     description="No record of who is using this",
@@ -126,17 +134,18 @@ async def initialize_agents(
     """
     try:
         await agent_manager.initialize_popular_agents(db)
-        return {
+        return APIResponse.success(data={
             "status": "success",
             "message": "Common Agents initialization completed",
             "active_agents": agent_manager.get_agent_count(),
-        }
+        })
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Initialization failed: {str(e)}")
+        return APIResponse.error(message=f"Initialization failed: {str(e)}")
 
 
 @router.delete(
     "/agents/cleanup",
+    response_model=APIResponse[dict],
     deprecated=True,
     include_in_schema=False,
     description="No record of who is using this",
@@ -151,18 +160,19 @@ async def cleanup_idle_agents(
         old_count = agent_manager.get_agent_count()
         agent_manager._cleanup_idle_agents()
         new_count = agent_manager.get_agent_count()
-        return {
+        return APIResponse.success(data={
             "status": "success",
             "message": "Idle Agents cleanup completed",
             "cleaned_count": old_count - new_count,
             "remaining_agents": new_count,
-        }
+        })
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Cleanup failed: {str(e)}")
+        return APIResponse.error(message=f"Cleanup failed: {str(e)}")
 
 
 @router.get(
     "/{chat_id}/detail",
+    response_model=APIResponse[ChatDetailResponse],
     deprecated=True,
     include_in_schema=False,
     tags=["unknown"],
@@ -200,37 +210,39 @@ async def get_chat_detail(
         )
 
         # Assemble return data
-        return {
-            "chat_info": {
-                "id": chat.id,
-                "agent_id": chat.agent_id,
-                "agent_name": chat.agent_name,
-                "agent_avatar": chat.agent_avatar,
-                "user_id": chat.user_id,
-                "created_at": chat.created_at.isoformat() if chat.created_at else None,
-                "updated_at": chat.updated_at.isoformat() if chat.updated_at else None,
-            },
-            "messages": messages_data["messages"],
-            "pagination": {
-                "total": messages_data["total"],
-                "limit": messages_data["limit"],
-                "offset": messages_data["offset"],
-                "page": messages_data["page"],
-                "has_more": messages_data["has_more"],
-                "total_pages": (
+        chat_detail = ChatDetailResponse(
+            chat_info=ChatInfo(
+                id=chat.id,
+                agent_id=chat.agent_id,
+                agent_name=chat.agent_name,
+                agent_avatar=chat.agent_avatar,
+                user_id=chat.user_id,
+                created_at=chat.created_at.isoformat() if chat.created_at else None,
+                updated_at=chat.updated_at.isoformat() if chat.updated_at else None,
+            ),
+            messages=[ChatMessage(**message) for message in messages_data["messages"]],
+            pagination=MessagesPagination(
+                total=messages_data["total"],
+                limit=messages_data["limit"],
+                offset=messages_data["offset"],
+                page=messages_data["page"],
+                has_more=messages_data["has_more"],
+                total_pages=(
                     (messages_data["total"] + limit - 1) // limit if limit > 0 else 1
                 ),
-            },
-        }
+            ),
+        )
+        return APIResponse.success(data=chat_detail)
 
     except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Failed to get chat details: {str(e)}"
+        return APIResponse.error(
+            message=f"Failed to get chat details: {str(e)}"
         )
 
 
 @router.get(
     "/agents/{agent_id}/detail",
+    response_model=APIResponse[ChatDetailResponse],
     tags=["unknown", "inty-eval"],
     include_in_schema=False,
     deprecated=True,
@@ -275,38 +287,39 @@ async def get_agent_chat_detail(
         )
 
         # Assemble return data
-        data = {
-            "chat_info": {
-                "id": chat.id,
-                "agent_id": chat.agent_id,
-                "agent_name": chat.agent_name,
-                "agent_avatar": chat.agent_avatar,
-                "user_id": chat.user_id,
-                "created_at": chat.created_at.isoformat() if chat.created_at else None,
-                "updated_at": chat.updated_at.isoformat() if chat.updated_at else None,
-            },
-            "messages": messages_data["messages"],
-            "pagination": {
-                "total": messages_data["total"],
-                "limit": messages_data["limit"],
-                "offset": messages_data["offset"],
-                "page": messages_data["page"],
-                "has_more": messages_data["has_more"],
-                "total_pages": (
+        chat_detail = ChatDetailResponse(
+            chat_info=ChatInfo(
+                id=chat.id,
+                agent_id=chat.agent_id,
+                agent_name=chat.agent_name,
+                agent_avatar=chat.agent_avatar,
+                user_id=chat.user_id,
+                created_at=chat.created_at.isoformat() if chat.created_at else None,
+                updated_at=chat.updated_at.isoformat() if chat.updated_at else None,
+            ),
+            messages=[ChatMessage(**message) for message in messages_data["messages"]],
+            pagination=MessagesPagination(
+                total=messages_data["total"],
+                limit=messages_data["limit"],
+                offset=messages_data["offset"],
+                page=messages_data["page"],
+                has_more=messages_data["has_more"],
+                total_pages=(
                     (messages_data["total"] + limit - 1) // limit if limit > 0 else 1
                 ),
-            },
-        }
-        return data
+            ),
+        )
+        return APIResponse.success(data=chat_detail)
 
     except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Failed to get chat details: {str(e)}"
+        return APIResponse.error(
+            message=f"Failed to get chat details: {str(e)}"
         )
 
 
 @router.get(
     "/agents/{agent_id}/messages",
+    response_model=APIResponse[PaginationData[ChatMessage]],
     tags=["inty-eval"],
     summary="Get Agent Chat Messages",
     description="Get only chat message records by Agent ID (lighter interface)",
@@ -358,11 +371,24 @@ async def get_agent_chat_messages(
         if order == "desc":
             messages_data["messages"].reverse()
 
-        return messages_data
+        # Convert messages to ChatMessage objects
+        chat_messages = [
+            ChatMessage(**message) for message in messages_data["messages"]
+        ]
+        
+        # Create PaginationData with proper structure
+        pagination_data = PaginationData[ChatMessage](
+            list=chat_messages,
+            total=messages_data["total"],
+            page=messages_data["page"],
+            page_size=messages_data["limit"],
+            total_pages=(messages_data["total"] + messages_data["limit"] - 1) // messages_data["limit"] if messages_data["limit"] > 0 else 1,
+        )
+        return APIResponse.success(data=pagination_data)
 
     except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Failed to get message records: {str(e)}"
+        return APIResponse.error(
+            message=f"Failed to get message records: {str(e)}"
         )
 
 
@@ -660,6 +686,7 @@ async def agent_chat_completions(
 
 @router.post(
     "/agents/{agent_id}/messages/{message_id}/voice",
+    response_model=APIResponse[dict],
     tags=["inty", "voice"],
     summary="Generate Message Voice",
     description="Generate voice for a message",
@@ -724,7 +751,7 @@ async def generate_message_voice(
             logger.error(f"更新chat_history的audio_url时发生异常: {str(e)}")
             # 继续执行，不影响API响应
 
-        return {
+        return APIResponse.success(data={
             "audio_url": audio_url,
             "message_id": message_id,
             "voice_id": agent_voice_id
@@ -733,7 +760,7 @@ async def generate_message_voice(
             "audio_duration": audio_duration,  # 音频时长（秒）
             "cached": False,  # 这里可以后续实现缓存检测
             "generation_time": None,  # 可以记录生成时间
-        }
+        })
 
     except Exception as e:
         logger.error(f"按需语音生成失败: {str(e)}")
@@ -926,7 +953,7 @@ async def get_agent_chat_settings(
 # TODO: Should we switch to /chats/{chat_id}?
 @router.delete(
     "/agents/{agent_id}/chats",
-    response_model=schemas.ChatDeletionResponse,
+    response_model=APIResponse[dict],
     deprecated=True,
     include_in_schema=False,
     tags=["inty"],
@@ -963,7 +990,7 @@ async def delete_agent_chats(
             f"删除结果: {result}"
         )
 
-        return {"success": True, "message": "聊天记录删除成功", "data": result}
+        return APIResponse.success(data={"success": True, "message": "聊天记录删除成功", "data": result})
 
     except HTTPException:
         raise
@@ -978,6 +1005,7 @@ async def delete_agent_chats(
 
 @router.get(
     "/agents/{agent_id}/debug-messages",
+    response_model=APIResponse[dict],
     deprecated=True,
     include_in_schema=False,
     tags=["inty-eval"],
@@ -1011,16 +1039,16 @@ async def get_agent_debug_messages(
 
         if not chat:
             # 如果没有聊天会话，返回空的调试信息
-            return {
+            return APIResponse.success(data={
                 "chat_id": None,
                 "agent_id": agent_id,
                 "agent_name": agent_db.name,
                 "debug_messages": None,
                 "message": "No chat session found with this agent",
-            }
+            })
 
         # 返回调试信息
-        return {
+        return APIResponse.success(data={
             "chat_id": chat.id,
             "agent_id": chat.agent_id,
             "agent_name": chat.agent_name or agent_db.name,
@@ -1031,7 +1059,7 @@ async def get_agent_debug_messages(
                 if chat.debug_messages
                 else "No debug messages available"
             ),
-        }
+        })
 
     except HTTPException:
         raise

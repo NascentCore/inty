@@ -4,8 +4,8 @@ from app.schemas.agent import (
     AgentInDB,
     AgentSortOption,
     AgentUpdate,
-    TextToImageRequest,
     CreatorAgentStats,
+    TextToImageRequest,
 )
 from app.schemas.auth import (
     GoogleAuthRequest,
@@ -36,9 +36,12 @@ from app.schemas.chat import (
     MessageUpdate,
 )
 from app.schemas.evaluation import (
+    AgentDeployResponse,
     BatchEvaluationRequest,
     EvaluationComparison,
+    EvaluationComparisonResponse,
     EvaluationExportRequest,
+    EvaluationExportResponse,
     EvaluationInteractionResponse,
     EvaluationResultResponse,
     EvaluationSessionCreate,
@@ -46,10 +49,14 @@ from app.schemas.evaluation import (
     EvaluationSessionResponse,
     EvaluationSessionUpdate,
     EvaluationStats,
+    EvaluationStatsResponse,
     EvaluationTemplateCreate,
     EvaluationTemplateResponse,
     QuestionFileUpload,
+    QuestionFileUploadResponse,
+    ScoringCriteriaValidationResponse,
     ScoringModelInfo,
+    SessionActionResponse,
     WebSocketMessage,
 )
 from app.schemas.resource import Resource, ResourceCreate, ResourceInDB, ResourceUpdate

@@ -247,3 +247,67 @@ class EvaluationExportRequest(BaseModel):
     format: str = Field("csv", pattern="^(csv|json|xlsx)$", description="导出格式")
     include_interactions: bool = Field(False, description="是否包含交互记录")
     include_metadata: bool = Field(False, description="是否包含元数据")
+
+
+class SessionActionResponse(BaseModel):
+    """会话操作响应"""
+
+    success: bool
+    message: str
+
+
+class QuestionFileUploadResponse(BaseModel):
+    """问题文件上传响应"""
+
+    questions: List[str]
+    total_count: int
+    valid_count: int
+    duplicates_removed: int
+    warnings: List[str] = []
+
+
+class ScoringCriteriaValidationResponse(BaseModel):
+    """评分标准验证响应"""
+
+    is_valid: bool
+    errors: List[str] = []
+    warnings: List[str] = []
+
+
+class EvaluationStatsResponse(BaseModel):
+    """评测统计响应"""
+
+    total_sessions: int
+    completed_sessions: int
+    running_sessions: int
+    failed_sessions: int
+    average_score: Optional[float]
+    success_rate: Optional[float]
+    total_tests: int
+    total_agents_tested: int
+
+
+class AgentDeployResponse(BaseModel):
+    """智能体部署响应"""
+
+    success: bool
+    message: str
+    agent_id: str
+    deploy_time: str
+
+
+class EvaluationExportResponse(BaseModel):
+    """评测结果导出响应"""
+
+    download_url: str
+    format: str
+    session_count: int
+
+
+class EvaluationComparisonResponse(BaseModel):
+    """评测对比响应"""
+
+    agents: List[str]
+    questions: List[str]
+    results: Dict[str, Dict[str, Any]]
+    summary: Dict[str, Any]

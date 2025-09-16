@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from app import schemas
 from app.api import deps
 from app.api.utils.logger_route import LoggerRoute
+from app.schemas.response import APIResponse
 from app.services.settings_service import create_settings, get_settings, update_settings
 
 from loguru import logger
@@ -16,7 +17,7 @@ from loguru import logger
 router = APIRouter(prefix="/settings", route_class=LoggerRoute)
 
 
-@router.get("/", response_model=schemas.Settings)
+@router.get("/", response_model=APIResponse[schemas.Settings])
 def get_settings_endpoint(
     db: Session = Depends(deps.get_db),
     current_user: schemas.User = Depends(deps.get_current_active_user),
@@ -29,24 +30,24 @@ def get_settings_endpoint(
         settings = get_settings(db, user_id=current_user.id)
         if not settings:
             logger.debug(f"User settings not found: user_id={current_user.id}")
-            raise HTTPException(status_code=404, detail="Settings not found")
+            return APIResponse.error(message="Settings not found")
         logger.debug(f"Successfully retrieved user settings: user_id={current_user.id}")
-        return settings
+        return APIResponse.success(data=settings)
     except SQLAlchemyError as e:
         logger.error(
             f"Failed to get user settings: user_id={current_user.id}, error={str(e)}"
         )
         logger.error(f"Error stack: {traceback.format_exc()}")
-        raise HTTPException(status_code=500, detail="Database operation failed")
+        return APIResponse.error(message="Database operation failed")
     except Exception as e:
         logger.error(
             f"Unknown error occurred while getting user settings: user_id={current_user.id}, error={str(e)}"
         )
         logger.error(f"Error stack: {traceback.format_exc()}")
-        raise HTTPException(status_code=500, detail="Internal server error")
+        return APIResponse.error(message="Internal server error")
 
 
-@router.put("/", response_model=schemas.Settings)
+@router.put("/", response_model=APIResponse[schemas.Settings])
 def update_settings_endpoint(
     *,
     db: Session = Depends(deps.get_db),
@@ -85,16 +86,16 @@ def update_settings_endpoint(
                 db, db_settings=settings, settings_in=settings_in
             )
         logger.debug(f"Successfully updated user settings: user_id={current_user.id}")
-        return settings
+        return APIResponse.success(data=settings)
     except SQLAlchemyError as e:
         logger.error(
             f"Failed to update user settings: user_id={current_user.id}, error={str(e)}"
         )
         logger.error(f"Error stack: {traceback.format_exc()}")
-        raise HTTPException(status_code=500, detail="Database operation failed")
+        return APIResponse.error(message="Database operation failed")
     except Exception as e:
         logger.error(
             f"Unknown error occurred while updating user settings: user_id={current_user.id}, error={str(e)}"
         )
         logger.error(f"Error stack: {traceback.format_exc()}")
-        raise HTTPException(status_code=500, detail="Internal server error")
+        return APIResponse.error(message="Internal server error")

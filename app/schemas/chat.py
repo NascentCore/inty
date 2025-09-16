@@ -165,8 +165,12 @@ class Chat(ChatInDB):
 
 # OpenAI style message model
 class ChatMessage(BaseModel):
-    role: str  # "user" or "assistant"
+    id: Optional[int] = None  # 消息ID，由服务器生成，客户端请求时可为空
     content: str
+    role: str  # "user" or "assistant"
+    audio_url: Optional[str] = None
+    meta_data: Optional[dict] = None
+    timestamp: Optional[str] = None
 
 
 class ChatCompletionRequest(BaseModel):
@@ -227,3 +231,34 @@ class ClearMessagesResponse(BaseModel):
     target_message: Optional[dict] = None  # 目标消息信息（当使用message_id时）
     deleted_time_range: Optional[dict] = None  # 删除的时间范围
     cutoff_timestamp: Optional[str] = None  # 截止时间戳（当使用timestamp时）
+
+
+class ChatInfo(BaseModel):
+    """聊天信息"""
+
+    id: str
+    agent_id: str
+    agent_name: Optional[str] = None
+    agent_avatar: Optional[str] = None
+    user_id: str
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
+
+
+class MessagesPagination(BaseModel):
+    """消息分页信息"""
+
+    total: int
+    limit: int
+    offset: int
+    page: int
+    has_more: bool
+    total_pages: int
+
+
+class ChatDetailResponse(BaseModel):
+    """聊天详情响应"""
+
+    chat_info: ChatInfo
+    messages: List[ChatMessage]
+    pagination: MessagesPagination

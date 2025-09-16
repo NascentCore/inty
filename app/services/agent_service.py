@@ -63,7 +63,9 @@ async def generate_agent_opening_voice(
             # 更新agent的opening_audio_url字段
             agent.opening_audio_url = audio_url
             await db.commit()
-            logger.debug(f"成功为Agent {agent.id} 生成开场白语音: {audio_url}, 时长: {audio_duration:.2f}秒")
+            logger.debug(
+                f"成功为Agent {agent.id} 生成开场白语音: {audio_url}, 时长: {audio_duration:.2f}秒"
+            )
             return audio_url
         else:
             logger.warning(f"Agent {agent.id} 开场白语音生成失败，未返回URL")
@@ -203,6 +205,7 @@ async def get_agent_for_chat(db: AsyncSession, agent_id: str) -> Optional[dict]:
             models.Agent.extensions,
             models.Agent.avatar,
             models.Agent.opening,
+            models.Agent.opening_audio_url,
             models.Agent.voice_id,
             models.Agent.created_at,
             models.Agent.updated_at,
@@ -231,9 +234,10 @@ async def get_agent_for_chat(db: AsyncSession, agent_id: str) -> Optional[dict]:
             "extensions": row[11] or {},
             "avatar": row[12],
             "opening": row[13],
-            "voice_id": row[14],
-            "created_at": row[15],
-            "updated_at": row[16],
+            "opening_audio_url": row[14],
+            "voice_id": row[15],
+            "created_at": row[16],
+            "updated_at": row[17],
             "_complete_data": True,  # 标记为完整数据
         }
 
@@ -427,9 +431,9 @@ async def get_recommended_agents_paginated(
             raise HTTPException(
                 status_code=400, detail="Page parameter must be greater than 0"
             )
-        if page_size <= 0 or page_size > 100:
+        if page_size <= 0 or page_size > 1000:
             raise HTTPException(
-                status_code=400, detail="Page size parameter must be between 1-100"
+                status_code=400, detail="Page size parameter must be between 1-1000"
             )
 
         # 计算偏移量
