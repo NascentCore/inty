@@ -335,6 +335,115 @@ async def get_user_agents(
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
+async def get_user_agents_paginated(
+    db: AsyncSession,
+    user_id: str,
+    page: int = 1,
+    page_size: int = 20,
+    current_user_id: Optional[str] = None,
+) -> schemas.PaginationData[schemas.Agent]:
+    """
+    Get user's created AI agents list (paginated version)
+    """
+    try:
+        # Validate parameters
+        if page <= 0:
+            raise HTTPException(
+                status_code=400, detail="Page parameter must be greater than 0"
+            )
+        if page_size <= 0 or page_size > 100:
+            raise HTTPException(
+                status_code=400, detail="Page size parameter must be between 1-100"
+            )
+
+        # Calculate offset from page and page_size
+        skip = (page - 1) * page_size
+
+        # Get total count
+        count_query = (
+            select(func.count(models.Agent.id))
+            .where(
+                and_(
+                    models.Agent.creator_id == user_id,
+                    models.Agent.deleted_at.is_(None),
+                )
+            )
+        )
+        count_result = await db.execute(count_query)
+        total = count_result.scalar() or 0
+
+        # Get agents with pagination
+        query = (
+            select(
+                models.Agent,
+                func.count(agent_followers.c.user_id).label("follower_count"),
+            )
+            .outerjoin(agent_followers, models.Agent.id == agent_followers.c.agent_id)
+            .options(selectinload(models.Agent.creator))
+            .where(
+                and_(
+                    models.Agent.creator_id == user_id,
+                    models.Agent.deleted_at.is_(None),
+                )
+            )
+            .group_by(models.Agent.id)
+            .offset(skip)
+            .limit(page_size)
+            .order_by(desc(models.Agent.created_at))
+        )
+
+        result = await db.execute(query)
+        rows = result.all()
+
+        agents = []
+        agent_ids = []
+
+        for row in rows:
+            agent = row[0]
+            follower_count = row[1] or 0
+            agent.follower_count = follower_count
+            agent.is_followed = False  # 默认值
+            agents.append(agent)
+            agent_ids.append(agent.id)
+
+        # 批量检查当前用户是否关注了这些agents
+        if current_user_id and agent_ids:
+            follow_query = select(agent_followers.c.agent_id).where(
+                and_(
+                    agent_followers.c.user_id == current_user_id,
+                    agent_followers.c.agent_id.in_(agent_ids),
+                )
+            )
+            follow_result = await db.execute(follow_query)
+            followed_agent_ids = {row[0] for row in follow_result}
+
+            for agent in agents:
+                agent.is_followed = agent.id in followed_agent_ids
+
+        # Calculate total pages
+        total_pages = math.ceil(total / page_size) if total > 0 else 0
+
+        # Convert to schemas
+        agent_schemas = [schemas.Agent.model_validate(agent) for agent in agents]
+
+        return schemas.PaginationData[schemas.Agent](
+            items=agent_schemas,
+            total=total,
+            page=page,
+            page_size=page_size,
+            total_pages=total_pages,
+        )
+
+    except HTTPException:
+        raise
+    except SQLAlchemyError as e:
+        logger.error(f"Database query error - get user agents paginated: {str(e)}")
+        raise HTTPException(status_code=500, detail="Database query failed")
+    except Exception as e:
+        logger.error(f"Unknown error - get user agents paginated: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
 async def get_recommended_agents(
     db: AsyncSession,
     skip: int = 0,

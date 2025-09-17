@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Optional
+from typing import Any
 
 from fastapi import APIRouter, Depends, Header, HTTPException
 from loguru import logger
@@ -13,14 +13,15 @@ from app.schemas.version import VersionCheckResponse
 
 router = APIRouter(prefix="/version", route_class=LoggerRoute)
 
+
 @router.post("/check", response_model=APIResponse[VersionCheckResponse])
 async def check_version(
     *,
     app_version_code: int = Header(
         ..., alias="appVersionCode", description="应用版本代码"
     ),
-    app_version_name: Optional[str] = Header(
-        None, alias="appVersionName", description="应用版本名称（可选）"
+    app_version_name: str = Header(
+        "unknown", alias="appVersionName", description="应用版本名称（可选）"
     ),
     current_user: schemas.User = Depends(deps.get_current_active_user),
 ) -> Any:

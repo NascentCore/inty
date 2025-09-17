@@ -46,27 +46,27 @@ router = APIRouter(prefix="/ai/agents", route_class=LoggerRoute)
 )
 @router.get(
     "/me",
-    response_model=schemas.APIResponse[List[schemas.Agent]],
+    response_model=schemas.APIResponse[schemas.PaginationData[schemas.Agent]],
     summary="Get list of user's created AI characters",
     description="This endpoint is used by an registered user to list their created AI characters (agents as a misnomer)",
 )
 async def list_agents(
     db: AsyncSession = Depends(deps.get_async_db),
-    skip: int = 0,
-    limit: int = 100,
+    page: int = Query(1, ge=1, description="Page number, starting from 1"),
+    page_size: int = Query(20, ge=1, le=100, description="Items per page, maximum 100"),
     current_user: schemas.User = Depends(deps.get_current_active_user),
 ) -> Any:
     """
-    Get current user's created AI agents list
+    Get current user's created AI agents list (paginated)
     """
-    agents = await agent_service.get_user_agents(
+    pagination_data = await agent_service.get_user_agents_paginated(
         db,
         user_id=current_user.id,
-        skip=skip,
-        limit=limit,
+        page=page,
+        page_size=page_size,
         current_user_id=current_user.id,
     )
-    return schemas.APIResponse.success(data=agents)
+    return schemas.APIResponse.success(data=pagination_data)
 
 
 @router.get(

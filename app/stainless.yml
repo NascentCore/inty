@@ -5,9 +5,9 @@ organization:
   # and headings.
   name: inty
   # Link to your API documentation.
-  docs: ''
+  docs: ""
   # Contact email for bug reports, questions, and support requests.
-  contact: ''
+  contact: ""
 
 # `targets` define the output targets and their customization options, such as
 # whether to emit the Node SDK and what it's package name should be.
@@ -34,6 +34,35 @@ targets:
 # "production") to the corresponding url to use.
 environments:
   production: https://app.inty.cc
+
+# `pagination` defines pagination schemes for list endpoints
+pagination:
+  - name: page_number_pagination
+    type: page_number
+    request:
+      page:
+        type: integer
+        description: Page number, starting from 1
+        x-stainless-pagination-property:
+          purpose: page_number_param
+      page_size:
+        type: integer
+        description: Items per page, maximum 100
+    response:
+      items:
+        type: array
+        items:
+          type: object
+        x-stainless-pagination-property:
+          purpose: items
+      page:
+        type: integer
+        x-stainless-pagination-property:
+          purpose: current_page_number_field
+      total_pages:
+        type: integer
+        x-stainless-pagination-property:
+          purpose: total_page_count_field
 
 # `resources` define the structure and organization for your API, such as how
 # methods and models are grouped together and accessed. See the [configuration
@@ -73,15 +102,15 @@ resources:
                 #
                 # [reference]: https://www.stainless.com/docs/reference/config#model
                 models:
-                  gender: '#/components/schemas/Gender'
-                  user: '#/components/schemas/User'
-                  api_response_user: '#/components/schemas/APIResponse_User_'
+                  gender: "#/components/schemas/Gender"
+                  user: "#/components/schemas/User"
+                  api_response_user: "#/components/schemas/APIResponse_User_"
                 methods:
                   retrieve: get /api/v1/users/profile
                   update: put /api/v1/users/profile
               device:
                 models:
-                  api_response: '#/components/schemas/APIResponse'
+                  api_response: "#/components/schemas/APIResponse"
                 methods:
                   register: post /api/v1/users/device/register
               deletion:
@@ -89,23 +118,31 @@ resources:
                   check_eligibility: get /api/v1/users/deletion/check
           report:
             models:
-              api_response_dict: '#/components/schemas/APIResponse_dict_'
+              api_response_dict: "#/components/schemas/APIResponse_dict_"
             methods:
               create: post /api/v1/report/
           ai:
             subresources:
               agents:
                 models:
-                  api_response_agent: '#/components/schemas/APIResponse_Agent_'
-                  api_response_pagination_data_agent: '#/components/schemas/APIResponse_PaginationData_Agent__'
-                  agent: '#/components/schemas/Agent'
-                  agent_visibility: '#/components/schemas/AgentVisibility'
-                  model_config: '#/components/schemas/ModelConfig'
+                  api_response_agent: "#/components/schemas/APIResponse_Agent_"
+                  api_response_pagination_data_agent: "#/components/schemas/APIResponse_PaginationData_Agent__"
+                  agent: "#/components/schemas/Agent"
+                  agent_visibility: "#/components/schemas/AgentVisibility"
+                  model_config: "#/components/schemas/ModelConfig"
                 methods:
-                  list: get /api/v1/ai/agents/me
-                  search: get /api/v1/ai/agents/search
-                  recommend: get /api/v1/ai/agents/recommend
-                  following: get /api/v1/ai/agents/following
+                  list:
+                    endpoint: get /api/v1/ai/agents/me
+                    paginated: page_number_pagination
+                  search:
+                    endpoint: get /api/v1/ai/agents/search
+                    paginated: page_number_pagination
+                  page_number_pagination:
+                    endpoint: get /api/v1/ai/agents/recommend
+                    paginated: page_number_pagination
+                  following:
+                    endpoint: get /api/v1/ai/agents/following
+                    paginated: page_number_pagination
                   create: post /api/v1/ai/agents
                   retrieve: get /api/v1/ai/agents/{agent_id}
                   update: put /api/v1/ai/agents/{agent_id}
@@ -114,16 +151,16 @@ resources:
                   unfollow_agent: delete /api/v1/ai/agents/{agent_id}/follow
           settings:
             models:
-              settings: '#/components/schemas/Settings'
-              api_response_settings: '#/components/schemas/APIResponse_Settings_'
+              settings: "#/components/schemas/Settings"
+              api_response_settings: "#/components/schemas/APIResponse_Settings_"
             methods:
               retrieve: get /api/v1/settings/
               update: put /api/v1/settings/
           subscription:
             models:
-              api_response_subscription_status: '#/components/schemas/APIResponse_SubscriptionStatusResponse_'
-              api_response_usage_statistics: '#/components/schemas/APIResponse_UsageStatisticsResponse_'
-              user_subscription: '#/components/schemas/UserSubscription'
+              api_response_subscription_status: "#/components/schemas/APIResponse_SubscriptionStatusResponse_"
+              api_response_usage_statistics: "#/components/schemas/APIResponse_UsageStatisticsResponse_"
+              user_subscription: "#/components/schemas/UserSubscription"
             methods:
               list_plans: get /api/v1/subscription/plans
               get_status: get /api/v1/subscription/status
@@ -137,8 +174,8 @@ resources:
                 subresources:
                   plans:
                     models:
-                      subscription_plan: '#/components/schemas/SubscriptionPlan'
-                      subscription_plan_type: '#/components/schemas/SubscriptionPlanType'
+                      subscription_plan: "#/components/schemas/SubscriptionPlan"
+                      subscription_plan_type: "#/components/schemas/SubscriptionPlanType"
                     methods:
                       create: post /api/v1/subscription/admin/plans
                       list: get /api/v1/subscription/admin/plans
@@ -151,7 +188,7 @@ resources:
               check: post /api/v1/version/check
           chats:
             models:
-              chat: '#/components/schemas/Chat'
+              chat: "#/components/schemas/Chat"
             methods:
               list: get /api/v1/chats/
               create: post /api/v1/chats/
@@ -160,19 +197,23 @@ resources:
             subresources:
               agents:
                 models:
-                  chat_settings: '#/components/schemas/ChatSettings'
-                  api_response_chat_settings: '#/components/schemas/APIResponse_ChatSettings_'
-                  api_response_pagination_data_chat_message: '#/components/schemas/APIResponse_PaginationData_ChatMessage__'
+                  chat_settings: "#/components/schemas/ChatSettings"
+                  api_response_chat_settings: "#/components/schemas/APIResponse_ChatSettings_"
+                  api_response_pagination_data_chat_message: "#/components/schemas/APIResponse_PaginationData_ChatMessage__"
                 methods:
-                  get_messages: get /api/v1/chats/agents/{agent_id}/messages
+                  get_messages:
+                    endpoint: get /api/v1/chats/agents/{agent_id}/messages
+                    paginated: page_number_pagination
                   generate_message_voice: post /api/v1/chats/agents/{agent_id}/messages/{message_id}/voice
                   update_settings: put /api/v1/chats/agents/{agent_id}/settings
                   get_settings: get /api/v1/chats/agents/{agent_id}/settings
           text_to_speech:
             models:
-              api_response_pagination_data_dict: '#/components/schemas/APIResponse_PaginationData_Dict_str__Any___'
+              api_response_pagination_data_dict: "#/components/schemas/APIResponse_PaginationData_Dict_str__Any___"
             methods:
-              list_voices: get /api/v1/text-to-speech/list-voices
+              list_voices:
+                endpoint: get /api/v1/text-to-speech/list-voices
+                paginated: page_number_pagination
 
 settings:
   # All generated integration tests that hit the prism mock http server are marked
