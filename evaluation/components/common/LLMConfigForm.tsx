@@ -47,7 +47,8 @@ export const LLMConfigForm: React.FC<LLMConfigFormProps> = ({
             <Form.Item
                 noStyle
                 shouldUpdate={(prevValues, currentValues) =>
-                    prevValues.modelType !== currentValues.modelType
+                    prevValues.modelType !== currentValues.modelType ||
+                    prevValues.model !== currentValues.model
                 }
             >
                 {({ getFieldValue, setFieldValue }) => {
