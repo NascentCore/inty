@@ -22,7 +22,7 @@ agent:
   langchain_api_key: "<fill-in-your-langchain_api_key>"
 
 gcs:
-  bucket: "your-gcs-bucket"
+  bucket: "<your-gcs-bucket>"
   credentials: ".secrets/gcs-service-account-key.json"
 
 firebase:
