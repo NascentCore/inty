@@ -209,13 +209,13 @@ export const AgentManagePage: React.FC = () => {
   // 处理修改头像截取
   const handleAvatarCrop = (agent: Agent) => {
     // 检查是否有背景图
-    if (!agent.background_images || agent.background_images.length === 0) {
+    if (!agent.background) {
       message.warning("该角色没有背景图，无法修改头像");
       return;
     }
 
-    // 使用第一张背景图作为截取源头
-    const backgroundImage = agent.background_images[0];
+    // 使用背景图作为截取源头
+    const backgroundImage = agent.background;
     setCurrentAgentForAvatar(agent);
     setAvatarCropImageSrc(backgroundImage);
     setAvatarCropModalVisible(true);
