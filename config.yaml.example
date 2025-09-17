@@ -4,7 +4,7 @@
 app:
   debug: true
   backend_cors_origins: ["http://localhost:3000"]
-  environment: <fill-in-your-environment>
+  environment: “<fill-in-your-environment>”
 
 logging:                                                                         
   level: "DEBUG"
