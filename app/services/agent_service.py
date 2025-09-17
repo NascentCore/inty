@@ -714,10 +714,6 @@ def _update_agent_in_db(update_data: dict, db_agent: models.Agent):
         else:
             if db_agent.settings and "llm_config" in db_agent.settings:
                 db_agent.settings.pop("llm_config")
-                # Tell SQLAlchemy that the settings field has been modified
-                from sqlalchemy.orm.attributes import flag_modified
-
-                flag_modified(db_agent, "settings")
 
     if "background_images" in update_data:
         images = update_data.pop("background_images")
@@ -728,7 +724,6 @@ def _update_agent_in_db(update_data: dict, db_agent: models.Agent):
             if image not in existing_images:
                 existing_images.append(image)
         db_agent.background_images = existing_images
-        flag_modified(db_agent, "background_images")
 
     # 更新其他字段
     for field, value in update_data.items():
@@ -752,6 +747,20 @@ async def update_agent(
         update_data = process_agent_image_urls(update_data)
 
         _update_agent_in_db(update_data, db_agent)
+
+        # 确保在异步上下文中调用 flag_modified
+        # 在 _update_agent_in_db() 调用 flag_modified 会报 MissingGreenlet 错误
+        # 这里的两个数据强制更新，实际上并不一定需要。
+        # TODO：使用正确的差异检测函数来避免修改没有更改的值。
+        from sqlalchemy.orm.attributes import flag_modified
+
+        if hasattr(db_agent, "settings") and db_agent.settings is not None:
+            flag_modified(db_agent, "settings")
+        if (
+            hasattr(db_agent, "background_images")
+            and db_agent.background_images is not None
+        ):
+            flag_modified(db_agent, "background_images")
 
         await db.commit()
         await db.refresh(db_agent)

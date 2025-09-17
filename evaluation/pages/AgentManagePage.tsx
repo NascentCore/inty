@@ -38,6 +38,7 @@ import VoiceSelector from "../components/common/VoiceSelector";
 import { useAgents } from "../hooks/useAgents";
 import AgentInfoDisplay from "../components/common/AgentInfoDisplay";
 import { generateRandomName } from "../utils/nameGenerator";
+import { hasAgentChanged, getAgentDifferences } from "../utils/agentComparison";
 import ImageCropModal from "../components/common/ImageCropModal";
 import AvatarDisplay from "../components/common/AvatarDisplay";
 
@@ -80,8 +81,42 @@ export const AgentManagePage: React.FC = () => {
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string>("");
   const [editAvatarFile, setEditAvatarFile] = useState<File | null>(null);
-  const [editAvatarPreview, setEditAvatarPreview] = useState<string>("");
+  const [agentCopy, setAgentCopy] = useState<Agent | null>(null);
 
+
+  // 检查是否有变化
+  const hasChanges = hasAgentChanged(currentAgent, agentCopy);
+
+  // 开发环境下显示具体差异（用于调试）
+  if (hasChanges) {
+    const differences = getAgentDifferences(currentAgent, agentCopy);
+    console.log('🔄 Agent changes detected:', differences);
+    console.log('📊 Change summary:', {
+      hasChanges,
+      originalAgent: currentAgent?.name,
+      copyAgent: agentCopy?.name,
+      changedFields: differences ? Object.keys(differences) : []
+    });
+  }
+
+  // 监听表单变化，更新 agent_copy
+  const handleFormChange = (changedValues: Record<string, unknown>, allValues: Record<string, unknown>) => {
+    if (!agentCopy) return;
+
+    setAgentCopy({
+      ...agentCopy,
+      ...changedValues,
+      // 处理 LLM 配置
+      llm_config: allValues.modelType === "custom" ? {
+        model: (allValues.model as string) || "gpt-4o",
+        temperature: (allValues.temperature as number) || 0.7,
+        max_tokens: (allValues.max_tokens as number) || 2048,
+        top_p: (allValues.top_p as number) || 1,
+        frequency_penalty: (allValues.frequency_penalty as number) || 0,
+        presence_penalty: (allValues.presence_penalty as number) || 0,
+      } : null
+    });
+  };
 
   // 修改头像弹窗状态
   const [avatarCropModalVisible, setAvatarCropModalVisible] = useState(false);
@@ -197,7 +232,20 @@ export const AgentManagePage: React.FC = () => {
     setEditAvatarFile(file);
     const reader = new FileReader();
     reader.onload = (e) => {
-      setEditAvatarPreview(e.target?.result as string);
+      const imageUrl = e.target?.result as string;
+
+      // 更新 agent_copy：清空 avatar 和 avatar_crop，设置 background 为新图片
+      if (agentCopy) {
+        setAgentCopy({
+          ...agentCopy,
+          avatar: undefined, // 清空 avatar
+          background: imageUrl, // 设置 background 为新图片
+          extensions: {
+            ...agentCopy.extensions,
+            avatar_crop: undefined // 清空 avatar_crop
+          }
+        });
+      }
     };
     reader.readAsDataURL(file);
     return false;
@@ -389,9 +437,9 @@ export const AgentManagePage: React.FC = () => {
       message.success("智能体更新成功");
       setEditModalVisible(false);
       setCurrentAgent(null);
+      setAgentCopy(null);
       editForm.resetFields();
       setEditAvatarFile(null);
-      setEditAvatarPreview("");
       loadAgents();
     } catch (error) {
 
@@ -448,7 +496,11 @@ export const AgentManagePage: React.FC = () => {
   // 显示编辑模态框
   const showEditModal = (agent: Agent) => {
     setCurrentAgent(agent);
-    setEditAvatarPreview(""); // 重置为空，这样初次进入时会使用 currentAgent 的数据
+    // 深拷贝 agent 数据到 agent_copy
+    setAgentCopy({
+      ...agent,
+      extensions: agent.extensions ? { ...agent.extensions } : undefined
+    });
 
     // 预填表单 - 使用 setTimeout 确保 Modal 完全渲染后再设置表单值
     setTimeout(() => {
@@ -524,13 +576,9 @@ export const AgentManagePage: React.FC = () => {
               overflow: "hidden",
             }}
           >
-            {(isEdit ? (editAvatarPreview || currentAgent?.background || currentAgent?.avatar) : avatarPreview) ? (
+              {(isEdit ? agentCopy : avatarPreview) ? (
                 <AvatarDisplay
-                  agent={isEdit ? {
-                    ...currentAgent!,
-                    // 如果有新上传的图片预览，将其作为 background
-                    ...(editAvatarPreview ? { background: editAvatarPreview } : {})
-                  } : {
+                  agent={isEdit ? agentCopy! : {
                     ...currentAgent,
                     avatar: avatarPreview,
                     background: avatarPreview
@@ -933,15 +981,18 @@ export const AgentManagePage: React.FC = () => {
         onCancel={() => {
           setEditModalVisible(false);
           setCurrentAgent(null);
+          setAgentCopy(null);
           editForm.resetFields();
           setEditAvatarFile(null);
-          setEditAvatarPreview("");
         }}
         confirmLoading={saveLoading}
+        okButtonProps={{
+          disabled: !hasChanges || saveLoading
+        }}
         width={800}
         destroyOnHidden
       >
-        <Form form={editForm} layout="vertical" preserve={true}>
+        <Form form={editForm} layout="vertical" preserve={true} onValuesChange={handleFormChange}>
           {renderAgentForm(editForm, true)}
         </Form>
       </Modal>
