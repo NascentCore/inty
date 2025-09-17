@@ -51,6 +51,7 @@ export const AvatarDisplay: React.FC<AvatarDisplayProps> = ({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
+          margin: '0 auto', // 在父容器水平居中
           ...style
         }}
       >

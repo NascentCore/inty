@@ -40,6 +40,7 @@ import api from "../services/api";
 import type { Agent } from "../types";
 import VoicePlayer from "../components/common/VoicePlayer";
 import { PremiumModeToggle } from "../components/common/PremiumModeToggle";
+import { AvatarDisplay } from "../components/common/AvatarDisplay";
 
 const { Content } = Layout;
 const { Text, Paragraph } = Typography;
@@ -828,15 +829,9 @@ export const ChatPage: React.FC = () => {
                       >
                         <List.Item.Meta
                           avatar={
-                            <Avatar
-                              src={agent.avatar}
-                              icon={<RobotOutlined />}
-                              style={{
-                                backgroundColor:
-                                  selectedAgent?.id === agent.id
-                                    ? "#52c41a"
-                                    : "#1890ff",
-                              }}
+                            <AvatarDisplay
+                              agent={agent}
+                              size={40}
                             />
                           }
                           title={
@@ -893,9 +888,9 @@ export const ChatPage: React.FC = () => {
               <Card
                 title={
                   <Space>
-                    <Avatar
-                      src={selectedAgent.avatar}
-                      icon={<RobotOutlined />}
+                    <AvatarDisplay
+                      agent={selectedAgent}
+                      size={32}
                     />
                     <div>
                       <Text strong>{selectedAgent.name}</Text>
@@ -1022,28 +1017,24 @@ export const ChatPage: React.FC = () => {
                               gap: "8px",
                             }}
                           >
-                            <Avatar
-                              size="small"
-                              icon={
-                                message.role === "user" ? (
-                                  <UserOutlined />
-                                ) : (
-                                  <RobotOutlined />
-                                )
-                              }
-                              src={
-                                message.role === "assistant"
-                                  ? selectedAgent.avatar
-                                  : undefined
-                              }
-                              style={{
-                                backgroundColor:
-                                  message.role === "user"
-                                    ? "#1890ff"
-                                    : "#52c41a",
-                                flexShrink: 0,
-                              }}
-                            />
+                            {message.role === "user" ? (
+                              <Avatar
+                                size="small"
+                                icon={<UserOutlined />}
+                                style={{
+                                  backgroundColor: "#1890ff",
+                                  flexShrink: 0,
+                                }}
+                              />
+                            ) : (
+                                <AvatarDisplay
+                                  agent={selectedAgent}
+                                  size={24}
+                                  style={{
+                                    flexShrink: 0,
+                                  }}
+                                />
+                            )}
                             <div
                               style={{
                                 backgroundColor:
@@ -1298,12 +1289,19 @@ export const ChatPage: React.FC = () => {
                     <List.Item key={message.id}>
                       <List.Item.Meta
                         avatar={
-                          <Avatar
-                            icon={message.role === "user" ? <UserOutlined /> : <RobotOutlined />}
-                            style={{
-                              backgroundColor: message.role === "user" ? "#1890ff" : "#52c41a"
-                            }}
-                          />
+                          message.role === "user" ? (
+                            <Avatar
+                              icon={<UserOutlined />}
+                              style={{
+                                backgroundColor: "#1890ff"
+                              }}
+                            />
+                          ) : (
+                            <AvatarDisplay
+                              agent={selectedAgent}
+                              size={32}
+                            />
+                          )
                         }
                         title={
                           <Space>
