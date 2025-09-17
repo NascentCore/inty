@@ -9,8 +9,8 @@ import com.ai.inty.base.BaseActivityViewModel
 import com.ai.inty.base.ToastUtils
 import com.ai.inty.beans.UserProfile
 import com.ai.inty.net.IUserApi
-import com.ai.inty.net.IUserApi2
 import com.ai.inty.ui.components.EditKey
+import com.ai.inty.utils.IntyUserProfileSDK
 import com.ai.inty.utils.UserProfileManager
 import com.architecture.httplib.core.HttpResult
 import com.therouter.TheRouter
@@ -92,23 +92,15 @@ class MySettingViewModel : BaseActivityViewModel() {
                 }
             }
 
-            val userApi2 by lazy {
-                TheRouter.get(IUserApi2::class.java)
-                    ?: throw IllegalStateException("IUserApi2 not found in TheRouter")
-            }
-            val result2 = userApi2.setUserProfile(_userProfile.value)
-//            EasyLog.log("set user profile = $result2")
-            when (result2) {
-                is HttpResult.Success -> {
-                    // Show success toast for profile update
-                    viewModelScope.launch(Dispatchers.Main) {
-                        ToastUtils.showToast(R.string.saved_successfully)
-                        UserProfileManager.saveUserProfile(_userProfile.value)
-                    }
+            val updatedProfile = IntyUserProfileSDK.updateUserProfile(_userProfile.value)
+            if (updatedProfile != null) {
+                // Show success toast for profile update
+                viewModelScope.launch(Dispatchers.Main) {
+                    ToastUtils.showToast(R.string.saved_successfully)
+                    UserProfileManager.saveUserProfile(updatedProfile)
                 }
-                is HttpResult.Failure -> {
-                    showNetworkAwareError(result2.message)
-                }
+            } else {
+                showNetworkAwareError("Failed to update user profile")
             }
 
             TheRouter.build(Constant.ACTION_USER_PROFILE_CHANGED).action()

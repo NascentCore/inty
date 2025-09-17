@@ -1,7 +1,5 @@
 package com.ai.inty.net
 
-import com.ai.inty.beans.CreateGuestReq
-import com.ai.inty.beans.CreateGuestResult
 import com.ai.inty.beans.GoogleLoginRequest
 import com.ai.inty.beans.GoogleLoginResponse
 import com.ai.inty.beans.SysMsgResponse
@@ -21,8 +19,6 @@ import retrofit2.http.Query
 
 @Singleton
 interface IUserApi {
-    @POST("/api/v1/auth/guest")
-    suspend fun createGuest(@Body req: CreateGuestReq): HttpResult<CreateGuestResult>
 
     @POST("/api/v1/auth/google/login")
     suspend fun loginByGoogle(@Body loginRequest: GoogleLoginRequest): HttpResult<GoogleLoginResponse>

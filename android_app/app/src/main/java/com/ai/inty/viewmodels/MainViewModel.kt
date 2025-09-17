@@ -21,10 +21,10 @@ import com.ai.inty.home.ActivityPageSubTab
 import com.ai.inty.net.IAgentApi
 import com.ai.inty.net.ICommonApi
 import com.ai.inty.net.IUserApi
-import com.ai.inty.net.IUserApi2
 import com.ai.inty.utils.AgentCacheManager
 import com.ai.inty.utils.AppStartupManager
 import com.ai.inty.utils.CredentialManagerHelper.clearCredentialState
+import com.ai.inty.utils.IntyUserProfileSDK
 import com.ai.inty.utils.SystemMessageCacheManager
 import com.ai.inty.utils.UserProfileManager
 import com.architecture.httplib.core.HttpResult
@@ -63,10 +63,6 @@ class MainViewModel : BaseActivityViewModel() {
     private val agentApi: IAgentApi by lazy {
         TheRouter.get(IAgentApi::class.java)
             ?: throw IllegalStateException("IAgentApi not found in TheRouter")
-    }
-    private val userApi2: IUserApi2 by lazy {
-        TheRouter.get(IUserApi2::class.java)
-            ?: throw IllegalStateException("IUserApi2 not found in TheRouter")
     }
 
     private val commonApi: ICommonApi by lazy {
@@ -383,32 +379,15 @@ class MainViewModel : BaseActivityViewModel() {
     fun getUserProfile() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val result = userApi2.getUserProfile()
-                EasyLog.log("getUserProfile result = $result")
-
-                when (result) {
-                    is HttpResult.Success -> {
-                        _userProfile.value = result.data
-                        // 更新本地缓存
-                        UserProfileManager.saveUserProfile(result.data)
-                        EasyLog.log("Updated user profile from server: ${result.data.nickname}")
-                    }
-
-                    is HttpResult.Failure -> {
-                        EasyLog.log(
-                            "getUserProfile failure: ${result.message}",
-                            priority = EasyLog.ERROR
-                        )
-//                        showNetworkAwareError(result.message)
-                    }
+                val userProfile = IntyUserProfileSDK.getUserProfile()
+                if (userProfile != null) {
+                    _userProfile.value = userProfile
+                    // 更新本地缓存
+                    UserProfileManager.saveUserProfile(userProfile)
+                    EasyLog.log("Updated user profile from server: ${userProfile.nickname}")
+                } else {
+                    EasyLog.log("getUserProfile failure: Failed to get user profile", EasyLog.ERROR)
                 }
-            } catch (e: retrofit2.HttpException) {
-                // 专门处理HTTP异常
-                val errorMessage = handleHttpException(e, "user")
-                EasyLog.log(
-                    "getUserProfile HTTP Exception: ${e.code()} - ${e.message()}",
-                    EasyLog.ERROR
-                )
             } catch (e: Exception) {
                 EasyLog.log("getUserProfile exception: ${e.message}", priority = EasyLog.ERROR)
             }

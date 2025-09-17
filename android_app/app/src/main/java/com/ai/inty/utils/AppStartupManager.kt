@@ -4,7 +4,6 @@ import android.content.Context
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.beans.UserProfile
 import com.ai.inty.net.IAgentApi
-import com.ai.inty.net.IUserApi2
 import com.architecture.httplib.core.HttpResult
 import com.inty.utils.log.EasyLog
 import com.inty.utils.storage.IntySetting
@@ -224,23 +223,13 @@ object AppStartupManager {
         }
 
         try {
-            val userApi2: IUserApi2 = TheRouter.get(IUserApi2::class.java)
-                ?: throw IllegalStateException("IUserApi2 not found")
-
-            val result = userApi2.getUserProfile()
-            when (result) {
-                is HttpResult.Success -> {
-                    UserProfileManager.saveUserProfile(result.data)
-                    _cachedUserProfile.value = result.data
-                    EasyLog.log("AppStartupManager - 更新用户信息成功: ${result.data.nickname}")
-                }
-
-                is HttpResult.Failure -> {
-                    EasyLog.log(
-                        "AppStartupManager - 更新用户信息失败: ${result.message}",
-                        EasyLog.WARN
-                    )
-                }
+            val userProfile = IntyUserProfileSDK.getUserProfile()
+            if (userProfile != null) {
+                UserProfileManager.saveUserProfile(userProfile)
+                _cachedUserProfile.value = userProfile
+                EasyLog.log("AppStartupManager - 更新用户信息成功: ${userProfile.nickname}")
+            } else {
+                EasyLog.log("AppStartupManager - 更新用户信息失败", EasyLog.WARN)
             }
         } catch (e: Exception) {
             EasyLog.log("AppStartupManager - 更新用户信息异常: ${e.message}", EasyLog.ERROR)
