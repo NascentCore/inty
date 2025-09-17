@@ -27,19 +27,20 @@ import {
   EditOutlined,
   DeleteOutlined,
   EyeOutlined,
-  RobotOutlined,
   CameraOutlined,
   ReloadOutlined,
 } from "@ant-design/icons";
 import type { UploadProps } from "antd";
 import api, { logError } from "../services/api";
 import modelCacheService from "../services/modelCache";
-import type { Agent, AgentCreateRequest, OpenRouterModel } from "../types";
+import type { Agent, AgentCreateRequest, OpenRouterModel, AvatarCropData } from "../types";
 import LLMConfigForm from "../components/common/LLMConfigForm";
 import VoiceSelector from "../components/common/VoiceSelector";
 import { useAgents } from "../hooks/useAgents";
 import AgentInfoDisplay from "../components/common/AgentInfoDisplay";
 import { generateRandomName } from "../utils/nameGenerator";
+import ImageCropModal from "../components/common/ImageCropModal";
+import AvatarDisplay from "../components/common/AvatarDisplay";
 
 const { TextArea } = Input;
 const { Search } = Input;
@@ -49,7 +50,7 @@ const { Option } = Select;
 
 export const AgentManagePage: React.FC = () => {
   // 使用 useAgents hook
-  const { agents, loading, loadAgents: loadAgentsFromHook } = useAgents({
+  const { agents, loading, loadAgents: loadAgentsFromHook, deleteAgent: deleteAgentFromHook } = useAgents({
     type: "all",
     autoLoad: false, // 手动控制加载
   });
@@ -81,6 +82,13 @@ export const AgentManagePage: React.FC = () => {
   const [avatarPreview, setAvatarPreview] = useState<string>("");
   const [editAvatarFile, setEditAvatarFile] = useState<File | null>(null);
   const [editAvatarPreview, setEditAvatarPreview] = useState<string>("");
+
+
+  // 修改头像弹窗状态
+  const [avatarCropModalVisible, setAvatarCropModalVisible] = useState(false);
+  const [avatarCropImageSrc, setAvatarCropImageSrc] = useState<string>("");
+  const [currentAgentForAvatar, setCurrentAgentForAvatar] = useState<Agent | null>(null);
+
 
   // 模型相关状态
   const [openRouterModels, setOpenRouterModels] = useState<OpenRouterModel[]>(
@@ -123,38 +131,36 @@ export const AgentManagePage: React.FC = () => {
 
   // 监听 agents 变化，应用筛选
   useEffect(() => {
-    if (agents.length > 0) {
-      let filteredAgents = agents || [];
+    let filteredAgents = agents || [];
 
-      // 搜索筛选
-      if (searchText) {
-        filteredAgents = filteredAgents.filter(
-          (agent) =>
-            agent.name.toLowerCase().includes(searchText.toLowerCase()) ||
-            agent.intro?.toLowerCase().includes(searchText.toLowerCase()),
-        );
-      }
-
-      // 可见性筛选
-      if (visibilityFilter !== "all") {
-        filteredAgents = filteredAgents.filter(
-          (agent) => agent.visibility === visibilityFilter.toUpperCase(),
-        );
-      }
-
-      // 性别筛选
-      if (genderFilter !== "all") {
-        filteredAgents = filteredAgents.filter(
-          (agent) => agent.gender === genderFilter.toUpperCase(),
-        );
-      }
-
-      setLocalAgents(filteredAgents);
-      setPagination((prev) => ({
-        ...prev,
-        total: filteredAgents.length,
-      }));
+    // 搜索筛选
+    if (searchText) {
+      filteredAgents = filteredAgents.filter(
+        (agent) =>
+          agent.name.toLowerCase().includes(searchText.toLowerCase()) ||
+          agent.intro?.toLowerCase().includes(searchText.toLowerCase()),
+      );
     }
+
+    // 可见性筛选
+    if (visibilityFilter !== "all") {
+      filteredAgents = filteredAgents.filter(
+        (agent) => agent.visibility === visibilityFilter.toUpperCase(),
+      );
+    }
+
+    // 性别筛选
+    if (genderFilter !== "all") {
+      filteredAgents = filteredAgents.filter(
+        (agent) => agent.gender === genderFilter.toUpperCase(),
+      );
+    }
+
+    setLocalAgents(filteredAgents);
+    setPagination((prev) => ({
+      ...prev,
+      total: filteredAgents.length,
+    }));
   }, [agents, searchText, visibilityFilter, genderFilter]);
 
   useEffect(() => {
@@ -162,7 +168,7 @@ export const AgentManagePage: React.FC = () => {
     loadModels(); // 加载模型列表
   }, [loadAgents, loadModels]);
 
-  // 处理头像上传
+  // 处理头像上传（创建模式，不截取）
   const handleAvatarChange: UploadProps["beforeUpload"] = (file) => {
     const isImage = file.type.startsWith("image/");
     if (!isImage) {
@@ -173,13 +179,15 @@ export const AgentManagePage: React.FC = () => {
     setAvatarFile(file);
     const reader = new FileReader();
     reader.onload = (e) => {
-      setAvatarPreview(e.target?.result as string);
+      const result = e.target?.result as string;
+      setAvatarPreview(result);
+
     };
     reader.readAsDataURL(file);
     return false;
   };
 
-  // 处理编辑头像上传
+  // 处理编辑头像上传（编辑模式，直接上传）
   const handleEditAvatarChange: UploadProps["beforeUpload"] = (file) => {
     const isImage = file.type.startsWith("image/");
     if (!isImage) {
@@ -196,6 +204,62 @@ export const AgentManagePage: React.FC = () => {
     return false;
   };
 
+
+
+  // 处理修改头像截取
+  const handleAvatarCrop = (agent: Agent) => {
+    // 检查是否有背景图
+    if (!agent.background_images || agent.background_images.length === 0) {
+      message.warning("该角色没有背景图，无法修改头像");
+      return;
+    }
+
+    // 使用第一张背景图作为截取源头
+    const backgroundImage = agent.background_images[0];
+    setCurrentAgentForAvatar(agent);
+    setAvatarCropImageSrc(backgroundImage);
+    setAvatarCropModalVisible(true);
+  };
+
+  // 处理头像截取确认
+  const handleAvatarCropConfirm = async (cropData: AvatarCropData) => {
+    if (!currentAgentForAvatar) return;
+
+    try {
+      // 更新智能体头像坐标信息
+      const updateData = {
+        extensions: {
+          avatar_crop: cropData
+        }
+      };
+
+      const updatedAgent = await api.inty.api.v1.ai.agents.update(currentAgentForAvatar.id, updateData) as unknown as Agent;
+      if (updatedAgent) {
+        message.success("头像坐标设置成功");
+        // 刷新智能体列表
+        loadAgents();
+      } else {
+        message.error("头像坐标设置失败");
+      }
+    } catch (error) {
+      logError("设置头像坐标失败");
+      console.error("设置头像坐标失败:", error);
+      message.error("设置头像坐标失败，请重试");
+    } finally {
+      // 关闭弹窗并重置状态
+      setAvatarCropModalVisible(false);
+      setAvatarCropImageSrc("");
+      setCurrentAgentForAvatar(null);
+    }
+  };
+
+  // 处理头像截取取消
+  const handleAvatarCropCancel = () => {
+    setAvatarCropModalVisible(false);
+    setAvatarCropImageSrc("");
+    setCurrentAgentForAvatar(null);
+  };
+
   // 创建智能体
   const handleCreateAgent = async () => {
     try {
@@ -207,7 +271,7 @@ export const AgentManagePage: React.FC = () => {
       let backgroundUrl = "";
       let backgroundImages: string[] = [];
 
-      // 如果有头像文件，先上传
+      // 如果有头像文件，先上传（创建模式，不截取）
       if (avatarFile) {
         try {
           const uploadResult = await api.inty.api.v1.uploadImage({ file: avatarFile, cropping_avatar: true }); // Enable cropping for avatar
@@ -297,6 +361,14 @@ export const AgentManagePage: React.FC = () => {
         voice_id: values.voice_id,
       };
 
+      // 如果有新头像文件，清理旧的avatar_crop数据，让组件使用新的avatar字段
+      if (editAvatarFile) {
+        updateData.extensions = {
+          ...currentAgent.extensions,
+          avatar_crop: null, // 清理旧的截取数据
+        };
+      }
+
       // 如果选择了自定义模型，添加LLM配置
       if (values.modelType === "custom") {
         updateData.llm_config = {
@@ -333,9 +405,11 @@ export const AgentManagePage: React.FC = () => {
   // 删除智能体
   const handleDeleteAgent = async (agent: Agent) => {
     try {
-      await api.inty.api.v1.ai.agents.delete(agent.id);
-      message.success("智能体删除成功");
-      loadAgents();
+      const success = await deleteAgentFromHook(agent.id);
+      if (success) {
+        // 删除成功后，重新加载列表以确保数据同步
+        loadAgents();
+      }
     } catch (error) {
       console.error("删除智能体失败:", error);
       message.error("删除智能体失败，请重试");
@@ -432,7 +506,7 @@ export const AgentManagePage: React.FC = () => {
     return (
     <>
       {/* 头像上传 */}
-      <Form.Item label="形像">
+        <Form.Item label="形象">
         <Upload
           beforeUpload={isEdit ? handleEditAvatarChange : handleAvatarChange}
           showUploadList={false}
@@ -452,27 +526,25 @@ export const AgentManagePage: React.FC = () => {
             }}
           >
             {(isEdit ? editAvatarPreview : avatarPreview) ? (
-              <img
+                <Avatar
+                  size={80}
                 src={isEdit ? editAvatarPreview : avatarPreview}
-                alt="avatar"
-                style={{ width: "100%", height: "100%", objectFit: "contain" }}
+                  icon={<CameraOutlined />}
               />
             ) : (
               <div style={{ textAlign: "center" }}>
                 <CameraOutlined style={{ fontSize: 20, color: "#999" }} />
                 <div style={{ marginTop: 4, fontSize: 12, color: "#999" }}>
-                  上传形像图
+                      上传形象图
                 </div>
               </div>
             )}
           </div>
         </Upload>
         <div style={{ marginTop: 8, fontSize: 12, color: "#666" }}>
-          上传头像后，系统会自动设置背景图为原图，头像为裁剪后的版本
+            头像将在后端从上传的形象图片截取
         </div>
       </Form.Item>
-
-
 
       {/* 基本信息 */}
       <Row gutter={16}>
@@ -679,10 +751,9 @@ export const AgentManagePage: React.FC = () => {
                       hoverable
                       cover={
                         <div style={{ padding: 16, textAlign: "center" }}>
-                          <Avatar
+                          <AvatarDisplay
+                            agent={agent}
                             size={64}
-                            src={agent.avatar}
-                            icon={<RobotOutlined />}
                           />
                         </div>
                       }
@@ -699,6 +770,13 @@ export const AgentManagePage: React.FC = () => {
                             type="text"
                             icon={<EditOutlined />}
                             onClick={() => showEditModal(agent)}
+                          />
+                        </Tooltip>,
+                        <Tooltip key="avatar" title="修改头像">
+                          <Button
+                            type="text"
+                            icon={<CameraOutlined />}
+                            onClick={() => handleAvatarCrop(agent)}
                           />
                         </Tooltip>,
                         <Popconfirm
@@ -891,6 +969,17 @@ export const AgentManagePage: React.FC = () => {
           <AgentInfoDisplay agent={currentAgent} />
         )}
       </Modal>
+
+
+      {/* 修改头像截取模态框 */}
+      <ImageCropModal
+        visible={avatarCropModalVisible}
+        imageSrc={avatarCropImageSrc}
+        onCancel={handleAvatarCropCancel}
+        onConfirm={handleAvatarCropConfirm}
+        title="修改头像"
+        existingCropData={currentAgentForAvatar?.extensions?.avatar_crop as AvatarCropData | undefined}
+      />
     </div>
   );
 };
