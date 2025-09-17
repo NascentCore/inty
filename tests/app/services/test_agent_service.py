@@ -1,18 +1,16 @@
 import io
+from unittest.mock import patch
+
 import pytest
-
-from PIL import Image
-
 from google.cloud import storage
+from loguru import logger
+from PIL import Image
 
 from app import models
 from app.core.config import global_config_loaded_from_config_yaml
-from app.services.agent_service import _crop_avatar_from_background
-from app.utils.gcs import download_from_gcs, get_bucket_and_path_from_gcs_url
 from app.schemas.agent import AgentUpdate, ModelConfig
-from app.services.agent_service import _update_agent_in_db
-
-from loguru import logger
+from app.services.agent_service import _crop_avatar_from_background, _update_agent_in_db
+from app.utils.gcs import download_from_gcs, get_bucket_and_path_from_gcs_url
 
 
 @pytest.mark.asyncio
@@ -59,7 +57,9 @@ def test_update_agent_in_db():
         ),
     )
 
-    _update_agent_in_db(agent_update, agent_in_db)
+    # Convert AgentUpdate to dict for the updated function signature
+    update_data = agent_update.model_dump(exclude_unset=True)
+    _update_agent_in_db(update_data, agent_in_db)
 
     # Verify agent attributes were updated
     agent_in_db_dict = {
@@ -80,7 +80,9 @@ def test_update_agent_in_db():
 
     agent_update = AgentUpdate(llm_config=None)
 
-    _update_agent_in_db(agent_update, agent_in_db)
+    # Convert AgentUpdate to dict for the updated function signature
+    update_data = agent_update.model_dump(exclude_unset=True)
+    _update_agent_in_db(update_data, agent_in_db)
 
     # Verify agent attributes were updated
     agent_in_db_dict = {
@@ -93,3 +95,38 @@ def test_update_agent_in_db():
             "existing_setting": "value",
         },
     }, "llm_config should be removed"
+
+
+def test_process_agent_image_urls():
+    """Test process_agent_image_urls function with valid URLs"""
+    from app.services.agent_service import process_agent_image_urls
+
+    # Test with valid URLs
+    agent_data = {
+        "name": "Test Agent",
+        "avatar": "https://storage.googleapis.com/test-bucket/avatar.jpg",
+        "background": "https://storage.googleapis.com/test-bucket/background.jpg",
+        "background_images": [
+            "https://storage.googleapis.com/test-bucket/photo1.jpg",
+            "https://storage.googleapis.com/test-bucket/photo2.jpg",
+        ],
+    }
+
+    # Mock the is_valid_gcs_url function to return True for all URLs
+    with patch("app.utils.gcs.is_valid_gcs_url", return_value=True):
+        result = process_agent_image_urls(agent_data)
+
+        # Verify that all image URLs are collected in background_images
+        assert result["background_images"] == [
+            "https://storage.googleapis.com/test-bucket/avatar.jpg",
+            "https://storage.googleapis.com/test-bucket/background.jpg",
+            "https://storage.googleapis.com/test-bucket/photo1.jpg",
+            "https://storage.googleapis.com/test-bucket/photo2.jpg",
+        ]
+        assert (
+            result["avatar"] == "https://storage.googleapis.com/test-bucket/avatar.jpg"
+        )
+        assert (
+            result["background"]
+            == "https://storage.googleapis.com/test-bucket/background.jpg"
+        )
