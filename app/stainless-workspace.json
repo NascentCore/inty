@@ -4,13 +4,13 @@
   "stainless_config": "./stainless.yml",
   "targets": {
     "kotlin": {
-      "output_path": "./sdks/kotlin"
+      "output_path": "../android_app/library/inty_sdk"
     },
     "python": {
       "output_path": "./sdks/python"
     },
     "typescript": {
-      "output_path": "./sdks/typescript"
+      "output_path": "../evaluation/inty_sdk"
     }
   }
 }
