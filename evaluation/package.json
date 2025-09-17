@@ -20,7 +20,8 @@
     "inty": "file:./inty_sdk",
     "prettier": "^3.6.2",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "react-image-crop": "^11.0.10"
   },
   "devDependencies": {
     "@types/node": "^24.3.0",

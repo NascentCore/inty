@@ -368,3 +368,8 @@ html {
     border: 1px solid #ddd;
   }
 }
+/* Avatar 组件样式 - 头像采用顶部中央对齐 */
+.ant-avatar img {
+  object-fit: cover !important;
+  object-position: center top !important;
+}

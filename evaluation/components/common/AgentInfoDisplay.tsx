@@ -4,11 +4,11 @@
  */
 
 import React from "react";
-import { Card, Row, Col, Avatar, Tag, Typography } from "antd";
+import { Card, Row, Col, Avatar, Tag } from "antd";
 import { RobotOutlined } from "@ant-design/icons";
-import type { Agent } from "../../types";
-
-const { Text } = Typography;
+import type { Agent, AvatarCropData } from "../../types";
+import { AvatarDisplay } from "./AvatarDisplay";
+import { BackgroundWithCropOverlay } from "./BackgroundWithCropOverlay";
 
 interface AgentInfoDisplayProps {
   agent: Agent;
@@ -25,14 +25,20 @@ export const AgentInfoDisplay: React.FC<AgentInfoDisplayProps> = ({
   showLLMConfig = true,
   compact = false,
 }) => {
+  // 统一的图片样式
+  const imageStyle = {
+    width: "100%",
+    maxWidth: 120,
+    height: "auto",
+    objectFit: "contain", // 保持原始长宽比，完整显示图片
+  };
   const renderBasicInfo = () => (
     <Card size="small" title="基本信息" style={{ marginBottom: 16 }}>
       <Row gutter={[16, 16]} align="middle">
         <Col span={compact ? 8 : 6} style={{ textAlign: "center" }}>
-          <Avatar
+          <AvatarDisplay
+            agent={agent}
             size={compact ? 60 : 80}
-            src={agent.avatar}
-            icon={<RobotOutlined />}
           />
           <div style={{ marginTop: 8 }}>
             <Tag
@@ -66,7 +72,7 @@ export const AgentInfoDisplay: React.FC<AgentInfoDisplayProps> = ({
             <strong>开场白:</strong> {agent.opening || "无"}
           </p>
           <p>
-            <strong>描述:</strong> {agent.description || "无"}
+            <strong>背景设定:</strong> {agent.scenario || "无"}
           </p>
           <p>
             <strong>创建时间:</strong>{" "}
@@ -160,12 +166,7 @@ export const AgentInfoDisplay: React.FC<AgentInfoDisplayProps> = ({
               <img
                 src={agent.avatar}
                 alt="avatar"
-                style={{
-                  width: "100%",
-                  maxWidth: 120,
-                  height: "auto",
-                  borderRadius: 8,
-                }}
+                style={imageStyle}
               />
             ) : (
               <span style={{ color: "#999" }}>无</span>
@@ -173,22 +174,13 @@ export const AgentInfoDisplay: React.FC<AgentInfoDisplayProps> = ({
           </Col>
           <Col span={12}>
             <p>
-              <strong>背景图:</strong>
+              <strong>背景图及截取头像效果:</strong>
             </p>
-            {agent.background ? (
-              <img
-                src={agent.background}
-                alt="background"
-                style={{
-                  width: "100%",
-                  maxWidth: 120,
-                  height: "auto",
-                  borderRadius: 8,
-                }}
-              />
-            ) : (
-              <span style={{ color: "#999" }}>无</span>
-            )}
+            <BackgroundWithCropOverlay
+              agent={agent}
+              style={imageStyle}
+              showCropOverlay={true}
+            />
           </Col>
         </Row>
         {agent.background_images && agent.background_images.length > 0 && (
@@ -202,14 +194,7 @@ export const AgentInfoDisplay: React.FC<AgentInfoDisplayProps> = ({
                   key={index}
                   src={img}
                   alt={`background-${index}`}
-                  style={{
-                    width: 80,
-                    height: 80,
-                    objectFit: "contain",
-                    borderRadius: 6,
-                    backgroundColor: "#f5f5f5",
-                    border: "1px solid #e8e8e8",
-                  }}
+                  style={imageStyle}
                 />
               ))}
             </div>

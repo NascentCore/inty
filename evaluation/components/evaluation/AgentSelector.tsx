@@ -30,6 +30,7 @@ import {
   ReloadOutlined,
 } from "@ant-design/icons";
 import { useAgents } from "../../hooks/useAgents";
+import { AvatarDisplay } from "../common/AvatarDisplay";
 
 const { Search } = Input;
 const { Option } = Select;
@@ -279,12 +280,10 @@ export const AgentSelector: React.FC<AgentSelectorProps> = ({
               >
                 <List.Item.Meta
                   avatar={
-                    <Avatar
+                    <AvatarDisplay
+                      agent={agent}
                       size={48}
-                      src={agent.avatar}
-                      icon={<UserOutlined />}
                       style={{
-                        backgroundColor: isSelected ? "#52c41a" : "#1890ff",
                         border: isSelected ? "2px solid #52c41a" : "none",
                       }}
                     />

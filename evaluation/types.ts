@@ -1,24 +1,16 @@
 // 智能体管理系统类型定义
 
-// 基础智能体接口
-export interface Agent {
-  id: string;
-  name: string;
-  gender: "MALE" | "FEMALE" | "OTHER";
-  intro?: string;
-  opening?: string;
-  visibility: "PUBLIC" | "PRIVATE";
-  main_prompt?: string;
-  personality?: string;
-  mode_prompt?: string;
-  avatar?: string;
-  background?: string;
-  background_images?: string[];
-  description?: string;
-  voice_id?: string;
-  created_at?: string;
-  updated_at?: string;
-  llm_config?: LLMConfig;
+// 从 SDK 导入 Agent 类型
+export type { Agent, AgentVisibility } from 'inty_sdk/src/resources/api/v1/ai/agents';
+
+// 头像截取坐标信息类型
+export interface AvatarCropData {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  imageWidth: number;
+  imageHeight: number;
 }
 
 // LLM 配置
