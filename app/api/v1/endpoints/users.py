@@ -31,7 +31,7 @@ from app.services.global_services import subscription_service
 router = APIRouter(prefix="/users", route_class=LoggerRoute)
 
 
-@router.get("/profile", response_model=User)
+@router.get("/profile", response_model=APIResponse[User])
 async def get_profile(
     current_user: User = Depends(deps.get_current_active_user),
     db: AsyncSession = Depends(get_async_db),
@@ -65,7 +65,7 @@ async def get_profile(
         "connector_count": connector_count,
     }
 
-    return User(**user_dict)
+    return APIResponse.success(data=User(**user_dict))
 
 
 @router.put("/profile", response_model=User)

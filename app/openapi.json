@@ -109,7 +109,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/User"
+                                    "$ref": "#/components/schemas/APIResponse_User_"
                                 }
                             }
                         }
@@ -2654,6 +2654,32 @@
                 },
                 "type": "object",
                 "title": "APIResponse[UsageStatisticsResponse]"
+            },
+            "APIResponse_User_": {
+                "properties": {
+                    "code": {
+                        "type": "integer",
+                        "title": "Code",
+                        "default": 200
+                    },
+                    "message": {
+                        "type": "string",
+                        "title": "Message",
+                        "default": "success"
+                    },
+                    "data": {
+                        "anyOf": [
+                            {
+                                "$ref": "#/components/schemas/User"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
+                    }
+                },
+                "type": "object",
+                "title": "APIResponse[User]"
             },
             "APIResponse_VersionCheckResponse_": {
                 "properties": {
