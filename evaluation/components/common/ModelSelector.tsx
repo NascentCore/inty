@@ -8,7 +8,7 @@ const { Option } = Select;
 interface ModelSelectorProps {
     name?: string;
     label?: string;
-    rules?: any[];
+    rules?: Array<{ required?: boolean; message?: string;[key: string]: unknown }>;
     value?: string;
     onChange?: (value: string) => void;
     models: OpenRouterModel[];
@@ -34,9 +34,6 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
     disabled = false,
     initialValue,
 }) => {
-    // 添加调试日志
-    console.log(`ModelSelector render - name: ${name}, value: ${value}, initialValue: ${initialValue}, models count: ${models.length}`);
-
     // 获取表单实例
     const form = Form.useFormInstance();
 
@@ -55,14 +52,12 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
                     showSearch
                     value={value}
                     onChange={(val) => {
-                        console.log(`ModelSelector onChange - name: ${name}, old value: ${value}, new value: ${val}`);
                         // 确保表单字段值被正确更新
                         if (onChange) {
                             onChange(val);
                         }
                         // 如果是在Form内部使用，还需要手动更新表单字段
                         if (!onChange && name && form) {
-                            console.log(`手动更新表单字段 ${name} 为: ${val}`);
                             form.setFieldValue(name, val);
                         }
                     }}

@@ -10,6 +10,7 @@ interface LLMConfigFormProps {
     showModelType?: boolean;
     showAdvancedParams?: boolean;
     disabled?: boolean;
+    onValuesChange?: (changedValues: Record<string, unknown>, allValues: Record<string, unknown>) => void;
 }
 
 export const LLMConfigForm: React.FC<LLMConfigFormProps> = ({
@@ -19,7 +20,11 @@ export const LLMConfigForm: React.FC<LLMConfigFormProps> = ({
     showModelType = true,
     showAdvancedParams = true,
     disabled = false,
+    onValuesChange,
 }) => {
+    // 在组件顶层获取表单实例
+    const form = Form.useFormInstance();
+
     return (
         <>
             {showModelType && (
@@ -42,15 +47,13 @@ export const LLMConfigForm: React.FC<LLMConfigFormProps> = ({
             <Form.Item
                 noStyle
                 shouldUpdate={(prevValues, currentValues) =>
-                    prevValues.modelType !== currentValues.modelType || prevValues.model !== currentValues.model
+                    prevValues.modelType !== currentValues.modelType
                 }
             >
                 {({ getFieldValue, setFieldValue }) => {
                     // 当 modelType 变为 "custom" 时，自动设置默认模型
                     const currentModelType = getFieldValue("modelType");
                     const currentModel = getFieldValue("model");
-
-                    console.log("LLMConfigForm render - modelType:", currentModelType, "model:", currentModel, "models count:", models.length);
 
                     // 只在真正需要时才自动设置默认模型
                     // 避免覆盖用户已经选择的值
@@ -59,12 +62,9 @@ export const LLMConfigForm: React.FC<LLMConfigFormProps> = ({
                         const hasUserSelection = currentModel && currentModel !== "";
 
                         if (!hasUserSelection) {
-                            console.log("检测到新选择自定义模型且没有现有值，自动设置默认模型:", models[0].id);
                             setTimeout(() => {
                                 setFieldValue("model", models[0].id);
                             }, 0);
-                        } else {
-                            console.log("用户已经选择了模型，不自动覆盖:", currentModel);
                         }
                     }
 
@@ -77,6 +77,14 @@ export const LLMConfigForm: React.FC<LLMConfigFormProps> = ({
                                 onRefresh={onRefresh}
                                 disabled={disabled}
                                 value={currentModel}  // 显式传递当前值
+                                onChange={(value) => {
+                                    setFieldValue("model", value);
+                                    // 手动触发表单的 onValuesChange 事件
+                                    if (onValuesChange) {
+                                        const allValues = form.getFieldsValue();
+                                        onValuesChange({ model: value }, allValues);
+                                    }
+                                }}
                             />
 
                             {showAdvancedParams && (

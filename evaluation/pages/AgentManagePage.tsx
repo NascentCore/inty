@@ -38,7 +38,7 @@ import VoiceSelector from "../components/common/VoiceSelector";
 import { useAgents } from "../hooks/useAgents";
 import AgentInfoDisplay from "../components/common/AgentInfoDisplay";
 import { generateRandomName } from "../utils/nameGenerator";
-import { hasAgentChanged, getAgentDifferences } from "../utils/agentComparison";
+import { hasAgentChanged } from "../utils/agentComparison";
 import ImageCropModal from "../components/common/ImageCropModal";
 import AvatarDisplay from "../components/common/AvatarDisplay";
 
@@ -87,35 +87,32 @@ export const AgentManagePage: React.FC = () => {
   // 检查是否有变化
   const hasChanges = hasAgentChanged(currentAgent, agentCopy);
 
-  // 开发环境下显示具体差异（用于调试）
-  if (hasChanges) {
-    const differences = getAgentDifferences(currentAgent, agentCopy);
-    console.log('🔄 Agent changes detected:', differences);
-    console.log('📊 Change summary:', {
-      hasChanges,
-      originalAgent: currentAgent?.name,
-      copyAgent: agentCopy?.name,
-      changedFields: differences ? Object.keys(differences) : []
-    });
-  }
 
   // 监听表单变化，更新 agent_copy
   const handleFormChange = (changedValues: Record<string, unknown>, allValues: Record<string, unknown>) => {
     if (!agentCopy) return;
 
-    setAgentCopy({
+    // 构建新的 agent_copy
+    const newAgentCopy = {
       ...agentCopy,
       ...changedValues,
-      // 处理 LLM 配置
-      llm_config: allValues.modelType === "custom" ? {
+    };
+
+    // 处理 LLM 配置
+    if (allValues.modelType === "custom") {
+      newAgentCopy.llm_config = {
         model: (allValues.model as string) || "gpt-4o",
         temperature: (allValues.temperature as number) || 0.7,
         max_tokens: (allValues.max_tokens as number) || 2048,
         top_p: (allValues.top_p as number) || 1,
         frequency_penalty: (allValues.frequency_penalty as number) || 0,
         presence_penalty: (allValues.presence_penalty as number) || 0,
-      } : null
-    });
+      };
+    } else {
+      newAgentCopy.llm_config = null;
+    }
+
+    setAgentCopy(newAgentCopy);
   };
 
   // 修改头像弹窗状态
@@ -720,6 +717,7 @@ export const AgentManagePage: React.FC = () => {
         models={openRouterModels}
         loading={modelsLoading}
         onRefresh={handleRefreshModels}
+          onValuesChange={isEdit ? handleFormChange : undefined}
       />
     </>
     );

@@ -299,7 +299,15 @@ async def unfollow_agent(
         return schemas.APIResponse.error(message="Failed to unfollow")
 
 
-@router.put("/{agent_id}", response_model=schemas.Agent)
+@router.put(
+    "/{agent_id}",
+    response_model=schemas.Agent,
+    summary="更新智能体（AI 角色）",
+    description=(
+        "更新任何图片，都会将图片全部记录在 background_images 字段中，用于保存历史记录"
+        "如果没有提供 avatar，则会自动截取头像，并记录在 avatar 字段中"
+    ),
+)
 async def update_agent(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
