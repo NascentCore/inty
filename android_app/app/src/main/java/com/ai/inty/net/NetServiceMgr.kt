@@ -99,7 +99,7 @@ class RetryInterceptor(private val maxRetries: Int = 3) : Interceptor {
                     EasyLog.log("Retry attempt ${attempt + 1} for ${request.url} due to server error ${currentResponse.code}")
                     currentResponse.close()
                     if (attempt < maxRetries - 1) {
-                        Thread.sleep(2000L * (attempt + 1)) // 增加退避时间
+                        Thread.sleep(1000L * (attempt + 1)) // 指数退避
                     }
                 } else {
                     return currentResponse
@@ -108,7 +108,7 @@ class RetryInterceptor(private val maxRetries: Int = 3) : Interceptor {
                 lastException = e
                 EasyLog.log("Retry attempt ${attempt + 1} failed for ${request.url}: ${e.message}")
                 if (attempt < maxRetries - 1) {
-                    Thread.sleep(2000L * (attempt + 1)) // 增加退避时间
+                    Thread.sleep(1000L * (attempt + 1)) // 指数退避
                 }
             }
         }
@@ -215,14 +215,14 @@ object NetServiceMgr {
         get() {
             val authInterceptor = AuthInterceptor()
             val performanceInterceptor = PerformanceInterceptor()
-            val retryInterceptor = RetryInterceptor(maxRetries = 5)
+            val retryInterceptor = RetryInterceptor(maxRetries = 3)
 
             val builder: OkHttpClient.Builder =
                 OkHttpClient.Builder()
                     // 根据构建类型优化超时配置
-                    .connectTimeout(30, TimeUnit.SECONDS)
-                    .writeTimeout(30, TimeUnit.SECONDS)
-                    .readTimeout(60, TimeUnit.SECONDS)
+                    .connectTimeout(15, TimeUnit.SECONDS)
+                    .writeTimeout(15, TimeUnit.SECONDS)
+                    .readTimeout(30, TimeUnit.SECONDS)
                     // 连接池配置
                     .connectionPool(ConnectionPool(5, 5, TimeUnit.MINUTES))
                     // DNS缓存

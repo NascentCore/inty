@@ -1,12 +1,8 @@
 package com.ai.inty.utils
 
 import com.ai.inty.beans.UserProfile
-import com.ai.inty.net.INTY_CLIENT_SUCCESS_CODE
-import com.ai.inty.net.getBaseUrl
-import com.inty.api.client.okhttp.IntyOkHttpClient
-import com.inty.api.models.api.v1.users.profile.ProfileUpdateParams
+import com.ai.inty.netapi.services.UserService
 import com.inty.utils.log.EasyLog
-import com.inty.utils.storage.IntySetting
 import com.inty.api.models.api.v1.users.profile.User as IntyUser
 
 /**
@@ -20,23 +16,23 @@ object IntyUserProfileSDK {
     suspend fun getUserProfile(): UserProfile? {
         return try {
             EasyLog.log("Getting user profile with inty-sdk...")
-            
-            val intyClient = IntyOkHttpClient.builder()
-                .apiKey(IntySetting.getCurToken())
-                .baseUrl(getBaseUrl())
-                .build()
 
-            val response = intyClient.api().v1().users().profile().retrieve()
-            EasyLog.log("getUserProfile result: $response")
+            val result = UserService.getUserProfile()
 
-            if (response.code() == INTY_CLIENT_SUCCESS_CODE) {
-                val intyUser = response.data()!!
-                val userProfile = convertIntyUserToUserProfile(intyUser)
-                EasyLog.log("Updated user profile from inty-sdk: ${userProfile.nickname}")
-                userProfile
-            } else {
-                EasyLog.log("Failed to get user profile with inty-sdk: ${response.message()}", EasyLog.ERROR)
-                null
+            when (result) {
+                is com.ai.inty.netapi.ApiResult.Success -> {
+                    val userProfile = result.data
+                    EasyLog.log("Updated user profile from inty-sdk: ${userProfile.nickname}")
+                    userProfile
+                }
+
+                is com.ai.inty.netapi.ApiResult.Error -> {
+                    EasyLog.log(
+                        "Failed to get user profile with inty-sdk: ${result.message}",
+                        EasyLog.ERROR
+                    )
+                    null
+                }
             }
         } catch (e: Exception) {
             EasyLog.log("Exception getting user profile with inty-sdk: ${e.message}", EasyLog.ERROR)
@@ -50,37 +46,29 @@ object IntyUserProfileSDK {
     suspend fun updateUserProfile(userProfile: UserProfile): UserProfile? {
         return try {
             EasyLog.log("Updating user profile with inty-sdk...")
-            
-            val intyClient = IntyOkHttpClient.builder()
-                .apiKey(IntySetting.getCurToken())
-                .baseUrl(getBaseUrl())
-                .build()
 
-            val updateParams = ProfileUpdateParams.builder()
-                .nickname(userProfile.nickname)
-                .avatar(userProfile.avatar)
-                .description(userProfile.description)
-                .gender(userProfile.gender?.let { 
-                    when (it) {
-                        "MALE" -> com.inty.api.models.api.v1.users.profile.Gender.MALE
-                        "FEMALE" -> com.inty.api.models.api.v1.users.profile.Gender.FEMALE
-                        "OTHER" -> com.inty.api.models.api.v1.users.profile.Gender.OTHER
-                        else -> null
-                    }
-                })
-                .ageGroup(userProfile.ageGroup?.toString())
-                .phone(userProfile.phone)
-                .systemLanguage(userProfile.systemLanguage)
-                .build()
+            val result = UserService.updateUserProfile(userProfile)
 
-            val response = intyClient.api().v1().users().profile().update(updateParams)
-            EasyLog.log("updateUserProfile result: $response")
+            when (result) {
+                is com.ai.inty.netapi.ApiResult.Success -> {
+                    val updatedUserProfile = result.data
+                    EasyLog.log("Updated user profile with inty-sdk: ${updatedUserProfile.nickname}")
+                    updatedUserProfile
+                }
 
-            val updatedUserProfile = convertIntyUserToUserProfile(response)
-            EasyLog.log("Updated user profile with inty-sdk: ${updatedUserProfile.nickname}")
-            updatedUserProfile
+                is com.ai.inty.netapi.ApiResult.Error -> {
+                    EasyLog.log(
+                        "Failed to update user profile with inty-sdk: ${result.message}",
+                        EasyLog.ERROR
+                    )
+                    null
+                }
+            }
         } catch (e: Exception) {
-            EasyLog.log("Exception updating user profile with inty-sdk: ${e.message}", EasyLog.ERROR)
+            EasyLog.log(
+                "Exception updating user profile with inty-sdk: ${e.message}",
+                EasyLog.ERROR
+            )
             null
         }
     }

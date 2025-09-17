@@ -2,15 +2,11 @@ package com.ai.inty.viewmodels
 
 import androidx.lifecycle.viewModelScope
 import com.ai.inty.base.BaseActivityViewModel
-import com.ai.inty.net.INTY_CLIENT_SUCCESS_CODE
 import com.ai.inty.net.IUserApi
-import com.ai.inty.net.getBaseUrl
+import com.ai.inty.netapi.services.AuthService
 import com.ai.inty.utils.AppStartupManager
 import com.ai.inty.utils.IntyUserProfileSDK
 import com.ai.inty.utils.UserProfileManager
-import com.inty.api.client.okhttp.IntyOkHttpClient
-import com.inty.api.models.api.v1.auth.AuthCreateGuestParams
-import com.inty.utils.AppEnv
 import com.inty.utils.log.EasyLog
 import com.inty.utils.storage.IntySetting
 import com.therouter.TheRouter
@@ -74,39 +70,22 @@ class SplashViewModel : BaseActivityViewModel() {
     private suspend fun createGuestWithIntySdk() {
         EasyLog.log("Creating guest account with inty-sdk...")
 
-        // 创建临时 inty client 来创建游客账号
-        // 首次创建游客账户不需要有效的 API key，游客账户创建完成后，
-        // 会设置全局 API key，后续 inty client 会使用全局 API key（还未验证）。
-        //
-        // 已经登录的用户会在本地缓存 API key，后续 inty client 会使用本地缓存的 API key。
-        val intyClient = IntyOkHttpClient.builder()
-            .apiKey("")
-            .baseUrl(getBaseUrl())
-            .build()
+        // 使用封装的 AuthService 创建游客账户
+        val result = AuthService.createGuest()
 
-        try {
-            val response = intyClient.api().v1().auth().createGuest(
-                AuthCreateGuestParams.builder()
-                    .deviceId(AppEnv.DeviceID)
-                    .systemLanguage(AppEnv.locale.language)
-                    .build()
-            )
-            EasyLog.log("createGuestWithIntySdk result: $response")
-
-            if (response.code() == INTY_CLIENT_SUCCESS_CODE) {
-                val data = response.data()!!
-                IntySetting.login(true, data.guestId(), data.token())
-                EasyLog.log("Guest created successfully with inty-sdk: ${data.guestId()}")
+        when (result) {
+            is com.ai.inty.netapi.ApiResult.Success -> {
+                val (guestId, token) = result.data
+                IntySetting.login(true, guestId, token)
+                EasyLog.log("Guest created successfully with inty-sdk: $guestId")
                 onLoginSuccess()
-            } else {
-                EasyLog.log("Guest creation failed with inty-sdk: ${response.message()}", EasyLog.ERROR)
+            }
+
+            is com.ai.inty.netapi.ApiResult.Error -> {
+                EasyLog.log("Guest creation failed with inty-sdk: ${result.message}", EasyLog.ERROR)
                 _initState.value = InitState.Failed
             }
-        }catch (e: Exception){
-            e.printStackTrace()
-            EasyLog.log("测试，接口异常 :${e.message}")
         }
-
     }
 
     /**
