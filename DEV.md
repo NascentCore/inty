@@ -6,6 +6,7 @@ InTy is a FastAPI- and PostgreSQL-based AI chat backend that integrates LangChai
 
 * config.yaml
 * gcp service account json
+* gcp dev web client id token
 
 ## Common instructions for Gemini CLI, Claude Code, Cursor
 
