@@ -38,8 +38,14 @@ class TtsManager private constructor(
 
     // 延迟获取API依赖
     private val chatApi by lazy {
-        TheRouter.get(IChatApi::class.java)
-            ?: throw IllegalStateException("IChatApi not found in TheRouter")
+        EasyLog.log("音频LOG测试 Getting IChatApi from TheRouter")
+        val api = TheRouter.get(IChatApi::class.java)
+        if (api == null) {
+            EasyLog.log("音频LOG测试 IChatApi not found in TheRouter", EasyLog.ERROR)
+            throw IllegalStateException("IChatApi not found in TheRouter")
+        }
+        EasyLog.log("音频LOG测试 IChatApi obtained successfully")
+        api
     }
 
     /**
@@ -70,8 +76,11 @@ class TtsManager private constructor(
         scope.launch(Dispatchers.IO) {
             try {
                 EasyLog.log("音频LOG测试 Generating TTS for message: $messageId, agent: $agentId")
+                EasyLog.log("音频LOG测试 About to call chatApi.fetchMsgVoice")
+                EasyLog.log("音频LOG测试 Request URL will be: /api/v1/chats/agents/$agentId/messages/$messageId/voice")
 
                 val response = chatApi.fetchMsgVoice(agentId, messageId)
+                EasyLog.log("音频LOG测试 fetchMsgVoice response received: $response")
 
                 when (response) {
                     is HttpResult.Success -> {

@@ -35,6 +35,7 @@ import com.ai.inty.R
 import com.inty.utils.log.EasyLog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 
 /**
@@ -54,7 +55,7 @@ fun VoicePlayer(
     val audioManager = remember {
         AudioManager.getInstance(
             context,
-            CoroutineScope(Dispatchers.Main)
+            CoroutineScope(Dispatchers.Main + SupervisorJob())
         )
     }
 

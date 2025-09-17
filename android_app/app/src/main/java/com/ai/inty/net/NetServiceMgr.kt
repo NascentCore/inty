@@ -82,31 +82,30 @@ class AuthInterceptor : Interceptor {
 class RetryInterceptor(private val maxRetries: Int = 3) : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
         val request = chain.request()
-        var response: Response? = null
-        var exception: Exception? = null
+        var lastException: Exception? = null
 
         // 重试逻辑
-        repeat(maxRetries) { attempt ->
+        for (attempt in 0 until maxRetries) {
             try {
-                response = chain.proceed(request)
+                val currentResponse = chain.proceed(request)
 
                 // 如果响应成功或客户端错误（4xx），不重试
-                if (response.isSuccessful || response.code in 400..499) {
-                    return response
+                if (currentResponse.isSuccessful || currentResponse.code in 400..499) {
+                    return currentResponse
                 }
 
                 // 服务器错误（5xx）才重试
-                if (response.code in 500..599) {
-                    EasyLog.log("Retry attempt ${attempt + 1} for ${request.url} due to server error ${response.code}")
-                    response.close()
+                if (currentResponse.code in 500..599) {
+                    EasyLog.log("Retry attempt ${attempt + 1} for ${request.url} due to server error ${currentResponse.code}")
+                    currentResponse.close()
                     if (attempt < maxRetries - 1) {
                         Thread.sleep(1000L * (attempt + 1)) // 指数退避
                     }
                 } else {
-                    return response
+                    return currentResponse
                 }
             } catch (e: Exception) {
-                exception = e
+                lastException = e
                 EasyLog.log("Retry attempt ${attempt + 1} failed for ${request.url}: ${e.message}")
                 if (attempt < maxRetries - 1) {
                     Thread.sleep(1000L * (attempt + 1)) // 指数退避
@@ -120,13 +119,8 @@ class RetryInterceptor(private val maxRetries: Int = 3) : Interceptor {
             EasyLog.ERROR
         )
 
-        // 如果有最后一次的响应，返回它
-        if (response != null) {
-            return response
-        }
-
         // 如果没有响应但有异常，创建一个错误响应
-        val errorMessage = exception?.message ?: "Request failed after $maxRetries attempts"
+        val errorMessage = lastException?.message ?: "Request failed after $maxRetries attempts"
         EasyLog.log("Creating error response for ${request.url}: $errorMessage", EasyLog.ERROR)
 
         // 创建一个表示网络错误的响应
