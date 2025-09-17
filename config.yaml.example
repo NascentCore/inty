@@ -22,7 +22,9 @@ agent:
   langchain_api_key: "<fill-in-your-langchain_api_key>"
 
 gcs:
-  bucket: "<your-gcs-bucket>"
+  # 这是 it@sxwl.ai gcp 账户上配置的开发测试用存储桶，
+  # 只要使用了来自 it@sxwl.ai 账户下的 service account，就能使用该存储桶
+  bucket: "yx-test"
   credentials: ".secrets/gcs-service-account-key.json"
 
 firebase:
