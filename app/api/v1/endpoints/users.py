@@ -68,7 +68,7 @@ async def get_profile(
     return APIResponse.success(data=User(**user_dict))
 
 
-@router.put("/profile", response_model=APIResponse[User])
+@router.put("/profile", response_model=User)
 async def update_profile(
     *,
     db: AsyncSession = Depends(get_async_db),
@@ -80,11 +80,11 @@ async def update_profile(
     """
     try:
         user = await user_service.update_user(db, current_user.id, user_in)
-        return APIResponse.success(data=user)
+        return user
     except Exception as e:
         logger.error(f"更新用户信息失败: {str(e)}")
         logger.error(f"错误堆栈: {traceback.format_exc()}")
-        return APIResponse.error(message=str(e))
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/device/register", response_model=APIResponse)
