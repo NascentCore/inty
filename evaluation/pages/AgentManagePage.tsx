@@ -12,7 +12,6 @@ import {
   Spin,
   Space,
   Tag,
-  Avatar,
   Modal,
   Form,
   Radio,
@@ -449,7 +448,7 @@ export const AgentManagePage: React.FC = () => {
   // 显示编辑模态框
   const showEditModal = (agent: Agent) => {
     setCurrentAgent(agent);
-    setEditAvatarPreview(agent.avatar || "");
+    setEditAvatarPreview(""); // 重置为空，这样初次进入时会使用 currentAgent 的数据
 
     // 预填表单 - 使用 setTimeout 确保 Modal 完全渲染后再设置表单值
     setTimeout(() => {
@@ -525,12 +524,19 @@ export const AgentManagePage: React.FC = () => {
               overflow: "hidden",
             }}
           >
-            {(isEdit ? editAvatarPreview : avatarPreview) ? (
-                <Avatar
+            {(isEdit ? (editAvatarPreview || currentAgent?.background || currentAgent?.avatar) : avatarPreview) ? (
+                <AvatarDisplay
+                  agent={isEdit ? {
+                    ...currentAgent!,
+                    // 如果有新上传的图片预览，将其作为 background
+                    ...(editAvatarPreview ? { background: editAvatarPreview } : {})
+                  } : {
+                    ...currentAgent,
+                    avatar: avatarPreview,
+                    background: avatarPreview
+                  } as Agent}
                   size={80}
-                src={isEdit ? editAvatarPreview : avatarPreview}
-                  icon={<CameraOutlined />}
-              />
+                />
             ) : (
               <div style={{ textAlign: "center" }}>
                 <CameraOutlined style={{ fontSize: 20, color: "#999" }} />
