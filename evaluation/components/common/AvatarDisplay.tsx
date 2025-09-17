@@ -21,25 +21,22 @@ export const AvatarDisplay: React.FC<AvatarDisplayProps> = ({
   style = {},
   showBackground = false
 }) => {
-  // 如果有头像坐标信息，使用截取方式显示
   const avatarCrop = agent.extensions?.avatar_crop as AvatarCropData | undefined;
   
+  // 1. 优先使用 avatar_crop + background
   if (avatarCrop && agent.background) {
     const { x, y, width, imageWidth, imageHeight } = avatarCrop;
     const sourceImageUrl = agent.background;
 
     // 计算缩放比例 - 让截取区域填满整个容器
-    // 截取区域是正方形，所以直接用宽度计算缩放
     const scale = size / width;
     
     // 计算图片在容器中的位置
-    // 对于截取显示，我们应该显示整个原始图片，然后通过定位来显示截取区域
     const imageDisplayWidth = imageWidth * scale;
     const imageDisplayHeight = imageHeight * scale;
     const offsetX = -x * scale;
     const offsetY = -y * scale;
 
-    
     return (
       <div
         style={{
@@ -51,6 +48,7 @@ export const AvatarDisplay: React.FC<AvatarDisplayProps> = ({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
+          margin: '0 auto',
           ...style
         }}
       >
@@ -89,12 +87,53 @@ export const AvatarDisplay: React.FC<AvatarDisplayProps> = ({
     );
   }
   
-  // 如果没有坐标信息，使用传统头像显示方式
+  // 2. 如果没有坐标信息，检查 agent.avatar
+  if (agent.avatar) {
+    return (
+      <Avatar
+        size={size}
+        src={agent.avatar}
+        icon={<RobotOutlined />}
+        style={style}
+      />
+    );
+  }
+
+  // 3. 最后使用 agent.background 顶部居中对齐截取正方形
+  if (agent.background) {
+    return (
+      <div
+        style={{
+          width: size,
+          height: size,
+          borderRadius: '50%',
+          overflow: 'hidden',
+          position: 'relative',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          margin: '0 auto',
+          ...style
+        }}
+      >
+        <img
+          src={agent.background}
+          alt="Avatar"
+          style={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            objectPosition: 'center top'
+          }}
+        />
+      </div>
+    );
+  }
   
+  // 如果都没有，显示默认图标
   return (
     <Avatar
       size={size}
-      src={agent.avatar}
       icon={<RobotOutlined />}
       style={style}
     />

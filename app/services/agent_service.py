@@ -570,24 +570,7 @@ async def create_agent(
             logger.debug(f"处理llm_config后的数据: {agent_data}")
 
         # 处理图片URL：验证、复制临时文件到永久路径、删除临时文件
-        try:
-            processed_agent_data = process_agent_image_urls(
-                agent_data, agent_id, user_id
-            )
-            # 确保返回值不为空
-            if processed_agent_data is None:
-                logger.warning(f"图片处理返回None，使用原始数据 - Agent ID: {agent_id}")
-                processed_agent_data = agent_data
-            else:
-                logger.debug(f"成功处理Agent图片URL - Agent ID: {agent_id}")
-        except Exception as e:
-            logger.error(
-                f"处理Agent图片URL失败 - Agent ID: {agent_id}, Error: {str(e)}"
-            )
-            # 图片处理失败不应该阻止Agent创建，使用原始数据
-            processed_agent_data = agent_data
-
-        logger.debug(f"最终处理后的Agent数据: {processed_agent_data}")
+        processed_agent_data = process_agent_image_urls(agent_data)
 
         need_to_crop_avatar = not processed_agent_data.get(
             "avatar", None
@@ -602,6 +585,7 @@ async def create_agent(
             logger.debug(
                 f"成功从background裁剪avatar - Agent ID: {agent_id}, Avatar URL: {cropped_avatar_url}"
             )
+            processed_agent_data["background_images"].append(cropped_avatar_url)
 
         db_agent = models.Agent(
             id=agent_id,
@@ -693,12 +677,8 @@ def _validate_character_card_fields(agent_in: schemas.AgentCreate):
     )
 
 
-def _update_agent_in_db(agent_in: schemas.AgentUpdate, db_agent: models.Agent):
+def _update_agent_in_db(update_data: dict, db_agent: models.Agent):
     # 验证更新数据
-    update_data = agent_in.model_dump(exclude_unset=True)
-    if not update_data:
-        raise HTTPException(status_code=400, detail="No data provided for update")
-
     # 验证名称不为空（如果提供了名称）
     if "name" in update_data and (
         not update_data["name"] or not update_data["name"].strip()
@@ -734,10 +714,16 @@ def _update_agent_in_db(agent_in: schemas.AgentUpdate, db_agent: models.Agent):
         else:
             if db_agent.settings and "llm_config" in db_agent.settings:
                 db_agent.settings.pop("llm_config")
-                # Tell SQLAlchemy that the settings field has been modified
-                from sqlalchemy.orm.attributes import flag_modified
 
-                flag_modified(db_agent, "settings")
+    if "background_images" in update_data:
+        images = update_data.pop("background_images")
+        existing_images = []
+        if db_agent.background_images:
+            existing_images = db_agent.background_images.copy()
+        for image in images:
+            if image not in existing_images:
+                existing_images.append(image)
+        db_agent.background_images = existing_images
 
     # 更新其他字段
     for field, value in update_data.items():
@@ -758,7 +744,23 @@ async def update_agent(
         update_data = agent_in.model_dump(exclude_unset=True)
         should_regenerate_voice = "opening" in update_data or "voice_id" in update_data
 
-        _update_agent_in_db(agent_in, db_agent)
+        update_data = process_agent_image_urls(update_data)
+
+        _update_agent_in_db(update_data, db_agent)
+
+        # 确保在异步上下文中调用 flag_modified
+        # 在 _update_agent_in_db() 调用 flag_modified 会报 MissingGreenlet 错误
+        # 这里的两个数据强制更新，实际上并不一定需要。
+        # TODO：使用正确的差异检测函数来避免修改没有更改的值。
+        from sqlalchemy.orm.attributes import flag_modified
+
+        if hasattr(db_agent, "settings") and db_agent.settings is not None:
+            flag_modified(db_agent, "settings")
+        if (
+            hasattr(db_agent, "background_images")
+            and db_agent.background_images is not None
+        ):
+            flag_modified(db_agent, "background_images")
 
         await db.commit()
         await db.refresh(db_agent)
@@ -793,7 +795,8 @@ async def update_agent(
             logger.error(f"清除Agent缓存时发生错误 {updated_agent.id}: {str(e)}")
             # 注意：这里不抛出异常，因为数据库更新已经成功了
 
-        # 重新加载Agent实例到AgentManager缓存中
+        # 重新加载Agent实例到AgentManager缓存中，AgentManager 仅用于提供聊天所需的提示词，
+        # 因此，不需要加载图片等数据。
         try:
             agent_data = {
                 "id": updated_agent.id,
@@ -896,9 +899,7 @@ async def delete_agent(db: AsyncSession, db_agent: models.Agent) -> models.Agent
         raise HTTPException(status_code=500, detail="服务器内部错误")
 
 
-def process_agent_image_urls(
-    agent_data: dict, agent_id: str = None, user_id: str = None
-) -> dict:
+def process_agent_image_urls(agent_data: dict) -> dict:
     """
     验证Agent创建时的图片URL，确保URL有效性
 
@@ -916,6 +917,11 @@ def process_agent_image_urls(
     from app.utils.gcs import is_valid_gcs_url
 
     processed_data = agent_data.copy()
+    images_urls = []
+
+    def add_image_url(image_url):
+        if image_url not in images_urls:
+            images_urls.append(image_url)
 
     # 验证头像URL
     if agent_data.get("avatar"):
@@ -923,6 +929,7 @@ def process_agent_image_urls(
         if is_valid_gcs_url(avatar_url):
             logger.debug(f"头像URL验证通过: {avatar_url}")
             processed_data["avatar"] = avatar_url
+            add_image_url(avatar_url)
         else:
             logger.warning(f"无效的头像URL: {avatar_url}")
             processed_data["avatar"] = None
@@ -933,6 +940,7 @@ def process_agent_image_urls(
         if is_valid_gcs_url(background_url):
             logger.debug(f"背景图URL验证通过: {background_url}")
             processed_data["background"] = background_url
+            add_image_url(background_url)
         else:
             logger.warning(f"无效的背景图URL: {background_url}")
             processed_data["background"] = None
@@ -941,14 +949,15 @@ def process_agent_image_urls(
     if agent_data.get("background_images") and isinstance(
         agent_data["background_images"], list
     ):
-        valid_photos = []
         for photo_url in agent_data["background_images"]:
             if is_valid_gcs_url(photo_url):
-                valid_photos.append(photo_url)
+                add_image_url(photo_url)
                 logger.debug(f"相册图片URL验证通过: {photo_url}")
             else:
                 logger.warning(f"无效的相册图片URL: {photo_url}")
-        processed_data["background_images"] = valid_photos
+
+    if images_urls:
+        processed_data["background_images"] = images_urls
 
     return processed_data
 
