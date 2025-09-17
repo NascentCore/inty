@@ -724,7 +724,10 @@ def _update_agent_in_db(update_data: dict, db_agent: models.Agent):
         existing_images = []
         if db_agent.background_images:
             existing_images = db_agent.background_images.copy()
-        db_agent.background_images = existing_images + images
+        for image in images:
+            if image not in existing_images:
+                existing_images.append(image)
+        db_agent.background_images = existing_images
         flag_modified(db_agent, "background_images")
 
     # 更新其他字段
