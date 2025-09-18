@@ -110,10 +110,10 @@ dependencies {
     // ===== Media3 音频播放 =====
     implementation(libs.androidx.media3.datasource.okhttp)
     implementation(libs.bundles.androidx.media3.bundle)
-    
+
     // ===== compose ui bundle =====
     implementation(libs.bundles.compose.ui.bundle)
-    
+
     // ===== Inty SDK =====
-    implementation("com.inty.api:inty-kotlin:0.3.0")
+    implementation("com.inty.api:inty-kotlin:0.8.0")
 }
