@@ -22,7 +22,10 @@ Based on [AGENTS.md](https://agents.md/)
 
 ## CloudFlare
 
-@<https://developers.cloudflare.com/llms.txt>
-@<https://developers.cloudflare.com/workers/prompt.txt>
-@<https://developers.cloudflare.com/stream/llms-full.txt>
-@<https://developers.cloudflare.com/developer-platform/llms-full.txt>
+- @<https://developers.cloudflare.com/llms.txt>
+- @<https://developers.cloudflare.com/workers/prompt.txt>
+- @<https://developers.cloudflare.com/stream/llms-full.txt>
+- @<https://developers.cloudflare.com/developer-platform/llms-full.txt>
+
+来自官方文档链接：
+<img width="600" height="1746" alt="image" src="https://github.com/user-attachments/assets/e82969a3-b533-42d0-96f1-9b57f284b22a" />
