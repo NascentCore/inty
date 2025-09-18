@@ -19,3 +19,10 @@ Based on [AGENTS.md](https://agents.md/)
 ## Android App
 
 - 只支持 portrait 显示；不支持 landscape 显示，无需在改动时考虑兼容 landscape 显示。
+
+## CloudFlare
+
+@<https://developers.cloudflare.com/llms.txt>
+@<https://developers.cloudflare.com/workers/prompt.txt>
+@<https://developers.cloudflare.com/stream/llms-full.txt>
+@<https://developers.cloudflare.com/developer-platform/llms-full.txt>
