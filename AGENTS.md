@@ -27,5 +27,6 @@ Based on [AGENTS.md](https://agents.md/)
 - @<https://developers.cloudflare.com/stream/llms-full.txt>
 - @<https://developers.cloudflare.com/developer-platform/llms-full.txt>
 
-来自官方文档链接：
+来自官方文档链接 https://developers.cloudflare.com/stream/changelog/：
+
 <img width="600" height="1746" alt="image" src="https://github.com/user-attachments/assets/e82969a3-b533-42d0-96f1-9b57f284b22a" />
