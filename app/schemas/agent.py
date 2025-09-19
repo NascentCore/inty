@@ -9,6 +9,24 @@ from app.models.user import Gender
 from app.schemas.user import User
 
 
+class AgentMetaData(BaseModel):
+    """Agent 元数据模型"""
+    
+    score: Optional[int] = Field(
+        None, 
+        ge=1, 
+        le=5, 
+        description="Agent 评分，1-5 的整数"
+    )
+
+    @field_validator("score")
+    @classmethod
+    def validate_score(cls, v):
+        if v is not None and (v < 1 or v > 5):
+            raise ValueError("Score must be between 1 and 5")
+        return v
+
+
 class AgentSortOption(str, Enum):
     """Agent sorting options"""
 
@@ -115,6 +133,11 @@ class AgentBase(BaseModel):
 
     # 模型配置
     llm_config: Optional[ModelConfig] = None
+    
+    # 元数据
+    meta_data: Optional[AgentMetaData] = Field(
+        None, description="Agent 元数据，包含评分等信息"
+    )
 
 
 class AgentCreate(AgentBase):
@@ -162,6 +185,9 @@ class AgentUpdate(AgentBase):
 
     # 模型配置
     llm_config: Optional[ModelConfig] = None
+    
+    # 元数据
+    meta_data: Optional[AgentMetaData] = None
 
 
 class AgentInDB(AgentBase):
@@ -227,6 +253,26 @@ class Agent(AgentInDB):
                 except Exception:
                     # 如果转换失败，返回None
                     return None
+
+        return None
+
+    @field_serializer("meta_data")
+    def serialize_meta_data(
+        self, meta_data: Optional[AgentMetaData]
+    ) -> Optional[AgentMetaData]:
+        """
+        从数据库的meta_data字段中提取并转换为AgentMetaData对象
+        """
+        if meta_data is not None:
+            return meta_data
+
+        # 如果meta_data为空，尝试从数据库的meta_data字段获取
+        if hasattr(self, 'meta_data') and self.meta_data and isinstance(self.meta_data, dict):
+            try:
+                return AgentMetaData(**self.meta_data)
+            except Exception:
+                # 如果转换失败，返回None
+                return None
 
         return None
 

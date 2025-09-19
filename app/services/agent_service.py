@@ -569,6 +569,13 @@ async def create_agent(
             agent_data["settings"]["llm_config"] = agent_data.pop("llm_config")
             logger.debug(f"处理llm_config后的数据: {agent_data}")
 
+        # 处理 meta_data 字段
+        if "meta_data" in agent_data and agent_data["meta_data"] is not None:
+            # 如果meta_data是AgentMetaData对象，转换为dict
+            if hasattr(agent_data["meta_data"], "model_dump"):
+                agent_data["meta_data"] = agent_data["meta_data"].model_dump()
+            logger.debug(f"处理meta_data后的数据: {agent_data}")
+
         # 处理图片URL：验证、复制临时文件到永久路径、删除临时文件
         processed_agent_data = process_agent_image_urls(agent_data)
 
@@ -715,6 +722,19 @@ def _update_agent_in_db(update_data: dict, db_agent: models.Agent):
             if db_agent.settings and "llm_config" in db_agent.settings:
                 db_agent.settings.pop("llm_config")
 
+    # 处理 meta_data 字段
+    if "meta_data" in update_data:
+        meta_data = update_data.pop("meta_data")
+        if meta_data is not None:
+            logger.debug(f"meta_data不为空，更新meta_data字段")
+            # 如果meta_data是AgentMetaData对象，转换为dict
+            if hasattr(meta_data, "model_dump"):
+                meta_data = meta_data.model_dump()
+            db_agent.meta_data = meta_data
+        else:
+            # 如果meta_data为None，清空该字段
+            db_agent.meta_data = None
+
     if "background_images" in update_data:
         images = update_data.pop("background_images")
         existing_images = []
@@ -761,6 +781,8 @@ async def update_agent(
             and db_agent.background_images is not None
         ):
             flag_modified(db_agent, "background_images")
+        if hasattr(db_agent, "meta_data") and db_agent.meta_data is not None:
+            flag_modified(db_agent, "meta_data")
 
         await db.commit()
         await db.refresh(db_agent)
