@@ -18,10 +18,22 @@ object BillingErrorHandler {
         PRICE_QUERY, PURCHASE, CONNECTION, GENERAL
     }
 
+
+    /**
+     * 处理价格查询错误
+     */
+    fun handlePriceQueryError(billingResult: BillingResult) {
+        handleBillingError(billingResult, errorType = ErrorType.PRICE_QUERY)
+    }
+
     /**
      * 统一的错误处理方法
      */
-    fun handleBillingError(billingResult: BillingResult, context: Context? = null, errorType: ErrorType = ErrorType.GENERAL) {
+    private fun handleBillingError(
+        billingResult: BillingResult,
+        context: Context? = null,
+        errorType: ErrorType = ErrorType.GENERAL
+    ) {
         val errorMessage = getErrorMessage(billingResult, errorType)
         EasyLog.log("BillingErrorHandler - $errorMessage", EasyLog.ERROR)
 
@@ -162,18 +174,18 @@ object BillingErrorHandler {
      */
     private fun provideBillingUnavailableDiagnostics(context: Context) {
         EasyLog.log("BillingErrorHandler - 开始BILLING_UNAVAILABLE诊断...")
-        
+
         // 检查Google Play服务状态
         val googlePlayStatus = BillingUtils.getGooglePlayServicesErrorDescription(context)
         EasyLog.log("BillingErrorHandler - Google Play服务状态: $googlePlayStatus")
-        
+
         // 检查设备信息
         EasyLog.log("BillingErrorHandler - 设备信息:")
         EasyLog.log("BillingErrorHandler -   制造商: ${android.os.Build.MANUFACTURER}")
         EasyLog.log("BillingErrorHandler -   型号: ${android.os.Build.MODEL}")
         EasyLog.log("BillingErrorHandler -   Android版本: ${android.os.Build.VERSION.RELEASE}")
         EasyLog.log("BillingErrorHandler -   是否为模拟器: ${BillingUtils.isEmulator()}")
-        
+
         // 检查应用信息
         try {
             val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
@@ -184,13 +196,6 @@ object BillingErrorHandler {
         } catch (e: Exception) {
             EasyLog.log("BillingErrorHandler - 获取应用信息失败: ${e.message}")
         }
-    }
-
-    /**
-     * 处理价格查询错误
-     */
-    fun handlePriceQueryError(billingResult: BillingResult) {
-        handleBillingError(billingResult, errorType = ErrorType.PRICE_QUERY)
     }
 
 }
