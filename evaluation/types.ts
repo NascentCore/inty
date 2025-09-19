@@ -1,7 +1,14 @@
 // 智能体管理系统类型定义
 
 // 从 SDK 导入 Agent 类型
-export type { Agent, AgentVisibility } from 'inty_sdk/src/resources/api/v1/ai/agents';
+import type { Agent as BaseAgent, AgentVisibility } from 'inty_sdk/src/resources/api/v1/ai/agents';
+
+// 扩展 Agent 类型以包含 meta_data 字段
+export interface Agent extends BaseAgent {
+  meta_data?: AgentMetaData;
+}
+
+export type { AgentVisibility };
 
 // 头像截取坐标信息类型
 export interface AvatarCropData {
@@ -11,6 +18,11 @@ export interface AvatarCropData {
   height: number;
   imageWidth: number;
   imageHeight: number;
+}
+
+// Agent 元数据
+export interface AgentMetaData {
+  score?: number; // 1-5 的整数评分
 }
 
 // LLM 配置
@@ -38,6 +50,7 @@ export interface AgentCreateRequest {
   background_images?: string[];
   voice_id?: string;
   llm_config?: LLMConfig;
+  meta_data?: AgentMetaData;
 }
 
 // 更新智能体请求
@@ -55,6 +68,7 @@ export interface AgentUpdateRequest {
   background_images?: string[];
   voice_id?: string;
   llm_config?: LLMConfig | null;
+  meta_data?: AgentMetaData;
 }
 
 // 聊天消息

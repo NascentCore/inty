@@ -35,6 +35,7 @@ import modelCacheService from "../services/modelCache";
 import type { Agent, AgentCreateRequest, OpenRouterModel, AvatarCropData } from "../types";
 import LLMConfigForm from "../components/common/LLMConfigForm";
 import VoiceSelector from "../components/common/VoiceSelector";
+import ScoreSelector from "../components/common/ScoreSelector";
 import { useAgents } from "../hooks/useAgents";
 import AgentInfoDisplay from "../components/common/AgentInfoDisplay";
 import { generateRandomName } from "../utils/nameGenerator";
@@ -341,6 +342,13 @@ export const AgentManagePage: React.FC = () => {
         voice_id: values.voice_id,
       };
 
+      // 如果有评分，添加到 meta_data 中
+      if (values.score) {
+        agentData.meta_data = {
+          score: values.score
+        };
+      }
+
       // 如果选择了自定义模型，添加LLM配置
       if (values.modelType === "custom") {
         agentData.llm_config = {
@@ -404,6 +412,16 @@ export const AgentManagePage: React.FC = () => {
         background_images: backgroundImages,
         voice_id: values.voice_id,
       };
+
+      // 处理评分更新
+      if (values.score !== undefined) {
+        updateData.meta_data = {
+          score: values.score
+        };
+      } else {
+        // 如果没有评分，确保清空 meta_data 
+        updateData.meta_data = undefined;
+      }
 
       // 如果有新头像文件，清理旧的avatar_crop数据，让组件使用新的avatar字段
       if (editAvatarFile) {
@@ -511,6 +529,7 @@ export const AgentManagePage: React.FC = () => {
         personality: agent.personality,
         mode_prompt: agent.mode_prompt,
         voice_id: agent.voice_id,
+        score: agent.meta_data?.score,
 
         modelType: agent.llm_config ? "custom" : "default",
         // 明确设置LLM配置字段，避免字段名不匹配问题
@@ -677,6 +696,29 @@ export const AgentManagePage: React.FC = () => {
         tooltip="选择角色的语音音色，用于文字转语音功能"
       >
         <VoiceSelector placeholder="请选择角色音色（可选）" />
+      </Form.Item>
+
+      {/* 评分设置 */}
+      <Divider>评分设置</Divider>
+
+      <Form.Item
+        name="score"
+        label="角色评分"
+        tooltip="对角色进行1-5分的评分，用于质量评估"
+        rules={[
+          {
+            type: 'number',
+            min: 1,
+            max: 5,
+            message: '评分必须在1-5之间'
+          }
+        ]}
+      >
+        <ScoreSelector 
+          placeholder="请选择角色评分（1-5分，可选）"
+          mode="star"
+          showText={true}
+        />
       </Form.Item>
 
       {/* 提示词配置 */}
@@ -896,7 +938,7 @@ export const AgentManagePage: React.FC = () => {
                             >
                               {agent.intro}
                             </p>
-                            <div style={{ marginTop: 8 }}>
+                            <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                               <Tag
                                 color={
                                   agent.gender === "MALE"
@@ -912,6 +954,16 @@ export const AgentManagePage: React.FC = () => {
                                     ? "女"
                                     : "其他"}
                               </Tag>
+                              {agent.meta_data?.score && (
+                                <div style={{ display: 'flex', alignItems: 'center' }}>
+                                  <ScoreSelector 
+                                    value={agent.meta_data.score}
+                                    disabled={true}
+                                    mode="star"
+                                    showText={false}
+                                  />
+                                </div>
+                              )}
                             </div>
                           </div>
                         }

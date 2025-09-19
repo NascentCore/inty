@@ -4,3 +4,4 @@ export { default as VoiceSelector } from './VoiceSelector';
 export { default as ImageCropModal } from './ImageCropModal';
 export { default as ImageSizeSelector } from './ImageSizeSelector';
 export { default as AvatarDisplay } from './AvatarDisplay';
+export { default as ScoreSelector } from './ScoreSelector';
