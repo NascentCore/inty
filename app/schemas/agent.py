@@ -9,25 +9,15 @@ from app.core.agent.prompt_template import (
     render_prompt_jinja2_template,
 )
 from app.models.agent import AgentStatus, AgentVisibility
-from app.models.user import Gender
 from app.schemas.user import User
 
 
 class AgentMetaData(BaseModel):
     """Agent 元数据模型"""
-    
-    score: Optional[int] = Field(
-        None, 
-        ge=1, 
-        le=5, 
-        description="Agent 评分，1-5 的整数"
-    )
-    
-    comment: Optional[str] = Field(
-        None,
-        max_length=1000,
-        description="Agent 备注信息"
-    )
+
+    score: Optional[int] = Field(None, ge=1, le=5, description="Agent 评分，1-5 的整数")
+
+    comment: Optional[str] = Field(None, max_length=1000, description="Agent 备注信息")
 
     @field_validator("score")
     @classmethod
@@ -152,7 +142,7 @@ class AgentBase(BaseModel):
 
     # 模型配置
     llm_config: Optional[ModelConfig] = None
-    
+
     # 元数据
     meta_data: Optional[AgentMetaData] = Field(
         None, description="Agent 元数据，包含评分等信息"
@@ -204,7 +194,7 @@ class AgentUpdate(AgentBase):
 
     # 模型配置
     llm_config: Optional[ModelConfig] = None
-    
+
     # 元数据
     meta_data: Optional[AgentMetaData] = None
 
@@ -285,6 +275,58 @@ class Agent(AgentInDB):
 
         return None
 
+    @field_serializer("avatar")
+    def serialize_avatar(self, avatar: Optional[str]) -> Optional[str]:
+        """转换avatar URL为CDN URL"""
+        if not avatar:
+            return avatar
+        try:
+            from app.services.image_transform_service import image_transform_service
+
+            return image_transform_service.transform_mobile(avatar)
+        except Exception:
+            return avatar
+
+    @field_serializer("background")
+    def serialize_background(self, background: Optional[str]) -> Optional[str]:
+        """转换background URL为CDN URL"""
+        if not background:
+            return background
+        try:
+            from app.services.image_transform_service import image_transform_service
+
+            return image_transform_service.transform_desktop(background)
+        except Exception:
+            return background
+
+    @field_serializer("background_images")
+    def serialize_background_images(
+        self, background_images: Optional[List[str]]
+    ) -> Optional[List[str]]:
+        """转换background_images URL列表为CDN URL"""
+        if not background_images:
+            return background_images
+        try:
+            from app.services.image_transform_service import image_transform_service
+
+            return image_transform_service.transform_url_list(
+                background_images, "desktop"
+            )
+        except Exception:
+            return background_images
+
+    @field_serializer("photos")
+    def serialize_photos(self, photos: Optional[List[str]]) -> Optional[List[str]]:
+        """转换photos URL列表为CDN URL"""
+        if not photos:
+            return photos
+        try:
+            from app.services.image_transform_service import image_transform_service
+
+            return image_transform_service.transform_url_list(photos, "mobile")
+        except Exception:
+            return photos
+
     @field_serializer("meta_data")
     def serialize_meta_data(
         self, meta_data: Optional[AgentMetaData]
@@ -296,7 +338,11 @@ class Agent(AgentInDB):
             return meta_data
 
         # 如果meta_data为空，尝试从数据库的meta_data字段获取
-        if hasattr(self, 'meta_data') and self.meta_data and isinstance(self.meta_data, dict):
+        if (
+            hasattr(self, "meta_data")
+            and self.meta_data
+            and isinstance(self.meta_data, dict)
+        ):
             try:
                 return AgentMetaData(**self.meta_data)
             except Exception:

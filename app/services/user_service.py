@@ -158,6 +158,11 @@ async def update_user(db: AsyncSession, user_id: str, user_in: UserUpdate) -> Us
 
         update_data = user_in.model_dump(exclude_unset=True)
 
+        # 处理头像URL：如果是CDN URL则转换为GCS URL用于存储
+        if 'avatar' in update_data and update_data['avatar']:
+            from app.services.image_transform_service import image_transform_service
+            update_data['avatar'] = image_transform_service.normalize_image_url_for_storage(update_data['avatar'])
+
         # 过滤掉不应该被用户更新的字段
         excluded_fields = {
             "readable_id",

@@ -142,12 +142,22 @@ async def process_image_upload(
     unique_id = uuid.uuid4().hex[:8]
     file_gcs_path = f"{base_path}/{user_id}/{timestamp}-{unique_id}.{file_ext}"
 
-    url = upload_to_gcs(
+    gcs_url = upload_to_gcs(
         file_data,
         file.content_type,
         global_config_loaded_from_config_yaml.gcs.bucket,
         file_gcs_path,
     )
+    
+    # Convert GCS URL to CDN URL
+    from app.services.image_transform_service import image_transform_service
+    try:
+        url = image_transform_service.transform_mobile(gcs_url)
+        logger.debug(f"图片 上传 GCS 成功，CDN URL: {url}")
+    except Exception as transform_error:
+        logger.warning(f"Failed to transform URL to CDN: {gcs_url}, error: {str(transform_error)}")
+        url = gcs_url  # Fallback to original GCS URL
+    
     result = ImageUploadResponse(url=url)
     logger.debug(f"图片 上传 GCS 成功，返回URL: {url}")
 
@@ -157,13 +167,21 @@ async def process_image_upload(
         uncompressed_file_gcs_path = f"{base_path}/{user_id}/{timestamp}-{unique_id}-original.{original_file_ext}"
 
         # Upload uncompressed file to GCS
-        uncompressed_url = upload_to_gcs(
+        uncompressed_gcs_url = upload_to_gcs(
             original_file_data,
             original_content_type,
             global_config_loaded_from_config_yaml.gcs.bucket,
             uncompressed_file_gcs_path,
         )
-        logger.debug(f"Uploaded original image: {uncompressed_url}")
+        
+        # Convert uncompressed GCS URL to CDN URL
+        try:
+            uncompressed_url = image_transform_service.transform_mobile(uncompressed_gcs_url)
+            logger.debug(f"Uploaded original image, CDN URL: {uncompressed_url}")
+        except Exception as transform_error:
+            logger.warning(f"Failed to transform original URL to CDN: {uncompressed_gcs_url}, error: {str(transform_error)}")
+            uncompressed_url = uncompressed_gcs_url  # Fallback to original GCS URL
+            
         result.original_url = uncompressed_url
 
     # Handle cropping if enabled
@@ -177,13 +195,21 @@ async def process_image_upload(
             file_gcs_path, CROPPED_AVATAR_FILENAME_SUFFIX
         )
 
-        cropped_avatar_url = upload_to_gcs(
+        cropped_avatar_gcs_url = upload_to_gcs(
             jpg_data,
             f"image/{ImageFormat.JPEG}",  # Cropped image is always JPEG
             global_config_loaded_from_config_yaml.gcs.bucket,
             cropped_file_gcs_path,
         )
-        logger.debug(f"扣脸图片上传 GCS 成功,返回URL: {cropped_avatar_url}")
+        
+        # Convert cropped avatar GCS URL to CDN URL
+        try:
+            cropped_avatar_url = image_transform_service.transform_mobile(cropped_avatar_gcs_url)
+            logger.debug(f"扣脸图片上传 GCS 成功, CDN URL: {cropped_avatar_url}")
+        except Exception as transform_error:
+            logger.warning(f"Failed to transform avatar URL to CDN: {cropped_avatar_gcs_url}, error: {str(transform_error)}")
+            cropped_avatar_url = cropped_avatar_gcs_url  # Fallback to original GCS URL
+            
         result.avatar_url = cropped_avatar_url
 
     return APIResponse.success(data=result)
