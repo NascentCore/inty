@@ -9,6 +9,7 @@ import { RobotOutlined } from "@ant-design/icons";
 import type { Agent, AvatarCropData } from "../../types";
 import { AvatarDisplay } from "./AvatarDisplay";
 import { BackgroundWithCropOverlay } from "./BackgroundWithCropOverlay";
+import ScoreSelector from "./ScoreSelector";
 
 interface AgentInfoDisplayProps {
   agent: Agent;
@@ -90,6 +91,19 @@ export const AgentInfoDisplay: React.FC<AgentInfoDisplayProps> = ({
             <strong>音色ID:</strong>{" "}
             {agent.voice_id || "未设置"}
           </p>
+          {agent.meta_data?.score && (
+            <div style={{ marginTop: 8 }}>
+              <strong>评分:</strong>
+              <div style={{ marginTop: 4 }}>
+                <ScoreSelector 
+                  value={agent.meta_data.score}
+                  disabled={true}
+                  mode="star"
+                  showText={true}
+                />
+              </div>
+            </div>
+          )}
         </Col>
       </Row>
     </Card>
