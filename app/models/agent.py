@@ -70,6 +70,7 @@ class Agent(Base):
     tags = Column(JSON, nullable=True)  # 标签
     character_version = Column(String, nullable=True)  # 版本号
     extensions = Column(JSON, nullable=True)  # 扩展数据
+    meta_data = Column(JSON, nullable=True)  # 灵活的元数据
 
     # 语音相关字段
     opening_audio_url = Column(String, nullable=True)  # 预生成的开场白语音URL
