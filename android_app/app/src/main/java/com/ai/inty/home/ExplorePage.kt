@@ -1,27 +1,26 @@
 package com.ai.inty.home
 
 import android.annotation.SuppressLint
-import kotlinx.coroutines.delay
-import kotlin.math.roundToInt
-
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.itemsIndexed
-import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
+import androidx.compose.foundation.lazy.staggeredgrid.itemsIndexed
+import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
@@ -33,8 +32,6 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -43,31 +40,32 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.Velocity
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.ui.unit.times
-
 import com.ai.inty.R
 import com.ai.inty.base.IntyImage
 import com.ai.inty.base.noRippleClickable
 import com.ai.inty.beans.AgentInfo
-import com.ai.inty.utils.calculateOptimalContentScale
 import com.ai.inty.utils.AspectRatio
-import com.ai.inty.utils.getHeightByWidth
 import com.ai.inty.utils.CHARACTER_CARD_ASPECT_RATIO
-import com.ai.inty.home.BottomNavigationBarHeight
+import com.ai.inty.utils.calculateOptimalContentScale
+import com.ai.inty.utils.getHeightByWidth
+import kotlinx.coroutines.delay
+import kotlin.math.roundToInt
 
 // 一个父容器内多个分布式子容器之间及与父容器边缘的间距相对父容器的比例
 // 水平方向的padding，包括左侧和右侧，子容器上下左右之间的间距
 const val SPACER_PERCENTAGE = 0.012f
 const val HORIZONTAL_PADDING_MULTIPLIER = 1.8
+
 // 预加载下一页的缓冲区数量
 // 当前已经加载但是还未被显示的角色数量
 const val COLUMN_COUNT = 2
@@ -204,22 +202,15 @@ fun RecommendPage(
                     .padding(start = TitleLeftPadding),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IntyImage(
-                    model = R.drawable.popular1
-                )
+                IntyImage(model = R.drawable.popular1)
                 Spacer(Modifier.width(7.dp))
-                IntyImage(
-                    model = R.drawable.popular
-                )
+                IntyImage(model = R.drawable.popular)
             }
 
-
-
-
-            val gridState = rememberLazyGridState()
+            val gridState = rememberLazyStaggeredGridState()
 
             // 检测是否在顶部
-            remember {
+            val isAtTop by remember {
                 derivedStateOf {
                     gridState.firstVisibleItemIndex == 0 && gridState.firstVisibleItemScrollOffset == 0
                 }
@@ -248,8 +239,8 @@ fun RecommendPage(
             // 用于角色卡上下左右的间距
             val spacerWidth = calculateSpacerWidth(containerWidth)
 
-            LazyVerticalGrid(
-                state = gridState,
+            LazyVerticalStaggeredGrid(
+                columns = StaggeredGridCells.Fixed(COLUMN_COUNT),
                 modifier = Modifier.padding(
                     bottom = BottomNavigationBarHeight,
                     // Left padding
@@ -257,9 +248,9 @@ fun RecommendPage(
                     // Right padding
                     end = HORIZONTAL_PADDING_MULTIPLIER * spacerWidth.dp,
                 ),
-                columns = GridCells.Fixed(COLUMN_COUNT),
+                state = gridState,
                 horizontalArrangement = Arrangement.spacedBy(spacerWidth.dp),
-                verticalArrangement = Arrangement.spacedBy(spacerWidth.dp),
+                verticalItemSpacing = spacerWidth.dp,
             ) {
                 runCatching {
                     if (agents.isNotEmpty()) {
@@ -267,6 +258,24 @@ fun RecommendPage(
                             items = agents,
                             key = { index, agent -> "${agent.id}_$index" }
                         ) { _, agent ->
+                            // 根据图片实际宽高比计算高度，设定最小和最大高度限制
+                            val dynamicHeight = remember(agent.id) {
+                                val cardWidth = characterCardSize.width
+                                val minHeight = cardWidth * 0.75f  // 最小高度：3:4比例
+                                val maxHeight = cardWidth * 1.78f  // 最大高度：9:16比例
+                                
+                                // 根据agent的图片宽高比计算高度
+                                val imageAspectRatio = agent.avatar?.let { avatar ->
+                                    // 这里可以根据实际图片尺寸计算宽高比
+                                    // 暂时使用agent.id的hash值模拟不同的宽高比
+                                    val ratio = 0.75f + (agent.id.hashCode() % 100) / 100f * (1.78f - 0.75f)
+                                    ratio
+                                } ?: 1.0f // 默认1:1比例
+                                
+                                val calculatedHeight = cardWidth / imageAspectRatio
+                                calculatedHeight.coerceIn(minHeight, maxHeight)
+                            }.dp
+                            
                             CharacterCard(
                                 modifier = Modifier
                                     .noRippleClickable {
@@ -274,12 +283,11 @@ fun RecommendPage(
                                     },
                                 agentInfo = agent,
                                 width = characterCardSize.width.dp,
-                                height = characterCardSize.height.dp
+                                height = dynamicHeight
                             )
                         }
                     }
                 }.onFailure { it.printStackTrace() }
-
 
                 // 加载更多指示器
                 if (isLoading && agents.isNotEmpty()) {
@@ -321,24 +329,25 @@ fun CharacterCard(
     width: Dp,
     height: Dp,
 ) {
-    
+
     // 状态来存储图片尺寸
     var imageWidth by remember { mutableStateOf<Int?>(null) }
     var imageHeight by remember { mutableStateOf<Int?>(null) }
-    
+
     // 计算最佳的 ContentScale
     val currentImageWidth = imageWidth
     val currentImageHeight = imageHeight
-    val optimalContentScale = if (currentImageWidth != null && currentImageHeight != null && currentImageWidth > 0 && currentImageHeight > 0) {
-        calculateOptimalContentScale(
-            containerWidth = width.value.roundToInt(),
-            containerHeight = height.value.roundToInt(),
-            imageWidth = currentImageWidth,
-            imageHeight = currentImageHeight
-        )
-    } else {
-        ContentScale.Crop // 默认值，当图片尺寸未知时
-    }
+    val optimalContentScale =
+        if (currentImageWidth != null && currentImageHeight != null && currentImageWidth > 0 && currentImageHeight > 0) {
+            calculateOptimalContentScale(
+                containerWidth = width.value.roundToInt(),
+                containerHeight = height.value.roundToInt(),
+                imageWidth = currentImageWidth,
+                imageHeight = currentImageHeight
+            )
+        } else {
+            ContentScale.Crop // 默认值，当图片尺寸未知时
+        }
 
     val roundedCornerShapeSize = calculateOptimalRoundedCornerShapeSize(width, height)
     Box(
@@ -351,7 +360,7 @@ fun CharacterCard(
             model = agentInfo.background,
             placeholder = painterResource(R.drawable.app_icon),
             error = painterResource(R.drawable.app_icon),
-            contentScale = optimalContentScale,
+            contentScale = ContentScale.Crop,
             onSuccess = { state ->
                 // 当图片加载成功时，获取图片尺寸
                 val drawable = state.painter
