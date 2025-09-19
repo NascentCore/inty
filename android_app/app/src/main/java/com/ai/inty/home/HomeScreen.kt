@@ -40,7 +40,6 @@ import com.ai.inty.ui.ChatDialogData
 import com.ai.inty.ui.ExpiredVipDialog
 import com.ai.inty.ui.components.ForceUpgradeDialog
 import com.ai.inty.ui.theme.DarkPurple
-import com.ai.inty.ui.theme.DarkPurple
 import com.ai.inty.viewmodels.ChatViewModel
 import com.ai.inty.viewmodels.HomeTabIndex
 import com.ai.inty.viewmodels.MainViewModel
@@ -291,15 +290,12 @@ private fun ConversationsTabContent(
 ) {
     val conversations by chatViewModel.conversations.collectAsState()
     val sysMsgs = mainViewModel.sysMsgs
-    val followingAgents = mainViewModel.followingAgents
     val isLoadingConversations by chatViewModel.isLoadingConversations.collectAsState()
-    val isLoadingFollowingAgents by mainViewModel.isLoadingFollowingAgents.collectAsState()
 
     ActivityPage(
         modifier = Modifier,
         selectedTab = selectedConversationsTab,
         conversations = conversations,
-        followingAgents = followingAgents,
         lastSysMsg = sysMsgs.firstOrNull(),
         onSelectTab = {
             mainViewModel.onSelectConversationsTab(it)
@@ -318,22 +314,10 @@ private fun ConversationsTabContent(
             )
             TheRouter.build(Constant.ROUTE_SYS_MSGS).navigation(context)
         },
-        onClickFollowingAgent = { agent ->
-            TheRouter.build(Constant.ROUTE_CHAT)
-                .withObject("agent", agent)
-                .navigation(context)
-        },
-        onUnfollowAgent = { agentId ->
-            mainViewModel.unfollowAgent(agentId)
-        },
         isLoadingConversations = isLoadingConversations,
-        isLoadingFollowingAgents = isLoadingFollowingAgents,
         onLoadMoreConversations = {
             chatViewModel.loadMoreConversations()
         },
-        onLoadMoreFollowingAgents = {
-            mainViewModel.loadMoreFollowingAgents()
-        }
     )
 }
 

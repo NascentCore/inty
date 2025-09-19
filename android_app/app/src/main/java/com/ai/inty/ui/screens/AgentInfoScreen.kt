@@ -46,15 +46,14 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-
 import com.ai.inty.Constant
 import com.ai.inty.R
 import com.ai.inty.base.AntiClick
 import com.ai.inty.base.noRippleClickable
 import com.ai.inty.beans.AgentInfo
+import com.ai.inty.ui.components.AgentBackground
 import com.ai.inty.ui.theme.DarkPurple
 import com.ai.inty.viewmodels.AgentInfoViewModel
-import com.ai.inty.ui.components.AgentBackground
 import com.inty.utils.storage.IntySetting
 import com.therouter.TheRouter
 
@@ -186,10 +185,7 @@ internal fun AiAgentInfoScreen(
                                 )
                             }
                         }
-                        FollowButton(
-                            isFollowing = agent.isFollowed,
-                            onClick = { viewModel.followAgent(agent.id, context) }
-                        )
+
                         Spacer(Modifier.width(16.dp))
                     }
 

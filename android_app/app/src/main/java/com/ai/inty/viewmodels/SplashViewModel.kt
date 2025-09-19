@@ -2,14 +2,12 @@ package com.ai.inty.viewmodels
 
 import androidx.lifecycle.viewModelScope
 import com.ai.inty.base.BaseActivityViewModel
-import com.ai.inty.net.IUserApi
 import com.ai.inty.netapi.services.AuthService
 import com.ai.inty.utils.AppStartupManager
 import com.ai.inty.utils.IntyUserProfileSDK
 import com.ai.inty.utils.UserProfileManager
 import com.inty.utils.log.EasyLog
 import com.inty.utils.storage.IntySetting
-import com.therouter.TheRouter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -22,12 +20,6 @@ enum class InitState {
 }
 
 class SplashViewModel : BaseActivityViewModel() {
-
-    // 延迟获取依赖，避免在构造函数中立即获取导致空指针异常
-    private val userApi: IUserApi by lazy {
-        TheRouter.get(IUserApi::class.java)
-            ?: throw IllegalStateException("IUserApi not found in TheRouter")
-    }
 
     private val _initState = MutableStateFlow(InitState.Loading)
     val initState = _initState.asStateFlow()

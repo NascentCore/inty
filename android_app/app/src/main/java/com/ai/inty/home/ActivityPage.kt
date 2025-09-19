@@ -71,17 +71,12 @@ fun ActivityPage(
     modifier: Modifier,
     selectedTab: ActivityPageSubTab,
     conversations: List<ConversationItem>,
-    followingAgents: List<AgentInfo>,
     lastSysMsg: SysMsgItem?,
     onSelectTab: (ActivityPageSubTab) -> Unit,
     onClickConversationItem: (ConversationItem) -> Unit,
     onClickSysMsg: () -> Unit,
-    onClickFollowingAgent: (AgentInfo) -> Unit,
-    onUnfollowAgent: ((String) -> Unit)? = null,
     isLoadingConversations: Boolean = false,
-    isLoadingFollowingAgents: Boolean = false,
     onLoadMoreConversations: (() -> Unit)? = null,
-    onLoadMoreFollowingAgents: (() -> Unit)? = null,
 ) {
     Box(modifier = modifier) {
         IntyImage(
@@ -91,17 +86,12 @@ fun ActivityPage(
         Content(
             selectedTab = selectedTab,
             conversations = conversations,
-            followingAgents = followingAgents,
             lastSysMsg = lastSysMsg,
             onSelectTab = onSelectTab,
             onClickConversationItem = onClickConversationItem,
             onClickSysMsg = onClickSysMsg,
-            onClickFollowingAgent = onClickFollowingAgent,
-            onUnfollowAgent = onUnfollowAgent,
             isLoadingConversations = isLoadingConversations,
-            isLoadingFollowingAgents = isLoadingFollowingAgents,
             onLoadMoreConversations = onLoadMoreConversations,
-            onLoadMoreFollowingAgents = onLoadMoreFollowingAgents
         )
     }
 }
@@ -112,17 +102,12 @@ val TAB_CONTENT_SPACER_HEIGHT = 22.dp
 private fun Content(
     selectedTab: ActivityPageSubTab,
     conversations: List<ConversationItem>,
-    followingAgents: List<AgentInfo>,
     lastSysMsg: SysMsgItem?,
     onSelectTab: (ActivityPageSubTab) -> Unit,
     onClickConversationItem: (ConversationItem) -> Unit,
     onClickSysMsg: () -> Unit,
-    onClickFollowingAgent: (AgentInfo) -> Unit,
-    onUnfollowAgent: ((String) -> Unit)? = null,
     isLoadingConversations: Boolean = false,
-    isLoadingFollowingAgents: Boolean = false,
     onLoadMoreConversations: (() -> Unit)? = null,
-    onLoadMoreFollowingAgents: (() -> Unit)? = null,
 ) {
     Scaffold(
         modifier = Modifier
@@ -133,67 +118,28 @@ private fun Content(
         Column(modifier = Modifier.fillMaxSize()) {
             Spacer(Modifier.height(innerPadding.calculateTopPadding() + 28.dp))
 
-            SubTabSelector(
-                selectedTab = selectedTab,
-                onSelectTab = onSelectTab
+            ActivityPageSubTabItem(
+                modifier = Modifier.noRippleClickable {
+                    onSelectTab(ActivityPageSubTab.TabMessage)
+                },
+                text = stringResource(R.string.tab_message),
+                isSelected = selectedTab == ActivityPageSubTab.TabMessage
             )
 
             Spacer(Modifier.height(TAB_CONTENT_SPACER_HEIGHT))
 
-            when (selectedTab) {
-                ActivityPageSubTab.TabMessage -> {
-                    MessageTabContent(
-                        conversations = conversations,
-                        lastSysMsg = lastSysMsg,
-                        onClickConversationItem = onClickConversationItem,
-                        onClickSysMsg = onClickSysMsg,
-                        isLoading = isLoadingConversations,
-                        onLoadMore = onLoadMoreConversations
-                    )
-                }
-
-                ActivityPageSubTab.TabFollowing -> {
-                    FollowingTabContent(
-                        followingAgents = followingAgents,
-                        onClickAgent = onClickFollowingAgent,
-                        onUnfollowAgent = onUnfollowAgent,
-                        isLoading = isLoadingFollowingAgents,
-                        onLoadMore = onLoadMoreFollowingAgents
-                    )
-                }
-            }
+            MessageTabContent(
+                conversations = conversations,
+                lastSysMsg = lastSysMsg,
+                onClickConversationItem = onClickConversationItem,
+                onClickSysMsg = onClickSysMsg,
+                isLoading = isLoadingConversations,
+                onLoadMore = onLoadMoreConversations
+            )
         }
     }
 }
 
-@Composable
-private fun SubTabSelector(
-    selectedTab: ActivityPageSubTab,
-    onSelectTab: (ActivityPageSubTab) -> Unit,
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.Center,
-    ) {
-        ActivityPageSubTabItem(
-            modifier = Modifier.noRippleClickable {
-                onSelectTab(ActivityPageSubTab.TabMessage)
-            },
-            text = stringResource(R.string.tab_message),
-            isSelected = selectedTab == ActivityPageSubTab.TabMessage
-        )
-
-        Spacer(Modifier.width(15.dp))
-
-        ActivityPageSubTabItem(
-            modifier = Modifier.noRippleClickable {
-                onSelectTab(ActivityPageSubTab.TabFollowing)
-            },
-            text = stringResource(R.string.tab_following),
-            isSelected = selectedTab == ActivityPageSubTab.TabFollowing
-        )
-    }
-}
 
 val TAB_ITEM_WIDTH = 120.dp
 val TAB_ITEM_HEIGHT = 38.dp
@@ -680,7 +626,10 @@ fun LongPressUnfollowItem(
             ) {
                 Row(
                     modifier = Modifier
-                        .padding(horizontal = LONG_PRESS_UNFOLLOW_ITEM_PADDING_HORIZONTAL, vertical = LONG_PRESS_UNFOLLOW_ITEM_PADDING_VERTICAL)
+                        .padding(
+                            horizontal = LONG_PRESS_UNFOLLOW_ITEM_PADDING_HORIZONTAL,
+                            vertical = LONG_PRESS_UNFOLLOW_ITEM_PADDING_VERTICAL
+                        )
                         .clickable(onClick = {
                             showPopup = false
                             isDeleting = true
@@ -692,7 +641,9 @@ fun LongPressUnfollowItem(
                             }
                         }),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(LONG_PRESS_UNFOLLOW_ITEM_PADDING_HORIZONTAL)
+                    horizontalArrangement = Arrangement.spacedBy(
+                        LONG_PRESS_UNFOLLOW_ITEM_PADDING_HORIZONTAL
+                    )
                 ) {
                     Text(
                         text = stringResource(R.string.unfollow),
