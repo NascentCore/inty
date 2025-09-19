@@ -54,6 +54,7 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
   const [searchText, setSearchText] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [expanded, setExpanded] = useState(false);
+  const [selectedVoiceInfo, setSelectedVoiceInfo] = useState<Voice | null>(null);
 
   // 加载音色列表
   const loadVoices = useCallback(async (forceRefresh = false, search = "", category = "all") => {
@@ -78,6 +79,51 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
     }
   }, []);
 
+  // 根据 voice_id 加载单个音色详情
+  const loadVoiceById = useCallback(async (voiceId: string) => {
+    if (!voiceId) return null;
+    
+    try {
+      // 首先尝试从当前列表中查找
+      const existingVoice = voices.find(voice => voice.voice_id === voiceId);
+      if (existingVoice) {
+        setSelectedVoiceInfo(existingVoice);
+        return existingVoice;
+      }
+
+      // 尝试加载完整的音色列表来查找目标音色
+      const allVoices = await api.voices.listVoices({});
+      const foundVoice = allVoices?.find(voice => voice.voice_id === voiceId);
+      if (foundVoice) {
+        setSelectedVoiceInfo(foundVoice);
+        return foundVoice;
+      }
+
+      // 如果还是找不到，更新为最终的基本音色信息
+      const finalVoiceInfo = {
+        voice_id: voiceId,
+        name: voiceId, // 使用 voice_id 作为显示名称
+        category: 'unknown',
+        description: '已选择的音色'
+      };
+      setSelectedVoiceInfo(finalVoiceInfo);
+      return finalVoiceInfo;
+      
+    } catch (error) {
+      console.error("获取音色详情失败:", error);
+      
+      // 出错时更新为错误状态的音色信息
+      const errorVoiceInfo = {
+        voice_id: voiceId,
+        name: voiceId,
+        category: 'error', 
+        description: '音色加载失败'
+      };
+      setSelectedVoiceInfo(errorVoiceInfo);
+      return errorVoiceInfo;
+    }
+  }, [voices]);
+
   // 搜索防抖处理
   const debouncedLoadVoices = useMemo(() => {
     const debounce = (func: Function, delay: number) => {
@@ -97,6 +143,25 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
     loadVoices(false, searchText, categoryFilter);
   }, []); // 只在组件挂载时加载一次
 
+  // 当 value 变化时，立即显示基本信息并异步加载详细信息
+  useEffect(() => {
+    if (value) {
+      // 立即设置基本音色信息用于显示
+      const basicInfo = {
+        voice_id: value,
+        name: value,
+        category: 'loading',
+        description: '正在加载音色信息...'
+      };
+      setSelectedVoiceInfo(basicInfo);
+      
+      // 异步加载完整音色信息
+      loadVoiceById(value);
+    } else {
+      setSelectedVoiceInfo(null);
+    }
+  }, [value, loadVoiceById]);
+
   // 搜索和筛选变化时的防抖处理
   useEffect(() => {
     debouncedLoadVoices(searchText, categoryFilter);
@@ -104,8 +169,13 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
 
   // 获取当前选中的音色
   const selectedVoice = useMemo(() => {
+    // 优先使用专门加载的选中音色信息
+    if (selectedVoiceInfo && selectedVoiceInfo.voice_id === value) {
+      return selectedVoiceInfo;
+    }
+    // 否则从音色列表中查找
     return voices.find(voice => voice.voice_id === value);
-  }, [voices, value]);
+  }, [voices, value, selectedVoiceInfo]);
 
   // 获取音色分类列表
   const categories = useMemo(() => {
@@ -184,7 +254,6 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
 
           {voice.category && (
             <Tag 
-              size="small" 
               color={isSelected ? 'green' : 'blue'}
               style={{ marginBottom: 4 }}
             >
@@ -268,11 +337,31 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
       {selectedVoice && (
         <div style={{ marginBottom: 16 }}>
           <Space align="center">
-            <Badge status="success" />
+            {selectedVoice.category === 'loading' ? (
+              <Badge status="processing" />
+            ) : selectedVoice.category === 'error' ? (
+              <Badge status="error" />
+            ) : (
+              <Badge status="success" />
+            )}
             <span style={{ fontWeight: 500 }}>当前音色：</span>
-            <Tag color="green" icon={<SoundOutlined />}>
+            <Tag 
+              color={
+                selectedVoice.category === 'loading' ? 'blue' :
+                selectedVoice.category === 'error' ? 'red' : 'green'
+              } 
+              icon={<SoundOutlined />}
+            >
               {selectedVoice.name}
+              {selectedVoice.category === 'loading' && (
+                <Spin size="small" style={{ marginLeft: 4 }} />
+              )}
             </Tag>
+            {selectedVoice.description && selectedVoice.category !== 'loading' && (
+              <span style={{ fontSize: '12px', color: '#666' }}>
+                ({selectedVoice.description})
+              </span>
+            )}
             {!disabled && (
               <Button
                 type="text"
@@ -390,7 +479,7 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
       )}
 
       {/* 自定义样式 */}
-      <style jsx>{`
+      <style>{`
         .voice-card-selected {
           box-shadow: 0 2px 8px rgba(24, 144, 255, 0.2) !important;
         }
