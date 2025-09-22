@@ -107,21 +107,9 @@ async def recommend_agents(
     page_size: int = Query(10, ge=1, le=100, description="Items per page, maximum 100"),
     sort: schemas.AgentSortOption = Query(
         schemas.AgentSortOption.CREATED_DESC,
-        description="Sort order: created_asc, created_desc, random",
+        description="Sort order: created_asc, created_desc, random, score_based_random",
     ),
-    # TODO: Fill in the implementation. 目前还没有使用该参数，因为还没有实现推荐算法。
-    # 目前不会影响 app 端正常使用。详情查看：https://github.com/NascentCore/inty/issues/484
-    # 实现原理：
-    # SELECT * FROM (
-    # SELECT *, md5(id || 'sort.sort_seed') as hash
-    # FROM agents
-    # ) ORDER BY hash;
-    # app 需要记录 sort seed，每次请求新的推荐列表时，要提供新的 sort seed；
-    # 以下这些场景下，需要生成新的 sort seed：
-    # 1. Home 页 featured 列表每次 app 重新启动时
-    # 2. Explore 页每次顶部下拉刷新推荐列表
-    # 然后每次请求 /recommends 要提供这个 sort seed，否则会返回相同的推荐列表。
-    sort_seed: str = Query("", description="sort seed [not yet used]"),
+    sort_seed: str = Query("", description="Sort seed for deterministic random ordering"),
     current_user: schemas.User = Depends(deps.get_current_active_user),
 ) -> Any:
     """
@@ -130,13 +118,20 @@ async def recommend_agents(
     Sorting options:
     - created_desc: Most recent first (default)
     - created_asc: Oldest first
-    - random: Random order
+    - random: Random order (uses sort_seed for deterministic results)
+    - score_based_random: Score-based recommendation (6 high-score agents + 4 random agents)
+    
+    For score_based_random algorithm:
+    - Returns 6 agents with highest scores (5-star first, then 4-star, etc.)
+    - Plus 4 randomly selected agents
+    - Uses sort_seed for consistent results across pagination requests
     """
     pagination_data = await agent_service.get_recommended_agents_paginated(
         db,
         page=page,
         page_size=page_size,
         sort_by=sort,
+        sort_seed=sort_seed,
         current_user_id=current_user.id,
     )
     return schemas.APIResponse.success(data=pagination_data)

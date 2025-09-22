@@ -49,6 +49,8 @@ class AgentSortOption(str, Enum):
     CREATED_DESC = "created_desc"
     # Random order, use sort_seed to ensure consistent order
     RANDOM = "random"
+    # Score-based random recommendation: 6 high-score agents + 4 random agents
+    SCORE_BASED_RANDOM = "score_based_random"
 
 
 class AgentSortConfig(BaseModel):
