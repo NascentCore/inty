@@ -23,6 +23,7 @@ export interface AvatarCropData {
 // Agent 元数据
 export interface AgentMetaData {
   score?: number; // 1-5 的整数评分
+  comment?: string; // 备注信息
 }
 
 // LLM 配置
