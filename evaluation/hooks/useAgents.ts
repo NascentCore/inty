@@ -243,6 +243,14 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
             console.log("uploadResponse:", uploadResponse);
             (updateData as AgentUpdateRequest).avatar = uploadResponse.data?.avatar_url as string;
             (updateData as AgentUpdateRequest).background = uploadResponse.data?.url as string;
+
+            const currentAgent = await api.inty.api.v1.ai.agents.retrieve(agentId) as unknown as Agent;
+            if (currentAgent.extensions && currentAgent.extensions.avatar_crop) {
+              const restExtensions = { ...currentAgent.extensions };
+              delete restExtensions.avatar_crop;
+              updateData.extensions = Object.keys(restExtensions).length > 0 ? restExtensions : null;
+              console.log("已清除 avatar_crop 扩展信息");
+            }
           } catch (error) {
             console.error("头像上传失败:", error);
             message.error("头像上传失败，但智能体更新将继续");

@@ -70,6 +70,7 @@ export interface AgentUpdateRequest {
   voice_id?: string;
   llm_config?: LLMConfig | null;
   meta_data?: AgentMetaData;
+  extensions?: { [key: string]: unknown } | null;
 }
 
 // 聊天消息
