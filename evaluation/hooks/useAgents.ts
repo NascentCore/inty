@@ -187,6 +187,7 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
             // 将上传后的URL赋值给avatar字段
             console.log("uploadResponse:", uploadResponse);
             (agentData as AgentCreateRequest).avatar = uploadResponse.data?.avatar_url as string;
+            (agentData as AgentCreateRequest).background = uploadResponse.data?.url as string;
             console.log("avatar:", (agentData as AgentCreateRequest).avatar);
           } catch (error) {
             console.error("头像上传失败:", error);
@@ -244,6 +245,7 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
             // 将上传后的URL赋值给avatar字段
             console.log("uploadResponse:", uploadResponse);
             (updateData as AgentUpdateRequest).avatar = uploadResponse.data?.avatar_url as string;
+            (updateData as AgentUpdateRequest).background = uploadResponse.data?.url as string;
             console.log("avatar:", (updateData as AgentUpdateRequest).avatar);
           } catch (error) {
             console.error("头像上传失败:", error);
