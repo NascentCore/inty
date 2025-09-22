@@ -285,7 +285,7 @@ export const AgentManagePage: React.FC = () => {
         }
       };
 
-      const updatedAgent = await api.inty.api.v1.ai.agents.update(currentAgentForAvatar.id, updateData) as unknown as Agent;
+      const updatedAgent = await api.getIntyClient().api.v1.ai.agents.update(currentAgentForAvatar.id, updateData) as unknown as Agent;
       if (updatedAgent) {
         message.success("头像坐标设置成功");
         // 刷新智能体列表

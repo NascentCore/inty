@@ -207,7 +207,7 @@ export const ChatPage: React.FC = () => {
       setSending(true);
 
       try {
-        const currentSettings = await api.inty.api.v1.chats.agents.getSettings(agent.id);
+        const currentSettings = await api.getIntyClient().api.v1.chats.agents.getSettings(agent.id);
         console.log(`智能体 ${agent.name} 的当前聊天设置:`, currentSettings);
         // 先尝试获取现有的聊天详情和消息历史
         const chatData = await api.chat.getChatDetail(agent.id, {

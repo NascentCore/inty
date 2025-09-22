@@ -30,7 +30,7 @@ export const PremiumModeToggle: React.FC<PremiumModeToggleProps> = ({
     setError(null);
     
     try {
-      const settings = await api.inty.api.v1.chats.agents.getSettings(agentId);
+      const settings = await api.getIntyClient().api.v1.chats.agents.getSettings(agentId);
       setPremiumMode(settings.premium_mode || false);
     } catch (err) {
       console.error("Failed to load premium mode settings:", err);

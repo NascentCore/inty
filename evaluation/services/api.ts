@@ -31,8 +31,16 @@ export const logError = (msg: string) => {
   message.error(msg);
 };
 
-const adminToken =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3ODQzNjAyMjAsInN1YiI6InVzZXItMDFKV1ozNFk0RDFDOTJHRDg2QTVSNkVXWUoifQ.vsYKRvrCfxWgJ5wkTjAYby3RrIOm6P-9VbcCg4msjlM";
+// 全局 API Key 管理
+let globalApiKey: string | null = null;
+
+export const setGlobalApiKey = (apiKey: string | null) => {
+  globalApiKey = apiKey;
+};
+
+export const getGlobalApiKey = (): string | null => {
+  return globalApiKey;
+};
 
 class ApiClient {
   private baseURL: string;
@@ -84,9 +92,15 @@ class ApiClient {
       }
     }
 
+    // 使用动态 API Key，如果没有则抛出错误
+    const currentApiKey = getGlobalApiKey();
+    if (!currentApiKey) {
+      throw new Error("API Key 未设置，请先设置 API Key");
+    }
+
     config.headers = {
       ...config.headers,
-      Authorization: `Bearer ${adminToken}`,
+      Authorization: `Bearer ${currentApiKey}`,
     };
 
     try {
@@ -228,12 +242,33 @@ const apiClient = new ApiClient(window.location.origin);
 
 
 // 创建一个自定义的 Inty 客户端，支持相对路径
-const intyClient = new Inty({
-  // 前端与后端部署与同一域名，因此总是使用同样的域名。
-  baseURL: window.location.origin,
-  // TODO: 添加功能让用户指定 API key
-  apiKey: adminToken,
-});
+let intyClient: Inty | null = null;
+
+// 初始化 Inty 客户端
+const initializeIntyClient = () => {
+  const apiKey = getGlobalApiKey();
+  if (apiKey) {
+    intyClient = new Inty({
+      baseURL: window.location.origin,
+      apiKey: apiKey,
+    });
+  }
+};
+
+// 初始化客户端
+initializeIntyClient();
+
+// 更新 Inty 客户端的 API Key
+export const updateIntyClient = (apiKey: string | null) => {
+  if (apiKey) {
+    intyClient = new Inty({
+      baseURL: window.location.origin,
+      apiKey: apiKey,
+    });
+  } else {
+    intyClient = null;
+  }
+};
 
 // =============================================================================
 // 评测会话API
@@ -864,4 +899,11 @@ export default {
   voices: voiceApi,
   inty: intyClient,
   WebSocketManager,
+  // 获取 Inty 客户端的函数，确保只有在有 API Key 时才返回客户端
+  getIntyClient: () => {
+    if (!intyClient) {
+      throw new Error("API Key 未设置，请先设置 API Key");
+    }
+    return intyClient;
+  },
 };
