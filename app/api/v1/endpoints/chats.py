@@ -574,7 +574,9 @@ async def agent_chat_completions(
                     )
                     if voice_result:
                         audio_url, audio_duration = voice_result
-                        logger.info(f"语音自动生成成功: {audio_url}, 时长: {audio_duration:.2f}秒")
+                        logger.info(
+                            f"语音自动生成成功: {audio_url}, 时长: {audio_duration:.2f}秒"
+                        )
                     else:
                         audio_url, audio_duration = None, None
                 else:
@@ -613,7 +615,11 @@ async def agent_chat_completions(
 
             # 获取最新AI消息的完整信息
             try:
-                latest_message_info = await chat_history_service.get_latest_ai_message_info(db, session_id)
+                latest_message_info = (
+                    await chat_history_service.get_latest_ai_message_info(
+                        db, session_id
+                    )
+                )
             except Exception as e:
                 logger.warning(f"获取最新消息信息失败: {str(e)}")
                 latest_message_info = None
@@ -706,7 +712,7 @@ async def generate_message_voice(
 
         if not voice_result:
             raise HTTPException(status_code=500, detail="Voice generation failed")
-        
+
         audio_url, audio_duration = voice_result
         logger.debug(f"按需语音生成成功: {audio_url}, 时长: {audio_duration:.2f}秒")
 
@@ -714,7 +720,11 @@ async def generate_message_voice(
         # 使用try-except确保更新失败不影响API响应
         try:
             update_success = await chat_history_service.update_message_audio_url(
-                db=db, session_id=session_id, message_id=message_id, audio_url=audio_url, audio_duration=audio_duration
+                db=db,
+                session_id=session_id,
+                message_id=message_id,
+                audio_url=audio_url,
+                audio_duration=audio_duration,
             )
             if update_success:
                 logger.debug(f"成功更新消息{message_id}的audio_url到chat_history")
@@ -745,7 +755,7 @@ async def generate_message_voice(
 @router.get(
     "/voices/{voice_id}",
     deprecated=True,
-    include_in_schema=False,
+    include_in_schema=True,
     tags=["inty", "voice"],
     summary="Get Voice Info",
     description="Get voice info by voice_id",
