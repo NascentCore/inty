@@ -153,7 +153,7 @@ const AppContent: React.FC = () => {
       case "evaluation":
         return "智能体评测";
       case "history":
-        return "评测历史";
+        return "评测记录";
       case "chat":
         return "单角色聊天";
       case "agents":
