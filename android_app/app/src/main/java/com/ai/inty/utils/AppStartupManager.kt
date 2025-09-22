@@ -40,7 +40,6 @@ object AppStartupManager {
     val cachedAgents: StateFlow<List<AgentInfo>> = _cachedAgents.asStateFlow()
 
 
-
     // 预加载状态
     private val _preloadProgress = MutableStateFlow(0f)
     val preloadProgress: StateFlow<Float> = _preloadProgress.asStateFlow()
@@ -211,7 +210,6 @@ object AppStartupManager {
     }
 
 
-
     /**
      * 从网络更新用户信息
      */
@@ -249,8 +247,10 @@ object AppStartupManager {
         try {
             val agentApi: IAgentApi = TheRouter.get(IAgentApi::class.java)
                 ?: throw IllegalStateException("IAgentApi not found")
-
-            val result = agentApi.recommendAgents(1, 10)
+            //推荐agents接口需要的随机种子，需要确保在同一批数据时，使用的seed是同一个值
+            val sortSeed = IntySetting.sortSeed()
+            val result =
+                agentApi.recommendAgents(page = 1, pageSize = 10, sort_seed = sortSeed.toString())
             when (result) {
                 is HttpResult.Success -> {
                     val agents = result.data.list ?: emptyList()
@@ -279,7 +279,6 @@ object AppStartupManager {
         _cachedAgents.value = agents
         EasyLog.log("AppStartupManager - 更新缓存推荐agents: ${agents.size}个")
     }
-
 
 
 }

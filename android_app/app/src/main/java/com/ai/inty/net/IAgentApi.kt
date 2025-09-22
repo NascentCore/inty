@@ -27,7 +27,8 @@ interface IAgentApi {
     suspend fun recommendAgents(
         @Query("page") page: Int,
         @Query("page_size") pageSize: Int,
-        @Query("sort") sort: String = "random",//三种排序 created_asc,created_desc,random
+        @Query("sort_seed") sort_seed: String,//随机排序的时候，这里需要一个随机种子，每一批次的请求，随机种子一致（即 同一个下载刷新后的加载更多，他们是一批次）
+        @Query("sort") sort: String = "score_based_random",//四种排序 created_asc, created_desc, random, score_based_random
     ): HttpResult<AgentInfoResponse>
 
     @GET("/api/v1/ai/agents/following")
