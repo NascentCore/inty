@@ -28,6 +28,7 @@ echo "📁 部署到后端静态目录..."
 rm -rf ../app/static/evaluation
 mkdir -p ../app/static/evaluation
 cp -r dist/* ../app/static/evaluation/
+cp -r resources/ ../app/static/evaluation/resources/
 
 echo "✅ 构建和部署完成！"
 echo "🌐 访问地址: http://127.0.0.1:8000/evaluation"

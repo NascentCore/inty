@@ -915,7 +915,7 @@ export const ChatPage: React.FC = () => {
                       <Button
                         icon={
                           <img
-                            src="/resources/langsmith.png"
+                            src="/evaluation/resources/langsmith.png"
                             alt="LangSmith"
                             style={{
                               width: "38px",
