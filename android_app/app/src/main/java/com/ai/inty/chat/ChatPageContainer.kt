@@ -52,7 +52,6 @@ fun ChatPageContainer(
     userProfile: UserProfile,
     currentPageIndex: Int = 0,
     onPageChanged: (Int) -> Unit = {},
-    onFollowAgent: ((String) -> Unit)? = null,
 ) {
     val pageState = rememberPagerState(initialPage = currentPageIndex) { agentList.size }
     val scope = rememberCoroutineScope()
@@ -81,7 +80,6 @@ fun ChatPageContainer(
             ChatPage(
                 modifier = Modifier.fillMaxSize(),
                 chatViewModel = chatViewModel,
-                onFollowAgent = onFollowAgent,
             )
         }
 

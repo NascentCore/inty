@@ -48,7 +48,6 @@ fun ChatTopBar(
     showBackButton: Boolean = false,
     onBack: (() -> Unit)? = null,
     onClickMore: () -> Unit,
-    onFollowAgent: ((String) -> Unit)? = null,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()

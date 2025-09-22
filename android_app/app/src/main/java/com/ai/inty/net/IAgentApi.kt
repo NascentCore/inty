@@ -3,7 +3,6 @@ package com.ai.inty.net
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.beans.AgentInfoResponse
 import com.ai.inty.beans.CreateAgentRequest
-import com.ai.inty.beans.FollowResponse
 import com.ai.inty.beans.GenerateBackgroundRequest
 import com.ai.inty.beans.GenerateBackgroundResponse
 import com.ai.inty.beans.UploadAvatarResponse
@@ -30,18 +29,6 @@ interface IAgentApi {
         @Query("sort_seed") sort_seed: String,//随机排序的时候，这里需要一个随机种子，每一批次的请求，随机种子一致（即 同一个下载刷新后的加载更多，他们是一批次）
         @Query("sort") sort: String = "score_based_random",//四种排序 created_asc, created_desc, random, score_based_random
     ): HttpResult<AgentInfoResponse>
-
-    @GET("/api/v1/ai/agents/following")
-    suspend fun getFollowingAgents(
-        @Query("page") page: Int,
-        @Query("page_size") pageSize: Int
-    ): HttpResult<AgentInfoResponse>
-
-    @POST("/api/v1/ai/agents/{agentId}/follow")
-    suspend fun followAgent(@Path("agentId") agentId: String): HttpResult<FollowResponse>
-
-    @DELETE("/api/v1/ai/agents/{agentId}/follow")
-    suspend fun unfollowAgent(@Path("agentId") agentId: String): HttpResult<FollowResponse>
 
     @POST("/api/v1/ai/agents")
     suspend fun createAgent(@Body request: CreateAgentRequest): HttpResult<AgentInfo>

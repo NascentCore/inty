@@ -1,7 +1,5 @@
 package com.ai.inty.chat
 
-import kotlinx.coroutines.launch
-
 import android.app.Activity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -40,20 +38,20 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-
 import com.ai.inty.Constant
 import com.ai.inty.R
 import com.ai.inty.base.ToastUtils
 import com.ai.inty.billing.BillingRepository
+import com.ai.inty.home.BottomNavigationBarHeight
 import com.ai.inty.ui.AdvancedModelChatDialog
 import com.ai.inty.ui.ChatDialogData
 import com.ai.inty.ui.UnlimitChatDialog
+import com.ai.inty.ui.components.AgentBackground
 import com.ai.inty.viewmodels.ChatViewModel
 import com.inty.utils.log.EasyLog
 import com.inty.utils.storage.IntySetting
 import com.therouter.TheRouter
-import com.ai.inty.ui.components.AgentBackground
-import com.ai.inty.home.BottomNavigationBarHeight
+import kotlinx.coroutines.launch
 
 
 // The spacer from the bottom of the chat input to what ever that flows underneath it.
@@ -63,7 +61,6 @@ val ChatInputBottomSpacerHeight = 8.dp
 internal fun ChatPage(
     modifier: Modifier,
     chatViewModel: ChatViewModel,
-    onFollowAgent: ((String) -> Unit)? = null,
     showBackButton: Boolean = false,
     onBack: (() -> Unit)? = null,
 ) {
@@ -189,16 +186,6 @@ internal fun ChatPage(
                                 }
                             }
                         },
-                        onFollowAgent = { agentId ->
-                            scope.launch {
-                                //如果是已经删除的agent，则不可点击，并提示
-                                if (agentInfo?.isDeleted == true) {
-                                    ToastUtils.showToast(R.string.str_agent_is_deleted)
-                                } else {
-                                    onFollowAgent?.invoke(agentId)
-                                }
-                            }
-                        }
                     )
                 }
 

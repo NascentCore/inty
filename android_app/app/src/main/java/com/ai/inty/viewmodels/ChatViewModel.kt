@@ -183,19 +183,6 @@ class ChatViewModel : BaseActivityViewModel() {
 
     //endregion
 
-    fun updateAgentFollowState(agentId: String, isFollowed: Boolean) {
-        EasyLog.log("ChatViewModel updateAgentFollowState - agentId: $agentId, isFollowed: $isFollowed")
-        _agentInfo.update { currentAgent ->
-            currentAgent?.let { agent ->
-                if (agent.id == agentId) {
-                    agent.copy(isFollowed = isFollowed)
-                } else {
-                    agent
-                }
-            }
-        }
-    }
-
     fun queryMsgs() {
         // 防重复请求检查
         val currentTime = System.currentTimeMillis()

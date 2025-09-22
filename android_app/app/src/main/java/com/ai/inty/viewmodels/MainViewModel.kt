@@ -2,10 +2,8 @@ package com.ai.inty.viewmodels
 
 //import com.ai.inty.billing.BillingRepository
 import android.content.Context
-import android.content.Intent
 import androidx.compose.runtime.mutableStateListOf
 import androidx.lifecycle.viewModelScope
-import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.ai.inty.Constant
 import com.ai.inty.R
 import com.ai.inty.base.BaseActivityViewModel
@@ -85,12 +83,6 @@ class MainViewModel : BaseActivityViewModel() {
     private var _isLoadingUserAgents = MutableStateFlow(false)
     val isLoadingUserAgents = _isLoadingUserAgents.asStateFlow()
     private var hasMoreUserAgents = true
-
-    // Pagination state for following agents
-    private var currentFollowingAgentsPage = 0
-    private var _isLoadingFollowingAgents = MutableStateFlow(false)
-    val isLoadingFollowingAgents = _isLoadingFollowingAgents.asStateFlow()
-    private var hasMoreFollowingAgents = true
 
     private val _selectedTab = MutableStateFlow(HomeTabIndex.Chat)
     val selectedTab = _selectedTab.asStateFlow()
@@ -346,11 +338,6 @@ class MainViewModel : BaseActivityViewModel() {
         when (_selectedTab.value) {
             HomeTabIndex.Conversation -> {
                 chatViewModel?.getConversations()
-                // 如果切换到对话页面且当前选中关注列表，则刷新关注列表
-                if (_selectedConversationsTab.value == ActivityPageSubTab.TabFollowing) {
-                    EasyLog.log("Switching to Conversations tab while following tab is selected - refreshing following agents")
-                    getFollowingAgents()
-                }
             }
 
             HomeTabIndex.My -> {
@@ -371,15 +358,6 @@ class MainViewModel : BaseActivityViewModel() {
 
     fun onSelectConversationsTab(tab: ActivityPageSubTab) {
         _selectedConversationsTab.value = tab
-        when (tab) {
-            ActivityPageSubTab.TabFollowing -> {
-                // 每次切换到关注列表时都刷新
-                EasyLog.log("Switching to following tab - refreshing following agents")
-                getFollowingAgents()
-            }
-
-            else -> {}
-        }
     }
 
     fun updateCurrentChatPageIndex(index: Int) {
@@ -525,211 +503,6 @@ class MainViewModel : BaseActivityViewModel() {
                 )
                 // 不影响主流程，静默处理
             }
-        }
-    }
-
-    fun getFollowingAgents() {
-        EasyLog.log("getFollowingAgents - 开始加载关注agents")
-        currentFollowingAgentsPage = 1 // 分页从1开始
-        hasMoreFollowingAgents = true
-
-        // 清空现有数据，准备加载新数据
-        followingAgents.clear()
-
-        // 直接加载第一页数据
-        loadFollowingAgents()
-    }
-
-    fun loadMoreFollowingAgents() {
-        if (!_isLoadingFollowingAgents.value && hasMoreFollowingAgents) {
-            EasyLog.log("loadMoreFollowingAgents - 开始加载第${currentFollowingAgentsPage + 1}页")
-            currentFollowingAgentsPage++
-            loadFollowingAgents()
-        } else {
-            EasyLog.log("loadMoreFollowingAgents - 跳过加载: isLoading=${_isLoadingFollowingAgents.value}, hasMoreData=$hasMoreFollowingAgents")
-        }
-    }
-
-    private fun loadFollowingAgents() {
-        if (_isLoadingFollowingAgents.value) return
-
-        _isLoadingFollowingAgents.value = true
-        EasyLog.log("loadFollowingAgents - page: $currentFollowingAgentsPage")
-
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val result = agentApi.getFollowingAgents(currentFollowingAgentsPage, 20)
-                EasyLog.log("loadFollowingAgents = $result")
-
-                when (result) {
-                    is HttpResult.Success -> {
-                        result.data.list?.let { agents ->
-                            if (agents.isEmpty()) {
-                                hasMoreFollowingAgents = false
-                                EasyLog.log("loadFollowingAgents - 第${currentFollowingAgentsPage}页数据为空，没有更多数据")
-                            } else {
-                                // 设置isDeleted标志
-                                agents.forEach { agent ->
-                                    agent.isDeleted = agent.deletedAt != null
-                                }
-
-                                // 第一页数据替换，其他页数据追加
-                                if (currentFollowingAgentsPage == 1) {
-                                    followingAgents.clear()
-                                    followingAgents.addAll(agents)
-                                    EasyLog.log("loadFollowingAgents - 替换第一页数据: ${agents.size}个，总计: ${followingAgents.size}个")
-                                } else {
-                                    followingAgents.addAll(agents)
-                                    EasyLog.log("loadFollowingAgents - 追加第${currentFollowingAgentsPage}页数据: ${agents.size}个，总计: ${followingAgents.size}个")
-                                }
-                            }
-                        } ?: run {
-                            EasyLog.log("loadFollowingAgents - 第${currentFollowingAgentsPage}页返回空列表")
-                            if (currentFollowingAgentsPage > 1) {
-                                hasMoreFollowingAgents = false
-                            }
-                        }
-                    }
-
-                    is HttpResult.Failure -> {
-                        EasyLog.log("loadFollowingAgents - 第${currentFollowingAgentsPage}页加载失败: ${result.message}")
-                        // 如果加载失败，回退页码
-                        if (currentFollowingAgentsPage > 1) {
-                            currentFollowingAgentsPage--
-                        }
-                    }
-                }
-            } catch (e: Exception) {
-                EasyLog.log(
-                    "loadFollowingAgents - 第${currentFollowingAgentsPage}页加载异常: ${e.message}",
-                    EasyLog.ERROR
-                )
-                // 如果加载失败，回退页码
-                if (currentFollowingAgentsPage > 1) {
-                    currentFollowingAgentsPage--
-                }
-            }
-            _isLoadingFollowingAgents.value = false
-
-            EasyLog.log("loadFollowingAgents - 完成，当前列表大小: ${followingAgents.size}")
-        }
-    }
-
-    fun followAgent(agentId: String) {
-        EasyLog.log("followAgent: $agentId")
-        launchWithNetCheck {
-            val result = agentApi.followAgent(agentId)
-            EasyLog.log("followAgent = $result")
-
-            when (result) {
-                is HttpResult.Success -> {
-                    EasyLog.log("followAgent success")
-                    // Update the agent list to reflect follow status
-                    agentList.find { it.id == agentId }?.let { agent ->
-                        val index = agentList.indexOf(agent)
-                        if (index != -1) {
-                            agentList[index] = agent.copy(isFollowed = true)
-                        }
-                    }
-
-                    // 同步更新缓存
-                    AgentCacheManager.updateAgentFollowState(agentId, true)
-                    // Show success toast
-                    viewModelScope.launch(Dispatchers.Main) {
-                        ToastUtils.showToast(R.string.followed_successfully)
-                    }
-                    // Update agent state in list
-                    updateAgentFollowStateInList(agentId, true)
-                    // Send broadcast to update UI with required parameters
-                    val intent = Intent("FOLLOW_STATE_CHANGED")
-                    intent.putExtra("agentId", agentId)
-                    intent.putExtra("isFollowed", true)
-                    LocalBroadcastManager.getInstance(AppEnv.context).sendBroadcast(intent)
-                    EasyLog.log("Sent FOLLOW_STATE_CHANGED broadcast - followed: $agentId")
-                    // Refresh following list if on conversations tab
-                    refreshFollowingListIfOnTab()
-                }
-
-                is HttpResult.Failure -> {
-                    EasyLog.log("followAgent error: $result", priority = EasyLog.ERROR)
-                    viewModelScope.launch(Dispatchers.Main) {
-                        ToastUtils.showToast(R.string.follow_failed_with_reason, result.message)
-                    }
-                }
-            }
-        }
-    }
-
-    fun unfollowAgent(agentId: String) {
-        EasyLog.log("unfollowAgent: $agentId")
-        launchWithNetCheck {
-            try {
-                val result = agentApi.unfollowAgent(agentId)
-                EasyLog.log("unfollowAgent = $result")
-
-                when (result) {
-                    is HttpResult.Success -> {
-                        EasyLog.log("unfollowAgent success")
-
-                        // 使用 withContext 确保在主线程上安全更新 UI 状态
-                        withContext(Dispatchers.Main) {
-                            // 安全地从关注列表中移除
-                            val indexToRemove = followingAgents.indexOfFirst { it.id == agentId }
-                            if (indexToRemove != -1) {
-                                followingAgents.removeAt(indexToRemove)
-                                EasyLog.log("Removed agent from following list at index: $indexToRemove")
-                            }
-
-                            // 更新主列表中的agent状态
-                            val mainListIndex = agentList.indexOfFirst { it.id == agentId }
-                            if (mainListIndex != -1) {
-                                agentList[mainListIndex] =
-                                    agentList[mainListIndex].copy(isFollowed = false)
-                                EasyLog.log("Updated agent in main list at index: $mainListIndex")
-                            }
-
-                            // 同步更新缓存
-                            AgentCacheManager.updateAgentFollowState(agentId, false)
-                        }
-
-                        // 发送广播更新UI
-                        val intent = Intent("FOLLOW_STATE_CHANGED")
-                        intent.putExtra("agentId", agentId)
-                        intent.putExtra("isFollowed", false)
-                        LocalBroadcastManager.getInstance(AppEnv.context).sendBroadcast(intent)
-                        EasyLog.log("Sent FOLLOW_STATE_CHANGED broadcast - unfollowed: $agentId")
-                    }
-
-                    is HttpResult.Failure -> {
-                        EasyLog.log("unfollowAgent error: $result", priority = EasyLog.ERROR)
-                        withContext(Dispatchers.Main) {
-                            ToastUtils.showToast(
-                                R.string.unfollow_failed_with_reason,
-                                result.message
-                            )
-                        }
-                    }
-                }
-            } catch (e: Exception) {
-                EasyLog.log("取消关注 异常: ${e.message}", EasyLog.ERROR)
-                withContext(Dispatchers.Main) {
-                    val msg =
-                        AppEnv.context.getString(R.string.toast_error_message, e.message ?: "")
-                    ToastUtils.showToast(msg)
-                }
-            }
-        }
-    }
-
-    fun refreshFollowingListIfOnTab() {
-        EasyLog.log("refreshFollowingListIfOnTab - selectedTab: ${_selectedTab.value}, selectedConversationsTab: ${_selectedConversationsTab.value}")
-        if (_selectedTab.value == HomeTabIndex.Conversation &&
-            _selectedConversationsTab.value == ActivityPageSubTab.TabFollowing
-        ) {
-            EasyLog.log("Refreshing following agents due to follow state change")
-            getFollowingAgents()
-        } else {
-            EasyLog.log("Not refreshing - not on following tab")
         }
     }
 

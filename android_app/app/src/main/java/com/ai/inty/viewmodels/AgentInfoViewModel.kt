@@ -1,9 +1,6 @@
 package com.ai.inty.viewmodels
 
-import android.content.Context
-import android.content.Intent
 import androidx.lifecycle.viewModelScope
-import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.ai.inty.base.BaseActivityViewModel
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.net.IAgentApi
@@ -16,7 +13,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-class AgentInfoViewModel: BaseActivityViewModel() {
+class AgentInfoViewModel : BaseActivityViewModel() {
 
     private val _agentInfo = MutableStateFlow<AgentInfo?>(null)
     val agentInfo = _agentInfo.asStateFlow()
@@ -76,47 +73,6 @@ class AgentInfoViewModel: BaseActivityViewModel() {
                 }
             } catch (e: Exception) {
                 EasyLog.log("refreshAgentData exception: ${e.message}", priority = EasyLog.ERROR)
-            }
-        }
-    }
-
-    fun followAgent(agentId: String, context: Context) {
-        val currentAgent = _agentInfo.value ?: return
-        EasyLog.log("followAgent: $agentId, current status: ${currentAgent.isFollowed}")
-
-        launchWithNetCheck {
-            val result = if (currentAgent.isFollowed) {
-                agentApi.unfollowAgent(agentId)
-            } else {
-                agentApi.followAgent(agentId)
-            }
-            EasyLog.log("followAgent result = $result")
-
-            when (result) {
-                is HttpResult.Success -> {
-                    val newFollowStatus = !currentAgent.isFollowed
-                    val newFollowerCount = if (newFollowStatus) {
-                        currentAgent.followerCount + 1
-                    } else {
-                        maxOf(0, currentAgent.followerCount - 1)
-                    }
-                    _agentInfo.value = currentAgent.copy(
-                        isFollowed = newFollowStatus,
-                        followerCount = newFollowerCount
-                    )
-
-                    showSnackbar(result.data.message)
-
-                    // Send broadcast to notify MainActivity about follow state change
-                    val intent = Intent("FOLLOW_STATE_CHANGED")
-                    intent.putExtra("agentId", agentId)
-                    intent.putExtra("isFollowed", newFollowStatus)
-                    intent.putExtra("followerCount", newFollowerCount)
-                    LocalBroadcastManager.getInstance(context).sendBroadcast(intent)
-                }
-                is HttpResult.Failure -> {
-                    showNetworkAwareError(result.message)
-                }
             }
         }
     }
