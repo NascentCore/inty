@@ -104,6 +104,21 @@ export const AgentInfoDisplay: React.FC<AgentInfoDisplayProps> = ({
               </div>
             </div>
           )}
+          {agent.meta_data?.comment && (
+            <div style={{ marginTop: 8 }}>
+              <strong>备注:</strong>
+              <div style={{ 
+                marginTop: 4, 
+                padding: 8, 
+                backgroundColor: "#f5f5f5", 
+                borderRadius: 4, 
+                fontSize: "14px",
+                whiteSpace: "pre-wrap"
+              }}>
+                {agent.meta_data.comment}
+              </div>
+            </div>
+          )}
         </Col>
       </Row>
     </Card>

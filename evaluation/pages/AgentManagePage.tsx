@@ -51,7 +51,14 @@ const { Option } = Select;
 
 export const AgentManagePage: React.FC = () => {
   // 使用 useAgents hook
-  const { agents, loading, loadAgents: loadAgentsFromHook, deleteAgent: deleteAgentFromHook } = useAgents({
+  const { 
+    agents, 
+    loading, 
+    loadAgents: loadAgentsFromHook, 
+    createAgent: createAgentFromHook,
+    updateAgent: updateAgentFromHook,
+    deleteAgent: deleteAgentFromHook 
+  } = useAgents({
     type: "all",
     autoLoad: false, // 手动控制加载
   });
@@ -312,40 +319,19 @@ export const AgentManagePage: React.FC = () => {
 
       setSaveLoading(true);
 
-      let avatarUrl = "";
-      let backgroundUrl = "";
-      let backgroundImages: string[] = [];
-
-      // 如果有头像文件，先上传（创建模式，不截取）
-      if (avatarFile) {
-        try {
-          const uploadResult = await api.inty.api.v1.uploadImage({ file: avatarFile, cropping_avatar: true }); // Enable cropping for avatar
-          const data = uploadResult.data as Record<string, unknown>;
-          avatarUrl = (data?.avatar_url as string) || (data?.url as string);
-          backgroundUrl = data?.url as string;
-          if (backgroundUrl) {
-            backgroundImages = [backgroundUrl];
-          }
-
-        } catch (uploadError) {
-          const errorMessage = uploadError instanceof Error ? uploadError.message : String(uploadError);
-          logError(`头像上传失败，请重试，错误信息：${errorMessage}`);
-          return;
-        }
-      }
-
+      // 从 values 中排除 score 和 comment，因为它们需要放到 meta_data 中
+      const { score, comment, ...otherValues } = values;
+      
       const agentData: AgentCreateRequest = {
-        ...values,
-        avatar: avatarUrl,
-        background: backgroundUrl,
-        background_images: backgroundImages,
+        ...otherValues,
         voice_id: values.voice_id,
       };
 
-      // 如果有评分，添加到 meta_data 中
-      if (values.score) {
+      // 如果有评分或备注，添加到 meta_data 中
+      if (score || comment) {
         agentData.meta_data = {
-          score: values.score
+          score: score,
+          comment: comment
         };
       }
 
@@ -361,15 +347,27 @@ export const AgentManagePage: React.FC = () => {
         };
       }
 
-      await api.inty.api.v1.ai.agents.create(agentData);
-      message.success("智能体创建成功");
-      setCreateModalVisible(false);
-      createForm.resetFields();
-      setAvatarFile(null);
-      setAvatarPreview("");
-      loadAgents(true);
-    } catch (error) {
+      // 处理头像文件
+      if (avatarFile) {
+        agentData.avatar = avatarFile;
+      }
 
+      // 使用 useAgents hook 的 createAgent 进行优化创建
+      const newAgent = await createAgentFromHook(agentData);
+      
+      if (newAgent) {
+        // 成功创建，关闭弹窗并重置状态
+        setCreateModalVisible(false);
+        createForm.resetFields();
+        setAvatarFile(null);
+        setAvatarPreview("");
+        // 不需要调用 loadAgents()，因为 createAgentFromHook 已经优化更新了本地状态
+      } else {
+        // 创建失败，保持弹窗打开让用户重试
+        message.error("创建智能体失败，请检查网络连接后重试");
+      }
+    } catch (error) {
+      console.error("创建智能体失败:", error);
       message.error("创建智能体失败，请重试");
     } finally {
       setSaveLoading(false);
@@ -384,51 +382,23 @@ export const AgentManagePage: React.FC = () => {
       const values = await editForm.validateFields();
       setSaveLoading(true);
 
-      let avatarUrl = currentAgent.avatar;
-      let backgroundUrl = currentAgent.background;
-      let backgroundImages = currentAgent.background_images || [];
-
-      // 如果有新头像文件，先上传
-      if (editAvatarFile) {
-        try {
-          const uploadResult = await api.inty.api.v1.uploadImage({ file: editAvatarFile, cropping_avatar: true }); // Enable cropping for avatar
-          const data = uploadResult.data as Record<string, unknown>;
-          avatarUrl = (data?.avatar_url as string) || (data?.url as string);
-          backgroundUrl = data?.url as string;
-          if (backgroundUrl) {
-            backgroundImages = [backgroundUrl];
-          }
-        } catch (uploadError) {
-          const errorMessage = uploadError instanceof Error ? uploadError.message : String(uploadError);
-          logError(`头像上传失败，请重试，错误信息：${errorMessage}`);
-          return;
-        }
-      }
-
+      // 从 values 中排除 score 和 comment，因为它们需要放到 meta_data 中
+      const { score, comment, ...otherValues } = values;
+      
       const updateData = {
-        ...values,
-        avatar: avatarUrl,
-        background: backgroundUrl,
-        background_images: backgroundImages,
+        ...otherValues,
         voice_id: values.voice_id,
       };
 
-      // 处理评分更新
-      if (values.score !== undefined) {
+      // 处理评分和备注更新
+      if (score !== undefined || comment !== undefined) {
         updateData.meta_data = {
-          score: values.score
+          score: score,
+          comment: comment
         };
       } else {
-        // 如果没有评分，确保清空 meta_data 
+        // 如果没有评分和备注，确保清空 meta_data 
         updateData.meta_data = undefined;
-      }
-
-      // 如果有新头像文件，清理旧的avatar_crop数据，让组件使用新的avatar字段
-      if (editAvatarFile) {
-        updateData.extensions = {
-          ...currentAgent.extensions,
-          avatar_crop: null, // 清理旧的截取数据
-        };
       }
 
       // 如果选择了自定义模型，添加LLM配置
@@ -448,16 +418,28 @@ export const AgentManagePage: React.FC = () => {
         updateData.llm_config = null;
       }
 
-      await api.inty.api.v1.ai.agents.update(currentAgent.id, updateData);
-      message.success("智能体更新成功");
-      setEditModalVisible(false);
-      setCurrentAgent(null);
-      setAgentCopy(null);
-      editForm.resetFields();
-      setEditAvatarFile(null);
-      loadAgents();
-    } catch (error) {
+      // 处理头像文件
+      if (editAvatarFile) {
+        updateData.avatar = editAvatarFile;
+      }
 
+      // 使用 useAgents hook 的 updateAgent 进行优化更新
+      const updatedAgent = await updateAgentFromHook(currentAgent.id, updateData);
+      
+      if (updatedAgent) {
+        // 成功更新，关闭弹窗并重置状态
+        setEditModalVisible(false);
+        setCurrentAgent(null);
+        setAgentCopy(null);
+        editForm.resetFields();
+        setEditAvatarFile(null);
+        // 不需要调用 loadAgents()，因为 updateAgentFromHook 已经优化更新了本地状态
+      } else {
+        // 更新失败，保持弹窗打开让用户重试
+        message.error("更新智能体失败，请检查网络连接后重试");
+      }
+    } catch (error) {
+      console.error("更新智能体失败:", error);
       message.error("更新智能体失败，请重试");
     } finally {
       setSaveLoading(false);
@@ -530,6 +512,7 @@ export const AgentManagePage: React.FC = () => {
         mode_prompt: agent.mode_prompt,
         voice_id: agent.voice_id,
         score: agent.meta_data?.score,
+        comment: agent.meta_data?.comment,
 
         modelType: agent.llm_config ? "custom" : "default",
         // 明确设置LLM配置字段，避免字段名不匹配问题
@@ -719,6 +702,17 @@ export const AgentManagePage: React.FC = () => {
           mode="star"
           showText={true}
         />
+      </Form.Item>
+
+      <Form.Item
+        name="comment"
+        label="备注信息"
+        tooltip="对角色的备注或说明信息"
+        rules={[
+          { max: 1000, message: "备注信息长度不能超过1000个字符" },
+        ]}
+      >
+        <TextArea rows={3} placeholder="请输入备注信息（可选）" />
       </Form.Item>
 
       {/* 提示词配置 */}
@@ -965,6 +959,25 @@ export const AgentManagePage: React.FC = () => {
                                 </div>
                               )}
                             </div>
+                            {agent.meta_data?.comment && (
+                              <div style={{ 
+                                marginTop: 8, 
+                                fontSize: "12px", 
+                                color: "#666",
+                                backgroundColor: "#f9f9f9",
+                                padding: "4px 8px",
+                                borderRadius: "4px",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                display: "-webkit-box",
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: "vertical",
+                                lineHeight: "1.4",
+                                maxHeight: "2.8em"
+                              }}>
+                                <strong>备注:</strong> {agent.meta_data.comment}
+                              </div>
+                            )}
                           </div>
                         }
                       />

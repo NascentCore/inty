@@ -18,12 +18,25 @@ class AgentMetaData(BaseModel):
         le=5, 
         description="Agent 评分，1-5 的整数"
     )
+    
+    comment: Optional[str] = Field(
+        None,
+        max_length=1000,
+        description="Agent 备注信息"
+    )
 
     @field_validator("score")
     @classmethod
     def validate_score(cls, v):
         if v is not None and (v < 1 or v > 5):
             raise ValueError("Score must be between 1 and 5")
+        return v
+
+    @field_validator("comment")
+    @classmethod
+    def validate_comment(cls, v):
+        if v is not None and len(v) > 1000:
+            raise ValueError("Comment must not exceed 1000 characters")
         return v
 
 
