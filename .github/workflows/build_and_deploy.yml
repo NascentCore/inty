@@ -45,6 +45,8 @@ jobs:
         echo "environment=${{ inputs.environment || 'dev' }}" >> $GITHUB_OUTPUT
 
     - uses: actions/checkout@v4
+      with:
+        submodules: true
 
     - uses: docker/login-action@v3
       with:
