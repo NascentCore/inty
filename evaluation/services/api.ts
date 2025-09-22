@@ -34,24 +34,6 @@ export const logError = (msg: string) => {
 const adminToken =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3ODQzNjAyMjAsInN1YiI6InVzZXItMDFKV1ozNFk0RDFDOTJHRDg2QTVSNkVXWUoifQ.vsYKRvrCfxWgJ5wkTjAYby3RrIOm6P-9VbcCg4msjlM";
 
-// 环境变量定义 - Vite define方式
-declare const REACT_APP_API_BASE_URL: string;
-declare const INTY_BASE_URL: string;
-declare const INTY_API_KEY: string;
-
-// 使用Vite define定义的全局常量，如果未定义则使用默认值
-// 当整合到后端时，使用相对路径进行同域调用
-const API_BASE_URL = typeof REACT_APP_API_BASE_URL !== 'undefined' ? REACT_APP_API_BASE_URL : "";
-const BASE_URL = typeof INTY_BASE_URL !== 'undefined' ? INTY_BASE_URL : "";
-const API_KEY = typeof INTY_API_KEY !== 'undefined' ? INTY_API_KEY : adminToken;
-
-// 调试信息
-console.log('🔧 Environment Variables Check:');
-console.log('  REACT_APP_API_BASE_URL defined:', typeof REACT_APP_API_BASE_URL !== 'undefined');
-console.log('  REACT_APP_API_BASE_URL value:', typeof REACT_APP_API_BASE_URL !== 'undefined' ? REACT_APP_API_BASE_URL : 'undefined');
-console.log('  Final API_BASE_URL:', API_BASE_URL);
-console.log('  Final BASE_URL:', BASE_URL);
-
 class ApiClient {
   private baseURL: string;
   private apiPrefix: string;
@@ -242,14 +224,15 @@ class ApiClient {
 }
 
 // 创建API客户端实例
-const apiClient = new ApiClient(API_BASE_URL);
+const apiClient = new ApiClient(window.location.origin);
 
 
 // 创建一个自定义的 Inty 客户端，支持相对路径
 const intyClient = new Inty({
-  baseURL: BASE_URL || window.location.origin, // 如果为空字符串，使用当前域名
+  // 前端与后端部署与同一域名，因此总是使用同样的域名。
+  baseURL: window.location.origin,
   // TODO: 添加功能让用户指定 API key
-  apiKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3ODQzNjAyMjAsInN1YiI6InVzZXItMDFKV1ozNFk0RDFDOTJHRDg2QTVSNkVXWUoifQ.vsYKRvrCfxWgJ5wkTjAYby3RrIOm6P-9VbcCg4msjlM",
+  apiKey: adminToken,
 });
 
 // =============================================================================
