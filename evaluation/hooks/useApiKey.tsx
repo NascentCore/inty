@@ -11,7 +11,7 @@ interface ApiKeyContextType {
   apiKey: string | null;
   isApiKeyValid: boolean;
   isLoading: boolean;
-  setApiKey: (key: string) => void;
+  setApiKey: (key: string) => Promise<boolean>;
   clearApiKey: () => void;
 }
 
@@ -98,11 +98,11 @@ export const useApiKey = () => {
   }, [validateApiKey]);
 
   // 设置 API key
-  const setApiKey = useCallback(async (key: string) => {
+  const setApiKey = useCallback(async (key: string): Promise<boolean> => {
     const trimmedKey = key.trim();
     if (!trimmedKey) {
       message.error("API Key 不能为空");
-      return;
+      return false;
     }
 
     setIsLoading(true);
@@ -118,11 +118,13 @@ export const useApiKey = () => {
       updateIntyClient(trimmedKey);
       
       message.success("API Key 设置成功");
+      setIsLoading(false);
+      return true;
     } else {
       setIsApiKeyValid(false);
+      setIsLoading(false);
+      return false;
     }
-    
-    setIsLoading(false);
   }, [validateApiKey]);
 
   // 清除 API key

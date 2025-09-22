@@ -4,11 +4,9 @@
  */
 
 import React, { useState } from "react";
-import { Modal, Input, Button, Form, Typography, Alert, Space } from "antd";
+import { Modal, Input, Button, Form, Alert, Space } from "antd";
 import { KeyOutlined, InfoCircleOutlined } from "@ant-design/icons";
 import { useApiKeyContext } from "../hooks/useApiKey";
-
-const { Text } = Typography;
 
 interface ApiKeyModalProps {
   visible: boolean;
@@ -23,14 +21,17 @@ export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({ visible, onClose, allo
 
   const handleSubmit = async (values: { apiKey: string }) => {
     setIsSubmitting(true);
-    await setApiKey(values.apiKey);
-    form.resetFields();
-    onClose();
+    const success = await setApiKey(values.apiKey);
+    if (success) {
+      form.resetFields();
+      onClose();
+    }
     setIsSubmitting(false);
   };
 
   const handleCancel = () => {
-    if (allowClose) {
+    // 只有在允许关闭且不在提交状态时才能关闭
+    if (allowClose && !isSubmitting && !isLoading) {
       form.resetFields();
       onClose();
     }
@@ -39,12 +40,12 @@ export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({ visible, onClose, allo
   return (
     <Modal
       open={visible}
-      onCancel={allowClose ? handleCancel : undefined}
+      onCancel={allowClose && !isSubmitting && !isLoading ? handleCancel : undefined}
       footer={null}
       width={500}
       centered
       maskClosable={false}
-      closable={allowClose && !isSubmitting}
+      closable={allowClose && !isSubmitting && !isLoading}
     >
       <div style={{ marginBottom: 16 }}>
         <Alert
