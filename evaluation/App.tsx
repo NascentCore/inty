@@ -12,7 +12,6 @@ import {
   HistoryOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
-  KeyOutlined,
 } from "@ant-design/icons";
 import { EvaluationPage } from "./pages/EvaluationPage";
 import { EvaluationHistoryPage } from "./pages/EvaluationHistoryPage";
@@ -20,6 +19,7 @@ import { ChatPage } from "./pages/ChatPage";
 import AgentManagePage from "./pages/AgentManagePage";
 import { ApiKeyProvider, useApiKeyContext } from "./hooks/useApiKey";
 import { ApiKeyModal } from "./components/ApiKeyModal";
+import { UserInfo } from "./components/UserInfo";
 
 
 const { Sider, Content } = Layout;
@@ -147,6 +147,22 @@ const AppContent: React.FC = () => {
     },
   ];
 
+  // 获取页面标题
+  const getPageTitle = () => {
+    switch (currentPage) {
+      case "evaluation":
+        return "智能体评测";
+      case "history":
+        return "评测历史";
+      case "chat":
+        return "单角色聊天";
+      case "agents":
+        return "智能体管理";
+      default:
+        return "智能体评测系统";
+    }
+  };
+
   // 渲染页面内容
   const renderPageContent = () => {
     switch (currentPage) {
@@ -226,18 +242,10 @@ const AppContent: React.FC = () => {
                 title="展开菜单"
               />
             ) : (
-              /* 展开状态：显示机器人图标 */
-              <RobotOutlined style={{ fontSize: "24px", color: "#1890ff" }} />
-            )}
-            {!collapsed && (
-              <div style={{ marginLeft: "12px" }}>
-                <Title level={4} style={{ margin: 0, color: "#1890ff" }}>
-                  InTy 评测
-                </Title>
-                <Text type="secondary" style={{ fontSize: "12px" }}>
-                  智能体评测系统
-                </Text>
-              </div>
+                  /* 展开状态：显示标题 */
+                  <Title level={4} style={{ margin: 0, color: "#1890ff" }}>
+                    InTy 评测
+                  </Title>
             )}
           </div>
 
@@ -356,63 +364,7 @@ const AppContent: React.FC = () => {
             right: 0,
             background: "inherit",
           }}
-        >
-            {/* API Key 管理 */}
-          {!collapsed && (
-            <div
-              style={{
-                padding: "12px 16px",
-                borderTop: "1px solid #f0f0f0",
-              }}
-            >
-                <div style={{ marginBottom: "8px" }}>
-                  <Button
-                    type="text"
-                    icon={<KeyOutlined />}
-                    onClick={() => setShowApiKeyModal(true)}
-                    style={{
-                      width: "100%",
-                      textAlign: "left",
-                      height: "32px",
-                      color: isApiKeyValid ? "#52c41a" : "#ff4d4f",
-                    }}
-                  >
-                    {isApiKeyValid ? "API Key 已设置" : "设置 API Key"}
-                  </Button>
-                  {isApiKeyValid && (
-                    <Button
-                      type="text"
-                      size="small"
-                      onClick={clearApiKey}
-                      style={{
-                        width: "100%",
-                        textAlign: "center",
-                        height: "24px",
-                        color: "#999",
-                        fontSize: "12px",
-                      }}
-                    >
-                      清除 API Key
-                    </Button>
-                  )}
-                </div>
-            </div>
-          )}
-
-          {/* 底部信息 */}
-          {!collapsed && (
-            <div
-              style={{
-                padding: "8px 24px 16px 24px",
-                textAlign: "center",
-                borderTop: "1px solid #f0f0f0",
-              }}
-            >
-              <Text type="secondary" style={{ fontSize: "11px" }}>
-                InTy Backend v1.0.0
-              </Text>
-            </div>
-          )}
+          >
         </div>
       </Sider>
 
@@ -424,11 +376,30 @@ const AppContent: React.FC = () => {
           minHeight: "100vh",
         }}
       >
+          {/* 页面头部 */}
+          <div
+            style={{
+              background: "#fff",
+              padding: "16px 24px",
+              borderBottom: "1px solid #f0f0f0",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            <div>
+              <Title level={4} style={{ margin: 0 }}>
+                {getPageTitle()}
+              </Title>
+            </div>
+            <UserInfo onShowApiKeyModal={() => setShowApiKeyModal(true)} />
+          </div>
+
         {/* 页面内容 */}
         <Content
           style={{
             background: "#f0f2f5",
-            minHeight: "100vh",
+              minHeight: "calc(100vh - 73px)",
             overflow: "auto",
             position: "relative",
           }}
@@ -442,6 +413,7 @@ const AppContent: React.FC = () => {
       <ApiKeyModal
         visible={showApiKeyModal}
         onClose={() => setShowApiKeyModal(false)}
+        allowClose={isApiKeyValid}
       />
     </>
   );

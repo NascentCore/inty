@@ -13,9 +13,10 @@ const { Text } = Typography;
 interface ApiKeyModalProps {
   visible: boolean;
   onClose: () => void;
+  allowClose?: boolean; // 是否允许关闭模态框
 }
 
-export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({ visible, onClose }) => {
+export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({ visible, onClose, allowClose = true }) => {
   const [form] = Form.useForm();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { setApiKey, isLoading } = useApiKeyContext();
@@ -29,25 +30,21 @@ export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({ visible, onClose }) =>
   };
 
   const handleCancel = () => {
-    form.resetFields();
-    onClose();
+    if (allowClose) {
+      form.resetFields();
+      onClose();
+    }
   };
 
   return (
     <Modal
-      title={
-        <Space>
-          <KeyOutlined style={{ color: "#1890ff" }} />
-          <span>设置 API Key</span>
-        </Space>
-      }
       open={visible}
-      onCancel={handleCancel}
+      onCancel={allowClose ? handleCancel : undefined}
       footer={null}
       width={500}
       centered
       maskClosable={false}
-      closable={!isSubmitting}
+      closable={allowClose && !isSubmitting}
     >
       <div style={{ marginBottom: 16 }}>
         <Alert
@@ -84,9 +81,11 @@ export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({ visible, onClose }) =>
 
         <Form.Item style={{ marginBottom: 0, textAlign: "right" }}>
           <Space>
-            <Button onClick={handleCancel} disabled={isSubmitting || isLoading}>
-              取消
-            </Button>
+            {allowClose && (
+              <Button onClick={handleCancel} disabled={isSubmitting || isLoading}>
+                取消
+              </Button>
+            )}
             <Button
               type="primary"
               htmlType="submit"
@@ -98,13 +97,6 @@ export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({ visible, onClose }) =>
           </Space>
         </Form.Item>
       </Form>
-
-      <div style={{ marginTop: 16, padding: 12, backgroundColor: "#f5f5f5", borderRadius: 6 }}>
-        <Text type="secondary" style={{ fontSize: "12px" }}>
-          <InfoCircleOutlined style={{ marginRight: 4 }} />
-          API Key 将安全存储在浏览器中，不会发送到第三方服务器。
-        </Text>
-      </div>
     </Modal>
   );
 };

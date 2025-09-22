@@ -28,6 +28,3 @@ rm -rf app/static/evaluation
 mkdir -p app/static/evaluation
 cp -r evaluation/dist/* app/static/evaluation/
 cp -r evaluation/resources/ app/static/evaluation/resources/
-
-echo "✅ 构建和部署完成！"
-echo "🌐 访问地址: http://127.0.0.1:8000/evaluation"
