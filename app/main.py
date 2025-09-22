@@ -89,6 +89,35 @@ static_dir = os.path.join(os.path.dirname(__file__), "static")
 if os.path.exists(static_dir):
     app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
+# 添加前端应用路由
+from fastapi.responses import FileResponse
+
+
+@app.get("/evaluation")
+async def evaluation_frontend():
+    """评测系统前端应用"""
+    evaluation_index = os.path.join(static_dir, "evaluation", "index.html")
+    if os.path.exists(evaluation_index):
+        return FileResponse(evaluation_index)
+    else:
+        return {"error": "Evaluation frontend not found"}
+
+
+@app.get("/evaluation/{path:path}")
+async def evaluation_static_files(path: str):
+    """评测系统静态文件"""
+    file_path = os.path.join(static_dir, "evaluation", path)
+    if os.path.exists(file_path) and os.path.isfile(file_path):
+        return FileResponse(file_path)
+    else:
+        # 如果文件不存在，返回前端应用（用于 SPA 路由）
+        evaluation_index = os.path.join(static_dir, "evaluation", "index.html")
+        if os.path.exists(evaluation_index):
+            return FileResponse(evaluation_index)
+        else:
+            return {"error": "File not found"}
+
+
 # 初始化 Firebase
 init_firebase()
 

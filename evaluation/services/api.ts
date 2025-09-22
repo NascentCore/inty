@@ -40,8 +40,9 @@ declare const INTY_BASE_URL: string;
 declare const INTY_API_KEY: string;
 
 // 使用Vite define定义的全局常量，如果未定义则使用默认值
-const API_BASE_URL = typeof REACT_APP_API_BASE_URL !== 'undefined' ? REACT_APP_API_BASE_URL : "http://localhost:8000";
-const BASE_URL = typeof INTY_BASE_URL !== 'undefined' ? INTY_BASE_URL : "http://localhost:8000";
+// 当整合到后端时，使用相对路径进行同域调用
+const API_BASE_URL = typeof REACT_APP_API_BASE_URL !== 'undefined' ? REACT_APP_API_BASE_URL : "";
+const BASE_URL = typeof INTY_BASE_URL !== 'undefined' ? INTY_BASE_URL : "";
 const API_KEY = typeof INTY_API_KEY !== 'undefined' ? INTY_API_KEY : adminToken;
 
 // 调试信息

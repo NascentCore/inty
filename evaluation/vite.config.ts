@@ -6,6 +6,18 @@ import { resolve } from "path";
 export default defineConfig({
   plugins: [react()],
 
+  // 设置基础路径，用于部署到子路径
+  // Vite 在构建时将所有资源路径都加上 /evaluation/ 前缀。
+  // 构建前：
+  // <script src="/assets/main.js"></script>
+  // 构建后：
+  // <script src="/evaluation/assets/main.js"></script>
+  // 构建前：
+  // background-image: url('/images/logo.png');
+  // 构建后：
+  // background-image: url('/evaluation/images/logo.png');
+  base: "/evaluation/",
+
   // 依赖优化配置
   optimizeDeps: {
     // inty 是从 stainless 生成的代码，遇到了优化问题，先暂时排除
