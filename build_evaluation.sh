@@ -1,5 +1,6 @@
 #!/bin/bash -e
 
+# 构建 inty-eval 前端，并将其拷贝到 python server 静态资源目录
 pushd evaluation
 
 # 安装依赖（在Docker环境中总是重新安装以确保架构兼容性）
