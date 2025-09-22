@@ -1,9 +1,13 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { resolve } from "path";
+import { fileURLToPath, URL } from "node:url";
 
 // https://vitejs.dev/config/
-export default defineConfig({
+export default defineConfig(() => {
+  const __dirname = fileURLToPath(new URL('.', import.meta.url));
+  
+  return {
   plugins: [react()],
 
   // 设置基础路径，用于部署到子路径
@@ -22,6 +26,8 @@ export default defineConfig({
   optimizeDeps: {
     // 包含 inty 包进行优化
     include: ['inty'],
+    // 强制预构建本地包
+    force: true,
   },
 
   // 构建配置
@@ -66,6 +72,11 @@ export default defineConfig({
       "@services": resolve(__dirname, "./services"),
       "@types": resolve(__dirname, "./types"),
       "@styles": resolve(__dirname, "./styles"),
+      // 确保 inty 包能正确解析
+      "inty": resolve(__dirname, "./inty_sdk/dist"),
     },
+    // 确保解析本地包
+    dedupe: ["inty"],
   },
+  };
 });
