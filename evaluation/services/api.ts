@@ -245,9 +245,10 @@ class ApiClient {
 const apiClient = new ApiClient(API_BASE_URL);
 
 
+// 创建一个自定义的 Inty 客户端，支持相对路径
 const intyClient = new Inty({
-  baseURL: BASE_URL,
-  apiKey: API_KEY,
+  baseURL: BASE_URL || window.location.origin, // 如果为空字符串，使用当前域名
+  apiKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3ODQzNjAyMjAsInN1YiI6InVzZXItMDFKV1ozNFk0RDFDOTJHRDg2QTVSNkVXWUoifQ.vsYKRvrCfxWgJ5wkTjAYby3RrIOm6P-9VbcCg4msjlM",
 });
 
 // =============================================================================

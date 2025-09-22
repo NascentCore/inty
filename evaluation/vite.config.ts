@@ -71,8 +71,8 @@ export default defineConfig({
 
   // 环境变量
   define: {
-    "REACT_APP_API_BASE_URL": JSON.stringify(process.env.REACT_APP_API_BASE_URL),
-    "INTY_BASE_URL": JSON.stringify(process.env.INTY_BASE_URL),
-    "INTY_API_KEY": JSON.stringify(process.env.INTY_API_KEY),
+    "REACT_APP_API_BASE_URL": JSON.stringify(process.env.REACT_APP_API_BASE_URL || ""),
+    "INTY_BASE_URL": JSON.stringify(process.env.INTY_BASE_URL || ""),
+    "INTY_API_KEY": JSON.stringify(process.env.INTY_API_KEY || ""),
   },
 });

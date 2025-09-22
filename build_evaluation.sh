@@ -15,12 +15,17 @@ if [ ! -d "node_modules" ]; then
     npm install
 fi
 
-# 构建前端
+# 构建前端（不设置环境变量，使用相对路径）
 echo "🔨 构建前端应用..."
+# 确保环境变量为空，这样会使用相对路径
+unset REACT_APP_API_BASE_URL
+unset INTY_BASE_URL
+unset INTY_API_KEY
 npm run build
 
 # 部署到后端静态目录
 echo "📁 部署到后端静态目录..."
+rm -rf ../app/static/evaluation
 mkdir -p ../app/static/evaluation
 cp -r dist/* ../app/static/evaluation/
 
