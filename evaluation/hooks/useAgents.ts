@@ -184,11 +184,9 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
               file: data.avatar,
               cropping_avatar: true
             });
-            // 将上传后的URL赋值给avatar字段
             console.log("uploadResponse:", uploadResponse);
             (agentData as AgentCreateRequest).avatar = uploadResponse.data?.avatar_url as string;
             (agentData as AgentCreateRequest).background = uploadResponse.data?.url as string;
-            console.log("avatar:", (agentData as AgentCreateRequest).avatar);
           } catch (error) {
             console.error("头像上传失败:", error);
             message.error("头像上传失败，但智能体创建将继续");
@@ -242,11 +240,9 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
               file: data.avatar,
               cropping_avatar: true
             });
-            // 将上传后的URL赋值给avatar字段
             console.log("uploadResponse:", uploadResponse);
             (updateData as AgentUpdateRequest).avatar = uploadResponse.data?.avatar_url as string;
             (updateData as AgentUpdateRequest).background = uploadResponse.data?.url as string;
-            console.log("avatar:", (updateData as AgentUpdateRequest).avatar);
           } catch (error) {
             console.error("头像上传失败:", error);
             message.error("头像上传失败，但智能体更新将继续");
