@@ -1,5 +1,12 @@
 #!/bin/bash -e
 
+# 构建 inty_sdk
+echo "📦 构建 inty_sdk..."
+pushd evaluation/inty_sdk
+yarn install # Install dependencies for inty_sdk
+yarn run build # Build inty_sdk, which should create its dist folder
+popd
+
 # 构建 inty-eval 前端，并将其拷贝到 python server 静态资源目录
 pushd evaluation
 
