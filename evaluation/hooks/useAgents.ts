@@ -180,11 +180,19 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
         // 如果有头像文件，先上传头像
         if (data.avatar) {
           try {
-            const { ...restData } = agentData;
-            agentData = restData;
+            const uploadResponse = await api.inty.api.v1.uploadImage({
+              file: data.avatar,
+              cropping_avatar: true
+            });
+            // 将上传后的URL赋值给avatar字段
+            console.log("uploadResponse:", uploadResponse);
+            (agentData as AgentCreateRequest).avatar = uploadResponse.data?.avatar_url as string;
+            console.log("avatar:", (agentData as AgentCreateRequest).avatar);
           } catch (error) {
             console.error("头像上传失败:", error);
             message.error("头像上传失败，但智能体创建将继续");
+            // 移除avatar字段，避免发送File对象
+            delete agentData.avatar;
           }
         }
 
