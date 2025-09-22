@@ -194,5 +194,4 @@ inty-firebase-key.json
 /playdebug/
 
 # 前端构建产物 - 不应该提交到仓库
-/app/static/evaluation/
-/evaluation/dist/
+/app/static/
