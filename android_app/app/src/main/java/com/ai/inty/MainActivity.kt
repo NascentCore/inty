@@ -1,9 +1,5 @@
 package com.ai.inty
 
-import android.content.BroadcastReceiver
-import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -20,9 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.lifecycleScope
-import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.ai.inty.base.BaseActivity
-
 import com.ai.inty.billing.BillingRepository
 import com.ai.inty.home.HomeScreen
 import com.ai.inty.ui.theme.IntyTheme
@@ -57,25 +51,6 @@ class MainActivity : BaseActivity() {
     private val backTimeout = 2000L // 2秒内需要第二次返回
     private var exitJob: Job? = null
 
-    // 关注状态变化的 广播接收器
-    private val followStateReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context?, intent: Intent?) {
-            if (intent?.action == "FOLLOW_STATE_CHANGED") {
-                EasyLog.log("MainActivity received FOLLOW_STATE_CHANGED broadcast")
-                val agentId = intent.getStringExtra("agentId")
-                val isFollowed = intent.getBooleanExtra("isFollowed", false)
-
-                // 强制刷新关注列表
-                mainViewModel.refreshFollowingListIfOnTab()
-
-                // 同时更新主列表中的agent状态
-                agentId?.let { id ->
-                    mainViewModel.updateAgentFollowStateInList(id, isFollowed)
-                }
-            }
-        }
-    }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -98,11 +73,6 @@ class MainActivity : BaseActivity() {
         lifecycleScope.launch {
             // 等待用户登录完成
             delay(1000) // 给登录流程一些时间
-
-            // 执行billing诊断
-//            val diagnosticReport =
-//                BillingDiagnosticHelper.performBillingDiagnostic(this@MainActivity)
-//            EasyLog.log("MainActivity - Billing诊断报告: $diagnosticReport")
 
             BillingRepository.initialize(this@MainActivity)
 
@@ -127,11 +97,6 @@ class MainActivity : BaseActivity() {
 
         requestNotifyPermission()
 
-        // 注册广播接收器
-        LocalBroadcastManager.getInstance(this).registerReceiver(
-            followStateReceiver,
-            IntentFilter("FOLLOW_STATE_CHANGED")
-        )
     }
 
     /**
@@ -242,7 +207,6 @@ class MainActivity : BaseActivity() {
     override fun onResume() {
         super.onResume()
         // 刷新关注列表和创建的角色列表
-        mainViewModel.refreshFollowingListIfOnTab()
         mainViewModel.refreshCreatedAgentsListIfOnTab()
         // 应用恢复时通知billing系统刷新状态
         BillingRepository.notifyAppResumed()
@@ -252,8 +216,6 @@ class MainActivity : BaseActivity() {
         super.onDestroy()
         // 取消协程
         exitJob?.cancel()
-        // Unregister broadcast receiver
-        LocalBroadcastManager.getInstance(this).unregisterReceiver(followStateReceiver)
     }
 
     private fun requestNotifyPermission() {

@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -271,9 +272,6 @@ private fun ChatTabContent(
         currentPageIndex = currentChatPageIndex.value,
         onPageChanged = { index ->
             mainViewModel.updateCurrentChatPageIndex(index)
-        },
-        onFollowAgent = { agentId ->
-            handleFollowAgent(agentId, mainViewModel)
         }
     )
 }
@@ -328,7 +326,7 @@ private fun ConversationsTabContent(
 private fun SuggestTabContent(
     mainViewModel: MainViewModel,
     context: Context,
-    innerPadding: androidx.compose.foundation.layout.PaddingValues,
+    innerPadding: PaddingValues,
 ) {
     val isLoading by mainViewModel.isLoading.collectAsState()
 
@@ -415,20 +413,6 @@ private fun MyTabContent(
             mainViewModel.loadMoreUserCreatedAgents()
         }
     )
-}
-
-/**
- * 处理关注代理逻辑
- */
-private fun handleFollowAgent(agentId: String, mainViewModel: MainViewModel) {
-    val agent = mainViewModel.agentList.find { it.id == agentId }
-    val isCurrentlyFollowed = agent?.isFollowed ?: false
-
-    if (isCurrentlyFollowed) {
-        mainViewModel.unfollowAgent(agentId)
-    } else {
-        mainViewModel.followAgent(agentId)
-    }
 }
 
 val BottomNavigationBarHeight = 48.dp
