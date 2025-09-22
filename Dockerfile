@@ -8,7 +8,7 @@ COPY evaluation/package*.json ./
 COPY evaluation/ ./
 
 # 安装依赖并构建
-RUN npm ci --only=production
+RUN npm ci
 RUN npm run build
 
 # 第二阶段：构建后端
