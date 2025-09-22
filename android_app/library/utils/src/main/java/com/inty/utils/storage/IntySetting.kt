@@ -245,6 +245,17 @@ object IntySetting {
         return isLoggingOut
     }
 
+
+    //用于推荐接口后端sort随机排序的seed种子
+    fun sortSeed(): Int {
+        return curUserSetting.getInt("current_sort_seed", 0)
+    }
+
+    fun updateSortSeed(seed: Int) {
+        curUserSetting.putInt("current_sort_seed", seed)
+    }
+
+
     //region 通用的用户信息存储方法（不依赖具体的 UserProfile 类）
     fun setUserProfileData(key: String, value: String) {
         curUserSetting.putString("user_profile_$key", value)

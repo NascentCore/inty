@@ -115,6 +115,9 @@ class MainViewModel : BaseActivityViewModel() {
         }
     }
 
+    //用于推荐接口的sort seed
+    var sortSeed = IntySetting.sortSeed()
+
     init {
         EasyLog.log("MainViewModel init - current user: ${IntySetting.getCurUserID()}")
 
@@ -201,6 +204,9 @@ class MainViewModel : BaseActivityViewModel() {
         currentPage = 1
         hasMoreData = true
         agentList.clear()
+        //每次手动刷新，需要重置sort seed,并保存，因为在AppStartupManger中有使用，可确保缓存与接口数据一致。
+        sortSeed = sortSeed + 1
+        IntySetting.updateSortSeed(sortSeed)
         loadAgents()
     }
 
@@ -214,7 +220,11 @@ class MainViewModel : BaseActivityViewModel() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 EasyLog.log("loadAgentsSilently - 开始静默刷新第一页数据")
-                val result = agentApi.recommendAgents(1, 10)
+                val result = agentApi.recommendAgents(
+                    page = 1,
+                    pageSize = 10,
+                    sort_seed = sortSeed.toString()
+                )
 
                 when (result) {
                     is HttpResult.Success -> {
@@ -268,7 +278,11 @@ class MainViewModel : BaseActivityViewModel() {
         EasyLog.log("loadAgents - page: $currentPage")
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val result = agentApi.recommendAgents(currentPage, 10)
+                val result = agentApi.recommendAgents(
+                    page = currentPage,
+                    pageSize = 10,
+                    sort_seed = sortSeed.toString()
+                )
                 EasyLog.log("loadAgents - API响应: $result")
 
                 when (result) {
