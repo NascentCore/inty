@@ -1,13 +1,6 @@
-#!/bin/bash
+#!/bin/bash -e
 
-# 构建评测系统前端并部署到后端
-# 使用方法: ./build_evaluation.sh
-
-set -e  # 遇到错误立即退出
-
-echo "🚀 开始构建评测系统前端..."
-
-cd evaluation
+pushd evaluation
 
 # 安装依赖（如果需要）
 if [ ! -d "node_modules" ]; then
@@ -17,10 +10,6 @@ fi
 
 # 构建前端（不设置环境变量，使用相对路径）
 echo "🔨 构建前端应用..."
-# 确保环境变量为空，这样会使用相对路径
-unset REACT_APP_API_BASE_URL
-unset INTY_BASE_URL
-unset INTY_API_KEY
 npm run build
 
 # 部署到后端静态目录
