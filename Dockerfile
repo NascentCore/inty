@@ -1,3 +1,17 @@
+# 第一阶段：构建前端
+FROM node:18-slim AS frontend-builder
+
+WORKDIR /app
+
+# 复制前端代码和依赖文件
+COPY evaluation/package*.json ./
+COPY evaluation/ ./
+
+# 安装依赖并构建
+RUN npm ci --only=production
+RUN npm run build
+
+# 第二阶段：构建后端
 FROM python:3.12-slim AS base
 
 WORKDIR /
@@ -23,6 +37,10 @@ COPY alembic.ini .
 # Used for manipulate backend system with bundled configurations.
 COPY scripts/ scripts/
 COPY start.sh .
+
+# 从前端构建阶段复制构建结果
+COPY --from=frontend-builder /app/dist/ app/static/evaluation/
+COPY --from=frontend-builder /app/resources/ app/static/evaluation/resources/
 
 # 暴露端口
 EXPOSE 8000
