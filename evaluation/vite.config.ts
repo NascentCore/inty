@@ -20,8 +20,8 @@ export default defineConfig({
 
   // 依赖优化配置
   optimizeDeps: {
-    // inty 是从 stainless 生成的代码，遇到了优化问题，先暂时排除
-    exclude: ['inty'],
+    // 包含 inty 包进行优化
+    include: ['inty'],
   },
 
   // 构建配置
