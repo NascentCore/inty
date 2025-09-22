@@ -3,6 +3,8 @@
 # 构建 inty_sdk
 echo "📦 构建 inty_sdk..."
 pushd evaluation/inty_sdk
+# 由于未知原因，tsc-multi 无法被 yarn install 安装，所以手动安装
+yarn add -D tsc-multi@https://github.com/stainless-api/tsc-multi/releases/download/v1.1.9/tsc-multi.tgz
 yarn install # Install dependencies for inty_sdk
 yarn run build # Build inty_sdk, which should create its dist folder
 popd

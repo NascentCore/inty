@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from "react";
-import { Layout, Menu, Typography, Tooltip, Button } from "antd";
+import { Layout, Menu, Typography, Tooltip, Button, Spin } from "antd";
 import {
   RobotOutlined,
   MessageOutlined,
@@ -12,12 +12,14 @@ import {
   HistoryOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
+  KeyOutlined,
 } from "@ant-design/icons";
 import { EvaluationPage } from "./pages/EvaluationPage";
 import { EvaluationHistoryPage } from "./pages/EvaluationHistoryPage";
 import { ChatPage } from "./pages/ChatPage";
 import AgentManagePage from "./pages/AgentManagePage";
-import { PremiumModeToggle } from "./components/common/PremiumModeToggle";
+import { ApiKeyProvider, useApiKeyContext } from "./hooks/useApiKey";
+import { ApiKeyModal } from "./components/ApiKeyModal";
 
 
 const { Sider, Content } = Layout;
@@ -36,7 +38,8 @@ interface NavigationItem {
   description: string;
 }
 
-export const App: React.FC = () => {
+// 主应用内容组件
+const AppContent: React.FC = () => {
   // 状态管理
   const [currentPage, setCurrentPage] = useState<PageKey>(() => {
     // GEMINI: 从 localStorage 读取上次访问的页面，如果不存在则默认为 "evaluation"
@@ -45,6 +48,10 @@ export const App: React.FC = () => {
   });
   const [collapsed, setCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [showApiKeyModal, setShowApiKeyModal] = useState(false);
+
+  // API Key 管理
+  const { apiKey, isApiKeyValid, isLoading, clearApiKey } = useApiKeyContext();
 
   // GEMINI: 将当前页面保存到 localStorage
   useEffect(() => {
@@ -81,6 +88,30 @@ export const App: React.FC = () => {
 
     return () => clearTimeout(timer);
   }, []);
+
+  // 检查是否需要显示 API Key 模态框
+  useEffect(() => {
+    if (!isLoading && !isApiKeyValid) {
+      setShowApiKeyModal(true);
+    }
+  }, [isLoading, isApiKeyValid]);
+
+  // 如果正在加载，显示加载状态
+  if (isLoading) {
+    return (
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '100vh',
+        flexDirection: 'column',
+        gap: '16px'
+      }}>
+        <Spin size="large" />
+        <Text type="secondary">正在验证 API Key...</Text>
+      </div>
+    );
+  }
 
   // 处理侧边栏折叠/展开
   const handleCollapse = (collapsed: boolean) => {
@@ -138,33 +169,34 @@ export const App: React.FC = () => {
   };
 
   return (
-    <Layout style={{ minHeight: "100vh" }}>
-      {/* 侧边导航 */}
-      <Sider
-        collapsible={false}
-        collapsed={collapsed}
-        width={220}
-        collapsedWidth={80}
-        style={{
-          overflow: "hidden",
-          height: "100vh",
-          position: "fixed",
-          left: 0,
-          top: 0,
-          bottom: 0,
-          zIndex: 100,
-          boxShadow: "2px 0 8px 0 rgba(29, 35, 41, 0.05)",
-          display: "flex",
-          flexDirection: "column",
-        }}
-        theme="light"
-        breakpoint="lg"
-        onBreakpoint={(broken) => {
-          if (broken) {
-            setCollapsed(true);
-          }
-        }}
-      >
+    <>
+      <Layout style={{ minHeight: "100vh" }}>
+        {/* 侧边导航 */}
+        <Sider
+          collapsible={false}
+          collapsed={collapsed}
+          width={220}
+          collapsedWidth={80}
+          style={{
+            overflow: "hidden",
+            height: "100vh",
+            position: "fixed",
+            left: 0,
+            top: 0,
+            bottom: 0,
+            zIndex: 100,
+            boxShadow: "2px 0 8px 0 rgba(29, 35, 41, 0.05)",
+            display: "flex",
+            flexDirection: "column",
+          }}
+          theme="light"
+          breakpoint="lg"
+          onBreakpoint={(broken) => {
+            if (broken) {
+              setCollapsed(true);
+            }
+          }}
+        >
         {/* Logo区域 - 添加汉堡按钮 */}
         <div
           style={{
@@ -325,7 +357,7 @@ export const App: React.FC = () => {
             background: "inherit",
           }}
         >
-          {/* Premium Mode Toggle */}
+            {/* API Key 管理 */}
           {!collapsed && (
             <div
               style={{
@@ -333,9 +365,37 @@ export const App: React.FC = () => {
                 borderTop: "1px solid #f0f0f0",
               }}
             >
-              <PremiumModeToggle
-                disabled={true}
-              />
+                <div style={{ marginBottom: "8px" }}>
+                  <Button
+                    type="text"
+                    icon={<KeyOutlined />}
+                    onClick={() => setShowApiKeyModal(true)}
+                    style={{
+                      width: "100%",
+                      textAlign: "left",
+                      height: "32px",
+                      color: isApiKeyValid ? "#52c41a" : "#ff4d4f",
+                    }}
+                  >
+                    {isApiKeyValid ? "API Key 已设置" : "设置 API Key"}
+                  </Button>
+                  {isApiKeyValid && (
+                    <Button
+                      type="text"
+                      size="small"
+                      onClick={clearApiKey}
+                      style={{
+                        width: "100%",
+                        textAlign: "center",
+                        height: "24px",
+                        color: "#999",
+                        fontSize: "12px",
+                      }}
+                    >
+                      清除 API Key
+                    </Button>
+                  )}
+                </div>
             </div>
           )}
 
@@ -377,5 +437,21 @@ export const App: React.FC = () => {
         </Content>
       </Layout>
     </Layout>
+
+      {/* API Key 模态框 */}
+      <ApiKeyModal
+        visible={showApiKeyModal}
+        onClose={() => setShowApiKeyModal(false)}
+      />
+    </>
+  );
+};
+
+// 主应用组件，包装 API Key Provider
+export const App: React.FC = () => {
+  return (
+    <ApiKeyProvider>
+      <AppContent />
+    </ApiKeyProvider>
   );
 };
