@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { Avatar, Dropdown, Typography, Space } from "antd";
-import { UserOutlined, LogoutOutlined, KeyOutlined } from "@ant-design/icons";
+import { UserOutlined, KeyOutlined } from "@ant-design/icons";
 import { useApiKeyContext } from "../hooks/useApiKey";
 import api from "../services/api";
 
@@ -27,7 +27,7 @@ interface UserInfoProps {
 export const UserInfo: React.FC<UserInfoProps> = ({ onShowApiKeyModal }) => {
   const [userInfo, setUserInfo] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(false);
-  const { isApiKeyValid, clearApiKey } = useApiKeyContext();
+  const { isApiKeyValid } = useApiKeyContext();
 
   // 获取用户信息
   const fetchUserInfo = useCallback(async () => {
@@ -66,10 +66,6 @@ export const UserInfo: React.FC<UserInfoProps> = ({ onShowApiKeyModal }) => {
       </div>
     );
   }
-
-  const handleLogout = () => {
-    clearApiKey();
-  };
 
   const menuItems = [
     {
@@ -118,17 +114,6 @@ export const UserInfo: React.FC<UserInfoProps> = ({ onShowApiKeyModal }) => {
         </Space>
       ),
       onClick: onShowApiKeyModal,
-    },
-    {
-      key: "logout",
-      label: (
-        <Space>
-          <LogoutOutlined />
-          清除 API Key
-        </Space>
-      ),
-      onClick: handleLogout,
-      disabled: !isApiKeyValid,
     },
   ];
 
