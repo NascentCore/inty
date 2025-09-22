@@ -126,7 +126,7 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
           }
         }
 
-        let response = await api.inty.api.v1.ai.agents.list({
+        let response = await api.getIntyClient().api.v1.ai.agents.list({
           // 增加限制以获取更多智能体；后端限制最多 1000 个，这是分页设计；以后需要调整
           limit: 1000,
           skip: 0
@@ -180,7 +180,7 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
         // 如果有头像文件，先上传头像
         if (data.avatar) {
           try {
-            const uploadResponse = await api.inty.api.v1.uploadImage({
+            const uploadResponse = await api.getIntyClient().api.v1.uploadImage({
               file: data.avatar,
               cropping_avatar: true
             });
@@ -200,7 +200,7 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
           agentData.voice_id = data.voice_id;
         }
 
-        const response = await api.inty.api.v1.ai.agents.create(agentData);
+        const response = await api.getIntyClient().api.v1.ai.agents.create(agentData);
         const newAgent = response.data as unknown as Agent;
 
         // 更新本地状态
@@ -236,7 +236,7 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
         // 如果有头像文件，先上传头像
         if (data.avatar) {
           try {
-            const uploadResponse = await api.inty.api.v1.uploadImage({
+            const uploadResponse = await api.getIntyClient().api.v1.uploadImage({
               file: data.avatar,
               cropping_avatar: true
             });
@@ -244,7 +244,7 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
             (updateData as AgentUpdateRequest).avatar = uploadResponse.data?.avatar_url as string;
             (updateData as AgentUpdateRequest).background = uploadResponse.data?.url as string;
 
-            const currentAgent = await api.inty.api.v1.ai.agents.retrieve(agentId) as unknown as Agent;
+            const currentAgent = await api.getIntyClient().api.v1.ai.agents.retrieve(agentId) as unknown as Agent;
             if (currentAgent.extensions && currentAgent.extensions.avatar_crop) {
               const restExtensions = { ...currentAgent.extensions };
               delete restExtensions.avatar_crop;
@@ -264,7 +264,7 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
           updateData.voice_id = data.voice_id;
         }
 
-        const updatedAgent = await api.inty.api.v1.ai.agents.update(agentId, updateData) as unknown as Agent;
+        const updatedAgent = await api.getIntyClient().api.v1.ai.agents.update(agentId, updateData) as unknown as Agent;
 
         // 更新本地状态
         setAgents((prev) =>
@@ -293,7 +293,7 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
         setLoading(true);
         setError(null);
 
-        await api.inty.api.v1.ai.agents.delete(agentId);
+        await api.getIntyClient().api.v1.ai.agents.delete(agentId);
 
         // 更新本地状态
         setAgents((prev) => prev.filter((agent) => agent.id !== agentId));

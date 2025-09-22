@@ -242,20 +242,32 @@ const apiClient = new ApiClient(window.location.origin);
 
 
 // 创建一个自定义的 Inty 客户端，支持相对路径
-let intyClient = new Inty({
-  // 前端与后端部署与同一域名，因此总是使用同样的域名。
-  baseURL: window.location.origin,
-  // 使用动态 API Key，如果没有则使用空字符串（会导致请求失败）
-  apiKey: getGlobalApiKey() || "",
-});
+let intyClient: Inty | null = null;
+
+// 初始化 Inty 客户端
+const initializeIntyClient = () => {
+  const apiKey = getGlobalApiKey();
+  if (apiKey) {
+    intyClient = new Inty({
+      baseURL: window.location.origin,
+      apiKey: apiKey,
+    });
+  }
+};
+
+// 初始化客户端
+initializeIntyClient();
 
 // 更新 Inty 客户端的 API Key
 export const updateIntyClient = (apiKey: string | null) => {
-  const currentApiKey = apiKey || "";
-  intyClient = new Inty({
-    baseURL: window.location.origin,
-    apiKey: currentApiKey,
-  });
+  if (apiKey) {
+    intyClient = new Inty({
+      baseURL: window.location.origin,
+      apiKey: apiKey,
+    });
+  } else {
+    intyClient = null;
+  }
 };
 
 // =============================================================================
@@ -887,4 +899,11 @@ export default {
   voices: voiceApi,
   inty: intyClient,
   WebSocketManager,
+  // 获取 Inty 客户端的函数，确保只有在有 API Key 时才返回客户端
+  getIntyClient: () => {
+    if (!intyClient) {
+      throw new Error("API Key 未设置，请先设置 API Key");
+    }
+    return intyClient;
+  },
 };
