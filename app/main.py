@@ -89,6 +89,22 @@ static_dir = os.path.join(os.path.dirname(__file__), "static")
 if os.path.exists(static_dir):
     app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
+# 添加前端应用路由
+from fastapi.responses import FileResponse
+
+
+@app.get("/evaluation")
+async def evaluation_frontend():
+    evaluation_index = os.path.join(static_dir, "evaluation", "index.html")
+    return FileResponse(evaluation_index)
+
+
+@app.get("/evaluation/{path:path}")
+async def evaluation_static_files(path: str):
+    file_path = os.path.join(static_dir, "evaluation", path)
+    return FileResponse(file_path)
+
+
 # 初始化 Firebase
 init_firebase()
 

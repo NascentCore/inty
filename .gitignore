@@ -192,3 +192,6 @@ inty-firebase-key.json
 /app/inty-typescript/
 # Android studio playdebug build type 写 apk/aab 的目录
 /playdebug/
+
+# 前端构建产物 - 不应该提交到仓库
+/app/static/
