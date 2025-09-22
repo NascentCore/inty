@@ -283,18 +283,69 @@ class VoiceService:
         page_size: Optional[int] = 10,
         voice_type: Optional[str] = None,
         category: Optional[str] = None,
+        include_shared: bool = True,
     ) -> List[Dict[str, Any]]:
         """
         获取可用的语音列表，支持搜索和过滤
 
         Args:
-            search: 搜索音色名称
+            search: 搜索音色名称或voice_id
             page_size: 每页结果数
             voice_type: 音色类型过滤
             category: 音色分类过滤
+            include_shared: 是否包含共享音色（Explore页面的音色）
 
         Returns:
-            语音列表
+            语音列表（合并了个人音色、预置音色和共享音色）
+        """
+        all_voices = []
+        actual_page_size = page_size or 10
+        
+        try:
+            # 1. 获取用户音色和预置音色
+            regular_voices = await self._search_regular_voices(
+                search, actual_page_size, voice_type, category
+            )
+            all_voices.extend(regular_voices)
+            
+            # 2. 获取共享音色（Explore页面）
+            if include_shared:
+                shared_voices = await self._search_shared_voices(
+                    search, actual_page_size, voice_type=voice_type, category=category
+                )
+                all_voices.extend(shared_voices)
+            
+            # 3. 去重（基于voice_id）
+            seen_voice_ids = set()
+            unique_voices = []
+            for voice in all_voices:
+                voice_id = voice.get("voice_id")
+                if voice_id and voice_id not in seen_voice_ids:
+                    seen_voice_ids.add(voice_id)
+                    unique_voices.append(voice)
+            
+            # 4. 限制返回数量
+            if page_size:
+                unique_voices = unique_voices[:page_size]
+            
+            shared_count = len(shared_voices) if include_shared and 'shared_voices' in locals() else 0
+            logger.debug(f"获取到音色总数: {len(unique_voices)} (常规: {len(regular_voices)}, 共享: {shared_count})")
+            return unique_voices
+
+        except Exception as e:
+            logger.error(f"获取语音列表异常: {str(e)}")
+            logger.exception("获取语音列表异常详细信息:")
+            return []
+
+    async def _search_regular_voices(
+        self,
+        search: Optional[str] = None,
+        page_size: int = 10,
+        voice_type: Optional[str] = None,
+        category: Optional[str] = None,
+    ) -> List[Dict[str, Any]]:
+        """
+        搜索常规音色（用户音色 + 预置音色）
         """
         try:
             # 使用 ElevenLabs SDK 的搜索功能
@@ -308,7 +359,7 @@ class VoiceService:
             if category is not None:
                 kwargs["category"] = category
 
-            logger.debug(f"获取语音列表，参数: {kwargs}")
+            logger.debug(f"搜索常规音色，参数: {kwargs}")
 
             # 调用 ElevenLabs voices search API
             if kwargs:
@@ -318,20 +369,79 @@ class VoiceService:
                 # 获取所有语音
                 voices_response = self.client.voices.get_all()
 
-            # 转换为字典格式以保持兼容性
-            voices_list = [voice.model_dump() for voice in voices_response.voices]
+            # 转换为字典格式并添加来源标识
+            voices_list = []
+            for voice in voices_response.voices:
+                voice_dict = voice.model_dump()
+                voice_dict["source"] = "regular"  # 标记为常规音色
+                voices_list.append(voice_dict)
 
-            logger.debug(f"获取到 {len(voices_list)} 个语音")
+            logger.debug(f"获取到 {len(voices_list)} 个常规音色")
             return voices_list
 
         except Exception as e:
-            logger.error(f"获取语音列表异常: {str(e)}")
-            logger.exception("获取语音列表异常详细信息:")
+            logger.error(f"搜索常规音色异常: {str(e)}")
+            logger.exception("搜索常规音色异常详细信息:")
+            return []
+
+    async def _search_shared_voices(
+        self,
+        search: Optional[str] = None,
+        page_size: int = 30,
+        **kwargs
+    ) -> List[Dict[str, Any]]:
+        """
+        搜索共享音色（Explore页面的音色）
+        
+        Args:
+            search: 搜索关键词（支持音色名称和voice_id）
+            page_size: 每页结果数，最大100
+            **kwargs: 其他搜索参数
+            
+        Returns:
+            共享音色列表
+        """
+        try:
+            # 准备搜索参数
+            search_params = {
+                "search": search,
+                "page_size": min(page_size, 100),  # API限制最大100
+                "sort": "created_date",  # 按创建时间排序
+            }
+            
+            # 添加其他搜索参数
+            if "voice_type" in kwargs:
+                search_params["category"] = kwargs["voice_type"]
+            if "category" in kwargs:
+                search_params["category"] = kwargs["category"]
+                
+            # 移除None值
+            search_params = {k: v for k, v in search_params.items() if v is not None}
+            
+            logger.debug(f"搜索共享音色，参数: {search_params}")
+            
+            # 调用 ElevenLabs get_shared API
+            voices_response = self.client.voices.get_shared(**search_params)
+            
+            # 转换为字典格式并添加来源标识
+            voices_list = []
+            for voice in voices_response.voices:
+                voice_dict = voice.model_dump()
+                voice_dict["source"] = "shared"  # 标记为共享音色
+                voices_list.append(voice_dict)
+            
+            logger.debug(f"获取到 {len(voices_list)} 个共享音色")
+            return voices_list
+            
+        except Exception as e:
+            logger.error(f"搜索共享音色异常: {str(e)}")
+            logger.exception("搜索共享音色异常详细信息:")
             return []
 
     async def get_voice_info(self, voice_id: str) -> Optional[Dict[str, Any]]:
         """
         获取特定语音的信息
+        支持从常规音色和共享音色中查找
 
         Args:
             voice_id: 语音ID
@@ -340,11 +450,33 @@ class VoiceService:
             语音信息
         """
         try:
+            # 1. 先尝试从常规音色中获取（用户音色 + 预置音色）
             voice = self.client.voices.get(voice_id)
-            return voice.model_dump()
+            voice_dict = voice.model_dump()
+            voice_dict["source"] = "regular"
+            logger.debug(f"从常规音色中找到 voice_id: {voice_id}")
+            return voice_dict
         except Exception as e:
-            logger.error(f"获取语音信息异常: {str(e)}")
-            return None
+            logger.debug(f"从常规音色中获取 {voice_id} 失败: {str(e)}")
+        
+        try:
+            # 2. 如果常规音色中没有，尝试从共享音色中搜索
+            logger.debug(f"尝试从共享音色中搜索 voice_id: {voice_id}")
+            shared_voices = await self._search_shared_voices(search=voice_id, page_size=50)
+            
+            # 在搜索结果中查找精确匹配的voice_id
+            for voice in shared_voices:
+                if voice.get("voice_id") == voice_id:
+                    logger.debug(f"从共享音色中找到 voice_id: {voice_id}")
+                    return voice
+            
+            logger.debug(f"在共享音色中也未找到 voice_id: {voice_id}")
+            
+        except Exception as e:
+            logger.error(f"从共享音色中搜索 {voice_id} 异常: {str(e)}")
+        
+        logger.warning(f"无法找到音色信息，voice_id: {voice_id}")
+        return None
 
 
 # 创建全局实例
