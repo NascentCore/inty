@@ -1,7 +1,9 @@
 plugins {
     alias(libs.plugins.ai.android.application)
     alias(libs.plugins.ai.android.application.compose)
+//    alias(libs.plugins.ai.android.application.flavor)
     alias(libs.plugins.ai.android.navigation.compose)
+
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.kotlin.parcelize)
     alias(libs.plugins.google.services)
@@ -9,6 +11,7 @@ plugins {
     alias(libs.plugins.ksp)
 
     id("therouter")
+
 }
 
 tasks.register("printVersionInfo") {
@@ -113,8 +116,4 @@ dependencies {
 
     // ===== Inty SDK =====
     implementation("com.inty.api:inty-kotlin:0.8.0")
-
-    // ===== 模板引擎 =====
-    implementation(libs.pebble)
-    testImplementation(libs.pebble)
 }
