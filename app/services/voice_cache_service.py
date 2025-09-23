@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 from typing import Any, Dict, Optional, Tuple
 
 from loguru import logger
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import func
 
@@ -49,9 +49,14 @@ class VoiceCacheService:
         try:
             content_hash = self._generate_content_hash(text, voice_id, model, language)
 
-            # 查询缓存
+            # 查询缓存，使用 COALESCE 将 NULL duration 转换为 0.0
             result = await db.execute(
-                select(VoiceCache).where(
+                select(
+                    VoiceCache.audio_url,
+                    # 保持兼容性；coalesce 返回参数列表中第一个非 NULL 的值。
+                    # TODO：清除掉 func.coalesce，填充 duration 值到数据库
+                    func.coalesce(VoiceCache.duration, 0.0).label("duration"),
+                ).where(
                     VoiceCache.content_hash == content_hash,
                     VoiceCache.is_active == True,
                 )

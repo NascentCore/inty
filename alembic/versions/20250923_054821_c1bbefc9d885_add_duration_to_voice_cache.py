@@ -1,8 +1,8 @@
 """add duration to voice cache
 
-Revision ID: c1fc37eb7471
+Revision ID: c1bbefc9d885
 Revises: add_meta_data_to_agents
-Create Date: 2025-09-23 05:38:47.644398+00:00
+Create Date: 2025-09-23 05:48:21.088278+00:00
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = 'c1fc37eb7471'
+revision: str = 'c1bbefc9d885'
 down_revision: Union[str, None] = 'add_meta_data_to_agents'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -24,7 +24,7 @@ def upgrade() -> None:
                existing_type=postgresql.JSONB(astext_type=sa.Text()),
                type_=sa.JSON(),
                existing_nullable=True)
-    op.add_column('voice_cache', sa.Column('duration', sa.Float(), nullable=False))
+    op.add_column('voice_cache', sa.Column('duration', sa.Float(), nullable=True))
     # ### end Alembic commands ###
 
 
