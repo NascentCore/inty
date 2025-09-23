@@ -254,21 +254,6 @@ def main():
         )
         return
     else:
-        bucket_name = global_config_loaded_from_config_yaml.gcs.bucket
-        credentials_path = (
-            global_config_loaded_from_config_yaml.app.gcp_service_account_key
-        )
-        logger.info(f"GCS bucket: {bucket_name}")
-        logger.info(f"GCS credentials: {credentials_path}")
-
-        if not bucket_name or not credentials_path:
-            logger.error("GCS configuration is incomplete")
-            sys.exit(1)
-
-        if not os.path.exists(credentials_path):
-            logger.error(f"GCS credentials file not found: {credentials_path}")
-            sys.exit(1)
-
         engine = create_engine(global_config_loaded_from_config_yaml.database.url)
         db = Session(engine)
 

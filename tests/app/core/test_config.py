@@ -190,15 +190,6 @@ class TestAgentConfig:
         assert config.max_tokens == 2000
         assert config.enable_debug_logging is True
 
-
-class TestGCSConfig:
-    def test_gcs_config_required_fields(self):
-        """Test GCSConfig with required fields"""
-        config = GCSConfig(bucket="test-bucket", credentials="path/to/credentials.json")
-        assert config.bucket == "test-bucket"
-        assert config.credentials == "path/to/credentials.json"
-
-
 class TestFirebaseConfig:
     def test_firebase_config_required_fields(self):
         """Test FirebaseConfig with required fields"""
@@ -207,19 +198,10 @@ class TestFirebaseConfig:
 
 
 class TestGooglePlayConfig:
-    def test_google_play_config_required_fields(self):
-        """Test GooglePlayConfig with required fields"""
-        config = GooglePlayConfig(
-            service_account_key="service-account-key", package_name="com.test.app"
-        )
-        assert config.service_account_key == "service-account-key"
-        assert config.package_name == "com.test.app"
 
     def test_google_play_config_defaults(self):
         """Test GooglePlayConfig default values"""
-        config = GooglePlayConfig(
-            service_account_key="service-account-key", package_name="com.test.app"
-        )
+        config = GooglePlayConfig(package_name="com.test.app")
         assert config.webhook_secret is None
         assert config.enable_version_check is True
         assert config.min_supported_version == 1
@@ -229,7 +211,6 @@ class TestGooglePlayConfig:
     def test_google_play_config_custom_values(self):
         """Test GooglePlayConfig with custom values"""
         config = GooglePlayConfig(
-            service_account_key="custom-key",
             package_name="com.custom.app",
             webhook_secret="custom-secret",
             enable_version_check=False,
@@ -240,13 +221,6 @@ class TestGooglePlayConfig:
         assert config.enable_version_check is False
         assert config.min_supported_version == 2
         assert config.release_track == "internal"
-
-    def test_google_play_config_default_fallback_tracks(self):
-        """Test GooglePlayConfig default fallback_tracks"""
-        config = GooglePlayConfig(
-            service_account_key="service-account-key", package_name="com.test.app"
-        )
-        assert config.fallback_tracks == ["production", "internal"]
 
 
 class TestElevenLabsConfig:

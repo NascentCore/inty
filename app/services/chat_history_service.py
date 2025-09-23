@@ -4,9 +4,13 @@ from typing import Any, Dict, List, Optional
 from langchain_core.messages import HumanMessage
 from langchain_postgres import PostgresChatMessageHistory
 from loguru import logger
-from sqlalchemy import select, update, desc, func, and_
+from sqlalchemy import and_, desc, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.agent.prompt_template import (
+    has_variable_name,
+    render_prompt_jinja2_template,
+)
 from app.core.config import global_config_loaded_from_config_yaml
 from app.models.chat_history import ChatHistory
 
@@ -83,16 +87,23 @@ async def add_agent_opening_message(
     opening_message: str,
     audio_url: Optional[str] = None,
     agent_id: Optional[str] = None,
-    audio_duration: Optional[float] = None
+    audio_duration: Optional[float] = None,
+    agent_name: Optional[str] = "I",
+    user_name: Optional[str] = "you",
 ) -> None:
     """添加Agent开场白到聊天历史"""
     try:
+        if has_variable_name(opening_message):
+            opening_message = render_prompt_jinja2_template(
+                opening_message, char=agent_name, user=user_name
+            )
+
         # 构建AIMessage的JSON格式数据
         message_data = {
             "type": "ai",
-            "data": {"content": opening_message}
+            "data": {"content": opening_message},
         }
-        
+
         # 构建meta_data
         meta_data = None
         if agent_id or audio_duration is not None:
@@ -102,7 +113,7 @@ async def add_agent_opening_message(
                 meta_data["isOpening"] = True
             if audio_duration is not None:
                 meta_data["audioDuration"] = audio_duration
-        
+
         # 使用ORM创建新记录
         chat_history = ChatHistory(
             session_id=session_id,
@@ -110,12 +121,14 @@ async def add_agent_opening_message(
             audio_url=audio_url,
             meta_data=meta_data
         )
-        
+
         db.add(chat_history)
         await db.commit()
-            
-        logger.debug(f"添加开场白到会话 {session_id}: {opening_message}, audio_url: {audio_url}")
-        
+
+        logger.debug(
+            f"添加开场白到会话 {session_id}: {processed_opening}, audio_url: {audio_url}"
+        )
+
     except Exception as e:
         logger.error(f"添加开场白失败 {session_id}: {str(e)}")
         await db.rollback()
