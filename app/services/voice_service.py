@@ -8,6 +8,7 @@ import base64
 import hashlib
 import io
 import re
+from enum import StrEnum
 from typing import Any, Dict, List, Optional, Tuple
 
 from elevenlabs import VoiceSettings
@@ -18,6 +19,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import global_config_loaded_from_config_yaml
 from app.services.gcs_service import GCSService
+
+
+class AudioFormat(StrEnum):
+    MPEG = "audio/mpeg"
 
 
 class VoiceService:
@@ -157,7 +162,7 @@ class VoiceService:
             # 创建上传任务
             upload_task = asyncio.create_task(
                 self.gcs_service.upload_voice_file(
-                    file_name, audio_data, content_type="audio/mpeg"
+                    file_name, audio_data, content_type=AudioFormat.MPEG.value
                 )
             )
 

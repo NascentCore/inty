@@ -6,3 +6,8 @@ def render_prompt_jinja2_template(tmpl: str, char: str, user: str) -> str:
     jinja2_template = Jinja2Template(tmpl)
     rendered_prompt = jinja2_template.render(char=char, user=user)
     return rendered_prompt
+
+
+def has_variable_name(tmpl: str) -> bool:
+    """Check if the template has variable name"""
+    return "{{" in tmpl and "}}" in tmpl

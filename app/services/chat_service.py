@@ -192,8 +192,20 @@ async def create_chat(
                     session_id=session_id, limit=1, offset=0
                 )
                 if existing_messages.get("total", 0) == 0:
+                    # 获取用户信息用于变量替换
+                    user_result = await db.execute(
+                        select(models.User.nickname).where(models.User.id == user_id)
+                    )
+                    user_nickname = user_result.scalar_one_or_none() or "you"
+
                     await chat_history_service.add_agent_opening_message(
-                        db, session_id, agent.opening, agent.opening_audio_url, agent.id
+                        db,
+                        session_id,
+                        agent.opening,
+                        agent.opening_audio_url,
+                        agent.id,
+                        agent_name=agent.name,
+                        user_name=user_nickname,
                     )
                     logger.debug(f"添加Agent开场白成功 - Session ID: {session_id}")
                 else:
@@ -408,9 +420,11 @@ async def get_or_create_chat_by_agent(
                 else:
                     # 数据库查询Agent信息
                     agent_result = await db.execute(
-                        select(models.Agent.name, models.Agent.avatar, models.Agent.deleted_at).where(
-                            models.Agent.id == agent_id
-                        )
+                        select(
+                            models.Agent.name,
+                            models.Agent.avatar,
+                            models.Agent.deleted_at,
+                        ).where(models.Agent.id == agent_id)
                     )
                     agent_info = agent_result.first()
                     if agent_info:
@@ -419,7 +433,11 @@ async def get_or_create_chat_by_agent(
                         existing_chat.agent_is_deleted = agent_info[2] is not None
                         # 缓存Agent信息
                         cache_service.set_agent_config(
-                            agent_id, {"name": agent_info[0], "avatar": agent_info[1]}
+                            agent_id,
+                            {
+                                "name": agent_info[0],
+                                "avatar": agent_info[1],
+                            },
                         )
                     else:
                         existing_chat.agent_name = None
@@ -457,8 +475,27 @@ async def get_or_create_chat_by_agent(
 
                     # 如果有开场白，添加到聊天历史
                     if agent_opening:
+                        # 获取用户和Agent信息用于变量替换
+                        user_result = await db.execute(
+                            select(models.User.nickname).where(
+                                models.User.id == user_id
+                            )
+                        )
+                        user_nickname = user_result.scalar_one_or_none() or "you"
+
+                        agent_result = await db.execute(
+                            select(models.Agent.name).where(models.Agent.id == agent_id)
+                        )
+                        agent_name = agent_result.scalar_one_or_none() or "Agent"
+
                         await chat_history_service.add_agent_opening_message(
-                            db, session_id, agent_opening, opening_audio_url, agent_id
+                            db,
+                            session_id,
+                            agent_opening,
+                            opening_audio_url,
+                            agent_id,
+                            agent_name=agent_name,
+                            user_name=user_nickname,
                         )
                         logger.debug(
                             f"为已存在的空聊天会话添加Agent开场白成功 - Session ID: {session_id}"
@@ -506,7 +543,11 @@ async def get_or_create_chat_by_agent(
             # 数据库查询Agent信息
             agent_result = await db.execute(
                 select(
-                    models.Agent.name, models.Agent.avatar, models.Agent.opening, models.Agent.opening_audio_url, models.Agent.deleted_at
+                    models.Agent.name,
+                    models.Agent.avatar,
+                    models.Agent.opening,
+                    models.Agent.opening_audio_url,
+                    models.Agent.deleted_at,
                 ).where(models.Agent.id == agent_id)
             )
             agent_info = agent_result.first()
@@ -514,11 +555,22 @@ async def get_or_create_chat_by_agent(
                 logger.error(f"Agent不存在: {agent_id}")
                 raise HTTPException(status_code=404, detail="Agent不存在")
 
-            agent_name, agent_avatar, agent_opening, opening_audio_url, agent_deleted_at = agent_info
+            (
+                agent_name,
+                agent_avatar,
+                agent_opening,
+                opening_audio_url,
+                agent_deleted_at,
+            ) = agent_info
             # 缓存Agent信息
             cache_service.set_agent_config(
                 agent_id,
-                {"name": agent_name, "avatar": agent_avatar, "opening": agent_opening, "opening_audio_url": opening_audio_url},
+                {
+                    "name": agent_name,
+                    "avatar": agent_avatar,
+                    "opening": agent_opening,
+                    "opening_audio_url": opening_audio_url,
+                },
             )
             logger.debug(f"验证Agent存在 - Agent ID: {agent_id}, Name: {agent_name}")
 
@@ -552,8 +604,20 @@ async def get_or_create_chat_by_agent(
                     session_id=session_id, limit=1, offset=0
                 )
                 if existing_messages.get("total", 0) == 0:
+                    # 获取用户信息用于变量替换
+                    user_result = await db.execute(
+                        select(models.User.nickname).where(models.User.id == user_id)
+                    )
+                    user_nickname = user_result.scalar_one_or_none() or "you"
+
                     await chat_history_service.add_agent_opening_message(
-                        db, session_id, agent_opening, opening_audio_url, agent_id
+                        db,
+                        session_id,
+                        agent_opening,
+                        opening_audio_url,
+                        agent_id,
+                        agent_name=agent_name,
+                        user_name=user_nickname,
                     )
                     logger.debug(f"添加Agent开场白成功 - Session ID: {session_id}")
                 else:
@@ -567,7 +631,7 @@ async def get_or_create_chat_by_agent(
         # 10. 设置Agent信息并缓存会话（优化：避免重复查询）
         db_chat.agent_name = agent_name
         db_chat.agent_avatar = agent_avatar
-        
+
         # Handle agent deletion status for cached vs database cases
         if cached_agent:
             # For cached agents, we need to check the database for deletion status
@@ -972,5 +1036,3 @@ async def save_debug_messages(
         logger.error(f"保存调试信息失败，session_id: {session_id}, 错误: {str(e)}")
         await db.rollback()
         # 不抛出异常，避免影响正常的聊天流程
-
-

@@ -24,7 +24,7 @@ class GCSService:
         self.bucket_name = global_config_loaded_from_config_yaml.gcs.bucket
 
     async def upload_voice_file(
-        self, file_name: str, file_data: bytes, content_type: str = "audio/mpeg"
+        self, file_name: str, file_data: bytes, content_type: str
     ) -> Optional[str]:
         """
         上传语音文件到GCS
