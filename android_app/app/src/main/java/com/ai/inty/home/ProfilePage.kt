@@ -27,7 +27,6 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -43,6 +42,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -327,43 +327,75 @@ private fun MyAgentCard(
             error = painterResource(R.drawable.app_icon),
         )
 
-        Text(
+        Column(
             modifier = Modifier
-                .align(Alignment.BottomStart)
-                .padding(12.dp),
-            text = agentInfo.name,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = Color.White,
-        )
+                .fillMaxWidth()
+                .background(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            Color.Transparent,
+                            Color.Black.copy(.2f),
+                            Color.Black.copy(.7f),
+                            Color.Black,
+                        ),
+                        endY = 300f
+                    )
+                )
+                .padding(8.dp)
+                .align(Alignment.BottomCenter),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IntyCircleImage(
+                    modifier = Modifier.size(18.dp),
+                    url = agentInfo.avatar,
+                    placeholderResID = R.drawable.app_icon
+                )
+                Spacer(Modifier.width(4.dp))
+                Text(
+                    modifier = Modifier,
+                    text = agentInfo.name,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color.White,
+                )
+            }
+            Text(
+                modifier = Modifier,
+                text = agentInfo.intro,
+                fontSize = 12.sp,
+                lineHeight = 12.sp,
+                color = Color.White.copy(.7f),
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
 
         // 右下角的菜单按钮
         if (onEditAgent != null || onDeleteAgent != null) {
             Box(
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .padding(8.dp)
+                    .padding(4.dp)
             ) {
-                IconButton(
-                    onClick = {
-                        val currentTime = System.currentTimeMillis()
-                        if (AntiClick.isValidClick(lastClickTime)) {
-                            lastClickTime = currentTime
-                            showMenu = true
-                        }
-                    },
+
+                IntyImage(
                     modifier = Modifier
-                        .size(24.dp)
+                        .size(30.dp)
                         .background(
                             Color.Black.copy(alpha = 0.5f),
-                            RoundedCornerShape(12.dp)
+                            RoundedCornerShape(4.dp)
                         )
-                ) {
-                    IntyImage(
-                        modifier = Modifier.size(16.dp),
-                        model = R.drawable.icon_more2
-                    )
-                }
+                        .noRippleClickable(onClick = {
+                            val currentTime = System.currentTimeMillis()
+                            if (AntiClick.isValidClick(lastClickTime)) {
+                                lastClickTime = currentTime
+                                showMenu = true
+                            }
+                        }),
+                    model = R.drawable.icon_more2
+                )
+
 
                 DropdownMenu(
                     expanded = showMenu,

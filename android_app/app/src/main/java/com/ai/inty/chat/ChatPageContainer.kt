@@ -53,7 +53,25 @@ fun ChatPageContainer(
     currentPageIndex: Int = 0,
     onPageChanged: (Int) -> Unit = {},
 ) {
-    val pageState = rememberPagerState(initialPage = currentPageIndex) { agentList.size }
+    // 如果 agentList 为空，显示空状态
+    if (agentList.isEmpty()) {
+        Box(
+            modifier = modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            // 可以在这里显示加载中或空状态的UI
+            // 暂时显示空白，等待数据加载
+        }
+        return
+    }
+
+    // 防止初始页面索引越界
+    val safeInitialPage = if (currentPageIndex >= 0 && currentPageIndex < agentList.size) {
+        currentPageIndex
+    } else {
+        0 // 默认使用第一页
+    }
+    val pageState = rememberPagerState(initialPage = safeInitialPage) { agentList.size }
     val scope = rememberCoroutineScope()
 
     // 监听页面变化
@@ -66,6 +84,11 @@ fun ChatPageContainer(
             modifier = modifier,
             state = pageState,
         ) { currentPage ->
+            // 防止数组越界
+            if (currentPage < 0 || currentPage >= agentList.size) {
+                // 如果索引无效，显示空页面或返回
+                return@HorizontalPager
+            }
             val agent = agentList[currentPage]
             val chatViewModel: ChatViewModel = viewModel(
                 key = agent.id,

@@ -322,7 +322,13 @@ class MainViewModel : BaseActivityViewModel() {
     }
 
     fun selectTab(tab: Int) {
-        _selectedTab.value = HomeTabIndex.entries.toTypedArray()[tab]
+        // 防止数组越界，确保tab索引在有效范围内
+        val tabEntries = HomeTabIndex.entries.toTypedArray()
+        if (tab < 0 || tab >= tabEntries.size) {
+            EasyLog.log("selectTab - 无效的tab索引: $tab, 有效范围: 0-${tabEntries.size - 1}", priority = EasyLog.ERROR)
+            return
+        }
+        _selectedTab.value = tabEntries[tab]
         when (_selectedTab.value) {
             HomeTabIndex.Conversation -> {
                 chatViewModel?.getConversations()
@@ -422,24 +428,6 @@ class MainViewModel : BaseActivityViewModel() {
                 )
                 // 不影响主流程，静默处理
             }
-        }
-    }
-
-    fun updateAgentFollowStateInList(agentId: String, isFollowed: Boolean) {
-        EasyLog.log("Updating agent follow state in list - agentId: $agentId, isFollowed: $isFollowed")
-
-        // 更新主列表中的agent状态
-        val index = agentList.indexOfFirst { it.id == agentId }
-        if (index != -1) {
-            val updatedAgent = agentList[index].copy(isFollowed = isFollowed)
-            agentList[index] = updatedAgent
-            EasyLog.log("Updated agent in main list: ${updatedAgent.name}")
-        }
-
-        // 如果是取消关注，从关注列表中移除
-        if (!isFollowed) {
-            followingAgents.removeAll { it.id == agentId }
-            EasyLog.log("Removed agent from following list")
         }
     }
 

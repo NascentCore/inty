@@ -34,8 +34,8 @@ fun SmartTagsLayout(
     tags: List<String>,
     modifier: Modifier = Modifier,
     maxLines: Int = 1,
-    horizontalArrangement: Arrangement.Horizontal = Arrangement.spacedBy(6.dp),
     isCardTag: Boolean = false,//标记是否是在explore现实的tag，目前主要用于AgentInfo和Explore的card
+    horizontalArrangement: Arrangement.Horizontal = Arrangement.spacedBy(if (isCardTag) 3.dp else 6.dp),
 ) {
     val density = LocalDensity.current
     var availableWidth by remember { mutableFloatStateOf(0f) }
