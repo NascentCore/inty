@@ -25,6 +25,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -419,11 +420,12 @@ private fun ExpandableTextWithButton(
     Box(
         modifier = modifier.fillMaxWidth()
     ) {
+        var pd by remember { mutableIntStateOf(0) }
         Text(
             text = text,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 12.dp),
+                .padding(bottom = pd.dp),
             style = textStyle,
             maxLines = if (isExpanded) Int.MAX_VALUE else collapsedMaxLines,
             overflow = TextOverflow.Ellipsis,
@@ -431,6 +433,8 @@ private fun ExpandableTextWithButton(
                 if (!isExpanded && textLayoutResult.hasVisualOverflow) {
                     expandable = true
                 }
+                //文案过长，需要折叠的时候，才加上bottom的padding
+                pd = if (textLayoutResult.lineCount >= 3 && textLayoutResult.hasVisualOverflow) 12 else 0
             },
         )
         if (expandable) {

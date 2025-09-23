@@ -338,7 +338,6 @@ private fun MyAgentCard(
                             Color.Black.copy(.7f),
                             Color.Black,
                         ),
-                        endY = 300f
                     )
                 )
                 .padding(8.dp)
@@ -378,10 +377,9 @@ private fun MyAgentCard(
                     .align(Alignment.BottomEnd)
                     .padding(4.dp)
             ) {
-
-                IntyImage(
+                Box(
                     modifier = Modifier
-                        .size(30.dp)
+                        .size(28.dp)
                         .background(
                             Color.Black.copy(alpha = 0.5f),
                             RoundedCornerShape(4.dp)
@@ -392,10 +390,13 @@ private fun MyAgentCard(
                                 lastClickTime = currentTime
                                 showMenu = true
                             }
-                        }),
-                    model = R.drawable.icon_more2
-                )
-
+                        }), contentAlignment = Alignment.Center
+                ) {
+                    IntyImage(
+                        modifier = Modifier.size(20.dp),
+                        model = R.drawable.icon_more2
+                    )
+                }
 
                 DropdownMenu(
                     expanded = showMenu,
