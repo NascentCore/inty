@@ -85,11 +85,11 @@ async def add_agent_opening_message(
     db: AsyncSession,
     session_id: str,
     opening_message: str,
+    agent_name: Optional[str],
+    user_name: Optional[str],
     audio_url: Optional[str] = None,
     agent_id: Optional[str] = None,
     audio_duration: Optional[float] = None,
-    agent_name: Optional[str] = "I",
-    user_name: Optional[str] = "you",
 ) -> None:
     """添加Agent开场白到聊天历史"""
     try:

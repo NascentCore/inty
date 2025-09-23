@@ -193,10 +193,11 @@ async def create_chat(
                 )
                 if existing_messages.get("total", 0) == 0:
                     # 获取用户信息用于变量替换
-                    user_result = await db.execute(
+                    query_result = await db.execute(
                         select(models.User.nickname).where(models.User.id == user_id)
                     )
-                    user_nickname = user_result.scalar_one_or_none() or "you"
+                    # TODO：用 you 来简称用户，可以考虑更多的替换方式。
+                    user_nickname = query_result.scalar_one_or_none() or "you"
 
                     await chat_history_service.add_agent_opening_message(
                         db,
@@ -476,17 +477,17 @@ async def get_or_create_chat_by_agent(
                     # 如果有开场白，添加到聊天历史
                     if agent_opening:
                         # 获取用户和Agent信息用于变量替换
-                        user_result = await db.execute(
+                        query_result = await db.execute(
                             select(models.User.nickname).where(
                                 models.User.id == user_id
                             )
                         )
-                        user_nickname = user_result.scalar_one_or_none() or "you"
+                        user_nickname = query_result.scalar_one_or_none() or "you"
 
-                        agent_result = await db.execute(
+                        query_result = await db.execute(
                             select(models.Agent.name).where(models.Agent.id == agent_id)
                         )
-                        agent_name = agent_result.scalar_one_or_none() or "Agent"
+                        agent_name = query_result.scalar_one_or_none() or "I"
 
                         await chat_history_service.add_agent_opening_message(
                             db,
@@ -605,10 +606,10 @@ async def get_or_create_chat_by_agent(
                 )
                 if existing_messages.get("total", 0) == 0:
                     # 获取用户信息用于变量替换
-                    user_result = await db.execute(
+                    query_result = await db.execute(
                         select(models.User.nickname).where(models.User.id == user_id)
                     )
-                    user_nickname = user_result.scalar_one_or_none() or "you"
+                    user_nickname = query_result.scalar_one_or_none() or "you"
 
                     await chat_history_service.add_agent_opening_message(
                         db,
