@@ -62,8 +62,8 @@
 
         <activity
             android:name=".SplashActivity"
-            android:launchMode="singleTask"
-            android:exported="true">
+            android:exported="true"
+            android:launchMode="singleTask">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -93,7 +93,7 @@
             android:screenOrientation="portrait"
             android:theme="@style/Theme.Inty.Popup"
             android:windowSoftInputMode="adjustResize" />
-        <activity android:name=".SysMsgsActivity" />
+
         <activity
             android:name=".AgentInfoActivity"
             android:launchMode="singleTop"
@@ -120,6 +120,7 @@
             android:windowSoftInputMode="adjustResize" />
         <activity
             android:name="com.yalantis.ucrop.UCropActivity"
+            android:launchMode="singleTop"
             android:screenOrientation="portrait"
             android:theme="@style/Theme.Inty.UCrop" />
         <activity

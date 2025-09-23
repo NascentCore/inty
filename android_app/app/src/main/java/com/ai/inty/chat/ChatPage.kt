@@ -383,6 +383,7 @@ internal fun ChatPage(
         ChatMorePanel(
             visible = showMorePanel,
             agentInfo = agentInfo,
+            chatViewModel = chatViewModel,
             onDismiss = { showMorePanel = false }
         )
 

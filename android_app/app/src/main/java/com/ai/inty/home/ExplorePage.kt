@@ -42,7 +42,6 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -50,23 +49,15 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.unit.times
 import com.ai.inty.R
 import com.ai.inty.base.IntyCircleImage
 import com.ai.inty.base.IntyImage
 import com.ai.inty.base.noRippleClickable
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.ui.components.SmartTagsLayout
-import com.ai.inty.utils.AspectRatio
-import com.ai.inty.utils.CHARACTER_CARD_ASPECT_RATIO
-import com.ai.inty.utils.getHeightByWidth
+import com.inty.utils.log.EasyLog
 import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
-
-// 一个父容器内多个分布式子容器之间及与父容器边缘的间距相对父容器的比例
-// 水平方向的padding，包括左侧和右侧，子容器上下左右之间的间距
-const val SPACER_PERCENTAGE = 0.012f
-const val HORIZONTAL_PADDING_MULTIPLIER = 1.8
 
 // 预加载下一页的缓冲区数量
 // 当前已经加载但是还未被显示的角色数量
@@ -75,25 +66,9 @@ val TitleHeight = 40.dp // 标题栏高度，文字居中显示，未预留与�
 val TitleLeftPadding = 24.dp // 标题栏内显示内容距离左侧边缘间距，用于与标题下方内容垂直对齐。
 
 
-private fun calculateSpacerWidth(containerWidth: Int): Int {
-    val spacerPercentage = SPACER_PERCENTAGE
-    return (containerWidth * spacerPercentage).toInt()
-}
-
-private fun getCharacterCardSize(containerWidth: Int): AspectRatio {
-    // Portrait aspect ratio
-    val portraitAspectRatio = CHARACTER_CARD_ASPECT_RATIO
-    val spacerPercentage = 0.03f
-    val spacerWidth = (containerWidth * spacerPercentage).toInt()
-    val columnCount = 2
-    val subContainerWidth = (containerWidth - (columnCount + 1) * spacerWidth) / columnCount
-    val subContainerHeight = getHeightByWidth(subContainerWidth, portraitAspectRatio)
-    return AspectRatio(subContainerWidth, subContainerHeight)
-}
-
 @SuppressLint("ConfigurationScreenWidthHeight")
 @Composable
-fun RecommendPage(
+fun ExplorePage(
     modifier: Modifier,
     innerPadding: PaddingValues,
     agents: List<AgentInfo>,
@@ -211,56 +186,43 @@ fun RecommendPage(
 
             val gridState = rememberLazyStaggeredGridState()
 
-            // 检测是否在顶部
-            val isAtTop by remember {
-                derivedStateOf {
-                    gridState.firstVisibleItemIndex == 0 && gridState.firstVisibleItemScrollOffset == 0
-                }
-            }
-
-            // 检测是否滚动到底部
+            // 检测是否滚动到底部 - 使用更稳定的计算方式
             val reachedBottom by remember {
                 derivedStateOf {
-                    val lastVisibleItem = gridState.layoutInfo.visibleItemsInfo.lastOrNull()
-                    lastVisibleItem?.index != null && lastVisibleItem.index >= agents.size - 3
+                    val layoutInfo = gridState.layoutInfo
+                    val totalItemsCount = layoutInfo.totalItemsCount
+                    val lastVisibleItemIndex = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1
+                    
+                    // 当最后一个可见项接近列表末尾时触发加载更多
+                    totalItemsCount > 0 && lastVisibleItemIndex >= totalItemsCount - 3
                 }
             }
 
             // 触发加载更多，添加防抖机制
-            LaunchedEffect(reachedBottom) {
+            LaunchedEffect(reachedBottom, agents.size) {
                 if (reachedBottom && agents.isNotEmpty() && !isLoading) {
                     // 添加延迟，避免快速滚动时重复触发
-                    delay(100)
-                    onLoadMore()
+                    delay(200)
+                    if (reachedBottom && !isLoading) {
+                        onLoadMore()
+                    }
                 }
             }
 
-            // Calculate dynamic spacing based on container width
-            val containerWidth = LocalConfiguration.current.screenWidthDp
-            val characterCardSize = getCharacterCardSize(containerWidth)
-            // 用于角色卡上下左右的间距
-            val spacerWidth = calculateSpacerWidth(containerWidth)
-
             LazyVerticalStaggeredGrid(
                 columns = StaggeredGridCells.Fixed(COLUMN_COUNT),
-                modifier = Modifier.padding(
-                    bottom = BottomNavigationBarHeight,
-                    // Left padding
-                    start = HORIZONTAL_PADDING_MULTIPLIER * spacerWidth.dp,
-                    // Right padding
-                    end = HORIZONTAL_PADDING_MULTIPLIER * spacerWidth.dp,
-                ),
+                modifier = Modifier,
                 state = gridState,
-                horizontalArrangement = Arrangement.spacedBy(spacerWidth.dp),
-                verticalItemSpacing = spacerWidth.dp,
+                contentPadding = PaddingValues(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalItemSpacing = 8.dp,
             ) {
                 runCatching {
                     if (agents.isNotEmpty()) {
                         itemsIndexed(
                             items = agents,
-                            key = { index, agent -> "${agent.id}_$index" }
+                            key = { _, agent -> agent.id } // 使用稳定的 ID 作为 key
                         ) { _, agent ->
-
                             CharacterCard(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -297,13 +259,41 @@ fun RecommendPage(
             }
         }
     }
+
+    // 使用 LaunchedEffect 避免在每次重组时都执行重复检测
+    LaunchedEffect(agents.size) {
+        if (agents.isNotEmpty()) {
+            listDup(agents)
+        }
+    }
 }
+
 
 @Composable
 fun CharacterCard(
     modifier: Modifier = Modifier,
     agentInfo: AgentInfo,
 ) {
+    // 缓存渐变画笔，避免每次重组时重新创建
+    val gradientBrush = remember {
+        Brush.verticalGradient(
+            colors = listOf(
+                Color.Transparent,
+                Color.Black.copy(.3f),
+                Color.Black.copy(.5f),
+                Color.Black.copy(.7f),
+                Color.Black.copy(.9f),
+                Color.Black,
+                Color.Black,
+                Color.Black,
+            )
+        )
+    }
+    
+    // 缓存过滤后的标签，避免每次重组时重新计算
+    val filteredTags = remember(agentInfo.tags) {
+        agentInfo.tags?.filterNotNull() ?: emptyList()
+    }
 
     Box(modifier = modifier) {
         IntyImage(
@@ -316,20 +306,7 @@ fun CharacterCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(
-                    brush = Brush.verticalGradient(
-                        colors = listOf(
-                            Color.Transparent,
-                            Color.Black.copy(.3f),
-                            Color.Black.copy(.5f),
-                            Color.Black.copy(.7f),
-                            Color.Black.copy(.9f),
-                            Color.Black,
-                            Color.Black,
-                            Color.Black,
-                        )
-                    )
-                )
+                .background(brush = gradientBrush)
                 .padding(start = 8.dp, end = 8.dp, top = 15.dp, bottom = 8.dp)
                 .align(Alignment.BottomCenter),
             verticalArrangement = Arrangement.spacedBy(4.dp)
@@ -358,11 +335,45 @@ fun CharacterCard(
                 maxLines = 3,
                 overflow = TextOverflow.Ellipsis
             )
-            agentInfo.tags?.filterNotNull()?.let { tags ->
-                SmartTagsLayout(tags = tags, isCardTag = true)
+            if (filteredTags.isNotEmpty()) {
+                SmartTagsLayout(tags = filteredTags, isCardTag = true)
             }
-
         }
+    }
+}
 
+
+private fun listDup(agents: List<AgentInfo>) {
+    if (agents.isEmpty()) {
+        EasyLog.log("listDup: agents列表为空", EasyLog.DEBUG)
+        return
+    }
+    
+    // 用于存储已见过的组合，key为"name|id|avatar"的组合
+    val seenCombinations = mutableSetOf<String>()
+    val duplicateItems = mutableListOf<AgentInfo>()
+    
+    agents.forEach { agent ->
+        // 创建唯一标识符：name|id|avatar
+        val combination = "${agent.name}|${agent.id}|${agent.avatar}"
+        
+        if (seenCombinations.contains(combination)) {
+            // 发现重复项
+            duplicateItems.add(agent)
+            EasyLog.log("发现重复的Agent: name=${agent.name}, id=${agent.id}, avatar=${agent.avatar}", EasyLog.WARN)
+        } else {
+            seenCombinations.add(combination)
+        }
+    }
+    
+    // 输出统计信息
+    EasyLog.log("listDup统计: 总数量=${agents.size}, 重复数量=${duplicateItems.size}, 唯一数量=${agents.size - duplicateItems.size}", EasyLog.INFO)
+    
+    // 如果有重复项，输出详细信息
+    if (duplicateItems.isNotEmpty()) {
+        EasyLog.log("重复项详细信息:", EasyLog.WARN)
+        duplicateItems.forEachIndexed { index, agent ->
+            EasyLog.log("重复项${index + 1}: name='${agent.name}', id='${agent.id}', avatar='${agent.avatar}'", EasyLog.WARN)
+        }
     }
 }

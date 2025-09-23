@@ -489,8 +489,25 @@ class ChatViewModel : BaseActivityViewModel() {
         }
     }
 
-    //获取聊天消息设置
-    val chatSetting = MutableStateFlow<ChatSettingsResponse.ChatSettingRspData?>(null)
+    //获取聊天消息设置 - 按agentId存储，确保每个agent的设置独立
+    private val _chatSettings = MutableStateFlow<Map<String, ChatSettingsResponse.ChatSettingRspData>>(emptyMap())
+    val chatSettings = _chatSettings.asStateFlow()
+    
+    /**
+     * 获取指定agent的聊天设置
+     */
+    fun getChatSettingForAgent(agentId: String): ChatSettingsResponse.ChatSettingRspData? {
+        return _chatSettings.value[agentId]
+    }
+    
+    /**
+     * 获取当前agent的聊天设置
+     */
+    fun getCurrentChatSetting(): ChatSettingsResponse.ChatSettingRspData? {
+        val agentId = agentInfo.value?.id ?: return null
+        return getChatSettingForAgent(agentId)
+    }
+    
     private fun getChatSetting() = launchWithNetCheck {
         val agentId = agentInfo.value?.id ?: return@launchWithNetCheck
         //有agent信息，才请求
@@ -503,7 +520,11 @@ class ChatViewModel : BaseActivityViewModel() {
             }
 
             is HttpResult.Success -> {
-                chatSetting.update { result.data }
+                // 更新指定agent的设置，保持其他agent的设置不变
+                _chatSettings.update { currentSettings ->
+                    currentSettings + (agentId to result.data)
+                }
+                EasyLog.log("Updated chat setting for agent: $agentId")
             }
         }
     }
@@ -518,8 +539,13 @@ class ChatViewModel : BaseActivityViewModel() {
             is HttpResult.Failure -> showNetworkAwareError(result.message)
             is HttpResult.Success -> {
                 showNetworkAwareError(AppEnv.context.getString(R.string.custom_reply_successful))
-                //要更新chatsetting
-                chatSetting.emit(result.data.data)
+                //要更新指定agent的chatsetting
+                result.data.data?.let { chatSettingData ->
+                    _chatSettings.update { currentSettings ->
+                        currentSettings + (agentId to chatSettingData)
+                    }
+                    EasyLog.log("Updated chat reply setting for agent: $agentId")
+                }
             }
         }
     }
@@ -723,6 +749,9 @@ class ChatViewModel : BaseActivityViewModel() {
         currentConversationsPage = 0
         hasMoreConversations = true
         _isLoadingConversations.value = false
+        
+        // 清理chatSettings
+        _chatSettings.value = emptyMap()
 
         EasyLog.log("All data cleared for ChatViewModel ${hashCode()}")
     }

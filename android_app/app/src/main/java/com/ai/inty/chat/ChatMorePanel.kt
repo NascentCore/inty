@@ -34,7 +34,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ai.inty.Constant
 import com.ai.inty.R
 import com.ai.inty.base.BottomSheetDialog
@@ -58,6 +57,7 @@ import com.therouter.TheRouter
 fun ChatMorePanel(
     visible: Boolean,
     agentInfo: AgentInfo?,
+    chatViewModel: ChatViewModel,
     onDismiss: () -> Unit,
 ) {
     if (!visible) return
@@ -137,10 +137,19 @@ fun ChatMorePanel(
     LaunchedEffect(showSheet) {
         if (showSheet) sheetState.show() else sheetState.hide()
     }
-    val viewmodel = viewModel<ChatViewModel>()
-    val chatSetting by viewmodel.chatSetting.collectAsState()
+    
+    // 获取当前agent的聊天设置，确保按agent隔离
+    val currentChatSetting by remember(agentInfo?.id) {
+        derivedStateOf { 
+            agentInfo?.id?.let { agentId ->
+                chatViewModel.getChatSettingForAgent(agentId)
+            }
+        }
+    }
 
-    val replyStr = remember { derivedStateOf { (chatSetting?.style_prompt ?: "") } }
+    val replyStr = remember(agentInfo?.id) { 
+        derivedStateOf { (currentChatSetting?.style_prompt ?: "") } 
+    }
     if (showSheet) {
         ReplyStyleSheet(
             sheetState = sheetState,
@@ -151,7 +160,7 @@ fun ChatMorePanel(
             },
             onSave = { str ->
                 //调用接口 save
-                viewmodel.updateChatReplySettings(str.trim())
+                chatViewModel.updateChatReplySettings(str.trim())
                 showSheet = false
             }
         )
@@ -171,7 +180,7 @@ fun ChatMorePanel(
                 if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
                     //购买最低档位的vip会员订阅
                     if (context is Activity) {
-                        viewmodel.purchaseFirstVip(context)
+                        chatViewModel.purchaseFirstVip(context)
                     }
                 } else {
                     //如果未登录，要求先登录

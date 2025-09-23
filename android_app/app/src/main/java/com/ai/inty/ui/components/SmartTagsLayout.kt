@@ -24,6 +24,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.delay
 
 /**
  * 智能 Tags 布局组件，支持自动换行和截断
@@ -41,15 +42,19 @@ fun SmartTagsLayout(
     var availableWidth by remember { mutableFloatStateOf(0f) }
     var visibleTags by remember { mutableStateOf(tags) }
 
-    // 计算可见的 tags
+    // 计算可见的 tags - 添加防抖机制
     LaunchedEffect(tags, availableWidth) {
         if (availableWidth > 0) {
-            visibleTags = calculateVisibleTags(
-                tags = tags,
-                availableWidth = availableWidth,
-                density = density,
-                maxLines = maxLines
-            )
+            // 添加小延迟，避免频繁计算
+            delay(16) // 约一帧的时间
+            if (availableWidth > 0) {
+                visibleTags = calculateVisibleTags(
+                    tags = tags,
+                    availableWidth = availableWidth,
+                    density = density,
+                    maxLines = maxLines
+                )
+            }
         }
     }
 
@@ -87,7 +92,7 @@ private fun calculateVisibleTags(
 
     val tagSpacing = with(density) { 6.dp.toPx() }
     val tagHeight = with(density) { 24.dp.toPx() } // 估算 tag 高度
-    val maxHeight = tagHeight * maxLines
+    // val maxHeight = tagHeight * maxLines // 暂时未使用，保留以备将来需要
 
     val visibleTags = mutableListOf<String>()
     var currentLineWidth = 0f
