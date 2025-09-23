@@ -12,7 +12,7 @@ from sqlalchemy.orm import selectinload
 from app import models, schemas
 from app.core.agent.agent import agent_manager
 from app.core.agent.prompt_template import (
-    has_variable_name,
+    has_template_variable,
     render_prompt_jinja2_template,
 )
 from app.core.config import global_config_loaded_from_config_yaml
@@ -42,7 +42,7 @@ async def generate_agent_opening_voice(
         return None
 
     opening = agent.opening
-    if has_variable_name(opening):
+    if has_template_variable(opening):
         # 将角色名字替换为实际字符，user 则替换为 you（假设英文）。
         opening = render_prompt_jinja2_template(opening, char=agent.name, user="you")
 
@@ -467,10 +467,6 @@ async def get_balanced_score_based_agents(
     
     result = await db.execute(query)
     return result.scalars().all()
-
-
-
-
 
 
 async def get_recommended_agents_paginated(
