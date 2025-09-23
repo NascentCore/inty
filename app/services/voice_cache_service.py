@@ -5,7 +5,7 @@
 
 import hashlib
 from datetime import datetime, timedelta
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Tuple
 
 from loguru import logger
 from sqlalchemy import select, update
@@ -32,9 +32,9 @@ class VoiceCacheService:
 
     async def get_cached_voice(
         self, db: AsyncSession, text: str, voice_id: str, model: str, language: str
-    ) -> Optional[str]:
+    ) -> Optional[Tuple[str, float]]:
         """
-        获取缓存的语音文件URL
+        获取缓存的语音文件URL和时长
 
         Args:
             db: 数据库会话
@@ -44,7 +44,7 @@ class VoiceCacheService:
             language: 语言
 
         Returns:
-            缓存的音频URL，如果不存在则返回None
+            缓存的音频URL和时长的元组，如果不存在则返回None
         """
         try:
             content_hash = self._generate_content_hash(text, voice_id, model, language)
@@ -74,7 +74,9 @@ class VoiceCacheService:
                         )
                     )
 
-                    return cache_entry.audio_url
+                    # 由于缓存中没有存储时长信息，返回默认值0.0
+                    # TODO: 后续可以考虑在VoiceCache模型中添加duration字段
+                    return (cache_entry.audio_url, 0.0)
                 else:
                     # 文件不存在，标记为无效（使用独立事务）
                     try:
