@@ -33,45 +33,42 @@ async def generate_agent_opening_voice(
     """
     为Agent生成开场白语音并返回音频URL
     """
-    try:
-        if not agent.opening or not agent.opening.strip():
-            logger.debug(f"Agent {agent.id} 没有开场白文本，跳过语音生成")
-            return None
-
-        # 确定使用的voice_id：优先使用agent的voice_id，否则使用配置文件默认值
-        voice_id_to_use = (
-            agent.voice_id or global_config_loaded_from_config_yaml.elevenlabs.voice_id
-        )
-
-        if not voice_id_to_use:
-            logger.debug(f"Agent {agent.id} 和配置文件都没有voice_id，跳过语音生成")
-            return None
-
-        logger.debug(
-            f"Agent {agent.id} 使用voice_id: {voice_id_to_use} (来源: {'Agent' if agent.voice_id else '配置文件'})"
-        )
-
-        voice_service = VoiceService()
-
-        # 生成开场白语音
-        voice_result = await voice_service.generate_voice(
-            text=agent.opening, voice_id=voice_id_to_use
-        )
-
-        if voice_result:
-            audio_url, audio_duration = voice_result
-            # 更新agent的opening_audio_url字段
-            agent.opening_audio_url = audio_url
-            await db.commit()
-            logger.debug(f"成功为Agent {agent.id} 生成开场白语音: {audio_url}, 时长: {audio_duration:.2f}秒")
-            return audio_url
-        else:
-            logger.warning(f"Agent {agent.id} 开场白语音生成失败，未返回URL")
-            return None
-
-    except Exception as e:
-        logger.error(f"为Agent {agent.id} 生成开场白语音失败: {str(e)}")
+    if not agent.opening or not agent.opening.strip():
+        logger.debug(f"Agent {agent.id} 没有开场白文本，跳过语音生成")
         return None
+
+    # 确定使用的voice_id：优先使用agent的voice_id，否则使用配置文件默认值
+    voice_id_to_use = (
+        agent.voice_id or global_config_loaded_from_config_yaml.elevenlabs.voice_id
+    )
+
+    if not voice_id_to_use:
+        logger.debug(f"Agent {agent.id} 和配置文件都没有voice_id，跳过语音生成")
+        return None
+
+    logger.debug(
+        f"Agent {agent.id} 使用voice_id: {voice_id_to_use} (来源: {'Agent' if agent.voice_id else '配置文件'})"
+    )
+
+    voice_service = VoiceService()
+
+    # 生成开场白语音
+    voice_result = await voice_service.generate_voice(
+        text=agent.opening, voice_id=voice_id_to_use
+    )
+
+    if not voice_result:
+        logger.warning(f"Agent {agent.id} 开场白语音生成失败，未返回URL")
+        return None
+
+    audio_url, audio_duration = voice_result
+    # 更新 agent 的 opening_audio_url字段
+    agent.opening_audio_url = audio_url
+    await db.commit()
+    logger.debug(
+        f"成功为Agent {agent.id} 生成开场白语音: {audio_url}, 时长: {audio_duration:.2f}秒"
+    )
+    return audio_url
 
 
 async def generate_next_readable_id(db: AsyncSession) -> str:
