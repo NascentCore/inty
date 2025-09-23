@@ -2,6 +2,7 @@ package com.ai.inty.base
 
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -58,16 +59,19 @@ fun IntyImage(
     colorFilter: ColorFilter? = null,
     filterQuality: FilterQuality = DrawScope.DefaultFilterQuality,
 ) {
-    AsyncImage(
-        model =
+    val context = LocalContext.current
+    val imageRequest = remember(model, context) {
         if (model is String) {
-            ImageRequest.Builder(LocalContext.current)
+            ImageRequest.Builder(context)
                 .data(model)
                 .build()
         } else {
             model
         }
-        ,
+    }
+    
+    AsyncImage(
+        model = imageRequest,
         contentDescription = contentDescription,
         modifier = modifier,
         placeholder = placeholder,
@@ -96,13 +100,20 @@ fun IntyCircleImage(
     colorFilter: ColorFilter? = null,
     filterQuality: FilterQuality = DrawScope.DefaultFilterQuality,
 ) {
+    val context = LocalContext.current
+    val imageRequest = remember(url, context) {
+        if (url != null) {
+            ImageRequest.Builder(context)
+                .data(url)
+                .build()
+        } else {
+            null
+        }
+    }
+    
     IntyImage(
-        modifier = modifier
-            .clip(CircleShape)
-        ,
-        model = ImageRequest.Builder(LocalContext.current)
-            .data(url)
-            .build(),
+        modifier = modifier.clip(CircleShape),
+        model = imageRequest,
         contentDescription = "",
         placeholder = painterResource(placeholderResID),
         error = painterResource(placeholderResID),
@@ -112,5 +123,4 @@ fun IntyCircleImage(
         colorFilter = colorFilter,
         filterQuality = filterQuality,
     )
-
 }

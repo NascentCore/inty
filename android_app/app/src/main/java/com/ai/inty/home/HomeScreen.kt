@@ -312,7 +312,7 @@ private fun SuggestTabContent(
 ) {
     val isLoading by mainViewModel.isLoading.collectAsState()
 
-    RecommendPage(
+    ExplorePage(
         modifier = Modifier,
         innerPadding = innerPadding,
         agents = mainViewModel.agentList,

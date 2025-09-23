@@ -1,6 +1,5 @@
 package com.ai.inty.viewmodels
 
-//import com.ai.inty.billing.BillingRepository
 import android.content.Context
 import androidx.compose.runtime.mutableStateListOf
 import androidx.lifecycle.viewModelScope
@@ -325,7 +324,10 @@ class MainViewModel : BaseActivityViewModel() {
         // 防止数组越界，确保tab索引在有效范围内
         val tabEntries = HomeTabIndex.entries.toTypedArray()
         if (tab < 0 || tab >= tabEntries.size) {
-            EasyLog.log("selectTab - 无效的tab索引: $tab, 有效范围: 0-${tabEntries.size - 1}", priority = EasyLog.ERROR)
+            EasyLog.log(
+                "selectTab - 无效的tab索引: $tab, 有效范围: 0-${tabEntries.size - 1}",
+                priority = EasyLog.ERROR
+            )
             return
         }
         _selectedTab.value = tabEntries[tab]
@@ -435,7 +437,7 @@ class MainViewModel : BaseActivityViewModel() {
         EasyLog.log("getUserCreatedAgents - Loading first page")
         currentUserAgentsPage = 0
         hasMoreUserAgents = true
-        
+
         // 如果已经有数据，则不立即清空，保持显示已有数据，等加载成功后再更新
         if (userCreatedAgents.isNotEmpty()) {
             EasyLog.log("getUserCreatedAgents - 已有数据，后台刷新，不立即清空")
@@ -457,7 +459,7 @@ class MainViewModel : BaseActivityViewModel() {
 
     private fun loadUserCreatedAgentsSilently() {
         if (_isLoadingUserAgents.value) return
-        
+
         EasyLog.log("loadUserCreatedAgentsSilently - 静默刷新，不显示loading")
         val skip = currentUserAgentsPage * 10
         EasyLog.log("loadUserCreatedAgentsSilently - page: $currentUserAgentsPage, skip: $skip")
@@ -479,6 +481,7 @@ class MainViewModel : BaseActivityViewModel() {
                             EasyLog.log("loadUserCreatedAgentsSilently - 静默更新数据: ${result.data.size}个")
                         }
                     }
+
                     is HttpResult.Failure -> {
                         EasyLog.log(
                             "loadUserCreatedAgentsSilently - API failure: ${result.message}",
