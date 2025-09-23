@@ -8,7 +8,6 @@ import yaml
 from loguru import logger
 from pydantic import AnyHttpUrl
 
-
 # All config classes' fields should have default values.
 # These default value allow this to be used without an actual config file.
 # Since config object is used as a global singleton, most code depends on it,
@@ -141,7 +140,8 @@ class AgentConfig:
 class GCSConfig:
     bucket: str
     # 与 GooglePlayConfig.service_account_key 相同
-    credentials: str
+    # DEPRECATED: 保留作为兼容
+    credentials: str = "<deprecated-do-not-use>"
 
 
 @dataclass
@@ -153,6 +153,7 @@ class FirebaseConfig:
 class GooglePlayConfig:
     """Google Play配置"""
     # 与 GCSConfig.credentials 相同
+    # DEPRECATED: 保留作为兼容
     service_account_key: str = "inty-backend-key.json"
     package_name: str = "com.ai.intellimate"
     webhook_secret: Optional[str] = None  # Webhook密钥（可选）
@@ -235,12 +236,8 @@ def _validate_config(config: Config):
         raise ValueError("agent.langchain_api_key is required")
     if not config.gcs.bucket:
         raise ValueError("gcs.bucket is required")
-    if not config.gcs.credentials:
-        raise ValueError("gcs.credentials is required")
     if not config.firebase.service_account_path:
         raise ValueError("firebase.service_account_path is required")
-    if not config.google_play.service_account_key:
-        raise ValueError("google_play.service_account_key is required")
     if not config.elevenlabs.api_key:
         raise ValueError("elevenlabs.api_key is required")
 
