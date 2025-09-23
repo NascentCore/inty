@@ -47,7 +47,7 @@ import com.ai.inty.utils.AuthClickable
  * 主页面第二个tab，会话列表页面，包含关注和聊天列表
  */
 @Composable
-fun ActivityPage(
+fun ConversationsPage(
     modifier: Modifier,
     conversations: List<ConversationItem>,
     onClickConversationItem: (ConversationItem) -> Unit,
@@ -68,8 +68,6 @@ fun ActivityPage(
     }
 }
 
-val TAB_CONTENT_SPACER_HEIGHT = 22.dp
-
 @Composable
 private fun Content(
     conversations: List<ConversationItem>,
@@ -87,7 +85,7 @@ private fun Content(
 
             Spacer(Modifier.height(innerPadding.calculateTopPadding() + 28.dp))
 
-            ActivityPageSubTabItem(
+            ConversationTabItem(
                 modifier = Modifier,
                 text = stringResource(R.string.tab_message),
             )
@@ -109,7 +107,7 @@ val COLOR_ORANGE = Color(0xFFFF905D)
 val COLOR_PURPLE = Color(0xFFC122FF)
 
 @Composable
-fun ActivityPageSubTabItem(
+private fun ConversationTabItem(
     modifier: Modifier,
     text: String,
 ) {
@@ -185,6 +183,9 @@ private fun MessageTabContent(
                                 conversation = conversion
                             )
                         }
+                    }
+                    item {
+                        Spacer(Modifier.height(60.dp))
                     }
                 }.onFailure { it.printStackTrace() }
             }

@@ -222,7 +222,6 @@ private fun HomeContent(
 
         HomeTabIndex.Conversation -> {
             ConversationsTabContent(
-                mainViewModel = mainViewModel,
                 chatViewModel = chatViewModel,
                 context = context
             )
@@ -277,14 +276,13 @@ private fun ChatTabContent(
  */
 @Composable
 private fun ConversationsTabContent(
-    mainViewModel: MainViewModel,
     chatViewModel: ChatViewModel,
     context: Context,
 ) {
     val conversations by chatViewModel.conversations.collectAsState()
     val isLoadingConversations by chatViewModel.isLoadingConversations.collectAsState()
 
-    ActivityPage(
+    ConversationsPage(
         modifier = Modifier,
         conversations = conversations,
         onClickConversationItem = { conversation ->
