@@ -67,18 +67,6 @@ async def list_agents(
         current_user_id=current_user.id,
     )
 
-    # 对每个agent的intro字段进行变量替换
-    from app.core.agent.prompt_template import (
-        has_variable_name,
-        render_prompt_jinja2_template,
-    )
-
-    for agent in agents:
-        if agent.intro and has_variable_name(agent.intro):
-            agent.intro = render_prompt_jinja2_template(
-                agent.intro, char=agent.name, user=current_user.nickname or "you"
-            )
-
     return schemas.APIResponse.success(data=agents)
 
 
@@ -101,18 +89,6 @@ async def search_agents(
     pagination_data = await agent_service.search_agents(
         db, keyword=q, page=page, page_size=page_size, current_user_id=current_user.id
     )
-
-    # 对每个agent的intro字段进行变量替换
-    from app.core.agent.prompt_template import (
-        has_variable_name,
-        render_prompt_jinja2_template,
-    )
-
-    for agent in pagination_data.items:
-        if agent.intro and has_variable_name(agent.intro):
-            agent.intro = render_prompt_jinja2_template(
-                agent.intro, char=agent.name, user=current_user.nickname or "you"
-            )
 
     return schemas.APIResponse.success(data=pagination_data)
 
@@ -161,18 +137,6 @@ async def recommend_agents(
         current_user_id=current_user.id,
     )
 
-    # 对每个agent的intro字段进行变量替换
-    from app.core.agent.prompt_template import (
-        has_variable_name,
-        render_prompt_jinja2_template,
-    )
-
-    for agent in pagination_data.items:
-        if agent.intro and has_variable_name(agent.intro):
-            agent.intro = render_prompt_jinja2_template(
-                agent.intro, char=agent.name, user=current_user.nickname or "you"
-            )
-
     return schemas.APIResponse.success(data=pagination_data)
 
 
@@ -192,18 +156,6 @@ async def get_following_agents(
     pagination_data = await agent_service.get_user_followed_agents(
         db, user_id=current_user.id, page=page, page_size=page_size
     )
-
-    # 对每个agent的intro字段进行变量替换
-    from app.core.agent.prompt_template import (
-        has_variable_name,
-        render_prompt_jinja2_template,
-    )
-
-    for agent in pagination_data.items:
-        if agent.intro and has_variable_name(agent.intro):
-            agent.intro = render_prompt_jinja2_template(
-                agent.intro, char=agent.name, user=current_user.nickname or "you"
-            )
 
     return schemas.APIResponse.success(data=pagination_data)
 
@@ -301,18 +253,6 @@ async def get_agent(
     )
     if not agent:
         raise HTTPException(status_code=404, detail="Agent not found")
-
-    # 对intro字段进行变量替换
-    if agent.intro:
-        from app.core.agent.prompt_template import (
-            has_variable_name,
-            render_prompt_jinja2_template,
-        )
-
-        if has_variable_name(agent.intro):
-            agent.intro = render_prompt_jinja2_template(
-                agent.intro, char=agent.name, user=current_user.nickname or "you"
-            )
 
     return agent
 

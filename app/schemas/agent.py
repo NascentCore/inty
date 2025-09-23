@@ -2,8 +2,12 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, Field, field_serializer, field_validator
+from pydantic import BaseModel, Field, computed_field, field_serializer, field_validator
 
+from app.core.agent.prompt_template import (
+    has_variable_name,
+    render_prompt_jinja2_template,
+)
 from app.models.agent import AgentStatus, AgentVisibility
 from app.models.user import Gender
 from app.schemas.user import User
@@ -246,6 +250,15 @@ class Agent(AgentInDB):
     follower_count: int = 0
     connector_count: int = 0
     creator: Optional[User] = None
+
+    @field_serializer("intro")
+    def serialize_intro(self, intro: Optional[str]) -> Optional[str]:
+        """
+        对intro字段进行变量替换，将 {{ char }} 替换为 agent.name
+        """
+        if intro and has_variable_name(intro):
+            return render_prompt_jinja2_template(intro, char=self.name, user="")
+        return intro
 
     @field_serializer("llm_config")
     def serialize_llm_config(
