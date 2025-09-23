@@ -30,7 +30,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -354,4 +357,30 @@ private fun LoadingAnimation() {
             )
         }
     }
-} 
+}
+
+/**
+ * 角色的信息介绍卡片
+ */
+@Composable
+fun AgentInfoChatCard(info: String) {
+    Box(
+        modifier = Modifier
+            .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+            .padding(12.dp)
+    ) {
+        val str = buildAnnotatedString {
+            withStyle(style = SpanStyle(fontWeight = FontWeight.SemiBold)) {
+                append("Intro: ")
+            }
+            append(info)
+        }
+        Text(
+            text = str,
+            fontSize = 14.sp,
+            lineHeight = 16.sp,
+            color = Color.White,
+            fontWeight = FontWeight.Normal
+        )
+    }
+}
