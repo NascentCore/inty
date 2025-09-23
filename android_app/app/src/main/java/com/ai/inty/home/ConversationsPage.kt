@@ -52,6 +52,7 @@ fun ConversationsPage(
     conversations: List<ConversationItem>,
     onClickConversationItem: (ConversationItem) -> Unit,
     isLoadingConversations: Boolean = false,
+    isRefreshingConversations: Boolean = false,
     onLoadMoreConversations: (() -> Unit)? = null,
 ) {
     Box(modifier = modifier) {
@@ -63,6 +64,7 @@ fun ConversationsPage(
             conversations = conversations,
             onClickConversationItem = onClickConversationItem,
             isLoadingConversations = isLoadingConversations,
+            isRefreshingConversations = isRefreshingConversations,
             onLoadMoreConversations = onLoadMoreConversations,
         )
     }
@@ -73,6 +75,7 @@ private fun Content(
     conversations: List<ConversationItem>,
     onClickConversationItem: (ConversationItem) -> Unit,
     isLoadingConversations: Boolean = false,
+    isRefreshingConversations: Boolean = false,
     onLoadMoreConversations: (() -> Unit)? = null,
 ) {
     Scaffold(
@@ -94,6 +97,7 @@ private fun Content(
                 conversations = conversations,
                 onClickConversationItem = onClickConversationItem,
                 isLoading = isLoadingConversations,
+                isRefreshing = isRefreshingConversations,
                 onLoadMore = onLoadMoreConversations
             )
         }
@@ -142,6 +146,7 @@ private fun MessageTabContent(
     conversations: List<ConversationItem>,
     onClickConversationItem: (ConversationItem) -> Unit,
     isLoading: Boolean = false,
+    isRefreshing: Boolean = false,
     onLoadMore: (() -> Unit)? = null,
 ) {
     val listState = rememberLazyListState()
@@ -170,6 +175,23 @@ private fun MessageTabContent(
             state = listState,
             modifier = Modifier.matchParentSize()
         ) {
+            // 刷新指示器
+            if (isRefreshing) {
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(LOAD_MORE_INDICATOR_HEIGHT),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(
+                            color = Color.White,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
+            }
+            
             // 会话列表
             if (conversations.isNotEmpty()) {
                 runCatching {
@@ -208,7 +230,7 @@ private fun MessageTabContent(
             }
         }
 
-        if (conversations.isEmpty() && !isLoading) {
+        if (conversations.isEmpty() && !isLoading && !isRefreshing) {
             EmptyContentUI()
         }
     }

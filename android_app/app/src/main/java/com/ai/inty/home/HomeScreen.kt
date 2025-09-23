@@ -281,6 +281,7 @@ private fun ConversationsTabContent(
 ) {
     val conversations by chatViewModel.conversations.collectAsState()
     val isLoadingConversations by chatViewModel.isLoadingConversations.collectAsState()
+    val isRefreshingConversations by chatViewModel.isRefreshingConversations.collectAsState()
 
     ConversationsPage(
         modifier = Modifier,
@@ -293,6 +294,7 @@ private fun ConversationsTabContent(
                 .navigation(context)
         },
         isLoadingConversations = isLoadingConversations,
+        isRefreshingConversations = isRefreshingConversations,
         onLoadMoreConversations = {
             chatViewModel.loadMoreConversations()
         },
