@@ -239,8 +239,8 @@ private fun HomeContent(
             )
         }
 
-        HomeTabIndex.My -> {
-            MyTabContent(
+        HomeTabIndex.Profile -> {
+            ProfileTabContent(
                 mainViewModel = mainViewModel,
                 context = context
             )
@@ -335,7 +335,7 @@ private fun SuggestTabContent(
  * 我的Tab内容
  */
 @Composable
-private fun MyTabContent(
+private fun ProfileTabContent(
     mainViewModel: MainViewModel,
     context: Context,
 ) {
@@ -365,7 +365,7 @@ private fun MyTabContent(
 
         }
     }
-    MyPage(
+    ProfilePage(
         modifier = Modifier,
         userProfile = safeUserProfile,
         agents = userCreatedAgents,

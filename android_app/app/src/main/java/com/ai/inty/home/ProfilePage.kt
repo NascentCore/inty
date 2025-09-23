@@ -72,7 +72,7 @@ import com.therouter.TheRouter
  * “我的”页面
  */
 @Composable
-internal fun MyPage(
+internal fun ProfilePage(
     modifier: Modifier,
     userProfile: UserProfile,
     agents: List<AgentInfo>,
@@ -97,7 +97,7 @@ internal fun MyPage(
             containerColor = Color.Transparent
         ) { innerPadding ->
 
-            Column {
+            Column(Modifier.fillMaxWidth()) {
                 Spacer(Modifier.height(innerPadding.calculateTopPadding() + 28.dp))
 
                 Row {
@@ -253,7 +253,7 @@ internal fun MyPage(
 
                     LazyVerticalGrid(
                         state = listState,
-                        modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 100.dp),
+                        modifier = Modifier.padding(horizontal = 16.dp),
                         columns = GridCells.Fixed(2),
                         horizontalArrangement = Arrangement.spacedBy(13.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -273,6 +273,8 @@ internal fun MyPage(
                                         onDeleteAgent = onDeleteAgent
                                     )
                                 }
+                                //添加一个底部空白，便于更好操作交互
+                                item { Spacer(Modifier.height(80.dp)) }
                             }
                         }.onFailure { it.printStackTrace() }
 
@@ -314,7 +316,8 @@ private fun MyAgentCard(
     var lastClickTime by remember { mutableLongStateOf(0L) }
 
     Box(
-        modifier = modifier.size(165.dp, 220.dp)
+        modifier = modifier
+            .size(165.dp, 220.dp)
             .clip(RoundedCornerShape(12.dp))
     ) {
         IntyImage(
@@ -531,7 +534,7 @@ private fun PremiumBanner(
 @Preview(showBackground = true, backgroundColor = 0xff000000)
 @Composable
 private fun MyPagePreview() {
-    MyPage(
+    ProfilePage(
         modifier = Modifier.fillMaxSize(),
         userProfile = UserProfile(
             nickname = "nick",
