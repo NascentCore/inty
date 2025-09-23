@@ -1,7 +1,5 @@
 package com.ai.inty
 
-import android.content.pm.PackageManager
-import android.os.Build
 import android.os.Bundle
 import android.view.GestureDetector
 import android.view.MotionEvent
@@ -9,11 +7,9 @@ import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Modifier
-import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.lifecycleScope
 import com.ai.inty.base.BaseActivity
@@ -22,7 +18,6 @@ import com.ai.inty.home.HomeScreen
 import com.ai.inty.ui.theme.IntyTheme
 import com.ai.inty.viewmodels.ChatViewModel
 import com.ai.inty.viewmodels.MainViewModel
-import com.inty.utils.log.EasyLog
 import com.therouter.router.Autowired
 import com.therouter.router.Route
 import kotlinx.coroutines.CoroutineScope
@@ -94,9 +89,6 @@ class MainActivity : BaseActivity() {
                 )
             }
         }
-
-        requestNotifyPermission()
-
     }
 
     /**
@@ -216,24 +208,5 @@ class MainActivity : BaseActivity() {
         super.onDestroy()
         // 取消协程
         exitJob?.cancel()
-    }
-
-    private fun requestNotifyPermission() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
-
-        if (ContextCompat.checkSelfPermission(
-                this,
-                android.Manifest.permission.POST_NOTIFICATIONS
-            ) == PackageManager.PERMISSION_GRANTED
-        ) {
-            return
-        }
-
-        val requestPermissionLauncher = registerForActivityResult(
-            ActivityResultContracts.RequestPermission()
-        ) { granted ->
-            EasyLog.log("POST_NOTIFICATIONS granted=$granted")
-        }
-        requestPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
     }
 }

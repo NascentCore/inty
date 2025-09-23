@@ -11,11 +11,8 @@ import com.ai.inty.base.ToastUtils
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.beans.AppVersionRsp
 import com.ai.inty.beans.CreateAgentRequest
-import com.ai.inty.beans.SysMsgItem
-import com.ai.inty.beans.TokenBean
 import com.ai.inty.beans.UserProfile
 import com.ai.inty.billing.BillingRepository
-import com.ai.inty.home.ActivityPageSubTab
 import com.ai.inty.net.IAgentApi
 import com.ai.inty.net.ICommonApi
 import com.ai.inty.net.IUserApi
@@ -23,11 +20,8 @@ import com.ai.inty.utils.AgentCacheManager
 import com.ai.inty.utils.AppStartupManager
 import com.ai.inty.utils.CredentialManagerHelper.clearCredentialState
 import com.ai.inty.utils.IntyUserProfileSDK
-import com.ai.inty.utils.SystemMessageCacheManager
 import com.ai.inty.utils.UserProfileManager
 import com.architecture.httplib.core.HttpResult
-import com.google.android.gms.tasks.OnCompleteListener
-import com.google.firebase.messaging.FirebaseMessaging
 import com.inty.utils.AppEnv
 import com.inty.utils.log.EasyLog
 import com.inty.utils.storage.IntySetting
@@ -87,9 +81,6 @@ class MainViewModel : BaseActivityViewModel() {
     private val _selectedTab = MutableStateFlow(HomeTabIndex.Chat)
     val selectedTab = _selectedTab.asStateFlow()
 
-    private val _selectedConversationsTab = MutableStateFlow(ActivityPageSubTab.TabMessage)
-    val selectedConversationsTab = _selectedConversationsTab.asStateFlow()
-
     private val _currentChatPageIndex = MutableStateFlow(0)
     val currentChatPageIndex = _currentChatPageIndex.asStateFlow()
 
@@ -146,12 +137,9 @@ class MainViewModel : BaseActivityViewModel() {
     }
 
     private fun loadBusinessData() {
-        // 检查是否需要从网络更新数据
         // 加载业务数据
         getAgents() // 现在会先使用缓存，然后后台静默刷新
         getUserProfile() // 从服务器获取最新信息并更新本地缓存
-        regFCM()
-        getSysMsgs()//⚠️当前业务，暂时没有系统消息的交互
         //检查app版本更新
         checkAppVersion()
 
@@ -356,9 +344,6 @@ class MainViewModel : BaseActivityViewModel() {
         chatViewModel.setAgentInfo(agentList.firstOrNull())
     }
 
-    fun onSelectConversationsTab(tab: ActivityPageSubTab) {
-        _selectedConversationsTab.value = tab
-    }
 
     fun updateCurrentChatPageIndex(index: Int) {
         _currentChatPageIndex.value = index
@@ -392,74 +377,6 @@ class MainViewModel : BaseActivityViewModel() {
         TheRouter.removeActionInterceptor(Constant.ACTION_USER_PROFILE_CHANGED, userProfileChanged)
     }
 
-    /**
-     * 注册firebase的推送服务
-     */
-    private fun regFCM() {
-        viewModelScope.launch {
-            FirebaseMessaging.getInstance().token.addOnCompleteListener(OnCompleteListener { task ->
-                if (!task.isSuccessful) {
-                    EasyLog.log(
-                        "Fetching FCM registration token failed, ${task.exception}",
-                        EasyLog.ERROR
-                    )
-                    task.exception?.let { EasyLog.log(it) }
-                    return@OnCompleteListener
-                }
-
-                // Get new FCM registration token
-                val token = task.result
-
-                EasyLog.log("FCM token = $token")
-                //拿到firebase推送的token，注册给业务服务器，关联到用户
-                viewModelScope.launch(Dispatchers.IO) {
-                    val result = userApi.regFCM(TokenBean(token))
-                    EasyLog.log("regFCM = $result")
-                }
-            })
-        }
-    }
-
-
-    //业务系统的消息列表
-    val sysMsgs = mutableStateListOf<SysMsgItem>()
-
-    /**
-     * 获取业务系统消息列表数据
-     */
-    private fun getSysMsgs() {
-        // 如果已有缓存数据，先使用缓存数据
-        val cachedSysMsgs = SystemMessageCacheManager.getCachedSystemMessages()
-        if (cachedSysMsgs.isNotEmpty() && !SystemMessageCacheManager.isCacheExpired()) {
-            sysMsgs.clear()
-            sysMsgs.addAll(cachedSysMsgs)
-            EasyLog.log("getSysMsgs - 使用缓存数据: ${cachedSysMsgs.size}条")
-        }
-
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val result = userApi.getSysMsgs(1, 10)
-                EasyLog.log("getSysMsgs = $result")
-                when (result) {
-                    is HttpResult.Success -> {
-                        sysMsgs.clear()
-                        sysMsgs.addAll(result.data.list)
-                        // 缓存系统消息数据
-                        SystemMessageCacheManager.cacheSystemMessages(result.data.list)
-                    }
-
-                    is HttpResult.Failure -> {
-                        EasyLog.log(
-                            "getSysMsgs failed: ${result.message}",
-                            priority = EasyLog.ERROR
-                        )
-                    }
-                }
-            } catch (e: Exception) {
-                EasyLog.log("getSysMsgs exception: ${e.message}", priority = EasyLog.ERROR)
-            }
-        }
-    }
 
     //感知接口获取到的用户订阅状态
     val vipStatusFlow = BillingRepository.vipStatusFlow
@@ -657,7 +574,6 @@ class MainViewModel : BaseActivityViewModel() {
         agentList.clear()
         followingAgents.clear()
         userCreatedAgents.clear()
-        sysMsgs.clear()
         _userProfile.value = UserProfile()
         chatViewModel?.clearAllData()
 
