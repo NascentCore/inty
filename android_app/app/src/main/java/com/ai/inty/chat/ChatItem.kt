@@ -25,14 +25,20 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
@@ -41,6 +47,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ai.inty.audio.AudioInfo
 import com.ai.inty.audio.OpeningPlayState
 import com.ai.inty.audio.VoicePlayer
+import com.ai.inty.base.noRippleClickable
 import com.ai.inty.beans.MsgInfo
 import com.ai.inty.utils.ChatTextFormatter
 import com.ai.inty.viewmodels.ChatViewModel
@@ -360,27 +367,82 @@ private fun LoadingAnimation() {
 }
 
 /**
- * 角色的信息介绍卡片
+ * 优化的可折叠文本卡片组件
+ * 使用新的ExpandableText组件实现
  */
 @Composable
 fun AgentInfoChatCard(info: String) {
+
+    val str = buildAnnotatedString {
+        withStyle(style = SpanStyle(fontWeight = FontWeight.SemiBold)) {
+            append("Intro: ")
+        }
+        append(info)
+    }
+
     Box(
         modifier = Modifier
             .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
             .padding(12.dp)
     ) {
-        val str = buildAnnotatedString {
-            withStyle(style = SpanStyle(fontWeight = FontWeight.SemiBold)) {
-                append("Intro: ")
-            }
-            append(info)
-        }
-        Text(
+        ExpandableTextWithButton(
             text = str,
-            fontSize = 14.sp,
-            lineHeight = 16.sp,
-            color = Color.White,
-            fontWeight = FontWeight.Normal
+            collapsedMaxLines = 3,
+            textStyle = TextStyle(
+                fontSize = 14.sp,
+                lineHeight = 20.sp,
+                color = Color.White,
+                fontWeight = FontWeight.Normal
+            ),
+            buttonStyle = TextStyle(
+                fontSize = 12.sp,
+                color = Color.White.copy(alpha = 0.8f)
+            )
         )
+    }
+}
+
+
+@Composable
+private fun ExpandableTextWithButton(
+    text: AnnotatedString,
+    modifier: Modifier = Modifier,
+    collapsedMaxLines: Int = 3,
+    textStyle: TextStyle = TextStyle.Default,
+    expandButtonText: String = "Expand",
+    collapseButtonText: String = "Collapse",
+    buttonStyle: TextStyle = TextStyle.Default
+) {
+    var isExpanded by remember { mutableStateOf(false) }
+    var expandable by remember { mutableStateOf(false) }
+
+    Box(
+        modifier = modifier.fillMaxWidth()
+    ) {
+        Text(
+            text = text,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 12.dp),
+            style = textStyle,
+            maxLines = if (isExpanded) Int.MAX_VALUE else collapsedMaxLines,
+            overflow = TextOverflow.Ellipsis,
+            onTextLayout = { textLayoutResult ->
+                if (!isExpanded && textLayoutResult.hasVisualOverflow) {
+                    expandable = true
+                }
+            },
+        )
+        if (expandable) {
+            Text(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .noRippleClickable(onClick = {
+                        isExpanded = isExpanded.not()
+                    }),
+                text = if (isExpanded) collapseButtonText else expandButtonText,
+                style = buttonStyle
+            )
+        }
     }
 }

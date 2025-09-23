@@ -222,7 +222,6 @@ private fun HomeContent(
 
         HomeTabIndex.Conversation -> {
             ConversationsTabContent(
-                mainViewModel = mainViewModel,
                 chatViewModel = chatViewModel,
                 context = context
             )
@@ -240,8 +239,8 @@ private fun HomeContent(
             )
         }
 
-        HomeTabIndex.My -> {
-            MyTabContent(
+        HomeTabIndex.Profile -> {
+            ProfileTabContent(
                 mainViewModel = mainViewModel,
                 context = context
             )
@@ -277,14 +276,14 @@ private fun ChatTabContent(
  */
 @Composable
 private fun ConversationsTabContent(
-    mainViewModel: MainViewModel,
     chatViewModel: ChatViewModel,
     context: Context,
 ) {
     val conversations by chatViewModel.conversations.collectAsState()
     val isLoadingConversations by chatViewModel.isLoadingConversations.collectAsState()
+    val isRefreshingConversations by chatViewModel.isRefreshingConversations.collectAsState()
 
-    ActivityPage(
+    ConversationsPage(
         modifier = Modifier,
         conversations = conversations,
         onClickConversationItem = { conversation ->
@@ -295,6 +294,7 @@ private fun ConversationsTabContent(
                 .navigation(context)
         },
         isLoadingConversations = isLoadingConversations,
+        isRefreshingConversations = isRefreshingConversations,
         onLoadMoreConversations = {
             chatViewModel.loadMoreConversations()
         },
@@ -335,7 +335,7 @@ private fun SuggestTabContent(
  * 我的Tab内容
  */
 @Composable
-private fun MyTabContent(
+private fun ProfileTabContent(
     mainViewModel: MainViewModel,
     context: Context,
 ) {
@@ -365,7 +365,7 @@ private fun MyTabContent(
 
         }
     }
-    MyPage(
+    ProfilePage(
         modifier = Modifier,
         userProfile = safeUserProfile,
         agents = userCreatedAgents,

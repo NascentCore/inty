@@ -5,13 +5,10 @@ import androidx.compose.runtime.mutableStateSetOf
 import androidx.core.net.toUri
 import com.ai.inty.base.BaseActivityViewModel
 import com.ai.inty.beans.ReportItem
-import com.ai.inty.net.getBaseUrl
 import com.ai.inty.netapi.services.ReportService
-import com.inty.api.client.okhttp.IntyOkHttpClient
 import com.inty.api.models.api.v1.report.ReportCreateParams
 import com.inty.utils.AppEnv
 import com.inty.utils.log.EasyLog
-import com.inty.utils.storage.IntySetting
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.io.InputStream
@@ -20,13 +17,6 @@ class ReportViewModel : BaseActivityViewModel() {
 
     var targetID: String = ""
     var targetType: String = "USER"
-
-    private val intyClient by lazy {
-        IntyOkHttpClient.builder()
-            .apiKey(IntySetting.getCurToken())
-            .baseUrl(getBaseUrl())
-            .build()
-    }
 
     // Hard-coded list of report reasons
     private val _reasons = MutableStateFlow(

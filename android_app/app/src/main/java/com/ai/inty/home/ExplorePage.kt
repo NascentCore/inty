@@ -320,7 +320,12 @@ fun CharacterCard(
                     brush = Brush.verticalGradient(
                         colors = listOf(
                             Color.Transparent,
+                            Color.Black.copy(.3f),
+                            Color.Black.copy(.5f),
                             Color.Black.copy(.7f),
+                            Color.Black.copy(.9f),
+                            Color.Black,
+                            Color.Black,
                             Color.Black,
                         )
                     )

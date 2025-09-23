@@ -47,11 +47,12 @@ import com.ai.inty.utils.AuthClickable
  * 主页面第二个tab，会话列表页面，包含关注和聊天列表
  */
 @Composable
-fun ActivityPage(
+fun ConversationsPage(
     modifier: Modifier,
     conversations: List<ConversationItem>,
     onClickConversationItem: (ConversationItem) -> Unit,
     isLoadingConversations: Boolean = false,
+    isRefreshingConversations: Boolean = false,
     onLoadMoreConversations: (() -> Unit)? = null,
 ) {
     Box(modifier = modifier) {
@@ -63,18 +64,18 @@ fun ActivityPage(
             conversations = conversations,
             onClickConversationItem = onClickConversationItem,
             isLoadingConversations = isLoadingConversations,
+            isRefreshingConversations = isRefreshingConversations,
             onLoadMoreConversations = onLoadMoreConversations,
         )
     }
 }
-
-val TAB_CONTENT_SPACER_HEIGHT = 22.dp
 
 @Composable
 private fun Content(
     conversations: List<ConversationItem>,
     onClickConversationItem: (ConversationItem) -> Unit,
     isLoadingConversations: Boolean = false,
+    isRefreshingConversations: Boolean = false,
     onLoadMoreConversations: (() -> Unit)? = null,
 ) {
     Scaffold(
@@ -87,7 +88,7 @@ private fun Content(
 
             Spacer(Modifier.height(innerPadding.calculateTopPadding() + 28.dp))
 
-            ActivityPageSubTabItem(
+            ConversationTabItem(
                 modifier = Modifier,
                 text = stringResource(R.string.tab_message),
             )
@@ -96,6 +97,7 @@ private fun Content(
                 conversations = conversations,
                 onClickConversationItem = onClickConversationItem,
                 isLoading = isLoadingConversations,
+                isRefreshing = isRefreshingConversations,
                 onLoadMore = onLoadMoreConversations
             )
         }
@@ -109,7 +111,7 @@ val COLOR_ORANGE = Color(0xFFFF905D)
 val COLOR_PURPLE = Color(0xFFC122FF)
 
 @Composable
-fun ActivityPageSubTabItem(
+private fun ConversationTabItem(
     modifier: Modifier,
     text: String,
 ) {
@@ -144,6 +146,7 @@ private fun MessageTabContent(
     conversations: List<ConversationItem>,
     onClickConversationItem: (ConversationItem) -> Unit,
     isLoading: Boolean = false,
+    isRefreshing: Boolean = false,
     onLoadMore: (() -> Unit)? = null,
 ) {
     val listState = rememberLazyListState()
@@ -172,6 +175,23 @@ private fun MessageTabContent(
             state = listState,
             modifier = Modifier.matchParentSize()
         ) {
+            // 刷新指示器
+            if (isRefreshing) {
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(LOAD_MORE_INDICATOR_HEIGHT),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(
+                            color = Color.White,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
+            }
+            
             // 会话列表
             if (conversations.isNotEmpty()) {
                 runCatching {
@@ -185,6 +205,9 @@ private fun MessageTabContent(
                                 conversation = conversion
                             )
                         }
+                    }
+                    item {
+                        Spacer(Modifier.height(60.dp))
                     }
                 }.onFailure { it.printStackTrace() }
             }
@@ -207,7 +230,7 @@ private fun MessageTabContent(
             }
         }
 
-        if (conversations.isEmpty() && !isLoading) {
+        if (conversations.isEmpty() && !isLoading && !isRefreshing) {
             EmptyContentUI()
         }
     }

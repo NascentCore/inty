@@ -42,7 +42,7 @@ enum class HomeTabIndex {
     Conversation,
     Create,
     Explore,
-    My
+    Profile
 }
 
 class MainViewModel : BaseActivityViewModel() {
@@ -322,14 +322,22 @@ class MainViewModel : BaseActivityViewModel() {
     }
 
     fun selectTab(tab: Int) {
-        _selectedTab.value = HomeTabIndex.entries.toTypedArray()[tab]
+        // 防止数组越界，确保tab索引在有效范围内
+        val tabEntries = HomeTabIndex.entries.toTypedArray()
+        if (tab < 0 || tab >= tabEntries.size) {
+            EasyLog.log("selectTab - 无效的tab索引: $tab, 有效范围: 0-${tabEntries.size - 1}", priority = EasyLog.ERROR)
+            return
+        }
+        _selectedTab.value = tabEntries[tab]
         when (_selectedTab.value) {
             HomeTabIndex.Conversation -> {
                 chatViewModel?.getConversations()
             }
 
-            HomeTabIndex.My -> {
-                getUserCreatedAgents()
+            HomeTabIndex.Profile -> {
+                // 使用refreshCreatedAgentsListIfOnTab()来避免重复请求
+                // 这样可以在一个地方统一管理Profile tab的数据刷新逻辑
+                refreshCreatedAgentsListIfOnTab()
             }
 
             else -> {
@@ -423,36 +431,67 @@ class MainViewModel : BaseActivityViewModel() {
         }
     }
 
-    fun updateAgentFollowStateInList(agentId: String, isFollowed: Boolean) {
-        EasyLog.log("Updating agent follow state in list - agentId: $agentId, isFollowed: $isFollowed")
-
-        // 更新主列表中的agent状态
-        val index = agentList.indexOfFirst { it.id == agentId }
-        if (index != -1) {
-            val updatedAgent = agentList[index].copy(isFollowed = isFollowed)
-            agentList[index] = updatedAgent
-            EasyLog.log("Updated agent in main list: ${updatedAgent.name}")
-        }
-
-        // 如果是取消关注，从关注列表中移除
-        if (!isFollowed) {
-            followingAgents.removeAll { it.id == agentId }
-            EasyLog.log("Removed agent from following list")
-        }
-    }
-
     fun getUserCreatedAgents() {
         EasyLog.log("getUserCreatedAgents - Loading first page")
         currentUserAgentsPage = 0
-        userCreatedAgents.clear()
         hasMoreUserAgents = true
-        loadUserCreatedAgents()
+        
+        // 如果已经有数据，则不立即清空，保持显示已有数据，等加载成功后再更新
+        if (userCreatedAgents.isNotEmpty()) {
+            EasyLog.log("getUserCreatedAgents - 已有数据，后台刷新，不立即清空")
+            loadUserCreatedAgentsSilently()
+        } else {
+            // 没有数据时才清空并显示loading
+            EasyLog.log("getUserCreatedAgents - 无数据，清空并显示loading")
+            userCreatedAgents.clear()
+            loadUserCreatedAgents()
+        }
     }
 
     fun loadMoreUserCreatedAgents() {
         if (!_isLoadingUserAgents.value && hasMoreUserAgents) {
             currentUserAgentsPage++
             loadUserCreatedAgents()
+        }
+    }
+
+    private fun loadUserCreatedAgentsSilently() {
+        if (_isLoadingUserAgents.value) return
+        
+        EasyLog.log("loadUserCreatedAgentsSilently - 静默刷新，不显示loading")
+        val skip = currentUserAgentsPage * 10
+        EasyLog.log("loadUserCreatedAgentsSilently - page: $currentUserAgentsPage, skip: $skip")
+
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val result = agentApi.getUserCreatedAgents(skip, 10)
+                EasyLog.log("loadUserCreatedAgentsSilently API result = $result")
+
+                when (result) {
+                    is HttpResult.Success -> {
+                        if (result.data.isEmpty()) {
+                            hasMoreUserAgents = false
+                            EasyLog.log("loadUserCreatedAgentsSilently - No more user created agents to load")
+                        } else {
+                            // 静默更新数据，直接替换
+                            userCreatedAgents.clear()
+                            userCreatedAgents.addAll(result.data)
+                            EasyLog.log("loadUserCreatedAgentsSilently - 静默更新数据: ${result.data.size}个")
+                        }
+                    }
+                    is HttpResult.Failure -> {
+                        EasyLog.log(
+                            "loadUserCreatedAgentsSilently - API failure: ${result.message}",
+                            priority = EasyLog.ERROR
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                EasyLog.log(
+                    "loadUserCreatedAgentsSilently exception: ${e.message}",
+                    priority = EasyLog.ERROR
+                )
+            }
         }
     }
 
@@ -474,8 +513,16 @@ class MainViewModel : BaseActivityViewModel() {
                             hasMoreUserAgents = false
                             EasyLog.log("No more user created agents to load")
                         } else {
-                            userCreatedAgents.addAll(result.data)
-                            EasyLog.log("Added ${result.data.size} user agents, total: ${userCreatedAgents.size}")
+                            if (currentUserAgentsPage == 0) {
+                                // 第一页，直接替换（这里才清空并替换数据）
+                                userCreatedAgents.clear()
+                                userCreatedAgents.addAll(result.data)
+                                EasyLog.log("loadUserCreatedAgents - 替换第一页数据: ${result.data.size}个")
+                            } else {
+                                // 后续页，追加到现有列表
+                                userCreatedAgents.addAll(result.data)
+                                EasyLog.log("loadUserCreatedAgents - 追加第${currentUserAgentsPage + 1}页数据: ${result.data.size}个，总计: ${userCreatedAgents.size}个")
+                            }
                         }
                     }
 
@@ -507,8 +554,14 @@ class MainViewModel : BaseActivityViewModel() {
     }
 
     fun refreshCreatedAgentsListIfOnTab() {
-        if (_selectedTab.value == HomeTabIndex.My) {
-            getUserCreatedAgents()
+        if (_selectedTab.value == HomeTabIndex.Profile) {
+            // 如果已经在加载中，避免重复请求
+            if (!_isLoadingUserAgents.value) {
+                EasyLog.log("refreshCreatedAgentsListIfOnTab - 刷新Profile tab数据")
+                getUserCreatedAgents()
+            } else {
+                EasyLog.log("refreshCreatedAgentsListIfOnTab - 跳过刷新，正在加载中")
+            }
         }
     }
 

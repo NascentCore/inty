@@ -32,7 +32,6 @@ private const val CHAT_TOP_BAR_AVATAR_SIZE = 30
 private const val CHAT_TOP_BAR_AVATAR_PADDING = 3
 private const val CHAT_TOP_BAR_CORNER_RADIUS = 20
 private val CHAT_TOP_BAR_BACKGROUND_COLOR = Color(33, 0, 0, 77)
-private const val CHAT_TOP_BAR_FOLLOW_BUTTON_SIZE = 20
 
 private const val BACK_BUTTON_SIZE = 24
 private const val MORE_BUTTON_SIZE = 20

@@ -76,6 +76,10 @@ class ChatViewModel : BaseActivityViewModel() {
     private var _isLoadingConversations = MutableStateFlow(false)
     val isLoadingConversations = _isLoadingConversations.asStateFlow()
     private var hasMoreConversations = true
+    
+    // 刷新状态，用于区分首次加载和刷新操作
+    private var _isRefreshingConversations = MutableStateFlow(false)
+    val isRefreshingConversations = _isRefreshingConversations.asStateFlow()
 
 
     // 延迟获取依赖，避免在构造函数中立即获取导致空指针异常
@@ -524,8 +528,16 @@ class ChatViewModel : BaseActivityViewModel() {
         EasyLog.log("getConversations - 开始加载第一页")
         currentConversationsPage = 0
         hasMoreConversations = true
-        _conversations.value = emptyList()
-        loadConversations()
+        
+        // 如果已经有数据，则不显示loading，直接后台刷新
+        if (_conversations.value.isNotEmpty()) {
+            EasyLog.log("getConversations - 已有数据，后台刷新，不显示loading")
+            loadConversationsSilently()
+        } else {
+            // 没有数据时才显示loading
+            EasyLog.log("getConversations - 无数据，显示loading")
+            loadConversations()
+        }
     }
 
     fun loadMoreConversations() {
@@ -538,10 +550,60 @@ class ChatViewModel : BaseActivityViewModel() {
         }
     }
 
-    private fun loadConversations() {
-        if (_isLoadingConversations.value) return
+    private fun loadConversationsSilently() {
+        if (_isLoadingConversations.value || _isRefreshingConversations.value) return
+        
+        EasyLog.log("loadConversationsSilently - 静默刷新，不显示loading")
+        
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val skip = currentConversationsPage * 20
+                val result = chatApi.getConversations(skip, 20)
+                EasyLog.log("loadConversationsSilently - skip: $skip, limit: 20, result: $result")
 
-        _isLoadingConversations.value = true
+                when (result) {
+                    is HttpResult.Success -> {
+                        val userInitiatedConversations = result.data
+                        
+                        if (userInitiatedConversations.isEmpty()) {
+                            hasMoreConversations = false
+                            EasyLog.log("loadConversationsSilently - 第${currentConversationsPage + 1}页数据为空，没有更多数据")
+                        } else {
+                            // 静默更新数据，不显示loading
+                            _conversations.value = userInitiatedConversations
+                            EasyLog.log("loadConversationsSilently - 静默更新数据: ${userInitiatedConversations.size}个")
+                        }
+                    }
+                    is HttpResult.Failure -> {
+                        EasyLog.log(
+                            "loadConversationsSilently - 第${currentConversationsPage + 1}页加载失败: ${result.message}",
+                            priority = EasyLog.ERROR
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                EasyLog.log(
+                    "loadConversationsSilently - 第${currentConversationsPage + 1}页加载异常: ${e.message}",
+                    priority = EasyLog.ERROR
+                )
+            }
+        }
+    }
+
+    private fun loadConversations() {
+        if (_isLoadingConversations.value || _isRefreshingConversations.value) return
+
+        // 记录当前页码，用于后续状态重置
+        val isFirstPage = currentConversationsPage == 0
+        
+        // 根据当前页码决定使用哪个loading状态
+        if (isFirstPage) {
+            // 第一页，使用刷新状态
+            _isRefreshingConversations.value = true
+        } else {
+            // 后续页，使用加载更多状态
+            _isLoadingConversations.value = true
+        }
         EasyLog.log("loadConversations - 当前页索引: $currentConversationsPage, 显示页码: ${currentConversationsPage + 1}")
 
         viewModelScope.launch(Dispatchers.IO) {
@@ -559,7 +621,7 @@ class ChatViewModel : BaseActivityViewModel() {
                             EasyLog.log("loadConversations - 第${currentConversationsPage + 1}页数据为空，没有更多数据")
                         } else {
                             if (currentConversationsPage == 0) {
-                                // 第一页，直接替换
+                                // 第一页，直接替换（这里才清空并替换数据）
                                 _conversations.value = userInitiatedConversations
                                 EasyLog.log("loadConversations - 替换第一页数据: ${userInitiatedConversations.size}个")
                             } else {
@@ -594,7 +656,13 @@ class ChatViewModel : BaseActivityViewModel() {
                     EasyLog.log("loadConversations - 页码回退到: $currentConversationsPage")
                 }
             }
-            _isLoadingConversations.value = false
+            
+            // 重置对应的loading状态
+            if (isFirstPage) {
+                _isRefreshingConversations.value = false
+            } else {
+                _isLoadingConversations.value = false
+            }
 
             EasyLog.log("loadConversations - 完成，当前列表大小: ${_conversations.value.size}")
         }
