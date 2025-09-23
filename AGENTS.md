@@ -16,6 +16,10 @@ Based on [AGENTS.md](https://agents.md/)
 - `devops/` Inty IntelliMate 运维相关代码
 - `docs/` 文档
 
+## Python
+
+- 避免使用 `try ... except Exception` 来覆盖所有异常，而应该至拦截函数能处理的异常
+
 ## Android App
 
 - 只支持 portrait 显示；不支持 landscape 显示，无需在改动时考虑兼容 landscape 显示。
@@ -27,6 +31,4 @@ Based on [AGENTS.md](https://agents.md/)
 - @<https://developers.cloudflare.com/stream/llms-full.txt>
 - @<https://developers.cloudflare.com/developer-platform/llms-full.txt>
 
-来自官方文档链接 https://developers.cloudflare.com/stream/changelog/：
-
-<img width="600" height="1746" alt="image" src="https://github.com/user-attachments/assets/e82969a3-b533-42d0-96f1-9b57f284b22a" />
+来自官方文档链接 https://developers.cloudflare.com/stream/changelog/
