@@ -182,8 +182,19 @@ private fun ChatItemAI(item: MsgInfo) {
                         LoadingAnimation()
                     } else {
                         // 消息文本
+                        val viewModel = viewModel<ChatViewModel>()
+                        val agentInfo by viewModel.agentInfo.collectAsState()
+                        val userProfile by viewModel.userProfile.collectAsState()
+                        
+                        // 如果是开场白消息，进行模板渲染
+                        val displayText = if (item.isOpening()) {
+                            com.ai.inty.utils.renderAgentText(item.content, agentInfo, userProfile.nickname)
+                        } else {
+                            item.content
+                        }
+
                         StyledMessageText(
-                            text = item.content,
+                            text = displayText,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Normal,
                             normalColor = Color.White,
@@ -372,12 +383,15 @@ private fun LoadingAnimation() {
  */
 @Composable
 fun AgentInfoChatCard(info: String) {
-
+    val viewModel = viewModel<ChatViewModel>()
+    val agentInfo by viewModel.agentInfo.collectAsState()
+    
+    val renderedInfo = com.ai.inty.utils.renderAgentText(info, agentInfo)
     val str = buildAnnotatedString {
         withStyle(style = SpanStyle(fontWeight = FontWeight.SemiBold)) {
             append("Intro: ")
         }
-        append(info)
+        append(renderedInfo)
     }
 
     Box(

@@ -243,7 +243,7 @@ internal fun AiAgentInfoScreen(
                                 Spacer(Modifier.height(8.dp))
                                 Text(
                                     modifier = Modifier.padding(horizontal = 12.dp),
-                                    text = agent.intro,
+                                    text = com.ai.inty.utils.renderAgentText(agent.intro, agent),
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.Light,
                                     color = Color.White,
@@ -265,7 +265,7 @@ internal fun AiAgentInfoScreen(
                             Spacer(Modifier.height(12.dp))
                             Text(
                                 modifier = Modifier.padding(horizontal = 12.dp),
-                                text = agent.opening,
+                                text = com.ai.inty.utils.renderAgentText(agent.opening, agent),
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Light,
                                 color = Color.White,
