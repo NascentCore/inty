@@ -264,7 +264,7 @@ internal fun ChatPage(
                     modifier = Modifier
                         .weight(1f)
                         .padding(horizontal = 16.dp),
-                    reverseLayout = true,
+                    reverseLayout = true,//⚠️此处使用了reverse，导致布局列表是反向的
                 ) {
                     item {
                         Spacer(Modifier.height(16.dp))
@@ -329,6 +329,13 @@ internal fun ChatPage(
                                     modifier = Modifier.align(Alignment.Center)
                                 )
                             }
+                        }
+                    }
+                    //因为是反向列表，所以这里添加，就是在最上面
+                    item {
+                        //开场白之前的，Agent的信息介绍卡片
+                        agentInfo?.intro?.let { info ->
+                            if (info.isNotEmpty()) AgentInfoChatCard(info)
                         }
                     }
                 }
