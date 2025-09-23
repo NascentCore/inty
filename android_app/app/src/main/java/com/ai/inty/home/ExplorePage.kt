@@ -36,6 +36,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
@@ -44,19 +45,20 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.times
 import com.ai.inty.R
+import com.ai.inty.base.IntyCircleImage
 import com.ai.inty.base.IntyImage
 import com.ai.inty.base.noRippleClickable
 import com.ai.inty.beans.AgentInfo
+import com.ai.inty.ui.components.SmartTagsLayout
 import com.ai.inty.utils.AspectRatio
 import com.ai.inty.utils.CHARACTER_CARD_ASPECT_RATIO
-import com.ai.inty.utils.calculateOptimalContentScale
 import com.ai.inty.utils.getHeightByWidth
 import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
@@ -258,32 +260,15 @@ fun RecommendPage(
                             items = agents,
                             key = { index, agent -> "${agent.id}_$index" }
                         ) { _, agent ->
-                            // 根据图片实际宽高比计算高度，设定最小和最大高度限制
-                            val dynamicHeight = remember(agent.id) {
-                                val cardWidth = characterCardSize.width
-                                val minHeight = cardWidth * 0.75f  // 最小高度：3:4比例
-                                val maxHeight = cardWidth * 1.78f  // 最大高度：9:16比例
-                                
-                                // 根据agent的图片宽高比计算高度
-                                val imageAspectRatio = agent.avatar?.let { avatar ->
-                                    // 这里可以根据实际图片尺寸计算宽高比
-                                    // 暂时使用agent.id的hash值模拟不同的宽高比
-                                    val ratio = 0.75f + (agent.id.hashCode() % 100) / 100f * (1.78f - 0.75f)
-                                    ratio
-                                } ?: 1.0f // 默认1:1比例
-                                
-                                val calculatedHeight = cardWidth / imageAspectRatio
-                                calculatedHeight.coerceIn(minHeight, maxHeight)
-                            }.dp
-                            
+
                             CharacterCard(
                                 modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(8.dp))
                                     .noRippleClickable {
                                         onClickAgent(agent)
                                     },
                                 agentInfo = agent,
-                                width = characterCardSize.width.dp,
-                                height = dynamicHeight
                             )
                         }
                     }
@@ -314,68 +299,65 @@ fun RecommendPage(
     }
 }
 
-const val ROUNDED_CORNER_SHAPE_PERCENTAGE = 0.03f
-fun calculateOptimalRoundedCornerShapeSize(width: Dp, height: Dp): Dp {
-    val percentage = ROUNDED_CORNER_SHAPE_PERCENTAGE
-    return (width + height) * percentage
-}
-
-val CHARACTER_CARD_TEXT_PADDING = 16.dp
-
 @Composable
 fun CharacterCard(
     modifier: Modifier = Modifier,
     agentInfo: AgentInfo,
-    width: Dp,
-    height: Dp,
 ) {
 
-    // 状态来存储图片尺寸
-    var imageWidth by remember { mutableStateOf<Int?>(null) }
-    var imageHeight by remember { mutableStateOf<Int?>(null) }
-
-    // 计算最佳的 ContentScale
-    val currentImageWidth = imageWidth
-    val currentImageHeight = imageHeight
-    val optimalContentScale =
-        if (currentImageWidth != null && currentImageHeight != null && currentImageWidth > 0 && currentImageHeight > 0) {
-            calculateOptimalContentScale(
-                containerWidth = width.value.roundToInt(),
-                containerHeight = height.value.roundToInt(),
-                imageWidth = currentImageWidth,
-                imageHeight = currentImageHeight
-            )
-        } else {
-            ContentScale.Crop // 默认值，当图片尺寸未知时
-        }
-
-    val roundedCornerShapeSize = calculateOptimalRoundedCornerShapeSize(width, height)
-    Box(
-        modifier = modifier
-            .width(width)
-            .clip(RoundedCornerShape(roundedCornerShapeSize))
-    ) {
+    Box(modifier = modifier) {
         IntyImage(
             modifier = Modifier.fillMaxWidth(),
             model = agentInfo.background,
             placeholder = painterResource(R.drawable.app_icon),
             error = painterResource(R.drawable.app_icon),
-            contentScale = ContentScale.Crop,
-            onSuccess = { state ->
-                // 当图片加载成功时，获取图片尺寸
-                val drawable = state.painter
-                imageWidth = drawable.intrinsicSize.width.toInt()
-                imageHeight = drawable.intrinsicSize.height.toInt()
-            }
+            contentScale = ContentScale.FillWidth,
         )
-        Text(
+        Column(
             modifier = Modifier
-                .align(Alignment.BottomStart)
-                .padding(CHARACTER_CARD_TEXT_PADDING),
-            text = agentInfo.name,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = Color.White,
-        )
+                .fillMaxWidth()
+                .background(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            Color.Transparent,
+                            Color.Black.copy(.7f),
+                            Color.Black,
+                        )
+                    )
+                )
+                .padding(start = 8.dp, end = 8.dp, top = 15.dp, bottom = 8.dp)
+                .align(Alignment.BottomCenter),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IntyCircleImage(
+                    modifier = Modifier.size(18.dp),
+                    url = agentInfo.avatar,
+                    placeholderResID = R.drawable.app_icon
+                )
+                Spacer(Modifier.width(4.dp))
+                Text(
+                    modifier = Modifier,
+                    text = agentInfo.name,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color.White,
+                )
+            }
+            Text(
+                modifier = Modifier,
+                text = agentInfo.intro,
+                fontSize = 12.sp,
+                lineHeight = 12.sp,
+                color = Color.White.copy(.7f),
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis
+            )
+            agentInfo.tags?.filterNotNull()?.let { tags ->
+                SmartTagsLayout(tags = tags, isCardTag = true)
+            }
+
+        }
+
     }
 }
