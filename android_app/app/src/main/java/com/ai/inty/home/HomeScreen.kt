@@ -282,26 +282,17 @@ private fun ConversationsTabContent(
     context: Context,
 ) {
     val conversations by chatViewModel.conversations.collectAsState()
-    val sysMsgs = mainViewModel.sysMsgs
     val isLoadingConversations by chatViewModel.isLoadingConversations.collectAsState()
 
     ActivityPage(
         modifier = Modifier,
         conversations = conversations,
-        lastSysMsg = sysMsgs.firstOrNull(),
         onClickConversationItem = { conversation ->
             chatViewModel.setConversationReaded(conversation)
             //从会话列表 跳转到聊天页面，
             TheRouter.build(Constant.ROUTE_CHAT)
                 .withObject("agent", conversation.convertToAgentInfo())
                 .navigation(context)
-        },
-        onClickSysMsg = {
-            IntySetting.setConversationReaded(
-                Constant.SYS_NOTIFICATION_ID,
-                sysMsgs.firstOrNull()?.content ?: ""
-            )
-            TheRouter.build(Constant.ROUTE_SYS_MSGS).navigation(context)
         },
         isLoadingConversations = isLoadingConversations,
         onLoadMoreConversations = {

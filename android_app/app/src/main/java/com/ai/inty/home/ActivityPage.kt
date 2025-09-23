@@ -36,12 +36,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.ai.inty.Constant
 import com.ai.inty.R
 import com.ai.inty.base.IntyImage
 import com.ai.inty.base.RedDot
 import com.ai.inty.beans.ConversationItem
-import com.ai.inty.beans.SysMsgItem
 import com.ai.inty.utils.AuthClickable
 
 
@@ -52,9 +50,7 @@ import com.ai.inty.utils.AuthClickable
 fun ActivityPage(
     modifier: Modifier,
     conversations: List<ConversationItem>,
-    lastSysMsg: SysMsgItem?,
     onClickConversationItem: (ConversationItem) -> Unit,
-    onClickSysMsg: () -> Unit,
     isLoadingConversations: Boolean = false,
     onLoadMoreConversations: (() -> Unit)? = null,
 ) {
@@ -65,9 +61,7 @@ fun ActivityPage(
         )
         Content(
             conversations = conversations,
-            lastSysMsg = lastSysMsg,
             onClickConversationItem = onClickConversationItem,
-            onClickSysMsg = onClickSysMsg,
             isLoadingConversations = isLoadingConversations,
             onLoadMoreConversations = onLoadMoreConversations,
         )
@@ -79,9 +73,7 @@ val TAB_CONTENT_SPACER_HEIGHT = 22.dp
 @Composable
 private fun Content(
     conversations: List<ConversationItem>,
-    lastSysMsg: SysMsgItem?,
     onClickConversationItem: (ConversationItem) -> Unit,
-    onClickSysMsg: () -> Unit,
     isLoadingConversations: Boolean = false,
     onLoadMoreConversations: (() -> Unit)? = null,
 ) {
@@ -102,9 +94,7 @@ private fun Content(
 
             MessageTabContent(
                 conversations = conversations,
-                lastSysMsg = lastSysMsg,
                 onClickConversationItem = onClickConversationItem,
-                onClickSysMsg = onClickSysMsg,
                 isLoading = isLoadingConversations,
                 onLoadMore = onLoadMoreConversations
             )
@@ -152,9 +142,7 @@ fun ActivityPageSubTabItem(
 @Composable
 private fun MessageTabContent(
     conversations: List<ConversationItem>,
-    lastSysMsg: SysMsgItem?,
     onClickConversationItem: (ConversationItem) -> Unit,
-    onClickSysMsg: () -> Unit,
     isLoading: Boolean = false,
     onLoadMore: (() -> Unit)? = null,
 ) {
@@ -184,26 +172,6 @@ private fun MessageTabContent(
             state = listState,
             modifier = Modifier.matchParentSize()
         ) {
-            // 系统消息
-            lastSysMsg?.let { sysMsg ->
-                item {
-                    AuthClickable(onClick = onClickSysMsg) { authModifier ->
-                        ChatHistoryItem(
-                            modifier = authModifier
-                                .fillMaxWidth()
-                                .background(color = Color(0x3378599A)),
-                            conversation = ConversationItem(
-                                agentId = Constant.SYS_NOTIFICATION_ID,
-                                agentName = "System Notification",
-                                lastMessage = sysMsg.content,
-                                createdAt = sysMsg.createdAt
-                            ),
-                            placeholderID = R.drawable.icon_sys_notify
-                        )
-                    }
-                }
-            }
-
             // 会话列表
             if (conversations.isNotEmpty()) {
                 runCatching {
@@ -239,7 +207,7 @@ private fun MessageTabContent(
             }
         }
 
-        if (lastSysMsg == null && conversations.isEmpty() && !isLoading) {
+        if (conversations.isEmpty() && !isLoading) {
             EmptyContentUI()
         }
     }

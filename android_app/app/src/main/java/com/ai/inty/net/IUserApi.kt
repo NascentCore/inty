@@ -2,8 +2,6 @@ package com.ai.inty.net
 
 import com.ai.inty.beans.GoogleLoginRequest
 import com.ai.inty.beans.GoogleLoginResponse
-import com.ai.inty.beans.SysMsgResponse
-import com.ai.inty.beans.TokenBean
 import com.ai.inty.beans.UploadAvatarResponse
 import com.ai.inty.beans.UserDeleteResponse
 import com.ai.inty.beans.UserDeletionCheckResponse
@@ -15,7 +13,6 @@ import retrofit2.http.GET
 import retrofit2.http.Multipart
 import retrofit2.http.POST
 import retrofit2.http.Part
-import retrofit2.http.Query
 
 @Singleton
 interface IUserApi {
@@ -26,16 +23,6 @@ interface IUserApi {
     @Multipart
     @POST("/api/v1/images")
     suspend fun uploadAvatar(@Part file: MultipartBody.Part): HttpResult<UploadAvatarResponse>
-
-    @POST("/api/v1/users/device/register")
-    suspend fun regFCM(@Body reqq: TokenBean): HttpResult<Any>
-
-    @GET("/api/v1/notifications/")
-    suspend fun getSysMsgs(
-        @Query("page") page: Int,
-        @Query("page_size") pageSize: Int
-    ): HttpResult<SysMsgResponse>
-
 
     @GET("/api/v1/users/deletion/check")
     suspend fun userDeletionCheck(): HttpResult<UserDeletionCheckResponse>
