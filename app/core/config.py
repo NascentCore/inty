@@ -90,6 +90,7 @@ class AppConfig:
     backend_cors_origins: List[AnyHttpUrl] = None
     version: str = "1.1.0"
     environment: str = "dev"
+    gcp_service_account_key: str = ".secrets/gcp-service-account-key.json"
 
     @dataclass
     class LimitsConfig:
