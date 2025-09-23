@@ -36,7 +36,7 @@ fun hasTemplateVariable(text: String): Boolean {
  * @param agentInfo agent信息，用于提供模板变量
  * @return 渲染后的文本
  */
-fun renderAgentText(text: String, agentInfo: AgentInfo?, userName: String): String {
+fun renderAgentText(text: String, agentInfo: AgentInfo, userName: String): String {
     if (!hasTemplateVariable(userName)) {
         return text
     }
