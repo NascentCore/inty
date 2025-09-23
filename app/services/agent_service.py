@@ -12,18 +12,18 @@ from sqlalchemy.orm import selectinload
 from app import models, schemas
 from app.core.agent.agent import agent_manager
 from app.core.config import global_config_loaded_from_config_yaml
+from app.external_services.gcs import (
+    append_filename_suffix,
+    download_from_gcs,
+    get_bucket_and_path_from_gcs_url,
+    upload_to_gcs,
+)
 from app.models.agent import AgentVisibility
 from app.models.associations import agent_followers
 from app.schemas.agent import AgentSortOption
 from app.services.cache_service import cache_service
 from app.services.voice_service import VoiceService
 from app.utils.crop_avatar import CROPPED_AVATAR_FILENAME_SUFFIX, crop_avatar
-from app.utils.gcs import (
-    append_filename_suffix,
-    download_from_gcs,
-    get_bucket_and_path_from_gcs_url,
-    upload_to_gcs,
-)
 from app.utils.image import ImageFormat, get_jpg_bytes_from_pil_image
 
 
@@ -1056,7 +1056,7 @@ def process_agent_image_urls(agent_data: dict) -> dict:
     Returns:
         验证后的agent_data，无效URL会被设置为None
     """
-    from app.utils.gcs import is_valid_gcs_url
+    from app.external_services.gcs import is_valid_gcs_url
 
     processed_data = agent_data.copy()
     images_urls = []

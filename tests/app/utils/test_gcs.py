@@ -1,6 +1,10 @@
 from google.cloud.storage import bucket
-from app.utils.gcs import append_filename_suffix, get_bucket_and_path_from_gcs_url
+
 from app.core.config import global_config_loaded_from_config_yaml
+from app.external_services.gcs import (
+    append_filename_suffix,
+    get_bucket_and_path_from_gcs_url,
+)
 
 
 def test_get_bucket_and_path_from_gcs_url():

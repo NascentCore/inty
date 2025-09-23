@@ -11,25 +11,25 @@ import os
 import sys
 import uuid
 from pathlib import Path
-from urllib.parse import urlparse
 from typing import Optional, Tuple
+from urllib.parse import urlparse
 
 import psycopg2
 import requests
-from PIL import Image
 from loguru import logger
-from sqlalchemy import select, create_engine, and_
+from PIL import Image
+from sqlalchemy import and_, create_engine, select
 from sqlalchemy.orm import Session
 
-from app.utils.image import ImageFormat
 from app.utils.crop_avatar import crop_avatar
+from app.utils.image import ImageFormat
 
 # Add the project root to Python path
 project_root = Path(__file__).parent.parent
 sys.path.append(str(project_root))
 
 from app.core.config import global_config_loaded_from_config_yaml
-from app.utils.gcs import upload_to_gcs
+from app.external_services.gcs import upload_to_gcs
 from app.models import Agent
 
 

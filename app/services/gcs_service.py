@@ -10,7 +10,11 @@ from typing import Optional
 from loguru import logger
 
 from app.core.config import global_config_loaded_from_config_yaml
-from app.utils.gcs import check_gcs_file_exists, delete_from_gcs, upload_to_gcs
+from app.external_services.gcs import (
+    check_gcs_file_exists,
+    delete_from_gcs,
+    upload_to_gcs,
+)
 
 
 class GCSService:

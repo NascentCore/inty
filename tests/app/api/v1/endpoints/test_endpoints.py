@@ -1,10 +1,10 @@
 import os
+
 import pytest
-
 from inty import Inty
-from app.utils.gcs import download_from_gcs
-
 from loguru import logger
+
+from app.external_services.gcs import download_from_gcs
 
 
 @pytest.mark.noci
