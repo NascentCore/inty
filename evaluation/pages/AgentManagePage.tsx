@@ -325,6 +325,7 @@ export const AgentManagePage: React.FC = () => {
       const agentData: AgentCreateRequest = {
         ...otherValues,
         voice_id: values.voice_id,
+        tags: values.tags || [],
       };
 
       // 如果有评分或备注，添加到 meta_data 中
@@ -388,6 +389,7 @@ export const AgentManagePage: React.FC = () => {
       const updateData = {
         ...otherValues,
         voice_id: values.voice_id,
+        tags: values.tags || [],
       };
 
       // 处理评分和备注更新
@@ -513,6 +515,7 @@ export const AgentManagePage: React.FC = () => {
         voice_id: agent.voice_id,
         score: agent.meta_data?.score,
         comment: agent.meta_data?.comment,
+        tags: agent.tags || [],
 
         modelType: agent.llm_config ? "custom" : "default",
         // 明确设置LLM配置字段，避免字段名不匹配问题
@@ -658,6 +661,21 @@ export const AgentManagePage: React.FC = () => {
         ]}
       >
         <TextArea rows={3} placeholder="请输入角色简介（可选）" />
+      </Form.Item>
+
+      <Form.Item
+        name="tags"
+        label="标签"
+        tooltip="为角色添加标签，便于分类和管理"
+      >
+        <Select
+          mode="tags"
+          style={{ width: '100%' }}
+          placeholder="输入标签后按回车添加"
+          tokenSeparators={[',']}
+          maxTagCount={10}
+          maxTagTextLength={20}
+        />
       </Form.Item>
 
       <Form.Item
@@ -957,6 +975,20 @@ export const AgentManagePage: React.FC = () => {
                                     showText={false}
                                   />
                                 </div>
+                              )}
+                              {agent.tags && agent.tags.length > 0 && (
+                                <>
+                                  {agent.tags.slice(0, 2).map((tag, index) => (
+                                    <Tag key={index} color="geekblue" style={{ fontSize: "11px" }}>
+                                      {tag}
+                                    </Tag>
+                                  ))}
+                                  {agent.tags.length > 2 && (
+                                    <Tag color="default" style={{ fontSize: "11px" }}>
+                                      +{agent.tags.length - 2}
+                                    </Tag>
+                                  )}
+                                </>
                               )}
                             </div>
                             {agent.meta_data?.comment && (

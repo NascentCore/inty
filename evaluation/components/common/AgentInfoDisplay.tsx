@@ -91,6 +91,18 @@ export const AgentInfoDisplay: React.FC<AgentInfoDisplayProps> = ({
             <strong>音色ID:</strong>{" "}
             {agent.voice_id || "未设置"}
           </p>
+          {agent.tags && agent.tags.length > 0 && (
+            <div style={{ marginTop: 8 }}>
+              <strong>标签:</strong>
+              <div style={{ marginTop: 4, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                {agent.tags.map((tag, index) => (
+                  <Tag key={index} color="geekblue">
+                    {tag}
+                  </Tag>
+                ))}
+              </div>
+            </div>
+          )}
           {agent.meta_data?.score && (
             <div style={{ marginTop: 8 }}>
               <strong>评分:</strong>

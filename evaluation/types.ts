@@ -52,6 +52,7 @@ export interface AgentCreateRequest {
   voice_id?: string;
   llm_config?: LLMConfig;
   meta_data?: AgentMetaData;
+  tags?: string[];
 }
 
 // 更新智能体请求
@@ -71,6 +72,7 @@ export interface AgentUpdateRequest {
   llm_config?: LLMConfig | null;
   meta_data?: AgentMetaData;
   extensions?: { [key: string]: unknown } | null;
+  tags?: string[];
 }
 
 // 聊天消息
