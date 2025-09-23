@@ -230,6 +230,8 @@ def load_config(path: str) -> Config:
 
 def _validate_config(config: Config):
     """Validate config values"""
+    if not config.app.gcp_service_account_key:
+        raise ValueError("app.gcp_service_account_key is required")
     if not config.agent.api_key:
         raise ValueError("agent.api_key is required")
     if not config.agent.langchain_api_key:
