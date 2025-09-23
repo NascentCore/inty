@@ -40,9 +40,6 @@ async def generate_agent_opening_voice(
     if not agent.opening or not agent.opening.strip():
         logger.debug(f"Agent {agent.id} 没有开场白文本，跳过语音生成")
         return None
-    if not agent.opening or not agent.opening.strip():
-        logger.debug(f"Agent {agent.id} 没有开场白文本，跳过语音生成")
-        return None
 
     opening = agent.opening
     if has_variable_name(opening):

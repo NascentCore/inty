@@ -7,6 +7,10 @@ from loguru import logger
 from sqlalchemy import and_, desc, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.agent.prompt_template import (
+    has_variable_name,
+    render_prompt_jinja2_template,
+)
 from app.core.config import global_config_loaded_from_config_yaml
 from app.models.chat_history import ChatHistory
 
@@ -89,20 +93,16 @@ async def add_agent_opening_message(
 ) -> None:
     """添加Agent开场白到聊天历史"""
     try:
-        # 如果开场白包含变量，进行替换
-        processed_opening = opening_message
-        from app.core.agent.prompt_template import (
-            has_variable_name,
-            render_prompt_jinja2_template,
-        )
-
         if has_variable_name(opening_message):
-            processed_opening = render_prompt_jinja2_template(
+            opening_message = render_prompt_jinja2_template(
                 opening_message, char=agent_name, user=user_name
             )
 
         # 构建AIMessage的JSON格式数据
-        message_data = {"type": "ai", "data": {"content": processed_opening}}
+        message_data = {
+            "type": "ai",
+            "data": {"content": opening_message},
+        }
 
         # 构建meta_data
         meta_data = None
