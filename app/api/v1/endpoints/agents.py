@@ -66,7 +66,6 @@ async def list_agents(
         limit=limit,
         current_user_id=current_user.id,
     )
-
     return schemas.APIResponse.success(data=agents)
 
 
@@ -89,7 +88,6 @@ async def search_agents(
     pagination_data = await agent_service.search_agents(
         db, keyword=q, page=page, page_size=page_size, current_user_id=current_user.id
     )
-
     return schemas.APIResponse.success(data=pagination_data)
 
 
@@ -136,7 +134,6 @@ async def recommend_agents(
         sort_seed=sort_seed,
         current_user_id=current_user.id,
     )
-
     return schemas.APIResponse.success(data=pagination_data)
 
 
@@ -156,7 +153,6 @@ async def get_following_agents(
     pagination_data = await agent_service.get_user_followed_agents(
         db, user_id=current_user.id, page=page, page_size=page_size
     )
-
     return schemas.APIResponse.success(data=pagination_data)
 
 
@@ -253,7 +249,6 @@ async def get_agent(
     )
     if not agent:
         raise HTTPException(status_code=404, detail="Agent not found")
-
     return agent
 
 
