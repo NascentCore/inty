@@ -8,9 +8,12 @@ from PIL import Image
 
 from app import models
 from app.core.config import global_config_loaded_from_config_yaml
+from app.external_services.gcs import (
+    download_from_gcs,
+    get_bucket_and_path_from_gcs_url,
+)
 from app.schemas.agent import AgentUpdate, ModelConfig
 from app.services.agent_service import _crop_avatar_from_background, _update_agent_in_db
-from app.utils.gcs import download_from_gcs, get_bucket_and_path_from_gcs_url
 
 
 @pytest.mark.asyncio
@@ -113,7 +116,7 @@ def test_process_agent_image_urls():
     }
 
     # Mock the is_valid_gcs_url function to return True for all URLs
-    with patch("app.utils.gcs.is_valid_gcs_url", return_value=True):
+    with patch("app.external_services.gcs.is_valid_gcs_url", return_value=True):
         result = process_agent_image_urls(agent_data)
 
         # Verify that all image URLs are collected in background_images

@@ -1,6 +1,7 @@
-import loguru
 import re
+import traceback
 
+import loguru
 from google.cloud import storage
 
 from app.core.config import global_config_loaded_from_config_yaml
@@ -13,38 +14,27 @@ GCS_PRIVATE_HTTPS_PREFIX = "https://storage.cloud.google.com/"
 GCS_GS_PREFIX = "gs://"
 
 
+gcs_client = None
+
+try:
+    gcs_client = storage.Client.from_service_account_json(
+        global_config_loaded_from_config_yaml.app.gcp_service_account_key
+    )
+except Exception as e:
+    if global_config_loaded_from_config_yaml.app.debug:
+        logger.error(f"GCS客户端初始化失败，debug 模式下忽略: {str(e)}")
+        logger.error(f"错误堆栈: {traceback.format_exc()}")
+    else:
+        raise
+
+
 def upload_to_gcs(file_data, content_type, bucket_name, path):
-    logger.info(f"=== 开始GCS上传 ===")
-    logger.debug(f"文件大小: {len(file_data)} bytes")
-    logger.debug(f"Content-Type: {content_type}")
-    logger.debug(f"Bucket: {bucket_name}")
-    logger.debug(f"路径: {path}")
-
     try:
-        logger.debug(
-            f"使用凭证文件: {global_config_loaded_from_config_yaml.gcs.credentials}"
-        )
-        client = storage.Client.from_service_account_json(
-            global_config_loaded_from_config_yaml.gcs.credentials
-        )
-        logger.debug("GCS客户端创建成功")
-
-        bucket = client.bucket(bucket_name)
-        logger.debug(f"获取bucket: {bucket_name}")
-
+        bucket = gcs_client.bucket(bucket_name)
         blob = bucket.blob(path)
-        logger.debug(f"创建blob对象: {path}")
-
-        logger.debug("开始上传文件内容")
         blob.upload_from_string(file_data, content_type=content_type)
-        logger.debug("文件上传完成")
-
         public_url = blob.public_url
-        logger.debug(f"获取公共URL: {public_url}")
-
-        logger.info("=== GCS上传成功 ===")
         return public_url
-
     except Exception as e:
         logger.error(f"GCS上传失败: {str(e)}")
         logger.error(f"错误类型: {type(e).__name__}")
@@ -58,10 +48,7 @@ def upload_to_gcs(file_data, content_type, bucket_name, path):
 def delete_from_gcs(bucket_name, path):
     """删除GCS文件，如果文件不存在则忽略"""
     try:
-        client = storage.Client.from_service_account_json(
-            global_config_loaded_from_config_yaml.gcs.credentials
-        )
-        bucket = client.bucket(bucket_name)
+        bucket = gcs_client.bucket(bucket_name)
         blob = bucket.blob(path)
 
         # 检查文件是否存在
@@ -94,16 +81,14 @@ def copy_gcs_file(source_url: str, destination_path: str, bucket_name: str) -> s
     Returns:
         新文件的公共URL
     """
-    client = storage.Client.from_service_account_json(
-        global_config_loaded_from_config_yaml.gcs.credentials
-    )
+    bucket = gcs_client.bucket(bucket_name)
 
     _, source_path = get_bucket_and_path_from_gcs_url(source_url)
     if not source_path:
         raise ValueError(f"Invalid GCS URL: {source_url}")
 
     # 获取源bucket和blob
-    source_bucket = client.bucket(bucket_name)
+    source_bucket = gcs_client.bucket(bucket_name)
     source_blob = source_bucket.blob(source_path)
 
     # 检查源文件是否存在
@@ -111,7 +96,7 @@ def copy_gcs_file(source_url: str, destination_path: str, bucket_name: str) -> s
         raise FileNotFoundError(f"Source file not found: {source_url}")
 
     # 获取目标bucket和blob
-    destination_bucket = client.bucket(bucket_name)
+    destination_bucket = gcs_client.bucket(bucket_name)
     destination_blob = destination_bucket.blob(destination_path)
 
     # 复制文件
@@ -192,10 +177,7 @@ def is_temp_gcs_path(url: str, user_id: str) -> bool:
 def check_gcs_file_exists(bucket_name: str, path: str) -> bool:
     """检查GCS文件是否存在"""
     try:
-        client = storage.Client.from_service_account_json(
-            global_config_loaded_from_config_yaml.gcs.credentials
-        )
-        bucket = client.bucket(bucket_name)
+        bucket = gcs_client.bucket(bucket_name)
         blob = bucket.blob(path)
         return blob.exists()
     except Exception:
@@ -207,10 +189,7 @@ def download_from_gcs(url: str) -> bytes:
     bucket_name, gcs_path = get_bucket_and_path_from_gcs_url(url)
     assert gcs_path
 
-    client = storage.Client.from_service_account_json(
-        global_config_loaded_from_config_yaml.gcs.credentials
-    )
-    bucket = client.bucket(bucket_name)
+    bucket = gcs_client.bucket(bucket_name)
     blob = bucket.blob(gcs_path)
     logger.debug(f"下载GCS文件: {bucket_name}/{gcs_path}")
     return blob.download_as_bytes()

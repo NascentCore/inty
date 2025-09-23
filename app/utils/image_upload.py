@@ -12,12 +12,12 @@ from loguru import logger
 from pydantic import BaseModel
 
 from app.core.config import global_config_loaded_from_config_yaml
+from app.external_services.gcs import append_filename_suffix, upload_to_gcs
 from app.schemas.response import APIResponse
 from app.utils.crop_avatar import CROPPED_AVATAR_FILENAME_SUFFIX, crop_avatar
-from app.utils.gcs import append_filename_suffix, upload_to_gcs
 from app.utils.image import (
-    compress_png_to_jpeg,
     ImageFormat,
+    compress_png_to_jpeg,
     get_jpg_bytes_from_pil_image,
 )
 
