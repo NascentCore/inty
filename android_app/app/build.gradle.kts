@@ -116,4 +116,7 @@ dependencies {
 
     // ===== Inty SDK =====
     implementation("com.inty.api:inty-kotlin:0.8.0")
+
+    // ===== 模板引擎 =====
+    implementation(libs.pebble)
 }
