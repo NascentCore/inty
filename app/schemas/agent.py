@@ -251,6 +251,7 @@ class Agent(AgentInDB):
     connector_count: int = 0
     creator: Optional[User] = None
 
+    # TODO: 考虑如何使用 intro 从而避免重复使用手动变量替换
     @field_serializer("intro")
     def serialize_intro(self, intro: Optional[str]) -> Optional[str]:
         """
