@@ -1,0 +1,62 @@
+app:
+  debug: true
+  limits:
+    free_user_chat_24h_limit: 100
+  gcp_service_account_key: "inty-backend-key.json"
+
+security:
+  secret_key: "your-secret-key-here"
+  algorithm: "HS256"
+  access_token_expire_minutes: 10080
+
+database:
+  db: devdb
+  host: "10.148.0.2"
+  password: postgres
+  port: 5432
+  user: postgres
+  pool_size: 50
+  max_overflow: 20
+  pool_timeout: 10
+  pool_recycle: 3600
+  pool_pre_ping: true
+  connect_timeout: 5
+  command_timeout: 30
+
+google_oauth:
+  client_id: "1034291688895-0e5hq72pghd4nihhpmf989ptv0ag1542.apps.googleusercontent.com"
+  client_secret: "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"
+  redirect_uri: "http://localhost:8000/api/v1/auth/google/callback"
+
+gcs:
+  bucket: "inty-static"
+
+verification:
+  code_expire_minutes: 5 
+
+logging:
+  level: "DEBUG"
+
+firebase:
+  service_account_path: "inty-firebase-key.json"
+
+agent:
+  api_key: "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"
+  # inty-dev api key personal access token
+  langchain_api_key: "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"
+
+google_play:
+  package_name: "com.ai.intellimate"
+  webhook_secret: ""
+  enable_version_check: true
+  min_supported_version: 100
+  release_track: internal
+  fallback_tracks: [internal]
+
+elevenlabs:
+  api_key: "sk_1976538731e00d58493ed27e63165adfa8d513c4c327c68c"
+  model: "eleven_flash_v2_5"  # Flash v2.5 - 最快的实时模型，75ms延迟
+  voice_id: "EXAVITQu4vr4xnSDxMaL"  # Sarah - 温柔女声
+  output_format: "mp3_22050_32"  # 优化的移动端格式：更小文件，更快传输
+  enabled: true
+  max_text_length: 5000  # 最大文本长度限制
