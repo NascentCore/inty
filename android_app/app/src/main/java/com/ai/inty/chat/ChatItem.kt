@@ -188,7 +188,7 @@ private fun ChatItemAI(item: MsgInfo) {
                         
                         // 如果是开场白消息，进行模板渲染
                         val displayText = if (item.isOpening()) {
-                            com.ai.inty.utils.renderAgentText(item.content, agentInfo, userProfile.nickname)
+                            com.ai.inty.utils.renderAgentText(item.content, agentInfo!!, userProfile.nickname)
                         } else {
                             item.content
                         }
@@ -386,7 +386,7 @@ fun AgentInfoChatCard(info: String) {
     val viewModel = viewModel<ChatViewModel>()
     val agentInfo by viewModel.agentInfo.collectAsState()
     
-    val renderedInfo = com.ai.inty.utils.renderAgentText(info, agentInfo)
+    val renderedInfo = com.ai.inty.utils.renderAgentText(info, agentInfo!!, "")
     val str = buildAnnotatedString {
         withStyle(style = SpanStyle(fontWeight = FontWeight.SemiBold)) {
             append("Intro: ")
