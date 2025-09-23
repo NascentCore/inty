@@ -29,6 +29,7 @@ data class AgentInfo(
     val createdAt: String = "",
     val creator: CreatorInfo? = null,
     val intro: String = "",
+    val tags: List<String?>? = null,//tags
     val settings: @RawValue Map<String, Any>? = null,
     val visibility: String = "",
     val prompt: String = "",

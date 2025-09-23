@@ -3,7 +3,6 @@ package com.ai.inty.ui.screens
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -28,13 +27,11 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -45,15 +42,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ai.inty.Constant
 import com.ai.inty.R
-import com.ai.inty.base.AntiClick
 import com.ai.inty.base.noRippleClickable
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.ui.components.AgentBackground
+import com.ai.inty.ui.components.SmartTagsLayout
 import com.ai.inty.ui.theme.DarkPurple
-import com.ai.inty.viewmodels.AgentInfoViewModel
 import com.inty.utils.storage.IntySetting
 import com.therouter.TheRouter
 
@@ -64,7 +59,6 @@ internal fun AiAgentInfoScreen(
     agent: AgentInfo,
     onBack: () -> Unit,
 ) {
-    val viewModel = viewModel<AgentInfoViewModel>()
     val context = LocalContext.current
     var showBottomSheet by remember { mutableStateOf(false) }
     val bottomSheetState = rememberModalBottomSheetState()
@@ -75,7 +69,7 @@ internal fun AiAgentInfoScreen(
             modifier = Modifier.fillMaxSize(),
             showGradients = false  // 角色主页不需要渐变遮罩
         )
-        
+
         Scaffold(
             modifier = Modifier.fillMaxSize(),
             containerColor = Color.Transparent,
@@ -153,121 +147,127 @@ internal fun AiAgentInfoScreen(
                             .verticalScroll(rememberScrollState()),
                     ) {
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Column(
-                            modifier = Modifier.weight(1f)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
                         ) {
+                            Column(
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text(
+                                    modifier = Modifier.padding(start = 16.dp),
+                                    text = agent.name,
+                                    fontSize = 20.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = Color.White
+                                )
+                                Spacer(Modifier.height(5.dp))
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Spacer(Modifier.width(16.dp))
+                                    Text(
+                                        modifier = Modifier.widthIn(0.dp, 100.dp),
+                                        text = stringResource(
+                                            R.string.ID,
+                                            agent.readableId.takeIf { it.isNotEmpty() }
+                                                ?: agent.id),
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Light,
+                                        color = Color.White.copy(0.55f),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                            }
+
+                            Spacer(Modifier.width(16.dp))
+                        }
+
+                        Spacer(Modifier.height(24.dp))
+
+                        Column(
+                            modifier = Modifier
+                                .padding(horizontal = 16.dp)
+                                .fillMaxWidth()
+                                .border(
+                                    brush = Brush.linearGradient(
+                                        colors = listOf(
+                                            Color.Transparent,
+                                            Color.White.copy(0.2f),
+                                            Color.Transparent
+                                        )
+                                    ),
+                                    width = 1.dp,
+                                    shape = RoundedCornerShape(8.dp)
+                                )
+                                .background(
+                                    color = Color(0x3378599A),
+                                    shape = RoundedCornerShape(8.dp)
+                                )
+                        ) {
+                            Spacer(Modifier.height(16.dp))
                             Text(
-                                modifier = Modifier.padding(start = 16.dp),
-                                text = agent.name,
-                                fontSize = 20.sp,
+                                modifier = Modifier.padding(horizontal = 12.dp),
+                                text = stringResource(R.string.introduction),
+                                fontSize = 14.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 color = Color.White
                             )
-                            Spacer(Modifier.height(5.dp))
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Spacer(Modifier.width(16.dp))
+                            Spacer(Modifier.height(12.dp))
+                            Column {
+                                // 使用智能 Tags 布局
+                                val agentTags = mutableListOf(
+                                    stringResource(R.string.gender_tag_format, agent.gender)
+                                )
+                                //取10个即可，避免太多，因为设计也只需要显示一行
+                                agent.tags?.take(10)?.forEach { tag ->
+                                    tag?.let {
+                                        agentTags.add(tag)
+                                    }
+                                }
+                                SmartTagsLayout(
+                                    tags = agentTags,
+                                    modifier = Modifier.padding(horizontal = 12.dp),
+                                    maxLines = 1
+                                )
+                                Spacer(Modifier.height(8.dp))
                                 Text(
-                                    modifier = Modifier.widthIn(0.dp, 100.dp),
-                                    text = stringResource(
-                                        R.string.ID,
-                                        agent.readableId.takeIf { it.isNotEmpty() } ?: agent.id),
-                                    fontSize = 12.sp,
+                                    modifier = Modifier.padding(horizontal = 12.dp),
+                                    text = agent.intro,
+                                    fontSize = 14.sp,
                                     fontWeight = FontWeight.Light,
-                                    color = Color.White.copy(0.55f),
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
+                                    color = Color.White,
+                                    maxLines = 3,
+                                    overflow = TextOverflow.Ellipsis,
                                 )
                             }
-                        }
 
-                        Spacer(Modifier.width(16.dp))
-                    }
-
-                    Spacer(Modifier.height(24.dp))
-
-                    Column(
-                        modifier = Modifier
-                            .padding(horizontal = 16.dp)
-                            .fillMaxWidth()
-                            .border(
-                                brush = Brush.linearGradient(
-                                    colors = listOf(
-                                        Color.Transparent,
-                                        Color.White.copy(0.2f),
-                                        Color.Transparent
-                                    )
-                                ),
-                                width = 1.dp,
-                                shape = RoundedCornerShape(8.dp)
-                            )
-                            .background(
-                                color = Color(0x3378599A),
-                                shape = RoundedCornerShape(8.dp)
-                            )
-                    ) {
-                        Spacer(Modifier.height(16.dp))
-                        Text(
-                            modifier = Modifier.padding(horizontal = 12.dp),
-                            text = stringResource(R.string.introduction),
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = Color.White
-                        )
-                        Spacer(Modifier.height(12.dp))
-                        Column {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 12.dp)
-                            ) {
-                                TagItem(
-                                    text = stringResource(
-                                        R.string.gender_tag_format,
-                                        agent.gender
-                                    )
-                                )
-                            }
-                            Spacer(Modifier.height(8.dp))
+                            Spacer(Modifier.height(12.dp))
+                            AgentSpacerLine()
+                            Spacer(Modifier.height(10.dp))
                             Text(
                                 modifier = Modifier.padding(horizontal = 12.dp),
-                                text = agent.intro,
+                                text = stringResource(R.string.opening),
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color.White
+                            )
+                            Spacer(Modifier.height(12.dp))
+                            Text(
+                                modifier = Modifier.padding(horizontal = 12.dp),
+                                text = agent.opening,
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Light,
                                 color = Color.White,
                                 maxLines = 3,
                                 overflow = TextOverflow.Ellipsis,
                             )
+
+                            Spacer(Modifier.height(16.dp))
                         }
 
-                        Spacer(Modifier.height(12.dp))
-                        AgentSpacerLine()
-                        Spacer(Modifier.height(10.dp))
-                        Text(
-                            modifier = Modifier.padding(horizontal = 12.dp),
-                            text = stringResource(R.string.opening),
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = Color.White
-                        )
-                        Spacer(Modifier.height(12.dp))
-                        Text(
-                            modifier = Modifier.padding(horizontal = 12.dp),
-                            text = agent.opening,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Light,
-                            color = Color.White,
-                            maxLines = 3,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-
-                        Spacer(Modifier.height(16.dp))
-                    }
-
-                    Spacer(Modifier.height(60.dp))
+                        Spacer(Modifier.height(60.dp))
                     }
                 }
             }
@@ -307,52 +307,6 @@ internal fun AiAgentInfoScreen(
 }
 
 @Composable
-private fun FollowButton(
-    isFollowing: Boolean,
-    onClick: () -> Unit,
-) {
-    var lastClickTime by remember { mutableLongStateOf(0L) }
-
-    Box(
-        modifier = Modifier
-            .height(40.dp)
-            .width(98.dp)
-            .clip(RoundedCornerShape(20.dp))
-            .let { md ->
-                if (!isFollowing) {
-                    md.background(
-                        brush = Brush.horizontalGradient(
-                            colors = listOf(
-                                Color(0xFFE91E63),
-                                Color(0xFFFF9800)
-                            )
-                        ),
-                        shape = RoundedCornerShape(16.dp)
-                    )
-                } else {
-                    md.background(Color(0xFF2D213A))
-                }
-            }
-            .clickable {
-                val currentTime = System.currentTimeMillis()
-                if (AntiClick.isValidClick(lastClickTime)) {
-                    lastClickTime = currentTime
-                    onClick()
-                }
-            },
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = if (isFollowing) "Following" else "Follow",
-            color = Color.White,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Medium
-        )
-    }
-}
-
-
-@Composable
 private fun AgentSpacerLine() {
     Spacer(Modifier.height(4.dp))
     Box(
@@ -368,32 +322,6 @@ private fun AgentSpacerLine() {
     Spacer(Modifier.height(4.dp))
 }
 
-@Composable
-private fun TagItem(text: String) {
-    Box(
-        modifier = Modifier
-            .background(color = Color(0xff1C1523), shape = RoundedCornerShape(4.dp))
-            .border(
-                width = 1.dp,
-                brush = Brush.linearGradient(
-                    colors = listOf(
-                        Color.Transparent,
-                        Color.White.copy(0.09f),
-                        Color.Transparent
-                    )
-                ),
-                shape = RoundedCornerShape(4.dp)
-            )
-    ) {
-        Text(
-            modifier = Modifier.padding(horizontal = 6.dp, vertical = 5.dp),
-            text = text,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Light,
-            color = Color.White.copy(0.55f)
-        )
-    }
-}
 
 @Composable
 private fun BottomSheetContent(
