@@ -15,7 +15,6 @@ import com.ai.inty.beans.SysMsgItem
 import com.ai.inty.beans.TokenBean
 import com.ai.inty.beans.UserProfile
 import com.ai.inty.billing.BillingRepository
-import com.ai.inty.home.ActivityPageSubTab
 import com.ai.inty.net.IAgentApi
 import com.ai.inty.net.ICommonApi
 import com.ai.inty.net.IUserApi
@@ -86,9 +85,6 @@ class MainViewModel : BaseActivityViewModel() {
 
     private val _selectedTab = MutableStateFlow(HomeTabIndex.Chat)
     val selectedTab = _selectedTab.asStateFlow()
-
-    private val _selectedConversationsTab = MutableStateFlow(ActivityPageSubTab.TabMessage)
-    val selectedConversationsTab = _selectedConversationsTab.asStateFlow()
 
     private val _currentChatPageIndex = MutableStateFlow(0)
     val currentChatPageIndex = _currentChatPageIndex.asStateFlow()
@@ -356,9 +352,6 @@ class MainViewModel : BaseActivityViewModel() {
         chatViewModel.setAgentInfo(agentList.firstOrNull())
     }
 
-    fun onSelectConversationsTab(tab: ActivityPageSubTab) {
-        _selectedConversationsTab.value = tab
-    }
 
     fun updateCurrentChatPageIndex(index: Int) {
         _currentChatPageIndex.value = index

@@ -71,7 +71,6 @@ fun HomeScreen(
     viewModelFactory: ViewModelProvider.Factory,
 ) {
     val selectedTab = mainViewModel.selectedTab.collectAsState()
-    val selectedConversationsTab = mainViewModel.selectedConversationsTab.collectAsState()
     val context = LocalContext.current
 
     Scaffold(
@@ -92,7 +91,6 @@ fun HomeScreen(
     ) { innerPadding ->
         HomeContent(
             selectedTab = selectedTab.value,
-            selectedConversationsTab = selectedConversationsTab.value,
             mainViewModel = mainViewModel,
             chatViewModel = chatViewModel,
             viewModelFactory = viewModelFactory,
@@ -208,12 +206,11 @@ private fun handleTabSelection(
 @Composable
 private fun HomeContent(
     selectedTab: HomeTabIndex,
-    selectedConversationsTab: ActivityPageSubTab,
     mainViewModel: MainViewModel,
     chatViewModel: ChatViewModel,
     viewModelFactory: ViewModelProvider.Factory,
     context: Context,
-    innerPadding: androidx.compose.foundation.layout.PaddingValues,
+    innerPadding: PaddingValues,
 ) {
     when (selectedTab) {
         HomeTabIndex.Chat -> {
@@ -227,7 +224,6 @@ private fun HomeContent(
             ConversationsTabContent(
                 mainViewModel = mainViewModel,
                 chatViewModel = chatViewModel,
-                selectedConversationsTab = selectedConversationsTab,
                 context = context
             )
         }
@@ -283,7 +279,6 @@ private fun ChatTabContent(
 private fun ConversationsTabContent(
     mainViewModel: MainViewModel,
     chatViewModel: ChatViewModel,
-    selectedConversationsTab: ActivityPageSubTab,
     context: Context,
 ) {
     val conversations by chatViewModel.conversations.collectAsState()
@@ -292,12 +287,8 @@ private fun ConversationsTabContent(
 
     ActivityPage(
         modifier = Modifier,
-        selectedTab = selectedConversationsTab,
         conversations = conversations,
         lastSysMsg = sysMsgs.firstOrNull(),
-        onSelectTab = {
-            mainViewModel.onSelectConversationsTab(it)
-        },
         onClickConversationItem = { conversation ->
             chatViewModel.setConversationReaded(conversation)
             //从会话列表 跳转到聊天页面，
