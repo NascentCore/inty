@@ -22,7 +22,7 @@ async def test_crop_avatar_from_background():
     bucket_name, path = get_bucket_and_path_from_gcs_url(
         "https://storage.googleapis.com/yx-test/Screenshot_20250815_213911-cropped-avatar.png")
     bucket = storage.Client.from_service_account_json(
-        global_config_loaded_from_config_yaml.gcs.credentials
+        global_config_loaded_from_config_yaml.app.gcp_service_account_key
     ).bucket(bucket_name)
     try:
         bucket.blob(path).delete()

@@ -15,12 +15,10 @@ They differ in:
 This file is for the genai API.
 """
 
-from enum import StrEnum
-from typing import List
-from dataclasses import dataclass
 import json
 import os
-from typing import Optional
+from enum import StrEnum
+from typing import List, Optional
 
 import google.genai as genai
 from google.genai import types
@@ -28,7 +26,6 @@ from loguru import logger
 from pydantic import BaseModel, Field
 
 from app.core.config import global_config_loaded_from_config_yaml
-
 
 # Initialize Google Gen AI client with Vertex AI
 # The client will use the same credentials as configured for GCS
@@ -44,7 +41,9 @@ def get_genai_client():
             # This will use the same service account credentials as GCS
 
             # Set environment variable for proper authentication
-            credentials_path = global_config_loaded_from_config_yaml.gcs.credentials
+            credentials_path = (
+                global_config_loaded_from_config_yaml.app.gcp_service_account_key
+            )
             os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = credentials_path
 
             # Try to get project ID from credentials file

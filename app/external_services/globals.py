@@ -1,12 +1,10 @@
-from app.core.config import global_config_loaded_from_config_yaml
+from loguru import logger
 
+from app.core.config import global_config_loaded_from_config_yaml
 from app.external_services.android_publisher import create_android_publisher_service
 from app.external_services.google_play_service import GooglePlayService
 
-from loguru import logger
-
-
-service_account_key = global_config_loaded_from_config_yaml.google_play.service_account_key
+service_account_key = global_config_loaded_from_config_yaml.app.gcp_service_account_key
 debug = global_config_loaded_from_config_yaml.app.debug
 
 try:

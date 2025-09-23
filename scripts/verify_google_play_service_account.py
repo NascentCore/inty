@@ -10,13 +10,13 @@ Usage:
 """
 
 import json
-import sys
-import os
 import logging
-from pathlib import Path
-from typing import Dict, Any
-from datetime import datetime, timezone
+import os
+import sys
 import traceback
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any, Dict
 
 # Add the project root to the Python path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -147,7 +147,7 @@ class GooglePlayVerifier:
 
         # Check service account key
         service_account_key = (
-            global_config_loaded_from_config_yaml.google_play.service_account_key
+            global_config_loaded_from_config_yaml.app.gcp_service_account_key
         )
         if not service_account_key:
             config_result["service_account_key"] = {
@@ -238,7 +238,7 @@ class GooglePlayVerifier:
         try:
             # Get service account credentials
             service_account_key = (
-                global_config_loaded_from_config_yaml.google_play.service_account_key
+                global_config_loaded_from_config_yaml.app.gcp_service_account_key
             )
 
             if service_account_key.endswith(".json"):

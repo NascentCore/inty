@@ -1,22 +1,23 @@
 import tempfile
-import yaml
 from pathlib import Path
+
 import pytest
+import yaml
 
 from app.core.config import (
+    AgentConfig,
+    AppConfig,
+    Config,
+    DatabaseSettings,
+    ElevenLabsConfig,
+    EmbeddingConfig,
+    FirebaseConfig,
+    GCSConfig,
+    GoogleOAuthConfig,
+    GooglePlayConfig,
     LoggingConfig,
     SecurityConfig,
-    DatabaseSettings,
-    GoogleOAuthConfig,
     VerificationConfig,
-    AppConfig,
-    EmbeddingConfig,
-    AgentConfig,
-    GCSConfig,
-    FirebaseConfig,
-    GooglePlayConfig,
-    ElevenLabsConfig,
-    Config,
     load_config,
 )
 
@@ -333,9 +334,7 @@ class TestLoadConfig:
             assert config.database.db == "testdb"
             assert config.logging.level == "DEBUG"
             assert config.gcs.bucket == "test-bucket"
-            assert config.gcs.credentials == "test-credentials"
             assert config.firebase.service_account_path == "test-path"
-            assert config.google_play.service_account_key == "test-key"
             assert config.google_play.package_name == "com.test.app"
             assert config.elevenlabs.api_key == "test-key"
         finally:

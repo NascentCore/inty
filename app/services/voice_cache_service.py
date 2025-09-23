@@ -5,10 +5,10 @@
 
 import hashlib
 from datetime import datetime, timedelta
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Tuple
 
 from loguru import logger
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import func
 
@@ -32,9 +32,9 @@ class VoiceCacheService:
 
     async def get_cached_voice(
         self, db: AsyncSession, text: str, voice_id: str, model: str, language: str
-    ) -> Optional[str]:
+    ) -> Optional[Tuple[str, float]]:
         """
-        获取缓存的语音文件URL
+        获取缓存的语音文件URL和时长
 
         Args:
             db: 数据库会话
@@ -44,14 +44,19 @@ class VoiceCacheService:
             language: 语言
 
         Returns:
-            缓存的音频URL，如果不存在则返回None
+            缓存的音频URL和时长的元组，如果不存在则返回None
         """
         try:
             content_hash = self._generate_content_hash(text, voice_id, model, language)
 
-            # 查询缓存
+            # 查询缓存，使用 COALESCE 将 NULL duration 转换为 0.0
             result = await db.execute(
-                select(VoiceCache).where(
+                select(
+                    VoiceCache.audio_url,
+                    # 保持兼容性；coalesce 返回参数列表中第一个非 NULL 的值。
+                    # TODO：清除掉 func.coalesce，填充 duration 值到数据库
+                    func.coalesce(VoiceCache.duration, 0.0).label("duration"),
+                ).where(
                     VoiceCache.content_hash == content_hash,
                     VoiceCache.is_active == True,
                 )
@@ -74,7 +79,7 @@ class VoiceCacheService:
                         )
                     )
 
-                    return cache_entry.audio_url
+                    return (cache_entry.audio_url, cache_entry.duration)
                 else:
                     # 文件不存在，标记为无效（使用独立事务）
                     try:
@@ -99,6 +104,7 @@ class VoiceCacheService:
         model: str,
         language: str,
         audio_url: str,
+        duration: float,
         file_size: int = 0,
     ) -> bool:
         """
@@ -111,6 +117,7 @@ class VoiceCacheService:
             model: 模型名称
             language: 语言
             audio_url: 音频文件URL
+            duration: 音频时长（秒）
             file_size: 文件大小
 
         Returns:
@@ -122,11 +129,18 @@ class VoiceCacheService:
 
             async with AsyncSessionLocal() as db_session:
                 return await self._save_voice_cache_impl(
-                    db_session, text, voice_id, model, language, audio_url, file_size
+                    db_session,
+                    text,
+                    voice_id,
+                    model,
+                    language,
+                    audio_url,
+                    duration,
+                    file_size,
                 )
         else:
             return await self._save_voice_cache_impl(
-                db, text, voice_id, model, language, audio_url, file_size
+                db, text, voice_id, model, language, audio_url, duration, file_size
             )
 
     async def _save_voice_cache_impl(
@@ -137,6 +151,7 @@ class VoiceCacheService:
         model: str,
         language: str,
         audio_url: str,
+        duration: float,
         file_size: int = 0,
     ) -> bool:
         """
@@ -156,6 +171,7 @@ class VoiceCacheService:
             if existing_cache:
                 # 更新现有缓存
                 existing_cache.audio_url = audio_url
+                existing_cache.duration = duration
                 existing_cache.file_size = file_size
                 existing_cache.is_active = True
                 existing_cache.last_accessed = datetime.now()
@@ -170,6 +186,7 @@ class VoiceCacheService:
                     model=model,
                     language=language,
                     audio_url=audio_url,
+                    duration=duration,
                     file_size=file_size,
                     hit_count=0,
                 )

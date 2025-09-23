@@ -255,7 +255,9 @@ def main():
         return
     else:
         bucket_name = global_config_loaded_from_config_yaml.gcs.bucket
-        credentials_path = global_config_loaded_from_config_yaml.gcs.credentials
+        credentials_path = (
+            global_config_loaded_from_config_yaml.app.gcp_service_account_key
+        )
         logger.info(f"GCS bucket: {bucket_name}")
         logger.info(f"GCS credentials: {credentials_path}")
 
