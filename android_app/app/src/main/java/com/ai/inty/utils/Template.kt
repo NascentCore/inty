@@ -46,9 +46,16 @@ object TemplateRenderer {
         // 替换所有匹配的变量
         result = pattern.replace(result) { matchResult ->
             val variableName = matchResult.groupValues[1].trim()
-            val defaultValue = matchResult.groupValues[2].trim()
+val defaultValue = matchResult.groupValues[2]
+
             
-            variables[variableName]?.toString() ?: defaultValue.ifEmpty { matchResult.value }
+// 如果变量存在，使用变量值；否则使用默认值（即使是空字符串）
+if (variables.containsKey(variableName)) {
+    variables[variableName]?.toString() ?: ""
+} else {
+    defaultValue
+}
+
         }
         
         return result
