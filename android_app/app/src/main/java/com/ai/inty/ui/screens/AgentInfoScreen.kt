@@ -217,8 +217,17 @@ internal fun AiAgentInfoScreen(
                             Spacer(Modifier.height(12.dp))
                             Column {
                                 // 使用智能 Tags 布局
+                                val gender = runCatching {
+                                    val tmpGender = agent.gender.lowercase()
+                                    tmpGender.replaceFirst(
+                                        tmpGender.first(),
+                                        tmpGender.first().uppercase().first()
+                                    )
+                                }.getOrNull() ?: ""
+
                                 val agentTags = mutableListOf(
-                                    stringResource(R.string.gender_tag_format, agent.gender)
+                                    //FEMALE/MALE转化为Female/Male
+                                    stringResource(R.string.gender_tag_format, gender)
                                 )
                                 //取10个即可，避免太多，因为设计也只需要显示一行
                                 agent.tags?.take(10)?.forEach { tag ->
