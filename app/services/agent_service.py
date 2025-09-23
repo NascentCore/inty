@@ -11,6 +11,10 @@ from sqlalchemy.orm import selectinload
 
 from app import models, schemas
 from app.core.agent.agent import agent_manager
+from app.core.agent.prompt_template import (
+    has_variable_name,
+    render_prompt_jinja2_template,
+)
 from app.core.config import global_config_loaded_from_config_yaml
 from app.external_services.gcs import (
     append_filename_suffix,
@@ -37,6 +41,11 @@ async def generate_agent_opening_voice(
         logger.debug(f"Agent {agent.id} 没有开场白文本，跳过语音生成")
         return None
 
+    opening = agent.opening
+    if has_variable_name(opening):
+        # 将角色名字替换为实际字符，user 则替换为 you（假设英文）。
+        opening = render_prompt_jinja2_template(opening, char=agent.name, user="you")
+
     # 确定使用的voice_id：优先使用agent的voice_id，否则使用配置文件默认值
     voice_id_to_use = (
         agent.voice_id or global_config_loaded_from_config_yaml.elevenlabs.voice_id
@@ -54,7 +63,7 @@ async def generate_agent_opening_voice(
 
     # 生成开场白语音
     voice_result = await voice_service.generate_voice(
-        text=agent.opening, voice_id=voice_id_to_use
+        text=opening, voice_id=voice_id_to_use
     )
 
     if not voice_result:
@@ -727,6 +736,11 @@ async def create_agent(
 
         # 异步生成开场白语音（不阻塞Agent创建）
         try:
+            # TODO：https://github.com/NascentCore/inty/issues/542
+            # 生成的开场语音中是包含变量名，这种场景下只能替换 agent 名字
+            # 比如 “你好，我是 {{ char }}，很高兴认识你”
+            # 如果出现了用户的名字，则无法静态生成。
+            # TODO：考虑在用户打开时再进行生成，这样用户看到的信息是不同的。
             await generate_agent_opening_voice(db_agent, db)
         except Exception as e:
             logger.warning(
@@ -910,6 +924,10 @@ async def update_agent(
         # 如果开场白文本或语音ID发生变化，重新生成语音
         if should_regenerate_voice:
             try:
+                # TODO：https://github.com/NascentCore/inty/issues/542
+                # 生成的开场语音中是包含变量名，这种场景下只能替换 agent 名字
+                # 比如 “你好，我是 {{ char }}，很高兴认识你”
+                # 如果出现了用户的名字，则无法静态生成。
                 await generate_agent_opening_voice(db_agent, db)
             except Exception as e:
                 logger.warning(f"Agent {db_agent.id} 更新后语音重新生成失败: {str(e)}")

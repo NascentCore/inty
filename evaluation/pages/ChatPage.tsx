@@ -843,9 +843,15 @@ export const ChatPage: React.FC = () => {
                             <div>
                               <Text
                                 type="secondary"
-                                style={{ fontSize: "12px", lineHeight: "1.4" }}
+                                style={{
+                                  fontSize: "12px",
+                                  lineHeight: "1.4",
+                                  whiteSpace: "pre-wrap",
+                                  wordBreak: "break-word",
+                                  display: "block"
+                                }}
                               >
-                                {agent.description}
+                                {agent.intro}
                               </Text>
                               <div style={{ marginTop: 4 }}>
                                 {agent.gender && (
@@ -895,8 +901,13 @@ export const ChatPage: React.FC = () => {
                     <div>
                       <Text strong>{selectedAgent.name}</Text>
                       <br />
-                      <Text type="secondary" style={{ fontSize: "12px" }}>
-                        {selectedAgent.description}
+                      <Text type="secondary" style={{ 
+                        fontSize: "12px",
+                        whiteSpace: "pre-wrap",
+                        wordBreak: "break-word",
+                        display: "block"
+                      }}>
+                        {selectedAgent.intro}
                       </Text>
                     </div>
                   </Space>
@@ -993,6 +1004,47 @@ export const ChatPage: React.FC = () => {
                     backgroundBlendMode: "multiply", // Blend mode for better visibility
                   }}
                 >
+                  {/* 角色介绍卡片 - 只在聊天开始时显示 */}
+                  {selectedAgent?.intro && messages.length === 0 && (
+                    <Card
+                      size="small"
+                      style={{
+                        marginBottom: "16px",
+                        backgroundColor: "rgba(255, 255, 255, 0.95)",
+                        border: "1px solid #e8f4fd",
+                        borderRadius: "12px",
+                        boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
+                      }}
+                      bodyStyle={{
+                        padding: "16px",
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "flex-start", gap: "12px" }}>
+                        <AvatarDisplay
+                          agent={selectedAgent!}
+                          size={40}
+                        />
+                        <div style={{ flex: 1 }}>
+                          <Text strong style={{ fontSize: "16px", color: "#1890ff" }}>
+                            {selectedAgent.name}
+                          </Text>
+                          <div style={{ marginTop: "8px" }}>
+                            <Text style={{
+                              fontSize: "14px", 
+                              lineHeight: "1.6",
+                              color: "#666",
+                              whiteSpace: "pre-wrap",
+                              wordBreak: "break-word",
+                              display: "block"
+                            }}>
+                              {selectedAgent.intro}
+                            </Text>
+                          </div>
+                        </div>
+                      </div>
+                    </Card>
+                  )}
+
                   {messages.length > 0 && (
                     <List
                       dataSource={messages}
@@ -1298,7 +1350,7 @@ export const ChatPage: React.FC = () => {
                             />
                           ) : (
                             <AvatarDisplay
-                              agent={selectedAgent}
+                                agent={selectedAgent!}
                               size={32}
                             />
                           )
