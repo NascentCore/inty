@@ -74,9 +74,7 @@ class VoiceCacheService:
                         )
                     )
 
-                    # 由于缓存中没有存储时长信息，返回默认值0.0
-                    # TODO: 后续可以考虑在VoiceCache模型中添加duration字段
-                    return (cache_entry.audio_url, 0.0)
+                    return (cache_entry.audio_url, cache_entry.duration)
                 else:
                     # 文件不存在，标记为无效（使用独立事务）
                     try:
@@ -101,6 +99,7 @@ class VoiceCacheService:
         model: str,
         language: str,
         audio_url: str,
+        duration: float,
         file_size: int = 0,
     ) -> bool:
         """
@@ -113,6 +112,7 @@ class VoiceCacheService:
             model: 模型名称
             language: 语言
             audio_url: 音频文件URL
+            duration: 音频时长（秒）
             file_size: 文件大小
 
         Returns:
@@ -124,11 +124,18 @@ class VoiceCacheService:
 
             async with AsyncSessionLocal() as db_session:
                 return await self._save_voice_cache_impl(
-                    db_session, text, voice_id, model, language, audio_url, file_size
+                    db_session,
+                    text,
+                    voice_id,
+                    model,
+                    language,
+                    audio_url,
+                    duration,
+                    file_size,
                 )
         else:
             return await self._save_voice_cache_impl(
-                db, text, voice_id, model, language, audio_url, file_size
+                db, text, voice_id, model, language, audio_url, duration, file_size
             )
 
     async def _save_voice_cache_impl(
@@ -139,6 +146,7 @@ class VoiceCacheService:
         model: str,
         language: str,
         audio_url: str,
+        duration: float,
         file_size: int = 0,
     ) -> bool:
         """
@@ -158,6 +166,7 @@ class VoiceCacheService:
             if existing_cache:
                 # 更新现有缓存
                 existing_cache.audio_url = audio_url
+                existing_cache.duration = duration
                 existing_cache.file_size = file_size
                 existing_cache.is_active = True
                 existing_cache.last_accessed = datetime.now()
@@ -172,6 +181,7 @@ class VoiceCacheService:
                     model=model,
                     language=language,
                     audio_url=audio_url,
+                    duration=duration,
                     file_size=file_size,
                     hit_count=0,
                 )

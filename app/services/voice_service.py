@@ -183,6 +183,7 @@ class VoiceService:
                         model,
                         language,
                         audio_url,
+                        duration,
                         len(audio_data),
                     )
                 )

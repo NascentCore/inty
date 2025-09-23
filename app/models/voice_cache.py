@@ -1,5 +1,5 @@
 import sqlalchemy
-from sqlalchemy import Boolean, Column, DateTime, Integer, String, Text
+from sqlalchemy import Boolean, Column, DateTime, Float, Integer, String, Text
 
 from app.models import Base
 
@@ -16,6 +16,7 @@ class VoiceCache(Base):
     model = Column(String, nullable=False)  # 模型名称
     language = Column(String, nullable=False)  # 语言
     audio_url = Column(String, nullable=False)  # 音频文件URL
+    duration = Column(Float, nullable=False, default=0.0)  # 音频时长（秒）
     file_size = Column(Integer, default=0)  # 文件大小（字节）
     hit_count = Column(Integer, default=0)  # 缓存命中次数
     last_accessed = Column(
