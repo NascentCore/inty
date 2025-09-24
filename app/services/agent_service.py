@@ -25,7 +25,7 @@ from app.models.agent import AgentVisibility
 from app.models.associations import agent_followers
 from app.schemas.agent import AgentSortOption
 from app.services.cache_service import cache_service
-from app.services.voice_service import VoiceService
+from app.services.voice_service import GENDER_VOICE_MAPPING, VoiceService
 from app.utils.crop_avatar import CROPPED_AVATAR_FILENAME_SUFFIX, crop_avatar
 from app.utils.image import ImageFormat, get_jpg_bytes_from_pil_image
 
@@ -45,18 +45,11 @@ async def generate_agent_opening_voice(
         # 将角色名字替换为实际字符，user 则替换为 you（假设英文）。
         opening = render_prompt_jinja2_template(opening, char=agent.name, user="you")
 
-    # 性别到音色ID的映射
-    gender_voice_mapping = {
-        "MALE": "rHWSYoq8UIVOYIBKMryp",
-        "FEMALE": "4tRn1lSkEn13EVTuqb0g",
-        "OTHER": "O7p2vmz2iEYgMXxkbsif",
-    }
-
     # 确定使用的voice_id：优先使用agent的voice_id，否则根据性别使用默认值
     voice_id_to_use = agent.voice_id
     if not voice_id_to_use:
         # 根据性别选择默认音色ID
-        voice_id_to_use = gender_voice_mapping.get(agent.gender.value)
+        voice_id_to_use = GENDER_VOICE_MAPPING.get(agent.gender.value)
         if not voice_id_to_use:
             logger.debug(
                 f"Agent {agent.id} 性别 {agent.gender.value} 没有对应的默认音色ID，跳过语音生成"
@@ -205,6 +198,7 @@ async def get_agent_for_chat(db: AsyncSession, agent_id: str) -> Optional[dict]:
         query = select(
             models.Agent.id,
             models.Agent.name,
+            models.Agent.gender,
             models.Agent.settings,
             models.Agent.main_prompt,
             models.Agent.mode_prompt,
@@ -233,21 +227,22 @@ async def get_agent_for_chat(db: AsyncSession, agent_id: str) -> Optional[dict]:
         agent_data = {
             "id": row[0],
             "name": row[1] or f"Agent_{row[0][:8]}",
-            "settings": row[2],
-            "main_prompt": row[3] or "",
-            "mode_prompt": row[4] or "",
-            "personality": row[5] or "",
-            "scenario": row[6] or "",
-            "message_example": row[7] or "",
-            "creator_notes": row[8] or "",
-            "tags": row[9] or [],
-            "character_version": row[10] or "1.0",
-            "extensions": row[11] or {},
-            "avatar": row[12],
-            "opening": row[13],
-            "voice_id": row[14],
-            "created_at": row[15],
-            "updated_at": row[16],
+            "gender": row[2].value if row[2] else None,
+            "settings": row[3],
+            "main_prompt": row[4] or "",
+            "mode_prompt": row[5] or "",
+            "personality": row[6] or "",
+            "scenario": row[7] or "",
+            "message_example": row[8] or "",
+            "creator_notes": row[9] or "",
+            "tags": row[10] or [],
+            "character_version": row[11] or "1.0",
+            "extensions": row[12] or {},
+            "avatar": row[13],
+            "opening": row[14],
+            "voice_id": row[15],
+            "created_at": row[16],
+            "updated_at": row[17],
             "_complete_data": True,  # 标记为完整数据
         }
 

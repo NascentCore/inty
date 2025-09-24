@@ -10,15 +10,21 @@ import io
 import re
 from typing import Any, Dict, List, Optional, Tuple
 
-from mutagen.mp3 import MP3
-
-from elevenlabs.client import ElevenLabs
 from elevenlabs import VoiceSettings
+from elevenlabs.client import ElevenLabs
 from loguru import logger
+from mutagen.mp3 import MP3
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import global_config_loaded_from_config_yaml
 from app.services.gcs_service import GCSService
+
+# 性别到音色ID的映射
+GENDER_VOICE_MAPPING = {
+    "MALE": "rHWSYoq8UIVOYIBKMryp",
+    "FEMALE": "4tRn1lSkEn13EVTuqb0g",
+    "OTHER": "O7p2vmz2iEYgMXxkbsif",
+}
 
 
 class VoiceService:
@@ -69,16 +75,18 @@ class VoiceService:
         language: str = "zh",
         model: Optional[str] = None,
         db: Optional[AsyncSession] = None,
+        agent_gender: Optional[str] = None,
     ) -> Optional[Tuple[str, float]]:
         """
         生成语音并上传到GCS
 
         Args:
             text: 要转换的文本
-            voice_id: 语音ID，默认使用配置中的
+            voice_id: 语音ID，如果为None则根据agent_gender选择默认音色
             language: 语言代码
             model: 模型名称，默认使用配置中的
             db: 数据库会话，用于缓存查询
+            agent_gender: Agent性别，用于选择默认音色（MALE/FEMALE/OTHER）
 
         Returns:
             语音文件的GCS URL和音频时长(秒)的元组，失败返回None
@@ -109,8 +117,21 @@ class VoiceService:
             text = text[: self.config.max_text_length]
 
         try:
-            # 使用默认配置
-            voice_id = voice_id or self.config.voice_id
+            # 确定使用的voice_id
+            if not voice_id:
+                # 根据性别选择默认音色ID
+                voice_id = (
+                    GENDER_VOICE_MAPPING.get(agent_gender)
+                    if agent_gender
+                    else self.config.voice_id
+                )
+
+                if not voice_id:
+                    logger.warning(
+                        f"无法确定音色ID: agent_gender={agent_gender}, 配置文件voice_id={self.config.voice_id}"
+                    )
+                    return None
+
             model = model or self.config.model
 
             logger.debug(
@@ -141,7 +162,7 @@ class VoiceService:
             if not audio_result:
                 logger.error("ElevenLabs API返回空数据")
                 return None
-            
+
             audio_data, duration = audio_result
 
             logger.debug(
@@ -231,14 +252,16 @@ class VoiceService:
 
             # 调用官方SDK的convert_with_timestamps方法
             response = self.client.text_to_speech.convert_with_timestamps(**kwargs)
-            
+
             # 从base64解码音频数据
             audio_data = base64.b64decode(response.audio_base_64)
-            
+
             # 计算音频时长
             duration = self._calculate_audio_duration(audio_data)
-            
-            logger.debug(f"ElevenLabs API调用成功，音频大小: {len(audio_data)} bytes, 时长: {duration:.2f}秒")
+
+            logger.debug(
+                f"ElevenLabs API调用成功，音频大小: {len(audio_data)} bytes, 时长: {duration:.2f}秒"
+            )
             return (audio_data, duration)
 
         except Exception as e:
@@ -262,10 +285,10 @@ class VoiceService:
     def _calculate_audio_duration(self, audio_data: bytes) -> float:
         """
         计算音频数据的时长
-        
+
         Args:
             audio_data: 音频字节数据
-            
+
         Returns:
             音频时长（秒）
         """
@@ -302,21 +325,21 @@ class VoiceService:
         """
         all_voices = []
         actual_page_size = page_size or 10
-        
+
         try:
             # 1. 获取用户音色和预置音色
             regular_voices = await self._search_regular_voices(
                 search, actual_page_size, voice_type, category
             )
             all_voices.extend(regular_voices)
-            
+
             # 2. 获取共享音色（Explore页面）
             if include_shared:
                 shared_voices = await self._search_shared_voices(
                     search, actual_page_size, voice_type=voice_type, category=category
                 )
                 all_voices.extend(shared_voices)
-            
+
             # 3. 去重（基于voice_id）
             seen_voice_ids = set()
             unique_voices = []
@@ -325,13 +348,19 @@ class VoiceService:
                 if voice_id and voice_id not in seen_voice_ids:
                     seen_voice_ids.add(voice_id)
                     unique_voices.append(voice)
-            
+
             # 4. 限制返回数量
             if page_size:
                 unique_voices = unique_voices[:page_size]
-            
-            shared_count = len(shared_voices) if include_shared and 'shared_voices' in locals() else 0
-            logger.debug(f"获取到音色总数: {len(unique_voices)} (常规: {len(regular_voices)}, 共享: {shared_count})")
+
+            shared_count = (
+                len(shared_voices)
+                if include_shared and "shared_voices" in locals()
+                else 0
+            )
+            logger.debug(
+                f"获取到音色总数: {len(unique_voices)} (常规: {len(regular_voices)}, 共享: {shared_count})"
+            )
             return unique_voices
 
         except Exception as e:
@@ -387,19 +416,16 @@ class VoiceService:
             return []
 
     async def _search_shared_voices(
-        self,
-        search: Optional[str] = None,
-        page_size: int = 30,
-        **kwargs
+        self, search: Optional[str] = None, page_size: int = 30, **kwargs
     ) -> List[Dict[str, Any]]:
         """
         搜索共享音色（Explore页面的音色）
-        
+
         Args:
             search: 搜索关键词（支持音色名称和voice_id）
             page_size: 每页结果数，最大100
             **kwargs: 其他搜索参数
-            
+
         Returns:
             共享音色列表
         """
@@ -410,31 +436,31 @@ class VoiceService:
                 "page_size": min(page_size, 100),  # API限制最大100
                 "sort": "created_date",  # 按创建时间排序
             }
-            
+
             # 添加其他搜索参数
             if "voice_type" in kwargs:
                 search_params["category"] = kwargs["voice_type"]
             if "category" in kwargs:
                 search_params["category"] = kwargs["category"]
-                
+
             # 移除None值
             search_params = {k: v for k, v in search_params.items() if v is not None}
-            
+
             logger.debug(f"搜索共享音色，参数: {search_params}")
-            
+
             # 调用 ElevenLabs get_shared API
             voices_response = self.client.voices.get_shared(**search_params)
-            
+
             # 转换为字典格式并添加来源标识
             voices_list = []
             for voice in voices_response.voices:
                 voice_dict = voice.model_dump()
                 voice_dict["source"] = "shared"  # 标记为共享音色
                 voices_list.append(voice_dict)
-            
+
             logger.debug(f"获取到 {len(voices_list)} 个共享音色")
             return voices_list
-            
+
         except Exception as e:
             logger.error(f"搜索共享音色异常: {str(e)}")
             logger.exception("搜索共享音色异常详细信息:")
@@ -460,23 +486,25 @@ class VoiceService:
             return voice_dict
         except Exception as e:
             logger.debug(f"从常规音色中获取 {voice_id} 失败: {str(e)}")
-        
+
         try:
             # 2. 如果常规音色中没有，尝试从共享音色中搜索
             logger.debug(f"尝试从共享音色中搜索 voice_id: {voice_id}")
-            shared_voices = await self._search_shared_voices(search=voice_id, page_size=50)
-            
+            shared_voices = await self._search_shared_voices(
+                search=voice_id, page_size=50
+            )
+
             # 在搜索结果中查找精确匹配的voice_id
             for voice in shared_voices:
                 if voice.get("voice_id") == voice_id:
                     logger.debug(f"从共享音色中找到 voice_id: {voice_id}")
                     return voice
-            
+
             logger.debug(f"在共享音色中也未找到 voice_id: {voice_id}")
-            
+
         except Exception as e:
             logger.error(f"从共享音色中搜索 {voice_id} 异常: {str(e)}")
-        
+
         logger.warning(f"无法找到音色信息，voice_id: {voice_id}")
         return None
 

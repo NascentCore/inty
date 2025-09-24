@@ -8,6 +8,7 @@ from typing import Any, List, Optional, Union
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from langchain_core.messages import HumanMessage
+from loguru import logger
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -25,9 +26,8 @@ from app.services.chat_service import generate_session_id
 from app.services.global_services import subscription_service
 from app.services.voice_service import voice_service
 
-from loguru import logger
-
 router = APIRouter(prefix="/chat", route_class=LoggerRoute)
+
 
 @router.post(
     "/completions/{agent_id}",
@@ -220,10 +220,13 @@ async def agent_chat_completions(
                     voice_id=agent_voice_id,
                     language=request.language,
                     db=db,
+                    agent_gender=agent_data.get("gender"),
                 )
                 if voice_result:
                     audio_url, audio_duration = voice_result
-                    logger.debug(f"语音自动生成成功: {audio_url}, 时长: {audio_duration:.2f}秒")
+                    logger.debug(
+                        f"语音自动生成成功: {audio_url}, 时长: {audio_duration:.2f}秒"
+                    )
             else:
                 logger.debug("语音未启用，跳过语音生成")
 
@@ -251,7 +254,9 @@ async def agent_chat_completions(
 
         # 获取最新AI消息的完整信息
         try:
-            latest_message_info = await chat_history_service.get_latest_ai_message_info(db, session_id)
+            latest_message_info = await chat_history_service.get_latest_ai_message_info(
+                db, session_id
+            )
         except Exception as e:
             logger.warning(f"获取最新消息信息失败: {str(e)}")
             latest_message_info = None
@@ -274,7 +279,7 @@ async def agent_chat_completions(
             # 如果获取失败，至少添加生成的语音URL
             if audio_url:
                 message["audio_url"] = audio_url
-                
+
         if audio_url or (latest_message_info and latest_message_info.get("audio_url")):
             logger.debug(f"响应包含语音URL: {message.get('audio_url')}")
 
