@@ -55,7 +55,6 @@ import com.ai.inty.base.IntyImage
 import com.ai.inty.base.noRippleClickable
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.ui.components.SmartTagsLayout
-import com.inty.utils.log.EasyLog
 import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
 
@@ -224,12 +223,11 @@ fun ExplorePage(
             ) {
                 runCatching {
                     if (deduplicatedAgents.isNotEmpty()) {
-                        listDup(deduplicatedAgents)
                         // 使用组合 key 策略，确保唯一性同时保持 LazyList 复用机制
                         // 当 agent.id 重复时，使用 index 作为后备方案
                         itemsIndexed(
                             items = deduplicatedAgents,
-                            key = { index, agent -> 
+                            key = { index, agent ->
                                 // 优先使用 agent.id，如果为空则使用 index
                                 agent.id.ifEmpty { "agent_$index" }
                             }
@@ -342,51 +340,6 @@ fun CharacterCard(
             if (filteredTags.isNotEmpty()) {
                 SmartTagsLayout(tags = filteredTags, isCardTag = true)
             }
-        }
-    }
-}
-
-
-private fun listDup(agents: List<AgentInfo>) {
-    if (agents.isEmpty()) {
-        EasyLog.log("Explore测试，listDup: agents列表为空", EasyLog.DEBUG)
-        return
-    }
-
-    // 用于存储已见过的组合，key为"name|id|avatar"的组合
-    val seenCombinations = mutableSetOf<String>()
-    val duplicateItems = mutableListOf<AgentInfo>()
-
-    agents.forEach { agent ->
-        // 创建唯一标识符：name|id|avatar
-        val combination = "${agent.name}|${agent.id}|${agent.avatar}"
-
-        if (seenCombinations.contains(combination)) {
-            // 发现重复项
-            duplicateItems.add(agent)
-            EasyLog.log(
-                "Explore测试，发现重复的Agent: name=${agent.name}, id=${agent.id}, avatar=${agent.avatar}",
-                EasyLog.WARN
-            )
-        } else {
-            seenCombinations.add(combination)
-        }
-    }
-
-    // 输出统计信息
-    EasyLog.log(
-        "Explore测试，listDup统计: 总数量=${agents.size}, 重复数量=${duplicateItems.size}, 唯一数量=${agents.size - duplicateItems.size}",
-        EasyLog.INFO
-    )
-
-    // 如果有重复项，输出详细信息
-    if (duplicateItems.isNotEmpty()) {
-        EasyLog.log("Explore测试，重复项详细信息:", EasyLog.WARN)
-        duplicateItems.forEachIndexed { index, agent ->
-            EasyLog.log(
-                "Explore测试，重复项${index + 1}: name='${agent.name}', id='${agent.id}', avatar='${agent.avatar}'",
-                EasyLog.WARN
-            )
         }
     }
 }
