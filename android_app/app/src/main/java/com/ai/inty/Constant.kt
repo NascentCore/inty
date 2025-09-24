@@ -36,5 +36,10 @@ class Constant {
         const val ROUTE_SUBSCRIPTION_MANAGEMENT = "${ROUTE_HOME_URL}subscription_management"
 
         const val ACTION_USER_PROFILE_CHANGED = "ACTION_USER_PROFILE_CHANGED"
+
+        // 用来作为通用的指代词来指代用户，用来在某些场景下在模版中指代人类用户 {{ user }}。
+        // 比如为用户提供描述，这里用户并不希望代入自己的名字，就应该用 you 来替代。
+        // TODO：如果 {{ user }} 是首字母，则需要首字母大写。
+        const val USER_YOU = "you"
     }
 }
