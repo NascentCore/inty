@@ -52,20 +52,39 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
   const [voices, setVoices] = useState<Voice[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [sourceFilter, setSourceFilter] = useState<string>("all");
   const [expanded, setExpanded] = useState(false);
   const [selectedVoiceInfo, setSelectedVoiceInfo] = useState<Voice | null>(null);
 
   // 加载音色列表
-  const loadVoices = useCallback(async (forceRefresh = false, search = "", category = "all") => {
+  const loadVoices = useCallback(async (forceRefresh = false, search = "", source = "all") => {
     setLoading(true);
     try {
-      const params: any = {};
+      const params: any = {
+        page_size: 50  // 设置页面大小为50
+      };
       if (search) params.search = search;
-      if (category !== "all") params.category = category;
+      // 注意：这里不传递source参数到后端，因为后端API不支持source筛选
+      // 我们在前端进行source筛选
       
       const voiceList = await api.voices.listVoices(params);
-      setVoices(voiceList || []);
+      let filteredVoices = voiceList || [];
+      
+      // 前端source筛选
+      if (source !== "all") {
+        filteredVoices = filteredVoices.filter(voice => {
+          if (source === "personal") {
+            // 个人音色：source为regular且不是预置音色
+            return voice.source === "regular" && voice.category !== "premade";
+          } else if (source === "preset") {
+            // 预置音色：source为regular且category为premade，或者是系统预置的音色
+            return voice.source === "regular" && (voice.category === "premade" || voice.category === "default");
+          }
+          return true;
+        });
+      }
+      
+      setVoices(filteredVoices);
       
       if (forceRefresh) {
         message.success("音色列表已刷新");
@@ -133,14 +152,14 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
         timeoutId = setTimeout(() => func(...args), delay);
       };
     };
-    return debounce((search: string, category: string) => {
-      loadVoices(false, search, category);
+    return debounce((search: string, source: string) => {
+      loadVoices(false, search, source);
     }, 500);
   }, [loadVoices]);
 
   // 初始加载
   useEffect(() => {
-    loadVoices(false, searchText, categoryFilter);
+    loadVoices(false, searchText, sourceFilter);
   }, []); // 只在组件挂载时加载一次
 
   // 当 value 变化时，立即显示基本信息并异步加载详细信息
@@ -164,8 +183,8 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
 
   // 搜索和筛选变化时的防抖处理
   useEffect(() => {
-    debouncedLoadVoices(searchText, categoryFilter);
-  }, [searchText, categoryFilter, debouncedLoadVoices]);
+    debouncedLoadVoices(searchText, sourceFilter);
+  }, [searchText, sourceFilter, debouncedLoadVoices]);
 
   // 获取当前选中的音色
   const selectedVoice = useMemo(() => {
@@ -177,15 +196,17 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
     return voices.find(voice => voice.voice_id === value);
   }, [voices, value, selectedVoiceInfo]);
 
-  // 获取音色分类列表
-  const categories = useMemo(() => {
-    const categorySet = new Set<string>();
+  // 获取音色来源统计
+  const sourceStats = useMemo(() => {
+    const stats = { personal: 0, preset: 0, total: voices.length };
     voices.forEach(voice => {
-      if (voice.category) {
-        categorySet.add(voice.category);
+      if (voice.source === "regular" && voice.category !== "premade") {
+        stats.personal++;
+      } else if (voice.source === "regular" && (voice.category === "premade" || voice.category === "default")) {
+        stats.preset++;
       }
     });
-    return Array.from(categorySet).sort();
+    return stats;
   }, [voices]);
 
   // 选择音色
@@ -379,7 +400,7 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
       {/* 搜索和过滤控件 */}
       <div style={{ marginBottom: 16 }}>
         <Row gutter={[12, 12]} align="middle">
-          <Col span={10}>
+          <Col span={12}>
             <Search
               placeholder="搜索音色名称"
               allowClear
@@ -391,25 +412,22 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
           </Col>
           <Col span={8}>
             <Select
-              placeholder="选择分类"
+              placeholder="选择音色类型"
               style={{ width: '100%' }}
-              value={categoryFilter}
-              onChange={setCategoryFilter}
+              value={sourceFilter}
+              onChange={setSourceFilter}
               disabled={disabled}
             >
-              <Option value="all">全部分类</Option>
-              {categories.map(category => (
-                <Option key={category} value={category}>
-                  {category}
-                </Option>
-              ))}
+              <Option value="all">全部音色 ({sourceStats.total})</Option>
+              <Option value="personal">个人音色 ({sourceStats.personal})</Option>
+              <Option value="preset">预置音色 ({sourceStats.preset})</Option>
             </Select>
           </Col>
-          <Col span={6}>
+          <Col span={4}>
             <Space>
               <Button
                 icon={<ReloadOutlined />}
-                onClick={() => loadVoices(true, searchText, categoryFilter)}
+                onClick={() => loadVoices(true, searchText, sourceFilter)}
                 loading={loading}
                 disabled={disabled}
               >
