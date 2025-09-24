@@ -213,7 +213,7 @@ internal fun ProfilePage(
 
                     IntyImage(
                         modifier = Modifier.align(Alignment.CenterHorizontally),
-                        model = R.drawable.group2085655908
+                        model = R.drawable.img_content_empty
                     )
 
                     Spacer(Modifier.height(16.dp))

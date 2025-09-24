@@ -148,7 +148,7 @@ private fun VipCenterTopBar(onClose: () -> Unit) {
 private fun VipCenterHeader() {
     Column(modifier = Modifier.padding(start = 16.dp)) {
         Image(
-            painter = painterResource(R.drawable.img_heartmate_premium),
+            painter = painterResource(R.drawable.img_intellimate_premium),
             contentDescription = null,
             modifier = Modifier.size(278.dp, 32.dp)
         )

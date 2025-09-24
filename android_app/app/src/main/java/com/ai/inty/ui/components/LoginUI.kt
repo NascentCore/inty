@@ -1,21 +1,17 @@
 package com.ai.inty.ui.components
 
-import android.content.Intent
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -35,12 +31,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.net.toUri
 
 import com.ai.inty.R
 import com.ai.inty.base.noRippleClickable
-import com.ai.inty.utils.TextStyleUtils
-import com.ai.inty.ui.components.PolicyRow
 
 /**
  * 登录页面关闭按钮组件
@@ -64,7 +57,7 @@ internal fun LoginCloseButton(onClose: () -> Unit) {
 internal fun LogoImage() {
     Image(
         modifier = Modifier.size(width = 239.dp, height = 190.dp),
-        painter = painterResource(R.drawable.group2085655930),
+        painter = painterResource(R.drawable.img_login_hi),
         contentScale = ContentScale.Crop,
         alignment = Alignment.TopCenter,
         contentDescription = ""

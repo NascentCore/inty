@@ -164,12 +164,11 @@ private fun LiteTagItem(text: String) {
         modifier = Modifier
             .background(color = Color(0xff1C1523), shape = RoundedCornerShape(4.dp))
             .border(
-                width = 1.dp,
-                brush = Brush.linearGradient(
+                width = .5.dp,
+                brush = Brush.horizontalGradient(
                     colors = listOf(
-                        Color.Transparent,
-                        Color.White.copy(0.09f),
-                        Color.Transparent
+                        Color(0xFF842BA7),
+                        Color(0xFF331141),
                     )
                 ),
                 shape = RoundedCornerShape(4.dp)
@@ -178,10 +177,10 @@ private fun LiteTagItem(text: String) {
         Text(
             modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
             text = text,
-            fontSize = 12.sp,
+            fontSize = 10.sp,
             lineHeight = 12.sp,
-            fontWeight = FontWeight.Light,
-            color = Color.White.copy(0.55f)
+            fontWeight = FontWeight.Normal,
+            color = Color(0x8CFFFFFF)
         )
     }
 }

@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -34,6 +35,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
@@ -45,6 +47,7 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.ai.inty.R
 import com.ai.inty.audio.AudioInfo
 import com.ai.inty.audio.OpeningPlayState
 import com.ai.inty.audio.VoicePlayer
@@ -394,10 +397,6 @@ fun AgentInfoChatCard(info: String) {
                 lineHeight = 20.sp,
                 color = Color.White,
                 fontWeight = FontWeight.Normal
-            ),
-            buttonStyle = TextStyle(
-                fontSize = 12.sp,
-                color = Color.White.copy(alpha = 0.8f)
             )
         )
     }
@@ -410,9 +409,6 @@ private fun ExpandableTextWithButton(
     modifier: Modifier = Modifier,
     collapsedMaxLines: Int = 3,
     textStyle: TextStyle = TextStyle.Default,
-    expandButtonText: String = "Expand",
-    collapseButtonText: String = "Collapse",
-    buttonStyle: TextStyle = TextStyle.Default
 ) {
     var isExpanded by remember { mutableStateOf(false) }
     var expandable by remember { mutableStateOf(false) }
@@ -425,7 +421,7 @@ private fun ExpandableTextWithButton(
             text = text,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = pd.dp),
+                .padding(end = pd.dp),
             style = textStyle,
             maxLines = if (isExpanded) Int.MAX_VALUE else collapsedMaxLines,
             overflow = TextOverflow.Ellipsis,
@@ -434,18 +430,23 @@ private fun ExpandableTextWithButton(
                     expandable = true
                 }
                 //文案过长，需要折叠的时候，才加上bottom的padding
-                pd = if (textLayoutResult.lineCount >= 3 && textLayoutResult.hasVisualOverflow) 12 else 0
+                pd =
+                    if (textLayoutResult.lineCount >= 3 && textLayoutResult.hasVisualOverflow) 15 else 0
             },
         )
         if (expandable) {
-            Text(
+            Icon(
+                painter = painterResource(
+                    if (isExpanded) R.drawable.ic_arrow_up else R.drawable.ic_arrow_down
+                ),
+                contentDescription = null,
                 modifier = Modifier
+                    .size(18.dp)
                     .align(Alignment.BottomEnd)
                     .noRippleClickable(onClick = {
                         isExpanded = isExpanded.not()
                     }),
-                text = if (isExpanded) collapseButtonText else expandButtonText,
-                style = buttonStyle
+                tint = Color.White
             )
         }
     }
