@@ -29,13 +29,13 @@ fun initImageLoader() {
     ImageLoader.Builder(context)
         .memoryCache {
             MemoryCache.Builder()
-                .maxSizePercent(context, 0.25)
+                .maxSizePercent(context, 0.4) // 增加内存缓存到 40%
                 .build()
         }
         .diskCache {
             DiskCache.Builder()
                 .directory(context.cacheDir.resolve("image_cache"))
-                .maxSizePercent(0.02)
+                .maxSizePercent(0.05) // 增加磁盘缓存到 5%
                 .build()
         }
         .build()
