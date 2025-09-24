@@ -109,7 +109,9 @@ async def recommend_agents(
         schemas.AgentSortOption.CREATED_DESC,
         description="Sort order: created_asc, created_desc, random, score_based_random",
     ),
-    sort_seed: str = Query("", description="Sort seed for deterministic random ordering"),
+    sort_seed: str = Query(
+        "", description="Sort seed for deterministic random ordering"
+    ),
     current_user: schemas.User = Depends(deps.get_current_active_user),
 ) -> Any:
     """
@@ -120,7 +122,7 @@ async def recommend_agents(
     - created_asc: Oldest first
     - random: Random order (uses sort_seed for deterministic results)
     - score_based_random: Score-based recommendation (6 high-score agents + 4 random agents)
-    
+
     For score_based_random algorithm:
     - Returns 6 agents with highest scores (5-star first, then 4-star, etc.)
     - Plus 4 randomly selected agents
@@ -316,9 +318,6 @@ async def update_agent(
     agent = await agent_service.get_agent(db, agent_id=agent_id)
     if not agent:
         raise HTTPException(status_code=404, detail="Agent not found")
-
-    if not agent.voice_id and not current_user.is_superuser:
-        raise HTTPException(status_code=403, detail="Permission denied")
 
     agent = await agent_service.update_agent(db, db_agent=agent, agent_in=agent_in)
     return agent
