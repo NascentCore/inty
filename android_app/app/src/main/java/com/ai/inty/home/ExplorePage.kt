@@ -77,6 +77,13 @@ fun ExplorePage(
     onLoadMore: () -> Unit = {},
     onRefresh: () -> Unit = {},
 ) {
+    // 对 agents 进行去重处理，确保没有重复的数据
+    val deduplicatedAgents = remember(agents) {
+        agents.distinctBy { agent ->
+            // 使用多个字段组合作为唯一标识，确保去重的准确性
+            "${agent.id}_${agent.name}_${agent.avatar}"
+        }
+    }
     // 下拉刷新状态
     var pullOffset by remember { mutableFloatStateOf(0f) }
     var isRefreshing by remember { mutableStateOf(false) }
@@ -192,20 +199,18 @@ fun ExplorePage(
                     val layoutInfo = gridState.layoutInfo
                     val totalItemsCount = layoutInfo.totalItemsCount
                     val lastVisibleItemIndex = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1
-                    
+
                     // 当最后一个可见项接近列表末尾时触发加载更多
                     totalItemsCount > 0 && lastVisibleItemIndex >= totalItemsCount - 3
                 }
             }
 
             // 触发加载更多，添加防抖机制
-            LaunchedEffect(reachedBottom, agents.size) {
-                if (reachedBottom && agents.isNotEmpty() && !isLoading) {
+            LaunchedEffect(reachedBottom, deduplicatedAgents.size) {
+                if (reachedBottom && deduplicatedAgents.isNotEmpty() && !isLoading) {
                     // 添加延迟，避免快速滚动时重复触发
                     delay(200)
-                    if (reachedBottom && !isLoading) {
-                        onLoadMore()
-                    }
+                    onLoadMore()
                 }
             }
 
@@ -218,10 +223,16 @@ fun ExplorePage(
                 verticalItemSpacing = 8.dp,
             ) {
                 runCatching {
-                    if (agents.isNotEmpty()) {
+                    if (deduplicatedAgents.isNotEmpty()) {
+                        listDup(deduplicatedAgents)
+                        // 使用组合 key 策略，确保唯一性同时保持 LazyList 复用机制
+                        // 当 agent.id 重复时，使用 index 作为后备方案
                         itemsIndexed(
-                            items = agents,
-                            key = { _, agent -> agent.id } // 使用稳定的 ID 作为 key
+                            items = deduplicatedAgents,
+                            key = { index, agent -> 
+                                // 优先使用 agent.id，如果为空则使用 index
+                                agent.id.ifEmpty { "agent_$index" }
+                            }
                         ) { _, agent ->
                             CharacterCard(
                                 modifier = Modifier
@@ -237,7 +248,7 @@ fun ExplorePage(
                 }.onFailure { it.printStackTrace() }
 
                 // 加载更多指示器
-                if (isLoading && agents.isNotEmpty()) {
+                if (isLoading && deduplicatedAgents.isNotEmpty()) {
                     item {
                         Box(
                             modifier = Modifier
@@ -257,13 +268,6 @@ fun ExplorePage(
                     Spacer(Modifier.height(16.dp))
                 }
             }
-        }
-    }
-
-    // 使用 LaunchedEffect 避免在每次重组时都执行重复检测
-    LaunchedEffect(agents.size) {
-        if (agents.isNotEmpty()) {
-            listDup(agents)
         }
     }
 }
@@ -289,7 +293,7 @@ fun CharacterCard(
             )
         )
     }
-    
+
     // 缓存过滤后的标签，避免每次重组时重新计算
     val filteredTags = remember(agentInfo.tags) {
         agentInfo.tags?.filterNotNull() ?: emptyList()
@@ -345,35 +349,44 @@ fun CharacterCard(
 
 private fun listDup(agents: List<AgentInfo>) {
     if (agents.isEmpty()) {
-        EasyLog.log("listDup: agents列表为空", EasyLog.DEBUG)
+        EasyLog.log("Explore测试，listDup: agents列表为空", EasyLog.DEBUG)
         return
     }
-    
+
     // 用于存储已见过的组合，key为"name|id|avatar"的组合
     val seenCombinations = mutableSetOf<String>()
     val duplicateItems = mutableListOf<AgentInfo>()
-    
+
     agents.forEach { agent ->
         // 创建唯一标识符：name|id|avatar
         val combination = "${agent.name}|${agent.id}|${agent.avatar}"
-        
+
         if (seenCombinations.contains(combination)) {
             // 发现重复项
             duplicateItems.add(agent)
-            EasyLog.log("发现重复的Agent: name=${agent.name}, id=${agent.id}, avatar=${agent.avatar}", EasyLog.WARN)
+            EasyLog.log(
+                "Explore测试，发现重复的Agent: name=${agent.name}, id=${agent.id}, avatar=${agent.avatar}",
+                EasyLog.WARN
+            )
         } else {
             seenCombinations.add(combination)
         }
     }
-    
+
     // 输出统计信息
-    EasyLog.log("listDup统计: 总数量=${agents.size}, 重复数量=${duplicateItems.size}, 唯一数量=${agents.size - duplicateItems.size}", EasyLog.INFO)
-    
+    EasyLog.log(
+        "Explore测试，listDup统计: 总数量=${agents.size}, 重复数量=${duplicateItems.size}, 唯一数量=${agents.size - duplicateItems.size}",
+        EasyLog.INFO
+    )
+
     // 如果有重复项，输出详细信息
     if (duplicateItems.isNotEmpty()) {
-        EasyLog.log("重复项详细信息:", EasyLog.WARN)
+        EasyLog.log("Explore测试，重复项详细信息:", EasyLog.WARN)
         duplicateItems.forEachIndexed { index, agent ->
-            EasyLog.log("重复项${index + 1}: name='${agent.name}', id='${agent.id}', avatar='${agent.avatar}'", EasyLog.WARN)
+            EasyLog.log(
+                "Explore测试，重复项${index + 1}: name='${agent.name}', id='${agent.id}', avatar='${agent.avatar}'",
+                EasyLog.WARN
+            )
         }
     }
 }
