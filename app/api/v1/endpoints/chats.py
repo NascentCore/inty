@@ -571,6 +571,7 @@ async def agent_chat_completions(
                         voice_id=agent_voice_id,
                         language=request.language,
                         db=db,
+                        agent_gender=agent_data.get("gender"),
                     )
                     if voice_result:
                         audio_url, audio_duration = voice_result
@@ -707,7 +708,11 @@ async def generate_message_voice(
         # 使用Agent的voice_id生成语音
         agent_voice_id = agent_data.get("voice_id")
         voice_result = await voice_service.generate_voice(
-            text=message_content, voice_id=agent_voice_id, language=language, db=db
+            text=message_content,
+            voice_id=agent_voice_id,
+            language=language,
+            db=db,
+            agent_gender=agent_data.get("gender"),
         )
 
         if not voice_result:
