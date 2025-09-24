@@ -18,4 +18,10 @@ def test_agent_intro():
     assert agent.intro == "Hello, I am {{ char }}"
     # 序列化时 @field_serializer 生效，得到替换后的内容
     serialized = agent.model_dump()
-    assert serialized["intro"] == "Hello, I am test"
+    assert (
+        serialized["intro"] == "Hello, I am test"
+    ), "model_dump 会触发 @field_serializer"
+    serialized_json = agent.model_dump_json()
+    assert (
+        '"intro":"Hello, I am test"' in serialized_json
+    ), "model_dump_json 会触发 @field_serializer"
