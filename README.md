@@ -343,3 +343,6 @@ docker run -p 8000:8000 -v $(pwd)/config.yaml:/app/config.yaml inty-backend
 * **Google Play Developer API** - 订阅管理
 * **Firebase Cloud Messaging** - 消息推送
 * **ElevenLabs API** - 高质量语音合成服务
+  * Gemini TTS: [pricing](https://cloud.google.com/text-to-speech/pricing?hl=en)
+    * 同类型的版本和层级 2.5-flash 语音价格按 1M token 计算是 $10（语音）$2.50（文字）
+    * [简单的预估语音生成成本是文字 40 倍](https://g.co/gemini/share/261be14cc60b)
