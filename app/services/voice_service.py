@@ -21,7 +21,7 @@ from app.services.gcs_service import GCSService
 
 # 性别到音色ID的映射
 GENDER_VOICE_MAPPING = {
-    "MALE": "rHWSYoq8UIVOYIBKMryp",
+    "MALE": "rHWSYoq8UlV0YIBKMryp",
     "FEMALE": "4tRn1lSkEn13EVTuqb0g",
     "OTHER": "O7p2vmz2iEYgMXxkbsif",
 }
