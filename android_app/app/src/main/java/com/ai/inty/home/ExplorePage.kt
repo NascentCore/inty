@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -76,8 +77,8 @@ fun ExplorePage(
         ImageSizeCache.init(context)
     }
 
-    // 预加载图片尺寸
-    LaunchedEffect(agents) {
+    // 预加载图片尺寸 - 立即执行，不等待 agents 变化
+    LaunchedEffect(agents.isNotEmpty()) {
         if (agents.isNotEmpty()) {
             val imageUrls = agents.mapNotNull { it.getChatBackground() }
             ImageSizeCache.preloadImageSizes(imageUrls)
@@ -128,7 +129,10 @@ fun ExplorePage(
                 modifier = Modifier.fillMaxSize()
             ) {
 
-                val gridState = rememberLazyStaggeredGridState()
+                val gridState = rememberLazyStaggeredGridState(
+                    initialFirstVisibleItemIndex = 0,
+                    initialFirstVisibleItemScrollOffset = 0
+                )
 
                 // 检测是否滚动到底部 - 使用更稳定的计算方式
                 val reachedBottom by remember {
@@ -215,7 +219,7 @@ fun CharacterCard(
     agentInfo: AgentInfo,
 ) {
     val density = LocalDensity.current
-    
+
     // 缓存渐变画笔，避免每次重组时重新创建
     val gradientBrush = remember {
         Brush.verticalGradient(
@@ -237,6 +241,10 @@ fun CharacterCard(
         agentInfo.getChatBackground()
     }
 
+    // 缓存文本内容，确保稳定显示
+    val agentName = remember(agentInfo.name) { agentInfo.name }
+    val agentIntro = remember(agentInfo.intro) { agentInfo.intro }
+
     // 动态计算卡片高度，基于图片宽高比
     val cardHeight = remember(imageUrl) {
         val heightPx = ImageSizeCache.getDisplayHeightPx(imageUrl)
@@ -249,31 +257,35 @@ fun CharacterCard(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(cardHeight)
+            .aspectRatio(.6f)
     ) {
-        // 使用 Shimmer 占位符
-        if (!imageLoaded) {
-            ShimmerPlaceholder(
-                modifier = Modifier.fillMaxSize(),
-                cornerRadius = 8.dp
+        // 背景图片层
+        Box(modifier = Modifier.fillMaxSize()) {
+            // 使用 Shimmer 占位符
+            if (!imageLoaded) {
+                ShimmerPlaceholder(
+                    modifier = Modifier.fillMaxSize(),
+                    cornerRadius = 8.dp
+                )
+            }
+
+            IntyImage(
+                modifier = Modifier
+                    .fillMaxSize(),
+                model = imageUrl,
+                contentScale = ContentScale.Crop,
+                placeholder = null, // 使用自定义的 Shimmer 占位符
+                error = null, // 错误时也使用 Shimmer
+                onSuccess = {
+                    imageLoaded = true
+                },
+                onError = {
+                    imageLoaded = false
+                }
             )
         }
-        
-        IntyImage(
-            modifier = Modifier
-                .fillMaxSize(),
-            model = imageUrl,
-            contentScale = ContentScale.Crop,
-            placeholder = null, // 使用自定义的 Shimmer 占位符
-            error = null, // 错误时也使用 Shimmer
-            onSuccess = {
-                imageLoaded = true
-            },
-            onError = {
-                imageLoaded = false
-            }
-        )
-        
+
+        // 文本内容层 - 立即显示，不依赖图片加载状态
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -284,7 +296,7 @@ fun CharacterCard(
         ) {
             Text(
                 modifier = Modifier,
-                text = agentInfo.name,
+                text = agentName,
                 fontSize = 14.sp,
                 lineHeight = 22.sp,
                 fontWeight = FontWeight.SemiBold,
@@ -293,7 +305,7 @@ fun CharacterCard(
 
             Text(
                 modifier = Modifier,
-                text = agentInfo.intro,
+                text = agentIntro,
                 fontSize = 12.sp,
                 lineHeight = 12.sp,
                 fontWeight = FontWeight.Normal,
@@ -301,8 +313,17 @@ fun CharacterCard(
                 maxLines = 3,
                 overflow = TextOverflow.Ellipsis
             )
+
             if (filteredTags.isNotEmpty()) {
-                SmartTagsLayout(tags = filteredTags, isCardTag = true)
+                Box(modifier = Modifier
+                    .fillMaxWidth()
+                    .height(16.dp)) {
+                    SmartTagsLayout(
+                        modifier = Modifier.matchParentSize(),
+                        tags = filteredTags,
+                        isCardTag = true
+                    )
+                }
             }
         }
     }

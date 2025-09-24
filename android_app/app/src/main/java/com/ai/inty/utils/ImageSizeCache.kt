@@ -76,7 +76,8 @@ object ImageSizeCache {
             return calculateDisplayHeightPx(cachedSize.x, cachedSize.y)
         }
         
-        // 返回默认高度
+        // 如果缓存中没有，尝试使用默认的宽高比计算
+        // 这样可以避免首次进入时显示固定高度
         return getDefaultHeightPx()
     }
     
