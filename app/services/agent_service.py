@@ -463,7 +463,9 @@ async def get_balanced_score_based_agents(
                 )
                 * 2
                 + func.abs(func.hashtext(func.concat(models.Agent.id, sort_seed))) % 100
-            ).desc()
+            ).desc(),
+            # 添加agent.id作为第二排序字段，确保排序稳定性，避免分页重复
+            models.Agent.id.asc()
         )
         .offset(offset)
         .limit(page_size)
