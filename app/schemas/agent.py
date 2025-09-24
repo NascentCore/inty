@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field, computed_field, field_serializer, field_validator
 
 from app.core.agent.prompt_template import (
-    has_variable_name,
+    has_template_variable,
     render_prompt_jinja2_template,
 )
 from app.models.agent import AgentStatus, AgentVisibility
@@ -257,7 +257,7 @@ class Agent(AgentInDB):
         """
         对intro字段进行变量替换，将 {{ char }} 替换为 agent.name
         """
-        if intro and has_variable_name(intro):
+        if intro and has_template_variable(intro):
             return render_prompt_jinja2_template(intro, char=self.name, user="")
         return intro
 

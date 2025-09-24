@@ -12,7 +12,7 @@ from sqlalchemy.orm import selectinload
 from app import models, schemas
 from app.core.agent.agent import agent_manager
 from app.core.agent.prompt_template import (
-    has_variable_name,
+    has_template_variable,
     render_prompt_jinja2_template,
 )
 from app.external_services.gcs import (
@@ -41,7 +41,7 @@ async def generate_agent_opening_voice(
         return None
 
     opening = agent.opening
-    if has_variable_name(opening):
+    if has_template_variable(opening):
         # 将角色名字替换为实际字符，user 则替换为 you（假设英文）。
         opening = render_prompt_jinja2_template(opening, char=agent.name, user="you")
 

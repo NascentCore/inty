@@ -8,7 +8,7 @@ from sqlalchemy import and_, desc, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.agent.prompt_template import (
-    has_variable_name,
+    has_template_variable,
     render_prompt_jinja2_template,
 )
 from app.core.config import global_config_loaded_from_config_yaml
@@ -93,7 +93,7 @@ async def add_agent_opening_message(
 ) -> None:
     """添加Agent开场白到聊天历史"""
     try:
-        if has_variable_name(opening_message):
+        if has_template_variable(opening_message):
             opening_message = render_prompt_jinja2_template(
                 opening_message, char=agent_name, user=user_name
             )
