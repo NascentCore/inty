@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.ai.inty.Constant
 import com.ai.inty.audio.AudioInfo
 import com.ai.inty.audio.OpeningPlayState
 import com.ai.inty.audio.VoicePlayer
@@ -386,7 +387,7 @@ fun AgentInfoChatCard(info: String) {
     val viewModel = viewModel<ChatViewModel>()
     val agentInfo by viewModel.agentInfo.collectAsState()
     
-    val renderedInfo = com.ai.inty.utils.renderAgentText(info, agentInfo!!, "")
+    val renderedInfo = com.ai.inty.utils.renderAgentText(info, agentInfo!!, Constant.USER_YOU)
     val str = buildAnnotatedString {
         withStyle(style = SpanStyle(fontWeight = FontWeight.SemiBold)) {
             append("Intro: ")
