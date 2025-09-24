@@ -305,7 +305,7 @@ class VoiceService:
     async def get_available_voices(
         self,
         search: Optional[str] = None,
-        page_size: Optional[int] = 10,
+        page_size: Optional[int] = None,
         voice_type: Optional[str] = None,
         category: Optional[str] = None,
         include_shared: bool = True,
@@ -324,7 +324,8 @@ class VoiceService:
             语音列表（合并了个人音色、预置音色和共享音色）
         """
         all_voices = []
-        actual_page_size = page_size or 10
+        # 如果没有指定page_size，获取所有音色；否则使用指定的page_size
+        actual_page_size = page_size if page_size is not None else 1000  # 使用足够大的数字获取所有音色
 
         try:
             # 1. 获取用户音色和预置音色
@@ -349,8 +350,8 @@ class VoiceService:
                     seen_voice_ids.add(voice_id)
                     unique_voices.append(voice)
 
-            # 4. 限制返回数量
-            if page_size:
+            # 4. 限制返回数量（只有明确指定page_size时才限制）
+            if page_size is not None and page_size > 0:
                 unique_voices = unique_voices[:page_size]
 
             shared_count = (
@@ -358,8 +359,9 @@ class VoiceService:
                 if include_shared and "shared_voices" in locals()
                 else 0
             )
-            logger.debug(
-                f"获取到音色总数: {len(unique_voices)} (常规: {len(regular_voices)}, 共享: {shared_count})"
+            logger.info(
+                f"最终返回音色总数: {len(unique_voices)} (常规: {len(regular_voices)}, 共享: {shared_count}, "
+                f"page_size限制: {page_size}, include_shared: {include_shared})"
             )
             return unique_voices
 
@@ -376,38 +378,62 @@ class VoiceService:
         category: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
         """
-        搜索常规音色（用户音色 + 预置音色）
+        搜索常规音色（用户音色 + 预置音色 + professional音色）
         """
         try:
-            # 使用 ElevenLabs SDK 的搜索功能
-            kwargs = {}
-            if page_size is not None:
-                kwargs["page_size"] = page_size
-            if search is not None:
-                kwargs["search"] = search
-            if voice_type is not None:
-                kwargs["voice_type"] = voice_type
-            if category is not None:
-                kwargs["category"] = category
+            logger.info(f"开始获取所有常规音色 (参数: search={search}, page_size={page_size}, voice_type={voice_type}, category={category})")
 
-            logger.debug(f"搜索常规音色，参数: {kwargs}")
-
-            # 调用 ElevenLabs voices search API
-            if kwargs:
-                # 使用搜索功能
-                voices_response = self.client.voices.search(**kwargs)
-            else:
-                # 获取所有语音
-                voices_response = self.client.voices.get_all()
+            # 1. 获取所有基础语音，包括legacy音色
+            voices_response = self.client.voices.get_all(show_legacy=True)
+            logger.info(f"get_all API返回 {len(voices_response.voices)} 个音色")
 
             # 转换为字典格式并添加来源标识
             voices_list = []
+            personal_count = 0
+            preset_count = 0
+            professional_count = 0
+            
             for voice in voices_response.voices:
                 voice_dict = voice.model_dump()
-                voice_dict["source"] = "regular"  # 标记为常规音色
+                
+                # 根据category和is_owner确定source和voice_type
+                voice_category = voice_dict.get("category", "unknown")
+                is_owner = voice_dict.get("is_owner", False)
+                
+                if voice_category == "professional":
+                    voice_dict["source"] = "professional"  # 标记为professional音色
+                    professional_count += 1
+                else:
+                    voice_dict["source"] = "regular"  # 标记为常规音色
+                
+                # 根据is_owner字段区分个人音色和预置音色
+                if is_owner:
+                    voice_dict["voice_type"] = "personal"  # 个人音色
+                    personal_count += 1
+                else:
+                    voice_dict["voice_type"] = "preset"    # 预置音色
+                    preset_count += 1
+                
+                # 应用筛选逻辑
+                # 检查voice_type筛选
+                if voice_type and voice_dict["voice_type"] != voice_type:
+                    continue
+                
+                # 检查category筛选
+                if category and voice_category != category:
+                    continue
+                
+                # 应用搜索筛选
+                if search:
+                    voice_name = voice_dict.get("name", "").lower()
+                    voice_id = voice_dict.get("voice_id", "").lower()
+                    search_term = search.lower()
+                    if search_term not in voice_name and search_term not in voice_id:
+                        continue
+                
                 voices_list.append(voice_dict)
 
-            logger.debug(f"获取到 {len(voices_list)} 个常规音色")
+            logger.info(f"处理完成: 总计 {len(voices_list)} 个音色 (个人: {personal_count}, 预置: {preset_count}, professional: {professional_count})")
             return voices_list
 
         except Exception as e:

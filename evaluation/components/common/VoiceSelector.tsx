@@ -61,7 +61,7 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
     setLoading(true);
     try {
       const params: any = {
-        page_size: 50  // 设置页面大小为50
+        // 移除page_size限制，让后端返回所有音色
       };
       if (search) params.search = search;
       // 注意：这里不传递source参数到后端，因为后端API不支持source筛选
@@ -70,15 +70,13 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
       const voiceList = await api.voices.listVoices(params);
       let filteredVoices = voiceList || [];
       
-      // 前端source筛选
+      // 前端source筛选 - 使用后端返回的voice_type字段
       if (source !== "all") {
         filteredVoices = filteredVoices.filter(voice => {
           if (source === "personal") {
-            // 个人音色：source为regular且不是预置音色
-            return voice.source === "regular" && voice.category !== "premade";
+            return voice.voice_type === "personal";
           } else if (source === "preset") {
-            // 预置音色：source为regular且category为premade，或者是系统预置的音色
-            return voice.source === "regular" && (voice.category === "premade" || voice.category === "default");
+            return voice.voice_type === "preset";
           }
           return true;
         });
@@ -196,13 +194,13 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
     return voices.find(voice => voice.voice_id === value);
   }, [voices, value, selectedVoiceInfo]);
 
-  // 获取音色来源统计
+  // 获取音色来源统计 - 使用后端返回的voice_type字段
   const sourceStats = useMemo(() => {
     const stats = { personal: 0, preset: 0, total: voices.length };
     voices.forEach(voice => {
-      if (voice.source === "regular" && voice.category !== "premade") {
+      if (voice.voice_type === "personal") {
         stats.personal++;
-      } else if (voice.source === "regular" && (voice.category === "premade" || voice.category === "default")) {
+      } else if (voice.voice_type === "preset") {
         stats.preset++;
       }
     });
