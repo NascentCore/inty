@@ -241,10 +241,6 @@ fun CharacterCard(
         agentInfo.getChatBackground()
     }
 
-    // 缓存文本内容，确保稳定显示
-    val agentName = remember(agentInfo.name) { agentInfo.name }
-    val agentIntro = remember(agentInfo.intro) { agentInfo.intro }
-
     // 动态计算卡片高度，基于图片宽高比
     val cardHeight = remember(imageUrl) {
         val heightPx = ImageSizeCache.getDisplayHeightPx(imageUrl)
@@ -257,7 +253,7 @@ fun CharacterCard(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .aspectRatio(.6f)
+            .aspectRatio(agentInfo.randomAspectRatio())
     ) {
         // 背景图片层
         Box(modifier = Modifier.fillMaxSize()) {
@@ -270,12 +266,9 @@ fun CharacterCard(
             }
 
             IntyImage(
-                modifier = Modifier
-                    .fillMaxSize(),
+                modifier = Modifier.fillMaxSize(),
                 model = imageUrl,
                 contentScale = ContentScale.Crop,
-                placeholder = null, // 使用自定义的 Shimmer 占位符
-                error = null, // 错误时也使用 Shimmer
                 onSuccess = {
                     imageLoaded = true
                 },
@@ -296,7 +289,7 @@ fun CharacterCard(
         ) {
             Text(
                 modifier = Modifier,
-                text = agentName,
+                text = agentInfo.name,
                 fontSize = 14.sp,
                 lineHeight = 22.sp,
                 fontWeight = FontWeight.SemiBold,
@@ -305,7 +298,7 @@ fun CharacterCard(
 
             Text(
                 modifier = Modifier,
-                text = agentIntro,
+                text = agentInfo.intro,
                 fontSize = 12.sp,
                 lineHeight = 12.sp,
                 fontWeight = FontWeight.Normal,
@@ -315,9 +308,11 @@ fun CharacterCard(
             )
 
             if (filteredTags.isNotEmpty()) {
-                Box(modifier = Modifier
-                    .fillMaxWidth()
-                    .height(16.dp)) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(16.dp)
+                ) {
                     SmartTagsLayout(
                         modifier = Modifier.matchParentSize(),
                         tags = filteredTags,

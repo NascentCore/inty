@@ -315,7 +315,7 @@ private fun MyAgentCard(
     var showMenu by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
     var lastClickTime by remember { mutableLongStateOf(0L) }
-    
+
     // 图片加载状态
     var imageLoaded by remember { mutableStateOf(false) }
 
@@ -331,7 +331,7 @@ private fun MyAgentCard(
                 cornerRadius = 12.dp
             )
         }
-        
+
         IntyImage(
             modifier = Modifier.fillMaxSize(),
             model = agentInfo.avatar,
@@ -345,18 +345,20 @@ private fun MyAgentCard(
             }
         )
 
+        // 缓存渐变画笔，避免每次重组时重新创建
+        val gradientBrush = remember {
+            Brush.verticalGradient(
+                colors = listOf(
+                    Color.Transparent,
+                    Color.Black.copy(.5f),
+                    Color.Black.copy(.9f),
+                )
+            )
+        }
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(
-                    brush = Brush.verticalGradient(
-                        colors = listOf(
-                            Color.Transparent,
-                            Color.Black.copy(.5f),
-                            Color.Black.copy(.9f),
-                        ),
-                    )
-                )
+                .background(brush = gradientBrush)
                 .padding(8.dp)
                 .align(Alignment.BottomCenter),
             verticalArrangement = Arrangement.spacedBy(4.dp)
