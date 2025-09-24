@@ -139,37 +139,6 @@ data class ConversationItem(
     }
 }
 
-@JsonClass(generateAdapter = true)
-data class SysMsgResponse(
-    val list: List<SysMsgItem> = listOf(),
-    val page: Int = 0,
-    @Json(name = "page_size")
-    val pageSize: Int = 0,
-    val total: Int = 0,
-    @Json(name = "total_pages")
-    val totalPages: Int = 0
-)
-
-@JsonClass(generateAdapter = true)
-data class SysMsgItem(
-    val content: String = "",
-    @Json(name = "created_at")
-    val createdAt: String = "",
-    val id: String = "",
-    @Json(name = "image_urls")
-    val imageUrls: List<Any?> = listOf(),
-    @Json(name = "is_read")
-    val isRead: Boolean = false,
-    @Json(name = "link_urls")
-    val linkUrls: List<String> = listOf(),
-    @Json(name = "read_at")
-    val readAt: String = "",
-    @Json(name = "template_id")
-    val templateId: Int = 0,
-    val title: String = "",
-    val type: Int = 0
-)
-
 //chat settings
 
 /**

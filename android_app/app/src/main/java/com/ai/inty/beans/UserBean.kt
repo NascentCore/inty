@@ -3,24 +3,6 @@ package com.ai.inty.beans
 import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 
-// TODO: 替换为自动生成的数据类型
-
-@JsonClass(generateAdapter = true)
-data class CreateGuestReq(
-    @Json(name = "device_id")
-    val deviceId: String,
-    @Json(name = "system_language")
-    val systemLanguage: String,
-)
-
-@JsonClass(generateAdapter = true)
-data class CreateGuestResult(
-    @Json(name = "guest_id")
-    val guestId: String,
-    val token: String,
-    @Json(name = "is_new_guest")
-    val isNewGuest: Boolean,
-)
 
 /**
  * {
@@ -100,11 +82,6 @@ enum class GENDER(val value: String) {
 }
 
 @JsonClass(generateAdapter = true)
-data class TokenBean(
-    val token: String,
-)
-
-@JsonClass(generateAdapter = true)
 data class GoogleLoginRequest(
     @Json(name = "id_token")
     val idToken: String,
@@ -139,4 +116,3 @@ data class UserDeleteResponse(
     @Json(name = "user_id")
     val userId: String?,
 )
-

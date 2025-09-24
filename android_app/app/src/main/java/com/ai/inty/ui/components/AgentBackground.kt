@@ -15,7 +15,6 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -24,14 +23,12 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.ai.inty.base.IntyImage
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.utils.getChatBackground
-import com.ai.inty.utils.calculateOptimalContentScale
+import kotlin.math.abs
 import kotlin.math.roundToInt
-import coil3.compose.AsyncImagePainter
 
 
 /**
@@ -64,20 +61,21 @@ fun AgentBackground(
     // 状态来存储图片尺寸
     var imageWidth by remember { mutableStateOf<Int?>(null) }
     var imageHeight by remember { mutableStateOf<Int?>(null) }
-    
+
     // 计算最佳的 ContentScale
     val currentImageWidth = imageWidth
     val currentImageHeight = imageHeight
-    val optimalContentScale = if (currentImageWidth != null && currentImageHeight != null && currentImageWidth > 0 && currentImageHeight > 0) {
-        calculateOptimalContentScale(
-            containerWidth = imageWidthDp,
-            containerHeight = imageHeightDp,
-            imageWidth = currentImageWidth,
-            imageHeight = currentImageHeight
-        )
-    } else {
-        ContentScale.Crop // 默认值，当图片尺寸未知时
-    }
+    val optimalContentScale =
+        if (currentImageWidth != null && currentImageHeight != null && currentImageWidth > 0 && currentImageHeight > 0) {
+            calculateOptimalContentScale(
+                containerWidth = imageWidthDp,
+                containerHeight = imageHeightDp,
+                imageWidth = currentImageWidth,
+                imageHeight = currentImageHeight
+            )
+        } else {
+            ContentScale.Crop // 默认值，当图片尺寸未知时
+        }
 
     Box(modifier = modifier) {
         Column(
@@ -139,36 +137,37 @@ fun AgentBackground(
     }
 }
 
-@Preview(showBackground = true)
-@Composable
-fun AgentBackgroundPreview() {
-    val mockAgent = AgentInfo(
-        id = "test",
-        name = "Test Agent", 
-        avatar = "",
-        background = "",
-        intro = "Test introduction"
-    )
-    AgentBackground(
-        agentInfo = mockAgent,
-        showGradients = true
-    )
-}
 
 /**
- * 展示不同宽高比比较的示例
+ * 根据容器和图片的宽高比计算最佳的 ContentScale
+ * 只支持人像模式屏幕显示，即尽量不留左右两侧空白。
+ * 当容器高宽比大于图片高宽比时，使用 FillHeight 填充高度，否则使用 FillWidth 填充宽度。
+ *
+ * @param containerWidth 容器宽度（dp）
+ * @param containerHeight 容器高度（dp）
+ * @param imageWidth 图片宽度（像素）
+ * @param imageHeight 图片高度（像素）
+ * @return 最佳的 ContentScale
  */
-@Composable
-fun AspectRatioComparisonExample() {
-    // 示例：不同屏幕和图片宽高比的组合
-    val examples = listOf(
-        "屏幕 9:16 (0.56) + 图片 9:16 (0.56) → Fit (完整显示)",
-        "屏幕 16:9 (1.78) + 图片 9:16 (0.56) → FillWidth (填充宽度)",
-        "屏幕 9:16 (0.56) + 图片 16:9 (1.78) → FillHeight (填充高度)",
-        "屏幕 1:1 (1.0) + 图片 4:3 (1.33) → FillHeight (填充高度)",
-        "屏幕 4:3 (1.33) + 图片 1:1 (1.0) → FillWidth (填充宽度)"
-    )
-    
-    // 这里可以添加实际的 UI 展示
-    // 为了简化，这里只是概念展示
+fun calculateOptimalContentScale(
+    containerWidth: Int,
+    containerHeight: Int,
+    imageWidth: Int,
+    imageHeight: Int
+): ContentScale {
+    val screenAspectRatio = containerWidth.toFloat() / containerHeight.toFloat()
+    val imageAspectRatio = imageWidth.toFloat() / imageHeight.toFloat()
+    return when {
+        // 如果屏幕和图片宽高比非常接近（差异小于5%），使用 Fit 显示完整图片
+        // 例如：屏幕 9:16 (0.5625)，图片 9:16 (0.5625) → 使用 Fit
+        abs(screenAspectRatio - imageAspectRatio) / imageAspectRatio < 0.05f -> ContentScale.Fit
+
+        // 如果屏幕比图片更宽（屏幕宽高比 > 图片宽高比），图片相对较窄，使用 FillWidth
+        // 例如：屏幕 16:9 (1.78)，图片 9:16 (0.5625) → 使用 FillWidth
+        screenAspectRatio > imageAspectRatio -> ContentScale.FillWidth
+
+        // 如果屏幕比图片更窄（屏幕宽高比 < 图片宽高比），图片相对较宽，使用 FillHeight
+        // 例如：屏幕 9:16 (0.5625)，图片 16:9 (1.78) → 使用 FillHeight
+        else -> ContentScale.FillHeight
+    }
 }

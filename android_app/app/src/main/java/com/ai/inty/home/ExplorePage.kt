@@ -3,12 +3,12 @@ package com.ai.inty.home
 import android.annotation.SuppressLint
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -16,14 +16,16 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.itemsIndexed
 import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -50,7 +52,6 @@ import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ai.inty.R
-import com.ai.inty.base.IntyCircleImage
 import com.ai.inty.base.IntyImage
 import com.ai.inty.base.noRippleClickable
 import com.ai.inty.beans.AgentInfo
@@ -62,10 +63,9 @@ import kotlin.math.roundToInt
 // 预加载下一页的缓冲区数量
 // 当前已经加载但是还未被显示的角色数量
 const val COLUMN_COUNT = 2
-val TitleHeight = 40.dp // 标题栏高度，文字居中显示，未预留与标题下方内容间距。
-val TitleLeftPadding = 24.dp // 标题栏内显示内容距离左侧边缘间距，用于与标题下方内容垂直对齐。
 
 
+@OptIn(ExperimentalMaterial3Api::class)
 @SuppressLint("ConfigurationScreenWidthHeight")
 @Composable
 fun ExplorePage(
@@ -170,19 +170,19 @@ fun ExplorePage(
                 .fillMaxSize()
                 .background(Color.Transparent)
                 .offset { IntOffset(0, animatedOffset.roundToInt()) }
-                // 允许留出顶部系统工具栏如日期/时间/信号强度等。
-                .padding(top = innerPadding.calculateTopPadding())
         ) {
-            Row(
-                modifier = Modifier
-                    .height(TitleHeight)
-                    .padding(start = TitleLeftPadding),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IntyImage(model = R.drawable.popular1)
-                Spacer(Modifier.width(7.dp))
-                IntyImage(model = R.drawable.popular)
-            }
+
+            TopAppBar(
+                title = {
+                    Image(
+                        painter = painterResource(R.drawable.img_explore_title),
+                        contentDescription = null,
+                        modifier = Modifier.size(132.dp, 28.dp)
+                    )
+                },
+                modifier = Modifier,
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+            )
 
             val gridState = rememberLazyStaggeredGridState()
 
@@ -192,7 +192,7 @@ fun ExplorePage(
                     val layoutInfo = gridState.layoutInfo
                     val totalItemsCount = layoutInfo.totalItemsCount
                     val lastVisibleItemIndex = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1
-                    
+
                     // 当最后一个可见项接近列表末尾时触发加载更多
                     totalItemsCount > 0 && lastVisibleItemIndex >= totalItemsCount - 3
                 }
@@ -203,15 +203,13 @@ fun ExplorePage(
                 if (reachedBottom && agents.isNotEmpty() && !isLoading) {
                     // 添加延迟，避免快速滚动时重复触发
                     delay(200)
-                    if (reachedBottom && !isLoading) {
-                        onLoadMore()
-                    }
+                    onLoadMore()
                 }
             }
 
             LazyVerticalStaggeredGrid(
                 columns = StaggeredGridCells.Fixed(COLUMN_COUNT),
-                modifier = Modifier,
+                modifier = Modifier.padding(bottom = innerPadding.calculateBottomPadding()),
                 state = gridState,
                 contentPadding = PaddingValues(16.dp),
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -219,6 +217,9 @@ fun ExplorePage(
             ) {
                 runCatching {
                     if (agents.isNotEmpty()) {
+                        //记录重复数据
+                        listDup(agents)
+                        //UI渲染
                         itemsIndexed(
                             items = agents,
                             key = { _, agent -> agent.id } // 使用稳定的 ID 作为 key
@@ -259,13 +260,6 @@ fun ExplorePage(
             }
         }
     }
-
-    // 使用 LaunchedEffect 避免在每次重组时都执行重复检测
-    LaunchedEffect(agents.size) {
-        if (agents.isNotEmpty()) {
-            listDup(agents)
-        }
-    }
 }
 
 
@@ -279,17 +273,12 @@ fun CharacterCard(
         Brush.verticalGradient(
             colors = listOf(
                 Color.Transparent,
-                Color.Black.copy(.3f),
                 Color.Black.copy(.5f),
-                Color.Black.copy(.7f),
                 Color.Black.copy(.9f),
-                Color.Black,
-                Color.Black,
-                Color.Black,
             )
         )
     }
-    
+
     // 缓存过滤后的标签，避免每次重组时重新计算
     val filteredTags = remember(agentInfo.tags) {
         agentInfo.tags?.filterNotNull() ?: emptyList()
@@ -307,31 +296,26 @@ fun CharacterCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(brush = gradientBrush)
-                .padding(start = 8.dp, end = 8.dp, top = 15.dp, bottom = 8.dp)
+                .padding(start = 8.dp, end = 8.dp, top = 16.dp, bottom = 8.dp)
                 .align(Alignment.BottomCenter),
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                IntyCircleImage(
-                    modifier = Modifier.size(18.dp),
-                    url = agentInfo.avatar,
-                    placeholderResID = R.drawable.app_icon
-                )
-                Spacer(Modifier.width(4.dp))
-                Text(
-                    modifier = Modifier,
-                    text = agentInfo.name,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Color.White,
-                )
-            }
+            Text(
+                modifier = Modifier,
+                text = agentInfo.name,
+                fontSize = 14.sp,
+                lineHeight = 22.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Color.White,
+            )
+
             Text(
                 modifier = Modifier,
                 text = agentInfo.intro,
                 fontSize = 12.sp,
                 lineHeight = 12.sp,
-                color = Color.White.copy(.7f),
+                fontWeight = FontWeight.Normal,
+                color = Color(0xB2FFFFFF),
                 maxLines = 3,
                 overflow = TextOverflow.Ellipsis
             )
@@ -344,36 +328,38 @@ fun CharacterCard(
 
 
 private fun listDup(agents: List<AgentInfo>) {
-    if (agents.isEmpty()) {
-        EasyLog.log("listDup: agents列表为空", EasyLog.DEBUG)
-        return
-    }
-    
+    if (agents.isEmpty()) return
+
     // 用于存储已见过的组合，key为"name|id|avatar"的组合
     val seenCombinations = mutableSetOf<String>()
     val duplicateItems = mutableListOf<AgentInfo>()
-    
+
     agents.forEach { agent ->
         // 创建唯一标识符：name|id|avatar
         val combination = "${agent.name}|${agent.id}|${agent.avatar}"
-        
+
         if (seenCombinations.contains(combination)) {
             // 发现重复项
             duplicateItems.add(agent)
-            EasyLog.log("发现重复的Agent: name=${agent.name}, id=${agent.id}, avatar=${agent.avatar}", EasyLog.WARN)
         } else {
             seenCombinations.add(combination)
         }
     }
-    
+
     // 输出统计信息
-    EasyLog.log("listDup统计: 总数量=${agents.size}, 重复数量=${duplicateItems.size}, 唯一数量=${agents.size - duplicateItems.size}", EasyLog.INFO)
-    
+    EasyLog.log(
+        "Explore测试，listDup统计: 总数量=${agents.size}, 重复数量=${duplicateItems.size}, 唯一数量=${agents.size - duplicateItems.size}",
+        EasyLog.INFO
+    )
+
     // 如果有重复项，输出详细信息
     if (duplicateItems.isNotEmpty()) {
-        EasyLog.log("重复项详细信息:", EasyLog.WARN)
+        EasyLog.log("Explore测试，重复项详细信息:", EasyLog.WARN)
         duplicateItems.forEachIndexed { index, agent ->
-            EasyLog.log("重复项${index + 1}: name='${agent.name}', id='${agent.id}', avatar='${agent.avatar}'", EasyLog.WARN)
+            EasyLog.log(
+                "Explore测试，重复项${index + 1}: name='${agent.name}', id='${agent.id}', avatar='${agent.avatar}'",
+                EasyLog.WARN
+            )
         }
     }
 }

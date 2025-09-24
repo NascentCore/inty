@@ -267,7 +267,7 @@ private fun AvatarPreviewSection(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Image(
-                        painter = painterResource(R.drawable.frame2085655912),
+                        painter = painterResource(R.drawable.img_gen_agent_preview),
                         contentDescription = null,
                         modifier = Modifier.size(48.dp)
                     )

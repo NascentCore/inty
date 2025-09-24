@@ -1,5 +1,6 @@
 package com.ai.inty.home
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,10 +16,13 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -27,11 +31,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -70,6 +72,7 @@ fun ConversationsPage(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun Content(
     conversations: List<ConversationItem>,
@@ -82,16 +85,26 @@ private fun Content(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Transparent),
-        containerColor = Color.Transparent
-    ) { innerPadding ->
-        Column(modifier = Modifier.fillMaxSize()) {
-
-            Spacer(Modifier.height(innerPadding.calculateTopPadding() + 28.dp))
-
-            ConversationTabItem(
+        containerColor = Color.Transparent,
+        topBar = {
+            TopAppBar(
+                title = {
+                    Image(
+                        painter = painterResource(R.drawable.img_message_title),
+                        contentDescription = null,
+                        modifier = Modifier.size(132.dp, 28.dp)
+                    )
+                },
                 modifier = Modifier,
-                text = stringResource(R.string.tab_message),
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
             )
+        }
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+        ) {
 
             MessageTabContent(
                 conversations = conversations,
@@ -101,40 +114,6 @@ private fun Content(
                 onLoadMore = onLoadMoreConversations
             )
         }
-    }
-}
-
-
-val TAB_ITEM_WIDTH = 120.dp
-val TAB_ITEM_HEIGHT = 38.dp
-val COLOR_ORANGE = Color(0xFFFF905D)
-val COLOR_PURPLE = Color(0xFFC122FF)
-
-@Composable
-private fun ConversationTabItem(
-    modifier: Modifier,
-    text: String,
-) {
-    Column(modifier = modifier.size(TAB_ITEM_WIDTH, TAB_ITEM_HEIGHT)) {
-        val colorStops = arrayOf(
-            0.0f to COLOR_ORANGE,
-            1.0f to COLOR_PURPLE
-        )
-        val brush = Brush.horizontalGradient(colorStops = colorStops)
-
-        Text(
-            modifier = Modifier.align(Alignment.CenterHorizontally),
-            text = text,
-            style = TextStyle(
-                brush = brush,
-                fontSize = 20.sp,
-                fontWeight = FontWeight.SemiBold,
-            ),
-        )
-        IntyImage(
-            modifier = Modifier.fillMaxWidth(),
-            model = R.drawable.group43027
-        )
     }
 }
 
@@ -159,7 +138,7 @@ private fun MessageTabContent(
             val lastVisibleItem = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
 
             // 当滚动到倒数第3项时触发加载更多
-            totalItems > 0 && lastVisibleItem >= totalItems - ACTIVITY_ITEM_BUFFER_COUNT && !isLoading
+            totalItems > 0 && lastVisibleItem >= totalItems - 3 && !isLoading
         }
     }
 
@@ -181,7 +160,7 @@ private fun MessageTabContent(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(LOAD_MORE_INDICATOR_HEIGHT),
+                            .height(80.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         CircularProgressIndicator(
@@ -191,7 +170,7 @@ private fun MessageTabContent(
                     }
                 }
             }
-            
+
             // 会话列表
             if (conversations.isNotEmpty()) {
                 runCatching {
@@ -218,7 +197,7 @@ private fun MessageTabContent(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(LOAD_MORE_INDICATOR_HEIGHT),
+                            .height(80.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         CircularProgressIndicator(
@@ -236,10 +215,6 @@ private fun MessageTabContent(
     }
 }
 
-val LOAD_MORE_INDICATOR_HEIGHT = 80.dp
-val EMPTY_CONTENT_IMAGE_TO_TEXT_PADDING = 16.dp
-val EMPTY_CONTENT_TEXT_PADDING_HORIZONTAL = 16.dp
-val EMPTY_CONTENT_TEXT_FONT_SIZE = 14.sp
 
 @Composable
 private fun EmptyContentUI() {
@@ -250,17 +225,17 @@ private fun EmptyContentUI() {
     ) {
 
 
-        IntyImage(model = R.drawable.group2085655908)
+        IntyImage(model = R.drawable.img_content_empty)
 
-        Spacer(Modifier.height(EMPTY_CONTENT_IMAGE_TO_TEXT_PADDING))
+        Spacer(Modifier.height(16.dp))
 
         Text(
             modifier = Modifier
-                .padding(horizontal = EMPTY_CONTENT_TEXT_PADDING_HORIZONTAL)
+                .padding(horizontal = 16.dp)
                 .align(Alignment.CenterHorizontally),
             text = stringResource(R.string.no_agent),
             color = Color.White.copy(0.55f),
-            fontSize = EMPTY_CONTENT_TEXT_FONT_SIZE,
+            fontSize = 14.sp,
             fontWeight = FontWeight.Normal,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
@@ -268,25 +243,6 @@ private fun EmptyContentUI() {
     }
 }
 
-const val ACTIVITY_ITEM_BUFFER_COUNT = 3
-
-
-val CHAT_ITEM_HEIGHT = 88.dp
-val CHAT_ITEM_PADDING = 16.dp
-val CHAT_ITEM_AVATAR_SIZE = 56.dp
-val CHAT_ITEM_NAME_HEIGHT = 22.dp
-val CHAT_ITEM_NAME_FONT_SIZE = 15.sp
-val CHAT_ITEM_LAST_MESSAGE_HEIGHT = 22.dp
-val CHAT_ITEM_INITIAL_FOLLOW_DATE_FONT_SIZE = 12.sp
-val CHAT_ITEM_NEW_MESSAGE_DOT_HEIGHT = 22.dp
-val CHAT_ITEM_DELETED_TEXT_FONT_SIZE = 15.sp
-val CHAT_ITEM_NAME_TO_DELETED_TEXT_PADDING = 4.dp
-val CHAT_ITEM_DELETED_TEXT_TO_LAST_MESSAGE_PADDING = 4.dp
-val CHAT_ITEM_LAST_MESSAGE_TO_INITIAL_FOLLOW_DATE_PADDING = 4.dp
-val CHAT_ITEM_INITIAL_FOLLOW_DATE_TO_NEW_MESSAGE_DOT_PADDING = 4.dp
-val CHAT_ITEM_NEW_MESSAGE_DOT_TO_RIGHT_PADDING = 13.dp
-val CHAT_ITEM_LAST_MESSAGE_FONT_SIZE = 14.sp
-val COLOR_SEMI_TRANS_WHITE = Color(0x8CFFFFFF)
 
 @Composable
 fun ChatHistoryItem(
@@ -295,50 +251,51 @@ fun ChatHistoryItem(
     placeholderID: Int = R.drawable.app_icon,
 ) {
     Row(
-        modifier = modifier.height(CHAT_ITEM_HEIGHT),
+        modifier = modifier.height(88.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Spacer(Modifier.width(CHAT_ITEM_PADDING))
+        Spacer(Modifier.width(16.dp))
 
         // 头像
         IntyImage(
             modifier = Modifier
-                .size(CHAT_ITEM_AVATAR_SIZE)
-                .clip(RoundedCornerShape(4.dp)),
+                .size(56.dp)
+                .clip(CircleShape),
             model = conversation.agentAvatar,
             placeholder = painterResource(placeholderID)
         )
 
-        Spacer(Modifier.width(CHAT_ITEM_NAME_TO_DELETED_TEXT_PADDING))
+        Spacer(Modifier.width(14.dp))
 
         // 内容区域
         Column(modifier = Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    modifier = Modifier.height(CHAT_ITEM_NAME_HEIGHT),
                     text = conversation.agentName,
-                    fontSize = CHAT_ITEM_NAME_FONT_SIZE,
+                    fontSize = 15.sp,
+                    lineHeight = 22.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = Color.White,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 if (conversation.isDeleted) {
-                    Spacer(Modifier.width(CHAT_ITEM_DELETED_TEXT_TO_LAST_MESSAGE_PADDING))
+                    Spacer(Modifier.width(4.dp))
                     Text(
                         text = "(deleted)",
-                        fontSize = CHAT_ITEM_DELETED_TEXT_FONT_SIZE,
-                        color = COLOR_SEMI_TRANS_WHITE,
+                        fontSize = 15.sp,
+                        color = Color(0x8CFFFFFF),
                     )
                 }
             }
 
-            Spacer(Modifier.height(CHAT_ITEM_LAST_MESSAGE_TO_INITIAL_FOLLOW_DATE_PADDING))
+            Spacer(Modifier.height(4.dp))
             Text(
-                modifier = Modifier.height(CHAT_ITEM_LAST_MESSAGE_HEIGHT),
+                modifier = Modifier.height(22.dp),
                 text = conversation.lastMessage,
-                fontSize = CHAT_ITEM_LAST_MESSAGE_FONT_SIZE,
-                color = COLOR_SEMI_TRANS_WHITE,
+                fontSize = 14.sp,
+                lineHeight = 22.sp,
+                color = Color(0x8CFFFFFF),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -348,12 +305,12 @@ fun ChatHistoryItem(
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
                 text = conversation.getShowTime(),
-                fontSize = CHAT_ITEM_INITIAL_FOLLOW_DATE_FONT_SIZE,
-                color = COLOR_SEMI_TRANS_WHITE,
+                fontSize = 12.sp,
+                color = Color(0x8CFFFFFF),
             )
-            Spacer(Modifier.height(CHAT_ITEM_INITIAL_FOLLOW_DATE_TO_NEW_MESSAGE_DOT_PADDING))
+            Spacer(Modifier.height(4.dp))
             Box(
-                modifier = Modifier.height(CHAT_ITEM_NEW_MESSAGE_DOT_HEIGHT),
+                modifier = Modifier.height(22.dp),
                 contentAlignment = Alignment.Center,
             ) {
                 if (conversation.isNew) {
@@ -361,6 +318,6 @@ fun ChatHistoryItem(
                 }
             }
         }
-        Spacer(Modifier.width(CHAT_ITEM_NEW_MESSAGE_DOT_TO_RIGHT_PADDING))
+        Spacer(Modifier.width(13.dp))
     }
 }

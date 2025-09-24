@@ -9,8 +9,8 @@ import kotlinx.parcelize.RawValue
 @Parcelize
 @JsonClass(generateAdapter = true)
 data class AgentInfo(
-    val avatar: String = "",
-    val background: String = "",
+    val avatar: String = "",//头像
+    val background: String = "",//背景图
     @Json(name = "background_images")
     val backgroundImages: List<String> = emptyList(),
     val category: String = "",
@@ -85,10 +85,6 @@ data class AgentInfoResponse(
     val totalPages: Int = 1,
 )
 
-@JsonClass(generateAdapter = true)
-data class FollowResponse(
-    val message: String = "",
-)
 
 @JsonClass(generateAdapter = true)
 data class CreateAgentRequest(
@@ -107,36 +103,6 @@ data class CreateAgentRequest(
     val photos: List<String> = emptyList(),
     val category: String = "",
     val prompt: String,
-)
-
-@JsonClass(generateAdapter = true)
-data class CreateAgentResponse(
-    val name: String = "",
-    val gender: String = "",
-    val avatar: String? = null,
-    val background: String? = null,
-    @Json(name = "voice_id")
-    val voiceId: String = "",
-    val settings: Map<String, Any>? = null,
-    val intro: String = "",
-    val opening: String = "",
-    val visibility: String = "",
-    val photos: List<String> = emptyList(),
-    val category: String = "",
-    val prompt: String = "",
-    val id: String = "",
-    val status: String = "",
-    @Json(name = "creator_id")
-    val creatorId: String = "",
-    @Json(name = "created_at")
-    val createdAt: String = "",
-    @Json(name = "updated_at")
-    val updatedAt: String? = null,
-    @Json(name = "is_followed")
-    val isFollowed: Boolean = false,
-    @Json(name = "follower_count")
-    val followerCount: Int = 0,
-    val creator: CreatorInfo? = null,
 )
 
 @JsonClass(generateAdapter = true)
