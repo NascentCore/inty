@@ -15,7 +15,6 @@ from app.core.agent.prompt_template import (
     has_variable_name,
     render_prompt_jinja2_template,
 )
-from app.core.config import global_config_loaded_from_config_yaml
 from app.external_services.gcs import (
     append_filename_suffix,
     download_from_gcs,
@@ -46,17 +45,26 @@ async def generate_agent_opening_voice(
         # 将角色名字替换为实际字符，user 则替换为 you（假设英文）。
         opening = render_prompt_jinja2_template(opening, char=agent.name, user="you")
 
-    # 确定使用的voice_id：优先使用agent的voice_id，否则使用配置文件默认值
-    voice_id_to_use = (
-        agent.voice_id or global_config_loaded_from_config_yaml.elevenlabs.voice_id
-    )
+    # 性别到音色ID的映射
+    gender_voice_mapping = {
+        "MALE": "rHWSYoq8UIVOYIBKMryp",
+        "FEMALE": "4tRn1lSkEn13EVTuqb0g",
+        "OTHER": "O7p2vmz2iEYgMXxkbsif",
+    }
 
+    # 确定使用的voice_id：优先使用agent的voice_id，否则根据性别使用默认值
+    voice_id_to_use = agent.voice_id
     if not voice_id_to_use:
-        logger.debug(f"Agent {agent.id} 和配置文件都没有voice_id，跳过语音生成")
-        return None
+        # 根据性别选择默认音色ID
+        voice_id_to_use = gender_voice_mapping.get(agent.gender.value)
+        if not voice_id_to_use:
+            logger.debug(
+                f"Agent {agent.id} 性别 {agent.gender.value} 没有对应的默认音色ID，跳过语音生成"
+            )
+            return None
 
     logger.debug(
-        f"Agent {agent.id} 使用voice_id: {voice_id_to_use} (来源: {'Agent' if agent.voice_id else '配置文件'})"
+        f"Agent {agent.id} 使用voice_id: {voice_id_to_use} (来源: {'Agent' if agent.voice_id else '性别默认值'})"
     )
 
     voice_service = VoiceService()
@@ -423,7 +431,7 @@ def get_deterministic_random_order(sort_seed: str):
     """
     if not sort_seed:
         return func.random()
-    
+
     # 使用MD5(concat(id, sort_seed))来实现确定性排序
     return func.md5(func.concat(models.Agent.id, sort_seed))
 
@@ -440,13 +448,13 @@ async def get_balanced_score_based_agents(
     既保持高分优先，又确保各页面有多样性
     """
     offset = (page - 1) * page_size
-    
+
     # 基础查询条件
     base_condition = and_(
         models.Agent.visibility == AgentVisibility.PUBLIC,
         models.Agent.deleted_at.is_(None),
     )
-    
+
     # 平衡权重排序查询
     query = (
         select(models.Agent)
@@ -456,21 +464,18 @@ async def get_balanced_score_based_agents(
             (
                 # score * 2 + random(0-100)
                 func.coalesce(
-                    models.Agent.meta_data.op('->>')(text("'score'")).cast(Integer), 0
-                ) * 2 +
-                func.abs(func.hashtext(func.concat(models.Agent.id, sort_seed))) % 100
+                    models.Agent.meta_data.op("->>")(text("'score'")).cast(Integer), 0
+                )
+                * 2
+                + func.abs(func.hashtext(func.concat(models.Agent.id, sort_seed))) % 100
             ).desc()
         )
         .offset(offset)
         .limit(page_size)
     )
-    
+
     result = await db.execute(query)
     return result.scalars().all()
-
-
-
-
 
 
 async def get_recommended_agents_paginated(
@@ -519,7 +524,7 @@ async def get_recommended_agents_paginated(
         else:
             # 传统分页逻辑
             skip = (page - 1) * page_size
-            
+
             # 确定排序方式
             sort_order = None
             if sort_by == AgentSortOption.CREATED_ASC:
