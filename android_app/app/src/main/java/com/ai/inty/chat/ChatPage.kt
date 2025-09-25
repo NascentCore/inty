@@ -77,7 +77,6 @@ internal fun ChatPage(
     // 页面生命周期管理：离开页面时重置播放状态
     DisposableEffect(chatViewModel) {
         onDispose {
-            EasyLog.log("ChatPage disposed, resetting voice playback")
             chatViewModel.resetVoicePlayback()
         }
     }
@@ -260,10 +259,10 @@ internal fun ChatPage(
                         )
                     }
                 }
-                val chatMessages by chatViewModel.msgs.collectAsState()
-                EasyLog.log("=== LazyColumn 渲染开始 ===")
-                EasyLog.log("Chat Messages State: ${chatMessages.size} 条消息")
-                EasyLog.log("Agent Info State: ${agentInfo?.id ?: "null"}")
+val chatMessages by chatViewModel.msgs.collectAsState()
+
+
+
                 
                 LazyColumn(
                     modifier = Modifier
@@ -283,13 +282,8 @@ internal fun ChatPage(
 
 
                     // 过滤掉 chatMessages 中的开场白消息
-                    val filteredChatMessages = chatMessages.filter { !it.isOpening() }
-                    EasyLog.log("=== 消息过滤 ===")
-                    EasyLog.log("原始消息数量: ${chatMessages.size}")
-                    EasyLog.log("过滤后消息数量: ${filteredChatMessages.size}")
-                    chatMessages.forEachIndexed { index, msg ->
-                        EasyLog.log("消息 $index: role='${msg.role}', isOpening=${msg.isOpening()}, content='${msg.content.take(50)}...'")
-                    }
+val filteredChatMessages = chatMessages.filter { !it.isOpening() }
+
 
                     // 添加安全检查
                     runCatching {
@@ -313,10 +307,6 @@ internal fun ChatPage(
                                         }
                                         Spacer(Modifier.height(16.dp))
                                     }.onFailure { e ->
-                                        EasyLog.log(
-                                            "Error rendering chat item at index $index: ${e.message}",
-                                            priority = EasyLog.ERROR
-                                        )
                                         // 渲染失败时显示错误占位符
                                         Box(
                                             modifier = Modifier
@@ -336,7 +326,6 @@ internal fun ChatPage(
                             }
                         }
                     }.onFailure { e ->
-                        EasyLog.log("Error in LazyColumn: ${e.message}", priority = EasyLog.ERROR)
                         // 如果整个列表渲染失败，显示错误信息
                         item {
                             Box(
@@ -356,50 +345,31 @@ internal fun ChatPage(
 // 2. Agent Opening (显示在顶部，因为是反向列表的最后一个item)
 item {
     agentInfo?.let { agent ->
-        EasyLog.log("=== 开场白显示检查 ===")
-        EasyLog.log("Agent ID: ${agent.id}")
-        EasyLog.log("Agent Name: ${agent.name}")
-        EasyLog.log("Agent Opening: '${agent.opening}'")
-        EasyLog.log("Agent Opening Length: ${agent.opening.length}")
-        EasyLog.log("Agent Opening Audio URL: '${agent.opening_audio_url}'")
-
         // 始终显示开场白
         val shouldShowOpening = agent.opening.isNotEmpty()
-        EasyLog.log("Should Show Opening: $shouldShowOpening (always show if agent has opening)")
 
         if (shouldShowOpening) {
-            EasyLog.log("=== 创建开场白消息 ===")
             // 创建开场白消息
-            val openingMessage =
-                    MsgInfo(
-                            content = agent.opening,
-                            role = "assistant",
-                            meta_data = MsgInfo.MsgMetaData(agentId = agent.id, isOpening = true),
-                            audio_url = agent.opening_audio_url
-                    )
-            EasyLog.log("Opening Message Created: $openingMessage")
-            EasyLog.log("Opening Message Content: '${openingMessage.content}'")
-            EasyLog.log("Opening Message Role: '${openingMessage.role}'")
-            EasyLog.log("Opening Message Audio URL: '${openingMessage.audio_url}'")
-            EasyLog.log("Opening Message Meta Data: ${openingMessage.meta_data}")
-            EasyLog.log("Opening Message Is Opening: ${openingMessage.isOpening()}")
-
+            val openingMessage = MsgInfo(
+                content = agent.opening,
+                role = "assistant",
+                meta_data = MsgInfo.MsgMetaData(
+                    agentId = agent.id,
+                    isOpening = true
+                ),
+                audio_url = agent.opening_audio_url
+            )
+            
             ChatItem(openingMessage)
             Spacer(Modifier.height(16.dp))
-            EasyLog.log("=== 开场白消息已渲染 ===")
-        } else {
-            EasyLog.log("=== 不显示开场白 ===")
-            EasyLog.log("原因: Agent opening 为空")
         }
     }
-            ?: run { EasyLog.log("=== Agent Info 为空 ===") }
 }
 
 // 3. Agent Intro (显示在最顶部，因为是反向列表的最后一个item)
 item {
     agentInfo?.intro?.let { info ->
         if (info.isNotEmpty()) {
-            EasyLog.log("=== 显示 Agent Intro ===")
             AgentInfoChatCard(info)
         }
     }
