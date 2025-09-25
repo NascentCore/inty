@@ -76,6 +76,7 @@ dependencies {
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.activity.ktx)
     implementation(libs.androidx.constraintlayout.compose)
+    implementation(libs.androidx.paging.compose)
 
     // ===== 路由 =====
     implementation(libs.router)

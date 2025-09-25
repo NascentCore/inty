@@ -11,10 +11,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -29,6 +29,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.LifecycleResumeEffect
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ai.inty.Constant
 import com.ai.inty.R
 import com.ai.inty.base.IntyImage
@@ -37,6 +38,8 @@ import com.ai.inty.beans.UserProfile
 import com.ai.inty.billing.BillingRepository
 import com.ai.inty.billing.VipStatusHelper
 import com.ai.inty.chat.ChatPageContainer
+import com.ai.inty.explore.ExplorePage
+import com.ai.inty.explore.ExploreViewModel
 import com.ai.inty.ui.ChatDialogData
 import com.ai.inty.ui.ExpiredVipDialog
 import com.ai.inty.ui.components.ForceUpgradeDialog
@@ -73,6 +76,16 @@ fun HomeScreen(
     val selectedTab = mainViewModel.selectedTab.collectAsState()
     val context = LocalContext.current
 
+    // 创建ExploreViewModel实例，用于ChatTab和ExploreTab共享推荐agents数据
+    val exploreViewModel: ExploreViewModel = viewModel()
+
+    // 初始化加载推荐agents数据
+    LaunchedEffect(Unit) {
+        if (exploreViewModel.agentList.isEmpty()) {
+            exploreViewModel.getRecommendAgents()
+        }
+    }
+
     Scaffold(
         modifier = modifier
             .fillMaxSize()
@@ -93,6 +106,7 @@ fun HomeScreen(
             selectedTab = selectedTab.value,
             mainViewModel = mainViewModel,
             chatViewModel = chatViewModel,
+            exploreViewModel = exploreViewModel,
             viewModelFactory = viewModelFactory,
             context = context,
             innerPadding = innerPadding
@@ -208,6 +222,7 @@ private fun HomeContent(
     selectedTab: HomeTabIndex,
     mainViewModel: MainViewModel,
     chatViewModel: ChatViewModel,
+    exploreViewModel: ExploreViewModel,
     viewModelFactory: ViewModelProvider.Factory,
     context: Context,
     innerPadding: PaddingValues,
@@ -216,6 +231,7 @@ private fun HomeContent(
         HomeTabIndex.Chat -> {
             ChatTabContent(
                 mainViewModel = mainViewModel,
+                exploreViewModel = exploreViewModel,
                 viewModelFactory = viewModelFactory
             )
         }
@@ -232,8 +248,8 @@ private fun HomeContent(
         }
 
         HomeTabIndex.Explore -> {
-            SuggestTabContent(
-                mainViewModel = mainViewModel,
+            ExploreTabContent(
+                exploreViewModel = exploreViewModel,
                 context = context,
                 innerPadding = innerPadding
             )
@@ -254,15 +270,17 @@ private fun HomeContent(
 @Composable
 private fun ChatTabContent(
     mainViewModel: MainViewModel,
+    exploreViewModel: ExploreViewModel,
     viewModelFactory: ViewModelProvider.Factory,
 ) {
     val userProfile = mainViewModel.userProfile.collectAsState()
     val currentChatPageIndex = mainViewModel.currentChatPageIndex.collectAsState()
+    val agentList = exploreViewModel.agentList
 
     ChatPageContainer(
         modifier = Modifier,
         viewModelFactory = viewModelFactory,
-        agentList = mainViewModel.agentList,
+        agentList = agentList,
         userProfile = userProfile.value,
         currentPageIndex = currentChatPageIndex.value,
         onPageChanged = { index ->
@@ -305,29 +323,20 @@ private fun ConversationsTabContent(
  * 推荐Tab内容
  */
 @Composable
-private fun SuggestTabContent(
-    mainViewModel: MainViewModel,
+private fun ExploreTabContent(
+    exploreViewModel: ExploreViewModel,
     context: Context,
     innerPadding: PaddingValues,
 ) {
-    val isLoading by mainViewModel.isLoading.collectAsState()
-
     ExplorePage(
         modifier = Modifier,
         innerPadding = innerPadding,
-        agents = mainViewModel.agentList,
-        isLoading = isLoading,
         onClickAgent = { agent ->
             TheRouter.build(Constant.ROUTE_CHAT)
                 .withObject("agent", agent)
                 .navigation(context)
         },
-        onLoadMore = {
-            mainViewModel.loadMoreAgents()
-        },
-        onRefresh = {
-            mainViewModel.refreshAgents()
-        }
+        viewModel = exploreViewModel
     )
 }
 
@@ -386,7 +395,7 @@ private fun ProfileTabContent(
                 onSuccess = {
                     // 删除成功，列表会自动更新
                 },
-                onError = { errorMessage ->
+                onError = { _ ->
                     // 错误处理已在ViewModel中完成
                 }
             )
@@ -398,8 +407,6 @@ private fun ProfileTabContent(
 }
 
 val BottomNavigationBarHeight = 48.dp
-val BottomNavigationBarPadding = 0.dp
-val BottomNavigationBarItemSize = 42.dp
 
 /**
  * 底部导航栏
@@ -414,8 +421,7 @@ private fun AppBottomNavigationBar(
         modifier = modifier
             .fillMaxWidth()
             .background(DarkPurple)
-            .height(BottomNavigationBarHeight)
-            .padding(bottom = BottomNavigationBarPadding),
+            .height(BottomNavigationBarHeight),
         verticalAlignment = Alignment.CenterVertically
     ) {
         MAIN_TAB_LIST.forEachIndexed { index, tab ->
@@ -445,7 +451,7 @@ private fun BottomBarItem(
     Box(modifier = modifier) {
         IntyImage(
             modifier = Modifier
-                .size(BottomNavigationBarItemSize)
+                .size(42.dp)
                 .align(Alignment.Center),
             model = if (selected) tabInfo.selectedImage else tabInfo.normalImage
         )

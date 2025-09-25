@@ -13,6 +13,11 @@ fun isToday(dateTime: ZonedDateTime): Boolean {
 }
 
 fun convertUtcToLocal(utcString: String): String {
+    // 检查空字符串或null
+    if (utcString.isBlank()) {
+        return ""
+    }
+    
     return runCatching {
         val instant = Instant.parse(utcString)
 
@@ -25,16 +30,19 @@ fun convertUtcToLocal(utcString: String): String {
             localDateTime.format(DateTimeFormatter.ofPattern("MM/dd"))
         }
     }.getOrNull() ?: ""
-
 }
 
 fun convertUtcToLocalFull(utcString: String): String {
-    val instant = Instant.parse(utcString)
-
-    val localDateTime = instant.atZone(ZoneId.systemDefault())
-
-
-    return localDateTime.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
+    // 检查空字符串或null
+    if (utcString.isBlank()) {
+        return ""
+    }
+    
+    return runCatching {
+        val instant = Instant.parse(utcString)
+        val localDateTime = instant.atZone(ZoneId.systemDefault())
+        localDateTime.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
+    }.getOrNull() ?: ""
 }
 
 /**

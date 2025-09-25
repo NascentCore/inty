@@ -31,7 +31,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -61,15 +60,8 @@ class MainViewModel : BaseActivityViewModel() {
             ?: throw IllegalStateException("ICommonApi not found in TheRouter")
     }
 
-    //系统推荐agents列表，也是首页默认的几个agents
-    val agentList = mutableStateListOf<AgentInfo>()
     val followingAgents = mutableStateListOf<AgentInfo>()//关注的agents列表数据
     val userCreatedAgents = mutableStateListOf<AgentInfo>()//用户自创建的agents数据
-
-    private var currentPage = 0
-    private var _isLoading = MutableStateFlow(false)
-    val isLoading = _isLoading.asStateFlow()
-    private var hasMoreData = true
 
     // Pagination state for user created agents
     private var currentUserAgentsPage = 0
@@ -97,8 +89,6 @@ class MainViewModel : BaseActivityViewModel() {
         }
     }
 
-    //用于推荐接口的sort seed
-    var sortSeed = IntySetting.sortSeed()
 
     init {
         EasyLog.log("MainViewModel init - current user: ${IntySetting.getCurUserID()}")
@@ -123,202 +113,15 @@ class MainViewModel : BaseActivityViewModel() {
             _userProfile.value = cachedUserProfile
             EasyLog.log("MainViewModel - 使用缓存用户信息: ${cachedUserProfile.nickname}")
         }
-
-        // 从启动管理器获取缓存的推荐agents
-        val cachedAgents = AppStartupManager.cachedAgents.value
-        if (cachedAgents.isNotEmpty()) {
-            agentList.clear()
-            agentList.addAll(cachedAgents)
-            EasyLog.log("MainViewModel - 使用缓存推荐agents: ${cachedAgents.size}个")
-        }
-
-
     }
 
     private fun loadBusinessData() {
         // 加载业务数据
-        getAgents() // 现在会先使用缓存，然后后台静默刷新
         getUserProfile() // 从服务器获取最新信息并更新本地缓存
         //检查app版本更新
         checkAppVersion()
-
     }
 
-    /**
-     * 检查是否需要从网络更新数据
-     */
-    private fun shouldUpdateFromNetwork(): Boolean {
-        // 只有在已登录且有有效token的情况下才进行网络更新
-        return IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()
-    }
-
-    fun getAgents() {
-        EasyLog.log("getAgents - 开始加载推荐agents")
-        currentPage = 1
-        hasMoreData = true
-
-        // 第一步：如果有缓存数据，先使用缓存数据快速展示
-        val cachedAgents = AppStartupManager.cachedAgents.value
-        if (cachedAgents.isNotEmpty()) {
-            agentList.clear()
-            agentList.addAll(cachedAgents)
-            EasyLog.log("getAgents - 使用缓存数据快速展示: ${cachedAgents.size}个")
-            chatViewModel?.setAgentInfo(agentList.firstOrNull())
-        }
-
-        // 第二步：后台静默刷新数据（无论是否有缓存）
-        if (shouldUpdateFromNetwork()) {
-            EasyLog.log("getAgents - 后台静默刷新数据")
-            loadAgentsSilently()
-        } else {
-            EasyLog.log("getAgents - 跳过网络更新，使用缓存数据")
-        }
-    }
-
-    /**
-     * 强制刷新agents数据（用于下拉刷新）
-     */
-    fun refreshAgents() {
-        EasyLog.log("refreshAgents - Force refresh from network")
-        currentPage = 1
-        hasMoreData = true
-        agentList.clear()
-        //每次手动刷新，需要重置sort seed,并保存，因为在AppStartupManger中有使用，可确保缓存与接口数据一致。
-        sortSeed = sortSeed + 1
-        IntySetting.updateSortSeed(sortSeed)
-        loadAgents()
-    }
-
-    /**
-     * 后台静默刷新数据
-     * 用于在进入页面时静默更新数据，不影响用户当前浏览
-     */
-    private fun loadAgentsSilently() {
-        if (_isLoading.value) return
-
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                EasyLog.log("loadAgentsSilently - 开始静默刷新第一页数据")
-                val result = agentApi.recommendAgents(
-                    page = 1,
-                    pageSize = 10,
-                    sort_seed = sortSeed.toString()
-                )
-
-                when (result) {
-                    is HttpResult.Success -> {
-                        result.data.list?.let { agents ->
-                            if (agents.isNotEmpty()) {
-                                // 静默更新UI和缓存，不显示加载状态
-                                agentList.clear()
-                                agentList.addAll(agents)
-                                EasyLog.log("loadAgentsSilently - 静默更新成功: ${agents.size}个")
-
-                                // 更新缓存
-                                AgentCacheManager.cacheAgents(agents)
-                                AppStartupManager.updateCachedAgents(agents)
-
-                                // 设置第一个agent给chatViewModel
-                                chatViewModel?.setAgentInfo(agentList.firstOrNull())
-                            } else {
-                                EasyLog.log("loadAgentsSilently - 第一页数据为空")
-                            }
-                        }
-                    }
-
-                    is HttpResult.Failure -> {
-                        EasyLog.log("loadAgentsSilently - 静默刷新失败: ${result.message}")
-                    }
-                }
-            } catch (e: Exception) {
-                EasyLog.log("loadAgentsSilently - 静默刷新异常: ${e.message}")
-            }
-        }
-    }
-
-    fun loadMoreAgents() {
-        if (!_isLoading.value && hasMoreData) {
-            EasyLog.log("loadMoreAgents - 开始加载第${currentPage + 1}页")
-            currentPage++
-            loadAgents()
-        } else {
-            EasyLog.log("loadMoreAgents - 跳过加载: isLoading=${_isLoading.value}, hasMoreData=$hasMoreData")
-        }
-    }
-
-
-    /**
-     * 加载agents数据
-     */
-    private fun loadAgents() {
-        if (_isLoading.value) return
-
-        _isLoading.update { true }
-        EasyLog.log("loadAgents - page: $currentPage")
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val result = agentApi.recommendAgents(
-                    page = currentPage,
-                    pageSize = 10,
-                    sort_seed = sortSeed.toString()
-                )
-                EasyLog.log("loadAgents - API响应: $result")
-
-                when (result) {
-                    is HttpResult.Success -> {
-                        result.data.list?.let { agents ->
-                            if (agents.isEmpty()) {
-                                hasMoreData = false
-                                EasyLog.log("loadAgents - 第${currentPage}页数据为空，没有更多数据")
-                            } else {
-                                // 第一页数据替换，其他页数据追加
-                                if (currentPage == 1) {
-                                    // 确保清空列表，避免与缓存数据重复
-                                    agentList.clear()
-                                    agentList.addAll(agents)
-                                    EasyLog.log("loadAgents - 替换第一页数据: ${agents.size}个，总计: ${agentList.size}个")
-
-                                    // 缓存第一页数据并更新AppStartupManager的缓存
-                                    AgentCacheManager.cacheAgents(agents)
-                                    AppStartupManager.updateCachedAgents(agents)
-                                    chatViewModel?.setAgentInfo(agentList.firstOrNull())
-                                } else {
-                                    agentList.addAll(agents)
-                                    EasyLog.log("loadAgents - 追加第${currentPage}页数据: ${agents.size}个，总计: ${agentList.size}个")
-                                }
-                            }
-                        } ?: run {
-                            EasyLog.log("loadAgents - 第${currentPage}页返回空列表")
-                            if (currentPage > 1) {
-                                hasMoreData = false
-                            }
-                        }
-                    }
-
-                    is HttpResult.Failure -> {
-                        EasyLog.log("loadAgents - 第${currentPage}页加载失败: ${result.message}")
-                        // 如果加载失败，回退页码
-                        if (currentPage > 1) {
-                            currentPage--
-                        }
-                        // 如果是第一页失败，可能需要重新加载
-                        if (currentPage == 1) {
-                            EasyLog.log("loadAgents - 第一页加载失败，可能需要重新加载")
-                        }
-                    }
-                }
-            } catch (e: Exception) {
-                EasyLog.log("loadAgents - 第${currentPage}页加载异常: ${e.message}")
-                // 如果加载失败，回退页码
-                if (currentPage > 1) {
-                    currentPage--
-                }
-            }
-            _isLoading.update { false }
-
-            EasyLog.log("loadAgents - 完成，当前列表大小: ${agentList.size}")
-        }
-    }
 
     fun selectTab(tab: Int) {
         // 防止数组越界，确保tab索引在有效范围内
@@ -350,8 +153,6 @@ class MainViewModel : BaseActivityViewModel() {
 
     fun setChatViewModel(chatViewModel: ChatViewModel) {
         this.chatViewModel = chatViewModel
-
-        chatViewModel.setAgentInfo(agentList.firstOrNull())
     }
 
 
@@ -627,7 +428,6 @@ class MainViewModel : BaseActivityViewModel() {
         EasyLog.log("User logout - clearing all data")
 
         // 清理内存数据
-        agentList.clear()
         followingAgents.clear()
         userCreatedAgents.clear()
         _userProfile.value = UserProfile()
@@ -690,8 +490,6 @@ class MainViewModel : BaseActivityViewModel() {
                             EasyLog.log("deleteAgent success: ${result.data}")
                             // 从用户创建的角色列表中移除
                             userCreatedAgents.removeAll { it.id == agentId }
-                            // 从主列表中移除（如果存在）
-                            agentList.removeAll { it.id == agentId }
                             // 从关注列表中移除（如果存在）
                             followingAgents.removeAll { it.id == agentId }
 
