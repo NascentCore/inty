@@ -117,6 +117,8 @@ data class ConversationItem(
     val id: String = "",
     @Json(name = "last_message")
     val lastMessage: String = "",
+    @Json(name = "last_message_time")
+    val lastMessageTime: String = "",
     val settings: Any? = null,
     @Json(name = "updated_at")
     val updatedAt: Any? = null,
@@ -127,7 +129,7 @@ data class ConversationItem(
     val isNew: Boolean = !IntySetting.isConversationReaded(agentId, lastMessage)
 ) {
     fun getShowTime(): String {
-        return convertUtcToLocal(createdAt)
+        return convertUtcToLocal(lastMessageTime)
     }
 
     fun convertToAgentInfo(): AgentInfo {

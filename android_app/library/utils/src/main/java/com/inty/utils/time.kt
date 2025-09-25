@@ -13,16 +13,19 @@ fun isToday(dateTime: ZonedDateTime): Boolean {
 }
 
 fun convertUtcToLocal(utcString: String): String {
-    val instant = Instant.parse(utcString)
+    return runCatching {
+        val instant = Instant.parse(utcString)
 
-    val localDateTime = instant.atZone(ZoneId.systemDefault())
+        val localDateTime = instant.atZone(ZoneId.systemDefault())
 
 
-    return if (isToday(localDateTime)) {
-        localDateTime.format(DateTimeFormatter.ofPattern("HH:mm"))
-    } else {
-        localDateTime.format(DateTimeFormatter.ofPattern("MM/dd"))
-    }
+        if (isToday(localDateTime)) {
+            localDateTime.format(DateTimeFormatter.ofPattern("HH:mm"))
+        } else {
+            localDateTime.format(DateTimeFormatter.ofPattern("MM/dd"))
+        }
+    }.getOrNull() ?: ""
+
 }
 
 fun convertUtcToLocalFull(utcString: String): String {
