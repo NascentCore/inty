@@ -39,15 +39,31 @@ object ImageSizeCache {
      * 初始化缓存管理器
      */
     fun init(context: Context) {
-        val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
-        val size = Point()
-        windowManager.currentWindowMetrics.bounds.let { bounds ->
-            size.x = bounds.width()
-            size.y = bounds.height()
+        try {
+            val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+            val size = Point()
+            
+            // 使用更安全的方式获取屏幕尺寸
+            try {
+                windowManager.currentWindowMetrics.bounds.let { bounds ->
+                    size.x = bounds.width()
+                    size.y = bounds.height()
+                }
+            } catch (e: Exception) {
+                // 如果新API失败，使用旧API作为备选
+                windowManager.defaultDisplay.getSize(size)
+                EasyLog.log("ImageSizeCache - 使用旧API获取屏幕尺寸", EasyLog.WARN)
+            }
+            
+            screenWidth = size.x
+            density = context.resources.displayMetrics.density
+            EasyLog.log("ImageSizeCache initialized, screen width: $screenWidth, density: $density")
+        } catch (e: Exception) {
+            EasyLog.log("ImageSizeCache - 初始化失败: ${e.message}", EasyLog.ERROR)
+            // 设置默认值，确保应用不会崩溃
+            screenWidth = 1080 // 默认宽度
+            density = 3.0f // 默认密度
         }
-        screenWidth = size.x
-        density = context.resources.displayMetrics.density
-        EasyLog.log("ImageSizeCache initialized, screen width: $screenWidth, density: $density")
     }
     
     /**

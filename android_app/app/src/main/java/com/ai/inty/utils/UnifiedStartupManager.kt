@@ -69,34 +69,79 @@ object UnifiedStartupManager {
     }
     
     /**
-     * 初始化启动管理器
+     * 初始化启动管理器 - 只做必要的登录判断，不阻塞启动
      */
-    fun initialize(@Suppress("UNUSED_PARAMETER") context: Context) {
-        EasyLog.log("UnifiedStartupManager - 开始初始化")
+    fun initializeEssential(context: Context) {
+        EasyLog.log("UnifiedStartupManager - 开始必要初始化")
         _startupState.value = StartupState.Initializing
         _currentPhase.value = StartupPhase.Initializing
         
+        // 异步进行必要的登录判断，给splash页面显示时间
         startupScope.launch {
             try {
+                // 给splash页面一些显示时间
+                kotlinx.coroutines.delay(800) // 至少显示800ms
+                
+                // 检查登录状态，如果未登录则尝试创建游客账户（不阻塞）
+                if (!IntySetting.isLogin()) {
+                    EasyLog.log("UnifiedStartupManager - 用户未登录，尝试创建游客账户")
+                    try {
+                        createGuestAccount()
+                    } catch (e: Exception) {
+                        EasyLog.log("UnifiedStartupManager - 游客账户创建失败，但不阻塞启动: ${e.message}", EasyLog.WARN)
+                    }
+                }
+                
+                _startupState.value = StartupState.UserReady
+                _startupProgress.value = 0.3f
+                EasyLog.log("UnifiedStartupManager - 必要初始化完成")
+                
+            } catch (e: Exception) {
+                EasyLog.log("UnifiedStartupManager - 必要初始化失败，但不阻塞启动: ${e.message}", EasyLog.WARN)
+                _startupState.value = StartupState.UserReady // 即使失败也标记为用户就绪，不阻塞启动
+            }
+        }
+    }
+    
+    /**
+     * 异步初始化 - 进行数据预加载和缓存，不阻塞启动
+     */
+    fun initializeAsync(context: Context) {
+        EasyLog.log("UnifiedStartupManager - 开始异步初始化")
+        
+        startupScope.launch {
+            try {
+                // 阶段0：初始化图片预加载管理器（在后台线程中）
+                initializeImagePreloadManager(context)
+                
                 // 阶段1：加载缓存数据
                 loadCacheData()
                 
-                // 阶段2：用户设置
-                setupUser()
-                
-                // 阶段3：网络同步
+                // 阶段2：网络同步（如果已登录）
                 syncNetworkData()
                 
                 _startupState.value = StartupState.Completed
                 _currentPhase.value = StartupPhase.Completed
                 _startupProgress.value = 1.0f
                 
-                EasyLog.log("UnifiedStartupManager - 启动完成")
+                EasyLog.log("UnifiedStartupManager - 异步初始化完成")
                 
             } catch (e: Exception) {
-                EasyLog.log("UnifiedStartupManager - 启动失败: ${e.message}", EasyLog.ERROR)
+                EasyLog.log("UnifiedStartupManager - 异步初始化失败: ${e.message}", EasyLog.ERROR)
                 _startupState.value = StartupState.Failed
             }
+        }
+    }
+    
+    /**
+     * 阶段0：初始化图片预加载管理器
+     */
+    private suspend fun initializeImagePreloadManager(context: Context) {
+        try {
+            ImagePreloadManager.init(context)
+            EasyLog.log("UnifiedStartupManager - 图片预加载管理器初始化完成")
+        } catch (e: Exception) {
+            EasyLog.log("UnifiedStartupManager - 图片预加载管理器初始化失败: ${e.message}", EasyLog.ERROR)
         }
     }
     
@@ -244,6 +289,19 @@ object UnifiedStartupManager {
                     AgentCacheManager.cacheAgents(agents)
                     _recommendedAgents.value = agents
                     EasyLog.log("UnifiedStartupManager - 推荐agents同步成功: ${agents.size}个")
+                    
+                    // 异步预加载图片资源，不阻塞启动流程
+                    kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                        try {
+                            // 先预加载关键图片（前10个），确保首屏快速渲染
+                            ImagePreloadManager.preloadCriticalImages(agents, 10)
+                            
+                            // 然后预加载所有图片，优化后续页面渲染
+                            ImagePreloadManager.preloadAgentsImages(agents, 5)
+                        } catch (e: Exception) {
+                            EasyLog.log("UnifiedStartupManager - 图片预加载异常: ${e.message}", EasyLog.ERROR)
+                        }
+                    }
                 }
                 is HttpResult.Failure -> {
                     EasyLog.log("UnifiedStartupManager - 推荐agents同步失败: ${result.message}", EasyLog.WARN)

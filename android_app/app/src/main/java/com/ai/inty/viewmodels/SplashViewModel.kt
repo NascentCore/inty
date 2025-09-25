@@ -53,11 +53,26 @@ class SplashViewModel : BaseActivityViewModel() {
      * 等待启动完成
      */
     private suspend fun waitForStartupCompletion() {
-        // 等待启动管理器完成所有阶段
-        while (!UnifiedStartupManager.isStartupCompleted()) {
-            kotlinx.coroutines.delay(100) // 100ms检查一次
+        // 确保splash页面至少显示1.5秒，给用户良好的视觉体验
+        val startTime = System.currentTimeMillis()
+        val minSplashTime = 1500L // 最少显示1.5秒
+        
+        // 等待必要的初始化完成（用户就绪状态），不等待完整的数据预加载
+        while (UnifiedStartupManager.startupState.value != UnifiedStartupManager.StartupState.UserReady &&
+               UnifiedStartupManager.startupState.value != UnifiedStartupManager.StartupState.Completed) {
+            kotlinx.coroutines.delay(50) // 50ms检查一次，更快响应
         }
         
-        EasyLog.log("SplashViewModel - 启动管理器完成，状态: ${UnifiedStartupManager.startupState.value}")
+        // 计算已经过去的时间
+        val elapsedTime = System.currentTimeMillis() - startTime
+        val remainingTime = minSplashTime - elapsedTime
+        
+        // 如果还没到最少显示时间，继续等待
+        if (remainingTime > 0) {
+            EasyLog.log("SplashViewModel - 必要初始化完成，等待splash显示时间: ${remainingTime}ms")
+            kotlinx.coroutines.delay(remainingTime)
+        }
+        
+        EasyLog.log("SplashViewModel - 启动完成，总耗时: ${System.currentTimeMillis() - startTime}ms")
     }
 }

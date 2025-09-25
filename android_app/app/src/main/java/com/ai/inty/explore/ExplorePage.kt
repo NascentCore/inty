@@ -30,7 +30,6 @@ import androidx.paging.compose.collectAsLazyPagingItems
 import com.ai.inty.R
 import com.ai.inty.base.IntyImage
 import com.ai.inty.beans.AgentInfo
-import com.ai.inty.utils.ImageSizeCache
 
 /**
  * Explore页面 - 推荐agents展示
@@ -50,10 +49,7 @@ fun ExplorePage(
     val agentsFlow = viewModel.getRecommendAgentsFlow()
     val lazyPagingItems = agentsFlow?.collectAsLazyPagingItems()
 
-    // 初始化图片尺寸缓存 - 立即同步初始化
-    LaunchedEffect(Unit) {
-        ImageSizeCache.init(context)
-    }
+    // 图片尺寸缓存已在启动时初始化，无需重复初始化
 
     // 初始化Paging数据
     LaunchedEffect(Unit) {
