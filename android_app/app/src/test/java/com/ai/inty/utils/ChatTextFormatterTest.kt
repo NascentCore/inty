@@ -9,10 +9,11 @@ import org.junit.Assert.assertNotNull
 import org.junit.Test
 
 class ChatTextFormatterTest {
-    @Test
-    fun formatChatMessage_appliesItalicStyleWithinBrackets() {
-        val input = "Hello (world)"
-        val result = ChatTextFormatter.formatChatMessage(
+  @Test
+  fun formatChatMessage_appliesItalicStyleWithinBrackets() {
+    val input = "Hello (world)"
+    val result =
+        ChatTextFormatter.formatChatMessage(
             text = input,
             fontSize = TextUnit.Unspecified,
             fontWeight = FontWeight.Normal,
@@ -20,16 +21,15 @@ class ChatTextFormatterTest {
             italicColor = Color.Red,
         )
 
-        // Text remains unchanged
-        assertEquals(input, result.text)
+    // Text remains unchanged
+    assertEquals(input, result.text)
 
-        // Find span for the bracket content
-        val italicSpan = result.spanStyles.find { span ->
-            result.text.substring(span.start, span.end) == "world"
-        }
+    // Find span for the bracket content
+    val italicSpan =
+        result.spanStyles.find { span -> result.text.substring(span.start, span.end) == "world" }
 
-        assertNotNull("Italic span for bracket content not found", italicSpan)
-        assertEquals(FontStyle.Italic, italicSpan!!.item.fontStyle)
-        assertEquals(Color.Red, italicSpan.item.color)
-    }
+    assertNotNull("Italic span for bracket content not found", italicSpan)
+    assertEquals(FontStyle.Italic, italicSpan!!.item.fontStyle)
+    assertEquals(Color.Red, italicSpan.item.color)
+  }
 }

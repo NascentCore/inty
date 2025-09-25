@@ -11,28 +11,25 @@ import org.gradle.kotlin.dsl.configure
 import org.gradle.kotlin.dsl.dependencies
 import org.gradle.kotlin.dsl.project
 
-/**
- * 用于Android 动态模块的plugin定义
- */
+/** 用于Android 动态模块的plugin定义 */
 class AndroidFeaturePlugin : Plugin<Project> {
-    override fun apply(target: Project) {
-        with(target) {
-            pluginManager.apply("com.android.dynamic-feature")
-            pluginManager.apply("org.jetbrains.kotlin.android")
+  override fun apply(target: Project) {
+    with(target) {
+      pluginManager.apply("com.android.dynamic-feature")
+      pluginManager.apply("org.jetbrains.kotlin.android")
 
-            extensions.configure<DynamicFeatureExtension> {
-                configureKotlinAndroid(this)
-                configureFlavors(this)
-            }
+      extensions.configure<DynamicFeatureExtension> {
+        configureKotlinAndroid(this)
+        configureFlavors(this)
+      }
 
-            testDependencies()
-            dependencies {
-                add("implementation", project(":app"))
-                add("implementation", libs.findLibrary("androidx.core.ktx").get())
+      testDependencies()
+      dependencies {
+        add("implementation", project(":app"))
+        add("implementation", libs.findLibrary("androidx.core.ktx").get())
 
-                add("androidTestImplementation", libs.findLibrary("androidx.annotation").get())
-            }
-
-        }
+        add("androidTestImplementation", libs.findLibrary("androidx.annotation").get())
+      }
     }
+  }
 }

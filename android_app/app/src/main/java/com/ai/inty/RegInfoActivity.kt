@@ -12,48 +12,39 @@ import com.ai.inty.viewmodels.RegInfoViewModel
 import com.therouter.router.Route
 import kotlinx.coroutines.launch
 
-/**
- * 注册信息完善页面，性别和年龄
- */
+/** 注册信息完善页面，性别和年龄 */
 @Route(path = Constant.ROUTE_REG_INFO)
 class RegInfoActivity : BaseActivity() {
 
-    private val viewModel: RegInfoViewModel by viewModels()
+  private val viewModel: RegInfoViewModel by viewModels()
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
+  override fun onCreate(savedInstanceState: Bundle?) {
+    super.onCreate(savedInstanceState)
 
-        setContent {
-            IntyTheme {
-                RegInfoContent(
-                    onClose = { finish() },
-                    onSave = { gender, age ->
-                        viewModel.onSave(gender, age)
-                    }
-                )
-            }
-        }
-
-        lifecycleScope.launch {
-            viewModel.finishActivity.collect {
-                if (it) {
-                    finish()
-                }
-            }
-        }
+    setContent {
+      IntyTheme {
+        RegInfoContent(
+            onClose = { finish() },
+            onSave = { gender, age -> viewModel.onSave(gender, age) },
+        )
+      }
     }
+
+    lifecycleScope.launch {
+      viewModel.finishActivity.collect {
+        if (it) {
+          finish()
+        }
+      }
+    }
+  }
 }
 
-/**
- * 注册信息内容组件
- */
+/** 注册信息内容组件 */
 @Composable
 private fun RegInfoContent(
     onClose: () -> Unit,
-    onSave: (gender: com.ai.inty.beans.GENDER, age: String) -> Unit
+    onSave: (gender: com.ai.inty.beans.GENDER, age: String) -> Unit,
 ) {
-    RegInfoScreen(
-        onClose = onClose,
-        onSave = onSave
-    )
+  RegInfoScreen(onClose = onClose, onSave = onSave)
 }

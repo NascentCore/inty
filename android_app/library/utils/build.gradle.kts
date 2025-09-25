@@ -1,17 +1,13 @@
-plugins {
-    alias(libs.plugins.ai.android.library)
-}
+plugins { alias(libs.plugins.ai.android.library) }
 
-android {
-    namespace = "com.inty.utils"
-}
+android { namespace = "com.inty.utils" }
 
 dependencies {
-    // ===== AndroidX 核心库 =====
-    implementation(libs.androidx.core.ktx)
-    implementation(libs.androidx.appcompat)
+  // ===== AndroidX 核心库 =====
+  implementation(libs.androidx.core.ktx)
+  implementation(libs.androidx.appcompat)
 
-    // ===== 腾讯系库 =====
-    api(libs.mmkv)
-    implementation(libs.mars.xlog)
+  // ===== 腾讯系库 =====
+  api(libs.mmkv)
+  implementation(libs.mars.xlog)
 }

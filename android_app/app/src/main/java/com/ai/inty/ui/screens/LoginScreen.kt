@@ -24,8 +24,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.credentials.exceptions.GetCredentialException
 import androidx.credentials.exceptions.GetCredentialCancellationException
+import androidx.credentials.exceptions.GetCredentialException
 import androidx.credentials.exceptions.GetCredentialInterruptedException
 import androidx.credentials.exceptions.NoCredentialException
 import com.ai.inty.R
@@ -41,143 +41,126 @@ import com.ai.inty.utils.CredentialManagerHelper
 import com.inty.utils.log.EasyLog
 import kotlinx.coroutines.launch
 
-/**
- * 登录屏幕
- */
+/** 登录屏幕 */
 @Composable
 internal fun LoginScreen(
     onClose: () -> Unit = {},
     onGoogleLoginSuccess: (idToken: String) -> Unit,
 ) {
-    val context = LocalContext.current
-    var lastClickTime by remember { mutableLongStateOf(0L) }
-    var isLoading by remember { mutableStateOf(false) }
-    val coroutineScope = rememberCoroutineScope()
+  val context = LocalContext.current
+  var lastClickTime by remember { mutableLongStateOf(0L) }
+  var isLoading by remember { mutableStateOf(false) }
+  val coroutineScope = rememberCoroutineScope()
 
-    // 使用新的 Credential Manager 登录
-    fun performGoogleSignIn() {
-        if (isLoading) return
+  // 使用新的 Credential Manager 登录
+  fun performGoogleSignIn() {
+    if (isLoading) return
 
-        val currentTime = System.currentTimeMillis()
-        if (!AntiClick.isValidClick(lastClickTime)) return
-        lastClickTime = currentTime
+    val currentTime = System.currentTimeMillis()
+    if (!AntiClick.isValidClick(lastClickTime)) return
+    lastClickTime = currentTime
 
-        coroutineScope.launch {
-            isLoading = true
-            try {
-                val result = CredentialManagerHelper.signInWithGoogle(context)
-                result.fold(
-                    onSuccess = { idToken ->
-                        EasyLog.log("Credential Manager sign-in successful")
-                        onGoogleLoginSuccess(idToken)
-                    },
-                    onFailure = { exception ->
-                        // 检查是否为用户取消操作，如果是则不显示错误提示
-                        when (exception) {
-                            is GetCredentialCancellationException -> {
-                                // 用户取消登录，不显示错误提示
-                                EasyLog.log("User cancelled the login process")
-                                return@fold
-                            }
-                            is GetCredentialInterruptedException -> {
-                                // 登录过程被中断，不显示错误提示
-                                EasyLog.log("Login process was interrupted")
-                                return@fold
-                            }
-                            is NoCredentialException -> {
-                                val errorMessage = context.getString(R.string.no_credentials_available)
-                                EasyLog.log("Credential Manager sign-in failed: $errorMessage", EasyLog.ERROR)
-                                // 显示错误提示
-                                coroutineScope.launch {
-                                    ToastUtils.showToast(errorMessage)
-                                }
-                            }
-                            is GetCredentialException -> {
-                                val errorMessage = context.getString(R.string.get_credential_failed)
-                                EasyLog.log("Credential Manager sign-in failed: $errorMessage", EasyLog.ERROR)
-                                // 显示错误提示
-                                coroutineScope.launch {
-                                    ToastUtils.showToast(errorMessage)
-                                }
-                            }
-                            else -> {
-                                val errorMessage = context.getString(R.string.login_failed)
-                                EasyLog.log("Credential Manager sign-in failed: $errorMessage", EasyLog.ERROR)
-                                // 显示错误提示
-                                coroutineScope.launch {
-                                    ToastUtils.showToast(errorMessage)
-                                }
-                            }
-                        }
-                    }
-                )
-            } finally {
-                isLoading = false
-            }
-        }
+    coroutineScope.launch {
+      isLoading = true
+      try {
+        val result = CredentialManagerHelper.signInWithGoogle(context)
+        result.fold(
+            onSuccess = { idToken ->
+              EasyLog.log("Credential Manager sign-in successful")
+              onGoogleLoginSuccess(idToken)
+            },
+            onFailure = { exception ->
+              // 检查是否为用户取消操作，如果是则不显示错误提示
+              when (exception) {
+                is GetCredentialCancellationException -> {
+                  // 用户取消登录，不显示错误提示
+                  EasyLog.log("User cancelled the login process")
+                  return@fold
+                }
+                is GetCredentialInterruptedException -> {
+                  // 登录过程被中断，不显示错误提示
+                  EasyLog.log("Login process was interrupted")
+                  return@fold
+                }
+                is NoCredentialException -> {
+                  val errorMessage = context.getString(R.string.no_credentials_available)
+                  EasyLog.log("Credential Manager sign-in failed: $errorMessage", EasyLog.ERROR)
+                  // 显示错误提示
+                  coroutineScope.launch { ToastUtils.showToast(errorMessage) }
+                }
+                is GetCredentialException -> {
+                  val errorMessage = context.getString(R.string.get_credential_failed)
+                  EasyLog.log("Credential Manager sign-in failed: $errorMessage", EasyLog.ERROR)
+                  // 显示错误提示
+                  coroutineScope.launch { ToastUtils.showToast(errorMessage) }
+                }
+                else -> {
+                  val errorMessage = context.getString(R.string.login_failed)
+                  EasyLog.log("Credential Manager sign-in failed: $errorMessage", EasyLog.ERROR)
+                  // 显示错误提示
+                  coroutineScope.launch { ToastUtils.showToast(errorMessage) }
+                }
+              }
+            },
+        )
+      } finally {
+        isLoading = false
+      }
     }
+  }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black.copy(0.6f)),
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
+  Box(
+      modifier = Modifier.fillMaxSize().background(Color.Black.copy(0.6f)),
+  ) {
+    Column(
+        modifier =
+            Modifier.fillMaxWidth()
                 .align(Alignment.BottomCenter)
                 .background(
-                    brush = Brush.verticalGradient(
-                        colors = listOf(
-                            Color(0xFF322341),
-                            Color(0xFF120E24)
-                        )
-                    ),
-                    shape = RoundedCornerShape(24.dp, 24.dp, 0.dp, 0.dp)
+                    brush =
+                        Brush.verticalGradient(
+                            colors = listOf(Color(0xFF322341), Color(0xFF120E24))
+                        ),
+                    shape = RoundedCornerShape(24.dp, 24.dp, 0.dp, 0.dp),
                 ),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            // 关闭按钮
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                LoginCloseButton(onClose = onClose)
-            }
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+      // 关闭按钮
+      Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+        LoginCloseButton(onClose = onClose)
+      }
 
-            Spacer(Modifier.height(12.dp))
+      Spacer(Modifier.height(12.dp))
 
-            // Logo 图片
-            LogoImage()
+      // Logo 图片
+      LogoImage()
 
-            Spacer(modifier = Modifier.height(40.dp))
+      Spacer(modifier = Modifier.height(40.dp))
 
-            // 欢迎文本
-            WelcomeTitle()
+      // 欢迎文本
+      WelcomeTitle()
 
-            Spacer(modifier = Modifier.height(8.dp))
+      Spacer(modifier = Modifier.height(8.dp))
 
-            WelcomeSubtitle()
+      WelcomeSubtitle()
 
-            Spacer(modifier = Modifier.height(40.dp))
+      Spacer(modifier = Modifier.height(40.dp))
 
-            // Google 登录按钮
-            GoogleLoginButton(
-                isLoading = isLoading,
-                onLoginClick = {
-                    performGoogleSignIn()
-                }
-            )
+      // Google 登录按钮
+      GoogleLoginButton(isLoading = isLoading, onLoginClick = { performGoogleSignIn() })
 
-            Spacer(modifier = Modifier.height(24.dp))
+      Spacer(modifier = Modifier.height(24.dp))
 
-            // 隐私政策文本
-            PolicyText()
+      // 隐私政策文本
+      PolicyText()
 
-            Spacer(modifier = Modifier.height(60.dp))
-        }
+      Spacer(modifier = Modifier.height(60.dp))
     }
+  }
 }
 
 @Preview(backgroundColor = 0xFFffffff, showBackground = true)
 @Composable
 private fun LoginScreenPreview() {
-    LoginScreen(onGoogleLoginSuccess = {})
+  LoginScreen(onGoogleLoginSuccess = {})
 }

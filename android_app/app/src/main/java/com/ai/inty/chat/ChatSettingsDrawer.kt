@@ -43,9 +43,7 @@ import com.ai.inty.viewmodels.ChatViewModel
 import com.inty.utils.storage.IntySetting
 import com.therouter.TheRouter
 
-/**
- * 聊天设置抽屉组件
- */
+/** 聊天设置抽屉组件 */
 @Composable
 fun ChatSettingsDrawer(
     chatViewModel: ChatViewModel,
@@ -54,295 +52,281 @@ fun ChatSettingsDrawer(
     onPremiumDialogShow: (Boolean) -> Unit,
     onPremiumModeChange: (Boolean) -> Unit,
 ) {
-    val context = LocalContext.current
-    val vipStatus by BillingRepository.vipStatusFlow.collectAsState()
+  val context = LocalContext.current
+  val vipStatus by BillingRepository.vipStatusFlow.collectAsState()
 
-    // Keep talking二状态设置：默认跟随全局设置
-    var agentKeepTalking by remember(agentInfo?.id) {
+  // Keep talking二状态设置：默认跟随全局设置
+  var agentKeepTalking by
+      remember(agentInfo?.id) {
         mutableStateOf(
             agentInfo?.let {
-                // 获取角色专用设置，如果不存在则使用全局设置
-                IntySetting.getAgentKeepTalking(it.id) ?: IntySetting.isShowKeepTalking()
+              // 获取角色专用设置，如果不存在则使用全局设置
+              IntySetting.getAgentKeepTalking(it.id) ?: IntySetting.isShowKeepTalking()
             } ?: false
         )
-    }
+      }
 
-    // Premium model二状态设置：默认跟随全局设置，但受VIP状态限制
-    var agentPremiumModel by remember(agentInfo?.id, vipStatus.isSubscribed) {
+  // Premium model二状态设置：默认跟随全局设置，但受VIP状态限制
+  var agentPremiumModel by
+      remember(agentInfo?.id, vipStatus.isSubscribed) {
         mutableStateOf(
             if (!vipStatus.isSubscribed) {
-                // 如果不是VIP，强制关闭Premium model
-                false
+              // 如果不是VIP，强制关闭Premium model
+              false
             } else {
-                agentInfo?.let {
-                    // 获取角色专用设置，如果不存在则使用全局设置
-                    IntySetting.getAgentPremiumModel(it.id) ?: IntySetting.isShowPremiumModel()
-                } ?: false
+              agentInfo?.let {
+                // 获取角色专用设置，如果不存在则使用全局设置
+                IntySetting.getAgentPremiumModel(it.id) ?: IntySetting.isShowPremiumModel()
+              } ?: false
             }
         )
-    }
+      }
 
-    LifecycleResumeEffect(chatViewModel) {
-        chatViewModel.updateUserInfo()
-        onPauseOrDispose { }
-    }
+  LifecycleResumeEffect(chatViewModel) {
+    chatViewModel.updateUserInfo()
+    onPauseOrDispose {}
+  }
 
-    val horizontalPadding = 16
+  val horizontalPadding = 16
 
-    MyModalNavigationDrawer(
-        modifier = Modifier,
-        drawerState = drawerState,
-        drawerContent = {
-            Column(
-                modifier = Modifier
-                    .width(319.dp)
+  MyModalNavigationDrawer(
+      modifier = Modifier,
+      drawerState = drawerState,
+      drawerContent = {
+        Column(
+            modifier =
+                Modifier.width(319.dp)
                     .fillMaxHeight()
                     .background(
-                        brush = Brush.verticalGradient(
-                            colors = listOf(
-                                Color(0xFF322341),
-                                Color(0xFF120E24)
+                        brush =
+                            Brush.verticalGradient(
+                                colors = listOf(Color(0xFF322341), Color(0xFF120E24))
                             )
-                        )
                     )
-            ) {
+        ) {
+          Text(
+              text = stringResource(R.string.chat_settings_my_persona_title),
+              modifier = Modifier.padding(top = 58.dp, start = 16.dp),
+              fontSize = 20.sp,
+              fontWeight = FontWeight.SemiBold,
+              color = Color.White,
+          )
+
+          Spacer(Modifier.height(14.dp))
+
+          Column(
+              modifier =
+                  Modifier.padding(horizontal = horizontalPadding.dp)
+                      .fillMaxWidth()
+                      .border(
+                          brush =
+                              Brush.linearGradient(
+                                  colors =
+                                      listOf(
+                                          Color.Transparent,
+                                          Color.White.copy(0.2f),
+                                          Color.Transparent,
+                                      )
+                              ),
+                          width = 1.dp,
+                          shape = RoundedCornerShape(8.dp),
+                      )
+                      .background(color = Color(0x3378599A), shape = RoundedCornerShape(8.dp))
+          ) {
+            val userProfile = chatViewModel.userProfile.collectAsState()
+            MySettingItem(
+                key = "Name",
+                value = userProfile.value.nickname,
+                horizontalPadding = horizontalPadding,
+                onClick = {
+                  // 检查是否正式登录（非游客且已登录）
+                  if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
+                    TheRouter.build(Constant.ROUTE_SETTING_MY)
+                        .withObject("userProfile", userProfile.value)
+                        .navigation(context)
+                  } else {
+                    // 未登录或游客时跳转到登录页面
+                    TheRouter.build(Constant.ROUTE_LOGIN).navigation(context)
+                  }
+                },
+            )
+            MySettingItem(
+                key = "Pronoun",
+                value = userProfile.value.pronouns(),
+                horizontalPadding = horizontalPadding,
+                onClick = {
+                  // 检查是否正式登录（非游客且已登录）
+                  if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
+                    TheRouter.build(Constant.ROUTE_SETTING_MY)
+                        .withObject("userProfile", userProfile.value)
+                        .navigation(context)
+                  } else {
+                    // 未登录或游客时跳转到登录页面
+                    TheRouter.build(Constant.ROUTE_LOGIN).navigation(context)
+                  }
+                },
+            )
+            MySettingItem(
+                key = "Intro",
+                value = userProfile.value.description ?: "Edit",
+                horizontalPadding = horizontalPadding,
+                onClick = {
+                  // 检查是否正式登录（非游客且已登录）
+                  if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
+                    TheRouter.build(Constant.ROUTE_SETTING_MY)
+                        .withObject("userProfile", userProfile.value)
+                        .navigation(context)
+                  } else {
+                    // 未登录或游客时跳转到登录页面
+                    TheRouter.build(Constant.ROUTE_LOGIN).navigation(context)
+                  }
+                },
+            )
+          }
+
+          Spacer(Modifier.height(30.dp))
+
+          Text(
+              text = stringResource(R.string.chat_settings_settings_title),
+              modifier = Modifier.padding(start = 16.dp),
+              fontSize = 20.sp,
+              fontWeight = FontWeight.SemiBold,
+              color = Color.White,
+          )
+
+          Spacer(Modifier.height(14.dp))
+
+          Column(
+              modifier =
+                  Modifier.padding(horizontal = horizontalPadding.dp)
+                      .fillMaxWidth()
+                      .border(
+                          brush =
+                              Brush.linearGradient(
+                                  colors =
+                                      listOf(
+                                          Color.Transparent,
+                                          Color.White.copy(0.2f),
+                                          Color.Transparent,
+                                      )
+                              ),
+                          width = 1.dp,
+                          shape = RoundedCornerShape(8.dp),
+                      )
+                      .background(color = Color(0x3378599A), shape = RoundedCornerShape(8.dp))
+          ) {
+            // Keep talking设置（二状态，与全局设置同步）
+            agentInfo?.let { agent ->
+              Row(
+                  modifier =
+                      Modifier.fillMaxWidth()
+                          .height(56.dp)
+                          .padding(horizontal = horizontalPadding.dp)
+                          .noRippleClickable {
+                            // 检查是否正式登录（非游客且已登录）
+                            if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
+                              agentKeepTalking = !agentKeepTalking
+                              IntySetting.setAgentKeepTalking(agent.id, agentKeepTalking)
+                            } else {
+                              // 未登录或游客时跳转到登录页面
+                              TheRouter.build(Constant.ROUTE_LOGIN).navigation(context)
+                            }
+                          },
+                  verticalAlignment = Alignment.CenterVertically,
+              ) {
                 Text(
-                    text = stringResource(R.string.chat_settings_my_persona_title),
-                    modifier = Modifier.padding(top = 58.dp, start = 16.dp),
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Color.White
+                    text = stringResource(R.string.settings_keep_talking),
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Normal,
+                    color = Color.White,
                 )
+                Spacer(Modifier.weight(1f))
+                Image(
+                    painter =
+                        if (agentKeepTalking) painterResource(R.drawable.opened)
+                        else painterResource(R.drawable.closed),
+                    contentDescription = null,
+                )
+              }
 
-                Spacer(Modifier.height(14.dp))
-
-                Column(
-                    modifier = Modifier
-                        .padding(horizontal = horizontalPadding.dp)
-                        .fillMaxWidth()
-                        .border(
-                            brush = Brush.linearGradient(
-                                colors = listOf(
-                                    Color.Transparent,
-                                    Color.White.copy(0.2f),
-                                    Color.Transparent
-                                )
-                            ),
-                            width = 1.dp,
-                            shape = RoundedCornerShape(8.dp)
-                        )
-                        .background(
-                            color = Color(0x3378599A),
-                            shape = RoundedCornerShape(8.dp)
-                        )
-                ) {
-                    val userProfile = chatViewModel.userProfile.collectAsState()
-                    MySettingItem(
-                        key = "Name",
-                        value = userProfile.value.nickname,
-                        horizontalPadding = horizontalPadding,
-                        onClick = {
+              // Premium model设置（二状态，与全局设置同步）
+              Row(
+                  modifier =
+                      Modifier.fillMaxWidth()
+                          .height(56.dp)
+                          .padding(horizontal = horizontalPadding.dp)
+                          .noRippleClickable {
                             // 检查是否正式登录（非游客且已登录）
                             if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
-                                TheRouter.build(Constant.ROUTE_SETTING_MY)
-                                    .withObject("userProfile", userProfile.value)
-                                    .navigation(context)
+                              // 检查VIP状态
+                              if (!vipStatus.isSubscribed) {
+                                // 如果不是VIP，显示提示
+                                onPremiumDialogShow(true)
+                              } else {
+                                // 如果是VIP，允许切换
+                                agentPremiumModel = agentPremiumModel.not()
+                                IntySetting.setAgentPremiumModel(agent.id, agentPremiumModel)
+                                onPremiumModeChange(agentPremiumModel)
+                              }
                             } else {
-                                // 未登录或游客时跳转到登录页面
-                                TheRouter.build(Constant.ROUTE_LOGIN)
-                                    .navigation(context)
+                              // 未登录或游客时跳转到登录页面
+                              TheRouter.build(Constant.ROUTE_LOGIN).navigation(context)
                             }
-                        }
-                    )
-                    MySettingItem(
-                        key = "Pronoun",
-                        value = userProfile.value.pronouns(),
-                        horizontalPadding = horizontalPadding,
-                        onClick = {
-                            // 检查是否正式登录（非游客且已登录）
-                            if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
-                                TheRouter.build(Constant.ROUTE_SETTING_MY)
-                                    .withObject("userProfile", userProfile.value)
-                                    .navigation(context)
-                            } else {
-                                // 未登录或游客时跳转到登录页面
-                                TheRouter.build(Constant.ROUTE_LOGIN)
-                                    .navigation(context)
-                            }
-                        }
-                    )
-                    MySettingItem(
-                        key = "Intro",
-                        value = userProfile.value.description ?: "Edit",
-                        horizontalPadding = horizontalPadding,
-                        onClick = {
-                            // 检查是否正式登录（非游客且已登录）
-                            if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
-                                TheRouter.build(Constant.ROUTE_SETTING_MY)
-                                    .withObject("userProfile", userProfile.value)
-                                    .navigation(context)
-                            } else {
-                                // 未登录或游客时跳转到登录页面
-                                TheRouter.build(Constant.ROUTE_LOGIN)
-                                    .navigation(context)
-                            }
-                        }
-                    )
-                }
-
-                Spacer(Modifier.height(30.dp))
-
+                          },
+                  verticalAlignment = Alignment.CenterVertically,
+              ) {
                 Text(
-                    text = stringResource(R.string.chat_settings_settings_title),
-                    modifier = Modifier.padding(start = 16.dp),
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Color.White
+                    text = stringResource(R.string.settings_premium_model),
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Normal,
+                    color = Color.White,
                 )
+                Spacer(Modifier.weight(1f))
+                Image(
+                    painter =
+                        if (agentPremiumModel) painterResource(R.drawable.opened)
+                        else painterResource(R.drawable.closed),
+                    contentDescription = null,
+                )
+              }
 
-                Spacer(Modifier.height(14.dp))
-
-                Column(
-                    modifier = Modifier
-                        .padding(horizontal = horizontalPadding.dp)
-                        .fillMaxWidth()
-                        .border(
-                            brush = Brush.linearGradient(
-                                colors = listOf(
-                                    Color.Transparent,
-                                    Color.White.copy(0.2f),
-                                    Color.Transparent
-                                )
-                            ),
-                            width = 1.dp,
-                            shape = RoundedCornerShape(8.dp)
-                        )
-                        .background(
-                            color = Color(0x3378599A),
-                            shape = RoundedCornerShape(8.dp)
-                        )
-                ) {
-                    // Keep talking设置（二状态，与全局设置同步）
-                    agentInfo?.let { agent ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(56.dp)
-                                .padding(horizontal = horizontalPadding.dp)
-                                .noRippleClickable {
-                                    // 检查是否正式登录（非游客且已登录）
-                                    if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
-                                        agentKeepTalking = !agentKeepTalking
-                                        IntySetting.setAgentKeepTalking(
-                                            agent.id,
-                                            agentKeepTalking
-                                        )
-                                    } else {
-                                        // 未登录或游客时跳转到登录页面
-                                        TheRouter.build(Constant.ROUTE_LOGIN)
-                                            .navigation(context)
-                                    }
-                                },
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = stringResource(R.string.settings_keep_talking),
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Normal,
-                                color = Color.White
-                            )
-                            Spacer(Modifier.weight(1f))
-                            Image(
-                                painter = if (agentKeepTalking) painterResource(R.drawable.opened) else painterResource(
-                                    R.drawable.closed
-                                ),
-                                contentDescription = null,
-                            )
-                        }
-
-                        // Premium model设置（二状态，与全局设置同步）
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(56.dp)
-                                .padding(horizontal = horizontalPadding.dp)
-                                .noRippleClickable {
-                                    // 检查是否正式登录（非游客且已登录）
-                                    if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
-                                        // 检查VIP状态
-                                        if (!vipStatus.isSubscribed) {
-                                            // 如果不是VIP，显示提示
-                                            onPremiumDialogShow(true)
-                                        } else {
-                                            // 如果是VIP，允许切换
-                                            agentPremiumModel = agentPremiumModel.not()
-                                            IntySetting.setAgentPremiumModel(
-                                                agent.id,
-                                                agentPremiumModel
-                                            )
-                                            onPremiumModeChange(agentPremiumModel)
-                                        }
-                                    } else {
-                                        // 未登录或游客时跳转到登录页面
-                                        TheRouter.build(Constant.ROUTE_LOGIN)
-                                            .navigation(context)
-                                    }
-                                },
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = stringResource(R.string.settings_premium_model),
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Normal,
-                                color = Color.White
-                            )
-                            Spacer(Modifier.weight(1f))
-                            Image(
-                                painter = if (agentPremiumModel) painterResource(R.drawable.opened) else painterResource(
-                                    R.drawable.closed
-                                ),
-                                contentDescription = null,
-                            )
-                        }
-
-                        // 举报入口
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(56.dp)
-                                .padding(horizontal = horizontalPadding.dp)
-                                .noRippleClickable {
-                                    // 检查是否正式登录（非游客且已登录）
-                                    if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
-                                        TheRouter.build(Constant.ROUTE_REPORT)
-                                            .withString("targetID", agent.id)
-                                            .withString("targetType", "AGENT")
-                                            .navigation(context)
-                                    } else {
-                                        // 未登录或游客时跳转到登录页面
-                                        TheRouter.build(Constant.ROUTE_LOGIN)
-                                            .navigation(context)
-                                    }
-                                },
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = stringResource(R.string.report),
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Normal,
-                                color = Color.White
-                            )
-                            Spacer(Modifier.weight(1f))
-                            Image(
-                                painter = painterResource(R.drawable.icon_next),
-                                contentDescription = null,
-                            )
-                        }
-                    }
-                }
+              // 举报入口
+              Row(
+                  modifier =
+                      Modifier.fillMaxWidth()
+                          .height(56.dp)
+                          .padding(horizontal = horizontalPadding.dp)
+                          .noRippleClickable {
+                            // 检查是否正式登录（非游客且已登录）
+                            if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
+                              TheRouter.build(Constant.ROUTE_REPORT)
+                                  .withString("targetID", agent.id)
+                                  .withString("targetType", "AGENT")
+                                  .navigation(context)
+                            } else {
+                              // 未登录或游客时跳转到登录页面
+                              TheRouter.build(Constant.ROUTE_LOGIN).navigation(context)
+                            }
+                          },
+                  verticalAlignment = Alignment.CenterVertically,
+              ) {
+                Text(
+                    text = stringResource(R.string.report),
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Normal,
+                    color = Color.White,
+                )
+                Spacer(Modifier.weight(1f))
+                Image(
+                    painter = painterResource(R.drawable.icon_next),
+                    contentDescription = null,
+                )
+              }
             }
+          }
         }
-    ) {
-        // 主屏内容
-    }
-} 
+      },
+  ) {
+    // 主屏内容
+  }
+}

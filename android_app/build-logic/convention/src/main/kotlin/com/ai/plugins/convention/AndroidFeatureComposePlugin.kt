@@ -12,31 +12,27 @@ import org.gradle.kotlin.dsl.dependencies
 import org.gradle.kotlin.dsl.getByType
 import org.gradle.kotlin.dsl.project
 
-/**
- * 用于Android 动态模块的plugin定义,包含compose的依赖配置
- */
+/** 用于Android 动态模块的plugin定义,包含compose的依赖配置 */
 class AndroidFeatureComposePlugin : Plugin<Project> {
-    override fun apply(target: Project) {
-        with(target) {
-            pluginManager.apply("com.android.dynamic-feature")
-            pluginManager.apply("org.jetbrains.kotlin.android")
-            pluginManager.apply("org.jetbrains.kotlin.plugin.compose")
+  override fun apply(target: Project) {
+    with(target) {
+      pluginManager.apply("com.android.dynamic-feature")
+      pluginManager.apply("org.jetbrains.kotlin.android")
+      pluginManager.apply("org.jetbrains.kotlin.plugin.compose")
 
-            extensions.configure<DynamicFeatureExtension> {
-                configureKotlinAndroid(this)
-            }
+      extensions.configure<DynamicFeatureExtension> { configureKotlinAndroid(this) }
 
-            testDependencies()
+      testDependencies()
 
-            val extension = extensions.getByType<DynamicFeatureExtension>()
-            configureAndroidCompose(extension)
+      val extension = extensions.getByType<DynamicFeatureExtension>()
+      configureAndroidCompose(extension)
 
-            dependencies {
-                add("implementation", project(":app"))
-                add("implementation", libs.findLibrary("androidx.core.ktx").get())
+      dependencies {
+        add("implementation", project(":app"))
+        add("implementation", libs.findLibrary("androidx.core.ktx").get())
 
-                add("androidTestImplementation", libs.findLibrary("androidx.annotation").get())
-            }
-        }
+        add("androidTestImplementation", libs.findLibrary("androidx.annotation").get())
+      }
     }
+  }
 }

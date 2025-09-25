@@ -23,24 +23,22 @@ import coil3.memory.MemoryCache
 import coil3.request.ImageRequest
 import com.inty.utils.AppEnv
 
-
 fun initImageLoader() {
-    val context = AppEnv.context
-    ImageLoader.Builder(context)
-        .memoryCache {
-            MemoryCache.Builder()
-                .maxSizePercent(context, 0.4) // 增加内存缓存到 40%
-                .build()
-        }
-        .diskCache {
-            DiskCache.Builder()
-                .directory(context.cacheDir.resolve("image_cache"))
-                .maxSizePercent(0.05) // 增加磁盘缓存到 5%
-                .build()
-        }
-        .build()
+  val context = AppEnv.context
+  ImageLoader.Builder(context)
+      .memoryCache {
+        MemoryCache.Builder()
+            .maxSizePercent(context, 0.4) // 增加内存缓存到 40%
+            .build()
+      }
+      .diskCache {
+        DiskCache.Builder()
+            .directory(context.cacheDir.resolve("image_cache"))
+            .maxSizePercent(0.05) // 增加磁盘缓存到 5%
+            .build()
+      }
+      .build()
 }
-
 
 @Composable
 fun IntyImage(
@@ -59,35 +57,33 @@ fun IntyImage(
     colorFilter: ColorFilter? = null,
     filterQuality: FilterQuality = DrawScope.DefaultFilterQuality,
 ) {
-    val context = LocalContext.current
-    val imageRequest = remember(model, context) {
+  val context = LocalContext.current
+  val imageRequest =
+      remember(model, context) {
         if (model is String) {
-            ImageRequest.Builder(context)
-                .data(model)
-                .build()
+          ImageRequest.Builder(context).data(model).build()
         } else {
-            model
+          model
         }
-    }
-    
-    AsyncImage(
-        model = imageRequest,
-        contentDescription = contentDescription,
-        modifier = modifier,
-        placeholder = placeholder,
-        error = error ?: placeholder,
-        fallback = fallback,
-        onLoading = onLoading,
-        onSuccess = onSuccess,
-        onError = onError,
-        alignment = alignment,
-        contentScale = contentScale,
-        alpha = alpha,
-        colorFilter = colorFilter,
-        filterQuality = filterQuality,
-    )
-}
+      }
 
+  AsyncImage(
+      model = imageRequest,
+      contentDescription = contentDescription,
+      modifier = modifier,
+      placeholder = placeholder,
+      error = error ?: placeholder,
+      fallback = fallback,
+      onLoading = onLoading,
+      onSuccess = onSuccess,
+      onError = onError,
+      alignment = alignment,
+      contentScale = contentScale,
+      alpha = alpha,
+      colorFilter = colorFilter,
+      filterQuality = filterQuality,
+  )
+}
 
 @Composable
 fun IntyCircleImage(
@@ -100,27 +96,26 @@ fun IntyCircleImage(
     colorFilter: ColorFilter? = null,
     filterQuality: FilterQuality = DrawScope.DefaultFilterQuality,
 ) {
-    val context = LocalContext.current
-    val imageRequest = remember(url, context) {
+  val context = LocalContext.current
+  val imageRequest =
+      remember(url, context) {
         if (url != null) {
-            ImageRequest.Builder(context)
-                .data(url)
-                .build()
+          ImageRequest.Builder(context).data(url).build()
         } else {
-            null
+          null
         }
-    }
-    
-    IntyImage(
-        modifier = modifier.clip(CircleShape),
-        model = imageRequest,
-        contentDescription = "",
-        placeholder = painterResource(placeholderResID),
-        error = painterResource(placeholderResID),
-        alignment = alignment,
-        contentScale = contentScale,
-        alpha = alpha,
-        colorFilter = colorFilter,
-        filterQuality = filterQuality,
-    )
+      }
+
+  IntyImage(
+      modifier = modifier.clip(CircleShape),
+      model = imageRequest,
+      contentDescription = "",
+      placeholder = painterResource(placeholderResID),
+      error = painterResource(placeholderResID),
+      alignment = alignment,
+      contentScale = contentScale,
+      alpha = alpha,
+      colorFilter = colorFilter,
+      filterQuality = filterQuality,
+  )
 }

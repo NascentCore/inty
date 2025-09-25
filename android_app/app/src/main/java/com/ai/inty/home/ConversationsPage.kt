@@ -44,10 +44,7 @@ import com.ai.inty.base.RedDot
 import com.ai.inty.beans.ConversationItem
 import com.ai.inty.utils.AuthClickable
 
-
-/**
- * 主页面第二个tab，会话列表页面，包含关注和聊天列表
- */
+/** 主页面第二个tab，会话列表页面，包含关注和聊天列表 */
 @Composable
 fun ConversationsPage(
     modifier: Modifier,
@@ -57,19 +54,16 @@ fun ConversationsPage(
     isRefreshingConversations: Boolean = false,
     onLoadMoreConversations: (() -> Unit)? = null,
 ) {
-    Box(modifier = modifier) {
-        IntyImage(
-            modifier = Modifier.align(Alignment.TopEnd),
-            model = R.drawable.notify_header_bg
-        )
-        Content(
-            conversations = conversations,
-            onClickConversationItem = onClickConversationItem,
-            isLoadingConversations = isLoadingConversations,
-            isRefreshingConversations = isRefreshingConversations,
-            onLoadMoreConversations = onLoadMoreConversations,
-        )
-    }
+  Box(modifier = modifier) {
+    IntyImage(modifier = Modifier.align(Alignment.TopEnd), model = R.drawable.notify_header_bg)
+    Content(
+        conversations = conversations,
+        onClickConversationItem = onClickConversationItem,
+        isLoadingConversations = isLoadingConversations,
+        isRefreshingConversations = isRefreshingConversations,
+        onLoadMoreConversations = onLoadMoreConversations,
+    )
+  }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -81,45 +75,36 @@ private fun Content(
     isRefreshingConversations: Boolean = false,
     onLoadMoreConversations: (() -> Unit)? = null,
 ) {
-    Scaffold(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Transparent),
-        containerColor = Color.Transparent,
-        topBar = {
-            TopAppBar(
-                title = {
-                    Image(
-                        painter = painterResource(R.drawable.img_message_title),
-                        contentDescription = null,
-                        modifier = Modifier.size(132.dp, 28.dp)
-                    )
-                },
-                modifier = Modifier,
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
-            )
-        }
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-        ) {
-
-            MessageTabContent(
-                conversations = conversations,
-                onClickConversationItem = onClickConversationItem,
-                isLoading = isLoadingConversations,
-                isRefreshing = isRefreshingConversations,
-                onLoadMore = onLoadMoreConversations
-            )
-        }
+  Scaffold(
+      modifier = Modifier.fillMaxSize().background(Color.Transparent),
+      containerColor = Color.Transparent,
+      topBar = {
+        TopAppBar(
+            title = {
+              Image(
+                  painter = painterResource(R.drawable.img_message_title),
+                  contentDescription = null,
+                  modifier = Modifier.size(132.dp, 28.dp),
+              )
+            },
+            modifier = Modifier,
+            colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
+        )
+      },
+  ) { innerPadding ->
+    Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+      MessageTabContent(
+          conversations = conversations,
+          onClickConversationItem = onClickConversationItem,
+          isLoading = isLoadingConversations,
+          isRefreshing = isRefreshingConversations,
+          onLoadMore = onLoadMoreConversations,
+      )
     }
+  }
 }
 
-/**
- * 消息Tab内容
- */
+/** 消息Tab内容 */
 @Composable
 private fun MessageTabContent(
     conversations: List<ConversationItem>,
@@ -128,121 +113,98 @@ private fun MessageTabContent(
     isRefreshing: Boolean = false,
     onLoadMore: (() -> Unit)? = null,
 ) {
-    val listState = rememberLazyListState()
+  val listState = rememberLazyListState()
 
-    // 检测滚动到底部
-    val shouldLoadMore by remember {
-        derivedStateOf {
-            val layoutInfo = listState.layoutInfo
-            val totalItems = layoutInfo.totalItemsCount
-            val lastVisibleItem = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+  // 检测滚动到底部
+  val shouldLoadMore by remember {
+    derivedStateOf {
+      val layoutInfo = listState.layoutInfo
+      val totalItems = layoutInfo.totalItemsCount
+      val lastVisibleItem = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
 
-            // 当滚动到倒数第3项时触发加载更多
-            totalItems > 0 && lastVisibleItem >= totalItems - 3 && !isLoading
-        }
+      // 当滚动到倒数第3项时触发加载更多
+      totalItems > 0 && lastVisibleItem >= totalItems - 3 && !isLoading
     }
+  }
 
-    // 监听滚动状态，触发加载更多
-    LaunchedEffect(shouldLoadMore) {
-        if (shouldLoadMore) {
-            onLoadMore?.invoke()
-        }
+  // 监听滚动状态，触发加载更多
+  LaunchedEffect(shouldLoadMore) {
+    if (shouldLoadMore) {
+      onLoadMore?.invoke()
     }
+  }
 
-    Box(Modifier.fillMaxSize()) {
-        LazyColumn(
-            state = listState,
-            modifier = Modifier.matchParentSize()
-        ) {
-            // 刷新指示器
-            if (isRefreshing) {
-                item {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(80.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator(
-                            color = Color.White,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
+  Box(Modifier.fillMaxSize()) {
+    LazyColumn(state = listState, modifier = Modifier.matchParentSize()) {
+      // 刷新指示器
+      if (isRefreshing) {
+        item {
+          Box(
+              modifier = Modifier.fillMaxWidth().height(80.dp),
+              contentAlignment = Alignment.Center,
+          ) {
+            CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+          }
+        }
+      }
+
+      // 会话列表
+      if (conversations.isNotEmpty()) {
+        runCatching {
+              itemsIndexed(
+                  items = conversations,
+                  key = { index, conversion -> "${conversion.agentId}_$index" },
+              ) { _, conversion ->
+                AuthClickable(onClick = { onClickConversationItem(conversion) }) { authModifier ->
+                  ChatHistoryItem(modifier = authModifier.fillMaxWidth(), conversation = conversion)
                 }
+              }
+              item { Spacer(Modifier.height(60.dp)) }
             }
+            .onFailure { it.printStackTrace() }
+      }
 
-            // 会话列表
-            if (conversations.isNotEmpty()) {
-                runCatching {
-                    itemsIndexed(
-                        items = conversations,
-                        key = { index, conversion -> "${conversion.agentId}_$index" }
-                    ) { _, conversion ->
-                        AuthClickable(onClick = { onClickConversationItem(conversion) }) { authModifier ->
-                            ChatHistoryItem(
-                                modifier = authModifier.fillMaxWidth(),
-                                conversation = conversion
-                            )
-                        }
-                    }
-                    item {
-                        Spacer(Modifier.height(60.dp))
-                    }
-                }.onFailure { it.printStackTrace() }
-            }
-
-            // 加载更多指示器
-            if (isLoading) {
-                item {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(80.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator(
-                            color = Color.White,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
-                }
-            }
+      // 加载更多指示器
+      if (isLoading) {
+        item {
+          Box(
+              modifier = Modifier.fillMaxWidth().height(80.dp),
+              contentAlignment = Alignment.Center,
+          ) {
+            CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+          }
         }
-
-        if (conversations.isEmpty() && !isLoading && !isRefreshing) {
-            EmptyContentUI()
-        }
+      }
     }
+
+    if (conversations.isEmpty() && !isLoading && !isRefreshing) {
+      EmptyContentUI()
+    }
+  }
 }
-
 
 @Composable
 private fun EmptyContentUI() {
-    Column(
-        modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
+  Column(
+      modifier = Modifier.fillMaxSize(),
+      verticalArrangement = Arrangement.Center,
+      horizontalAlignment = Alignment.CenterHorizontally,
+  ) {
+    IntyImage(model = R.drawable.img_content_empty)
 
+    Spacer(Modifier.height(16.dp))
 
-        IntyImage(model = R.drawable.img_content_empty)
-
-        Spacer(Modifier.height(16.dp))
-
-        Text(
-            modifier = Modifier
-                .padding(horizontal = 16.dp)
-                .align(Alignment.CenterHorizontally),
-            text = stringResource(R.string.no_agent),
-            color = Color.White.copy(0.55f),
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Normal,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-    }
+    Text(
+        modifier = Modifier.padding(horizontal = 16.dp).align(Alignment.CenterHorizontally),
+        text = stringResource(R.string.no_agent),
+        color = Color.White.copy(0.55f),
+        fontSize = 14.sp,
+        fontWeight = FontWeight.Normal,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+    )
+  }
 }
-
 
 @Composable
 fun ChatHistoryItem(
@@ -250,74 +212,72 @@ fun ChatHistoryItem(
     conversation: ConversationItem,
     placeholderID: Int = R.drawable.app_icon,
 ) {
-    Row(
-        modifier = modifier.height(88.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Spacer(Modifier.width(16.dp))
+  Row(
+      modifier = modifier.height(88.dp),
+      verticalAlignment = Alignment.CenterVertically,
+  ) {
+    Spacer(Modifier.width(16.dp))
 
-        // 头像
-        IntyImage(
-            modifier = Modifier
-                .size(56.dp)
-                .clip(CircleShape),
-            model = conversation.agentAvatar,
-            placeholder = painterResource(placeholderID)
+    // 头像
+    IntyImage(
+        modifier = Modifier.size(56.dp).clip(CircleShape),
+        model = conversation.agentAvatar,
+        placeholder = painterResource(placeholderID),
+    )
+
+    Spacer(Modifier.width(14.dp))
+
+    // 内容区域
+    Column(modifier = Modifier.weight(1f)) {
+      Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            text = conversation.agentName,
+            fontSize = 15.sp,
+            lineHeight = 22.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = Color.White,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
         )
-
-        Spacer(Modifier.width(14.dp))
-
-        // 内容区域
-        Column(modifier = Modifier.weight(1f)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = conversation.agentName,
-                    fontSize = 15.sp,
-                    lineHeight = 22.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Color.White,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                if (conversation.isDeleted) {
-                    Spacer(Modifier.width(4.dp))
-                    Text(
-                        text = "(deleted)",
-                        fontSize = 15.sp,
-                        color = Color(0x8CFFFFFF),
-                    )
-                }
-            }
-
-            Spacer(Modifier.height(4.dp))
-            Text(
-                modifier = Modifier.height(22.dp),
-                text = conversation.lastMessage,
-                fontSize = 14.sp,
-                lineHeight = 22.sp,
-                color = Color(0x8CFFFFFF),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
+        if (conversation.isDeleted) {
+          Spacer(Modifier.width(4.dp))
+          Text(
+              text = "(deleted)",
+              fontSize = 15.sp,
+              color = Color(0x8CFFFFFF),
+          )
         }
+      }
 
-        // 右侧信息
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                text = conversation.getShowTime(),
-                fontSize = 12.sp,
-                color = Color(0x8CFFFFFF),
-            )
-            Spacer(Modifier.height(4.dp))
-            Box(
-                modifier = Modifier.height(22.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                if (conversation.isNew) {
-                    RedDot()
-                }
-            }
-        }
-        Spacer(Modifier.width(13.dp))
+      Spacer(Modifier.height(4.dp))
+      Text(
+          modifier = Modifier.height(22.dp),
+          text = conversation.lastMessage,
+          fontSize = 14.sp,
+          lineHeight = 22.sp,
+          color = Color(0x8CFFFFFF),
+          maxLines = 1,
+          overflow = TextOverflow.Ellipsis,
+      )
     }
+
+    // 右侧信息
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+      Text(
+          text = conversation.getShowTime(),
+          fontSize = 12.sp,
+          color = Color(0x8CFFFFFF),
+      )
+      Spacer(Modifier.height(4.dp))
+      Box(
+          modifier = Modifier.height(22.dp),
+          contentAlignment = Alignment.Center,
+      ) {
+        if (conversation.isNew) {
+          RedDot()
+        }
+      }
+    }
+    Spacer(Modifier.width(13.dp))
+  }
 }

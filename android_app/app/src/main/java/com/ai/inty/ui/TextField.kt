@@ -26,9 +26,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-/**
- * 聊天输入框
- */
+/** 聊天输入框 */
 @Composable
 fun HeartMultiLineEditor(
     modifier: Modifier = Modifier,
@@ -37,87 +35,79 @@ fun HeartMultiLineEditor(
     enableInput: Boolean = true,
     readOnly: Boolean = false,
     supportStr: String = "",
-    textStyle: TextStyle = TextStyle(
-        fontSize = 14.sp,
-        fontWeight = FontWeight.Normal,
-        color = Color.White,
-        textAlign = TextAlign.Start,
-        lineHeightStyle = LineHeightStyle(
-            alignment = LineHeightStyle.Alignment.Center,
-            trim = LineHeightStyle.Trim.Both
-        )
-    ),
+    textStyle: TextStyle =
+        TextStyle(
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Normal,
+            color = Color.White,
+            textAlign = TextAlign.Start,
+            lineHeightStyle =
+                LineHeightStyle(
+                    alignment = LineHeightStyle.Alignment.Center,
+                    trim = LineHeightStyle.Trim.Both,
+                ),
+        ),
     @IntRange(from = 0L) maxLength: Int = Int.MAX_VALUE,
     maxLines: Int = Int.MAX_VALUE,
     hintStr: String = "",
 ) {
-    Row(
+  Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
+    OutlinedTextField(
+        value = inputValue,
+        onValueChange = { str ->
+          if (str.length in 0..maxLength) {
+            onInputChange(str)
+          }
+        },
         modifier = modifier,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        OutlinedTextField(
-            value = inputValue,
-            onValueChange = { str ->
-                if (str.length in 0..maxLength) {
-                    onInputChange(str)
-                }
-            },
-            modifier = modifier,
-            enabled = enableInput,
-            readOnly = readOnly,
-            textStyle = textStyle,
-            maxLines = maxLines,
-            placeholder = {
-                if (hintStr.isNotEmpty()) {
-                    Text(
-                        text = hintStr,
-                        fontSize = textStyle.fontSize,
-                        fontWeight = textStyle.fontWeight,
-                        color = Color(0x59FFFFFF),
-                    )
-                }
-            },
-            supportingText = {
-                if (supportStr.isNotEmpty()) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.End
-                    ) {
-                        Text(
-                            text = supportStr,
-                            fontSize = 12.sp,
-                            lineHeight = 22.sp,
-                            fontWeight = FontWeight.Normal,
-                            color = Color(0x8CFFFFFF),
-                            modifier = Modifier
-                        )
-                    }
-                }
-
-            },
-            colors = OutlinedTextFieldDefaults.colors(
+        enabled = enableInput,
+        readOnly = readOnly,
+        textStyle = textStyle,
+        maxLines = maxLines,
+        placeholder = {
+          if (hintStr.isNotEmpty()) {
+            Text(
+                text = hintStr,
+                fontSize = textStyle.fontSize,
+                fontWeight = textStyle.fontWeight,
+                color = Color(0x59FFFFFF),
+            )
+          }
+        },
+        supportingText = {
+          if (supportStr.isNotEmpty()) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+              Text(
+                  text = supportStr,
+                  fontSize = 12.sp,
+                  lineHeight = 22.sp,
+                  fontWeight = FontWeight.Normal,
+                  color = Color(0x8CFFFFFF),
+                  modifier = Modifier,
+              )
+            }
+          }
+        },
+        colors =
+            OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = Color.Transparent,
                 unfocusedBorderColor = Color.Transparent,
-                disabledBorderColor = Color.Transparent
-            )
-        )
-
-    }
+                disabledBorderColor = Color.Transparent,
+            ),
+    )
+  }
 }
 
 @Preview
 @Composable
 private fun PreviewChatInputUI() {
-    var inputStr by remember { mutableStateOf("Input...") }
-    HeartMultiLineEditor(
-        Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
-            .background(Color(0x1AFFFFFF)),
-        inputValue = inputStr,
-        onInputChange = { inputStr = it },
-        maxLength = 20,
-        maxLines = 3,
-        supportStr = "${inputStr.length}/20",
-    )
+  var inputStr by remember { mutableStateOf("Input...") }
+  HeartMultiLineEditor(
+      Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(Color(0x1AFFFFFF)),
+      inputValue = inputStr,
+      onInputChange = { inputStr = it },
+      maxLength = 20,
+      maxLines = 3,
+      supportStr = "${inputStr.length}/20",
+  )
 }

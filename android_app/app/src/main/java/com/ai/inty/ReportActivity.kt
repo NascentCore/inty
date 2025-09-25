@@ -17,90 +17,65 @@ import com.therouter.router.Autowired
 import com.therouter.router.Route
 import kotlinx.coroutines.launch
 
-/**
- * 举报页面
- */
+/** 举报页面 */
 @Route(path = Constant.ROUTE_REPORT)
 class ReportActivity : BaseActivity() {
 
-    private val viewModel: ReportViewModel by viewModels()
+  private val viewModel: ReportViewModel by viewModels()
 
-    @Autowired
-    var targetID: String = ""
+  @Autowired var targetID: String = ""
 
-    @Autowired
-    var targetType: String = "USER"
+  @Autowired var targetType: String = "USER"
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
+  override fun onCreate(savedInstanceState: Bundle?) {
+    super.onCreate(savedInstanceState)
 
-        viewModel.targetID = targetID
-        viewModel.targetType = targetType
+    viewModel.targetID = targetID
+    viewModel.targetType = targetType
 
-        lifecycleScope.launch {
-            viewModel.finishActivity.collect {
-                if (it) {
-                    finish()
-                }
-            }
+    lifecycleScope.launch {
+      viewModel.finishActivity.collect {
+        if (it) {
+          finish()
         }
-
-        setContent {
-            IntyTheme {
-                ReportContent(
-                    viewModel = viewModel,
-                    onBack = { finish() }
-                )
-            }
-        }
+      }
     }
+
+    setContent { IntyTheme { ReportContent(viewModel = viewModel, onBack = { finish() }) } }
+  }
 }
 
-/**
- * 举报内容组件
- */
+/** 举报内容组件 */
 @Composable
-private fun ReportContent(
-    viewModel: ReportViewModel,
-    onBack: () -> Unit
-) {
-    val reasons = viewModel.reasons.collectAsState()
-    val selectIDs = viewModel.selectIDS
-    val description = viewModel.description.collectAsState()
-    val localImages = viewModel.localImages
-    val isSubmitting = viewModel.isSubmitting.collectAsState()
+private fun ReportContent(viewModel: ReportViewModel, onBack: () -> Unit) {
+  val reasons = viewModel.reasons.collectAsState()
+  val selectIDs = viewModel.selectIDS
+  val description = viewModel.description.collectAsState()
+  val localImages = viewModel.localImages
+  val isSubmitting = viewModel.isSubmitting.collectAsState()
 
-    val galleryLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.GetContent()
-    ) { imageUri ->
-        imageUri?.let {
-            viewModel.onAddImage(imageUri)
+  val galleryLauncher =
+      rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { imageUri ->
+        imageUri?.let { viewModel.onAddImage(imageUri) }
+      }
+
+  ReportScreen(
+      reasons = reasons.value,
+      selectIDs = selectIDs,
+      onClickReason = { id, isSelect ->
+        EasyLog.log("onClickReason id = $id, isSelect = $isSelect")
+        if (isSelect) {
+          viewModel.selectIDS.add(id)
+        } else {
+          viewModel.selectIDS.remove(id)
         }
-    }
-
-    ReportScreen(
-        reasons = reasons.value,
-        selectIDs = selectIDs,
-        onClickReason = { id, isSelect ->
-            EasyLog.log("onClickReason id = $id, isSelect = $isSelect")
-            if (isSelect) {
-                viewModel.selectIDS.add(id)
-            } else {
-                viewModel.selectIDS.remove(id)
-            }
-        },
-        description = description.value,
-        onDescriptionChange = {
-            viewModel.setDescription(it)
-        },
-        images = localImages.toList(),
-        onClickAddImage = {
-            galleryLauncher.launch("image/*")
-        },
-        onSave = {
-            viewModel.submit()
-        },
-        isSubmitting = isSubmitting.value,
-        onBack = onBack
-    )
+      },
+      description = description.value,
+      onDescriptionChange = { viewModel.setDescription(it) },
+      images = localImages.toList(),
+      onClickAddImage = { galleryLauncher.launch("image/*") },
+      onSave = { viewModel.submit() },
+      isSubmitting = isSubmitting.value,
+      onBack = onBack,
+  )
 }

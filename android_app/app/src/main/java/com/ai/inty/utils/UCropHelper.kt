@@ -12,39 +12,40 @@ import com.yalantis.ucrop.UCropActivity
 import java.io.File
 
 object UCropHelper {
-    fun getIntent(context: Context, srcUri: Uri, title: String): Intent {
-        // Use timestamp to create unique file names and avoid caching conflicts
-        val timestamp = System.currentTimeMillis()
-        // This is required, otherwise the preview will always be tmp.jpg
-        // So that the preview can be viewed after first modification,
-        // but the future update will always be stale.
-        val avatarTempFile = File(AppEnv.dirs.imagecache, "my_avatar_${timestamp}.jpg")
-        android.util.Log.d("UCropHelper", "Creating crop file: ${avatarTempFile.absolutePath}")
-        
-        val uCropOptions = UCrop.Options()
-        uCropOptions.apply {
-            setCompressionFormat(Bitmap.CompressFormat.JPEG)
-            // According to cursor, 2048 is a good balance between quality and size.
-            setMaxBitmapSize(2048)
-            // Set compression quality to 80 for better file size control
-            setCompressionQuality(80)
-            setCircleDimmedLayer(true)
-            setAllowedGestures(UCropActivity.SCALE, UCropActivity.NONE, UCropActivity.NONE)
-            setHideBottomControls(true)
-            setToolbarTitle(title)
-            setToolbarColor("#1C1523".toColorInt())
-            setToolbarWidgetColor(Color.WHITE)
-            setShowCropFrame(false)
-            setShowCropGrid(false)
-            setFreeStyleCropEnabled(false)
-        }
+  fun getIntent(context: Context, srcUri: Uri, title: String): Intent {
+    // Use timestamp to create unique file names and avoid caching conflicts
+    val timestamp = System.currentTimeMillis()
+    // This is required, otherwise the preview will always be tmp.jpg
+    // So that the preview can be viewed after first modification,
+    // but the future update will always be stale.
+    val avatarTempFile = File(AppEnv.dirs.imagecache, "my_avatar_${timestamp}.jpg")
+    android.util.Log.d("UCropHelper", "Creating crop file: ${avatarTempFile.absolutePath}")
 
-        val intentCrop = UCrop.of(srcUri, Uri.fromFile(avatarTempFile))
+    val uCropOptions = UCrop.Options()
+    uCropOptions.apply {
+      setCompressionFormat(Bitmap.CompressFormat.JPEG)
+      // According to cursor, 2048 is a good balance between quality and size.
+      setMaxBitmapSize(2048)
+      // Set compression quality to 80 for better file size control
+      setCompressionQuality(80)
+      setCircleDimmedLayer(true)
+      setAllowedGestures(UCropActivity.SCALE, UCropActivity.NONE, UCropActivity.NONE)
+      setHideBottomControls(true)
+      setToolbarTitle(title)
+      setToolbarColor("#1C1523".toColorInt())
+      setToolbarWidgetColor(Color.WHITE)
+      setShowCropFrame(false)
+      setShowCropGrid(false)
+      setFreeStyleCropEnabled(false)
+    }
+
+    val intentCrop =
+        UCrop.of(srcUri, Uri.fromFile(avatarTempFile))
             .withAspectRatio(1f, 1f)
             .withOptions(uCropOptions)
             .withMaxResultSize(1080, 1080)
             .getIntent(context)
 
-        return intentCrop
-    }
+    return intentCrop
+  }
 }

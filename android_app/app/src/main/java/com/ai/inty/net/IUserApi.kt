@@ -17,17 +17,16 @@ import retrofit2.http.Part
 @Singleton
 interface IUserApi {
 
-    @POST("/api/v1/auth/google/login")
-    suspend fun loginByGoogle(@Body loginRequest: GoogleLoginRequest): HttpResult<GoogleLoginResponse>
+  @POST("/api/v1/auth/google/login")
+  suspend fun loginByGoogle(@Body loginRequest: GoogleLoginRequest): HttpResult<GoogleLoginResponse>
 
-    @Multipart
-    @POST("/api/v1/images")
-    suspend fun uploadAvatar(@Part file: MultipartBody.Part): HttpResult<UploadAvatarResponse>
+  @Multipart
+  @POST("/api/v1/images")
+  suspend fun uploadAvatar(@Part file: MultipartBody.Part): HttpResult<UploadAvatarResponse>
 
-    @GET("/api/v1/users/deletion/check")
-    suspend fun userDeletionCheck(): HttpResult<UserDeletionCheckResponse>
+  @GET("/api/v1/users/deletion/check")
+  suspend fun userDeletionCheck(): HttpResult<UserDeletionCheckResponse>
 
-    @POST("/api/v1/users/delete-account")
-    suspend fun userDeleteAccount(): HttpResult<UserDeleteResponse>
-
+  @POST("/api/v1/users/delete-account")
+  suspend fun userDeleteAccount(): HttpResult<UserDeleteResponse>
 }

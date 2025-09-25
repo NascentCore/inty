@@ -9,23 +9,23 @@ import com.therouter.TheRouter
 
 open class BaseActivity : ComponentActivity() {
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        onInit()
-    }
+  override fun onCreate(savedInstanceState: Bundle?) {
+    super.onCreate(savedInstanceState)
+    onInit()
+  }
 
-    private fun onInit() {
-        TheRouter.inject(this)
-    }
+  private fun onInit() {
+    TheRouter.inject(this)
+  }
 
-    override fun attachBaseContext(newBase: Context) {
-        val overrideConfiguration = Configuration(newBase.resources.configuration)
-        overrideConfiguration.fontScale = 1.0f
-        super.attachBaseContext(newBase.createConfigurationContext(overrideConfiguration))
-    }
+  override fun attachBaseContext(newBase: Context) {
+    val overrideConfiguration = Configuration(newBase.resources.configuration)
+    overrideConfiguration.fontScale = 1.0f
+    super.attachBaseContext(newBase.createConfigurationContext(overrideConfiguration))
+  }
 
-    override fun onCreate(savedInstanceState: Bundle?, persistentState: PersistableBundle?) {
-        super.onCreate(savedInstanceState, persistentState)
-        onInit()
-    }
+  override fun onCreate(savedInstanceState: Bundle?, persistentState: PersistableBundle?) {
+    super.onCreate(savedInstanceState, persistentState)
+    onInit()
+  }
 }

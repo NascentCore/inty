@@ -37,9 +37,7 @@ import com.ai.inty.ui.components.ReportItem
 import com.ai.inty.ui.components.ReportReasonsContainer
 import com.ai.inty.ui.components.SaveBtn
 
-/**
- * 举报屏幕
- */
+/** 举报屏幕 */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReportScreen(
@@ -54,119 +52,112 @@ fun ReportScreen(
     onSave: () -> Unit,
     isSubmitting: Boolean = false,
 ) {
-    val focusManager = LocalFocusManager.current
+  val focusManager = LocalFocusManager.current
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null
-            ) {
-                focusManager.clearFocus()
-            },
-    ) {
-        Column(
-            modifier = Modifier
-                .matchParentSize()
+  Box(
+      modifier =
+          Modifier.fillMaxSize().clickable(
+              interactionSource = remember { MutableInteractionSource() },
+              indication = null,
+          ) {
+            focusManager.clearFocus()
+          },
+  ) {
+    Column(
+        modifier =
+            Modifier.matchParentSize()
                 .padding(horizontal = 16.dp)
                 .imePadding()
                 .verticalScroll(rememberScrollState()),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            // 布局占位用
-            CenterAlignedTopAppBar(
-                title = {},
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
-            )
-            Spacer(Modifier.height(16.dp))
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+      // 布局占位用
+      CenterAlignedTopAppBar(
+          title = {},
+          colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
+      )
+      Spacer(Modifier.height(16.dp))
 
-            // 举报原因
-            ReportReasonsContainer(
-                title = stringResource(R.string.npc_asterisk_full)
-            ) {
-                reasons.forEach { reason ->
-                    val isSelected = selectIDs.contains(reason.id)
-                    ReportItem(
-                        text = reason.description,
-                        selected = isSelected,
-                        onClick = {
-                            onClickReason(reason.id, !isSelected)
-                        }
-                    )
-                }
-            }
-
-            Spacer(Modifier.height(24.dp))
-
-            // 举报描述
-            ReportDescriptionContainer(
-                title = stringResource(R.string.report_description),
-                description = description,
-                onDescriptionChange = onDescriptionChange,
-                placeholder = stringResource(R.string.please_fill_feedback_full)
-            )
-
-            Spacer(Modifier.height(24.dp))
-
-            // 图片证据
-            ReportImageEvidenceContainer(
-                title = stringResource(R.string.image_evidence_full),
-                images = images,
-                onClickAddImage = onClickAddImage
-            )
-
-            Spacer(Modifier.height(60.dp))
-
-            SaveBtn(onSave = onSave, isSubmitting = isSubmitting)
-            Spacer(Modifier.height(60.dp))
+      // 举报原因
+      ReportReasonsContainer(title = stringResource(R.string.npc_asterisk_full)) {
+        reasons.forEach { reason ->
+          val isSelected = selectIDs.contains(reason.id)
+          ReportItem(
+              text = reason.description,
+              selected = isSelected,
+              onClick = { onClickReason(reason.id, !isSelected) },
+          )
         }
+      }
 
-        // 顶部导航栏
-        CenterAlignedTopAppBar(
-            colors = TopAppBarDefaults.centerAlignedTopAppBarColors()
-                .copy(containerColor = Color(0XFF1C1523)),
-            title = {
-                Text(
-                    text = stringResource(R.string.report),
-                    color = Color.White,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 20.sp,
-                )
-            },
-            navigationIcon = {
-                Image(
-                    modifier = Modifier
-                        .padding(horizontal = 12.dp)
-                        .noRippleClickable {
-                            onBack()
-                        },
-                    painter = painterResource(R.drawable.back),
-                    contentDescription = null,
-                )
-            },
-        )
+      Spacer(Modifier.height(24.dp))
+
+      // 举报描述
+      ReportDescriptionContainer(
+          title = stringResource(R.string.report_description),
+          description = description,
+          onDescriptionChange = onDescriptionChange,
+          placeholder = stringResource(R.string.please_fill_feedback_full),
+      )
+
+      Spacer(Modifier.height(24.dp))
+
+      // 图片证据
+      ReportImageEvidenceContainer(
+          title = stringResource(R.string.image_evidence_full),
+          images = images,
+          onClickAddImage = onClickAddImage,
+      )
+
+      Spacer(Modifier.height(60.dp))
+
+      SaveBtn(onSave = onSave, isSubmitting = isSubmitting)
+      Spacer(Modifier.height(60.dp))
     }
+
+    // 顶部导航栏
+    CenterAlignedTopAppBar(
+        colors =
+            TopAppBarDefaults.centerAlignedTopAppBarColors()
+                .copy(containerColor = Color(0XFF1C1523)),
+        title = {
+          Text(
+              text = stringResource(R.string.report),
+              color = Color.White,
+              fontWeight = FontWeight.SemiBold,
+              fontSize = 20.sp,
+          )
+        },
+        navigationIcon = {
+          Image(
+              modifier = Modifier.padding(horizontal = 12.dp).noRippleClickable { onBack() },
+              painter = painterResource(R.drawable.back),
+              contentDescription = null,
+          )
+        },
+    )
+  }
 }
 
 @Preview(showBackground = true)
 @Composable
 fun ReportScreenPreview() {
-    val mockReasons = listOf(
-        ReportItem(id = 1, description = "不当内容"),
-        ReportItem(id = 2, description = "垃圾信息"),
-        ReportItem(id = 3, description = "骚扰行为")
-    )
+  val mockReasons =
+      listOf(
+          ReportItem(id = 1, description = "不当内容"),
+          ReportItem(id = 2, description = "垃圾信息"),
+          ReportItem(id = 3, description = "骚扰行为"),
+      )
 
-    ReportScreen(
-        onBack = {},
-        reasons = mockReasons,
-        selectIDs = setOf(1),
-        onClickReason = { _, _ -> },
-        description = "这是一条举报描述",
-        onDescriptionChange = {},
-        images = listOf(),
-        onClickAddImage = {},
-        onSave = {}
-    )
+  ReportScreen(
+      onBack = {},
+      reasons = mockReasons,
+      selectIDs = setOf(1),
+      onClickReason = { _, _ -> },
+      description = "这是一条举报描述",
+      onDescriptionChange = {},
+      images = listOf(),
+      onClickAddImage = {},
+      onSave = {},
+  )
 }

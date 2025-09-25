@@ -14,40 +14,24 @@ import com.ai.inty.ui.theme.IntyTheme
 import com.ai.inty.viewmodels.SubsManageViewModel
 import com.therouter.router.Route
 
-/**
- * 订阅管理页面
- */
+/** 订阅管理页面 */
 @Route(path = Constant.ROUTE_SUBSCRIPTION_MANAGEMENT)
 class SubscriptionManagementActivity : BaseActivity() {
 
-    private val viewModel: SubsManageViewModel by viewModels()
+  private val viewModel: SubsManageViewModel by viewModels()
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContent {
-            IntyTheme {
-                SubsManageContent(
-                    onBack = { finish() },
-                    viewModel = viewModel
-                )
-            }
-        }
-    }
+  override fun onCreate(savedInstanceState: Bundle?) {
+    super.onCreate(savedInstanceState)
+    setContent { IntyTheme { SubsManageContent(onBack = { finish() }, viewModel = viewModel) } }
+  }
 }
 
-/**
- * 订阅管理内容组件
- */
+/** 订阅管理内容组件 */
 @Composable
-private fun SubsManageContent(
-    onBack: () -> Unit,
-    viewModel: SubsManageViewModel
-) {
-    SubscriptionManagementScreen(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(DarkPurple),
-        onBack = onBack,
-        viewModel = viewModel
-    )
+private fun SubsManageContent(onBack: () -> Unit, viewModel: SubsManageViewModel) {
+  SubscriptionManagementScreen(
+      modifier = Modifier.fillMaxSize().background(DarkPurple),
+      onBack = onBack,
+      viewModel = viewModel,
+  )
 }

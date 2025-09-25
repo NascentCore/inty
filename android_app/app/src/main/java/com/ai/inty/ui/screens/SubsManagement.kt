@@ -32,9 +32,7 @@ import com.ai.inty.ui.components.openPlayStoreSubscriptions
 import com.ai.inty.viewmodels.SubsManageViewModel
 import com.ai.inty.viewmodels.SubscriptionUiEvent
 
-/**
- * 订阅管理屏幕
- */
+/** 订阅管理屏幕 */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SubscriptionManagementScreen(
@@ -42,85 +40,71 @@ fun SubscriptionManagementScreen(
     onBack: () -> Unit,
     viewModel: SubsManageViewModel,
 ) {
-    val context = LocalContext.current
+  val context = LocalContext.current
 
-    // 获取订阅状态
-    val vipStatus by BillingRepository.vipStatusFlow.collectAsState()
+  // 获取订阅状态
+  val vipStatus by BillingRepository.vipStatusFlow.collectAsState()
 
-    // 观察来自 ViewModel 的 UI 事件
-    LaunchedEffect(Unit) {
-        viewModel.uiEvent.collect { event ->
-            when (event) {
-                SubscriptionUiEvent.NavigateToPlayStoreSubscriptions -> {
-                    // 在View层执行实际的Intent启动
-                    openPlayStoreSubscriptions(context)
-                }
-
-                is SubscriptionUiEvent.ShowToast -> {
-                    Toast.makeText(context, event.message, Toast.LENGTH_LONG).show()
-                }
-            }
+  // 观察来自 ViewModel 的 UI 事件
+  LaunchedEffect(Unit) {
+    viewModel.uiEvent.collect { event ->
+      when (event) {
+        SubscriptionUiEvent.NavigateToPlayStoreSubscriptions -> {
+          // 在View层执行实际的Intent启动
+          openPlayStoreSubscriptions(context)
         }
+
+        is SubscriptionUiEvent.ShowToast -> {
+          Toast.makeText(context, event.message, Toast.LENGTH_LONG).show()
+        }
+      }
     }
+  }
 
-    Scaffold(
-        modifier = modifier,
-        topBar = {
-            CenterAlignedTopAppBar(
-                title = {
-                    Text(
-                        text = stringResource(R.string.settings_subscription_management),
-                        color = Color.White,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 20.sp,
-                    )
-                },
-                navigationIcon = {
-                    Image(
-                        modifier = Modifier
-                            .padding(horizontal = 12.dp)
-                            .noRippleClickable {
-                                onBack()
-                            },
-                        painter = painterResource(R.drawable.back),
-                        contentDescription = null,
-                    )
-                }
-            )
-        }
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier.padding(innerPadding)
-        ) {
-            SubscriptionManagementContainer {
-                SubscriptionManagementItem(
-                    icon = R.drawable.icon_list_row_3,
-                    title = stringResource(R.string.cancel_subscription),
-                    onClick = {
-                        viewModel.navigateToGooglePlaySubscription()
-                    }
-                )
-                SettingDivider()
-                SubscriptionManagementItem(
-                    icon = R.drawable.icon_list_row_1,
-                    title = stringResource(R.string.restore_subscription),
-                    onClick = {
-                        viewModel.navigateToGooglePlaySubscription()
-                    }
-                )
-            }
-        }
+  Scaffold(
+      modifier = modifier,
+      topBar = {
+        CenterAlignedTopAppBar(
+            title = {
+              Text(
+                  text = stringResource(R.string.settings_subscription_management),
+                  color = Color.White,
+                  fontWeight = FontWeight.SemiBold,
+                  fontSize = 20.sp,
+              )
+            },
+            navigationIcon = {
+              Image(
+                  modifier = Modifier.padding(horizontal = 12.dp).noRippleClickable { onBack() },
+                  painter = painterResource(R.drawable.back),
+                  contentDescription = null,
+              )
+            },
+        )
+      },
+  ) { innerPadding ->
+    Column(modifier = Modifier.padding(innerPadding)) {
+      SubscriptionManagementContainer {
+        SubscriptionManagementItem(
+            icon = R.drawable.icon_list_row_3,
+            title = stringResource(R.string.cancel_subscription),
+            onClick = { viewModel.navigateToGooglePlaySubscription() },
+        )
+        SettingDivider()
+        SubscriptionManagementItem(
+            icon = R.drawable.icon_list_row_1,
+            title = stringResource(R.string.restore_subscription),
+            onClick = { viewModel.navigateToGooglePlaySubscription() },
+        )
+      }
     }
+  }
 }
 
 @SuppressLint("ViewModelConstructorInComposable")
 @Preview(showBackground = true)
 @Composable
 private fun SubscriptionManagementScreenPreview() {
-    // 这里需要模拟 ViewModel，实际使用时会在 Activity 中传入
-    SubscriptionManagementScreen(
-        modifier = Modifier,
-        onBack = {},
-        viewModel = SubsManageViewModel()
-    )
+  // 这里需要模拟 ViewModel，实际使用时会在 Activity 中传入
+  SubscriptionManagementScreen(modifier = Modifier, onBack = {}, viewModel = SubsManageViewModel())
 }

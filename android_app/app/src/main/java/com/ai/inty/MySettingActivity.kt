@@ -30,141 +30,124 @@ import com.therouter.router.Route
 import com.yalantis.ucrop.UCrop
 import kotlinx.coroutines.launch
 
-
-/**
- * 个人设置页面
- */
+/** 个人设置页面 */
 @Route(path = Constant.ROUTE_SETTING_MY)
 class MySettingActivity : BaseActivity() {
 
-    @Autowired
-    var userProfile: com.ai.inty.beans.UserProfile? = null
+  @Autowired var userProfile: com.ai.inty.beans.UserProfile? = null
 
-    private val viewModel: MySettingViewModel by viewModels()
+  private val viewModel: MySettingViewModel by viewModels()
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
+  override fun onCreate(savedInstanceState: Bundle?) {
+    super.onCreate(savedInstanceState)
 
-        viewModel.init(userProfile)
+    viewModel.init(userProfile)
 
-        lifecycleScope.launch {
-            viewModel.finishActivity.collect {
-                if (it) {
-                    finish()
-                }
-            }
+    lifecycleScope.launch {
+      viewModel.finishActivity.collect {
+        if (it) {
+          finish()
         }
-
-        setContent {
-            IntyTheme {
-                val context = LocalContext.current
-                val cropTitle = stringResource(id = R.string.crop_image)
-
-                val activityCropResultLauncher = rememberLauncherForActivityResult(
-                    ActivityResultContracts.StartActivityForResult()
-                ) { result ->
-                    if (result.resultCode == RESULT_OK) {
-                        runCatching {
-                            result.data?.let { intentResult ->
-                                val imageUri = UCrop.getOutput(intentResult) // 图片uri
-                                imageUri?.let { imageUriReal ->
-                                    viewModel.setAvatar(imageUriReal)
-                                }
-                            }
-                        }.onFailure { e -> e.printStackTrace() }
-                    }
-                }
-
-                val galleryLauncher = rememberLauncherForActivityResult(
-                    ActivityResultContracts.GetContent()
-                ) { imageUri ->
-                    imageUri?.let { uri ->
-                        runCatching {
-                            // Check file size before cropping - limit to 10MB
-                            val fileSize = getFileSize(context, uri)
-                            // TODO: 使用 firebase remote config 配置应集中管理
-                            // https://firebase.google.com/docs/remote-config
-                            val maxSizeMB = 10
-                            val maxSizeBytes = maxSizeMB * 1024 * 1024 // 10MB in bytes
-                            if (fileSize > maxSizeBytes) {
-                                val maxSizeMBStr = String.format("%dMB", maxSizeMB)
-                                val fileSizeMBStr =
-                                    String.format("%.1fMB", fileSize / (1024.0 * 1024.0))
-                                val msg = String.format(
-                                    context.getString(R.string.user_avatar_size_too_large_with_size_format),
-                                    maxSizeMBStr,
-                                    fileSizeMBStr
-                                )
-                                lifecycleScope.launch {
-                                    ToastUtils.showToast(msg)
-                                }
-                                return@let
-                            }
-                            val intentCrop = UCropHelper.getIntent(context, uri, cropTitle)
-                            activityCropResultLauncher.launch(intentCrop)
-                        }.onFailure { it.printStackTrace() }
-
-                    }
-                }
-
-                val userProfile = viewModel.userProfile.collectAsState()
-                var editKey by remember { mutableStateOf(EditKey.None) }
-                var editValue by rememberSaveable { mutableStateOf("") }
-
-                Box {
-                    MySettingScreen(
-                        userProfile = userProfile.value,
-                        onBack = {
-                            finish()
-                        },
-                        onClickName = {
-                            editKey = EditKey.Name
-                            editValue = userProfile.value.nickname
-                        },
-                        onClickPersona = {
-                            editKey = EditKey.Persona
-                            editValue = userProfile.value.description ?: ""
-                        },
-                        onClickPronouns = {
-                            editKey = EditKey.Pronouns
-                            editValue = userProfile.value.gender ?: ""
-                        },
-                        onSelectAvatar = {
-                            galleryLauncher.launch("image/*")
-                        },
-                        onSave = {
-                            viewModel.onSave()
-                        }
-                    )
-
-                    if (editKey != EditKey.None) {
-                        EditDialog(
-                            editKey = editKey,
-                            editValue = editValue,
-                            onDismiss = {
-                                editKey = EditKey.None
-                            },
-                            onSave = { key, value ->
-                                viewModel.changeUserProfile(key, value)
-                                editKey = EditKey.None
-                            },
-                            onValueChange = {
-                                editValue = it
-                            }
-                        )
-                    }
-                }
-            }
-        }
+      }
     }
 
-    private fun getFileSize(context: Context, uri: Uri): Long {
-        return try {
-            context.contentResolver.openInputStream(uri)?.use { input ->
-                input.available().toLong()
-            } ?: 0L
-        } catch (e: Exception) {
-            0L
+    setContent {
+      IntyTheme {
+        val context = LocalContext.current
+        val cropTitle = stringResource(id = R.string.crop_image)
+
+        val activityCropResultLauncher =
+            rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+                result ->
+              if (result.resultCode == RESULT_OK) {
+                runCatching {
+                      result.data?.let { intentResult ->
+                        val imageUri = UCrop.getOutput(intentResult) // 图片uri
+                        imageUri?.let { imageUriReal -> viewModel.setAvatar(imageUriReal) }
+                      }
+                    }
+                    .onFailure { e -> e.printStackTrace() }
+              }
+            }
+
+        val galleryLauncher =
+            rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { imageUri ->
+              imageUri?.let { uri ->
+                runCatching {
+                      // Check file size before cropping - limit to 10MB
+                      val fileSize = getFileSize(context, uri)
+                      // TODO: 使用 firebase remote config 配置应集中管理
+                      // https://firebase.google.com/docs/remote-config
+                      val maxSizeMB = 10
+                      val maxSizeBytes = maxSizeMB * 1024 * 1024 // 10MB in bytes
+                      if (fileSize > maxSizeBytes) {
+                        val maxSizeMBStr = String.format("%dMB", maxSizeMB)
+                        val fileSizeMBStr = String.format("%.1fMB", fileSize / (1024.0 * 1024.0))
+                        val msg =
+                            String.format(
+                                context.getString(
+                                    R.string.user_avatar_size_too_large_with_size_format
+                                ),
+                                maxSizeMBStr,
+                                fileSizeMBStr,
+                            )
+                        lifecycleScope.launch { ToastUtils.showToast(msg) }
+                        return@let
+                      }
+                      val intentCrop = UCropHelper.getIntent(context, uri, cropTitle)
+                      activityCropResultLauncher.launch(intentCrop)
+                    }
+                    .onFailure { it.printStackTrace() }
+              }
+            }
+
+        val userProfile = viewModel.userProfile.collectAsState()
+        var editKey by remember { mutableStateOf(EditKey.None) }
+        var editValue by rememberSaveable { mutableStateOf("") }
+
+        Box {
+          MySettingScreen(
+              userProfile = userProfile.value,
+              onBack = { finish() },
+              onClickName = {
+                editKey = EditKey.Name
+                editValue = userProfile.value.nickname
+              },
+              onClickPersona = {
+                editKey = EditKey.Persona
+                editValue = userProfile.value.description ?: ""
+              },
+              onClickPronouns = {
+                editKey = EditKey.Pronouns
+                editValue = userProfile.value.gender ?: ""
+              },
+              onSelectAvatar = { galleryLauncher.launch("image/*") },
+              onSave = { viewModel.onSave() },
+          )
+
+          if (editKey != EditKey.None) {
+            EditDialog(
+                editKey = editKey,
+                editValue = editValue,
+                onDismiss = { editKey = EditKey.None },
+                onSave = { key, value ->
+                  viewModel.changeUserProfile(key, value)
+                  editKey = EditKey.None
+                },
+                onValueChange = { editValue = it },
+            )
+          }
         }
+      }
     }
+  }
+
+  private fun getFileSize(context: Context, uri: Uri): Long {
+    return try {
+      context.contentResolver.openInputStream(uri)?.use { input -> input.available().toLong() }
+          ?: 0L
+    } catch (e: Exception) {
+      0L
+    }
+  }
 }
