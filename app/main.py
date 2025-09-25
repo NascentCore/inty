@@ -93,13 +93,21 @@ if os.path.exists(static_dir):
 from fastapi.responses import FileResponse
 
 
-@app.get("/evaluation")
+@app.get(
+    "/evaluation",
+    # 此为内部运营使用 API，不对外展示
+    include_in_schema=False,
+)
 async def evaluation_frontend():
     evaluation_index = os.path.join(static_dir, "evaluation", "index.html")
     return FileResponse(evaluation_index)
 
 
-@app.get("/evaluation/{path:path}")
+@app.get(
+    "/evaluation/{path:path}",
+    # 此为内部运营使用 API，不对外展示
+    include_in_schema=False,
+)
 async def evaluation_static_files(path: str):
     file_path = os.path.join(static_dir, "evaluation", path)
     return FileResponse(file_path)
