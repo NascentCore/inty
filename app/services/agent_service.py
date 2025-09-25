@@ -36,49 +36,56 @@ async def generate_agent_opening_voice(
     """
     为Agent生成开场白语音并返回音频URL
     """
-    if not agent.opening or not agent.opening.strip():
-        logger.debug(f"Agent {agent.id} 没有开场白文本，跳过语音生成")
-        return None
-
-    opening = agent.opening
-    if has_template_variable(opening):
-        # 将角色名字替换为实际字符，user 则替换为 you（假设英文）。
-        opening = render_prompt_jinja2_template(opening, char=agent.name, user="you")
-
-    # 确定使用的voice_id：优先使用agent的voice_id，否则根据性别使用默认值
-    voice_id_to_use = agent.voice_id
-    if not voice_id_to_use:
-        # 根据性别选择默认音色ID
-        voice_id_to_use = GENDER_VOICE_MAPPING.get(agent.gender.value)
-        if not voice_id_to_use:
-            logger.debug(
-                f"Agent {agent.id} 性别 {agent.gender.value} 没有对应的默认音色ID，跳过语音生成"
-            )
+    try:
+        if not agent.opening or not agent.opening.strip():
+            logger.debug(f"Agent {agent.id} 没有开场白文本，跳过语音生成")
             return None
 
-    logger.debug(
-        f"Agent {agent.id} 使用voice_id: {voice_id_to_use} (来源: {'Agent' if agent.voice_id else '性别默认值'})"
-    )
+        opening = agent.opening
+        if has_template_variable(opening):
+            # 将角色名字替换为实际字符，user 则替换为 you（假设英文）。
+            opening = render_prompt_jinja2_template(
+                opening, char=agent.name, user="you"
+            )
 
-    voice_service = VoiceService()
+        # 确定使用的voice_id：优先使用agent的voice_id，否则根据性别使用默认值
+        voice_id_to_use = agent.voice_id
+        if not voice_id_to_use:
+            # 根据性别选择默认音色ID
+            voice_id_to_use = GENDER_VOICE_MAPPING.get(agent.gender.value)
+            if not voice_id_to_use:
+                logger.debug(
+                    f"Agent {agent.id} 性别 {agent.gender.value} 没有对应的默认音色ID，跳过语音生成"
+                )
+                return None
 
-    # 生成开场白语音
-    voice_result = await voice_service.generate_voice(
-        text=opening, voice_id=voice_id_to_use
-    )
+        logger.debug(
+            f"Agent {agent.id} 使用voice_id: {voice_id_to_use} (来源: {'Agent' if agent.voice_id else '性别默认值'})"
+        )
 
-    if not voice_result:
-        logger.warning(f"Agent {agent.id} 开场白语音生成失败，未返回URL")
+        voice_service = VoiceService()
+
+        # 生成开场白语音
+        voice_result = await voice_service.generate_voice(
+            text=opening, voice_id=voice_id_to_use
+        )
+
+        if not voice_result:
+            logger.warning(f"Agent {agent.id} 开场白语音生成失败，未返回URL")
+            return None
+
+        audio_url, audio_duration = voice_result
+        # 更新 agent 的 opening_audio_url字段
+        agent.opening_audio_url = audio_url
+        await db.commit()
+        logger.debug(
+            f"成功为Agent {agent.id} 生成开场白语音: {audio_url}, 时长: {audio_duration:.2f}秒"
+        )
+        return audio_url
+
+    except Exception as e:
+        logger.error(f"为Agent {agent.id} 生成开场白语音失败: {str(e)}")
         return None
-
-    audio_url, audio_duration = voice_result
-    # 更新 agent 的 opening_audio_url字段
-    agent.opening_audio_url = audio_url
-    await db.commit()
-    logger.debug(
-        f"成功为Agent {agent.id} 生成开场白语音: {audio_url}, 时长: {audio_duration:.2f}秒"
-    )
-    return audio_url
 
 
 async def generate_next_readable_id(db: AsyncSession) -> str:
@@ -465,7 +472,7 @@ async def get_balanced_score_based_agents(
                 + func.abs(func.hashtext(func.concat(models.Agent.id, sort_seed))) % 100
             ).desc(),
             # 添加agent.id作为第二排序字段，确保排序稳定性，避免分页重复
-            models.Agent.id.asc()
+            models.Agent.id.asc(),
         )
         .offset(offset)
         .limit(page_size)
@@ -1001,7 +1008,6 @@ async def delete_agent(db: AsyncSession, db_agent: models.Agent) -> models.Agent
 def process_agent_image_urls(agent_data: dict) -> dict:
     """
     验证Agent创建时的图片URL，确保URL有效性
-
     现在的实现非常简洁：只验证URL的有效性，不进行任何文件操作。
     背景图片和头像都使用统一目录存储，无需复制或移动。
 
@@ -1014,8 +1020,12 @@ def process_agent_image_urls(agent_data: dict) -> dict:
         验证后的agent_data，无效URL会被设置为None
     """
     from app.external_services.gcs import is_valid_gcs_url
+    from app.services.image_transform_service import image_transform_service
 
-    processed_data = agent_data.copy()
+    # 先将CDN URL转换为GCS URL用于存储
+    processed_data = image_transform_service.batch_normalize_urls_for_storage(
+        agent_data
+    )
     images_urls = []
 
     def add_image_url(image_url):
