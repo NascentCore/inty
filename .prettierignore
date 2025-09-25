@@ -1,5 +1,4 @@
 # stainless generated code
 evaluation/inty_sdk
-
-# Markdown is handled by mdformat
-**/*.md
+sdks/python
+android_app/library/inty_sdk
