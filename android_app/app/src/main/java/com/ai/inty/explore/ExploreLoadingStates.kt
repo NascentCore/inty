@@ -17,12 +17,14 @@ import androidx.paging.LoadState
 import androidx.paging.compose.LazyPagingItems
 import com.ai.inty.beans.AgentInfo
 
-/** Explore页面的加载状态组件 */
+/**
+ * Explore页面的加载状态组件
+ */
 @Composable
 fun ExploreLoadingStates(
     lazyPagingItems: LazyPagingItems<AgentInfo>,
     showLoadMoreLoading: Boolean = false,
-    isRefreshing: Boolean = false,
+    isRefreshing: Boolean = false
 ) {
     // 加载更多状态指示器
     when (lazyPagingItems.loadState.append) {
@@ -41,11 +43,10 @@ fun ExploreLoadingStates(
         is LoadState.NotLoading -> {
             // 只有在真正没有更多数据且不是初始状态时才显示
             // 增加更严格的条件：确保不是首次加载，且确实没有更多数据
-            if (
-                lazyPagingItems.loadState.append.endOfPaginationReached &&
-                    lazyPagingItems.itemCount > 0 &&
-                    lazyPagingItems.loadState.refresh is LoadState.NotLoading &&
-                    !lazyPagingItems.loadState.prepend.endOfPaginationReached
+            if (lazyPagingItems.loadState.append.endOfPaginationReached &&
+                lazyPagingItems.itemCount > 0 &&
+                lazyPagingItems.loadState.refresh is LoadState.NotLoading &&
+                !lazyPagingItems.loadState.prepend.endOfPaginationReached
             ) { // 确保不是初始状态
                 NoMoreDataIndicator()
             }
@@ -53,39 +54,60 @@ fun ExploreLoadingStates(
     }
 }
 
-/** 加载更多指示器 */
+/**
+ * 加载更多指示器
+ */
 @Composable
 private fun LoadingMoreIndicator() {
     Box(
-        modifier = Modifier.size(165.dp, 60.dp).padding(16.dp),
-        contentAlignment = Alignment.Center,
+        modifier = Modifier
+            .size(165.dp, 60.dp)
+            .padding(16.dp),
+        contentAlignment = Alignment.Center
     ) {
-        CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White.copy(0.7f))
-    }
-}
-
-/** 加载更多错误指示器 */
-@Composable
-private fun LoadMoreErrorIndicator() {
-    Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
-        Text(
-            text = "Failed to load more data",
-            color = Color.White.copy(0.7f),
-            fontSize = 12.sp,
-            textAlign = TextAlign.Center,
+        CircularProgressIndicator(
+            modifier = Modifier.size(24.dp),
+            color = Color.White.copy(0.7f)
         )
     }
 }
 
-/** 没有更多数据指示器 - 跨两列显示 */
+/**
+ * 加载更多错误指示器
+ */
+@Composable
+private fun LoadMoreErrorIndicator() {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = "Failed to load more data",
+            color = Color.White.copy(0.7f),
+            fontSize = 12.sp,
+            textAlign = TextAlign.Center
+        )
+    }
+}
+
+/**
+ * 没有更多数据指示器 - 跨两列显示
+ */
 @Composable
 private fun NoMoreDataIndicator() {
-    Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        contentAlignment = Alignment.Center
+    ) {
         Text(
             text = "No more data available",
             color = Color.White.copy(0.6f),
             fontSize = 12.sp,
-            textAlign = TextAlign.Center,
+            textAlign = TextAlign.Center
         )
     }
 }

@@ -12,8 +12,11 @@ import com.inty.utils.log.EasyLog
 import com.inty.utils.log.defaultInit
 import com.therouter.TheRouter
 
-/** 应用Application的实现类 */
+/**
+ * 应用Application的实现类
+ */
 class IntyApp : Application() {
+
 
     override fun attachBaseContext(base: Context?) {
         AppEnv.context = this
@@ -37,17 +40,17 @@ class IntyApp : Application() {
 
         // 初始化网络管理器
         NetworkManager.getInstance().initialize(this)
-
+        
         // 初始化新的 IntyNetworkManager
         IntyNetworkManager.initialize(this)
 
         // 初始化统一启动管理器
         UnifiedStartupManager.initialize(this)
     }
-
+    
     override fun onTerminate() {
         super.onTerminate()
-
+        
         // 应用退出时释放Billing连接
         if (BillingRepository.isInitialized()) {
             EasyLog.log("IntyApp - 应用退出，释放Billing连接")

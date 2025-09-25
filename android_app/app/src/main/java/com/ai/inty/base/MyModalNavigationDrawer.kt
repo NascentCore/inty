@@ -27,50 +27,65 @@ import kotlin.math.absoluteValue
 fun MyModalNavigationDrawer(
     drawerContent: @Composable () -> Unit,
     modifier: Modifier = Modifier,
-    drawerState: MutableState<DrawerValue> = remember { mutableStateOf(DrawerValue.Closed) },
-    content: @Composable () -> Unit,
+    drawerState: MutableState<DrawerValue> = remember {
+        mutableStateOf(DrawerValue.Closed)
+    },
+    content: @Composable () -> Unit
 ) {
     val configuration = LocalConfiguration.current
     val screenWidthDp = configuration.screenWidthDp
-    val screenWidthPx = with(LocalDensity.current) { screenWidthDp.dp.toPx() }
+    val screenWidthPx = with(LocalDensity.current) {
+        screenWidthDp.dp.toPx()
+    }
 
-    Box(modifier.fillMaxSize()) {
+    Box(
+        modifier
+            .fillMaxSize()
+    ) {
         // 是否显示遮罩层
-        val showMask = remember { mutableStateOf(false) }
+        val showMask = remember {
+            mutableStateOf(false)
+        }
         // 抽屉宽度
-        val drawerWidth = remember { mutableIntStateOf(0) }
+        val drawerWidth = remember {
+            mutableIntStateOf(0)
+        }
         // 抽屉的 x 位置
-        val xOffset by
-            animateFloatAsState(
-                targetValue =
-                    if (drawerState.value == DrawerValue.Closed) screenWidthPx.toFloat()
-                    else screenWidthPx - drawerWidth.value.toFloat(),
-                animationSpec = tween(durationMillis = 400),
-            )
+        val xOffset by animateFloatAsState(
+            targetValue = if (drawerState.value == DrawerValue.Closed) screenWidthPx.toFloat() else screenWidthPx - drawerWidth.value.toFloat(),
+            animationSpec = tween(durationMillis = 400)
+        )
         // 半透明
-        val maskLayerAlpha by
-            animateFloatAsState(
-                targetValue = if (drawerState.value == DrawerValue.Closed) 0f else 0.6f,
-                animationSpec = tween(durationMillis = 400),
-                finishedListener = { showMask.value = it.absoluteValue > 0f },
-            )
+        val maskLayerAlpha by animateFloatAsState(
+            targetValue = if (drawerState.value == DrawerValue.Closed) 0f else 0.6f,
+            animationSpec = tween(durationMillis = 400),
+            finishedListener = {
+                showMask.value = it.absoluteValue > 0f
+            }
+        )
         // 内容
-        Box { content() }
+        Box {
+            content()
+        }
         // 遮罩
         if (showMask.value || drawerState.value == DrawerValue.Open) {
             Box(
-                modifier =
-                    Modifier.fillMaxSize()
-                        .alpha(maskLayerAlpha)
-                        .background(color = Color(0xff000000))
-                        .clickable { drawerState.value = DrawerValue.Closed }
-            ) {}
+                modifier = Modifier
+                    .fillMaxSize()
+                    .alpha(maskLayerAlpha)
+                    .background(color = Color(0xff000000))
+                    .clickable {
+                        drawerState.value = DrawerValue.Closed
+                    }) {}
             // 抽屉
             Box(
-                modifier =
-                    Modifier.onSizeChanged { drawerWidth.intValue = it.width }
-                        .graphicsLayer { translationX = xOffset }
-            ) {
+                modifier = Modifier
+                    .onSizeChanged {
+                        drawerWidth.intValue = it.width
+                    }
+                    .graphicsLayer {
+                        translationX = xOffset
+                    }) {
                 drawerContent()
             }
         }

@@ -5,7 +5,11 @@ import com.android.build.api.dsl.ApplicationProductFlavor
 import com.android.build.api.dsl.CommonExtension
 import com.android.build.api.dsl.ProductFlavor
 
-/** 扩展定义用于区分产品特色、类型不同的参数扩展 */
+/**
+ * 扩展定义用于区分产品特色、类型不同的参数扩展
+ */
+
+
 @Suppress("EnumEntryName")
 internal enum class FlavorDimension {
     contentType
@@ -15,16 +19,19 @@ internal enum class FlavorDimension {
 @Suppress("EnumEntryName")
 internal enum class HeartFlavor(
     val dimension: FlavorDimension,
-    val applicationIdSuffix: String? = null,
+    val applicationIdSuffix: String? = null
 ) {
     free(FlavorDimension.contentType),
     premium(FlavorDimension.contentType),
+
 }
 
-/** 配置渠道分包 */
+/**
+ * 配置渠道分包
+ */
 internal fun configureFlavors(
     commonExtension: CommonExtension<*, *, *, *, *, *>,
-    flavorConfigurationBlock: ProductFlavor.(flavor: HeartFlavor) -> Unit = {},
+    flavorConfigurationBlock: ProductFlavor.(flavor: HeartFlavor) -> Unit = {}
 ) {
     commonExtension.apply {
         FlavorDimension.values().forEach { flavorDimension ->

@@ -37,7 +37,9 @@ import com.ai.inty.ui.components.ReportItem
 import com.ai.inty.ui.components.ReportReasonsContainer
 import com.ai.inty.ui.components.SaveBtn
 
-/** 举报屏幕 */
+/**
+ * 举报屏幕
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReportScreen(
@@ -55,37 +57,42 @@ fun ReportScreen(
     val focusManager = LocalFocusManager.current
 
     Box(
-        modifier =
-            Modifier.fillMaxSize().clickable(
+        modifier = Modifier
+            .fillMaxSize()
+            .clickable(
                 interactionSource = remember { MutableInteractionSource() },
-                indication = null,
+                indication = null
             ) {
                 focusManager.clearFocus()
-            }
+            },
     ) {
         Column(
-            modifier =
-                Modifier.matchParentSize()
-                    .padding(horizontal = 16.dp)
-                    .imePadding()
-                    .verticalScroll(rememberScrollState()),
-            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier
+                .matchParentSize()
+                .padding(horizontal = 16.dp)
+                .imePadding()
+                .verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // 布局占位用
             CenterAlignedTopAppBar(
                 title = {},
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
             )
             Spacer(Modifier.height(16.dp))
 
             // 举报原因
-            ReportReasonsContainer(title = stringResource(R.string.npc_asterisk_full)) {
+            ReportReasonsContainer(
+                title = stringResource(R.string.npc_asterisk_full)
+            ) {
                 reasons.forEach { reason ->
                     val isSelected = selectIDs.contains(reason.id)
                     ReportItem(
                         text = reason.description,
                         selected = isSelected,
-                        onClick = { onClickReason(reason.id, !isSelected) },
+                        onClick = {
+                            onClickReason(reason.id, !isSelected)
+                        }
                     )
                 }
             }
@@ -97,7 +104,7 @@ fun ReportScreen(
                 title = stringResource(R.string.report_description),
                 description = description,
                 onDescriptionChange = onDescriptionChange,
-                placeholder = stringResource(R.string.please_fill_feedback_full),
+                placeholder = stringResource(R.string.please_fill_feedback_full)
             )
 
             Spacer(Modifier.height(24.dp))
@@ -106,7 +113,7 @@ fun ReportScreen(
             ReportImageEvidenceContainer(
                 title = stringResource(R.string.image_evidence_full),
                 images = images,
-                onClickAddImage = onClickAddImage,
+                onClickAddImage = onClickAddImage
             )
 
             Spacer(Modifier.height(60.dp))
@@ -117,9 +124,8 @@ fun ReportScreen(
 
         // 顶部导航栏
         CenterAlignedTopAppBar(
-            colors =
-                TopAppBarDefaults.centerAlignedTopAppBarColors()
-                    .copy(containerColor = Color(0XFF1C1523)),
+            colors = TopAppBarDefaults.centerAlignedTopAppBarColors()
+                .copy(containerColor = Color(0XFF1C1523)),
             title = {
                 Text(
                     text = stringResource(R.string.report),
@@ -130,7 +136,11 @@ fun ReportScreen(
             },
             navigationIcon = {
                 Image(
-                    modifier = Modifier.padding(horizontal = 12.dp).noRippleClickable { onBack() },
+                    modifier = Modifier
+                        .padding(horizontal = 12.dp)
+                        .noRippleClickable {
+                            onBack()
+                        },
                     painter = painterResource(R.drawable.back),
                     contentDescription = null,
                 )
@@ -142,12 +152,11 @@ fun ReportScreen(
 @Preview(showBackground = true)
 @Composable
 fun ReportScreenPreview() {
-    val mockReasons =
-        listOf(
-            ReportItem(id = 1, description = "不当内容"),
-            ReportItem(id = 2, description = "垃圾信息"),
-            ReportItem(id = 3, description = "骚扰行为"),
-        )
+    val mockReasons = listOf(
+        ReportItem(id = 1, description = "不当内容"),
+        ReportItem(id = 2, description = "垃圾信息"),
+        ReportItem(id = 3, description = "骚扰行为")
+    )
 
     ReportScreen(
         onBack = {},
@@ -158,6 +167,6 @@ fun ReportScreenPreview() {
         onDescriptionChange = {},
         images = listOf(),
         onClickAddImage = {},
-        onSave = {},
+        onSave = {}
     )
 }

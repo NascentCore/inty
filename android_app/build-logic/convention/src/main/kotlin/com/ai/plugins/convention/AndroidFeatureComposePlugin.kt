@@ -12,7 +12,9 @@ import org.gradle.kotlin.dsl.dependencies
 import org.gradle.kotlin.dsl.getByType
 import org.gradle.kotlin.dsl.project
 
-/** 用于Android 动态模块的plugin定义,包含compose的依赖配置 */
+/**
+ * 用于Android 动态模块的plugin定义,包含compose的依赖配置
+ */
 class AndroidFeatureComposePlugin : Plugin<Project> {
     override fun apply(target: Project) {
         with(target) {
@@ -20,7 +22,9 @@ class AndroidFeatureComposePlugin : Plugin<Project> {
             pluginManager.apply("org.jetbrains.kotlin.android")
             pluginManager.apply("org.jetbrains.kotlin.plugin.compose")
 
-            extensions.configure<DynamicFeatureExtension> { configureKotlinAndroid(this) }
+            extensions.configure<DynamicFeatureExtension> {
+                configureKotlinAndroid(this)
+            }
 
             testDependencies()
 

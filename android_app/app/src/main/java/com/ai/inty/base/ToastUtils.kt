@@ -4,9 +4,9 @@ import android.content.Context
 import android.util.Log
 import android.widget.Toast
 import com.inty.utils.AppEnv
-import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.util.concurrent.ConcurrentHashMap
 
 object ToastUtils {
 
@@ -14,7 +14,8 @@ object ToastUtils {
     private val lastToastInfo = ConcurrentHashMap<String, Long>()
 
     // 防重复时间间隔（毫秒），默认 2 秒
-    @Volatile private var debounceTimeMs: Long = 2000L
+    @Volatile
+    private var debounceTimeMs: Long = 2000L
 
     // 最大缓存数量，避免内存泄漏
     private const val MAX_CACHE_SIZE = 50
@@ -22,7 +23,9 @@ object ToastUtils {
     // 缓存清理阈值
     private const val CACHE_CLEANUP_THRESHOLD = 30
 
-    /** 检查是否应该显示 Toast（防重复） */
+    /**
+     * 检查是否应该显示 Toast（防重复）
+     */
     private fun shouldShowToast(message: String): Boolean {
         val currentTime = System.currentTimeMillis()
         val lastTime = lastToastInfo[message] ?: 0L
@@ -41,13 +44,14 @@ object ToastUtils {
         return false
     }
 
-    /** 清理过期的缓存项 */
+    /**
+     * 清理过期的缓存项
+     */
     private fun cleanupCache(currentTime: Long) {
         if (lastToastInfo.size > CACHE_CLEANUP_THRESHOLD) {
-            val expiredKeys =
-                lastToastInfo.entries
-                    .filter { currentTime - it.value > debounceTimeMs * 2 }
-                    .map { it.key }
+            val expiredKeys = lastToastInfo.entries
+                .filter { currentTime - it.value > debounceTimeMs * 2 }
+                .map { it.key }
 
             expiredKeys.forEach { lastToastInfo.remove(it) }
 
@@ -60,7 +64,9 @@ object ToastUtils {
         }
     }
 
-    /** 安全地创建 Toast */
+    /**
+     * 安全地创建 Toast
+     */
     private fun createSafeToast(context: Context, message: String, duration: Int): Toast? {
         return try {
             Toast.makeText(context, message, duration)
@@ -72,46 +78,41 @@ object ToastUtils {
 
     /**
      * 显示 Toast 消息（带防重复功能）
-     *
      * @param msg 要显示的消息
      */
-    suspend fun showToast(msg: String) =
-        withContext(Dispatchers.Main) {
-            try {
-                val context: Context? = AppEnv.context
-                if (context != null && msg.isNotEmpty() && shouldShowToast(msg)) {
-                    val toast = createSafeToast(context, msg, Toast.LENGTH_SHORT)
-                    toast?.show()
-                }
-            } catch (e: Exception) {
-                Log.e("ToastUtils", "showToast error: ${e.message}")
+    suspend fun showToast(msg: String) = withContext(Dispatchers.Main) {
+        try {
+            val context: Context? = AppEnv.context
+            if (context != null && msg.isNotEmpty() && shouldShowToast(msg)) {
+                val toast = createSafeToast(context, msg, Toast.LENGTH_SHORT)
+                toast?.show()
             }
+        } catch (e: Exception) {
+            Log.e("ToastUtils", "showToast error: ${e.message}")
         }
+    }
 
     /**
      * 显示 Toast 消息（通过资源ID，带防重复功能）
-     *
      * @param stringResId 字符串资源ID
      */
-    suspend fun showToast(stringResId: Int) =
-        withContext(Dispatchers.Main) {
-            try {
-                val context: Context? = AppEnv.context
-                if (context != null) {
-                    val message = context.getString(stringResId)
-                    if (message.isNotEmpty() && shouldShowToast(message)) {
-                        val toast = createSafeToast(context, message, Toast.LENGTH_SHORT)
-                        toast?.show()
-                    }
+    suspend fun showToast(stringResId: Int) = withContext(Dispatchers.Main) {
+        try {
+            val context: Context? = AppEnv.context
+            if (context != null) {
+                val message = context.getString(stringResId)
+                if (message.isNotEmpty() && shouldShowToast(message)) {
+                    val toast = createSafeToast(context, message, Toast.LENGTH_SHORT)
+                    toast?.show()
                 }
-            } catch (e: Exception) {
-                Log.e("ToastUtils", "showToast error: ${e.message}")
             }
+        } catch (e: Exception) {
+            Log.e("ToastUtils", "showToast error: ${e.message}")
         }
+    }
 
     /**
      * 显示 Toast 消息（带格式化参数，带防重复功能）
-     *
      * @param stringResId 字符串资源ID
      * @param formatArgs 格式化参数
      */
@@ -133,83 +134,77 @@ object ToastUtils {
 
     /**
      * 强制显示 Toast（忽略防重复检查）
-     *
      * @param msg 要显示的消息
      */
-    suspend fun showToastForce(msg: String) =
-        withContext(Dispatchers.Main) {
-            try {
-                val context: Context? = AppEnv.context
-                if (context != null && msg.isNotEmpty()) {
-                    val toast = createSafeToast(context, msg, Toast.LENGTH_SHORT)
-                    toast?.show()
-                }
-            } catch (e: Exception) {
-                Log.e("ToastUtils", "showToastForce error: ${e.message}")
+    suspend fun showToastForce(msg: String) = withContext(Dispatchers.Main) {
+        try {
+            val context: Context? = AppEnv.context
+            if (context != null && msg.isNotEmpty()) {
+                val toast = createSafeToast(context, msg, Toast.LENGTH_SHORT)
+                toast?.show()
             }
+        } catch (e: Exception) {
+            Log.e("ToastUtils", "showToastForce error: ${e.message}")
         }
+    }
 
     /**
      * 强制显示 Toast（忽略防重复检查）
-     *
      * @param stringResId 字符串资源ID
      */
-    suspend fun showToastForce(stringResId: Int) =
-        withContext(Dispatchers.Main) {
-            try {
-                val context: Context? = AppEnv.context
-                if (context != null) {
-                    val message = context.getString(stringResId)
-                    if (message.isNotEmpty()) {
-                        val toast = createSafeToast(context, message, Toast.LENGTH_SHORT)
-                        toast?.show()
-                    }
+    suspend fun showToastForce(stringResId: Int) = withContext(Dispatchers.Main) {
+        try {
+            val context: Context? = AppEnv.context
+            if (context != null) {
+                val message = context.getString(stringResId)
+                if (message.isNotEmpty()) {
+                    val toast = createSafeToast(context, message, Toast.LENGTH_SHORT)
+                    toast?.show()
                 }
-            } catch (e: Exception) {
-                Log.e("ToastUtils", "showToastForce error: ${e.message}")
             }
+        } catch (e: Exception) {
+            Log.e("ToastUtils", "showToastForce error: ${e.message}")
         }
+    }
 
     /**
      * 显示长时长的 Toast（带防重复功能）
-     *
      * @param msg 要显示的消息
      */
-    suspend fun showLongToast(msg: String) =
-        withContext(Dispatchers.Main) {
-            try {
-                val context: Context? = AppEnv.context
-                if (context != null && msg.isNotEmpty() && shouldShowToast(msg)) {
-                    val toast = createSafeToast(context, msg, Toast.LENGTH_LONG)
-                    toast?.show()
-                }
-            } catch (e: Exception) {
-                Log.e("ToastUtils", "showLongToast error: ${e.message}")
+    suspend fun showLongToast(msg: String) = withContext(Dispatchers.Main) {
+        try {
+            val context: Context? = AppEnv.context
+            if (context != null && msg.isNotEmpty() && shouldShowToast(msg)) {
+                val toast = createSafeToast(context, msg, Toast.LENGTH_LONG)
+                toast?.show()
             }
+        } catch (e: Exception) {
+            Log.e("ToastUtils", "showLongToast error: ${e.message}")
         }
+    }
 
     /**
      * 显示长时长的 Toast（通过资源ID，带防重复功能）
-     *
      * @param stringResId 字符串资源ID
      */
-    suspend fun showLongToast(stringResId: Int) =
-        withContext(Dispatchers.Main) {
-            try {
-                val context: Context? = AppEnv.context
-                if (context != null) {
-                    val message = context.getString(stringResId)
-                    if (message.isNotEmpty() && shouldShowToast(message)) {
-                        val toast = createSafeToast(context, message, Toast.LENGTH_LONG)
-                        toast?.show()
-                    }
+    suspend fun showLongToast(stringResId: Int) = withContext(Dispatchers.Main) {
+        try {
+            val context: Context? = AppEnv.context
+            if (context != null) {
+                val message = context.getString(stringResId)
+                if (message.isNotEmpty() && shouldShowToast(message)) {
+                    val toast = createSafeToast(context, message, Toast.LENGTH_LONG)
+                    toast?.show()
                 }
-            } catch (e: Exception) {
-                Log.e("ToastUtils", "showLongToast error: ${e.message}")
             }
+        } catch (e: Exception) {
+            Log.e("ToastUtils", "showLongToast error: ${e.message}")
         }
+    }
 
-    /** 清除 Toast 缓存 */
+    /**
+     * 清除 Toast 缓存
+     */
     fun clearToastCache() {
         lastToastInfo.clear()
         Log.d("ToastUtils", "Toast cache cleared")
@@ -217,7 +212,6 @@ object ToastUtils {
 
     /**
      * 设置防重复时间间隔
-     *
      * @param debounceTimeMs 防重复时间间隔（毫秒）
      */
     fun setDebounceTime(debounceTimeMs: Long) {
@@ -227,19 +221,22 @@ object ToastUtils {
         }
     }
 
-    /** 获取当前防重复时间间隔 */
+    /**
+     * 获取当前防重复时间间隔
+     */
     fun getDebounceTime(): Long {
         return debounceTimeMs
     }
 
-    /** 获取当前缓存大小 */
+    /**
+     * 获取当前缓存大小
+     */
     fun getCacheSize(): Int {
         return lastToastInfo.size
     }
 
     /**
      * 检查指定消息是否在防重复期内
-     *
      * @param message 要检查的消息
      * @return true 如果在防重复期内，false 否则
      */

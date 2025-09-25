@@ -4,25 +4,28 @@ import com.ai.plugins.ProjectConfig
 import com.ai.plugins.SignKeyConfig
 import com.android.build.api.dsl.ApplicationExtension
 import com.android.build.api.dsl.LibraryExtension
-import java.io.File
 import org.gradle.api.GradleException
 import org.gradle.api.Project
+import java.io.File
 
-/** 获取git commit信息的函数 */
+/**
+ * 获取git commit信息的函数
+ */
 private fun getGitCommitInfo(): String {
     return runCatching {
-            val process = ProcessBuilder("git", "rev-parse", "--short", "HEAD").start()
-            process.waitFor()
-            if (process.exitValue() == 0) {
-                process.inputStream.bufferedReader().readText().trim()
-            } else {
-                "-Debug"
-            }
+        val process = ProcessBuilder("git", "rev-parse", "--short", "HEAD").start()
+        process.waitFor()
+        if (process.exitValue() == 0) {
+            process.inputStream.bufferedReader().readText().trim()
+        } else {
+            "-Debug"
         }
-        .getOrNull() ?: "-Debug"
+    }.getOrNull() ?: "-Debug"
 }
 
-/** 获取git的提交次数，作为versionCode */
+/**
+ * 获取git的提交次数，作为versionCode
+ */
 private fun getCommitCount(): Int {
     val process = ProcessBuilder("git", "rev-list", "--count", "HEAD").start()
     process.waitFor()
@@ -33,7 +36,10 @@ private fun getCommitCount(): Int {
     return gitCommitCount
 }
 
-/** android application 的gradle相关配置 扩展函数 */
+/**
+ * android application 的gradle相关配置 扩展函数
+ */
+
 internal fun ApplicationExtension.commonAppConfig(project: Project) {
     defaultConfig {
         versionName = ProjectConfig.versionName
@@ -41,10 +47,11 @@ internal fun ApplicationExtension.commonAppConfig(project: Project) {
         targetSdk = ProjectConfig.targetVersion
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        vectorDrawables { useSupportLibrary = true }
+        vectorDrawables {
+            useSupportLibrary = true
+        }
         ndk {
-            // 设置支持的SO库架构（开发者可以根据需要，选择一个或多个平台的so） "armeabi", "armeabi-v7a", "arm64-v8a", "x86",
-            // "x86_64"
+            //设置支持的SO库架构（开发者可以根据需要，选择一个或多个平台的so） "armeabi", "armeabi-v7a", "arm64-v8a", "x86", "x86_64"
             abiFilters.add("arm64-v8a")
         }
     }
@@ -70,7 +77,7 @@ internal fun ApplicationExtension.commonAppConfig(project: Project) {
             signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro",
+                "proguard-rules.pro"
             )
         }
         debug {
@@ -80,8 +87,7 @@ internal fun ApplicationExtension.commonAppConfig(project: Project) {
             isShrinkResources = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro",
-                "consumer-rules.pro",
+                "proguard-rules.pro", "consumer-rules.pro"
             )
         }
 
@@ -100,13 +106,21 @@ internal fun ApplicationExtension.commonAppConfig(project: Project) {
         }
     }
 
-    packaging { resources { excludes += "/META-INF/{AL2.0,LGPL2.1}" } }
+    packaging {
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        }
+    }
+
 }
 
 internal fun LibraryExtension.commonLibConfig() {
     defaultConfig {
+
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        vectorDrawables { useSupportLibrary = true }
+        vectorDrawables {
+            useSupportLibrary = true
+        }
 
         consumerProguardFiles("consumer-rules.pro")
     }
@@ -116,35 +130,36 @@ internal fun LibraryExtension.commonLibConfig() {
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro",
-                "consumer-rules.pro",
+                "proguard-rules.pro", "consumer-rules.pro"
             )
         }
         release {
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro",
-                "consumer-rules.pro",
+                "proguard-rules.pro", "consumer-rules.pro"
             )
         }
         create("playdebug") {
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro",
-                "consumer-rules.pro",
+                "proguard-rules.pro", "consumer-rules.pro"
             )
         }
         create("local") {
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro",
-                "consumer-rules.pro",
+                "proguard-rules.pro", "consumer-rules.pro"
             )
         }
     }
 
-    packaging { resources { excludes += "/META-INF/{AL2.0,LGPL2.1}" } }
+    packaging {
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        }
+    }
+
 }

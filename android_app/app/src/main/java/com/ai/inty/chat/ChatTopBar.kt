@@ -27,6 +27,7 @@ import com.ai.inty.beans.AgentInfo
 import com.therouter.TheRouter
 import kotlinx.coroutines.launch
 
+
 private const val CHAT_TOP_BAR_AVATAR_SIZE = 30
 private const val CHAT_TOP_BAR_AVATAR_PADDING = 3
 private const val CHAT_TOP_BAR_CORNER_RADIUS = 20
@@ -35,7 +36,10 @@ private val CHAT_TOP_BAR_BACKGROUND_COLOR = Color(33, 0, 0, 77)
 private const val BACK_BUTTON_SIZE = 24
 private const val MORE_BUTTON_SIZE = 20
 
-/** 聊天页面顶部栏组件 */
+
+/**
+ * 聊天页面顶部栏组件
+ */
 @Composable
 fun ChatTopBar(
     modifier: Modifier,
@@ -47,43 +51,49 @@ fun ChatTopBar(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
         // 返回按钮
         if (showBackButton) {
             IntyImage(
-                modifier =
-                    Modifier.size(BACK_BUTTON_SIZE.dp).noRippleClickable { onBack?.invoke() },
-                model = R.drawable.back,
+                modifier = Modifier
+                    .size(BACK_BUTTON_SIZE.dp)
+                    .noRippleClickable {
+                        onBack?.invoke()
+                    },
+                model = R.drawable.back
             )
             Spacer(modifier = Modifier.width(8.dp))
         }
 
         Row(
-            modifier =
-                Modifier.background(
-                        color = CHAT_TOP_BAR_BACKGROUND_COLOR,
-                        shape = RoundedCornerShape(CHAT_TOP_BAR_CORNER_RADIUS.dp),
-                    )
-                    .noRippleClickable {
-                        scope.launch {
-                            // 如果是已经删除的agent，则不可点击，并提示
-                            if (agentInfo.isDeleted) {
-                                ToastUtils.showToast(R.string.str_agent_is_deleted)
-                            } else {
-                                TheRouter.build(Constant.ROUTE_AGENT_INFO)
-                                    .withObject("agent", agentInfo)
-                                    .navigation(context)
-                            }
+            modifier = Modifier
+                .background(
+                    color = CHAT_TOP_BAR_BACKGROUND_COLOR,
+                    shape = RoundedCornerShape(CHAT_TOP_BAR_CORNER_RADIUS.dp)
+                )
+                .noRippleClickable {
+                    scope.launch {
+                        //如果是已经删除的agent，则不可点击，并提示
+                        if (agentInfo.isDeleted) {
+                            ToastUtils.showToast(R.string.str_agent_is_deleted)
+                        } else {
+                            TheRouter.build(Constant.ROUTE_AGENT_INFO)
+                                .withObject("agent", agentInfo)
+                                .navigation(context)
                         }
-                    },
-            verticalAlignment = Alignment.CenterVertically,
+                    }
+                },
+            verticalAlignment = Alignment.CenterVertically
         ) {
             IntyCircleImage(
-                modifier =
-                    Modifier.padding(CHAT_TOP_BAR_AVATAR_PADDING.dp)
-                        .size(CHAT_TOP_BAR_AVATAR_SIZE.dp),
+                modifier = Modifier
+                    .padding(CHAT_TOP_BAR_AVATAR_PADDING.dp)
+                    .size(CHAT_TOP_BAR_AVATAR_SIZE.dp),
                 url = agentInfo.avatar,
-                placeholderResID = R.drawable.app_icon,
+                placeholderResID = R.drawable.app_icon
             )
 
             Spacer(modifier = Modifier.width(6.dp))
@@ -92,7 +102,7 @@ fun ChatTopBar(
                 text = agentInfo.name,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Medium,
-                color = Color.White,
+                color = Color.White
             )
 
             Spacer(modifier = Modifier.width(16.dp))
@@ -101,8 +111,12 @@ fun ChatTopBar(
         Spacer(modifier = Modifier.weight(1f))
 
         IntyImage(
-            modifier = Modifier.size(MORE_BUTTON_SIZE.dp).noRippleClickable { onClickMore() },
-            model = R.drawable.icon_more,
+            modifier = Modifier
+                .size(MORE_BUTTON_SIZE.dp)
+                .noRippleClickable {
+                    onClickMore()
+                },
+            model = R.drawable.icon_more
         )
     }
-}
+} 

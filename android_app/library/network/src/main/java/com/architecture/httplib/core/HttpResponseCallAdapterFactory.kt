@@ -1,31 +1,37 @@
 package com.architecture.httplib.core
 
 import com.architecture.httplib.error.BusinessException
-import java.lang.reflect.ParameterizedType
-import java.lang.reflect.Type
 import retrofit2.Call
 import retrofit2.CallAdapter
 import retrofit2.Retrofit
+import java.lang.reflect.ParameterizedType
+import java.lang.reflect.Type
 
 /**
  * 作用：将默认的网络请求执行器（OkHttpCall）转换成适合被不同平台来调用的网络请求执行器形式
  *
  * 在Retrofit中提供了四种CallAdapterFactory： Executor（默认）、Guava 、Java8 、RxJava
  *
+ *
+ *
  * extends CallAdapter
  *
- * Call<T> --> HttpResponseCall<T> 就是为了返回HttpResult<T>
+ * Call<T>  --> HttpResponseCall<T>
+ * 就是为了返回HttpResult<T>
  *
  * suspend fun getFakerData(): HttpResult<List<FakerDataBean>>
  *
  * https://github.com/AnyLifeZLB
- *
  * @author anylife.zlb@gmail.com
+ *
  */
 class HttpResponseCallAdapterFactory(private val errorHandler: ErrorHandler? = null) :
     CallAdapter.Factory() {
 
-    /** [onFailure] will be called when [Result.isFailure] */
+    /**
+     * [onFailure] will be called when [Result.isFailure]
+     *
+     */
     fun interface ErrorHandler {
         fun onFailure(throwable: BusinessException)
     }
@@ -33,7 +39,7 @@ class HttpResponseCallAdapterFactory(private val errorHandler: ErrorHandler? = n
     override fun get(
         returnType: Type,
         annotations: Array<Annotation>,
-        retrofit: Retrofit,
+        retrofit: Retrofit
     ): CallAdapter<*, *>? {
 
         // suspend functions wrap the response type in `Call`
@@ -46,6 +52,7 @@ class HttpResponseCallAdapterFactory(private val errorHandler: ErrorHandler? = n
             "return type must be parameterized as Call<HttpResult<<Foo>> or Call<HttpResult<out Foo>>"
         }
 
+
         // get the response type inside the `Call` type
         val responseType = getParameterUpperBound(0, returnType)
 
@@ -56,9 +63,7 @@ class HttpResponseCallAdapterFactory(private val errorHandler: ErrorHandler? = n
         }
 
         // the response type is ApiResponse and should be parameterized
-        check(responseType is ParameterizedType) {
-            "Response must be parameterized as HttpResult<Foo> or HttpResponse<out Foo>"
-        }
+        check(responseType is ParameterizedType) { "Response must be parameterized as HttpResult<Foo> or HttpResponse<out Foo>" }
 
         // 上面都是一些基本的参数检查，类型匹配
 
@@ -74,6 +79,8 @@ class HttpResponseCallAdapterFactory(private val errorHandler: ErrorHandler? = n
                 // 就是为了返回HttpResult<T> 这个啊
                 return HttpResponseCall(call, errorHandler)
             }
+
         }
+
     }
 }

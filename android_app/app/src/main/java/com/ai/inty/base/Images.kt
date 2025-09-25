@@ -23,6 +23,7 @@ import coil3.memory.MemoryCache
 import coil3.request.ImageRequest
 import com.inty.utils.AppEnv
 
+
 fun initImageLoader() {
     val context = AppEnv.context
     ImageLoader.Builder(context)
@@ -39,6 +40,7 @@ fun initImageLoader() {
         }
         .build()
 }
+
 
 @Composable
 fun IntyImage(
@@ -58,15 +60,16 @@ fun IntyImage(
     filterQuality: FilterQuality = DrawScope.DefaultFilterQuality,
 ) {
     val context = LocalContext.current
-    val imageRequest =
-        remember(model, context) {
-            if (model is String) {
-                ImageRequest.Builder(context).data(model).build()
-            } else {
-                model
-            }
+    val imageRequest = remember(model, context) {
+        if (model is String) {
+            ImageRequest.Builder(context)
+                .data(model)
+                .build()
+        } else {
+            model
         }
-
+    }
+    
     AsyncImage(
         model = imageRequest,
         contentDescription = contentDescription,
@@ -85,6 +88,7 @@ fun IntyImage(
     )
 }
 
+
 @Composable
 fun IntyCircleImage(
     url: Any?,
@@ -97,15 +101,16 @@ fun IntyCircleImage(
     filterQuality: FilterQuality = DrawScope.DefaultFilterQuality,
 ) {
     val context = LocalContext.current
-    val imageRequest =
-        remember(url, context) {
-            if (url != null) {
-                ImageRequest.Builder(context).data(url).build()
-            } else {
-                null
-            }
+    val imageRequest = remember(url, context) {
+        if (url != null) {
+            ImageRequest.Builder(context)
+                .data(url)
+                .build()
+        } else {
+            null
         }
-
+    }
+    
     IntyImage(
         modifier = modifier.clip(CircleShape),
         model = imageRequest,

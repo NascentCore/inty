@@ -9,14 +9,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
+
+
 @Composable
 fun RedDot() {
     Box(
-        modifier =
-            Modifier.size(8.dp)
-                .background(
-                    color = Color.Red, // 红色填充[4](@ref)
-                    shape = CircleShape, // 圆形裁剪[1,6](@ref)
-                )
+        modifier = Modifier
+            .size(8.dp)
+            .background(
+                color = Color.Red,  // 红色填充[4](@ref)
+                shape = CircleShape  // 圆形裁剪[1,6](@ref)
+            )
     )
 }

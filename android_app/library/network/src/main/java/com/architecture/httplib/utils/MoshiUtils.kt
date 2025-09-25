@@ -5,9 +5,13 @@ import com.squareup.moshi.Types
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import java.lang.reflect.Type
 
-/**  */
+/**
+ *
+ *
+ */
 object MoshiUtils {
-    val moshiBuild: Moshi = Moshi.Builder().addLast(KotlinJsonAdapterFactory()).build()
+    val moshiBuild: Moshi = Moshi.Builder().addLast(KotlinJsonAdapterFactory())
+        .build()
 
     fun <T> fromJson(json: String, type: Type): T? {
         val adapter = moshiBuild.adapter<T>(type)
@@ -21,15 +25,16 @@ object MoshiUtils {
 
     inline fun <reified T> toJson(t: T) = moshiBuild.adapter(T::class.java).toJson(t) ?: ""
 
-    inline fun <reified T> listFromJson(json: String): MutableList<T> =
-        fromJson<MutableList<T>>(
-            json,
-            Types.newParameterizedType(MutableList::class.java, T::class.java),
-        ) ?: mutableListOf()
+    inline fun <reified T> listFromJson(json: String): MutableList<T> = fromJson<MutableList<T>>(
+        json, Types.newParameterizedType(
+            MutableList::class.java, T::class.java
+        )
+    ) ?: mutableListOf()
 
-    inline fun <reified K, reified V> mapFromJson(json: String): MutableMap<K, V> =
-        fromJson(
-            json,
-            Types.newParameterizedType(MutableMap::class.java, K::class.java, V::class.java),
-        ) ?: mutableMapOf()
+    inline fun <reified K, reified V> mapFromJson(json: String): MutableMap<K, V> = fromJson(
+        json,
+        Types.newParameterizedType(MutableMap::class.java, K::class.java, V::class.java)
+    ) ?: mutableMapOf()
+
+
 }

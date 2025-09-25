@@ -19,7 +19,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-/** 设置页面 ViewModel */
+/**
+ * 设置页面 ViewModel
+ */
 class SettingViewModel : BaseViewModel() {
 
     private val userApi: IUserApi by lazy {
@@ -39,26 +41,31 @@ class SettingViewModel : BaseViewModel() {
         loadSettings()
     }
 
-    /** 加载设置 */
+    /**
+     * 加载设置
+     */
     private fun loadSettings() {
         viewModelScope.launch {
             val currentState = _settingsState.value
-            _settingsState.value =
-                currentState.copy(
-                    keepTalking = IntySetting.isShowKeepTalking(),
-                    premiumMode = IntySetting.isShowPremiumModel(),
-                )
+            _settingsState.value = currentState.copy(
+                keepTalking = IntySetting.isShowKeepTalking(),
+                premiumMode = IntySetting.isShowPremiumModel()
+            )
         }
     }
 
-    /** 切换保持对话设置 */
+    /**
+     * 切换保持对话设置
+     */
     fun toggleKeepTalking() {
         val newValue = !_settingsState.value.keepTalking
         IntySetting.setShowKeepTalking(newValue)
         _settingsState.value = _settingsState.value.copy(keepTalking = newValue)
     }
 
-    /** 切换高级模型设置 */
+    /**
+     * 切换高级模型设置
+     */
     fun togglePremiumMode() {
         VipStatusHelper.checkVipStatus(
             onVip = {
@@ -66,31 +73,43 @@ class SettingViewModel : BaseViewModel() {
                 IntySetting.setShowPremiumModel(newValue)
                 _settingsState.value = _settingsState.value.copy(premiumMode = newValue)
             },
-            onNotVip = { _dialogState.value = _dialogState.value.copy(showPremiumDialog = true) },
+            onNotVip = {
+                _dialogState.value = _dialogState.value.copy(showPremiumDialog = true)
+            }
         )
     }
 
-    /** 显示删除账号对话框 */
+    /**
+     * 显示删除账号对话框
+     */
     fun showDeleteAccountDialog() {
         _dialogState.value = _dialogState.value.copy(showDeleteAccountDialog = true)
     }
 
-    /** 隐藏删除账号对话框 */
+    /**
+     * 隐藏删除账号对话框
+     */
     fun hideDeleteAccountDialog() {
         _dialogState.value = _dialogState.value.copy(showDeleteAccountDialog = false)
     }
 
-    /** 隐藏高级模型对话框 */
+    /**
+     * 隐藏高级模型对话框
+     */
     fun hidePremiumDialog() {
         _dialogState.value = _dialogState.value.copy(showPremiumDialog = false)
     }
 
-    // 购买vip会员订阅，最低档
+
+    //购买vip会员订阅，最低档
     fun purchaseFirstVip(activity: Activity) {
         VipStatusHelper.purchaseFirstVip(activity)
     }
 
-    /** 检查账号是否有订阅需要取消，才能用来删除账号 */
+
+    /**
+     * 检查账号是否有订阅需要取消，才能用来删除账号
+     */
     fun checkAccountSubscribe() {
         EasyLog.log("检查账号需要取消订阅 ---> ")
         viewModelScope.launch(Dispatchers.IO) {
@@ -106,21 +125,16 @@ class SettingViewModel : BaseViewModel() {
                             if (result.data.canDelete && !result.data.activeSubscription) {
                                 deleteUserAccount()
                             } else {
-                                ToastUtils.showToast(
-                                    AppEnv.context.getString(
-                                        R.string.toast_cancel_subscription_first
-                                    )
-                                )
+                                ToastUtils.showToast(AppEnv.context.getString(R.string.toast_cancel_subscription_first))
                             }
                         }
 
                         is HttpResult.Failure -> {
-                            EasyLog.log("检查账号需要取消订阅的结果 error: $result", priority = EasyLog.ERROR)
-                            ToastUtils.showToast(
-                                AppEnv.context.getString(
-                                    R.string.toast_check_account_deletion_error
-                                )
+                            EasyLog.log(
+                                "检查账号需要取消订阅的结果 error: $result",
+                                priority = EasyLog.ERROR
                             )
+                            ToastUtils.showToast(AppEnv.context.getString(R.string.toast_check_account_deletion_error))
                         }
                     }
                 }
@@ -128,23 +142,32 @@ class SettingViewModel : BaseViewModel() {
                 // 专门处理HTTP异常
                 EasyLog.log(
                     "checkAccountSubscribe HTTP Exception: ${e.code()} - ${e.message()}",
-                    EasyLog.ERROR,
+                    EasyLog.ERROR
                 )
                 val errorMessage = handleHttpException(e, "account")
-                withContext(Dispatchers.Main) { ToastUtils.showToast(errorMessage) }
+                withContext(Dispatchers.Main) {
+                    ToastUtils.showToast(errorMessage)
+                }
             } catch (e: Exception) {
-                EasyLog.log("检查账号需要取消订阅 exception: ${e.message}", priority = EasyLog.ERROR)
+                EasyLog.log(
+                    "检查账号需要取消订阅 exception: ${e.message}",
+                    priority = EasyLog.ERROR
+                )
                 EasyLog.log(e)
                 val errorMessage = handleGeneralException(e, "account")
-                withContext(Dispatchers.Main) { ToastUtils.showToast(errorMessage) }
+                withContext(Dispatchers.Main) {
+                    ToastUtils.showToast(errorMessage)
+                }
             }
         }
     }
 
-    // 删除账号的结果
+    //删除账号的结果
     val deleteAccountResultFlow = MutableStateFlow(false)
 
-    /** 删除账号的接口 */
+    /**
+     * 删除账号的接口
+     */
     private fun deleteUserAccount() {
         EasyLog.log("删除用户账号 ---> ")
         launchWithNetCheck {
@@ -161,10 +184,11 @@ class SettingViewModel : BaseViewModel() {
                         }
 
                         is HttpResult.Failure -> {
-                            EasyLog.log("删除用户账号的结果 error: $result", priority = EasyLog.ERROR)
-                            ToastUtils.showToast(
-                                AppEnv.context.getString(R.string.toast_account_deletion_error)
+                            EasyLog.log(
+                                "删除用户账号的结果 error: $result",
+                                priority = EasyLog.ERROR
                             )
+                            ToastUtils.showToast(AppEnv.context.getString(R.string.toast_account_deletion_error))
                         }
                     }
                 }
@@ -172,25 +196,36 @@ class SettingViewModel : BaseViewModel() {
                 // 专门处理HTTP异常
                 EasyLog.log(
                     "deleteUserAccount HTTP Exception: ${e.code()} - ${e.message()}",
-                    EasyLog.ERROR,
+                    EasyLog.ERROR
                 )
                 val errorMessage = handleHttpException(e, "account")
-                withContext(Dispatchers.Main) { ToastUtils.showToast(errorMessage) }
+                withContext(Dispatchers.Main) {
+                    ToastUtils.showToast(errorMessage)
+                }
             } catch (e: Exception) {
                 EasyLog.log("删除用户账号 exception: ${e.message}", priority = EasyLog.ERROR)
                 EasyLog.log(e)
                 val errorMessage = handleGeneralException(e, "account")
-                withContext(Dispatchers.Main) { ToastUtils.showToast(errorMessage) }
+                withContext(Dispatchers.Main) {
+                    ToastUtils.showToast(errorMessage)
+                }
             }
         }
     }
 }
 
-/** 设置状态数据类 */
-data class SettingsState(val keepTalking: Boolean = false, val premiumMode: Boolean = false)
+/**
+ * 设置状态数据类
+ */
+data class SettingsState(
+    val keepTalking: Boolean = false,
+    val premiumMode: Boolean = false
+)
 
-/** 对话框状态数据类 */
+/**
+ * 对话框状态数据类
+ */
 data class DialogState(
     val showDeleteAccountDialog: Boolean = false,
-    val showPremiumDialog: Boolean = false,
-)
+    val showPremiumDialog: Boolean = false
+) 

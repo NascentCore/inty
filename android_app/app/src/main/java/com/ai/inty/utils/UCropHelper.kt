@@ -20,7 +20,7 @@ object UCropHelper {
         // but the future update will always be stale.
         val avatarTempFile = File(AppEnv.dirs.imagecache, "my_avatar_${timestamp}.jpg")
         android.util.Log.d("UCropHelper", "Creating crop file: ${avatarTempFile.absolutePath}")
-
+        
         val uCropOptions = UCrop.Options()
         uCropOptions.apply {
             setCompressionFormat(Bitmap.CompressFormat.JPEG)
@@ -39,12 +39,11 @@ object UCropHelper {
             setFreeStyleCropEnabled(false)
         }
 
-        val intentCrop =
-            UCrop.of(srcUri, Uri.fromFile(avatarTempFile))
-                .withAspectRatio(1f, 1f)
-                .withOptions(uCropOptions)
-                .withMaxResultSize(1080, 1080)
-                .getIntent(context)
+        val intentCrop = UCrop.of(srcUri, Uri.fromFile(avatarTempFile))
+            .withAspectRatio(1f, 1f)
+            .withOptions(uCropOptions)
+            .withMaxResultSize(1080, 1080)
+            .getIntent(context)
 
         return intentCrop
     }

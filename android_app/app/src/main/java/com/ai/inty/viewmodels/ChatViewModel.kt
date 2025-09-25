@@ -47,6 +47,7 @@ class ChatViewModel : BaseActivityViewModel() {
     private val _conversations = MutableStateFlow<List<ConversationItem>>(emptyList())
     val conversations = _conversations.asStateFlow()
 
+
     val inputData = MutableStateFlow<String>("")
     val inputSelection = MutableStateFlow<Int>(0)
 
@@ -75,10 +76,11 @@ class ChatViewModel : BaseActivityViewModel() {
     private var _isLoadingConversations = MutableStateFlow(false)
     val isLoadingConversations = _isLoadingConversations.asStateFlow()
     private var hasMoreConversations = true
-
+    
     // 刷新状态，用于区分首次加载和刷新操作
     private var _isRefreshingConversations = MutableStateFlow(false)
     val isRefreshingConversations = _isRefreshingConversations.asStateFlow()
+
 
     // 延迟获取依赖，避免在构造函数中立即获取导致空指针异常
     private val chatApi by lazy {
@@ -89,6 +91,7 @@ class ChatViewModel : BaseActivityViewModel() {
     init {
         EasyLog.log("ChatViewModel = ${hashCode()}")
     }
+
 
     fun setAgentInfo(agentInfo: AgentInfo?) {
         EasyLog.log("setAgentInfo called with agent: ${agentInfo?.id}")
@@ -118,16 +121,18 @@ class ChatViewModel : BaseActivityViewModel() {
 
         // 查询新 agent 的消息
         queryMsgs()
-        // 查询改聊天设置
+        //查询改聊天设置
         getChatSetting()
 
         // 开场白播放逻辑已移至ChatItem中的VoicePlayer处理
         // 不再在ChatViewModel中播放Agent开场白
     }
 
-    // region 语音播报相关
+    //region 语音播报相关
 
-    /** 初始化音频管理器 */
+    /**
+     * 初始化音频管理器
+     */
     fun initVoiceService(context: Context) {
         if (audioManager == null) {
             audioManager = AudioManager.getInstance(context, viewModelScope)
@@ -135,46 +140,52 @@ class ChatViewModel : BaseActivityViewModel() {
         }
     }
 
-    /** 停止语音播放 */
+
+    /**
+     * 停止语音播放
+     */
     fun stopVoicePlayback() {
         audioManager?.stopAllPlayback()
     }
 
-    /** 暂停语音播放（页面离开时调用） */
+    /**
+     * 暂停语音播放（页面离开时调用）
+     */
     fun pauseVoicePlayback() {
         audioManager?.pausePlayback()
     }
 
-    /** 重置语音播放状态（页面切换时调用） */
+    /**
+     * 重置语音播放状态（页面切换时调用）
+     */
     fun resetVoicePlayback() {
         audioManager?.resetForPageChange()
     }
 
-    // endregion
+    //endregion
 
-    // region TTS相关功能
+    //region TTS相关功能
 
-    /** 更新消息的音频URL（供AudioManager回调使用） */
+    /**
+     * 更新消息的音频URL（供AudioManager回调使用）
+     */
     fun updateMessageAudioUrl(messageId: String, audioUrl: String) {
         EasyLog.log("updateMessageAudioUrl: messageId=$messageId, audioUrl=$audioUrl")
         _msgs.update { currentMsgs ->
-            val updatedMsgs =
-                currentMsgs.map { msg ->
-                    if (msg.localMsgId == messageId) {
-                        EasyLog.log(
-                            "Found matching message: ${msg.localMsgId}, updating audio_url from ${msg.audio_url} to $audioUrl"
-                        )
-                        msg.copy(audio_url = audioUrl)
-                    } else {
-                        msg
-                    }
+            val updatedMsgs = currentMsgs.map { msg ->
+                if (msg.localMsgId == messageId) {
+                    EasyLog.log("Found matching message: ${msg.localMsgId}, updating audio_url from ${msg.audio_url} to $audioUrl")
+                    msg.copy(audio_url = audioUrl)
+                } else {
+                    msg
                 }
+            }
             EasyLog.log("Updated messages count: ${updatedMsgs.size}")
             updatedMsgs
         }
     }
 
-    // endregion
+    //endregion
 
     fun queryMsgs() {
         // 防重复请求检查
@@ -191,8 +202,8 @@ class ChatViewModel : BaseActivityViewModel() {
             return
         }
 
-        if (
-            lastQueryAgentId == currentAgentId && currentTime - lastQueryTime < QUERY_DEBOUNCE_TIME
+        if (lastQueryAgentId == currentAgentId &&
+            currentTime - lastQueryTime < QUERY_DEBOUNCE_TIME
         ) {
             EasyLog.log("Query debounced for agent $currentAgentId")
             return
@@ -212,14 +223,11 @@ class ChatViewModel : BaseActivityViewModel() {
                     when (result) {
                         is HttpResult.Success -> {
                             // 去重处理：基于内容和角色的组合去重，同时考虑时间戳
-                            val uniqueMessages =
-                                result.data.messages.distinctBy { msg ->
-                                    "${msg.role}_${msg.content}_${msg.localMsgId}"
-                                }
+                            val uniqueMessages = result.data.messages.distinctBy { msg ->
+                                "${msg.role}_${msg.content}_${msg.localMsgId}"
+                            }
                             _msgs.update { uniqueMessages }
-                            EasyLog.log(
-                                "Successfully loaded ${uniqueMessages.size} unique messages for agent ${agent.id} (original: ${result.data.messages.size})"
-                            )
+                            EasyLog.log("Successfully loaded ${uniqueMessages.size} unique messages for agent ${agent.id} (original: ${result.data.messages.size})")
                         }
 
                         is HttpResult.Failure -> {
@@ -238,7 +246,6 @@ class ChatViewModel : BaseActivityViewModel() {
     }
 
     val showLimitDialog = MutableStateFlow(false)
-
     fun sendMsg() {
         // 防抖检查
         val currentTime = System.currentTimeMillis()
@@ -265,14 +272,16 @@ class ChatViewModel : BaseActivityViewModel() {
                 inputData.update { "" }
                 EasyLog.log("send msg $inputMsg")
 
-                val msgInfo = MsgInfo(content = inputMsg, role = "user")
+                val msgInfo = MsgInfo(
+                    content = inputMsg,
+                    role = "user"
+                )
 
                 // 添加临时的加载消息
-                val loadingMsg =
-                    MsgInfo(
-                        content = "loading_animation", // 特殊标识符
-                        role = "assistant",
-                    )
+                val loadingMsg = MsgInfo(
+                    content = "loading_animation", // 特殊标识符
+                    role = "assistant"
+                )
 
                 // 使用 StateFlow 的 update 方法安全地更新列表
                 _msgs.update { currentMsgs ->
@@ -287,7 +296,7 @@ class ChatViewModel : BaseActivityViewModel() {
                     } catch (e: Exception) {
                         EasyLog.log(
                             "Error updating messages list: ${e.message}",
-                            priority = EasyLog.ERROR,
+                            priority = EasyLog.ERROR
                         )
                         currentMsgs // 返回原列表，避免数据丢失
                     }
@@ -297,62 +306,58 @@ class ChatViewModel : BaseActivityViewModel() {
                 val req = SendMsgReq(listOf(msgInfo))
                 val currentAgent = agentInfo.value
                 currentAgent?.let { agent ->
+
                     val result = chatApi.sendMsg(agent.id, req)
 
                     EasyLog.log("sendMsg($agent, $req) -> $result")
 
                     // 移除加载消息
                     _msgs.update { currentMsgs ->
-                        currentMsgs.filterNot {
-                            it.content == "loading_animation" && it.role == "assistant"
-                        }
+                        currentMsgs.filterNot { it.content == "loading_animation" && it.role == "assistant" }
                     }
                     _isWaitingForReply.value = false
 
                     when (result) {
                         is HttpResult.Success -> {
                             runCatching {
-                                    // 有免费次数限制，需要vip订阅
-                                    if (result.data.code == 10001001) {
-                                        showLimitDialog.emit(true)
-                                    }
-                                    // 添加AI回复
-                                    _msgs.update { currentMsgs ->
-                                        try {
-                                            val newMsgs = mutableListOf<MsgInfo>()
-                                            result.data.data?.choices?.forEach { choice ->
-                                                newMsgs.add(choice.message)
-                                            }
-                                            // 创建当前消息的副本以避免并发修改
-                                            newMsgs.addAll(currentMsgs.toList())
-                                            newMsgs
-                                        } catch (e: Exception) {
-                                            EasyLog.log(
-                                                "Error adding AI response: ${e.message}",
-                                                priority = EasyLog.ERROR,
-                                            )
-                                            currentMsgs // 返回原列表，避免数据丢失
+                                //有免费次数限制，需要vip订阅
+                                if (result.data.code == 10001001) {
+                                    showLimitDialog.emit(true)
+                                }
+                                // 添加AI回复
+                                _msgs.update { currentMsgs ->
+                                    try {
+                                        val newMsgs = mutableListOf<MsgInfo>()
+                                        result.data.data?.choices?.forEach { choice ->
+                                            newMsgs.add(choice.message)
                                         }
+                                        // 创建当前消息的副本以避免并发修改
+                                        newMsgs.addAll(currentMsgs.toList())
+                                        newMsgs
+                                    } catch (e: Exception) {
+                                        EasyLog.log(
+                                            "Error adding AI response: ${e.message}",
+                                            priority = EasyLog.ERROR
+                                        )
+                                        currentMsgs // 返回原列表，避免数据丢失
                                     }
+                                }
 
-                                    result.data.data
-                                        ?.choices
-                                        ?.lastOrNull()
-                                        ?.message
-                                        ?.content
-                                        ?.let { str ->
-                                            IntySetting.setConversationReaded(agent.id, str)
-                                        }
-                                }
-                                .onFailure {
-                                    EasyLog.log(
-                                        "Error processing AI response: ${it.message}",
-                                        priority = EasyLog.ERROR,
+                                result.data.data?.choices?.lastOrNull()?.message?.content?.let { str ->
+                                    IntySetting.setConversationReaded(
+                                        agent.id,
+                                        str
                                     )
-                                    it.printStackTrace()
-                                    // 错误恢复：确保状态正确
-                                    _isWaitingForReply.value = false
                                 }
+                            }.onFailure {
+                                EasyLog.log(
+                                    "Error processing AI response: ${it.message}",
+                                    priority = EasyLog.ERROR
+                                )
+                                it.printStackTrace()
+                                // 错误恢复：确保状态正确
+                                _isWaitingForReply.value = false
+                            }
                         }
 
                         is HttpResult.Failure -> {
@@ -361,15 +366,14 @@ class ChatViewModel : BaseActivityViewModel() {
                             _isWaitingForReply.value = false
                         }
                     }
+                } ?: run {
+                    // 如果没有 agent 信息，恢复状态
+                    _isWaitingForReply.value = false
+                    EasyLog.log(
+                        "No agent info available for sending message",
+                        priority = EasyLog.ERROR
+                    )
                 }
-                    ?: run {
-                        // 如果没有 agent 信息，恢复状态
-                        _isWaitingForReply.value = false
-                        EasyLog.log(
-                            "No agent info available for sending message",
-                            priority = EasyLog.ERROR,
-                        )
-                    }
             } catch (e: Exception) {
                 EasyLog.log("Unexpected error in sendMsg: ${e.message}", priority = EasyLog.ERROR)
                 _isWaitingForReply.value = false
@@ -384,8 +388,10 @@ class ChatViewModel : BaseActivityViewModel() {
         }
     }
 
-    // 关闭limit次数 拦截消息的弹窗
-    fun dismissDialog() = viewModelScope.launch { showLimitDialog.emit(false) }
+    //关闭limit次数 拦截消息的弹窗
+    fun dismissDialog() = viewModelScope.launch {
+        showLimitDialog.emit(false)
+    }
 
     fun sendKeepTalkingMessage() {
         // 防抖检查
@@ -403,11 +409,10 @@ class ChatViewModel : BaseActivityViewModel() {
             val msgInfo = MsgInfo(content = keepTalkingMsg, role = "user")
 
             // 添加临时的加载消息 (keep talking不显示用户消息，只显示加载动画)
-            val loadingMsg =
-                MsgInfo(
-                    content = "loading_animation", // 特殊标识符
-                    role = "assistant",
-                )
+            val loadingMsg = MsgInfo(
+                content = "loading_animation", // 特殊标识符
+                role = "assistant"
+            )
             // 使用 StateFlow 的 update 方法安全地更新列表
             _msgs.update { currentMsgs ->
                 val newMsgs = mutableListOf<MsgInfo>()
@@ -422,50 +427,52 @@ class ChatViewModel : BaseActivityViewModel() {
             val req = SendMsgReq(listOf(msgInfo))
 
             agentInfo.value?.let { agent ->
+
                 val result = chatApi.sendMsg(agent.id, req)
 
                 EasyLog.log("sendKeepTalkingMessage($agent, $req) -> $result")
 
+
                 // 移除加载消息
                 _msgs.update { currentMsgs ->
-                    currentMsgs.filterNot {
-                        it.content == "loading_animation" && it.role == "assistant"
-                    }
+                    currentMsgs.filterNot { it.content == "loading_animation" && it.role == "assistant" }
                 }
                 _isWaitingForReply.value = false
 
                 when (result) {
                     is HttpResult.Success -> {
                         runCatching {
-                                // 有免费次数限制，需要vip订阅
-                                if (result.data.code == 10001001) {
-                                    showLimitDialog.emit(true)
+                            //有免费次数限制，需要vip订阅
+                            if (result.data.code == 10001001) {
+                                showLimitDialog.emit(true)
+                            }
+                            // 添加AI回复
+                            _msgs.update { currentMsgs ->
+                                val newMsgs = mutableListOf<MsgInfo>()
+                                result.data.data?.choices?.forEach { choice ->
+                                    newMsgs.add(choice.message)
                                 }
-                                // 添加AI回复
-                                _msgs.update { currentMsgs ->
-                                    val newMsgs = mutableListOf<MsgInfo>()
-                                    result.data.data?.choices?.forEach { choice ->
-                                        newMsgs.add(choice.message)
-                                    }
-                                    // 创建当前消息的副本以避免并发修改
-                                    newMsgs.addAll(currentMsgs.toList())
-                                    newMsgs
-                                }
+                                // 创建当前消息的副本以避免并发修改
+                                newMsgs.addAll(currentMsgs.toList())
+                                newMsgs
+                            }
 
-                                result.data.data?.choices?.lastOrNull()?.message?.content?.let { str
-                                    ->
-                                    IntySetting.setConversationReaded(agent.id, str)
-                                }
-                            }
-                            .onFailure {
-                                EasyLog.log(
-                                    "Error processing keep talking AI response: ${it.message}",
-                                    priority = EasyLog.ERROR,
+                            result.data.data?.choices?.lastOrNull()?.message?.content?.let { str ->
+                                IntySetting.setConversationReaded(
+                                    agent.id,
+                                    str
                                 )
-                                it.printStackTrace()
-                                // 错误恢复：确保状态正确
-                                _isWaitingForReply.value = false
                             }
+
+                        }.onFailure {
+                            EasyLog.log(
+                                "Error processing keep talking AI response: ${it.message}",
+                                priority = EasyLog.ERROR
+                            )
+                            it.printStackTrace()
+                            // 错误恢复：确保状态正确
+                            _isWaitingForReply.value = false
+                        }
                     }
 
                     is HttpResult.Failure -> {
@@ -474,43 +481,42 @@ class ChatViewModel : BaseActivityViewModel() {
                         _isWaitingForReply.value = false
                     }
                 }
+            } ?: run {
+                // 如果没有 agent 信息，恢复状态
+                _isWaitingForReply.value = false
+                EasyLog.log("No agent info available for keep talking", priority = EasyLog.ERROR)
             }
-                ?: run {
-                    // 如果没有 agent 信息，恢复状态
-                    _isWaitingForReply.value = false
-                    EasyLog.log(
-                        "No agent info available for keep talking",
-                        priority = EasyLog.ERROR,
-                    )
-                }
         }
     }
 
-    // 获取聊天消息设置 - 按agentId存储，确保每个agent的设置独立
-    private val _chatSettings =
-        MutableStateFlow<Map<String, ChatSettingsResponse.ChatSettingRspData>>(emptyMap())
+    //获取聊天消息设置 - 按agentId存储，确保每个agent的设置独立
+    private val _chatSettings = MutableStateFlow<Map<String, ChatSettingsResponse.ChatSettingRspData>>(emptyMap())
     val chatSettings = _chatSettings.asStateFlow()
-
-    /** 获取指定agent的聊天设置 */
+    
+    /**
+     * 获取指定agent的聊天设置
+     */
     fun getChatSettingForAgent(agentId: String): ChatSettingsResponse.ChatSettingRspData? {
         return _chatSettings.value[agentId]
     }
-
-    /** 获取当前agent的聊天设置 */
+    
+    /**
+     * 获取当前agent的聊天设置
+     */
     fun getCurrentChatSetting(): ChatSettingsResponse.ChatSettingRspData? {
         val agentId = agentInfo.value?.id ?: return null
         return getChatSettingForAgent(agentId)
     }
-
+    
     private fun getChatSetting() = launchWithNetCheck {
         val agentId = agentInfo.value?.id ?: return@launchWithNetCheck
-        // 有agent信息，才请求
+        //有agent信息，才请求
         val result = chatApi.getChatSettings(agentId)
         when (result) {
             is HttpResult.Failure -> {
-                // 此设置，暂时不用toast显示
+                //此设置，暂时不用toast显示
                 EasyLog.log(result.message)
-                //                showNetworkAwareError(result.message)
+//                showNetworkAwareError(result.message)
             }
 
             is HttpResult.Success -> {
@@ -523,17 +529,17 @@ class ChatViewModel : BaseActivityViewModel() {
         }
     }
 
-    // 高级模型定制化回复的接口调用
+    //高级模型定制化回复的接口调用
     fun updateChatReplySettings(prompt: String) = launchWithNetCheck {
         val agentId = agentInfo.value?.id ?: return@launchWithNetCheck
-        // 有agent信息，才请求
+        //有agent信息，才请求
         val req = ChatSettingsReq(style_prompt = prompt)
         val result = chatApi.updateChatSettings(agentId, req)
         when (result) {
             is HttpResult.Failure -> showNetworkAwareError(result.message)
             is HttpResult.Success -> {
                 showNetworkAwareError(AppEnv.context.getString(R.string.custom_reply_successful))
-                // 要更新指定agent的chatsetting
+                //要更新指定agent的chatsetting
                 result.data.data?.let { chatSettingData ->
                     _chatSettings.update { currentSettings ->
                         currentSettings + (agentId to chatSettingData)
@@ -548,7 +554,7 @@ class ChatViewModel : BaseActivityViewModel() {
         EasyLog.log("getConversations - 开始加载第一页")
         currentConversationsPage = 0
         hasMoreConversations = true
-
+        
         // 如果已经有数据，则不显示loading，直接后台刷新
         if (_conversations.value.isNotEmpty()) {
             EasyLog.log("getConversations - 已有数据，后台刷新，不显示loading")
@@ -566,17 +572,15 @@ class ChatViewModel : BaseActivityViewModel() {
             currentConversationsPage++
             loadConversations()
         } else {
-            EasyLog.log(
-                "loadMoreConversations - 跳过加载: isLoading=${_isLoadingConversations.value}, hasMoreData=$hasMoreConversations"
-            )
+            EasyLog.log("loadMoreConversations - 跳过加载: isLoading=${_isLoadingConversations.value}, hasMoreData=$hasMoreConversations")
         }
     }
 
     private fun loadConversationsSilently() {
         if (_isLoadingConversations.value || _isRefreshingConversations.value) return
-
+        
         EasyLog.log("loadConversationsSilently - 静默刷新，不显示loading")
-
+        
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val skip = currentConversationsPage * 20
@@ -586,31 +590,27 @@ class ChatViewModel : BaseActivityViewModel() {
                 when (result) {
                     is HttpResult.Success -> {
                         val userInitiatedConversations = result.data
-
+                        
                         if (userInitiatedConversations.isEmpty()) {
                             hasMoreConversations = false
-                            EasyLog.log(
-                                "loadConversationsSilently - 第${currentConversationsPage + 1}页数据为空，没有更多数据"
-                            )
+                            EasyLog.log("loadConversationsSilently - 第${currentConversationsPage + 1}页数据为空，没有更多数据")
                         } else {
                             // 静默更新数据，不显示loading
                             _conversations.value = userInitiatedConversations
-                            EasyLog.log(
-                                "loadConversationsSilently - 静默更新数据: ${userInitiatedConversations.size}个"
-                            )
+                            EasyLog.log("loadConversationsSilently - 静默更新数据: ${userInitiatedConversations.size}个")
                         }
                     }
                     is HttpResult.Failure -> {
                         EasyLog.log(
                             "loadConversationsSilently - 第${currentConversationsPage + 1}页加载失败: ${result.message}",
-                            priority = EasyLog.ERROR,
+                            priority = EasyLog.ERROR
                         )
                     }
                 }
             } catch (e: Exception) {
                 EasyLog.log(
                     "loadConversationsSilently - 第${currentConversationsPage + 1}页加载异常: ${e.message}",
-                    priority = EasyLog.ERROR,
+                    priority = EasyLog.ERROR
                 )
             }
         }
@@ -621,7 +621,7 @@ class ChatViewModel : BaseActivityViewModel() {
 
         // 记录当前页码，用于后续状态重置
         val isFirstPage = currentConversationsPage == 0
-
+        
         // 根据当前页码决定使用哪个loading状态
         if (isFirstPage) {
             // 第一页，使用刷新状态
@@ -630,9 +630,7 @@ class ChatViewModel : BaseActivityViewModel() {
             // 后续页，使用加载更多状态
             _isLoadingConversations.value = true
         }
-        EasyLog.log(
-            "loadConversations - 当前页索引: $currentConversationsPage, 显示页码: ${currentConversationsPage + 1}"
-        )
+        EasyLog.log("loadConversations - 当前页索引: $currentConversationsPage, 显示页码: ${currentConversationsPage + 1}")
 
         viewModelScope.launch(Dispatchers.IO) {
             try {
@@ -646,23 +644,17 @@ class ChatViewModel : BaseActivityViewModel() {
 
                         if (userInitiatedConversations.isEmpty()) {
                             hasMoreConversations = false
-                            EasyLog.log(
-                                "loadConversations - 第${currentConversationsPage + 1}页数据为空，没有更多数据"
-                            )
+                            EasyLog.log("loadConversations - 第${currentConversationsPage + 1}页数据为空，没有更多数据")
                         } else {
                             if (currentConversationsPage == 0) {
                                 // 第一页，直接替换（这里才清空并替换数据）
                                 _conversations.value = userInitiatedConversations
-                                EasyLog.log(
-                                    "loadConversations - 替换第一页数据: ${userInitiatedConversations.size}个"
-                                )
+                                EasyLog.log("loadConversations - 替换第一页数据: ${userInitiatedConversations.size}个")
                             } else {
                                 // 后续页，追加到现有列表
                                 _conversations.value =
                                     _conversations.value + userInitiatedConversations
-                                EasyLog.log(
-                                    "loadConversations - 追加第${currentConversationsPage + 1}页数据: ${userInitiatedConversations.size}个，总计: ${_conversations.value.size}个"
-                                )
+                                EasyLog.log("loadConversations - 追加第${currentConversationsPage + 1}页数据: ${userInitiatedConversations.size}个，总计: ${_conversations.value.size}个")
                             }
                         }
                     }
@@ -670,7 +662,7 @@ class ChatViewModel : BaseActivityViewModel() {
                     is HttpResult.Failure -> {
                         EasyLog.log(
                             "loadConversations - 第${currentConversationsPage + 1}页加载失败: ${result.message}",
-                            priority = EasyLog.ERROR,
+                            priority = EasyLog.ERROR
                         )
                         // 如果加载失败，回退页码
                         if (currentConversationsPage > 0) {
@@ -682,7 +674,7 @@ class ChatViewModel : BaseActivityViewModel() {
             } catch (e: Exception) {
                 EasyLog.log(
                     "loadConversations - 第${currentConversationsPage + 1}页加载异常: ${e.message}",
-                    priority = EasyLog.ERROR,
+                    priority = EasyLog.ERROR
                 )
                 // 如果加载失败，回退页码
                 if (currentConversationsPage > 0) {
@@ -690,7 +682,7 @@ class ChatViewModel : BaseActivityViewModel() {
                     EasyLog.log("loadConversations - 页码回退到: $currentConversationsPage")
                 }
             }
-
+            
             // 重置对应的loading状态
             if (isFirstPage) {
                 _isRefreshingConversations.value = false
@@ -723,16 +715,13 @@ class ChatViewModel : BaseActivityViewModel() {
         }
     }
 
-    // 标记会话消息 已读
+    //标记会话消息 已读
     fun setConversationReaded(conversationItem: ConversationItem) {
         IntySetting.setConversationReaded(conversationItem.agentId, conversationItem.lastMessage)
 
         _conversations.update { currentConversations ->
             currentConversations.map { conversation ->
-                if (
-                    conversation.id == conversationItem.id &&
-                        conversation.agentId == conversationItem.agentId
-                ) {
+                if (conversation.id == conversationItem.id && conversation.agentId == conversationItem.agentId) {
                     conversation.copy(isNew = false)
                 } else {
                     conversation
@@ -760,7 +749,7 @@ class ChatViewModel : BaseActivityViewModel() {
         currentConversationsPage = 0
         hasMoreConversations = true
         _isLoadingConversations.value = false
-
+        
         // 清理chatSettings
         _chatSettings.value = emptyMap()
 
@@ -771,7 +760,7 @@ class ChatViewModel : BaseActivityViewModel() {
         _userProfile.value = userProfile
     }
 
-    // 本地userInfo的更新，而非接口
+    //本地userInfo的更新，而非接口
     fun updateUserInfo() {
         if (UserProfileManager.hasUserProfile()) {
             _userProfile.value = UserProfileManager.getUserProfile()
@@ -779,8 +768,11 @@ class ChatViewModel : BaseActivityViewModel() {
         }
     }
 
-    // 购买vip会员订阅，最低档
+
+    //购买vip会员订阅，最低档
     fun purchaseFirstVip(activity: Activity) {
-        VipStatusHelper.purchaseFirstVip(activity) { error -> showNetworkAwareError(error) }
+        VipStatusHelper.purchaseFirstVip(activity) { error ->
+            showNetworkAwareError(error)
+        }
     }
 }

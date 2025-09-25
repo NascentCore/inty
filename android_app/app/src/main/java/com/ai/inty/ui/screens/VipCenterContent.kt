@@ -39,13 +39,15 @@ import com.ai.inty.ui.components.PremiumPlanList
 import com.ai.inty.ui.components.PurchaseButton
 import com.ai.inty.viewmodels.VipCenterViewModel
 
-/** 会员中心页面主内容 */
+/**
+ * 会员中心页面主内容
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun VipCenterContent(
     onClose: () -> Unit,
     onPurchase: () -> Unit,
-    viewModel: VipCenterViewModel = viewModel(),
+    viewModel: VipCenterViewModel = viewModel()
 ) {
     val plans by viewModel.plansFlow.collectAsState()
     val selectedPlanIndex by viewModel.selectedPlanIndex.collectAsState()
@@ -57,22 +59,20 @@ fun VipCenterContent(
 
         // 半透明遮罩层，确保内容可读性
         Box(
-            modifier =
-                Modifier.fillMaxWidth()
-                    .fillMaxHeight(.77f)
-                    .align(Alignment.BottomCenter)
-                    .background(
-                        brush =
-                            Brush.verticalGradient(
-                                colors =
-                                    listOf(
-                                        Color(0x001C1523),
-                                        Color(0xA81C1523),
-                                        Color(0xE31C1523),
-                                        Color(0xFF1C1523),
-                                    )
-                            )
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(.77f)
+                .align(Alignment.BottomCenter)
+                .background(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            Color(0x001C1523),
+                            Color(0xA81C1523),
+                            Color(0xE31C1523),
+                            Color(0xFF1C1523),
+                        )
                     )
+                )
         )
 
         Column(modifier = Modifier.fillMaxSize()) {
@@ -91,7 +91,7 @@ fun VipCenterContent(
                     plans = plans,
                     selectedIndex = selectedPlanIndex,
                     isSubscribed = vipStatus.isSubscribed,
-                    onPlanSelected = { index -> viewModel.selectPlan(index) },
+                    onPlanSelected = { index -> viewModel.selectPlan(index) }
                 )
 
                 Spacer(Modifier.height(32.dp))
@@ -99,8 +99,9 @@ fun VipCenterContent(
                 PurchaseButton(
                     isSubscribed = vipStatus.isSubscribed,
                     hasSelectedPlan = viewModel.hasSelectedPlan(),
-                    onPurchase = onPurchase,
+                    onPurchase = onPurchase
                 )
+
             } else {
                 EmptyPlanState()
             }
@@ -112,7 +113,9 @@ fun VipCenterContent(
     }
 }
 
-/** 会员中心顶部栏 */
+/**
+ * 会员中心顶部栏
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun VipCenterTopBar(onClose: () -> Unit) {
@@ -121,7 +124,7 @@ private fun VipCenterTopBar(onClose: () -> Unit) {
             Text(
                 text = stringResource(R.string.premium_title),
                 fontWeight = FontWeight(600),
-                color = Color.White,
+                color = Color.White
             )
         },
         modifier = Modifier.fillMaxWidth(),
@@ -129,22 +132,25 @@ private fun VipCenterTopBar(onClose: () -> Unit) {
             IconButton(onClick = onClose) {
                 Image(
                     painter = painterResource(R.drawable.back),
-                    contentDescription = stringResource(R.string.content_desc_back),
+                    contentDescription = stringResource(R.string.content_desc_back)
                 )
             }
         },
-        colors = TopAppBarDefaults.topAppBarColors().copy(containerColor = Color.Transparent),
+        colors = TopAppBarDefaults.topAppBarColors()
+            .copy(containerColor = Color.Transparent)
     )
 }
 
-/** 会员中心头部 */
+/**
+ * 会员中心头部
+ */
 @Composable
 private fun VipCenterHeader() {
     Column(modifier = Modifier.padding(start = 16.dp)) {
         Image(
             painter = painterResource(R.drawable.img_intellimate_premium),
             contentDescription = null,
-            modifier = Modifier.size(278.dp, 32.dp),
+            modifier = Modifier.size(278.dp, 32.dp)
         )
         Text(
             text = stringResource(R.string.premium_subtitle),
@@ -156,10 +162,16 @@ private fun VipCenterHeader() {
     }
 }
 
-/** 会员权益列表 */
+/**
+ * 会员权益列表
+ */
 @Composable
 private fun VipCenterBenefits() {
-    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+    ) {
         PremiumBenefitItem(stringResource(R.string.premium_benefit_unlimited))
         PremiumBenefitItem(stringResource(R.string.premium_benefit_model))
         PremiumBenefitItem(stringResource(R.string.premium_benefit_inspiration))
@@ -167,10 +179,14 @@ private fun VipCenterBenefits() {
         PremiumBenefitItem(stringResource(R.string.premium_benefit_memory))
         PremiumBenefitItem(stringResource(R.string.premium_benefit_newfeature))
     }
+
 }
 
 @Preview(showBackground = true)
 @Composable
 private fun VipCenterContentPreview() {
-    VipCenterContent(onClose = {}, onPurchase = {})
-}
+    VipCenterContent(
+        onClose = {},
+        onPurchase = {}
+    )
+} 

@@ -27,32 +27,37 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.ai.inty.R
 
-/** 删除账号确认对话框 */
+/**
+ * 删除账号确认对话框
+ */
 @Composable
-fun DeleteAccountDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
+fun DeleteAccountDialog(
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
+) {
     Dialog(onDismissRequest = onDismiss) {
         Column(
-            modifier =
-                Modifier.fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(color = Color(0xFF1B0130))
-                    .padding(12.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(12.dp))
+                .background(color = Color(0xFF1B0130))
+                .padding(12.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
                     text = stringResource(R.string.are_you_sure),
                     fontSize = 22.sp,
-                    color = Color.White,
+                    color = Color.White
                 )
                 Spacer(Modifier.weight(1f))
                 IconButton(onClick = onDismiss) {
                     Icon(
                         painter = painterResource(R.drawable.close),
                         contentDescription = "",
-                        tint = Color.White,
+                        tint = Color.White
                     )
                 }
             }
@@ -62,7 +67,7 @@ fun DeleteAccountDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
             Text(
                 text = stringResource(R.string.delete_account_warning),
                 fontSize = 14.sp,
-                color = Color.White,
+                color = Color.White
             )
 
             Spacer(Modifier.height(8.dp))
@@ -70,7 +75,7 @@ fun DeleteAccountDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
             Text(
                 text = stringResource(R.string.please_read_warning),
                 fontSize = 16.sp,
-                color = Color.White,
+                color = Color.White
             )
 
             Spacer(Modifier.height(16.dp))
@@ -78,14 +83,16 @@ fun DeleteAccountDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
             // 按钮
             Button(
                 onClick = onDismiss,
-                modifier = Modifier.fillMaxWidth(.85f).align(Alignment.CenterHorizontally),
+                modifier = Modifier
+                    .fillMaxWidth(.85f)
+                    .align(Alignment.CenterHorizontally)
             ) {
                 Text(stringResource(R.string.cancel), fontSize = 18.sp, color = Color.White)
             }
 
             TextButton(
                 onClick = onConfirm,
-                modifier = Modifier.align(Alignment.CenterHorizontally),
+                modifier = Modifier.align(Alignment.CenterHorizontally)
             ) {
                 Text(stringResource(R.string.delete), fontSize = 14.sp, color = Color.Red)
             }
@@ -96,10 +103,15 @@ fun DeleteAccountDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
 @Preview(showBackground = true)
 @Composable
 private fun DeleteAccountDialogPreview() {
-    DeleteAccountDialog(onDismiss = {}, onConfirm = {})
+    DeleteAccountDialog(
+        onDismiss = {},
+        onConfirm = {}
+    )
 }
 
-/** App强制更新的Dialog */
+/**
+ * App强制更新的Dialog
+ */
 @Composable
 fun ForceUpgradeDialog(
     content: String = stringResource(R.string.str_upgrade_content),
@@ -108,48 +120,56 @@ fun ForceUpgradeDialog(
 ) {
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(false, false, true)) {
         Column(
-            modifier =
-                Modifier.fillMaxWidth()
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(color = Color(0xFF1B0130))
-                    .padding(12.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(20.dp))
+                .background(color = Color(0xFF1B0130))
+                .padding(12.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
                     text = stringResource(R.string.str_upgrade_required),
                     fontSize = 22.sp,
-                    color = Color.White,
+                    color = Color.White
                 )
                 Spacer(Modifier.weight(1f))
                 IconButton(onClick = onDismiss, enabled = false) {
-                    //                    Icon(
-                    //                        painter = painterResource(R.drawable.close),
-                    //                        contentDescription = "",
-                    //                        tint = Color.White
-                    //                    )
+//                    Icon(
+//                        painter = painterResource(R.drawable.close),
+//                        contentDescription = "",
+//                        tint = Color.White
+//                    )
                 }
             }
 
             Spacer(Modifier.height(8.dp))
 
-            Text(text = content, fontSize = 14.sp, color = Color.White)
+            Text(
+                text = content,
+                fontSize = 14.sp,
+                color = Color.White
+            )
+
 
             Spacer(Modifier.height(16.dp))
 
             // 按钮
             Button(
                 onClick = onConfirm,
-                modifier = Modifier.fillMaxWidth(.85f).align(Alignment.CenterHorizontally),
+                modifier = Modifier
+                    .fillMaxWidth(.85f)
+                    .align(Alignment.CenterHorizontally)
             ) {
                 Text(
                     stringResource(R.string.str_upgrade_now),
                     fontSize = 18.sp,
-                    color = Color.White,
+                    color = Color.White
                 )
             }
+
         }
     }
 }
@@ -157,5 +177,8 @@ fun ForceUpgradeDialog(
 @Preview(showBackground = true)
 @Composable
 private fun PreviewForceUpgradeDialog() {
-    ForceUpgradeDialog(onDismiss = {}, onConfirm = {})
-}
+    ForceUpgradeDialog(
+        onDismiss = {},
+        onConfirm = {}
+    )
+} 

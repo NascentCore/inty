@@ -21,16 +21,25 @@ object AppEnv {
     var version_name = "0.0"
     var version_code: Int = 0
 
-    val dirs by lazy { DirsEnv() }
+    val dirs by lazy {
+        DirsEnv()
+    }
 
-    val processName by lazy { getCurrentProcessName(context) }
+    val processName by lazy {
+        getCurrentProcessName(context)
+    }
 
-    val locale by lazy { Locale.getDefault() }
+    val locale by lazy {
+        Locale.getDefault()
+    }
+
 
     val DeviceID: String by lazy {
         var id = IntySetting.getDeviceID()
         if (id.isNullOrEmpty()) {
-            id = Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID)
+            id = Settings.Secure.getString(
+                context.contentResolver, Settings.Secure.ANDROID_ID
+            )
             IntySetting.setDeviceID(id)
         }
         id ?: ""
@@ -47,10 +56,16 @@ class DirsEnv {
         tmp.mkdirs()
         tmp
     }
-    val root: String by lazy { rootDir.absolutePath }
-    val imagecache: String by lazy { makeDir("imagecache") }
+    val root: String by lazy {
+        rootDir.absolutePath
+    }
+    val imagecache: String by lazy {
+        makeDir("imagecache")
+    }
 
-    val logDir: String by lazy { makeDir("logs") }
+    val logDir: String by lazy {
+        makeDir("logs")
+    }
 
     fun makeDir(dirName: String): String {
         val dir = File(rootDir, dirName)

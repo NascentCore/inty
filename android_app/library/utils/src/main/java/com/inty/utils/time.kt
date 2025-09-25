@@ -6,6 +6,7 @@ import java.time.ZoneId
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 
+
 fun isToday(dateTime: ZonedDateTime): Boolean {
     val today = LocalDate.now(ZoneId.systemDefault())
     return dateTime.toLocalDate() == today
@@ -16,19 +17,19 @@ fun convertUtcToLocal(utcString: String): String {
     if (utcString.isBlank()) {
         return ""
     }
-
+    
     return runCatching {
-            val instant = Instant.parse(utcString)
+        val instant = Instant.parse(utcString)
 
-            val localDateTime = instant.atZone(ZoneId.systemDefault())
+        val localDateTime = instant.atZone(ZoneId.systemDefault())
 
-            if (isToday(localDateTime)) {
-                localDateTime.format(DateTimeFormatter.ofPattern("HH:mm"))
-            } else {
-                localDateTime.format(DateTimeFormatter.ofPattern("MM/dd"))
-            }
+
+        if (isToday(localDateTime)) {
+            localDateTime.format(DateTimeFormatter.ofPattern("HH:mm"))
+        } else {
+            localDateTime.format(DateTimeFormatter.ofPattern("MM/dd"))
         }
-        .getOrNull() ?: ""
+    }.getOrNull() ?: ""
 }
 
 fun convertUtcToLocalFull(utcString: String): String {
@@ -36,18 +37,17 @@ fun convertUtcToLocalFull(utcString: String): String {
     if (utcString.isBlank()) {
         return ""
     }
-
+    
     return runCatching {
-            val instant = Instant.parse(utcString)
-            val localDateTime = instant.atZone(ZoneId.systemDefault())
-            localDateTime.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
-        }
-        .getOrNull() ?: ""
+        val instant = Instant.parse(utcString)
+        val localDateTime = instant.atZone(ZoneId.systemDefault())
+        localDateTime.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
+    }.getOrNull() ?: ""
 }
 
 /**
- * 格式化秒级时间戳为年月日时分格式 如果是今年，则不显示年份
- *
+ * 格式化秒级时间戳为年月日时分格式
+ * 如果是今年，则不显示年份
  * @param timestampSeconds 秒级时间戳字符串
  * @return 格式化后的时间字符串，格式为：MM-dd或 yyyy-MM-dd
  */
@@ -60,12 +60,11 @@ fun formatTimestampToDateTime(timestampSeconds: String): String {
         val currentYear = LocalDate.now(ZoneId.systemDefault()).year
         val targetYear = localDateTime.year
 
-        val pattern =
-            if (targetYear == currentYear) {
-                "MM/dd"
-            } else {
-                "yyyy/MM/dd"
-            }
+        val pattern = if (targetYear == currentYear) {
+            "MM/dd"
+        } else {
+            "yyyy/MM/dd"
+        }
 
         localDateTime.format(DateTimeFormatter.ofPattern(pattern))
     } catch (e: Exception) {
@@ -76,7 +75,6 @@ fun formatTimestampToDateTime(timestampSeconds: String): String {
 
 /**
  * 将ISO 8601格式的时间字符串转换为毫秒时间戳
- *
  * @param isoTimeString ISO 8601格式的时间字符串，如："2025-09-01T06:03:15.383000Z"
  * @return 毫秒时间戳，如果解析失败返回null
  */
@@ -92,7 +90,6 @@ fun parseIsoTimeToTimestamp(isoTimeString: String?): Long? {
 
 /**
  * 将ISO 8601格式的时间字符串根据指定pattern格式化为时间字符串
- *
  * @param isoTimeString ISO 8601格式的时间字符串，如："2025-09-01T06:03:15.383000Z"
  * @param pattern 时间格式pattern，默认为"yyyy-MM-dd"
  * @return 格式化后的时间字符串，如果解析失败返回null
@@ -110,7 +107,6 @@ fun formatIsoTimeToString(isoTimeString: String?, pattern: String = "yyyy-MM-dd"
 
 /**
  * 将毫秒时间戳转换为标准pattern时间字符串
- *
  * @param timestampMillis 毫秒时间戳
  * @param pattern 时间格式pattern，默认为"yyyy-MM-dd"
  * @return 格式化后的时间字符串，如果解析失败返回null

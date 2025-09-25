@@ -45,28 +45,57 @@ object OpeningPlayState {
 
     private val coroutineScope = CoroutineScope(Job() + Dispatchers.Default)
 
-    /** 查看本agent的开场白，在App本次启用运行期间，是否播放过 线程安全的同步方法 */
+    /**
+     * 查看本agent的开场白，在App本次启用运行期间，是否播放过
+     * 线程安全的同步方法
+     */
     fun agentOpeningPlayed(agentId: String): Boolean {
         return playedMap.getOrDefault(agentId, false)
     }
 
-    /** 标记指定agent的开场白已播放 线程安全的协程方法 */
+    /**
+     * 标记指定agent的开场白已播放
+     * 线程安全的协程方法
+     */
     suspend fun openingPlayed(agentId: String) {
-        withContext(Dispatchers.Default) { mutex.withLock { playedMap[agentId] = true } }
+        withContext(Dispatchers.Default) {
+            mutex.withLock {
+                playedMap[agentId] = true
+            }
+        }
     }
 
-    /** 异步标记指定agent的开场白已播放 不阻塞调用线程的版本 */
+    /**
+     * 异步标记指定agent的开场白已播放
+     * 不阻塞调用线程的版本
+     */
     fun openingPlayedAsync(agentId: String) {
-        coroutineScope.launch { openingPlayed(agentId) }
+        coroutineScope.launch {
+            openingPlayed(agentId)
+        }
     }
 
-    /** 清除所有播放记录 线程安全的协程方法 */
+    /**
+     * 清除所有播放记录
+     * 线程安全的协程方法
+     */
     suspend fun clearAllPlayed() {
-        withContext(Dispatchers.Default) { mutex.withLock { playedMap.clear() } }
+        withContext(Dispatchers.Default) {
+            mutex.withLock {
+                playedMap.clear()
+            }
+        }
     }
 
-    /** 清除指定agent的播放记录 线程安全的协程方法 */
+    /**
+     * 清除指定agent的播放记录
+     * 线程安全的协程方法
+     */
     suspend fun clearAgentPlayed(agentId: String) {
-        withContext(Dispatchers.Default) { mutex.withLock { playedMap.remove(agentId) } }
+        withContext(Dispatchers.Default) {
+            mutex.withLock {
+                playedMap.remove(agentId)
+            }
+        }
     }
 }

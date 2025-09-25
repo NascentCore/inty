@@ -9,7 +9,9 @@ import com.ai.inty.ui.theme.IntyTheme
 import com.ai.inty.viewmodels.VipCenterViewModel
 import com.therouter.router.Route
 
-/** 会员中心页面，展示会员权益与订阅选项。 */
+/**
+ * 会员中心页面，展示会员权益与订阅选项。
+ */
 @Route(path = Constant.ROUTE_VIP_CENTER)
 class VipCenterActivity : BaseActivity() {
     private val viewModel: VipCenterViewModel by viewModels()
@@ -20,7 +22,7 @@ class VipCenterActivity : BaseActivity() {
             IntyTheme {
                 VipCenterContent(
                     onClose = { finish() },
-                    onPurchase = { viewModel.purchaseSelectedPlan(this) },
+                    onPurchase = { viewModel.purchaseSelectedPlan(this) }
                 )
             }
         }

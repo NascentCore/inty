@@ -23,41 +23,43 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-/** 智能 Tags 布局组件，支持自动换行和截断 确保不会显示被截断的 tag */
+/**
+ * 智能 Tags 布局组件，支持自动换行和截断
+ * 确保不会显示被截断的 tag
+ */
 @Composable
 fun SmartTagsLayout(
     tags: List<String>,
     modifier: Modifier = Modifier,
     maxLines: Int = 1,
     isCardTag: Boolean = false,
-    horizontalArrangement: Arrangement.Horizontal =
-        Arrangement.spacedBy(if (isCardTag) 3.dp else 6.dp),
+    horizontalArrangement: Arrangement.Horizontal = Arrangement.spacedBy(if (isCardTag) 3.dp else 6.dp),
 ) {
     val density = LocalDensity.current
     var availableWidth by remember { mutableFloatStateOf(0f) }
-
+    
     // 优化性能，避免不必要的重组
-    val visibleTags =
-        remember(tags, availableWidth, maxLines) {
-            if (availableWidth > 0) {
-                calculateVisibleTags(
-                    tags = tags,
-                    availableWidth = availableWidth,
-                    density = density,
-                    maxLines = maxLines,
-                )
-            } else {
-                tags // 初始时显示所有标签，避免空白
-            }
+    val visibleTags = remember(tags, availableWidth, maxLines) {
+        if (availableWidth > 0) {
+            calculateVisibleTags(
+                tags = tags,
+                availableWidth = availableWidth,
+                density = density,
+                maxLines = maxLines
+            )
+        } else {
+            tags // 初始时显示所有标签，避免空白
         }
+    }
 
     FlowRow(
-        modifier =
-            modifier.fillMaxWidth().onGloballyPositioned { layoutCoordinates ->
+        modifier = modifier
+            .fillMaxWidth()
+            .onGloballyPositioned { layoutCoordinates ->
                 availableWidth = layoutCoordinates.size.width.toFloat()
             },
         horizontalArrangement = horizontalArrangement,
-        maxItemsInEachRow = Int.MAX_VALUE,
+        maxItemsInEachRow = Int.MAX_VALUE
     ) {
         visibleTags.forEach { tag ->
             if (isCardTag) {
@@ -69,12 +71,14 @@ fun SmartTagsLayout(
     }
 }
 
-/** 计算可以完全显示的 tags */
+/**
+ * 计算可以完全显示的 tags
+ */
 private fun calculateVisibleTags(
     tags: List<String>,
     availableWidth: Float,
     density: androidx.compose.ui.unit.Density,
-    maxLines: Int,
+    maxLines: Int
 ): List<String> {
     if (tags.isEmpty()) return emptyList()
 
@@ -86,16 +90,10 @@ private fun calculateVisibleTags(
     for (tag in tags) {
         val estimatedTagWidth = estimateTagWidth(tag, density)
 
-        if (
-            currentLineWidth + estimatedTagWidth + tagSpacing > availableWidth &&
-                currentLine < maxLines
-        ) {
+        if (currentLineWidth + estimatedTagWidth + tagSpacing > availableWidth && currentLine < maxLines) {
             currentLine++
             currentLineWidth = estimatedTagWidth
-        } else if (
-            currentLineWidth + estimatedTagWidth + tagSpacing > availableWidth &&
-                currentLine >= maxLines
-        ) {
+        } else if (currentLineWidth + estimatedTagWidth + tagSpacing > availableWidth && currentLine >= maxLines) {
             break
         } else {
             currentLineWidth += estimatedTagWidth + tagSpacing
@@ -107,7 +105,9 @@ private fun calculateVisibleTags(
     return visibleTags
 }
 
-/** 估算 tag 的宽度 */
+/**
+ * 估算 tag 的宽度
+ */
 private fun estimateTagWidth(text: String, density: androidx.compose.ui.unit.Density): Float {
     val charWidth = with(density) { 7.dp.toPx() }
     val horizontalPadding = with(density) { 12.dp.toPx() }
@@ -117,28 +117,26 @@ private fun estimateTagWidth(text: String, density: androidx.compose.ui.unit.Den
 @Composable
 private fun TagItem(text: String) {
     Box(
-        modifier =
-            Modifier.background(color = Color(0xff1C1523), shape = RoundedCornerShape(4.dp))
-                .border(
-                    width = 1.dp,
-                    brush =
-                        Brush.linearGradient(
-                            colors =
-                                listOf(
-                                    Color.Transparent,
-                                    Color.White.copy(0.09f),
-                                    Color.Transparent,
-                                )
-                        ),
-                    shape = RoundedCornerShape(4.dp),
-                )
+        modifier = Modifier
+            .background(color = Color(0xff1C1523), shape = RoundedCornerShape(4.dp))
+            .border(
+                width = 1.dp,
+                brush = Brush.linearGradient(
+                    colors = listOf(
+                        Color.Transparent,
+                        Color.White.copy(0.09f),
+                        Color.Transparent
+                    )
+                ),
+                shape = RoundedCornerShape(4.dp)
+            )
     ) {
         Text(
             modifier = Modifier.padding(horizontal = 6.dp, vertical = 5.dp),
             text = text,
             fontSize = 12.sp,
             fontWeight = FontWeight.Light,
-            color = Color.White.copy(0.55f),
+            color = Color.White.copy(0.55f)
         )
     }
 }
@@ -146,16 +144,18 @@ private fun TagItem(text: String) {
 @Composable
 private fun LiteTagItem(text: String) {
     Box(
-        modifier =
-            Modifier.background(color = Color(0xff1C1523), shape = RoundedCornerShape(4.dp))
-                .border(
-                    width = .5.dp,
-                    brush =
-                        Brush.horizontalGradient(
-                            colors = listOf(Color(0xFF842BA7), Color(0xFF331141))
-                        ),
-                    shape = RoundedCornerShape(4.dp),
-                )
+        modifier = Modifier
+            .background(color = Color(0xff1C1523), shape = RoundedCornerShape(4.dp))
+            .border(
+                width = .5.dp,
+                brush = Brush.horizontalGradient(
+                    colors = listOf(
+                        Color(0xFF842BA7),
+                        Color(0xFF331141),
+                    )
+                ),
+                shape = RoundedCornerShape(4.dp)
+            )
     ) {
         Text(
             modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
@@ -163,7 +163,7 @@ private fun LiteTagItem(text: String) {
             fontSize = 10.sp,
             lineHeight = 12.sp,
             fontWeight = FontWeight.Normal,
-            color = Color(0x8CFFFFFF),
+            color = Color(0x8CFFFFFF)
         )
     }
 }
