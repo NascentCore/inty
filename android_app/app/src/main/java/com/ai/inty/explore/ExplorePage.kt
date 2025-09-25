@@ -1,4 +1,4 @@
-package com.ai.inty.home
+package com.ai.inty.explore
 
 import android.annotation.SuppressLint
 import androidx.compose.foundation.Image
@@ -26,6 +26,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -44,6 +45,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ai.inty.R
 import com.ai.inty.base.IntyImage
 import com.ai.inty.base.noRippleClickable
@@ -55,20 +57,21 @@ import com.ai.inty.utils.getChatBackground
 import com.inty.utils.log.EasyLog
 import kotlinx.coroutines.delay
 
-
+/**
+ * Explore页面 - 推荐agents展示
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @SuppressLint("ConfigurationScreenWidthHeight")
 @Composable
 fun ExplorePage(
-    modifier: Modifier,
+    modifier: Modifier = Modifier,
     innerPadding: PaddingValues,
-    agents: List<AgentInfo>,
-    isLoading: Boolean = false,
     onClickAgent: (AgentInfo) -> Unit,
-    onLoadMore: () -> Unit = {},
-    onRefresh: () -> Unit = {},
+    viewModel: ExploreViewModel = viewModel()
 ) {
     val context = LocalContext.current
+    val isLoading by viewModel.isLoading.collectAsState()
+    val agents = viewModel.agentList
 
     // 初始化图片尺寸缓存 - 立即同步初始化
     LaunchedEffect(Unit) {
@@ -84,13 +87,18 @@ fun ExplorePage(
         }
     }
 
-    Box(modifier = modifier) {
+    // 初始化加载数据
+    LaunchedEffect(Unit) {
+        if (viewModel.agentList.isEmpty()) {
+            viewModel.getRecommendAgents()
+        }
+    }
 
+    Box(modifier = modifier) {
         IntyImage(
             modifier = Modifier.align(Alignment.TopEnd),
             model = R.drawable.notify_header_bg
         )
-
 
         Column(
             modifier = Modifier
@@ -123,11 +131,10 @@ fun ExplorePage(
                 isRefreshing = isRefreshing,
                 onRefresh = {
                     isRefreshing = true
-                    onRefresh()
+                    viewModel.refreshRecommendAgents()
                 },
                 modifier = Modifier.fillMaxSize()
             ) {
-
                 val gridState = rememberLazyStaggeredGridState(
                     initialFirstVisibleItemIndex = 0,
                     initialFirstVisibleItemScrollOffset = 0
@@ -160,7 +167,7 @@ fun ExplorePage(
                         // 再次检查状态，确保在延迟期间状态没有变化
                         // 额外检查：确保不是首次进入页面（通过检查滚动状态）
                         if (reachedBottom && agents.isNotEmpty() && !isLoading && gridState.firstVisibleItemIndex > 0) {
-                            onLoadMore()
+                            viewModel.loadMoreRecommendAgents()
                         }
                     }
                 }
@@ -220,7 +227,6 @@ fun ExplorePage(
         }
     }
 }
-
 
 @Composable
 private fun CharacterCard(
