@@ -5,8 +5,8 @@ import android.content.Context
 import com.ai.inty.base.initImageLoader
 import com.ai.inty.billing.BillingRepository
 import com.ai.inty.netapi.IntyNetworkManager
-import com.ai.inty.utils.AppStartupManager
 import com.ai.inty.utils.NetworkManager
+import com.ai.inty.utils.UnifiedStartupManager
 import com.inty.utils.AppEnv
 import com.inty.utils.log.EasyLog
 import com.inty.utils.log.defaultInit
@@ -44,8 +44,8 @@ class IntyApp : Application() {
         // 初始化新的 IntyNetworkManager
         IntyNetworkManager.initialize(this)
 
-        // 初始化应用启动管理器（优化启动流程）
-        AppStartupManager.initialize(this)
+        // 初始化统一启动管理器
+        UnifiedStartupManager.initialize(this)
     }
     
     override fun onTerminate() {

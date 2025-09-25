@@ -3,7 +3,7 @@ package com.ai.inty.explore
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.net.IAgentApi
 import com.ai.inty.utils.AgentCacheManager
-import com.ai.inty.utils.AppStartupManager
+import com.ai.inty.utils.UnifiedStartupManager
 import com.architecture.httplib.core.HttpResult
 import com.inty.utils.log.EasyLog
 import com.inty.utils.storage.IntySetting
@@ -16,15 +16,15 @@ import kotlinx.coroutines.withContext
  * 负责处理推荐agents的数据请求、缓存管理
  */
 class ExploreRepository {
-    
+
     private val agentApi: IAgentApi by lazy {
         TheRouter.get(IAgentApi::class.java)
             ?: throw IllegalStateException("IAgentApi not found in TheRouter")
     }
-    
+
     // 用于推荐接口的sort seed
     private var sortSeed = IntySetting.sortSeed()
-    
+
     /**
      * 获取推荐agents（第一页）
      * @param useCache 是否优先使用缓存数据
@@ -35,18 +35,18 @@ class ExploreRepository {
             try {
                 // 第一步：如果有缓存数据，先使用缓存数据快速展示
                 val cachedAgents = if (useCache) {
-                    AppStartupManager.cachedAgents.value
+                    UnifiedStartupManager.getCurrentRecommendedAgents()
                 } else {
                     emptyList()
                 }
-                
+
                 // 第二步：后台静默刷新数据（无论是否有缓存）
                 val networkResult = if (shouldUpdateFromNetwork()) {
                     loadAgentsFromNetwork(page = 1, pageSize = 10)
                 } else {
                     null
                 }
-                
+
                 ExploreResult(
                     cachedAgents = cachedAgents,
                     networkAgents = networkResult?.data?.list,
@@ -54,7 +54,10 @@ class ExploreRepository {
                     hasMoreData = networkResult?.hasMore ?: true
                 )
             } catch (e: Exception) {
-                EasyLog.log("ExploreRepository - getRecommendAgents异常: ${e.message}", EasyLog.ERROR)
+                EasyLog.log(
+                    "ExploreRepository - getRecommendAgents异常: ${e.message}",
+                    EasyLog.ERROR
+                )
                 ExploreResult(
                     cachedAgents = emptyList(),
                     networkAgents = null,
@@ -64,7 +67,7 @@ class ExploreRepository {
             }
         }
     }
-    
+
     /**
      * 刷新推荐agents（强制从网络获取）
      */
@@ -72,11 +75,11 @@ class ExploreRepository {
         // 重置sort seed
         sortSeed = sortSeed + 1
         IntySetting.updateSortSeed(sortSeed)
-        
+
         return withContext(Dispatchers.IO) {
             try {
                 val result = loadAgentsFromNetwork(page = 1, pageSize = 10)
-                
+
                 ExploreResult(
                     cachedAgents = emptyList(),
                     networkAgents = result.data?.list,
@@ -84,7 +87,10 @@ class ExploreRepository {
                     hasMoreData = result.hasMore
                 )
             } catch (e: Exception) {
-                EasyLog.log("ExploreRepository - refreshRecommendAgents异常: ${e.message}", EasyLog.ERROR)
+                EasyLog.log(
+                    "ExploreRepository - refreshRecommendAgents异常: ${e.message}",
+                    EasyLog.ERROR
+                )
                 ExploreResult(
                     cachedAgents = emptyList(),
                     networkAgents = null,
@@ -94,7 +100,7 @@ class ExploreRepository {
             }
         }
     }
-    
+
     /**
      * 加载更多推荐agents
      */
@@ -102,7 +108,7 @@ class ExploreRepository {
         return withContext(Dispatchers.IO) {
             try {
                 val result = loadAgentsFromNetwork(page = page, pageSize = 10)
-                
+
                 ExploreResult(
                     cachedAgents = emptyList(),
                     networkAgents = result.data?.list,
@@ -110,7 +116,10 @@ class ExploreRepository {
                     hasMoreData = result.hasMore
                 )
             } catch (e: Exception) {
-                EasyLog.log("ExploreRepository - loadMoreRecommendAgents异常: ${e.message}", EasyLog.ERROR)
+                EasyLog.log(
+                    "ExploreRepository - loadMoreRecommendAgents异常: ${e.message}",
+                    EasyLog.ERROR
+                )
                 ExploreResult(
                     cachedAgents = emptyList(),
                     networkAgents = null,
@@ -120,7 +129,7 @@ class ExploreRepository {
             }
         }
     }
-    
+
     /**
      * 从网络加载agents数据
      */
@@ -131,24 +140,26 @@ class ExploreRepository {
                 pageSize = pageSize,
                 sort_seed = sortSeed.toString()
             )
-            
+
             when (result) {
                 is HttpResult.Success -> {
                     val agents = result.data.list ?: emptyList()
                     val hasMore = agents.isNotEmpty() && agents.size >= pageSize
-                    
+
                     // 缓存第一页数据
                     if (page == 1) {
                         AgentCacheManager.cacheAgents(agents)
-                        AppStartupManager.updateCachedAgents(agents)
+                        // 通知统一启动管理器更新数据
+                        UnifiedStartupManager.refreshRecommendedAgents()
                     }
-                    
+
                     NetworkResult(
                         data = result.data,
                         error = null,
                         hasMore = hasMore
                     )
                 }
+
                 is HttpResult.Failure -> {
                     NetworkResult(
                         data = null,
@@ -165,7 +176,7 @@ class ExploreRepository {
             )
         }
     }
-    
+
     /**
      * 检查是否需要从网络更新数据
      */

@@ -4,7 +4,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.lifecycle.viewModelScope
 import com.ai.inty.base.BaseViewModel
 import com.ai.inty.beans.AgentInfo
-import com.ai.inty.utils.AppStartupManager
+import com.ai.inty.utils.UnifiedStartupManager
 import com.inty.utils.log.EasyLog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -39,13 +39,13 @@ class ExploreViewModel : BaseViewModel() {
     fun initializeCacheData() {
         if (isCacheInitialized) return
         
-        // 立即从AppStartupManager获取缓存数据
-        val cachedAgents = AppStartupManager.cachedAgents.value
-        if (cachedAgents.isNotEmpty()) {
+        // 从统一启动管理器获取预加载数据
+        val preloadedAgents = UnifiedStartupManager.getCurrentRecommendedAgents()
+        if (preloadedAgents.isNotEmpty()) {
             agentList.clear()
-            agentList.addAll(cachedAgents)
+            agentList.addAll(preloadedAgents)
             isCacheInitialized = true
-            EasyLog.log("ExploreViewModel - 初始化缓存数据: ${cachedAgents.size}个")
+            EasyLog.log("ExploreViewModel - 使用预加载数据: ${preloadedAgents.size}个")
         } else {
             EasyLog.log("ExploreViewModel - 无缓存数据，等待网络加载")
         }
@@ -180,17 +180,21 @@ class ExploreViewModel : BaseViewModel() {
     }
     
     /**
-     * 监听AppStartupManager的缓存更新
+     * 监听预加载数据更新
      */
-    fun startListeningCacheUpdates() {
+    fun startListeningPreloadUpdates() {
         viewModelScope.launch {
-            AppStartupManager.cachedAgents.collect { cachedAgents ->
-                // 只有在当前列表为空或者缓存数据更新时才更新
-                if (agentList.isEmpty() || (cachedAgents.isNotEmpty() && cachedAgents != agentList.toList())) {
+            // 监听统一启动管理器的预加载数据更新
+            UnifiedStartupManager.recommendedAgents.collect { preloadedAgents ->
+                if (preloadedAgents.isNotEmpty() && preloadedAgents != agentList.toList()) {
                     agentList.clear()
-                    agentList.addAll(cachedAgents)
+                    agentList.addAll(preloadedAgents)
                     isCacheInitialized = true
-                    EasyLog.log("ExploreViewModel - 监听到缓存更新: ${cachedAgents.size}个")
+                    EasyLog.log("ExploreViewModel - 监听到预加载数据更新: ${preloadedAgents.size}个")
+                } else if (preloadedAgents.isEmpty() && agentList.isNotEmpty()) {
+                    // 监听数据清理（如用户登出）
+                    clearData()
+                    EasyLog.log("ExploreViewModel - 监听到数据清理")
                 }
             }
         }

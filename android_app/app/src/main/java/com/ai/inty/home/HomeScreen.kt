@@ -84,9 +84,9 @@ fun HomeScreen(
         exploreViewModel.initializeCacheData()
     }
     
-    // 启动缓存更新监听
+    // 启动预加载数据监听
     LaunchedEffect(Unit) {
-        exploreViewModel.startListeningCacheUpdates()
+        exploreViewModel.startListeningPreloadUpdates()
     }
     
     // 异步加载推荐agents数据（如果缓存为空）

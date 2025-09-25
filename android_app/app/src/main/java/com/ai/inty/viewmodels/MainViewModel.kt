@@ -16,9 +16,9 @@ import com.ai.inty.net.IAgentApi
 import com.ai.inty.net.ICommonApi
 import com.ai.inty.net.IUserApi
 import com.ai.inty.utils.AgentCacheManager
-import com.ai.inty.utils.AppStartupManager
 import com.ai.inty.utils.CredentialManagerHelper.clearCredentialState
 import com.ai.inty.utils.IntyUserProfileSDK
+import com.ai.inty.utils.UnifiedStartupManager
 import com.ai.inty.utils.UserProfileManager
 import com.architecture.httplib.core.HttpResult
 import com.inty.utils.AppEnv
@@ -93,33 +93,32 @@ class MainViewModel : BaseActivityViewModel() {
     init {
         EasyLog.log("MainViewModel init - current user: ${IntySetting.getCurUserID()}")
 
-        // 使用启动管理器的缓存数据快速初始化UI
-        loadCachedData()
+        // 使用统一启动管理器的数据快速初始化UI
+        loadStartupData()
 
-        // 后台更新网络数据
+        // 加载业务数据
         loadBusinessData()
 
         TheRouter.addActionInterceptor(Constant.ACTION_USER_PROFILE_CHANGED, userProfileChanged)
     }
 
     /**
-     * 加载缓存数据（快速展示）
-     * 在App启动时快速展示缓存数据，提供良好的用户体验
+     * 加载启动数据（快速展示）
+     * 从统一启动管理器获取预加载的数据
      */
-    private fun loadCachedData() {
-        // 从启动管理器获取缓存的用户信息
-        val cachedUserProfile = AppStartupManager.cachedUserProfile.value
-        if (cachedUserProfile != null) {
-            _userProfile.value = cachedUserProfile
-            EasyLog.log("MainViewModel - 使用缓存用户信息: ${cachedUserProfile.nickname}")
+    private fun loadStartupData() {
+        // 从统一启动管理器获取用户信息
+        val startupUserProfile = UnifiedStartupManager.getCurrentUserProfile()
+        if (startupUserProfile != null) {
+            _userProfile.value = startupUserProfile
+            EasyLog.log("MainViewModel - 使用启动管理器用户信息: ${startupUserProfile.nickname}")
         }
     }
 
     private fun loadBusinessData() {
         // 加载业务数据
-        getUserProfile() // 从服务器获取最新信息并更新本地缓存
-        //检查app版本更新
-        checkAppVersion()
+        checkAppVersion() // 检查app版本更新
+        // 用户信息由启动管理器处理，这里不需要重复获取
     }
 
 
@@ -432,6 +431,9 @@ class MainViewModel : BaseActivityViewModel() {
         userCreatedAgents.clear()
         _userProfile.value = UserProfile()
         chatViewModel?.clearAllData()
+        
+        // 清理统一启动管理器的数据
+        UnifiedStartupManager.clearAllData()
 
         // 清理本地存储（这会切换到游客模式）
         IntySetting.logout()
