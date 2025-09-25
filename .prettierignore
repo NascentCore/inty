@@ -2,3 +2,4 @@
 evaluation/inty_sdk
 sdks/python
 android_app/library/inty_sdk
+.github/workflows/gemini-*

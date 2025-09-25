@@ -56,7 +56,7 @@ jobs:
           key: ${{ runner.os }}-venv-${{ hashFiles('requirements.txt', 'test_requirements.txt') }}
           restore-keys: |
             ${{ runner.os }}-venv-
-
+  
       - name: Install dependencies
         run: |
           python -m venv .venv
