@@ -20,49 +20,37 @@ import androidx.compose.ui.unit.sp
 import com.ai.inty.R
 import com.ai.inty.base.noRippleClickable
 
-/**
- * Keep Talking按钮组件
- */
+/** Keep Talking按钮组件 */
 @Composable
-fun KeepTalkingButton(
-    visible: Boolean,
-    onClick: () -> Unit,
-) {
+fun KeepTalkingButton(visible: Boolean, onClick: () -> Unit) {
     if (!visible) return
 
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp),
-        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.Start
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.Start,
     ) {
         Box(
-            modifier = Modifier
-                .width(80.dp)
-                .height(32.dp)
-                .background(
-                    Color.Transparent,
-                    RoundedCornerShape(16.dp)
-                )
-                .noRippleClickable { onClick() },
-            contentAlignment = Alignment.Center
+            modifier =
+                Modifier.width(80.dp)
+                    .height(32.dp)
+                    .background(Color.Transparent, RoundedCornerShape(16.dp))
+                    .noRippleClickable { onClick() },
+            contentAlignment = Alignment.Center,
         ) {
             // 播放按钮图标 (>>)
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = stringResource(R.string.play_button_symbol),
                     color = Color.White,
-                    fontSize = 12.sp
+                    fontSize = 12.sp,
                 )
                 Spacer(modifier = Modifier.width(0.dp))
                 Text(
                     text = stringResource(R.string.play_button_symbol),
                     color = Color.White,
-                    fontSize = 12.sp
+                    fontSize = 12.sp,
                 )
             }
         }
     }
-} 
+}

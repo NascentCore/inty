@@ -14,9 +14,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /**
- * Credential Manager 助手类
- * 使用最新的 Credential Manager API 进行 Google 登录
- * 参考: https://developer.android.google.cn/identity/sign-in/credential-manager-siwg?hl=zh-cn
+ * Credential Manager 助手类 使用最新的 Credential Manager API 进行 Google 登录 参考:
+ * https://developer.android.google.cn/identity/sign-in/credential-manager-siwg?hl=zh-cn
  */
 object CredentialManagerHelper {
 
@@ -40,20 +39,20 @@ object CredentialManagerHelper {
                 // https://stackoverflow.com/a/78840062
                 // GetGoogleIdOption 用于创建“使用 Google 账号登录”流程
                 // GetSignInWithGoogleOption 用于触发“使用 Google 账号登录”按钮流程
-                val signInWithGoogleOption = GetSignInWithGoogleOption.Builder(
-                    serverClientId = com.ai.inty.BuildConfig.WEB_CLIENT_ID
-                ).build()
+                val signInWithGoogleOption =
+                    GetSignInWithGoogleOption.Builder(
+                            serverClientId = com.ai.inty.BuildConfig.WEB_CLIENT_ID
+                        )
+                        .build()
 
                 // 创建获取凭证请求
-                val request = GetCredentialRequest.Builder()
-                    .addCredentialOption(signInWithGoogleOption)
-                    .build()
+                val request =
+                    GetCredentialRequest.Builder()
+                        .addCredentialOption(signInWithGoogleOption)
+                        .build()
 
                 // 获取凭证
-                val response = credentialManager.getCredential(
-                    request = request,
-                    context = context
-                )
+                val response = credentialManager.getCredential(request = request, context = context)
 
                 // 处理响应
                 handleSignInWithGoogleResponse(response)
@@ -78,7 +77,9 @@ object CredentialManagerHelper {
             when (credential) {
                 // 自定义凭证类型 (Google ID Token)
                 is androidx.credentials.CustomCredential -> {
-                    if (credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
+                    if (
+                        credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
+                    ) {
                         try {
                             // 使用 GoogleIdTokenCredential.createFrom 方法转换
                             val googleIdTokenCredential =
@@ -89,7 +90,7 @@ object CredentialManagerHelper {
                         } catch (e: GoogleIdTokenParsingException) {
                             EasyLog.log(
                                 "Received an invalid google id token response",
-                                EasyLog.ERROR
+                                EasyLog.ERROR,
                             )
                             Result.failure(Exception("Invalid Google ID token"))
                         }
@@ -100,7 +101,9 @@ object CredentialManagerHelper {
                 }
 
                 else -> {
-                    EasyLog.log("Unexpected type of credential: ${credential::class.java.simpleName}")
+                    EasyLog.log(
+                        "Unexpected type of credential: ${credential::class.java.simpleName}"
+                    )
                     Result.failure(Exception("Unexpected credential type"))
                 }
             }
@@ -111,9 +114,8 @@ object CredentialManagerHelper {
     }
 
     /**
-     * 清除凭证状态
-     * 当用户退出登录时调用
-     * 参考: https://developer.android.com/identity/sign-in/credential-manager-siwg#handle-sign-out
+     * 清除凭证状态 当用户退出登录时调用 参考:
+     * https://developer.android.com/identity/sign-in/credential-manager-siwg#handle-sign-out
      */
     suspend fun clearCredentialState(context: Context) {
         try {
@@ -124,4 +126,4 @@ object CredentialManagerHelper {
             EasyLog.log("Error clearing credential state: ${e.message}", EasyLog.ERROR)
         }
     }
-} 
+}

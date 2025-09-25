@@ -52,13 +52,9 @@ import com.ai.inty.ui.theme.DarkPurple
 import com.inty.utils.storage.IntySetting
 import com.therouter.TheRouter
 
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun AiAgentInfoScreen(
-    agent: AgentInfo,
-    onBack: () -> Unit,
-) {
+internal fun AiAgentInfoScreen(agent: AgentInfo, onBack: () -> Unit) {
     val context = LocalContext.current
     var showBottomSheet by remember { mutableStateOf(false) }
     val bottomSheetState = rememberModalBottomSheetState()
@@ -67,7 +63,7 @@ internal fun AiAgentInfoScreen(
         AgentBackground(
             agentInfo = agent,
             modifier = Modifier.fillMaxSize(),
-            showGradients = false  // 角色主页不需要渐变遮罩
+            showGradients = false, // 角色主页不需要渐变遮罩
         )
 
         Scaffold(
@@ -75,108 +71,95 @@ internal fun AiAgentInfoScreen(
             containerColor = Color.Transparent,
             topBar = {
                 CenterAlignedTopAppBar(
-                    colors = TopAppBarDefaults.centerAlignedTopAppBarColors()
-                        .copy(containerColor = Color.Transparent),
-                    title = {
-                    },
+                    colors =
+                        TopAppBarDefaults.centerAlignedTopAppBarColors()
+                            .copy(containerColor = Color.Transparent),
+                    title = {},
                     navigationIcon = {
                         Image(
-                            modifier = Modifier
-                                .padding(horizontal = 12.dp)
-                                .noRippleClickable {
-                                    onBack()
-                                },
+                            modifier =
+                                Modifier.padding(horizontal = 12.dp).noRippleClickable { onBack() },
                             painter = painterResource(R.drawable.back),
                             contentDescription = null,
                         )
-
                     },
                     actions = {
                         Image(
-                            modifier = Modifier
-                                .padding(horizontal = 12.dp)
-                                .noRippleClickable {
+                            modifier =
+                                Modifier.padding(horizontal = 12.dp).noRippleClickable {
                                     showBottomSheet = true
                                 },
                             painter = painterResource(R.drawable.icon_more2),
                             contentDescription = null,
                         )
-                    }
+                    },
                 )
             },
         ) { innerPadding ->
             Column {
                 // 顶部渐变遮罩
                 Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(160.dp)
-                        .background(
-                            brush = Brush.verticalGradient(
-                                listOf(
-                                    Color(0xFF000000),
-                                    Color(0x00000000)
-                                )
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .height(160.dp)
+                            .background(
+                                brush =
+                                    Brush.verticalGradient(
+                                        listOf(Color(0xFF000000), Color(0x00000000))
+                                    )
                             )
-                        )
                 )
+                Box(modifier = Modifier.fillMaxWidth().weight(1f))
                 Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f)
-                )
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(
-                            brush = Brush.verticalGradient(
-                                listOf(
-                                    Color(0x00000000),
-                                    DarkPurple.copy(.3f),
-                                    DarkPurple.copy(.7f),
-                                    DarkPurple.copy(.9f),
-                                    DarkPurple, DarkPurple,
-                                ),
-                                endY = 900f
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .background(
+                                brush =
+                                    Brush.verticalGradient(
+                                        listOf(
+                                            Color(0x00000000),
+                                            DarkPurple.copy(.3f),
+                                            DarkPurple.copy(.7f),
+                                            DarkPurple.copy(.9f),
+                                            DarkPurple,
+                                            DarkPurple,
+                                        ),
+                                        endY = 900f,
+                                    )
                             )
-                        )
                 ) {
                     Column(
-                        modifier = Modifier
-                            .padding(innerPadding)
-                            .verticalScroll(rememberScrollState()),
+                        modifier =
+                            Modifier.padding(innerPadding).verticalScroll(rememberScrollState())
                     ) {
-
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Column(
-                                modifier = Modifier.weight(1f)
-                            ) {
+                            Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                     modifier = Modifier.padding(start = 16.dp),
                                     text = agent.name,
                                     fontSize = 20.sp,
                                     fontWeight = FontWeight.SemiBold,
-                                    color = Color.White
+                                    color = Color.White,
                                 )
                                 Spacer(Modifier.height(5.dp))
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
                                     Spacer(Modifier.width(16.dp))
                                     Text(
                                         modifier = Modifier.widthIn(0.dp, 100.dp),
-                                        text = stringResource(
-                                            R.string.ID,
-                                            agent.readableId.takeIf { it.isNotEmpty() }
-                                                ?: agent.id),
+                                        text =
+                                            stringResource(
+                                                R.string.ID,
+                                                agent.readableId.takeIf { it.isNotEmpty() }
+                                                    ?: agent.id,
+                                            ),
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.Light,
                                         color = Color.White.copy(0.55f),
                                         maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
+                                        overflow = TextOverflow.Ellipsis,
                                     )
                                 }
                             }
@@ -187,24 +170,26 @@ internal fun AiAgentInfoScreen(
                         Spacer(Modifier.height(24.dp))
 
                         Column(
-                            modifier = Modifier
-                                .padding(horizontal = 16.dp)
-                                .fillMaxWidth()
-                                .border(
-                                    brush = Brush.linearGradient(
-                                        colors = listOf(
-                                            Color.Transparent,
-                                            Color.White.copy(0.2f),
-                                            Color.Transparent
-                                        )
-                                    ),
-                                    width = 1.dp,
-                                    shape = RoundedCornerShape(8.dp)
-                                )
-                                .background(
-                                    color = Color(0x3378599A),
-                                    shape = RoundedCornerShape(8.dp)
-                                )
+                            modifier =
+                                Modifier.padding(horizontal = 16.dp)
+                                    .fillMaxWidth()
+                                    .border(
+                                        brush =
+                                            Brush.linearGradient(
+                                                colors =
+                                                    listOf(
+                                                        Color.Transparent,
+                                                        Color.White.copy(0.2f),
+                                                        Color.Transparent,
+                                                    )
+                                            ),
+                                        width = 1.dp,
+                                        shape = RoundedCornerShape(8.dp),
+                                    )
+                                    .background(
+                                        color = Color(0x3378599A),
+                                        shape = RoundedCornerShape(8.dp),
+                                    )
                         ) {
                             Spacer(Modifier.height(16.dp))
                             Text(
@@ -212,33 +197,34 @@ internal fun AiAgentInfoScreen(
                                 text = stringResource(R.string.introduction),
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.SemiBold,
-                                color = Color.White
+                                color = Color.White,
                             )
                             Spacer(Modifier.height(12.dp))
                             Column {
                                 // 使用智能 Tags 布局
-                                val gender = runCatching {
-                                    val tmpGender = agent.gender.lowercase()
-                                    tmpGender.replaceFirst(
-                                        tmpGender.first(),
-                                        tmpGender.first().uppercase().first()
-                                    )
-                                }.getOrNull() ?: ""
+                                val gender =
+                                    runCatching {
+                                            val tmpGender = agent.gender.lowercase()
+                                            tmpGender.replaceFirst(
+                                                tmpGender.first(),
+                                                tmpGender.first().uppercase().first(),
+                                            )
+                                        }
+                                        .getOrNull() ?: ""
 
-                                val agentTags = mutableListOf(
-                                    //FEMALE/MALE转化为Female/Male
-                                    stringResource(R.string.gender_tag_format, gender)
-                                )
-                                //取10个即可，避免太多，因为设计也只需要显示一行
+                                val agentTags =
+                                    mutableListOf(
+                                        // FEMALE/MALE转化为Female/Male
+                                        stringResource(R.string.gender_tag_format, gender)
+                                    )
+                                // 取10个即可，避免太多，因为设计也只需要显示一行
                                 agent.tags?.take(10)?.forEach { tag ->
-                                    tag?.let {
-                                        agentTags.add(tag)
-                                    }
+                                    tag?.let { agentTags.add(tag) }
                                 }
                                 SmartTagsLayout(
                                     tags = agentTags,
                                     modifier = Modifier.padding(horizontal = 12.dp),
-                                    maxLines = 1
+                                    maxLines = 1,
                                 )
                                 Spacer(Modifier.height(8.dp))
                                 Text(
@@ -260,7 +246,7 @@ internal fun AiAgentInfoScreen(
                                 text = stringResource(R.string.opening),
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.SemiBold,
-                                color = Color.White
+                                color = Color.White,
                             )
                             Spacer(Modifier.height(12.dp))
                             Text(
@@ -289,7 +275,7 @@ internal fun AiAgentInfoScreen(
             onDismissRequest = { showBottomSheet = false },
             sheetState = bottomSheetState,
             containerColor = DarkPurple,
-            contentColor = Color.White
+            contentColor = Color.White,
         ) {
             BottomSheetContent(
                 onReportClick = {
@@ -302,62 +288,48 @@ internal fun AiAgentInfoScreen(
                             .navigation(context)
                     } else {
                         // 未登录或游客时跳转到登录页面
-                        TheRouter.build(Constant.Companion.ROUTE_LOGIN)
-                            .navigation(context)
+                        TheRouter.build(Constant.Companion.ROUTE_LOGIN).navigation(context)
                     }
                 },
-                onCancelClick = {
-                    showBottomSheet = false
-                }
+                onCancelClick = { showBottomSheet = false },
             )
         }
     }
-
 }
 
 @Composable
 private fun AgentSpacerLine() {
     Spacer(Modifier.height(4.dp))
     Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(1.dp)
-            .background(
-                brush = Brush.horizontalGradient(
-                    colors = listOf(Color.Transparent, Color.White.copy(0.2f), Color.Transparent)
+        modifier =
+            Modifier.fillMaxWidth()
+                .height(1.dp)
+                .background(
+                    brush =
+                        Brush.horizontalGradient(
+                            colors =
+                                listOf(Color.Transparent, Color.White.copy(0.2f), Color.Transparent)
+                        )
                 )
-            )
     ) {}
     Spacer(Modifier.height(4.dp))
 }
 
-
 @Composable
-private fun BottomSheetContent(
-    onReportClick: () -> Unit,
-    onCancelClick: () -> Unit,
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 24.dp)
-    ) {
+private fun BottomSheetContent(onReportClick: () -> Unit, onCancelClick: () -> Unit) {
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 24.dp)) {
         // Report按钮
         Button(
             onClick = onReportClick,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(60.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0x3378599A)
-            ),
-            shape = RoundedCornerShape(16.dp)
+            modifier = Modifier.fillMaxWidth().height(60.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0x3378599A)),
+            shape = RoundedCornerShape(16.dp),
         ) {
             Text(
                 text = stringResource(R.string.report_button),
                 color = Color.White,
                 fontSize = 18.sp,
-                fontWeight = FontWeight.Normal
+                fontWeight = FontWeight.Normal,
             )
         }
 
@@ -366,19 +338,15 @@ private fun BottomSheetContent(
         // Cancel按钮
         Button(
             onClick = onCancelClick,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(60.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0x3378599A)
-            ),
-            shape = RoundedCornerShape(16.dp)
+            modifier = Modifier.fillMaxWidth().height(60.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0x3378599A)),
+            shape = RoundedCornerShape(16.dp),
         ) {
             Text(
                 text = stringResource(R.string.cancel_button),
                 color = Color.White,
                 fontSize = 18.sp,
-                fontWeight = FontWeight.Normal
+                fontWeight = FontWeight.Normal,
             )
         }
 
@@ -386,22 +354,23 @@ private fun BottomSheetContent(
     }
 }
 
-
 @Preview
 @Composable
 private fun PreviewAgentInfoScreen() {
-    val agent = AgentInfo(
-        avatar = "",
-        background = "",
-        category = "category",
-        gender = "Female",
-        readableId = "readableID",
-        isFollowed = true,
-        name = "小甜甜",
-        opening = "青青河边草，又有到海角，野火烧不尽，天涯也不到，啦啦啦啦啦，啦啦啦啦，啦啦啦啦，啦啦啦啦啦啦，轻轻河边草，又有到海角，野火烧不尽，春风吹不到。哈哈哈哈。",
-        intro = "自我介绍，这是一个，什么可以说的呢，不知道，小甜甜就是小甜甜",
-        prompt = "性感，时尚，火辣，大方"
-    )
+    val agent =
+        AgentInfo(
+            avatar = "",
+            background = "",
+            category = "category",
+            gender = "Female",
+            readableId = "readableID",
+            isFollowed = true,
+            name = "小甜甜",
+            opening =
+                "青青河边草，又有到海角，野火烧不尽，天涯也不到，啦啦啦啦啦，啦啦啦啦，啦啦啦啦，啦啦啦啦啦啦，轻轻河边草，又有到海角，野火烧不尽，春风吹不到。哈哈哈哈。",
+            intro = "自我介绍，这是一个，什么可以说的呢，不知道，小甜甜就是小甜甜",
+            prompt = "性感，时尚，火辣，大方",
+        )
 
-    AiAgentInfoScreen(agent) { }
+    AiAgentInfoScreen(agent) {}
 }

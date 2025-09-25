@@ -10,9 +10,7 @@ import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.kotlin.dsl.configure
 
-/**
- * 用于Android普通module的plugin定义
- */
+/** 用于Android普通module的plugin定义 */
 class AndroidLibraryPlugin : Plugin<Project> {
     override fun apply(target: Project) {
         with(target) {
@@ -24,15 +22,14 @@ class AndroidLibraryPlugin : Plugin<Project> {
             extensions.configure<LibraryExtension> {
                 configureKotlinAndroid(this)
                 commonLibConfig()
-//                configureGradleManagedDevices(this)
+                //                configureGradleManagedDevices(this)
             }
             extensions.configure<LibraryAndroidComponentsExtension> {
-//                configurePrintApksTask(this)
+                //                configurePrintApksTask(this)
                 disableUnnecessaryAndroidTests(target)
             }
 
             testDependencies()
         }
-
     }
 }

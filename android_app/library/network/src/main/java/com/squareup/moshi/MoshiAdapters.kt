@@ -1,15 +1,14 @@
 package com.squareup.moshi
 
-import okio.BufferedSource
 import java.lang.reflect.Type
 import java.util.concurrent.atomic.AtomicBoolean
-
+import okio.BufferedSource
 
 class DefaultIfNullFactory : JsonAdapter.Factory {
     override fun create(
         type: Type,
         annotations: MutableSet<out Annotation>,
-        moshi: Moshi
+        moshi: Moshi,
     ): JsonAdapter<*>? {
         val delegate = moshi.nextAdapter<Any>(this, type, annotations)
         if (!annotations.isEmpty()) return null
@@ -46,11 +45,10 @@ class DefaultIfNullFactory : JsonAdapter.Factory {
     }
 }
 
-class JsonReaderSkipNullValuesWrapper(
-    private val wrapped: JsonReader
-) : JsonReader() {
+class JsonReaderSkipNullValuesWrapper(private val wrapped: JsonReader) : JsonReader() {
     private var ignoreSkipName = AtomicBoolean(false)
     private var ignoreSkipValue = AtomicBoolean(false)
+
     override fun close() {
         wrapped.close()
     }

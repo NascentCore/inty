@@ -38,7 +38,9 @@ export const UserInfo: React.FC<UserInfoProps> = ({ onShowApiKeyModal }) => {
 
     try {
       setLoading(true);
-      const response = await api.getIntyClient().api.v1.users.profile.retrieve();
+      const response = await api
+        .getIntyClient()
+        .api.v1.users.profile.retrieve();
       setUserInfo(response.data || null);
     } catch (error) {
       console.error("获取用户信息失败:", error);
@@ -79,9 +81,7 @@ export const UserInfo: React.FC<UserInfoProps> = ({ onShowApiKeyModal }) => {
             {userInfo.email || userInfo.readable_id}
           </div>
           {userInfo.is_superuser && (
-            <div style={{ fontSize: "12px", color: "#1890ff" }}>
-              管理员
-            </div>
+            <div style={{ fontSize: "12px", color: "#1890ff" }}>管理员</div>
           )}
         </div>
       ),
@@ -93,14 +93,27 @@ export const UserInfo: React.FC<UserInfoProps> = ({ onShowApiKeyModal }) => {
       key: "api-key-status",
       label: (
         <div style={{ padding: "4px 0" }}>
-          <div style={{ display: "flex", alignItems: "center", marginBottom: "4px" }}>
-            <KeyOutlined style={{ marginRight: "8px", color: isApiKeyValid ? "#52c41a" : "#ff4d4f" }} />
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              marginBottom: "4px",
+            }}
+          >
+            <KeyOutlined
+              style={{
+                marginRight: "8px",
+                color: isApiKeyValid ? "#52c41a" : "#ff4d4f",
+              }}
+            />
             <span style={{ fontSize: "14px" }}>
               {isApiKeyValid ? "API Key 已设置" : "API Key 未设置"}
             </span>
           </div>
           <div style={{ fontSize: "12px", color: "#666", marginLeft: "24px" }}>
-            {isApiKeyValid ? "点击下方按钮重新设置" : "点击下方按钮设置 API Key"}
+            {isApiKeyValid
+              ? "点击下方按钮重新设置"
+              : "点击下方按钮设置 API Key"}
           </div>
         </div>
       ),
@@ -124,7 +137,9 @@ export const UserInfo: React.FC<UserInfoProps> = ({ onShowApiKeyModal }) => {
         placement="bottomRight"
         trigger={["click"]}
       >
-        <div style={{ cursor: "pointer", display: "flex", alignItems: "center" }}>
+        <div
+          style={{ cursor: "pointer", display: "flex", alignItems: "center" }}
+        >
           <Avatar
             size="small"
             src={userInfo.avatar}

@@ -44,10 +44,7 @@ import com.ai.inty.base.RedDot
 import com.ai.inty.beans.ConversationItem
 import com.ai.inty.utils.AuthClickable
 
-
-/**
- * 主页面第二个tab，会话列表页面，包含关注和聊天列表
- */
+/** 主页面第二个tab，会话列表页面，包含关注和聊天列表 */
 @Composable
 fun ConversationsPage(
     modifier: Modifier,
@@ -58,10 +55,7 @@ fun ConversationsPage(
     onLoadMoreConversations: (() -> Unit)? = null,
 ) {
     Box(modifier = modifier) {
-        IntyImage(
-            modifier = Modifier.align(Alignment.TopEnd),
-            model = R.drawable.notify_header_bg
-        )
+        IntyImage(modifier = Modifier.align(Alignment.TopEnd), model = R.drawable.notify_header_bg)
         Content(
             conversations = conversations,
             onClickConversationItem = onClickConversationItem,
@@ -82,9 +76,7 @@ private fun Content(
     onLoadMoreConversations: (() -> Unit)? = null,
 ) {
     Scaffold(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Transparent),
+        modifier = Modifier.fillMaxSize().background(Color.Transparent),
         containerColor = Color.Transparent,
         topBar = {
             TopAppBar(
@@ -92,34 +84,27 @@ private fun Content(
                     Image(
                         painter = painterResource(R.drawable.img_message_title),
                         contentDescription = null,
-                        modifier = Modifier.size(132.dp, 28.dp)
+                        modifier = Modifier.size(132.dp, 28.dp),
                     )
                 },
                 modifier = Modifier,
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
             )
-        }
+        },
     ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-        ) {
-
+        Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
             MessageTabContent(
                 conversations = conversations,
                 onClickConversationItem = onClickConversationItem,
                 isLoading = isLoadingConversations,
                 isRefreshing = isRefreshingConversations,
-                onLoadMore = onLoadMoreConversations
+                onLoadMore = onLoadMoreConversations,
             )
         }
     }
 }
 
-/**
- * 消息Tab内容
- */
+/** 消息Tab内容 */
 @Composable
 private fun MessageTabContent(
     conversations: List<ConversationItem>,
@@ -150,22 +135,17 @@ private fun MessageTabContent(
     }
 
     Box(Modifier.fillMaxSize()) {
-        LazyColumn(
-            state = listState,
-            modifier = Modifier.matchParentSize()
-        ) {
+        LazyColumn(state = listState, modifier = Modifier.matchParentSize()) {
             // 刷新指示器
             if (isRefreshing) {
                 item {
                     Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(80.dp),
-                        contentAlignment = Alignment.Center
+                        modifier = Modifier.fillMaxWidth().height(80.dp),
+                        contentAlignment = Alignment.Center,
                     ) {
                         CircularProgressIndicator(
                             color = Color.White,
-                            modifier = Modifier.size(24.dp)
+                            modifier = Modifier.size(24.dp),
                         )
                     }
                 }
@@ -174,35 +154,33 @@ private fun MessageTabContent(
             // 会话列表
             if (conversations.isNotEmpty()) {
                 runCatching {
-                    itemsIndexed(
-                        items = conversations,
-                        key = { index, conversion -> "${conversion.agentId}_$index" }
-                    ) { _, conversion ->
-                        AuthClickable(onClick = { onClickConversationItem(conversion) }) { authModifier ->
-                            ChatHistoryItem(
-                                modifier = authModifier.fillMaxWidth(),
-                                conversation = conversion
-                            )
+                        itemsIndexed(
+                            items = conversations,
+                            key = { index, conversion -> "${conversion.agentId}_$index" },
+                        ) { _, conversion ->
+                            AuthClickable(onClick = { onClickConversationItem(conversion) }) {
+                                authModifier ->
+                                ChatHistoryItem(
+                                    modifier = authModifier.fillMaxWidth(),
+                                    conversation = conversion,
+                                )
+                            }
                         }
+                        item { Spacer(Modifier.height(60.dp)) }
                     }
-                    item {
-                        Spacer(Modifier.height(60.dp))
-                    }
-                }.onFailure { it.printStackTrace() }
+                    .onFailure { it.printStackTrace() }
             }
 
             // 加载更多指示器
             if (isLoading) {
                 item {
                     Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(80.dp),
-                        contentAlignment = Alignment.Center
+                        modifier = Modifier.fillMaxWidth().height(80.dp),
+                        contentAlignment = Alignment.Center,
                     ) {
                         CircularProgressIndicator(
                             color = Color.White,
-                            modifier = Modifier.size(24.dp)
+                            modifier = Modifier.size(24.dp),
                         )
                     }
                 }
@@ -215,34 +193,28 @@ private fun MessageTabContent(
     }
 }
 
-
 @Composable
 private fun EmptyContentUI() {
     Column(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-
-
         IntyImage(model = R.drawable.img_content_empty)
 
         Spacer(Modifier.height(16.dp))
 
         Text(
-            modifier = Modifier
-                .padding(horizontal = 16.dp)
-                .align(Alignment.CenterHorizontally),
+            modifier = Modifier.padding(horizontal = 16.dp).align(Alignment.CenterHorizontally),
             text = stringResource(R.string.no_agent),
             color = Color.White.copy(0.55f),
             fontSize = 14.sp,
             fontWeight = FontWeight.Normal,
             maxLines = 1,
-            overflow = TextOverflow.Ellipsis
+            overflow = TextOverflow.Ellipsis,
         )
     }
 }
-
 
 @Composable
 fun ChatHistoryItem(
@@ -250,19 +222,14 @@ fun ChatHistoryItem(
     conversation: ConversationItem,
     placeholderID: Int = R.drawable.app_icon,
 ) {
-    Row(
-        modifier = modifier.height(88.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
+    Row(modifier = modifier.height(88.dp), verticalAlignment = Alignment.CenterVertically) {
         Spacer(Modifier.width(16.dp))
 
         // 头像
         IntyImage(
-            modifier = Modifier
-                .size(56.dp)
-                .clip(CircleShape),
+            modifier = Modifier.size(56.dp).clip(CircleShape),
             model = conversation.agentAvatar,
-            placeholder = painterResource(placeholderID)
+            placeholder = painterResource(placeholderID),
         )
 
         Spacer(Modifier.width(14.dp))
@@ -277,15 +244,11 @@ fun ChatHistoryItem(
                     fontWeight = FontWeight.SemiBold,
                     color = Color.White,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
                 )
                 if (conversation.isDeleted) {
                     Spacer(Modifier.width(4.dp))
-                    Text(
-                        text = "(deleted)",
-                        fontSize = 15.sp,
-                        color = Color(0x8CFFFFFF),
-                    )
+                    Text(text = "(deleted)", fontSize = 15.sp, color = Color(0x8CFFFFFF))
                 }
             }
 
@@ -297,22 +260,15 @@ fun ChatHistoryItem(
                 lineHeight = 22.sp,
                 color = Color(0x8CFFFFFF),
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
             )
         }
 
         // 右侧信息
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                text = conversation.getShowTime(),
-                fontSize = 12.sp,
-                color = Color(0x8CFFFFFF),
-            )
+            Text(text = conversation.getShowTime(), fontSize = 12.sp, color = Color(0x8CFFFFFF))
             Spacer(Modifier.height(4.dp))
-            Box(
-                modifier = Modifier.height(22.dp),
-                contentAlignment = Alignment.Center,
-            ) {
+            Box(modifier = Modifier.height(22.dp), contentAlignment = Alignment.Center) {
                 if (conversation.isNew) {
                     RedDot()
                 }

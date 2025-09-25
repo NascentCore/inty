@@ -1,4 +1,5 @@
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
+
 pluginManagement {
     includeBuild("build-logic")
     repositories {
@@ -15,6 +16,7 @@ pluginManagement {
         maven("https://jitpack.io")
     }
 }
+
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
@@ -26,8 +28,11 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "Inty"
+
 include(":app")
+
 include(":library:utils")
+
 include(":library:network")
 
 // 将 inty_sdk 作为复合构建（composite build）

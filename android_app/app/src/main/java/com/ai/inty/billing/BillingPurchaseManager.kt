@@ -20,35 +20,34 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 
-/**
- * 计费购买管理类
- */
+/** 计费购买管理类 */
 internal class BillingPurchaseManager(
     private val billingClient: BillingClient,
     private val eventScope: CoroutineScope,
     private val eventFlow: MutableSharedFlow<BillingEvent>,
-    private val vipStatusFlow: MutableStateFlow<VipStatus>
+    private val vipStatusFlow: MutableStateFlow<VipStatus>,
 ) {
 
-    private val api = TheRouter.get(ISubscriptionApi::class.java)
-        ?: error("Billing Purchase Manager theRouter init Error")
+    private val api =
+        TheRouter.get(ISubscriptionApi::class.java)
+            ?: error("Billing Purchase Manager theRouter init Error")
 
-    /**
-     * 处理购买更新
-     */
+    /** 处理购买更新 */
     fun onPurchasesUpdated(billingResult: BillingResult, purchases: MutableList<Purchase>?) {
-        EasyLog.log("BillingRepository BillingPurchaseManager - 购买更新回调: 响应码=${billingResult.responseCode}")
+        EasyLog.log(
+            "BillingRepository BillingPurchaseManager - 购买更新回调: 响应码=${billingResult.responseCode}"
+        )
 
         when (billingResult.responseCode) {
             BillingClient.BillingResponseCode.OK -> {
                 if (purchases != null && purchases.isNotEmpty()) {
-                    EasyLog.log("BillingRepository BillingPurchaseManager - 购买成功，处理 ${purchases.size} 个购买")
+                    EasyLog.log(
+                        "BillingRepository BillingPurchaseManager - 购买成功，处理 ${purchases.size} 个购买"
+                    )
                     for (purchase in purchases) {
                         handlePurchase(purchase)
                         // 发送购买成功事件
-                        eventScope.launch {
-                            eventFlow.emit(BillingEvent.PurchaseSuccess(purchase))
-                        }
+                        eventScope.launch { eventFlow.emit(BillingEvent.PurchaseSuccess(purchase)) }
                     }
                 } else {
                     EasyLog.log("BillingRepository BillingPurchaseManager - 购买成功但购买列表为空")
@@ -58,135 +57,143 @@ internal class BillingPurchaseManager(
 
             BillingClient.BillingResponseCode.USER_CANCELED -> {
                 EasyLog.log("BillingRepository BillingPurchaseManager - 用户取消购买")
-//                showError("purchases USER_CANCELED")
+                //                showError("purchases USER_CANCELED")
                 // 用户取消不发送失败事件
             }
 
             BillingClient.BillingResponseCode.ITEM_ALREADY_OWNED -> {
-                EasyLog.log("BillingRepository BillingPurchaseManager - Item already owned: User already has this subscription")
+                EasyLog.log(
+                    "BillingRepository BillingPurchaseManager - Item already owned: User already has this subscription"
+                )
                 showError("Item already owned")
                 eventScope.launch {
                     eventFlow.emit(
                         BillingEvent.PurchaseFailed(
                             billingResult.responseCode,
-                            "Item already owned"
+                            "Item already owned",
                         )
                     )
                 }
             }
 
             BillingClient.BillingResponseCode.ITEM_NOT_OWNED -> {
-                EasyLog.log("BillingRepository BillingPurchaseManager - Item not owned: User has not purchased this item")
+                EasyLog.log(
+                    "BillingRepository BillingPurchaseManager - Item not owned: User has not purchased this item"
+                )
                 showError("Item not owned")
                 eventScope.launch {
                     eventFlow.emit(
-                        BillingEvent.PurchaseFailed(
-                            billingResult.responseCode,
-                            "Item not owned"
-                        )
+                        BillingEvent.PurchaseFailed(billingResult.responseCode, "Item not owned")
                     )
                 }
             }
 
             BillingClient.BillingResponseCode.ITEM_UNAVAILABLE -> {
-                EasyLog.log("BillingRepository BillingPurchaseManager - Item unavailable: Item is not available in current region")
+                EasyLog.log(
+                    "BillingRepository BillingPurchaseManager - Item unavailable: Item is not available in current region"
+                )
                 showError("Item is not available in current region")
                 eventScope.launch {
                     eventFlow.emit(
                         BillingEvent.PurchaseFailed(
                             billingResult.responseCode,
-                            "Item is not available in current region"
+                            "Item is not available in current region",
                         )
                     )
                 }
             }
 
             BillingClient.BillingResponseCode.DEVELOPER_ERROR -> {
-                EasyLog.log("BillingRepository BillingPurchaseManager - Developer error: Please check product ID configuration, app signature, test user settings")
+                EasyLog.log(
+                    "BillingRepository BillingPurchaseManager - Developer error: Please check product ID configuration, app signature, test user settings"
+                )
                 showError("Developer error")
                 eventScope.launch {
                     eventFlow.emit(
-                        BillingEvent.PurchaseFailed(
-                            billingResult.responseCode,
-                            "Developer error"
-                        )
+                        BillingEvent.PurchaseFailed(billingResult.responseCode, "Developer error")
                     )
                 }
             }
 
             BillingClient.BillingResponseCode.SERVICE_UNAVAILABLE -> {
-                EasyLog.log("BillingRepository BillingPurchaseManager - Service unavailable: Google Play services temporarily unavailable")
+                EasyLog.log(
+                    "BillingRepository BillingPurchaseManager - Service unavailable: Google Play services temporarily unavailable"
+                )
                 showError("Service unavailable")
                 eventScope.launch {
                     eventFlow.emit(
                         BillingEvent.PurchaseFailed(
                             billingResult.responseCode,
-                            "Service unavailable"
+                            "Service unavailable",
                         )
                     )
                 }
             }
 
             BillingClient.BillingResponseCode.BILLING_UNAVAILABLE -> {
-                EasyLog.log("BillingRepository BillingPurchaseManager - Billing unavailable: Device does not support Google Play billing")
+                EasyLog.log(
+                    "BillingRepository BillingPurchaseManager - Billing unavailable: Device does not support Google Play billing"
+                )
                 showError("Device does not support Google Play billing")
                 eventScope.launch {
                     eventFlow.emit(
                         BillingEvent.PurchaseFailed(
                             billingResult.responseCode,
-                            "Device does not support Google Play billing"
+                            "Device does not support Google Play billing",
                         )
                     )
                 }
             }
 
             BillingClient.BillingResponseCode.NETWORK_ERROR -> {
-                EasyLog.log("BillingRepository BillingPurchaseManager - Network error: Network connection issue")
+                EasyLog.log(
+                    "BillingRepository BillingPurchaseManager - Network error: Network connection issue"
+                )
                 showError("Network error")
                 eventScope.launch {
                     eventFlow.emit(
-                        BillingEvent.PurchaseFailed(
-                            billingResult.responseCode,
-                            "Network error"
-                        )
+                        BillingEvent.PurchaseFailed(billingResult.responseCode, "Network error")
                     )
                 }
             }
 
             BillingClient.BillingResponseCode.FEATURE_NOT_SUPPORTED -> {
-                EasyLog.log("BillingRepository BillingPurchaseManager - Feature not supported: Current device does not support this feature")
+                EasyLog.log(
+                    "BillingRepository BillingPurchaseManager - Feature not supported: Current device does not support this feature"
+                )
                 showError("Feature not supported")
                 eventScope.launch {
                     eventFlow.emit(
                         BillingEvent.PurchaseFailed(
                             billingResult.responseCode,
-                            "Feature not supported"
+                            "Feature not supported",
                         )
                     )
                 }
             }
 
             BillingClient.BillingResponseCode.ERROR -> {
-                EasyLog.log("BillingRepository BillingPurchaseManager - General error: An unknown error occurred")
+                EasyLog.log(
+                    "BillingRepository BillingPurchaseManager - General error: An unknown error occurred"
+                )
                 showError("General error")
                 eventScope.launch {
                     eventFlow.emit(
-                        BillingEvent.PurchaseFailed(
-                            billingResult.responseCode,
-                            "General error"
-                        )
+                        BillingEvent.PurchaseFailed(billingResult.responseCode, "General error")
                     )
                 }
             }
 
             else -> {
-                EasyLog.log("BillingRepository BillingPurchaseManager - 购买失败: ${billingResult.debugMessage} (错误码: ${billingResult.responseCode})")
+                EasyLog.log(
+                    "BillingRepository BillingPurchaseManager - 购买失败: ${billingResult.debugMessage} (错误码: ${billingResult.responseCode})"
+                )
                 showError("Purchase failed: ${billingResult.debugMessage}")
                 eventScope.launch {
                     eventFlow.emit(
                         BillingEvent.PurchaseFailed(
                             billingResult.responseCode,
-                            billingResult.debugMessage
+                            billingResult.debugMessage,
                         )
                     )
                 }
@@ -194,20 +201,19 @@ internal class BillingPurchaseManager(
         }
     }
 
-    /**
-     * 处理购买
-     */
+    /** 处理购买 */
     private fun handlePurchase(purchase: Purchase) {
         if (purchase.purchaseState == Purchase.PurchaseState.PURCHASED) {
             // 先更新状态，如果后续确认失败再回滚
-            val newStatus = VipStatus(
-                isSubscribed = true,
-                subscriptionId = purchase.products.firstOrNull(),
-                purchaseTime = purchase.purchaseTime,
-            )
+            val newStatus =
+                VipStatus(
+                    isSubscribed = true,
+                    subscriptionId = purchase.products.firstOrNull(),
+                    purchaseTime = purchase.purchaseTime,
+                )
             vipStatusFlow.value = newStatus
             BillingStorage.saveLocalVipStatus(newStatus)
-            
+
             if (!purchase.isAcknowledged) {
                 acknowledgePurchase(purchase)
             }
@@ -217,37 +223,32 @@ internal class BillingPurchaseManager(
         }
     }
 
-
-
-    /**
-     * 确认购买
-     */
+    /** 确认购买 */
     private fun acknowledgePurchase(purchase: Purchase) {
-        val acknowledgePurchaseParams = AcknowledgePurchaseParams.newBuilder()
-            .setPurchaseToken(purchase.purchaseToken)
-            .build()
+        val acknowledgePurchaseParams =
+            AcknowledgePurchaseParams.newBuilder().setPurchaseToken(purchase.purchaseToken).build()
         billingClient.acknowledgePurchase(acknowledgePurchaseParams) { billingResult ->
             if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
                 EasyLog.log("BillingRepository BillingPurchaseManager - 购买确认成功")
                 // 确认成功，通知购买成功事件
-                eventScope.launch {
-                    eventFlow.emit(BillingEvent.PurchaseSuccess(purchase))
-                }
+                eventScope.launch { eventFlow.emit(BillingEvent.PurchaseSuccess(purchase)) }
             } else {
-                EasyLog.log("BillingRepository BillingPurchaseManager - 购买确认失败: ${billingResult.debugMessage}")
+                EasyLog.log(
+                    "BillingRepository BillingPurchaseManager - 购买确认失败: ${billingResult.debugMessage}"
+                )
                 showError("Purchase acknowledgment failed")
-                
+
                 // 购买确认失败，回滚订阅状态
                 val oldStatus = VipStatus(isSubscribed = false)
                 vipStatusFlow.value = oldStatus
                 BillingStorage.saveLocalVipStatus(oldStatus)
                 EasyLog.log("BillingRepository BillingPurchaseManager - 已回滚订阅状态")
-                
+
                 eventScope.launch {
                     eventFlow.emit(
                         BillingEvent.PurchaseFailed(
                             billingResult.responseCode,
-                            billingResult.debugMessage
+                            billingResult.debugMessage,
                         )
                     )
                 }
@@ -255,20 +256,21 @@ internal class BillingPurchaseManager(
         }
     }
 
-    /**
-     * 调用后端验证订阅信息
-     */
+    /** 调用后端验证订阅信息 */
     private fun verifySubscriptionWithServer(purchase: Purchase) {
         eventScope.launch {
             try {
                 // 构建验证请求
-                val verifyRequest = SubscriptionVerifyRequest(
-                    productId = purchase.products.firstOrNull() ?: "",
-                    purchaseToken = purchase.purchaseToken,
-                    orderId = purchase.orderId ?: ""
-                )
+                val verifyRequest =
+                    SubscriptionVerifyRequest(
+                        productId = purchase.products.firstOrNull() ?: "",
+                        purchaseToken = purchase.purchaseToken,
+                        orderId = purchase.orderId ?: "",
+                    )
 
-                EasyLog.log("BillingRepository BillingPurchaseManager 验证订阅: productId=${verifyRequest.productId}, purchaseToken=${verifyRequest.purchaseToken}, orderId=${verifyRequest.orderId}")
+                EasyLog.log(
+                    "BillingRepository BillingPurchaseManager 验证订阅: productId=${verifyRequest.productId}, purchaseToken=${verifyRequest.purchaseToken}, orderId=${verifyRequest.orderId}"
+                )
 
                 // 调用验证接口
                 val result = api.verifySubscription(verifyRequest)
@@ -279,17 +281,20 @@ internal class BillingPurchaseManager(
                         if (response.isVerified) {
                             EasyLog.log("BillingRepository BillingPurchaseManager ✅ 订阅验证成功")
                         } else {
-                            EasyLog.log("BillingRepository BillingPurchaseManager ⚠️ 订阅验证失败: ${response.message}")
+                            EasyLog.log(
+                                "BillingRepository BillingPurchaseManager ⚠️ 订阅验证失败: ${response.message}"
+                            )
                             showError("Subscription verification failed: ${response.message}")
                         }
                     }
 
                     is HttpResult.Failure -> {
-                        EasyLog.log("BillingRepository BillingPurchaseManager ❌ 订阅验证失败: ${result.message}")
+                        EasyLog.log(
+                            "BillingRepository BillingPurchaseManager ❌ 订阅验证失败: ${result.message}"
+                        )
                         showError("Subscription verification failed: ${result.message}")
                     }
                 }
-
             } catch (e: Exception) {
                 EasyLog.log("BillingRepository BillingPurchaseManager ❌ 订阅验证异常: ${e.message}")
                 showError("Subscription verification exception: ${e.message}")
@@ -297,9 +302,7 @@ internal class BillingPurchaseManager(
         }
     }
 
-    /**
-     * 检查购买前的状态
-     */
+    /** 检查购买前的状态 */
     fun checkPurchasePreconditions(activity: Activity): Boolean {
         // 检查 Google Play 服务是否可用
         val googleApiAvailability = GoogleApiAvailability.getInstance()
@@ -340,7 +343,9 @@ internal class BillingPurchaseManager(
             }
 
             else -> {
-                EasyLog.log("BillingRepository BillingPurchaseManager ❌ Google Play 服务不可用: $resultCode")
+                EasyLog.log(
+                    "BillingRepository BillingPurchaseManager ❌ Google Play 服务不可用: $resultCode"
+                )
                 showError(activity, "Google Play Service unavailable")
                 return false
             }
@@ -356,16 +361,18 @@ internal class BillingPurchaseManager(
         return true
     }
 
-    /**
-     * 检查设备是否支持计费
-     */
+    /** 检查设备是否支持计费 */
     private fun isBillingSupported(): Boolean {
         return try {
             val billingResult =
                 billingClient.isFeatureSupported(BillingClient.FeatureType.SUBSCRIPTIONS)
             val isSupported = billingResult.responseCode == BillingClient.BillingResponseCode.OK
-            EasyLog.log("BillingRepository BillingPurchaseManager 设备计费支持检查: $isSupported (响应码: ${billingResult.responseCode})")
-            EasyLog.log("BillingRepository BillingPurchaseManager 计费支持检查详情: ${billingResult.debugMessage}")
+            EasyLog.log(
+                "BillingRepository BillingPurchaseManager 设备计费支持检查: $isSupported (响应码: ${billingResult.responseCode})"
+            )
+            EasyLog.log(
+                "BillingRepository BillingPurchaseManager 计费支持检查详情: ${billingResult.debugMessage}"
+            )
             if (!isSupported) {
                 showError("Billing feature not supported on this device")
             }
@@ -378,9 +385,7 @@ internal class BillingPurchaseManager(
         }
     }
 
-    /**
-     * 启动购买流程
-     */
+    /** 启动购买流程 */
     fun launchBillingFlow(activity: Activity, productId: String) {
         // 检查购买前条件
         if (!checkPurchasePreconditions(activity)) {
@@ -394,71 +399,95 @@ internal class BillingPurchaseManager(
         launchBillingFlowInternal(activity, productId)
     }
 
-    /**
-     * 内部购买流程实现
-     */
+    /** 内部购买流程实现 */
     private fun launchBillingFlowInternal(activity: Activity, productId: String) {
         // 查询商品详情（使用 SkuDetails API）
-        val params = SkuDetailsParams.newBuilder()
-            .setSkusList(listOf(productId))
-            .setType(BillingClient.SkuType.SUBS)
-            .build()
+        val params =
+            SkuDetailsParams.newBuilder()
+                .setSkusList(listOf(productId))
+                .setType(BillingClient.SkuType.SUBS)
+                .build()
 
         billingClient.querySkuDetailsAsync(params) { billingResult, skuDetailsList ->
-            EasyLog.log("BillingRepository BillingPurchaseManager - 查询商品详情结果: 响应码=${billingResult.responseCode}")
+            EasyLog.log(
+                "BillingRepository BillingPurchaseManager - 查询商品详情结果: 响应码=${billingResult.responseCode}"
+            )
 
             when (billingResult.responseCode) {
                 BillingClient.BillingResponseCode.OK -> {
                     skuDetailsList?.firstOrNull()?.let { skuDetails ->
-                        EasyLog.log("BillingRepository BillingPurchaseManager ✅ 找到商品详情: ${skuDetails.sku}")
-                        EasyLog.log("BillingRepository BillingPurchaseManager    商品标题: ${skuDetails.title}")
-                        EasyLog.log("BillingRepository BillingPurchaseManager    商品描述: ${skuDetails.description}")
-                        EasyLog.log("BillingRepository BillingPurchaseManager    价格: ${skuDetails.price}")
-                        EasyLog.log("BillingRepository BillingPurchaseManager    货币代码: ${skuDetails.priceCurrencyCode}")
+                        EasyLog.log(
+                            "BillingRepository BillingPurchaseManager ✅ 找到商品详情: ${skuDetails.sku}"
+                        )
+                        EasyLog.log(
+                            "BillingRepository BillingPurchaseManager    商品标题: ${skuDetails.title}"
+                        )
+                        EasyLog.log(
+                            "BillingRepository BillingPurchaseManager    商品描述: ${skuDetails.description}"
+                        )
+                        EasyLog.log(
+                            "BillingRepository BillingPurchaseManager    价格: ${skuDetails.price}"
+                        )
+                        EasyLog.log(
+                            "BillingRepository BillingPurchaseManager    货币代码: ${skuDetails.priceCurrencyCode}"
+                        )
 
                         // 使用 SkuDetails 启动购买流程
-                        val billingFlowParams = BillingFlowParams.newBuilder()
-                            .setSkuDetails(skuDetails)
-                            .build()
+                        val billingFlowParams =
+                            BillingFlowParams.newBuilder().setSkuDetails(skuDetails).build()
                         val launchResult =
                             billingClient.launchBillingFlow(activity, billingFlowParams)
-                        EasyLog.log("BillingRepository BillingPurchaseManager ✅ 购买流程启动结果: $launchResult")
-
-                    } ?: run {
-                        EasyLog.log("BillingRepository BillingPurchaseManager ❌ 未找到商品详情: $productId")
-                        EasyLog.log("BillingRepository BillingPurchaseManager 可能原因:")
-                        EasyLog.log("BillingRepository BillingPurchaseManager   1. 商品ID不存在于Google Play Console")
-                        EasyLog.log("BillingRepository BillingPurchaseManager   2. 商品未激活或未发布")
-                        EasyLog.log("BillingRepository BillingPurchaseManager   3. 应用签名与Google Play Console不匹配")
-                        EasyLog.log("BillingRepository BillingPurchaseManager   4. 测试用户未正确设置")
-
-                        showError(activity, "Product details not found: $productId")
+                        EasyLog.log(
+                            "BillingRepository BillingPurchaseManager ✅ 购买流程启动结果: $launchResult"
+                        )
                     }
+                        ?: run {
+                            EasyLog.log(
+                                "BillingRepository BillingPurchaseManager ❌ 未找到商品详情: $productId"
+                            )
+                            EasyLog.log("BillingRepository BillingPurchaseManager 可能原因:")
+                            EasyLog.log(
+                                "BillingRepository BillingPurchaseManager   1. 商品ID不存在于Google Play Console"
+                            )
+                            EasyLog.log("BillingRepository BillingPurchaseManager   2. 商品未激活或未发布")
+                            EasyLog.log(
+                                "BillingRepository BillingPurchaseManager   3. 应用签名与Google Play Console不匹配"
+                            )
+                            EasyLog.log("BillingRepository BillingPurchaseManager   4. 测试用户未正确设置")
+
+                            showError(activity, "Product details not found: $productId")
+                        }
                 }
 
                 BillingClient.BillingResponseCode.DEVELOPER_ERROR -> {
-                    EasyLog.log("BillingRepository BillingPurchaseManager ❌ 开发者错误 (12): 请检查商品ID配置、应用签名、测试用户设置")
+                    EasyLog.log(
+                        "BillingRepository BillingPurchaseManager ❌ 开发者错误 (12): 请检查商品ID配置、应用签名、测试用户设置"
+                    )
                     EasyLog.log("BillingRepository BillingPurchaseManager 当前查询的商品ID: $productId")
                     showError(
                         activity,
-                        "Developer error: Please check product ID configuration, app signature, test user settings"
+                        "Developer error: Please check product ID configuration, app signature, test user settings",
                     )
                 }
 
                 BillingClient.BillingResponseCode.SERVICE_UNAVAILABLE -> {
                     showError(
                         activity,
-                        "Service unavailable: Google Play services temporarily unavailable"
+                        "Service unavailable: Google Play services temporarily unavailable",
                     )
-                    EasyLog.log("BillingRepository BillingPurchaseManager ❌ 服务不可用: Google Play 服务暂时不可用")
+                    EasyLog.log(
+                        "BillingRepository BillingPurchaseManager ❌ 服务不可用: Google Play 服务暂时不可用"
+                    )
                 }
 
                 BillingClient.BillingResponseCode.BILLING_UNAVAILABLE -> {
                     showError(
                         activity,
-                        "Billing unavailable: Device does not support Google Play billing"
+                        "Billing unavailable: Device does not support Google Play billing",
                     )
-                    EasyLog.log("BillingRepository BillingPurchaseManager ❌ 计费不可用: 设备不支持 Google Play 计费")
+                    EasyLog.log(
+                        "BillingRepository BillingPurchaseManager ❌ 计费不可用: 设备不支持 Google Play 计费"
+                    )
                 }
 
                 BillingClient.BillingResponseCode.ITEM_UNAVAILABLE -> {
@@ -474,21 +503,21 @@ internal class BillingPurchaseManager(
                 else -> {
                     showError(
                         activity,
-                        "Query product details failed: ${billingResult.debugMessage}"
+                        "Query product details failed: ${billingResult.debugMessage}",
                     )
-                    EasyLog.log("BillingRepository BillingPurchaseManager ❌ 查询商品详情失败: ${billingResult.debugMessage} (错误码: ${billingResult.responseCode})")
+                    EasyLog.log(
+                        "BillingRepository BillingPurchaseManager ❌ 查询商品详情失败: ${billingResult.debugMessage} (错误码: ${billingResult.responseCode})"
+                    )
                 }
             }
         }
     }
 
     private fun showError(activity: Activity, error: String?) {
-        activity.runOnUiThread {
-            Toast.makeText(activity, "$error", Toast.LENGTH_SHORT).show()
-        }
+        activity.runOnUiThread { Toast.makeText(activity, "$error", Toast.LENGTH_SHORT).show() }
     }
 
     private fun showError(error: String?) {
         Toast.makeText(AppEnv.context, "$error", Toast.LENGTH_SHORT).show()
     }
-} 
+}

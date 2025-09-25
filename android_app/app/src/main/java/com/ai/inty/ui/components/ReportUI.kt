@@ -31,66 +31,39 @@ import com.ai.inty.base.IntyImage
 import com.ai.inty.base.IntySmallTextField2
 import com.ai.inty.base.noRippleClickable
 
-/**
- * 举报项组件
- */
+/** 举报项组件 */
 @Composable
-fun ReportItem(
-    text: String,
-    selected: Boolean,
-    onClick: () -> Unit = {},
-) {
+fun ReportItem(text: String, selected: Boolean, onClick: () -> Unit = {}) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(48.dp)
-            .noRippleClickable {
-                onClick()
-            },
+        modifier = Modifier.fillMaxWidth().height(48.dp).noRippleClickable { onClick() },
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(
-            text = text,
-            fontSize = 14.sp,
-            color = Color.White.copy(0.55f),
-        )
+        Text(text = text, fontSize = 14.sp, color = Color.White.copy(0.55f))
         Spacer(Modifier.weight(1f))
 
         Image(
-            painter = painterResource(
-                if (selected) R.drawable.checked else R.drawable.check_no
-            ),
+            painter = painterResource(if (selected) R.drawable.checked else R.drawable.check_no),
             contentDescription = null,
         )
     }
 }
 
-/**
- * 举报原因容器组件
- */
+/** 举报原因容器组件 */
 @Composable
-fun ReportReasonsContainer(
-    title: String,
-    content: @Composable () -> Unit
-) {
+fun ReportReasonsContainer(title: String, content: @Composable () -> Unit) {
     Column(
-        modifier = Modifier
-            .background(
-                color = Color(0x1A78599A),
-                shape = RoundedCornerShape(8.dp)
-            )
-            .border(
-                brush = Brush.linearGradient(
-                    colors = listOf(
-                        Color.Transparent,
-                        Color.White.copy(0.2f),
-                        Color.Transparent
-                    )
-                ),
-                width = 1.dp,
-                shape = RoundedCornerShape(8.dp)
-            )
-            .padding(horizontal = 12.dp),
+        modifier =
+            Modifier.background(color = Color(0x1A78599A), shape = RoundedCornerShape(8.dp))
+                .border(
+                    brush =
+                        Brush.linearGradient(
+                            colors =
+                                listOf(Color.Transparent, Color.White.copy(0.2f), Color.Transparent)
+                        ),
+                    width = 1.dp,
+                    shape = RoundedCornerShape(8.dp),
+                )
+                .padding(horizontal = 12.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Spacer(Modifier.height(16.dp))
@@ -110,36 +83,29 @@ fun ReportReasonsContainer(
     }
 }
 
-/**
- * 举报描述容器组件
- */
+/** 举报描述容器组件 */
 @Composable
 fun ReportDescriptionContainer(
     title: String,
     description: String,
     onDescriptionChange: (String) -> Unit,
     placeholder: String,
-    maxLength: Int = 400
+    maxLength: Int = 400,
 ) {
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(
-                color = Color(0x1A78599A),
-                shape = RoundedCornerShape(8.dp)
-            )
-            .border(
-                brush = Brush.linearGradient(
-                    colors = listOf(
-                        Color.Transparent,
-                        Color.White.copy(0.2f),
-                        Color.Transparent
-                    )
-                ),
-                width = 1.dp,
-                shape = RoundedCornerShape(8.dp)
-            )
-            .padding(horizontal = 12.dp),
+        modifier =
+            Modifier.fillMaxWidth()
+                .background(color = Color(0x1A78599A), shape = RoundedCornerShape(8.dp))
+                .border(
+                    brush =
+                        Brush.linearGradient(
+                            colors =
+                                listOf(Color.Transparent, Color.White.copy(0.2f), Color.Transparent)
+                        ),
+                    width = 1.dp,
+                    shape = RoundedCornerShape(8.dp),
+                )
+                .padding(horizontal = 12.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Spacer(Modifier.height(16.dp))
@@ -153,45 +119,31 @@ fun ReportDescriptionContainer(
         Spacer(Modifier.height(12.dp))
 
         Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(112.dp)
-                .background(
-                    color = Color.White.copy(0.1f),
-                    shape = RoundedCornerShape(8.dp)
-                )
-                .padding(vertical = 10.dp)
+            modifier =
+                Modifier.fillMaxWidth()
+                    .height(112.dp)
+                    .background(color = Color.White.copy(0.1f), shape = RoundedCornerShape(8.dp))
+                    .padding(vertical = 10.dp)
         ) {
             IntySmallTextField2(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 16.dp),
+                modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
                 value = description,
                 maxLength = maxLength,
                 placeholder = {
                     Text(
-                        modifier = Modifier
-                            .matchParentSize()
-                            .align(Alignment.TopStart),
+                        modifier = Modifier.matchParentSize().align(Alignment.TopStart),
                         text = placeholder,
                         fontWeight = FontWeight.Normal,
                         color = Color.White.copy(0.55f),
                         fontSize = 14.sp,
                     )
                 },
-                onValueChange = {
-                    onDescriptionChange(it)
-                }
+                onValueChange = { onDescriptionChange(it) },
             )
 
             Text(
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(horizontal = 12.dp),
-                text = stringResource(
-                    R.string.character_count_format_full,
-                    description.length
-                ),
+                modifier = Modifier.align(Alignment.BottomEnd).padding(horizontal = 12.dp),
+                text = stringResource(R.string.character_count_format_full, description.length),
                 fontSize = 12.sp,
                 color = Color.White.copy(0.55f),
             )
@@ -200,34 +152,23 @@ fun ReportDescriptionContainer(
     }
 }
 
-/**
- * 举报图片证据容器组件
- */
+/** 举报图片证据容器组件 */
 @Composable
-fun ReportImageEvidenceContainer(
-    title: String,
-    images: List<String>,
-    onClickAddImage: () -> Unit
-) {
+fun ReportImageEvidenceContainer(title: String, images: List<String>, onClickAddImage: () -> Unit) {
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(
-                color = Color(0x1A78599A),
-                shape = RoundedCornerShape(8.dp)
-            )
-            .border(
-                brush = Brush.linearGradient(
-                    colors = listOf(
-                        Color.Transparent,
-                        Color.White.copy(0.2f),
-                        Color.Transparent
-                    )
-                ),
-                width = 1.dp,
-                shape = RoundedCornerShape(8.dp)
-            )
-            .padding(horizontal = 12.dp),
+        modifier =
+            Modifier.fillMaxWidth()
+                .background(color = Color(0x1A78599A), shape = RoundedCornerShape(8.dp))
+                .border(
+                    brush =
+                        Brush.linearGradient(
+                            colors =
+                                listOf(Color.Transparent, Color.White.copy(0.2f), Color.Transparent)
+                        ),
+                    width = 1.dp,
+                    shape = RoundedCornerShape(8.dp),
+                )
+                .padding(horizontal = 12.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Spacer(Modifier.height(16.dp))
@@ -241,26 +182,18 @@ fun ReportImageEvidenceContainer(
         Spacer(Modifier.height(12.dp))
 
         Box(
-            modifier = Modifier
-                .size(88.dp)
-                .align(Alignment.Start)
-                .background(
-                    color = Color.White.copy(0.1f),
-                    shape = RoundedCornerShape(8.dp)
-                )
-                .clip(RoundedCornerShape(8.dp)),
+            modifier =
+                Modifier.size(88.dp)
+                    .align(Alignment.Start)
+                    .background(color = Color.White.copy(0.1f), shape = RoundedCornerShape(8.dp))
+                    .clip(RoundedCornerShape(8.dp))
         ) {
             if (images.isNotEmpty()) {
-                IntyImage(
-                    modifier = Modifier.fillMaxSize(),
-                    model = images.firstOrNull(),
-                )
+                IntyImage(modifier = Modifier.fillMaxSize(), model = images.firstOrNull())
             } else {
                 Image(
-                    modifier = Modifier
-                        .size(26.dp)
-                        .align(Alignment.Center)
-                        .noRippleClickable {
+                    modifier =
+                        Modifier.size(26.dp).align(Alignment.Center).noRippleClickable {
                             onClickAddImage()
                         },
                     painter = painterResource(R.drawable.btn_add6),
@@ -273,43 +206,40 @@ fun ReportImageEvidenceContainer(
     }
 }
 
-/**
- * 保存按钮组件
- */
+/** 保存按钮组件 */
 @Composable
-fun SaveBtn(
-    onSave: () -> Unit,
-    isSubmitting: Boolean = false
-) {
+fun SaveBtn(onSave: () -> Unit, isSubmitting: Boolean = false) {
     Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp)
-            .height(50.dp)
-            .background(
-                brush = Brush.linearGradient(
-                    colors = if (isSubmitting) {
-                        // TODO：需要优化视觉设计
-                        // https://github.com/NascentCore/inty/issues/436
-                        listOf(Color(0xFF666666), Color(0xFF888888))
-                    } else {
-                        listOf(Color(0xFFC122FF), Color(0xFFFF905D))
+        modifier =
+            Modifier.fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .height(50.dp)
+                .background(
+                    brush =
+                        Brush.linearGradient(
+                            colors =
+                                if (isSubmitting) {
+                                    // TODO：需要优化视觉设计
+                                    // https://github.com/NascentCore/inty/issues/436
+                                    listOf(Color(0xFF666666), Color(0xFF888888))
+                                } else {
+                                    listOf(Color(0xFFC122FF), Color(0xFFFF905D))
+                                }
+                        ),
+                    shape = RoundedCornerShape(25.dp),
+                )
+                .noRippleClickable {
+                    if (!isSubmitting) {
+                        onSave()
                     }
-                ),
-                shape = RoundedCornerShape(25.dp)
-            )
-            .noRippleClickable {
-                if (!isSubmitting) {
-                    onSave()
                 }
-            }
     ) {
         if (isSubmitting) {
             // 显示加载动画
             androidx.compose.material3.CircularProgressIndicator(
                 modifier = Modifier.align(Alignment.Center),
                 color = Color.White,
-                strokeWidth = 2.dp
+                strokeWidth = 2.dp,
             )
         } else {
             Text(
@@ -327,29 +257,15 @@ fun SaveBtn(
 @Preview(showBackground = true)
 @Composable
 fun ReportItemPreview() {
-    ReportItem(
-        text = "不当内容",
-        selected = true,
-        onClick = {}
-    )
+    ReportItem(text = "不当内容", selected = true, onClick = {})
 }
 
 @Preview(showBackground = true)
 @Composable
 fun ReportReasonsContainerPreview() {
-    ReportReasonsContainer(
-        title = "举报原因"
-    ) {
-        ReportItem(
-            text = "不当内容",
-            selected = true,
-            onClick = {}
-        )
-        ReportItem(
-            text = "垃圾信息",
-            selected = false,
-            onClick = {}
-        )
+    ReportReasonsContainer(title = "举报原因") {
+        ReportItem(text = "不当内容", selected = true, onClick = {})
+        ReportItem(text = "垃圾信息", selected = false, onClick = {})
     }
 }
 
@@ -360,18 +276,14 @@ fun ReportDescriptionContainerPreview() {
         title = "举报描述",
         description = "这是一条举报描述",
         onDescriptionChange = {},
-        placeholder = "请填写反馈内容"
+        placeholder = "请填写反馈内容",
     )
 }
 
 @Preview(showBackground = true)
 @Composable
 fun ReportImageEvidenceContainerPreview() {
-    ReportImageEvidenceContainer(
-        title = "图片证据",
-        images = listOf(),
-        onClickAddImage = {}
-    )
+    ReportImageEvidenceContainer(title = "图片证据", images = listOf(), onClickAddImage = {})
 }
 
 @Preview(showBackground = true)

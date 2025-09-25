@@ -21,15 +21,10 @@ import { ApiKeyProvider, useApiKeyContext } from "./hooks/useApiKey";
 import { ApiKeyModal } from "./components/ApiKeyModal";
 import { UserInfo } from "./components/UserInfo";
 
-
 const { Sider, Content } = Layout;
 const { Title, Text } = Typography;
 
-type PageKey =
-  | "evaluation"
-  | "history"
-  | "chat"
-  | "agents";
+type PageKey = "evaluation" | "history" | "chat" | "agents";
 
 interface NavigationItem {
   key: PageKey;
@@ -99,14 +94,16 @@ const AppContent: React.FC = () => {
   // 如果正在加载，显示加载状态
   if (isLoading) {
     return (
-      <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        height: '100vh',
-        flexDirection: 'column',
-        gap: '16px'
-      }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          height: "100vh",
+          flexDirection: "column",
+          gap: "16px",
+        }}
+      >
         <Spin size="large" />
         <Text type="secondary">正在验证 API Key...</Text>
       </div>
@@ -213,169 +210,168 @@ const AppContent: React.FC = () => {
             }
           }}
         >
-        {/* Logo区域 - 添加汉堡按钮 */}
-        <div
-          style={{
-            padding: collapsed ? "16px 12px" : "16px 24px",
-            borderBottom: "1px solid #f0f0f0",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: collapsed ? "center" : "space-between",
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center" }}>
-            {collapsed ? (
-              /* 收起状态：显示汉堡按钮 */
+          {/* Logo区域 - 添加汉堡按钮 */}
+          <div
+            style={{
+              padding: collapsed ? "16px 12px" : "16px 24px",
+              borderBottom: "1px solid #f0f0f0",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: collapsed ? "center" : "space-between",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center" }}>
+              {collapsed ? (
+                /* 收起状态：显示汉堡按钮 */
+                <Button
+                  type="text"
+                  icon={<MenuUnfoldOutlined />}
+                  onClick={() => handleCollapse(false)}
+                  style={{
+                    padding: "4px 8px",
+                    height: "32px",
+                    width: "32px",
+                    borderRadius: "6px",
+                    color: "#1890ff",
+                    border: "1px solid #d9d9d9",
+                    fontSize: "16px",
+                  }}
+                  title="展开菜单"
+                />
+              ) : (
+                /* 展开状态：显示标题 */
+                <Title level={4} style={{ margin: 0, color: "#1890ff" }}>
+                  InTy 评测
+                </Title>
+              )}
+            </div>
+
+            {/* 汉堡按钮 - 仅在展开状态显示 */}
+            {!collapsed && (
               <Button
                 type="text"
-                icon={<MenuUnfoldOutlined />}
-                onClick={() => handleCollapse(false)}
+                icon={<MenuFoldOutlined />}
+                onClick={() => handleCollapse(true)}
                 style={{
                   padding: "4px 8px",
                   height: "32px",
                   width: "32px",
                   borderRadius: "6px",
-                  color: "#1890ff",
+                  color: "#666",
                   border: "1px solid #d9d9d9",
-                  fontSize: "16px",
                 }}
-                title="展开菜单"
+                title="收起菜单"
               />
-            ) : (
-                  /* 展开状态：显示标题 */
-                  <Title level={4} style={{ margin: 0, color: "#1890ff" }}>
-                    InTy 评测
-                  </Title>
             )}
           </div>
 
-          {/* 汉堡按钮 - 仅在展开状态显示 */}
-          {!collapsed && (
-            <Button
-              type="text"
-              icon={<MenuFoldOutlined />}
-              onClick={() => handleCollapse(true)}
-              style={{
-                padding: "4px 8px",
-                height: "32px",
-                width: "32px",
-                borderRadius: "6px",
-                color: "#666",
-                border: "1px solid #d9d9d9",
-              }}
-              title="收起菜单"
-            />
-          )}
-        </div>
-
-        {/* 导航菜单容器 */}
-        <div
-          style={{
-            flex: 1,
-            overflow: "auto",
-            paddingBottom: collapsed ? "20px" : "80px", // 为底部预留空间
-          }}
-        >
-          <Menu
-            mode="inline"
-            selectedKeys={[currentPage]}
+          {/* 导航菜单容器 */}
+          <div
             style={{
-              border: "none",
-              paddingTop: "16px",
-              background: "transparent",
+              flex: 1,
+              overflow: "auto",
+              paddingBottom: collapsed ? "20px" : "80px", // 为底部预留空间
             }}
-            items={navigationItems.map((item) => ({
-              key: item.key,
-              icon: item.icon,
-              label: (
-                <Tooltip
-                  title={collapsed ? item.label : ""}
-                  placement="right"
-                  styles={{
-                    root: {
-                      fontSize: "12px",
+          >
+            <Menu
+              mode="inline"
+              selectedKeys={[currentPage]}
+              style={{
+                border: "none",
+                paddingTop: "16px",
+                background: "transparent",
+              }}
+              items={navigationItems.map((item) => ({
+                key: item.key,
+                icon: item.icon,
+                label: (
+                  <Tooltip
+                    title={collapsed ? item.label : ""}
+                    placement="right"
+                    styles={{
+                      root: {
+                        fontSize: "12px",
+                        color: "#ffffff",
+                      },
+                    }}
+                    overlayInnerStyle={{
                       color: "#ffffff",
-                    },
-                  }}
-                  overlayInnerStyle={{
-                    color: "#ffffff",
-                    backgroundColor: "rgba(0, 0, 0, 0.85)",
-                    borderRadius: "6px",
-                    padding: "6px 8px",
-                    border: "none",
-                    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.15)",
-                  }}
-                >
-                  <div
-                    style={{
-                      flex: 1,
-                      minHeight: collapsed ? "auto" : "40px",
-                      display: "flex",
-                      flexDirection: "column",
-                      justifyContent: collapsed ? "center" : "flex-start",
+                      backgroundColor: "rgba(0, 0, 0, 0.85)",
+                      borderRadius: "6px",
+                      padding: "6px 8px",
+                      border: "none",
+                      boxShadow: "0 2px 8px rgba(0, 0, 0, 0.15)",
                     }}
                   >
                     <div
                       style={{
-                        fontSize: "14px",
-                        fontWeight: "500",
-                        lineHeight: "1.4",
-                        color: "rgba(0, 0, 0, 0.85)",
-                        marginBottom: collapsed ? "0" : "2px",
+                        flex: 1,
+                        minHeight: collapsed ? "auto" : "40px",
+                        display: "flex",
+                        flexDirection: "column",
+                        justifyContent: collapsed ? "center" : "flex-start",
                       }}
                     >
-                      {item.label}
-                    </div>
-                    {!collapsed && (
                       <div
                         style={{
-                          fontSize: "11px",
-                          lineHeight: "1.3",
-                          color: "rgba(0, 0, 0, 0.45)",
-                          marginTop: "2px",
+                          fontSize: "14px",
+                          fontWeight: "500",
+                          lineHeight: "1.4",
+                          color: "rgba(0, 0, 0, 0.85)",
+                          marginBottom: collapsed ? "0" : "2px",
                         }}
                       >
-                        {item.description}
+                        {item.label}
                       </div>
-                    )}
-                  </div>
-                </Tooltip>
-              ),
-              onClick: () => setCurrentPage(item.key),
-              style: {
-                height: "auto",
-                lineHeight: "normal",
-                padding: collapsed ? "12px" : "12px 24px",
-                marginBottom: "4px",
-                borderRadius: "6px",
-                display: "flex",
-                alignItems: "flex-start",
-              },
-            }))}
-          />
-        </div>
+                      {!collapsed && (
+                        <div
+                          style={{
+                            fontSize: "11px",
+                            lineHeight: "1.3",
+                            color: "rgba(0, 0, 0, 0.45)",
+                            marginTop: "2px",
+                          }}
+                        >
+                          {item.description}
+                        </div>
+                      )}
+                    </div>
+                  </Tooltip>
+                ),
+                onClick: () => setCurrentPage(item.key),
+                style: {
+                  height: "auto",
+                  lineHeight: "normal",
+                  padding: collapsed ? "12px" : "12px 24px",
+                  marginBottom: "4px",
+                  borderRadius: "6px",
+                  display: "flex",
+                  alignItems: "flex-start",
+                },
+              }))}
+            />
+          </div>
 
-        {/* 底部区域 */}
-        <div
+          {/* 底部区域 */}
+          <div
+            style={{
+              position: "absolute",
+              bottom: 0,
+              left: 0,
+              right: 0,
+              background: "inherit",
+            }}
+          ></div>
+        </Sider>
+
+        {/* 主内容区域 */}
+        <Layout
           style={{
-            position: "absolute",
-            bottom: 0,
-            left: 0,
-            right: 0,
-            background: "inherit",
+            marginLeft: isMobile ? 0 : collapsed ? 80 : 220,
+            transition: "margin-left 0.2s",
+            minHeight: "100vh",
           }}
-          >
-        </div>
-      </Sider>
-
-      {/* 主内容区域 */}
-      <Layout
-        style={{
-          marginLeft: isMobile ? 0 : collapsed ? 80 : 220,
-          transition: "margin-left 0.2s",
-          minHeight: "100vh",
-        }}
-      >
+        >
           {/* 页面头部 */}
           <div
             style={{
@@ -395,19 +391,19 @@ const AppContent: React.FC = () => {
             <UserInfo onShowApiKeyModal={() => setShowApiKeyModal(true)} />
           </div>
 
-        {/* 页面内容 */}
-        <Content
-          style={{
-            background: "#f0f2f5",
+          {/* 页面内容 */}
+          <Content
+            style={{
+              background: "#f0f2f5",
               minHeight: "calc(100vh - 73px)",
-            overflow: "auto",
-            position: "relative",
-          }}
-        >
-          {renderPageContent()}
-        </Content>
+              overflow: "auto",
+              position: "relative",
+            }}
+          >
+            {renderPageContent()}
+          </Content>
+        </Layout>
       </Layout>
-    </Layout>
 
       {/* API Key 模态框 */}
       <ApiKeyModal

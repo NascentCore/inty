@@ -331,7 +331,10 @@ export const AgentSelector: React.FC<AgentSelectorProps> = ({
                         </p>
                       )}
                       <div style={{ fontSize: "12px", color: "#999" }}>
-                        创建时间: {agent.created_at ? new Date(agent.created_at).toLocaleString() : "未知"}
+                        创建时间:{" "}
+                        {agent.created_at
+                          ? new Date(agent.created_at).toLocaleString()
+                          : "未知"}
                       </div>
                     </div>
                   }

@@ -3,33 +3,21 @@ package com.ai.inty.billing
 import android.app.Activity
 import com.inty.utils.log.EasyLog
 
-/**
- * VIP状态检查工具类
- * 统一管理VIP状态检查和购买逻辑
- */
+/** VIP状态检查工具类 统一管理VIP状态检查和购买逻辑 */
 object VipStatusHelper {
 
-    /**
-     * 检查用户是否为VIP
-     */
+    /** 检查用户是否为VIP */
     fun isUserVip(): Boolean {
         return BillingRepository.vipStatusFlow.value.isSubscribed
     }
 
-    /**
-     * 获取当前VIP状态
-     */
+    /** 获取当前VIP状态 */
     fun getVipStatus(): VipStatus {
         return BillingRepository.vipStatusFlow.value
     }
 
-    /**
-     * 检查VIP状态并执行相应操作
-     */
-    fun checkVipStatus(
-        onVip: () -> Unit,
-        onNotVip: () -> Unit
-    ) {
+    /** 检查VIP状态并执行相应操作 */
+    fun checkVipStatus(onVip: () -> Unit, onNotVip: () -> Unit) {
         if (isUserVip()) {
             onVip()
         } else {
@@ -37,14 +25,14 @@ object VipStatusHelper {
         }
     }
 
-    /**
-     * 统一的购买逻辑 - 购买第一个可用计划
-     */
+    /** 统一的购买逻辑 - 购买第一个可用计划 */
     fun purchaseFirstVip(activity: Activity, onError: (String) -> Unit = {}) {
         val currentPlans = BillingRepository.plansFlow.value
         if (currentPlans.isNotEmpty()) {
             val selectedPlan = currentPlans[0]
-            EasyLog.log("VipStatusHelper - 准备购买订阅计划: ${selectedPlan.name} (${selectedPlan.googleProductId}) - ${selectedPlan.price}")
+            EasyLog.log(
+                "VipStatusHelper - 准备购买订阅计划: ${selectedPlan.name} (${selectedPlan.googleProductId}) - ${selectedPlan.price}"
+            )
 
             // 检查用户是否已经订阅
             if (isUserVip()) {
@@ -61,9 +49,7 @@ object VipStatusHelper {
         }
     }
 
-    /**
-     * 购买指定计划
-     */
+    /** 购买指定计划 */
     fun purchasePlan(activity: Activity, productId: String, onError: (String) -> Unit = {}) {
         // 检查用户是否已经订阅
         if (isUserVip()) {
@@ -86,10 +72,7 @@ object VipStatusHelper {
         BillingRepository.launchBillingFlow(activity, productId)
     }
 
-
-    /**
-     * 刷新订阅状态
-     */
+    /** 刷新订阅状态 */
     fun refreshSubscriptionStatus() {
         BillingRepository.refreshSubscriptionStatus()
     }

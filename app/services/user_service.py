@@ -36,6 +36,7 @@ async def generate_next_readable_id(db: AsyncSession) -> str:
         logger.error(f"Error generating readable ID from sequence: {str(e)}")
         # Fallback to a random 8-digit number starting from 10000000
         import random
+
         return str(random.randint(10000000, 99999999))
 
 
@@ -52,6 +53,7 @@ def generate_next_readable_id_sync(db: Session) -> str:
         logger.error(f"Error generating readable ID from sequence: {str(e)}")
         # Fallback to a random 8-digit number starting from 10000000
         import random
+
         return str(random.randint(10000000, 99999999))
 
 

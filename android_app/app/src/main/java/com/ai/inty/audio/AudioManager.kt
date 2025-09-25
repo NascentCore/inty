@@ -7,23 +7,19 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
-/**
- * 统一音频管理器
- * 协调各个音频子模块，提供统一的音频服务接口
- */
-class AudioManager private constructor(
-    private val context: Context,
-    private val scope: CoroutineScope
-) {
+/** 统一音频管理器 协调各个音频子模块，提供统一的音频服务接口 */
+class AudioManager
+private constructor(private val context: Context, private val scope: CoroutineScope) {
 
     companion object {
-        @Volatile
-        private var INSTANCE: AudioManager? = null
+        @Volatile private var INSTANCE: AudioManager? = null
 
         fun getInstance(context: Context, scope: CoroutineScope): AudioManager {
-            return INSTANCE ?: synchronized(this) {
-                INSTANCE ?: AudioManager(context.applicationContext, scope).also { INSTANCE = it }
-            }
+            return INSTANCE
+                ?: synchronized(this) {
+                    INSTANCE
+                        ?: AudioManager(context.applicationContext, scope).also { INSTANCE = it }
+                }
         }
     }
 
@@ -41,11 +37,7 @@ class AudioManager private constructor(
     val isLoading: StateFlow<Boolean> = playbackManager.isLoading
     val error: StateFlow<String?> = playbackManager.error
 
-
-    /**
-     * 播放消息语音
-     * 如果audioUrl为空，会自动生成TTS
-     */
+    /** 播放消息语音 如果audioUrl为空，会自动生成TTS */
     fun playMessageVoice(
         messageId: String,
         audioUrl: String?,
@@ -54,7 +46,7 @@ class AudioManager private constructor(
         isManualClick: Boolean = false,
         onTtsGenerated: ((String) -> Unit)? = null,
         onTtsFailed: ((String) -> Unit)? = null,
-        serverMessageId: String? = null // 服务器端消息ID，用于TTS生成
+        serverMessageId: String? = null, // 服务器端消息ID，用于TTS生成
     ) {
 
         // 检查是否启用自动播放
@@ -68,7 +60,9 @@ class AudioManager private constructor(
                 EasyLog.log("音频LOG测试 Auto play audio is disabled, skipping message voice playback")
                 return
             } else {
-                EasyLog.log("音频LOG测试 Opening message detected (messageId contains '_assistant_'), allowing auto play despite user setting")
+                EasyLog.log(
+                    "音频LOG测试 Opening message detected (messageId contains '_assistant_'), allowing auto play despite user setting"
+                )
             }
         }
 
@@ -77,7 +71,9 @@ class AudioManager private constructor(
         // 如果audioUrl为空，生成TTS
         if (audioUrl.isNullOrEmpty()) {
             val ttsMessageId = serverMessageId ?: messageId
-            EasyLog.log("音频LOG测试 Audio URL is empty, generating TTS for message: $messageId (serverId: $ttsMessageId)")
+            EasyLog.log(
+                "音频LOG测试 Audio URL is empty, generating TTS for message: $messageId (serverId: $ttsMessageId)"
+            )
             ttsManager.generateMessageVoice(
                 messageId = ttsMessageId, // 使用服务器端ID进行TTS生成
                 agentId = agentId,
@@ -85,13 +81,15 @@ class AudioManager private constructor(
                     EasyLog.log("音频LOG测试 TTS generated successfully: $generatedUrl")
                     onTtsGenerated?.invoke(generatedUrl)
                     // 使用生成的URL播放
-                    EasyLog.log("音频LOG测试 Playing TTS generated audio: messageId=$messageId, generatedUrl=$generatedUrl, autoPlay=$autoPlay")
+                    EasyLog.log(
+                        "音频LOG测试 Playing TTS generated audio: messageId=$messageId, generatedUrl=$generatedUrl, autoPlay=$autoPlay"
+                    )
                     playMessageWithUrl(messageId, generatedUrl, agentId, autoPlay)
                 },
                 onError = { error ->
                     EasyLog.log("音频LOG测试 TTS generation failed: $error", EasyLog.ERROR)
                     onTtsFailed?.invoke(error)
-                }
+                },
             )
         } else {
             // 直接播放
@@ -99,126 +97,86 @@ class AudioManager private constructor(
         }
     }
 
-    /**
-     * 使用指定URL播放消息
-     */
+    /** 使用指定URL播放消息 */
     private fun playMessageWithUrl(
         messageId: String,
         audioUrl: String,
         agentId: String,
-        autoPlay: Boolean
+        autoPlay: Boolean,
     ) {
-        val audioInfo = AudioInfo(
-            url = audioUrl,
-            title = "msg voice",
-            artist = "AI",
-            messageId = messageId,
-            agentId = agentId
-        )
+        val audioInfo =
+            AudioInfo(
+                url = audioUrl,
+                title = "msg voice",
+                artist = "AI",
+                messageId = messageId,
+                agentId = agentId,
+            )
 
         EasyLog.log("音频LOG测试 Playing message voice for message: $messageId")
-        
+
         // 确保在主线程上调用ExoPlayer
-        scope.launch {
-            playbackManager.playAudio(audioInfo, autoPlay = autoPlay)
-        }
+        scope.launch { playbackManager.playAudio(audioInfo, autoPlay = autoPlay) }
     }
 
-
-    /**
-     * 停止所有语音播放
-     */
+    /** 停止所有语音播放 */
     fun stopAllPlayback() {
         EasyLog.log("音频LOG测试 Stopping all voice playback")
-        scope.launch {
-            playbackManager.stopPlayback()
-        }
+        scope.launch { playbackManager.stopPlayback() }
     }
 
-    /**
-     * 暂停语音播放
-     */
+    /** 暂停语音播放 */
     fun pausePlayback() {
         EasyLog.log("音频LOG测试 Pausing voice playback")
-        scope.launch {
-            playbackManager.pausePlayback()
-        }
+        scope.launch { playbackManager.pausePlayback() }
     }
 
-    /**
-     * 恢复语音播放
-     */
+    /** 恢复语音播放 */
     fun resumePlayback() {
         EasyLog.log("音频LOG测试 Resuming voice playback")
-        scope.launch {
-            playbackManager.resumePlayback()
-        }
+        scope.launch { playbackManager.resumePlayback() }
     }
 
-    /**
-     * 重置播放状态（页面切换时调用）
-     */
+    /** 重置播放状态（页面切换时调用） */
     fun resetForPageChange() {
         EasyLog.log("音频LOG测试 Resetting voice playback for page change")
-        scope.launch {
-            playbackManager.resetForPageChange()
-        }
+        scope.launch { playbackManager.resetForPageChange() }
     }
 
-    /**
-     * 检查是否正在播放指定Agent的语音
-     */
+    /** 检查是否正在播放指定Agent的语音 */
     fun isPlayingAgentVoice(agentId: String): Boolean {
         val currentAudioInfo = playbackManager.getCurrentAudioInfo()
         return currentAudioInfo?.agentId == agentId && playbackManager.isPlaying()
     }
 
-    /**
-     * 获取当前播放信息
-     */
+    /** 获取当前播放信息 */
     fun getCurrentAudioInfo(): AudioInfo? = playbackManager.getCurrentAudioInfo()
 
-    /**
-     * 是否正在播放
-     */
+    /** 是否正在播放 */
     fun isPlaying(): Boolean = playbackManager.isPlaying()
 
-    /**
-     * 获取播放进度百分比
-     */
+    /** 获取播放进度百分比 */
     fun getProgress(): Float = playbackManager.getProgress()
 
-    /**
-     * 跳转到指定位置
-     */
+    /** 跳转到指定位置 */
     fun seekTo(positionMs: Long) = playbackManager.seekTo(positionMs)
 
-    /**
-     * 检查是否正在生成指定消息的TTS
-     */
+    /** 检查是否正在生成指定消息的TTS */
     fun isGeneratingTtsForMessage(messageId: String): Boolean {
         return ttsManager.isGeneratingForMessage(messageId)
     }
 
-    /**
-     * 预加载音频
-     */
+    /** 预加载音频 */
     fun preloadAudio(url: String) {
-        scope.launch {
-            cacheManager.preloadAudio(url)
-        }
+        scope.launch { cacheManager.preloadAudio(url) }
     }
 
-    /**
-     * 清理缓存
-     */
+    /** 清理缓存 */
     fun clearCache() {
         cacheManager.clearCache()
     }
 
-    /**
-     * 释放资源
-     */
+    /** 释放资源 */
     fun release() {
         EasyLog.log("音频LOG测试 Releasing AudioManager")
         stopAllPlayback()

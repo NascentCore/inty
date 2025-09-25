@@ -6,26 +6,16 @@ import org.gradle.kotlin.dsl.dependencies
 import org.gradle.kotlin.dsl.withType
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
-/**
- * 定义一些可用于Android端 compose项目的配置gradle的扩展函数
- */
+/** 定义一些可用于Android端 compose项目的配置gradle的扩展函数 */
 
-
-/**
- * Configure Compose-specific options
- */
-internal fun Project.configureAndroidCompose(
-    commonExtension: CommonExtension<*, *, *, *, *, *>,
-) {
+/** Configure Compose-specific options */
+internal fun Project.configureAndroidCompose(commonExtension: CommonExtension<*, *, *, *, *, *>) {
     commonExtension.apply {
-
-        buildFeatures {
-            compose = true
-        }
+        buildFeatures { compose = true }
 
         dependencies {
             val bom = libs.findLibrary("androidx.compose-bom").get()
-            //注意⚠️，这里的findLibrary要在libs.version.toml中有的才可以,最好名称中-或_要替换为. 如activity-compose 使用如下。
+            // 注意⚠️，这里的findLibrary要在libs.version.toml中有的才可以,最好名称中-或_要替换为. 如activity-compose 使用如下。
             add("implementation", libs.findLibrary("androidx.activity.compose").get())
             add("implementation", platform(bom))
             add("implementation", libs.findLibrary("androidx.compose-ui").get())
@@ -37,7 +27,7 @@ internal fun Project.configureAndroidCompose(
             add("androidTestImplementation", platform(bom))
             add(
                 "androidTestImplementation",
-                libs.findLibrary("androidx.compose-ui.test.junit4").get()
+                libs.findLibrary("androidx.compose-ui.test.junit4").get(),
             )
             add("debugImplementation", libs.findLibrary("androidx.compose-ui.tooling").get())
             // Add ComponentActivity to debug manifest
@@ -53,9 +43,7 @@ internal fun Project.configureAndroidCompose(
     }
 
     tasks.withType<KotlinCompile>().configureEach {
-        compilerOptions {
-            freeCompilerArgs.addAll(buildComposeMetricsParameters())
-        }
+        compilerOptions { freeCompilerArgs.addAll(buildComposeMetricsParameters()) }
     }
 }
 
@@ -67,11 +55,14 @@ private fun Project.buildComposeMetricsParameters(): List<String> {
     val enableMetrics = (enableMetricsProvider.orNull == "true")
     if (enableMetrics) {
         val metricsFolder =
-            rootProject.layout.buildDirectory.asFile.get().resolve("compose-metrics")
+            rootProject.layout.buildDirectory.asFile
+                .get()
+                .resolve("compose-metrics")
                 .resolve(relativePath)
         metricParameters.add("-P")
         metricParameters.add(
-            "plugin:androidx.compose.compiler.plugins.kotlin:metricsDestination=" + metricsFolder.absolutePath
+            "plugin:androidx.compose.compiler.plugins.kotlin:metricsDestination=" +
+                metricsFolder.absolutePath
         )
     }
 
@@ -79,11 +70,14 @@ private fun Project.buildComposeMetricsParameters(): List<String> {
     val enableReports = (enableReportsProvider.orNull == "true")
     if (enableReports) {
         val reportsFolder =
-            rootProject.layout.buildDirectory.asFile.get().resolve("compose-reports")
+            rootProject.layout.buildDirectory.asFile
+                .get()
+                .resolve("compose-reports")
                 .resolve(relativePath)
         metricParameters.add("-P")
         metricParameters.add(
-            "plugin:androidx.compose.compiler.plugins.kotlin:reportsDestination=" + reportsFolder.absolutePath
+            "plugin:androidx.compose.compiler.plugins.kotlin:reportsDestination=" +
+                reportsFolder.absolutePath
         )
     }
     return metricParameters.toList()
