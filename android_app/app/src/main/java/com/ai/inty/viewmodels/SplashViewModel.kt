@@ -2,118 +2,62 @@ package com.ai.inty.viewmodels
 
 import androidx.lifecycle.viewModelScope
 import com.ai.inty.base.BaseActivityViewModel
-import com.ai.inty.netapi.services.AuthService
-import com.ai.inty.utils.AppStartupManager
-import com.ai.inty.utils.IntyUserProfileSDK
-import com.ai.inty.utils.UserProfileManager
+import com.ai.inty.utils.UnifiedStartupManager
 import com.inty.utils.log.EasyLog
-import com.inty.utils.storage.IntySetting
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
+/**
+ * 启动状态枚举
+ */
 enum class InitState {
     Loading,
     Success,
     Failed
 }
 
+/**
+ * 简化的启动ViewModel
+ * 只负责UI状态管理，所有启动逻辑由UnifiedStartupManager处理
+ */
 class SplashViewModel : BaseActivityViewModel() {
 
     private val _initState = MutableStateFlow(InitState.Loading)
     val initState = _initState.asStateFlow()
 
-    //启动初始化流程
+    /**
+     * 启动初始化流程
+     */
     fun initTask() {
-        EasyLog.log("SplashViewModel initTask - starting initialization")
+        EasyLog.log("SplashViewModel - 开始启动流程")
 
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                // 等待启动管理器的缓存数据加载完成
-                waitForCacheData()
-
-                if (IntySetting.isLogin()) {
-                    EasyLog.log("User already logged in: ${IntySetting.getCurUserID()}")
-                    onLoginSuccess()
-                } else {
-                    EasyLog.log("No login found, creating guest account")
-                    createGuestWithIntySdk()
-                }
+                // 等待统一启动管理器完成启动
+                waitForStartupCompletion()
+                
+                // 启动完成，跳转到主页面
+                _initState.value = InitState.Success
+                EasyLog.log("SplashViewModel - 启动流程完成")
+                
             } catch (e: Exception) {
-                EasyLog.log("Initialization failed: ${e.message}", EasyLog.ERROR)
+                EasyLog.log("SplashViewModel - 启动失败: ${e.message}", EasyLog.ERROR)
                 _initState.value = InitState.Failed
             }
         }
     }
 
     /**
-     * 等待缓存数据加载完成
+     * 等待启动完成
      */
-    private suspend fun waitForCacheData() {
-        // 等待启动管理器的缓存数据加载完成
-        while (AppStartupManager.startupState.value == AppStartupManager.StartupState.Initializing) {
-            kotlinx.coroutines.delay(50) // 50ms检查一次
+    private suspend fun waitForStartupCompletion() {
+        // 等待启动管理器完成所有阶段
+        while (!UnifiedStartupManager.isStartupCompleted()) {
+            kotlinx.coroutines.delay(100) // 100ms检查一次
         }
-
-        EasyLog.log("SplashViewModel - 缓存数据加载完成，状态: ${AppStartupManager.startupState.value}")
+        
+        EasyLog.log("SplashViewModel - 启动管理器完成，状态: ${UnifiedStartupManager.startupState.value}")
     }
-
-    private suspend fun createGuestWithIntySdk() {
-        EasyLog.log("Creating guest account with inty-sdk...")
-
-        // 使用封装的 AuthService 创建游客账户
-        val result = AuthService.createGuest()
-
-        when (result) {
-            is com.ai.inty.netapi.ApiResult.Success -> {
-                val (guestId, token) = result.data
-                IntySetting.login(true, guestId, token)
-                EasyLog.log("Guest created successfully with inty-sdk: $guestId")
-                onLoginSuccess()
-            }
-
-            is com.ai.inty.netapi.ApiResult.Error -> {
-                EasyLog.log("Guest creation failed with inty-sdk: ${result.message}", EasyLog.ERROR)
-                _initState.value = InitState.Failed
-            }
-        }
-    }
-
-    /**
-     * Guest或正式用户登录成功后，执行更新用户信息逻辑
-     */
-    private suspend fun onLoginSuccess() {
-        EasyLog.log("onLoginSuccess - user: ${IntySetting.getCurUserID()}")
-
-        // 优先从本地缓存获取用户信息
-        if (UserProfileManager.hasUserProfile()) {
-            EasyLog.log("Loaded user profile from cache")
-        }
-
-        // 获取用户信息
-        getUserProfile()
-
-        // 通知启动管理器开始网络预加载
-        AppStartupManager.onLoginSuccess()
-
-        EasyLog.log("Initialization completed successfully")
-        _initState.value = InitState.Success
-    }
-
-    /**
-     * 从接口获取用户信息（Guest或正式用户）
-     */
-    private suspend fun getUserProfile() {
-        val userProfile = IntyUserProfileSDK.getUserProfile()
-        if (userProfile != null) {
-            UserProfileManager.saveUserProfile(userProfile)
-            EasyLog.log("Updated user profile from inty-sdk: ${userProfile.nickname}")
-        } else {
-            EasyLog.log("Failed to get user profile from inty-sdk", EasyLog.ERROR)
-            // 不阻止初始化成功，因为用户信息不是必需的
-        }
-    }
-
-
 }

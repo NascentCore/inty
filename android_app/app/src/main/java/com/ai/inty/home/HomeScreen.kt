@@ -79,11 +79,14 @@ fun HomeScreen(
     // 创建ExploreViewModel实例，用于ChatTab和ExploreTab共享推荐agents数据
     val exploreViewModel: ExploreViewModel = viewModel()
 
-    // 初始化加载推荐agents数据
+    // 初始化Paging数据
     LaunchedEffect(Unit) {
-        if (exploreViewModel.agentList.isEmpty()) {
-            exploreViewModel.getRecommendAgents()
-        }
+        exploreViewModel.initializePagingData()
+    }
+    
+    // 启动预加载数据监听
+    LaunchedEffect(Unit) {
+        exploreViewModel.startListeningPreloadUpdates()
     }
 
     Scaffold(
@@ -275,7 +278,7 @@ private fun ChatTabContent(
 ) {
     val userProfile = mainViewModel.userProfile.collectAsState()
     val currentChatPageIndex = mainViewModel.currentChatPageIndex.collectAsState()
-    val agentList = exploreViewModel.agentList
+    val agentList = exploreViewModel.getCachedAgentsList()
 
     ChatPageContainer(
         modifier = Modifier,

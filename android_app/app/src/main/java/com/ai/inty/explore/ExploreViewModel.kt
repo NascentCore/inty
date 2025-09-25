@@ -1,165 +1,115 @@
 package com.ai.inty.explore
 
-import androidx.compose.runtime.mutableStateListOf
 import androidx.lifecycle.viewModelScope
+import androidx.paging.PagingData
+import androidx.paging.cachedIn
 import com.ai.inty.base.BaseViewModel
 import com.ai.inty.beans.AgentInfo
+import com.ai.inty.utils.UnifiedStartupManager
 import com.inty.utils.log.EasyLog
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /**
  * Explore页面ViewModel
- * 负责管理推荐agents的状态、分页加载、缓存等逻辑
+ * 负责管理推荐agents的Paging数据流、刷新、缓存等逻辑
  */
 class ExploreViewModel : BaseViewModel() {
     
-    private val repository = ExploreRepository()
+    private val pagingRepository = ExplorePagingRepository()
     
-    // 推荐agents列表
-    val agentList = mutableStateListOf<AgentInfo>()
+    // Paging数据流
+    private val _agentsFlow = MutableStateFlow<Flow<PagingData<AgentInfo>>?>(null)
     
-    // 加载状态
-    private var currentPage = 1
-    private var _isLoading = MutableStateFlow(false)
-    val isLoading = _isLoading.asStateFlow()
     
-    private var hasMoreData = true
+    // 是否已初始化
+    private var isInitialized = false
     
     /**
-     * 初始化加载推荐agents
+     * 初始化Paging数据流
      */
-    fun getRecommendAgents() {
-        EasyLog.log("ExploreViewModel - 开始加载推荐agents")
-        currentPage = 1
-        hasMoreData = true
+    fun initializePagingData() {
+        if (isInitialized) return
         
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val result = repository.getRecommendAgents(useCache = true)
-                
-                // 先使用缓存数据快速展示
-                if (result.cachedAgents.isNotEmpty()) {
-                    agentList.clear()
-                    agentList.addAll(result.cachedAgents)
-                    EasyLog.log("ExploreViewModel - 使用缓存数据快速展示: ${result.cachedAgents.size}个")
-                }
-                
-                // 如果有网络数据，静默更新
-                result.networkAgents?.let { networkAgents ->
-                    if (networkAgents.isNotEmpty()) {
-                        agentList.clear()
-                        agentList.addAll(networkAgents)
-                        hasMoreData = result.hasMoreData
-                        EasyLog.log("ExploreViewModel - 静默更新网络数据: ${networkAgents.size}个")
-                    }
-                }
-                
-                // 处理网络错误
-                result.networkError?.let { error ->
-                    EasyLog.log("ExploreViewModel - 网络更新失败: $error", EasyLog.WARN)
-                }
-                
-            } catch (e: Exception) {
-                EasyLog.log("ExploreViewModel - getRecommendAgents异常: ${e.message}", EasyLog.ERROR)
-            }
+        EasyLog.log("ExploreViewModel - 初始化Paging数据流")
+        
+        // 创建初始数据流（优先使用缓存）
+        val initialFlow = pagingRepository.getInitialRecommendAgents()
+            .cachedIn(viewModelScope) // 在ViewModel作用域内缓存
+        
+        _agentsFlow.value = initialFlow
+        isInitialized = true
+        
+        EasyLog.log("ExploreViewModel - Paging数据流初始化完成")
+    }
+    
+    /**
+     * 获取推荐agents的Paging数据流
+     */
+    fun getRecommendAgentsFlow(): Flow<PagingData<AgentInfo>>? {
+        if (!isInitialized) {
+            initializePagingData()
         }
+        return _agentsFlow.value
     }
     
     /**
      * 强制刷新推荐agents
+     * 简化策略：直接使用Paging的刷新机制，让Paging处理状态
      */
     fun refreshRecommendAgents() {
         EasyLog.log("ExploreViewModel - 强制刷新推荐agents")
-        currentPage = 1
-        hasMoreData = true
-        
-        _isLoading.update { true }
-        
-        viewModelScope.launch(Dispatchers.IO) {
+
+        viewModelScope.launch {
             try {
-                val result = repository.refreshRecommendAgents()
+                // 直接创建新的刷新数据流，让Paging处理状态
+                val refreshFlow = pagingRepository.refreshRecommendAgents()
+                    .cachedIn(viewModelScope)
                 
-                when {
-                    result.networkAgents != null -> {
-                        agentList.clear()
-                        agentList.addAll(result.networkAgents)
-                        hasMoreData = result.hasMoreData
-                        EasyLog.log("ExploreViewModel - 刷新成功: ${result.networkAgents.size}个")
-                    }
-                    result.networkError != null -> {
-                        EasyLog.log("ExploreViewModel - 刷新失败: ${result.networkError}", EasyLog.ERROR)
-                    }
-                }
-                
+                _agentsFlow.value = refreshFlow
+                EasyLog.log("ExploreViewModel - 刷新数据流创建成功")
+
             } catch (e: Exception) {
                 EasyLog.log("ExploreViewModel - refreshRecommendAgents异常: ${e.message}", EasyLog.ERROR)
-            } finally {
-                _isLoading.update { false }
+            }
+        }
+    }
+
+    
+    /**
+     * 监听预加载数据更新
+     */
+    fun startListeningPreloadUpdates() {
+        viewModelScope.launch {
+            // 监听统一启动管理器的预加载数据更新
+            UnifiedStartupManager.recommendedAgents.collect { preloadedAgents ->
+                if (preloadedAgents.isEmpty()) {
+                    // 监听数据清理（如用户登出）
+                    clearData()
+                    EasyLog.log("ExploreViewModel - 监听到数据清理")
+                } else if (!isInitialized) {
+                    // 如果还未初始化且有预加载数据，则初始化
+                    initializePagingData()
+                    EasyLog.log("ExploreViewModel - 监听到预加载数据，初始化Paging: ${preloadedAgents.size}个")
+                }
             }
         }
     }
     
     /**
-     * 加载更多推荐agents
+     * 获取缓存的agents列表（用于ChatTab显示）
      */
-    fun loadMoreRecommendAgents() {
-        if (!_isLoading.value && hasMoreData) {
-            EasyLog.log("ExploreViewModel - 开始加载第${currentPage + 1}页")
-            currentPage++
-            
-            _isLoading.update { true }
-            
-            viewModelScope.launch(Dispatchers.IO) {
-                try {
-                    val result = repository.loadMoreRecommendAgents(currentPage)
-                    
-                    when {
-                        result.networkAgents != null -> {
-                            if (result.networkAgents.isEmpty()) {
-                                hasMoreData = false
-                                EasyLog.log("ExploreViewModel - 第${currentPage}页数据为空，没有更多数据")
-                            } else {
-                                agentList.addAll(result.networkAgents)
-                                hasMoreData = result.hasMoreData
-                                EasyLog.log("ExploreViewModel - 追加第${currentPage}页数据: ${result.networkAgents.size}个，总计: ${agentList.size}个")
-                            }
-                        }
-                        result.networkError != null -> {
-                            EasyLog.log("ExploreViewModel - 第${currentPage}页加载失败: ${result.networkError}", EasyLog.ERROR)
-                            // 如果加载失败，回退页码
-                            if (currentPage > 1) {
-                                currentPage--
-                            }
-                        }
-                    }
-                    
-                } catch (e: Exception) {
-                    EasyLog.log("ExploreViewModel - loadMoreRecommendAgents异常: ${e.message}", EasyLog.ERROR)
-                    // 如果加载失败，回退页码
-                    if (currentPage > 1) {
-                        currentPage--
-                    }
-                } finally {
-                    _isLoading.update { false }
-                }
-            }
-        } else {
-            EasyLog.log("ExploreViewModel - 跳过加载: isLoading=${_isLoading.value}, hasMoreData=$hasMoreData")
-        }
+    fun getCachedAgentsList(): List<AgentInfo> {
+        return UnifiedStartupManager.getCurrentRecommendedAgents()
     }
     
     /**
      * 清空数据（用于用户登出等场景）
      */
     fun clearData() {
-        agentList.clear()
-        currentPage = 1
-        hasMoreData = true
-        _isLoading.update { false }
-        EasyLog.log("ExploreViewModel - 清空数据")
+        _agentsFlow.value = null
+        isInitialized = false
+        EasyLog.log("ExploreViewModel - 清空Paging数据")
     }
 }
