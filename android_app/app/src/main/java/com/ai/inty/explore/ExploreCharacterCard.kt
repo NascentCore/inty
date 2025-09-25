@@ -33,7 +33,7 @@ import com.ai.inty.beans.AgentInfo
 import com.ai.inty.ui.components.ShimmerPlaceholder
 import com.ai.inty.ui.components.SmartTagsLayout
 import com.ai.inty.utils.AvatarManager
-import com.ai.inty.utils.ImageSizeCache
+import com.ai.inty.utils.StableCardHeightManager
 
 /**
  * Explore页面的角色卡片组件
@@ -67,29 +67,25 @@ fun ExploreCharacterCard(
         AvatarManager.getChatBackgroundForAgent(agentInfo)
     }
 
-    // 动态计算卡片高度，基于图片宽高比
-    // 使用mutableStateOf确保高度可以动态更新，实现瀑布流效果
-    var cardHeight by remember(imageUrl) {
-        mutableStateOf(
-            with(density) {
-                ImageSizeCache.getDisplayHeightPx(imageUrl).toDp()
-            }
-        )
+    // 使用稳定的高度管理器，基于图片真实比例计算
+    var cardHeight by remember(agentInfo.id, imageUrl) {
+        val initialHeight = StableCardHeightManager.getStableCardHeightDp(agentInfo)
+        mutableStateOf(initialHeight.dp)
     }
 
     // 图片加载状态
     var imageLoaded by remember { mutableStateOf(false) }
 
-    // 预加载图片尺寸，动态更新卡片高度
+    // 预加载图片尺寸，并在预加载完成后更新高度
     LaunchedEffect(imageUrl) {
         if (!imageUrl.isNullOrEmpty()) {
             try {
-                ImageSizeCache.preloadImageSize(imageUrl)
+                StableCardHeightManager.preloadImageSize(imageUrl)
                 // 预加载完成后，重新计算高度
-                val newHeightPx = ImageSizeCache.getDisplayHeightPx(imageUrl)
-                val newHeightDp = with(density) { newHeightPx.toDp() }
-                if (newHeightDp != cardHeight) {
-                    cardHeight = newHeightDp
+                val newHeightDp = StableCardHeightManager.getStableCardHeightDp(agentInfo)
+                val newHeight = newHeightDp.dp
+                if (newHeight != cardHeight) {
+                    cardHeight = newHeight
                 }
             } catch (e: Exception) {
                 // 预加载失败，保持当前高度
@@ -100,6 +96,7 @@ fun ExploreCharacterCard(
     Box(
         modifier = modifier
             .fillMaxWidth()
+            .height(cardHeight)
             .clip(RoundedCornerShape(8.dp))
             .noRippleClickable { onClick() }
     ) {

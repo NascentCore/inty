@@ -21,6 +21,7 @@ object ImagePreloadManager {
         if (isInitialized) return
         
         ImageSizeCache.init(context)
+        StableCardHeightManager.init(context)
         isInitialized = true
         EasyLog.log("ImagePreloadManager - 初始化完成")
     }
@@ -55,6 +56,7 @@ object ImagePreloadManager {
                 if (imageUrls.isNotEmpty()) {
                     // 使用批量预加载方法，提高效率
                     ImageSizeCache.preloadImageSizes(imageUrls)
+                    StableCardHeightManager.preloadImageSizes(imageUrls)
                     EasyLog.log("ImagePreloadManager - 批量预加载图片尺寸完成")
                 }
             }
@@ -112,6 +114,7 @@ object ImagePreloadManager {
                 if (imageUrls.isNotEmpty()) {
                     // 使用批量预加载方法，优先预加载关键图片
                     ImageSizeCache.preloadCriticalImageSizes(imageUrls, criticalCount)
+                    StableCardHeightManager.preloadImageSizes(imageUrls)
                     EasyLog.log("ImagePreloadManager - 关键图片批量预加载完成")
                 }
             }
@@ -135,6 +138,7 @@ object ImagePreloadManager {
      */
     fun clearCache() {
         ImageSizeCache.clearCache()
+        StableCardHeightManager.clearCache()
         EasyLog.log("ImagePreloadManager - 清除预加载缓存")
     }
 }
