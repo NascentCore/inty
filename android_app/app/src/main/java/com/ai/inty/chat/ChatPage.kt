@@ -260,10 +260,6 @@ internal fun ChatPage(
                     }
                 }
                 val chatMessages by chatViewModel.msgs.collectAsState()
-
-
-
-
                 LazyColumn(
                     modifier = Modifier
                         .weight(1f)
@@ -273,15 +269,9 @@ internal fun ChatPage(
                     item {
                         Spacer(Modifier.height(16.dp))
                     }
-
-
                     // 1. 用户和 agent 的对话消息（显示在底部，因为是反向列表）
-
-
                     // 过滤掉 chatMessages 中的开场白消息
                     val filteredChatMessages = chatMessages.filter { !it.isOpening() }
-
-
                     // 添加安全检查
                     runCatching {
                         if (filteredChatMessages.isNotEmpty()) {
