@@ -31,7 +31,7 @@
 
 ## 流程示例
 
-以 https://github.com/NascentCore/inty/pull/630 为例：
+以 https://github.com/NascentCore/inty/pull/630 https://github.com/NascentCore/inty/pull/635 为例：
 
 * 首先使用 [generate_openapi_json.py](../scripts/generate_openapi_json.py) 更新 [openapi.json](openapi.json)
 * 提交改动并创建 pull request，该 PR 会触发 stainless 工作流，如下图所示：
@@ -39,4 +39,8 @@
 * 待 stainless 工作流完成，代码改动会自动同步到 kotlin python typescript 代码库，打开链接确认最新的代码已经提交；
   如果没有提交，则需要手动将代码提交
   <img width="960" height="1490" alt="image" src="https://github.com/user-attachments/assets/6e644f75-2b73-4c4c-816f-9941e4d05ac6" />
-* 更新对应的 submodule，生成 pull request 来进行更新
+* 更新对应的 submodule，生成 pull request 来进行更新；注意 `android_app/library/inty_sdk`
+  同时须更新 `android_app/app/build.gradle.kts` 中的 `implementation("com.inty.api:inty-kotlin:0.9.0")` 版本号到 submodule 版本。
+  示例：https://github.com/NascentCore/inty/pull/635
+  <img width="960" height="522" alt="image" src="https://github.com/user-attachments/assets/cedf19cb-3576-4d37-9024-921ad70cc8a9" />
+
