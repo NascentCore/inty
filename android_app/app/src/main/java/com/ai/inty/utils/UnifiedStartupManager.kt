@@ -118,8 +118,8 @@ object UnifiedStartupManager {
         
         startupScope.launch {
             try {
-                // 阶段0：初始化图片预加载管理器（在后台线程中）
-                initializeImagePreloadManager(context)
+                // 阶段0：初始化预加载管理器（在后台线程中）
+                initializePreloadManagers(context)
                 
                 // 阶段1：加载缓存数据
                 loadCacheData()
@@ -164,14 +164,19 @@ object UnifiedStartupManager {
     }
     
     /**
-     * 阶段0：初始化图片预加载管理器
+     * 阶段0：初始化预加载管理器
      */
-    private suspend fun initializeImagePreloadManager(context: Context) {
+    private suspend fun initializePreloadManagers(context: Context) {
         try {
+            // 初始化图片预加载管理器
             ImagePreloadManager.init(context)
             EasyLog.log("UnifiedStartupManager - 图片预加载管理器初始化完成")
+            
+            // 初始化音频预加载管理器
+            AudioPreloadManager.init(context)
+            EasyLog.log("UnifiedStartupManager - 音频预加载管理器初始化完成")
         } catch (e: Exception) {
-            EasyLog.log("UnifiedStartupManager - 图片预加载管理器初始化失败: ${e.message}", EasyLog.ERROR)
+            EasyLog.log("UnifiedStartupManager - 预加载管理器初始化失败: ${e.message}", EasyLog.ERROR)
         }
     }
     
@@ -361,16 +366,23 @@ object UnifiedStartupManager {
                     _recommendedAgents.value = agents
                     EasyLog.log("UnifiedStartupManager - 推荐agents同步成功: ${agents.size}个")
                     
-                    // 异步预加载图片资源，不阻塞启动流程
+                    // 异步预加载资源，不阻塞启动流程
                     kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
                         try {
-                            // 先预加载关键图片（前10个），确保首屏快速渲染
+                            // 先预加载关键图片尺寸（前10个），确保首屏快速渲染
                             ImagePreloadManager.preloadCriticalImages(agents, 10)
                             
-                            // 然后预加载所有图片，优化后续页面渲染
+                            // 然后预计算卡片高度（基于已缓存的图片尺寸）
+                            StableCardHeightManager.preCalculateAndCacheHeights(agents)
+                            
+                            // 预加载关键音频
+                            AudioPreloadManager.preloadCriticalOpeningAudios(agents, 5)
+                            
+                            // 最后预加载所有资源，优化后续页面渲染
                             ImagePreloadManager.preloadAgentsImages(agents, 5)
+                            AudioPreloadManager.preloadAgentsOpeningAudios(agents, 3)
                         } catch (e: Exception) {
-                            EasyLog.log("UnifiedStartupManager - 图片预加载异常: ${e.message}", EasyLog.ERROR)
+                            EasyLog.log("UnifiedStartupManager - 资源预加载异常: ${e.message}", EasyLog.ERROR)
                         }
                     }
                 }

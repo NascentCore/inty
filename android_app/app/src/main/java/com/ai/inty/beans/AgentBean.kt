@@ -43,6 +43,9 @@ data class AgentInfo(
 ) : Parcelable {
     //本地使用的属性数据，非接口字段
     var isDeleted: Boolean = false//标记该agent是否被服务端已经删除
+    
+    // 缓存的卡片高度（dp），用于避免UI重组时的高度跳动
+    var cachedCardHeightDp: Float = 0f
 
     fun randomAspectRatio():Float{
         return Random.nextInt(56,75).div(100f)

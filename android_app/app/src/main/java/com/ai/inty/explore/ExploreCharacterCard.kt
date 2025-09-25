@@ -67,11 +67,17 @@ fun ExploreCharacterCard(
         AvatarManager.getChatBackgroundForAgent(agentInfo)
     }
 
-    // 使用稳定的高度计算，基于图片URL缓存，避免重组时高度变化
-    val cardHeight = remember(imageUrl) {
-        // 直接使用像素值计算，避免dp转换的精度问题
-        val heightPx = StableCardHeightManager.getDisplayHeightPx(imageUrl)
-        with(density) { heightPx.toDp() }
+    // 使用AgentInfo中缓存的高度，但保持瀑布流效果
+    val cardHeight = remember(agentInfo.cachedCardHeightDp, imageUrl) {
+        if (agentInfo.cachedCardHeightDp > 0f) {
+            // 使用缓存的高度
+            agentInfo.cachedCardHeightDp.dp
+        } else {
+            // 如果缓存中没有高度，使用StableCardHeightManager计算并缓存
+            // 这里会基于图片的实际尺寸计算，保持瀑布流效果
+            val calculatedHeight = StableCardHeightManager.getStableCardHeightDp(agentInfo)
+            calculatedHeight.dp
+        }
     }
 
     // 图片加载状态

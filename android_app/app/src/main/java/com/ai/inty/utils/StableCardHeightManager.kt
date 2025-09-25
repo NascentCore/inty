@@ -26,9 +26,9 @@ object StableCardHeightManager {
     private val horizontalSpacing = 6f // dp - 对应 LazyList 的 horizontalArrangement.spacedBy
     private val columnCount = 2 // 对应 StaggeredGridCells.Fixed(2)
     
-    // 高度范围限制
-    private val minHeightDp = 120f
-    private val maxHeightDp = 450f
+    // 高度范围限制 - 放宽限制以保持瀑布流效果
+    private val minHeightDp = 100f
+    private val maxHeightDp = 600f
     
     /**
      * 初始化管理器
@@ -51,11 +51,61 @@ object StableCardHeightManager {
     /**
      * 获取卡片的稳定高度（dp）
      * 基于图片真实比例计算，确保瀑布流效果
+     * 优先使用缓存在AgentInfo中的高度，避免UI重组时的高度跳动
      */
     fun getStableCardHeightDp(agentInfo: AgentInfo): Float {
+        // 如果AgentInfo中已经缓存了高度，直接使用
+        if (agentInfo.cachedCardHeightDp > 0f) {
+            EasyLog.log("StableCardHeightManager - 使用缓存高度: ${agentInfo.cachedCardHeightDp} dp", EasyLog.DEBUG)
+            return agentInfo.cachedCardHeightDp
+        }
+        
+        // 计算新高度并缓存到AgentInfo中
         val calculatedHeight = calculateCardHeightDp(agentInfo)
-        EasyLog.log("StableCardHeightManager - 计算卡片高度: $calculatedHeight dp", EasyLog.DEBUG)
+        agentInfo.cachedCardHeightDp = calculatedHeight
+        EasyLog.log("StableCardHeightManager - 计算并缓存卡片高度: $calculatedHeight dp", EasyLog.DEBUG)
         return calculatedHeight
+    }
+    
+    /**
+     * 预计算并缓存AgentInfo的卡片高度
+     * 只有在图片尺寸已缓存时才预计算，否则延迟到UI渲染时计算
+     */
+    fun preCalculateAndCacheHeight(agentInfo: AgentInfo) {
+        if (agentInfo.cachedCardHeightDp <= 0f) {
+            val imageUrl = AvatarManager.getChatBackgroundForAgent(agentInfo)
+            
+            // 只有当图片尺寸已经缓存时才预计算高度
+            if (!imageUrl.isNullOrBlank() && imageSizeCache.get(imageUrl) != null) {
+                val calculatedHeight = calculateCardHeightDp(agentInfo)
+                agentInfo.cachedCardHeightDp = calculatedHeight
+                EasyLog.log("StableCardHeightManager - 预计算卡片高度: ${agentInfo.name} -> $calculatedHeight dp", EasyLog.DEBUG)
+            } else {
+                EasyLog.log("StableCardHeightManager - 图片尺寸未缓存，延迟计算: ${agentInfo.name}", EasyLog.DEBUG)
+            }
+        }
+    }
+    
+    /**
+     * 批量预计算并缓存多个AgentInfo的卡片高度
+     * 只有在图片尺寸已缓存时才预计算，保持瀑布流效果
+     */
+    fun preCalculateAndCacheHeights(agents: List<AgentInfo>) {
+        var preCalculatedCount = 0
+        var delayedCount = 0
+        
+        agents.forEach { agent ->
+            val beforeHeight = agent.cachedCardHeightDp
+            preCalculateAndCacheHeight(agent)
+            
+            if (agent.cachedCardHeightDp > beforeHeight) {
+                preCalculatedCount++
+            } else {
+                delayedCount++
+            }
+        }
+        
+        EasyLog.log("StableCardHeightManager - 批量预计算完成: 预计算${preCalculatedCount}个, 延迟${delayedCount}个")
     }
     
     /**
@@ -242,6 +292,21 @@ object StableCardHeightManager {
     fun clearCache() {
         imageSizeCache.evictAll()
         EasyLog.log("StableCardHeightManager - 清除缓存")
+    }
+    
+    /**
+     * 在图片尺寸加载完成后更新AgentInfo的缓存高度
+     * 用于在图片尺寸预加载完成后更新高度，保持瀑布流效果
+     */
+    fun updateHeightAfterImageSizeLoaded(agentInfo: AgentInfo) {
+        if (agentInfo.cachedCardHeightDp <= 0f) {
+            val imageUrl = AvatarManager.getChatBackgroundForAgent(agentInfo)
+            if (!imageUrl.isNullOrBlank() && imageSizeCache.get(imageUrl) != null) {
+                val calculatedHeight = calculateCardHeightDp(agentInfo)
+                agentInfo.cachedCardHeightDp = calculatedHeight
+                EasyLog.log("StableCardHeightManager - 图片尺寸加载后更新高度: ${agentInfo.name} -> $calculatedHeight dp", EasyLog.DEBUG)
+            }
+        }
     }
     
     /**

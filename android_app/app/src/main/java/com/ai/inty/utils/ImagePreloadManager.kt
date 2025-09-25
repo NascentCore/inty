@@ -58,6 +58,11 @@ object ImagePreloadManager {
                     ImageSizeCache.preloadImageSizes(imageUrls)
                     StableCardHeightManager.preloadImageSizes(imageUrls)
                     EasyLog.log("ImagePreloadManager - 批量预加载图片尺寸完成")
+                    
+                    // 图片尺寸预加载完成后，更新卡片高度
+                    agents.forEach { agent ->
+                        StableCardHeightManager.updateHeightAfterImageSizeLoaded(agent)
+                    }
                 }
             }
             
@@ -116,6 +121,11 @@ object ImagePreloadManager {
                     ImageSizeCache.preloadCriticalImageSizes(imageUrls, criticalCount)
                     StableCardHeightManager.preloadImageSizes(imageUrls)
                     EasyLog.log("ImagePreloadManager - 关键图片批量预加载完成")
+                    
+                    // 关键图片尺寸预加载完成后，更新卡片高度
+                    criticalAgents.forEach { agent ->
+                        StableCardHeightManager.updateHeightAfterImageSizeLoaded(agent)
+                    }
                 }
             }
             
