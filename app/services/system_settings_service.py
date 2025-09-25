@@ -192,9 +192,8 @@ class SystemSettingsService:
                 db, "free_user_chat_total_limit", 100
             ),
             "chat_24h_limit": await self.get_setting(
-                db,
-                "free_user_chat_24h_limit",
-                global_config_loaded_from_config_yaml.app.limits.free_user_chat_24h_limit,
+                db, "free_user_chat_24h_limit", 
+                global_config_loaded_from_config_yaml.app.limits.free_user_chat_24h_limit
             ),
             "agent_creation_limit": await self.get_setting(
                 db, "free_user_agent_creation_limit", 6

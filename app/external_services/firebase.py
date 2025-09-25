@@ -7,7 +7,6 @@ from app.core.config import global_config_loaded_from_config_yaml
 
 debug = global_config_loaded_from_config_yaml.app.debug
 
-
 def init_firebase() -> None:
     """初始化 Firebase Admin SDK
 

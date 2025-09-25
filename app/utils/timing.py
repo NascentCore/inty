@@ -13,7 +13,7 @@ from loguru import logger
 def log_time(operation_name: str) -> Generator[None, None, None]:
     """
     Context manager to measure and log execution time of operations.
-
+    
     Args:
         operation_name: Name of the operation being measured
     Example:

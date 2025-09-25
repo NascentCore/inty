@@ -24,7 +24,6 @@ from app.utils.image import (
 
 class ImageUploadResponse(BaseModel):
     """Image upload response"""
-
     # Uploaded compressed image
     url: str
     # Uploaded original image
@@ -82,7 +81,7 @@ async def process_image_upload(
                 "error_code": "FILE_SIZE_EXCEEDED",
                 "max_size_mb": max_size_mb,
                 "actual_size_bytes": file_size,
-            },
+            }
         )
 
     # Validate filename
@@ -113,7 +112,7 @@ async def process_image_upload(
                 "error_code": "UNSUPPORTED_FILE_TYPE",
                 "supported_formats": allowed_extensions,
                 "received_format": file_ext,
-            },
+            }
         )
 
     # Store original file data before compression
@@ -128,10 +127,7 @@ async def process_image_upload(
     # PNG is a lossless format, so we can compress it to JPEG to save space.
     # TODO: Explicitly add parameter compress_image in request body to control this.
     # Not always compress png files.
-    compression_threshold_size_bytes = (
-        global_config_loaded_from_config_yaml.app.limits.image_compression_threshold_size_kb
-        * 1024
-    )
+    compression_threshold_size_bytes = global_config_loaded_from_config_yaml.app.limits.image_compression_threshold_size_kb * 1024
     was_compressed = False
     if file_ext == ImageFormat.PNG or len(file_data) > compression_threshold_size_bytes:
         file_data = compress_png_to_jpeg(file_data)

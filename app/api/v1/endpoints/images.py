@@ -43,9 +43,7 @@ async def upload_image(
     try:
         # Use helper function to process image upload
         # Use avatars directory for unified storage, similar to backgrounds
-        base_path = (
-            f"avatars/{current_user.id}" if cropping_avatar else "images/uploads"
-        )
+        base_path = f"avatars/{current_user.id}" if cropping_avatar else "images/uploads"
         result = await process_image_upload(
             file=file,
             user_id=current_user.id,

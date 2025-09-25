@@ -136,7 +136,6 @@ class AgentConfig:
     enable_debug_logging: bool = False  # 是否启用调试日志记录功能
     vertex_image_model: str = "imagen-4.0-fast-generate-001"
 
-
 @dataclass
 class GCSConfig:
     bucket: str
@@ -153,7 +152,6 @@ class FirebaseConfig:
 @dataclass
 class GooglePlayConfig:
     """Google Play配置"""
-
     # 与 GCSConfig.credentials 相同
     # DEPRECATED: 保留作为兼容
     service_account_key: str = "inty-backend-key.json"
@@ -175,7 +173,6 @@ class GooglePlayConfig:
 @dataclass
 class ElevenLabsConfig:
     """ElevenLabs语音生成配置"""
-
     api_key: str
     model: str = "eleven_multilingual_v2"
     voice_id: str = "JBFqnCBsd6RMkjVDRZzb"  # 默认语音ID

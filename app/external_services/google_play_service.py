@@ -493,9 +493,7 @@ class GooglePlayService:
             logger.warning(f"提取发布说明失败: {e}")
             return None
 
-    def check_version_requirement(
-        self, client_version_code: int, client_version_name: Optional[str] = None
-    ) -> Dict[str, Any]:
+    def check_version_requirement(self, client_version_code: int, client_version_name: Optional[str] = None) -> Dict[str, Any]:
         """
         检查版本更新要求
 
@@ -560,10 +558,8 @@ class GooglePlayService:
 
             # 2. 检查Major版本号差距
             if client_version_name and latest_version_name:
-                major_force_update, major_reason = (
-                    self._check_major_version_gap_requirement(
-                        client_version_name, latest_version_name
-                    )
+                major_force_update, major_reason = self._check_major_version_gap_requirement(
+                    client_version_name, latest_version_name
                 )
                 if major_force_update:
                     force_update_reasons.append(major_reason)
@@ -636,15 +632,13 @@ class GooglePlayService:
             logger.warning(f"版本代码比较失败，将客户端版本视为需要更新: {e}")
             return True  # 如果比较失败，保守起见要求更新
 
-    def _parse_semantic_version(
-        self, version_name: str
-    ) -> Optional[Tuple[int, int, int]]:
+    def _parse_semantic_version(self, version_name: str) -> Optional[Tuple[int, int, int]]:
         """
         解析语义化版本号 (major.minor.patch)
-
+        
         Args:
             version_name: 版本名称，如 "1.2.3"
-
+            
         Returns:
             Tuple[int, int, int]: (major, minor, patch) 如果解析失败返回None
         """
@@ -653,7 +647,7 @@ class GooglePlayService:
                 return None
 
             # 使用正则表达式匹配 major.minor.patch 格式
-            pattern = r"^(\d+)\.(\d+)\.(\d+)"
+            pattern = r'^(\d+)\.(\d+)\.(\d+)'
             match = re.match(pattern, version_name.strip())
 
             if not match:
@@ -664,9 +658,7 @@ class GooglePlayService:
             minor = int(match.group(2))
             patch = int(match.group(3))
 
-            logger.debug(
-                f"成功解析版本名称 {version_name}: major={major}, minor={minor}, patch={patch}"
-            )
+            logger.debug(f"成功解析版本名称 {version_name}: major={major}, minor={minor}, patch={patch}")
 
             return (major, minor, patch)
 
@@ -677,9 +669,7 @@ class GooglePlayService:
             logger.warning(f"版本名称解析异常: {version_name}, 错误: {e}")
             return None
 
-    def _check_major_version_gap_requirement(
-        self, client_version_name: str, latest_version_name: str
-    ) -> Tuple[bool, str]:
+    def _check_major_version_gap_requirement(self, client_version_name: str, latest_version_name: str) -> Tuple[bool, str]:
         """
         检查Major和Minor版本号差距是否超过配置的限制
 

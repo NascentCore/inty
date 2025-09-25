@@ -48,9 +48,6 @@ async def list_voices(
     - samples: 音色样本信息
     """
     return await voice_service.get_available_voices(
-        search=search,
-        page_size=page_size,
-        voice_type=voice_type,
-        category=category,
-        include_shared=False,  # 只返回用户个人音色，不包含共享市场音色
+        search=search, page_size=page_size, voice_type=voice_type, category=category,
+        include_shared=False  # 只返回用户个人音色，不包含共享市场音色
     )

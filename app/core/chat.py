@@ -1,3 +1,4 @@
+
 import json
 import time
 import uuid
@@ -34,9 +35,7 @@ async def generate_chat_stream(
                 chunk_data = {
                     "id": f"chatcmpl-{uuid.uuid4().hex[:12]}",
                     "object": "chat.completion.chunk",
-                    "created": int(
-                        time.time()
-                    ),  # pyright: ignore[reportUndefinedVariable]
+                    "created": int(time.time()),  # pyright: ignore[reportUndefinedVariable]
                     "model": model_name,
                     "choices": [
                         {

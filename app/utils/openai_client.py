@@ -17,7 +17,6 @@ from app.core.config import global_config_loaded_from_config_yaml
 
 from loguru import logger
 
-
 class Role(StrEnum):
     USER = "user"
     ASSISTANT = "assistant"
