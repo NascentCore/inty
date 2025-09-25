@@ -261,6 +261,10 @@ internal fun ChatPage(
                     }
                 }
                 val chatMessages by chatViewModel.msgs.collectAsState()
+                EasyLog.log("=== LazyColumn 渲染开始 ===")
+                EasyLog.log("Chat Messages State: ${chatMessages.size} 条消息")
+                EasyLog.log("Agent Info State: ${agentInfo?.id ?: "null"}")
+                
                 LazyColumn(
                     modifier = Modifier
                         .weight(1f)
@@ -273,7 +277,20 @@ internal fun ChatPage(
 // 直接显示开场白（如果agent有opening且没有历史消息）
 item {
     agentInfo?.let { agent ->
-        if (agent.opening.isNotEmpty() && chatMessages.isEmpty()) {
+        EasyLog.log("=== 开场白显示检查 ===")
+        EasyLog.log("Agent ID: ${agent.id}")
+        EasyLog.log("Agent Name: ${agent.name}")
+        EasyLog.log("Agent Opening: '${agent.opening}'")
+        EasyLog.log("Agent Opening Length: ${agent.opening.length}")
+        EasyLog.log("Agent Opening Audio URL: '${agent.opening_audio_url}'")
+        EasyLog.log("Chat Messages Count: ${chatMessages.size}")
+        EasyLog.log("Chat Messages: $chatMessages")
+        
+        val shouldShowOpening = agent.opening.isNotEmpty() && chatMessages.isEmpty()
+        EasyLog.log("Should Show Opening: $shouldShowOpening")
+        
+        if (shouldShowOpening) {
+            EasyLog.log("=== 创建开场白消息 ===")
             // 创建开场白消息
             val openingMessage = MsgInfo(
                 content = agent.opening,
@@ -284,14 +301,38 @@ item {
                 ),
                 audio_url = agent.opening_audio_url
             )
+            EasyLog.log("Opening Message Created: $openingMessage")
+            EasyLog.log("Opening Message Content: '${openingMessage.content}'")
+            EasyLog.log("Opening Message Role: '${openingMessage.role}'")
+            EasyLog.log("Opening Message Audio URL: '${openingMessage.audio_url}'")
+            EasyLog.log("Opening Message Meta Data: ${openingMessage.meta_data}")
+            EasyLog.log("Opening Message Is Opening: ${openingMessage.isOpening()}")
+            
             ChatItem(openingMessage)
             Spacer(Modifier.height(16.dp))
+            EasyLog.log("=== 开场白消息已渲染 ===")
+        } else {
+            EasyLog.log("=== 不显示开场白 ===")
+            if (agent.opening.isEmpty()) {
+                EasyLog.log("原因: Agent opening 为空")
+            }
+            if (chatMessages.isNotEmpty()) {
+                EasyLog.log("原因: 已有历史消息，数量: ${chatMessages.size}")
+            }
         }
+    } ?: run {
+        EasyLog.log("=== Agent Info 为空 ===")
     }
 }
 
 // 过滤掉 chatMessages 中的开场白消息
 val filteredChatMessages = chatMessages.filter { !it.isOpening() }
+EasyLog.log("=== 消息过滤 ===")
+EasyLog.log("原始消息数量: ${chatMessages.size}")
+EasyLog.log("过滤后消息数量: ${filteredChatMessages.size}")
+chatMessages.forEachIndexed { index, msg ->
+    EasyLog.log("消息 $index: role='${msg.role}', isOpening=${msg.isOpening()}, content='${msg.content.take(50)}...'")
+}
 
                     // 添加安全检查
                     runCatching {
