@@ -274,61 +274,71 @@ internal fun ChatPage(
                     item {
                         Spacer(Modifier.height(16.dp))
                     }
-// 直接显示开场白（如果agent有opening且没有历史消息）
-item {
-    agentInfo?.let { agent ->
-        EasyLog.log("=== 开场白显示检查 ===")
-        EasyLog.log("Agent ID: ${agent.id}")
-        EasyLog.log("Agent Name: ${agent.name}")
-        EasyLog.log("Agent Opening: '${agent.opening}'")
-        EasyLog.log("Agent Opening Length: ${agent.opening.length}")
-        EasyLog.log("Agent Opening Audio URL: '${agent.opening_audio_url}'")
-        EasyLog.log("Chat Messages Count: ${chatMessages.size}")
-        EasyLog.log("Chat Messages: $chatMessages")
-        
-        // 始终显示开场白（与 agent intro 显示逻辑一致）
-        val shouldShowOpening = agent.opening.isNotEmpty()
-        EasyLog.log("Should Show Opening: $shouldShowOpening (always show if agent has opening)")
-        
-        if (shouldShowOpening) {
-            EasyLog.log("=== 创建开场白消息 ===")
-            // 创建开场白消息
-            val openingMessage = MsgInfo(
-                content = agent.opening,
-                role = "assistant",
-                meta_data = MsgInfo.MsgMetaData(
-                    agentId = agent.id,
-                    isOpening = true
-                ),
-                audio_url = agent.opening_audio_url
-            )
-            EasyLog.log("Opening Message Created: $openingMessage")
-            EasyLog.log("Opening Message Content: '${openingMessage.content}'")
-            EasyLog.log("Opening Message Role: '${openingMessage.role}'")
-            EasyLog.log("Opening Message Audio URL: '${openingMessage.audio_url}'")
-            EasyLog.log("Opening Message Meta Data: ${openingMessage.meta_data}")
-            EasyLog.log("Opening Message Is Opening: ${openingMessage.isOpening()}")
-            
-            ChatItem(openingMessage)
-            Spacer(Modifier.height(16.dp))
-            EasyLog.log("=== 开场白消息已渲染 ===")
-        } else {
-            EasyLog.log("=== 不显示开场白 ===")
-            EasyLog.log("原因: Agent opening 为空")
-        }
-    } ?: run {
-        EasyLog.log("=== Agent Info 为空 ===")
-    }
-}
+                    
+                    // 1. Agent Intro (显示在最上面，因为是反向列表)
+                    item {
+                        agentInfo?.intro?.let { info ->
+                            if (info.isNotEmpty()) {
+                                EasyLog.log("=== 显示 Agent Intro ===")
+                                AgentInfoChatCard(info)
+                            }
+                        }
+                    }
+                    
+                    // 2. Agent Opening (显示在 Agent Intro 之后)
+                    item {
+                        agentInfo?.let { agent ->
+                            EasyLog.log("=== 开场白显示检查 ===")
+                            EasyLog.log("Agent ID: ${agent.id}")
+                            EasyLog.log("Agent Name: ${agent.name}")
+                            EasyLog.log("Agent Opening: '${agent.opening}'")
+                            EasyLog.log("Agent Opening Length: ${agent.opening.length}")
+                            EasyLog.log("Agent Opening Audio URL: '${agent.opening_audio_url}'")
+                            
+                            // 始终显示开场白
+                            val shouldShowOpening = agent.opening.isNotEmpty()
+                            EasyLog.log("Should Show Opening: $shouldShowOpening (always show if agent has opening)")
+                            
+                            if (shouldShowOpening) {
+                                EasyLog.log("=== 创建开场白消息 ===")
+                                // 创建开场白消息
+                                val openingMessage = MsgInfo(
+                                    content = agent.opening,
+                                    role = "assistant",
+                                    meta_data = MsgInfo.MsgMetaData(
+                                        agentId = agent.id,
+                                        isOpening = true
+                                    ),
+                                    audio_url = agent.opening_audio_url
+                                )
+                                EasyLog.log("Opening Message Created: $openingMessage")
+                                EasyLog.log("Opening Message Content: '${openingMessage.content}'")
+                                EasyLog.log("Opening Message Role: '${openingMessage.role}'")
+                                EasyLog.log("Opening Message Audio URL: '${openingMessage.audio_url}'")
+                                EasyLog.log("Opening Message Meta Data: ${openingMessage.meta_data}")
+                                EasyLog.log("Opening Message Is Opening: ${openingMessage.isOpening()}")
+                                
+                                ChatItem(openingMessage)
+                                Spacer(Modifier.height(16.dp))
+                                EasyLog.log("=== 开场白消息已渲染 ===")
+                            } else {
+                                EasyLog.log("=== 不显示开场白 ===")
+                                EasyLog.log("原因: Agent opening 为空")
+                            }
+                        } ?: run {
+                            EasyLog.log("=== Agent Info 为空 ===")
+                        }
+                    }
 
-// 过滤掉 chatMessages 中的开场白消息
-val filteredChatMessages = chatMessages.filter { !it.isOpening() }
-EasyLog.log("=== 消息过滤 ===")
-EasyLog.log("原始消息数量: ${chatMessages.size}")
-EasyLog.log("过滤后消息数量: ${filteredChatMessages.size}")
-chatMessages.forEachIndexed { index, msg ->
-    EasyLog.log("消息 $index: role='${msg.role}', isOpening=${msg.isOpening()}, content='${msg.content.take(50)}...'")
-}
+                    // 3. 用户和 agent 的对话消息
+                    // 过滤掉 chatMessages 中的开场白消息
+                    val filteredChatMessages = chatMessages.filter { !it.isOpening() }
+                    EasyLog.log("=== 消息过滤 ===")
+                    EasyLog.log("原始消息数量: ${chatMessages.size}")
+                    EasyLog.log("过滤后消息数量: ${filteredChatMessages.size}")
+                    chatMessages.forEachIndexed { index, msg ->
+                        EasyLog.log("消息 $index: role='${msg.role}', isOpening=${msg.isOpening()}, content='${msg.content.take(50)}...'")
+                    }
 
                     // 添加安全检查
                     runCatching {
@@ -390,13 +400,6 @@ chatMessages.forEachIndexed { index, msg ->
                                     modifier = Modifier.align(Alignment.Center)
                                 )
                             }
-                        }
-                    }
-                    //因为是反向列表，所以这里添加，就是在最上面
-                    item {
-                        //开场白之前的，Agent的信息介绍卡片
-                        agentInfo?.intro?.let { info ->
-                            if (info.isNotEmpty()) AgentInfoChatCard(info)
                         }
                     }
                 }
