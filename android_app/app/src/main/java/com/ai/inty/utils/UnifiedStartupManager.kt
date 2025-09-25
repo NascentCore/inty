@@ -3,6 +3,7 @@ package com.ai.inty.utils
 import android.content.Context
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.beans.UserProfile
+import com.ai.inty.explore.ExploreConstants
 import com.ai.inty.net.IAgentApi
 import com.architecture.httplib.core.HttpResult
 import com.inty.utils.log.EasyLog
@@ -349,7 +350,7 @@ object UnifiedStartupManager {
             val sortSeed = IntySetting.sortSeed()
             val result = agentApi.recommendAgents(
                 page = 1, 
-                pageSize = 20, // 减少首次加载数量，提高速度
+                pageSize = ExploreConstants.PAGE_SIZE, // 使用统一的页面大小
                 sort_seed = sortSeed.toString()
             )
             
@@ -363,11 +364,13 @@ object UnifiedStartupManager {
                     // 异步预加载图片资源，不阻塞启动流程
                     kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
                         try {
-                            // 先预加载关键图片（前5个），确保首屏快速渲染
-                            ImagePreloadManager.preloadCriticalImages(agents, 5)
-                            EasyLog.log("UnifiedStartupManager - 关键图片预加载完成")
+                            // 先预加载关键图片（前10个），确保首屏快速渲染
+                            ImagePreloadManager.preloadCriticalImages(agents, 10)
+                            
+                            // 然后预加载所有图片，优化后续页面渲染
+                            ImagePreloadManager.preloadAgentsImages(agents, 5)
                         } catch (e: Exception) {
-                            EasyLog.log("UnifiedStartupManager - 关键图片预加载失败: ${e.message}", EasyLog.ERROR)
+                            EasyLog.log("UnifiedStartupManager - 图片预加载异常: ${e.message}", EasyLog.ERROR)
                         }
                     }
                 }

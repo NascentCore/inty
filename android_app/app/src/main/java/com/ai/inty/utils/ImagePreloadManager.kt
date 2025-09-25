@@ -4,8 +4,6 @@ import android.content.Context
 import com.ai.inty.beans.AgentInfo
 import com.inty.utils.log.EasyLog
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 
 /**
@@ -54,27 +52,10 @@ object ImagePreloadManager {
                 val imageUrls = collectImageUrls(agents)
                 EasyLog.log("ImagePreloadManager - 收集到 ${imageUrls.size} 个图片URL")
                 
-                // 分批预加载，避免过多并发请求
-                val batches = imageUrls.chunked(maxConcurrent)
-                
-                coroutineScope {
-                    batches.forEachIndexed { batchIndex, batch ->
-                        val batchJobs = batch.map { imageUrl ->
-                            async {
-                                try {
-                                    // 预加载图片尺寸
-                                    ImageSizeCache.preloadImageSize(imageUrl)
-                                    EasyLog.log("ImagePreloadManager - 预加载图片尺寸成功: $imageUrl", EasyLog.DEBUG)
-                                } catch (e: Exception) {
-                                    EasyLog.log("ImagePreloadManager - 预加载图片尺寸失败: $imageUrl, 错误: ${e.message}", EasyLog.WARN)
-                                }
-                            }
-                        }
-                        
-                        // 等待当前批次完成
-                        batchJobs.forEach { it.await() }
-                        EasyLog.log("ImagePreloadManager - 批次 ${batchIndex + 1}/${batches.size} 预加载完成")
-                    }
+                if (imageUrls.isNotEmpty()) {
+                    // 使用批量预加载方法，提高效率
+                    ImageSizeCache.preloadImageSizes(imageUrls)
+                    EasyLog.log("ImagePreloadManager - 批量预加载图片尺寸完成")
                 }
             }
             
@@ -87,14 +68,16 @@ object ImagePreloadManager {
     
     /**
      * 收集agents中的所有图片URL
+     * 使用与ExploreCharacterCard相同的逻辑，确保URL一致性
      */
     private fun collectImageUrls(agents: List<AgentInfo>): List<String> {
         val imageUrls = mutableSetOf<String>()
         
         agents.forEach { agent ->
-            // 收集avatar和background图片URL
-            agent.avatar?.takeIf { it.isNotBlank() }?.let { imageUrls.add(it) }
-            agent.background?.takeIf { it.isNotBlank() }?.let { imageUrls.add(it) }
+            // 使用与ExploreCharacterCard相同的逻辑获取图片URL
+            // 优先级：background -> avatar
+            val imageUrl = AvatarManager.getChatBackgroundForAgent(agent)
+            imageUrl?.takeIf { it.isNotBlank() }?.let { imageUrls.add(it) }
         }
         
         return imageUrls.toList()
@@ -126,19 +109,10 @@ object ImagePreloadManager {
             withContext(Dispatchers.IO) {
                 val imageUrls = collectImageUrls(criticalAgents)
                 
-                coroutineScope {
-                    val jobs = imageUrls.map { imageUrl ->
-                        async {
-                            try {
-                                ImageSizeCache.preloadImageSize(imageUrl)
-                                EasyLog.log("ImagePreloadManager - 关键图片预加载成功: $imageUrl", EasyLog.DEBUG)
-                            } catch (e: Exception) {
-                                EasyLog.log("ImagePreloadManager - 关键图片预加载失败: $imageUrl, 错误: ${e.message}", EasyLog.WARN)
-                            }
-                        }
-                    }
-                    
-                    jobs.forEach { it.await() }
+                if (imageUrls.isNotEmpty()) {
+                    // 使用批量预加载方法，优先预加载关键图片
+                    ImageSizeCache.preloadCriticalImageSizes(imageUrls, criticalCount)
+                    EasyLog.log("ImagePreloadManager - 关键图片批量预加载完成")
                 }
             }
             

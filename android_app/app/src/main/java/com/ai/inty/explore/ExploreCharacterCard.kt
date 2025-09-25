@@ -69,10 +69,10 @@ fun ExploreCharacterCard(
 
     // 动态计算卡片高度，基于图片宽高比
     // 使用mutableStateOf确保高度可以动态更新，实现瀑布流效果
-    var cardHeight by remember(imageUrl) { 
+    var cardHeight by remember(imageUrl) {
         mutableStateOf(
-            with(density) { 
-                ImageSizeCache.getDisplayHeightPx(imageUrl).toDp() 
+            with(density) {
+                ImageSizeCache.getDisplayHeightPx(imageUrl).toDp()
             }
         )
     }
@@ -100,12 +100,11 @@ fun ExploreCharacterCard(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(cardHeight)
             .clip(RoundedCornerShape(8.dp))
             .noRippleClickable { onClick() }
     ) {
         // 背景图片层
-        Box(modifier = Modifier.fillMaxSize()) {
+        Box(modifier = Modifier.fillMaxWidth()) {
             // 使用 Shimmer 占位符
             if (!imageLoaded) {
                 ShimmerPlaceholder(
@@ -115,7 +114,8 @@ fun ExploreCharacterCard(
             }
 
             IntyImage(
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier
+                    .fillMaxWidth(),
                 model = imageUrl,
                 contentScale = ContentScale.FillWidth,
                 onSuccess = {

@@ -84,7 +84,7 @@ object ImageSizeCache {
     fun getDisplayHeightPx(imageUrl: String?): Int {
         // 如果还没有初始化，返回一个安全的默认高度
         if (screenWidth == 0 || density == 0f) {
-            return (290 * 3f).toInt() // 使用290dp作为安全默认值，假设density=3
+            return (270 * 3f).toInt() // 使用270dp作为安全默认值，假设density=3
         }
         
         if (imageUrl.isNullOrBlank()) {
@@ -157,32 +157,53 @@ object ImageSizeCache {
     
     /**
      * 根据图片尺寸计算显示高度（像素）
+     * 模拟 ContentScale.FillWidth 模式下的实际显示高度
      */
     private fun calculateDisplayHeightPx(imageWidth: Int, imageHeight: Int): Int {
+        if (imageWidth <= 0 || imageHeight <= 0) {
+            return getDefaultHeightPx()
+        }
+        
         val originalAspectRatio = imageWidth.toFloat() / imageHeight.toFloat()
-        
-        // 限制宽高比在指定范围内
-        val clampedAspectRatio = originalAspectRatio.coerceIn(MIN_ASPECT_RATIO, MAX_ASPECT_RATIO)
-        
-        // 计算显示高度
         val itemWidthPx = getItemWidthPx()
-        val displayHeightPx = (itemWidthPx / clampedAspectRatio).toInt()
         
-        // 限制高度范围，避免过高或过低
-        val minHeightPx = (150 * density).toInt()
-        val maxHeightPx = (400 * density).toInt()
+        // 模拟 FillWidth 模式：图片宽度填满容器，高度按比例缩放
+        // 在 FillWidth 模式下，显示高度 = 容器宽度 / 图片原始宽高比
+        val fillWidthHeightPx = (itemWidthPx / originalAspectRatio).toInt()
         
-        return displayHeightPx.coerceIn(minHeightPx, maxHeightPx)
+        // 应用合理的宽高比限制，避免极端情况
+        val clampedAspectRatio = originalAspectRatio.coerceIn(MIN_ASPECT_RATIO, MAX_ASPECT_RATIO)
+        val clampedHeightPx = (itemWidthPx / clampedAspectRatio).toInt()
+        
+        // 选择更合理的高度：优先使用 FillWidth 的实际高度，但不超过限制范围
+        val finalHeightPx = if (fillWidthHeightPx in (120 * density).toInt()..(450 * density).toInt()) {
+            fillWidthHeightPx
+        } else {
+            clampedHeightPx
+        }
+        
+        // 最终高度范围限制（稍微放宽范围）
+        val minHeightPx = (120 * density).toInt()
+        val maxHeightPx = (450 * density).toInt()
+        
+        return finalHeightPx.coerceIn(minHeightPx, maxHeightPx)
     }
     
     /**
      * 获取默认高度（像素）
+     * 使用更合理的默认宽高比，模拟常见图片比例
      */
     private fun getDefaultHeightPx(): Int {
         val itemWidthPx = getItemWidthPx()
-        // 使用默认宽高比 4:5 计算默认高度
-        val defaultAspectRatio = 4f / 5f
-        return (itemWidthPx / defaultAspectRatio).toInt()
+        // 使用默认宽高比 3:4 计算默认高度（更接近常见图片比例）
+        val defaultAspectRatio = 3f / 4f
+        val defaultHeightPx = (itemWidthPx / defaultAspectRatio).toInt()
+        
+        // 确保默认高度在合理范围内
+        val minHeightPx = (120 * density).toInt()
+        val maxHeightPx = (450 * density).toInt()
+        
+        return defaultHeightPx.coerceIn(minHeightPx, maxHeightPx)
     }
     
     /**
