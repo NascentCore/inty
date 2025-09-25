@@ -1,5 +1,5 @@
 #!/bin/bash -e
 
-ktfmt android_app/
+ktfmt android_app/app/src
 black app/ scripts/
-prettier --write evaluation/
+npx prettier --write evaluation/

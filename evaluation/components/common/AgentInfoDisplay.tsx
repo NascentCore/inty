@@ -37,16 +37,9 @@ export const AgentInfoDisplay: React.FC<AgentInfoDisplayProps> = ({
     <Card size="small" title="基本信息" style={{ marginBottom: 16 }}>
       <Row gutter={[16, 16]} align="middle">
         <Col span={compact ? 8 : 6} style={{ textAlign: "center" }}>
-          <AvatarDisplay
-            agent={agent}
-            size={compact ? 60 : 80}
-          />
+          <AvatarDisplay agent={agent} size={compact ? 60 : 80} />
           <div style={{ marginTop: 8 }}>
-            <Tag
-              color={
-                agent.visibility === "PUBLIC" ? "green" : "orange"
-              }
-            >
+            <Tag color={agent.visibility === "PUBLIC" ? "green" : "orange"}>
               {agent.visibility === "PUBLIC" ? "公开" : "私有"}
             </Tag>
           </div>
@@ -88,13 +81,19 @@ export const AgentInfoDisplay: React.FC<AgentInfoDisplayProps> = ({
               : "无"}
           </p>
           <p>
-            <strong>音色ID:</strong>{" "}
-            {agent.voice_id || "未设置"}
+            <strong>音色ID:</strong> {agent.voice_id || "未设置"}
           </p>
           {agent.tags && agent.tags.length > 0 && (
             <div style={{ marginTop: 8 }}>
               <strong>标签:</strong>
-              <div style={{ marginTop: 4, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+              <div
+                style={{
+                  marginTop: 4,
+                  display: "flex",
+                  gap: 4,
+                  flexWrap: "wrap",
+                }}
+              >
                 {agent.tags.map((tag, index) => (
                   <Tag key={index} color="geekblue">
                     {tag}
@@ -107,7 +106,7 @@ export const AgentInfoDisplay: React.FC<AgentInfoDisplayProps> = ({
             <div style={{ marginTop: 8 }}>
               <strong>评分:</strong>
               <div style={{ marginTop: 4 }}>
-                <ScoreSelector 
+                <ScoreSelector
                   value={agent.meta_data.score}
                   disabled={true}
                   mode="star"
@@ -119,14 +118,16 @@ export const AgentInfoDisplay: React.FC<AgentInfoDisplayProps> = ({
           {agent.meta_data?.comment && (
             <div style={{ marginTop: 8 }}>
               <strong>备注:</strong>
-              <div style={{ 
-                marginTop: 4, 
-                padding: 8, 
-                backgroundColor: "#f5f5f5", 
-                borderRadius: 4, 
-                fontSize: "14px",
-                whiteSpace: "pre-wrap"
-              }}>
+              <div
+                style={{
+                  marginTop: 4,
+                  padding: 8,
+                  backgroundColor: "#f5f5f5",
+                  borderRadius: 4,
+                  fontSize: "14px",
+                  whiteSpace: "pre-wrap",
+                }}
+              >
                 {agent.meta_data.comment}
               </div>
             </div>
@@ -204,11 +205,7 @@ export const AgentInfoDisplay: React.FC<AgentInfoDisplayProps> = ({
               <strong>头像:</strong>
             </p>
             {agent.avatar ? (
-              <img
-                src={agent.avatar}
-                alt="avatar"
-                style={imageStyle}
-              />
+              <img src={agent.avatar} alt="avatar" style={imageStyle} />
             ) : (
               <span style={{ color: "#999" }}>无</span>
             )}
@@ -253,22 +250,18 @@ export const AgentInfoDisplay: React.FC<AgentInfoDisplayProps> = ({
         <Row gutter={[16, 16]}>
           <Col span={12}>
             <p>
-              <strong>模型:</strong>{" "}
-              {agent.llm_config.model || "无"}
+              <strong>模型:</strong> {agent.llm_config.model || "无"}
             </p>
             <p>
-              <strong>温度:</strong>{" "}
-              {agent.llm_config.temperature ?? "无"}
+              <strong>温度:</strong> {agent.llm_config.temperature ?? "无"}
             </p>
             <p>
-              <strong>最大令牌数:</strong>{" "}
-              {agent.llm_config.max_tokens ?? "无"}
+              <strong>最大令牌数:</strong> {agent.llm_config.max_tokens ?? "无"}
             </p>
           </Col>
           <Col span={12}>
             <p>
-              <strong>Top P:</strong>{" "}
-              {agent.llm_config.top_p ?? "无"}
+              <strong>Top P:</strong> {agent.llm_config.top_p ?? "无"}
             </p>
             <p>
               <strong>频率惩罚:</strong>{" "}
@@ -285,7 +278,13 @@ export const AgentInfoDisplay: React.FC<AgentInfoDisplayProps> = ({
   };
 
   return (
-    <div style={{ maxHeight: compact ? 400 : 600, overflowY: "auto", padding: compact ? 8 : 16 }}>
+    <div
+      style={{
+        maxHeight: compact ? 400 : 600,
+        overflowY: "auto",
+        padding: compact ? 8 : 16,
+      }}
+    >
       {renderBasicInfo()}
       {renderPrompts()}
       {renderImages()}

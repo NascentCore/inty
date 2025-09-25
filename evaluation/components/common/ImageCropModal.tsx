@@ -1,8 +1,8 @@
-import React, { useState, useRef, useCallback } from 'react';
-import { Modal, Button, message } from 'antd';
-import ReactCrop, { Crop, PixelCrop, makeAspectCrop } from 'react-image-crop';
-import 'react-image-crop/dist/ReactCrop.css';
-import type { AvatarCropData } from '../../types';
+import React, { useState, useRef, useCallback } from "react";
+import { Modal, Button, message } from "antd";
+import ReactCrop, { Crop, PixelCrop, makeAspectCrop } from "react-image-crop";
+import "react-image-crop/dist/ReactCrop.css";
+import type { AvatarCropData } from "../../types";
 
 /**
  * 将 AvatarCropData 转换为 ReactCrop 的 Crop 对象
@@ -16,9 +16,16 @@ const createCropFromAvatarData = (
   existingCropData: AvatarCropData,
   displayWidth: number,
   displayHeight: number,
-  aspect: number = 1
+  aspect: number = 1,
 ): Crop => {
-  const { x, y, width: cropWidth, height: cropHeight, imageWidth, imageHeight } = existingCropData;
+  const {
+    x,
+    y,
+    width: cropWidth,
+    height: cropHeight,
+    imageWidth,
+    imageHeight,
+  } = existingCropData;
 
   // 计算缩放比例
   const scaleX = displayWidth / imageWidth;
@@ -32,7 +39,7 @@ const createCropFromAvatarData = (
 
   return makeAspectCrop(
     {
-      unit: 'px',
+      unit: "px",
       width: scaledWidth,
       height: scaledHeight,
       x: displayX,
@@ -40,7 +47,7 @@ const createCropFromAvatarData = (
     },
     aspect,
     displayWidth,
-    displayHeight
+    displayHeight,
   );
 };
 
@@ -62,8 +69,8 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({
   imageSrc,
   onCancel,
   onConfirm,
-  title = '截取头像',
-  existingCropData
+  title = "截取头像",
+  existingCropData,
 }) => {
   const [crop, setCrop] = useState<Crop>();
   const [completedCrop, setCompletedCrop] = useState<PixelCrop>();
@@ -71,41 +78,49 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({
   const imgRef = useRef<HTMLImageElement>(null);
 
   // 初始化截取区域
-  const onImageLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
-    const { width, height } = e.currentTarget;
+  const onImageLoad = useCallback(
+    (e: React.SyntheticEvent<HTMLImageElement>) => {
+      const { width, height } = e.currentTarget;
 
-    // 如果有现有的裁剪数据，使用它来初始化裁剪区域
-    if (existingCropData) {
-      const crop = createCropFromAvatarData(existingCropData, width, height, 1);
-      setCrop(crop);
-    } else {
-      // 默认行为：计算截取区域的宽度（与图片等宽）
-      const cropWidth = width;
-      const cropHeight = width; // 正方形，所以高度等于宽度
+      // 如果有现有的裁剪数据，使用它来初始化裁剪区域
+      if (existingCropData) {
+        const crop = createCropFromAvatarData(
+          existingCropData,
+          width,
+          height,
+          1,
+        );
+        setCrop(crop);
+      } else {
+        // 默认行为：计算截取区域的宽度（与图片等宽）
+        const cropWidth = width;
+        const cropHeight = width; // 正方形，所以高度等于宽度
 
-      // 如果图片高度小于宽度，则使用图片高度作为截取区域大小
-      const finalCropSize = Math.min(cropWidth, cropHeight, height);
+        // 如果图片高度小于宽度，则使用图片高度作为截取区域大小
+        const finalCropSize = Math.min(cropWidth, cropHeight, height);
 
-      const crop = makeAspectCrop(
-        {
-          unit: 'px',
-          width: finalCropSize,
-          height: finalCropSize,
-          x: (width - finalCropSize) / 2, // 水平居中
-          y: 0, // 顶部对齐
-        },
-        1,
-        width,
-        height
-      );
-      setCrop(crop);
-    }
-  }, [existingCropData]);
+        const crop = makeAspectCrop(
+          {
+            unit: "px",
+            width: finalCropSize,
+            height: finalCropSize,
+            x: (width - finalCropSize) / 2, // 水平居中
+            y: 0, // 顶部对齐
+          },
+          1,
+          width,
+          height,
+        );
+        setCrop(crop);
+      }
+    },
+    [existingCropData],
+  );
 
   // 确认截取
   const handleConfirm = () => {
     if (!completedCrop || !imgRef.current) {
-      message.error('请先选择截取区域');
+      message.error("请先选择截取区域");
       return;
     }
 
@@ -124,7 +139,7 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({
     };
 
     onConfirm(cropData);
-    message.success('头像坐标设置成功');
+    message.success("头像坐标设置成功");
   };
 
   // 重置截取区域
@@ -134,7 +149,12 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({
 
       // 如果有现有的裁剪数据，重置到该位置
       if (existingCropData) {
-        const crop = createCropFromAvatarData(existingCropData, width, height, 1);
+        const crop = createCropFromAvatarData(
+          existingCropData,
+          width,
+          height,
+          1,
+        );
         setCrop(crop);
       } else {
         // 默认行为：计算截取区域的宽度（与图片等宽）
@@ -146,7 +166,7 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({
 
         const crop = makeAspectCrop(
           {
-            unit: 'px',
+            unit: "px",
             width: finalCropSize,
             height: finalCropSize,
             x: (width - finalCropSize) / 2, // 水平居中
@@ -154,7 +174,7 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({
           },
           1,
           width,
-          height
+          height,
         );
         setCrop(crop);
       }
@@ -180,13 +200,13 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({
       ]}
       destroyOnClose
     >
-      <div style={{ textAlign: 'center' }}>
+      <div style={{ textAlign: "center" }}>
         <div style={{ marginBottom: 16 }}>
-          <p style={{ color: '#666', fontSize: '14px' }}>
+          <p style={{ color: "#666", fontSize: "14px" }}>
             请拖拽调整截取区域，截取正方形图片作为头像
           </p>
         </div>
-        
+
         <div style={{ marginBottom: 16 }}>
           <ReactCrop
             crop={crop}
@@ -200,12 +220,11 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({
               ref={imgRef}
               alt="Crop me"
               src={imageSrc}
-              style={{ maxWidth: '100%', maxHeight: '400px' }}
+              style={{ maxWidth: "100%", maxHeight: "400px" }}
               onLoad={onImageLoad}
             />
           </ReactCrop>
         </div>
-
       </div>
     </Modal>
   );
