@@ -353,8 +353,9 @@ internal fun ChatPage(
                         }
                     }
 
-// 3. Agent Intro (显示在最顶部，因为是反向列表的最后一个item)
+                    // 3. Agent Intro (显示在最顶部，因为是反向列表的最后一个item)
                     item {
+                        //开场白之前的，Agent的信息介绍卡片
                         agentInfo?.intro?.let { info ->
                             if (info.isNotEmpty()) {
                                 AgentInfoChatCard(info)
