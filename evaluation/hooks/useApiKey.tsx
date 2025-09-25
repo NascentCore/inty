@@ -3,13 +3,7 @@
  * 提供 API key 的存储、验证和管理功能
  */
 
-import React, {
-  useState,
-  useEffect,
-  useCallback,
-  createContext,
-  useContext,
-} from "react";
+import React, { useState, useEffect, useCallback, createContext, useContext } from "react";
 import { message } from "antd";
 import { setGlobalApiKey, updateIntyClient } from "../services/api";
 
@@ -64,7 +58,7 @@ export const useApiKey = () => {
       const response = await fetch("/api/v1/ai/agents/me?limit=1", {
         method: "GET",
         headers: {
-          Authorization: `Bearer ${key}`,
+          "Authorization": `Bearer ${key}`,
           "Content-Type": "application/json",
         },
       });
@@ -92,7 +86,7 @@ export const useApiKey = () => {
       // 设置全局 API Key 和更新 Inty 客户端
       setGlobalApiKey(savedApiKey);
       updateIntyClient(savedApiKey);
-
+      
       // 验证保存的 API key
       validateApiKey(savedApiKey).then((isValid) => {
         setIsApiKeyValid(isValid);
@@ -104,51 +98,48 @@ export const useApiKey = () => {
   }, [validateApiKey]);
 
   // 设置 API key
-  const setApiKey = useCallback(
-    async (key: string): Promise<boolean> => {
-      const trimmedKey = key.trim();
-      if (!trimmedKey) {
-        message.error("API Key 不能为空");
-        return false;
-      }
+  const setApiKey = useCallback(async (key: string): Promise<boolean> => {
+    const trimmedKey = key.trim();
+    if (!trimmedKey) {
+      message.error("API Key 不能为空");
+      return false;
+    }
 
-      setIsLoading(true);
-      const isValid = await validateApiKey(trimmedKey);
-
-      if (isValid) {
-        setApiKeyState(trimmedKey);
-        setIsApiKeyValid(true);
-        setCookie(COOKIE_NAME, trimmedKey, COOKIE_EXPIRY_DAYS);
-
-        // 更新全局 API Key 和 Inty 客户端
-        setGlobalApiKey(trimmedKey);
-        updateIntyClient(trimmedKey);
-
-        message.success("API Key 设置成功");
-        setIsLoading(false);
-        return true;
-      } else {
-        setIsApiKeyValid(false);
-        setIsLoading(false);
-        return false;
-      }
-    },
-    [validateApiKey],
-  );
+    setIsLoading(true);
+    const isValid = await validateApiKey(trimmedKey);
+    
+    if (isValid) {
+      setApiKeyState(trimmedKey);
+      setIsApiKeyValid(true);
+      setCookie(COOKIE_NAME, trimmedKey, COOKIE_EXPIRY_DAYS);
+      
+      // 更新全局 API Key 和 Inty 客户端
+      setGlobalApiKey(trimmedKey);
+      updateIntyClient(trimmedKey);
+      
+      message.success("API Key 设置成功");
+      setIsLoading(false);
+      return true;
+    } else {
+      setIsApiKeyValid(false);
+      setIsLoading(false);
+      return false;
+    }
+  }, [validateApiKey]);
 
   // 清除 API key
   const clearApiKey = useCallback(() => {
     // 清除本地状态
     setApiKeyState(null);
     setIsApiKeyValid(false);
-
+    
     // 清除 cookie 中的 API key
     deleteCookie(COOKIE_NAME);
-
+    
     // 清除全局 API Key 并重置 Inty 客户端
     setGlobalApiKey(null);
     updateIntyClient(null);
-
+    
     message.success("API Key 已清除");
   }, []);
 
@@ -162,11 +153,9 @@ export const useApiKey = () => {
 };
 
 // Context Provider 组件
-export const ApiKeyProvider: React.FC<{ children: React.ReactNode }> = ({
-  children,
-}) => {
+export const ApiKeyProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const apiKeyContext = useApiKey();
-
+  
   return (
     <ApiKeyContext.Provider value={apiKeyContext}>
       {children}

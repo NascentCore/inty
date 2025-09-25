@@ -1,10 +1,7 @@
 // 智能体管理系统类型定义
 
 // 从 SDK 导入 Agent 类型
-import type {
-  Agent as BaseAgent,
-  AgentVisibility,
-} from "inty_sdk/src/resources/api/v1/ai/agents";
+import type { Agent as BaseAgent, AgentVisibility } from 'inty_sdk/src/resources/api/v1/ai/agents';
 
 // 扩展 Agent 类型以包含 meta_data 字段
 export interface Agent extends BaseAgent {

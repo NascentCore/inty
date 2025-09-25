@@ -235,7 +235,7 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
         export_metadata: {
           export_time: new Date().toISOString(),
           total_results: results.length,
-        },
+        }
       };
 
       // 生成文件名

@@ -48,7 +48,6 @@ npm run dev
 ```
 
 **特性**:
-
 - ✅ 热重载 - 代码修改实时生效
 - ✅ API代理 - `/api` 请求自动代理到后端
 - ✅ TypeScript 支持
@@ -56,7 +55,6 @@ npm run dev
 - ✅ 源码映射 (Source Maps)
 
 **访问地址**:
-
 - 前端: http://localhost:3000
 - API代理: http://localhost:3000/api → http://localhost:8000/api
 
@@ -69,13 +67,11 @@ npm run build
 ```
 
 **输出**:
-
 - 构建文件: `./dist/` 目录
 - 入口文件: `./dist/index.html`
 - 静态资源: `./dist/assets/`
 
 **优化特性**:
-
 - ✅ 代码分割
 - ✅ 资源压缩
 - ✅ Tree Shaking
@@ -116,16 +112,16 @@ app/static/evaluation/
 export default defineConfig({
   plugins: [react()],
   server: {
-    port: 3000, // 开发服务器端口
+    port: 3000,           // 开发服务器端口
     proxy: {
-      "/api": "http://localhost:8000", // API代理
-    },
+      '/api': 'http://localhost:8000'  // API代理
+    }
   },
   build: {
-    outDir: "dist", // 构建输出目录
-    sourcemap: true, // 生成源码映射
-  },
-});
+    outDir: 'dist',       // 构建输出目录
+    sourcemap: true       // 生成源码映射
+  }
+})
 ```
 
 ### TypeScript 配置 (`tsconfig.json`)
@@ -138,41 +134,31 @@ export default defineConfig({
 ## 🚨 常见问题
 
 ### Q1: `npm install` 失败
-
 **A**: 检查 Node.js 版本，确保是 16+
-
 ```bash
 node --version  # 应该是 v16+ 或 v18+
 ```
 
 ### Q2: 开发服务器启动失败
-
 **A**: 检查端口是否被占用
-
 ```bash
 lsof -i :3000  # 检查 3000 端口
 ```
 
 ### Q3: API 请求失败
-
 **A**: 确保后端服务运行正常
-
 ```bash
 curl http://localhost:8000/  # 测试后端
 ```
 
 ### Q4: 构建后静态文件 404
-
 **A**: 检查构建输出和服务器配置
-
 ```bash
 ls -la dist/  # 检查构建文件
 ```
 
 ### Q5: TypeScript 错误
-
 **A**: 运行类型检查
-
 ```bash
 npm run type-check
 ```
@@ -180,25 +166,20 @@ npm run type-check
 ## 📊 性能优化
 
 ### 1. 代码分割
-
 Vite 自动进行代码分割，将 vendor 库和应用代码分离
 
 ### 2. 资源压缩
-
 生产构建自动压缩 JS、CSS、HTML
 
 ### 3. 缓存策略
-
 静态资源使用内容哈希命名，支持长期缓存
 
 ### 4. Tree Shaking
-
 未使用的代码自动移除
 
 ## 🎯 部署选项
 
 ### 选项1: 集成到后端 (推荐)
-
 ```bash
 # 构建前端
 npm run build
@@ -208,7 +189,6 @@ cp -r dist/* ../../../static/evaluation/
 ```
 
 ### 选项2: 独立部署
-
 ```bash
 # 使用任何静态文件服务器
 npx serve dist/
@@ -217,7 +197,6 @@ python -m http.server 8080 -d dist/
 ```
 
 ### 选项3: CDN 部署
-
 将 `dist/` 目录上传到 CDN 或静态站点托管服务
 
 ## 🛡️ 开发建议
@@ -231,7 +210,6 @@ python -m http.server 8080 -d dist/
 ## 📞 技术支持
 
 遇到问题时请检查：
-
 1. Node.js 和 npm 版本
 2. 后端服务状态
 3. 浏览器控制台错误

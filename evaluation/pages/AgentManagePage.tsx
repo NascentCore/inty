@@ -32,12 +32,7 @@ import {
 import type { UploadProps } from "antd";
 import api, { logError } from "../services/api";
 import modelCacheService from "../services/modelCache";
-import type {
-  Agent,
-  AgentCreateRequest,
-  OpenRouterModel,
-  AvatarCropData,
-} from "../types";
+import type { Agent, AgentCreateRequest, OpenRouterModel, AvatarCropData } from "../types";
 import LLMConfigForm from "../components/common/LLMConfigForm";
 import VoiceSelector from "../components/common/VoiceSelector";
 import ScoreSelector from "../components/common/ScoreSelector";
@@ -56,13 +51,13 @@ const { Option } = Select;
 
 export const AgentManagePage: React.FC = () => {
   // 使用 useAgents hook
-  const {
-    agents,
-    loading,
-    loadAgents: loadAgentsFromHook,
+  const { 
+    agents, 
+    loading, 
+    loadAgents: loadAgentsFromHook, 
     createAgent: createAgentFromHook,
     updateAgent: updateAgentFromHook,
-    deleteAgent: deleteAgentFromHook,
+    deleteAgent: deleteAgentFromHook 
   } = useAgents({
     type: "all",
     autoLoad: false, // 手动控制加载
@@ -96,14 +91,13 @@ export const AgentManagePage: React.FC = () => {
   const [editAvatarFile, setEditAvatarFile] = useState<File | null>(null);
   const [agentCopy, setAgentCopy] = useState<Agent | null>(null);
 
+
   // 检查是否有变化
   const hasChanges = hasAgentChanged(currentAgent, agentCopy);
 
+
   // 监听表单变化，更新 agent_copy
-  const handleFormChange = (
-    changedValues: Record<string, unknown>,
-    allValues: Record<string, unknown>,
-  ) => {
+  const handleFormChange = (changedValues: Record<string, unknown>, allValues: Record<string, unknown>) => {
     if (!agentCopy) return;
 
     // 构建新的 agent_copy
@@ -132,8 +126,8 @@ export const AgentManagePage: React.FC = () => {
   // 修改头像弹窗状态
   const [avatarCropModalVisible, setAvatarCropModalVisible] = useState(false);
   const [avatarCropImageSrc, setAvatarCropImageSrc] = useState<string>("");
-  const [currentAgentForAvatar, setCurrentAgentForAvatar] =
-    useState<Agent | null>(null);
+  const [currentAgentForAvatar, setCurrentAgentForAvatar] = useState<Agent | null>(null);
+
 
   // 模型相关状态
   const [openRouterModels, setOpenRouterModels] = useState<OpenRouterModel[]>(
@@ -226,6 +220,7 @@ export const AgentManagePage: React.FC = () => {
     reader.onload = (e) => {
       const result = e.target?.result as string;
       setAvatarPreview(result);
+
     };
     reader.readAsDataURL(file);
     return false;
@@ -252,14 +247,16 @@ export const AgentManagePage: React.FC = () => {
           background: imageUrl, // 设置 background 为新图片
           extensions: {
             ...agentCopy.extensions,
-            avatar_crop: undefined, // 清空 avatar_crop
-          },
+            avatar_crop: undefined // 清空 avatar_crop
+          }
         });
       }
     };
     reader.readAsDataURL(file);
     return false;
   };
+
+
 
   // 处理修改头像截取
   const handleAvatarCrop = (agent: Agent) => {
@@ -284,16 +281,11 @@ export const AgentManagePage: React.FC = () => {
       // 更新智能体头像坐标信息
       const updateData = {
         extensions: {
-          avatar_crop: cropData,
-        },
+          avatar_crop: cropData
+        }
       };
 
-      const updatedAgent = (await api
-        .getIntyClient()
-        .api.v1.ai.agents.update(
-          currentAgentForAvatar.id,
-          updateData,
-        )) as unknown as Agent;
+      const updatedAgent = await api.getIntyClient().api.v1.ai.agents.update(currentAgentForAvatar.id, updateData) as unknown as Agent;
       if (updatedAgent) {
         message.success("头像坐标设置成功");
         // 刷新智能体列表
@@ -329,7 +321,7 @@ export const AgentManagePage: React.FC = () => {
 
       // 从 values 中排除 score 和 comment，因为它们需要放到 meta_data 中
       const { score, comment, ...otherValues } = values;
-
+      
       const agentData: AgentCreateRequest = {
         ...otherValues,
         voice_id: values.voice_id,
@@ -340,7 +332,7 @@ export const AgentManagePage: React.FC = () => {
       if (score || comment) {
         agentData.meta_data = {
           score: score,
-          comment: comment,
+          comment: comment
         };
       }
 
@@ -363,7 +355,7 @@ export const AgentManagePage: React.FC = () => {
 
       // 使用 useAgents hook 的 createAgent 进行优化创建
       const newAgent = await createAgentFromHook(agentData);
-
+      
       if (newAgent) {
         // 成功创建，关闭弹窗并重置状态
         setCreateModalVisible(false);
@@ -393,7 +385,7 @@ export const AgentManagePage: React.FC = () => {
 
       // 从 values 中排除 score 和 comment，因为它们需要放到 meta_data 中
       const { score, comment, ...otherValues } = values;
-
+      
       const updateData = {
         ...otherValues,
         voice_id: values.voice_id,
@@ -404,10 +396,10 @@ export const AgentManagePage: React.FC = () => {
       if (score !== undefined || comment !== undefined) {
         updateData.meta_data = {
           score: score,
-          comment: comment,
+          comment: comment
         };
       } else {
-        // 如果没有评分和备注，确保清空 meta_data
+        // 如果没有评分和备注，确保清空 meta_data 
         updateData.meta_data = undefined;
       }
 
@@ -434,11 +426,8 @@ export const AgentManagePage: React.FC = () => {
       }
 
       // 使用 useAgents hook 的 updateAgent 进行优化更新
-      const updatedAgent = await updateAgentFromHook(
-        currentAgent.id,
-        updateData,
-      );
-
+      const updatedAgent = await updateAgentFromHook(currentAgent.id, updateData);
+      
       if (updatedAgent) {
         // 成功更新，关闭弹窗并重置状态
         setEditModalVisible(false);
@@ -477,9 +466,7 @@ export const AgentManagePage: React.FC = () => {
   const setCreateFormDefaults = () => {
     setTimeout(() => {
       const gender = "FEMALE";
-      const randomName = generateRandomName(
-        gender as "MALE" | "FEMALE" | "OTHER",
-      );
+      const randomName = generateRandomName(gender as 'MALE' | 'FEMALE' | 'OTHER');
       const defaultValues = {
         name: randomName,
         gender: gender,
@@ -493,20 +480,16 @@ export const AgentManagePage: React.FC = () => {
 
   // 随机生成角色名字
   const generateRandomNameForForm = () => {
-    const currentGender = createForm.getFieldValue("gender") || "FEMALE";
-    const randomName = generateRandomName(
-      currentGender as "MALE" | "FEMALE" | "OTHER",
-    );
-    createForm.setFieldValue("name", randomName);
+    const currentGender = createForm.getFieldValue('gender') || 'FEMALE';
+    const randomName = generateRandomName(currentGender as 'MALE' | 'FEMALE' | 'OTHER');
+    createForm.setFieldValue('name', randomName);
   };
 
   // 随机生成角色名字（编辑表单）
   const generateRandomNameForEditForm = () => {
-    const currentGender = editForm.getFieldValue("gender") || "FEMALE";
-    const randomName = generateRandomName(
-      currentGender as "MALE" | "FEMALE" | "OTHER",
-    );
-    editForm.setFieldValue("name", randomName);
+    const currentGender = editForm.getFieldValue('gender') || 'FEMALE';
+    const randomName = generateRandomName(currentGender as 'MALE' | 'FEMALE' | 'OTHER');
+    editForm.setFieldValue('name', randomName);
   };
 
   // 显示编辑模态框
@@ -515,7 +498,7 @@ export const AgentManagePage: React.FC = () => {
     // 深拷贝 agent 数据到 agent_copy
     setAgentCopy({
       ...agent,
-      extensions: agent.extensions ? { ...agent.extensions } : undefined,
+      extensions: agent.extensions ? { ...agent.extensions } : undefined
     });
 
     // 预填表单 - 使用 setTimeout 确保 Modal 完全渲染后再设置表单值
@@ -538,14 +521,14 @@ export const AgentManagePage: React.FC = () => {
         // 明确设置LLM配置字段，避免字段名不匹配问题
         ...(agent.llm_config
           ? {
-              // 如果 model 为空，设置一个默认值
-              model: agent.llm_config.model || "gpt-4o",
-              temperature: agent.llm_config.temperature || 0.7,
-              max_tokens: agent.llm_config.max_tokens || 2048,
-              top_p: agent.llm_config.top_p || 1,
-              frequency_penalty: agent.llm_config.frequency_penalty || 0,
-              presence_penalty: agent.llm_config.presence_penalty || 0,
-            }
+            // 如果 model 为空，设置一个默认值
+            model: agent.llm_config.model || "gpt-4o",
+            temperature: agent.llm_config.temperature || 0.7,
+            max_tokens: agent.llm_config.max_tokens || 2048,
+            top_p: agent.llm_config.top_p || 1,
+            frequency_penalty: agent.llm_config.frequency_penalty || 0,
+            presence_penalty: agent.llm_config.presence_penalty || 0,
+          }
           : {}),
       };
 
@@ -571,71 +554,65 @@ export const AgentManagePage: React.FC = () => {
 
   // 渲染表单字段
   const renderAgentForm = (form: typeof createForm, isEdit = false) => {
-    const generateRandomName = isEdit
-      ? generateRandomNameForEditForm
-      : generateRandomNameForForm;
+    const generateRandomName = isEdit ? generateRandomNameForEditForm : generateRandomNameForForm;
 
     return (
-      <>
-        {/* 头像上传 */}
+    <>
+      {/* 头像上传 */}
         <Form.Item label="形象">
-          <Upload
-            beforeUpload={isEdit ? handleEditAvatarChange : handleAvatarChange}
-            showUploadList={false}
-            accept="image/*"
+        <Upload
+          beforeUpload={isEdit ? handleEditAvatarChange : handleAvatarChange}
+          showUploadList={false}
+          accept="image/*"
+        >
+          <div
+            style={{
+              width: 80,
+              height: 80,
+              border: "1px dashed #d9d9d9",
+              borderRadius: 8,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer",
+              overflow: "hidden",
+            }}
           >
-            <div
-              style={{
-                width: 80,
-                height: 80,
-                border: "1px dashed #d9d9d9",
-                borderRadius: 8,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                cursor: "pointer",
-                overflow: "hidden",
-              }}
-            >
               {(isEdit ? agentCopy : avatarPreview) ? (
                 <AvatarDisplay
-                  agent={
-                    isEdit
-                      ? agentCopy!
-                      : ({
-                          ...currentAgent,
-                          avatar: avatarPreview,
-                          background: avatarPreview,
-                        } as Agent)
-                  }
+                  agent={isEdit ? agentCopy! : {
+                    ...currentAgent,
+                    avatar: avatarPreview,
+                    background: avatarPreview
+                  } as Agent}
                   size={80}
                 />
-              ) : (
-                <div style={{ textAlign: "center" }}>
-                  <CameraOutlined style={{ fontSize: 20, color: "#999" }} />
-                  <div style={{ marginTop: 4, fontSize: 12, color: "#999" }}>
-                    上传形象图
-                  </div>
+            ) : (
+              <div style={{ textAlign: "center" }}>
+                <CameraOutlined style={{ fontSize: 20, color: "#999" }} />
+                <div style={{ marginTop: 4, fontSize: 12, color: "#999" }}>
+                      上传形象图
                 </div>
-              )}
-            </div>
-          </Upload>
-          <div style={{ marginTop: 8, fontSize: 12, color: "#666" }}>
-            头像将在后端从上传的形象图片截取
+              </div>
+            )}
           </div>
-        </Form.Item>
+        </Upload>
+        <div style={{ marginTop: 8, fontSize: 12, color: "#666" }}>
+            头像将在后端从上传的形象图片截取
+        </div>
+      </Form.Item>
 
-        {/* 基本信息 */}
-        <Row gutter={16}>
-          <Col span={12}>
-            <Form.Item
-              name="name"
-              label="角色名称"
-              rules={[
-                { required: true, message: "请输入角色名称" },
-                { min: 1, max: 50, message: "角色名称长度为1-50个字符" },
-              ]}
-            >
+      {/* 基本信息 */}
+      <Row gutter={16}>
+        <Col span={12}>
+          <Form.Item
+            name="name"
+            label="角色名称"
+            rules={[
+              { required: true, message: "请输入角色名称" },
+              { min: 1, max: 50, message: "角色名称长度为1-50个字符" },
+            ]}
+          >
               <Input
                 placeholder="请输入角色名称"
                 suffix={
@@ -648,143 +625,155 @@ export const AgentManagePage: React.FC = () => {
                   />
                 }
               />
-            </Form.Item>
-          </Col>
-          <Col span={12}>
-            <Form.Item
-              name="gender"
-              label="性别"
-              rules={[{ required: true, message: "请选择性别" }]}
-            >
-              <Radio.Group>
-                <Radio value="MALE">男</Radio>
-                <Radio value="FEMALE">女</Radio>
-                <Radio value="OTHER">其他</Radio>
-              </Radio.Group>
-            </Form.Item>
-          </Col>
-        </Row>
+          </Form.Item>
+        </Col>
+        <Col span={12}>
+          <Form.Item
+            name="gender"
+            label="性别"
+            rules={[{ required: true, message: "请选择性别" }]}
+          >
+            <Radio.Group>
+              <Radio value="MALE">男</Radio>
+              <Radio value="FEMALE">女</Radio>
+              <Radio value="OTHER">其他</Radio>
+            </Radio.Group>
+          </Form.Item>
+        </Col>
+      </Row>
 
-        <Form.Item
-          name="visibility"
-          label="可见性"
-          rules={[{ required: true, message: "请选择可见性" }]}
-        >
-          <Radio.Group>
-            <Radio value="PUBLIC">公开</Radio>
-            <Radio value="PRIVATE">私有</Radio>
-          </Radio.Group>
-        </Form.Item>
+      <Form.Item
+        name="visibility"
+        label="可见性"
+        rules={[{ required: true, message: "请选择可见性" }]}
+      >
+        <Radio.Group>
+          <Radio value="PUBLIC">公开</Radio>
+          <Radio value="PRIVATE">私有</Radio>
+        </Radio.Group>
+      </Form.Item>
 
-        <Form.Item
-          name="intro"
-          label="角色简介"
-          rules={[{ max: 5000, message: "角色简介长度不能超过5000个字符" }]}
-        >
-          <TextArea rows={3} placeholder="请输入角色简介（可选）" />
-        </Form.Item>
+      <Form.Item
+        name="intro"
+        label="角色简介"
+        rules={[
+          { max: 5000, message: "角色简介长度不能超过5000个字符" },
+        ]}
+      >
+        <TextArea rows={3} placeholder="请输入角色简介（可选）" />
+      </Form.Item>
 
-        <Form.Item
-          name="tags"
-          label="标签"
-          tooltip="为角色添加标签，便于分类和管理"
-        >
-          <Select
-            mode="tags"
-            style={{ width: "100%" }}
-            placeholder="输入标签后按回车添加"
-            tokenSeparators={[","]}
-            maxTagCount={10}
-            maxTagTextLength={20}
-          />
-        </Form.Item>
-
-        <Form.Item
-          name="opening"
-          label="开场白"
-          rules={[{ max: 5000, message: "开场白长度不能超过5000个字符" }]}
-        >
-          <TextArea rows={3} placeholder="请输入开场白（可选）" />
-        </Form.Item>
-
-        {/* 音色设置 */}
-        <Divider>音色设置</Divider>
-
-        <Form.Item
-          name="voice_id"
-          label="角色音色"
-          tooltip="选择角色的语音音色，用于文字转语音功能"
-        >
-          <VoiceSelector placeholder="请选择角色音色（可选）" />
-        </Form.Item>
-
-        {/* 评分设置 */}
-        <Divider>评分设置</Divider>
-
-        <Form.Item
-          name="score"
-          label="角色评分"
-          tooltip="对角色进行1-5分的评分，用于质量评估"
-          rules={[
-            {
-              type: "number",
-              min: 1,
-              max: 5,
-              message: "评分必须在1-5之间",
-            },
-          ]}
-        >
-          <ScoreSelector
-            placeholder="请选择角色评分（1-5分，可选）"
-            mode="star"
-            showText={true}
-          />
-        </Form.Item>
-
-        <Form.Item
-          name="comment"
-          label="备注信息"
-          tooltip="对角色的备注或说明信息"
-          rules={[{ max: 1000, message: "备注信息长度不能超过1000个字符" }]}
-        >
-          <TextArea rows={3} placeholder="请输入备注信息（可选）" />
-        </Form.Item>
-
-        {/* 提示词配置 */}
-        <Divider>提示词配置</Divider>
-
-        <Form.Item
-          name="main_prompt"
-          label="主提示词"
-          rules={[{ max: 50000, message: "主提示词长度不能超过50000个字符" }]}
-        >
-          <TextArea rows={5} placeholder="请输入主提示词（可选）" />
-        </Form.Item>
-
-        <Form.Item
-          name="personality"
-          label="角色信息"
-          rules={[{ max: 50000, message: "角色信息长度不能超过50000个字符" }]}
-        >
-          <TextArea rows={4} placeholder="请输入角色信息（可选）" />
-        </Form.Item>
-
-        <Form.Item
-          name="mode_prompt"
-          label="聊天模式"
-          rules={[{ max: 50000, message: "聊天模式长度不能超过50000个字符" }]}
-        >
-          <TextArea rows={4} placeholder="请输入聊天模式（可选）" />
-        </Form.Item>
-
-        {/* 模型配置 */}
-        <LLMConfigForm
-          models={openRouterModels}
-          loading={modelsLoading}
-          onRefresh={handleRefreshModels}
-          onValuesChange={isEdit ? handleFormChange : undefined}
+      <Form.Item
+        name="tags"
+        label="标签"
+        tooltip="为角色添加标签，便于分类和管理"
+      >
+        <Select
+          mode="tags"
+          style={{ width: '100%' }}
+          placeholder="输入标签后按回车添加"
+          tokenSeparators={[',']}
+          maxTagCount={10}
+          maxTagTextLength={20}
         />
-      </>
+      </Form.Item>
+
+      <Form.Item
+        name="opening"
+        label="开场白"
+        rules={[
+          { max: 5000, message: "开场白长度不能超过5000个字符" },
+        ]}
+      >
+        <TextArea rows={3} placeholder="请输入开场白（可选）" />
+      </Form.Item>
+
+      {/* 音色设置 */}
+      <Divider>音色设置</Divider>
+
+      <Form.Item
+        name="voice_id"
+        label="角色音色"
+        tooltip="选择角色的语音音色，用于文字转语音功能"
+      >
+        <VoiceSelector placeholder="请选择角色音色（可选）" />
+      </Form.Item>
+
+      {/* 评分设置 */}
+      <Divider>评分设置</Divider>
+
+      <Form.Item
+        name="score"
+        label="角色评分"
+        tooltip="对角色进行1-5分的评分，用于质量评估"
+        rules={[
+          {
+            type: 'number',
+            min: 1,
+            max: 5,
+            message: '评分必须在1-5之间'
+          }
+        ]}
+      >
+        <ScoreSelector 
+          placeholder="请选择角色评分（1-5分，可选）"
+          mode="star"
+          showText={true}
+        />
+      </Form.Item>
+
+      <Form.Item
+        name="comment"
+        label="备注信息"
+        tooltip="对角色的备注或说明信息"
+        rules={[
+          { max: 1000, message: "备注信息长度不能超过1000个字符" },
+        ]}
+      >
+        <TextArea rows={3} placeholder="请输入备注信息（可选）" />
+      </Form.Item>
+
+      {/* 提示词配置 */}
+      <Divider>提示词配置</Divider>
+
+      <Form.Item
+        name="main_prompt"
+        label="主提示词"
+        rules={[
+          { max: 50000, message: "主提示词长度不能超过50000个字符" },
+        ]}
+      >
+        <TextArea rows={5} placeholder="请输入主提示词（可选）" />
+      </Form.Item>
+
+      <Form.Item
+        name="personality"
+        label="角色信息"
+        rules={[
+          { max: 50000, message: "角色信息长度不能超过50000个字符" },
+        ]}
+      >
+        <TextArea rows={4} placeholder="请输入角色信息（可选）" />
+      </Form.Item>
+
+      <Form.Item
+        name="mode_prompt"
+        label="聊天模式"
+        rules={[
+          { max: 50000, message: "聊天模式长度不能超过50000个字符" },
+        ]}
+      >
+        <TextArea rows={4} placeholder="请输入聊天模式（可选）" />
+      </Form.Item>
+
+      {/* 模型配置 */}
+      <LLMConfigForm
+        models={openRouterModels}
+        loading={modelsLoading}
+        onRefresh={handleRefreshModels}
+          onValuesChange={isEdit ? handleFormChange : undefined}
+      />
+    </>
     );
   };
 
@@ -868,7 +857,10 @@ export const AgentManagePage: React.FC = () => {
                       hoverable
                       cover={
                         <div style={{ padding: 16, textAlign: "center" }}>
-                          <AvatarDisplay agent={agent} size={64} />
+                          <AvatarDisplay
+                            agent={agent}
+                            size={64}
+                          />
                         </div>
                       }
                       actions={[
@@ -958,15 +950,7 @@ export const AgentManagePage: React.FC = () => {
                             >
                               {agent.intro}
                             </p>
-                            <div
-                              style={{
-                                marginTop: 8,
-                                display: "flex",
-                                alignItems: "center",
-                                gap: 8,
-                                flexWrap: "wrap",
-                              }}
-                            >
+                            <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                               <Tag
                                 color={
                                   agent.gender === "MALE"
@@ -983,13 +967,8 @@ export const AgentManagePage: React.FC = () => {
                                     : "其他"}
                               </Tag>
                               {agent.meta_data?.score && (
-                                <div
-                                  style={{
-                                    display: "flex",
-                                    alignItems: "center",
-                                  }}
-                                >
-                                  <ScoreSelector
+                                <div style={{ display: 'flex', alignItems: 'center' }}>
+                                  <ScoreSelector 
                                     value={agent.meta_data.score}
                                     disabled={true}
                                     mode="star"
@@ -1000,19 +979,12 @@ export const AgentManagePage: React.FC = () => {
                               {agent.tags && agent.tags.length > 0 && (
                                 <>
                                   {agent.tags.slice(0, 2).map((tag, index) => (
-                                    <Tag
-                                      key={index}
-                                      color="geekblue"
-                                      style={{ fontSize: "11px" }}
-                                    >
+                                    <Tag key={index} color="geekblue" style={{ fontSize: "11px" }}>
                                       {tag}
                                     </Tag>
                                   ))}
                                   {agent.tags.length > 2 && (
-                                    <Tag
-                                      color="default"
-                                      style={{ fontSize: "11px" }}
-                                    >
+                                    <Tag color="default" style={{ fontSize: "11px" }}>
                                       +{agent.tags.length - 2}
                                     </Tag>
                                   )}
@@ -1020,23 +992,21 @@ export const AgentManagePage: React.FC = () => {
                               )}
                             </div>
                             {agent.meta_data?.comment && (
-                              <div
-                                style={{
-                                  marginTop: 8,
-                                  fontSize: "12px",
-                                  color: "#666",
-                                  backgroundColor: "#f9f9f9",
-                                  padding: "4px 8px",
-                                  borderRadius: "4px",
-                                  overflow: "hidden",
-                                  textOverflow: "ellipsis",
-                                  display: "-webkit-box",
-                                  WebkitLineClamp: 2,
-                                  WebkitBoxOrient: "vertical",
-                                  lineHeight: "1.4",
-                                  maxHeight: "2.8em",
-                                }}
-                              >
+                              <div style={{ 
+                                marginTop: 8, 
+                                fontSize: "12px", 
+                                color: "#666",
+                                backgroundColor: "#f9f9f9",
+                                padding: "4px 8px",
+                                borderRadius: "4px",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                display: "-webkit-box",
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: "vertical",
+                                lineHeight: "1.4",
+                                maxHeight: "2.8em"
+                              }}>
                                 <strong>备注:</strong> {agent.meta_data.comment}
                               </div>
                             )}
@@ -1112,17 +1082,12 @@ export const AgentManagePage: React.FC = () => {
         }}
         confirmLoading={saveLoading}
         okButtonProps={{
-          disabled: !hasChanges || saveLoading,
+          disabled: !hasChanges || saveLoading
         }}
         width={800}
         destroyOnHidden
       >
-        <Form
-          form={editForm}
-          layout="vertical"
-          preserve={true}
-          onValuesChange={handleFormChange}
-        >
+        <Form form={editForm} layout="vertical" preserve={true} onValuesChange={handleFormChange}>
           {renderAgentForm(editForm, true)}
         </Form>
       </Modal>
@@ -1152,8 +1117,11 @@ export const AgentManagePage: React.FC = () => {
         ]}
         width={800}
       >
-        {currentAgent && <AgentInfoDisplay agent={currentAgent} />}
+        {currentAgent && (
+          <AgentInfoDisplay agent={currentAgent} />
+        )}
       </Modal>
+
 
       {/* 修改头像截取模态框 */}
       <ImageCropModal
@@ -1162,11 +1130,7 @@ export const AgentManagePage: React.FC = () => {
         onCancel={handleAvatarCropCancel}
         onConfirm={handleAvatarCropConfirm}
         title="修改头像"
-        existingCropData={
-          currentAgentForAvatar?.extensions?.avatar_crop as
-            | AvatarCropData
-            | undefined
-        }
+        existingCropData={currentAgentForAvatar?.extensions?.avatar_crop as AvatarCropData | undefined}
       />
     </div>
   );

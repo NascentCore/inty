@@ -112,6 +112,8 @@ export const QuestionManager: React.FC<QuestionManagerProps> = ({
     message.success("问题列表已清空");
   }, [onChange]);
 
+
+
   // 加载问题集
   const loadQuestionSet = useCallback(
     (questionSet: QuestionSet) => {
@@ -141,38 +143,39 @@ export const QuestionManager: React.FC<QuestionManagerProps> = ({
   );
 
   // 通用导出JSON函数
-  const exportToJson = useCallback(
-    (data: any, filename: string, successMessage: string) => {
-      try {
-        // 生成文件名
-        const timestamp = new Date()
-          .toISOString()
-          .slice(0, 19)
-          .replace(/:/g, "-");
-        const finalFilename = `${filename}_${timestamp}.json`;
+  const exportToJson = useCallback((
+    data: any,
+    filename: string,
+    successMessage: string
+  ) => {
+    try {
+      // 生成文件名
+      const timestamp = new Date()
+        .toISOString()
+        .slice(0, 19)
+        .replace(/:/g, "-");
+      const finalFilename = `${filename}_${timestamp}.json`;
 
-        // 创建并下载文件
-        const blob = new Blob([JSON.stringify(data, null, 2)], {
-          type: "application/json",
-        });
-        const url = URL.createObjectURL(blob);
+      // 创建并下载文件
+      const blob = new Blob([JSON.stringify(data, null, 2)], {
+        type: "application/json",
+      });
+      const url = URL.createObjectURL(blob);
 
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = finalFilename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = finalFilename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
 
-        message.success(successMessage);
-      } catch (error) {
-        console.error("导出失败:", error);
-        message.error("导出失败，请重试");
-      }
-    },
-    [],
-  );
+      message.success(successMessage);
+    } catch (error) {
+      console.error("导出失败:", error);
+      message.error("导出失败，请重试");
+    }
+  }, []);
 
   // 导出当前问题列表为JSON
   const exportCurrentQuestions = useCallback(() => {
@@ -186,23 +189,16 @@ export const QuestionManager: React.FC<QuestionManagerProps> = ({
       export_metadata: {
         export_time: new Date().toISOString(),
         total_questions: questions.length,
-      },
+      }
     };
 
     exportToJson(exportData, "current_questions", "当前问题已导出");
   }, [questions, exportToJson]);
 
   // 导出问题集为JSON
-  const exportQuestionSet = useCallback(
-    (questionSet: QuestionSet) => {
-      exportToJson(
-        questionSet,
-        `question_set_${questionSet.name}`,
-        "问题集已导出",
-      );
-    },
-    [exportToJson],
-  );
+  const exportQuestionSet = useCallback((questionSet: QuestionSet) => {
+    exportToJson(questionSet, `question_set_${questionSet.name}`, "问题集已导出");
+  }, [exportToJson]);
 
   // 文件上传处理
   const handleFileUpload = useCallback(
@@ -353,6 +349,8 @@ export const QuestionManager: React.FC<QuestionManagerProps> = ({
             }}
           >
             <Tag color="blue">已添加问题 ({questions.length})</Tag>
+
+
 
             <Popconfirm
               title="确定要清空所有问题吗？"

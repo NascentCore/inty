@@ -14,7 +14,10 @@ import {
   Space,
   Tooltip,
 } from "antd";
-import { InfoCircleOutlined, QuestionCircleOutlined } from "@ant-design/icons";
+import {
+  InfoCircleOutlined,
+  QuestionCircleOutlined,
+} from "@ant-design/icons";
 import { useForm } from "../../hooks/useForm";
 import modelCacheService from "../../services/modelCache";
 import { ModelSelector } from "../common/ModelSelector";
@@ -116,9 +119,7 @@ export const TestConfigForm: React.FC<TestConfigFormProps> = ({
 
       // 设置默认模型 - 优先选择 google/gemini-2.5-flash-lite
       if (models.length > 0 && !form.values.scoring_model) {
-        const preferredModel = models.find(
-          (model) => model.id === "google/gemini-2.5-flash-lite",
-        );
+        const preferredModel = models.find(model => model.id === "google/gemini-2.5-flash-lite");
         const defaultModel = preferredModel || models[0];
         form.setValue("scoring_model", defaultModel.id);
       }
