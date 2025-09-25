@@ -286,7 +286,10 @@ item {
         EasyLog.log("Chat Messages Count: ${chatMessages.size}")
         EasyLog.log("Chat Messages: $chatMessages")
         
-        val shouldShowOpening = agent.opening.isNotEmpty() && chatMessages.isEmpty()
+        // 检查是否有非开场白的历史消息
+        val hasNonOpeningMessages = chatMessages.any { !it.isOpening() }
+        val shouldShowOpening = agent.opening.isNotEmpty() && !hasNonOpeningMessages
+        EasyLog.log("Has Non-Opening Messages: $hasNonOpeningMessages")
         EasyLog.log("Should Show Opening: $shouldShowOpening")
         
         if (shouldShowOpening) {
@@ -316,8 +319,8 @@ item {
             if (agent.opening.isEmpty()) {
                 EasyLog.log("原因: Agent opening 为空")
             }
-            if (chatMessages.isNotEmpty()) {
-                EasyLog.log("原因: 已有历史消息，数量: ${chatMessages.size}")
+            if (hasNonOpeningMessages) {
+                EasyLog.log("原因: 已有非开场白的历史消息，数量: ${chatMessages.count { !it.isOpening() }}")
             }
         }
     } ?: run {
