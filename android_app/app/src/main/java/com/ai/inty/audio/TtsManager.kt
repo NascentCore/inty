@@ -63,7 +63,7 @@ class TtsManager private constructor(
     ) {
         EasyLog.log("音频LOG测试 TtsManager.generateMessageVoice called: messageId=$messageId, agentId=$agentId")
         EasyLog.log("音频LOG测试 Current generating TTS messages: ${_isGeneratingTts.value}")
-        
+
         // 检查是否正在生成
         if (_isGeneratingTts.value.contains(messageId)) {
             EasyLog.log("音频LOG测试 TTS already generating for message: $messageId")
@@ -79,6 +79,13 @@ class TtsManager private constructor(
                 EasyLog.log("音频LOG测试 About to call chatApi.fetchMsgVoice")
                 EasyLog.log("音频LOG测试 Request URL will be: /api/v1/chats/agents/$agentId/messages/$messageId/voice")
 
+                if (agentId.isEmpty() || messageId.isEmpty()) {
+                    EasyLog.log(
+                        "音频LOG测试 TTS generation agentId=$agentId 或 messageId=$messageId",
+                        EasyLog.ERROR
+                    )
+                    return@launch onError("TTS生成失败：agentId=$agentId ,, messageId=$messageId")
+                }
                 val response = chatApi.fetchMsgVoice(agentId, messageId)
                 EasyLog.log("音频LOG测试 fetchMsgVoice response received: $response")
 
@@ -89,13 +96,19 @@ class TtsManager private constructor(
                             EasyLog.log("音频LOG测试 TTS generated successfully: $audioUrl")
                             onSuccess(audioUrl)
                         } else {
-                            EasyLog.log("音频LOG测试 TTS generation returned empty audio_url", EasyLog.ERROR)
+                            EasyLog.log(
+                                "音频LOG测试 TTS generation returned empty audio_url",
+                                EasyLog.ERROR
+                            )
                             onError("TTS生成失败：返回空音频URL")
                         }
                     }
 
                     is HttpResult.Failure -> {
-                        EasyLog.log("音频LOG测试 TTS generation failed: ${response.message}", EasyLog.ERROR)
+                        EasyLog.log(
+                            "音频LOG测试 TTS generation failed: ${response.message}",
+                            EasyLog.ERROR
+                        )
                         onError("TTS生成失败：${response.message}")
                     }
                 }
