@@ -9,7 +9,6 @@ import com.ai.inty.utils.UnifiedStartupManager
 import com.inty.utils.log.EasyLog
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 /**
@@ -22,7 +21,6 @@ class ExploreViewModel : BaseViewModel() {
     
     // Paging数据流
     private val _agentsFlow = MutableStateFlow<Flow<PagingData<AgentInfo>>?>(null)
-    val agentsFlow = _agentsFlow.asStateFlow()
     
     
     // 是否已初始化
@@ -102,7 +100,7 @@ class ExploreViewModel : BaseViewModel() {
     /**
      * 获取缓存的agents列表（用于ChatTab显示）
      */
-    fun getCachedAgentsList(): List<com.ai.inty.beans.AgentInfo> {
+    fun getCachedAgentsList(): List<AgentInfo> {
         return UnifiedStartupManager.getCurrentRecommendedAgents()
     }
     

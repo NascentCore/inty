@@ -22,8 +22,6 @@ class ExplorePagingRepository {
             ?: throw IllegalStateException("IAgentApi not found in TheRouter")
     }
 
-    // 用于推荐接口的sort seed
-    private var sortSeed = IntySetting.sortSeed()
 
     companion object {
         // 使用统一的常量
@@ -81,42 +79,5 @@ class ExplorePagingRepository {
         return getRecommendAgentsFlow(useCache = true)
     }
 
-    /**
-     * 预加载第一页数据，用于刷新前的数据验证
-     * 返回Result，成功时表示数据可用，失败时保持当前数据
-     */
-    suspend fun preloadFirstPage(): Result<Unit> {
-        return try {
-            val newSortSeed = IntySetting.sortSeed() + 1
-            val agentApi: IAgentApi = TheRouter.get(IAgentApi::class.java)
-                ?: throw IllegalStateException("IAgentApi not found in TheRouter")
-
-            val result = agentApi.recommendAgents(
-                page = 1,
-                pageSize = PAGE_SIZE,
-                sort_seed = newSortSeed.toString()
-            )
-
-            when (result) {
-                is com.architecture.httplib.core.HttpResult.Success -> {
-                    val agents = result.data.list ?: emptyList()
-                    if (agents.isNotEmpty()) {
-                        EasyLog.log("ExplorePagingRepository - 预加载第一页成功: ${agents.size}个")
-                        Result.success(Unit)
-                    } else {
-                        EasyLog.log("ExplorePagingRepository - 预加载第一页数据为空", EasyLog.WARN)
-                        Result.failure(Exception("Empty data"))
-                    }
-                }
-                is com.architecture.httplib.core.HttpResult.Failure -> {
-                    EasyLog.log("ExplorePagingRepository - 预加载第一页失败: ${result.message}", EasyLog.WARN)
-                    Result.failure(Exception(result.message ?: "Network error"))
-                }
-            }
-        } catch (e: Exception) {
-            EasyLog.log("ExplorePagingRepository - 预加载第一页异常: ${e.message}", EasyLog.ERROR)
-            Result.failure(e)
-        }
-    }
 
 }
