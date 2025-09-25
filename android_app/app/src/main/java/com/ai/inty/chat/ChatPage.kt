@@ -329,7 +329,7 @@ internal fun ChatPage(
                             }
                         }
                     }
-// 2. Agent Opening (显示在顶部，因为是反向列表的最后一个item)
+                    // 2. Agent Opening (显示在顶部，因为是反向列表的最后一个item)
                     item {
                         agentInfo?.let { agent ->
                             // 始终显示开场白
