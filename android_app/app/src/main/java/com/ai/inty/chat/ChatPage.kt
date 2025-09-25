@@ -362,7 +362,6 @@ internal fun ChatPage(
                             }
                         }
                     }
-
                 }
 
                 // 输入框区域
