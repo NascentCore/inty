@@ -14,7 +14,6 @@ import com.ai.inty.beans.UserProfile
 import com.ai.inty.billing.BillingRepository
 import com.ai.inty.net.IAgentApi
 import com.ai.inty.net.ICommonApi
-import com.ai.inty.net.IUserApi
 import com.ai.inty.utils.AgentCacheManager
 import com.ai.inty.utils.CredentialManagerHelper.clearCredentialState
 import com.ai.inty.utils.IntyUserProfileSDK
@@ -45,11 +44,7 @@ enum class HomeTabIndex {
 
 class MainViewModel : BaseActivityViewModel() {
 
-    // 延迟获取依赖，避免在构造函数中立即获取导致空指针异常
-    private val userApi: IUserApi by lazy {
-        TheRouter.get(IUserApi::class.java)
-            ?: throw IllegalStateException("IUserApi not found in TheRouter")
-    }
+
     private val agentApi: IAgentApi by lazy {
         TheRouter.get(IAgentApi::class.java)
             ?: throw IllegalStateException("IAgentApi not found in TheRouter")
@@ -96,9 +91,6 @@ class MainViewModel : BaseActivityViewModel() {
         // 使用统一启动管理器的数据快速初始化UI
         loadStartupData()
 
-        // 加载业务数据
-        loadBusinessData()
-
         TheRouter.addActionInterceptor(Constant.ACTION_USER_PROFILE_CHANGED, userProfileChanged)
     }
 
@@ -115,10 +107,9 @@ class MainViewModel : BaseActivityViewModel() {
         }
     }
 
-    private fun loadBusinessData() {
-        // 加载业务数据
-        checkAppVersion() // 检查app版本更新
-        // 用户信息由启动管理器处理，这里不需要重复获取
+    fun loadBusinessData() {
+        // 检查app版本更新
+        checkAppVersion()
     }
 
 
@@ -431,7 +422,7 @@ class MainViewModel : BaseActivityViewModel() {
         userCreatedAgents.clear()
         _userProfile.value = UserProfile()
         chatViewModel?.clearAllData()
-        
+
         // 清理统一启动管理器的数据
         UnifiedStartupManager.clearAllData()
 

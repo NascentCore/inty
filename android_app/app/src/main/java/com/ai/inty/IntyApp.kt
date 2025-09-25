@@ -11,6 +11,7 @@ import com.inty.utils.AppEnv
 import com.inty.utils.log.EasyLog
 import com.inty.utils.log.defaultInit
 import com.therouter.TheRouter
+import kotlinx.coroutines.launch
 
 /**
  * 应用Application的实现类
@@ -35,17 +36,29 @@ class IntyApp : Application() {
     override fun onCreate() {
         super.onCreate()
 
+        // 立即初始化日志，不阻塞
         EasyLog.defaultInit()
-        initImageLoader()
 
-        // 初始化网络管理器
+        // 立即初始化网络管理器（轻量级，不阻塞）
         NetworkManager.getInstance().initialize(this)
-        
-        // 初始化新的 IntyNetworkManager
         IntyNetworkManager.initialize(this)
+        
+        // 立即初始化统一启动管理器（只做必要的登录判断，不阻塞）
+        UnifiedStartupManager.initializeEssential(this)
 
-        // 初始化统一启动管理器
-        UnifiedStartupManager.initialize(this)
+        // 异步初始化所有可能阻塞的组件
+        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+            try {
+                // 初始化图片加载器（可能阻塞）
+                initImageLoader()
+                
+                // 异步进行完整的数据预加载和缓存
+                UnifiedStartupManager.initializeAsync(this@IntyApp)
+                
+            } catch (e: Exception) {
+                EasyLog.log("IntyApp - 异步初始化失败: ${e.message}", EasyLog.ERROR)
+            }
+        }
     }
     
     override fun onTerminate() {
