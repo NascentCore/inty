@@ -96,17 +96,17 @@ class AvatarGenerateViewModel : BaseViewModel() {
 
                 // 生成成功后，返回到Ai形象创建页面 Immediately navigate back to CreateRoleActivity
                 withContext(Dispatchers.Main) {
-                    EasyLog.log("Generation request submitted, navigating back to CreateRoleActivity")
+                    EasyLog.log(
+                        "Generation request submitted, navigating back to CreateRoleActivity"
+                    )
                     onNavigateBack()
                 }
-
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
                     NetworkErrorHandler.handleNetworkException(
                         isNetworkConnected = NetworkManager.getInstance().isNetworkConnected(),
                         exception = e,
-                        showToast = {
-                            errorMessage ->
+                        showToast = { errorMessage ->
                             AvatarManager.setGenerationError(errorMessage)
                             _errorMessage.value = errorMessage
                         },
@@ -154,7 +154,7 @@ class AvatarGenerateViewModel : BaseViewModel() {
                     } else {
                         EasyLog.log(
                             "Empty image URLs received from server during regeneration",
-                            EasyLog.ERROR
+                            EasyLog.ERROR,
                         )
                         _errorMessage.value = "Regenerated image URLs are empty"
                     }
@@ -174,7 +174,8 @@ class AvatarGenerateViewModel : BaseViewModel() {
 
     fun getSelectedAvatarUrl(): String? {
         return when {
-            _generatedImageUrls.value.isNotEmpty() && _selectedImageIndex.value < _generatedImageUrls.value.size -> {
+            _generatedImageUrls.value.isNotEmpty() &&
+                _selectedImageIndex.value < _generatedImageUrls.value.size -> {
                 _generatedImageUrls.value[_selectedImageIndex.value]
             }
 
@@ -188,7 +189,7 @@ class AvatarGenerateViewModel : BaseViewModel() {
     }
 
     private suspend fun generateBackground(
-        request: GenerateBackgroundRequest,
+        request: GenerateBackgroundRequest
     ): GenerateBackgroundResponse {
         try {
             val result = agentApi.generateBackground(request)
@@ -203,30 +204,27 @@ class AvatarGenerateViewModel : BaseViewModel() {
                 is com.architecture.httplib.core.HttpResult.Failure -> {
                     EasyLog.log("generateBackground error: $result", priority = EasyLog.ERROR)
                     val errorMessage =
-                        result.message.ifBlank { "Generation failed, please check your network connection" }
+                        result.message.ifBlank {
+                            "Generation failed, please check your network connection"
+                        }
                     throw Exception(errorMessage)
                 }
             }
         } catch (e: Exception) {
             // Exception handling with detailed error messages
-            val errorMessage = when {
-                e.message?.contains(
-                    "timeout",
-                    ignoreCase = true
-                ) == true -> "Network timeout, please try again later"
+            val errorMessage =
+                when {
+                    e.message?.contains("timeout", ignoreCase = true) == true ->
+                        "Network timeout, please try again later"
 
-                e.message?.contains(
-                    "network",
-                    ignoreCase = true
-                ) == true -> "Network connection failed, please check your network"
+                    e.message?.contains("network", ignoreCase = true) == true ->
+                        "Network connection failed, please check your network"
 
-                e.message?.contains(
-                    "json",
-                    ignoreCase = true
-                ) == true -> "Data format error, please try again later"
+                    e.message?.contains("json", ignoreCase = true) == true ->
+                        "Data format error, please try again later"
 
-                else -> e.message ?: "Unknown error"
-            }
+                    else -> e.message ?: "Unknown error"
+                }
             throw Exception(errorMessage)
         }
     }

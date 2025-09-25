@@ -6,62 +6,43 @@ import com.inty.utils.log.interceptor.LogcatInterceptor
 import com.inty.utils.log.interceptor.MapInterceptor
 import java.util.regex.Pattern
 
-
 /**
- * A flexible log lib which logging process can be customized through [Interceptor].
- * Inspired by Timber and Logger
+ * A flexible log lib which logging process can be customized through [Interceptor]. Inspired by
+ * Timber and Logger
  */
 object EasyLog {
 
-    /**
-     * Priority constant for the println method; use Log.v.
-     */
+    /** Priority constant for the println method; use Log.v. */
     const val VERBOSE = 2
 
-    /**
-     * Priority constant for the println method; use Log.d.
-     */
+    /** Priority constant for the println method; use Log.d. */
     const val DEBUG = 3
 
-    /**
-     * Priority constant for the println method; use Log.i.
-     */
+    /** Priority constant for the println method; use Log.i. */
     const val INFO = 4
 
-    /**
-     * Priority constant for the println method; use Log.w.
-     */
+    /** Priority constant for the println method; use Log.w. */
     const val WARN = 5
 
-    /**
-     * Priority constant for the println method; use Log.e.
-     */
+    /** Priority constant for the println method; use Log.e. */
     const val ERROR = 6
 
-    /**
-     * Priority constant for the println method.
-     */
+    /** Priority constant for the println method. */
     const val ASSERT = 7
 
-    /**
-     * Priority constant for no log
-     */
+    /** Priority constant for no log */
     const val NONE = 8
 
     private val interceptors = mutableListOf<Interceptor<in Nothing>>()
     private val chain = Chain(interceptors)
 
-    /**
-     * A transient [Interceptor] only for next logging
-     */
+    /** A transient [Interceptor] only for next logging */
     private var onetimeInterceptor: ThreadLocal<Interceptor<*>>? = null
 
     private val ANONYMOUS_CLASS = Pattern.compile("(\\$\\d+)+$")
     private val MAX_TAG_LENGTH = 23
 
-    /**
-     * A transient tag only for next logging
-     */
+    /** A transient tag only for next logging */
     private var onetimeTag = ThreadLocal<String>()
     private var tag: String?
         get() = onetimeTag.get()?.also { onetimeTag.remove() }
@@ -72,28 +53,26 @@ object EasyLog {
     var curPriority = VERBOSE
     var curPriorityFile = VERBOSE
 
-    /**
-     * Class names exclude from call stack
-     */
-    private val blackList = listOf(
-        EasyLog::class.java.name,
-        Chain::class.java.name
-    )
+    /** Class names exclude from call stack */
+    private val blackList = listOf(EasyLog::class.java.name, Chain::class.java.name)
 
     /**
      * The entry point for logging POJO
+     *
      * @param message the object to be logged
      * @param priority the log level in logcat
      * @param args the formatted args
      */
     fun log(message: Any, priority: Int = VERBOSE, vararg args: Any) {
         chain.proceed(createTag(), message, priority, *args)
-        onetimeInterceptor?.takeIf { it.get() != null }
+        onetimeInterceptor
+            ?.takeIf { it.get() != null }
             ?.also { removeInterceptor(it.get()) } // remove one time interceptor
     }
 
     /**
      * The entry point for logging [Iterable]
+     *
      * @param message the Iterator to log
      * @param priority the log level in logcat
      * @param map define what to log of <T>
@@ -101,51 +80,46 @@ object EasyLog {
     fun <T> list(message: Iterable<T>, priority: Int = VERBOSE, map: ((T) -> String)? = null) {
         interceptor(ListInterceptor(map))
         chain.proceed(createTag(), message, priority)
-        onetimeInterceptor?.takeIf { it.get() != null }
+        onetimeInterceptor
+            ?.takeIf { it.get() != null }
             ?.also { removeInterceptor(it.get()) } // remove one time interceptor
     }
 
     /**
      * The entry point for logging [Map]
+     *
      * @param message the Iterator to log
      * @param priority the log level in logcat
      */
     fun <K, V> map(message: Map<K, V>, priority: Int = VERBOSE) {
         interceptor(MapInterceptor<K, V>())
         chain.proceed(createTag(), message, priority)
-        onetimeInterceptor?.takeIf { it.get() != null }
+        onetimeInterceptor
+            ?.takeIf { it.get() != null }
             ?.also { removeInterceptor(it.get()) } // remove one time interceptor
     }
 
-    /**
-     * Add one time tag for the next logging
-     */
+    /** Add one time tag for the next logging */
     fun tag(tag: String): EasyLog {
         this.tag = tag
         return this
     }
 
-    /**
-     * Add [Interceptor] for customizing log process
-     */
+    /** Add [Interceptor] for customizing log process */
     fun <T> addInterceptor(interceptor: Interceptor<T>, isLoggable: (T) -> Boolean = { true }) {
         addInterceptor(interceptors.size, interceptor, isLoggable)
     }
 
-    /**
-     * Add [Interceptor] at [index] for customizing log process
-     */
+    /** Add [Interceptor] at [index] for customizing log process */
     fun <T> addInterceptor(
         index: Int,
         interceptor: Interceptor<T>,
-        isLoggable: (T) -> Boolean = { true }
+        isLoggable: (T) -> Boolean = { true },
     ) {
         interceptors.add(index, interceptor.apply { this.isLoggable = isLoggable })
     }
 
-    /**
-     * Add one time [Interceptor]
-     */
+    /** Add one time [Interceptor] */
     fun interceptor(interceptor: Interceptor<*>): EasyLog {
         interceptors.add(0, interceptor) // always add log
         if (onetimeInterceptor == null) onetimeInterceptor = ThreadLocal()
@@ -153,25 +127,24 @@ object EasyLog {
         return this
     }
 
-    /**
-     * Remove [interceptor]
-     */
+    /** Remove [interceptor] */
     fun removeInterceptor(interceptor: Interceptor<*>?) {
         interceptors.remove(interceptor)
     }
 
     /**
-     * Create one-time tag for log, which may be set by [EasyLog.tag] or auto-generate with the host class name
+     * Create one-time tag for log, which may be set by [EasyLog.tag] or auto-generate with the host
+     * class name
      */
     private fun createTag(): String {
-        return tag ?: Throwable().stackTrace
-            .first { it.className !in blackList }
-            .let(::createStackElementTag)
+        return tag
+            ?: Throwable()
+                .stackTrace
+                .first { it.className !in blackList }
+                .let(::createStackElementTag)
     }
 
-    /**
-     * Generate call stack for [Throwable]
-     */
+    /** Generate call stack for [Throwable] */
     private fun createStackElementTag(element: StackTraceElement): String {
         var tag = element.className.substringAfterLast('.')
         val m = ANONYMOUS_CLASS.matcher(tag)
@@ -187,10 +160,9 @@ object EasyLog {
     }
 }
 
-
 fun EasyLog.defaultInit() {
     EasyLog.apply {
         addInterceptor(LogcatInterceptor())
-//        addInterceptor(FileInterceptor())
+        //        addInterceptor(FileInterceptor())
     }
 }

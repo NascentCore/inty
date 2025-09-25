@@ -20,21 +20,18 @@ import com.ai.inty.viewmodels.ChatViewModel
 import com.ai.inty.viewmodels.MainViewModel
 import com.therouter.router.Autowired
 import com.therouter.router.Route
+import kotlin.math.abs
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlin.math.abs
 
-/**
- * 主页面，包含聊天、消息与关注、创建模型、模型列表、"我的"
- */
+/** 主页面，包含聊天、消息与关注、创建模型、模型列表、"我的" */
 @Route(path = Constant.ROUTE_MAIN)
 class MainActivity : BaseActivity() {
 
-    @Autowired
-    var action: String = ""
+    @Autowired var action: String = ""
 
     val mainViewModel: MainViewModel by viewModels()
     val chatViewModel: ChatViewModel by viewModels()
@@ -85,38 +82,43 @@ class MainActivity : BaseActivity() {
                     modifier = Modifier.fillMaxSize(),
                     mainViewModel = mainViewModel,
                     chatViewModel = chatViewModel,
-                    viewModelFactory = defaultViewModelProviderFactory
+                    viewModelFactory = defaultViewModelProviderFactory,
                 )
             }
         }
     }
 
-    /**
-     * 设置返回拦截功能
-     */
+    /** 设置返回拦截功能 */
     private fun setupBackInterception() {
         // 使用新的OnBackPressedCallback API
-        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
-            override fun handleOnBackPressed() {
-                handleBackPress()
-            }
-        })
+        onBackPressedDispatcher.addCallback(
+            this,
+            object : OnBackPressedCallback(true) {
+                override fun handleOnBackPressed() {
+                    handleBackPress()
+                }
+            },
+        )
 
         // 设置边缘滑动手势
-        gestureDetector = GestureDetector(this, object : GestureDetector.SimpleOnGestureListener() {
-            override fun onFling(
-                e1: MotionEvent?,
-                e2: MotionEvent,
-                velocityX: Float,
-                velocityY: Float,
-            ): Boolean {
-                if (e1 != null && isEdgeSwipe(e1, e2, velocityX, velocityY)) {
-                    handleBackPress()
-                    return true
-                }
-                return false
-            }
-        })
+        gestureDetector =
+            GestureDetector(
+                this,
+                object : GestureDetector.SimpleOnGestureListener() {
+                    override fun onFling(
+                        e1: MotionEvent?,
+                        e2: MotionEvent,
+                        velocityX: Float,
+                        velocityY: Float,
+                    ): Boolean {
+                        if (e1 != null && isEdgeSwipe(e1, e2, velocityX, velocityY)) {
+                            handleBackPress()
+                            return true
+                        }
+                        return false
+                    }
+                },
+            )
 
         // 为根视图设置触摸监听
         window.decorView.setOnTouchListener { _, event ->
@@ -124,9 +126,7 @@ class MainActivity : BaseActivity() {
         }
     }
 
-    /**
-     * 判断是否为边缘滑动
-     */
+    /** 判断是否为边缘滑动 */
     private fun isEdgeSwipe(
         e1: MotionEvent,
         e2: MotionEvent,
@@ -150,9 +150,7 @@ class MainActivity : BaseActivity() {
         return isFromLeftEdge && isRightSwipe && isHorizontalSwipe
     }
 
-    /**
-     * 处理返回事件（按键返回或手势返回）
-     */
+    /** 处理返回事件（按键返回或手势返回） */
     private fun handleBackPress() {
         val currentTime = System.currentTimeMillis()
 
@@ -164,10 +162,11 @@ class MainActivity : BaseActivity() {
 
             // 2秒后重置状态
             exitJob?.cancel()
-            exitJob = CoroutineScope(Dispatchers.Main).launch {
-                delay(backTimeout)
-                isFirstBack = true
-            }
+            exitJob =
+                CoroutineScope(Dispatchers.Main).launch {
+                    delay(backTimeout)
+                    isFirstBack = true
+                }
         } else {
             // 第二次返回，检查时间间隔
             if (currentTime - lastBackTime <= backTimeout) {
@@ -180,21 +179,19 @@ class MainActivity : BaseActivity() {
                 lastBackTime = currentTime
 
                 exitJob?.cancel()
-                exitJob = CoroutineScope(Dispatchers.Main).launch {
-                    delay(backTimeout)
-                    isFirstBack = true
-                }
+                exitJob =
+                    CoroutineScope(Dispatchers.Main).launch {
+                        delay(backTimeout)
+                        isFirstBack = true
+                    }
             }
         }
     }
 
-    /**
-     * 显示退出提示
-     */
+    /** 显示退出提示 */
     private fun showExitHint() {
         Toast.makeText(this, getString(R.string.edge_swipe_exit_hint), Toast.LENGTH_SHORT).show()
     }
-
 
     override fun onResume() {
         super.onResume()

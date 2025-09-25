@@ -12,21 +12,23 @@ class ChatTextFormatterTest {
     @Test
     fun formatChatMessage_appliesItalicStyleWithinBrackets() {
         val input = "Hello (world)"
-        val result = ChatTextFormatter.formatChatMessage(
-            text = input,
-            fontSize = TextUnit.Unspecified,
-            fontWeight = FontWeight.Normal,
-            normalColor = Color.Black,
-            italicColor = Color.Red,
-        )
+        val result =
+            ChatTextFormatter.formatChatMessage(
+                text = input,
+                fontSize = TextUnit.Unspecified,
+                fontWeight = FontWeight.Normal,
+                normalColor = Color.Black,
+                italicColor = Color.Red,
+            )
 
         // Text remains unchanged
         assertEquals(input, result.text)
 
         // Find span for the bracket content
-        val italicSpan = result.spanStyles.find { span ->
-            result.text.substring(span.start, span.end) == "world"
-        }
+        val italicSpan =
+            result.spanStyles.find { span ->
+                result.text.substring(span.start, span.end) == "world"
+            }
 
         assertNotNull("Italic span for bracket content not found", italicSpan)
         assertEquals(FontStyle.Italic, italicSpan!!.item.fontStyle)

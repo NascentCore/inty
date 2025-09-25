@@ -20,29 +20,21 @@ import androidx.compose.ui.unit.sp
 import com.ai.inty.R
 import com.ai.inty.base.noRippleClickable
 
-/**
- * 通用渐变按钮组件
- */
+/** 通用渐变按钮组件 */
 @Composable
-fun GradientButton(
-    text: String,
-    onSave: () -> Unit,
-    modifier: Modifier = Modifier
-) {
+fun GradientButton(text: String, onSave: () -> Unit, modifier: Modifier = Modifier) {
     Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp)
-            .height(50.dp)
-            .background(
-                brush = Brush.linearGradient(
-                    colors = listOf(Color(0xFFC122FF), Color(0xFFFF905D))
-                ),
-                shape = RoundedCornerShape(25.dp)
-            )
-            .noRippleClickable {
-                onSave()
-            }
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .height(50.dp)
+                .background(
+                    brush =
+                        Brush.linearGradient(colors = listOf(Color(0xFFC122FF), Color(0xFFFF905D))),
+                    shape = RoundedCornerShape(25.dp),
+                )
+                .noRippleClickable { onSave() }
     ) {
         Text(
             modifier = Modifier.align(Alignment.Center),
@@ -54,36 +46,23 @@ fun GradientButton(
     }
 }
 
-/**
- * 提交按钮组件
- */
+/** 提交按钮组件 */
 @Composable
 fun SubmitButton(onSubmit: () -> Unit) {
-    GradientButton(
-        text = stringResource(R.string.submit_button),
-        onSave = onSubmit
-    )
+    GradientButton(text = stringResource(R.string.submit_button), onSave = onSubmit)
 }
 
-/**
- * 进入按钮组件
- */
+/** 进入按钮组件 */
 @Composable
 fun EnterButton(onEnter: () -> Unit) {
-    GradientButton(
-        text = stringResource(R.string.enter),
-        onSave = onEnter
-    )
+    GradientButton(text = stringResource(R.string.enter), onSave = onEnter)
 }
 
 // Preview 函数
 @Preview(showBackground = true)
 @Composable
 private fun GradientButtonPreview() {
-    GradientButton(
-        text = "提交",
-        onSave = {}
-    )
+    GradientButton(text = "提交", onSave = {})
 }
 
 @Preview(showBackground = true)

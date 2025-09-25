@@ -26,9 +26,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-/**
- * 聊天输入框
- */
+/** 聊天输入框 */
 @Composable
 fun HeartMultiLineEditor(
     modifier: Modifier = Modifier,
@@ -37,24 +35,23 @@ fun HeartMultiLineEditor(
     enableInput: Boolean = true,
     readOnly: Boolean = false,
     supportStr: String = "",
-    textStyle: TextStyle = TextStyle(
-        fontSize = 14.sp,
-        fontWeight = FontWeight.Normal,
-        color = Color.White,
-        textAlign = TextAlign.Start,
-        lineHeightStyle = LineHeightStyle(
-            alignment = LineHeightStyle.Alignment.Center,
-            trim = LineHeightStyle.Trim.Both
-        )
-    ),
+    textStyle: TextStyle =
+        TextStyle(
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Normal,
+            color = Color.White,
+            textAlign = TextAlign.Start,
+            lineHeightStyle =
+                LineHeightStyle(
+                    alignment = LineHeightStyle.Alignment.Center,
+                    trim = LineHeightStyle.Trim.Both,
+                ),
+        ),
     @IntRange(from = 0L) maxLength: Int = Int.MAX_VALUE,
     maxLines: Int = Int.MAX_VALUE,
     hintStr: String = "",
 ) {
-    Row(
-        modifier = modifier,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
+    Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
         OutlinedTextField(
             value = inputValue,
             onValueChange = { str ->
@@ -81,7 +78,7 @@ fun HeartMultiLineEditor(
                 if (supportStr.isNotEmpty()) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.End
+                        horizontalArrangement = Arrangement.End,
                     ) {
                         Text(
                             text = supportStr,
@@ -89,19 +86,18 @@ fun HeartMultiLineEditor(
                             lineHeight = 22.sp,
                             fontWeight = FontWeight.Normal,
                             color = Color(0x8CFFFFFF),
-                            modifier = Modifier
+                            modifier = Modifier,
                         )
                     }
                 }
-
             },
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = Color.Transparent,
-                unfocusedBorderColor = Color.Transparent,
-                disabledBorderColor = Color.Transparent
-            )
+            colors =
+                OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Color.Transparent,
+                    unfocusedBorderColor = Color.Transparent,
+                    disabledBorderColor = Color.Transparent,
+                ),
         )
-
     }
 }
 
@@ -110,10 +106,7 @@ fun HeartMultiLineEditor(
 private fun PreviewChatInputUI() {
     var inputStr by remember { mutableStateOf("Input...") }
     HeartMultiLineEditor(
-        Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
-            .background(Color(0x1AFFFFFF)),
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(Color(0x1AFFFFFF)),
         inputValue = inputStr,
         onInputChange = { inputStr = it },
         maxLength = 20,

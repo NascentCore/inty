@@ -38,72 +38,63 @@ import androidx.compose.ui.unit.sp
 import com.ai.inty.R
 import com.ai.inty.billing.VipPlan
 
-/**
- * 会员权益项组件
- */
+/** 会员权益项组件 */
 @Composable
 fun PremiumBenefitItem(text: String) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.padding(vertical = 2.dp)
+        modifier = Modifier.padding(vertical = 2.dp),
     ) {
         Image(
             painter = painterResource(id = R.drawable.ic_checked_premium),
             contentDescription = null,
-            modifier = Modifier.size(16.dp)
+            modifier = Modifier.size(16.dp),
         )
         Spacer(Modifier.width(8.dp))
-        Text(
-            text = text,
-            color = Color.White,
-            fontSize = 13.sp,
-            fontWeight = FontWeight.Light
-        )
+        Text(text = text, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Light)
     }
     Spacer(Modifier.height(4.dp))
 }
 
-/**
- * 订阅计划卡片组件
- */
+/** 订阅计划卡片组件 */
 @Composable
 fun PremiumPlanCard(
     plan: VipPlan,
     isSelected: Boolean,
     isSubscribed: Boolean,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val subModifier = if (isSubscribed) Modifier.alpha(.4f) else Modifier
 
     Box(
-        modifier = modifier
-            .fillMaxHeight()
-            .background(
-                color = if (isSelected) Color(0x99350D5D) else Color(0x991C1523),
-                shape = RoundedCornerShape(8.dp)
-            )
-            .border(
-                width = 1.dp,
-                color = if (isSelected) Color.White else Color.Transparent,
-                shape = RoundedCornerShape(8.dp)
-            )
-            .then(subModifier)
-            .clickable(enabled = !isSubscribed) { onClick() }
-            .padding(vertical = 8.dp),
-        contentAlignment = Alignment.Center
+        modifier =
+            modifier
+                .fillMaxHeight()
+                .background(
+                    color = if (isSelected) Color(0x99350D5D) else Color(0x991C1523),
+                    shape = RoundedCornerShape(8.dp),
+                )
+                .border(
+                    width = 1.dp,
+                    color = if (isSelected) Color.White else Color.Transparent,
+                    shape = RoundedCornerShape(8.dp),
+                )
+                .then(subModifier)
+                .clickable(enabled = !isSubscribed) { onClick() }
+                .padding(vertical = 8.dp),
+        contentAlignment = Alignment.Center,
     ) {
         Text(
             text = plan.name,
-            color = when {
-                isSubscribed -> Color.White.copy(alpha = 0.5f)
-                else -> Color.White
-            },
+            color =
+                when {
+                    isSubscribed -> Color.White.copy(alpha = 0.5f)
+                    else -> Color.White
+                },
             fontWeight = FontWeight.Bold,
             fontSize = 16.sp,
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .then(subModifier)
+            modifier = Modifier.align(Alignment.TopCenter).then(subModifier),
         )
 
         val priceStr = buildAnnotatedString {
@@ -116,66 +107,60 @@ fun PremiumPlanCard(
 
         Text(
             text = priceStr,
-            color = when {
-                isSubscribed -> Color.White.copy(alpha = 0.5f)
-                else -> Color.White
-            },
+            color =
+                when {
+                    isSubscribed -> Color.White.copy(alpha = 0.5f)
+                    else -> Color.White
+                },
             fontSize = 12.sp,
             fontWeight = FontWeight.Normal,
-            modifier = subModifier
+            modifier = subModifier,
         )
 
         // 折扣标签
         if (plan.discountRate < 1) {
             Box(
-                Modifier
-                    .size(64.dp, 22.dp)
+                Modifier.size(64.dp, 22.dp)
                     .clip(RoundedCornerShape(12.dp))
                     .background(
-                        brush = Brush.horizontalGradient(
-                            colors = listOf(
-                                Color(0xFFC1F9FD),
-                                Color(0xFFD4AEFD),
-                                Color(0xFF7B96FB),
+                        brush =
+                            Brush.horizontalGradient(
+                                colors =
+                                    listOf(Color(0xFFC1F9FD), Color(0xFFD4AEFD), Color(0xFF7B96FB))
                             )
-                        )
                     )
                     .then(subModifier)
                     .align(Alignment.BottomCenter),
-                contentAlignment = Alignment.Center
+                contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    text = stringResource(
-                        R.string.save_percentage,
-                        ((1 - plan.discountRate) * 100).toInt()
-                    ),
+                    text =
+                        stringResource(
+                            R.string.save_percentage,
+                            ((1 - plan.discountRate) * 100).toInt(),
+                        ),
                     color = Color.Black,
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Bold,
-                    modifier = subModifier
+                    modifier = subModifier,
                 )
             }
         }
     }
 }
 
-/**
- * 订阅计划列表组件
- */
+/** 订阅计划列表组件 */
 @Composable
 fun PremiumPlanList(
     plans: List<VipPlan>,
     selectedIndex: Int,
     isSubscribed: Boolean,
     onPlanSelected: (Int) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(132.dp)
-            .padding(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(6.dp)
+        modifier = modifier.fillMaxWidth().height(132.dp).padding(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         plans.forEachIndexed { idx, plan ->
             PremiumPlanCard(
@@ -183,64 +168,55 @@ fun PremiumPlanList(
                 isSelected = idx == selectedIndex,
                 isSubscribed = isSubscribed,
                 onClick = { onPlanSelected(idx) },
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
             )
         }
     }
 }
 
-/**
- * 购买按钮组件
- */
+/** 购买按钮组件 */
 @Composable
 fun PurchaseButton(
     isSubscribed: Boolean,
     hasSelectedPlan: Boolean,
     onPurchase: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 15.dp)
-            .height(56.dp)
-            .clip(RoundedCornerShape(28.dp))
-            .background(
-                brush = Brush.horizontalGradient(
-                    colors = listOf(
-                        Color(0xFF9756FF),
-                        Color(0xFFEF56FF)
-                    )
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .padding(horizontal = 15.dp)
+                .height(56.dp)
+                .clip(RoundedCornerShape(28.dp))
+                .background(
+                    brush =
+                        Brush.horizontalGradient(
+                            colors = listOf(Color(0xFF9756FF), Color(0xFFEF56FF))
+                        )
                 )
-            )
-            .alpha(if (isSubscribed) .4f else 1f)
-            .clickable(
-                enabled = !isSubscribed && hasSelectedPlan,
-                onClick = onPurchase
-            ),
-        contentAlignment = Alignment.Center
+                .alpha(if (isSubscribed) .4f else 1f)
+                .clickable(enabled = !isSubscribed && hasSelectedPlan, onClick = onPurchase),
+        contentAlignment = Alignment.Center,
     ) {
         Text(
-            text = if (isSubscribed) {
-                stringResource(R.string.premium_subscribed)
-            } else {
-                stringResource(R.string.premium_continue)
-            },
+            text =
+                if (isSubscribed) {
+                    stringResource(R.string.premium_subscribed)
+                } else {
+                    stringResource(R.string.premium_continue)
+                },
             fontSize = 18.sp,
             fontWeight = FontWeight.Bold,
             color = Color.White,
-            modifier = Modifier.alpha(if (isSubscribed) .7f else 1f)
+            modifier = Modifier.alpha(if (isSubscribed) .7f else 1f),
         )
     }
 }
 
-/**
- * 自动续费提示组件
- */
+/** 自动续费提示组件 */
 @Composable
-fun AutoRenewalNotice(
-    modifier: Modifier = Modifier
-) {
+fun AutoRenewalNotice(modifier: Modifier = Modifier) {
     Column(
         modifier = modifier,
         verticalArrangement = Arrangement.Center,
@@ -249,25 +225,21 @@ fun AutoRenewalNotice(
         Text(
             text = stringResource(R.string.premium_autorenew),
             fontSize = 12.sp,
-            color = Color.White
+            color = Color.White,
         )
         PolicyRow(context = LocalContext.current, fontSize = 12.sp)
     }
 }
 
-/**
- * 空状态组件
- */
+/** 空状态组件 */
 @Composable
-fun EmptyPlanState(
-    modifier: Modifier = Modifier
-) {
+fun EmptyPlanState(modifier: Modifier = Modifier) {
     Text(
         text = stringResource(R.string.no_subscription_plans),
         color = Color.White.copy(alpha = 0.6f),
         fontSize = 14.sp,
         textAlign = TextAlign.Center,
-        modifier = modifier.fillMaxWidth()
+        modifier = modifier.fillMaxWidth(),
     )
 }
 
@@ -280,9 +252,5 @@ private fun PremiumBenefitItemPreview() {
 @Preview(showBackground = true)
 @Composable
 private fun PurchaseButtonPreview() {
-    PurchaseButton(
-        isSubscribed = false,
-        hasSelectedPlan = true,
-        onPurchase = {}
-    )
-} 
+    PurchaseButton(isSubscribed = false, hasSelectedPlan = true, onPurchase = {})
+}

@@ -18,7 +18,9 @@ import retrofit2.http.Part
 interface IUserApi {
 
     @POST("/api/v1/auth/google/login")
-    suspend fun loginByGoogle(@Body loginRequest: GoogleLoginRequest): HttpResult<GoogleLoginResponse>
+    suspend fun loginByGoogle(
+        @Body loginRequest: GoogleLoginRequest
+    ): HttpResult<GoogleLoginResponse>
 
     @Multipart
     @POST("/api/v1/images")
@@ -29,5 +31,4 @@ interface IUserApi {
 
     @POST("/api/v1/users/delete-account")
     suspend fun userDeleteAccount(): HttpResult<UserDeleteResponse>
-
 }

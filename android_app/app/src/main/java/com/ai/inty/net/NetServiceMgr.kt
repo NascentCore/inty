@@ -15,6 +15,8 @@ import com.squareup.moshi.DefaultIfNullFactory
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import com.therouter.inject.ServiceProvider
+import java.net.InetAddress
+import java.util.concurrent.TimeUnit
 import okhttp3.ConnectionPool
 import okhttp3.Dns
 import okhttp3.Interceptor
@@ -25,13 +27,8 @@ import okhttp3.Response
 import okhttp3.ResponseBody.Companion.toResponseBody
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
-import java.net.InetAddress
-import java.util.concurrent.TimeUnit
 
-/**
- * 获取基础URL
- * 根据构建类型返回对应的API基础URL
- */
+/** 获取基础URL 根据构建类型返回对应的API基础URL */
 fun getBaseUrl(): String {
     return when (AppEnv.buildType) {
         "local" -> "http://${Constant.USER_HOST_LOCAL}/"
@@ -46,7 +43,8 @@ class AuthInterceptor : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
         EasyLog.log("AuthInterceptor - getCurToken: ${IntySetting.getCurToken()}")
         val request =
-            chain.request()
+            chain
+                .request()
                 .newBuilder()
                 .addHeader("accept", "application/json")
                 .addHeader("appVersionCode", AppEnv.version_code.toString())
@@ -75,10 +73,7 @@ class AuthInterceptor : Interceptor {
     }
 }
 
-/**
- * 重试拦截器
- * 对网络错误进行重试，提高请求成功率
- */
+/** 重试拦截器 对网络错误进行重试，提高请求成功率 */
 class RetryInterceptor(private val maxRetries: Int = 3) : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
         val request = chain.request()
@@ -96,7 +91,9 @@ class RetryInterceptor(private val maxRetries: Int = 3) : Interceptor {
 
                 // 服务器错误（5xx）才重试
                 if (currentResponse.code in 500..599) {
-                    EasyLog.log("Retry attempt ${attempt + 1} for ${request.url} due to server error ${currentResponse.code}")
+                    EasyLog.log(
+                        "Retry attempt ${attempt + 1} for ${request.url} due to server error ${currentResponse.code}"
+                    )
                     currentResponse.close()
                     if (attempt < maxRetries - 1) {
                         Thread.sleep(1000L * (attempt + 1)) // 指数退避
@@ -116,7 +113,7 @@ class RetryInterceptor(private val maxRetries: Int = 3) : Interceptor {
         // 所有重试都失败了，返回错误响应而不是抛出异常
         EasyLog.log(
             "All retry attempts failed for ${request.url} after $maxRetries attempts",
-            EasyLog.ERROR
+            EasyLog.ERROR,
         )
 
         // 如果没有响应但有异常，创建一个错误响应
@@ -134,10 +131,7 @@ class RetryInterceptor(private val maxRetries: Int = 3) : Interceptor {
     }
 }
 
-/**
- * 网络性能监控拦截器
- * 监控请求耗时，帮助识别性能问题
- */
+/** 网络性能监控拦截器 监控请求耗时，帮助识别性能问题 */
 private class PerformanceInterceptor : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
         val request = chain.request()
@@ -153,20 +147,22 @@ private class PerformanceInterceptor : Interceptor {
             // 记录请求性能
             when {
                 duration < 1000 -> {
-                    EasyLog.log("✅ Request completed: ${request.method} ${request.url} (${duration}ms)")
+                    EasyLog.log(
+                        "✅ Request completed: ${request.method} ${request.url} (${duration}ms)"
+                    )
                 }
 
                 duration < 3000 -> {
                     EasyLog.log(
                         "⚠️ Slow request: ${request.method} ${request.url} (${duration}ms)",
-                        EasyLog.WARN
+                        EasyLog.WARN,
                     )
                 }
 
                 else -> {
                     EasyLog.log(
                         "🚨 Very slow request: ${request.method} ${request.url} (${duration}ms)",
-                        EasyLog.ERROR
+                        EasyLog.ERROR,
                     )
                 }
             }
@@ -177,23 +173,19 @@ private class PerformanceInterceptor : Interceptor {
             val duration = endTime - startTime
             EasyLog.log(
                 "❌ Request failed: ${request.method} ${request.url} (${duration}ms): ${e.message}",
-                EasyLog.ERROR
+                EasyLog.ERROR,
             )
             throw e
         }
     }
 }
 
-/**
- * 自定义DNS解析器，支持缓存
- */
+/** 自定义DNS解析器，支持缓存 */
 private class CachedDns : Dns {
     private val cache = mutableMapOf<String, List<InetAddress>>()
 
     override fun lookup(hostname: String): List<InetAddress> {
-        return cache.getOrPut(hostname) {
-            Dns.SYSTEM.lookup(hostname)
-        }
+        return cache.getOrPut(hostname) { Dns.SYSTEM.lookup(hostname) }
     }
 }
 
@@ -209,7 +201,6 @@ private fun restartAppProcess(context: Context) {
 }
 
 object NetServiceMgr {
-
 
     val okHttpClient: OkHttpClient
         get() {
@@ -234,6 +225,7 @@ object NetServiceMgr {
                     .addInterceptor(ChuckerInterceptor(AppEnv.context))
             return builder.build()
         }
+
     val moshi: Moshi
         get() {
             return Moshi.Builder()
@@ -243,6 +235,7 @@ object NetServiceMgr {
                 .addLast(KotlinJsonAdapterFactory()) //
                 .build()
         }
+
     val moshiNoWrapper: Moshi
         get() {
             return Moshi.Builder()
@@ -255,7 +248,7 @@ object NetServiceMgr {
 
     private val globalErrorHandler = GlobalErrorHandler()
 
-    //todo 这里使用wrapper来区分 是否带有外部code，message，data格式的响应数据体
+    // todo 这里使用wrapper来区分 是否带有外部code，message，data格式的响应数据体
     private fun getHttpWrapperHandler(): MoshiResultTypeAdapterFactory.HttpWrapper {
 
         return object : MoshiResultTypeAdapterFactory.HttpWrapper {
@@ -320,7 +313,6 @@ fun getUserApi(): IUserApi {
     return NetServiceMgr.retrofitNormal.create(IUserApi::class.java)
 }
 
-
 @ServiceProvider
 fun getAgentApi(): IAgentApi {
     return NetServiceMgr.retrofitNormal.create(IAgentApi::class.java)
@@ -330,7 +322,6 @@ fun getAgentApi(): IAgentApi {
 fun getChatApi(): IChatApi {
     return NetServiceMgr.retrofitNoWrapper.create(IChatApi::class.java)
 }
-
 
 @ServiceProvider
 fun getSubscriptionApi(): ISubscriptionApi {

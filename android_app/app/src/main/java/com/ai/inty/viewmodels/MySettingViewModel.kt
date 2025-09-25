@@ -14,6 +14,7 @@ import com.ai.inty.utils.IntyUserProfileSDK
 import com.ai.inty.utils.UserProfileManager
 import com.architecture.httplib.core.HttpResult
 import com.therouter.TheRouter
+import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -21,7 +22,6 @@ import kotlinx.coroutines.launch
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
-import java.io.File
 
 class MySettingViewModel : BaseActivityViewModel() {
 
@@ -37,11 +37,7 @@ class MySettingViewModel : BaseActivityViewModel() {
     }
 
     fun init(userProfile: UserProfile?) {
-        viewModelScope.launch {
-            userProfile?.let {
-                _userProfile.emit(userProfile)
-            }
-        }
+        viewModelScope.launch { userProfile?.let { _userProfile.emit(userProfile) } }
     }
 
     fun changeUserProfile(editKey: EditKey, editValue: String) {
@@ -63,24 +59,28 @@ class MySettingViewModel : BaseActivityViewModel() {
         launchWithNetCheck {
             if (_avatarChanged.value) {
                 val fileUri = _userProfile.value.avatar?.toUri()
-                
+
                 if (fileUri?.path == null) {
                     showNetworkAwareError("Invalid avatar file")
                     return@launchWithNetCheck
                 }
-                
-                val requestBody = File(
-                    fileUri?.path ?: return@launchWithNetCheck
-                ).asRequestBody(contentType = "image/jpg".toMediaTypeOrNull())
-                val result = userApi.uploadAvatar(MultipartBody.Part.createFormData("file", "file.png", requestBody))
-//                EasyLog.log("upload avatar = $result")
+
+                val requestBody =
+                    File(fileUri?.path ?: return@launchWithNetCheck)
+                        .asRequestBody(contentType = "image/jpg".toMediaTypeOrNull())
+                val result =
+                    userApi.uploadAvatar(
+                        MultipartBody.Part.createFormData("file", "file.png", requestBody)
+                    )
+                //                EasyLog.log("upload avatar = $result")
 
                 when (result) {
                     is HttpResult.Success -> {
-                        _userProfile.value = _userProfile.value.copy(
-                            // No cropping, just use the provided url.
-                            avatar = result.data.url
-                        )
+                        _userProfile.value =
+                            _userProfile.value.copy(
+                                // No cropping, just use the provided url.
+                                avatar = result.data.url
+                            )
                         // Show success toast for avatar upload
                         viewModelScope.launch(Dispatchers.Main) {
                             ToastUtils.showToast(R.string.saved_successfully)
@@ -110,12 +110,8 @@ class MySettingViewModel : BaseActivityViewModel() {
     }
 
     fun setAvatar(uri: Uri?) {
-//        EasyLog.log("avatar= $uri")
+        //        EasyLog.log("avatar= $uri")
         _avatarChanged.value = true
-        _userProfile.value = _userProfile.value.copy(
-            avatar = uri.toString()
-        )
+        _userProfile.value = _userProfile.value.copy(avatar = uri.toString())
     }
-
-
 }
