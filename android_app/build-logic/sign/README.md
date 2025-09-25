@@ -47,7 +47,7 @@ android {
             keyAlias = SignKeyConfig.DEBUG_KEY_ALIAS
             keyPassword = SignKeyConfig.DEBUG_KEY_PASSWORD
         }
-        
+
         create("release") {
             storeFile = file(SignKeyConfig.RELEASE_STORE_FILE)
             storePassword = SignKeyConfig.RELEASE_STORE_PASSWORD
@@ -55,7 +55,7 @@ android {
             keyPassword = SignKeyConfig.RELEASE_KEY_PASSWORD
         }
     }
-    
+
     buildTypes {
         debug {
             signingConfig = signingConfigs.getByName("debug")

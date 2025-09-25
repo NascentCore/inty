@@ -21,16 +21,19 @@ InTy后端支持SillyTavern角色卡V2规范，允许用户导入和导出标准
 ### 核心字段说明
 
 #### 必需字段
+
 - **`name`**: 角色名称，最大30个字符
 - **`description`**: 角色描述，包含外貌、背景等基础信息
 
 #### 基础字段
+
 - **`personality`**: 性格特征，描述角色的行为方式和价值观
 - **`scenario`**: 场景设定，定义角色所处的环境和背景故事
 - **`first_mes`**: 第一条消息，角色的开场白
 - **`mes_example`**: 对话示例，展示角色的说话风格
 
 #### 高级字段
+
 - **`creator_notes`**: 创作者备注，不会出现在提示中的说明信息
 - **`tags`**: 标签数组，用于分类和搜索
 - **`creator`**: 创作者名称
@@ -40,17 +43,20 @@ InTy后端支持SillyTavern角色卡V2规范，允许用户导入和导出标准
 ## 功能特性
 
 ### 支持的功能
+
 1. **基础信息导入**: name, description, personality, scenario
 2. **对话风格**: first_mes, mes_example
 3. **元数据**: creator_notes, tags, creator, character_version
 4. **扩展数据**: extensions字段支持自定义数据
 
 ### 暂不支持的功能
+
 1. **system_prompt**: 系统提示词（计划在后续版本支持）
 2. **character_book**: 角色书/世界书（计划在后续版本支持）
 3. **alternate_greetings**: 替代问候语（计划在后续版本支持）
 
 ### 导入格式支持
+
 - **JSON文件**: 直接的角色卡JSON数据
 - **PNG图片**: 从PNG图片的metadata中提取角色卡数据（需要PIL库）
 
@@ -59,6 +65,7 @@ InTy后端支持SillyTavern角色卡V2规范，允许用户导入和导出标准
 ### 导入角色卡
 
 #### 从JSON数据导入
+
 ```http
 POST /api/v1/agents/import-character-card
 Content-Type: application/json
@@ -80,6 +87,7 @@ Content-Type: application/json
 ```
 
 #### 从文件导入
+
 ```http
 POST /api/v1/agents/import-character-card-file
 Content-Type: multipart/form-data
@@ -93,6 +101,7 @@ import_alternate_greetings: true
 ### 导出角色卡
 
 #### 导出为角色卡格式
+
 ```http
 POST /api/v1/agents/export-character-card
 Content-Type: application/json
@@ -106,6 +115,7 @@ Content-Type: application/json
 ```
 
 #### 获取角色卡数据
+
 ```http
 GET /api/v1/agents/{agent_id}/character-card?include_character_book=true
 ```
@@ -150,18 +160,18 @@ extensions JSON                        -- 扩展数据
 
 ### 字段映射关系
 
-| 角色卡字段 | Agent字段 | 说明 |
-|-----------|-----------|------|
-| name | name | 角色名称 |
-| description | intro | 角色描述 |
-| personality | personality | 性格特征 |
-| scenario | scenario | 场景设定 |
-| first_mes | first_message | 第一条消息 |
-| mes_example | message_example | 对话示例 |
-| creator_notes | creator_notes | 创作者备注 |
-| tags | tags | 标签数组 |
-| character_version | character_version | 版本号 |
-| extensions | extensions | 扩展数据 |
+| 角色卡字段        | Agent字段         | 说明       |
+| ----------------- | ----------------- | ---------- |
+| name              | name              | 角色名称   |
+| description       | intro             | 角色描述   |
+| personality       | personality       | 性格特征   |
+| scenario          | scenario          | 场景设定   |
+| first_mes         | first_message     | 第一条消息 |
+| mes_example       | message_example   | 对话示例   |
+| creator_notes     | creator_notes     | 创作者备注 |
+| tags              | tags              | 标签数组   |
+| character_version | character_version | 版本号     |
+| extensions        | extensions        | 扩展数据   |
 
 ## 使用示例
 
@@ -234,9 +244,7 @@ result = await character_card_service.import_character_card(
         "code": "FIELD_REQUIRED"
       }
     ],
-    "warnings": [
-      "建议添加角色性格描述"
-    ]
+    "warnings": ["建议添加角色性格描述"]
   }
 }
 ```

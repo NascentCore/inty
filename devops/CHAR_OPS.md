@@ -12,7 +12,7 @@ ERROR:  trailing junk after numeric literal at or near "28c46073"
 LINE 1: select * from chat_settings where id = 28c46073-43b2-4bf5-b1...
                                                ^
 inty=> select * from chat_settings where id = '28c46073-43b2-4bf5-b1aa-6d772d255d61';
- id | user_id | agent_id | language | voice_enabled | keep_talking | created_at | updated_at | chat_id 
+ id | user_id | agent_id | language | voice_enabled | keep_talking | created_at | updated_at | chat_id
 ----+---------+----------+----------+---------------+--------------+------------+------------+---------
 (0 rows)
 

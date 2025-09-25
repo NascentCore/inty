@@ -1,17 +1,17 @@
 # Eval
 
-* This is a thin wrapper on top of inty backend
-* JWT token is hardcoded in api.ts
-* The inty backend is configured through env var REACT_APP_API_BASE_URL
+- This is a thin wrapper on top of inty backend
+- JWT token is hardcoded in api.ts
+- The inty backend is configured through env var REACT_APP_API_BASE_URL
 
 Nginx is installed on the server to do login:
 
-* `test.inty.cc` `new.test.inty.cc` share the same password files; there are 2 users:
+- `test.inty.cc` `new.test.inty.cc` share the same password files; there are 2 users:
 
-    ```password
-    wzy:sxwl6662025!
-    heartmate:heartmate.inty.cc
-    ```
+  ```password
+  wzy:sxwl6662025!
+  heartmate:heartmate.inty.cc
+  ```
 
 Deployment process:
 
@@ -35,12 +35,12 @@ docker run --rm -d -p 8103:80 --name inty-eval $IMAGE
 
 # namecheap 上配置域名解析
 例：new.test.inty.cc -> 35.186.154.142
-    
+
 # 配置 nginx
 $ sudo vim /etc/nginx/conf.d/sxwl.ai.conf
 # 增加如下配置
 server {
-    server_name new.test.inty.cc; 
+    server_name new.test.inty.cc;
     client_max_body_size 100M;
 
     location / {

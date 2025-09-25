@@ -9,21 +9,24 @@ This tool tests Gemini 2.5 Pro performance with long context input (~500k tokens
 Choose a book based on your testing needs:
 
 **Light Testing (~50k tokens)**:
+
 ```bash
 # Alice's Adventures in Wonderland (~27k tokens)
 curl -o data/book.txt https://www.gutenberg.org/files/11/11-0.txt
 
-# The Great Gatsby (~50k tokens) 
+# The Great Gatsby (~50k tokens)
 curl -o data/book.txt https://www.gutenberg.org/files/64317/64317-0.txt
 ```
 
 **Medium Testing (~200k tokens)**:
+
 ```bash
 # Moby Dick (~200k tokens)
 curl -o data/book.txt https://www.gutenberg.org/files/2701/2701-0.txt
 ```
 
 **Heavy Testing (400k+ tokens)**:
+
 ```bash
 # The Count of Monte Cristo (~460k tokens)
 curl -o data/book.txt https://www.gutenberg.org/files/1184/1184-0.txt
@@ -93,14 +96,17 @@ Processing speed:       49.98 tokens/sec
 ## Book Recommendations by Token Count
 
 **🟢 Light (Start Here)**:
+
 - **Alice's Adventures in Wonderland** (~27k tokens) - Quick test
 - **The Great Gatsby** (~50k tokens) - Modern classic
 
-**🟡 Medium**:  
+**🟡 Medium**:
+
 - **Moby Dick** (~200k tokens) - Classic literature
 - **Pride and Prejudice** (~180k tokens) - Jane Austen
 
 **🔴 Heavy (May Timeout)**:
+
 - **The Count of Monte Cristo** (~460k tokens) - Adventure epic
 - **War and Peace** (~600k tokens) - Russian masterpiece
 
