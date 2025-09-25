@@ -75,7 +75,7 @@ resources:
     memory: "64Mi"
     cpu: "50m"
   limits:
-    memory: "128Mi"
+    memory: "128Mi" 
     cpu: "100m"
 ```
 

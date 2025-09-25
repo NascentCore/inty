@@ -14,11 +14,7 @@ interface ApiKeyModalProps {
   allowClose?: boolean; // 是否允许关闭模态框
 }
 
-export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({
-  visible,
-  onClose,
-  allowClose = true,
-}) => {
+export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({ visible, onClose, allowClose = true }) => {
   const [form] = Form.useForm();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { setApiKey, isLoading } = useApiKeyContext();
@@ -44,9 +40,7 @@ export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({
   return (
     <Modal
       open={visible}
-      onCancel={
-        allowClose && !isSubmitting && !isLoading ? handleCancel : undefined
-      }
+      onCancel={allowClose && !isSubmitting && !isLoading ? handleCancel : undefined}
       footer={null}
       width={500}
       centered
@@ -89,10 +83,7 @@ export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({
         <Form.Item style={{ marginBottom: 0, textAlign: "right" }}>
           <Space>
             {allowClose && (
-              <Button
-                onClick={handleCancel}
-                disabled={isSubmitting || isLoading}
-              >
+              <Button onClick={handleCancel} disabled={isSubmitting || isLoading}>
                 取消
               </Button>
             )}

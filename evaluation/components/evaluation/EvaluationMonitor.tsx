@@ -36,7 +36,12 @@ import { useJsonDisplay } from "../../hooks/useJsonDisplay";
 import { MultiAgentChatDisplay } from "./MultiAgentChatDisplay";
 import { JsonDisplayModal } from "../common/JsonDisplayModal";
 import api from "../../services/api";
-import type { EvaluationSession, EvaluationResult } from "../../types";
+import type {
+  EvaluationSession,
+  EvaluationResult,
+} from "../../types";
+
+
 
 interface EvaluationMonitorProps {
   session: EvaluationSession | null;
@@ -236,7 +241,7 @@ export const EvaluationMonitor: React.FC<EvaluationMonitorProps> = ({
         export_metadata: {
           export_time: new Date().toISOString(),
           total_results: results.length,
-        },
+        }
       };
 
       // 生成文件名
@@ -388,7 +393,10 @@ export const EvaluationMonitor: React.FC<EvaluationMonitorProps> = ({
                   >
                     导出结果
                   </Button>
-                  <Button icon={<RobotOutlined />} onClick={handleShowJson}>
+                  <Button
+                    icon={<RobotOutlined />}
+                    onClick={handleShowJson}
+                  >
                     查看JSON
                   </Button>
                 </>

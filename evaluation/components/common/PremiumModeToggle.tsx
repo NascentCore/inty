@@ -25,14 +25,12 @@ export const PremiumModeToggle: React.FC<PremiumModeToggleProps> = ({
   // Load premium mode status
   const loadPremiumMode = useCallback(async () => {
     if (!agentId) return;
-
+    
     setLoading(true);
     setError(null);
-
+    
     try {
-      const settings = await api
-        .getIntyClient()
-        .api.v1.chats.agents.getSettings(agentId);
+      const settings = await api.getIntyClient().api.v1.chats.agents.getSettings(agentId);
       setPremiumMode(settings.premium_mode || false);
     } catch (err) {
       console.error("Failed to load premium mode settings:", err);
@@ -45,24 +43,25 @@ export const PremiumModeToggle: React.FC<PremiumModeToggleProps> = ({
   // Handle toggle
   const handleToggle = async (checked: boolean) => {
     if (!agentId) return;
-
+    
     setLoading(true);
     setError(null); // Clear any previous errors when user retries
-
+    
     try {
       console.log("Premium mode toggle requested:", checked);
-
+      
       // Call the actual API to update chat settings
       await api.chat.updateAgentSettings(agentId, {
-        premium_mode: checked,
+        premium_mode: checked
       });
 
       // Update local state only after successful API call
       setPremiumMode(checked);
-
+      
       if (onToggle) {
         onToggle(checked);
       }
+
     } catch (err) {
       console.error("Failed to update premium mode:", err);
       setError("Failed to update premium mode");
@@ -86,7 +85,7 @@ export const PremiumModeToggle: React.FC<PremiumModeToggleProps> = ({
         icon={<Spin size="small" />}
         disabled
         type="default"
-        style={{ width: "80px" }}
+        style={{ width: '80px' }}
       >
         Loading...
       </Button>
@@ -102,7 +101,7 @@ export const PremiumModeToggle: React.FC<PremiumModeToggleProps> = ({
           onClick={() => handleToggle(!premiumMode)}
           loading={loading}
           disabled={disabled}
-          style={{ width: "80px" }}
+          style={{ width: '80px' }}
         >
           {premiumMode ? "Premium" : "Standard"}
         </Button>
@@ -117,7 +116,7 @@ export const PremiumModeToggle: React.FC<PremiumModeToggleProps> = ({
         onClick={() => handleToggle(!premiumMode)}
         loading={loading}
         disabled={disabled}
-        style={{ width: "80px" }}
+        style={{ width: '80px' }}
       >
         {premiumMode ? "Premium" : "Standard"}
       </Button>

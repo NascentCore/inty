@@ -47,10 +47,10 @@ class ApiClient {
   private apiPrefix: string;
   private headers: Record<string, string>;
 
-  constructor(baseURL: string, apiPrefix: string = "/api/v1") {
+  constructor(baseURL: string, apiPrefix: string = '/api/v1') {
     this.baseURL = baseURL;
     // 如果baseURL已经包含api/v1，则不使用apiPrefix
-    this.apiPrefix = baseURL.includes("/api/v1") ? "" : apiPrefix;
+    this.apiPrefix = baseURL.includes('/api/v1') ? '' : apiPrefix;
     // This is the default headers for all requests.
     // Some API endpoints needs different content header, like upload avatar,
     // needs multipart/form-data.
@@ -59,13 +59,17 @@ class ApiClient {
     };
   }
 
-  private async request<T>(endpoint: string, options: any = {}): Promise<T> {
+  private async request<T>(
+    endpoint: string,
+    options: any = {},
+  ): Promise<T> {
     // 自动添加API前缀，如果endpoint已经包含/api/则不添加
-    const fullEndpoint = endpoint.startsWith("/api/")
-      ? endpoint
+    const fullEndpoint = endpoint.startsWith('/api/') 
+      ? endpoint 
       : `${this.apiPrefix}${endpoint}`;
-
+    
     const url = `${this.baseURL}${fullEndpoint}`;
+    
 
     const config: any = {
       ...options,
@@ -127,8 +131,8 @@ class ApiClient {
         const errorData = await response.json().catch(() => ({}));
         throw new ApiError(
           errorData.detail ||
-            errorData.message ||
-            `HTTP ${response.status}: ${response.statusText}`,
+          errorData.message ||
+          `HTTP ${response.status}: ${response.statusText}`,
           response.status,
           response.statusText,
           errorData,
@@ -148,7 +152,7 @@ class ApiClient {
               result.message || "API Error",
               response.status,
               response.statusText,
-              result,
+              result
             );
           }
         } else {
@@ -235,6 +239,7 @@ class ApiClient {
 
 // 创建API客户端实例
 const apiClient = new ApiClient(window.location.origin);
+
 
 // 创建一个自定义的 Inty 客户端，支持相对路径
 let intyClient: Inty | null = null;
@@ -832,7 +837,7 @@ export const chatApi = {
       language?: string;
       voice_enabled?: boolean;
       style_prompt?: string;
-    },
+    }
   ): Promise<any> =>
     apiClient.put(`/chats/agents/${agentId}/settings`, settings),
 };
