@@ -59,6 +59,32 @@ object StableCardHeightManager {
     }
     
     /**
+     * 获取图片的显示高度（像素）
+     * 直接返回像素值，避免dp转换的精度问题
+     * @param imageUrl 图片URL
+     * @return 显示高度（像素）
+     */
+    fun getDisplayHeightPx(imageUrl: String?): Int {
+        // 如果还没有初始化，返回一个安全的默认高度
+        if (screenWidth == 0 || density == 0f) {
+            return (290 * 3f).toInt() // 使用290dp作为安全默认值，假设density=3
+        }
+        
+        if (imageUrl.isNullOrBlank()) {
+            return getDefaultHeightPx()
+        }
+        
+        // 先从缓存中查找
+        val cachedSize = imageSizeCache.get(imageUrl)
+        if (cachedSize != null) {
+            return calculateDisplayHeightPx(cachedSize.x, cachedSize.y)
+        }
+        
+        // 如果缓存中没有，使用默认高度
+        return getDefaultHeightPx()
+    }
+    
+    /**
      * 预加载图片尺寸，用于更准确的高度计算
      */
     suspend fun preloadImageSize(imageUrl: String) {
@@ -144,6 +170,33 @@ object StableCardHeightManager {
     }
     
     /**
+     * 根据图片尺寸计算显示高度（像素）
+     * 直接返回像素值，避免dp转换的精度问题
+     */
+    private fun calculateDisplayHeightPx(imageWidth: Int, imageHeight: Int): Int {
+        if (imageWidth <= 0 || imageHeight <= 0) {
+            return getDefaultHeightPx()
+        }
+        
+        val originalAspectRatio = imageWidth.toFloat() / imageHeight.toFloat()
+        
+        // 限制宽高比在合理范围内，避免极端比例
+        val minAspectRatio = 9f / 16f // 9:16 (更窄，高度更高)
+        val maxAspectRatio = 3f / 4f  // 3:4 (更宽，高度更低)
+        val clampedAspectRatio = originalAspectRatio.coerceIn(minAspectRatio, maxAspectRatio)
+        
+        // 计算显示高度
+        val itemWidthPx = getItemWidthPx()
+        val displayHeightPx = (itemWidthPx / clampedAspectRatio).toInt()
+        
+        // 限制高度范围，避免过高或过低
+        val minHeightPx = (minHeightDp * density).toInt()
+        val maxHeightPx = (maxHeightDp * density).toInt()
+        
+        return displayHeightPx.coerceIn(minHeightPx, maxHeightPx)
+    }
+    
+    /**
      * 获取默认高度（dp）
      */
     private fun getDefaultHeightDp(): Float {
@@ -153,6 +206,16 @@ object StableCardHeightManager {
         val defaultHeightDp = defaultHeightPx / density
         
         return defaultHeightDp.coerceIn(minHeightDp, maxHeightDp)
+    }
+    
+    /**
+     * 获取默认高度（像素）
+     */
+    private fun getDefaultHeightPx(): Int {
+        val itemWidthPx = getItemWidthPx()
+        // 使用默认宽高比 4:5 计算默认高度
+        val defaultAspectRatio = 4f / 5f
+        return (itemWidthPx / defaultAspectRatio).toInt()
     }
     
     /**

@@ -67,28 +67,23 @@ fun ExploreCharacterCard(
         AvatarManager.getChatBackgroundForAgent(agentInfo)
     }
 
-    // 使用稳定的高度管理器，基于图片真实比例计算
-    var cardHeight by remember(agentInfo.id, imageUrl) {
-        val initialHeight = StableCardHeightManager.getStableCardHeightDp(agentInfo)
-        mutableStateOf(initialHeight.dp)
+    // 使用稳定的高度计算，基于图片URL缓存，避免重组时高度变化
+    val cardHeight = remember(imageUrl) {
+        // 直接使用像素值计算，避免dp转换的精度问题
+        val heightPx = StableCardHeightManager.getDisplayHeightPx(imageUrl)
+        with(density) { heightPx.toDp() }
     }
 
     // 图片加载状态
     var imageLoaded by remember { mutableStateOf(false) }
 
-    // 预加载图片尺寸，并在预加载完成后更新高度
+    // 预加载图片尺寸，但不更新高度（高度已在remember中稳定）
     LaunchedEffect(imageUrl) {
         if (!imageUrl.isNullOrEmpty()) {
             try {
                 StableCardHeightManager.preloadImageSize(imageUrl)
-                // 预加载完成后，重新计算高度
-                val newHeightDp = StableCardHeightManager.getStableCardHeightDp(agentInfo)
-                val newHeight = newHeightDp.dp
-                if (newHeight != cardHeight) {
-                    cardHeight = newHeight
-                }
             } catch (e: Exception) {
-                // 预加载失败，保持当前高度
+                // 预加载失败，不影响UI显示
             }
         }
     }
@@ -111,10 +106,9 @@ fun ExploreCharacterCard(
             }
 
             IntyImage(
-                modifier = Modifier
-                    .fillMaxWidth(),
+                modifier = Modifier.fillMaxSize(),
                 model = imageUrl,
-                contentScale = ContentScale.FillWidth,
+                contentScale = ContentScale.Crop,
                 onSuccess = {
                     imageLoaded = true
                 },
