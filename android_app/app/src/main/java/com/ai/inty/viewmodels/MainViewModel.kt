@@ -167,7 +167,8 @@ class MainViewModel : BaseActivityViewModel() {
         }
 
         // 第二步：后台静默刷新数据（无论是否有缓存）
-        if (shouldUpdateFromNetwork()) {
+        // 避免重复请求：只有在没有正在加载时才进行网络请求
+        if (shouldUpdateFromNetwork() && !_isLoading.value) {
             EasyLog.log("getAgents - 后台静默刷新数据")
             loadAgentsSilently()
         } else {

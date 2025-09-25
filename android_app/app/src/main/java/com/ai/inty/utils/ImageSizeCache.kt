@@ -66,6 +66,11 @@ object ImageSizeCache {
      * @return 显示高度（像素）
      */
     fun getDisplayHeightPx(imageUrl: String?): Int {
+        // 如果还没有初始化，返回一个安全的默认高度
+        if (screenWidth == 0 || density == 0f) {
+            return (290 * 3f).toInt() // 使用290dp作为安全默认值，假设density=3
+        }
+        
         if (imageUrl.isNullOrBlank()) {
             return getDefaultHeightPx()
         }
@@ -76,8 +81,7 @@ object ImageSizeCache {
             return calculateDisplayHeightPx(cachedSize.x, cachedSize.y)
         }
         
-        // 如果缓存中没有，尝试使用默认的宽高比计算
-        // 这样可以避免首次进入时显示固定高度
+        // 如果缓存中没有，使用默认高度
         return getDefaultHeightPx()
     }
     
@@ -120,6 +124,17 @@ object ImageSizeCache {
      */
     suspend fun preloadImageSizes(imageUrls: List<String>) {
         imageUrls.forEach { url ->
+            preloadImageSize(url)
+        }
+    }
+    
+    /**
+     * 同步预加载关键图片尺寸（用于瀑布流稳定布局）
+     * 优先加载前几屏的图片尺寸，确保初始渲染稳定
+     */
+    suspend fun preloadCriticalImageSizes(imageUrls: List<String>, maxCount: Int = 10) {
+        val criticalUrls = imageUrls.take(maxCount)
+        criticalUrls.forEach { url ->
             preloadImageSize(url)
         }
     }

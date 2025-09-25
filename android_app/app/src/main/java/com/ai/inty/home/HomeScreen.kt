@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
@@ -232,7 +231,7 @@ private fun HomeContent(
         }
 
         HomeTabIndex.Explore -> {
-            SuggestTabContent(
+            ExploreTabContent(
                 mainViewModel = mainViewModel,
                 context = context,
                 innerPadding = innerPadding
@@ -305,7 +304,7 @@ private fun ConversationsTabContent(
  * 推荐Tab内容
  */
 @Composable
-private fun SuggestTabContent(
+private fun ExploreTabContent(
     mainViewModel: MainViewModel,
     context: Context,
     innerPadding: PaddingValues,
@@ -398,8 +397,6 @@ private fun ProfileTabContent(
 }
 
 val BottomNavigationBarHeight = 48.dp
-val BottomNavigationBarPadding = 0.dp
-val BottomNavigationBarItemSize = 42.dp
 
 /**
  * 底部导航栏
@@ -414,8 +411,7 @@ private fun AppBottomNavigationBar(
         modifier = modifier
             .fillMaxWidth()
             .background(DarkPurple)
-            .height(BottomNavigationBarHeight)
-            .padding(bottom = BottomNavigationBarPadding),
+            .height(BottomNavigationBarHeight),
         verticalAlignment = Alignment.CenterVertically
     ) {
         MAIN_TAB_LIST.forEachIndexed { index, tab ->
@@ -445,7 +441,7 @@ private fun BottomBarItem(
     Box(modifier = modifier) {
         IntyImage(
             modifier = Modifier
-                .size(BottomNavigationBarItemSize)
+                .size(42.dp)
                 .align(Alignment.Center),
             model = if (selected) tabInfo.selectedImage else tabInfo.normalImage
         )

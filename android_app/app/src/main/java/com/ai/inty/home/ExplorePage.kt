@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -43,7 +42,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ai.inty.R
@@ -72,15 +70,16 @@ fun ExplorePage(
 ) {
     val context = LocalContext.current
 
-    // 初始化图片尺寸缓存
+    // 初始化图片尺寸缓存 - 立即同步初始化
     LaunchedEffect(Unit) {
         ImageSizeCache.init(context)
     }
 
-    // 预加载图片尺寸 - 立即执行，不等待 agents 变化
+    // 预加载图片尺寸 - 后台异步进行，不影响UI渲染
     LaunchedEffect(agents.isNotEmpty()) {
         if (agents.isNotEmpty()) {
             val imageUrls = agents.mapNotNull { it.getChatBackground() }
+            // 后台预加载图片尺寸，不阻塞UI渲染
             ImageSizeCache.preloadImageSizes(imageUrls)
         }
     }
@@ -142,17 +141,27 @@ fun ExplorePage(
                         val lastVisibleItemIndex =
                             layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1
 
-                        // 当最后一个可见项接近列表末尾时触发加载更多
-                        totalItemsCount > 0 && lastVisibleItemIndex >= totalItemsCount - 3
+                        // 更严格的底部检测逻辑，避免首次进入时误触发
+                        // 只有在用户真正滚动到底部时才触发加载更多
+                        val isScrolledToBottom = totalItemsCount > 0 &&
+                                lastVisibleItemIndex >= totalItemsCount - 1 && // 更严格：必须是最后一个item可见
+                                totalItemsCount >= 10 && // 确保至少有10个项目
+                                gridState.firstVisibleItemIndex > 0 // 确保用户已经滚动过（不是初始状态）
+
+                        isScrolledToBottom
                     }
                 }
 
-                // 触发加载更多，添加防抖机制
+                // 触发加载更多，添加防抖机制和稳定性检查
                 LaunchedEffect(reachedBottom, agents.size) {
                     if (reachedBottom && agents.isNotEmpty() && !isLoading) {
-                        // 添加延迟，避免快速滚动时重复触发
-                        delay(200)
-                        onLoadMore()
+                        // 增加延迟，避免快速滚动和布局变化时重复触发
+                        delay(300)
+                        // 再次检查状态，确保在延迟期间状态没有变化
+                        // 额外检查：确保不是首次进入页面（通过检查滚动状态）
+                        if (reachedBottom && agents.isNotEmpty() && !isLoading && gridState.firstVisibleItemIndex > 0) {
+                            onLoadMore()
+                        }
                     }
                 }
 
@@ -214,7 +223,7 @@ fun ExplorePage(
 
 
 @Composable
-fun CharacterCard(
+private fun CharacterCard(
     modifier: Modifier = Modifier,
     agentInfo: AgentInfo,
 ) {
@@ -242,7 +251,9 @@ fun CharacterCard(
     }
 
     // 动态计算卡片高度，基于图片宽高比
+    // 暂时使用固定高度确保UI正常显示，避免黑屏问题
     val cardHeight = remember(imageUrl) {
+        // 先使用固定高度，确保UI能正常显示
         val heightPx = ImageSizeCache.getDisplayHeightPx(imageUrl)
         with(density) { heightPx.toDp() }
     }
@@ -253,7 +264,7 @@ fun CharacterCard(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .aspectRatio(agentInfo.randomAspectRatio())
+            .height(cardHeight) // 等图片尺寸缓存稳定后再启用
     ) {
         // 背景图片层
         Box(modifier = Modifier.fillMaxSize()) {
@@ -322,21 +333,6 @@ fun CharacterCard(
             }
         }
     }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun CharacterCardPreview() {
-    CharacterCard(
-        agentInfo = AgentInfo(
-            id = "test_id",
-            name = "测试角色",
-            intro = "这是一个测试角色的介绍，用来展示卡片的效果",
-            avatar = "https://example.com/avatar.jpg",
-            background = "https://example.com/background.jpg",
-            tags = listOf("标签1", "标签2", "标签3")
-        )
-    )
 }
 
 private fun listDup(agents: List<AgentInfo>) {
