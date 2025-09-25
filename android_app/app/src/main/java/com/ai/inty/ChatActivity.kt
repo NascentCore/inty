@@ -15,6 +15,7 @@ import com.ai.inty.beans.AgentInfo
 import com.ai.inty.chat.ChatPage
 import com.ai.inty.ui.theme.DarkPurple
 import com.ai.inty.ui.theme.IntyTheme
+import com.ai.inty.utils.FirebaseAnalyticsHelper
 import com.ai.inty.viewmodels.ChatViewModel
 import com.inty.utils.log.EasyLog
 import com.therouter.router.Autowired
@@ -93,6 +94,17 @@ class ChatActivity : BaseActivity() {
                 )
             }
         }
+        
+        // 跟踪ChatActivity页面访问
+        val agentId = agent?.id ?: agent_id ?: "unknown"
+        FirebaseAnalyticsHelper.trackScreenView(
+            screenName = "ChatScreen",
+            screenClass = "ChatActivity",
+            additionalParams = mapOf(
+                "agent_id" to agentId,
+                "agent_name" to (agent?.name ?: "unknown")
+            )
+        )
     }
 
 

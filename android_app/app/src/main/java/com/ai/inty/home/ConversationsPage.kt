@@ -43,6 +43,7 @@ import com.ai.inty.base.IntyImage
 import com.ai.inty.base.RedDot
 import com.ai.inty.beans.ConversationItem
 import com.ai.inty.utils.AuthClickable
+import com.ai.inty.utils.TrackScreenView
 
 
 /**
@@ -57,6 +58,16 @@ fun ConversationsPage(
     isRefreshingConversations: Boolean = false,
     onLoadMoreConversations: (() -> Unit)? = null,
 ) {
+    // 跟踪ConversationsPage页面访问
+    TrackScreenView(
+        screenName = "ConversationsPage",
+        screenClass = "MainActivity",
+        additionalParams = mapOf(
+            "conversation_count" to conversations.size,
+            "is_loading" to isLoadingConversations
+        )
+    )
+    
     Box(modifier = modifier) {
         IntyImage(
             modifier = Modifier.align(Alignment.TopEnd),

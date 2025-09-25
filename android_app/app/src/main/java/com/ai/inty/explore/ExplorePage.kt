@@ -31,6 +31,7 @@ import com.ai.inty.R
 import com.ai.inty.base.IntyImage
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.utils.StableCardHeightManager
+import com.ai.inty.utils.TrackScreenView
 
 /**
  * Explore页面 - 推荐agents展示
@@ -49,6 +50,16 @@ fun ExplorePage(
     // 获取Paging数据流
     val agentsFlow = viewModel.getRecommendAgentsFlow()
     val lazyPagingItems = agentsFlow?.collectAsLazyPagingItems()
+    
+    // 跟踪ExplorePage页面访问
+    TrackScreenView(
+        screenName = "ExplorePage",
+        screenClass = "MainActivity",
+        additionalParams = mapOf(
+            "agent_count" to (lazyPagingItems?.itemCount ?: 0),
+            "is_loading" to (lazyPagingItems?.loadState?.refresh is LoadState.Loading)
+        )
+    )
 
     // 初始化图片尺寸缓存管理器
     LaunchedEffect(Unit) {

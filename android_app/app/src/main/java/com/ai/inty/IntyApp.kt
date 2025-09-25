@@ -5,6 +5,7 @@ import android.content.Context
 import com.ai.inty.base.initImageLoader
 import com.ai.inty.billing.BillingRepository
 import com.ai.inty.netapi.IntyNetworkManager
+import com.ai.inty.utils.FirebaseAnalyticsHelper
 import com.ai.inty.utils.NetworkManager
 import com.ai.inty.utils.UnifiedStartupManager
 import com.inty.utils.AppEnv
@@ -45,6 +46,9 @@ class IntyApp : Application() {
         
         // 立即初始化统一启动管理器（只做必要的登录判断，不阻塞）
         UnifiedStartupManager.initializeEssential(this)
+        
+        // 初始化Firebase Analytics Helper
+        FirebaseAnalyticsHelper.initialize(this)
 
         // 异步初始化所有可能阻塞的组件
         kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
