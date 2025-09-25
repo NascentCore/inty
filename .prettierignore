@@ -2,4 +2,7 @@
 evaluation/inty_sdk
 sdks/python
 android_app/library/inty_sdk
+# Copied gemini workflow files, do not auto format
 .github/workflows/gemini-*
+# GitHub auto generated issue templates
+.github/ISSUE_TEMPLATE
