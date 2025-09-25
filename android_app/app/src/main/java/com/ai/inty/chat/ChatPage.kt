@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import com.ai.inty.Constant
 import com.ai.inty.R
 import com.ai.inty.base.ToastUtils
+import com.ai.inty.beans.MsgInfo
 import com.ai.inty.billing.BillingRepository
 import com.ai.inty.home.BottomNavigationBarHeight
 import com.ai.inty.ui.AdvancedModelChatDialog
@@ -76,7 +77,6 @@ internal fun ChatPage(
     // 页面生命周期管理：离开页面时重置播放状态
     DisposableEffect(chatViewModel) {
         onDispose {
-            EasyLog.log("ChatPage disposed, resetting voice playback")
             chatViewModel.resetVoicePlayback()
         }
     }
@@ -269,11 +269,14 @@ internal fun ChatPage(
                     item {
                         Spacer(Modifier.height(16.dp))
                     }
+                    // 1. 用户和 agent 的对话消息（显示在底部，因为是反向列表）
+                    // 过滤掉 chatMessages 中的开场白消息
+                    val filteredChatMessages = chatMessages.filter { !it.isOpening() }
                     // 添加安全检查
                     runCatching {
-                        if (chatMessages.isNotEmpty()) {
+                        if (filteredChatMessages.isNotEmpty()) {
                             // 创建消息列表的副本以避免并发修改
-                            val messagesCopy = chatMessages.toList()
+                            val messagesCopy = filteredChatMessages.toList()
                             val items =
                                 messagesCopy.filter { !(it.role == "user" && it.content == "continue") }
                             if (items.isNotEmpty()) {
@@ -291,10 +294,6 @@ internal fun ChatPage(
                                         }
                                         Spacer(Modifier.height(16.dp))
                                     }.onFailure { e ->
-                                        EasyLog.log(
-                                            "Error rendering chat item at index $index: ${e.message}",
-                                            priority = EasyLog.ERROR
-                                        )
                                         // 渲染失败时显示错误占位符
                                         Box(
                                             modifier = Modifier
@@ -314,7 +313,6 @@ internal fun ChatPage(
                             }
                         }
                     }.onFailure { e ->
-                        EasyLog.log("Error in LazyColumn: ${e.message}", priority = EasyLog.ERROR)
                         // 如果整个列表渲染失败，显示错误信息
                         item {
                             Box(
@@ -331,11 +329,37 @@ internal fun ChatPage(
                             }
                         }
                     }
-                    //因为是反向列表，所以这里添加，就是在最上面
+                    // 2. Agent Opening (显示在顶部，因为是反向列表的最后一个item)
+                    item {
+                        agentInfo?.let { agent ->
+                            // 始终显示开场白
+                            val shouldShowOpening = agent.opening.isNotEmpty()
+
+                            if (shouldShowOpening) {
+                                // 创建开场白消息
+                                val openingMessage = MsgInfo(
+                                    content = agent.opening,
+                                    role = "assistant",
+                                    meta_data = MsgInfo.MsgMetaData(
+                                        agentId = agent.id,
+                                        isOpening = true
+                                    ),
+                                    audio_url = agent.opening_audio_url
+                                )
+
+                                ChatItem(openingMessage)
+                                Spacer(Modifier.height(16.dp))
+                            }
+                        }
+                    }
+
+                    // 3. Agent Intro (显示在最顶部，因为是反向列表的最后一个item)
                     item {
                         //开场白之前的，Agent的信息介绍卡片
                         agentInfo?.intro?.let { info ->
-                            if (info.isNotEmpty()) AgentInfoChatCard(info)
+                            if (info.isNotEmpty()) {
+                                AgentInfoChatCard(info)
+                            }
                         }
                     }
                 }
