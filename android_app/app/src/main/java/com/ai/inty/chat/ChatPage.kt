@@ -259,11 +259,11 @@ internal fun ChatPage(
                         )
                     }
                 }
-val chatMessages by chatViewModel.msgs.collectAsState()
+                val chatMessages by chatViewModel.msgs.collectAsState()
 
 
 
-                
+
                 LazyColumn(
                     modifier = Modifier
                         .weight(1f)
@@ -275,14 +275,11 @@ val chatMessages by chatViewModel.msgs.collectAsState()
                     }
 
 
-
-
                     // 1. 用户和 agent 的对话消息（显示在底部，因为是反向列表）
 
 
-
                     // 过滤掉 chatMessages 中的开场白消息
-val filteredChatMessages = chatMessages.filter { !it.isOpening() }
+                    val filteredChatMessages = chatMessages.filter { !it.isOpening() }
 
 
                     // 添加安全检查
@@ -343,37 +340,37 @@ val filteredChatMessages = chatMessages.filter { !it.isOpening() }
                         }
                     }
 // 2. Agent Opening (显示在顶部，因为是反向列表的最后一个item)
-item {
-    agentInfo?.let { agent ->
-        // 始终显示开场白
-        val shouldShowOpening = agent.opening.isNotEmpty()
+                    item {
+                        agentInfo?.let { agent ->
+                            // 始终显示开场白
+                            val shouldShowOpening = agent.opening.isNotEmpty()
 
-        if (shouldShowOpening) {
-            // 创建开场白消息
-            val openingMessage = MsgInfo(
-                content = agent.opening,
-                role = "assistant",
-                meta_data = MsgInfo.MsgMetaData(
-                    agentId = agent.id,
-                    isOpening = true
-                ),
-                audio_url = agent.opening_audio_url
-            )
-            
-            ChatItem(openingMessage)
-            Spacer(Modifier.height(16.dp))
-        }
-    }
-}
+                            if (shouldShowOpening) {
+                                // 创建开场白消息
+                                val openingMessage = MsgInfo(
+                                    content = agent.opening,
+                                    role = "assistant",
+                                    meta_data = MsgInfo.MsgMetaData(
+                                        agentId = agent.id,
+                                        isOpening = true
+                                    ),
+                                    audio_url = agent.opening_audio_url
+                                )
+
+                                ChatItem(openingMessage)
+                                Spacer(Modifier.height(16.dp))
+                            }
+                        }
+                    }
 
 // 3. Agent Intro (显示在最顶部，因为是反向列表的最后一个item)
-item {
-    agentInfo?.intro?.let { info ->
-        if (info.isNotEmpty()) {
-            AgentInfoChatCard(info)
-        }
-    }
-}
+                    item {
+                        agentInfo?.intro?.let { info ->
+                            if (info.isNotEmpty()) {
+                                AgentInfoChatCard(info)
+                            }
+                        }
+                    }
 
                 }
 
