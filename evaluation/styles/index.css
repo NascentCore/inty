@@ -10,8 +10,10 @@
 body {
   margin: 0;
   padding: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB',
-    'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+    "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial,
+    sans-serif;
   font-size: 14px;
   line-height: 1.5715;
   color: rgba(0, 0, 0, 0.85);
@@ -168,7 +170,7 @@ html {
 }
 
 /* 表单样式增强 */
-.ant-form-item-label>label {
+.ant-form-item-label > label {
   font-weight: 500;
 }
 
@@ -181,7 +183,10 @@ html {
 /* 卡片样式增强 */
 .ant-card {
   border-radius: 8px;
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03), 0 1px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px 0 rgba(0, 0, 0, 0.02);
+  box-shadow:
+    0 1px 2px 0 rgba(0, 0, 0, 0.03),
+    0 1px 6px -1px rgba(0, 0, 0, 0.02),
+    0 2px 4px 0 rgba(0, 0, 0, 0.02);
 }
 
 .ant-card-head {
@@ -352,7 +357,6 @@ html {
 
 /* 打印样式 */
 @media print {
-
   .ant-layout-sider,
   .ant-layout-header,
   .no-print {

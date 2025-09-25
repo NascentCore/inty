@@ -54,92 +54,103 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
   const [searchText, setSearchText] = useState("");
   const [sourceFilter, setSourceFilter] = useState<string>("all");
   const [expanded, setExpanded] = useState(false);
-  const [selectedVoiceInfo, setSelectedVoiceInfo] = useState<Voice | null>(null);
+  const [selectedVoiceInfo, setSelectedVoiceInfo] = useState<Voice | null>(
+    null,
+  );
 
   // 加载音色列表
-  const loadVoices = useCallback(async (forceRefresh = false, search = "", source = "all") => {
-    setLoading(true);
-    try {
-      const params: any = {
-        // 移除page_size限制，让后端返回所有音色
-      };
-      if (search) params.search = search;
-      // 注意：这里不传递source参数到后端，因为后端API不支持source筛选
-      // 我们在前端进行source筛选
-      
-      const voiceList = await api.voices.listVoices(params);
-      let filteredVoices = voiceList || [];
-      
-      // 前端source筛选 - 使用后端返回的voice_type字段
-      if (source !== "all") {
-        filteredVoices = filteredVoices.filter(voice => {
-          if (source === "personal") {
-            return voice.voice_type === "personal";
-          } else if (source === "preset") {
-            return voice.voice_type === "preset";
-          }
-          return true;
-        });
+  const loadVoices = useCallback(
+    async (forceRefresh = false, search = "", source = "all") => {
+      setLoading(true);
+      try {
+        const params: any = {
+          // 移除page_size限制，让后端返回所有音色
+        };
+        if (search) params.search = search;
+        // 注意：这里不传递source参数到后端，因为后端API不支持source筛选
+        // 我们在前端进行source筛选
+
+        const voiceList = await api.voices.listVoices(params);
+        let filteredVoices = voiceList || [];
+
+        // 前端source筛选 - 使用后端返回的voice_type字段
+        if (source !== "all") {
+          filteredVoices = filteredVoices.filter((voice) => {
+            if (source === "personal") {
+              return voice.voice_type === "personal";
+            } else if (source === "preset") {
+              return voice.voice_type === "preset";
+            }
+            return true;
+          });
+        }
+
+        setVoices(filteredVoices);
+
+        if (forceRefresh) {
+          message.success("音色列表已刷新");
+        }
+      } catch (error) {
+        console.error("加载音色列表失败:", error);
+        message.error("加载音色列表失败");
+        setVoices([]);
+      } finally {
+        setLoading(false);
       }
-      
-      setVoices(filteredVoices);
-      
-      if (forceRefresh) {
-        message.success("音色列表已刷新");
-      }
-    } catch (error) {
-      console.error("加载音色列表失败:", error);
-      message.error("加载音色列表失败");
-      setVoices([]);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    },
+    [],
+  );
 
   // 根据 voice_id 加载单个音色详情
-  const loadVoiceById = useCallback(async (voiceId: string) => {
-    if (!voiceId) return null;
-    
-    try {
-      // 首先尝试从当前列表中查找
-      const existingVoice = voices.find(voice => voice.voice_id === voiceId);
-      if (existingVoice) {
-        setSelectedVoiceInfo(existingVoice);
-        return existingVoice;
-      }
+  const loadVoiceById = useCallback(
+    async (voiceId: string) => {
+      if (!voiceId) return null;
 
-      // 尝试加载完整的音色列表来查找目标音色
-      const allVoices = await api.voices.listVoices({});
-      const foundVoice = allVoices?.find(voice => voice.voice_id === voiceId);
-      if (foundVoice) {
-        setSelectedVoiceInfo(foundVoice);
-        return foundVoice;
-      }
+      try {
+        // 首先尝试从当前列表中查找
+        const existingVoice = voices.find(
+          (voice) => voice.voice_id === voiceId,
+        );
+        if (existingVoice) {
+          setSelectedVoiceInfo(existingVoice);
+          return existingVoice;
+        }
 
-      // 如果还是找不到，更新为最终的基本音色信息
-      const finalVoiceInfo = {
-        voice_id: voiceId,
-        name: voiceId, // 使用 voice_id 作为显示名称
-        category: 'unknown',
-        description: '已选择的音色'
-      };
-      setSelectedVoiceInfo(finalVoiceInfo);
-      return finalVoiceInfo;
-      
-    } catch (error) {
-      console.error("获取音色详情失败:", error);
-      
-      // 出错时更新为错误状态的音色信息
-      const errorVoiceInfo = {
-        voice_id: voiceId,
-        name: voiceId,
-        category: 'error', 
-        description: '音色加载失败'
-      };
-      setSelectedVoiceInfo(errorVoiceInfo);
-      return errorVoiceInfo;
-    }
-  }, [voices]);
+        // 尝试加载完整的音色列表来查找目标音色
+        const allVoices = await api.voices.listVoices({});
+        const foundVoice = allVoices?.find(
+          (voice) => voice.voice_id === voiceId,
+        );
+        if (foundVoice) {
+          setSelectedVoiceInfo(foundVoice);
+          return foundVoice;
+        }
+
+        // 如果还是找不到，更新为最终的基本音色信息
+        const finalVoiceInfo = {
+          voice_id: voiceId,
+          name: voiceId, // 使用 voice_id 作为显示名称
+          category: "unknown",
+          description: "已选择的音色",
+        };
+        setSelectedVoiceInfo(finalVoiceInfo);
+        return finalVoiceInfo;
+      } catch (error) {
+        console.error("获取音色详情失败:", error);
+
+        // 出错时更新为错误状态的音色信息
+        const errorVoiceInfo = {
+          voice_id: voiceId,
+          name: voiceId,
+          category: "error",
+          description: "音色加载失败",
+        };
+        setSelectedVoiceInfo(errorVoiceInfo);
+        return errorVoiceInfo;
+      }
+    },
+    [voices],
+  );
 
   // 搜索防抖处理
   const debouncedLoadVoices = useMemo(() => {
@@ -167,11 +178,11 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
       const basicInfo = {
         voice_id: value,
         name: value,
-        category: 'loading',
-        description: '正在加载音色信息...'
+        category: "loading",
+        description: "正在加载音色信息...",
       };
       setSelectedVoiceInfo(basicInfo);
-      
+
       // 异步加载完整音色信息
       loadVoiceById(value);
     } else {
@@ -191,13 +202,13 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
       return selectedVoiceInfo;
     }
     // 否则从音色列表中查找
-    return voices.find(voice => voice.voice_id === value);
+    return voices.find((voice) => voice.voice_id === value);
   }, [voices, value, selectedVoiceInfo]);
 
   // 获取音色来源统计 - 使用后端返回的voice_type字段
   const sourceStats = useMemo(() => {
     const stats = { personal: 0, preset: 0, total: voices.length };
-    voices.forEach(voice => {
+    voices.forEach((voice) => {
       if (voice.voice_type === "personal") {
         stats.personal++;
       } else if (voice.voice_type === "preset") {
@@ -208,16 +219,19 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
   }, [voices]);
 
   // 选择音色
-  const handleSelectVoice = useCallback((voiceId: string) => {
-    if (disabled) return;
-    
-    if (value === voiceId) {
-      // 如果点击已选中的音色，则取消选择
-      onChange?.(undefined);
-    } else {
-      onChange?.(voiceId);
-    }
-  }, [value, onChange, disabled]);
+  const handleSelectVoice = useCallback(
+    (voiceId: string) => {
+      if (disabled) return;
+
+      if (value === voiceId) {
+        // 如果点击已选中的音色，则取消选择
+        onChange?.(undefined);
+      } else {
+        onChange?.(voiceId);
+      }
+    },
+    [value, onChange, disabled],
+  );
 
   // 清除选择
   const handleClearSelection = useCallback(() => {
@@ -228,42 +242,42 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
   // 音色卡片组件
   const VoiceCard: React.FC<{ voice: Voice }> = ({ voice }) => {
     const isSelected = value === voice.voice_id;
-    
+
     return (
       <Card
         size="small"
         hoverable={!disabled}
-        className={`voice-card ${isSelected ? 'voice-card-selected' : ''}`}
+        className={`voice-card ${isSelected ? "voice-card-selected" : ""}`}
         style={{
-          borderColor: isSelected ? '#1890ff' : '#f0f0f0',
-          backgroundColor: isSelected ? '#f6ffed' : '#fff',
-          cursor: disabled ? 'not-allowed' : 'pointer',
+          borderColor: isSelected ? "#1890ff" : "#f0f0f0",
+          backgroundColor: isSelected ? "#f6ffed" : "#fff",
+          cursor: disabled ? "not-allowed" : "pointer",
           opacity: disabled ? 0.6 : 1,
-          transition: 'all 0.3s ease',
+          transition: "all 0.3s ease",
         }}
         onClick={() => handleSelectVoice(voice.voice_id)}
-        bodyStyle={{ padding: '12px' }}
+        bodyStyle={{ padding: "12px" }}
       >
-        <div style={{ textAlign: 'center' }}>
+        <div style={{ textAlign: "center" }}>
           <Avatar
             size={48}
             icon={<SoundOutlined />}
             style={{
-              backgroundColor: isSelected ? '#52c41a' : '#1890ff',
+              backgroundColor: isSelected ? "#52c41a" : "#1890ff",
               marginBottom: 8,
             }}
           />
-          
+
           <div style={{ marginBottom: 4 }}>
             <Tooltip title={voice.name}>
-              <div 
+              <div
                 style={{
                   fontWeight: 600,
-                  fontSize: '14px',
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  color: isSelected ? '#52c41a' : '#333',
+                  fontSize: "14px",
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  color: isSelected ? "#52c41a" : "#333",
                 }}
               >
                 {voice.name}
@@ -272,8 +286,8 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
           </div>
 
           {voice.category && (
-            <Tag 
-              color={isSelected ? 'green' : 'blue'}
+            <Tag
+              color={isSelected ? "green" : "blue"}
               style={{ marginBottom: 4 }}
             >
               {voice.category}
@@ -281,11 +295,11 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
           )}
 
           {/* 预览播放按钮 */}
-          <div 
-            style={{ 
+          <div
+            style={{
               marginTop: 8,
-              padding: '4px 0',
-              borderTop: '1px solid #f0f0f0',
+              padding: "4px 0",
+              borderTop: "1px solid #f0f0f0",
             }}
             onClick={(e) => e.stopPropagation()} // 阻止事件冒泡，避免触发选择
           >
@@ -294,14 +308,16 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
               voiceName={voice.name}
               size="small"
               style={{
-                width: '100%',
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-                height: '28px',
-                borderRadius: '4px',
-                backgroundColor: voice.preview_url ? '#f6ffed' : '#fafafa',
-                border: voice.preview_url ? '1px solid #d9f7be' : '1px solid #f0f0f0',
+                width: "100%",
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                height: "28px",
+                borderRadius: "4px",
+                backgroundColor: voice.preview_url ? "#f6ffed" : "#fafafa",
+                border: voice.preview_url
+                  ? "1px solid #d9f7be"
+                  : "1px solid #f0f0f0",
               }}
             />
           </div>
@@ -309,15 +325,15 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
           {voice.description && (
             <div
               style={{
-                fontSize: '12px',
-                color: '#666',
-                lineHeight: '1.2',
-                height: '24px',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                display: '-webkit-box',
+                fontSize: "12px",
+                color: "#666",
+                lineHeight: "1.2",
+                height: "24px",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                display: "-webkit-box",
                 WebkitLineClamp: 2,
-                WebkitBoxOrient: 'vertical',
+                WebkitBoxOrient: "vertical",
               }}
             >
               {voice.description}
@@ -332,9 +348,9 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
               icon={<PlayCircleOutlined />}
               style={{
                 marginTop: 4,
-                fontSize: '12px',
-                padding: '0 4px',
-                height: '20px',
+                fontSize: "12px",
+                padding: "0 4px",
+                height: "20px",
               }}
               onClick={(e) => {
                 e.stopPropagation();
@@ -356,31 +372,35 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
       {selectedVoice && (
         <div style={{ marginBottom: 16 }}>
           <Space align="center">
-            {selectedVoice.category === 'loading' ? (
+            {selectedVoice.category === "loading" ? (
               <Badge status="processing" />
-            ) : selectedVoice.category === 'error' ? (
+            ) : selectedVoice.category === "error" ? (
               <Badge status="error" />
             ) : (
               <Badge status="success" />
             )}
             <span style={{ fontWeight: 500 }}>当前音色：</span>
-            <Tag 
+            <Tag
               color={
-                selectedVoice.category === 'loading' ? 'blue' :
-                selectedVoice.category === 'error' ? 'red' : 'green'
-              } 
+                selectedVoice.category === "loading"
+                  ? "blue"
+                  : selectedVoice.category === "error"
+                    ? "red"
+                    : "green"
+              }
               icon={<SoundOutlined />}
             >
               {selectedVoice.name}
-              {selectedVoice.category === 'loading' && (
+              {selectedVoice.category === "loading" && (
                 <Spin size="small" style={{ marginLeft: 4 }} />
               )}
             </Tag>
-            {selectedVoice.description && selectedVoice.category !== 'loading' && (
-              <span style={{ fontSize: '12px', color: '#666' }}>
-                ({selectedVoice.description})
-              </span>
-            )}
+            {selectedVoice.description &&
+              selectedVoice.category !== "loading" && (
+                <span style={{ fontSize: "12px", color: "#666" }}>
+                  ({selectedVoice.description})
+                </span>
+              )}
             {!disabled && (
               <Button
                 type="text"
@@ -411,13 +431,15 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
           <Col span={8}>
             <Select
               placeholder="选择音色类型"
-              style={{ width: '100%' }}
+              style={{ width: "100%" }}
               value={sourceFilter}
               onChange={setSourceFilter}
               disabled={disabled}
             >
               <Option value="all">全部音色 ({sourceStats.total})</Option>
-              <Option value="personal">个人音色 ({sourceStats.personal})</Option>
+              <Option value="personal">
+                个人音色 ({sourceStats.personal})
+              </Option>
               <Option value="preset">预置音色 ({sourceStats.preset})</Option>
             </Select>
           </Col>
@@ -437,7 +459,7 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
                 onClick={() => setExpanded(!expanded)}
                 disabled={disabled}
               >
-                {expanded ? '收起' : '展开'}
+                {expanded ? "收起" : "展开"}
               </Button>
             </Space>
           </Col>
@@ -450,17 +472,17 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
           <Empty
             description={searchText ? "没有找到匹配的音色" : "暂无音色数据"}
             image={Empty.PRESENTED_IMAGE_SIMPLE}
-            style={{ padding: '40px 20px' }}
+            style={{ padding: "40px 20px" }}
           />
         ) : (
           <div
             style={{
-              maxHeight: expanded ? 'none' : '300px',
-              overflowY: expanded ? 'visible' : 'auto',
-              border: '1px solid #f0f0f0',
-              borderRadius: '6px',
-              padding: '12px',
-              backgroundColor: '#fafafa',
+              maxHeight: expanded ? "none" : "300px",
+              overflowY: expanded ? "visible" : "auto",
+              border: "1px solid #f0f0f0",
+              borderRadius: "6px",
+              padding: "12px",
+              backgroundColor: "#fafafa",
             }}
           >
             <Row gutter={[12, 12]}>
@@ -472,7 +494,7 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
             </Row>
 
             {!expanded && voices.length > 8 && (
-              <div style={{ textAlign: 'center', marginTop: 12 }}>
+              <div style={{ textAlign: "center", marginTop: 12 }}>
                 <Button
                   type="link"
                   onClick={() => setExpanded(true)}
@@ -488,7 +510,14 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
 
       {/* 统计信息 */}
       {voices.length > 0 && (
-        <div style={{ marginTop: 12, fontSize: '12px', color: '#666', textAlign: 'center' }}>
+        <div
+          style={{
+            marginTop: 12,
+            fontSize: "12px",
+            color: "#666",
+            textAlign: "center",
+          }}
+        >
           共找到 {voices.length} 个音色
           {selectedVoice && ` • 已选择：${selectedVoice.name}`}
         </div>
