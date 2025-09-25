@@ -39,4 +39,5 @@
 * 待 stainless 工作流完成，代码改动会自动同步到 kotlin python typescript 代码库，打开链接确认最新的代码已经提交；
   如果没有提交，则需要手动将代码提交
   <img width="960" height="1490" alt="image" src="https://github.com/user-attachments/assets/6e644f75-2b73-4c4c-816f-9941e4d05ac6" />
-* 更新对应的 submodule，生成 pull request 来进行更新
+* 更新对应的 submodule，生成 pull request 来进行更新；注意 `android_app/library/inty_sdk` 同时须更新 `android_app/app/build.gradle.kts`。
+  示例：https://github.com/NascentCore/inty/pull/635
