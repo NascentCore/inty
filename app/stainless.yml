@@ -5,9 +5,9 @@ organization:
   # and headings.
   name: inty
   # Link to your API documentation.
-  docs: ""
+  docs: ''
   # Contact email for bug reports, questions, and support requests.
-  contact: ""
+  contact: ''
 
 # `targets` define the output targets and their customization options, such as
 # whether to emit the Node SDK and what it's package name should be.
@@ -73,14 +73,14 @@ resources:
                 #
                 # [reference]: https://www.stainless.com/docs/reference/config#model
                 models:
-                  gender: "#/components/schemas/Gender"
-                  user: "#/components/schemas/User"
+                  gender: '#/components/schemas/Gender'
+                  user: '#/components/schemas/User'
                 methods:
                   retrieve: get /api/v1/users/profile
                   update: put /api/v1/users/profile
               device:
                 models:
-                  api_response: "#/components/schemas/APIResponse"
+                  api_response: '#/components/schemas/APIResponse'
                 methods:
                   register: post /api/v1/users/device/register
               deletion:
@@ -88,18 +88,18 @@ resources:
                   check_eligibility: get /api/v1/users/deletion/check
           report:
             models:
-              api_response_dict: "#/components/schemas/APIResponse_dict_"
+              api_response_dict: '#/components/schemas/APIResponse_dict_'
             methods:
               create: post /api/v1/report/
           ai:
             subresources:
               agents:
                 models:
-                  api_response_agent: "#/components/schemas/APIResponse_Agent_"
-                  api_response_pagination_data_agent: "#/components/schemas/APIResponse_PaginationData_Agent__"
-                  agent: "#/components/schemas/Agent"
-                  agent_visibility: "#/components/schemas/AgentVisibility"
-                  model_config: "#/components/schemas/ModelConfig"
+                  api_response_agent: '#/components/schemas/APIResponse_Agent_'
+                  api_response_pagination_data_agent: '#/components/schemas/APIResponse_PaginationData_Agent__'
+                  agent: '#/components/schemas/Agent'
+                  agent_visibility: '#/components/schemas/AgentVisibility'
+                  model_config: '#/components/schemas/ModelConfig'
                 methods:
                   list: get /api/v1/ai/agents/me
                   search: get /api/v1/ai/agents/search
@@ -113,15 +113,15 @@ resources:
                   unfollow_agent: delete /api/v1/ai/agents/{agent_id}/follow
           settings:
             models:
-              settings: "#/components/schemas/Settings"
+              settings: '#/components/schemas/Settings'
             methods:
               retrieve: get /api/v1/settings/
               update: put /api/v1/settings/
           subscription:
             models:
-              api_response_subscription_status: "#/components/schemas/APIResponse_SubscriptionStatusResponse_"
-              api_response_usage_statistics: "#/components/schemas/APIResponse_UsageStatisticsResponse_"
-              user_subscription: "#/components/schemas/UserSubscription"
+              api_response_subscription_status: '#/components/schemas/APIResponse_SubscriptionStatusResponse_'
+              api_response_usage_statistics: '#/components/schemas/APIResponse_UsageStatisticsResponse_'
+              user_subscription: '#/components/schemas/UserSubscription'
             methods:
               list_plans: get /api/v1/subscription/plans
               get_status: get /api/v1/subscription/status
@@ -135,8 +135,8 @@ resources:
                 subresources:
                   plans:
                     models:
-                      subscription_plan: "#/components/schemas/SubscriptionPlan"
-                      subscription_plan_type: "#/components/schemas/SubscriptionPlanType"
+                      subscription_plan: '#/components/schemas/SubscriptionPlan'
+                      subscription_plan_type: '#/components/schemas/SubscriptionPlanType'
                     methods:
                       create: post /api/v1/subscription/admin/plans
                       list: get /api/v1/subscription/admin/plans
@@ -149,7 +149,7 @@ resources:
               check: post /api/v1/version/check
           chats:
             models:
-              chat: "#/components/schemas/Chat"
+              chat: '#/components/schemas/Chat'
             methods:
               list: get /api/v1/chats/
               create: post /api/v1/chats/
@@ -159,7 +159,7 @@ resources:
             subresources:
               agents:
                 models:
-                  chat_settings: "#/components/schemas/ChatSettings"
+                  chat_settings: '#/components/schemas/ChatSettings'
                 methods:
                   get_messages: get /api/v1/chats/agents/{agent_id}/messages
                   generate_message_voice: post /api/v1/chats/agents/{agent_id}/messages/{message_id}/voice
