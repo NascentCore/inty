@@ -155,6 +155,7 @@ resources:
               create: post /api/v1/chats/
               delete: delete /api/v1/chats/{chat_id}
               create_completion: post /api/v1/chat/completions/{agent_id}
+              retrieve_voice: get /api/v1/chats/voices/{voice_id}
             subresources:
               agents:
                 models:
