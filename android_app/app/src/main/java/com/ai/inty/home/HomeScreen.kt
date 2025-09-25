@@ -79,7 +79,17 @@ fun HomeScreen(
     // 创建ExploreViewModel实例，用于ChatTab和ExploreTab共享推荐agents数据
     val exploreViewModel: ExploreViewModel = viewModel()
 
-    // 初始化加载推荐agents数据
+    // 立即初始化缓存数据（同步，快速展示）
+    LaunchedEffect(Unit) {
+        exploreViewModel.initializeCacheData()
+    }
+    
+    // 启动缓存更新监听
+    LaunchedEffect(Unit) {
+        exploreViewModel.startListeningCacheUpdates()
+    }
+    
+    // 异步加载推荐agents数据（如果缓存为空）
     LaunchedEffect(Unit) {
         if (exploreViewModel.agentList.isEmpty()) {
             exploreViewModel.getRecommendAgents()

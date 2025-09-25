@@ -4,6 +4,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.lifecycle.viewModelScope
 import com.ai.inty.base.BaseViewModel
 import com.ai.inty.beans.AgentInfo
+import com.ai.inty.utils.AppStartupManager
 import com.inty.utils.log.EasyLog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,38 +30,64 @@ class ExploreViewModel : BaseViewModel() {
     
     private var hasMoreData = true
     
+    // 是否已初始化缓存数据
+    private var isCacheInitialized = false
+    
+    /**
+     * 初始化缓存数据（立即同步加载，用于快速展示）
+     */
+    fun initializeCacheData() {
+        if (isCacheInitialized) return
+        
+        // 立即从AppStartupManager获取缓存数据
+        val cachedAgents = AppStartupManager.cachedAgents.value
+        if (cachedAgents.isNotEmpty()) {
+            agentList.clear()
+            agentList.addAll(cachedAgents)
+            isCacheInitialized = true
+            EasyLog.log("ExploreViewModel - 初始化缓存数据: ${cachedAgents.size}个")
+        } else {
+            EasyLog.log("ExploreViewModel - 无缓存数据，等待网络加载")
+        }
+    }
+    
     /**
      * 初始化加载推荐agents
      */
     fun getRecommendAgents() {
         EasyLog.log("ExploreViewModel - 开始加载推荐agents")
+        
+        // 第一步：立即初始化缓存数据（同步，快速展示）
+        initializeCacheData()
+        
+        // 第二步：如果已有缓存数据，直接返回，避免重复加载
+        if (agentList.isNotEmpty()) {
+            EasyLog.log("ExploreViewModel - 已有缓存数据，跳过网络请求")
+            return
+        }
+        
+        // 第三步：如果没有缓存数据，进行网络请求
         currentPage = 1
         hasMoreData = true
         
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val result = repository.getRecommendAgents(useCache = true)
+                val result = repository.getRecommendAgents(useCache = false)
                 
-                // 先使用缓存数据快速展示
-                if (result.cachedAgents.isNotEmpty()) {
-                    agentList.clear()
-                    agentList.addAll(result.cachedAgents)
-                    EasyLog.log("ExploreViewModel - 使用缓存数据快速展示: ${result.cachedAgents.size}个")
-                }
-                
-                // 如果有网络数据，静默更新
+                // 使用网络数据
                 result.networkAgents?.let { networkAgents ->
                     if (networkAgents.isNotEmpty()) {
                         agentList.clear()
                         agentList.addAll(networkAgents)
                         hasMoreData = result.hasMoreData
-                        EasyLog.log("ExploreViewModel - 静默更新网络数据: ${networkAgents.size}个")
+                        isCacheInitialized = true
+                        EasyLog.log("ExploreViewModel - 网络数据加载成功: ${networkAgents.size}个")
                     }
                 }
                 
                 // 处理网络错误
                 result.networkError?.let { error ->
-                    EasyLog.log("ExploreViewModel - 网络更新失败: $error", EasyLog.WARN)
+                    EasyLog.log("ExploreViewModel - 网络加载失败: $error", EasyLog.WARN)
                 }
                 
             } catch (e: Exception) {
@@ -153,6 +180,23 @@ class ExploreViewModel : BaseViewModel() {
     }
     
     /**
+     * 监听AppStartupManager的缓存更新
+     */
+    fun startListeningCacheUpdates() {
+        viewModelScope.launch {
+            AppStartupManager.cachedAgents.collect { cachedAgents ->
+                // 只有在当前列表为空或者缓存数据更新时才更新
+                if (agentList.isEmpty() || (cachedAgents.isNotEmpty() && cachedAgents != agentList.toList())) {
+                    agentList.clear()
+                    agentList.addAll(cachedAgents)
+                    isCacheInitialized = true
+                    EasyLog.log("ExploreViewModel - 监听到缓存更新: ${cachedAgents.size}个")
+                }
+            }
+        }
+    }
+    
+    /**
      * 清空数据（用于用户登出等场景）
      */
     fun clearData() {
@@ -160,6 +204,7 @@ class ExploreViewModel : BaseViewModel() {
         currentPage = 1
         hasMoreData = true
         _isLoading.update { false }
+        isCacheInitialized = false
         EasyLog.log("ExploreViewModel - 清空数据")
     }
 }

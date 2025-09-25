@@ -87,10 +87,13 @@ fun ExplorePage(
         }
     }
 
-    // 初始化加载数据
+    // 确保缓存数据已初始化（如果HomeScreen没有初始化的话）
     LaunchedEffect(Unit) {
         if (viewModel.agentList.isEmpty()) {
-            viewModel.getRecommendAgents()
+            viewModel.initializeCacheData()
+            if (viewModel.agentList.isEmpty()) {
+                viewModel.getRecommendAgents()
+            }
         }
     }
 
