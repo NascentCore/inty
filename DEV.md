@@ -2,6 +2,14 @@
 
 InTy is a FastAPI- and PostgreSQL-based AI chat backend that integrates LangChain and LangGraph for managing multi-model AI agents in an asynchronous architecture. The project supports features such as user authentication, subscription management, and AI voice services.
 
+## 工具
+
+```bash
+brew install ktfmt
+pip install black
+npm install --save-dev --save-exact prettier
+```
+
 ## 启动本地后端服务
 
 * config.yaml
