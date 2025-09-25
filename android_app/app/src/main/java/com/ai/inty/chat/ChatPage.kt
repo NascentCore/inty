@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import com.ai.inty.Constant
 import com.ai.inty.R
 import com.ai.inty.base.ToastUtils
+import com.ai.inty.beans.MsgInfo
 import com.ai.inty.billing.BillingRepository
 import com.ai.inty.home.BottomNavigationBarHeight
 import com.ai.inty.ui.AdvancedModelChatDialog
@@ -269,11 +270,34 @@ internal fun ChatPage(
                     item {
                         Spacer(Modifier.height(16.dp))
                     }
+// 直接显示开场白（如果agent有opening且没有历史消息）
+item {
+    agentInfo?.let { agent ->
+        if (agent.opening.isNotEmpty() && chatMessages.isEmpty()) {
+            // 创建开场白消息
+            val openingMessage = MsgInfo(
+                content = agent.opening,
+                role = "assistant",
+                meta_data = MsgInfo.MsgMetaData(
+                    agentId = agent.id,
+                    isOpening = true
+                ),
+                audio_url = agent.opening_audio_url
+            )
+            ChatItem(openingMessage)
+            Spacer(Modifier.height(16.dp))
+        }
+    }
+}
+
+// 过滤掉 chatMessages 中的开场白消息
+val filteredChatMessages = chatMessages.filter { !it.isOpening() }
+
                     // 添加安全检查
                     runCatching {
-                        if (chatMessages.isNotEmpty()) {
+                        if (filteredChatMessages.isNotEmpty()) {
                             // 创建消息列表的副本以避免并发修改
-                            val messagesCopy = chatMessages.toList()
+                            val messagesCopy = filteredChatMessages.toList()
                             val items =
                                 messagesCopy.filter { !(it.role == "user" && it.content == "continue") }
                             if (items.isNotEmpty()) {
