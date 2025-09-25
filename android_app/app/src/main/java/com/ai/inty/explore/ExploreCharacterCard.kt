@@ -117,7 +117,7 @@ fun ExploreCharacterCard(
             IntyImage(
                 modifier = Modifier.fillMaxSize(),
                 model = imageUrl,
-                contentScale = ContentScale.Crop,
+                contentScale = ContentScale.FillWidth,
                 onSuccess = {
                     imageLoaded = true
                 },

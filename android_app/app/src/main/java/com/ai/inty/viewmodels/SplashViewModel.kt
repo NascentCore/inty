@@ -57,10 +57,28 @@ class SplashViewModel : BaseActivityViewModel() {
         val startTime = System.currentTimeMillis()
         val minSplashTime = 1500L // 最少显示1.5秒
         
-        // 等待必要的初始化完成（用户就绪状态），不等待完整的数据预加载
+        // 等待必要的初始化完成（用户就绪状态）
         while (UnifiedStartupManager.startupState.value != UnifiedStartupManager.StartupState.UserReady &&
                UnifiedStartupManager.startupState.value != UnifiedStartupManager.StartupState.Completed) {
             kotlinx.coroutines.delay(50) // 50ms检查一次，更快响应
+        }
+        
+        EasyLog.log("SplashViewModel - 用户状态就绪，开始等待关键数据预加载")
+        
+        // 等待关键数据预加载完成（recommend agents）
+        val maxWaitTime = 5000L // 最多等待5秒
+        val dataWaitStartTime = System.currentTimeMillis()
+        
+        while (UnifiedStartupManager.getCurrentRecommendedAgents().isEmpty() && 
+               (System.currentTimeMillis() - dataWaitStartTime) < maxWaitTime) {
+            kotlinx.coroutines.delay(100) // 100ms检查一次
+        }
+        
+        val dataWaitTime = System.currentTimeMillis() - dataWaitStartTime
+        if (UnifiedStartupManager.getCurrentRecommendedAgents().isNotEmpty()) {
+            EasyLog.log("SplashViewModel - 关键数据预加载完成，耗时: ${dataWaitTime}ms")
+        } else {
+            EasyLog.log("SplashViewModel - 关键数据预加载超时，耗时: ${dataWaitTime}ms", EasyLog.WARN)
         }
         
         // 计算已经过去的时间
@@ -69,7 +87,7 @@ class SplashViewModel : BaseActivityViewModel() {
         
         // 如果还没到最少显示时间，继续等待
         if (remainingTime > 0) {
-            EasyLog.log("SplashViewModel - 必要初始化完成，等待splash显示时间: ${remainingTime}ms")
+            EasyLog.log("SplashViewModel - 数据预加载完成，等待splash显示时间: ${remainingTime}ms")
             kotlinx.coroutines.delay(remainingTime)
         }
         

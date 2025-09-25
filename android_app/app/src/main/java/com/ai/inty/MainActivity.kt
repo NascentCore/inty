@@ -16,8 +16,11 @@ import com.ai.inty.base.BaseActivity
 import com.ai.inty.billing.BillingRepository
 import com.ai.inty.home.HomeScreen
 import com.ai.inty.ui.theme.IntyTheme
+import com.ai.inty.utils.UnifiedStartupManager
 import com.ai.inty.viewmodels.ChatViewModel
 import com.ai.inty.viewmodels.MainViewModel
+import com.inty.utils.log.EasyLog
+import com.inty.utils.storage.IntySetting
 import com.therouter.router.Autowired
 import com.therouter.router.Route
 import kotlinx.coroutines.CoroutineScope
@@ -61,22 +64,39 @@ class MainActivity : BaseActivity() {
 
         mainViewModel.setChatViewModel(chatViewModel)
 
-        // Load user created agents
-        mainViewModel.getUserCreatedAgents()
-
-        // 初始化 BillingRepository（在用户登录后）
+        // 等待启动管理器完成后再加载需要认证的数据
         lifecycleScope.launch {
-            // 等待用户登录完成
-            delay(1000) // 给登录流程一些时间
+            // 等待启动管理器完成必要初始化
+            while (UnifiedStartupManager.startupState.value != UnifiedStartupManager.StartupState.UserReady &&
+                   UnifiedStartupManager.startupState.value != UnifiedStartupManager.StartupState.Completed) {
+                delay(100) // 100ms检查一次
+            }
+            
+            EasyLog.log("MainActivity - 启动管理器完成，开始加载用户数据")
+            
+            // 确保用户已登录后再加载需要认证的数据
+            if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
+                EasyLog.log("MainActivity - 用户已登录，开始加载业务数据")
+                
+                // 加载业务数据（包括版本检查等）
+                mainViewModel.loadBusinessData()
+                
+                // Load user created agents
+                mainViewModel.getUserCreatedAgents()
+                
+                // 初始化 BillingRepository（在用户登录后）
+                delay(500) // 给登录流程一些时间
+                BillingRepository.initialize(this@MainActivity)
 
-            BillingRepository.initialize(this@MainActivity)
+                // BillingRepository初始化完成后，再调用updatePlans
+                delay(500) // 给BillingRepository一些初始化时间
+                mainViewModel.updatePlans()
 
-            // BillingRepository初始化完成后，再调用updatePlans
-            delay(500) // 给BillingRepository一些初始化时间
-            mainViewModel.updatePlans()
-
-            // 启动订阅状态监控
-            BillingRepository.startEnhancedSubscriptionMonitoring()
+                // 启动订阅状态监控
+                BillingRepository.startEnhancedSubscriptionMonitoring()
+            } else {
+                EasyLog.log("MainActivity - 用户未登录，跳过需要认证的数据加载", EasyLog.WARN)
+            }
         }
 
         setContent {

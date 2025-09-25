@@ -3,7 +3,6 @@ package com.ai.inty.utils
 import android.content.Context
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.beans.UserProfile
-import com.ai.inty.explore.ExploreConstants
 import com.ai.inty.net.IAgentApi
 import com.architecture.httplib.core.HttpResult
 import com.inty.utils.log.EasyLog
@@ -82,19 +81,26 @@ object UnifiedStartupManager {
                 // 给splash页面一些显示时间
                 kotlinx.coroutines.delay(800) // 至少显示800ms
                 
-                // 检查登录状态，如果未登录则尝试创建游客账户（不阻塞）
-                if (!IntySetting.isLogin()) {
-                    EasyLog.log("UnifiedStartupManager - 用户未登录，尝试创建游客账户")
+                // 检查登录状态，确保有有效的token
+                if (!isUserLoggedIn()) {
+                    EasyLog.log("UnifiedStartupManager - 用户未登录或token无效，创建游客账户")
                     try {
                         createGuestAccount()
+                        EasyLog.log("UnifiedStartupManager - 游客账户创建成功")
                     } catch (e: Exception) {
-                        EasyLog.log("UnifiedStartupManager - 游客账户创建失败，但不阻塞启动: ${e.message}", EasyLog.WARN)
+                        EasyLog.log("UnifiedStartupManager - 游客账户创建失败: ${e.message}", EasyLog.ERROR)
+                        // 游客账户创建失败，仍然标记为用户就绪，避免阻塞启动
                     }
+                } else {
+                    EasyLog.log("UnifiedStartupManager - 用户已登录，token有效")
                 }
                 
                 _startupState.value = StartupState.UserReady
                 _startupProgress.value = 0.3f
                 EasyLog.log("UnifiedStartupManager - 必要初始化完成")
+                
+                // 立即开始关键数据预加载，不等待异步初始化
+                loadCriticalData()
                 
             } catch (e: Exception) {
                 EasyLog.log("UnifiedStartupManager - 必要初始化失败，但不阻塞启动: ${e.message}", EasyLog.WARN)
@@ -129,6 +135,29 @@ object UnifiedStartupManager {
             } catch (e: Exception) {
                 EasyLog.log("UnifiedStartupManager - 异步初始化失败: ${e.message}", EasyLog.ERROR)
                 _startupState.value = StartupState.Failed
+            }
+        }
+    }
+    
+    /**
+     * 加载关键数据 - 优先加载recommend agents，确保UI有数据展示
+     */
+    private fun loadCriticalData() {
+        startupScope.launch {
+            try {
+                EasyLog.log("UnifiedStartupManager - 开始加载关键数据")
+                
+                // 优先加载缓存数据（非阻塞）
+                loadCacheDataNonBlocking()
+                
+                // 如果已登录，立即同步recommend agents
+                if (isUserLoggedIn()) {
+                    syncRecommendedAgents()
+                }
+                
+                EasyLog.log("UnifiedStartupManager - 关键数据加载完成")
+            } catch (e: Exception) {
+                EasyLog.log("UnifiedStartupManager - 关键数据加载失败: ${e.message}", EasyLog.ERROR)
             }
         }
     }
@@ -180,6 +209,29 @@ object UnifiedStartupManager {
     }
     
     /**
+     * 加载缓存数据（非阻塞版本，用于关键数据加载）
+     */
+    private suspend fun loadCacheDataNonBlocking() {
+        try {
+            EasyLog.log("UnifiedStartupManager - 开始加载缓存数据（非阻塞）")
+            
+            // 快速加载缓存数据，不等待
+            if (UserProfileManager.hasUserProfile()) {
+                val profile = UserProfileManager.getUserProfile()
+                _userProfile.value = profile
+                EasyLog.log("UnifiedStartupManager - 加载缓存用户信息: ${profile.nickname}")
+            }
+            
+            val cachedAgents = AgentCacheManager.getCachedAgents()
+            _recommendedAgents.value = cachedAgents
+            EasyLog.log("UnifiedStartupManager - 加载缓存agents: ${cachedAgents.size}个")
+            
+        } catch (e: Exception) {
+            EasyLog.log("UnifiedStartupManager - 缓存数据加载异常: ${e.message}", EasyLog.ERROR)
+        }
+    }
+    
+    /**
      * 阶段2：用户设置
      */
     private suspend fun setupUser() {
@@ -204,8 +256,8 @@ object UnifiedStartupManager {
         EasyLog.log("UnifiedStartupManager - 开始网络同步")
         
         // 检查登录状态
-        if (!IntySetting.isLogin() || IntySetting.getCurToken().isEmpty()) {
-            EasyLog.log("UnifiedStartupManager - 未登录或token为空，跳过网络同步")
+        if (!isUserLoggedIn()) {
+            EasyLog.log("UnifiedStartupManager - 用户未登录或token无效，跳过网络同步")
             return
         }
         
@@ -225,6 +277,24 @@ object UnifiedStartupManager {
         _startupState.value = StartupState.NetworkUpdated
         _startupProgress.value = 0.9f
         EasyLog.log("UnifiedStartupManager - 网络同步完成")
+    }
+    
+    /**
+     * 检查用户是否已登录且token有效
+     */
+    private fun isUserLoggedIn(): Boolean {
+        return try {
+            val isLogin = IntySetting.isLogin()
+            val token = IntySetting.getCurToken()
+            val userId = IntySetting.getCurUserID()
+            
+            val isValid = isLogin && token.isNotEmpty() && userId.isNotEmpty()
+            EasyLog.log("UnifiedStartupManager - 登录状态检查: isLogin=$isLogin, hasToken=${token.isNotEmpty()}, hasUserId=${userId.isNotEmpty()}, isValid=$isValid")
+            isValid
+        } catch (e: Exception) {
+            EasyLog.log("UnifiedStartupManager - 登录状态检查异常: ${e.message}", EasyLog.ERROR)
+            false
+        }
     }
     
     /**
@@ -279,7 +349,7 @@ object UnifiedStartupManager {
             val sortSeed = IntySetting.sortSeed()
             val result = agentApi.recommendAgents(
                 page = 1, 
-                pageSize = ExploreConstants.PAGE_SIZE, // 使用统一的页面大小
+                pageSize = 20, // 减少首次加载数量，提高速度
                 sort_seed = sortSeed.toString()
             )
             
@@ -293,13 +363,11 @@ object UnifiedStartupManager {
                     // 异步预加载图片资源，不阻塞启动流程
                     kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
                         try {
-                            // 先预加载关键图片（前10个），确保首屏快速渲染
-                            ImagePreloadManager.preloadCriticalImages(agents, 10)
-                            
-                            // 然后预加载所有图片，优化后续页面渲染
-                            ImagePreloadManager.preloadAgentsImages(agents, 5)
+                            // 先预加载关键图片（前5个），确保首屏快速渲染
+                            ImagePreloadManager.preloadCriticalImages(agents, 5)
+                            EasyLog.log("UnifiedStartupManager - 关键图片预加载完成")
                         } catch (e: Exception) {
-                            EasyLog.log("UnifiedStartupManager - 图片预加载异常: ${e.message}", EasyLog.ERROR)
+                            EasyLog.log("UnifiedStartupManager - 关键图片预加载失败: ${e.message}", EasyLog.ERROR)
                         }
                     }
                 }
