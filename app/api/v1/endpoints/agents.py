@@ -384,7 +384,7 @@ def process_generated_images(generated_images: List[ImagenGeneratedImage]) -> di
     "/generate_background",
     response_model=APIResponse[dict],
     deprecated=True,
-    include_in_schema=False,
+    include_in_schema=True,
     summary="Deprecated, use /generate_background instead",
     description="Deprecated, use /generate_background instead",
 )
@@ -457,6 +457,20 @@ async def generate_background(
         gcs_urls = result["image_uris"]
         rai_reasons = result["rai_reasons"]
 
+        # Convert GCS URLs to CDN URLs
+        from app.services.image_transform_service import image_transform_service
+
+        cdn_urls = []
+        for gcs_url in gcs_urls:
+            try:
+                cdn_url = image_transform_service.transform_desktop(gcs_url)
+                cdn_urls.append(cdn_url)
+            except Exception as transform_error:
+                logger.warning(
+                    f"Failed to transform URL to CDN: {gcs_url}, error: {str(transform_error)}"
+                )
+                cdn_urls.append(gcs_url)  # Fallback to original URL
+
         # 记录背景图生成使用次数
         try:
             await subscription_service.record_usage(
@@ -470,8 +484,8 @@ async def generate_background(
             # 使用记录失败不影响主要功能，继续返回结果
 
         response_data = {
-            "urls": gcs_urls,
-            "count": len(gcs_urls),
+            "urls": cdn_urls,
+            "count": len(cdn_urls),
             "format": ImageFormat.JPEG,
             "remaining_usage": {
                 "used_count": check_result[1] + request.count,
