@@ -1,9 +1,7 @@
 plugins {
     alias(libs.plugins.ai.android.application)
     alias(libs.plugins.ai.android.application.compose)
-//    alias(libs.plugins.ai.android.application.flavor)
     alias(libs.plugins.ai.android.navigation.compose)
-
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.kotlin.parcelize)
     alias(libs.plugins.google.services)
@@ -11,7 +9,6 @@ plugins {
     alias(libs.plugins.ksp)
 
     id("therouter")
-
 }
 
 tasks.register("printVersionInfo") {
@@ -47,7 +44,7 @@ android {
     packaging {
         resources {
             // 解决 META-INF 文件冲突问题
-            // inty-sdk 包含了多个相同的文件
+            // inty-sdk 包含了多个同名文件
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
             excludes += "/META-INF/DEPENDENCIES"
             excludes += "/META-INF/LICENSE"
@@ -69,6 +66,9 @@ TheRouter {
 }
 
 dependencies {
+    // ===== Inty SDK（Stainless https://app.stainless.com/ 根据 app/openapi.json 生成的代码）=====
+    implementation("com.inty.api:inty-kotlin:0.8.0")
+
     // ===== AndroidX 核心库 =====
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
@@ -114,7 +114,4 @@ dependencies {
 
     // ===== compose ui bundle =====
     implementation(libs.bundles.compose.ui.bundle)
-
-    // ===== Inty SDK =====
-    implementation("com.inty.api:inty-kotlin:0.8.0")
 }
