@@ -3,6 +3,7 @@ package com.ai.inty.utils
 import android.content.Context
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.beans.UserProfile
+import com.ai.inty.explore.ExploreConstants
 import com.ai.inty.net.IAgentApi
 import com.architecture.httplib.core.HttpResult
 import com.inty.utils.log.EasyLog
@@ -233,7 +234,7 @@ object UnifiedStartupManager {
             val sortSeed = IntySetting.sortSeed()
             val result = agentApi.recommendAgents(
                 page = 1, 
-                pageSize = 10, 
+                pageSize = ExploreConstants.PAGE_SIZE, // 使用统一的页面大小
                 sort_seed = sortSeed.toString()
             )
             
