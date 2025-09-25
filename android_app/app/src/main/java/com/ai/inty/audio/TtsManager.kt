@@ -12,18 +12,23 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-/** TTS管理器 专门处理文本转语音的生成和管理 */
-class TtsManager
-private constructor(private val context: Context, private val scope: CoroutineScope) {
+/**
+ * TTS管理器
+ * 专门处理文本转语音的生成和管理
+ */
+class TtsManager private constructor(
+    private val context: Context,
+    private val scope: CoroutineScope
+) {
 
     companion object {
-        @Volatile private var INSTANCE: TtsManager? = null
+        @Volatile
+        private var INSTANCE: TtsManager? = null
 
         fun getInstance(context: Context, scope: CoroutineScope): TtsManager {
-            return INSTANCE
-                ?: synchronized(this) {
-                    INSTANCE ?: TtsManager(context.applicationContext, scope).also { INSTANCE = it }
-                }
+            return INSTANCE ?: synchronized(this) {
+                INSTANCE ?: TtsManager(context.applicationContext, scope).also { INSTANCE = it }
+            }
         }
     }
 
@@ -45,7 +50,6 @@ private constructor(private val context: Context, private val scope: CoroutineSc
 
     /**
      * 生成消息语音
-     *
      * @param messageId 消息ID
      * @param agentId Agent ID
      * @param onSuccess 成功回调，返回生成的音频URL
@@ -55,13 +59,11 @@ private constructor(private val context: Context, private val scope: CoroutineSc
         messageId: String,
         agentId: String,
         onSuccess: (String) -> Unit,
-        onError: (String) -> Unit,
+        onError: (String) -> Unit
     ) {
-        EasyLog.log(
-            "音频LOG测试 TtsManager.generateMessageVoice called: messageId=$messageId, agentId=$agentId"
-        )
+        EasyLog.log("音频LOG测试 TtsManager.generateMessageVoice called: messageId=$messageId, agentId=$agentId")
         EasyLog.log("音频LOG测试 Current generating TTS messages: ${_isGeneratingTts.value}")
-
+        
         // 检查是否正在生成
         if (_isGeneratingTts.value.contains(messageId)) {
             EasyLog.log("音频LOG测试 TTS already generating for message: $messageId")
@@ -75,9 +77,7 @@ private constructor(private val context: Context, private val scope: CoroutineSc
             try {
                 EasyLog.log("音频LOG测试 Generating TTS for message: $messageId, agent: $agentId")
                 EasyLog.log("音频LOG测试 About to call chatApi.fetchMsgVoice")
-                EasyLog.log(
-                    "音频LOG测试 Request URL will be: /api/v1/chats/agents/$agentId/messages/$messageId/voice"
-                )
+                EasyLog.log("音频LOG测试 Request URL will be: /api/v1/chats/agents/$agentId/messages/$messageId/voice")
 
                 val response = chatApi.fetchMsgVoice(agentId, messageId)
                 EasyLog.log("音频LOG测试 fetchMsgVoice response received: $response")
@@ -89,19 +89,13 @@ private constructor(private val context: Context, private val scope: CoroutineSc
                             EasyLog.log("音频LOG测试 TTS generated successfully: $audioUrl")
                             onSuccess(audioUrl)
                         } else {
-                            EasyLog.log(
-                                "音频LOG测试 TTS generation returned empty audio_url",
-                                EasyLog.ERROR,
-                            )
+                            EasyLog.log("音频LOG测试 TTS generation returned empty audio_url", EasyLog.ERROR)
                             onError("TTS生成失败：返回空音频URL")
                         }
                     }
 
                     is HttpResult.Failure -> {
-                        EasyLog.log(
-                            "音频LOG测试 TTS generation failed: ${response.message}",
-                            EasyLog.ERROR,
-                        )
+                        EasyLog.log("音频LOG测试 TTS generation failed: ${response.message}", EasyLog.ERROR)
                         onError("TTS生成失败：${response.message}")
                     }
                 }
@@ -115,17 +109,23 @@ private constructor(private val context: Context, private val scope: CoroutineSc
         }
     }
 
-    /** 检查是否正在生成指定消息的TTS */
+    /**
+     * 检查是否正在生成指定消息的TTS
+     */
     fun isGeneratingForMessage(messageId: String): Boolean {
         return _isGeneratingTts.value.contains(messageId)
     }
 
-    /** 取消指定消息的TTS生成 */
+    /**
+     * 取消指定消息的TTS生成
+     */
     fun cancelGeneration(messageId: String) {
         _isGeneratingTts.value = _isGeneratingTts.value - messageId
     }
 
-    /** 取消所有TTS生成 */
+    /**
+     * 取消所有TTS生成
+     */
     fun cancelAllGenerations() {
         _isGeneratingTts.value = emptySet()
     }

@@ -1,5 +1,6 @@
 package com.ai.inty
 
+
 import android.annotation.SuppressLint
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -10,13 +11,15 @@ import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import com.inty.utils.log.EasyLog
 
-/** Firebase 消息推送服务 */
+/**
+ * Firebase 消息推送服务
+ */
 class FCMService : FirebaseMessagingService() {
 
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
         // 1. 处理数据消息（应用前后台均触发）
         if (remoteMessage.data.isNotEmpty()) {
-            EasyLog.log("Data: " + remoteMessage.data)
+            EasyLog.log( "Data: " + remoteMessage.data)
         }
 
         // 2. 处理通知消息（仅前台触发；后台时由系统自动显示）
@@ -33,27 +36,23 @@ class FCMService : FirebaseMessagingService() {
 
     override fun onNewToken(token: String) {
         // 将新Token发送至服务器
-        EasyLog.log("FCM onNewToken: $token")
-        //        sendTokenToServer(token)
+        EasyLog.log( "FCM onNewToken: $token")
+//        sendTokenToServer(token)
     }
 
     @SuppressLint("MissingPermission")
     private fun showNotification(title: String, body: String) {
-        val builder: NotificationCompat.Builder =
-            NotificationCompat.Builder(this, "channel_id")
-                .setSmallIcon(R.drawable.app_icon)
-                .setContentTitle(title)
-                .setContentText(body)
-                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+        val builder: NotificationCompat.Builder = NotificationCompat.Builder(this, "channel_id")
+            .setSmallIcon(R.drawable.app_icon)
+            .setContentTitle(title)
+            .setContentText(body)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
 
         // Android 8.0+ 需创建通知渠道
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel =
-                NotificationChannel(
-                    "channel_id",
-                    "Channel Name",
-                    NotificationManager.IMPORTANCE_DEFAULT,
-                )
+            val channel = NotificationChannel(
+                "channel_id", "Channel Name", NotificationManager.IMPORTANCE_DEFAULT
+            )
             val manager = getSystemService(NotificationManager::class.java)
             manager.createNotificationChannel(channel)
         }

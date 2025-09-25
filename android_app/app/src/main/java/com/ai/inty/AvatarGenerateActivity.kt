@@ -70,7 +70,9 @@ import com.ai.inty.viewmodels.AvatarGenerateViewModel
 import com.inty.utils.log.EasyLog
 import com.therouter.router.Route
 
-/** Ai 模型形象的 封面头像生成页面 */
+/**
+ * Ai 模型形象的 封面头像生成页面
+ */
 @Route(path = Constant.ROUTE_AVATAR_GENERATE)
 class AvatarGenerateActivity : BaseActivity() {
 
@@ -84,7 +86,7 @@ class AvatarGenerateActivity : BaseActivity() {
                 AvatarGeneratePage(
                     modifier = Modifier.fillMaxSize(),
                     viewModel = viewModel,
-                    onBack = { finish() },
+                    onBack = { finish() }
                 )
             }
         }
@@ -120,49 +122,55 @@ private fun AvatarGeneratePage(
         containerColor = DarkPurple,
         topBar = {
             CenterAlignedTopAppBar(
-                colors =
-                    TopAppBarDefaults.centerAlignedTopAppBarColors()
-                        .copy(containerColor = Color.Transparent),
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors()
+                    .copy(containerColor = Color.Transparent),
                 title = {
                     Text(
                         text = stringResource(R.string.generate_avatar),
                         fontSize = 18.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = Color.White,
+                        color = Color.White
                     )
                 },
                 navigationIcon = {
                     Image(
-                        modifier =
-                            Modifier.padding(horizontal = 12.dp).noRippleClickable { onBack() },
+                        modifier = Modifier
+                            .padding(horizontal = 12.dp)
+                            .noRippleClickable { onBack() },
                         painter = painterResource(R.drawable.close),
                         contentDescription = null,
                     )
-                },
+                }
             )
-        },
+        }
     ) { padding ->
         Column(
-            modifier =
-                Modifier.fillMaxSize()
-                    .imePadding()
-                    .padding(
-                        top = padding.calculateTopPadding(),
-                        start = padding.calculateLeftPadding(LayoutDirection.Ltr),
-                        end = padding.calculateRightPadding(LayoutDirection.Ltr),
-                    )
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 20.dp)
-                    .pointerInput(Unit) {
-                        detectTapGestures(onTap = { focusManager.clearFocus() })
-                    },
-            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier
+                .fillMaxSize()
+                .imePadding()
+                .padding(
+                    top = padding.calculateTopPadding(),
+                    start = padding.calculateLeftPadding(LayoutDirection.Ltr),
+                    end = padding.calculateRightPadding(LayoutDirection.Ltr)
+                )
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp)
+                .pointerInput(Unit) {
+                    detectTapGestures(onTap = {
+                        focusManager.clearFocus()
+                    })
+                },
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
+
             Spacer(modifier = Modifier.height(24.dp))
 
             // Image Preview Section
             if (generatedImageUrls.isEmpty()) {
-                AvatarPreviewSection(imageUrl = generatedImageUrl, isLoading = isLoading)
+                AvatarPreviewSection(
+                    imageUrl = generatedImageUrl,
+                    isLoading = isLoading
+                )
             } else {
                 AvatarGridSection(
                     imageUrls = generatedImageUrls,
@@ -170,14 +178,19 @@ private fun AvatarGeneratePage(
                     onImageSelected = viewModel::selectImage,
                     prompt = prompt,
                     isLoading = isLoading,
-                    onRegenerate = { _ -> viewModel.regenerateAvatar() },
+                    onRegenerate = { _ ->
+                        viewModel.regenerateAvatar()
+                    }
                 )
             }
 
             Spacer(modifier = Modifier.height(32.dp))
 
             // Prompt Input Field
-            PromptInputField(value = prompt, onValueChange = viewModel::updatePrompt)
+            PromptInputField(
+                value = prompt,
+                onValueChange = viewModel::updatePrompt
+            )
 
             Spacer(modifier = Modifier.height(32.dp))
 
@@ -185,7 +198,9 @@ private fun AvatarGeneratePage(
             GenerateButton(
                 isLoading = isLoading,
                 enabled = prompt.isNotBlank(),
-                onClick = { viewModel.generateAvatar(onNavigateBack = onBack) },
+                onClick = {
+                    viewModel.generateAvatar(onNavigateBack = onBack)
+                }
             )
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -204,18 +219,25 @@ private fun AvatarGeneratePage(
             }
 
             Spacer(modifier = Modifier.height(32.dp))
+
         }
     }
 }
 
 @Composable
-private fun AvatarPreviewSection(imageUrl: String?, isLoading: Boolean) {
+private fun AvatarPreviewSection(
+    imageUrl: String?,
+    isLoading: Boolean,
+) {
     Box(
-        modifier =
-            Modifier.fillMaxWidth()
-                .height(320.dp)
-                .background(color = Color(0x1A78599A), shape = RoundedCornerShape(16.dp)),
-        contentAlignment = Alignment.Center,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(320.dp)
+            .background(
+                color = Color(0x1A78599A),
+                shape = RoundedCornerShape(16.dp)
+            ),
+        contentAlignment = Alignment.Center
     ) {
         when {
             isLoading -> {
@@ -227,26 +249,34 @@ private fun AvatarPreviewSection(imageUrl: String?, isLoading: Boolean) {
                 AsyncImage(
                     model = imageUrl,
                     contentDescription = stringResource(R.string.content_desc_generated_avatar),
-                    modifier = Modifier.fillMaxSize().padding(4.dp),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(4.dp),
                     contentScale = ContentScale.Crop,
-                    onSuccess = { EasyLog.log("Image loaded successfully: $imageUrl") },
-                    onError = { EasyLog.log("Failed to load image: $imageUrl", EasyLog.ERROR) },
+                    onSuccess = {
+                        EasyLog.log("Image loaded successfully: $imageUrl")
+                    },
+                    onError = {
+                        EasyLog.log("Failed to load image: $imageUrl", EasyLog.ERROR)
+                    }
                 )
             }
 
             else -> {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
                     Image(
                         painter = painterResource(R.drawable.img_gen_agent_preview),
                         contentDescription = null,
-                        modifier = Modifier.size(48.dp),
+                        modifier = Modifier.size(48.dp)
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
                         text = stringResource(R.string.preview_generated_avatar),
                         fontSize = 14.sp,
                         color = Color.White.copy(0.7f),
-                        textAlign = TextAlign.Center,
+                        textAlign = TextAlign.Center
                     )
                 }
             }
@@ -263,18 +293,15 @@ private fun AvatarPreviewSection(imageUrl: String?, isLoading: Boolean) {
                 drawRoundRect(
                     color = Color.Gray,
                     topLeft = androidx.compose.ui.geometry.Offset(strokeWidth / 2, strokeWidth / 2),
-                    size =
-                        androidx.compose.ui.geometry.Size(
-                            size.width - strokeWidth,
-                            size.height - strokeWidth,
-                        ),
+                    size = androidx.compose.ui.geometry.Size(
+                        size.width - strokeWidth,
+                        size.height - strokeWidth
+                    ),
                     cornerRadius = CornerRadius(cornerRadius),
-                    style =
-                        Stroke(
-                            width = strokeWidth,
-                            pathEffect =
-                                PathEffect.dashPathEffect(floatArrayOf(dashLength, gapLength)),
-                        ),
+                    style = Stroke(
+                        width = strokeWidth,
+                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(dashLength, gapLength))
+                    )
                 )
             }
         }
@@ -282,30 +309,39 @@ private fun AvatarPreviewSection(imageUrl: String?, isLoading: Boolean) {
 }
 
 @Composable
-private fun PromptInputField(value: String, onValueChange: (String) -> Unit) {
+private fun PromptInputField(
+    value: String,
+    onValueChange: (String) -> Unit,
+) {
     Column {
         Text(
             text = stringResource(R.string.describe_desired_avatar),
             fontSize = 16.sp,
             color = Color.White,
-            fontWeight = FontWeight.Medium,
+            fontWeight = FontWeight.Medium
         )
         Spacer(modifier = Modifier.height(12.dp))
 
         BasicTextField(
             value = value,
             onValueChange = onValueChange,
-            modifier =
-                Modifier.fillMaxWidth()
-                    .background(color = Color(0x1A78599A), shape = RoundedCornerShape(12.dp))
-                    .border(
-                        width = 1.dp,
-                        color = Color.White.copy(0.2f),
-                        shape = RoundedCornerShape(12.dp),
-                    )
-                    .padding(16.dp)
-                    .height(120.dp),
-            textStyle = TextStyle(color = Color.White, fontSize = 16.sp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    color = Color(0x1A78599A),
+                    shape = RoundedCornerShape(12.dp)
+                )
+                .border(
+                    width = 1.dp,
+                    color = Color.White.copy(0.2f),
+                    shape = RoundedCornerShape(12.dp)
+                )
+                .padding(16.dp)
+                .height(120.dp),
+            textStyle = TextStyle(
+                color = Color.White,
+                fontSize = 16.sp
+            ),
             cursorBrush = SolidColor(Color.White),
             decorationBox = { innerTextField ->
                 Box {
@@ -313,69 +349,85 @@ private fun PromptInputField(value: String, onValueChange: (String) -> Unit) {
                         Text(
                             text = stringResource(R.string.avatar_creation_hint_full),
                             fontSize = 16.sp,
-                            color = Color.White.copy(0.5f),
+                            color = Color.White.copy(0.5f)
                         )
                     }
                     innerTextField()
                 }
-            },
+            }
         )
     }
 }
 
 @Composable
-private fun GenerateButton(isLoading: Boolean, enabled: Boolean, onClick: () -> Unit) {
+private fun GenerateButton(
+    isLoading: Boolean,
+    enabled: Boolean,
+    onClick: () -> Unit,
+) {
     Button(
         onClick = onClick,
         enabled = enabled && !isLoading,
-        colors =
-            ButtonDefaults.buttonColors(
-                containerColor = Color.Transparent,
-                disabledContainerColor = Color.Transparent,
-            ),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = Color.Transparent,
+            disabledContainerColor = Color.Transparent
+        ),
         shape = RoundedCornerShape(25.dp),
-        modifier =
-            Modifier.fillMaxWidth()
-                .height(56.dp)
-                .background(
-                    brush =
-                        androidx.compose.ui.graphics.Brush.horizontalGradient(
-                            colors =
-                                if (enabled && !isLoading) {
-                                    listOf(Color(0xFFE91E63), Color(0xFFFF9800))
-                                } else {
-                                    listOf(Color(0x4DE91E63), Color(0x4DFF9800))
-                                }
-                        ),
-                    shape = RoundedCornerShape(25.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(56.dp)
+            .background(
+                brush = androidx.compose.ui.graphics.Brush.horizontalGradient(
+                    colors = if (enabled && !isLoading) {
+                        listOf(
+                            Color(0xFFE91E63),
+                            Color(0xFFFF9800)
+                        )
+                    } else {
+                        listOf(
+                            Color(0x4DE91E63),
+                            Color(0x4DFF9800)
+                        )
+                    }
                 ),
+                shape = RoundedCornerShape(25.dp)
+            )
     ) {
         if (isLoading) {
-            CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+            CircularProgressIndicator(
+                color = Color.White,
+                modifier = Modifier.size(24.dp)
+            )
         } else {
             Text(
                 text = stringResource(R.string.generate_avatar_button),
                 fontSize = 18.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = Color.White,
+                color = Color.White
             )
         }
     }
 }
 
 @Composable
-private fun UseAvatarButton(onClick: () -> Unit) {
+private fun UseAvatarButton(
+    onClick: () -> Unit,
+) {
     Button(
         onClick = onClick,
-        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3)),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = Color(0xFF2196F3)
+        ),
         shape = RoundedCornerShape(25.dp),
-        modifier = Modifier.fillMaxWidth().height(48.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(48.dp)
     ) {
         Text(
             text = stringResource(R.string.use_this_avatar_button),
             fontSize = 16.sp,
             fontWeight = FontWeight.Medium,
-            color = Color.White,
+            color = Color.White
         )
     }
 }
@@ -386,25 +438,25 @@ fun ThreeDotLoadingAnimation() {
 
     Row(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically,
+        verticalAlignment = Alignment.CenterVertically
     ) {
         repeat(3) { index ->
             val delay = index * 200
-            val alpha by
-                infiniteTransition.animateFloat(
-                    initialValue = 0.3f,
-                    targetValue = 1.0f,
-                    animationSpec = infiniteRepeatable(animation = tween(600, delayMillis = delay)),
-                    label = "dot_alpha_$index",
-                )
+            val alpha by infiniteTransition.animateFloat(
+                initialValue = 0.3f,
+                targetValue = 1.0f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(600, delayMillis = delay)
+                ), label = "dot_alpha_$index"
+            )
 
             Box(
-                modifier =
-                    Modifier.size(12.dp)
-                        .background(
-                            color = Color(0xFFE91E63).copy(alpha = alpha),
-                            shape = CircleShape,
-                        )
+                modifier = Modifier
+                    .size(12.dp)
+                    .background(
+                        color = Color(0xFFE91E63).copy(alpha = alpha),
+                        shape = CircleShape
+                    )
             )
         }
     }
@@ -419,39 +471,51 @@ private fun AvatarGridSection(
     isLoading: Boolean,
     onRegenerate: (String) -> Unit,
 ) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
         // Regen 按钮
-        RegenButton(onClick = { onRegenerate(prompt) }, enabled = !isLoading)
+        RegenButton(
+            onClick = {
+                onRegenerate(prompt)
+            },
+            enabled = !isLoading
+        )
 
         Spacer(modifier = Modifier.height(16.dp))
 
         // 4张图片的网格布局
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             imageUrls.take(4).forEachIndexed { index, imageUrl ->
                 Box(
-                    modifier =
-                        Modifier.weight(1f)
-                            .aspectRatio(9 / 16f)
-                            .background(color = Color(0x1A78599A), shape = RoundedCornerShape(8.dp))
-                            .border(
-                                width = if (index == selectedIndex) 3.dp else 1.dp,
-                                color =
-                                    if (index == selectedIndex) Color(0xFFE91E63)
-                                    else Color.Transparent,
-                                shape = RoundedCornerShape(8.dp),
-                            )
-                            .noRippleClickable { onImageSelected(index) },
-                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+                        .weight(1f)
+                        .aspectRatio(9 / 16f)
+                        .background(
+                            color = Color(0x1A78599A),
+                            shape = RoundedCornerShape(8.dp)
+                        )
+                        .border(
+                            width = if (index == selectedIndex) 3.dp else 1.dp,
+                            color = if (index == selectedIndex) Color(0xFFE91E63) else Color.Transparent,
+                            shape = RoundedCornerShape(8.dp)
+                        )
+                        .noRippleClickable { onImageSelected(index) },
+                    contentAlignment = Alignment.Center
                 ) {
                     AsyncImage(
                         model = imageUrl,
-                        contentDescription =
-                            stringResource(R.string.content_desc_generated_avatar_index, index),
-                        modifier = Modifier.fillMaxSize().padding(4.dp),
-                        contentScale = ContentScale.Crop,
+                        contentDescription = stringResource(
+                            R.string.content_desc_generated_avatar_index,
+                            index
+                        ),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(4.dp),
+                        contentScale = ContentScale.Crop
                     )
                 }
             }
@@ -460,25 +524,31 @@ private fun AvatarGridSection(
 }
 
 @Composable
-fun RegenButton(onClick: () -> Unit, enabled: Boolean = true) {
+fun RegenButton(
+    onClick: () -> Unit,
+    enabled: Boolean = true,
+) {
     Box(
-        modifier =
-            Modifier.fillMaxSize()
-                .heightIn(112.dp)
-                .background(color = Color(0x1A78599A), shape = RoundedCornerShape(8.dp))
-                .border(
-                    width = 1.dp,
-                    color = if (enabled) Color.Gray else Color.White.copy(0.2f),
-                    shape = RoundedCornerShape(8.dp),
-                )
-                .noRippleClickable { if (enabled) onClick() },
-        contentAlignment = Alignment.Center,
+        modifier = Modifier
+            .fillMaxSize()
+            .heightIn(112.dp)
+            .background(
+                color = Color(0x1A78599A),
+                shape = RoundedCornerShape(8.dp)
+            )
+            .border(
+                width = 1.dp,
+                color = if (enabled) Color.Gray else Color.White.copy(0.2f),
+                shape = RoundedCornerShape(8.dp)
+            )
+            .noRippleClickable { if (enabled) onClick() },
+        contentAlignment = Alignment.Center
     ) {
         Text(
             text = stringResource(R.string.regen_button),
             fontSize = 14.sp,
             fontWeight = FontWeight.Medium,
-            color = if (enabled) Color.White else Color.White.copy(0.5f),
+            color = if (enabled) Color.White else Color.White.copy(0.5f)
         )
     }
 }

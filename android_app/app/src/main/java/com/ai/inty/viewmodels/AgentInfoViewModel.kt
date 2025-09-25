@@ -52,7 +52,9 @@ class AgentInfoViewModel : BaseActivityViewModel() {
         EasyLog.log("agent = $agentInfo")
         _agentInfo.value = agentInfo
         // Refresh agent data to get latest follower count and follow status
-        agentInfo?.let { agent -> refreshAgentData(agent.id) }
+        agentInfo?.let { agent ->
+            refreshAgentData(agent.id)
+        }
     }
 
     private fun refreshAgentData(agentId: String) {
@@ -74,4 +76,5 @@ class AgentInfoViewModel : BaseActivityViewModel() {
             }
         }
     }
+
 }

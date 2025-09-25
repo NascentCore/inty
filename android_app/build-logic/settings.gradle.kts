@@ -15,15 +15,18 @@
  */
 
 dependencyResolutionManagement {
-  repositories {
-    maven(url = "https://maven.aliyun.com/repository/public/")
-    google()
-    mavenCentral()
-  }
-  // 这里暂时创建引用的tom还是外部工程的目录，build-logic内的，暂时bak使用，后续尝试开发IDE plugin创建模版工程project
-  versionCatalogs { create("libs") { from(files("../gradle/libs.versions.toml")) } }
+    repositories {
+        maven(url = "https://maven.aliyun.com/repository/public/")
+        google()
+        mavenCentral()
+    }
+    //这里暂时创建引用的tom还是外部工程的目录，build-logic内的，暂时bak使用，后续尝试开发IDE plugin创建模版工程project
+    versionCatalogs {
+        create("libs") {
+            from(files("../gradle/libs.versions.toml"))
+        }
+    }
 }
 
 rootProject.name = "build-logic"
-
 include(":convention")

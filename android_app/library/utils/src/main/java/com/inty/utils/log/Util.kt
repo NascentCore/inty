@@ -1,28 +1,29 @@
 package com.inty.utils.log
 
-/** Print [Iterable] POJO in which you interested defined by [map] */
+
+/**
+ * Print [Iterable] POJO in which you interested defined by [map]
+ */
 fun <T> Iterable<T>.log(map: (T) -> String) =
-    fold(StringBuilder("[")) { acc: StringBuilder, t: T -> acc.append("\t${map(t)},") }
-        .append("]")
+    fold(StringBuilder("[")) { acc: StringBuilder, t: T -> acc.append("\t${map(t)},") }.append("]")
         .toString()
+
 
 /**
  * Print [Map]
- *
  * @param space
  */
 fun <K, V> Map<K, V?>.log(space: Int = 0): String {
-  val indent = StringBuilder().apply { repeat(space) { append(" ") } }.toString()
-  return StringBuilder("\n${indent}{")
-      .also { sb ->
+    val indent = StringBuilder().apply {
+        repeat(space) { append(" ") }
+    }.toString()
+    return StringBuilder("\n${indent}{").also { sb ->
         this.iterator().forEach { entry ->
-          val value =
-              entry.value.let { v ->
+            val value = entry.value.let { v ->
                 (v as? Map<*, *>)?.log("${indent}${entry.key} = ".length) ?: v.toString()
-              }
-          sb.append("\n\t${indent}[${entry.key}] = $value,")
+            }
+            sb.append("\n\t${indent}[${entry.key}] = $value,")
         }
         sb.append("\n${indent}}")
-      }
-      .toString()
+    }.toString()
 }

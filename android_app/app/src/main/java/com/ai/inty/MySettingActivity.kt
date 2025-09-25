@@ -30,11 +30,15 @@ import com.therouter.router.Route
 import com.yalantis.ucrop.UCrop
 import kotlinx.coroutines.launch
 
-/** 个人设置页面 */
+
+/**
+ * 个人设置页面
+ */
 @Route(path = Constant.ROUTE_SETTING_MY)
 class MySettingActivity : BaseActivity() {
 
-    @Autowired var userProfile: com.ai.inty.beans.UserProfile? = null
+    @Autowired
+    var userProfile: com.ai.inty.beans.UserProfile? = null
 
     private val viewModel: MySettingViewModel by viewModels()
 
@@ -56,56 +60,52 @@ class MySettingActivity : BaseActivity() {
                 val context = LocalContext.current
                 val cropTitle = stringResource(id = R.string.crop_image)
 
-                val activityCropResultLauncher =
-                    rememberLauncherForActivityResult(
-                        ActivityResultContracts.StartActivityForResult()
-                    ) { result ->
-                        if (result.resultCode == RESULT_OK) {
-                            runCatching {
-                                    result.data?.let { intentResult ->
-                                        val imageUri = UCrop.getOutput(intentResult) // 图片uri
-                                        imageUri?.let { imageUriReal ->
-                                            viewModel.setAvatar(imageUriReal)
-                                        }
-                                    }
+                val activityCropResultLauncher = rememberLauncherForActivityResult(
+                    ActivityResultContracts.StartActivityForResult()
+                ) { result ->
+                    if (result.resultCode == RESULT_OK) {
+                        runCatching {
+                            result.data?.let { intentResult ->
+                                val imageUri = UCrop.getOutput(intentResult) // 图片uri
+                                imageUri?.let { imageUriReal ->
+                                    viewModel.setAvatar(imageUriReal)
                                 }
-                                .onFailure { e -> e.printStackTrace() }
-                        }
+                            }
+                        }.onFailure { e -> e.printStackTrace() }
                     }
+                }
 
-                val galleryLauncher =
-                    rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) {
-                        imageUri ->
-                        imageUri?.let { uri ->
-                            runCatching {
-                                    // Check file size before cropping - limit to 10MB
-                                    val fileSize = getFileSize(context, uri)
-                                    // TODO: 使用 firebase remote config 配置应集中管理
-                                    // https://firebase.google.com/docs/remote-config
-                                    val maxSizeMB = 10
-                                    val maxSizeBytes = maxSizeMB * 1024 * 1024 // 10MB in bytes
-                                    if (fileSize > maxSizeBytes) {
-                                        val maxSizeMBStr = String.format("%dMB", maxSizeMB)
-                                        val fileSizeMBStr =
-                                            String.format("%.1fMB", fileSize / (1024.0 * 1024.0))
-                                        val msg =
-                                            String.format(
-                                                context.getString(
-                                                    R.string
-                                                        .user_avatar_size_too_large_with_size_format
-                                                ),
-                                                maxSizeMBStr,
-                                                fileSizeMBStr,
-                                            )
-                                        lifecycleScope.launch { ToastUtils.showToast(msg) }
-                                        return@let
-                                    }
-                                    val intentCrop = UCropHelper.getIntent(context, uri, cropTitle)
-                                    activityCropResultLauncher.launch(intentCrop)
+                val galleryLauncher = rememberLauncherForActivityResult(
+                    ActivityResultContracts.GetContent()
+                ) { imageUri ->
+                    imageUri?.let { uri ->
+                        runCatching {
+                            // Check file size before cropping - limit to 10MB
+                            val fileSize = getFileSize(context, uri)
+                            // TODO: 使用 firebase remote config 配置应集中管理
+                            // https://firebase.google.com/docs/remote-config
+                            val maxSizeMB = 10
+                            val maxSizeBytes = maxSizeMB * 1024 * 1024 // 10MB in bytes
+                            if (fileSize > maxSizeBytes) {
+                                val maxSizeMBStr = String.format("%dMB", maxSizeMB)
+                                val fileSizeMBStr =
+                                    String.format("%.1fMB", fileSize / (1024.0 * 1024.0))
+                                val msg = String.format(
+                                    context.getString(R.string.user_avatar_size_too_large_with_size_format),
+                                    maxSizeMBStr,
+                                    fileSizeMBStr
+                                )
+                                lifecycleScope.launch {
+                                    ToastUtils.showToast(msg)
                                 }
-                                .onFailure { it.printStackTrace() }
-                        }
+                                return@let
+                            }
+                            val intentCrop = UCropHelper.getIntent(context, uri, cropTitle)
+                            activityCropResultLauncher.launch(intentCrop)
+                        }.onFailure { it.printStackTrace() }
+
                     }
+                }
 
                 val userProfile = viewModel.userProfile.collectAsState()
                 var editKey by remember { mutableStateOf(EditKey.None) }
@@ -114,7 +114,9 @@ class MySettingActivity : BaseActivity() {
                 Box {
                     MySettingScreen(
                         userProfile = userProfile.value,
-                        onBack = { finish() },
+                        onBack = {
+                            finish()
+                        },
                         onClickName = {
                             editKey = EditKey.Name
                             editValue = userProfile.value.nickname
@@ -127,20 +129,28 @@ class MySettingActivity : BaseActivity() {
                             editKey = EditKey.Pronouns
                             editValue = userProfile.value.gender ?: ""
                         },
-                        onSelectAvatar = { galleryLauncher.launch("image/*") },
-                        onSave = { viewModel.onSave() },
+                        onSelectAvatar = {
+                            galleryLauncher.launch("image/*")
+                        },
+                        onSave = {
+                            viewModel.onSave()
+                        }
                     )
 
                     if (editKey != EditKey.None) {
                         EditDialog(
                             editKey = editKey,
                             editValue = editValue,
-                            onDismiss = { editKey = EditKey.None },
+                            onDismiss = {
+                                editKey = EditKey.None
+                            },
                             onSave = { key, value ->
                                 viewModel.changeUserProfile(key, value)
                                 editKey = EditKey.None
                             },
-                            onValueChange = { editValue = it },
+                            onValueChange = {
+                                editValue = it
+                            }
                         )
                     }
                 }

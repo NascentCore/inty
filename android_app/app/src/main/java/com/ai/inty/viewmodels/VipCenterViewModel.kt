@@ -11,7 +11,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-/** 会员中心ViewModel，管理订阅状态和计划信息。 */
+/**
+ * 会员中心ViewModel，管理订阅状态和计划信息。
+ */
 class VipCenterViewModel : BaseViewModel() {
     private val _selectedPlanIndex = MutableStateFlow(0)
     val selectedPlanIndex: StateFlow<Int> = _selectedPlanIndex.asStateFlow()
@@ -22,19 +24,21 @@ class VipCenterViewModel : BaseViewModel() {
     // 订阅计划Flow，从BillingRepository订阅
     val plansFlow: StateFlow<List<VipPlan>> = BillingRepository.plansFlow
 
-    /** 选择订阅计划 */
+    /**
+     * 选择订阅计划
+     */
     fun selectPlan(index: Int) {
         val currentPlans = plansFlow.value
         if (index >= 0 && index < currentPlans.size) {
             _selectedPlanIndex.value = index
             val selectedPlan = currentPlans[index]
-            EasyLog.log(
-                "BillingRepository VipViewModel 选择订阅计划: ${selectedPlan.name} (${selectedPlan.googleProductId})"
-            )
+            EasyLog.log("BillingRepository VipViewModel 选择订阅计划: ${selectedPlan.name} (${selectedPlan.googleProductId})")
         }
     }
 
-    /** 购买选中的订阅计划 */
+    /**
+     * 购买选中的订阅计划
+     */
     fun purchaseSelectedPlan(activity: Activity) {
         val selectedIndex = _selectedPlanIndex.value
         val currentPlans = plansFlow.value
@@ -50,7 +54,9 @@ class VipCenterViewModel : BaseViewModel() {
         }
     }
 
-    /** 获取选中的订阅计划 */
+    /**
+     * 获取选中的订阅计划
+     */
     fun getSelectedPlan(): VipPlan? {
         val selectedIndex = _selectedPlanIndex.value
         val currentPlans = plansFlow.value
@@ -62,17 +68,23 @@ class VipCenterViewModel : BaseViewModel() {
         }
     }
 
-    /** 检查用户是否为会员 */
+    /**
+     * 检查用户是否为会员
+     */
     fun isUserSubscribed(): Boolean {
         return VipStatusHelper.isUserVip()
     }
 
-    /** 获取用户订阅信息 */
+    /**
+     * 获取用户订阅信息
+     */
     fun getUserSubscriptionInfo(): VipStatus {
         return VipStatusHelper.getVipStatus()
     }
 
-    /** 检查是否有选中的计划 */
+    /**
+     * 检查是否有选中的计划
+     */
     fun hasSelectedPlan(): Boolean {
         val selectedIndex = _selectedPlanIndex.value
         val currentPlans = plansFlow.value

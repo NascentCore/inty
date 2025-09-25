@@ -35,33 +35,47 @@ import com.ai.inty.ui.components.SmartTagsLayout
 import com.ai.inty.utils.AvatarManager
 import com.ai.inty.utils.ImageSizeCache
 
-/** Explore页面的角色卡片组件 */
+/**
+ * Explore页面的角色卡片组件
+ */
 @Composable
-fun ExploreCharacterCard(modifier: Modifier = Modifier, agentInfo: AgentInfo, onClick: () -> Unit) {
+fun ExploreCharacterCard(
+    modifier: Modifier = Modifier,
+    agentInfo: AgentInfo,
+    onClick: () -> Unit
+) {
     val density = LocalDensity.current
 
     // 缓存渐变画笔，避免每次重组时重新创建
     val gradientBrush = remember {
         Brush.verticalGradient(
-            colors = listOf(Color.Transparent, Color.Black.copy(.5f), Color.Black.copy(.9f))
+            colors = listOf(
+                Color.Transparent,
+                Color.Black.copy(.5f),
+                Color.Black.copy(.9f),
+            )
         )
     }
 
     // 缓存过滤后的标签，避免每次重组时重新计算
-    val filteredTags = remember(agentInfo.tags) { agentInfo.tags?.filterNotNull() ?: emptyList() }
+    val filteredTags = remember(agentInfo.tags) {
+        agentInfo.tags?.filterNotNull() ?: emptyList()
+    }
 
     // 获取图片URL
-    val imageUrl =
-        remember(agentInfo.id, agentInfo.background, agentInfo.avatar) {
-            AvatarManager.getChatBackgroundForAgent(agentInfo)
-        }
+    val imageUrl = remember(agentInfo.id, agentInfo.background, agentInfo.avatar) {
+        AvatarManager.getChatBackgroundForAgent(agentInfo)
+    }
 
     // 动态计算卡片高度，基于图片宽高比
     // 使用mutableStateOf确保高度可以动态更新，实现瀑布流效果
-    var cardHeight by
-        remember(imageUrl) {
-            mutableStateOf(with(density) { ImageSizeCache.getDisplayHeightPx(imageUrl).toDp() })
-        }
+    var cardHeight by remember(imageUrl) { 
+        mutableStateOf(
+            with(density) { 
+                ImageSizeCache.getDisplayHeightPx(imageUrl).toDp() 
+            }
+        )
+    }
 
     // 图片加载状态
     var imageLoaded by remember { mutableStateOf(false) }
@@ -84,37 +98,43 @@ fun ExploreCharacterCard(modifier: Modifier = Modifier, agentInfo: AgentInfo, on
     }
 
     Box(
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .height(cardHeight)
-                .clip(RoundedCornerShape(8.dp))
-                .noRippleClickable { onClick() }
+        modifier = modifier
+            .fillMaxWidth()
+            .height(cardHeight)
+            .clip(RoundedCornerShape(8.dp))
+            .noRippleClickable { onClick() }
     ) {
         // 背景图片层
         Box(modifier = Modifier.fillMaxSize()) {
             // 使用 Shimmer 占位符
             if (!imageLoaded) {
-                ShimmerPlaceholder(modifier = Modifier.fillMaxSize(), cornerRadius = 8.dp)
+                ShimmerPlaceholder(
+                    modifier = Modifier.fillMaxSize(),
+                    cornerRadius = 8.dp
+                )
             }
 
             IntyImage(
                 modifier = Modifier.fillMaxSize(),
                 model = imageUrl,
                 contentScale = ContentScale.Crop,
-                onSuccess = { imageLoaded = true },
-                onError = { imageLoaded = false },
+                onSuccess = {
+                    imageLoaded = true
+                },
+                onError = {
+                    imageLoaded = false
+                }
             )
         }
 
         // 文本内容层 - 立即显示，不依赖图片加载状态
         Column(
-            modifier =
-                Modifier.fillMaxWidth()
-                    .background(brush = gradientBrush)
-                    .padding(start = 8.dp, end = 8.dp, top = 16.dp, bottom = 8.dp)
-                    .align(Alignment.BottomCenter),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(brush = gradientBrush)
+                .padding(start = 8.dp, end = 8.dp, top = 16.dp, bottom = 8.dp)
+                .align(Alignment.BottomCenter),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             Text(
                 modifier = Modifier,
@@ -133,15 +153,19 @@ fun ExploreCharacterCard(modifier: Modifier = Modifier, agentInfo: AgentInfo, on
                 fontWeight = FontWeight.Normal,
                 color = Color(0xB2FFFFFF),
                 maxLines = 3,
-                overflow = TextOverflow.Ellipsis,
+                overflow = TextOverflow.Ellipsis
             )
 
             if (filteredTags.isNotEmpty()) {
-                Box(modifier = Modifier.fillMaxWidth().height(16.dp)) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(16.dp)
+                ) {
                     SmartTagsLayout(
                         modifier = Modifier.matchParentSize(),
                         tags = filteredTags,
-                        isCardTag = true,
+                        isCardTag = true
                     )
                 }
             }

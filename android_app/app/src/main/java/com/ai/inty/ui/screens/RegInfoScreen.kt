@@ -38,7 +38,9 @@ import com.ai.inty.ui.components.SubtitleText
 import com.ai.inty.ui.components.TitleText
 import kotlinx.coroutines.launch
 
-/** 注册信息屏幕 */
+/**
+ * 注册信息屏幕
+ */
 @Composable
 internal fun RegInfoScreen(
     onClose: () -> Unit = {},
@@ -47,18 +49,24 @@ internal fun RegInfoScreen(
     var selectGender by remember { mutableStateOf(GENDER.OTHER) }
     var selectAge by remember { mutableStateOf("") }
 
-    Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(0.6f))) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(0.6f)),
+    ) {
         Column(
-            modifier =
-                Modifier.fillMaxWidth()
-                    .align(Alignment.BottomCenter)
-                    .background(
-                        brush =
-                            Brush.verticalGradient(
-                                colors = listOf(Color(0xFF322341), Color(0xFF120E24))
-                            ),
-                        shape = RoundedCornerShape(24.dp, 24.dp, 0.dp, 0.dp),
-                    )
+            modifier = Modifier
+                .fillMaxWidth()
+                .align(Alignment.BottomCenter)
+                .background(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            Color(0xFF322341),
+                            Color(0xFF120E24)
+                        )
+                    ),
+                    shape = RoundedCornerShape(24.dp, 24.dp, 0.dp, 0.dp)
+                )
         ) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                 CloseButton(onClose = onClose)
@@ -76,24 +84,32 @@ internal fun RegInfoScreen(
             Spacer(Modifier.height(12.dp))
 
             // 性别选择
-            Row(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+            ) {
                 Spacer(Modifier.width(40.dp))
                 GenderItem(
                     gender = GENDER.MALE,
                     selected = (selectGender == GENDER.MALE),
-                    onClick = { selectGender = GENDER.MALE },
+                    onClick = {
+                        selectGender = GENDER.MALE
+                    }
                 )
                 Spacer(Modifier.weight(0.5f))
                 GenderItem(
                     gender = GENDER.FEMALE,
                     selected = (selectGender == GENDER.FEMALE),
-                    onClick = { selectGender = GENDER.FEMALE },
+                    onClick = {
+                        selectGender = GENDER.FEMALE
+                    }
                 )
                 Spacer(Modifier.weight(0.5f))
                 GenderItem(
                     gender = GENDER.OTHER,
                     selected = (selectGender == GENDER.OTHER),
-                    onClick = { selectGender = GENDER.OTHER },
+                    onClick = {
+                        selectGender = GENDER.OTHER
+                    }
                 )
                 Spacer(Modifier.width(40.dp))
             }
@@ -104,48 +120,64 @@ internal fun RegInfoScreen(
 
             // 年龄选择
             FlowRow(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
-                maxItemsInEachRow = 2,
+                maxItemsInEachRow = 2
             ) {
-                val itemModifier = Modifier.weight(1f).height(48.dp)
+                val itemModifier = Modifier
+                    .weight(1f)
+                    .height(48.dp)
 
                 AgeItem(
                     itemModifier,
                     text = stringResource(R.string.age_under_18),
                     isSelected = (selectAge == "<18"),
-                    onSelected = { selectAge = "<18" },
+                    onSelected = {
+                        selectAge = "<18"
+                    }
                 )
                 AgeItem(
                     itemModifier,
                     text = stringResource(R.string.age_18_20),
                     isSelected = (selectAge == "18-20"),
-                    onSelected = { selectAge = "18-20" },
+                    onSelected = {
+                        selectAge = "18-20"
+                    }
                 )
                 AgeItem(
                     itemModifier,
                     text = stringResource(R.string.age_21_23),
                     isSelected = (selectAge == "21-23"),
-                    onSelected = { selectAge = "21-23" },
+                    onSelected = {
+                        selectAge = "21-23"
+                    }
                 )
                 AgeItem(
                     itemModifier,
                     text = stringResource(R.string.age_24_29),
                     isSelected = (selectAge == "24-29"),
-                    onSelected = { selectAge = "24-29" },
+                    onSelected = {
+                        selectAge = "24-29"
+                    }
                 )
                 AgeItem(
                     itemModifier,
                     text = stringResource(R.string.age_30_36),
                     isSelected = (selectAge == "30-36"),
-                    onSelected = { selectAge = "30-36" },
+                    onSelected = {
+                        selectAge = "30-36"
+                    }
                 )
                 AgeItem(
                     itemModifier,
                     text = stringResource(R.string.age_above_36),
                     isSelected = (selectAge == "Above 36"),
-                    onSelected = { selectAge = "Above 36" },
+                    onSelected = {
+                        selectAge = "Above 36"
+                    }
                 )
             }
 
@@ -158,9 +190,13 @@ internal fun RegInfoScreen(
             EnterButton(
                 onEnter = {
                     if (selectAge == "<18") {
-                        coroutineScope.launch { ToastUtils.showToast(notEligibleMsg) }
+                        coroutineScope.launch {
+                            ToastUtils.showToast(notEligibleMsg)
+                        }
                     } else if (selectAge.isEmpty() || selectAge.isBlank()) {
-                        coroutineScope.launch { ToastUtils.showToast(requireMsg) }
+                        coroutineScope.launch {
+                            ToastUtils.showToast(requireMsg)
+                        }
                     } else {
                         onSave(selectGender, selectAge)
                     }

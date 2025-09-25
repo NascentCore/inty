@@ -24,8 +24,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.credentials.exceptions.GetCredentialCancellationException
 import androidx.credentials.exceptions.GetCredentialException
+import androidx.credentials.exceptions.GetCredentialCancellationException
 import androidx.credentials.exceptions.GetCredentialInterruptedException
 import androidx.credentials.exceptions.NoCredentialException
 import com.ai.inty.R
@@ -41,7 +41,9 @@ import com.ai.inty.utils.CredentialManagerHelper
 import com.inty.utils.log.EasyLog
 import kotlinx.coroutines.launch
 
-/** 登录屏幕 */
+/**
+ * 登录屏幕
+ */
 @Composable
 internal fun LoginScreen(
     onClose: () -> Unit = {},
@@ -83,35 +85,31 @@ internal fun LoginScreen(
                                 return@fold
                             }
                             is NoCredentialException -> {
-                                val errorMessage =
-                                    context.getString(R.string.no_credentials_available)
-                                EasyLog.log(
-                                    "Credential Manager sign-in failed: $errorMessage",
-                                    EasyLog.ERROR,
-                                )
+                                val errorMessage = context.getString(R.string.no_credentials_available)
+                                EasyLog.log("Credential Manager sign-in failed: $errorMessage", EasyLog.ERROR)
                                 // 显示错误提示
-                                coroutineScope.launch { ToastUtils.showToast(errorMessage) }
+                                coroutineScope.launch {
+                                    ToastUtils.showToast(errorMessage)
+                                }
                             }
                             is GetCredentialException -> {
                                 val errorMessage = context.getString(R.string.get_credential_failed)
-                                EasyLog.log(
-                                    "Credential Manager sign-in failed: $errorMessage",
-                                    EasyLog.ERROR,
-                                )
+                                EasyLog.log("Credential Manager sign-in failed: $errorMessage", EasyLog.ERROR)
                                 // 显示错误提示
-                                coroutineScope.launch { ToastUtils.showToast(errorMessage) }
+                                coroutineScope.launch {
+                                    ToastUtils.showToast(errorMessage)
+                                }
                             }
                             else -> {
                                 val errorMessage = context.getString(R.string.login_failed)
-                                EasyLog.log(
-                                    "Credential Manager sign-in failed: $errorMessage",
-                                    EasyLog.ERROR,
-                                )
+                                EasyLog.log("Credential Manager sign-in failed: $errorMessage", EasyLog.ERROR)
                                 // 显示错误提示
-                                coroutineScope.launch { ToastUtils.showToast(errorMessage) }
+                                coroutineScope.launch {
+                                    ToastUtils.showToast(errorMessage)
+                                }
                             }
                         }
-                    },
+                    }
                 )
             } finally {
                 isLoading = false
@@ -119,19 +117,25 @@ internal fun LoginScreen(
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(0.6f))) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(0.6f)),
+    ) {
         Column(
-            modifier =
-                Modifier.fillMaxWidth()
-                    .align(Alignment.BottomCenter)
-                    .background(
-                        brush =
-                            Brush.verticalGradient(
-                                colors = listOf(Color(0xFF322341), Color(0xFF120E24))
-                            ),
-                        shape = RoundedCornerShape(24.dp, 24.dp, 0.dp, 0.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .align(Alignment.BottomCenter)
+                .background(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            Color(0xFF322341),
+                            Color(0xFF120E24)
+                        )
                     ),
-            horizontalAlignment = Alignment.CenterHorizontally,
+                    shape = RoundedCornerShape(24.dp, 24.dp, 0.dp, 0.dp)
+                ),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // 关闭按钮
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
@@ -155,7 +159,12 @@ internal fun LoginScreen(
             Spacer(modifier = Modifier.height(40.dp))
 
             // Google 登录按钮
-            GoogleLoginButton(isLoading = isLoading, onLoginClick = { performGoogleSignIn() })
+            GoogleLoginButton(
+                isLoading = isLoading,
+                onLoginClick = {
+                    performGoogleSignIn()
+                }
+            )
 
             Spacer(modifier = Modifier.height(24.dp))
 
