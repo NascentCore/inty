@@ -64,6 +64,7 @@ import com.ai.inty.beans.AgentInfo
 import com.ai.inty.beans.UserProfile
 import com.ai.inty.billing.BillingRepository
 import com.ai.inty.billing.VipStatus
+import com.ai.inty.ui.components.ShimmerPlaceholder
 import com.ai.inty.utils.AuthClickable
 import com.inty.utils.formatTimestampToString
 import com.therouter.TheRouter
@@ -315,57 +316,67 @@ private fun MyAgentCard(
     var showDeleteDialog by remember { mutableStateOf(false) }
     var lastClickTime by remember { mutableLongStateOf(0L) }
 
+    // 图片加载状态
+    var imageLoaded by remember { mutableStateOf(false) }
+
     Box(
         modifier = modifier
             .size(165.dp, 220.dp)
             .clip(RoundedCornerShape(12.dp))
     ) {
+        // 使用 Shimmer 占位符
+        if (!imageLoaded) {
+            ShimmerPlaceholder(
+                modifier = Modifier.fillMaxSize(),
+                cornerRadius = 12.dp
+            )
+        }
+
         IntyImage(
             modifier = Modifier.fillMaxSize(),
             model = agentInfo.avatar,
-            placeholder = painterResource(R.drawable.app_icon),
-            error = painterResource(R.drawable.app_icon),
+            placeholder = null, // 使用自定义的 Shimmer 占位符
+            error = null, // 错误时也使用 Shimmer
+            onSuccess = {
+                imageLoaded = true
+            },
+            onError = {
+                imageLoaded = false
+            }
         )
 
+        // 缓存渐变画笔，避免每次重组时重新创建
+        val gradientBrush = remember {
+            Brush.verticalGradient(
+                colors = listOf(
+                    Color.Transparent,
+                    Color.Black.copy(.5f),
+                    Color.Black.copy(.9f),
+                )
+            )
+        }
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(
-                    brush = Brush.verticalGradient(
-                        colors = listOf(
-                            Color.Transparent,
-                            Color.Black.copy(.2f),
-                            Color.Black.copy(.7f),
-                            Color.Black,
-                        ),
-                    )
-                )
+                .background(brush = gradientBrush)
                 .padding(8.dp)
                 .align(Alignment.BottomCenter),
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                IntyCircleImage(
-                    modifier = Modifier.size(18.dp),
-                    url = agentInfo.avatar,
-                    placeholderResID = R.drawable.app_icon
-                )
-                Spacer(Modifier.width(4.dp))
-                Text(
-                    modifier = Modifier,
-                    text = agentInfo.name,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Color.White,
-                )
-            }
+            Text(
+                modifier = Modifier,
+                text = agentInfo.name,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Color.White,
+            )
             Text(
                 modifier = Modifier,
                 text = agentInfo.intro,
                 fontSize = 12.sp,
                 lineHeight = 12.sp,
                 color = Color.White.copy(.7f),
-                maxLines = 3,
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
         }
@@ -560,24 +571,5 @@ private fun PremiumBanner(
             }
         }
     }
-
-}
-
-
-@Preview(showBackground = true, backgroundColor = 0xff000000)
-@Composable
-private fun MyPagePreview() {
-    ProfilePage(
-        modifier = Modifier.fillMaxSize(),
-        userProfile = UserProfile(
-            nickname = "nick",
-            id = "12345",
-            avatar = ""
-        ),
-        agents = listOf(),
-        onClickAgent = {
-
-        },
-    )
 
 }

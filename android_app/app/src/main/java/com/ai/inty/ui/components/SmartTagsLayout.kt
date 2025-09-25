@@ -10,10 +10,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -24,7 +22,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kotlinx.coroutines.delay
 
 /**
  * 智能 Tags 布局组件，支持自动换行和截断
@@ -35,26 +32,23 @@ fun SmartTagsLayout(
     tags: List<String>,
     modifier: Modifier = Modifier,
     maxLines: Int = 1,
-    isCardTag: Boolean = false,//标记是否是在explore现实的tag，目前主要用于AgentInfo和Explore的card
+    isCardTag: Boolean = false,
     horizontalArrangement: Arrangement.Horizontal = Arrangement.spacedBy(if (isCardTag) 3.dp else 6.dp),
 ) {
     val density = LocalDensity.current
     var availableWidth by remember { mutableFloatStateOf(0f) }
-    var visibleTags by remember { mutableStateOf(tags) }
-
-    // 计算可见的 tags - 添加防抖机制
-    LaunchedEffect(tags, availableWidth) {
+    
+    // 优化性能，避免不必要的重组
+    val visibleTags = remember(tags, availableWidth, maxLines) {
         if (availableWidth > 0) {
-            // 添加小延迟，避免频繁计算
-            delay(16) // 约一帧的时间
-            if (availableWidth > 0) {
-                visibleTags = calculateVisibleTags(
-                    tags = tags,
-                    availableWidth = availableWidth,
-                    density = density,
-                    maxLines = maxLines
-                )
-            }
+            calculateVisibleTags(
+                tags = tags,
+                availableWidth = availableWidth,
+                density = density,
+                maxLines = maxLines
+            )
+        } else {
+            tags // 初始时显示所有标签，避免空白
         }
     }
 
@@ -73,11 +67,9 @@ fun SmartTagsLayout(
             } else {
                 TagItem(text = tag)
             }
-
         }
     }
 }
-
 
 /**
  * 计算可以完全显示的 tags
@@ -91,23 +83,17 @@ private fun calculateVisibleTags(
     if (tags.isEmpty()) return emptyList()
 
     val tagSpacing = with(density) { 6.dp.toPx() }
-    val tagHeight = with(density) { 24.dp.toPx() } // 估算 tag 高度
-    // val maxHeight = tagHeight * maxLines // 暂时未使用，保留以备将来需要
-
     val visibleTags = mutableListOf<String>()
     var currentLineWidth = 0f
     var currentLine = 1
 
     for (tag in tags) {
-        // 估算 tag 宽度（文本宽度 + padding）
         val estimatedTagWidth = estimateTagWidth(tag, density)
 
-        // 检查是否需要换行
         if (currentLineWidth + estimatedTagWidth + tagSpacing > availableWidth && currentLine < maxLines) {
             currentLine++
             currentLineWidth = estimatedTagWidth
         } else if (currentLineWidth + estimatedTagWidth + tagSpacing > availableWidth && currentLine >= maxLines) {
-            // 当前行已满且已达到最大行数，停止添加
             break
         } else {
             currentLineWidth += estimatedTagWidth + tagSpacing
@@ -119,14 +105,12 @@ private fun calculateVisibleTags(
     return visibleTags
 }
 
-
 /**
  * 估算 tag 的宽度
  */
 private fun estimateTagWidth(text: String, density: androidx.compose.ui.unit.Density): Float {
-    // 基于字符数量估算宽度，这是一个简化的估算方法
-    val charWidth = with(density) { 7.dp.toPx() } // 每个字符大约 7dp
-    val horizontalPadding = with(density) { 12.dp.toPx() } // 左右 padding 各 6dp
+    val charWidth = with(density) { 7.dp.toPx() }
+    val horizontalPadding = with(density) { 12.dp.toPx() }
     return text.length * charWidth + horizontalPadding
 }
 
@@ -156,7 +140,6 @@ private fun TagItem(text: String) {
         )
     }
 }
-
 
 @Composable
 private fun LiteTagItem(text: String) {

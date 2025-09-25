@@ -5,6 +5,7 @@ import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 import kotlinx.parcelize.Parcelize
 import kotlinx.parcelize.RawValue
+import kotlin.random.Random
 
 @Parcelize
 @JsonClass(generateAdapter = true)
@@ -42,6 +43,10 @@ data class AgentInfo(
 ) : Parcelable {
     //本地使用的属性数据，非接口字段
     var isDeleted: Boolean = false//标记该agent是否被服务端已经删除
+
+    fun randomAspectRatio():Float{
+        return Random.nextInt(56,75).div(100f)
+    }
 }
 
 @Parcelize
