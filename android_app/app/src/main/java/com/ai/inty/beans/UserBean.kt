@@ -35,32 +35,27 @@ data class UserProfile(
     @Json(name = "followers_count") val followerCount: Int = 0,
     @Json(name = "connector_count") val connectorCount: Int = 0,
 ) {
-  /** 性别代指 */
-  fun pronouns(): String {
-    return when (gender) {
-      GENDER.MALE.value -> "He/Him"
-      GENDER.FEMALE.value -> "She/Her"
-      else -> "They/Them"
+    /** 性别代指 */
+    fun pronouns(): String {
+        return when (gender) {
+            GENDER.MALE.value -> "He/Him"
+            GENDER.FEMALE.value -> "She/Her"
+            else -> "They/Them"
+        }
     }
-  }
 }
 
 enum class GENDER(val value: String) {
-  MALE("MALE"),
-  FEMALE("FEMALE"),
-  OTHER("OTHER"),
+    MALE("MALE"),
+    FEMALE("FEMALE"),
+    OTHER("OTHER"),
 }
 
 @JsonClass(generateAdapter = true)
-data class GoogleLoginRequest(
-    @Json(name = "id_token") val idToken: String,
-)
+data class GoogleLoginRequest(@Json(name = "id_token") val idToken: String)
 
 @JsonClass(generateAdapter = true)
-data class GoogleLoginResponse(
-    val token: String,
-    val user: UserProfile,
-)
+data class GoogleLoginResponse(val token: String, val user: UserProfile)
 
 /** 检查账号删除的接口返回 */
 @JsonClass(generateAdapter = true)

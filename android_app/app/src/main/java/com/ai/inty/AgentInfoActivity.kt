@@ -19,48 +19,48 @@ import com.therouter.router.Route
 @Route(path = Constant.ROUTE_AGENT_INFO)
 class AgentInfoActivity : BaseActivity() {
 
-  @Autowired var agent: AgentInfo? = null
+    @Autowired var agent: AgentInfo? = null
 
-  @Autowired var agent_id: String? = null
+    @Autowired var agent_id: String? = null
 
-  val viewModel: AgentInfoViewModel by viewModels()
+    val viewModel: AgentInfoViewModel by viewModels()
 
-  override fun onCreate(savedInstanceState: Bundle?) {
-    super.onCreate(savedInstanceState)
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
 
-    // 强制设置状态栏为白色图标 - 多重保险
-    setupStatusBar()
+        // 强制设置状态栏为白色图标 - 多重保险
+        setupStatusBar()
 
-    if (agent == null) {
-      if (agent_id != null) {
-        viewModel.setAgentID(agent_id!!)
-      } else {
-        // 既没有 agent 对象也没有 agent_id，说明参数传递有问题
-        finish()
-        return
-      }
-    } else {
-      viewModel.setAgentInfo(agent)
+        if (agent == null) {
+            if (agent_id != null) {
+                viewModel.setAgentID(agent_id!!)
+            } else {
+                // 既没有 agent 对象也没有 agent_id，说明参数传递有问题
+                finish()
+                return
+            }
+        } else {
+            viewModel.setAgentInfo(agent)
+        }
+
+        setContent {
+            IntyTheme {
+                val agentInfo = viewModel.agentInfo.collectAsState()
+                agentInfo.value?.let { agent -> AiAgentInfoScreen(agent, onBack = { finish() }) }
+            }
+        }
     }
-
-    setContent {
-      IntyTheme {
-        val agentInfo = viewModel.agentInfo.collectAsState()
-        agentInfo.value?.let { agent -> AiAgentInfoScreen(agent, onBack = { finish() }) }
-      }
-    }
-  }
 }
 
 private fun AgentInfoActivity.setupStatusBar() {
-  // 使用现代API设置状态栏颜色
-  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-    window.statusBarColor = android.graphics.Color.parseColor("#1C1523")
-    window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
-  }
+    // 使用现代API设置状态栏颜色
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+        window.statusBarColor = android.graphics.Color.parseColor("#1C1523")
+        window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
+    }
 
-  // 使用WindowCompat兼容库统一处理状态栏样式
-  WindowCompat.setDecorFitsSystemWindows(window, false)
-  val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
-  windowInsetsController.isAppearanceLightStatusBars = false
+    // 使用WindowCompat兼容库统一处理状态栏样式
+    WindowCompat.setDecorFitsSystemWindows(window, false)
+    val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
+    windowInsetsController.isAppearanceLightStatusBars = false
 }

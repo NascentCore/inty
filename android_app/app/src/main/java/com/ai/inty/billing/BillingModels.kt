@@ -12,31 +12,31 @@ data class VipStatus(
     val previous_plan_id: String? = null, // 上次订阅的sku的id
     val subscriptionStatus: String? = null,
 ) {
-  companion object {
-    const val UI_SUBSCRIBED = "SUBSCRIBED"
-    const val UI_UNSUBSCRIBED = "UNSUBSCRIBED"
-    const val UI_SUBSCRIBED_EXPIRE_SOON = "SUBSCRIBED_EXPIRE_SOON"
-  }
+    companion object {
+        const val UI_SUBSCRIBED = "SUBSCRIBED"
+        const val UI_UNSUBSCRIBED = "UNSUBSCRIBED"
+        const val UI_SUBSCRIBED_EXPIRE_SOON = "SUBSCRIBED_EXPIRE_SOON"
+    }
 }
 
 /** 计费事件 */
 sealed class BillingEvent {
-  object Connected : BillingEvent()
+    object Connected : BillingEvent()
 
-  object Disconnected : BillingEvent()
+    object Disconnected : BillingEvent()
 
-  data class PurchaseSuccess(val purchase: Purchase) : BillingEvent()
+    data class PurchaseSuccess(val purchase: Purchase) : BillingEvent()
 
-  data class PurchaseFailed(val code: Int, val message: String) : BillingEvent()
+    data class PurchaseFailed(val code: Int, val message: String) : BillingEvent()
 
-  data class SkuDetailsQueryFailed(val code: Int, val message: String) : BillingEvent()
+    data class SkuDetailsQueryFailed(val code: Int, val message: String) : BillingEvent()
 
-  data class InitializationFailed(val reason: String) : BillingEvent()
+    data class InitializationFailed(val reason: String) : BillingEvent()
 
-  object AppResumed : BillingEvent()
+    object AppResumed : BillingEvent()
 
-  data class SubscriptionStatusChanged(val oldStatus: VipStatus, val newStatus: VipStatus) :
-      BillingEvent()
+    data class SubscriptionStatusChanged(val oldStatus: VipStatus, val newStatus: VipStatus) :
+        BillingEvent()
 }
 
 /** BillingRepository初始化状态 */

@@ -27,62 +27,64 @@ import kotlinx.coroutines.launch
 @Route(path = Constant.ROUTE_LOGIN)
 class LoginActivity : BaseActivity() {
 
-  private val viewModel: LoginViewModel by viewModels()
+    private val viewModel: LoginViewModel by viewModels()
 
-  override fun onCreate(savedInstanceState: Bundle?) {
-    super.onCreate(savedInstanceState)
-    enableEdgeToEdge()
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
 
-    setContent {
-      IntyTheme {
-        LoginContent(
-            onClose = { finish() },
-            onGoogleLoginSuccess = { idToken -> viewModel.onGoogleLoginSuccess(idToken) },
-        )
-      }
-    }
-
-    lifecycleScope.launch {
-      viewModel.finishActivity.collect {
-        if (it) {
-          checkAndShowRegInfo()
-          finish()
+        setContent {
+            IntyTheme {
+                LoginContent(
+                    onClose = { finish() },
+                    onGoogleLoginSuccess = { idToken -> viewModel.onGoogleLoginSuccess(idToken) },
+                )
+            }
         }
-      }
-    }
-  }
 
-  private fun checkAndShowRegInfo() {
-    val userProfile = UserProfileManager.getUserProfile()
-    if (userProfile.gender.isNullOrEmpty()) {
-      EasyLog.log("User has not set gender, showing RegInfoActivity")
-      CoroutineScope(Dispatchers.Main).launch {
-        delay(300)
-        TheRouter.build(Constant.ROUTE_REG_INFO).navigation(this@LoginActivity)
-      }
-    } else {
-      EasyLog.log("User has set gender, no need to show RegInfoActivity")
+        lifecycleScope.launch {
+            viewModel.finishActivity.collect {
+                if (it) {
+                    checkAndShowRegInfo()
+                    finish()
+                }
+            }
+        }
     }
-  }
 
-  override fun onDestroy() {
-    super.onDestroy()
-    // 1. **避免误清理**：如果用户已经登录成功，不应该清除凭证
-    // 2. **区分退出方式**：正常退出不需要清理，异常退出需要清理
-    // 3. **安全考虑**：确保在用户未成功认证的情况下清理敏感信息
-    if (
-        // 用户没有用户档案（未登录成功）
-        !UserProfileManager.hasUserProfile() &&
-            // Activity 不是正常结束状态
-            !isFinishing
-    ) {
-      lifecycleScope.launch { CredentialManagerHelper.clearCredentialState(this@LoginActivity) }
+    private fun checkAndShowRegInfo() {
+        val userProfile = UserProfileManager.getUserProfile()
+        if (userProfile.gender.isNullOrEmpty()) {
+            EasyLog.log("User has not set gender, showing RegInfoActivity")
+            CoroutineScope(Dispatchers.Main).launch {
+                delay(300)
+                TheRouter.build(Constant.ROUTE_REG_INFO).navigation(this@LoginActivity)
+            }
+        } else {
+            EasyLog.log("User has set gender, no need to show RegInfoActivity")
+        }
     }
-  }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        // 1. **避免误清理**：如果用户已经登录成功，不应该清除凭证
+        // 2. **区分退出方式**：正常退出不需要清理，异常退出需要清理
+        // 3. **安全考虑**：确保在用户未成功认证的情况下清理敏感信息
+        if (
+            // 用户没有用户档案（未登录成功）
+            !UserProfileManager.hasUserProfile() &&
+                // Activity 不是正常结束状态
+                !isFinishing
+        ) {
+            lifecycleScope.launch {
+                CredentialManagerHelper.clearCredentialState(this@LoginActivity)
+            }
+        }
+    }
 }
 
 /** 登录内容组件 */
 @Composable
 private fun LoginContent(onClose: () -> Unit, onGoogleLoginSuccess: (idToken: String) -> Unit) {
-  LoginScreen(onClose = onClose, onGoogleLoginSuccess = onGoogleLoginSuccess)
+    LoginScreen(onClose = onClose, onGoogleLoginSuccess = onGoogleLoginSuccess)
 }

@@ -17,33 +17,28 @@ import com.ai.inty.base.noRippleClickable
 /** 文本样式工具类 提供常用的文本格式化功能 */
 object TextStyleUtils {
 
-  /** Helper function to create clickable text that opens a URL */
-  @Composable
-  fun BuildLink(
-      context: Context,
-      text: String,
-      url: String,
-      fontSize: TextUnit,
-  ) =
-      Text(
-          text =
-              buildAnnotatedString {
-                withStyle(
-                    SpanStyle(
-                        color = Color.White,
-                        fontSize = fontSize,
-                        textDecoration = TextDecoration.Underline,
-                    )
-                ) {
-                  append(text)
-                }
-              },
-          modifier =
-              Modifier.noRippleClickable(
-                  onClick = {
-                    val intent = Intent(Intent.ACTION_VIEW, url.toUri())
-                    context.startActivity(intent)
-                  }
-              ),
-      )
+    /** Helper function to create clickable text that opens a URL */
+    @Composable
+    fun BuildLink(context: Context, text: String, url: String, fontSize: TextUnit) =
+        Text(
+            text =
+                buildAnnotatedString {
+                    withStyle(
+                        SpanStyle(
+                            color = Color.White,
+                            fontSize = fontSize,
+                            textDecoration = TextDecoration.Underline,
+                        )
+                    ) {
+                        append(text)
+                    }
+                },
+            modifier =
+                Modifier.noRippleClickable(
+                    onClick = {
+                        val intent = Intent(Intent.ACTION_VIEW, url.toUri())
+                        context.startActivity(intent)
+                    }
+                ),
+        )
 }

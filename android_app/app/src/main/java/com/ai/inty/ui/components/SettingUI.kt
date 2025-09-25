@@ -31,26 +31,26 @@ import com.ai.inty.base.noRippleClickable
 /** 设置项容器组件 */
 @Composable
 fun SettingSection(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
-  Column(
-      modifier =
-          modifier
-              .padding(horizontal = 16.dp)
-              .fillMaxWidth()
-              .border(
-                  brush =
-                      Brush.linearGradient(
-                          colors =
-                              listOf(Color.Transparent, Color.White.copy(0.2f), Color.Transparent)
-                      ),
-                  width = 1.dp,
-                  shape = RoundedCornerShape(8.dp),
-              )
-              .background(color = Color(0x3378599A), shape = RoundedCornerShape(8.dp))
-  ) {
-    Spacer(Modifier.height(8.dp))
-    content()
-    Spacer(Modifier.height(8.dp))
-  }
+    Column(
+        modifier =
+            modifier
+                .padding(horizontal = 16.dp)
+                .fillMaxWidth()
+                .border(
+                    brush =
+                        Brush.linearGradient(
+                            colors =
+                                listOf(Color.Transparent, Color.White.copy(0.2f), Color.Transparent)
+                        ),
+                    width = 1.dp,
+                    shape = RoundedCornerShape(8.dp),
+                )
+                .background(color = Color(0x3378599A), shape = RoundedCornerShape(8.dp))
+    ) {
+        Spacer(Modifier.height(8.dp))
+        content()
+        Spacer(Modifier.height(8.dp))
+    }
 }
 
 /** 设置项开关组件 */
@@ -61,22 +61,22 @@ fun SettingSwitchItem(
     onToggle: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-  Row(
-      modifier =
-          modifier.fillMaxWidth().height(48.dp).padding(horizontal = 12.dp).noRippleClickable {
-            onToggle()
-          },
-      verticalAlignment = Alignment.CenterVertically,
-  ) {
-    Text(text = title, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
-    Spacer(Modifier.weight(1f))
-    Image(
-        painter =
-            if (isEnabled) painterResource(R.drawable.opened)
-            else painterResource(R.drawable.closed),
-        contentDescription = null,
-    )
-  }
+    Row(
+        modifier =
+            modifier.fillMaxWidth().height(48.dp).padding(horizontal = 12.dp).noRippleClickable {
+                onToggle()
+            },
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(text = title, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
+        Spacer(Modifier.weight(1f))
+        Image(
+            painter =
+                if (isEnabled) painterResource(R.drawable.opened)
+                else painterResource(R.drawable.closed),
+            contentDescription = null,
+        )
+    }
 }
 
 /** 设置项导航组件 */
@@ -87,29 +87,26 @@ fun SettingNavigationItem(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-  Row(
-      modifier =
-          modifier.fillMaxWidth().height(48.dp).padding(horizontal = 12.dp).noRippleClickable {
-            onClick()
-          },
-      verticalAlignment = Alignment.CenterVertically,
-  ) {
-    Text(text = title, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
-    Spacer(Modifier.weight(1f))
-    if (subtitle != null) {
-      Text(
-          text = subtitle,
-          fontSize = 14.sp,
-          fontWeight = FontWeight.Normal,
-          color = Color.White.copy(0.55f),
-      )
-      Spacer(Modifier.width(10.dp))
+    Row(
+        modifier =
+            modifier.fillMaxWidth().height(48.dp).padding(horizontal = 12.dp).noRippleClickable {
+                onClick()
+            },
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(text = title, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
+        Spacer(Modifier.weight(1f))
+        if (subtitle != null) {
+            Text(
+                text = subtitle,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Normal,
+                color = Color.White.copy(0.55f),
+            )
+            Spacer(Modifier.width(10.dp))
+        }
+        Image(painter = painterResource(R.drawable.icon_next), contentDescription = null)
     }
-    Image(
-        painter = painterResource(R.drawable.icon_next),
-        contentDescription = null,
-    )
-  }
 }
 
 /** 设置项信息组件（只显示，不可点击） */
@@ -120,97 +117,101 @@ fun SettingInfoItem(
     modifier: Modifier = Modifier,
     hasRedDot: Boolean = false,
 ) {
-  Row(
-      modifier = modifier.fillMaxWidth().height(48.dp).padding(horizontal = 12.dp),
-      verticalAlignment = Alignment.CenterVertically,
-  ) {
-    Text(text = title, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
-    Spacer(Modifier.weight(1f))
-    Text(
-        text = value,
-        fontSize = 14.sp,
-        fontWeight = FontWeight.Normal,
-        color = Color.White.copy(0.55f),
-    )
-    if (hasRedDot) RedDot()
-  }
+    Row(
+        modifier = modifier.fillMaxWidth().height(48.dp).padding(horizontal = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(text = title, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
+        Spacer(Modifier.weight(1f))
+        Text(
+            text = value,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Normal,
+            color = Color.White.copy(0.55f),
+        )
+        if (hasRedDot) RedDot()
+    }
 }
 
 /** 分隔线组件 */
 @Composable
 fun SettingDivider() {
-  Spacer(Modifier.height(4.dp))
-  Box(
-      modifier =
-          Modifier.fillMaxWidth()
-              .height(1.dp)
-              .background(
-                  brush =
-                      Brush.horizontalGradient(
-                          colors =
-                              listOf(Color.Transparent, Color.White.copy(0.2f), Color.Transparent)
-                      )
-              )
-  )
-  Spacer(Modifier.height(4.dp))
+    Spacer(Modifier.height(4.dp))
+    Box(
+        modifier =
+            Modifier.fillMaxWidth()
+                .height(1.dp)
+                .background(
+                    brush =
+                        Brush.horizontalGradient(
+                            colors =
+                                listOf(Color.Transparent, Color.White.copy(0.2f), Color.Transparent)
+                        )
+                )
+    )
+    Spacer(Modifier.height(4.dp))
 }
 
 /** 退出登录按钮组件 */
 @Composable
 fun LogoutButton(onLogout: () -> Unit, modifier: Modifier = Modifier) {
-  Column(
-      modifier =
-          modifier
-              .padding(horizontal = 16.dp)
-              .fillMaxWidth()
-              .border(
-                  brush =
-                      Brush.linearGradient(
-                          colors =
-                              listOf(Color.Transparent, Color.White.copy(0.2f), Color.Transparent)
-                      ),
-                  width = 1.dp,
-                  shape = RoundedCornerShape(8.dp),
-              )
-              .background(color = Color(0x3378599A), shape = RoundedCornerShape(8.dp))
-              .noRippleClickable { onLogout() }
-  ) {
-    Spacer(Modifier.height(21.dp))
-    Row(
-        modifier = Modifier.fillMaxWidth().height(48.dp).padding(horizontal = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
+    Column(
+        modifier =
+            modifier
+                .padding(horizontal = 16.dp)
+                .fillMaxWidth()
+                .border(
+                    brush =
+                        Brush.linearGradient(
+                            colors =
+                                listOf(Color.Transparent, Color.White.copy(0.2f), Color.Transparent)
+                        ),
+                    width = 1.dp,
+                    shape = RoundedCornerShape(8.dp),
+                )
+                .background(color = Color(0x3378599A), shape = RoundedCornerShape(8.dp))
+                .noRippleClickable { onLogout() }
     ) {
-      Spacer(Modifier.weight(1f))
-      Text(
-          text = stringResource(R.string.logout),
-          fontSize = 14.sp,
-          fontWeight = FontWeight.SemiBold,
-          color = Color.White,
-      )
-      Spacer(Modifier.weight(1f))
+        Spacer(Modifier.height(21.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth().height(48.dp).padding(horizontal = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Spacer(Modifier.weight(1f))
+            Text(
+                text = stringResource(R.string.logout),
+                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Color.White,
+            )
+            Spacer(Modifier.weight(1f))
+        }
+        Spacer(Modifier.height(17.dp))
     }
-    Spacer(Modifier.height(17.dp))
-  }
 }
 
 @Preview(showBackground = true)
 @Composable
 private fun SettingSwitchItemPreview() {
-  SettingSwitchItem(title = stringResource(R.string.keep_talking), isEnabled = true, onToggle = {})
+    SettingSwitchItem(
+        title = stringResource(R.string.keep_talking),
+        isEnabled = true,
+        onToggle = {},
+    )
 }
 
 @Preview(showBackground = true)
 @Composable
 private fun SettingNavigationItemPreview() {
-  SettingNavigationItem(
-      title = stringResource(R.string.email_support),
-      subtitle = stringResource(R.string.support_email),
-      onClick = {},
-  )
+    SettingNavigationItem(
+        title = stringResource(R.string.email_support),
+        subtitle = stringResource(R.string.support_email),
+        onClick = {},
+    )
 }
 
 @Preview(showBackground = true)
 @Composable
 private fun SettingInfoItemPreview() {
-  SettingInfoItem(title = stringResource(R.string.about), value = "1.0.0")
+    SettingInfoItem(title = stringResource(R.string.about), value = "1.0.0")
 }

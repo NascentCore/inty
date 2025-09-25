@@ -61,77 +61,77 @@ fun SettingContent(
     onLogout: () -> Unit,
     viewModel: SettingViewModel = viewModel(),
 ) {
-  val context = LocalContext.current
-  val settingsState by viewModel.settingsState.collectAsState()
-  val dialogState by viewModel.dialogState.collectAsState()
-  val vipStatus by BillingRepository.vipStatusFlow.collectAsState()
+    val context = LocalContext.current
+    val settingsState by viewModel.settingsState.collectAsState()
+    val dialogState by viewModel.dialogState.collectAsState()
+    val vipStatus by BillingRepository.vipStatusFlow.collectAsState()
 
-  // 监听删除账号结果
-  LaunchedEffect(viewModel) {
-    viewModel.deleteAccountResultFlow.collectLatest { deleted ->
-      if (deleted) {
-        // 账号删除成功
-        onLogout()
-      }
+    // 监听删除账号结果
+    LaunchedEffect(viewModel) {
+        viewModel.deleteAccountResultFlow.collectLatest { deleted ->
+            if (deleted) {
+                // 账号删除成功
+                onLogout()
+            }
+        }
     }
-  }
 
-  Scaffold(modifier = modifier, topBar = { SettingTopBar(onBack = onBack) }) { innerPadding ->
-    Column(modifier = Modifier.padding(innerPadding)) {
+    Scaffold(modifier = modifier, topBar = { SettingTopBar(onBack = onBack) }) { innerPadding ->
+        Column(modifier = Modifier.padding(innerPadding)) {
 
-      // 设置选项区域
-      SettingOptionsSection(
-          settingsState = settingsState,
-          vipStatus = vipStatus,
-          onToggleKeepTalking = { viewModel.toggleKeepTalking() },
-          onTogglePremiumMode = { viewModel.togglePremiumMode() },
-      )
+            // 设置选项区域
+            SettingOptionsSection(
+                settingsState = settingsState,
+                vipStatus = vipStatus,
+                onToggleKeepTalking = { viewModel.toggleKeepTalking() },
+                onTogglePremiumMode = { viewModel.togglePremiumMode() },
+            )
 
-      Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(16.dp))
 
-      // 支持与帮助区域
-      SupportAndHelpSection(
-          context = context,
-          onShowDeleteDialog = { viewModel.showDeleteAccountDialog() },
-      )
+            // 支持与帮助区域
+            SupportAndHelpSection(
+                context = context,
+                onShowDeleteDialog = { viewModel.showDeleteAccountDialog() },
+            )
 
-      Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(16.dp))
 
-      // 退出登录按钮
-      LogoutButton(onLogout = onLogout)
+            // 退出登录按钮
+            LogoutButton(onLogout = onLogout)
 
-      // 对话框
-      SettingDialogs(
-          dialogState = dialogState,
-          onHideDeleteDialog = { viewModel.hideDeleteAccountDialog() },
-          onConfirmDelete = { viewModel.checkAccountSubscribe() },
-          onHidePremiumDialog = { viewModel.hidePremiumDialog() },
-      )
+            // 对话框
+            SettingDialogs(
+                dialogState = dialogState,
+                onHideDeleteDialog = { viewModel.hideDeleteAccountDialog() },
+                onConfirmDelete = { viewModel.checkAccountSubscribe() },
+                onHidePremiumDialog = { viewModel.hidePremiumDialog() },
+            )
+        }
     }
-  }
 }
 
 /** 设置页面顶部栏 */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SettingTopBar(onBack: () -> Unit) {
-  CenterAlignedTopAppBar(
-      title = {
-        Text(
-            text = stringResource(R.string.settings),
-            color = Color.White,
-            fontWeight = FontWeight.SemiBold,
-            fontSize = 20.sp,
-        )
-      },
-      navigationIcon = {
-        Image(
-            modifier = Modifier.padding(horizontal = 12.dp).noRippleClickable { onBack() },
-            painter = painterResource(R.drawable.back),
-            contentDescription = null,
-        )
-      },
-  )
+    CenterAlignedTopAppBar(
+        title = {
+            Text(
+                text = stringResource(R.string.settings),
+                color = Color.White,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 20.sp,
+            )
+        },
+        navigationIcon = {
+            Image(
+                modifier = Modifier.padding(horizontal = 12.dp).noRippleClickable { onBack() },
+                painter = painterResource(R.drawable.back),
+                contentDescription = null,
+            )
+        },
+    )
 }
 
 /** 设置选项区域 */
@@ -142,103 +142,111 @@ private fun SettingOptionsSection(
     onToggleKeepTalking: () -> Unit,
     onTogglePremiumMode: () -> Unit,
 ) {
-  SettingSection {
-    SettingSwitchItem(
-        title = stringResource(R.string.settings_keep_talking),
-        isEnabled = settingsState.keepTalking,
-        onToggle = onToggleKeepTalking,
-    )
+    SettingSection {
+        SettingSwitchItem(
+            title = stringResource(R.string.settings_keep_talking),
+            isEnabled = settingsState.keepTalking,
+            onToggle = onToggleKeepTalking,
+        )
 
-    SettingDivider()
+        SettingDivider()
 
-    SettingSwitchItem(
-        title = stringResource(R.string.settings_premium_model),
-        isEnabled = settingsState.premiumMode,
-        onToggle = onTogglePremiumMode,
-    )
-  }
+        SettingSwitchItem(
+            title = stringResource(R.string.settings_premium_model),
+            isEnabled = settingsState.premiumMode,
+            onToggle = onTogglePremiumMode,
+        )
+    }
 }
 
 /** 支持与帮助区域 */
 @Composable
 private fun SupportAndHelpSection(context: Context, onShowDeleteDialog: () -> Unit) {
-  SettingSection {
-    // 邮件联系
-    val email = stringResource(R.string.settings_email_inty)
-    SettingNavigationItem(
-        title = stringResource(R.string.settings_email_support),
-        subtitle = email,
-        onClick = { mailTo(context, email) },
-    )
+    SettingSection {
+        // 邮件联系
+        val email = stringResource(R.string.settings_email_inty)
+        SettingNavigationItem(
+            title = stringResource(R.string.settings_email_support),
+            subtitle = email,
+            onClick = { mailTo(context, email) },
+        )
 
-    SettingDivider()
+        SettingDivider()
 
-    // 举报
-    SettingNavigationItem(
-        title = stringResource(R.string.report),
-        onClick = { TheRouter.build(Constant.ROUTE_REPORT).navigation(context) },
-    )
+        // 举报
+        SettingNavigationItem(
+            title = stringResource(R.string.report),
+            onClick = { TheRouter.build(Constant.ROUTE_REPORT).navigation(context) },
+        )
 
-    SettingDivider()
+        SettingDivider()
 
-    // 用户协议
-    SettingNavigationItem(
-        title = stringResource(R.string.terms_of_use),
-        onClick = {
-          val intent =
-              Intent(Intent.ACTION_VIEW, context.getString(R.string.url_user_agreement).toUri())
+        // 用户协议
+        SettingNavigationItem(
+            title = stringResource(R.string.terms_of_use),
+            onClick = {
+                val intent =
+                    Intent(
+                        Intent.ACTION_VIEW,
+                        context.getString(R.string.url_user_agreement).toUri(),
+                    )
 
-          context.startActivity(intent)
-        },
-    )
+                context.startActivity(intent)
+            },
+        )
 
-    SettingDivider()
+        SettingDivider()
 
-    // 隐私政策
-    SettingNavigationItem(
-        title = stringResource(R.string.privacy_policy),
-        onClick = {
-          val intent =
-              Intent(Intent.ACTION_VIEW, context.getString(R.string.url_privacy_policy).toUri())
-          context.startActivity(intent)
-        },
-    )
+        // 隐私政策
+        SettingNavigationItem(
+            title = stringResource(R.string.privacy_policy),
+            onClick = {
+                val intent =
+                    Intent(
+                        Intent.ACTION_VIEW,
+                        context.getString(R.string.url_privacy_policy).toUri(),
+                    )
+                context.startActivity(intent)
+            },
+        )
 
-    SettingDivider()
+        SettingDivider()
 
-    // 删除账号
-    SettingNavigationItem(
-        title = stringResource(R.string.settings_str_delete_account),
-        onClick = onShowDeleteDialog,
-    )
+        // 删除账号
+        SettingNavigationItem(
+            title = stringResource(R.string.settings_str_delete_account),
+            onClick = onShowDeleteDialog,
+        )
 
-    SettingDivider()
+        SettingDivider()
 
-    // 订阅管理
-    SettingNavigationItem(
-        title = stringResource(R.string.settings_subscription_management),
-        onClick = { TheRouter.build(Constant.ROUTE_SUBSCRIPTION_MANAGEMENT).navigation(context) },
-    )
+        // 订阅管理
+        SettingNavigationItem(
+            title = stringResource(R.string.settings_subscription_management),
+            onClick = {
+                TheRouter.build(Constant.ROUTE_SUBSCRIPTION_MANAGEMENT).navigation(context)
+            },
+        )
 
-    SettingDivider()
+        SettingDivider()
 
-    // 版本号
-    val uriHandler = LocalUriHandler.current
-    SettingInfoItem(
-        title = stringResource(R.string.settings_about),
-        value = BuildConfig.VERSION_NAME,
-        modifier =
-            Modifier.noRippleClickable(
-                onClick = {
-                  runCatching {
-                    val url = IntySetting.appGooglePlayUrl()
-                    if (url.isNotBlank()) uriHandler.openUri(url)
-                  }
-                }
-            ),
-        hasRedDot = IntySetting.hasAppUpdateTips(),
-    )
-  }
+        // 版本号
+        val uriHandler = LocalUriHandler.current
+        SettingInfoItem(
+            title = stringResource(R.string.settings_about),
+            value = BuildConfig.VERSION_NAME,
+            modifier =
+                Modifier.noRippleClickable(
+                    onClick = {
+                        runCatching {
+                            val url = IntySetting.appGooglePlayUrl()
+                            if (url.isNotBlank()) uriHandler.openUri(url)
+                        }
+                    }
+                ),
+            hasRedDot = IntySetting.hasAppUpdateTips(),
+        )
+    }
 }
 
 /** 设置对话框 */
@@ -249,66 +257,66 @@ private fun SettingDialogs(
     onConfirmDelete: () -> Unit,
     onHidePremiumDialog: () -> Unit,
 ) {
-  // 删除账号对话框
-  if (dialogState.showDeleteAccountDialog) {
-    DeleteAccountDialog(onDismiss = onHideDeleteDialog, onConfirm = onConfirmDelete)
-  }
+    // 删除账号对话框
+    if (dialogState.showDeleteAccountDialog) {
+        DeleteAccountDialog(onDismiss = onHideDeleteDialog, onConfirm = onConfirmDelete)
+    }
 
-  // 高级模型对话框
-  if (dialogState.showPremiumDialog) {
-    val data =
-        ChatDialogData(
-            R.drawable.img_advanced_model_dialog_bg,
-            stringResource(R.string.str_premium_mode_dialog_content),
-            stringResource(R.string.settings_premium_model),
+    // 高级模型对话框
+    if (dialogState.showPremiumDialog) {
+        val data =
+            ChatDialogData(
+                R.drawable.img_advanced_model_dialog_bg,
+                stringResource(R.string.str_premium_mode_dialog_content),
+                stringResource(R.string.settings_premium_model),
+            )
+        val context = LocalContext.current
+        val viewmodel = viewModel<SettingViewModel>()
+        AdvancedModelChatDialog(
+            data,
+            onCancel = onHidePremiumDialog,
+            onSure = {
+                // 检查是否正式登录（非游客且已登录）
+                if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
+                    // 购买最低档位的vip会员订阅
+                    if (context is Activity) {
+                        // 购买最低档位的订阅
+                        viewmodel.purchaseFirstVip(context)
+                    }
+                } else {
+                    // 如果未登录，要求先登录
+                    TheRouter.build(Constant.ROUTE_LOGIN).navigation(context)
+                }
+                onHidePremiumDialog()
+            },
+            onMoreInfo = {
+                // 检查是否正式登录（非游客且已登录）
+                if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
+                    // 去会员中心
+                    TheRouter.build(Constant.ROUTE_VIP_CENTER).navigation()
+                } else {
+                    // 如果未登录，要求先登录
+                    TheRouter.build(Constant.ROUTE_LOGIN).navigation(context)
+                }
+                onHidePremiumDialog()
+            },
         )
-    val context = LocalContext.current
-    val viewmodel = viewModel<SettingViewModel>()
-    AdvancedModelChatDialog(
-        data,
-        onCancel = onHidePremiumDialog,
-        onSure = {
-          // 检查是否正式登录（非游客且已登录）
-          if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
-            // 购买最低档位的vip会员订阅
-            if (context is Activity) {
-              // 购买最低档位的订阅
-              viewmodel.purchaseFirstVip(context)
-            }
-          } else {
-            // 如果未登录，要求先登录
-            TheRouter.build(Constant.ROUTE_LOGIN).navigation(context)
-          }
-          onHidePremiumDialog()
-        },
-        onMoreInfo = {
-          // 检查是否正式登录（非游客且已登录）
-          if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
-            // 去会员中心
-            TheRouter.build(Constant.ROUTE_VIP_CENTER).navigation()
-          } else {
-            // 如果未登录，要求先登录
-            TheRouter.build(Constant.ROUTE_LOGIN).navigation(context)
-          }
-          onHidePremiumDialog()
-        },
-    )
-  }
+    }
 }
 
 /** 发送邮件 */
 private fun mailTo(context: Context, email: String) {
-  val intent = Intent(Intent.ACTION_SENDTO).apply { data = "mailto:$email".toUri() }
-  try {
-    context.startActivity(Intent.createChooser(intent, "email"))
-  } catch (e: Exception) {
-    Toast.makeText(context, context.getString(R.string.toast_email_error), Toast.LENGTH_SHORT)
-        .show()
-  }
+    val intent = Intent(Intent.ACTION_SENDTO).apply { data = "mailto:$email".toUri() }
+    try {
+        context.startActivity(Intent.createChooser(intent, "email"))
+    } catch (e: Exception) {
+        Toast.makeText(context, context.getString(R.string.toast_email_error), Toast.LENGTH_SHORT)
+            .show()
+    }
 }
 
 @Preview(showBackground = true)
 @Composable
 private fun SettingContentPreview() {
-  SettingContent(modifier = Modifier.fillMaxSize(), onBack = {}, onLogout = {})
+    SettingContent(modifier = Modifier.fillMaxSize(), onBack = {}, onLogout = {})
 }

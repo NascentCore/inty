@@ -51,63 +51,66 @@ fun HeartMultiLineEditor(
     maxLines: Int = Int.MAX_VALUE,
     hintStr: String = "",
 ) {
-  Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
-    OutlinedTextField(
-        value = inputValue,
-        onValueChange = { str ->
-          if (str.length in 0..maxLength) {
-            onInputChange(str)
-          }
-        },
-        modifier = modifier,
-        enabled = enableInput,
-        readOnly = readOnly,
-        textStyle = textStyle,
-        maxLines = maxLines,
-        placeholder = {
-          if (hintStr.isNotEmpty()) {
-            Text(
-                text = hintStr,
-                fontSize = textStyle.fontSize,
-                fontWeight = textStyle.fontWeight,
-                color = Color(0x59FFFFFF),
-            )
-          }
-        },
-        supportingText = {
-          if (supportStr.isNotEmpty()) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-              Text(
-                  text = supportStr,
-                  fontSize = 12.sp,
-                  lineHeight = 22.sp,
-                  fontWeight = FontWeight.Normal,
-                  color = Color(0x8CFFFFFF),
-                  modifier = Modifier,
-              )
-            }
-          }
-        },
-        colors =
-            OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = Color.Transparent,
-                unfocusedBorderColor = Color.Transparent,
-                disabledBorderColor = Color.Transparent,
-            ),
-    )
-  }
+    Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
+        OutlinedTextField(
+            value = inputValue,
+            onValueChange = { str ->
+                if (str.length in 0..maxLength) {
+                    onInputChange(str)
+                }
+            },
+            modifier = modifier,
+            enabled = enableInput,
+            readOnly = readOnly,
+            textStyle = textStyle,
+            maxLines = maxLines,
+            placeholder = {
+                if (hintStr.isNotEmpty()) {
+                    Text(
+                        text = hintStr,
+                        fontSize = textStyle.fontSize,
+                        fontWeight = textStyle.fontWeight,
+                        color = Color(0x59FFFFFF),
+                    )
+                }
+            },
+            supportingText = {
+                if (supportStr.isNotEmpty()) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End,
+                    ) {
+                        Text(
+                            text = supportStr,
+                            fontSize = 12.sp,
+                            lineHeight = 22.sp,
+                            fontWeight = FontWeight.Normal,
+                            color = Color(0x8CFFFFFF),
+                            modifier = Modifier,
+                        )
+                    }
+                }
+            },
+            colors =
+                OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Color.Transparent,
+                    unfocusedBorderColor = Color.Transparent,
+                    disabledBorderColor = Color.Transparent,
+                ),
+        )
+    }
 }
 
 @Preview
 @Composable
 private fun PreviewChatInputUI() {
-  var inputStr by remember { mutableStateOf("Input...") }
-  HeartMultiLineEditor(
-      Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(Color(0x1AFFFFFF)),
-      inputValue = inputStr,
-      onInputChange = { inputStr = it },
-      maxLength = 20,
-      maxLines = 3,
-      supportStr = "${inputStr.length}/20",
-  )
+    var inputStr by remember { mutableStateOf("Input...") }
+    HeartMultiLineEditor(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(Color(0x1AFFFFFF)),
+        inputValue = inputStr,
+        onInputChange = { inputStr = it },
+        maxLength = 20,
+        maxLines = 3,
+        supportStr = "${inputStr.length}/20",
+    )
 }

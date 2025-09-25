@@ -19,43 +19,40 @@ import com.ai.inty.R
 import com.ai.inty.utils.TextStyleUtils
 
 @Composable
-fun PolicyRow(
-    context: Context,
-    fontSize: TextUnit,
-) {
-  Row(
-      // 占据全部宽度，这样下面的居中显示才有意义
-      modifier = Modifier.fillMaxWidth(),
-      horizontalArrangement = Arrangement.Center,
-      verticalAlignment = Alignment.CenterVertically,
-  ) {
-    TextStyleUtils.BuildLink(
-        context = context,
-        text = stringResource(R.string.terms_of_use),
-        url = context.getString(R.string.url_user_agreement),
-        fontSize = fontSize,
-    )
+fun PolicyRow(context: Context, fontSize: TextUnit) {
+    Row(
+        // 占据全部宽度，这样下面的居中显示才有意义
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        TextStyleUtils.BuildLink(
+            context = context,
+            text = stringResource(R.string.terms_of_use),
+            url = context.getString(R.string.url_user_agreement),
+            fontSize = fontSize,
+        )
 
-    Text(
-        text =
-            buildAnnotatedString {
-              withStyle(
-                  SpanStyle(
-                      color = Color.White.copy(alpha = 0.6f),
-                      fontSize = fontSize,
-                      fontWeight = FontWeight.Normal,
-                  )
-              ) {
-                append(" and ")
-              }
-            }
-    )
+        Text(
+            text =
+                buildAnnotatedString {
+                    withStyle(
+                        SpanStyle(
+                            color = Color.White.copy(alpha = 0.6f),
+                            fontSize = fontSize,
+                            fontWeight = FontWeight.Normal,
+                        )
+                    ) {
+                        append(" and ")
+                    }
+                }
+        )
 
-    TextStyleUtils.BuildLink(
-        context = context,
-        text = stringResource(R.string.privacy_policy),
-        url = context.getString(R.string.url_privacy_policy),
-        fontSize = fontSize,
-    )
-  }
+        TextStyleUtils.BuildLink(
+            context = context,
+            text = stringResource(R.string.privacy_policy),
+            url = context.getString(R.string.url_privacy_policy),
+            fontSize = fontSize,
+        )
+    }
 }

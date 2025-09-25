@@ -15,132 +15,136 @@ import kotlinx.coroutines.flow.asStateFlow
 
 class ReportViewModel : BaseActivityViewModel() {
 
-  var targetID: String = ""
-  var targetType: String = "USER"
+    var targetID: String = ""
+    var targetType: String = "USER"
 
-  // Hard-coded list of report reasons
-  private val _reasons =
-      MutableStateFlow(
-          listOf(
-              ReportItem(
-                  id = 1,
-                  description = "Sensitive or sexual content",
-                  code = "SENSITIVE_CONTENT",
-              ),
-              ReportItem(id = 2, description = "Misinformation", code = "MISINFORMATION"),
-              ReportItem(id = 3, description = "Fraud or scams", code = "FRAUD_SCAMS"),
-              ReportItem(id = 4, description = "Violation of privacy", code = "PRIVACY_VIOLATION"),
-              ReportItem(id = 5, description = "Harmful to minors", code = "HARMFUL_MINORS"),
-              ReportItem(
-                  id = 6,
-                  description = "Violations of my intellectual property",
-                  code = "IP_VIOLATION",
-              ),
-              ReportItem(
-                  id = 0,
-                  description = "Other, details in report description",
-                  code = "OTHER",
-              ),
-          )
-      )
-  val reasons = _reasons.asStateFlow()
-
-  var selectIDS = mutableStateSetOf<Int>()
-
-  private val _description = MutableStateFlow("")
-  val description = _description.asStateFlow()
-
-  var localImages = mutableStateSetOf<String>()
-  var remoteImages = mutableStateSetOf<String>()
-
-  // 提交状态
-  private val _isSubmitting = MutableStateFlow(false)
-  val isSubmitting = _isSubmitting.asStateFlow()
-
-  fun setDescription(text: String) {
-    _description.value = text
-  }
-
-  fun submit() {
-    if (selectIDS.isEmpty()) {
-      showSnackbar("Please select at least one reason")
-      return
-    }
-
-    // 如果正在提交，直接返回
-    if (_isSubmitting.value) {
-      return
-    }
-
-    _isSubmitting.value = true
-
-    launchWithNetCheck {
-      try {
-        val uploadedImageUrls = mutableListOf<String>()
-        for (imageUri in localImages) {
-          val uri = imageUri.toUri()
-          val inputStream = AppEnv.context.contentResolver.openInputStream(uri)
-          inputStream?.let { stream ->
-            val uploadedUrl = uploadImageWithIntySdk(stream)
-            if (uploadedUrl != null) {
-              uploadedImageUrls.add(uploadedUrl)
-            }
-          }
-        }
-
-        val result =
-            ReportService.createReport(
-                reasonIds = selectIDS.map { it.toLong() },
-                targetId = targetID,
-                targetType =
-                    if (targetType == "USER") {
-                      ReportCreateParams.TargetType.USER
-                    } else {
-                      ReportCreateParams.TargetType.AGENT
-                    },
-                description = description.value.trim(),
-                imageUrls = uploadedImageUrls + remoteImages.toList(),
+    // Hard-coded list of report reasons
+    private val _reasons =
+        MutableStateFlow(
+            listOf(
+                ReportItem(
+                    id = 1,
+                    description = "Sensitive or sexual content",
+                    code = "SENSITIVE_CONTENT",
+                ),
+                ReportItem(id = 2, description = "Misinformation", code = "MISINFORMATION"),
+                ReportItem(id = 3, description = "Fraud or scams", code = "FRAUD_SCAMS"),
+                ReportItem(
+                    id = 4,
+                    description = "Violation of privacy",
+                    code = "PRIVACY_VIOLATION",
+                ),
+                ReportItem(id = 5, description = "Harmful to minors", code = "HARMFUL_MINORS"),
+                ReportItem(
+                    id = 6,
+                    description = "Violations of my intellectual property",
+                    code = "IP_VIOLATION",
+                ),
+                ReportItem(
+                    id = 0,
+                    description = "Other, details in report description",
+                    code = "OTHER",
+                ),
             )
+        )
+    val reasons = _reasons.asStateFlow()
 
-        when (result) {
-          is com.ai.inty.netapi.ApiResult.Success -> {
-            EasyLog.log("Report created successfully")
-            showSnackbar("Report sent")
-            closeActivity()
-          }
+    var selectIDS = mutableStateSetOf<Int>()
 
-          is com.ai.inty.netapi.ApiResult.Error -> {
-            EasyLog.log("Report creation failed: ${result.message}", EasyLog.ERROR)
-            showSnackbar(result.message ?: "Report creation failed")
-          }
+    private val _description = MutableStateFlow("")
+    val description = _description.asStateFlow()
+
+    var localImages = mutableStateSetOf<String>()
+    var remoteImages = mutableStateSetOf<String>()
+
+    // 提交状态
+    private val _isSubmitting = MutableStateFlow(false)
+    val isSubmitting = _isSubmitting.asStateFlow()
+
+    fun setDescription(text: String) {
+        _description.value = text
+    }
+
+    fun submit() {
+        if (selectIDS.isEmpty()) {
+            showSnackbar("Please select at least one reason")
+            return
         }
-      } finally {
-        // 无论成功还是失败，都要重置提交状态
-        _isSubmitting.value = false
-      }
+
+        // 如果正在提交，直接返回
+        if (_isSubmitting.value) {
+            return
+        }
+
+        _isSubmitting.value = true
+
+        launchWithNetCheck {
+            try {
+                val uploadedImageUrls = mutableListOf<String>()
+                for (imageUri in localImages) {
+                    val uri = imageUri.toUri()
+                    val inputStream = AppEnv.context.contentResolver.openInputStream(uri)
+                    inputStream?.let { stream ->
+                        val uploadedUrl = uploadImageWithIntySdk(stream)
+                        if (uploadedUrl != null) {
+                            uploadedImageUrls.add(uploadedUrl)
+                        }
+                    }
+                }
+
+                val result =
+                    ReportService.createReport(
+                        reasonIds = selectIDS.map { it.toLong() },
+                        targetId = targetID,
+                        targetType =
+                            if (targetType == "USER") {
+                                ReportCreateParams.TargetType.USER
+                            } else {
+                                ReportCreateParams.TargetType.AGENT
+                            },
+                        description = description.value.trim(),
+                        imageUrls = uploadedImageUrls + remoteImages.toList(),
+                    )
+
+                when (result) {
+                    is com.ai.inty.netapi.ApiResult.Success -> {
+                        EasyLog.log("Report created successfully")
+                        showSnackbar("Report sent")
+                        closeActivity()
+                    }
+
+                    is com.ai.inty.netapi.ApiResult.Error -> {
+                        EasyLog.log("Report creation failed: ${result.message}", EasyLog.ERROR)
+                        showSnackbar(result.message ?: "Report creation failed")
+                    }
+                }
+            } finally {
+                // 无论成功还是失败，都要重置提交状态
+                _isSubmitting.value = false
+            }
+        }
     }
-  }
 
-  fun onAddImage(imageUri: Uri) {
-    localImages.add(imageUri.toString())
-  }
-
-  private suspend fun uploadImageWithIntySdk(inputStream: InputStream): String? {
-    EasyLog.log("Uploading image using inty_sdk V1UploadImageParams")
-
-    val result = ReportService.uploadImage(inputStream, "report-image.jpg")
-
-    return when (result) {
-      is com.ai.inty.netapi.ApiResult.Success -> {
-        val url = result.data
-        EasyLog.log("Image uploaded successfully: $url")
-        url
-      }
-
-      is com.ai.inty.netapi.ApiResult.Error -> {
-        EasyLog.log("Image upload failed: ${result.message}", EasyLog.ERROR)
-        null
-      }
+    fun onAddImage(imageUri: Uri) {
+        localImages.add(imageUri.toString())
     }
-  }
+
+    private suspend fun uploadImageWithIntySdk(inputStream: InputStream): String? {
+        EasyLog.log("Uploading image using inty_sdk V1UploadImageParams")
+
+        val result = ReportService.uploadImage(inputStream, "report-image.jpg")
+
+        return when (result) {
+            is com.ai.inty.netapi.ApiResult.Success -> {
+                val url = result.data
+                EasyLog.log("Image uploaded successfully: $url")
+                url
+            }
+
+            is com.ai.inty.netapi.ApiResult.Error -> {
+                EasyLog.log("Image upload failed: ${result.message}", EasyLog.ERROR)
+                null
+            }
+        }
+    }
 }

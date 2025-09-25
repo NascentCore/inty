@@ -6,5 +6,5 @@ import com.ai.inty.beans.AgentInfo
 
 /** Get the chat background image URL Priority: background -> avatar */
 fun AgentInfo.getChatBackground(): String? {
-  return background.takeIf { it.isNotBlank() } ?: avatar.takeIf { it.isNotBlank() }
+    return background.takeIf { it.isNotBlank() } ?: avatar.takeIf { it.isNotBlank() }
 }

@@ -12,17 +12,17 @@ import com.therouter.router.Route
 /** 会员中心页面，展示会员权益与订阅选项。 */
 @Route(path = Constant.ROUTE_VIP_CENTER)
 class VipCenterActivity : BaseActivity() {
-  private val viewModel: VipCenterViewModel by viewModels()
+    private val viewModel: VipCenterViewModel by viewModels()
 
-  override fun onCreate(savedInstanceState: Bundle?) {
-    super.onCreate(savedInstanceState)
-    setContent {
-      IntyTheme {
-        VipCenterContent(
-            onClose = { finish() },
-            onPurchase = { viewModel.purchaseSelectedPlan(this) },
-        )
-      }
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContent {
+            IntyTheme {
+                VipCenterContent(
+                    onClose = { finish() },
+                    onPurchase = { viewModel.purchaseSelectedPlan(this) },
+                )
+            }
+        }
     }
-  }
 }

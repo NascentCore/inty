@@ -18,20 +18,20 @@ import com.therouter.router.Route
 @Route(path = Constant.ROUTE_SUBSCRIPTION_MANAGEMENT)
 class SubscriptionManagementActivity : BaseActivity() {
 
-  private val viewModel: SubsManageViewModel by viewModels()
+    private val viewModel: SubsManageViewModel by viewModels()
 
-  override fun onCreate(savedInstanceState: Bundle?) {
-    super.onCreate(savedInstanceState)
-    setContent { IntyTheme { SubsManageContent(onBack = { finish() }, viewModel = viewModel) } }
-  }
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContent { IntyTheme { SubsManageContent(onBack = { finish() }, viewModel = viewModel) } }
+    }
 }
 
 /** 订阅管理内容组件 */
 @Composable
 private fun SubsManageContent(onBack: () -> Unit, viewModel: SubsManageViewModel) {
-  SubscriptionManagementScreen(
-      modifier = Modifier.fillMaxSize().background(DarkPurple),
-      onBack = onBack,
-      viewModel = viewModel,
-  )
+    SubscriptionManagementScreen(
+        modifier = Modifier.fillMaxSize().background(DarkPurple),
+        onBack = onBack,
+        viewModel = viewModel,
+    )
 }

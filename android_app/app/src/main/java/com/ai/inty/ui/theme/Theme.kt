@@ -7,11 +7,7 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 
 private val DarkColorScheme =
-    darkColorScheme(
-        primary = Purple80,
-        secondary = PurpleGrey80,
-        tertiary = Pink80,
-    )
+    darkColorScheme(primary = Purple80, secondary = PurpleGrey80, tertiary = Pink80)
 
 private val LightColorScheme =
     lightColorScheme(
@@ -37,16 +33,17 @@ fun IntyTheme(
     dynamicColor: Boolean = true,
     content: @Composable () -> Unit,
 ) {
-  //    val colorScheme = when {
-  //        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-  //            val context = LocalContext.current
-  //            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-  //        }
-  //
-  //        darkTheme -> DarkColorScheme
-  //        else -> LightColorScheme
-  //    }
-  val colorScheme = DarkColorScheme
+    //    val colorScheme = when {
+    //        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
+    //            val context = LocalContext.current
+    //            if (darkTheme) dynamicDarkColorScheme(context) else
+    // dynamicLightColorScheme(context)
+    //        }
+    //
+    //        darkTheme -> DarkColorScheme
+    //        else -> LightColorScheme
+    //    }
+    val colorScheme = DarkColorScheme
 
-  MaterialTheme(colorScheme = colorScheme, typography = Typography, content = content)
+    MaterialTheme(colorScheme = colorScheme, typography = Typography, content = content)
 }
