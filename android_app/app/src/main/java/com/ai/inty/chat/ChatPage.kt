@@ -286,11 +286,9 @@ item {
         EasyLog.log("Chat Messages Count: ${chatMessages.size}")
         EasyLog.log("Chat Messages: $chatMessages")
         
-        // 检查是否有非开场白的历史消息
-        val hasNonOpeningMessages = chatMessages.any { !it.isOpening() }
-        val shouldShowOpening = agent.opening.isNotEmpty() && !hasNonOpeningMessages
-        EasyLog.log("Has Non-Opening Messages: $hasNonOpeningMessages")
-        EasyLog.log("Should Show Opening: $shouldShowOpening")
+        // 始终显示开场白（与 agent intro 显示逻辑一致）
+        val shouldShowOpening = agent.opening.isNotEmpty()
+        EasyLog.log("Should Show Opening: $shouldShowOpening (always show if agent has opening)")
         
         if (shouldShowOpening) {
             EasyLog.log("=== 创建开场白消息 ===")
@@ -316,12 +314,7 @@ item {
             EasyLog.log("=== 开场白消息已渲染 ===")
         } else {
             EasyLog.log("=== 不显示开场白 ===")
-            if (agent.opening.isEmpty()) {
-                EasyLog.log("原因: Agent opening 为空")
-            }
-            if (hasNonOpeningMessages) {
-                EasyLog.log("原因: 已有非开场白的历史消息，数量: ${chatMessages.count { !it.isOpening() }}")
-            }
+            EasyLog.log("原因: Agent opening 为空")
         }
     } ?: run {
         EasyLog.log("=== Agent Info 为空 ===")
