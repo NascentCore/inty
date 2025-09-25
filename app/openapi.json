@@ -605,10 +605,10 @@
                         "required": false,
                         "schema": {
                             "$ref": "#/components/schemas/AgentSortOption",
-                            "description": "Sort order: created_asc, created_desc, random",
+                            "description": "Sort order: created_asc, created_desc, random, score_based_random",
                             "default": "created_desc"
                         },
-                        "description": "Sort order: created_asc, created_desc, random"
+                        "description": "Sort order: created_asc, created_desc, random, score_based_random"
                     },
                     {
                         "name": "sort_seed",
@@ -616,11 +616,11 @@
                         "required": false,
                         "schema": {
                             "type": "string",
-                            "description": "sort seed [not yet used]",
+                            "description": "Sort seed for deterministic random ordering",
                             "default": "",
                             "title": "Sort Seed"
                         },
-                        "description": "sort seed [not yet used]"
+                        "description": "Sort seed for deterministic random ordering"
                     }
                 ],
                 "responses": {
@@ -817,8 +817,8 @@
                     "agents",
                     "characters"
                 ],
-                "summary": "Update Agent",
-                "description": "Update AI agent",
+                "summary": "\u66f4\u65b0\u667a\u80fd\u4f53\uff08AI \u89d2\u8272\uff09",
+                "description": "\u66f4\u65b0\u4efb\u4f55\u56fe\u7247\uff0c\u90fd\u4f1a\u5c06\u56fe\u7247\u5168\u90e8\u8bb0\u5f55\u5728 background_images \u5b57\u6bb5\u4e2d\uff0c\u7528\u4e8e\u4fdd\u5b58\u5386\u53f2\u8bb0\u5f55\u5982\u679c\u6ca1\u6709\u63d0\u4f9b avatar\uff0c\u5219\u4f1a\u81ea\u52a8\u622a\u53d6\u5934\u50cf\uff0c\u5e76\u8bb0\u5f55\u5728 avatar \u5b57\u6bb5\u4e2d",
                 "operationId": "update_agent_api_v1_ai_agents__agent_id__put",
                 "security": [
                     {
@@ -1303,6 +1303,55 @@
                             "title": "Language"
                         },
                         "description": "\u8bed\u8a00\u4ee3\u7801"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {}
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/chats/voices/{voice_id}": {
+            "get": {
+                "tags": [
+                    "chats",
+                    "inty",
+                    "voice"
+                ],
+                "summary": "Get Voice Info",
+                "description": "Get voice info by voice_id",
+                "operationId": "get_voice_info_api_v1_chats_voices__voice_id__get",
+                "deprecated": true,
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "voice_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "title": "Voice Id"
+                        }
                     }
                 ],
                 "responses": {
@@ -2119,18 +2168,17 @@
                             "anyOf": [
                                 {
                                     "type": "integer",
-                                    "maximum": 100,
+                                    "maximum": 1000,
                                     "minimum": 1
                                 },
                                 {
                                     "type": "null"
                                 }
                             ],
-                            "description": "\u6bcf\u9875\u8fd4\u56de\u7ed3\u679c\u6570\uff0c\u9ed8\u8ba410\uff0c\u6700\u5927100",
-                            "default": 10,
+                            "description": "\u6bcf\u9875\u8fd4\u56de\u7ed3\u679c\u6570\uff0c\u9ed8\u8ba4\u8fd4\u56de\u6240\u6709\u97f3\u8272\uff0c\u6700\u59271000",
                             "title": "Page Size"
                         },
-                        "description": "\u6bcf\u9875\u8fd4\u56de\u7ed3\u679c\u6570\uff0c\u9ed8\u8ba410\uff0c\u6700\u5927100"
+                        "description": "\u6bcf\u9875\u8fd4\u56de\u7ed3\u679c\u6570\uff0c\u9ed8\u8ba4\u8fd4\u56de\u6240\u6709\u97f3\u8272\uff0c\u6700\u59271000"
                     },
                     {
                         "name": "voice_type",
@@ -2182,6 +2230,69 @@
                                     },
                                     "title": "Response List Voices Api V1 Text To Speech List Voices Get"
                                 }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ]
+            }
+        },
+        "/evaluation": {
+            "get": {
+                "summary": "Evaluation Frontend",
+                "operationId": "evaluation_frontend_evaluation_get",
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {}
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ]
+            }
+        },
+        "/evaluation/{path}": {
+            "get": {
+                "summary": "Evaluation Static Files",
+                "operationId": "evaluation_static_files_evaluation__path__get",
+                "parameters": [
+                    {
+                        "name": "path",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "title": "Path"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {}
                             }
                         }
                     },
@@ -3134,6 +3245,17 @@
                             }
                         ]
                     },
+                    "meta_data": {
+                        "anyOf": [
+                            {
+                                "$ref": "#/components/schemas/AgentMetaData"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "description": "Agent \u5143\u6570\u636e\uff0c\u5305\u542b\u8bc4\u5206\u7b49\u4fe1\u606f"
+                    },
                     "id": {
                         "type": "string",
                         "title": "Id"
@@ -3530,6 +3652,17 @@
                                 "type": "null"
                             }
                         ]
+                    },
+                    "meta_data": {
+                        "anyOf": [
+                            {
+                                "$ref": "#/components/schemas/AgentMetaData"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "description": "Agent \u5143\u6570\u636e\uff0c\u5305\u542b\u8bc4\u5206\u7b49\u4fe1\u606f"
                     }
                 },
                 "type": "object",
@@ -3540,12 +3673,47 @@
                 "title": "AgentCreate",
                 "description": "\u521b\u5efaAI\u89d2\u8272\n\n\u63a8\u8350\u4f7f\u7528\u65b9\u5f0f\uff1a\n1. \u4f7f\u7528personality + scenario\u5b57\u6bb5\u6784\u5efa\u89d2\u8272\n2. \u6dfb\u52a0first_message\u4f5c\u4e3a\u5f00\u573a\u767d\n3. \u53ef\u9009\u6dfb\u52a0message_example\u5c55\u793a\u5bf9\u8bdd\u98ce\u683c\n\n\u517c\u5bb9\u6027\u8bf4\u660e\uff1a\n- \u4ecd\u652f\u6301\u4f7f\u7528prompt\u5b57\u6bb5 (legacy\u6a21\u5f0f)\n- \u4f18\u5148\u7ea7\uff1a\u89d2\u8272\u5361\u5b57\u6bb5 > prompt\u5b57\u6bb5"
             },
+            "AgentMetaData": {
+                "properties": {
+                    "score": {
+                        "anyOf": [
+                            {
+                                "type": "integer",
+                                "maximum": 5.0,
+                                "minimum": 1.0
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Score",
+                        "description": "Agent \u8bc4\u5206\uff0c1-5 \u7684\u6574\u6570"
+                    },
+                    "comment": {
+                        "anyOf": [
+                            {
+                                "type": "string",
+                                "maxLength": 1000
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Comment",
+                        "description": "Agent \u5907\u6ce8\u4fe1\u606f"
+                    }
+                },
+                "type": "object",
+                "title": "AgentMetaData",
+                "description": "Agent \u5143\u6570\u636e\u6a21\u578b"
+            },
             "AgentSortOption": {
                 "type": "string",
                 "enum": [
                     "created_asc",
                     "created_desc",
-                    "random"
+                    "random",
+                    "score_based_random"
                 ],
                 "title": "AgentSortOption",
                 "description": "Agent sorting options"
@@ -3879,6 +4047,16 @@
                         "anyOf": [
                             {
                                 "$ref": "#/components/schemas/ModelConfig"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
+                    },
+                    "meta_data": {
+                        "anyOf": [
+                            {
+                                "$ref": "#/components/schemas/AgentMetaData"
                             },
                             {
                                 "type": "null"
