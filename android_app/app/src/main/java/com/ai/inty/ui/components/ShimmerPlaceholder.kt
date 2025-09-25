@@ -16,37 +16,36 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
-/**
- * Shimmer 占位符组件
- * 用于图片加载时的占位效果
- */
+/** Shimmer 占位符组件 用于图片加载时的占位效果 */
 @Composable
 fun ShimmerPlaceholder(
     modifier: Modifier = Modifier,
-    cornerRadius: androidx.compose.ui.unit.Dp = 8.dp
+    cornerRadius: androidx.compose.ui.unit.Dp = 8.dp,
 ) {
     val infiniteTransition = rememberInfiniteTransition(label = "shimmer")
-    val alpha by infiniteTransition.animateFloat(
-        initialValue = 0.2f,
-        targetValue = 0.6f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1000),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "shimmer_alpha"
-    )
+    val alpha by
+        infiniteTransition.animateFloat(
+            initialValue = 0.2f,
+            targetValue = 0.6f,
+            animationSpec =
+                infiniteRepeatable(animation = tween(1000), repeatMode = RepeatMode.Reverse),
+            label = "shimmer_alpha",
+        )
 
     Box(
-        modifier = modifier
-            .clip(RoundedCornerShape(cornerRadius))
-            .background(
-                brush = Brush.verticalGradient(
-                    colors = listOf(
-                        Color(0xFF2A2A2A).copy(alpha = alpha),
-                        Color(0xFF3A3A3A).copy(alpha = alpha),
-                        Color(0xFF2A2A2A).copy(alpha = alpha)
-                    )
+        modifier =
+            modifier
+                .clip(RoundedCornerShape(cornerRadius))
+                .background(
+                    brush =
+                        Brush.verticalGradient(
+                            colors =
+                                listOf(
+                                    Color(0xFF2A2A2A).copy(alpha = alpha),
+                                    Color(0xFF3A3A3A).copy(alpha = alpha),
+                                    Color(0xFF2A2A2A).copy(alpha = alpha),
+                                )
+                        )
                 )
-            )
     )
 }

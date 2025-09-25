@@ -90,8 +90,6 @@ export const ChatPage: React.FC = () => {
     autoLoad: true,
   });
 
-
-
   // 重新发送和删除消息相关状态
   const [resending, setResending] = useState<string | null>(null);
   const [clearing, setClearing] = useState<string | null>(null);
@@ -207,7 +205,9 @@ export const ChatPage: React.FC = () => {
       setSending(true);
 
       try {
-        const currentSettings = await api.getIntyClient().api.v1.chats.agents.getSettings(agent.id);
+        const currentSettings = await api
+          .getIntyClient()
+          .api.v1.chats.agents.getSettings(agent.id);
         console.log(`智能体 ${agent.name} 的当前聊天设置:`, currentSettings);
         // 先尝试获取现有的聊天详情和消息历史
         const chatData = await api.chat.getChatDetail(agent.id, {
@@ -460,17 +460,29 @@ export const ChatPage: React.FC = () => {
           });
           console.log(`currentMessages: ${JSON.stringify(currentMessages)}`);
 
-          if (currentMessages.messages && currentMessages.messages.length >= 2) {
+          if (
+            currentMessages.messages &&
+            currentMessages.messages.length >= 2
+          ) {
             // 消息顺序是最新到最旧，找出目前消息列表中倒数第 2 个用户消息的 ID
-            const firstUserMsgId = currentMessages.messages[currentMessages.messages.length - 2].id;
+            const firstUserMsgId =
+              currentMessages.messages[currentMessages.messages.length - 2].id;
             console.log(`firstUserMsgId: ${firstUserMsgId}`);
-            await api.chat.clearMessages(selectedAgent.id, firstUserMsgId.toString());
+            await api.chat.clearMessages(
+              selectedAgent.id,
+              firstUserMsgId.toString(),
+            );
           }
-          const refreshedMessages = await api.chat.getMessages(selectedAgent.id, {
-            page: 1,
-            size: 100,
-          });
-          const convertedMessages: ChatMessage[] = (refreshedMessages.messages || []).map(msg => ({
+          const refreshedMessages = await api.chat.getMessages(
+            selectedAgent.id,
+            {
+              page: 1,
+              size: 100,
+            },
+          );
+          const convertedMessages: ChatMessage[] = (
+            refreshedMessages.messages || []
+          ).map((msg) => ({
             id: msg.id.toString(), // 转换number到string
             role: msg.role,
             content: msg.content,
@@ -526,7 +538,11 @@ export const ChatPage: React.FC = () => {
                         borderRadius: "4px",
                       }}
                     >
-                      {JSON.stringify(errorDetail as Record<string, unknown>, null, 2)}
+                      {JSON.stringify(
+                        errorDetail as Record<string, unknown>,
+                        null,
+                        2,
+                      )}
                     </pre>
                   </div>
                 ) : null}
@@ -579,8 +595,6 @@ export const ChatPage: React.FC = () => {
     },
     [handleSendMessage],
   );
-
-
 
   // 重新发送消息
   const handleResendMessage = useCallback(
@@ -828,12 +842,7 @@ export const ChatPage: React.FC = () => {
                         onClick={() => handleSelectAgent(agent)}
                       >
                         <List.Item.Meta
-                          avatar={
-                            <AvatarDisplay
-                              agent={agent}
-                              size={40}
-                            />
-                          }
+                          avatar={<AvatarDisplay agent={agent} size={40} />}
                           title={
                             <Text strong style={{ fontSize: "14px" }}>
                               {agent.name}
@@ -848,7 +857,7 @@ export const ChatPage: React.FC = () => {
                                   lineHeight: "1.4",
                                   whiteSpace: "pre-wrap",
                                   wordBreak: "break-word",
-                                  display: "block"
+                                  display: "block",
                                 }}
                               >
                                 {agent.intro}
@@ -864,7 +873,11 @@ export const ChatPage: React.FC = () => {
                                           : "default"
                                     }
                                   >
-                                    {agent.gender === "MALE" ? "男" : agent.gender === "FEMALE" ? "女" : "其他"}
+                                    {agent.gender === "MALE"
+                                      ? "男"
+                                      : agent.gender === "FEMALE"
+                                        ? "女"
+                                        : "其他"}
                                   </Tag>
                                 )}
                                 <Tag
@@ -874,7 +887,9 @@ export const ChatPage: React.FC = () => {
                                       : "orange"
                                   }
                                 >
-                                  {agent.visibility === "PUBLIC" ? "公开" : "私有"}
+                                  {agent.visibility === "PUBLIC"
+                                    ? "公开"
+                                    : "私有"}
                                 </Tag>
                               </div>
                             </div>
@@ -894,19 +909,19 @@ export const ChatPage: React.FC = () => {
               <Card
                 title={
                   <Space>
-                    <AvatarDisplay
-                      agent={selectedAgent}
-                      size={32}
-                    />
+                    <AvatarDisplay agent={selectedAgent} size={32} />
                     <div>
                       <Text strong>{selectedAgent.name}</Text>
                       <br />
-                      <Text type="secondary" style={{ 
-                        fontSize: "12px",
-                        whiteSpace: "pre-wrap",
-                        wordBreak: "break-word",
-                        display: "block"
-                      }}>
+                      <Text
+                        type="secondary"
+                        style={{
+                          fontSize: "12px",
+                          whiteSpace: "pre-wrap",
+                          wordBreak: "break-word",
+                          display: "block",
+                        }}
+                      >
                         {selectedAgent.intro}
                       </Text>
                     </div>
@@ -1019,24 +1034,32 @@ export const ChatPage: React.FC = () => {
                         padding: "16px",
                       }}
                     >
-                      <div style={{ display: "flex", alignItems: "flex-start", gap: "12px" }}>
-                        <AvatarDisplay
-                          agent={selectedAgent!}
-                          size={40}
-                        />
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "flex-start",
+                          gap: "12px",
+                        }}
+                      >
+                        <AvatarDisplay agent={selectedAgent!} size={40} />
                         <div style={{ flex: 1 }}>
-                          <Text strong style={{ fontSize: "16px", color: "#1890ff" }}>
+                          <Text
+                            strong
+                            style={{ fontSize: "16px", color: "#1890ff" }}
+                          >
                             {selectedAgent.name}
                           </Text>
                           <div style={{ marginTop: "8px" }}>
-                            <Text style={{
-                              fontSize: "14px", 
-                              lineHeight: "1.6",
-                              color: "#666",
-                              whiteSpace: "pre-wrap",
-                              wordBreak: "break-word",
-                              display: "block"
-                            }}>
+                            <Text
+                              style={{
+                                fontSize: "14px",
+                                lineHeight: "1.6",
+                                color: "#666",
+                                whiteSpace: "pre-wrap",
+                                wordBreak: "break-word",
+                                display: "block",
+                              }}
+                            >
                               {selectedAgent.intro}
                             </Text>
                           </div>
@@ -1079,13 +1102,13 @@ export const ChatPage: React.FC = () => {
                                 }}
                               />
                             ) : (
-                                <AvatarDisplay
-                                  agent={selectedAgent}
-                                  size={24}
-                                  style={{
-                                    flexShrink: 0,
-                                  }}
-                                />
+                              <AvatarDisplay
+                                agent={selectedAgent}
+                                size={24}
+                                style={{
+                                  flexShrink: 0,
+                                }}
+                              />
                             )}
                             <div
                               style={{
@@ -1305,9 +1328,6 @@ export const ChatPage: React.FC = () => {
           </Col>
         </Row>
 
-
-          
-
         {/* 聊天历史模态框 */}
         <Modal
           title={
@@ -1327,63 +1347,78 @@ export const ChatPage: React.FC = () => {
               image={Empty.PRESENTED_IMAGE_SIMPLE}
             />
           ) : (
-              <div>
-                <div style={{ marginBottom: 16 }}>
-                  <Text strong>当前智能体: {selectedAgent?.name}</Text>
-                  <br />
-                  <Text type="secondary">共 {messages.length} 条消息</Text>
-                </div>
+            <div>
+              <div style={{ marginBottom: 16 }}>
+                <Text strong>当前智能体: {selectedAgent?.name}</Text>
+                <br />
+                <Text type="secondary">共 {messages.length} 条消息</Text>
+              </div>
 
-                {/* 消息列表 */}
-                <List
-                  dataSource={messages}
-                  renderItem={(message) => (
-                    <List.Item key={message.id}>
-                      <List.Item.Meta
-                        avatar={
-                          message.role === "user" ? (
-                            <Avatar
-                              icon={<UserOutlined />}
-                              style={{
-                                backgroundColor: "#1890ff"
-                              }}
-                            />
-                          ) : (
-                            <AvatarDisplay
-                                agent={selectedAgent!}
-                              size={32}
-                            />
-                          )
-                        }
-                        title={
-                          <Space>
-                            <Text strong>{message.role === "user" ? "用户" : "AI助手"}</Text>
+              {/* 消息列表 */}
+              <List
+                dataSource={messages}
+                renderItem={(message) => (
+                  <List.Item key={message.id}>
+                    <List.Item.Meta
+                      avatar={
+                        message.role === "user" ? (
+                          <Avatar
+                            icon={<UserOutlined />}
+                            style={{
+                              backgroundColor: "#1890ff",
+                            }}
+                          />
+                        ) : (
+                          <AvatarDisplay agent={selectedAgent!} size={32} />
+                        )
+                      }
+                      title={
+                        <Space>
+                          <Text strong>
+                            {message.role === "user" ? "用户" : "AI助手"}
+                          </Text>
                           <Text type="secondary" style={{ fontSize: "12px" }}>
                             {new Date(message.timestamp).toLocaleString()}
                           </Text>
-                          </Space>
-                        }
-                        description={
-                          <div style={{
+                        </Space>
+                      }
+                      description={
+                        <div
+                          style={{
                             whiteSpace: "pre-wrap",
                             wordBreak: "break-word",
                             maxHeight: "200px",
-                            overflowY: "auto"
-                          }}>
-                            {message.content}
-                          </div>
-                        }
-                      />
-                    </List.Item>
-                  )}
-                />
+                            overflowY: "auto",
+                          }}
+                        >
+                          {message.content}
+                        </div>
+                      }
+                    />
+                  </List.Item>
+                )}
+              />
 
-                {/* 原始JSON数据显示 */}
-                <div style={{ marginTop: 24, paddingTop: 16, borderTop: "1px solid #f0f0f0" }}>
-                  <h4 style={{ margin: "8px 0", fontSize: "14px", fontWeight: "bold", color: "#666" }}>
-                    原始JSON数据
-                  </h4>
-                  <div style={{
+              {/* 原始JSON数据显示 */}
+              <div
+                style={{
+                  marginTop: 24,
+                  paddingTop: 16,
+                  borderTop: "1px solid #f0f0f0",
+                }}
+              >
+                <h4
+                  style={{
+                    margin: "8px 0",
+                    fontSize: "14px",
+                    fontWeight: "bold",
+                    color: "#666",
+                  }}
+                >
+                  原始JSON数据
+                </h4>
+                <div
+                  style={{
                     background: "#f5f5f5",
                     padding: "12px",
                     borderRadius: "6px",
@@ -1394,12 +1429,13 @@ export const ChatPage: React.FC = () => {
                     wordBreak: "break-word",
                     border: "1px solid #e0e0e0",
                     maxHeight: "300px",
-                    overflowY: "auto"
-                  }}>
-                    {JSON.stringify(messages, null, 2)}
-                  </div>
+                    overflowY: "auto",
+                  }}
+                >
+                  {JSON.stringify(messages, null, 2)}
                 </div>
               </div>
+            </div>
           )}
         </Modal>
       </Content>

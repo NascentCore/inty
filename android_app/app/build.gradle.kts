@@ -17,7 +17,9 @@ tasks.register("printVersionInfo") {
     doLast {
         println("Version code: ${android.defaultConfig.versionCode}")
         println("Version name: ${android.defaultConfig.versionName}")
-        println("Version name with suffix: ${android.defaultConfig.versionName}${android.defaultConfig.versionNameSuffix}")
+        println(
+            "Version name with suffix: ${android.defaultConfig.versionName}${android.defaultConfig.versionNameSuffix}"
+        )
     }
 }
 
@@ -28,18 +30,17 @@ android {
         applicationId = "com.ai.intellimate"
         // Google OAuth client ID
         // TODO: This is the same now for debug and release builds for convenience.
-        // Create a new client ID for debug build, but keep the production one for backward compatibility.
+        // Create a new client ID for debug build, but keep the production one for backward
+        // compatibility.
         // https://github.com/NascentCore/inty-backend/issues/171
         buildConfigField(
             "String",
             "WEB_CLIENT_ID",
-            "\"1034291688895-0e5hq72pghd4nihhpmf989ptv0ag1542.apps.googleusercontent.com\""
+            "\"1034291688895-0e5hq72pghd4nihhpmf989ptv0ag1542.apps.googleusercontent.com\"",
         )
     }
 
-    buildFeatures {
-        buildConfig = true
-    }
+    buildFeatures { buildConfig = true }
 
     packaging {
         resources {

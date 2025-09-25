@@ -32,9 +32,7 @@ import com.ai.inty.ui.components.openPlayStoreSubscriptions
 import com.ai.inty.viewmodels.SubsManageViewModel
 import com.ai.inty.viewmodels.SubscriptionUiEvent
 
-/**
- * 订阅管理屏幕
- */
+/** 订阅管理屏幕 */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SubscriptionManagementScreen(
@@ -77,36 +75,27 @@ fun SubscriptionManagementScreen(
                 },
                 navigationIcon = {
                     Image(
-                        modifier = Modifier
-                            .padding(horizontal = 12.dp)
-                            .noRippleClickable {
-                                onBack()
-                            },
+                        modifier =
+                            Modifier.padding(horizontal = 12.dp).noRippleClickable { onBack() },
                         painter = painterResource(R.drawable.back),
                         contentDescription = null,
                     )
-                }
+                },
             )
-        }
+        },
     ) { innerPadding ->
-        Column(
-            modifier = Modifier.padding(innerPadding)
-        ) {
+        Column(modifier = Modifier.padding(innerPadding)) {
             SubscriptionManagementContainer {
                 SubscriptionManagementItem(
                     icon = R.drawable.icon_list_row_3,
                     title = stringResource(R.string.cancel_subscription),
-                    onClick = {
-                        viewModel.navigateToGooglePlaySubscription()
-                    }
+                    onClick = { viewModel.navigateToGooglePlaySubscription() },
                 )
                 SettingDivider()
                 SubscriptionManagementItem(
                     icon = R.drawable.icon_list_row_1,
                     title = stringResource(R.string.restore_subscription),
-                    onClick = {
-                        viewModel.navigateToGooglePlaySubscription()
-                    }
+                    onClick = { viewModel.navigateToGooglePlaySubscription() },
                 )
             }
         }
@@ -121,6 +110,6 @@ private fun SubscriptionManagementScreenPreview() {
     SubscriptionManagementScreen(
         modifier = Modifier,
         onBack = {},
-        viewModel = SubsManageViewModel()
+        viewModel = SubsManageViewModel(),
     )
 }

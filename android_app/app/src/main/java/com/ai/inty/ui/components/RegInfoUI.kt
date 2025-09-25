@@ -27,60 +27,51 @@ import com.ai.inty.R
 import com.ai.inty.base.noRippleClickable
 import com.ai.inty.beans.GENDER
 
-/**
- * 性别选择项组件
- */
+/** 性别选择项组件 */
 @Composable
-internal fun GenderItem(
-    gender: GENDER,
-    selected: Boolean,
-    onClick: () -> Unit,
-) {
-    val genderIcon = when (gender) {
-        GENDER.MALE -> if (selected) R.drawable.gender_male_selected else R.drawable.gender_male
-        GENDER.FEMALE -> if (selected) R.drawable.gender_female_selected else R.drawable.gender_female
-        GENDER.OTHER -> if (selected) R.drawable.gender_other_selected else R.drawable.gender_other
-    }
+internal fun GenderItem(gender: GENDER, selected: Boolean, onClick: () -> Unit) {
+    val genderIcon =
+        when (gender) {
+            GENDER.MALE -> if (selected) R.drawable.gender_male_selected else R.drawable.gender_male
+            GENDER.FEMALE ->
+                if (selected) R.drawable.gender_female_selected else R.drawable.gender_female
+            GENDER.OTHER ->
+                if (selected) R.drawable.gender_other_selected else R.drawable.gender_other
+        }
 
-    val genderText = when (gender) {
-        GENDER.MALE -> "He/Him"
-        GENDER.FEMALE -> "She/Her"
-        GENDER.OTHER -> "They/Them"
-    }
+    val genderText =
+        when (gender) {
+            GENDER.MALE -> "He/Him"
+            GENDER.FEMALE -> "She/Her"
+            GENDER.OTHER -> "They/Them"
+        }
 
     Column(
-        modifier = Modifier.noRippleClickable {
-            onClick()
-        },
+        modifier = Modifier.noRippleClickable { onClick() },
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Box(
-            modifier = Modifier
-                .size(80.dp)
-                .background(
-                    color = Color.White.copy(0.1f),
-                    shape = CircleShape
-                )
-                .then(
-                    if (selected) {
-                        Modifier.border(
-                            brush = Brush.linearGradient(
-                                colors = listOf(
-                                    Color(0xffC122FF),
-                                    Color(0xffFF905D),
-                                )
-                            ),
-                            width = 2.dp,
-                            shape = CircleShape
-                        )
-                    } else {
-                        Modifier.border(
-                            width = 0.5.dp,
-                            color = Color.White.copy(0.2f),
-                            shape = CircleShape
-                        )
-                    }
-                ),
+            modifier =
+                Modifier.size(80.dp)
+                    .background(color = Color.White.copy(0.1f), shape = CircleShape)
+                    .then(
+                        if (selected) {
+                            Modifier.border(
+                                brush =
+                                    Brush.linearGradient(
+                                        colors = listOf(Color(0xffC122FF), Color(0xffFF905D))
+                                    ),
+                                width = 2.dp,
+                                shape = CircleShape,
+                            )
+                        } else {
+                            Modifier.border(
+                                width = 0.5.dp,
+                                color = Color.White.copy(0.2f),
+                                shape = CircleShape,
+                            )
+                        }
+                    ),
             contentAlignment = Alignment.Center,
         ) {
             Image(
@@ -98,45 +89,37 @@ internal fun GenderItem(
     }
 }
 
-/**
- * 年龄选择项组件
- */
+/** 年龄选择项组件 */
 @Composable
 internal fun AgeItem(
     modifier: Modifier,
     text: String,
     isSelected: Boolean = false,
-    onSelected: () -> Unit = {}
+    onSelected: () -> Unit = {},
 ) {
     Box(
-        modifier = modifier
-            .background(
-                color = Color(0x3378599A),
-                shape = RoundedCornerShape(24.dp)
-            )
-            .then(
-                if (isSelected) {
-                    Modifier.border(
-                        brush = Brush.linearGradient(
-                            colors = listOf(
-                                Color(0xffC122FF),
-                                Color(0xffFF905D),
-                            )
-                        ),
-                        width = 2.dp,
-                        shape = RoundedCornerShape(24.dp)
-                    )
-                } else {
-                    Modifier.border(
-                        width = 0.5.dp,
-                        color = Color.White.copy(0.2f),
-                        shape = RoundedCornerShape(24.dp)
-                    )
-                }
-            )
-            .noRippleClickable {
-                onSelected()
-            },
+        modifier =
+            modifier
+                .background(color = Color(0x3378599A), shape = RoundedCornerShape(24.dp))
+                .then(
+                    if (isSelected) {
+                        Modifier.border(
+                            brush =
+                                Brush.linearGradient(
+                                    colors = listOf(Color(0xffC122FF), Color(0xffFF905D))
+                                ),
+                            width = 2.dp,
+                            shape = RoundedCornerShape(24.dp),
+                        )
+                    } else {
+                        Modifier.border(
+                            width = 0.5.dp,
+                            color = Color.White.copy(0.2f),
+                            shape = RoundedCornerShape(24.dp),
+                        )
+                    }
+                )
+                .noRippleClickable { onSelected() },
         contentAlignment = Alignment.Center,
     ) {
         if (isSelected) {
@@ -157,16 +140,12 @@ internal fun AgeItem(
     }
 }
 
-/**
- * 关闭按钮组件
- */
+/** 关闭按钮组件 */
 @Composable
 internal fun CloseButton(onClose: () -> Unit) {
     Image(
-        modifier = Modifier
-            .padding(end = 16.dp, top = 16.dp)
-            .size(18.dp, 18.dp)
-            .noRippleClickable {
+        modifier =
+            Modifier.padding(end = 16.dp, top = 16.dp).size(18.dp, 18.dp).noRippleClickable {
                 onClose()
             },
         painter = painterResource(R.drawable.close),
@@ -174,14 +153,9 @@ internal fun CloseButton(onClose: () -> Unit) {
     )
 }
 
-/**
- * 标题文本组件
- */
+/** 标题文本组件 */
 @Composable
-internal fun TitleText(
-    title: String,
-    modifier: Modifier = Modifier
-) {
+internal fun TitleText(title: String, modifier: Modifier = Modifier) {
     Text(
         modifier = modifier.padding(horizontal = 24.dp),
         text = title,
@@ -191,14 +165,9 @@ internal fun TitleText(
     )
 }
 
-/**
- * 副标题文本组件
- */
+/** 副标题文本组件 */
 @Composable
-internal fun SubtitleText(
-    subtitle: String,
-    modifier: Modifier = Modifier
-) {
+internal fun SubtitleText(subtitle: String, modifier: Modifier = Modifier) {
     Text(
         modifier = modifier.padding(horizontal = 24.dp),
         text = subtitle,
@@ -208,14 +177,9 @@ internal fun SubtitleText(
     )
 }
 
-/**
- * 标签文本组件
- */
+/** 标签文本组件 */
 @Composable
-internal fun LabelText(
-    label: String,
-    modifier: Modifier = Modifier
-) {
+internal fun LabelText(label: String, modifier: Modifier = Modifier) {
     Text(
         modifier = modifier.padding(horizontal = 24.dp),
         text = label,
@@ -229,23 +193,17 @@ internal fun LabelText(
 @Preview(showBackground = true)
 @Composable
 private fun GenderItemPreview() {
-    GenderItem(
-        gender = GENDER.MALE,
-        selected = true,
-        onClick = {}
-    )
+    GenderItem(gender = GENDER.MALE, selected = true, onClick = {})
 }
 
 @Preview(showBackground = true)
 @Composable
 private fun AgeItemPreview() {
     AgeItem(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(48.dp),
+        modifier = Modifier.fillMaxWidth().height(48.dp),
         text = "18-20",
         isSelected = true,
-        onSelected = {}
+        onSelected = {},
     )
 }
 

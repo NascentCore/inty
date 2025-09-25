@@ -31,7 +31,7 @@ environments:
       user: "postgres"
       password: "postgres"
       db: "devdb"
-  
+
   production:
     name: "生产环境"
     database:
@@ -47,18 +47,18 @@ environments:
 ```yaml
 migration:
   export:
-    include_deleted: false        # 是否包含已删除的角色
-    status_filter: "APPROVED"     # 状态过滤(PENDING/APPROVED/REJECTED)
-    visibility_filter: null       # 可见性过滤(PUBLIC/PRIVATE)
-    include_creator_info: true    # 是否导出创建者信息
+    include_deleted: false # 是否包含已删除的角色
+    status_filter: "APPROVED" # 状态过滤(PENDING/APPROVED/REJECTED)
+    visibility_filter: null # 可见性过滤(PUBLIC/PRIVATE)
+    include_creator_info: true # 是否导出创建者信息
     output_file: "agents_export.json"
-  
+
   import:
-    update_existing: false        # 如果角色已存在是否更新
-    keep_original_ids: false      # 是否保持原始ID
-    default_creator_id: null      # 默认创建者ID
-    force_status: null            # 强制设置状态
-    skip_validation: false        # 是否跳过验证
+    update_existing: false # 如果角色已存在是否更新
+    keep_original_ids: false # 是否保持原始ID
+    default_creator_id: null # 默认创建者ID
+    force_status: null # 强制设置状态
+    skip_validation: false # 是否跳过验证
 ```
 
 ## 使用方法

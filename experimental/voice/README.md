@@ -8,7 +8,6 @@ This will write out a `.wav` file that can be played.
 官方示例代码
 <img width="380" height="358" alt="image" src="https://github.com/user-attachments/assets/ed3b97fe-0e2c-49ef-8bda-2b588b5d5a34" />
 
-
 ## ElevenLabs Demo
 
 Using ElevenLabs API to turn text into speech.
@@ -44,6 +43,7 @@ What's the differences between these audio format?
 ```
 
 MP3 Formats:
+
 - **mp3_22050_32**: 22.05 kHz sample rate, 32 kbps bitrate - Lower quality, smaller file size
 - **mp3_44100_32**: 44.1 kHz sample rate, 32 kbps bitrate - CD quality sample rate, but low bitrate
 - **mp3_44100_64**: 44.1 kHz sample rate, 64 kbps bitrate - Better quality than 32 kbps
@@ -52,6 +52,7 @@ MP3 Formats:
 - **mp3_44100_192**: 44.1 kHz sample rate, 192 kbps bitrate - High quality, larger file size
 
 PCM Formats (Uncompressed):
+
 - **pcm_8000**: 8 kHz sample rate - Telephone quality, very small files
 - **pcm_16000**: 16 kHz sample rate - Better than telephone, good for speech
 - **pcm_22050**: 22.05 kHz sample rate - Standard for web audio
@@ -60,10 +61,12 @@ PCM Formats (Uncompressed):
 - **pcm_48000**: 48 kHz sample rate - Professional audio quality
 
 Compressed Formats:
+
 - **ulaw_8000**: μ-law compression at 8 kHz - Telephone standard
 - **alaw_8000**: A-law compression at 8 kHz - European telephone standard
 
 Opus Formats (Modern, Efficient):
+
 - **opus_48000_32**: 48 kHz sample rate, 32 kbps - Very efficient compression
 - **opus_48000_64**: 48 kHz sample rate, 64 kbps - Good quality, small size
 - **opus_48000_96**: 48 kHz sample rate, 96 kbps - High quality
@@ -71,6 +74,7 @@ Opus Formats (Modern, Efficient):
 - **opus_48000_192**: 48 kHz sample rate, 192 kbps - Maximum quality
 
 Recommendations:
+
 - **For web/speech**: `mp3_22050_32` (your current choice) - good balance of quality and size
 - **For high quality**: `mp3_44100_128` or `opus_48000_128`
 - **For maximum compatibility**: `mp3_44100_128`

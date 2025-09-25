@@ -16,7 +16,5 @@ class ChatHistory(Base):
     audio_url = Column(String, nullable=True)
     meta_data = Column(JSONB, nullable=True)
     created_at = Column(
-        DateTime(timezone=True), 
-        nullable=False, 
-        server_default=func.now()
+        DateTime(timezone=True), nullable=False, server_default=func.now()
     )

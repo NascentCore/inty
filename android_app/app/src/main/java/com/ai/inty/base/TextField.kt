@@ -30,7 +30,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ai.inty.ui.theme.TextFieldColor
 
-
 @Composable
 fun IntySmallTextField(
     modifier: Modifier = Modifier,
@@ -49,65 +48,55 @@ fun IntySmallTextField(
     selection: Int = 0,
 ) {
 
-    Row(
-        modifier = modifier.fillMaxHeight(),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-
+    Row(modifier = modifier.fillMaxHeight(), verticalAlignment = Alignment.CenterVertically) {
         leadingIcon?.let { it() }
 
         val focusManager = LocalFocusManager.current
 
-        val newActions = KeyboardActions(
-            onDone = {
-                focusManager.clearFocus()
-                keyboardActions.onDone?.let { it() }
-            },
-            onGo = {
-                focusManager.clearFocus()
-                keyboardActions.onGo?.let { it() }
-            },
-            onNext = {
-                focusManager.clearFocus()
-                keyboardActions.onNext?.let { it() }
-            },
-            onPrevious = {
-                focusManager.clearFocus()
-                keyboardActions.onPrevious?.let { it() }
-            },
-            onSearch = {
-                focusManager.clearFocus()
-                keyboardActions.onSearch?.let { it() }
-            },
-            onSend = {
-                focusManager.clearFocus()
-                keyboardActions.onSend?.let { it() }
-            },
-        )
+        val newActions =
+            KeyboardActions(
+                onDone = {
+                    focusManager.clearFocus()
+                    keyboardActions.onDone?.let { it() }
+                },
+                onGo = {
+                    focusManager.clearFocus()
+                    keyboardActions.onGo?.let { it() }
+                },
+                onNext = {
+                    focusManager.clearFocus()
+                    keyboardActions.onNext?.let { it() }
+                },
+                onPrevious = {
+                    focusManager.clearFocus()
+                    keyboardActions.onPrevious?.let { it() }
+                },
+                onSearch = {
+                    focusManager.clearFocus()
+                    keyboardActions.onSearch?.let { it() }
+                },
+                onSend = {
+                    focusManager.clearFocus()
+                    keyboardActions.onSend?.let { it() }
+                },
+            )
 
         Box(
             modifier = Modifier.weight(1f),
             contentAlignment = if (singleLine) Alignment.CenterStart else Alignment.TopStart,
         ) {
             var textFieldValue by remember {
-                mutableStateOf(
-                    TextFieldValue(
-                        value, selection = TextRange(selection)
-                    )
-                )
+                mutableStateOf(TextFieldValue(value, selection = TextRange(selection)))
             }
 
             // 使用LaunchedEffect来监听外部value和selection的变化
             LaunchedEffect(value, selection) {
-                textFieldValue = textFieldValue.copy(
-                    text = value, selection = TextRange(selection)
-                )
+                textFieldValue = textFieldValue.copy(text = value, selection = TextRange(selection))
             }
 
             TextField(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .onFocusChanged { focusState ->
+                modifier =
+                    Modifier.fillMaxWidth().onFocusChanged { focusState ->
                         onFocusChanged?.invoke(focusState.isFocused)
                     },
                 enabled = enabled,
@@ -120,24 +109,22 @@ fun IntySmallTextField(
                 },
                 keyboardOptions = keyboardOptions,
                 keyboardActions = newActions,
-                textStyle = TextStyle.Default.copy(
-                    fontSize = 14.sp, color = TextFieldColor.Text
-                ),
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = Color.Transparent,
-                    unfocusedContainerColor = Color.Transparent,
-                    disabledContainerColor = Color.Transparent,
-                    focusedIndicatorColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent,
-                    disabledIndicatorColor = Color.Transparent,
-                    cursorColor = TextFieldColor.Text
-                ),
-                placeholder = placeholder
+                textStyle = TextStyle.Default.copy(fontSize = 14.sp, color = TextFieldColor.Text),
+                colors =
+                    TextFieldDefaults.colors(
+                        focusedContainerColor = Color.Transparent,
+                        unfocusedContainerColor = Color.Transparent,
+                        disabledContainerColor = Color.Transparent,
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent,
+                        disabledIndicatorColor = Color.Transparent,
+                        cursorColor = TextFieldColor.Text,
+                    ),
+                placeholder = placeholder,
             )
         }
 
         trailingIcon?.let { it() }
-
     }
 }
 
@@ -148,7 +135,7 @@ fun IntySmallTextField2(
     isError: Boolean = false,
     singleLine: Boolean = false,
     enabled: Boolean = true,
-    maxLength: Int = -1,//限制最大输入字数，-1 表示不限制
+    maxLength: Int = -1, // 限制最大输入字数，-1 表示不限制
     placeholder: @Composable (() -> Unit)? = null,
     leadingIcon: @Composable (() -> Unit)? = null,
     trailingIcon: @Composable (() -> Unit)? = null,
@@ -157,46 +144,42 @@ fun IntySmallTextField2(
     onValueChange: (String) -> Unit,
 ) {
 
-    Row(
-        modifier = modifier.fillMaxHeight(),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
+    Row(modifier = modifier.fillMaxHeight(), verticalAlignment = Alignment.CenterVertically) {
         leadingIcon?.let { it() }
 
         val focusManager = LocalFocusManager.current
 
-        val newActions = KeyboardActions(
-            onDone = {
-                focusManager.clearFocus()
-                keyboardActions.onDone?.let { it() }
-            },
-            onGo = {
-                focusManager.clearFocus()
-                keyboardActions.onGo?.let { it() }
-            },
-            onNext = {
-                focusManager.clearFocus()
-                keyboardActions.onNext?.let { it() }
-            },
-            onPrevious = {
-                focusManager.clearFocus()
-                keyboardActions.onPrevious?.let { it() }
-            },
-            onSearch = {
-                focusManager.clearFocus()
-                keyboardActions.onSearch?.let { it() }
-            },
-            onSend = {
-                focusManager.clearFocus()
-                keyboardActions.onSend?.let { it() }
-            },
-        )
+        val newActions =
+            KeyboardActions(
+                onDone = {
+                    focusManager.clearFocus()
+                    keyboardActions.onDone?.let { it() }
+                },
+                onGo = {
+                    focusManager.clearFocus()
+                    keyboardActions.onGo?.let { it() }
+                },
+                onNext = {
+                    focusManager.clearFocus()
+                    keyboardActions.onNext?.let { it() }
+                },
+                onPrevious = {
+                    focusManager.clearFocus()
+                    keyboardActions.onPrevious?.let { it() }
+                },
+                onSearch = {
+                    focusManager.clearFocus()
+                    keyboardActions.onSearch?.let { it() }
+                },
+                onSend = {
+                    focusManager.clearFocus()
+                    keyboardActions.onSend?.let { it() }
+                },
+            )
 
         Box(
-            modifier = Modifier
-                .fillMaxHeight()
-                .weight(1f)
-                .padding(horizontal = 8.dp, vertical = 4.dp),
+            modifier =
+                Modifier.fillMaxHeight().weight(1f).padding(horizontal = 8.dp, vertical = 4.dp),
             contentAlignment = if (singleLine) Alignment.CenterStart else Alignment.TopStart,
         ) {
             BasicTextField(
@@ -204,15 +187,13 @@ fun IntySmallTextField2(
                 enabled = enabled,
                 singleLine = singleLine,
                 value = value,
-                textStyle = TextStyle.Default.copy(
-                    fontSize = 14.sp, color = TextFieldColor.Text
-                ),
+                textStyle = TextStyle.Default.copy(fontSize = 14.sp, color = TextFieldColor.Text),
                 onValueChange = { str ->
-                    //有最大输入数字限制时候
+                    // 有最大输入数字限制时候
                     if (maxLength > 0 && str.length <= maxLength) {
                         onValueChange(str)
                     } else {
-                        //不作限制
+                        // 不作限制
                         if (maxLength == -1) {
                             onValueChange(str)
                         }
@@ -220,16 +201,13 @@ fun IntySmallTextField2(
                 },
                 keyboardOptions = keyboardOptions,
                 keyboardActions = newActions,
-                cursorBrush = SolidColor(TextFieldColor.Text)
+                cursorBrush = SolidColor(TextFieldColor.Text),
             )
             if (value.isEmpty()) {
                 placeholder?.let { it() }
             }
         }
 
-
         trailingIcon?.let { it() }
-
-
     }
 }

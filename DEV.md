@@ -14,13 +14,13 @@ npm install --save-dev --save-exact prettier
 
 ## 启动本地后端服务
 
-* config.yaml
-* gcp service account json
-* gcp dev web client id token
+- config.yaml
+- gcp service account json
+- gcp dev web client id token
 
 ## Common instructions for Gemini CLI, Claude Code, Cursor
 
-* Add a blank line at the bottom of each and every file written.
+- Add a blank line at the bottom of each and every file written.
 
 ## Alembic
 
@@ -38,19 +38,19 @@ All table definitions must be added to `app/models` directory for consistency.
 
 ## Core Structure
 
-| Layer | Key Modules | Notes |
-|-------|-------------|-------|
-| **Entry point** | [`app/main.py`](app/main.py) | Configures FastAPI, CORS, error handlers, and startup tasks (e.g., agent initialization, Keep Talking service) |
-| **API layer** | [`app/api/v1`](app/api/v1) | Router modules for agents, chats, auth, subscriptions, etc. provide REST endpoints |
-| **Configuration** | [`app/core/config.py`](app/core/config.py) | Settings defined with dataclasses and loaded from `config.yaml` via `load_config` |
-| **Models** | [`app/models`](app/models) | SQLAlchemy models (e.g., `User`) map database tables and relationships |
-| **Schemas** | [`app/schemas`](app/schemas) | Pydantic models validate request/response data (mirroring model structure) |
-| **Services** | [`app/services`](app/services) | Business logic; for example, `chat_service.py` manages chat sessions and caching logic |
-| **Agent engine** | [`app/core/agent`](app/core/agent) | LangChain/LangGraph-based agent system with custom state, memory tools, and model configuration utilities |
-| **Documentation** | [`docs/`](docs) | Design notes for character cards, AI voice, prompt templates, Google Play subscriptions, etc. |
-| **Migrations** | [`alembic/`](alembic) | Database schema migrations |
-| **Utilities** | [`scripts/`](scripts) | Setup helpers and maintenance scripts |
-| **Testing** | [`testing/`](testing) | Sample data and test utilities |
+| Layer             | Key Modules                                | Notes                                                                                                          |
+| ----------------- | ------------------------------------------ | -------------------------------------------------------------------------------------------------------------- |
+| **Entry point**   | [`app/main.py`](app/main.py)               | Configures FastAPI, CORS, error handlers, and startup tasks (e.g., agent initialization, Keep Talking service) |
+| **API layer**     | [`app/api/v1`](app/api/v1)                 | Router modules for agents, chats, auth, subscriptions, etc. provide REST endpoints                             |
+| **Configuration** | [`app/core/config.py`](app/core/config.py) | Settings defined with dataclasses and loaded from `config.yaml` via `load_config`                              |
+| **Models**        | [`app/models`](app/models)                 | SQLAlchemy models (e.g., `User`) map database tables and relationships                                         |
+| **Schemas**       | [`app/schemas`](app/schemas)               | Pydantic models validate request/response data (mirroring model structure)                                     |
+| **Services**      | [`app/services`](app/services)             | Business logic; for example, `chat_service.py` manages chat sessions and caching logic                         |
+| **Agent engine**  | [`app/core/agent`](app/core/agent)         | LangChain/LangGraph-based agent system with custom state, memory tools, and model configuration utilities      |
+| **Documentation** | [`docs/`](docs)                            | Design notes for character cards, AI voice, prompt templates, Google Play subscriptions, etc.                  |
+| **Migrations**    | [`alembic/`](alembic)                      | Database schema migrations                                                                                     |
+| **Utilities**     | [`scripts/`](scripts)                      | Setup helpers and maintenance scripts                                                                          |
+| **Testing**       | [`testing/`](testing)                      | Sample data and test utilities                                                                                 |
 
 ## Configuring Cursor
 
@@ -58,11 +58,12 @@ All table definitions must be added to `app/models` directory for consistency.
 
 Goal: install and enable black formatter to format file on save, use the default black format style.
 
-* First install Black Formatter
-  
+- First install Black Formatter
+
   <img width="600" alt="image" src="https://github.com/user-attachments/assets/279a14ae-1814-4f89-b82b-0215810e3624" />
-* Then enable "format on save"
-  
+
+- Then enable "format on save"
+
   <img width="600" alt="image" src="https://github.com/user-attachments/assets/aad4af61-bb27-4b4d-9ebe-5c4bb57316b1" />
   <img width="600" alt="image" src="https://github.com/user-attachments/assets/aa251443-ada9-4331-9c99-1756aed57344" />
 

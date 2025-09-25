@@ -148,7 +148,7 @@ def is_valid_gcs_url(url: str) -> bool:
 
 def is_temp_gcs_path(url: str, user_id: str) -> bool:
     """检查是否为用户的临时GCS路径
-    
+
     注意：背景图片现在使用统一目录 backgrounds/{user_id}/，不再是临时路径
     只有 avatars/tmp/{user_id}/ 和 tmp/{user_id}/ 被认为是临时路径
     """

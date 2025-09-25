@@ -7,100 +7,99 @@ on:
 
   schedule:
     # 1 am UTC, 9 am Beijing time, 6 pm PST.
-    - cron: '0 1 * * *'
+    - cron: "0 1 * * *"
 
 jobs:
   build-apk:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - uses: actions/setup-java@v4
-      with:
-        java-version: '21'
-        distribution: 'temurin'
+      - uses: actions/setup-java@v4
+        with:
+          java-version: "21"
+          distribution: "temurin"
 
-    - name: Cache Gradle dependencies and build cache
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.gradle/caches
-          ~/.gradle/wrapper
-          android_app/.gradle
-          android_app/build
-          android_app/app/build
-          android_app/network/build
-          android_app/utils/build
-        # https://github.com/actions/cache/blob/main/examples.md#java---gradle
-        key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}-${{ github.sha }}
-        restore-keys: |
-          ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}-
+      - name: Cache Gradle dependencies and build cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            android_app/.gradle
+            android_app/build
+            android_app/app/build
+            android_app/network/build
+            android_app/utils/build
+          # https://github.com/actions/cache/blob/main/examples.md#java---gradle
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}-
 
-    - name: Create Google Play service account key
-      env:
-        GOOGLE_PLAY_SERVICE_ACCOUNT_KEY: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_KEY }}
-      run: |
-        echo "$GOOGLE_PLAY_SERVICE_ACCOUNT_KEY" > service-account-key.json
+      - name: Create Google Play service account key
+        env:
+          GOOGLE_PLAY_SERVICE_ACCOUNT_KEY: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_KEY }}
+        run: |
+          echo "$GOOGLE_PLAY_SERVICE_ACCOUNT_KEY" > service-account-key.json
 
-    - name: Build APK
-      run: |
-        cd android_app
-        ./gradlew assembleDebug --stacktrace --info
+      - name: Build APK
+        run: |
+          cd android_app
+          ./gradlew assembleDebug --stacktrace --info
 
-    - id: gen-release-info
-      run: |
-        cd android_app
-        echo "version_name_with_commit_id=$(./gradlew printVersionWithSuffix | grep 'Version Name with Suffix: ' | awk -F': ' '{print $2}')" >> $GITHUB_OUTPUT
-        echo "release_name=$(./gradlew printVersionWithSuffix | grep 'Version Name with Suffix: ' | awk -F': ' '{print $2}' | sed 's/ (/-/; s/)//')" >> $GITHUB_OUTPUT
+      - id: gen-release-info
+        run: |
+          cd android_app
+          echo "version_name_with_commit_id=$(./gradlew printVersionWithSuffix | grep 'Version Name with Suffix: ' | awk -F': ' '{print $2}')" >> $GITHUB_OUTPUT
+          echo "release_name=$(./gradlew printVersionWithSuffix | grep 'Version Name with Suffix: ' | awk -F': ' '{print $2}' | sed 's/ (/-/; s/)//')" >> $GITHUB_OUTPUT
 
+      - id: create-release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.gen-release-info.outputs.release_name }}
+          draft: false
+          prerelease: false
+          files: |
+            android_app/app/build/outputs/apk/debug/app-debug.apk
+          generate_release_notes: true
+          make_latest: true
+          fail_on_unmatched_files: false
 
-    - id: create-release
-      uses: softprops/action-gh-release@v2
-      with:
-        tag_name: ${{ steps.gen-release-info.outputs.release_name }}
-        draft: false
-        prerelease: false
-        files: |
-          android_app/app/build/outputs/apk/debug/app-debug.apk
-        generate_release_notes: true
-        make_latest: true
-        fail_on_unmatched_files: false
-
-    - name: Notify Feishu group
-      run: |
-        RELEASE_NAME=${{ steps.gen-release-info.outputs.release_name }}
-        RELEASE_URL=${{ steps.create-release.outputs.url }}
-        # See https://github.com/softprops/action-gh-release?tab=readme-ov-file#outputs
-        RELEASE_APK_URL=${{ fromJSON(steps.create-release.outputs.assets)[0].browser_download_url }}
-        # See:
-        # https://open.larksuite.com/document/common-capabilities/message-card/message-cards-content/using-markdown-tags
-        # for how to write content in feishu card.
-        cat <<EOF > feishu_card.json
-        {
-          "msg_type": "interactive",
-          "card": {
-            "config": {
-              "wide_screen_mode": true
-            },
-            "header": {
-              "title": {
-                "tag": "plain_text",
-                "content": "IntelliMate 测试 APK 发布，版本：$RELEASE_NAME"
-              }
-            },
-            "elements": [
-              {
-                "tag": "div",
-                "text": {
-                  "tag": "lark_md",
-                  "content": "✅ 改动列表见 [GitHub Release](${RELEASE_URL})\n📦 [APK 下载链接](${RELEASE_APK_URL})"
+      - name: Notify Feishu group
+        run: |
+          RELEASE_NAME=${{ steps.gen-release-info.outputs.release_name }}
+          RELEASE_URL=${{ steps.create-release.outputs.url }}
+          # See https://github.com/softprops/action-gh-release?tab=readme-ov-file#outputs
+          RELEASE_APK_URL=${{ fromJSON(steps.create-release.outputs.assets)[0].browser_download_url }}
+          # See:
+          # https://open.larksuite.com/document/common-capabilities/message-card/message-cards-content/using-markdown-tags
+          # for how to write content in feishu card.
+          cat <<EOF > feishu_card.json
+          {
+            "msg_type": "interactive",
+            "card": {
+              "config": {
+                "wide_screen_mode": true
+              },
+              "header": {
+                "title": {
+                  "tag": "plain_text",
+                  "content": "IntelliMate 测试 APK 发布，版本：$RELEASE_NAME"
                 }
-              }
-            ]
+              },
+              "elements": [
+                {
+                  "tag": "div",
+                  "text": {
+                    "tag": "lark_md",
+                    "content": "✅ 改动列表见 [GitHub Release](${RELEASE_URL})\n📦 [APK 下载链接](${RELEASE_APK_URL})"
+                  }
+                }
+              ]
+            }
           }
-        }
-        EOF
-        curl -X POST ${{ secrets.FEISHU_WEBHOOK_URL }} \
-          -H "Content-Type: application/json" \
-          -d @feishu_card.json
+          EOF
+          curl -X POST ${{ secrets.FEISHU_WEBHOOK_URL }} \
+            -H "Content-Type: application/json" \
+            -d @feishu_card.json

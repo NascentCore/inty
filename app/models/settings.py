@@ -13,7 +13,9 @@ class Settings(Base):
     id = Column(String, primary_key=True, index=True)
     language = Column(String, default="en")  # 系统语言
     voice_enabled = Column(Boolean, default=True)  # 是否启用语音
-    keep_talking = Column(Boolean, default=True)  # DEPRECATED: 该功能已弃用，保留字段仅为向后兼容
+    keep_talking = Column(
+        Boolean, default=True
+    )  # DEPRECATED: 该功能已弃用，保留字段仅为向后兼容
 
     # 关系
     user = relationship("User", back_populates="settings")

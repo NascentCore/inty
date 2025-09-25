@@ -13,11 +13,8 @@ import com.inty.utils.log.defaultInit
 import com.therouter.TheRouter
 import kotlinx.coroutines.launch
 
-/**
- * 应用Application的实现类
- */
+/** 应用Application的实现类 */
 class IntyApp : Application() {
-
 
     override fun attachBaseContext(base: Context?) {
         AppEnv.context = this
@@ -42,7 +39,7 @@ class IntyApp : Application() {
         // 立即初始化网络管理器（轻量级，不阻塞）
         NetworkManager.getInstance().initialize(this)
         IntyNetworkManager.initialize(this)
-        
+
         // 立即初始化统一启动管理器（只做必要的登录判断，不阻塞）
         UnifiedStartupManager.initializeEssential(this)
 
@@ -51,19 +48,18 @@ class IntyApp : Application() {
             try {
                 // 初始化图片加载器（可能阻塞）
                 initImageLoader()
-                
+
                 // 异步进行完整的数据预加载和缓存
                 UnifiedStartupManager.initializeAsync(this@IntyApp)
-                
             } catch (e: Exception) {
                 EasyLog.log("IntyApp - 异步初始化失败: ${e.message}", EasyLog.ERROR)
             }
         }
     }
-    
+
     override fun onTerminate() {
         super.onTerminate()
-        
+
         // 应用退出时释放Billing连接
         if (BillingRepository.isInitialized()) {
             EasyLog.log("IntyApp - 应用退出，释放Billing连接")

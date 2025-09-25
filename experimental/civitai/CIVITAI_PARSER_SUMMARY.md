@@ -159,13 +159,13 @@ pip install -r requirements_parser.txt
 
 ## Files Summary
 
-| File | Purpose |
-|------|---------|
-| `civitai_parser.py` | Basic parser implementation |
+| File                         | Purpose                                 |
+| ---------------------------- | --------------------------------------- |
+| `civitai_parser.py`          | Basic parser implementation             |
 | `civitai_parser_enhanced.py` | Enhanced version with better extraction |
-| `requirements_parser.txt` | Python dependencies |
-| `example_usage.py` | Usage examples |
-| `README_parser.md` | Detailed documentation |
+| `requirements_parser.txt`    | Python dependencies                     |
+| `example_usage.py`           | Usage examples                          |
+| `README_parser.md`           | Detailed documentation                  |
 
 ## Success Metrics
 
