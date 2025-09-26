@@ -1,8 +1,12 @@
 from typing import List, Optional
 
+from loguru import logger
 from sqlalchemy.orm import Session
 
 from app import models, schemas
+from app.models.resource import ResourceType
+from app.schemas.resource import ResourceCreate
+from app.utils.image import ImageFormat, ImageSize
 
 
 def get_resource(db: Session, resource_id: str) -> Optional[models.Resource]:
@@ -56,3 +60,40 @@ def delete_resource(db: Session, *, db_resource: models.Resource) -> models.Reso
     db.delete(db_resource)
     db.commit()
     return db_resource
+
+
+def create_image_resource(
+    db: Session,
+    user_id: str,
+    url: str,
+    size: ImageSize,
+    format: ImageFormat,
+    byte_size: int,
+    compressed: bool = False,
+    uncompressed_image_url: Optional[str] = None,
+    cropped: bool = False,
+    uncropped_image_url: Optional[str] = None,
+) -> None:
+    """
+    创建图片资源记录的辅助函数
+    """
+    resource_metadata = {
+        "creator": user_id,
+        "size": size.model_dump(),
+        "content_type": f"image/{format.value}",
+        "byte_size": byte_size,
+        "compressed": compressed,
+        "uncompressed_image_url": uncompressed_image_url,
+        "cropped": cropped,
+        "uncropped_image_url": uncropped_image_url,
+    }
+    resource = create_resource(
+        db=db,
+        resource_in=ResourceCreate(
+            type=ResourceType.IMAGE,
+            url=url,
+            resource_metadata=resource_metadata,
+        ),
+        user_id=user_id,
+    )
+    logger.debug(f"创建图片资源记录成功，URL: {resource.url}")

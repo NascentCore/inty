@@ -18,7 +18,7 @@ from app.external_services.gcs import append_filename_suffix, upload_to_gcs
 from app.models.resource import ResourceType
 from app.schemas.resource import ResourceCreate
 from app.schemas.response import APIResponse
-from app.services.resource_service import create_resource
+from app.services.resource_service import create_image_resource
 from app.utils.crop_avatar import CROPPED_AVATAR_FILENAME_SUFFIX, crop_avatar
 from app.utils.image import (
     ImageFormat,
@@ -26,43 +26,6 @@ from app.utils.image import (
     compress_png_to_jpeg,
     get_jpg_bytes_from_pil_image,
 )
-
-
-def _create_image_resource(
-    db: Session,
-    user_id: str,
-    url: str,
-    size: ImageSize,
-    format: ImageFormat,
-    byte_size: int,
-    compressed: bool = False,
-    uncompressed_image_url: Optional[str] = None,
-    cropped: bool = False,
-    uncropped_image_url: Optional[str] = None,
-) -> None:
-    """
-    创建图片资源记录的辅助函数
-    """
-    resource_metadata = {
-        "creator": user_id,
-        "size": size.model_dump(),
-        "content_type": f"image/{format.value}",
-        "byte_size": byte_size,
-        "compressed": compressed,
-        "uncompressed_image_url": uncompressed_image_url,
-        "cropped": cropped,
-        "uncropped_image_url": uncropped_image_url,
-    }
-    resource = create_resource(
-        db=db,
-        resource_in=ResourceCreate(
-            type=ResourceType.IMAGE,
-            url=url,
-            resource_metadata=resource_metadata,
-        ),
-        user_id=user_id,
-    )
-    logger.debug(f"创建图片资源记录成功，URL: {resource.url}")
 
 
 class ImageUploadResponse(BaseModel):
@@ -235,7 +198,7 @@ async def process_image_upload(
 
         result.original_url = uncompressed_url
 
-        _create_image_resource(
+        create_image_resource(
             db=db,
             user_id=user_id,
             url=uncompressed_url,
@@ -245,7 +208,7 @@ async def process_image_upload(
         )
 
     # Create resource record for the compressed image
-    _create_image_resource(
+    create_image_resource(
         db=db,
         user_id=user_id,
         url=url,
@@ -253,7 +216,9 @@ async def process_image_upload(
         format=ImageFormat(file_ext),
         byte_size=len(file_data),
         compressed=was_compressed,
-        uncompressed_image_url=result.original_url if was_compressed and result.original_url else None,
+        uncompressed_image_url=(
+            result.original_url if was_compressed and result.original_url else None
+        ),
     )
 
     # Handle cropping if enabled
@@ -287,7 +252,7 @@ async def process_image_upload(
         result.avatar_url = cropped_avatar_url
 
         # Write the metadata of the uploaded image, which might be compressed.
-        _create_image_resource(
+        create_image_resource(
             db=db,
             user_id=user_id,
             url=cropped_avatar_url,
