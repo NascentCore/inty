@@ -2,7 +2,6 @@ package com.ai.inty.home
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -42,6 +41,7 @@ import com.ai.inty.R
 import com.ai.inty.base.IntyImage
 import com.ai.inty.base.RedDot
 import com.ai.inty.beans.ConversationItem
+import com.ai.inty.ui.components.EmptyDataState
 import com.ai.inty.utils.AuthClickable
 import com.ai.inty.utils.TrackScreenView
 import com.ai.inty.utils.getCdnImageUrl
@@ -222,38 +222,15 @@ private fun MessageTabContent(
         }
 
         if (conversations.isEmpty() && !isLoading && !isRefreshing) {
-            EmptyContentUI()
+            EmptyDataState(
+                subtitle = stringResource(R.string.empty_conversations),
+                modifier = Modifier.fillMaxSize()
+            )
         }
     }
 }
 
 
-@Composable
-private fun EmptyContentUI() {
-    Column(
-        modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-
-
-        IntyImage(model = R.drawable.img_content_empty)
-
-        Spacer(Modifier.height(16.dp))
-
-        Text(
-            modifier = Modifier
-                .padding(horizontal = 16.dp)
-                .align(Alignment.CenterHorizontally),
-            text = stringResource(R.string.no_agent),
-            color = Color.White.copy(0.55f),
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Normal,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-    }
-}
 
 
 @Composable

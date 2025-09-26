@@ -326,4 +326,11 @@
 
     <string name="str_chat_disabled">Chat unavailable</string>
     <string name="str_agent_is_deleted">Character is no longer available</string>
+    
+    <!-- Empty State Messages -->
+    <string name="empty_conversations">No conversations yet\nStart chatting with your favorite characters!</string>
+    <string name="empty_explore_data">No characters available\nTry refreshing or check your connection</string>
+    <string name="empty_explore_error">Failed to load characters\nCheck your connection and try again</string>
+    <string name="retry_button">Retry</string>
+    <string name="refresh_button">Refresh</string>
 </resources>
