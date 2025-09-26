@@ -46,7 +46,9 @@ class ExplorePagingSource(
                 if (page == INITIAL_PAGE && useCache) {
                     val cachedAgents = UnifiedStartupManager.getCurrentRecommendedAgents()
                     if (cachedAgents.isNotEmpty()) {
-                        EasyLog.log("ExplorePagingSource - 使用缓存数据: ${cachedAgents.size}个")
+                        // 过滤掉id为空的agent，避免key重复问题
+                        val validCachedAgents = cachedAgents.filter { it.id.isNotEmpty() }
+                        EasyLog.log("ExplorePagingSource - 使用缓存数据: ${validCachedAgents.size}个 (过滤后)")
                         
                         // 如果有缓存数据，返回缓存数据，同时后台加载网络数据
                         if (shouldUpdateFromNetwork()) {
@@ -58,9 +60,9 @@ class ExplorePagingSource(
                         // 这样Paging会继续尝试加载下一页，确保分页功能正常
                         // 但是要确保缓存数据不为空，避免无限循环
                         return@withContext LoadResult.Page(
-                            data = cachedAgents,
+                            data = validCachedAgents,
                             prevKey = null,
-                            nextKey = if (cachedAgents.isNotEmpty()) page + 1 else null
+                            nextKey = if (validCachedAgents.isNotEmpty()) page + 1 else null
                         )
                     }
                 }
@@ -71,17 +73,19 @@ class ExplorePagingSource(
                 when (result) {
                     is NetworkResult.Success -> {
                         val agents = result.data.list ?: emptyList()
-                        val hasMore = agents.isNotEmpty() && agents.size >= pageSize
+                        // 过滤掉id为空的agent，避免key重复问题
+                        val validAgents = agents.filter { it.id.isNotEmpty() }
+                        val hasMore = validAgents.isNotEmpty() && validAgents.size >= pageSize
                         
                         // 缓存第一页数据
-                        if (page == INITIAL_PAGE && agents.isNotEmpty()) {
-                            AgentCacheManager.cacheAgents(agents)
+                        if (page == INITIAL_PAGE && validAgents.isNotEmpty()) {
+                            AgentCacheManager.cacheAgents(validAgents)
                             UnifiedStartupManager.refreshRecommendedAgents()
-                            EasyLog.log("ExplorePagingSource - 缓存第一页数据: ${agents.size}个")
+                            EasyLog.log("ExplorePagingSource - 缓存第一页数据: ${validAgents.size}个 (过滤后)")
                         }
                         
                         LoadResult.Page(
-                            data = agents,
+                            data = validAgents,
                             prevKey = if (page == INITIAL_PAGE) null else page - 1,
                             nextKey = if (hasMore) page + 1 else null
                         )
@@ -142,10 +146,12 @@ class ExplorePagingSource(
                 val result = loadFromNetwork(page, pageSize)
                 if (result is NetworkResult.Success) {
                     val agents = result.data.list ?: emptyList()
-                    if (agents.isNotEmpty()) {
-                        AgentCacheManager.cacheAgents(agents)
+                    // 过滤掉id为空的agent，避免key重复问题
+                    val validAgents = agents.filter { it.id.isNotEmpty() }
+                    if (validAgents.isNotEmpty()) {
+                        AgentCacheManager.cacheAgents(validAgents)
                         UnifiedStartupManager.refreshRecommendedAgents()
-                        EasyLog.log("ExplorePagingSource - 后台刷新完成: ${agents.size}个")
+                        EasyLog.log("ExplorePagingSource - 后台刷新完成: ${validAgents.size}个 (过滤后)")
                     }
                 }
             } catch (e: Exception) {

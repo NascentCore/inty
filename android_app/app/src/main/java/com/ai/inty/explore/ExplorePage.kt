@@ -140,7 +140,8 @@ fun ExplorePage(
                     agentsFlow = agentsFlow,
                     innerPadding = innerPadding,
                     onClickAgent = onClickAgent,
-                    isRefreshing = isRefreshing
+                    isRefreshing = isRefreshing,
+                    onRetry = { viewModel.refreshRecommendAgents() }
                 )
             }
         }
