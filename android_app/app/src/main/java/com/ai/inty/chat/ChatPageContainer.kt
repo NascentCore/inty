@@ -1,7 +1,6 @@
 package com.ai.inty.chat
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
@@ -43,7 +42,6 @@ import com.ai.inty.beans.UserProfile
 import com.ai.inty.chat.viewmodel.ChatTabViewModel
 import com.inty.utils.log.EasyLog
 import com.inty.utils.storage.IntySetting
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -63,7 +61,7 @@ fun ChatPageContainer(
     // 获取Paging数据流
     val agentsFlow = chatTabViewModel.getChatAgentsFlow()
     val agentsPagingItems = agentsFlow?.collectAsLazyPagingItems() ?: return
-    
+
     // 获取当前加载的agents列表
     val agentList = remember(agentsPagingItems.itemCount) {
         val list = mutableListOf<AgentInfo>()
@@ -74,7 +72,7 @@ fun ChatPageContainer(
         }
         list
     }
-    
+
     // 如果 agentList 为空，显示空状态
     if (agentList.isEmpty()) {
         Box(
@@ -96,41 +94,49 @@ fun ChatPageContainer(
     val pageState = rememberPagerState(initialPage = safeInitialPage) { agentList.size }
     val scope = rememberCoroutineScope()
 
+    // 新用户引导状态
+    var hasShowGuest by remember { mutableStateOf(IntySetting.hasShowGuest()) }
+    val shouldShowGuide = remember(agentList.size, hasShowGuest) {
+        !hasShowGuest && agentList.size > 1
+    }
+
     // 监听页面变化
     LaunchedEffect(pageState.currentPage) {
         onPageChanged(pageState.currentPage)
-        
+
         // 页面切换时停止当前播放的音频，避免播放错误agent的音频
         val currentAgent = agentList.getOrNull(pageState.currentPage)
         if (currentAgent != null) {
-            EasyLog.log("页面切换到agent: ${currentAgent.id}, 停止其他agent的音频播放")
-            // 通过AudioManager停止所有播放，让新页面重新开始
-            // 这里我们依赖AudioManager的单例特性来管理全局音频状态
-            // 给新页面一点时间初始化
+            try {
+                val audioManager = com.ai.inty.audio.AudioManager.getInstance(
+                    com.inty.utils.AppEnv.context,
+                    scope
+                )
+                audioManager.stopAllPlayback()
+            } catch (e: Exception) {
+                EasyLog.log("ChatPageContainer - 停止音频播放失败: ${e.message}", EasyLog.ERROR)
+            }
             delay(100)
         }
-        
+
         // 预加载逻辑：当用户接近最后一页时，触发加载更多数据
         val currentPage = pageState.currentPage
         val totalPages = agentList.size
-        if (currentPage >= totalPages - 2 && totalPages > 0) { // 距离最后一页还有2页时开始预加载
-            EasyLog.log("ChatPageContainer - 触发预加载，当前页: $currentPage, 总页数: $totalPages")
-            // 触发Paging加载更多数据
+        if (currentPage >= totalPages - 2 && totalPages > 0) {
             agentsPagingItems.retry()
         }
     }
 
     // 监听Paging数据变化，更新页面状态
     LaunchedEffect(agentsPagingItems.itemCount) {
-        if (agentsPagingItems.itemCount > 0) {
-            EasyLog.log("ChatPageContainer - Paging数据更新，总页数: ${agentsPagingItems.itemCount}")
-        }
+        // Paging数据更新时会自动触发UI重组
     }
 
     Box {
         HorizontalPager(
             modifier = modifier,
             state = pageState,
+            userScrollEnabled = !shouldShowGuide, // 在引导期间禁用用户滑动
         ) { currentPage ->
             // 防止数组越界
             if (currentPage < 0 || currentPage >= agentList.size) {
@@ -155,13 +161,6 @@ fun ChatPageContainer(
             )
         }
 
-        // 新用户聊天滑动引导
-        NewUserGuide(
-            agentList = agentList,
-            pageState = pageState,
-            scope = scope
-        )
-        
         // 加载状态指示器
         if (agentsPagingItems.loadState.append is androidx.paging.LoadState.Loading) {
             Box(
@@ -175,6 +174,15 @@ fun ChatPageContainer(
                 )
             }
         }
+        
+        // 新用户聊天滑动引导
+        NewUserGuide(
+            agentList = agentList,
+            pageState = pageState,
+            shouldShowGuide = shouldShowGuide,
+            onGuideCompleted = { hasShowGuest = true }
+        )
+
     }
 }
 
@@ -185,27 +193,33 @@ fun ChatPageContainer(
 private fun NewUserGuide(
     agentList: List<AgentInfo>,
     pageState: PagerState,
-    scope: CoroutineScope,
+    shouldShowGuide: Boolean,
+    onGuideCompleted: () -> Unit,
 ) {
-    var hasShowGuest by remember { mutableStateOf(IntySetting.hasShowGuest()) }
 
-    if (!hasShowGuest && agentList.size > 1) {
+    if (shouldShowGuide) {
         val density = LocalDensity.current
         val pageScrollPx = with(density) { 80.dp.toPx() }
-        val showHand = MutableTransitionState(false)
+        var showHand by remember { mutableStateOf(false) }
+        var isGuideActive by remember { mutableStateOf(false) }
+        // 保存初始页面索引，确保能正确恢复
+        val initialPageIndex = remember { pageState.currentPage }
 
         LaunchedEffect(Unit) {
             delay(3000)
-            showHand.targetState = true
+            isGuideActive = true
+            showHand = true
             pageState.animateScrollBy(pageScrollPx)
-            IntySetting.setShowGuested()
             delay(1000)
-            showHand.targetState = false
-            pageState.animateScrollToPage(pageState.currentPage)
+            showHand = false
+            pageState.animateScrollToPage(initialPageIndex)
+            IntySetting.setShowGuested()
+            onGuideCompleted()
+            isGuideActive = false
         }
 
         AnimatedVisibility(
-            visibleState = showHand,
+            visible = showHand,
             enter = fadeIn() + slideInHorizontally(
                 initialOffsetX = { fullWidth -> fullWidth / 6 } // 从屏幕右侧1/6处出现
             ),
@@ -213,14 +227,20 @@ private fun NewUserGuide(
                 targetOffsetX = { it }
             )
         ) {
+            val scope = rememberCoroutineScope()
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .noRippleClickable {
-                        scope.launch {
-                            showHand.targetState = false
-                            pageState.animateScrollToPage(pageState.currentPage)
-                            hasShowGuest = true
+                        // 只有在引导期间才响应点击
+                        if (isGuideActive) {
+                            scope.launch {
+                                showHand = false
+                                pageState.animateScrollToPage(initialPageIndex)
+                                IntySetting.setShowGuested()
+                                onGuideCompleted()
+                                isGuideActive = false
+                            }
                         }
                     }
             ) {
