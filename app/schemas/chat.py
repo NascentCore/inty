@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import List, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_serializer
 
 from app.models.message import MessageType, SenderType
 
@@ -161,6 +161,18 @@ class Chat(ChatInDB):
     agent_avatar: Optional[str] = None
     agent_is_deleted: Optional[bool] = None
     settings: Optional[ChatSettings] = None
+
+    @field_serializer("agent_avatar")
+    def serialize_agent_avatar(self, agent_avatar: Optional[str]) -> Optional[str]:
+        """转换agent_avatar URL为CDN URL"""
+        if not agent_avatar:
+            return agent_avatar
+        try:
+            from app.services.image_transform_service import image_transform_service
+
+            return image_transform_service.transform_mobile(agent_avatar)
+        except Exception:
+            return agent_avatar
 
 
 # OpenAI style message model
