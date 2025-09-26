@@ -38,6 +38,7 @@ import com.ai.inty.beans.UserProfile
 import com.ai.inty.billing.BillingRepository
 import com.ai.inty.billing.VipStatusHelper
 import com.ai.inty.chat.ChatPageContainer
+import com.ai.inty.chat.ChatViewModel
 import com.ai.inty.explore.ExplorePage
 import com.ai.inty.explore.ExploreViewModel
 import com.ai.inty.ui.ChatDialogData
@@ -45,7 +46,6 @@ import com.ai.inty.ui.ExpiredVipDialog
 import com.ai.inty.ui.components.ForceUpgradeDialog
 import com.ai.inty.ui.theme.DarkPurple
 import com.ai.inty.utils.TrackScreenView
-import com.ai.inty.viewmodels.ChatViewModel
 import com.ai.inty.viewmodels.HomeTabIndex
 import com.ai.inty.viewmodels.MainViewModel
 import com.inty.utils.storage.IntySetting

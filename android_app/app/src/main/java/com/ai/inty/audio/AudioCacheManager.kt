@@ -37,9 +37,10 @@ class AudioCacheManager private constructor(
     }
 
     private val httpClient = OkHttpClient.Builder()
-        .connectTimeout(10, TimeUnit.SECONDS)
-        .readTimeout(30, TimeUnit.SECONDS)
+        .connectTimeout(15, TimeUnit.SECONDS)
+        .readTimeout(60, TimeUnit.SECONDS)
         .writeTimeout(30, TimeUnit.SECONDS)
+        .retryOnConnectionFailure(true)
         .build()
 
     // 内存缓存
@@ -170,23 +171,66 @@ class AudioCacheManager private constructor(
      * 从网络下载音频
      */
     private suspend fun downloadAudio(url: String): ByteArray? = withContext(Dispatchers.IO) {
-        try {
-            val request = Request.Builder()
-                .url(url)
-                .build()
+        var retryCount = 0
+        val maxRetries = 3
+        
+        while (retryCount <= maxRetries) {
+            try {
+                val request = Request.Builder()
+                    .url(url)
+                    .addHeader("User-Agent", "IntyApp/1.0")
+                    .build()
 
-            httpClient.newCall(request).execute().use { response ->
-                if (response.isSuccessful) {
-                    response.body?.bytes()
-                } else {
-                    EasyLog.log("音频LOG测试 Failed to download audio: ${response.code}", EasyLog.ERROR)
-                    null
+                httpClient.newCall(request).execute().use { response ->
+                    if (response.isSuccessful) {
+                        val body = response.body?.bytes()
+                        if (body != null && body.isNotEmpty()) {
+                            EasyLog.log("音频LOG测试 Audio downloaded successfully: $url, size: ${body.size} bytes")
+                            return@withContext body
+                        } else {
+                            EasyLog.log("音频LOG测试 Downloaded audio is empty: $url", EasyLog.ERROR)
+                            return@withContext null
+                        }
+                    } else {
+                        val errorMsg = when (response.code) {
+                            404 -> "音频文件不存在"
+                            403 -> "音频文件访问被拒绝"
+                            500 -> "服务器内部错误"
+                            else -> "HTTP错误: ${response.code}"
+                        }
+                        EasyLog.log("音频LOG测试 Failed to download audio: $errorMsg (${response.code})", EasyLog.ERROR)
+                        
+                        // 对于4xx错误，不重试
+                        if (response.code in 400..499) {
+                            return@withContext null
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                val errorMsg = when {
+                    e.message?.contains("Connection reset", ignoreCase = true) == true -> "连接被重置"
+                    e.message?.contains("timeout", ignoreCase = true) == true -> "连接超时"
+                    e.message?.contains("network", ignoreCase = true) == true -> "网络错误"
+                    else -> e.message ?: "未知错误"
+                }
+                EasyLog.log("音频LOG测试 Failed to download audio (attempt ${retryCount + 1}): $errorMsg", EasyLog.ERROR)
+                
+                // 如果是最后一次重试，返回null
+                if (retryCount == maxRetries) {
+                    return@withContext null
                 }
             }
-        } catch (e: Exception) {
-            EasyLog.log("音频LOG测试 Failed to download audio: ${e.message}", EasyLog.ERROR)
-            null
+            
+            retryCount++
+            if (retryCount <= maxRetries) {
+                // 指数退避重试
+                val delayMs = 1000L * (1 shl (retryCount - 1))
+                EasyLog.log("音频LOG测试 Retrying audio download in ${delayMs}ms (attempt ${retryCount + 1}/$maxRetries)")
+                kotlinx.coroutines.delay(delayMs)
+            }
         }
+        
+        null
     }
 
     /**

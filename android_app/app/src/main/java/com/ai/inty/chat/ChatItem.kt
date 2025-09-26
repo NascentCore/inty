@@ -55,11 +55,7 @@ import com.ai.inty.audio.VoicePlayer
 import com.ai.inty.base.noRippleClickable
 import com.ai.inty.beans.MsgInfo
 import com.ai.inty.utils.ChatTextFormatter
-import com.ai.inty.viewmodels.ChatViewModel
 import com.inty.utils.log.EasyLog
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 
 /**
  * 复制文本到剪贴板；这是用于测试功能。
@@ -74,11 +70,11 @@ private fun debugOnlyCopyToClipboard(context: Context, text: String) {
  * 聊天消息项目组件
  */
 @Composable
-fun ChatItem(item: MsgInfo, isCurrentPage: Boolean = true) {
+fun ChatItem(item: MsgInfo, isCurrentPage: Boolean = true, chatViewModel: ChatViewModel? = null) {
     runCatching {
         when (item.role) {
             "assistant" -> {
-                ChatItemAI(item, isCurrentPage)
+                ChatItemAI(item, isCurrentPage, chatViewModel)
             }
 
             "user" -> {
@@ -113,29 +109,31 @@ fun ChatItem(item: MsgInfo, isCurrentPage: Boolean = true) {
  * AI消息显示组件
  */
 @Composable
-private fun ChatItemAI(item: MsgInfo, isCurrentPage: Boolean = true) {
+private fun ChatItemAI(item: MsgInfo, isCurrentPage: Boolean = true, chatViewModel: ChatViewModel? = null) {
     runCatching {
         Column {
             //播放器按钮
             if (item.content.isNotEmpty() && item.content != "loading_animation") {
-                val viewModel = viewModel<ChatViewModel>()
+                // 使用传入的chatViewModel，如果没有则创建一个新的（向后兼容）
+                val viewModel = chatViewModel ?: viewModel<ChatViewModel>()
                 val agentInfo by viewModel.agentInfo.collectAsState()
-                val context = LocalContext.current
-                val audioManager = remember {
-                    com.ai.inty.audio.AudioManager.getInstance(
-                        context,
-                        CoroutineScope(Dispatchers.Main + SupervisorJob())
-                    )
-                }
-
+                
+                EasyLog.log("音频LOG测试 ChatItemAI: agentInfo=${agentInfo?.id}, messageId=${item.localMsgId}")
                 // 为每个消息生成唯一的测试URL，避免状态混乱
                 val audioInfo = AudioInfo(
                     url = item.audio_url ?: "",
                     title = "Voice Message",
                     artist = "AI Agent",
                     messageId = item.localMsgId, // 使用localMsgId，包含_assistant_标识，用于播放状态管理
-                    agentId = agentInfo?.id // 使用当前agent的ID
+                    agentId = agentInfo?.id ?: "" // 确保agentId不为null
                 )
+                
+                // 验证关键参数
+                if (audioInfo.agentId.isNullOrEmpty()) {
+                    EasyLog.log("音频LOG测试 Warning: agentId is empty for message: ${item.localMsgId}, agentInfo=${agentInfo?.id}, chatViewModel=${chatViewModel?.hashCode()}", EasyLog.WARN)
+                } else {
+                    EasyLog.log("音频LOG测试 AudioInfo created successfully: agentId=${audioInfo.agentId}, messageId=${audioInfo.messageId}")
+                }
 
                 // 检查当前消息列表是否只有开场白消息,避免已经聊过多个消息后，再进入还播放开场白
                 val allMessages by viewModel.msgs.collectAsState()
@@ -148,13 +146,16 @@ private fun ChatItemAI(item: MsgInfo, isCurrentPage: Boolean = true) {
                     EasyLog.WARN
                 )
                 // 开场白自动播放逻辑：只有开场白消息且未播放过
-                // 增加检查：确保当前播放的音频不是其他agent的，且是当前页面
-                val currentAudioInfo = audioManager.getCurrentAudioInfo()
-                val isCurrentAgentAudio = currentAudioInfo?.agentId == agentInfo?.id
-                val shouldAutoPlay =
-                    item.isOpening() && isOnlyOpeningMessage && !hasPlayedOpening && isCurrentAgentAudio && isCurrentPage
+                // 简化判断条件，确保逻辑清晰
+                val shouldAutoPlay = item.isOpening() && 
+                    isOnlyOpeningMessage && 
+                    !hasPlayedOpening && 
+                    isCurrentPage &&
+                    !(audioInfo.agentId.isNullOrEmpty()) &&
+                    audioInfo.url.isNotEmpty()
+                    
                 EasyLog.log(
-                    "音频LOG测试 当前音频消息$item ,, 是否要自动播放：$shouldAutoPlay (isCurrentAgentAudio: $isCurrentAgentAudio, isCurrentPage: $isCurrentPage) ",
+                    "音频LOG测试 开场白自动播放判断: shouldAutoPlay=$shouldAutoPlay, isOpening=${item.isOpening()}, isOnlyOpeningMessage=$isOnlyOpeningMessage, hasPlayedOpening=$hasPlayedOpening, isCurrentPage=$isCurrentPage, agentId='${audioInfo.agentId}', hasAudioUrl=${audioInfo.url.isNotEmpty()}",
                     EasyLog.WARN
                 )
                 VoicePlayer(

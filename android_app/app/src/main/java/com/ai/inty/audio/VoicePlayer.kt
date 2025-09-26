@@ -172,21 +172,19 @@ fun VoicePlayer(
     }
 
     // 自动播放（仅开场白消息）
-    LaunchedEffect(autoPlay) {
+    LaunchedEffect(autoPlay, messageId) {
         EasyLog.log("音频LOG测试 === VoicePlayer LaunchedEffect ===")
-        EasyLog.log("音频LOG测试 autoPlay: $autoPlay")
+        EasyLog.log("音频LOG测试 autoPlay: $autoPlay, messageId: $messageId")
         EasyLog.log("音频LOG测试 audioUrl: ${audioInfo.url}")
+        EasyLog.log("音频LOG测试 agentId: ${audioInfo.agentId}")
         EasyLog.log("音频LOG测试 isPlaying: $isPlaying")
         EasyLog.log("音频LOG测试 hasError: $hasError")
-        EasyLog.log("音频LOG测试 messageId: $messageId")
 
-        if (autoPlay && !isPlaying && !hasError) {
+        if (autoPlay && !isPlaying && !hasError && !(audioInfo.agentId.isNullOrEmpty())) {
             EasyLog.log("音频LOG测试 VoicePlayer conditions met, starting auto play...")
-            // 立即设置loading状态，提供视觉反馈
-            isLoading = true
             
             // 增加延迟，确保组件完全初始化
-            delay(200)
+            delay(300)
 
             // 再次检查状态，确保条件仍然满足
             if (!isPlaying && !hasError) {
@@ -194,7 +192,7 @@ fun VoicePlayer(
                 audioManager.playMessageVoice(
                     messageId = messageId, // 使用localMsgId用于播放状态管理
                     audioUrl = audioInfo.url,
-                    agentId = audioInfo.agentId ?: "",
+                    agentId = audioInfo.agentId,
                     autoPlay = true,
                     isManualClick = false, // 自动播放
                     onTtsGenerated = onTtsGenerated,
@@ -209,7 +207,7 @@ fun VoicePlayer(
                 EasyLog.log("音频LOG测试 VoicePlayer auto play conditions no longer met after delay: autoPlay=$autoPlay, isPlaying=$isPlaying, hasError=$hasError")
             }
         } else {
-            EasyLog.log("音频LOG测试 VoicePlayer auto play conditions not met: autoPlay=$autoPlay, isPlaying=$isPlaying, hasError=$hasError")
+            EasyLog.log("音频LOG测试 VoicePlayer auto play conditions not met: autoPlay=$autoPlay, isPlaying=$isPlaying, hasError=$hasError, agentId='${audioInfo.agentId}'")
         }
         EasyLog.log("音频LOG测试 === End VoicePlayer LaunchedEffect ===")
     }
