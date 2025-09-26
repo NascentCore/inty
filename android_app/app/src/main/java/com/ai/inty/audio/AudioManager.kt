@@ -56,6 +56,18 @@ class AudioManager private constructor(
         onTtsFailed: ((String) -> Unit)? = null,
         serverMessageId: String? = null // 服务器端消息ID，用于TTS生成
     ) {
+        // 参数验证
+        if (messageId.isEmpty()) {
+            EasyLog.log("音频LOG测试 playMessageVoice failed: messageId is empty", EasyLog.ERROR)
+            onTtsFailed?.invoke("消息ID不能为空")
+            return
+        }
+        
+        if (agentId.isEmpty()) {
+            EasyLog.log("音频LOG测试 playMessageVoice failed: agentId is empty", EasyLog.ERROR)
+            onTtsFailed?.invoke("Agent ID不能为空")
+            return
+        }
 
         // 检查是否启用自动播放
         // 手动点击时不受自动播放设置影响

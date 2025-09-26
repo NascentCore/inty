@@ -13,10 +13,10 @@ import androidx.core.view.WindowCompat
 import com.ai.inty.base.BaseActivity
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.chat.ChatPage
+import com.ai.inty.chat.ChatViewModel
 import com.ai.inty.ui.theme.DarkPurple
 import com.ai.inty.ui.theme.IntyTheme
 import com.ai.inty.utils.FirebaseAnalyticsHelper
-import com.ai.inty.viewmodels.ChatViewModel
 import com.inty.utils.log.EasyLog
 import com.therouter.router.Autowired
 import com.therouter.router.Route

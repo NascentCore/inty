@@ -1,4 +1,4 @@
-package com.ai.inty.viewmodels
+package com.ai.inty.chat
 
 import android.app.Activity
 import android.content.Context
@@ -26,13 +26,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-
-// 聊天对话 app + backend 交互
-// app 启动
-// app 请求聊天记录（/agents/{agent_id}/messages
-// backednf 创建对话（如果是首次对话）
-// backend 返回对话 ID
-// app 请求聊天回复（/api/v1/chat/completions/{agent_id}）
 
 // 操作什么数据，支持什么 UI？Model 是 beans
 // View 是各类 page/activity。
@@ -76,7 +69,7 @@ class ChatViewModel : BaseActivityViewModel() {
     private var _isLoadingConversations = MutableStateFlow(false)
     val isLoadingConversations = _isLoadingConversations.asStateFlow()
     private var hasMoreConversations = true
-    
+
     // 刷新状态，用于区分首次加载和刷新操作
     private var _isRefreshingConversations = MutableStateFlow(false)
     val isRefreshingConversations = _isRefreshingConversations.asStateFlow()
@@ -123,9 +116,6 @@ class ChatViewModel : BaseActivityViewModel() {
         queryMsgs()
         //查询改聊天设置
         getChatSetting()
-
-        // 开场白播放逻辑已移至ChatItem中的VoicePlayer处理
-        // 不再在ChatViewModel中播放Agent开场白
     }
 
     //region 语音播报相关
@@ -135,7 +125,7 @@ class ChatViewModel : BaseActivityViewModel() {
      */
     fun initVoiceService(context: Context) {
         if (audioManager == null) {
-            audioManager = AudioManager.getInstance(context, viewModelScope)
+            audioManager = AudioManager.Companion.getInstance(context, viewModelScope)
             EasyLog.log("Audio manager initialized")
         }
     }
@@ -507,16 +497,17 @@ class ChatViewModel : BaseActivityViewModel() {
     }
 
     //获取聊天消息设置 - 按agentId存储，确保每个agent的设置独立
-    private val _chatSettings = MutableStateFlow<Map<String, ChatSettingsResponse.ChatSettingRspData>>(emptyMap())
+    private val _chatSettings =
+        MutableStateFlow<Map<String, ChatSettingsResponse.ChatSettingRspData>>(emptyMap())
     val chatSettings = _chatSettings.asStateFlow()
-    
+
     /**
      * 获取指定agent的聊天设置
      */
     fun getChatSettingForAgent(agentId: String): ChatSettingsResponse.ChatSettingRspData? {
         return _chatSettings.value[agentId]
     }
-    
+
     /**
      * 获取当前agent的聊天设置
      */
@@ -524,7 +515,7 @@ class ChatViewModel : BaseActivityViewModel() {
         val agentId = agentInfo.value?.id ?: return null
         return getChatSettingForAgent(agentId)
     }
-    
+
     private fun getChatSetting() = launchWithNetCheck {
         val agentId = agentInfo.value?.id ?: return@launchWithNetCheck
         //有agent信息，才请求
@@ -571,7 +562,7 @@ class ChatViewModel : BaseActivityViewModel() {
         EasyLog.log("getConversations - 开始加载第一页")
         currentConversationsPage = 0
         hasMoreConversations = true
-        
+
         // 如果已经有数据，则不显示loading，直接后台刷新
         if (_conversations.value.isNotEmpty()) {
             EasyLog.log("getConversations - 已有数据，后台刷新，不显示loading")
@@ -595,9 +586,9 @@ class ChatViewModel : BaseActivityViewModel() {
 
     private fun loadConversationsSilently() {
         if (_isLoadingConversations.value || _isRefreshingConversations.value) return
-        
+
         EasyLog.log("loadConversationsSilently - 静默刷新，不显示loading")
-        
+
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val skip = currentConversationsPage * 20
@@ -607,7 +598,7 @@ class ChatViewModel : BaseActivityViewModel() {
                 when (result) {
                     is HttpResult.Success -> {
                         val userInitiatedConversations = result.data
-                        
+
                         if (userInitiatedConversations.isEmpty()) {
                             hasMoreConversations = false
                             EasyLog.log("loadConversationsSilently - 第${currentConversationsPage + 1}页数据为空，没有更多数据")
@@ -638,7 +629,7 @@ class ChatViewModel : BaseActivityViewModel() {
 
         // 记录当前页码，用于后续状态重置
         val isFirstPage = currentConversationsPage == 0
-        
+
         // 根据当前页码决定使用哪个loading状态
         if (isFirstPage) {
             // 第一页，使用刷新状态
@@ -699,7 +690,7 @@ class ChatViewModel : BaseActivityViewModel() {
                     EasyLog.log("loadConversations - 页码回退到: $currentConversationsPage")
                 }
             }
-            
+
             // 重置对应的loading状态
             if (isFirstPage) {
                 _isRefreshingConversations.value = false
@@ -766,7 +757,7 @@ class ChatViewModel : BaseActivityViewModel() {
         currentConversationsPage = 0
         hasMoreConversations = true
         _isLoadingConversations.value = false
-        
+
         // 清理chatSettings
         _chatSettings.value = emptyMap()
 

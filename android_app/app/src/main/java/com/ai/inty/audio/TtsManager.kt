@@ -81,10 +81,19 @@ class TtsManager private constructor(
 
                 if (agentId.isEmpty() || messageId.isEmpty()) {
                     EasyLog.log(
-                        "音频LOG测试 TTS generation agentId=$agentId 或 messageId=$messageId",
+                        "音频LOG测试 TTS generation failed: agentId='$agentId', messageId='$messageId'",
                         EasyLog.ERROR
                     )
-                    return@launch onError("TTS生成失败：agentId=$agentId ,, messageId=$messageId")
+                    return@launch onError("TTS生成失败：参数无效 - agentId='$agentId', messageId='$messageId'")
+                }
+                
+                // 验证agentId和messageId格式
+                if (agentId.length < 3 || messageId.length < 3) {
+                    EasyLog.log(
+                        "音频LOG测试 TTS generation failed: Invalid ID format - agentId='$agentId', messageId='$messageId'",
+                        EasyLog.ERROR
+                    )
+                    return@launch onError("TTS生成失败：ID格式无效")
                 }
                 val response = chatApi.fetchMsgVoice(agentId, messageId)
                 EasyLog.log("音频LOG测试 fetchMsgVoice response received: $response")

@@ -1,4 +1,4 @@
-package com.ai.inty.chat
+package com.ai.inty.chat.ui
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -38,8 +38,8 @@ import com.ai.inty.base.MyModalNavigationDrawer
 import com.ai.inty.base.noRippleClickable
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.billing.BillingRepository
+import com.ai.inty.chat.ChatViewModel
 import com.ai.inty.ui.components.MySettingItem
-import com.ai.inty.viewmodels.ChatViewModel
 import com.inty.utils.storage.IntySetting
 import com.therouter.TheRouter
 

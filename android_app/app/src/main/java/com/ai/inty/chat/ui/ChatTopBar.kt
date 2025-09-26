@@ -1,4 +1,4 @@
-package com.ai.inty.chat
+package com.ai.inty.chat.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Row

@@ -1,4 +1,4 @@
-package com.ai.inty.chat
+package com.ai.inty.chat.ui
 
 import android.app.Activity
 import androidx.compose.foundation.Image
@@ -41,11 +41,11 @@ import com.ai.inty.base.DiaAmountLayout
 import com.ai.inty.base.noRippleClickable
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.billing.BillingRepository
+import com.ai.inty.chat.ChatViewModel
 import com.ai.inty.ui.ChatDialogData
 import com.ai.inty.ui.PremiumChatDialog
 import com.ai.inty.ui.ReplyStyleSheet
 import com.ai.inty.ui.theme.DarkPurple
-import com.ai.inty.viewmodels.ChatViewModel
 import com.inty.utils.storage.IntySetting
 import com.therouter.TheRouter
 

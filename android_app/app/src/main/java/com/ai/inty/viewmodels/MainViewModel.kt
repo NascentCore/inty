@@ -12,6 +12,7 @@ import com.ai.inty.beans.AppVersionRsp
 import com.ai.inty.beans.CreateAgentRequest
 import com.ai.inty.beans.UserProfile
 import com.ai.inty.billing.BillingRepository
+import com.ai.inty.chat.ChatViewModel
 import com.ai.inty.net.IAgentApi
 import com.ai.inty.net.ICommonApi
 import com.ai.inty.utils.AgentCacheManager

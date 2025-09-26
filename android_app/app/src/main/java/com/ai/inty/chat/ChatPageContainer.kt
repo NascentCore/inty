@@ -38,7 +38,6 @@ import com.ai.inty.R
 import com.ai.inty.base.noRippleClickable
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.beans.UserProfile
-import com.ai.inty.viewmodels.ChatViewModel
 import com.inty.utils.log.EasyLog
 import com.inty.utils.storage.IntySetting
 import kotlinx.coroutines.CoroutineScope

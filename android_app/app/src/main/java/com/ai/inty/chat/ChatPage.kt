@@ -43,13 +43,18 @@ import com.ai.inty.R
 import com.ai.inty.base.ToastUtils
 import com.ai.inty.beans.MsgInfo
 import com.ai.inty.billing.BillingRepository
+import com.ai.inty.chat.ui.ChatInput
+import com.ai.inty.chat.ui.ChatMorePanel
+import com.ai.inty.chat.ui.ChatSettingsDrawer
+import com.ai.inty.chat.ui.ChatTopBar
+import com.ai.inty.chat.ui.KeepTalkingButton
+import com.ai.inty.chat.ui.PremiumModelTag
 import com.ai.inty.home.BottomNavigationBarHeight
 import com.ai.inty.ui.AdvancedModelChatDialog
 import com.ai.inty.ui.ChatDialogData
 import com.ai.inty.ui.UnlimitChatDialog
 import com.ai.inty.ui.components.AgentBackground
 import com.ai.inty.utils.TrackScreenView
-import com.ai.inty.viewmodels.ChatViewModel
 import com.inty.utils.log.EasyLog
 import com.inty.utils.storage.IntySetting
 import com.therouter.TheRouter
@@ -89,9 +94,12 @@ internal fun ChatPage(
     }
 
     // 页面生命周期管理：离开页面时重置播放状态
-    DisposableEffect(chatViewModel) {
+    DisposableEffect(chatViewModel, isCurrentPage) {
         onDispose {
-            chatViewModel.resetVoicePlayback()
+            if (!isCurrentPage) {
+                EasyLog.log("音频LOG测试 ChatPage disposed, resetting voice playback")
+                chatViewModel.resetVoicePlayback()
+            }
         }
     }
 
@@ -313,7 +321,7 @@ internal fun ChatPage(
                                     runCatching {
                                         //明确数据边界
                                         if (index < items.size) {
-                                            ChatItem(item, isCurrentPage = isCurrentPage)
+                                            ChatItem(item, isCurrentPage = isCurrentPage, chatViewModel = chatViewModel)
                                         }
                                         Spacer(Modifier.height(16.dp))
                                     }.onFailure { e ->
@@ -370,7 +378,7 @@ internal fun ChatPage(
                                     audio_url = agent.opening_audio_url
                                 )
 
-                                ChatItem(openingMessage, isCurrentPage = isCurrentPage)
+                                ChatItem(openingMessage, isCurrentPage = isCurrentPage, chatViewModel = chatViewModel)
                                 Spacer(Modifier.height(16.dp))
                             }
                         }

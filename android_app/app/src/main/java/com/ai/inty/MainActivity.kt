@@ -14,10 +14,10 @@ import androidx.core.view.WindowCompat
 import androidx.lifecycle.lifecycleScope
 import com.ai.inty.base.BaseActivity
 import com.ai.inty.billing.BillingRepository
+import com.ai.inty.chat.ChatViewModel
 import com.ai.inty.home.HomeScreen
 import com.ai.inty.ui.theme.IntyTheme
 import com.ai.inty.utils.UnifiedStartupManager
-import com.ai.inty.viewmodels.ChatViewModel
 import com.ai.inty.viewmodels.MainViewModel
 import com.inty.utils.log.EasyLog
 import com.inty.utils.storage.IntySetting

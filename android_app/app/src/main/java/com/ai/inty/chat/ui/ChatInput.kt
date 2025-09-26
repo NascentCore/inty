@@ -1,4 +1,4 @@
-package com.ai.inty.chat
+package com.ai.inty.chat.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -27,6 +27,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ai.inty.Constant
@@ -34,7 +35,7 @@ import com.ai.inty.R
 import com.ai.inty.base.IntyImage
 import com.ai.inty.base.IntySmallTextField
 import com.ai.inty.base.noRippleClickable
-import com.ai.inty.viewmodels.ChatViewModel
+import com.ai.inty.chat.ChatViewModel
 import com.inty.utils.storage.IntySetting
 import com.therouter.TheRouter
 
@@ -47,7 +48,7 @@ fun ChatInput(
     onSendMessage: () -> Unit,
     onToggleMorePanel: () -> Unit,
     showMorePanel: Boolean,
-    bottomPadding: androidx.compose.ui.unit.Dp,
+    bottomPadding: Dp,
 ) {
     val context = LocalContext.current
     val inputData = chatViewModel.inputData.collectAsState()
