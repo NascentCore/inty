@@ -134,6 +134,7 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
         let data = response.data;
         console.log("agent data:", data, "total:", data?.length);
 
+
         if (type !== "all" && Array.isArray(data)) {
           data = data.filter((agent) => {
             if (type === "public")

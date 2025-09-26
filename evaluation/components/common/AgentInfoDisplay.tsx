@@ -4,9 +4,8 @@
  */
 
 import React from "react";
-import { Card, Row, Col, Avatar, Tag } from "antd";
-import { RobotOutlined } from "@ant-design/icons";
-import type { Agent, AvatarCropData } from "../../types";
+import { Card, Row, Col, Tag } from "antd";
+import type { Agent } from "../../types";
 import { AvatarDisplay } from "./AvatarDisplay";
 import { BackgroundWithCropOverlay } from "./BackgroundWithCropOverlay";
 import ScoreSelector from "./ScoreSelector";
@@ -31,7 +30,7 @@ export const AgentInfoDisplay: React.FC<AgentInfoDisplayProps> = ({
     width: "100%",
     maxWidth: 120,
     height: "auto",
-    objectFit: "contain", // 保持原始长宽比，完整显示图片
+    objectFit: "contain" as const, // 保持原始长宽比，完整显示图片
   };
   const renderBasicInfo = () => (
     <Card size="small" title="基本信息" style={{ marginBottom: 16 }}>
@@ -90,6 +89,20 @@ export const AgentInfoDisplay: React.FC<AgentInfoDisplayProps> = ({
           <p>
             <strong>音色ID:</strong>{" "}
             {agent.voice_id || "未设置"}
+          </p>
+          <p>
+            <strong>头像尺寸:</strong>{" "}
+            {agent.avatar_size
+              ? `${agent.avatar_size.width} × ${agent.avatar_size.height} 像素`
+              : "未设置"
+            }
+          </p>
+          <p>
+            <strong>背景图尺寸:</strong>{" "}
+            {agent.background_size
+              ? `${agent.background_size.width} × ${agent.background_size.height} 像素`
+              : "未设置"
+            }
           </p>
           {agent.tags && agent.tags.length > 0 && (
             <div style={{ marginTop: 8 }}>
