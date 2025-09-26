@@ -9,6 +9,7 @@ from typing import Optional
 
 from fastapi import UploadFile
 from loguru import logger
+from PIL import Image
 from pydantic import BaseModel
 
 from app.core.config import global_config_loaded_from_config_yaml
@@ -22,15 +23,23 @@ from app.utils.image import (
 )
 
 
+class ImageSize(BaseModel):
+    """Image size"""
+
+    width: int
+    height: int
+
+
 class ImageUploadResponse(BaseModel):
     """Image upload response"""
     # Uploaded compressed image
     url: str
+    size: ImageSize
     # Uploaded original image
     original_url: Optional[str] = None
     # Uploaded avatar image
     avatar_url: Optional[str] = None
-
+    avatar_size: Optional[ImageSize] = None
 
 async def process_image_upload(
     file: UploadFile,
@@ -137,6 +146,10 @@ async def process_image_upload(
             f"Compressed PNG ({file_size} bytes) to JPEG ({len(file_data)} bytes)"
         )
 
+    img = Image.open(io.BytesIO(original_file_data))
+    size = ImageSize(width=img.width, height=img.height)
+    logger.debug(f"图片大小: {size}")
+
     # Generate unique file paths
     timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
     unique_id = uuid.uuid4().hex[:8]
@@ -148,7 +161,7 @@ async def process_image_upload(
         global_config_loaded_from_config_yaml.gcs.bucket,
         file_gcs_path,
     )
-    
+
     # Convert GCS URL to CDN URL
     from app.services.image_transform_service import image_transform_service
     try:
@@ -157,8 +170,8 @@ async def process_image_upload(
     except Exception as transform_error:
         logger.warning(f"Failed to transform URL to CDN: {gcs_url}, error: {str(transform_error)}")
         url = gcs_url  # Fallback to original GCS URL
-    
-    result = ImageUploadResponse(url=url)
+
+    result = ImageUploadResponse(url=url, size=size)
     logger.debug(f"图片 上传 GCS 成功，返回URL: {url}")
 
     # If image was compressed and it's not an avatar, also upload uncompressed version
@@ -173,7 +186,7 @@ async def process_image_upload(
             global_config_loaded_from_config_yaml.gcs.bucket,
             uncompressed_file_gcs_path,
         )
-        
+
         # Convert uncompressed GCS URL to CDN URL
         try:
             uncompressed_url = image_transform_service.transform_mobile(uncompressed_gcs_url)
@@ -181,12 +194,14 @@ async def process_image_upload(
         except Exception as transform_error:
             logger.warning(f"Failed to transform original URL to CDN: {uncompressed_gcs_url}, error: {str(transform_error)}")
             uncompressed_url = uncompressed_gcs_url  # Fallback to original GCS URL
-            
+
         result.original_url = uncompressed_url
 
     # Handle cropping if enabled
     if cropping_avatar:
-        cropped_avatar = crop_avatar(file_data)
+        crop_avatar_result = crop_avatar(file_data)
+        cropped_avatar = crop_avatar_result.image
+        result.avatar_size = crop_avatar_result.size
 
         # Convert PIL Image to bytes for GCS upload
         jpg_data = get_jpg_bytes_from_pil_image(cropped_avatar)
@@ -201,7 +216,7 @@ async def process_image_upload(
             global_config_loaded_from_config_yaml.gcs.bucket,
             cropped_file_gcs_path,
         )
-        
+
         # Convert cropped avatar GCS URL to CDN URL
         try:
             cropped_avatar_url = image_transform_service.transform_mobile(cropped_avatar_gcs_url)
@@ -209,7 +224,7 @@ async def process_image_upload(
         except Exception as transform_error:
             logger.warning(f"Failed to transform avatar URL to CDN: {cropped_avatar_gcs_url}, error: {str(transform_error)}")
             cropped_avatar_url = cropped_avatar_gcs_url  # Fallback to original GCS URL
-            
+
         result.avatar_url = cropped_avatar_url
 
     return APIResponse.success(data=result)

@@ -1,7 +1,16 @@
-from PIL import Image
 import io
 from enum import StrEnum
+
 from loguru import logger
+from PIL import Image
+from pydantic import BaseModel
+
+
+class ImageSize(BaseModel):
+    """Image size"""
+
+    width: int
+    height: int
 
 
 class ImageFormat(StrEnum):
