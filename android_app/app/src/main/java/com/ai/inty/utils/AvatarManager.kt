@@ -40,13 +40,6 @@ object AvatarManager {
         EasyLog.log("AvatarManager: Set generation error: $error")
     }
 
-    fun getAndClearGeneratedAvatarUrl(): String? {
-        val url = generatedAvatarUrl
-        generatedAvatarUrl = null
-        EasyLog.log("AvatarManager: Retrieved and cleared avatar URL: $url")
-        return url
-    }
-
     fun clearGeneratedAvatarUrl() {
         generatedAvatarUrl = null
         generatedAvatarUrls = emptyList()
@@ -60,16 +53,25 @@ object AvatarManager {
 
     fun clearAllAvatarData() {
         clearGeneratedAvatarUrl()
-        EasyLog.log("AvatarManager: Cleared all avatar and background data", priority = EasyLog.DEBUG)
+        EasyLog.log(
+            "AvatarManager: Cleared all avatar and background data",
+            priority = EasyLog.DEBUG
+        )
     }
 
     fun getCurrentAvatarUrl(): String? {
-        EasyLog.log("AvatarManager: Current avatar URL: $generatedAvatarUrl", priority = EasyLog.DEBUG)
+        EasyLog.log(
+            "AvatarManager: Current avatar URL: $generatedAvatarUrl",
+            priority = EasyLog.DEBUG
+        )
         return generatedAvatarUrl
     }
 
     fun getCurrentAvatarUrls(): List<String> {
-        EasyLog.log("AvatarManager: Current avatar URLs: $generatedAvatarUrls", priority = EasyLog.DEBUG)
+        EasyLog.log(
+            "AvatarManager: Current avatar URLs: $generatedAvatarUrls",
+            priority = EasyLog.DEBUG
+        )
         return generatedAvatarUrls
     }
 
@@ -80,17 +82,6 @@ object AvatarManager {
     fun setSelectedImageIndex(index: Int) {
         selectedImageIndex = index
         EasyLog.log("AvatarManager: Set selected image index: $index")
-    }
-
-    fun getSelectedAvatarUrl(): String? {
-        return when {
-            generatedAvatarUrls.isNotEmpty() && selectedImageIndex < generatedAvatarUrls.size -> {
-                generatedAvatarUrls[selectedImageIndex]
-            }
-
-            generatedAvatarUrl != null -> generatedAvatarUrl
-            else -> null
-        }
     }
 
     fun isGenerating(): Boolean {
@@ -112,25 +103,4 @@ object AvatarManager {
         EasyLog.log("AvatarManager: Set chat background URL: $url")
     }
 
-    fun getChatBackgroundUrl(): String? {
-        return chatBackgroundUrl
-    }
-
-    fun clearChatBackground() {
-        chatBackgroundUrl = null
-        EasyLog.log("AvatarManager: Cleared chat background URL")
-    }
-
-    // Helper functions for chat and avatar display logic
-    fun getChatBackgroundForAgent(agent: com.ai.inty.beans.AgentInfo): String? {
-        // Priority: background -> avatar
-        return agent.background.takeIf { it.isNotBlank() }
-            ?: agent.avatar.takeIf { it.isNotBlank() }
-    }
-
-    fun getAvatarForAgent(agent: com.ai.inty.beans.AgentInfo): String? {
-        // Priority: avatar -> background
-        return agent.avatar.takeIf { it.isNotBlank() }
-            ?: agent.background.takeIf { it.isNotBlank() }
-    }
 }

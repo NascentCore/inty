@@ -32,7 +32,6 @@ import com.ai.inty.base.noRippleClickable
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.ui.components.ShimmerPlaceholder
 import com.ai.inty.ui.components.SmartTagsLayout
-import com.ai.inty.utils.AvatarManager
 import com.ai.inty.utils.StableCardHeightManager
 
 
@@ -65,7 +64,7 @@ fun ExploreCharacterCard(
 
     // 获取图片URL
     val imageUrl = remember(agentInfo.id, agentInfo.background, agentInfo.avatar) {
-        AvatarManager.getChatBackgroundForAgent(agentInfo)
+        agentInfo.getLargeBackground() ?: agentInfo.getLargeAvatar()
     }
 
     // 使用AgentInfo中缓存的高度，但保持瀑布流效果
