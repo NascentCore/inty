@@ -23,7 +23,7 @@ class Resource(Base):
 
     id = Column(String, primary_key=True, index=True)
     type = Column(Enum(ResourceType))
-    url = Column(String)
+    url = Column(String, nullable=False, index=True)
     resource_metadata = Column(JSON)  # 存储资源的元数据，如尺寸、格式等
     created_at = Column(DateTime(timezone=True), server_default=sa.text("now()"))
     updated_at = Column(DateTime(timezone=True), onupdate=sa.text("now()"))
