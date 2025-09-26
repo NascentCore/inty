@@ -174,6 +174,20 @@ class AudioManager private constructor(
     }
 
     /**
+     * 停止非当前Agent的音频播放
+     * 用于页面切换时确保只播放当前Agent的音频
+     */
+    fun stopNonCurrentAgentPlayback(currentAgentId: String) {
+        val currentAudioInfo = playbackManager.getCurrentAudioInfo()
+        if (currentAudioInfo?.agentId != currentAgentId && playbackManager.isPlaying()) {
+            EasyLog.log("音频LOG测试 Stopping non-current agent playback: current=${currentAudioInfo?.agentId}, target=$currentAgentId")
+            scope.launch {
+                playbackManager.stopPlayback()
+            }
+        }
+    }
+
+    /**
      * 获取当前播放信息
      */
     fun getCurrentAudioInfo(): AudioInfo? = playbackManager.getCurrentAudioInfo()

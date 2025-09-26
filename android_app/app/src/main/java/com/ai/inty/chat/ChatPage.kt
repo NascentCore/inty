@@ -50,6 +50,7 @@ import com.ai.inty.ui.UnlimitChatDialog
 import com.ai.inty.ui.components.AgentBackground
 import com.ai.inty.utils.TrackScreenView
 import com.ai.inty.viewmodels.ChatViewModel
+import com.inty.utils.log.EasyLog
 import com.inty.utils.storage.IntySetting
 import com.therouter.TheRouter
 import kotlinx.coroutines.launch
@@ -64,6 +65,7 @@ internal fun ChatPage(
     chatViewModel: ChatViewModel,
     showBackButton: Boolean = false,
     onBack: (() -> Unit)? = null,
+    isCurrentPage: Boolean = true,
 ) {
 
     val context = LocalContext.current
@@ -90,6 +92,16 @@ internal fun ChatPage(
     DisposableEffect(chatViewModel) {
         onDispose {
             chatViewModel.resetVoicePlayback()
+        }
+    }
+
+    // 监听agent变化，当agent切换时停止非当前agent的播放
+    LaunchedEffect(agentInfo?.id) {
+        val currentAgentId = agentInfo?.id
+        if (currentAgentId != null) {
+            // 当agent切换时，停止非当前agent的音频播放
+            chatViewModel.stopNonCurrentAgentPlayback()
+            EasyLog.log("Agent切换，停止非当前agent的音频播放: $currentAgentId")
         }
     }
 
@@ -301,7 +313,7 @@ internal fun ChatPage(
                                     runCatching {
                                         //明确数据边界
                                         if (index < items.size) {
-                                            ChatItem(item)
+                                            ChatItem(item, isCurrentPage = isCurrentPage)
                                         }
                                         Spacer(Modifier.height(16.dp))
                                     }.onFailure { e ->
@@ -358,7 +370,7 @@ internal fun ChatPage(
                                     audio_url = agent.opening_audio_url
                                 )
 
-                                ChatItem(openingMessage)
+                                ChatItem(openingMessage, isCurrentPage = isCurrentPage)
                                 Spacer(Modifier.height(16.dp))
                             }
                         }

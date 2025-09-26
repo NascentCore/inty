@@ -156,10 +156,27 @@ class ChatViewModel : BaseActivityViewModel() {
     }
 
     /**
+     * 恢复语音播放（页面恢复时调用）
+     */
+    fun resumeVoicePlayback() {
+        audioManager?.resumePlayback()
+    }
+
+    /**
      * 重置语音播放状态（页面切换时调用）
      */
     fun resetVoicePlayback() {
         audioManager?.resetForPageChange()
+    }
+
+    /**
+     * 停止非当前Agent的音频播放
+     */
+    fun stopNonCurrentAgentPlayback() {
+        val currentAgentId = agentInfo.value?.id
+        if (currentAgentId != null) {
+            audioManager?.stopNonCurrentAgentPlayback(currentAgentId)
+        }
     }
 
     //endregion

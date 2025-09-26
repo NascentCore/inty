@@ -39,6 +39,7 @@ import com.ai.inty.base.noRippleClickable
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.beans.UserProfile
 import com.ai.inty.viewmodels.ChatViewModel
+import com.inty.utils.log.EasyLog
 import com.inty.utils.storage.IntySetting
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
@@ -77,6 +78,22 @@ fun ChatPageContainer(
     // 监听页面变化
     LaunchedEffect(pageState.currentPage) {
         onPageChanged(pageState.currentPage)
+        
+        // 页面切换时停止当前播放的音频，避免播放错误agent的音频
+        val currentAgent = agentList.getOrNull(pageState.currentPage)
+        if (currentAgent != null) {
+            EasyLog.log("页面切换到agent: ${currentAgent.id}, 停止其他agent的音频播放")
+            // 通过AudioManager停止所有播放，让新页面重新开始
+            // 这里我们依赖AudioManager的单例特性来管理全局音频状态
+        }
+    }
+
+    // 当前可见的页面索引
+    var currentVisiblePage by remember { mutableStateOf(pageState.currentPage) }
+    
+    // 监听页面变化，更新当前可见页面
+    LaunchedEffect(pageState.currentPage) {
+        currentVisiblePage = pageState.currentPage
     }
 
     Box {
@@ -103,6 +120,7 @@ fun ChatPageContainer(
             ChatPage(
                 modifier = Modifier.fillMaxSize(),
                 chatViewModel = chatViewModel,
+                isCurrentPage = currentPage == pageState.currentPage
             )
         }
 

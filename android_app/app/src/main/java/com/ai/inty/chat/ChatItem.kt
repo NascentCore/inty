@@ -46,6 +46,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.getSystemService
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ai.inty.R
 import com.ai.inty.audio.AudioInfo
@@ -56,25 +57,28 @@ import com.ai.inty.beans.MsgInfo
 import com.ai.inty.utils.ChatTextFormatter
 import com.ai.inty.viewmodels.ChatViewModel
 import com.inty.utils.log.EasyLog
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 
 /**
  * 复制文本到剪贴板；这是用于测试功能。
  */
 private fun debugOnlyCopyToClipboard(context: Context, text: String) {
-    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+    val clipboard = context.getSystemService<ClipboardManager>()
     val clip = ClipData.newPlainText("Message", text)
-    clipboard.setPrimaryClip(clip)
+    clipboard?.setPrimaryClip(clip)
 }
 
 /**
  * 聊天消息项目组件
  */
 @Composable
-fun ChatItem(item: MsgInfo) {
+fun ChatItem(item: MsgInfo, isCurrentPage: Boolean = true) {
     runCatching {
         when (item.role) {
             "assistant" -> {
-                ChatItemAI(item)
+                ChatItemAI(item, isCurrentPage)
             }
 
             "user" -> {
@@ -109,13 +113,20 @@ fun ChatItem(item: MsgInfo) {
  * AI消息显示组件
  */
 @Composable
-private fun ChatItemAI(item: MsgInfo) {
+private fun ChatItemAI(item: MsgInfo, isCurrentPage: Boolean = true) {
     runCatching {
         Column {
             //播放器按钮
             if (item.content.isNotEmpty() && item.content != "loading_animation") {
                 val viewModel = viewModel<ChatViewModel>()
                 val agentInfo by viewModel.agentInfo.collectAsState()
+                val context = LocalContext.current
+                val audioManager = remember {
+                    com.ai.inty.audio.AudioManager.getInstance(
+                        context,
+                        CoroutineScope(Dispatchers.Main + SupervisorJob())
+                    )
+                }
 
                 // 为每个消息生成唯一的测试URL，避免状态混乱
                 val audioInfo = AudioInfo(
@@ -132,10 +143,20 @@ private fun ChatItemAI(item: MsgInfo) {
 
                 // 检查开场白是否已播放过
                 val hasPlayedOpening = OpeningPlayState.agentOpeningPlayed(agentInfo?.id ?: "")
-                EasyLog.log("音频LOG测试 音频消息allMessages.size ${allMessages.size} ,, isOnlyOpeningMessage:$isOnlyOpeningMessage ,,hasPlayedOpening:$hasPlayedOpening ", EasyLog.WARN)
+                EasyLog.log(
+                    "音频LOG测试 音频消息allMessages.size ${allMessages.size} ,, isOnlyOpeningMessage:$isOnlyOpeningMessage ,,hasPlayedOpening:$hasPlayedOpening ",
+                    EasyLog.WARN
+                )
                 // 开场白自动播放逻辑：只有开场白消息且未播放过
-                val shouldAutoPlay = item.isOpening() && isOnlyOpeningMessage && !hasPlayedOpening
-                EasyLog.log("音频LOG测试 当前音频消息$item ,, 是否要自动播放：$shouldAutoPlay ", EasyLog.WARN)
+                // 增加检查：确保当前播放的音频不是其他agent的，且是当前页面
+                val currentAudioInfo = audioManager.getCurrentAudioInfo()
+                val isCurrentAgentAudio = currentAudioInfo?.agentId == agentInfo?.id
+                val shouldAutoPlay =
+                    item.isOpening() && isOnlyOpeningMessage && !hasPlayedOpening && isCurrentAgentAudio && isCurrentPage
+                EasyLog.log(
+                    "音频LOG测试 当前音频消息$item ,, 是否要自动播放：$shouldAutoPlay (isCurrentAgentAudio: $isCurrentAgentAudio, isCurrentPage: $isCurrentPage) ",
+                    EasyLog.WARN
+                )
                 VoicePlayer(
                     audioInfo = audioInfo,
                     autoPlay = shouldAutoPlay,

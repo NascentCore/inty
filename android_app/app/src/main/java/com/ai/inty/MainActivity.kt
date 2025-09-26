@@ -222,6 +222,14 @@ class MainActivity : BaseActivity() {
         mainViewModel.refreshCreatedAgentsListIfOnTab()
         // 应用恢复时通知billing系统刷新状态
         BillingRepository.notifyAppResumed()
+        // 恢复音频播放（如果有正在播放的音频）
+        chatViewModel.resumeVoicePlayback()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        // 暂停音频播放
+        chatViewModel.pauseVoicePlayback()
     }
 
     override fun onDestroy() {
