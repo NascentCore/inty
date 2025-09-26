@@ -253,7 +253,7 @@ async def process_image_upload(
         format=ImageFormat(file_ext),
         byte_size=len(file_data),
         compressed=was_compressed,
-        uncompressed_image_url=result.url if was_compressed else None,
+        uncompressed_image_url=result.original_url if was_compressed and result.original_url else None,
     )
 
     # Handle cropping if enabled
@@ -294,8 +294,8 @@ async def process_image_upload(
             size=crop_avatar_result.size,
             format=ImageFormat.JPEG,
             byte_size=len(jpg_data),
+            compressed=True,
             cropped=True,
-            # This is the original image URL.
             uncropped_image_url=result.url,
         )
 

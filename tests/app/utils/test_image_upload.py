@@ -138,7 +138,7 @@ class TestUploadImage:
             "content_type": "image/jpeg",
             "byte_size": 15456,
             "compressed": True,
-            "uncompressed_image_url": f"https://storage.googleapis.com/test-bucket/{user_id}/image.jpg",
+            "uncompressed_image_url": f"https://storage.googleapis.com/test-bucket/{user_id}/original.png",
             "cropped": False,
             "uncropped_image_url": None,
         }, f"图片资源记录不正确，实际结果：{image_resource.resource_metadata}"
@@ -176,7 +176,7 @@ class TestUploadImage:
             "size": {"width": 214, "height": 214},
             "content_type": "image/jpeg",
             "byte_size": 11178,
-            "compressed": False,
+            "compressed": True,
             "uncompressed_image_url": None,
             "cropped": True,
             "uncropped_image_url": f"https://storage.googleapis.com/test-bucket/{user_id}/image.jpg",
