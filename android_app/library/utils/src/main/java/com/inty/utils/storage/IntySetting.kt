@@ -3,6 +3,7 @@ package com.inty.utils.storage
 import com.inty.utils.AppEnv
 import com.inty.utils.log.EasyLog
 import com.tencent.mmkv.MMKV
+import kotlin.random.Random
 
 
 object IntySetting {
@@ -250,7 +251,16 @@ object IntySetting {
     fun sortSeed(): Int {
         return curUserSetting.getInt("current_sort_seed", 0)
     }
-
+    
+    //用于首页chat的页面请求数据的seed，每次app启动时生成固定值
+    private var _randomSortSeed: Int? = null
+    fun randomSortSeed(): Int {
+        if (_randomSortSeed == null) {
+            _randomSortSeed = Random.nextInt()
+        }
+        return _randomSortSeed!!
+    }
+    
     fun updateSortSeed(seed: Int) {
         curUserSetting.putInt("current_sort_seed", seed)
     }

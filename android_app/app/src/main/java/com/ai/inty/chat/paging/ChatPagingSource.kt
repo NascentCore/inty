@@ -22,7 +22,7 @@ import kotlinx.coroutines.withContext
  */
 class ChatPagingSource(
     private val useCache: Boolean = true,
-    private val sortSeed: Int = IntySetting.sortSeed()
+    private val sortSeed: Int = IntySetting.randomSortSeed()
 ) : PagingSource<Int, AgentInfo>() {
 
     private val agentApi: IAgentApi by lazy {

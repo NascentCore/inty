@@ -102,11 +102,11 @@ class TtsManager private constructor(
                     is HttpResult.Success -> {
                         val audioUrl = response.data.audio_url
                         if (audioUrl != null && audioUrl.isNotEmpty()) {
-                            EasyLog.log("音频LOG测试 TTS generated successfully: $audioUrl")
+                            EasyLog.log("音频LOG测试 TTS generated successfully: $audioUrl (Agent: $agentId)")
                             onSuccess(audioUrl)
                         } else {
                             EasyLog.log(
-                                "音频LOG测试 TTS generation returned empty audio_url",
+                                "音频LOG测试 TTS generation returned empty audio_url (Agent: $agentId)",
                                 EasyLog.ERROR
                             )
                             onError("TTS生成失败：返回空音频URL")
@@ -115,14 +115,14 @@ class TtsManager private constructor(
 
                     is HttpResult.Failure -> {
                         EasyLog.log(
-                            "音频LOG测试 TTS generation failed: ${response.message}",
+                            "音频LOG测试 TTS generation failed: ${response.message} (Agent: $agentId)",
                             EasyLog.ERROR
                         )
                         onError("TTS生成失败：${response.message}")
                     }
                 }
             } catch (e: Exception) {
-                EasyLog.log("音频LOG测试 TTS generation exception: ${e.message}", EasyLog.ERROR)
+                EasyLog.log("音频LOG测试 TTS generation exception: ${e.message} (Agent: $agentId)", EasyLog.ERROR)
                 onError("TTS生成异常：${e.message}")
             } finally {
                 // 从生成队列中移除
