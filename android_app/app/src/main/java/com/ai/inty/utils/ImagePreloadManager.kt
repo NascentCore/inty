@@ -81,9 +81,6 @@ object ImagePreloadManager {
                     // 使用Coil进行真正的图片预加载缓存
                     preloadImagesToCoilCache(imageUrls, maxConcurrent)
                     EasyLog.log("ImagePreloadManager - 批量预加载图片到Coil缓存完成")
-
-                    // 图片预加载完成后，预计算卡片高度
-                    StableCardHeightManager.preCalculateAndCacheHeights(agents)
                 }
             }
 
@@ -141,9 +138,6 @@ object ImagePreloadManager {
                     // 使用Coil进行关键图片预加载缓存，提高并发数
                     preloadImagesToCoilCache(imageUrls, maxConcurrent = 8)
                     EasyLog.log("ImagePreloadManager - 关键图片批量预加载到Coil缓存完成")
-
-                    // 预计算关键图片的卡片高度
-                    StableCardHeightManager.preCalculateAndCacheHeights(criticalAgents)
                 }
             }
 

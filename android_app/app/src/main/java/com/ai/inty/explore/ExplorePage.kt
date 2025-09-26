@@ -31,7 +31,6 @@ import com.ai.inty.R
 import com.ai.inty.base.IntyImage
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.utils.ImagePreloadManager
-import com.ai.inty.utils.StableCardHeightManager
 import com.ai.inty.utils.TrackScreenView
 
 /**
@@ -47,11 +46,11 @@ fun ExplorePage(
     viewModel: ExploreViewModel = viewModel()
 ) {
     val context = LocalContext.current
-    
+
     // 获取Paging数据流
     val agentsFlow = viewModel.getRecommendAgentsFlow()
     val lazyPagingItems = agentsFlow?.collectAsLazyPagingItems()
-    
+
     // 跟踪ExplorePage页面访问
     TrackScreenView(
         screenName = "ExplorePage",
@@ -64,7 +63,6 @@ fun ExplorePage(
 
     // 初始化图片尺寸缓存管理器和图片预加载管理器
     LaunchedEffect(Unit) {
-        StableCardHeightManager.init(context)
         ImagePreloadManager.init(context)
     }
 
@@ -105,18 +103,21 @@ fun ExplorePage(
                     is LoadState.Loading -> {
                         // 正在加载，保持刷新状态
                     }
+
                     is LoadState.NotLoading -> {
                         if (isRefreshing) {
                             // 刷新完成，隐藏指示器
                             isRefreshing = false
                         }
                     }
+
                     is LoadState.Error -> {
                         if (isRefreshing) {
                             // 刷新失败，也要隐藏指示器
                             isRefreshing = false
                         }
                     }
+
                     null -> {
                         // 无数据状态，如果正在刷新则停止
                         if (isRefreshing) {
