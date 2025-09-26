@@ -80,6 +80,7 @@ def process_single_url(
     logger.info(f"Processing {url_type} URL: {url}")
     image_bytes = download_from_gcs(url)
     size, format, byte_size = get_image_metadata(image_bytes)
+    logger.info(f"Image metadata: {size}, {format}, {byte_size}")
 
     # Check if resource already exists
     existing_resource = db.query(Resource).filter(Resource.url == url).first()
@@ -161,17 +162,18 @@ def main():
         .all()
     )
 
-    try:
-        logger.info(f"Found {len(agents)} agents with image URLs")
-        for agent in agents:
+    logger.info(f"Found {len(agents)} agents with image URLs")
+    for agent in agents:
+        try:
             logger.info(f"Processing agent {agent.id} ({agent.name})")
             process_agent_urls(db, agent)
             logger.info(f"Processed agent {agent.id} ({agent.name})")
-        logger.info("Image size update script completed")
-    except Exception as e:
-        logger.error(f"Error in main: {e}")
-    finally:
-        db.close()
+        except Exception as e:
+            logger.error(
+                f"Skipping, error when processing agent {agent.id} ({agent.name}): {e}"
+            )
+    logger.info("Image size update script completed")
+    db.close()
 
 
 if __name__ == "__main__":
