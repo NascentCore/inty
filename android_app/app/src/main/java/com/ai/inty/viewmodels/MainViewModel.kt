@@ -124,6 +124,10 @@ class MainViewModel : BaseActivityViewModel() {
             )
             return
         }
+        
+        // 切换tab时停止所有音频播放
+        stopAllAudioPlayback()
+        
         _selectedTab.value = tabEntries[tab]
         when (_selectedTab.value) {
             HomeTabIndex.Conversation -> {
@@ -139,6 +143,24 @@ class MainViewModel : BaseActivityViewModel() {
             else -> {
 
             }
+        }
+    }
+    
+    /**
+     * 停止所有音频播放
+     * 用于tab切换时确保音频停止
+     */
+    private fun stopAllAudioPlayback() {
+        try {
+            // 通过AudioManager单例停止所有播放
+            val audioManager = com.ai.inty.audio.AudioManager.getInstance(
+                AppEnv.context, 
+                viewModelScope
+            )
+            audioManager.stopAllPlayback()
+            EasyLog.log("MainViewModel - Tab切换时停止所有音频播放")
+        } catch (e: Exception) {
+            EasyLog.log("MainViewModel - 停止音频播放失败: ${e.message}", EasyLog.ERROR)
         }
     }
 
