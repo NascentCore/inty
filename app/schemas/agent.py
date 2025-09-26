@@ -10,6 +10,7 @@ from app.core.agent.prompt_template import (
 )
 from app.models.agent import AgentStatus, AgentVisibility
 from app.schemas.user import User
+from app.utils.image import ImageSize
 
 
 class AgentMetaData(BaseModel):
@@ -200,7 +201,7 @@ class AgentUpdate(AgentBase):
 
 
 class AgentInDB(AgentBase):
-    """数据库中的AI角色"""
+    """数据库中的AI角色，与 sqlalchemy 模型一一对应"""
 
     id: str
     readable_id: str
@@ -234,12 +235,16 @@ class AgentInDB(AgentBase):
 
 
 class Agent(AgentInDB):
-    """AI角色"""
+    """AI角色，在 sqlalchemy 模型基础上添加额外多表查询来的数据"""
 
     is_followed: bool = False
     follower_count: int = 0
     connector_count: int = 0
     creator: Optional[User] = None
+    # 从 resources 表中读取对应的图片尺寸；注意区分图片的字节大小，指的是文件本身的大小。
+    avatar_size: Optional[ImageSize] = None
+    # 从 resources 表中读取对应的图片尺寸；注意区分图片的字节大小，指的是文件本身的大小。
+    background_size: Optional[ImageSize] = None
 
     # TODO: 考虑如何使用 intro 从而避免重复使用手动变量替换
     @field_serializer("intro")

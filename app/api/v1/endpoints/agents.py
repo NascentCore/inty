@@ -384,7 +384,7 @@ def process_generated_images(generated_images: List[ImagenGeneratedImage]) -> di
     "/generate_background",
     response_model=APIResponse[dict],
     deprecated=True,
-    include_in_schema=True,
+    include_in_schema=False,
     summary="Deprecated, use /generate_background instead",
     description="Deprecated, use /generate_background instead",
 )

@@ -3265,6 +3265,26 @@
                                 "type": "null"
                             }
                         ]
+                    },
+                    "avatar_size": {
+                        "anyOf": [
+                            {
+                                "$ref": "#/components/schemas/ImageSize"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
+                    },
+                    "background_size": {
+                        "anyOf": [
+                            {
+                                "$ref": "#/components/schemas/ImageSize"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
                     }
                 },
                 "type": "object",
@@ -3277,7 +3297,7 @@
                     "created_at"
                 ],
                 "title": "Agent",
-                "description": "AI\u89d2\u8272"
+                "description": "AI\u89d2\u8272\uff0c\u5728 sqlalchemy \u6a21\u578b\u57fa\u7840\u4e0a\u6dfb\u52a0\u989d\u5916\u591a\u8868\u67e5\u8be2\u6765\u7684\u6570\u636e"
             },
             "AgentCreate": {
                 "properties": {
@@ -4557,6 +4577,25 @@
                 },
                 "type": "object",
                 "title": "HTTPValidationError"
+            },
+            "ImageSize": {
+                "properties": {
+                    "width": {
+                        "type": "integer",
+                        "title": "Width"
+                    },
+                    "height": {
+                        "type": "integer",
+                        "title": "Height"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "width",
+                    "height"
+                ],
+                "title": "ImageSize",
+                "description": "Image size"
             },
             "LoginResponse": {
                 "properties": {
