@@ -18,16 +18,10 @@ from app.schemas.response import APIResponse
 from app.utils.crop_avatar import CROPPED_AVATAR_FILENAME_SUFFIX, crop_avatar
 from app.utils.image import (
     ImageFormat,
+    ImageSize,
     compress_png_to_jpeg,
     get_jpg_bytes_from_pil_image,
 )
-
-
-class ImageSize(BaseModel):
-    """Image size"""
-
-    width: int
-    height: int
 
 
 class ImageUploadResponse(BaseModel):
