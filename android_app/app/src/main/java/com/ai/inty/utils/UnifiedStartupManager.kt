@@ -367,14 +367,8 @@ object UnifiedStartupManager {
                     EasyLog.log("UnifiedStartupManager - 推荐agents同步成功: ${agents.size}个")
                     
                     // 异步预加载资源，不阻塞启动流程
-                    kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                    CoroutineScope(Dispatchers.IO).launch {
                         try {
-                            // 先预加载关键图片尺寸（前10个），确保首屏快速渲染
-                            ImagePreloadManager.preloadCriticalImages(agents, 10)
-                            
-                            // 然后预计算卡片高度（基于已缓存的图片尺寸）
-                            StableCardHeightManager.preCalculateAndCacheHeights(agents)
-                            
                             // 预加载关键音频
                             AudioPreloadManager.preloadCriticalOpeningAudios(agents, 5)
                             

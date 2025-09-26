@@ -1,6 +1,7 @@
 package com.ai.inty.beans
 
 import android.os.Parcelable
+import com.ai.inty.utils.getCdnImageUrl
 import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 import kotlinx.parcelize.Parcelize
@@ -43,12 +44,37 @@ data class AgentInfo(
 ) : Parcelable {
     //本地使用的属性数据，非接口字段
     var isDeleted: Boolean = false//标记该agent是否被服务端已经删除
-    
+
     // 缓存的卡片高度（dp），用于避免UI重组时的高度跳动
     var cachedCardHeightDp: Float = 0f
 
-    fun randomAspectRatio():Float{
-        return Random.nextInt(56,75).div(100f)
+    fun randomAspectRatio(): Float {
+        return Random.nextInt(56, 75).div(100f)
+    }
+
+    //头像的url获取，根据尺寸比例 和quality
+    fun getSmallAvatar():String?{
+       return getCdnImageUrl(avatar, width = 128)
+    }
+    fun getMediumAvatar():String?{
+        return getCdnImageUrl(avatar, width = 256)
+    }
+    fun getLargeAvatar():String?{
+        return getCdnImageUrl(avatar, width = 512)
+    }
+
+    //背景图的获取
+    fun getMediumBackground():String?{
+        return getCdnImageUrl(background, width = 540)
+    }
+    fun getLargeBackground():String?{
+        return getCdnImageUrl(background, width = 720)
+    }
+
+
+    //用于显示的图
+    fun getAlbumImage():String?{
+        return getMediumBackground()?:getLargeAvatar()
     }
 }
 

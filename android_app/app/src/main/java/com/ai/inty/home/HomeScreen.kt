@@ -44,6 +44,7 @@ import com.ai.inty.ui.ChatDialogData
 import com.ai.inty.ui.ExpiredVipDialog
 import com.ai.inty.ui.components.ForceUpgradeDialog
 import com.ai.inty.ui.theme.DarkPurple
+import com.ai.inty.utils.TrackScreenView
 import com.ai.inty.viewmodels.ChatViewModel
 import com.ai.inty.viewmodels.HomeTabIndex
 import com.ai.inty.viewmodels.MainViewModel
@@ -88,6 +89,12 @@ fun HomeScreen(
     LaunchedEffect(Unit) {
         exploreViewModel.startListeningPreloadUpdates()
     }
+    
+    // 跟踪HomeScreen页面访问
+    TrackScreenView(
+        screenName = "HomeScreen",
+        screenClass = "MainActivity"
+    )
 
     Scaffold(
         modifier = modifier

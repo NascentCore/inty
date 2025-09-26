@@ -126,17 +126,16 @@ private fun ChatItemAI(item: MsgInfo) {
                     agentId = agentInfo?.id // 使用当前agent的ID
                 )
 
-                // 检查当前消息列表是否只有开场白消息
+                // 检查当前消息列表是否只有开场白消息,避免已经聊过多个消息后，再进入还播放开场白
                 val allMessages by viewModel.msgs.collectAsState()
-                val isOnlyOpeningMessage =
-                    allMessages.size == 1 && allMessages.firstOrNull()?.isOpening() == true
+                val isOnlyOpeningMessage = allMessages.size <= 1
 
                 // 检查开场白是否已播放过
                 val hasPlayedOpening = OpeningPlayState.agentOpeningPlayed(agentInfo?.id ?: "")
-
+                EasyLog.log("音频LOG测试 音频消息allMessages.size ${allMessages.size} ,, isOnlyOpeningMessage:$isOnlyOpeningMessage ,,hasPlayedOpening:$hasPlayedOpening ", EasyLog.WARN)
                 // 开场白自动播放逻辑：只有开场白消息且未播放过
                 val shouldAutoPlay = item.isOpening() && isOnlyOpeningMessage && !hasPlayedOpening
-
+                EasyLog.log("音频LOG测试 当前音频消息$item ,, 是否要自动播放：$shouldAutoPlay ", EasyLog.WARN)
                 VoicePlayer(
                     audioInfo = audioInfo,
                     autoPlay = shouldAutoPlay,

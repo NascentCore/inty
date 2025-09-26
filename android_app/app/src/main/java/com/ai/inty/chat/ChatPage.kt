@@ -48,8 +48,8 @@ import com.ai.inty.ui.AdvancedModelChatDialog
 import com.ai.inty.ui.ChatDialogData
 import com.ai.inty.ui.UnlimitChatDialog
 import com.ai.inty.ui.components.AgentBackground
+import com.ai.inty.utils.TrackScreenView
 import com.ai.inty.viewmodels.ChatViewModel
-import com.inty.utils.log.EasyLog
 import com.inty.utils.storage.IntySetting
 import com.therouter.TheRouter
 import kotlinx.coroutines.launch
@@ -67,6 +67,18 @@ internal fun ChatPage(
 ) {
 
     val context = LocalContext.current
+    val agentInfo by chatViewModel.agentInfo.collectAsState()
+
+    // 跟踪ChatPage页面访问
+    TrackScreenView(
+        screenName = "ChatPage",
+        screenClass = if (showBackButton) "ChatActivity" else "MainActivity",
+        additionalParams = mapOf(
+            "agent_id" to (agentInfo?.id ?: "unknown"),
+            "agent_name" to (agentInfo?.name ?: "unknown"),
+            "show_back_button" to showBackButton
+        )
+    )
 
     LaunchedEffect(chatViewModel) {
         chatViewModel.queryMsgs()
@@ -82,7 +94,6 @@ internal fun ChatPage(
     }
 
     val density = LocalDensity.current
-    val agentInfo by chatViewModel.agentInfo.collectAsState()
     val focusManager = LocalFocusManager.current
 
     // 检测键盘状态

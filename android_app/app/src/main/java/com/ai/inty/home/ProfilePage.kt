@@ -66,6 +66,7 @@ import com.ai.inty.billing.BillingRepository
 import com.ai.inty.billing.VipStatus
 import com.ai.inty.ui.components.ShimmerPlaceholder
 import com.ai.inty.utils.AuthClickable
+import com.ai.inty.utils.TrackScreenView
 import com.inty.utils.formatTimestampToString
 import com.therouter.TheRouter
 
@@ -84,6 +85,19 @@ internal fun ProfilePage(
     onLoadMore: () -> Unit = {},
 ) {
     val context = LocalContext.current
+    
+    // 跟踪ProfilePage页面访问
+    TrackScreenView(
+        screenName = "ProfilePage",
+        screenClass = "MainActivity",
+        additionalParams = mapOf(
+//            "user_id" to userProfile.id,
+            "agent_count" to agents.size,
+            "is_loading" to isLoading,
+//            "user_type" to (userProfile.gender ?: "unknown")
+        )
+    )
+    
     Box(
         modifier = modifier
     ) {
