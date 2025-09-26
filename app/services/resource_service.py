@@ -63,6 +63,7 @@ def delete_resource(db: Session, *, db_resource: models.Resource) -> models.Reso
 
 
 def create_image_resource(
+    # TODO: 使用 AsyncSession 替换 Session
     db: Session,
     user_id: str,
     url: str,

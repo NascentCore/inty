@@ -483,6 +483,7 @@ async def generate_background(
 
         # Create image resource records for each generated image
         # Note: We need to use sync session for create_image_resource
+        # next() 是从生成器中手动提取数据库会话对象的方法，因为我们需要同步会话来调用 create_image_resource 函数。
         sync_db = next(deps.get_db())
         try:
             for cdn_url in cdn_urls:
