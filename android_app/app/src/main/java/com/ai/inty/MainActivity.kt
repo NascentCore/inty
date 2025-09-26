@@ -64,15 +64,15 @@ class MainActivity : BaseActivity() {
 
         mainViewModel.setChatViewModel(chatViewModel)
 
-        // 等待启动管理器完成后再加载需要认证的数据
+        // 立即显示UI，不等待启动管理器完成
+        // 启动管理器会在后台继续加载数据，UI会通过Paging自动更新
         lifecycleScope.launch {
-            // 等待启动管理器完成必要初始化
-            while (UnifiedStartupManager.startupState.value != UnifiedStartupManager.StartupState.UserReady &&
-                   UnifiedStartupManager.startupState.value != UnifiedStartupManager.StartupState.Completed) {
-                delay(100) // 100ms检查一次
+            // 等待启动管理器完成必要初始化（但不等缓存数据）
+            while (UnifiedStartupManager.startupState.value == UnifiedStartupManager.StartupState.Initializing) {
+                delay(50) // 50ms检查一次，更快响应
             }
             
-            EasyLog.log("MainActivity - 启动管理器完成，开始加载用户数据")
+            EasyLog.log("MainActivity - 启动管理器初始化完成，开始加载用户数据")
             
             // 确保用户已登录后再加载需要认证的数据
             if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {

@@ -48,17 +48,13 @@ class ChatPagingSource(
                 if (page == INITIAL_PAGE && useCache) {
                     val cachedAgents = UnifiedStartupManager.getCurrentChatAgents()
                     if (cachedAgents.isNotEmpty()) {
-                        EasyLog.log("ChatPagingSource - 使用缓存数据: ${cachedAgents.size}个")
-                        
                         // 如果有缓存数据，返回缓存数据，同时后台加载网络数据
                         if (shouldUpdateFromNetwork()) {
                             // 后台静默刷新，不阻塞UI
                             loadFromNetworkAsync(page, pageSize)
                         }
                         
-                        // 关键修复：即使缓存数据不足一页，也假设有更多数据
-                        // 这样Paging会继续尝试加载下一页，确保分页功能正常
-                        // 但是要确保缓存数据不为空，避免无限循环
+                        // 返回缓存数据，假设有更多数据以支持分页
                         return@withContext LoadResult.Page(
                             data = cachedAgents,
                             prevKey = null,

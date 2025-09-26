@@ -94,6 +94,12 @@ fun ChatPageContainer(
     val pageState = rememberPagerState(initialPage = safeInitialPage) { agentList.size }
     val scope = rememberCoroutineScope()
 
+    // 新用户引导状态
+    var hasShowGuest by remember { mutableStateOf(IntySetting.hasShowGuest()) }
+    val shouldShowGuide = remember(agentList.size, hasShowGuest) {
+        !hasShowGuest && agentList.size > 1
+    }
+
     // 监听页面变化
     LaunchedEffect(pageState.currentPage) {
         onPageChanged(pageState.currentPage)
@@ -130,6 +136,7 @@ fun ChatPageContainer(
         HorizontalPager(
             modifier = modifier,
             state = pageState,
+            userScrollEnabled = !shouldShowGuide, // 在引导期间禁用用户滑动
         ) { currentPage ->
             // 防止数组越界
             if (currentPage < 0 || currentPage >= agentList.size) {
@@ -172,6 +179,8 @@ fun ChatPageContainer(
         NewUserGuide(
             agentList = agentList,
             pageState = pageState,
+            shouldShowGuide = shouldShowGuide,
+            onGuideCompleted = { hasShowGuest = true }
         )
 
     }
@@ -184,30 +193,29 @@ fun ChatPageContainer(
 private fun NewUserGuide(
     agentList: List<AgentInfo>,
     pageState: PagerState,
+    shouldShowGuide: Boolean,
+    onGuideCompleted: () -> Unit,
 ) {
-    var hasShowGuest by remember { mutableStateOf(IntySetting.hasShowGuest()) }
-
-    // 监听agentList变化，确保在数据加载完成后重新检查显示条件
-    val shouldShowGuide = remember(agentList.size, hasShowGuest) {
-        !hasShowGuest && agentList.size > 1
-    }
 
     if (shouldShowGuide) {
         val density = LocalDensity.current
         val pageScrollPx = with(density) { 80.dp.toPx() }
         var showHand by remember { mutableStateOf(false) }
+        var isGuideActive by remember { mutableStateOf(false) }
         // 保存初始页面索引，确保能正确恢复
         val initialPageIndex = remember { pageState.currentPage }
 
         LaunchedEffect(Unit) {
             delay(3000)
+            isGuideActive = true
             showHand = true
             pageState.animateScrollBy(pageScrollPx)
             delay(1000)
             showHand = false
             pageState.animateScrollToPage(initialPageIndex)
             IntySetting.setShowGuested()
-            hasShowGuest = true
+            onGuideCompleted()
+            isGuideActive = false
         }
 
         AnimatedVisibility(
@@ -224,11 +232,15 @@ private fun NewUserGuide(
                 modifier = Modifier
                     .fillMaxSize()
                     .noRippleClickable {
-                        scope.launch {
-                            showHand = false
-                            pageState.animateScrollToPage(initialPageIndex)
-                            IntySetting.setShowGuested()
-                            hasShowGuest = true
+                        // 只有在引导期间才响应点击
+                        if (isGuideActive) {
+                            scope.launch {
+                                showHand = false
+                                pageState.animateScrollToPage(initialPageIndex)
+                                IntySetting.setShowGuested()
+                                onGuideCompleted()
+                                isGuideActive = false
+                            }
                         }
                     }
             ) {
