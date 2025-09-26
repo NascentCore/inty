@@ -35,61 +35,40 @@ async def _populate_agent_image_sizes(db: AsyncSession, agent: models.Agent) -> 
     """
     从 resources 表填充 agent 的 avatar_size 和 background_size
     """
-    try:
-        # 查询 avatar 和 background 对应的资源信息
-        resource_urls = []
-        if agent.avatar:
-            resource_urls.append(agent.avatar)
-        if agent.background:
-            resource_urls.append(agent.background)
+    # 查询 avatar 和 background 对应的资源信息
+    resource_urls = []
+    if agent.avatar:
+        resource_urls.append(agent.avatar)
+    if agent.background:
+        resource_urls.append(agent.background)
 
-        if not resource_urls:
-            return
+    if not resource_urls:
+        return
 
-        # 查询 resources 表获取图片尺寸信息
-        query = select(models.Resource).where(
-            and_(
-                models.Resource.url.in_(resource_urls),
-                models.Resource.type == ResourceType.IMAGE,
-            )
+    # 查询 resources 表获取图片尺寸信息
+    query = select(models.Resource).where(models.Resource.url.in_(resource_urls))
+
+    result = await db.execute(query)
+    resources = result.scalars().all()
+
+    # 创建 URL 到资源的映射
+    resource_map = {resource.url: resource for resource in resources}
+
+    # 填充 avatar_size
+    if agent.avatar in resource_map:
+        resource = resource_map[agent.avatar]
+        size_data = resource.resource_metadata["size"]
+        agent.avatar_size = ImageSize(
+            width=size_data["width"], height=size_data["height"]
         )
 
-        result = await db.execute(query)
-        resources = result.scalars().all()
-
-        # 创建 URL 到资源的映射
-        resource_map = {resource.url: resource for resource in resources}
-
-        # 填充 avatar_size
-        if agent.avatar and agent.avatar in resource_map:
-            resource = resource_map[agent.avatar]
-            if resource.resource_metadata and "size" in resource.resource_metadata:
-                size_data = resource.resource_metadata["size"]
-                if (
-                    isinstance(size_data, dict)
-                    and "width" in size_data
-                    and "height" in size_data
-                ):
-                    agent.avatar_size = ImageSize(
-                        width=size_data["width"], height=size_data["height"]
-                    )
-
-        # 填充 background_size
-        if agent.background and agent.background in resource_map:
-            resource = resource_map[agent.background]
-            if resource.resource_metadata and "size" in resource.resource_metadata:
-                size_data = resource.resource_metadata["size"]
-                if (
-                    isinstance(size_data, dict)
-                    and "width" in size_data
-                    and "height" in size_data
-                ):
-                    agent.background_size = ImageSize(
-                        width=size_data["width"], height=size_data["height"]
-                    )
-
-    except Exception as e:
-        logger.warning(f"Failed to populate image sizes for agent {agent.id}: {str(e)}")
+    # 填充 background_size
+    if agent.background in resource_map:
+        resource = resource_map[agent.background]
+        size_data = resource.resource_metadata["size"]
+        agent.background_size = ImageSize(
+            width=size_data["width"], height=size_data["height"]
+        )
 
 
 async def generate_agent_opening_voice(
