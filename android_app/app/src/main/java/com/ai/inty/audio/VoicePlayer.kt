@@ -68,6 +68,7 @@ fun VoicePlayer(
     var isGeneratingTts by remember(messageId) { mutableStateOf(false) }
     var ttsGenerationFailed by remember(messageId) { mutableStateOf(false) } // TTS生成是否失败
     var userClickedRecently by remember(messageId) { mutableStateOf(false) } // 用户最近是否点击过
+    var ttsGenerationStartTime by remember(messageId) { mutableLongStateOf(0L) } // TTS生成开始时间
 
     // 监听TTS生成状态
     LaunchedEffect(messageId) {
@@ -75,18 +76,36 @@ fun VoicePlayer(
             // 从AudioManager获取TTS生成状态
             val managerTtsState = audioManager.isGeneratingTtsForMessage(messageId)
 
-            // 同步TTS生成状态，但不要覆盖用户刚刚设置的loading状态
-            // 只有当AudioManager确实开始生成TTS时才更新状态
+            // 同步TTS生成状态
             if (managerTtsState) {
+                if (!isGeneratingTts) {
+                    // TTS刚开始生成，记录开始时间
+                    ttsGenerationStartTime = System.currentTimeMillis()
+                    EasyLog.log("音频LOG测试 TTS generation started for message: $messageId")
+                }
                 isGeneratingTts = true
-                userClickedRecently = false // TTS开始生成，清除用户点击标志
-            } else if (isGeneratingTts && !userClickedRecently) {
-                // 只有当之前确实在生成TTS且现在完成且用户没有最近点击时才更新
+                // 不要立即清除userClickedRecently，保持用户点击状态
+            } else if (isGeneratingTts) {
+                // TTS生成完成或失败，重置状态
                 isGeneratingTts = false
+                userClickedRecently = false
+                ttsGenerationStartTime = 0L
+                EasyLog.log("音频LOG测试 TTS generation completed/failed for message: $messageId")
+            }
+            
+            // 检查TTS生成超时（30秒超时）
+            if (isGeneratingTts && ttsGenerationStartTime > 0) {
+                val elapsedTime = System.currentTimeMillis() - ttsGenerationStartTime
+                if (elapsedTime > 30000) { // 30秒超时
+                    EasyLog.log("音频LOG测试 TTS generation timeout for message: $messageId, elapsed: ${elapsedTime}ms", EasyLog.ERROR)
+                    isGeneratingTts = false
+                    ttsGenerationFailed = true
+                    userClickedRecently = false
+                    ttsGenerationStartTime = 0L
+                }
             }
 
             // 如果TTS生成完成且之前失败过，重置失败状态
-            // 注意：只有在用户重新点击时才重置失败状态，避免自动重置
             if (!managerTtsState && ttsGenerationFailed && userClickedRecently) {
                 // 用户重新点击后，重置失败状态
                 ttsGenerationFailed = false
@@ -136,6 +155,14 @@ fun VoicePlayer(
                     isGeneratingTts = false
                     userClickedRecently = false
                     EasyLog.log("音频LOG测试 Playback started, clearing TTS generation state")
+                    
+                    // 开场白播放开始时立即标记为已播放
+                    if (messageId.contains("_assistant_")) {
+                        audioInfo.agentId?.let { agentId ->
+                            OpeningPlayState.openingPlayedAsync(agentId)
+                            EasyLog.log("音频LOG测试 Marked opening as played for agent: $agentId")
+                        }
+                    }
                 }
 
                 EasyLog.log("音频LOG测试 VoicePlayer state updated: messageId=$messageId, isPlaying=$isPlaying (was: $wasPlaying), state=$state, isLoading=$isLoading (was: $wasLoading), isGeneratingTts=$isGeneratingTts")
@@ -229,6 +256,11 @@ fun VoicePlayer(
             if (isGeneratingTts && !ttsGenerationFailed) {
                 EasyLog.log("音频LOG测试 Click ignored due to TTS generation in progress")
                 return@ChatVoicePlayer
+            }
+            
+            // 如果TTS生成失败，允许用户重新点击
+            if (ttsGenerationFailed) {
+                EasyLog.log("音频LOG测试 TTS generation failed, allowing retry")
             }
 
             val isCurrentMessage = currentAudioInfo?.messageId == messageId

@@ -1,8 +1,9 @@
-package com.ai.inty.explore
+package com.ai.inty.chat.paging
 
 import androidx.paging.PagingSource
 import androidx.paging.PagingState
 import com.ai.inty.beans.AgentInfo
+import com.ai.inty.chat.constants.ChatConstants
 import com.ai.inty.net.IAgentApi
 import com.ai.inty.utils.AgentCacheManager
 import com.ai.inty.utils.UnifiedStartupManager
@@ -15,10 +16,11 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
- * Explore页面的Paging数据源
- * 负责处理推荐agents的分页加载、缓存管理
+ * Chat页面的Paging数据源
+ * 负责处理聊天agents的分页加载、缓存管理
+ * 使用chatAgents API，与exploreAgents区分开
  */
-class ExplorePagingSource(
+class ChatPagingSource(
     private val useCache: Boolean = true,
     private val sortSeed: Int = IntySetting.sortSeed()
 ) : PagingSource<Int, AgentInfo>() {
@@ -30,8 +32,8 @@ class ExplorePagingSource(
 
     companion object {
         // 使用统一的常量
-        private const val PAGE_SIZE = ExploreConstants.PAGE_SIZE
-        private const val INITIAL_PAGE = ExploreConstants.INITIAL_PAGE
+        private const val PAGE_SIZE = ChatConstants.PAGE_SIZE
+        private const val INITIAL_PAGE = ChatConstants.INITIAL_PAGE
     }
 
     override suspend fun load(params: LoadParams<Int>): LoadResult<Int, AgentInfo> {
@@ -40,13 +42,13 @@ class ExplorePagingSource(
                 val page = params.key ?: INITIAL_PAGE
                 val pageSize = params.loadSize.coerceAtMost(PAGE_SIZE)
                 
-                EasyLog.log("ExplorePagingSource - 加载第${page}页，页面大小: ${pageSize}")
+                EasyLog.log("ChatPagingSource - 加载第${page}页，页面大小: ${pageSize}")
 
                 // 第一页特殊处理：优先使用缓存数据
                 if (page == INITIAL_PAGE && useCache) {
-                    val cachedAgents = UnifiedStartupManager.getCurrentRecommendedAgents()
+                    val cachedAgents = UnifiedStartupManager.getCurrentChatAgents()
                     if (cachedAgents.isNotEmpty()) {
-                        EasyLog.log("ExplorePagingSource - 使用缓存数据: ${cachedAgents.size}个")
+                        EasyLog.log("ChatPagingSource - 使用缓存数据: ${cachedAgents.size}个")
                         
                         // 如果有缓存数据，返回缓存数据，同时后台加载网络数据
                         if (shouldUpdateFromNetwork()) {
@@ -75,9 +77,9 @@ class ExplorePagingSource(
                         
                         // 缓存第一页数据
                         if (page == INITIAL_PAGE && agents.isNotEmpty()) {
-                            AgentCacheManager.cacheAgents(agents)
-                            UnifiedStartupManager.refreshRecommendedAgents()
-                            EasyLog.log("ExplorePagingSource - 缓存第一页数据: ${agents.size}个")
+                            AgentCacheManager.cacheChatAgents(agents)
+                            UnifiedStartupManager.refreshChatAgents()
+                            EasyLog.log("ChatPagingSource - 缓存第一页数据: ${agents.size}个")
                         }
                         
                         LoadResult.Page(
@@ -88,13 +90,13 @@ class ExplorePagingSource(
                     }
                     
                     is NetworkResult.Error -> {
-                        EasyLog.log("ExplorePagingSource - 网络加载失败: ${result.error}", EasyLog.ERROR)
+                        EasyLog.log("ChatPagingSource - 网络加载失败: ${result.error}", EasyLog.ERROR)
                         LoadResult.Error(Exception(result.error))
                     }
                 }
                 
             } catch (e: Exception) {
-                EasyLog.log("ExplorePagingSource - 加载异常: ${e.message}", EasyLog.ERROR)
+                EasyLog.log("ChatPagingSource - 加载异常: ${e.message}", EasyLog.ERROR)
                 LoadResult.Error(e)
             }
         }
@@ -113,7 +115,7 @@ class ExplorePagingSource(
      */
     private suspend fun loadFromNetwork(page: Int, pageSize: Int): NetworkResult {
         return try {
-            val result = agentApi.exploreAgents(
+            val result = agentApi.chatAgents(
                 page = page,
                 pageSize = pageSize,
                 sort_seed = sortSeed.toString()
@@ -143,13 +145,13 @@ class ExplorePagingSource(
                 if (result is NetworkResult.Success) {
                     val agents = result.data.list ?: emptyList()
                     if (agents.isNotEmpty()) {
-                        AgentCacheManager.cacheAgents(agents)
-                        UnifiedStartupManager.refreshRecommendedAgents()
-                        EasyLog.log("ExplorePagingSource - 后台刷新完成: ${agents.size}个")
+                        AgentCacheManager.cacheChatAgents(agents)
+                        UnifiedStartupManager.refreshChatAgents()
+                        EasyLog.log("ChatPagingSource - 后台刷新完成: ${agents.size}个")
                     }
                 }
             } catch (e: Exception) {
-                EasyLog.log("ExplorePagingSource - 后台刷新失败: ${e.message}", EasyLog.ERROR)
+                EasyLog.log("ChatPagingSource - 后台刷新失败: ${e.message}", EasyLog.ERROR)
             }
         }
     }

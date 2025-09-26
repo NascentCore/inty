@@ -37,6 +37,9 @@ object UnifiedStartupManager {
     private val _recommendedAgents = MutableStateFlow<List<AgentInfo>>(emptyList())
     val recommendedAgents: StateFlow<List<AgentInfo>> = _recommendedAgents.asStateFlow()
     
+    private val _chatAgents = MutableStateFlow<List<AgentInfo>>(emptyList())
+    val chatAgents: StateFlow<List<AgentInfo>> = _chatAgents.asStateFlow()
+    
     // 启动进度
     private val _startupProgress = MutableStateFlow(0f)
     val startupProgress: StateFlow<Float> = _startupProgress.asStateFlow()
@@ -151,9 +154,10 @@ object UnifiedStartupManager {
                 // 优先加载缓存数据（非阻塞）
                 loadCacheDataNonBlocking()
                 
-                // 如果已登录，立即同步recommend agents
+                // 如果已登录，立即同步recommend agents和chat agents
                 if (isUserLoggedIn()) {
                     syncRecommendedAgents()
+                    syncChatAgents()
                 }
                 
                 EasyLog.log("UnifiedStartupManager - 关键数据加载完成")
@@ -205,9 +209,16 @@ object UnifiedStartupManager {
             cachedAgents
         }
         
+        val chatAgentsDeferred = startupScope.async { 
+            val cachedChatAgents = AgentCacheManager.getCachedChatAgents()
+            EasyLog.log("UnifiedStartupManager - 加载缓存chat agents: ${cachedChatAgents.size}个")
+            cachedChatAgents
+        }
+        
         // 等待缓存数据加载完成
         _userProfile.value = userProfileDeferred.await()
         _recommendedAgents.value = agentsDeferred.await()
+        _chatAgents.value = chatAgentsDeferred.await()
         
         _startupState.value = StartupState.CacheLoaded
         _startupProgress.value = 0.3f
@@ -231,6 +242,10 @@ object UnifiedStartupManager {
             val cachedAgents = AgentCacheManager.getCachedAgents()
             _recommendedAgents.value = cachedAgents
             EasyLog.log("UnifiedStartupManager - 加载缓存agents: ${cachedAgents.size}个")
+            
+            val cachedChatAgents = AgentCacheManager.getCachedChatAgents()
+            _chatAgents.value = cachedChatAgents
+            EasyLog.log("UnifiedStartupManager - 加载缓存chat agents: ${cachedChatAgents.size}个")
             
         } catch (e: Exception) {
             EasyLog.log("UnifiedStartupManager - 缓存数据加载异常: ${e.message}", EasyLog.ERROR)
@@ -276,9 +291,14 @@ object UnifiedStartupManager {
             syncRecommendedAgents()
         }
         
+        val chatAgentsTask = startupScope.async {
+            syncChatAgents()
+        }
+        
         // 等待网络同步完成
         userProfileTask.await()
         agentsTask.await()
+        chatAgentsTask.await()
         
         _startupState.value = StartupState.NetworkUpdated
         _startupProgress.value = 0.9f
@@ -353,7 +373,7 @@ object UnifiedStartupManager {
                 ?: throw IllegalStateException("IAgentApi not found")
             
             val sortSeed = IntySetting.sortSeed()
-            val result = agentApi.recommendAgents(
+            val result = agentApi.exploreAgents(
                 page = 1, 
                 pageSize = ExploreConstants.PAGE_SIZE, // 使用统一的页面大小
                 sort_seed = sortSeed.toString()
@@ -390,6 +410,51 @@ object UnifiedStartupManager {
     }
     
     /**
+     * 同步聊天agents
+     */
+    private suspend fun syncChatAgents() {
+        try {
+            val agentApi: IAgentApi = TheRouter.get(IAgentApi::class.java)
+                ?: throw IllegalStateException("IAgentApi not found")
+            
+            val sortSeed = IntySetting.sortSeed()
+            val result = agentApi.chatAgents(
+                page = 1, 
+                pageSize = com.ai.inty.chat.constants.ChatConstants.PAGE_SIZE, // 使用聊天页面大小
+                sort_seed = sortSeed.toString()
+            )
+            
+            when (result) {
+                is HttpResult.Success -> {
+                    val agents = result.data.list ?: emptyList()
+                    AgentCacheManager.cacheChatAgents(agents)
+                    _chatAgents.value = agents
+                    EasyLog.log("UnifiedStartupManager - 聊天agents同步成功: ${agents.size}个")
+                    
+                    // 异步预加载资源，不阻塞启动流程
+                    CoroutineScope(Dispatchers.IO).launch {
+                        try {
+                            // 预加载关键音频
+                            AudioPreloadManager.preloadCriticalOpeningAudios(agents, 5)
+                            
+                            // 最后预加载所有资源，优化后续页面渲染
+                            ImagePreloadManager.preloadAgentsImages(agents, 5)
+                            AudioPreloadManager.preloadAgentsOpeningAudios(agents, 3)
+                        } catch (e: Exception) {
+                            EasyLog.log("UnifiedStartupManager - 聊天agents资源预加载异常: ${e.message}", EasyLog.ERROR)
+                        }
+                    }
+                }
+                is HttpResult.Failure -> {
+                    EasyLog.log("UnifiedStartupManager - 聊天agents同步失败: ${result.message}", EasyLog.WARN)
+                }
+            }
+        } catch (e: Exception) {
+            EasyLog.log("UnifiedStartupManager - 聊天agents同步异常: ${e.message}", EasyLog.ERROR)
+        }
+    }
+    
+    /**
      * 获取当前用户信息
      */
     fun getCurrentUserProfile(): UserProfile? {
@@ -404,6 +469,13 @@ object UnifiedStartupManager {
     }
     
     /**
+     * 获取当前聊天agents
+     */
+    fun getCurrentChatAgents(): List<AgentInfo> {
+        return _chatAgents.value
+    }
+    
+    /**
      * 检查是否已完成启动
      */
     fun isStartupCompleted(): Boolean {
@@ -414,7 +486,7 @@ object UnifiedStartupManager {
      * 检查是否有缓存数据
      */
     fun hasCacheData(): Boolean {
-        return _recommendedAgents.value.isNotEmpty() || _userProfile.value != null
+        return _recommendedAgents.value.isNotEmpty() || _chatAgents.value.isNotEmpty() || _userProfile.value != null
     }
     
     /**
@@ -423,6 +495,15 @@ object UnifiedStartupManager {
     fun refreshRecommendedAgents() {
         startupScope.launch {
             syncRecommendedAgents()
+        }
+    }
+    
+    /**
+     * 手动刷新聊天agents
+     */
+    fun refreshChatAgents() {
+        startupScope.launch {
+            syncChatAgents()
         }
     }
     
@@ -441,6 +522,7 @@ object UnifiedStartupManager {
     fun clearAllData() {
         _userProfile.value = null
         _recommendedAgents.value = emptyList()
+        _chatAgents.value = emptyList()
         _startupProgress.value = 0f
         _startupState.value = StartupState.Initializing
         _currentPhase.value = StartupPhase.Initializing
