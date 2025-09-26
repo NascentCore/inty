@@ -69,7 +69,7 @@ class TestUploadImage:
         )
         base_path = "images/uploads"
 
-        # Mock GCS 上传函数，返回固定的 URL
+        # Mock GCS 上传函数，返回对应 user_id 的 URL，这样保证多次运行测试相互无干扰。
         mock_gcs_url = f"https://storage.googleapis.com/test-bucket/{user_id}/image.jpg"
         mock_gcs_avatar_url = (
             f"https://storage.googleapis.com/test-bucket/{user_id}/avatar.jpg"
@@ -172,7 +172,8 @@ class TestUploadImage:
         )
         assert avatar_resource.resource_metadata == {
             "creator": user_id,
-            "size": {"width": 320, "height": 214},
+            # 扣脸图片大小为 214x214；这个符合上面返回的信息
+            "size": {"width": 214, "height": 214},
             "content_type": "image/jpeg",
             "byte_size": 11178,
             "compressed": False,
