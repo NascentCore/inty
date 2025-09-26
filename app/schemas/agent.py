@@ -10,6 +10,7 @@ from app.core.agent.prompt_template import (
 )
 from app.models.agent import AgentStatus, AgentVisibility
 from app.schemas.user import User
+from app.utils.image import ImageSize
 
 
 class AgentMetaData(BaseModel):
@@ -103,7 +104,11 @@ class AgentBase(BaseModel):
     name: str
     gender: str
     avatar: Optional[str] = None
+    # 从 resources 表中读取对应的图片尺寸；注意区分图片的字节大小，指的是文件本身的大小。
+    avatar_size: Optional[ImageSize] = None
     background: Optional[str] = None
+    # 从 resources 表中读取对应的图片尺寸；注意区分图片的字节大小，指的是文件本身的大小。
+    background_size: Optional[ImageSize] = None
     background_images: Optional[List[str]] = None
     voice_id: Optional[str] = None
     settings: Optional[Dict[str, Any]] = None
