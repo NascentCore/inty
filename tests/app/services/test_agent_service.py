@@ -120,14 +120,12 @@ def test_process_agent_image_urls():
         result = process_agent_image_urls(agent_data)
 
         # Verify that all image URLs are collected in background_images
-        expected_urls = {
+        assert result["background_images"] == [
             "https://storage.googleapis.com/test-bucket/avatar.jpg",
             "https://storage.googleapis.com/test-bucket/background.jpg",
             "https://storage.googleapis.com/test-bucket/photo1.jpg",
             "https://storage.googleapis.com/test-bucket/photo2.jpg",
-        }
-        assert set(result["background_images"]) == expected_urls
-        assert len(result["background_images"]) == 4
+        ]
         assert (
             result["avatar"] == "https://storage.googleapis.com/test-bucket/avatar.jpg"
         )
