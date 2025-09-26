@@ -1013,55 +1013,6 @@
                 }
             }
         },
-        "/api/v1/ai/agents/generate_background": {
-            "post": {
-                "tags": [
-                    "agents",
-                    "characters"
-                ],
-                "summary": "Deprecated, use /generate_background instead",
-                "description": "Deprecated, use /generate_background instead",
-                "operationId": "generate_background_api_v1_ai_agents_generate_background_post",
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/TextToImageRequest"
-                            }
-                        }
-                    },
-                    "required": true
-                },
-                "responses": {
-                    "200": {
-                        "description": "Successful Response",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/APIResponse_dict_"
-                                }
-                            }
-                        }
-                    },
-                    "422": {
-                        "description": "Validation Error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/HTTPValidationError"
-                                }
-                            }
-                        }
-                    }
-                },
-                "deprecated": true,
-                "security": [
-                    {
-                        "Bearer": []
-                    }
-                ]
-            }
-        },
         "/api/v1/chats/": {
             "get": {
                 "tags": [
@@ -5819,60 +5770,6 @@
                     "AGENT"
                 ],
                 "title": "TargetType"
-            },
-            "TextToImageRequest": {
-                "properties": {
-                    "prompt": {
-                        "type": "string",
-                        "title": "Prompt",
-                        "description": "Text description of the image, typically a list of comma separated keywords/tags/properties"
-                    },
-                    "negative_prompt": {
-                        "anyOf": [
-                            {
-                                "type": "string"
-                            },
-                            {
-                                "type": "null"
-                            }
-                        ],
-                        "title": "Negative Prompt",
-                        "description": "Negative prompt to avoid generating images with certain features, e.g. 'blurry, low quality, explicit, NSFW'"
-                    },
-                    "enhance_prompt": {
-                        "anyOf": [
-                            {
-                                "type": "boolean"
-                            },
-                            {
-                                "type": "null"
-                            }
-                        ],
-                        "title": "Enhance Prompt",
-                        "description": "Whether to enhance the prompt to improve the quality of the image. The default is True for backward comaptibility. This enhancement is different than the underlying imagen API's own enhancement. This parameter is also required to allow this api to be used as a text-to-image wrapper. As a wrapper, we'll not want to apply enhancement to the prompt. ",
-                        "default": true
-                    },
-                    "count": {
-                        "type": "integer",
-                        "maximum": 4.0,
-                        "minimum": 1.0,
-                        "title": "Count",
-                        "description": "Number of images to generate",
-                        "default": 4
-                    }
-                },
-                "type": "object",
-                "required": [
-                    "prompt"
-                ],
-                "title": "TextToImageRequest",
-                "description": "Text to image request",
-                "example": {
-                    "count": 2,
-                    "enhance_prompt": true,
-                    "negative_prompt": "blurry, low quality, explicit, NSFW",
-                    "prompt": "A beautiful mountain landscape with sunset"
-                }
             },
             "UsageStatisticsResponse": {
                 "properties": {
