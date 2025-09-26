@@ -63,7 +63,7 @@ def _create_image_resource(
         ),
         user_id=user_id,
     )
-    logger.debug(f"创建图片资源记录成功，ID: {resource.id}")
+    logger.debug(f"创建图片资源记录成功，URL: {resource.url}")
 
 
 class ImageUploadResponse(BaseModel):
@@ -245,6 +245,18 @@ async def process_image_upload(
             byte_size=len(original_file_data),
         )
 
+    # Create resource record for the compressed image
+    _create_image_resource(
+        db=db,
+        user_id=user_id,
+        url=url,
+        size=size,
+        format=ImageFormat(file_ext),
+        byte_size=len(file_data),
+        compressed=was_compressed,
+        uncompressed_image_url=result.url if was_compressed else None,
+    )
+
     # Handle cropping if enabled
     if cropping_avatar:
         crop_avatar_result = crop_avatar(file_data)
@@ -286,20 +298,6 @@ async def process_image_upload(
             cropped=True,
             # This is the original image URL.
             uncropped_image_url=result.url,
-        )
-
-        # Write cropped avatar image metadata.
-        _create_image_resource(
-            db=db,
-            user_id=user_id,
-            url=cropped_avatar_url,
-            size=crop_avatar_result.size,
-            format=ImageFormat.JPEG,
-            filename=f"{file.filename}_avatar",
-            content_type=f"image/{ImageFormat.JPEG}",
-            original_size_bytes=len(jpg_data),
-            compressed=True,
-            avatar_cropped=True,
         )
 
     return APIResponse.success(data=result)
