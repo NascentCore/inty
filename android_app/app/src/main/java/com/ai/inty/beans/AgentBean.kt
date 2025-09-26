@@ -74,7 +74,7 @@ data class AgentInfo(
 
     //用于显示的图
     fun getAlbumImage():String?{
-        return getMediumBackground()?:getLargeAvatar()
+        return getLargeBackground()?.ifEmpty { getLargeAvatar() }
     }
 }
 

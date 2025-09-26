@@ -67,6 +67,7 @@ import com.ai.inty.billing.VipStatus
 import com.ai.inty.ui.components.ShimmerPlaceholder
 import com.ai.inty.utils.AuthClickable
 import com.ai.inty.utils.TrackScreenView
+import com.ai.inty.utils.getCdnImageUrl
 import com.inty.utils.formatTimestampToString
 import com.therouter.TheRouter
 
@@ -145,7 +146,7 @@ internal fun ProfilePage(
                     ) {
                         IntyCircleImage(
                             modifier = Modifier.fillMaxSize(),
-                            url = userProfile.avatar,
+                            url = getCdnImageUrl(userProfile.avatar, width = 512),
                             placeholderResID = R.drawable.app_icon
                         )
                     }

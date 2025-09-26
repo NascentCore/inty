@@ -44,6 +44,7 @@ import com.ai.inty.base.RedDot
 import com.ai.inty.beans.ConversationItem
 import com.ai.inty.utils.AuthClickable
 import com.ai.inty.utils.TrackScreenView
+import com.ai.inty.utils.getCdnImageUrl
 
 
 /**
@@ -67,7 +68,7 @@ fun ConversationsPage(
             "is_loading" to isLoadingConversations
         )
     )
-    
+
     Box(modifier = modifier) {
         IntyImage(
             modifier = Modifier.align(Alignment.TopEnd),
@@ -272,7 +273,7 @@ fun ChatHistoryItem(
             modifier = Modifier
                 .size(56.dp)
                 .clip(CircleShape),
-            model = conversation.agentAvatar,
+            model = getCdnImageUrl(conversation.agentAvatar, width = 128),
             placeholder = painterResource(placeholderID)
         )
 
