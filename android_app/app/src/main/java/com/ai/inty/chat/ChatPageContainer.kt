@@ -17,6 +17,7 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -34,25 +35,46 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.paging.compose.collectAsLazyPagingItems
 import com.ai.inty.R
 import com.ai.inty.base.noRippleClickable
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.beans.UserProfile
+import com.ai.inty.chat.viewmodel.ChatTabViewModel
 import com.inty.utils.log.EasyLog
 import com.inty.utils.storage.IntySetting
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+/**
+ * ChatPageContainer - 支持分页加载的聊天页面容器
+ * 使用Paging库实现分页加载更多agents，提供更流畅的滑动体验
+ */
 @Composable
 fun ChatPageContainer(
     modifier: Modifier,
     viewModelFactory: ViewModelProvider.Factory,
-    agentList: List<AgentInfo>,
+    chatTabViewModel: ChatTabViewModel,
     userProfile: UserProfile,
     currentPageIndex: Int = 0,
     onPageChanged: (Int) -> Unit = {},
 ) {
+    // 获取Paging数据流
+    val agentsFlow = chatTabViewModel.getChatAgentsFlow()
+    val agentsPagingItems = agentsFlow?.collectAsLazyPagingItems() ?: return
+    
+    // 获取当前加载的agents列表
+    val agentList = remember(agentsPagingItems.itemCount) {
+        val list = mutableListOf<AgentInfo>()
+        for (i in 0 until agentsPagingItems.itemCount) {
+            agentsPagingItems[i]?.let { agent ->
+                list.add(agent)
+            }
+        }
+        list
+    }
+    
     // 如果 agentList 为空，显示空状态
     if (agentList.isEmpty()) {
         Box(
@@ -87,14 +109,22 @@ fun ChatPageContainer(
             // 给新页面一点时间初始化
             delay(100)
         }
+        
+        // 预加载逻辑：当用户接近最后一页时，触发加载更多数据
+        val currentPage = pageState.currentPage
+        val totalPages = agentList.size
+        if (currentPage >= totalPages - 2 && totalPages > 0) { // 距离最后一页还有2页时开始预加载
+            EasyLog.log("ChatPageContainer - 触发预加载，当前页: $currentPage, 总页数: $totalPages")
+            // 触发Paging加载更多数据
+            agentsPagingItems.retry()
+        }
     }
 
-    // 当前可见的页面索引
-    var currentVisiblePage by remember { mutableStateOf(pageState.currentPage) }
-    
-    // 监听页面变化，更新当前可见页面
-    LaunchedEffect(pageState.currentPage) {
-        currentVisiblePage = pageState.currentPage
+    // 监听Paging数据变化，更新页面状态
+    LaunchedEffect(agentsPagingItems.itemCount) {
+        if (agentsPagingItems.itemCount > 0) {
+            EasyLog.log("ChatPageContainer - Paging数据更新，总页数: ${agentsPagingItems.itemCount}")
+        }
     }
 
     Box {
@@ -131,9 +161,21 @@ fun ChatPageContainer(
             pageState = pageState,
             scope = scope
         )
-
+        
+        // 加载状态指示器
+        if (agentsPagingItems.loadState.append is androidx.paging.LoadState.Loading) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(16.dp)
+            ) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(24.dp),
+                    strokeWidth = 2.dp
+                )
+            }
+        }
     }
-
 }
 
 /**

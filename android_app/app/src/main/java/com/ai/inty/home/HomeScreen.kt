@@ -39,6 +39,7 @@ import com.ai.inty.billing.BillingRepository
 import com.ai.inty.billing.VipStatusHelper
 import com.ai.inty.chat.ChatPageContainer
 import com.ai.inty.chat.ChatViewModel
+import com.ai.inty.chat.viewmodel.ChatTabViewModel
 import com.ai.inty.explore.ExplorePage
 import com.ai.inty.explore.ExploreViewModel
 import com.ai.inty.ui.ChatDialogData
@@ -77,17 +78,22 @@ fun HomeScreen(
     val selectedTab = mainViewModel.selectedTab.collectAsState()
     val context = LocalContext.current
 
-    // 创建ExploreViewModel实例，用于ChatTab和ExploreTab共享推荐agents数据
+    // 创建ExploreViewModel实例，用于ExploreTab
     val exploreViewModel: ExploreViewModel = viewModel()
+    
+    // 创建ChatTabViewModel实例，用于ChatTab
+    val chatTabViewModel: ChatTabViewModel = viewModel()
 
     // 初始化Paging数据
     LaunchedEffect(Unit) {
         exploreViewModel.initializePagingData()
+        chatTabViewModel.initializePagingData()
     }
     
     // 启动预加载数据监听
     LaunchedEffect(Unit) {
         exploreViewModel.startListeningPreloadUpdates()
+        chatTabViewModel.startListeningPreloadUpdates()
     }
     
     // 跟踪HomeScreen页面访问
@@ -117,6 +123,7 @@ fun HomeScreen(
             mainViewModel = mainViewModel,
             chatViewModel = chatViewModel,
             exploreViewModel = exploreViewModel,
+            chatTabViewModel = chatTabViewModel,
             viewModelFactory = viewModelFactory,
             context = context,
             innerPadding = innerPadding
@@ -233,6 +240,7 @@ private fun HomeContent(
     mainViewModel: MainViewModel,
     chatViewModel: ChatViewModel,
     exploreViewModel: ExploreViewModel,
+    chatTabViewModel: ChatTabViewModel,
     viewModelFactory: ViewModelProvider.Factory,
     context: Context,
     innerPadding: PaddingValues,
@@ -241,7 +249,7 @@ private fun HomeContent(
         HomeTabIndex.Chat -> {
             ChatTabContent(
                 mainViewModel = mainViewModel,
-                exploreViewModel = exploreViewModel,
+                chatTabViewModel = chatTabViewModel,
                 viewModelFactory = viewModelFactory
             )
         }
@@ -280,17 +288,16 @@ private fun HomeContent(
 @Composable
 private fun ChatTabContent(
     mainViewModel: MainViewModel,
-    exploreViewModel: ExploreViewModel,
+    chatTabViewModel: ChatTabViewModel,
     viewModelFactory: ViewModelProvider.Factory,
 ) {
     val userProfile = mainViewModel.userProfile.collectAsState()
     val currentChatPageIndex = mainViewModel.currentChatPageIndex.collectAsState()
-    val agentList = exploreViewModel.getCachedAgentsList()
 
     ChatPageContainer(
         modifier = Modifier,
         viewModelFactory = viewModelFactory,
-        agentList = agentList,
+        chatTabViewModel = chatTabViewModel,
         userProfile = userProfile.value,
         currentPageIndex = currentChatPageIndex.value,
         onPageChanged = { index ->
