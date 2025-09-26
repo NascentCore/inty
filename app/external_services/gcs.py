@@ -1,9 +1,7 @@
 import re
-import time
 import traceback
 
 import loguru
-from google.api_core import retry
 from google.cloud import storage
 
 from app.core.config import global_config_loaded_from_config_yaml
@@ -19,31 +17,9 @@ GCS_GS_PREFIX = "gs://"
 gcs_client = None
 
 try:
-    # 创建带有自定义传输配置的GCS客户端
-    import requests
-    from google.auth.transport.requests import Request
-
-    # 创建自定义的requests会话，增加超时和重试
-    session = requests.Session()
-    session.timeout = 30  # 增加超时时间
-
-    # 配置重试策略
-    from requests.adapters import HTTPAdapter
-    from urllib3.util.retry import Retry
-
-    retry_strategy = Retry(
-        total=3,
-        backoff_factor=1,
-        status_forcelist=[429, 500, 502, 503, 504],
-    )
-    adapter = HTTPAdapter(max_retries=retry_strategy)
-    session.mount("http://", adapter)
-    session.mount("https://", adapter)
-
     gcs_client = storage.Client.from_service_account_json(
-        global_config_loaded_from_config_yaml.app.gcp_service_account_key, _http=session
+        global_config_loaded_from_config_yaml.app.gcp_service_account_key
     )
-    logger.debug("GCS客户端初始化成功")
 except Exception as e:
     if global_config_loaded_from_config_yaml.app.debug:
         logger.error(f"GCS客户端初始化失败，debug 模式下忽略: {str(e)}")
@@ -52,49 +28,20 @@ except Exception as e:
         raise
 
 
-def upload_to_gcs(file_data, content_type, bucket_name, path, max_retries=3):
-    """
-    上传文件到GCS，带重试机制
+def upload_to_gcs(file_data, content_type, bucket_name, path):
+    try:
+        bucket = gcs_client.bucket(bucket_name)
+        blob = bucket.blob(path)
+        blob.upload_from_string(file_data, content_type=content_type)
+        public_url = blob.public_url
+        return public_url
+    except Exception as e:
+        logger.error(f"GCS上传失败: {str(e)}")
+        logger.error(f"错误类型: {type(e).__name__}")
+        import traceback
 
-    Args:
-        file_data: 文件数据
-        content_type: 内容类型
-        bucket_name: 存储桶名称
-        path: 文件路径
-        max_retries: 最大重试次数
-
-    Returns:
-        文件的公共URL
-    """
-    last_exception = None
-
-    for attempt in range(max_retries + 1):
-        try:
-            bucket = gcs_client.bucket(bucket_name)
-            blob = bucket.blob(path)
-            blob.upload_from_string(file_data, content_type=content_type)
-            public_url = blob.public_url
-            logger.debug(f"GCS上传成功 (尝试 {attempt + 1}/{max_retries + 1}): {path}")
-            return public_url
-        except Exception as e:
-            last_exception = e
-            logger.warning(
-                f"GCS上传失败 (尝试 {attempt + 1}/{max_retries + 1}): {str(e)}"
-            )
-            logger.warning(f"错误类型: {type(e).__name__}")
-
-            # 如果是最后一次尝试，记录详细错误信息
-            if attempt == max_retries:
-                logger.error(f"GCS上传最终失败，已重试 {max_retries} 次")
-                logger.error(f"错误堆栈: {traceback.format_exc()}")
-            else:
-                # 等待一段时间后重试，使用指数退避
-                wait_time = 2**attempt
-                logger.info(f"等待 {wait_time} 秒后重试...")
-                time.sleep(wait_time)
-
-    # 所有重试都失败了，抛出最后一个异常
-    raise last_exception
+        logger.error(f"错误堆栈: {traceback.format_exc()}")
+        raise
 
 
 # 新增删除方法
