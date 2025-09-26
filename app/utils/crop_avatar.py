@@ -1,16 +1,17 @@
 import argparse
 import os
-
+from dataclasses import dataclass
 from math import floor
 from typing import List, Tuple
 
-import cv2
-from PIL import Image
-from loguru import logger
-import numpy as np
-from pydantic import BaseModel
 import animeface
+import cv2
+import numpy as np
+from loguru import logger
+from PIL import Image
+from pydantic import BaseModel
 
+from app.utils.image import ImageSize
 
 CROPPED_AVATAR_FILENAME_SUFFIX = "-cropped-avatar"
 
@@ -179,6 +180,17 @@ def _detect_faces(
     )
 
 
+@dataclass
+class CropAvatarResult:
+    """
+    Cropped avatar image and its size. Used as a container for return value for easy extension.
+    """
+
+    # 不使用 Basemodel, 因为 Image.Image 无法序列化。
+    image: Image.Image
+    size: ImageSize
+
+
 # TODO: We tried to combine profile face and frontal face detection,
 # but profile face detection always returns empty list.
 # Many ideas can be tried:
@@ -186,7 +198,7 @@ def _detect_faces(
 # 2. Media pipe: https://colab.research.google.com/github/googlesamples/mediapipe/blob/main/examples/object_detection/python/object_detector.ipynb
 #
 # The existing approach is fast, but far from perfect.
-def crop_avatar(img_data: bytes) -> Image.Image:
+def crop_avatar(img_data: bytes) -> CropAvatarResult:
     # Haar cascade classifier only works with grayscale images.
     img = cv2.imdecode(np.frombuffer(img_data, np.uint8), cv2.IMREAD_COLOR)
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -219,7 +231,10 @@ def crop_avatar(img_data: bytes) -> Image.Image:
         logger.warning("No faces detected, using top square boundaries")
         x, y, w, h = _calculate_top_square_boundaries(img.shape[1], img.shape[0])
         cropped_face = img[y : y + h, x : x + w]
-        return Image.fromarray(cv2.cvtColor(cropped_face, cv2.COLOR_BGR2RGB))
+        return CropAvatarResult(
+            image=Image.fromarray(cv2.cvtColor(cropped_face, cv2.COLOR_BGR2RGB)),
+            size=ImageSize(width=w, height=h),
+        )
 
     largest_face = max(faces, key=lambda x: x[2] * x[3])
     avatar_square = _calculate_crop_square_boundaries(
@@ -237,7 +252,10 @@ def crop_avatar(img_data: bytes) -> Image.Image:
     cropped_face = img[y : y + h, x : x + w]
 
     # OpenCV uses BGR color order (Blue, Green, Red), needs to convert to RGB.
-    return Image.fromarray(cv2.cvtColor(cropped_face, cv2.COLOR_BGR2RGB))
+    return CropAvatarResult(
+        image=Image.fromarray(cv2.cvtColor(cropped_face, cv2.COLOR_BGR2RGB)),
+        size=ImageSize(width=w, height=h),
+    )
 
 
 def parse_args():
@@ -253,7 +271,8 @@ def main():
     original_image.show()
     img_data = open(args.image_path, "rb").read()
 
-    cropped_image = crop_avatar(img_data)
+    crop_avatar_result = crop_avatar(img_data)
+    cropped_image = crop_avatar_result.image
     cropped_image.show()
 
 

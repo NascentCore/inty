@@ -733,7 +733,8 @@ async def _crop_avatar_from_background(background_url: str) -> str:
         logger.warning(f"无法下载background图片: {background_url}")
         raise RuntimeError(f"无法下载background图片: {background_url}")
 
-    cropped_avatar = crop_avatar(background_data)
+    crop_avatar_result = crop_avatar(background_data)
+    cropped_avatar = crop_avatar_result.image
     avatar_data = get_jpg_bytes_from_pil_image(cropped_avatar)
 
     bucket, background_gcs_path = get_bucket_and_path_from_gcs_url(background_url)

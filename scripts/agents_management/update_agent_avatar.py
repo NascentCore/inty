@@ -166,8 +166,10 @@ def process_one_agent_avatar_with_database(db: Session, agent_id: str):
 
     consent = input(f"Crop agent {agent_id} avatar? (y/n): ")
     if consent.lower() == "y":
-        pil_avatr = crop_avatar(png_data)
+        crop_avatar_result = crop_avatar(png_data)
+        pil_avatr = crop_avatar_result.image
         pil_avatr.show()
+        print(crop_avatar_result.size)
 
         jpeg_data = _get_jpeg_bytes_from_pil_image(pil_avatr, 80)
         gcs_base_path = _get_gcs_base_path(agent.avatar)
