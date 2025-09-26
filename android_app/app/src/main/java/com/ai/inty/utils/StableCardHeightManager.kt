@@ -107,33 +107,7 @@ object StableCardHeightManager {
         
         EasyLog.log("StableCardHeightManager - 批量预计算完成: 预计算${preCalculatedCount}个, 延迟${delayedCount}个")
     }
-    
-    /**
-     * 获取图片的显示高度（像素）
-     * 直接返回像素值，避免dp转换的精度问题
-     * @param imageUrl 图片URL
-     * @return 显示高度（像素）
-     */
-    fun getDisplayHeightPx(imageUrl: String?): Int {
-        // 如果还没有初始化，返回一个安全的默认高度
-        if (screenWidth == 0 || density == 0f) {
-            return (290 * 3f).toInt() // 使用290dp作为安全默认值，假设density=3
-        }
-        
-        if (imageUrl.isNullOrBlank()) {
-            return getDefaultHeightPx()
-        }
-        
-        // 先从缓存中查找
-        val cachedSize = imageSizeCache.get(imageUrl)
-        if (cachedSize != null) {
-            return calculateDisplayHeightPx(cachedSize.x, cachedSize.y)
-        }
-        
-        // 如果缓存中没有，使用默认高度
-        return getDefaultHeightPx()
-    }
-    
+
     /**
      * 预加载图片尺寸，用于更准确的高度计算
      */
@@ -168,14 +142,7 @@ object StableCardHeightManager {
         }
     }
     
-    /**
-     * 批量预加载图片尺寸
-     */
-    suspend fun preloadImageSizes(imageUrls: List<String>) {
-        imageUrls.forEach { url ->
-            preloadImageSize(url)
-        }
-    }
+
     
     /**
      * 计算卡片高度（dp）
@@ -218,34 +185,7 @@ object StableCardHeightManager {
         // 应用合理的高度限制，但不要过度限制，保持瀑布流效果
         return fillWidthHeightDp.coerceIn(minHeightDp, maxHeightDp)
     }
-    
-    /**
-     * 根据图片尺寸计算显示高度（像素）
-     * 直接返回像素值，避免dp转换的精度问题
-     */
-    private fun calculateDisplayHeightPx(imageWidth: Int, imageHeight: Int): Int {
-        if (imageWidth <= 0 || imageHeight <= 0) {
-            return getDefaultHeightPx()
-        }
-        
-        val originalAspectRatio = imageWidth.toFloat() / imageHeight.toFloat()
-        
-        // 限制宽高比在合理范围内，避免极端比例
-        val minAspectRatio = 9f / 16f // 9:16 (更窄，高度更高)
-        val maxAspectRatio = 3f / 4f  // 3:4 (更宽，高度更低)
-        val clampedAspectRatio = originalAspectRatio.coerceIn(minAspectRatio, maxAspectRatio)
-        
-        // 计算显示高度
-        val itemWidthPx = getItemWidthPx()
-        val displayHeightPx = (itemWidthPx / clampedAspectRatio).toInt()
-        
-        // 限制高度范围，避免过高或过低
-        val minHeightPx = (minHeightDp * density).toInt()
-        val maxHeightPx = (maxHeightDp * density).toInt()
-        
-        return displayHeightPx.coerceIn(minHeightPx, maxHeightPx)
-    }
-    
+
     /**
      * 获取默认高度（dp）
      */
@@ -257,16 +197,7 @@ object StableCardHeightManager {
         
         return defaultHeightDp.coerceIn(minHeightDp, maxHeightDp)
     }
-    
-    /**
-     * 获取默认高度（像素）
-     */
-    private fun getDefaultHeightPx(): Int {
-        val itemWidthPx = getItemWidthPx()
-        // 使用默认宽高比 4:5 计算默认高度
-        val defaultAspectRatio = 4f / 5f
-        return (itemWidthPx / defaultAspectRatio).toInt()
-    }
+
     
     /**
      * 计算每个item的实际宽度（像素）
@@ -277,14 +208,7 @@ object StableCardHeightManager {
         val availableWidth = screenWidth - contentPaddingPx - spacingPx
         return availableWidth / columnCount
     }
-    
-    /**
-     * 生成缓存键
-     */
-    private fun generateCacheKey(agentInfo: AgentInfo): String {
-        val imageUrl = AvatarManager.getChatBackgroundForAgent(agentInfo)
-        return "${agentInfo.id}_${imageUrl}"
-    }
+
     
     /**
      * 清除缓存
@@ -293,26 +217,5 @@ object StableCardHeightManager {
         imageSizeCache.evictAll()
         EasyLog.log("StableCardHeightManager - 清除缓存")
     }
-    
-    /**
-     * 在图片尺寸加载完成后更新AgentInfo的缓存高度
-     * 用于在图片尺寸预加载完成后更新高度，保持瀑布流效果
-     */
-    fun updateHeightAfterImageSizeLoaded(agentInfo: AgentInfo) {
-        if (agentInfo.cachedCardHeightDp <= 0f) {
-            val imageUrl = AvatarManager.getChatBackgroundForAgent(agentInfo)
-            if (!imageUrl.isNullOrBlank() && imageSizeCache.get(imageUrl) != null) {
-                val calculatedHeight = calculateCardHeightDp(agentInfo)
-                agentInfo.cachedCardHeightDp = calculatedHeight
-                EasyLog.log("StableCardHeightManager - 图片尺寸加载后更新高度: ${agentInfo.name} -> $calculatedHeight dp", EasyLog.DEBUG)
-            }
-        }
-    }
-    
-    /**
-     * 获取缓存统计信息
-     */
-    fun getCacheStats(): String {
-        return "图片尺寸缓存: ${imageSizeCache.size()}"
-    }
+
 }
