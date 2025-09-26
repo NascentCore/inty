@@ -1,11 +1,14 @@
 import random
+
 import pytest
 from PIL import Image, ImageChops
+
 from app.utils.crop_avatar import (
-    crop_avatar,
-    _calculate_top_square_boundaries,
     _calculate_crop_square_boundaries,
+    _calculate_top_square_boundaries,
+    crop_avatar,
 )
+from app.utils.image import ImageSize
 
 
 def _gen_random_image(width, height):
@@ -166,26 +169,34 @@ def test_calculate_crop_square_boundaries():
 def test_crop_square_face_handle_all_image_formats():
     img_path = "tests/files/test.jpg"
     img_data = open(img_path, "rb").read()
-    cropped_img = crop_avatar(img_data)
+    crop_avatar_result = crop_avatar(img_data)
+    cropped_img = crop_avatar_result.image
     cropped_img.save("avatar_test_image.jpg")
     assert cropped_img.size == (214, 214)
+    assert crop_avatar_result.size == ImageSize(width=214, height=214)
 
     img_path = "tests/files/test.png"
     img_data = open(img_path, "rb").read()
-    cropped_img = crop_avatar(img_data)
+    crop_avatar_result = crop_avatar(img_data)
+    cropped_img = crop_avatar_result.image
     cropped_img.save("avatar_test_image.png")
     assert cropped_img.size == (214, 214)
+    assert crop_avatar_result.size == ImageSize(width=214, height=214)
 
     img_path = "tests/files/test.webp"
     img_data = open(img_path, "rb").read()
-    cropped_img = crop_avatar(img_data)
+    crop_avatar_result = crop_avatar(img_data)
+    cropped_img = crop_avatar_result.image
     cropped_img.save("avatar_test_image.webp")
     assert cropped_img.size == (214, 214)
+    assert crop_avatar_result.size == ImageSize(width=214, height=214)
 
     img_path = "tests/files/2-faces.png"
     img_data = open(img_path, "rb").read()
-    cropped_img = crop_avatar(img_data)
+    crop_avatar_result = crop_avatar(img_data)
+    cropped_img = crop_avatar_result.image
     assert cropped_img.size == (288, 288)
+    assert crop_avatar_result.size == ImageSize(width=288, height=288)
     golden_img = Image.open("tests/files/avatar-2-faces.png")
     diff = ImageChops.difference(cropped_img, golden_img)
     assert diff.getbbox() is None

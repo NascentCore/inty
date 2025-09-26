@@ -9,32 +9,78 @@ from typing import Optional
 
 from fastapi import UploadFile
 from loguru import logger
+from PIL import Image
 from pydantic import BaseModel
+from sqlalchemy.orm import Session
 
 from app.core.config import global_config_loaded_from_config_yaml
 from app.external_services.gcs import append_filename_suffix, upload_to_gcs
+from app.models.resource import ResourceType
+from app.schemas.resource import ResourceCreate
 from app.schemas.response import APIResponse
+from app.services.resource_service import create_resource
 from app.utils.crop_avatar import CROPPED_AVATAR_FILENAME_SUFFIX, crop_avatar
 from app.utils.image import (
     ImageFormat,
+    ImageSize,
     compress_png_to_jpeg,
     get_jpg_bytes_from_pil_image,
 )
+
+
+def _create_image_resource(
+    db: Session,
+    user_id: str,
+    url: str,
+    size: ImageSize,
+    format: ImageFormat,
+    byte_size: int,
+    compressed: bool = False,
+    uncompressed_image_url: Optional[str] = None,
+    cropped: bool = False,
+    uncropped_image_url: Optional[str] = None,
+) -> None:
+    """
+    创建图片资源记录的辅助函数
+    """
+    resource_metadata = {
+        "creator": user_id,
+        "size": size.model_dump(),
+        "content_type": f"image/{format.value}",
+        "byte_size": byte_size,
+        "compressed": compressed,
+        "uncompressed_image_url": uncompressed_image_url,
+        "cropped": cropped,
+        "uncropped_image_url": uncropped_image_url,
+    }
+    resource = create_resource(
+        db=db,
+        resource_in=ResourceCreate(
+            type=ResourceType.IMAGE,
+            url=url,
+            resource_metadata=resource_metadata,
+        ),
+        user_id=user_id,
+    )
+    logger.debug(f"创建图片资源记录成功，URL: {resource.url}")
 
 
 class ImageUploadResponse(BaseModel):
     """Image upload response"""
     # Uploaded compressed image
     url: str
+    size: ImageSize
     # Uploaded original image
     original_url: Optional[str] = None
     # Uploaded avatar image
     avatar_url: Optional[str] = None
+    avatar_size: Optional[ImageSize] = None
 
 
 async def process_image_upload(
     file: UploadFile,
     user_id: str,
+    db: Session,
     base_path: str = "uploads/images",
     cropping_avatar: bool = False,
     max_size_mb: int = global_config_loaded_from_config_yaml.app.limits.max_image_size_mb,
@@ -45,6 +91,7 @@ async def process_image_upload(
     Args:
         file: The uploaded file
         user_id: User ID for creating unique file paths
+        db: Database session for creating resource records
         base_path: Base path for file storage (e.g., "avatars/tmp", "uploads/images")
         cropping_avatar: Whether to enable avatar cropping (requires crop_avatar utility)
         max_size_mb: Maximum file size in MB (overrides config if provided)
@@ -137,6 +184,10 @@ async def process_image_upload(
             f"Compressed PNG ({file_size} bytes) to JPEG ({len(file_data)} bytes)"
         )
 
+    img = Image.open(io.BytesIO(original_file_data))
+    size = ImageSize(width=img.width, height=img.height)
+    logger.debug(f"图片大小: {size}")
+
     # Generate unique file paths
     timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
     unique_id = uuid.uuid4().hex[:8]
@@ -148,7 +199,7 @@ async def process_image_upload(
         global_config_loaded_from_config_yaml.gcs.bucket,
         file_gcs_path,
     )
-    
+
     # Convert GCS URL to CDN URL
     from app.services.image_transform_service import image_transform_service
     try:
@@ -157,8 +208,8 @@ async def process_image_upload(
     except Exception as transform_error:
         logger.warning(f"Failed to transform URL to CDN: {gcs_url}, error: {str(transform_error)}")
         url = gcs_url  # Fallback to original GCS URL
-    
-    result = ImageUploadResponse(url=url)
+
+    result = ImageUploadResponse(url=url, size=size)
     logger.debug(f"图片 上传 GCS 成功，返回URL: {url}")
 
     # If image was compressed and it's not an avatar, also upload uncompressed version
@@ -173,7 +224,7 @@ async def process_image_upload(
             global_config_loaded_from_config_yaml.gcs.bucket,
             uncompressed_file_gcs_path,
         )
-        
+
         # Convert uncompressed GCS URL to CDN URL
         try:
             uncompressed_url = image_transform_service.transform_mobile(uncompressed_gcs_url)
@@ -181,12 +232,35 @@ async def process_image_upload(
         except Exception as transform_error:
             logger.warning(f"Failed to transform original URL to CDN: {uncompressed_gcs_url}, error: {str(transform_error)}")
             uncompressed_url = uncompressed_gcs_url  # Fallback to original GCS URL
-            
+
         result.original_url = uncompressed_url
+
+        _create_image_resource(
+            db=db,
+            user_id=user_id,
+            url=uncompressed_url,
+            size=size,
+            format=ImageFormat(original_file_ext),
+            byte_size=len(original_file_data),
+        )
+
+    # Create resource record for the compressed image
+    _create_image_resource(
+        db=db,
+        user_id=user_id,
+        url=url,
+        size=size,
+        format=ImageFormat(file_ext),
+        byte_size=len(file_data),
+        compressed=was_compressed,
+        uncompressed_image_url=result.original_url if was_compressed and result.original_url else None,
+    )
 
     # Handle cropping if enabled
     if cropping_avatar:
-        cropped_avatar = crop_avatar(file_data)
+        crop_avatar_result = crop_avatar(file_data)
+        cropped_avatar = crop_avatar_result.image
+        result.avatar_size = crop_avatar_result.size
 
         # Convert PIL Image to bytes for GCS upload
         jpg_data = get_jpg_bytes_from_pil_image(cropped_avatar)
@@ -201,7 +275,7 @@ async def process_image_upload(
             global_config_loaded_from_config_yaml.gcs.bucket,
             cropped_file_gcs_path,
         )
-        
+
         # Convert cropped avatar GCS URL to CDN URL
         try:
             cropped_avatar_url = image_transform_service.transform_mobile(cropped_avatar_gcs_url)
@@ -209,7 +283,20 @@ async def process_image_upload(
         except Exception as transform_error:
             logger.warning(f"Failed to transform avatar URL to CDN: {cropped_avatar_gcs_url}, error: {str(transform_error)}")
             cropped_avatar_url = cropped_avatar_gcs_url  # Fallback to original GCS URL
-            
+
         result.avatar_url = cropped_avatar_url
+
+        # Write the metadata of the uploaded image, which might be compressed.
+        _create_image_resource(
+            db=db,
+            user_id=user_id,
+            url=cropped_avatar_url,
+            size=crop_avatar_result.size,
+            format=ImageFormat.JPEG,
+            byte_size=len(jpg_data),
+            compressed=True,
+            cropped=True,
+            uncropped_image_url=result.url,
+        )
 
     return APIResponse.success(data=result)
