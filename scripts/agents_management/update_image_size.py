@@ -18,27 +18,11 @@ from app.services.resource_service import create_image_resource
 from app.utils.image import ImageFormat, ImageSize
 
 
-def get_image_metadata(image_bytes: bytes) -> tuple[ImageSize, ImageFormat, int]:
-    """
-    Get image metadata from bytes
-
-    Returns:
-        tuple: (ImageSize, ImageFormat, byte_size)
-    """
+def get_image_metadata(image_bytes: bytes) -> tuple[ImageSize, int]:
     pil_image = Image.open(io.BytesIO(image_bytes))
     size = ImageSize(width=pil_image.width, height=pil_image.height)
-
-    # Determine format from PIL image
-    format_map = {
-        "JPEG": ImageFormat.JPEG,
-        "PNG": ImageFormat.PNG,
-        "WEBP": ImageFormat.WEBP,
-    }
-    format = format_map.get(pil_image.format, ImageFormat.JPEG)
-
     byte_size = len(image_bytes)
-
-    return size, format, byte_size
+    return size, byte_size
 
 
 _process_single_url = set()
@@ -90,8 +74,8 @@ def process_single_url(
     """
     logger.info(f"Processing {url_type} URL: {url}")
     image_bytes = download_from_gcs(url)
-    size, format, byte_size = get_image_metadata(image_bytes)
-    logger.info(f"Image metadata: {size}, {format}, {byte_size}")
+    size, byte_size = get_image_metadata(image_bytes)
+    logger.info(f"Image metadata: {size}, {byte_size}")
 
     # Check if resource already exists
     existing_resource = db.query(Resource).filter(Resource.url == url).first()
