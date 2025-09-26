@@ -24,6 +24,7 @@ import com.ai.inty.base.IntyImage
 import com.ai.inty.base.ToastUtils
 import com.ai.inty.base.noRippleClickable
 import com.ai.inty.beans.AgentInfo
+import com.ai.inty.utils.getCdnImageUrl
 import com.therouter.TheRouter
 import kotlinx.coroutines.launch
 
@@ -92,7 +93,7 @@ fun ChatTopBar(
                 modifier = Modifier
                     .padding(CHAT_TOP_BAR_AVATAR_PADDING.dp)
                     .size(CHAT_TOP_BAR_AVATAR_SIZE.dp),
-                url = agentInfo.avatar,
+                url = getCdnImageUrl(agentInfo.avatar, width = 64),
                 placeholderResID = R.drawable.app_icon
             )
 

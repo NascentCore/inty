@@ -26,7 +26,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import com.ai.inty.base.IntyImage
 import com.ai.inty.beans.AgentInfo
-import com.ai.inty.utils.getChatBackground
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
@@ -94,7 +93,7 @@ fun AgentBackground(
             IntyImage(
                 modifier = Modifier
                     .size(imageWidthDp.dp, imageHeightDp.dp),
-                model = agentInfo?.getChatBackground(),
+                model = agentInfo?.getAlbumImage(),
                 alignment = Alignment.TopCenter,
                 contentScale = optimalContentScale,
                 onSuccess = { state ->

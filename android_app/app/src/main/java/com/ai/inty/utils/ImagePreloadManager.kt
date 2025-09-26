@@ -42,7 +42,7 @@ object ImagePreloadManager {
                         .build()
                 }
                 .build()
-            
+
             isInitialized = true
             EasyLog.log("ImagePreloadManager - 初始化完成")
         } catch (e: Exception) {
@@ -81,9 +81,6 @@ object ImagePreloadManager {
                     // 使用Coil进行真正的图片预加载缓存
                     preloadImagesToCoilCache(imageUrls, maxConcurrent)
                     EasyLog.log("ImagePreloadManager - 批量预加载图片到Coil缓存完成")
-
-                    // 图片预加载完成后，预计算卡片高度
-                    StableCardHeightManager.preCalculateAndCacheHeights(agents)
                 }
             }
 
@@ -141,9 +138,6 @@ object ImagePreloadManager {
                     // 使用Coil进行关键图片预加载缓存，提高并发数
                     preloadImagesToCoilCache(imageUrls, maxConcurrent = 8)
                     EasyLog.log("ImagePreloadManager - 关键图片批量预加载到Coil缓存完成")
-
-                    // 预计算关键图片的卡片高度
-                    StableCardHeightManager.preCalculateAndCacheHeights(criticalAgents)
                 }
             }
 
@@ -164,7 +158,7 @@ object ImagePreloadManager {
         maxConcurrent: Int = 5
     ) {
         val loader = imageLoader ?: return
-        
+
         coroutineScope {
             // 分批处理，控制并发数
             imageUrls.chunked(maxConcurrent).forEach { batch ->
@@ -174,16 +168,22 @@ object ImagePreloadManager {
                             val request = ImageRequest.Builder(AppEnv.context)
                                 .data(imageUrl)
                                 .build()
-                            
+
                             // 执行预加载，图片会被缓存到Coil的内存和磁盘缓存中
                             loader.execute(request)
-                            EasyLog.log("ImagePreloadManager - 预加载成功: $imageUrl", EasyLog.DEBUG)
+                            EasyLog.log(
+                                "ImagePreloadManager - 预加载成功: $imageUrl",
+                                EasyLog.DEBUG
+                            )
                         } catch (e: Exception) {
-                            EasyLog.log("ImagePreloadManager - 预加载失败: $imageUrl, 错误: ${e.message}", EasyLog.WARN)
+                            EasyLog.log(
+                                "ImagePreloadManager - 预加载失败: $imageUrl, 错误: ${e.message}",
+                                EasyLog.WARN
+                            )
                         }
                     }
                 }
-                
+
                 // 等待当前批次完成
                 deferred.forEach { it.await() }
             }
@@ -205,12 +205,15 @@ object ImagePreloadManager {
                 val request = ImageRequest.Builder(AppEnv.context)
                     .data(imageUrl)
                     .build()
-                
+
                 loader.execute(request)
                 EasyLog.log("ImagePreloadManager - 单图片预加载成功: $imageUrl", EasyLog.DEBUG)
             }
         } catch (e: Exception) {
-            EasyLog.log("ImagePreloadManager - 单图片预加载失败: $imageUrl, 错误: ${e.message}", EasyLog.WARN)
+            EasyLog.log(
+                "ImagePreloadManager - 单图片预加载失败: $imageUrl, 错误: ${e.message}",
+                EasyLog.WARN
+            )
         }
     }
 
@@ -240,9 +243,9 @@ object ImagePreloadManager {
 fun getCdnImageUrl(originUrl: String?, width: Int = 1080, quality: Int = 75): String? {
     originUrl ?: return null
     return when {
-        originUrl.contains("/cdn-cgi/image/") -> {
-            originUrl
-        }
+        originUrl.contains("/cdn-cgi/image/") -> originUrl
+        //google gsc原图，这个url不支持拼接cdn访问
+        originUrl.startsWith("https://storage.googleapis.com") -> originUrl
 
         originUrl.contains("/inty-static") -> {
             originUrl.replace(

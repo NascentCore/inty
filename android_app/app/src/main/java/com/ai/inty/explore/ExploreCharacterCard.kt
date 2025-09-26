@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -11,7 +12,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -31,7 +31,6 @@ import com.ai.inty.base.noRippleClickable
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.ui.components.ShimmerPlaceholder
 import com.ai.inty.ui.components.SmartTagsLayout
-import com.ai.inty.utils.StableCardHeightManager
 
 
 /**
@@ -64,37 +63,13 @@ fun ExploreCharacterCard(
         agentInfo.getAlbumImage()
     }
 
-    // 使用AgentInfo中缓存的高度，但保持瀑布流效果
-    val cardHeight = remember(agentInfo.cachedCardHeightDp, imageUrl) {
-        if (agentInfo.cachedCardHeightDp > 0f) {
-            // 使用缓存的高度
-            agentInfo.cachedCardHeightDp.dp
-        } else {
-            // 如果缓存中没有高度，使用StableCardHeightManager计算并缓存
-            // 这里会基于图片的实际尺寸计算，保持瀑布流效果
-            val calculatedHeight = StableCardHeightManager.getStableCardHeightDp(agentInfo)
-            calculatedHeight.dp
-        }
-    }
-
     // 图片加载状态 - 使用稳定的key避免不必要的重组
     var imageLoaded by remember(agentInfo.id) { mutableStateOf(false) }
-
-    // 预加载图片尺寸，但不更新高度（高度已在remember中稳定）
-    LaunchedEffect(agentInfo.id, imageUrl) {
-        if (!imageUrl.isNullOrEmpty()) {
-            try {
-                StableCardHeightManager.preloadImageSize(imageUrl)
-            } catch (e: Exception) {
-                // 预加载失败，不影响UI显示
-            }
-        }
-    }
 
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(cardHeight)
+            .aspectRatio(agentInfo.imageAspectRatio())
             .clip(RoundedCornerShape(8.dp))
             .noRippleClickable { onClick() }
     ) {

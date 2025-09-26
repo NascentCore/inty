@@ -4,10 +4,8 @@ import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import com.ai.inty.beans.AgentInfo
-import com.ai.inty.net.IAgentApi
 import com.inty.utils.log.EasyLog
 import com.inty.utils.storage.IntySetting
-import com.therouter.TheRouter
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -16,12 +14,6 @@ import kotlinx.coroutines.flow.Flow
  * 集成了原ExploreRepository的所有功能
  */
 class ExplorePagingRepository {
-
-    private val agentApi: IAgentApi by lazy {
-        TheRouter.get(IAgentApi::class.java)
-            ?: throw IllegalStateException("IAgentApi not found in TheRouter")
-    }
-
 
     companion object {
         // 使用统一的常量
