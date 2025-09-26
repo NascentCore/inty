@@ -1056,32 +1056,26 @@ def process_agent_image_urls(agent_data: dict) -> dict:
             logger.warning(f"无效的背景图URL: {background_url} (原始: {agent_data.get('background')})")
             processed_data["background"] = None
 
-    # 验证相册图片URLs
+    # 验证相册图片URLs，但不添加到images_urls（避免重复）
+    valid_bg_images = []
     if processed_data.get("background_images") and isinstance(
         processed_data["background_images"], list
     ):
-        valid_images = []
-        original_images = agent_data.get("background_images", [])
-        for i, photo_url in enumerate(processed_data["background_images"]):
-            original_url = original_images[i] if i < len(original_images) else photo_url
+        for photo_url in processed_data["background_images"]:
             if is_valid_gcs_url(photo_url):
-                add_image_url(photo_url)
-                valid_images.append(photo_url)
-                logger.debug(f"相册图片URL验证通过: {photo_url} (原始: {original_url})")
+                valid_bg_images.append(photo_url)
             else:
-                logger.warning(f"无效的相册图片URL: {photo_url} (原始: {original_url})")
-        # 只保留验证通过的图片
-        processed_data["background_images"] = valid_images
+                logger.warning(f"无效的相册图片URL: {photo_url}")
 
-    # 如果没有通过validation的图片，确保background_images为当前收集到的有效图片
-    if images_urls:
-        # 避免重复，如果background_images已经设置了，则合并去重
-        existing_bg_images = processed_data.get("background_images", [])
-        all_images = existing_bg_images + [url for url in images_urls if url not in existing_bg_images]
-        processed_data["background_images"] = all_images
-    elif not processed_data.get("background_images"):
-        # 如果没有任何有效图片，设置为空列表
-        processed_data["background_images"] = []
+    # 构建最终的background_images列表，顺序：avatar -> background -> background_images
+    final_images = []
+    for url in images_urls:  # images_urls已经包含了avatar和background（按添加顺序）
+        final_images.append(url)
+    for url in valid_bg_images:  # 添加原始的background_images
+        if url not in final_images:  # 避免重复
+            final_images.append(url)
+    
+    processed_data["background_images"] = final_images if final_images else []
     
     return processed_data
 
