@@ -507,10 +507,31 @@ async def get_balanced_score_based_agents(
         models.Agent.deleted_at.is_(None),
     )
 
-    # 平衡权重排序查询
+    # 平衡权重排序查询，同时获取头像和背景图的尺寸信息
+    avatar_resource = models.Resource.__table__.alias("avatar_resource")
+    background_resource = models.Resource.__table__.alias("background_resource")
+
     query = (
-        select(models.Agent)
+        select(
+            models.Agent,
+            avatar_resource.c.resource_metadata.label("avatar_metadata"),
+            background_resource.c.resource_metadata.label("background_metadata"),
+        )
         .options(selectinload(models.Agent.creator))
+        .outerjoin(
+            avatar_resource,
+            and_(
+                avatar_resource.c.url == models.Agent.avatar,
+                avatar_resource.c.type == ResourceType.IMAGE.value,
+            ),
+        )
+        .outerjoin(
+            background_resource,
+            and_(
+                background_resource.c.url == models.Agent.background,
+                background_resource.c.type == ResourceType.IMAGE.value,
+            ),
+        )
         .where(base_condition)
         .order_by(
             (
@@ -529,7 +550,21 @@ async def get_balanced_score_based_agents(
     )
 
     result = await db.execute(query)
-    return result.scalars().all()
+    query_results = result.all()
+
+    # 处理查询结果，提取agent和metadata信息
+    agents_list = []
+    for row in query_results:
+        agent = row[0]  # Agent对象
+        avatar_metadata = row[1]  # 头像metadata
+        bg_metadata = row[2]  # 背景图metadata
+
+        agent.avatar_size = ImageSize.model_validate(avatar_metadata["size"])
+        agent.background_size = ImageSize.model_validate(bg_metadata["size"])
+
+        agents_list.append(agent)
+
+    return agents_list
 
 
 async def get_recommended_agents_paginated(
@@ -588,10 +623,27 @@ async def get_recommended_agents_paginated(
             else:  # 默认为 CREATED_DESC
                 sort_order = desc(models.Agent.created_at)
 
-            # 获取分页数据
+            # 获取分页数据，同时获取头像和背景图的尺寸信息
+            avatar_resource = models.Resource.__table__.alias("avatar_resource")
+            background_resource = models.Resource.__table__.alias("background_resource")
+
             data_query = (
-                select(models.Agent)
+                select(
+                    models.Agent,
+                    avatar_resource.c.resource_metadata.label("avatar_metadata"),
+                    background_resource.c.resource_metadata.label(
+                        "background_metadata"
+                    ),
+                )
                 .options(selectinload(models.Agent.creator))
+                .outerjoin(
+                    avatar_resource,
+                    avatar_resource.c.url == models.Agent.avatar,
+                )
+                .outerjoin(
+                    background_resource,
+                    background_resource.c.url == models.Agent.background,
+                )
                 .where(
                     and_(
                         models.Agent.visibility == AgentVisibility.PUBLIC,
@@ -605,7 +657,19 @@ async def get_recommended_agents_paginated(
             )
 
             result = await db.execute(data_query)
-            agents_list = result.scalars().all()
+            query_results = result.all()
+
+            # 处理查询结果，提取agent和metadata信息
+            agents_list = []
+            for row in query_results:
+                agent = row[0]  # Agent对象
+                avatar_metadata = row[1]  # 头像metadata
+                bg_metadata = row[2]  # 背景图metadata
+
+                agent.avatar_size = ImageSize.model_validate(avatar_metadata["size"])
+                agent.background_size = ImageSize.model_validate(bg_metadata["size"])
+
+                agents_list.append(agent)
 
         # 为所有agents添加关注者数量和关注状态
         agents = []
