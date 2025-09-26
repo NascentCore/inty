@@ -71,6 +71,17 @@ def process_agent_urls(db: Session, agent: Agent) -> None:
                 _process_single_url.add(bg_url)
 
 
+def _check_metadata(metadata: dict, size: ImageSize, byte_size: int) -> bool:
+    """
+    Check if metadata matches the given size and byte size
+    """
+    return (
+        metadata["size"]["width"] == size.width
+        and metadata["size"]["height"] == size.height
+        and metadata["byte_size"] == byte_size
+    )
+
+
 def process_single_url(
     db: Session, url: str, user_id: str, agent_id: str, url_type: str
 ) -> None:
@@ -85,63 +96,20 @@ def process_single_url(
     # Check if resource already exists
     existing_resource = db.query(Resource).filter(Resource.url == url).first()
 
-    if existing_resource:
-        logger.info(f"Resource exists, verifying metadata for {url}")
-        # Download image to verify metadata
-        try:
-            # Check if metadata matches
-            metadata = existing_resource.resource_metadata or {}
-            stored_size = metadata.get("size", {})
-            stored_byte_size = metadata.get("byte_size", 0)
-
-            if (
-                stored_size.get("width") != size.width
-                or stored_size.get("height") != size.height
-                or stored_byte_size != byte_size
-            ):
-                logger.info(f"Updating metadata for {url}")
-                # Update metadata
-                metadata.update(
-                    {
-                        "size": size.model_dump(),
-                        "content_type": f"image/{format.value}",
-                        "byte_size": byte_size,
-                    }
-                )
-                existing_resource.resource_metadata = metadata
-                db.commit()
-                logger.info(f"Updated metadata for {url}")
-            else:
-                logger.info(f"Metadata is correct for {url}")
-
-        except Exception as e:
-            logger.error(f"Error verifying metadata for {url}: {e}")
+    if not existing_resource or not _check_metadata(
+        existing_resource.resource_metadata, size, byte_size
+    ):
+        logger.info(f"Updating metadata for {url}")
+        existing_resource.resource_metadata.update(
+            {
+                "size": size.model_dump(),
+                "byte_size": byte_size,
+            }
+        )
+        db.commit()
+        logger.info(f"Updated metadata for {url}")
     else:
-        logger.info(f"Resource not found, creating new record for {url}")
-        # Download image and create resource record
-        try:
-            # Create resource record
-            create_image_resource(
-                db=db,
-                user_id=user_id,
-                url=url,
-                size=size,
-                format=format,
-                byte_size=byte_size,
-                compressed=False,  # We don't know if it was compressed
-                cropped=False,  # We don't know if it was cropped
-            )
-
-            # Update agent_id for the resource
-            resource = db.query(Resource).filter(Resource.url == url).first()
-            if resource:
-                resource.agent_id = agent_id
-                db.commit()
-
-            logger.info(f"Created resource record for {url}")
-
-        except Exception as e:
-            logger.error(f"Error creating resource for {url}: {e}")
+        logger.info(f"Metadata is correct for {url}")
 
 
 def main():
