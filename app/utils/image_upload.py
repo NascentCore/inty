@@ -36,7 +36,6 @@ def _create_image_resource(
     format: ImageFormat,
     byte_size: int,
     compressed: bool = False,
-    # If not None, indicate this is an avatar, and this points to the original image.
     uncompressed_image_url: Optional[str] = None,
     cropped: bool = False,
     uncropped_image_url: Optional[str] = None,
