@@ -263,9 +263,17 @@ class Agent:
             chat_params["presence_penalty"] = presence_penalty
 
     def _get_effective_main_prompt(self) -> str:
+        # 如果配置为强制使用默认提示词，则直接返回默认值
+        if global_config_loaded_from_config_yaml.agent.force_default_prompts:
+            return prompts.ROMANTIC_ROLEPLAY_PROMPT.main_prompt
+        # 否则使用原有逻辑：优先使用Agent配置，如果没有则使用默认值
         return self.main_prompt or prompts.ROMANTIC_ROLEPLAY_PROMPT.main_prompt
 
     def _get_effective_mode_prompt(self) -> str:
+        # 如果配置为强制使用默认提示词，则直接返回默认值
+        if global_config_loaded_from_config_yaml.agent.force_default_prompts:
+            return prompts.ROMANTIC_ROLEPLAY_PROMPT.mode_prompt
+        # 否则使用原有逻辑：优先使用Agent配置，如果没有则使用默认值
         return self.mode_prompt or prompts.ROMANTIC_ROLEPLAY_PROMPT.mode_prompt
 
     def _get_effective_output_format_prompt(self) -> str:

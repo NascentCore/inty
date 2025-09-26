@@ -135,6 +135,7 @@ class AgentConfig:
     # DEPRECATED: Do not use.
     enable_debug_logging: bool = False  # 是否启用调试日志记录功能
     vertex_image_model: str = "imagen-4.0-fast-generate-001"
+    force_default_prompts: bool = False  # 强制使用默认提示词，忽略Agent自定义提示词
 
 
 @dataclass
