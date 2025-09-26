@@ -84,6 +84,8 @@ fun ChatPageContainer(
             EasyLog.log("页面切换到agent: ${currentAgent.id}, 停止其他agent的音频播放")
             // 通过AudioManager停止所有播放，让新页面重新开始
             // 这里我们依赖AudioManager的单例特性来管理全局音频状态
+            // 给新页面一点时间初始化
+            delay(100)
         }
     }
 

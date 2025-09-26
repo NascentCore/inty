@@ -99,6 +99,12 @@ internal fun ChatPage(
             if (!isCurrentPage) {
                 EasyLog.log("音频LOG测试 ChatPage disposed, resetting voice playback")
                 chatViewModel.resetVoicePlayback()
+                // 清理OpeningPlayState中可能存在的错误状态
+                agentInfo?.id?.let { agentId ->
+                    // 注意：这里不清理已播放状态，因为用户可能希望保持已播放记录
+                    // 只在应用重启时清理，通过OpeningPlayState的clearAllPlayed方法
+                    EasyLog.log("音频LOG测试 ChatPage disposed for agent: $agentId")
+                }
             }
         }
     }
@@ -373,7 +379,7 @@ internal fun ChatPage(
                                     role = "assistant",
                                     meta_data = MsgInfo.MsgMetaData(
                                         agentId = agent.id,
-                                        isOpening = true
+                                        isOpening = true  // 确保正确设置开场白标识
                                     ),
                                     audio_url = agent.opening_audio_url
                                 )

@@ -136,6 +136,14 @@ fun VoicePlayer(
                     isGeneratingTts = false
                     userClickedRecently = false
                     EasyLog.log("音频LOG测试 Playback started, clearing TTS generation state")
+                    
+                    // 开场白播放开始时立即标记为已播放
+                    if (messageId.contains("_assistant_")) {
+                        audioInfo.agentId?.let { agentId ->
+                            OpeningPlayState.openingPlayedAsync(agentId)
+                            EasyLog.log("音频LOG测试 Marked opening as played for agent: $agentId")
+                        }
+                    }
                 }
 
                 EasyLog.log("音频LOG测试 VoicePlayer state updated: messageId=$messageId, isPlaying=$isPlaying (was: $wasPlaying), state=$state, isLoading=$isLoading (was: $wasLoading), isGeneratingTts=$isGeneratingTts")

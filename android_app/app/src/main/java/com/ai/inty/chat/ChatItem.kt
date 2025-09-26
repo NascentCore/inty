@@ -137,12 +137,16 @@ private fun ChatItemAI(item: MsgInfo, isCurrentPage: Boolean = true, chatViewMod
 
                 // 检查当前消息列表是否只有开场白消息,避免已经聊过多个消息后，再进入还播放开场白
                 val allMessages by viewModel.msgs.collectAsState()
-                val isOnlyOpeningMessage = allMessages.size <= 1
+                // 更准确的消息过滤：只计算实际的聊天消息（排除intro和开场白）
+                val actualChatMessages = allMessages.filter { 
+                    !it.isOpening() && it.role != "system" 
+                }
+                val isOnlyOpeningMessage = actualChatMessages.isEmpty()
 
                 // 检查开场白是否已播放过
                 val hasPlayedOpening = OpeningPlayState.agentOpeningPlayed(agentInfo?.id ?: "")
                 EasyLog.log(
-                    "音频LOG测试 音频消息allMessages.size ${allMessages.size} ,, isOnlyOpeningMessage:$isOnlyOpeningMessage ,,hasPlayedOpening:$hasPlayedOpening ",
+                    "音频LOG测试 音频消息allMessages.size ${allMessages.size}, actualChatMessages.size ${actualChatMessages.size}, isOnlyOpeningMessage:$isOnlyOpeningMessage, hasPlayedOpening:$hasPlayedOpening ",
                     EasyLog.WARN
                 )
                 // 开场白自动播放逻辑：只有开场白消息且未播放过
@@ -163,13 +167,7 @@ private fun ChatItemAI(item: MsgInfo, isCurrentPage: Boolean = true, chatViewMod
                     autoPlay = shouldAutoPlay,
                     modifier = Modifier.widthIn(38.dp),
                     onPlayStateChange = { isPlaying ->
-                        // 播放状态变化回调，记录开场白播放状态
-                        if (isPlaying && item.isOpening()) {
-                            agentInfo?.id?.let { agentId ->
-                                OpeningPlayState.openingPlayedAsync(agentId)
-                                EasyLog.log("音频LOG测试 Marked opening as played for agent: $agentId")
-                            }
-                        }
+                        // 播放状态变化回调
                         EasyLog.log("音频LOG测试 VoicePlayer play state changed: $isPlaying for message: ${item.localMsgId}")
                     },
                     onTtsGenerated = { audioUrl ->
