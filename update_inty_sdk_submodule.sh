@@ -22,7 +22,7 @@ if [ -n "$(git status --porcelain)" ]; then
     git commit -m "更新 $INTY_SDK_KOTLIN_DIR submodule"
 fi
 
-INTY_SDK_TYPESCRIPT_DIR=sdks/typescript
+INTY_SDK_TYPESCRIPT_DIR=evaluation/inty_sdk
 pushd $INTY_SDK_TYPESCRIPT_DIR
 git checkout main
 git pull
