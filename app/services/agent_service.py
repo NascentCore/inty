@@ -380,6 +380,10 @@ async def get_user_agents(
             for agent in agents:
                 agent.is_followed = agent.id in followed_agent_ids
 
+        # 批量填充图片尺寸信息
+        for agent in agents:
+            await _populate_agent_image_sizes(db, agent)
+
         return agents
     except HTTPException:
         raise
