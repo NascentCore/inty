@@ -204,11 +204,9 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
         const response = await api.getIntyClient().api.v1.ai.agents.create(agentData);
         const newAgent = response.data as unknown as Agent;
 
-        // 更新本地状态
-        setAgents((prev) => [newAgent, ...prev]);
-
-        // 清理缓存
+        // 清理缓存并重新加载 agents 列表以确保获取完整数据（包括 avatar_size 和 background_size）
         clearCache();
+        await loadAgents(true); // 强制刷新
 
         message.success("智能体创建成功");
         return newAgent;
@@ -219,7 +217,7 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
         setLoading(false);
       }
     },
-    [clearCache, handleError],
+    [clearCache, handleError, loadAgents],
   );
 
   // 更新智能体
@@ -267,13 +265,9 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
 
         const updatedAgent = await api.getIntyClient().api.v1.ai.agents.update(agentId, updateData) as unknown as Agent;
 
-        // 更新本地状态
-        setAgents((prev) =>
-          prev.map((agent) => (agent.id === agentId ? updatedAgent : agent)),
-        );
-
-        // 清理缓存
+        // 清理缓存并重新加载 agents 列表以确保获取完整数据（包括 avatar_size 和 background_size）
         clearCache();
+        await loadAgents(true); // 强制刷新
 
         message.success("智能体更新成功");
         return updatedAgent;
@@ -284,7 +278,7 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
         setLoading(false);
       }
     },
-    [clearCache, handleError],
+    [clearCache, handleError, loadAgents],
   );
 
   // 删除智能体
