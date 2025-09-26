@@ -186,6 +186,7 @@ class CropAvatarResult:
     Cropped avatar image and its size. Used as a container for return value for easy extension.
     """
 
+    # 不使用 Basemodel, 因为 Image.Image 无法序列化。
     image: Image.Image
     size: ImageSize
 
