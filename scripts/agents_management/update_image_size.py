@@ -12,7 +12,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.base import SessionLocal
-from app.external_services.gcs import download_from_gcs
+from app.external_services.gcs import download_from_gcs, is_valid_gcs_url
 from app.models import Agent, Resource
 from app.services.resource_service import create_image_resource
 from app.utils.image import ImageFormat, ImageSize
@@ -35,12 +35,20 @@ def process_agent_urls(db: Session, agent: Agent) -> None:
     logger.info(f"Processing agent {agent.id} ({agent.name})")
 
     # Process avatar URL
-    if agent.avatar and agent.avatar not in _process_single_url:
+    if (
+        agent.avatar
+        and is_valid_gcs_url(agent.avatar)
+        and agent.avatar not in _process_single_url
+    ):
         process_single_url(db, agent.avatar, agent.creator_id, agent.id, "avatar")
         _process_single_url.add(agent.avatar)
 
     # Process background URL
-    if agent.background and agent.background not in _process_single_url:
+    if (
+        agent.background
+        and is_valid_gcs_url(agent.background)
+        and agent.background not in _process_single_url
+    ):
         process_single_url(
             db, agent.background, agent.creator_id, agent.id, "background"
         )
@@ -48,7 +56,11 @@ def process_agent_urls(db: Session, agent: Agent) -> None:
     # Process background_images (JSON array)
     if agent.background_images:
         for bg_url in agent.background_images:
-            if bg_url not in _process_single_url:
+            if (
+                bg_url
+                and is_valid_gcs_url(bg_url)
+                and bg_url not in _process_single_url
+            ):
                 process_single_url(
                     db, bg_url, agent.creator_id, agent.id, "background_image"
                 )
@@ -59,10 +71,16 @@ def _check_metadata(metadata: dict, size: ImageSize, byte_size: int) -> bool:
     """
     Check if metadata matches the given size and byte size
     """
+    if not metadata:
+        return False
+
+    stored_size = metadata.get("size", {})
+    stored_byte_size = metadata.get("byte_size", 0)
+
     return (
-        metadata["size"]["width"] == size.width
-        and metadata["size"]["height"] == size.height
-        and metadata["byte_size"] == byte_size
+        stored_size.get("width") == size.width
+        and stored_size.get("height") == size.height
+        and stored_byte_size == byte_size
     )
 
 
@@ -73,27 +91,67 @@ def process_single_url(
     Process a single URL - check if it exists in resources table and create/update if needed
     """
     logger.info(f"Processing {url_type} URL: {url}")
-    image_bytes = download_from_gcs(url)
-    size, byte_size = get_image_metadata(image_bytes)
-    logger.info(f"Image metadata: {size}, {byte_size}")
+
+    try:
+        image_bytes = download_from_gcs(url)
+        size, byte_size = get_image_metadata(image_bytes)
+        logger.info(f"Image metadata: {size}, {byte_size}")
+    except Exception as e:
+        logger.error(f"Error downloading or processing image {url}: {e}")
+        return
 
     # Check if resource already exists
     existing_resource = db.query(Resource).filter(Resource.url == url).first()
 
-    if not existing_resource or not _check_metadata(
-        existing_resource.resource_metadata, size, byte_size
-    ):
-        logger.info(f"Updating metadata for {url}")
-        existing_resource.resource_metadata.update(
-            {
-                "size": size.model_dump(),
-                "byte_size": byte_size,
-            }
-        )
-        db.commit()
-        logger.info(f"Updated metadata for {url}")
+    if existing_resource:
+        # Resource exists, check if metadata needs updating
+        metadata = existing_resource.resource_metadata or {}
+        if not _check_metadata(metadata, size, byte_size):
+            logger.info(f"Updating metadata for {url}")
+            metadata.update(
+                {
+                    "size": size.model_dump(),
+                    "byte_size": byte_size,
+                }
+            )
+            existing_resource.resource_metadata = metadata
+            db.commit()
+            logger.info(f"Updated metadata for {url}")
+        else:
+            logger.info(f"Metadata is correct for {url}")
     else:
-        logger.info(f"Metadata is correct for {url}")
+        # Resource doesn't exist, create new one
+        logger.info(f"Creating new resource record for {url}")
+        try:
+            # Determine format from URL extension
+            format = ImageFormat.JPEG  # default
+            if url.lower().endswith(".png"):
+                format = ImageFormat.PNG
+            elif url.lower().endswith(".webp"):
+                format = ImageFormat.WEBP
+            elif url.lower().endswith(".jpg") or url.lower().endswith(".jpeg"):
+                format = ImageFormat.JPEG
+
+            create_image_resource(
+                db=db,
+                user_id=user_id,
+                url=url,
+                size=size,
+                format=format,
+                byte_size=byte_size,
+                compressed=False,  # We don't know if it was compressed
+                cropped=False,  # We don't know if it was cropped
+            )
+
+            # Update agent_id for the resource
+            resource = db.query(Resource).filter(Resource.url == url).first()
+            if resource:
+                resource.agent_id = agent_id
+                db.commit()
+
+            logger.info(f"Created resource record for {url}")
+        except Exception as e:
+            logger.error(f"Error creating resource for {url}: {e}")
 
 
 def main():
