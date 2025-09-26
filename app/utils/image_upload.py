@@ -292,7 +292,7 @@ async def process_image_upload(
             db=db,
             user_id=user_id,
             url=cropped_avatar_url,
-            size=size,
+            size=crop_avatar_result.size,
             format=ImageFormat.JPEG,
             byte_size=len(jpg_data),
             cropped=True,
