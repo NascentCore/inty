@@ -2,14 +2,16 @@
 Unit tests for image upload utility functions.
 """
 
-import pytest
-from unittest.mock import patch, MagicMock
-from fastapi import UploadFile
 from io import BytesIO
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 
-from app.utils.image_upload import process_image_upload
+import pytest
+from fastapi import UploadFile
+from sqlalchemy.orm import Session
+
 from app.schemas.response import APIResponse
+from app.utils.image_upload import process_image_upload
 
 
 class TestUploadImage:
@@ -34,10 +36,14 @@ class TestUploadImage:
         user_id = "test_user_123"
         base_path = "images/uploads"
         cropping_avatar = False
+        # Mock database session
+        mock_db = MagicMock(spec=Session)
+
         result = await process_image_upload(
             file=upload_file,
             user_id=user_id,
+            db=mock_db,
             base_path=base_path,
-            cropping_avatar=cropping_avatar
+            cropping_avatar=cropping_avatar,
         )
         assert result.code is 200

@@ -11,10 +11,14 @@ from fastapi import UploadFile
 from loguru import logger
 from PIL import Image
 from pydantic import BaseModel
+from sqlalchemy.orm import Session
 
 from app.core.config import global_config_loaded_from_config_yaml
 from app.external_services.gcs import append_filename_suffix, upload_to_gcs
+from app.models.resource import ResourceType
+from app.schemas.resource import ResourceCreate
 from app.schemas.response import APIResponse
+from app.services.resource_service import create_resource
 from app.utils.crop_avatar import CROPPED_AVATAR_FILENAME_SUFFIX, crop_avatar
 from app.utils.image import (
     ImageFormat,
@@ -35,9 +39,11 @@ class ImageUploadResponse(BaseModel):
     avatar_url: Optional[str] = None
     avatar_size: Optional[ImageSize] = None
 
+
 async def process_image_upload(
     file: UploadFile,
     user_id: str,
+    db: Session,
     base_path: str = "uploads/images",
     cropping_avatar: bool = False,
     max_size_mb: int = global_config_loaded_from_config_yaml.app.limits.max_image_size_mb,
@@ -48,6 +54,7 @@ async def process_image_upload(
     Args:
         file: The uploaded file
         user_id: User ID for creating unique file paths
+        db: Database session for creating resource records
         base_path: Base path for file storage (e.g., "avatars/tmp", "uploads/images")
         cropping_avatar: Whether to enable avatar cropping (requires crop_avatar utility)
         max_size_mb: Maximum file size in MB (overrides config if provided)
@@ -165,6 +172,25 @@ async def process_image_upload(
         logger.warning(f"Failed to transform URL to CDN: {gcs_url}, error: {str(transform_error)}")
         url = gcs_url  # Fallback to original GCS URL
 
+    compressed_resource = create_resource(
+        db=db,
+        resource_in=ResourceCreate(
+            type=ResourceType.IMAGE,
+            url=url,
+            resource_metadata={
+                "size": size.model_dump(),
+                "format": file_ext,
+                "compressed": True,
+                "original_size_bytes": file_size,
+                "compressed_size_bytes": len(file_data),
+                "filename": file.filename,
+                "content_type": file.content_type,
+            },
+        ),
+        user_id=user_id,
+    )
+    logger.debug(f"创建压缩图片资源记录成功，ID: {compressed_resource.id}")
+
     result = ImageUploadResponse(url=url, size=size)
     logger.debug(f"图片 上传 GCS 成功，返回URL: {url}")
 
@@ -190,6 +216,24 @@ async def process_image_upload(
             uncompressed_url = uncompressed_gcs_url  # Fallback to original GCS URL
 
         result.original_url = uncompressed_url
+
+        original_resource = create_resource(
+            db=db,
+            resource_in=ResourceCreate(
+                type=ResourceType.IMAGE,
+                url=uncompressed_url,
+                resource_metadata={
+                    "size": size.model_dump(),
+                    "format": original_file_ext,
+                    "compressed": False,
+                    "original_size_bytes": file_size,
+                    "filename": file.filename,
+                    "content_type": original_content_type,
+                },
+            ),
+            user_id=user_id,
+        )
+        logger.debug(f"创建原版图片资源记录成功，ID: {original_resource.id}")
 
     # Handle cropping if enabled
     if cropping_avatar:
@@ -220,5 +264,24 @@ async def process_image_upload(
             cropped_avatar_url = cropped_avatar_gcs_url  # Fallback to original GCS URL
 
         result.avatar_url = cropped_avatar_url
+
+        avatar_resource = create_resource(
+            db=db,
+            resource_in=ResourceCreate(
+                type=ResourceType.IMAGE,
+                url=cropped_avatar_url,
+                resource_metadata={
+                    "size": crop_avatar_result.size.model_dump(),
+                    "format": ImageFormat.JPEG,
+                    "compressed": True,
+                    "avatar_cropped": True,
+                    "original_size_bytes": len(jpg_data),
+                    "filename": f"{file.filename}_avatar",
+                    "content_type": f"image/{ImageFormat.JPEG}",
+                },
+            ),
+            user_id=user_id,
+        )
+        logger.debug(f"创建头像图片资源记录成功，ID: {avatar_resource.id}")
 
     return APIResponse.success(data=result)

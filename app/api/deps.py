@@ -8,6 +8,7 @@ from typing import Generator, Optional
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
+from loguru import logger
 from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -21,14 +22,11 @@ from app.db.session import get_async_db
 from app.models.user import User
 from app.schemas.token import TokenPayload
 
-from loguru import logger
-
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
 
-@deprecated("Use app.db.session get_async_db instead")
 def get_db() -> Generator:
-    """获取数据库会话"""
+    """获取数据库会话（同步版本，另有 async 版本）"""
     try:
         db = SessionLocal()
         yield db
