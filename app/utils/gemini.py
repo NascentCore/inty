@@ -15,17 +15,21 @@ They differ in:
 This file is for the genai API.
 """
 
+import io
 import json
 import os
 from enum import StrEnum
 from typing import List, Optional
 
 import google.genai as genai
+import PIL
 from google.genai import types
 from loguru import logger
 from pydantic import BaseModel, Field
 
 from app.core.config import global_config_loaded_from_config_yaml
+from app.external_services.gcs import download_from_gcs
+from app.utils.image import ImageFormat, ImageSize
 
 # Initialize Google Gen AI client with Vertex AI
 # The client will use the same credentials as configured for GCS
@@ -111,6 +115,18 @@ class ImagenGeneratedImage(BaseModel):
         default=None,
         description="""The output image's GCS URI. None if filtered out by RAI.""",
     )
+    size: Optional[ImageSize] = Field(
+        default=None,
+        description="""The size of the generated image.""",
+    )
+    byte_size: Optional[int] = Field(
+        default=None,
+        description="""The byte size of the generated image.""",
+    )
+    format: Optional[ImageFormat] = Field(
+        default=None,
+        description="""The format of the generated image.""",
+    )
     rai_filtered_reason: Optional[str] = Field(
         default=None,
         description="""Reason why this image is filtered out. None if not filtered out.""",
@@ -195,9 +211,26 @@ def text_to_image(
                 logger.debug(f"Image {i}: {gcs_uri}")
             elif gcs_uri is None:
                 logger.debug(f"Image {i}: Filtered by RAI - no GCS URI available")
+
+            # Try to get size from image.image.image_bytes if available
+            size = None
+            byte_size = 0
+            if gcs_uri:
+                # TODO: 考虑取消自动 gcs 上传，本地处理上传，这样就不用下载了。
+                image_bytes = download_from_gcs(gcs_uri)
+                byte_size = len(image_bytes)
+                pil_image = PIL.Image.open(io.BytesIO(image_bytes))
+                size = ImageSize(
+                    width=pil_image.width,
+                    height=pil_image.height,
+                )
+
             generated_images.append(
                 ImagenGeneratedImage(
                     gcs_uri=gcs_uri,
+                    size=size,
+                    byte_size=byte_size,
+                    format=ImageFormat.JPEG,
                     rai_filtered_reason=image.rai_filtered_reason,
                     enhanced_prompt=image.enhanced_prompt or "",
                 )

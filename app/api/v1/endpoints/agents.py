@@ -31,8 +31,9 @@ from app.schemas.response import (
 from app.services import agent_service
 from app.services.character_card_service import character_card_service
 from app.services.global_services import subscription_service
+from app.services.resource_service import create_image_resource
 from app.utils.gemini import ImagenGeneratedImage, text_to_image
-from app.utils.image import AspectRatio, ImageFormat
+from app.utils.image import AspectRatio, ImageFormat, ImageSize
 
 router = APIRouter(prefix="/ai/agents", route_class=LoggerRoute)
 
@@ -453,6 +454,11 @@ async def generate_background(
         )
 
         result = process_generated_images(generated_images)
+        gcs_url_to_img_dict = {}
+        for image in generated_images:
+            if not image.gcs_uri:
+                continue
+            gcs_url_to_img_dict[image.gcs_uri] = image
 
         gcs_urls = result["image_uris"]
         rai_reasons = result["rai_reasons"]
@@ -461,15 +467,39 @@ async def generate_background(
         from app.services.image_transform_service import image_transform_service
 
         cdn_urls = []
+        cdn_url_to_img_dict = {}
         for gcs_url in gcs_urls:
             try:
                 cdn_url = image_transform_service.transform_desktop(gcs_url)
+                logger.debug(f"Transformed GCS URL to CDN URL: {gcs_url} -> {cdn_url}")
                 cdn_urls.append(cdn_url)
+                cdn_url_to_img_dict[cdn_url] = gcs_url_to_img_dict[gcs_url]
             except Exception as transform_error:
                 logger.warning(
                     f"Failed to transform URL to CDN: {gcs_url}, error: {str(transform_error)}"
                 )
                 cdn_urls.append(gcs_url)  # Fallback to original URL
+                cdn_url_to_img_dict[gcs_url] = gcs_url_to_img_dict[gcs_url]
+
+        # Create image resource records for each generated image
+        # Note: We need to use sync session for create_image_resource
+        sync_db = next(deps.get_db())
+        try:
+            for cdn_url in cdn_urls:
+                # For generated images, we don't have exact size/format info from the API
+                # We'll use default values and let the system handle it
+                create_image_resource(
+                    db=sync_db,
+                    user_id=current_user.id,
+                    url=cdn_url,
+                    size=cdn_url_to_img_dict[cdn_url].size,
+                    byte_size=cdn_url_to_img_dict[cdn_url].byte_size,
+                    format=cdn_url_to_img_dict[cdn_url].format,
+                    compressed=False,  # Generated images are already optimized
+                )
+                logger.debug(f"Created image resource record for: {cdn_url}")
+        finally:
+            sync_db.close()
 
         # 记录背景图生成使用次数
         try:
