@@ -30,6 +30,7 @@ import androidx.paging.compose.collectAsLazyPagingItems
 import com.ai.inty.R
 import com.ai.inty.base.IntyImage
 import com.ai.inty.beans.AgentInfo
+import com.ai.inty.utils.ImagePreloadManager
 import com.ai.inty.utils.StableCardHeightManager
 import com.ai.inty.utils.TrackScreenView
 
@@ -61,9 +62,10 @@ fun ExplorePage(
         )
     )
 
-    // 初始化图片尺寸缓存管理器
+    // 初始化图片尺寸缓存管理器和图片预加载管理器
     LaunchedEffect(Unit) {
         StableCardHeightManager.init(context)
+        ImagePreloadManager.init(context)
     }
 
     // 初始化Paging数据

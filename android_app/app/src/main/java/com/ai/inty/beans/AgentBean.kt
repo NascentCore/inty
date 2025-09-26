@@ -65,12 +65,17 @@ data class AgentInfo(
 
     //背景图的获取
     fun getMediumBackground():String?{
-        return getCdnImageUrl(background, width = 360)
+        return getCdnImageUrl(background, width = 540)
     }
     fun getLargeBackground():String?{
-        return getCdnImageUrl(background, width = 540, quality = 50)
+        return getCdnImageUrl(background, width = 720)
     }
 
+
+    //用于显示的图
+    fun getAlbumImage():String?{
+        return getMediumBackground()?:getLargeAvatar()
+    }
 }
 
 @Parcelize

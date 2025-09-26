@@ -79,7 +79,7 @@ object StableCardHeightManager {
      */
     fun preCalculateAndCacheHeight(agentInfo: AgentInfo) {
         if (agentInfo.cachedCardHeightDp <= 0f) {
-            val imageUrl = agentInfo.getLargeBackground()
+            val imageUrl = agentInfo.getAlbumImage()
 
             // 只有当图片尺寸已经缓存时才预计算高度
             if (!imageUrl.isNullOrBlank() && imageSizeCache.get(imageUrl) != null) {
@@ -162,7 +162,7 @@ object StableCardHeightManager {
      * 计算卡片高度（dp）
      */
     private fun calculateCardHeightDp(agentInfo: AgentInfo): Float {
-        val imageUrl = agentInfo.getLargeBackground()
+        val imageUrl = agentInfo.getAlbumImage()
 
         if (imageUrl.isNullOrBlank()) {
             return getDefaultHeightDp()

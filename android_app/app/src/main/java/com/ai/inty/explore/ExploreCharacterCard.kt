@@ -22,7 +22,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -44,8 +43,6 @@ fun ExploreCharacterCard(
     agentInfo: AgentInfo,
     onClick: () -> Unit
 ) {
-    val density = LocalDensity.current
-
     // 缓存渐变画笔，避免每次重组时重新创建
     val gradientBrush = remember {
         Brush.verticalGradient(
@@ -64,7 +61,7 @@ fun ExploreCharacterCard(
 
     // 获取图片URL
     val imageUrl = remember(agentInfo.id, agentInfo.background, agentInfo.avatar) {
-        agentInfo.getLargeBackground() ?: agentInfo.getLargeAvatar()
+        agentInfo.getAlbumImage()
     }
 
     // 使用AgentInfo中缓存的高度，但保持瀑布流效果
@@ -80,11 +77,11 @@ fun ExploreCharacterCard(
         }
     }
 
-    // 图片加载状态
-    var imageLoaded by remember { mutableStateOf(false) }
+    // 图片加载状态 - 使用稳定的key避免不必要的重组
+    var imageLoaded by remember(agentInfo.id) { mutableStateOf(false) }
 
     // 预加载图片尺寸，但不更新高度（高度已在remember中稳定）
-    LaunchedEffect(imageUrl) {
+    LaunchedEffect(agentInfo.id, imageUrl) {
         if (!imageUrl.isNullOrEmpty()) {
             try {
                 StableCardHeightManager.preloadImageSize(imageUrl)
@@ -116,10 +113,16 @@ fun ExploreCharacterCard(
                 model = imageUrl,
                 contentScale = ContentScale.Crop,
                 onSuccess = {
-                    imageLoaded = true
+                    // 只在状态真正改变时才更新，避免不必要的重组
+                    if (!imageLoaded) {
+                        imageLoaded = true
+                    }
                 },
                 onError = {
-                    imageLoaded = false
+                    // 只在状态真正改变时才更新，避免不必要的重组
+                    if (imageLoaded) {
+                        imageLoaded = false
+                    }
                 }
             )
         }
