@@ -1,4 +1,5 @@
 import io
+import uuid
 from unittest.mock import patch
 
 import pytest
@@ -7,13 +8,19 @@ from loguru import logger
 from PIL import Image
 
 from app import models
+from app.api.deps import get_async_db
 from app.core.config import global_config_loaded_from_config_yaml
+from app.db.session import AsyncSessionLocal
 from app.external_services.gcs import (
     download_from_gcs,
     get_bucket_and_path_from_gcs_url,
 )
 from app.schemas.agent import AgentUpdate, ModelConfig
-from app.services.agent_service import _crop_avatar_from_background, _update_agent_in_db
+from app.services.agent_service import (
+    _crop_avatar_from_background,
+    _update_agent_in_db,
+    get_balanced_score_based_agents,
+)
 
 
 @pytest.mark.asyncio
@@ -133,3 +140,79 @@ def test_process_agent_image_urls():
             result["background"]
             == "https://storage.googleapis.com/test-bucket/background.jpg"
         )
+
+
+# TODO: See how to test the ordering of the agents returned from get_balanced_score_based_agents.
+# The ordering is deterministic but determined by random seed.
+# Also the database can have values from other tests.
+
+
+@pytest.mark.asyncio
+async def test_get_balanced_score_based_agents_pagination():
+    """
+    Test that the agents returned from get_balanced_score_based_agents are paginated correctly.
+    """
+    test_id = str(uuid.uuid4())[:4]  # Use only 4 chars to leave room for index
+
+    async for db in get_async_db():
+        for i in range(10):
+            db.add(
+                models.Agent(
+                    id=f"test-agent-{test_id}-{i}",
+                    readable_id=f"{test_id}{i:04d}",  # 4 + 4 = 8 chars max
+                    name=f"Test Agent {i}",
+                    gender="FEMALE",
+                    meta_data={"score": i},
+                )
+            )
+        await db.commit()
+
+        # Get the agents with balanced score based on the score
+        part1 = await get_balanced_score_based_agents(db, 1, 3)
+        part2 = await get_balanced_score_based_agents(db, 2, 3)
+        part3 = await get_balanced_score_based_agents(db, 3, 3)
+        one_part = await get_balanced_score_based_agents(db, 1, 9)
+        assert one_part == part1 + part2 + part3
+
+
+@pytest.mark.asyncio
+async def test_get_balanced_score_based_agents_stable_with_sort_seed():
+    """
+    Test that the agents returned from get_balanced_score_based_agents are stable with the same sort seed.
+    """
+    test_id = str(uuid.uuid4())[:4]  # Use only 4 chars to leave room for index
+
+    async for db in get_async_db():
+        for i in range(10):
+            db.add(
+                models.Agent(
+                    id=f"test-agent-seed-{test_id}-{i}",
+                    readable_id=f"{test_id}{i:04d}",  # 4 + 4 = 8 chars max
+                    name=f"Test Seed Agent {i}",
+                    gender="FEMALE",
+                    meta_data={"score": i},
+                )
+            )
+        await db.commit()
+
+        # Get the agents with balanced score based on the score
+        agents = await get_balanced_score_based_agents(db, 1, 10, "test-seed")
+        first_query_results = [agent.id for agent in agents]
+
+        second_query_agents = await get_balanced_score_based_agents(
+            db, 1, 10, "test-seed"
+        )
+        second_query_results = [agent.id for agent in second_query_agents]
+
+        assert (
+            first_query_results == second_query_results
+        ), "The results of the two queries should be the same"
+
+        third_query_agents = await get_balanced_score_based_agents(
+            db, 1, 10, "test-seed"
+        )
+        third_query_results = [agent.id for agent in third_query_agents]
+
+        assert (
+            first_query_results == third_query_results
+        ), "The results of the two queries should be the same"
