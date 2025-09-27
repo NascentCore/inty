@@ -481,13 +481,11 @@ private fun BottomBarItem(
             modifier = Modifier.size(42.dp),
             model = if (selected) tabInfo.selectedImage else tabInfo.normalImage
         )
-        tabInfo.label.let { labelRes ->
-            Text(
-                text = stringResource(labelRes),
-                fontSize = 12.sp,
-                fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-                color = if (selected) Color(0xFF9C27B0) else Color.White // 选中时使用紫色，未选中时使用白色
-            )
-        }
+        Text(
+            text = stringResource(tabInfo.label),
+            fontSize = 12.sp,
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+            color = if (selected) Color(0xFF9C27B0) else Color.White // 选中时使用紫色，未选中时使用白色
+        )
     }
 }
