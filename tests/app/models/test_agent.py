@@ -6,7 +6,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from app.models.agent import Agent, AgentStatus, AgentVisibility
-from app.models.user import Gender
+from app.models.user import AuthType, Gender, User
 
 
 def test_agent_extensions_field():
@@ -22,7 +22,24 @@ def test_agent_extensions_field():
     # 创建会话
     db = SessionLocal()
 
-    # 1. 创建一个新的 Agent 记录，包含 extensions 数据
+    # 1. 首先创建一个测试用户
+    user_id = f"test-user-{uuid.uuid4().hex[:8]}"
+    user_readable_id = f"user{uuid.uuid4().hex[:4]}"
+    
+    test_user = User(
+        id=user_id,
+        readable_id=user_readable_id,
+        auth_type=AuthType.PHONE,
+        nickname="Test User",
+        email="test@example.com",
+        system_language="en",
+        is_active=True,
+    )
+    db.add(test_user)
+    db.commit()
+    db.refresh(test_user)
+
+    # 2. 创建一个新的 Agent 记录，包含 extensions 数据
     agent_id = f"test-agent-{uuid.uuid4().hex[:8]}"
     readable_id = f"test{uuid.uuid4().hex[:4]}"
 
@@ -44,7 +61,8 @@ def test_agent_extensions_field():
         opening="你好！我是测试角色",
         visibility=AgentVisibility.PUBLIC,
         status=AgentStatus.APPROVED,
-        extensions=initial_extensions
+        extensions=initial_extensions,
+        creator_id=test_user.id  # Use the created user's ID
     )
 
     # 保存到数据库
