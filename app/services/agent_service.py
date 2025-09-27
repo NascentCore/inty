@@ -52,6 +52,7 @@ async def _populate_agent_image_sizes(db: AsyncSession, agent: models.Agent) -> 
 
     result = await db.execute(query)
     resources = result.scalars().all()
+    logger.debug(f"Agent {agent.id} Image resources: {resources}")
 
     # 创建 URL 到资源的映射
     resource_map = {resource.url: resource for resource in resources}
@@ -348,6 +349,7 @@ async def get_user_agents(
                     models.Agent.deleted_at.is_(None),
                 )
             )
+            # 获取每个agent的follower数量
             .group_by(models.Agent.id)
             .offset(skip)
             .limit(limit)
@@ -384,6 +386,7 @@ async def get_user_agents(
 
         # 批量填充图片尺寸信息
         for agent in agents:
+            logger.debug(f"Populating image sizes for agent {agent.id}")
             await _populate_agent_image_sizes(db, agent)
 
         return agents
