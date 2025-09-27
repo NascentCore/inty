@@ -61,19 +61,6 @@ import com.ai.inty.viewmodels.MainViewModel
 import com.inty.utils.storage.IntySetting
 import com.therouter.TheRouter
 
-private data class TabInfo(
-    val normalImage: Int,
-    val selectedImage: Int,
-    val label: Int, // 文字标签资源 ID
-)
-
-private val MAIN_TAB_LIST = listOf(
-    TabInfo(R.drawable.tab_icon_chat, R.drawable.tab_icon_chat_selected, R.string.tab_home),
-    TabInfo(R.drawable.tab_icon_activity, R.drawable.tab_icon_activity_selected, R.string.tab_activity),
-    TabInfo(R.drawable.tab_icon_create, R.drawable.tab_icon_create, R.string.tab_create), // Create tab 不需要文字标签
-    TabInfo(R.drawable.tab_icon_explore, R.drawable.tab_icon_explore_selected, R.string.tab_explore),
-    TabInfo(R.drawable.tab_icon_me, R.drawable.tab_icon_me_selected, R.string.tab_me),
-)
 
 /**
  * 主页面，包含五个tab
@@ -436,9 +423,23 @@ private fun ProfileTabContent(
 val BottomNavigationBarHeight = 64.dp
 val TabIconSize = 30.dp
 
-/**
- * 底部导航栏
- */
+
+private data class TabInfo(
+    val icon: Int,
+    val iconSelected: Int,
+    val label: Int,
+)
+
+
+private val MAIN_TAB_LIST = listOf(
+    TabInfo(R.drawable.tab_icon_chat, R.drawable.tab_icon_chat_selected, R.string.tab_home),
+    TabInfo(R.drawable.tab_icon_activity, R.drawable.tab_icon_activity_selected, R.string.tab_activity),
+    TabInfo(R.drawable.tab_icon_create, R.drawable.tab_icon_create, R.string.tab_create), // Create tab 不需要文字标签
+    TabInfo(R.drawable.tab_icon_explore, R.drawable.tab_icon_explore_selected, R.string.tab_explore),
+    TabInfo(R.drawable.tab_icon_me, R.drawable.tab_icon_me_selected, R.string.tab_me),
+)
+
+
 @Composable
 private fun AppBottomNavigationBar(
     modifier: Modifier,
@@ -467,9 +468,7 @@ private fun AppBottomNavigationBar(
     }
 }
 
-/**
- * 底部导航栏项
- */
+
 @Composable
 private fun BottomNavigationBarItem(
     modifier: Modifier,
@@ -483,7 +482,7 @@ private fun BottomNavigationBarItem(
     ) {
         IntyImage(
             modifier = Modifier.size(TabIconSize),
-            model = if (selected) tabInfo.selectedImage else tabInfo.normalImage,
+            model = if (selected) tabInfo.iconSelected else tabInfo.icon,
             contentScale = ContentScale.Fit, // 保持图片宽高比不变
             alignment = Alignment.Center
         )
