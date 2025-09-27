@@ -123,7 +123,7 @@ async def async_create_image_resource(
     resource_metadata = {
         "size": size.model_dump(),
     }
-    async_create_resource(
+    await async_create_resource(
         async_db=async_db,
         resource_in=ResourceCreate(
             type=ResourceType.IMAGE,
