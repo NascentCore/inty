@@ -46,20 +46,20 @@ internal class BillingPriceManager(
             .build()
 
         billingClient.querySkuDetailsAsync(params) { billingResult, skuDetailsList ->
-            EasyLog.log("BillingRepository BillingPriceManager - Google Play 价格查询结果: 响应码=${billingResult.responseCode}", EasyLog.DEBUG)
-            EasyLog.log("BillingRepository BillingPriceManager - 查询结果详情: ${billingResult.debugMessage}", EasyLog.DEBUG)
+            EasyLog.log("BillingRepository BillingPriceManager - Google Play 价格查询结果: 响应码=${billingResult.responseCode}")
+            EasyLog.log("BillingRepository BillingPriceManager - 查询结果详情: ${billingResult.debugMessage}")
 
             when (billingResult.responseCode) {
                 BillingClient.BillingResponseCode.OK -> {
                     skuDetailsList?.let { detailsList ->
                         if (detailsList.isNotEmpty()) {
-                            EasyLog.log("BillingRepository BillingPriceManager - 查询成功，获取到 ${detailsList.size} 个商品信息", EasyLog.DEBUG)
+                            EasyLog.log("BillingRepository BillingPriceManager - 查询成功，获取到 ${detailsList.size} 个商品信息")
                             EasyLog.log(
                                 "BillingRepository BillingPriceManager - 查询成功，获取到 ${
                                     detailsList.joinToString(
                                         " ,, "
                                     )
-                                } 个商品信息", EasyLog.DEBUG
+                                } 个商品信息"
                             )
                             // 使用 SkuDetails 更新计划价格
                             updateLocalPlans(currentPlans, detailsList)
@@ -130,7 +130,7 @@ internal class BillingPriceManager(
         val updatedPlans = currentPlans.toMutableList()
         var updatedCount = 0
 
-        EasyLog.log("BillingRepository BillingPriceManager 开始比较价格信息 (旧API)...", EasyLog.DEBUG)
+        EasyLog.log("BillingRepository BillingPriceManager 开始比较价格信息 (旧API)...")
 
         skuDetailsList.forEach { skuDetails ->
             val planId = skuDetails.sku
@@ -151,6 +151,7 @@ internal class BillingPriceManager(
                     currentPlan.currencyCode != currencyCode ||
                     currentPlan.priceAmountMicros != micros
                 ) {
+
                     val oldPrice = currentPlan.price
                     updatedPlans[index] = currentPlan.copy(
                         price = correctedPrice,
@@ -160,27 +161,27 @@ internal class BillingPriceManager(
                     )
                     updatedCount++
 
-                    EasyLog.log("BillingRepository BillingPriceManager ✅ 价格有变化，更新计划: $planId", EasyLog.DEBUG)
-                    EasyLog.log("BillingRepository BillingPriceManager    计划名称: ${currentPlan.name}", EasyLog.DEBUG)
-                    EasyLog.log("BillingRepository BillingPriceManager    价格变化: $oldPrice -> $correctedPrice", EasyLog.DEBUG)
-                    EasyLog.log("BillingRepository BillingPriceManager    货币代码: ${currentPlan.currencyCode} -> $currencyCode", EasyLog.DEBUG)
-                    EasyLog.log("BillingRepository BillingPriceManager    商品标题: ${skuDetails.title}", EasyLog.DEBUG)
-                    EasyLog.log("BillingRepository BillingPriceManager    商品描述: ${skuDetails.description}", EasyLog.DEBUG)
+                    EasyLog.log("BillingRepository BillingPriceManager ✅ 价格有变化，更新计划: $planId")
+                    EasyLog.log("BillingRepository BillingPriceManager    计划名称: ${currentPlan.name}")
+                    EasyLog.log("BillingRepository BillingPriceManager    价格变化: $oldPrice -> $correctedPrice")
+                    EasyLog.log("BillingRepository BillingPriceManager    货币代码: ${currentPlan.currencyCode} -> $currencyCode")
+                    EasyLog.log("BillingRepository BillingPriceManager    商品标题: ${skuDetails.title}")
+                    EasyLog.log("BillingRepository BillingPriceManager    商品描述: ${skuDetails.description}")
                 } else {
-                    EasyLog.log("BillingRepository BillingPriceManager ℹ️ 价格无变化，跳过: $planId (${currentPlan.name})", EasyLog.DEBUG)
+                    EasyLog.log("BillingRepository BillingPriceManager ℹ️ 价格无变化，跳过: $planId (${currentPlan.name})")
                 }
             } else {
-                EasyLog.log("BillingRepository BillingPriceManager ⚠️ 未找到匹配的计划ID: $planId", EasyLog.DEBUG)
+                EasyLog.log("BillingRepository BillingPriceManager ⚠️ 未找到匹配的计划ID: $planId")
             }
         }
 
         // 如果有变化，更新并通知
         if (updatedCount > 0) {
-            EasyLog.log("BillingRepository BillingPriceManager ✅ 检测到 $updatedCount 个计划价格变化，更新 plansFlow", EasyLog.DEBUG)
+            EasyLog.log("BillingRepository BillingPriceManager ✅ 检测到 $updatedCount 个计划价格变化，更新 plansFlow")
             plansFlow.value = updatedPlans
             BillingStorage.saveLocalPlans(updatedPlans) // 保存到本地缓存
         } else {
-            EasyLog.log("BillingRepository BillingPriceManager ℹ️ 所有计划价格都无变化，无需更新", EasyLog.DEBUG)
+            EasyLog.log("BillingRepository BillingPriceManager ℹ️ 所有计划价格都无变化，无需更新")
         }
     }
 } 
