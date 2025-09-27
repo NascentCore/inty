@@ -67,7 +67,7 @@ TheRouter {
 
 dependencies {
     // ===== Inty SDK（Stainless https://app.stainless.com/ 根据 app/openapi.json 生成的代码）=====
-    implementation("com.inty.api:inty-kotlin:0.10.0")
+    implementation("com.inty.api:inty-kotlin:0.9.0")
 
     // ===== AndroidX 核心库 =====
     implementation(libs.androidx.core.ktx)
