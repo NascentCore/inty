@@ -75,7 +75,7 @@ class Agent(Base):
     opening_audio_url = Column(String, nullable=True)  # 预生成的开场白语音URL
 
     # 外键
-    creator_id = Column(String, ForeignKey("users.id"))
+    creator_id = Column(String, ForeignKey("users.id"), nullable=False)
 
     # 关系
     creator = relationship("User", back_populates="agents")

@@ -488,6 +488,48 @@ def get_deterministic_random_order(sort_seed: str):
     return func.md5(func.concat(models.Agent.id, sort_seed))
 
 
+def _select_agents_with_sizes() -> select:
+    avatar_resource = models.Resource.__table__.alias("avatar_resource")
+    background_resource = models.Resource.__table__.alias("background_resource")
+    return (
+        select(
+            models.Agent,
+            avatar_resource.c.resource_metadata.label("avatar_metadata"),
+            background_resource.c.resource_metadata.label("background_metadata"),
+        )
+        # eager loading optimization that tells SQLAlchemy to load the related creator data in a separate, efficient query.
+        # 1. Prevents N+1 queries: Without this, if you access agent.creator for each agent,
+        #    SQLAlchemy would make a separate database query for each one
+        # 2. Loads all creator data upfront: It performs one additional query to load all the creator information for all agents at once
+        # 3. Makes the relationship immediately available: You can access agent.creator without triggering additional database hits
+        .options(selectinload(models.Agent.creator))
+        .outerjoin(
+            avatar_resource,
+            avatar_resource.c.url == models.Agent.avatar,
+        )
+        .outerjoin(
+            background_resource,
+            background_resource.c.url == models.Agent.background,
+        )
+        .where(
+            # Public ones, users can create private agents
+            models.Agent.visibility == AgentVisibility.PUBLIC,
+            # Not deleted
+            models.Agent.deleted_at.is_(None),
+        )
+    )
+
+
+def _fill_agent_image_sizes(
+    agent: models.Agent, avatar_metadata: dict, bg_metadata: dict
+) -> models.Agent:
+    if avatar_metadata:
+        agent.avatar_size = ImageSize.model_validate(avatar_metadata["size"])
+    if bg_metadata:
+        agent.background_size = ImageSize.model_validate(bg_metadata["size"])
+    return agent
+
+
 async def get_balanced_score_based_agents(
     db: AsyncSession,
     page: int,
@@ -501,17 +543,9 @@ async def get_balanced_score_based_agents(
     """
     offset = (page - 1) * page_size
 
-    # 基础查询条件
-    base_condition = and_(
-        models.Agent.visibility == AgentVisibility.PUBLIC,
-        models.Agent.deleted_at.is_(None),
-    )
-
-    # 平衡权重排序查询
+    # 平衡权重排序查询，同时获取头像和背景图的尺寸信息
     query = (
-        select(models.Agent)
-        .options(selectinload(models.Agent.creator))
-        .where(base_condition)
+        _select_agents_with_sizes()
         .order_by(
             (
                 # score * 2 + random(0-100)
@@ -529,7 +563,10 @@ async def get_balanced_score_based_agents(
     )
 
     result = await db.execute(query)
-    return result.scalars().all()
+    query_results = result.all()
+
+    # 处理查询结果，提取agent和metadata信息
+    return [_fill_agent_image_sizes(row[0], row[1], row[2]) for row in query_results]
 
 
 async def get_recommended_agents_paginated(
@@ -588,24 +625,21 @@ async def get_recommended_agents_paginated(
             else:  # 默认为 CREATED_DESC
                 sort_order = desc(models.Agent.created_at)
 
-            # 获取分页数据
+            # 获取分页数据，同时获取头像和背景图的尺寸信息
             data_query = (
-                select(models.Agent)
-                .options(selectinload(models.Agent.creator))
-                .where(
-                    and_(
-                        models.Agent.visibility == AgentVisibility.PUBLIC,
-                        models.Agent.deleted_at.is_(None),
-                        # models.Agent.status == AgentStatus.APPROVED
-                    )
-                )
+                _select_agents_with_sizes()
                 .offset(skip)
                 .limit(page_size)
                 .order_by(sort_order)
             )
 
             result = await db.execute(data_query)
-            agents_list = result.scalars().all()
+            query_results = result.all()
+
+            # 处理查询结果，提取agent和metadata信息
+            agents_list = [
+                _fill_agent_image_sizes(row[0], row[1], row[2]) for row in query_results
+            ]
 
         # 为所有agents添加关注者数量和关注状态
         agents = []
