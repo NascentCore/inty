@@ -46,7 +46,7 @@ async def _populate_agent_image_sizes(db: AsyncSession, agent: models.Agent) -> 
 
     if not resource_urls:
         return
-
+    logger.debug(f"Agent {agent.id} Resource URLs: {resource_urls}")
     # 查询 resources 表获取图片尺寸信息
     query = select(models.Resource).where(models.Resource.url.in_(resource_urls))
 
