@@ -420,9 +420,6 @@ private fun ProfileTabContent(
     )
 }
 
-val BottomNavigationBarHeight = 64.dp
-val TabIconSize = 30.dp
-
 
 private data class TabInfo(
     val icon: Int,
@@ -432,13 +429,15 @@ private data class TabInfo(
 
 
 private val MAIN_TAB_LIST = listOf(
-    TabInfo(R.drawable.tab_icon_chat, R.drawable.tab_icon_chat_selected, R.string.tab_home),
+    TabInfo(R.drawable.tab_icon_home, R.drawable.tab_icon_home_selected, R.string.tab_home),
     TabInfo(R.drawable.tab_icon_activity, R.drawable.tab_icon_activity_selected, R.string.tab_activity),
     TabInfo(R.drawable.tab_icon_create, R.drawable.tab_icon_create, R.string.tab_create), // Create tab 不需要文字标签
     TabInfo(R.drawable.tab_icon_explore, R.drawable.tab_icon_explore_selected, R.string.tab_explore),
     TabInfo(R.drawable.tab_icon_me, R.drawable.tab_icon_me_selected, R.string.tab_me),
 )
 
+
+val BottomNavigationBarHeight = 64.dp
 
 @Composable
 private fun AppBottomNavigationBar(
@@ -469,6 +468,8 @@ private fun AppBottomNavigationBar(
 }
 
 
+val TabIconSize = 28.dp
+
 @Composable
 private fun BottomNavigationBarItem(
     modifier: Modifier,
@@ -487,7 +488,7 @@ private fun BottomNavigationBarItem(
             alignment = Alignment.Center
         )
         
-        val spacerRatio = 0.1f
+        val spacerRatio = 0.05f
         val spacerHeight = TabIconSize.value * spacerRatio
         Spacer(modifier = Modifier.height(spacerHeight.dp)) // Vertical spacing between icon and text
         
