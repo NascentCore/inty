@@ -62,9 +62,7 @@ TheRouter {
     // 检查 FlowTask 是否有循环引用，可选参数 warning(仅打印日志)/error(编译期抛异常)，不配置则不校验
     checkFlowDepend = "warning"
     // 图形化展示当前的 FlowTask 依赖图
-    showFlowDepend = false  // 关闭图形化展示以提升构建速度
-    // 启用增量构建
-    forceIncremental = true
+    showFlowDepend = true
 }
 
 dependencies {
