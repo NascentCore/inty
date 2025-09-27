@@ -13,8 +13,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.material3.Scaffold
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.material3.Text
@@ -27,14 +27,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.foundation.shape.GenericShape
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.LifecycleResumeEffect
@@ -72,30 +71,9 @@ private val MAIN_TAB_LIST = listOf(
     TabInfo(R.drawable.tab_chat, R.drawable.tab_chat_selected, R.string.tab_home),
     TabInfo(R.drawable.tab_msg, R.drawable.tab_msg_selected, R.string.tab_activity),
     TabInfo(R.drawable.tab_add, R.drawable.tab_add, R.string.tab_create), // Create tab 不需要文字标签
-    TabInfo(R.drawable.tab_suggest, R.drawable.tab_suggest_selected, R.string.tab_explore),
-    TabInfo(R.drawable.tab_my, R.drawable.tab_my_selected, R.string.tab_my),
+    TabInfo(R.drawable.tab_icon_explore, R.drawable.tab_icon_explore_selected, R.string.tab_explore),
+    TabInfo(R.drawable.tab_icon_me, R.drawable.tab_icon_me_selected, R.string.tab_me),
 )
-
-/**
- * Creates a clipping shape that removes a percentage from all sides
- * @param insetPercentage The percentage to clip from each side (0.0 to 0.5)
- * @return A GenericShape that clips the specified percentage from all sides
- */
-private fun createInsetClippingShape(insetPercentage: Float): GenericShape {
-    return GenericShape { size, _ ->
-        val inset = size.minDimension * insetPercentage
-        val horizontalClip = size.width * insetPercentage / 2
-        val verticalClip = size.height * insetPercentage / 2
-        addRect(
-            androidx.compose.ui.geometry.Rect(
-                left = horizontalClip,
-                top = verticalClip,
-                right = size.width - horizontalClip,
-                bottom = size.height - verticalClip
-            )
-        )
-    }
-}
 
 /**
  * 主页面，包含五个tab
@@ -456,6 +434,7 @@ private fun ProfileTabContent(
 }
 
 val BottomNavigationBarHeight = 64.dp
+val TabIconSize = 30.dp
 
 /**
  * 底部导航栏
@@ -474,7 +453,7 @@ private fun AppBottomNavigationBar(
         verticalAlignment = Alignment.CenterVertically
     ) {
         MAIN_TAB_LIST.forEachIndexed { index, tab ->
-            BottomBarItem(
+            BottomNavigationBarItem(
                 modifier = Modifier
                     .fillMaxHeight()
                     .weight(1f)
@@ -492,7 +471,7 @@ private fun AppBottomNavigationBar(
  * 底部导航栏项
  */
 @Composable
-private fun BottomBarItem(
+private fun BottomNavigationBarItem(
     modifier: Modifier,
     tabInfo: TabInfo,
     selected: Boolean,
@@ -500,21 +479,44 @@ private fun BottomBarItem(
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(2.dp, Alignment.Top),
+        verticalArrangement = Arrangement.Center,
     ) {
         IntyImage(
-            modifier = Modifier
-                .size(42.dp)
-                .clip(createInsetClippingShape(0.2f)), // 裁剪掉图片边缘10%的空白
+            modifier = Modifier.size(TabIconSize),
             model = if (selected) tabInfo.selectedImage else tabInfo.normalImage,
             contentScale = ContentScale.FillBounds, // 强制填充整个区域
             alignment = Alignment.Center
         )
+        
+        val spacerRatio = 0.1f
+        val spacerHeight = TabIconSize.value * spacerRatio
+        Spacer(modifier = Modifier.height(spacerHeight.dp)) // Vertical spacing between icon and text
+        
+        val tabTextFontSizeRatio = 0.4f
+        val tabTextFontSize = TabIconSize.value * tabTextFontSizeRatio
         Text(
             text = stringResource(tabInfo.label),
-            fontSize = 15.sp,
+            fontSize = tabTextFontSize.sp,
             fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
             color = if (selected) MediumPurple else Color.White // 选中时使用紫色，未选中时使用白色
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun AppBottomNavigationBarPreview() {
+    // Preview for the entire bottom navigation bar positioned in the middle
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black), // Dark background to match the app theme
+        contentAlignment = Alignment.Center
+    ) {
+        AppBottomNavigationBar(
+            modifier = Modifier,
+            selectedTab = 0, // Home tab selected
+            onSelectTab = { /* Preview doesn't need actual functionality */ }
         )
     }
 }

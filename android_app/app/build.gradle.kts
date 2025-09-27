@@ -62,12 +62,14 @@ TheRouter {
     // 检查 FlowTask 是否有循环引用，可选参数 warning(仅打印日志)/error(编译期抛异常)，不配置则不校验
     checkFlowDepend = "warning"
     // 图形化展示当前的 FlowTask 依赖图
-    showFlowDepend = true
+    showFlowDepend = false  // 关闭图形化展示以提升构建速度
+    // 启用增量构建
+    forceIncremental = true
 }
 
 dependencies {
     // ===== Inty SDK（Stainless https://app.stainless.com/ 根据 app/openapi.json 生成的代码）=====
-    implementation("com.inty.api:inty-kotlin:0.9.0")
+    implementation("com.inty.api:inty-kotlin:0.10.0")
 
     // ===== AndroidX 核心库 =====
     implementation(libs.androidx.core.ktx)
