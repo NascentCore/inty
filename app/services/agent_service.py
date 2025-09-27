@@ -559,8 +559,13 @@ async def get_balanced_score_based_agents(
         avatar_metadata = row[1]  # 头像metadata
         bg_metadata = row[2]  # 背景图metadata
 
-        agent.avatar_size = ImageSize.model_validate(avatar_metadata["size"])
-        agent.background_size = ImageSize.model_validate(bg_metadata["size"])
+        # 提取头像尺寸信息
+        if avatar_metadata:
+            agent.avatar_size = ImageSize.model_validate(avatar_metadata["size"])
+
+        # 提取背景图尺寸信息
+        if bg_metadata:
+            agent.background_size = ImageSize.model_validate(bg_metadata["size"])
 
         agents_list.append(agent)
 
@@ -666,8 +671,17 @@ async def get_recommended_agents_paginated(
                 avatar_metadata = row[1]  # 头像metadata
                 bg_metadata = row[2]  # 背景图metadata
 
-                agent.avatar_size = ImageSize.model_validate(avatar_metadata["size"])
-                agent.background_size = ImageSize.model_validate(bg_metadata["size"])
+                # 提取头像尺寸信息
+                if avatar_metadata:
+                    agent.avatar_size = ImageSize.model_validate(
+                        avatar_metadata["size"]
+                    )
+
+                # 提取背景图尺寸信息
+                if bg_metadata:
+                    agent.background_size = ImageSize.model_validate(
+                        bg_metadata["size"]
+                    )
 
                 agents_list.append(agent)
 
