@@ -468,7 +468,7 @@ private fun AppBottomNavigationBar(
 }
 
 
-val TabIconSize = 28.dp
+val TabIconSize = 26.dp
 
 @Composable
 private fun BottomNavigationBarItem(
@@ -492,7 +492,7 @@ private fun BottomNavigationBarItem(
         val spacerHeight = TabIconSize.value * spacerRatio
         Spacer(modifier = Modifier.height(spacerHeight.dp)) // Vertical spacing between icon and text
         
-        val tabTextFontSizeRatio = 0.4f
+        val tabTextFontSizeRatio = 0.45f
         val tabTextFontSize = TabIconSize.value * tabTextFontSizeRatio
         Text(
             text = stringResource(tabInfo.label),
