@@ -52,6 +52,7 @@ async def _populate_agent_image_sizes(db: AsyncSession, agent: models.Agent) -> 
 
     result = await db.execute(query)
     resources = result.scalars().all()
+    logger.debug(f"Agent {agent.id} Image resources: {resources}")
 
     # 创建 URL 到资源的映射
     resource_map = {resource.url: resource for resource in resources}
