@@ -19,6 +19,7 @@ from app.external_services.gcs import (
     append_filename_suffix,
     download_from_gcs,
     get_bucket_and_path_from_gcs_url,
+    is_valid_gcs_url,
     upload_to_gcs,
 )
 from app.models.agent import AgentVisibility
@@ -26,6 +27,7 @@ from app.models.associations import agent_followers
 from app.models.resource import ResourceType
 from app.schemas.agent import AgentSortOption
 from app.services.cache_service import cache_service
+from app.services.image_transform_service import image_transform_service
 from app.services.voice_service import GENDER_VOICE_MAPPING, VoiceService
 from app.utils.crop_avatar import CROPPED_AVATAR_FILENAME_SUFFIX, crop_avatar
 from app.utils.image import ImageFormat, ImageSize, get_jpg_bytes_from_pil_image
@@ -1058,26 +1060,15 @@ def process_agent_image_urls(agent_data: dict) -> dict:
     """
     验证Agent创建时的图片URL，确保URL有效性
     现在的实现非常简洁：只验证URL的有效性，不进行任何文件操作。
-    背景图片和头像都使用统一目录存储，无需复制或移动。
-
-    Args:
-        agent_data: Agent数据字典
-        agent_id: Agent ID (已弃用，保留以兼容现有调用)
-        user_id: 用户ID (已弃用，保留以兼容现有调用)
-
-    Returns:
-        验证后的agent_data，无效URL会被设置为None
+    返回所有有效的图片URL，包括头像、背景图和相册图片。
     """
-    from app.external_services.gcs import is_valid_gcs_url
-    from app.services.image_transform_service import image_transform_service
-
     logger.debug(f"开始处理Agent图片URLs - 原始数据: avatar={agent_data.get('avatar')}, background={agent_data.get('background')}, background_images={agent_data.get('background_images')}")
-    
+
     # 先将CDN URL转换为GCS URL用于存储
     processed_data = image_transform_service.batch_normalize_urls_for_storage(
         agent_data
     )
-    
+
     logger.debug(f"URL转换完成 - 转换后数据: avatar={processed_data.get('avatar')}, background={processed_data.get('background')}, background_images={processed_data.get('background_images')}")
     images_urls = []
 
@@ -1123,9 +1114,9 @@ def process_agent_image_urls(agent_data: dict) -> dict:
     for url in valid_bg_images:  # 添加原始的background_images
         if url not in final_images:  # 避免重复
             final_images.append(url)
-    
+
     processed_data["background_images"] = final_images if final_images else []
-    
+
     return processed_data
 
 
