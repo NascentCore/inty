@@ -1115,6 +1115,7 @@ def process_agent_image_urls(agent_data: dict) -> dict:
     验证Agent创建时的图片URL，确保URL有效性
     现在的实现非常简洁：只验证URL的有效性，不进行任何文件操作。
     返回所有有效的图片URL，包括头像、背景图和相册图片。
+    同时将CDN URL转换为GCS URL用于存储。
     """
     logger.debug(f"开始处理Agent图片URLs - 原始数据: avatar={agent_data.get('avatar')}, background={agent_data.get('background')}, background_images={agent_data.get('background_images')}")
 
