@@ -55,6 +55,7 @@ import com.ai.inty.ui.ChatDialogData
 import com.ai.inty.ui.ExpiredVipDialog
 import com.ai.inty.ui.components.ForceUpgradeDialog
 import com.ai.inty.ui.theme.DarkPurple
+import com.ai.inty.ui.theme.MediumPurple
 import com.ai.inty.utils.TrackScreenView
 import com.ai.inty.viewmodels.HomeTabIndex
 import com.ai.inty.viewmodels.MainViewModel
@@ -513,7 +514,7 @@ private fun BottomBarItem(
             text = stringResource(tabInfo.label),
             fontSize = 15.sp,
             fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-            color = if (selected) DarkPurple else Color.White // 选中时使用紫色，未选中时使用白色
+            color = if (selected) MediumPurple else Color.White // 选中时使用紫色，未选中时使用白色
         )
     }
 }
