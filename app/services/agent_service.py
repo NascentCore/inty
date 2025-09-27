@@ -348,6 +348,7 @@ async def get_user_agents(
                     models.Agent.deleted_at.is_(None),
                 )
             )
+            # 获取每个agent的follower数量
             .group_by(models.Agent.id)
             .offset(skip)
             .limit(limit)
