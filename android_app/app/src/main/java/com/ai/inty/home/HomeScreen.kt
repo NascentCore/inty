@@ -3,7 +3,9 @@ package com.ai.inty.home
 import android.app.Activity
 import android.content.Context
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -12,7 +14,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.material3.Scaffold
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -24,8 +29,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.LifecycleResumeEffect
@@ -46,24 +54,13 @@ import com.ai.inty.ui.ChatDialogData
 import com.ai.inty.ui.ExpiredVipDialog
 import com.ai.inty.ui.components.ForceUpgradeDialog
 import com.ai.inty.ui.theme.DarkPurple
+import com.ai.inty.ui.theme.MediumPurple
 import com.ai.inty.utils.TrackScreenView
 import com.ai.inty.viewmodels.HomeTabIndex
 import com.ai.inty.viewmodels.MainViewModel
 import com.inty.utils.storage.IntySetting
 import com.therouter.TheRouter
 
-private data class TabInfo(
-    val normalImage: Int,
-    val selectedImage: Int,
-)
-
-private val MAIN_TAB_LIST = listOf(
-    TabInfo(R.drawable.tab_chat, R.drawable.tab_chat_selected),
-    TabInfo(R.drawable.tab_msg, R.drawable.tab_msg_selected),
-    TabInfo(R.drawable.tab_add, R.drawable.tab_add),
-    TabInfo(R.drawable.tab_suggest, R.drawable.tab_suggest_selected),
-    TabInfo(R.drawable.tab_my, R.drawable.tab_my_selected),
-)
 
 /**
  * 主页面，包含五个tab
@@ -423,11 +420,25 @@ private fun ProfileTabContent(
     )
 }
 
-val BottomNavigationBarHeight = 48.dp
 
-/**
- * 底部导航栏
- */
+private data class TabInfo(
+    val icon: Int,
+    val iconSelected: Int,
+    val label: Int,
+)
+
+
+private val MAIN_TAB_LIST = listOf(
+    TabInfo(R.drawable.tab_icon_home, R.drawable.tab_icon_home_selected, R.string.tab_home),
+    TabInfo(R.drawable.tab_icon_activity, R.drawable.tab_icon_activity_selected, R.string.tab_activity),
+    TabInfo(R.drawable.tab_icon_create, R.drawable.tab_icon_create, R.string.tab_create), // Create tab 不需要文字标签
+    TabInfo(R.drawable.tab_icon_explore, R.drawable.tab_icon_explore_selected, R.string.tab_explore),
+    TabInfo(R.drawable.tab_icon_me, R.drawable.tab_icon_me_selected, R.string.tab_me),
+)
+
+
+val BottomNavigationBarHeight = 64.dp
+
 @Composable
 private fun AppBottomNavigationBar(
     modifier: Modifier,
@@ -442,7 +453,7 @@ private fun AppBottomNavigationBar(
         verticalAlignment = Alignment.CenterVertically
     ) {
         MAIN_TAB_LIST.forEachIndexed { index, tab ->
-            BottomBarItem(
+            BottomNavigationBarItem(
                 modifier = Modifier
                     .fillMaxHeight()
                     .weight(1f)
@@ -456,21 +467,56 @@ private fun AppBottomNavigationBar(
     }
 }
 
-/**
- * 底部导航栏项
- */
+
+val TabIconSize = 26.dp
+
 @Composable
-private fun BottomBarItem(
+private fun BottomNavigationBarItem(
     modifier: Modifier,
     tabInfo: TabInfo,
     selected: Boolean,
 ) {
-    Box(modifier = modifier) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Bottom,
+    ) {
         IntyImage(
-            modifier = Modifier
-                .size(42.dp)
-                .align(Alignment.Center),
-            model = if (selected) tabInfo.selectedImage else tabInfo.normalImage
+            modifier = Modifier.size(TabIconSize),
+            model = if (selected) tabInfo.iconSelected else tabInfo.icon,
+            contentScale = ContentScale.Fit, // 保持图片宽高比不变
+            alignment = Alignment.Center
+        )
+        
+        val spacerRatio = 0.05f
+        val spacerHeight = TabIconSize.value * spacerRatio
+        Spacer(modifier = Modifier.height(spacerHeight.dp)) // Vertical spacing between icon and text
+        
+        val tabTextFontSizeRatio = 0.45f
+        val tabTextFontSize = TabIconSize.value * tabTextFontSizeRatio
+        Text(
+            text = stringResource(tabInfo.label),
+            fontSize = tabTextFontSize.sp,
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+            color = if (selected) MediumPurple else Color.White // 选中时使用紫色，未选中时使用白色
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun AppBottomNavigationBarPreview() {
+    // Preview for the entire bottom navigation bar positioned in the middle
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black), // Dark background to match the app theme
+        contentAlignment = Alignment.Center
+    ) {
+        AppBottomNavigationBar(
+            modifier = Modifier,
+            selectedTab = 0, // Home tab selected
+            onSelectTab = { /* Preview doesn't need actual functionality */ }
         )
     }
 }
