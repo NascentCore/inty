@@ -18,12 +18,14 @@ from app.external_services.gcs import (
     get_bucket_and_path_from_gcs_url,
 )
 from app.schemas.agent import AgentUpdate, ModelConfig
+from app.schemas.user import UserCreate
 from app.services.agent_service import (
     _crop_avatar_from_background,
     _update_agent_in_db,
     get_balanced_score_based_agents,
 )
 
+admin_user = None
 
 @pytest.fixture
 async def db_session():
@@ -39,6 +41,24 @@ async def db_session():
     async_session = sessionmaker(
         bind=engine, class_=AsyncSession, expire_on_commit=False
     )
+
+    # create default admin user
+    global admin_user
+    async with async_session() as session:
+        user_id = str(uuid.uuid4())
+        readable_id = str(uuid.uuid4().int)[:8]
+        admin_user = models.User(
+            id=user_id,
+            readable_id=readable_id,
+            auth_type=models.AuthType.PHONE,
+            nickname="admin",
+            email="admin@sxwl.ai",
+            system_language="en",
+            is_active=True,
+        )
+        session.add(admin_user)
+        await session.commit()
+        await session.refresh(admin_user)
 
     async with async_session() as session:
         yield session
@@ -75,10 +95,16 @@ async def test_crop_avatar_from_background():
 def test_update_agent_in_db():
     """Test _update_agent_in_db function with llm_config update"""
 
+    # Create a test user for this test
+    test_user_id = str(uuid.uuid4())
+
+    # Note: This test only validates in-memory object updates, not database constraints
+    # The creator_id doesn't need to exist in the database since we're not saving
     agent_in_db = models.Agent(
         name="Original Agent",
         personality="Original personality",
         settings={"existing_setting": "value"},
+        creator_id=test_user_id,
     )
 
     agent_update = AgentUpdate(
@@ -89,6 +115,7 @@ def test_update_agent_in_db():
             temperature=0.7,
             max_tokens=2048,
         ),
+        creator_id=test_user_id,
     )
 
     # Convert AgentUpdate to dict for the updated function signature
@@ -110,6 +137,7 @@ def test_update_agent_in_db():
                 "temperature": 0.7,
             },
         },
+        "creator_id": test_user_id,
     }
 
     agent_update = AgentUpdate(llm_config=None)
@@ -128,6 +156,7 @@ def test_update_agent_in_db():
         "settings": {
             "existing_setting": "value",
         },
+        "creator_id": test_user_id,
     }, "llm_config should be removed"
 
 
@@ -186,6 +215,7 @@ async def test_get_balanced_score_based_agents_pagination(db_session):
                 name=f"Test Agent {i}",
                 gender="FEMALE",
                 meta_data={"score": i},
+                creator_id=admin_user.id,
             )
         )
     await db_session.commit()
@@ -213,6 +243,7 @@ async def test_get_balanced_score_based_agents_stable_with_sort_seed(db_session)
                 name=f"Test Seed Agent {i}",
                 gender="FEMALE",
                 meta_data={"score": i},
+                creator_id=admin_user.id,
             )
         )
     await db_session.commit()
