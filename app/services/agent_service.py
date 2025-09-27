@@ -758,7 +758,7 @@ async def create_agent(
                 f"成功从background裁剪avatar - Agent ID: {agent_id}, Avatar URL: {cropped_avatar_url}"
             )
             processed_agent_data["background_images"].append(cropped_avatar_url)
-            async_create_image_resource(
+            await async_create_image_resource(
                 db,
                 user_id,
                 cropped_avatar_url,
