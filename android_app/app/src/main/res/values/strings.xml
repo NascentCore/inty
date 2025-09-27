@@ -339,5 +339,5 @@
     <string name="tab_activity">Activity</string>
     <string name="tab_create">Create</string>
     <string name="tab_explore">Explore</string>
-    <string name="tab_my">My</string>
+    <string name="tab_my">Me</string>
 </resources>
