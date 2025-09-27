@@ -485,7 +485,7 @@ private fun BottomNavigationBarItem(
             modifier = Modifier.size(TabIconSize),
             model = if (selected) tabInfo.iconSelected else tabInfo.icon,
             contentScale = ContentScale.Fit, // 保持图片宽高比不变
-            alignment = Alignment.BottomCenter
+            alignment = Alignment.Center
         )
         
         val spacerRatio = 0.05f
