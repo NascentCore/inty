@@ -555,9 +555,7 @@ async def get_balanced_score_based_agents(
     # 处理查询结果，提取agent和metadata信息
     agents_list = []
     for row in query_results:
-        agent = row[0]  # Agent对象
-        avatar_metadata = row[1]  # 头像metadata
-        bg_metadata = row[2]  # 背景图metadata
+        agent, avatar_metadata, bg_metadata = row
 
         # 提取头像尺寸信息
         if avatar_metadata:
