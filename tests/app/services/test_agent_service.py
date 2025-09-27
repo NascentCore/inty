@@ -6,6 +6,8 @@ import pytest
 from google.cloud import storage
 from loguru import logger
 from PIL import Image
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.orm import sessionmaker
 
 from app import models
 from app.api.deps import get_async_db
@@ -21,6 +23,28 @@ from app.services.agent_service import (
     _update_agent_in_db,
     get_balanced_score_based_agents,
 )
+
+
+@pytest.fixture
+async def db_session():
+    """Provide a database session for testing with proper cleanup."""
+    # Create a new engine for this test to avoid shared connection issues
+    engine = create_async_engine(
+        str(global_config_loaded_from_config_yaml.database.async_url),
+        pool_size=1,
+        max_overflow=0,
+        pool_pre_ping=True,
+    )
+
+    async_session = sessionmaker(
+        bind=engine, class_=AsyncSession, expire_on_commit=False
+    )
+
+    async with async_session() as session:
+        yield session
+
+    # Properly dispose of the engine
+    await engine.dispose()
 
 
 @pytest.mark.asyncio
@@ -148,71 +172,69 @@ def test_process_agent_image_urls():
 
 
 @pytest.mark.asyncio
-async def test_get_balanced_score_based_agents_pagination():
+async def test_get_balanced_score_based_agents_pagination(db_session):
     """
     Test that the agents returned from get_balanced_score_based_agents are paginated correctly.
     """
     test_id = str(uuid.uuid4())[:4]  # Use only 4 chars to leave room for index
 
-    async for db in get_async_db():
-        for i in range(10):
-            db.add(
-                models.Agent(
-                    id=f"test-agent-{test_id}-{i}",
-                    readable_id=f"{test_id}{i:04d}",  # 4 + 4 = 8 chars max
-                    name=f"Test Agent {i}",
-                    gender="FEMALE",
-                    meta_data={"score": i},
-                )
+    for i in range(10):
+        db_session.add(
+            models.Agent(
+                id=f"test-agent-{test_id}-{i}",
+                readable_id=f"{test_id}{i:04d}",  # 4 + 4 = 8 chars max
+                name=f"Test Agent {i}",
+                gender="FEMALE",
+                meta_data={"score": i},
             )
-        await db.commit()
+        )
+    await db_session.commit()
 
-        # Get the agents with balanced score based on the score
-        part1 = await get_balanced_score_based_agents(db, 1, 3)
-        part2 = await get_balanced_score_based_agents(db, 2, 3)
-        part3 = await get_balanced_score_based_agents(db, 3, 3)
-        one_part = await get_balanced_score_based_agents(db, 1, 9)
-        assert one_part == part1 + part2 + part3
+    # Get the agents with balanced score based on the score
+    part1 = await get_balanced_score_based_agents(db_session, 1, 3)
+    part2 = await get_balanced_score_based_agents(db_session, 2, 3)
+    part3 = await get_balanced_score_based_agents(db_session, 3, 3)
+    one_part = await get_balanced_score_based_agents(db_session, 1, 9)
+    assert one_part == part1 + part2 + part3
 
 
 @pytest.mark.asyncio
-async def test_get_balanced_score_based_agents_stable_with_sort_seed():
+async def test_get_balanced_score_based_agents_stable_with_sort_seed(db_session):
     """
     Test that the agents returned from get_balanced_score_based_agents are stable with the same sort seed.
     """
     test_id = str(uuid.uuid4())[:4]  # Use only 4 chars to leave room for index
 
-    async for db in get_async_db():
-        for i in range(10):
-            db.add(
-                models.Agent(
-                    id=f"test-agent-seed-{test_id}-{i}",
-                    readable_id=f"{test_id}{i:04d}",  # 4 + 4 = 8 chars max
-                    name=f"Test Seed Agent {i}",
-                    gender="FEMALE",
-                    meta_data={"score": i},
-                )
+    for i in range(10):
+        db_session.add(
+            models.Agent(
+                id=f"test-agent-seed-{test_id}-{i}",
+                readable_id=f"{test_id}{i:04d}",  # 4 + 4 = 8 chars max
+                name=f"Test Seed Agent {i}",
+                gender="FEMALE",
+                meta_data={"score": i},
             )
-        await db.commit()
-
-        # Get the agents with balanced score based on the score
-        agents = await get_balanced_score_based_agents(db, 1, 10, "test-seed")
-        first_query_results = [agent.id for agent in agents]
-
-        second_query_agents = await get_balanced_score_based_agents(
-            db, 1, 10, "test-seed"
         )
-        second_query_results = [agent.id for agent in second_query_agents]
+    await db_session.commit()
 
-        assert (
-            first_query_results == second_query_results
-        ), "The results of the two queries should be the same"
+    # Get the agents with balanced score based on the score
+    agents = await get_balanced_score_based_agents(db_session, 1, 10, "test-seed")
+    first_query_results = [agent.id for agent in agents]
 
-        third_query_agents = await get_balanced_score_based_agents(
-            db, 1, 10, "test-seed"
-        )
-        third_query_results = [agent.id for agent in third_query_agents]
+    second_query_agents = await get_balanced_score_based_agents(
+        db_session, 1, 10, "test-seed"
+    )
+    second_query_results = [agent.id for agent in second_query_agents]
 
-        assert (
-            first_query_results == third_query_results
-        ), "The results of the two queries should be the same"
+    assert (
+        first_query_results == second_query_results
+    ), "The results of the two queries should be the same"
+
+    third_query_agents = await get_balanced_score_based_agents(
+        db_session, 1, 10, "test-seed"
+    )
+    third_query_results = [agent.id for agent in third_query_agents]
+
+    assert (
+        first_query_results == third_query_results
+    ), "The results of the two queries should be the same"
