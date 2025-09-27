@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Scaffold
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -26,7 +27,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.shape.GenericShape
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
@@ -71,6 +74,27 @@ private val MAIN_TAB_LIST = listOf(
     TabInfo(R.drawable.tab_suggest, R.drawable.tab_suggest_selected, R.string.tab_explore),
     TabInfo(R.drawable.tab_my, R.drawable.tab_my_selected, R.string.tab_my),
 )
+
+/**
+ * Creates a clipping shape that removes a percentage from all sides
+ * @param insetPercentage The percentage to clip from each side (0.0 to 0.5)
+ * @return A GenericShape that clips the specified percentage from all sides
+ */
+private fun createInsetClippingShape(insetPercentage: Float): GenericShape {
+    return GenericShape { size, _ ->
+        val inset = size.minDimension * insetPercentage
+        val horizontalClip = size.width * insetPercentage / 2
+        val verticalClip = size.height * insetPercentage / 2
+        addRect(
+            androidx.compose.ui.geometry.Rect(
+                left = horizontalClip,
+                top = verticalClip,
+                right = size.width - horizontalClip,
+                bottom = size.height - verticalClip
+            )
+        )
+    }
+}
 
 /**
  * 主页面，包含五个tab
@@ -478,12 +502,16 @@ private fun BottomBarItem(
         verticalArrangement = Arrangement.spacedBy(2.dp, Alignment.Top),
     ) {
         IntyImage(
-            modifier = Modifier.size(42.dp),
-            model = if (selected) tabInfo.selectedImage else tabInfo.normalImage
+            modifier = Modifier
+                .size(42.dp)
+                .clip(createInsetClippingShape(0.2f)), // 裁剪掉图片边缘10%的空白
+            model = if (selected) tabInfo.selectedImage else tabInfo.normalImage,
+            contentScale = ContentScale.FillBounds, // 强制填充整个区域
+            alignment = Alignment.Center
         )
         Text(
             text = stringResource(tabInfo.label),
-            fontSize = 12.sp,
+            fontSize = 15.sp,
             fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
             color = if (selected) Color(0xFF9C27B0) else Color.White // 选中时使用紫色，未选中时使用白色
         )
