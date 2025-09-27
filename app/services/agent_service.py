@@ -384,6 +384,7 @@ async def get_user_agents(
 
         # 批量填充图片尺寸信息
         for agent in agents:
+            logger.debug(f"Populating image sizes for agent {agent.id}")
             await _populate_agent_image_sizes(db, agent)
 
         return agents
