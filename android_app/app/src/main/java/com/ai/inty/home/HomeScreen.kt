@@ -479,13 +479,13 @@ private fun BottomNavigationBarItem(
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
+        verticalArrangement = Arrangement.Bottom,
     ) {
         IntyImage(
             modifier = Modifier.size(TabIconSize),
             model = if (selected) tabInfo.iconSelected else tabInfo.icon,
             contentScale = ContentScale.Fit, // 保持图片宽高比不变
-            alignment = Alignment.Center
+            alignment = Alignment.BottomCenter
         )
         
         val spacerRatio = 0.05f
