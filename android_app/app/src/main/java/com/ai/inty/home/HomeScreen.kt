@@ -68,9 +68,9 @@ private data class TabInfo(
 )
 
 private val MAIN_TAB_LIST = listOf(
-    TabInfo(R.drawable.tab_chat, R.drawable.tab_chat_selected, R.string.tab_home),
-    TabInfo(R.drawable.tab_msg, R.drawable.tab_msg_selected, R.string.tab_activity),
-    TabInfo(R.drawable.tab_add, R.drawable.tab_add, R.string.tab_create), // Create tab 不需要文字标签
+    TabInfo(R.drawable.tab_icon_chat, R.drawable.tab_icon_chat_selected, R.string.tab_home),
+    TabInfo(R.drawable.tab_icon_activity, R.drawable.tab_icon_activity_selected, R.string.tab_activity),
+    TabInfo(R.drawable.tab_icon_create, R.drawable.tab_icon_create, R.string.tab_create), // Create tab 不需要文字标签
     TabInfo(R.drawable.tab_icon_explore, R.drawable.tab_icon_explore_selected, R.string.tab_explore),
     TabInfo(R.drawable.tab_icon_me, R.drawable.tab_icon_me_selected, R.string.tab_me),
 )
@@ -484,7 +484,7 @@ private fun BottomNavigationBarItem(
         IntyImage(
             modifier = Modifier.size(TabIconSize),
             model = if (selected) tabInfo.selectedImage else tabInfo.normalImage,
-            contentScale = ContentScale.FillBounds, // 强制填充整个区域
+            contentScale = ContentScale.Fit, // 保持图片宽高比不变
             alignment = Alignment.Center
         )
         
