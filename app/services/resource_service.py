@@ -1,6 +1,7 @@
 from typing import List, Optional
 
 from loguru import logger
+from sqlalchemy.ext.asyncio.session import AsyncSession
 from sqlalchemy.orm import Session
 
 from app import models, schemas
@@ -98,3 +99,36 @@ def create_image_resource(
         user_id=user_id,
     )
     logger.debug(f"创建图片资源记录成功，URL: {resource.url} 数据：{resource_metadata}")
+
+
+async def async_create_resource(
+    async_db: AsyncSession, resource_in: schemas.ResourceCreate, user_id: str
+) -> models.Resource:
+    db_resource = models.Resource(**resource_in.dict(), user_id=user_id)
+    async_db.add(db_resource)
+    await async_db.commit()
+    await async_db.refresh(db_resource)
+    return db_resource
+
+
+async def async_create_image_resource(
+    async_db: AsyncSession,
+    user_id: str,
+    url: str,
+    size: ImageSize,
+) -> None:
+    """
+    创建图片资源记录的辅助函数
+    """
+    resource_metadata = {
+        "size": size.model_dump(),
+    }
+    async_create_resource(
+        async_db=async_db,
+        resource_in=ResourceCreate(
+            url=url,
+            resource_metadata=resource_metadata,
+        ),
+        user_id=user_id,
+    )
+    logger.debug(f"创建图片资源记录成功，URL: {url} 数据：{resource_metadata}")
