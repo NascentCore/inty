@@ -3,7 +3,9 @@ package com.ai.inty.home
 import android.app.Activity
 import android.content.Context
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -11,8 +13,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -24,6 +28,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -55,14 +61,15 @@ import com.therouter.TheRouter
 private data class TabInfo(
     val normalImage: Int,
     val selectedImage: Int,
+    val label: Int, // 文字标签资源 ID
 )
 
 private val MAIN_TAB_LIST = listOf(
-    TabInfo(R.drawable.tab_chat, R.drawable.tab_chat_selected),
-    TabInfo(R.drawable.tab_msg, R.drawable.tab_msg_selected),
-    TabInfo(R.drawable.tab_add, R.drawable.tab_add),
-    TabInfo(R.drawable.tab_suggest, R.drawable.tab_suggest_selected),
-    TabInfo(R.drawable.tab_my, R.drawable.tab_my_selected),
+    TabInfo(R.drawable.tab_chat, R.drawable.tab_chat_selected, R.string.tab_home),
+    TabInfo(R.drawable.tab_msg, R.drawable.tab_msg_selected, R.string.tab_activity),
+    TabInfo(R.drawable.tab_add, R.drawable.tab_add, R.string.tab_create), // Create tab 不需要文字标签
+    TabInfo(R.drawable.tab_suggest, R.drawable.tab_suggest_selected, R.string.tab_explore),
+    TabInfo(R.drawable.tab_my, R.drawable.tab_my_selected, R.string.tab_my),
 )
 
 /**
@@ -423,7 +430,7 @@ private fun ProfileTabContent(
     )
 }
 
-val BottomNavigationBarHeight = 48.dp
+val BottomNavigationBarHeight = 64.dp
 
 /**
  * 底部导航栏
@@ -465,12 +472,22 @@ private fun BottomBarItem(
     tabInfo: TabInfo,
     selected: Boolean,
 ) {
-    Box(modifier = modifier) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(2.dp, Alignment.Top),
+    ) {
         IntyImage(
-            modifier = Modifier
-                .size(42.dp)
-                .align(Alignment.Center),
+            modifier = Modifier.size(42.dp),
             model = if (selected) tabInfo.selectedImage else tabInfo.normalImage
         )
+        tabInfo.label.let { labelRes ->
+            Text(
+                text = stringResource(labelRes),
+                fontSize = 12.sp,
+                fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+                color = if (selected) Color(0xFF9C27B0) else Color.White // 选中时使用紫色，未选中时使用白色
+            )
+        }
     }
 }
