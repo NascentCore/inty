@@ -1,5 +1,6 @@
 import math
 import uuid
+from dataclasses import dataclass
 from typing import List, Optional
 
 from fastapi import HTTPException
@@ -28,6 +29,7 @@ from app.models.resource import ResourceType
 from app.schemas.agent import AgentSortOption
 from app.services.cache_service import cache_service
 from app.services.image_transform_service import image_transform_service
+from app.services.resource_service import async_create_image_resource
 from app.services.voice_service import GENDER_VOICE_MAPPING, VoiceService
 from app.utils.crop_avatar import CROPPED_AVATAR_FILENAME_SUFFIX, crop_avatar
 from app.utils.image import ImageFormat, ImageSize, get_jpg_bytes_from_pil_image
@@ -749,12 +751,19 @@ async def create_agent(
                 f"Agent avatar为空，尝试从background裁剪avatar - Agent ID: {agent_id}"
             )
             background_url = processed_agent_data["background"]
-            cropped_avatar_url = await _crop_avatar_from_background(background_url)
+            crop_avatar_result = await _crop_avatar_from_background(background_url)
+            cropped_avatar_url = crop_avatar_result.avatar_url
             processed_agent_data["avatar"] = cropped_avatar_url
             logger.debug(
                 f"成功从background裁剪avatar - Agent ID: {agent_id}, Avatar URL: {cropped_avatar_url}"
             )
             processed_agent_data["background_images"].append(cropped_avatar_url)
+            async_create_image_resource(
+                db,
+                user_id,
+                cropped_avatar_url,
+                crop_avatar_result.avatar_size,
+            )
 
         db_agent = models.Agent(
             id=agent_id,
@@ -806,7 +815,15 @@ async def create_agent(
         raise HTTPException(status_code=500, detail="服务器内部错误")
 
 
-async def _crop_avatar_from_background(background_url: str) -> str:
+@dataclass
+class CropAvatarFromGCSUrlResult:
+    avatar_url: str
+    avatar_size: ImageSize
+
+
+async def _crop_avatar_from_background(
+    background_url: str,
+) -> CropAvatarFromGCSUrlResult:
     """
     从 background 图片中裁剪出 avatar
     Args:
@@ -830,7 +847,7 @@ async def _crop_avatar_from_background(background_url: str) -> str:
     )
 
     avatar_url = upload_to_gcs(avatar_data, ImageFormat.JPEG, bucket, avatar_gcs_path)
-    return avatar_url
+    return CropAvatarFromGCSUrlResult(avatar_url, crop_avatar_result.size)
 
 
 def _validate_character_card_fields(agent_in: schemas.AgentCreate):

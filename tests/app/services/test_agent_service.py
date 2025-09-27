@@ -82,9 +82,10 @@ async def test_crop_avatar_from_background():
 
     assert not bucket.blob(path).exists()
 
-    cropped_avatar_url = await _crop_avatar_from_background(
+    crop_avatar_result = await _crop_avatar_from_background(
         "https://storage.cloud.google.com/yx-test/Screenshot_20250815_213911.png",
     )
+    cropped_avatar_url = crop_avatar_result.avatar_url
     assert cropped_avatar_url == "https://storage.googleapis.com/yx-test/Screenshot_20250815_213911-cropped-avatar.png"
     logger.info(f"Cropped avatar URL: {cropped_avatar_url}")
     jpe_data = download_from_gcs(cropped_avatar_url)
