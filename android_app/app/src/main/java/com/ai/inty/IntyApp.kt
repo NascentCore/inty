@@ -40,41 +40,6 @@ class IntyApp : Application() {
         // 立即初始化日志，不阻塞
         EasyLog.defaultInit()
 
-        // 立即初始化TheRouter（必须在其他组件之前）
-        EasyLog.log("IntyApp - 开始初始化 TheRouter")
-        TheRouter.init(this)
-        EasyLog.log("IntyApp - TheRouter 初始化完成")
-        
-        // 配置 TheRouter 使用生成的服务提供者
-        try {
-            EasyLog.log("IntyApp - 开始配置 TheRouter 使用生成的服务提供者")
-            // 手动调用服务提供者函数来注册它们
-            val agentApi = com.ai.inty.net.getAgentApi()
-            val chatApi = com.ai.inty.net.getChatApi()
-            val commonApi = com.ai.inty.net.getCommonApi()
-            val subscriptionApi = com.ai.inty.net.getSubscriptionApi()
-            val userApi = com.ai.inty.net.getUserApi()
-            
-            // 手动注册到 TheRouter 服务容器
-            TheRouter.inject(agentApi)
-            TheRouter.inject(chatApi)
-            TheRouter.inject(commonApi)
-            TheRouter.inject(subscriptionApi)
-            TheRouter.inject(userApi)
-            
-            EasyLog.log("IntyApp - 服务提供者手动注册到 TheRouter 完成")
-        } catch (e: Exception) {
-            EasyLog.log("IntyApp - 服务提供者手动注册到 TheRouter 失败: ${e.message}", EasyLog.ERROR)
-        }
-        
-        // 测试 TheRouter 服务注册
-        try {
-            val testApi = TheRouter.get(com.ai.inty.net.IAgentApi::class.java)
-            EasyLog.log("IntyApp - TheRouter 服务测试: IAgentApi = ${testApi != null}")
-        } catch (e: Exception) {
-            EasyLog.log("IntyApp - TheRouter 服务测试失败: ${e.message}", EasyLog.ERROR)
-        }
-
         // 立即初始化网络管理器（轻量级，不阻塞）
         NetworkManager.getInstance().initialize(this)
         IntyNetworkManager.initialize(this)
