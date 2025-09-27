@@ -45,7 +45,8 @@ data class AgentInfo(
     var isDeleted: Boolean = false//标记该agent是否被服务端已经删除
 
     fun imageAspectRatio(): Float {
-        //3:4
+        // TODO: Gemini text-to-image 返回尺寸为 6/11（768/1408），
+        // 这是在指定 9/16 下的结果。
         return .75f
     }
 
