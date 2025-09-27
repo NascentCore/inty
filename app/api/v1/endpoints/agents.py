@@ -486,6 +486,17 @@ async def generate_background(
         # next() 是从生成器中手动提取数据库会话对象的方法，因为我们需要同步会话来调用 create_image_resource 函数。
         sync_db = next(deps.get_db())
         try:
+            # Also create resource records for the original GCS URLs
+            for gcs_url in gcs_urls:
+                create_image_resource(
+                    db=sync_db,
+                    user_id=current_user.id,
+                    url=gcs_url,
+                    size=gcs_url_to_img_dict[gcs_url].size,
+                    byte_size=gcs_url_to_img_dict[gcs_url].byte_size,
+                    format=gcs_url_to_img_dict[gcs_url].format,
+                )
+                logger.debug(f"Created image resource record for: {gcs_url}")
             for cdn_url in cdn_urls:
                 # For generated images, we don't have exact size/format info from the API
                 # We'll use default values and let the system handle it
@@ -496,7 +507,6 @@ async def generate_background(
                     size=cdn_url_to_img_dict[cdn_url].size,
                     byte_size=cdn_url_to_img_dict[cdn_url].byte_size,
                     format=cdn_url_to_img_dict[cdn_url].format,
-                    compressed=False,  # Generated images are already optimized
                 )
                 logger.debug(f"Created image resource record for: {cdn_url}")
         finally:
