@@ -137,6 +137,7 @@ def process_single_url(
                 user_id=user_id,
                 url=url,
                 size=size,
+                format=format,
                 byte_size=byte_size,
                 compressed=False,  # We don't know if it was compressed
                 cropped=False,  # We don't know if it was cropped
