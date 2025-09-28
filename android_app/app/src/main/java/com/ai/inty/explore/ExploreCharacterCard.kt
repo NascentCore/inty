@@ -47,8 +47,8 @@ fun ExploreCharacterCard(
         Brush.verticalGradient(
             colors = listOf(
                 Color.Transparent,
-                Color.Black.copy(.5f),
-                Color.Black.copy(.9f),
+                Color.Black.copy(.6f),
+                Color.Black.copy(.95f),
             )
         )
     }
@@ -70,11 +70,14 @@ fun ExploreCharacterCard(
         modifier = modifier
             .fillMaxWidth()
             .aspectRatio(agentInfo.imageAspectRatio())
-            .clip(RoundedCornerShape(8.dp))
             .noRippleClickable { onClick() }
     ) {
-        // 背景图片层
-        Box(modifier = Modifier.fillMaxWidth()) {
+        // 背景图片层 - 在这里应用 clip
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .clip(RoundedCornerShape(8.dp))
+        ) {
             // 使用 Shimmer 占位符
             if (!imageLoaded) {
                 ShimmerPlaceholder(
@@ -106,7 +109,10 @@ fun ExploreCharacterCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(brush = gradientBrush)
+                .background(
+                    brush = gradientBrush,
+                    shape = RoundedCornerShape(bottomStart = 7.dp, bottomEnd = 7.dp)//比图片的倒角8.dp小1，来遮挡像素级白边
+                )
                 .padding(start = 8.dp, end = 8.dp, top = 16.dp, bottom = 8.dp)
                 .align(Alignment.BottomCenter),
             verticalArrangement = Arrangement.spacedBy(4.dp)

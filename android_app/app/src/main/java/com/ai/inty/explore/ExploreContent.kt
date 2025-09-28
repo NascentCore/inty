@@ -143,9 +143,7 @@ fun ExploreContent(
                     val agent = lazyPagingItems[index]
                     if (agent != null) {
                         ExploreCharacterCard(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(8.dp)),
+                            modifier = Modifier.fillMaxWidth(),
                             agentInfo = agent,
                             onClick = { onClickAgent(agent) }
                         )
