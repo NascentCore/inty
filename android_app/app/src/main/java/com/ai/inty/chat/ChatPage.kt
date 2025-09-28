@@ -38,6 +38,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.ai.inty.Constant
 import com.ai.inty.R
 import com.ai.inty.base.ToastUtils
@@ -91,6 +92,14 @@ internal fun ChatPage(
         chatViewModel.queryMsgs()
         // 初始化语音服务
         chatViewModel.initVoiceService(context)
+    }
+
+    // 统一生命周期：页面进入 onPause（包括 Activity 或应用退到后台）时停止音频
+    LifecycleResumeEffect(isCurrentPage) {
+        onPauseOrDispose {
+            EasyLog.log("音频LOG测试 ChatPage onPause -> stopAllPlayback")
+            chatViewModel.pauseVoicePlayback()
+        }
     }
 
     // 页面生命周期管理：离开页面时重置播放状态

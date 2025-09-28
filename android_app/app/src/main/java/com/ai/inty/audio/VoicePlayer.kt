@@ -129,6 +129,7 @@ fun VoicePlayer(
             EasyLog.log("音频LOG测试 VoicePlayer state change: messageId=$messageId, state=$state, isCurrentMessage=$isCurrentMessage")
             EasyLog.log("音频LOG测试 Current audio info: messageId=${currentAudioInfo?.messageId}, agentId=${currentAudioInfo?.agentId}, agentName=${currentAudioInfo?.agentName}")
             EasyLog.log("音频LOG测试 Message ID comparison: '${currentAudioInfo?.messageId}' == '$messageId' = ${currentAudioInfo?.messageId == messageId}")
+            EasyLog.log("音频LOG测试 Current local state: isPlaying=$isPlaying, isLoading=$isLoading, isGeneratingTts=$isGeneratingTts")
 
             if (isCurrentMessage) {
                 // 更准确的状态判断
@@ -174,18 +175,20 @@ fun VoicePlayer(
                     onPlayStateChange?.invoke(isPlaying)
                 }
             } else {
-                // 非当前消息时，保持当前状态不变，避免UI闪烁
-                // 只有当真正停止播放时才重置状态
-                if (state == PlaybackState.IDLE || state == PlaybackState.ENDED) {
-                    val wasPlaying = isPlaying
-                    isPlaying = false
-                    hasError = false
-                    isLoading = false
+                // 非当前消息时，立即停止显示播放状态
+                // 当有其他消息开始播放时，当前消息应该立即停止显示播放状态
+                val wasPlaying = isPlaying
+                val wasLoading = isLoading
+                
+                // 立即重置播放状态
+                isPlaying = false
+                hasError = false
+                isLoading = false
 
-                    // 如果从播放状态变为非当前消息，调用回调
-                    if (wasPlaying) {
-                        onPlayStateChange?.invoke(false)
-                    }
+                // 如果从播放状态变为非当前消息，调用回调
+                if (wasPlaying || wasLoading) {
+                    onPlayStateChange?.invoke(false)
+                    EasyLog.log("音频LOG测试 VoicePlayer state reset for non-current message: messageId=$messageId, wasPlaying=$wasPlaying, wasLoading=$wasLoading")
                 }
             }
         }
@@ -291,8 +294,11 @@ fun VoicePlayer(
                 // 开始播放新消息
                 EasyLog.log("音频LOG测试 Starting playback for message: $messageId")
 
-                // 重置失败状态
-                ttsGenerationFailed = false
+                // 重置失败状态（如果之前失败过）
+                if (ttsGenerationFailed) {
+                    EasyLog.log("音频LOG测试 Resetting TTS generation failed state for retry")
+                    ttsGenerationFailed = false
+                }
 
                 // 设置用户点击标志，保护loading状态不被过早重置
                 userClickedRecently = true
@@ -325,7 +331,8 @@ fun VoicePlayer(
                         ttsGenerationFailed = true
                     },
                     serverMessageId = serverMessageId, // 传递服务器端ID用于TTS生成
-                    agentName = audioInfo.agentName // 传递Agent名称用于日志分析
+                    agentName = audioInfo.agentName, // 传递Agent名称用于日志分析
+                    forceRegenerateTts = ttsGenerationFailed // 如果之前失败过，强制重新生成
                 )
             }
         },

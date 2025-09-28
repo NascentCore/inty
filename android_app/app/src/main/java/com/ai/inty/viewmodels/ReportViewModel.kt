@@ -117,8 +117,7 @@ class ReportViewModel : BaseActivityViewModel() {
 
                 when (result) {
                     is com.ai.inty.netapi.ApiResult.Success -> {
-                        EasyLog.log("Report created successfully")
-                        showSnackbar("Report sent")
+                        showSnackbar("Submitted successfully. We’ll review it soon. Thank you for helping keep things safe.")
                         closeActivity()
                     }
 
@@ -139,7 +138,6 @@ class ReportViewModel : BaseActivityViewModel() {
     }
 
     private suspend fun uploadImageWithIntySdk(inputStream: InputStream): String? {
-        EasyLog.log("Uploading image using inty_sdk V1UploadImageParams")
 
         val result = ReportService.uploadImage(inputStream, "report-image.jpg")
 

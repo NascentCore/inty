@@ -237,7 +237,7 @@ private fun MessageTabContent(
 fun ChatHistoryItem(
     modifier: Modifier,
     conversation: ConversationItem,
-    placeholderID: Int = R.drawable.app_icon,
+    placeholderID: Int = R.drawable.img_default_avatar,
 ) {
     Row(
         modifier = modifier.height(88.dp),

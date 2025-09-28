@@ -59,7 +59,8 @@ class AudioManager private constructor(
         onTtsGenerated: ((String) -> Unit)? = null,
         onTtsFailed: ((String) -> Unit)? = null,
         serverMessageId: String? = null, // 服务器端消息ID，用于TTS生成
-        agentName: String? = null // Agent名称，用于日志分析
+        agentName: String? = null, // Agent名称，用于日志分析
+        forceRegenerateTts: Boolean = false // 是否强制重新生成TTS
     ) {
         // 参数验证
         if (messageId.isEmpty()) {
@@ -115,7 +116,8 @@ class AudioManager private constructor(
                 onError = { error ->
                     EasyLog.log("音频LOG测试 TTS generation failed: $error", EasyLog.ERROR)
                     onTtsFailed?.invoke(error)
-                }
+                },
+                forceRegenerate = forceRegenerateTts
             )
         } else {
             // 直接播放
