@@ -72,11 +72,18 @@ fun ExploreCharacterCard(
             .aspectRatio(agentInfo.imageAspectRatio())
             .noRippleClickable { onClick() }
     ) {
-        // 背景图片层 - 在这里应用 clip
+        // 背景图片层
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .clip(RoundedCornerShape(8.dp))
+                .clip(
+                    RoundedCornerShape(
+                        topStart = 7.dp,
+                        topEnd = 7.dp,
+                        bottomStart = 8.dp,
+                        bottomEnd = 8.dp
+                    )
+                )
         ) {
             // 使用 Shimmer 占位符
             if (!imageLoaded) {
@@ -111,7 +118,10 @@ fun ExploreCharacterCard(
                 .fillMaxWidth()
                 .background(
                     brush = gradientBrush,
-                    shape = RoundedCornerShape(bottomStart = 7.dp, bottomEnd = 7.dp)//比图片的倒角8.dp小1，来遮挡像素级白边
+                    shape = RoundedCornerShape(
+                        bottomStart = 7.dp,
+                        bottomEnd = 7.dp
+                    )//比图片的倒角8.dp小1，来遮挡像素级白边
                 )
                 .padding(start = 8.dp, end = 8.dp, top = 16.dp, bottom = 8.dp)
                 .align(Alignment.BottomCenter),
