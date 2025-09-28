@@ -10,12 +10,15 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
 from app import models
+from app.api.deps import get_async_db
 from app.core.config import global_config_loaded_from_config_yaml
+from app.db.session import AsyncSessionLocal
 from app.external_services.gcs import (
     download_from_gcs,
     get_bucket_and_path_from_gcs_url,
 )
 from app.schemas.agent import AgentUpdate, ModelConfig
+from app.schemas.user import UserCreate
 from app.services.agent_service import (
     _crop_avatar_from_background,
     _update_agent_in_db,
