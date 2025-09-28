@@ -4,7 +4,7 @@ from sqlalchemy import and_, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
-from app.core.uuid import uid
+from app.core.uuid import get_new_report_id
 from app.models.report import Report, ReportReason
 from app.schemas.report import ReportCreate, ReportQuery
 
@@ -18,7 +18,7 @@ async def list_report_reasons(db: AsyncSession) -> List[ReportReason]:
 async def create_report(
     db: AsyncSession, report_in: ReportCreate, reporter_id: str
 ) -> Report:
-    report_id = uid(prefix="report")
+    report_id = get_new_report_id()
     report = Report(
         id=report_id,
         target_id=report_in.target_id,

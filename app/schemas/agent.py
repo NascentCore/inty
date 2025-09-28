@@ -91,6 +91,18 @@ class ModelConfig(BaseModel):
         return v
 
 
+class AgentExtension(BaseModel):
+    """
+    AI 角色扩展字段，该字段用于衔接 fastapi 与 sqlalchemey；fastapi 使用该类型，并将其转换为 JSON
+    字符串写入/读出数据库。
+    """
+
+    id: str
+    agent_id: str
+    extension_id: str
+    extension_data: Dict[str, Any]
+
+
 class AgentBase(BaseModel):
     """AI角色基础模型"""
 

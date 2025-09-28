@@ -10,7 +10,6 @@ from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.uuid import uid
 from app.models.agent import Agent
 from app.schemas.character_card import (
     CharacterCardImportRequest,

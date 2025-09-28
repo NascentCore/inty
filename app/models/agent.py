@@ -1,6 +1,7 @@
 from enum import StrEnum
 
 import sqlalchemy as sa
+from pydantic import BaseModel
 from sqlalchemy import JSON, Boolean, Column, DateTime, Enum, ForeignKey, String, Text
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func

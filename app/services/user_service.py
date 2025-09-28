@@ -3,6 +3,7 @@ import uuid
 from datetime import UTC, datetime
 from typing import Optional
 
+from loguru import logger
 from sqlalchemy import and_, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,7 +11,7 @@ from sqlalchemy.future import select
 from sqlalchemy.orm import Session
 
 from app.core.config import global_config_loaded_from_config_yaml
-from app.core.uuid import uid
+from app.core.uuid import get_new_user_id
 from app.models import User
 from app.models.chat import Chat
 from app.models.subscription import SubscriptionStatus, UserSubscription
@@ -18,9 +19,6 @@ from app.models.user import AuthType, DeviceToken
 from app.schemas import UserUpdate
 from app.services.cache_service import cache_service
 from app.services.subscription_service import SubscriptionService
-
-
-from loguru import logger
 
 
 async def generate_next_readable_id(db: AsyncSession) -> str:
@@ -115,7 +113,7 @@ async def create_guest_user(
             if existing_user:
                 return existing_user
 
-        user_id = uid(prefix="user")
+        user_id = get_new_user_id()
         readable_id = await generate_next_readable_id(db)
 
         user = User(
