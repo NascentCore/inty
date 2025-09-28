@@ -3,7 +3,6 @@ package com.ai.inty.ui.screens
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Column
@@ -61,7 +60,7 @@ import kotlinx.coroutines.flow.collectLatest
 fun SettingContent(
     modifier: Modifier = Modifier,
     onBack: () -> Unit,
-    onLogout: () -> Unit,
+    onLogout: (isDelete: Boolean) -> Unit,
     viewModel: SettingViewModel = viewModel()
 ) {
     val context = LocalContext.current
@@ -74,7 +73,7 @@ fun SettingContent(
         viewModel.deleteAccountResultFlow.collectLatest { deleted ->
             if (deleted) {
                 // 账号删除成功
-                onLogout()
+                onLogout(true)
             }
         }
     }
@@ -106,7 +105,7 @@ fun SettingContent(
             Spacer(Modifier.height(16.dp))
 
             // 退出登录按钮
-            LogoutButton(onLogout = onLogout)
+            LogoutButton(onLogout = { onLogout(false) })
 
             // 对话框
             SettingDialogs(
