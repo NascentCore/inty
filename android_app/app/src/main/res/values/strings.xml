@@ -337,7 +337,7 @@
 
     <!-- Bottom Navigation Tab Labels -->
     <string name="tab_home">Chats</string>
-    <string name="tab_activity">Activity</string>
+    <string name="tab_messages">Messages</string>
     <string name="tab_create">Create</string>
     <string name="tab_explore">Explore</string>
     <string name="tab_me">Me</string>
