@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
 import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
@@ -125,7 +126,7 @@ fun ExploreContent(
         ) {
             // 如果没有Paging数据，显示加载状态
             if (lazyPagingItems == null) {
-                item {
+                item(span = StaggeredGridItemSpan.FullLine) {
                     EmptyStateIndicator()
                 }
             } else {
@@ -159,7 +160,7 @@ fun ExploreContent(
                 }
 
                 // 加载状态指示器
-                item {
+                item(span = StaggeredGridItemSpan.FullLine) {
                     ExploreLoadingStates(lazyPagingItems, showLoadMoreLoading, isRefreshing)
                 }
             }

@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
@@ -86,7 +87,7 @@ internal fun ProfilePage(
     onLoadMore: () -> Unit = {},
 ) {
     val context = LocalContext.current
-    
+
     // 跟踪ProfilePage页面访问
     TrackScreenView(
         screenName = "ProfilePage",
@@ -98,7 +99,7 @@ internal fun ProfilePage(
 //            "user_type" to (userProfile.gender ?: "unknown")
         )
     )
-    
+
     Box(
         modifier = modifier
     ) {
@@ -296,7 +297,9 @@ internal fun ProfilePage(
 
                         // Loading indicator when loading more
                         if (isLoading) {
-                            item {
+                            item(span = {
+                                GridItemSpan(maxLineSpan)
+                            }) {
                                 Box(
                                     modifier = Modifier
                                         .padding(16.dp),
