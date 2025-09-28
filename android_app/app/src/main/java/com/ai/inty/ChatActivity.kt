@@ -113,4 +113,10 @@ class ChatActivity : BaseActivity() {
         // 清理 ChatViewModel 资源
         chatViewModel.clearAllData()
     }
+
+    override fun onPause() {
+        super.onPause()
+        // 统一生命周期：Activity 页面进入后台即停止音频
+        chatViewModel.pauseVoicePlayback()
+    }
 }

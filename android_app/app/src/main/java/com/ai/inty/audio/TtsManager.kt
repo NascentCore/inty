@@ -54,18 +54,20 @@ class TtsManager private constructor(
      * @param agentId Agent ID
      * @param onSuccess 成功回调，返回生成的音频URL
      * @param onError 失败回调
+     * @param forceRegenerate 是否强制重新生成（用于失败后重试）
      */
     fun generateMessageVoice(
         messageId: String,
         agentId: String,
         onSuccess: (String) -> Unit,
-        onError: (String) -> Unit
+        onError: (String) -> Unit,
+        forceRegenerate: Boolean = false
     ) {
-        EasyLog.log("音频LOG测试 TtsManager.generateMessageVoice called: messageId=$messageId, agentId=$agentId")
+        EasyLog.log("音频LOG测试 TtsManager.generateMessageVoice called: messageId=$messageId, agentId=$agentId, forceRegenerate=$forceRegenerate")
         EasyLog.log("音频LOG测试 Current generating TTS messages: ${_isGeneratingTts.value}")
 
-        // 检查是否正在生成
-        if (_isGeneratingTts.value.contains(messageId)) {
+        // 检查是否正在生成（除非强制重新生成）
+        if (!forceRegenerate && _isGeneratingTts.value.contains(messageId)) {
             EasyLog.log("音频LOG测试 TTS already generating for message: $messageId")
             return
         }
