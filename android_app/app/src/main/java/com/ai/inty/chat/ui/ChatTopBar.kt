@@ -95,7 +95,7 @@ fun ChatTopBar(
                     .padding(CHAT_TOP_BAR_AVATAR_PADDING.dp)
                     .size(CHAT_TOP_BAR_AVATAR_SIZE.dp),
                 url = getCdnImageUrl(agentInfo.avatar, width = 64),
-                placeholderResID = R.drawable.app_icon
+                placeholderResID = R.drawable.img_default_avatar
             )
 
             Spacer(modifier = Modifier.width(6.dp))

@@ -67,8 +67,9 @@ class SplashActivity : ComponentActivity() {
                                 .padding(bottom = 80.dp)
                                 .size(80.dp)
                                 .clip(RoundedCornerShape(10.dp)),
-                            painter = painterResource(R.drawable.app_icon),
-                            contentDescription = ""
+                            painter = painterResource(R.mipmap.ic_launcher_foreground),
+                            contentDescription = "",
+                            contentScale = ContentScale.Crop
                         )
 
                         // 显示启动进度
