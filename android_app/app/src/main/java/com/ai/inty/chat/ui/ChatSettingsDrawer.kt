@@ -53,6 +53,7 @@ fun ChatSettingsDrawer(
     drawerState: MutableState<DrawerValue>,
     onPremiumDialogShow: (Boolean) -> Unit,
     onPremiumModeChange: (Boolean) -> Unit,
+    onKeepTalkingChange: (Boolean) -> Unit,
 ) {
     val context = LocalContext.current
     val vipStatus by BillingRepository.vipStatusFlow.collectAsState()
@@ -237,6 +238,8 @@ fun ChatSettingsDrawer(
                                             agent.id,
                                             agentKeepTalking
                                         )
+                                        // 通知ChatPage状态已变化
+                                        onKeepTalkingChange(agentKeepTalking)
                                     } else {
                                         // 未登录或游客时跳转到登录页面
                                         TheRouter.build(Constant.ROUTE_LOGIN)
