@@ -35,13 +35,15 @@ class SettingActivity : BaseActivity() {
                     onBack = {
                         finish()
                     },
-                    onLogout = {
+                    onLogout = { isDelete ->
                         // 使用MainViewModel的logout方法，不重启应用
                         mainViewModel.logout()
                         // 显示退出成功提示
+                        val str = if (isDelete) getString(R.string.delete_account_successfully)
+                        else getString(R.string.logout_successfully)
                         Toast.makeText(
                             this@SettingActivity,
-                            getString(R.string.logout_successfully),
+                            str,
                             Toast.LENGTH_SHORT
                         ).show()
                         // 返回到主页面

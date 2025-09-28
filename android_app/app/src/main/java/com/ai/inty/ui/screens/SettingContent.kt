@@ -3,7 +3,6 @@ package com.ai.inty.ui.screens
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Column
@@ -36,7 +35,6 @@ import com.ai.inty.Constant
 import com.ai.inty.R
 import com.ai.inty.base.noRippleClickable
 import com.ai.inty.billing.BillingRepository
-import com.ai.inty.billing.VipStatus
 import com.ai.inty.ui.AdvancedModelChatDialog
 import com.ai.inty.ui.ChatDialogData
 import com.ai.inty.ui.components.DeleteAccountDialog
@@ -61,7 +59,7 @@ import kotlinx.coroutines.flow.collectLatest
 fun SettingContent(
     modifier: Modifier = Modifier,
     onBack: () -> Unit,
-    onLogout: () -> Unit,
+    onLogout: (isDelete: Boolean) -> Unit,
     viewModel: SettingViewModel = viewModel()
 ) {
     val context = LocalContext.current
@@ -74,7 +72,7 @@ fun SettingContent(
         viewModel.deleteAccountResultFlow.collectLatest { deleted ->
             if (deleted) {
                 // 账号删除成功
-                onLogout()
+                onLogout(true)
             }
         }
     }
@@ -90,8 +88,6 @@ fun SettingContent(
             // 设置选项区域
             SettingOptionsSection(
                 settingsState = settingsState,
-                vipStatus = vipStatus,
-                onToggleKeepTalking = { viewModel.toggleKeepTalking() },
                 onTogglePremiumMode = { viewModel.togglePremiumMode() }
             )
 
@@ -106,7 +102,7 @@ fun SettingContent(
             Spacer(Modifier.height(16.dp))
 
             // 退出登录按钮
-            LogoutButton(onLogout = onLogout)
+            LogoutButton(onLogout = { onLogout(false) })
 
             // 对话框
             SettingDialogs(
@@ -152,19 +148,9 @@ private fun SettingTopBar(onBack: () -> Unit) {
 @Composable
 private fun SettingOptionsSection(
     settingsState: SettingsState,
-    vipStatus: VipStatus,
-    onToggleKeepTalking: () -> Unit,
     onTogglePremiumMode: () -> Unit
 ) {
     SettingSection {
-        SettingSwitchItem(
-            title = stringResource(R.string.settings_keep_talking),
-            isEnabled = settingsState.keepTalking,
-            onToggle = onToggleKeepTalking
-        )
-
-        SettingDivider()
-
         SettingSwitchItem(
             title = stringResource(R.string.settings_premium_model),
             isEnabled = settingsState.premiumMode,

@@ -1,6 +1,7 @@
 package com.ai.inty.chat.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
@@ -111,13 +112,24 @@ fun ChatTopBar(
 
         Spacer(modifier = Modifier.weight(1f))
 
-        IntyImage(
+        Box(
             modifier = Modifier
-                .size(MORE_BUTTON_SIZE.dp)
-                .noRippleClickable {
-                    onClickMore()
-                },
-            model = R.drawable.icon_more
-        )
+                .size(48.dp, 32.dp)
+                .background(
+                    color = Color.Black.copy(.3f),
+                    shape = RoundedCornerShape(topStart = 16.dp, bottomStart = 16.dp)
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            IntyImage(
+                modifier = Modifier
+                    .size(MORE_BUTTON_SIZE.dp)
+                    .noRippleClickable {
+                        onClickMore()
+                    },
+                model = R.drawable.icon_more
+            )
+        }
+
     }
 } 

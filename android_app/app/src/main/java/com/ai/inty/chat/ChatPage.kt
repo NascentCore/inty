@@ -146,6 +146,12 @@ internal fun ChatPage(
     // 用于实时更新按钮显示状态
     var shouldShowButton by remember(agentInfo?.id) { mutableStateOf(agentKeepTalking) }
 
+    // Keep talking状态变化回调
+    fun onKeepTalkingChange(enabled: Boolean) {
+        agentKeepTalking = enabled
+        shouldShowButton = enabled
+    }
+
     // VIP状态
     val vipStatus by BillingRepository.vipStatusFlow.collectAsState()
 
@@ -205,7 +211,7 @@ internal fun ChatPage(
                     ChatTopBar(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 18.dp, vertical = 0.dp),
+                            .padding(start = 18.dp),
                         agentInfo = info,
                         showBackButton = showBackButton,
                         onBack = onBack,
@@ -327,7 +333,11 @@ internal fun ChatPage(
                                     runCatching {
                                         //明确数据边界
                                         if (index < items.size) {
-                                            ChatItem(item, isCurrentPage = isCurrentPage, chatViewModel = chatViewModel)
+                                            ChatItem(
+                                                item,
+                                                isCurrentPage = isCurrentPage,
+                                                chatViewModel = chatViewModel
+                                            )
                                         }
                                         Spacer(Modifier.height(16.dp))
                                     }.onFailure { e ->
@@ -384,7 +394,11 @@ internal fun ChatPage(
                                     audio_url = agent.opening_audio_url
                                 )
 
-                                ChatItem(openingMessage, isCurrentPage = isCurrentPage, chatViewModel = chatViewModel)
+                                ChatItem(
+                                    openingMessage,
+                                    isCurrentPage = isCurrentPage,
+                                    chatViewModel = chatViewModel
+                                )
                                 Spacer(Modifier.height(16.dp))
                             }
                         }
@@ -454,7 +468,8 @@ internal fun ChatPage(
             agentInfo = agentInfo,
             drawerState = drawerState,
             onPremiumDialogShow = { show -> showPremiumDialog = show },
-            onPremiumModeChange = { mode -> agentPremiumModel = mode }
+            onPremiumModeChange = { mode -> agentPremiumModel = mode },
+            onKeepTalkingChange = { enabled -> onKeepTalkingChange(enabled) }
         )
 
         //免费聊天次数限制的dialog

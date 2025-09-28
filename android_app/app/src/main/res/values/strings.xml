@@ -60,6 +60,7 @@
     <string name="login_successfully">Login successfully</string>
     <string name="create_ai_successfully">Created</string>
     <string name="logout_successfully">Logout successfully</string>
+    <string name="delete_account_successfully">Your account has been deleted.</string>
 
     <!-- Form validation messages -->
     <string name="please_fill_required_fields">Please fill in all required fields</string>
