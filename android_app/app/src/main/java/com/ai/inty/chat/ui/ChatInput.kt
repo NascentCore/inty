@@ -75,7 +75,7 @@ fun ChatInput(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(if (isInputFocused.value) 80.dp else 64.dp),
+                .height(48.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             IntySmallTextField(

@@ -280,7 +280,7 @@ class ChatViewModel : BaseActivityViewModel() {
                 EasyLog.log("send msg $inputMsg")
 
                 val msgInfo = MsgInfo(
-                    content = inputMsg,
+                    content = inputMsg.trimEnd(),
                     role = "user"
                 )
 
@@ -508,13 +508,6 @@ class ChatViewModel : BaseActivityViewModel() {
         return _chatSettings.value[agentId]
     }
 
-    /**
-     * 获取当前agent的聊天设置
-     */
-    fun getCurrentChatSetting(): ChatSettingsResponse.ChatSettingRspData? {
-        val agentId = agentInfo.value?.id ?: return null
-        return getChatSettingForAgent(agentId)
-    }
 
     private fun getChatSetting() = launchWithNetCheck {
         val agentId = agentInfo.value?.id ?: return@launchWithNetCheck
