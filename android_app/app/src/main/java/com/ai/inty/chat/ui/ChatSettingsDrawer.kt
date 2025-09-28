@@ -223,45 +223,7 @@ fun ChatSettingsDrawer(
                             shape = RoundedCornerShape(8.dp)
                         )
                 ) {
-                    // Keep talking设置（二状态，与全局设置同步）
                     agentInfo?.let { agent ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(56.dp)
-                                .padding(horizontal = horizontalPadding.dp)
-                                .noRippleClickable {
-                                    // 检查是否正式登录（非游客且已登录）
-                                    if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
-                                        agentKeepTalking = !agentKeepTalking
-                                        IntySetting.setAgentKeepTalking(
-                                            agent.id,
-                                            agentKeepTalking
-                                        )
-                                        // 通知ChatPage状态已变化
-                                        onKeepTalkingChange(agentKeepTalking)
-                                    } else {
-                                        // 未登录或游客时跳转到登录页面
-                                        TheRouter.build(Constant.ROUTE_LOGIN)
-                                            .navigation(context)
-                                    }
-                                },
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = stringResource(R.string.settings_keep_talking),
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Normal,
-                                color = Color.White
-                            )
-                            Spacer(Modifier.weight(1f))
-                            Image(
-                                painter = if (agentKeepTalking) painterResource(R.drawable.opened) else painterResource(
-                                    R.drawable.closed
-                                ),
-                                contentDescription = null,
-                            )
-                        }
 
                         // Premium model设置（二状态，与全局设置同步）
                         Row(

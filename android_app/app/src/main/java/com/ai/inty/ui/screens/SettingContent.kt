@@ -35,7 +35,6 @@ import com.ai.inty.Constant
 import com.ai.inty.R
 import com.ai.inty.base.noRippleClickable
 import com.ai.inty.billing.BillingRepository
-import com.ai.inty.billing.VipStatus
 import com.ai.inty.ui.AdvancedModelChatDialog
 import com.ai.inty.ui.ChatDialogData
 import com.ai.inty.ui.components.DeleteAccountDialog
@@ -89,8 +88,6 @@ fun SettingContent(
             // 设置选项区域
             SettingOptionsSection(
                 settingsState = settingsState,
-                vipStatus = vipStatus,
-                onToggleKeepTalking = { viewModel.toggleKeepTalking() },
                 onTogglePremiumMode = { viewModel.togglePremiumMode() }
             )
 
@@ -151,19 +148,9 @@ private fun SettingTopBar(onBack: () -> Unit) {
 @Composable
 private fun SettingOptionsSection(
     settingsState: SettingsState,
-    vipStatus: VipStatus,
-    onToggleKeepTalking: () -> Unit,
     onTogglePremiumMode: () -> Unit
 ) {
     SettingSection {
-        SettingSwitchItem(
-            title = stringResource(R.string.settings_keep_talking),
-            isEnabled = settingsState.keepTalking,
-            onToggle = onToggleKeepTalking
-        )
-
-        SettingDivider()
-
         SettingSwitchItem(
             title = stringResource(R.string.settings_premium_model),
             isEnabled = settingsState.premiumMode,

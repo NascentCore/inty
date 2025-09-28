@@ -221,11 +221,10 @@ fun LogoutButton(
             )
             .noRippleClickable { onLogout() }
     ) {
-        Spacer(Modifier.height(21.dp))
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(48.dp)
+                .height(60.dp)
                 .padding(horizontal = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -238,7 +237,6 @@ fun LogoutButton(
             )
             Spacer(Modifier.weight(1f))
         }
-        Spacer(Modifier.height(17.dp))
     }
 }
 
