@@ -42,7 +42,7 @@ fun KeepTalkingButton(
                 .width(80.dp)
                 .height(32.dp)
                 .background(
-                    Color.Transparent,
+                    Color.Black.copy(.3f),
                     RoundedCornerShape(16.dp)
                 )
                 .noRippleClickable { onClick() },
