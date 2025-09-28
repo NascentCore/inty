@@ -63,12 +63,13 @@ enum class EditKey {
 /**
  * 编辑类型显示名称扩展
  */
+@Composable
 private fun EditKey.toDisplayName(): String {
     return when (this) {
         EditKey.None -> ""
-        EditKey.Name -> "Name"
-        EditKey.Pronouns -> "My Pronouns"
-        EditKey.Persona -> "My Persona"
+        EditKey.Name -> stringResource(R.string.str_name)
+        EditKey.Pronouns -> stringResource(R.string.str_pronouns)
+        EditKey.Persona -> stringResource(R.string.str_persona)
     }
 }
 
@@ -92,7 +93,7 @@ fun MySettingScreen(
             CenterAlignedTopAppBar(
                 title = {
                     Text(
-                        text = stringResource(R.string.settings),
+                        text = stringResource(R.string.str_edit_my_persona),
                         color = Color.White,
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 20.sp,
@@ -132,21 +133,21 @@ fun MySettingScreen(
             // 设置项区域
             SettingSection {
                 MySettingItem(
-                    key = "Name",
+                    key = stringResource(R.string.str_name),
                     value = userProfile.nickname,
                     horizontalPadding = horizontalPadding,
                     onClick = onClickName
                 )
                 SettingDivider()
                 MySettingItem(
-                    key = "My Pronouns",
+                    key = stringResource(R.string.str_pronouns),
                     value = userProfile.pronouns(),
                     horizontalPadding = horizontalPadding,
                     onClick = onClickPronouns
                 )
                 SettingDivider()
                 MySettingItem(
-                    key = "My Persona",
+                    key = stringResource(R.string.str_persona),
                     value = userProfile.description ?: "",
                     horizontalPadding = horizontalPadding,
                     onClick = onClickPersona
@@ -310,8 +311,9 @@ fun EditDialog(
             )
 
             // 标题
+            val displayName = editKey.toDisplayName()
             Text(
-                text = editKey.toDisplayName(),
+                text = displayName,
                 color = Color.White,
                 fontSize = 20.sp,
                 fontWeight = FontWeight.SemiBold,

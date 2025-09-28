@@ -139,7 +139,7 @@ fun ChatSettingsDrawer(
                 ) {
                     val userProfile = chatViewModel.userProfile.collectAsState()
                     MySettingItem(
-                        key = "Name",
+                        key = stringResource(R.string.str_name),
                         value = userProfile.value.nickname,
                         horizontalPadding = horizontalPadding,
                         onClick = {
@@ -156,7 +156,7 @@ fun ChatSettingsDrawer(
                         }
                     )
                     MySettingItem(
-                        key = "Pronoun",
+                        key = stringResource(R.string.str_pronouns),
                         value = userProfile.value.pronouns(),
                         horizontalPadding = horizontalPadding,
                         onClick = {
@@ -173,7 +173,7 @@ fun ChatSettingsDrawer(
                         }
                     )
                     MySettingItem(
-                        key = "Intro",
+                        key = stringResource(R.string.str_persona),
                         value = userProfile.value.description ?: "Edit",
                         horizontalPadding = horizontalPadding,
                         onClick = {
