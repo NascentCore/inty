@@ -138,25 +138,27 @@ class AudioPlaybackManager private constructor(private val context: Context) : P
             EasyLog.log("音频LOG测试 === AudioPlaybackManager.playAudio START ===")
             EasyLog.log("音频LOG测试 Audio URL: ${audioInfo.url}")
             EasyLog.log("音频LOG测试 Message ID: ${audioInfo.messageId}")
+            EasyLog.log("音频LOG测试 Agent ID: ${audioInfo.agentId}")
+            EasyLog.log("音频LOG测试 Agent Name: ${audioInfo.agentName}")
             EasyLog.log("音频LOG测试 Auto play: $autoPlay")
-            EasyLog.log("音频LOG测试 Current audio info: ${currentAudioInfo?.messageId}")
+            EasyLog.log("音频LOG测试 Current audio info: ${currentAudioInfo?.messageId} (Agent: ${currentAudioInfo?.agentName})")
             EasyLog.log("音频LOG测试 Is currently playing: ${isPlaying()}")
 
             // 检查是否是同一个音频（优先使用messageId判断）
             val isSameAudio = currentAudioInfo?.messageId == audioInfo.messageId
 
-            EasyLog.log("音频LOG测试 Is same audio: $isSameAudio (current: ${currentAudioInfo?.messageId}, new: ${audioInfo.messageId})")
+            EasyLog.log("音频LOG测试 Is same audio: $isSameAudio (current: ${currentAudioInfo?.messageId} [${currentAudioInfo?.agentName}], new: ${audioInfo.messageId} [${audioInfo.agentName}])")
 
             if (isSameAudio && isPlaying()) {
                 // 如果是同一个音频且正在播放，则暂停
-                EasyLog.log("音频LOG测试 Same audio playing, pausing...")
+                EasyLog.log("音频LOG测试 Same audio playing, pausing... (Agent: ${audioInfo.agentName})")
                 pausePlayback()
                 return
             }
 
             // 停止当前播放（如果不是同一个音频）
             if (!isSameAudio) {
-                EasyLog.log("音频LOG测试 Different audio, stopping current playback...")
+                EasyLog.log("音频LOG测试 Different audio, stopping current playback... (From: ${currentAudioInfo?.agentName} To: ${audioInfo.agentName})")
                 stopPlayback()
             }
 
@@ -224,8 +226,17 @@ class AudioPlaybackManager private constructor(private val context: Context) : P
      */
     fun pausePlayback() {
         try {
+            EasyLog.log("音频LOG测试 === Pausing playback ===")
+            EasyLog.log("音频LOG测试 Current player state: ${exoPlayer?.playbackState}")
+            EasyLog.log("音频LOG测试 Is playing: ${exoPlayer?.isPlaying}")
+            
             exoPlayer?.pause()
-            EasyLog.log("音频LOG测试 Audio playback paused")
+            
+            // 立即更新状态
+            _playbackState.value = PlaybackState.PAUSED
+            stopPositionUpdate()
+            
+            EasyLog.log("音频LOG测试 Audio playback paused successfully")
         } catch (e: Exception) {
             EasyLog.log("音频LOG测试 Failed to pause playback: ${e.message}", EasyLog.ERROR)
         }
@@ -236,11 +247,25 @@ class AudioPlaybackManager private constructor(private val context: Context) : P
      */
     fun resumePlayback() {
         try {
-            EasyLog.log("音频LOG测试 Attempting to resume playback...")
+            EasyLog.log("音频LOG测试 === Resuming playback ===")
+            EasyLog.log("音频LOG测试 Current player state: ${exoPlayer?.playbackState}")
+            EasyLog.log("音频LOG测试 Is playing: ${exoPlayer?.isPlaying}")
+            EasyLog.log("音频LOG测试 Current playback state: ${_playbackState.value}")
+            
+            // 检查当前状态是否允许恢复
+            if (_playbackState.value != PlaybackState.PAUSED) {
+                EasyLog.log("音频LOG测试 Cannot resume: current state is ${_playbackState.value}, expected PAUSED")
+                return
+            }
             
             // 直接恢复播放，不重新请求音频焦点
             // 因为音频焦点在初始播放时已经获得，暂停时不会释放
             exoPlayer?.play()
+            
+            // 立即更新状态
+            _playbackState.value = PlaybackState.PLAYING
+            startPositionUpdate()
+            
             EasyLog.log("音频LOG测试 Audio playback resumed successfully")
             
         } catch (e: Exception) {
@@ -459,9 +484,10 @@ class AudioPlaybackManager private constructor(private val context: Context) : P
                 stopPositionUpdate()
                 abandonAudioFocus()
 
-                // 播放完成后自动释放资源
+                // 播放完成后延迟释放资源，给UI更多时间更新状态
                 scope.launch {
-                    delay(100) // 短暂延迟确保UI更新完成
+                    delay(500) // 增加延迟时间，确保UI状态正确更新
+                    EasyLog.log("音频LOG测试 Delayed reset after playback completion")
                     resetPlayerState()
                 }
             }
@@ -472,6 +498,7 @@ class AudioPlaybackManager private constructor(private val context: Context) : P
         super.onIsPlayingChanged(isPlaying)
 
         EasyLog.log("音频LOG测试 === onIsPlayingChanged: $isPlaying ===")
+        EasyLog.log("音频LOG测试 Current playback state: ${_playbackState.value}")
 
         if (isPlaying) {
             EasyLog.log("音频LOG测试 Player started playing")
@@ -479,8 +506,22 @@ class AudioPlaybackManager private constructor(private val context: Context) : P
             startPositionUpdate()
         } else {
             EasyLog.log("音频LOG测试 Player stopped playing")
-            if (_playbackState.value != PlaybackState.BUFFERING) {
-                _playbackState.value = PlaybackState.PAUSED
+            // 只有在不是缓冲状态时才设置为暂停状态
+            // 如果当前状态是 PLAYING，则设置为 PAUSED
+            // 如果当前状态是其他状态，则保持原状态
+            when (_playbackState.value) {
+                PlaybackState.PLAYING -> {
+                    _playbackState.value = PlaybackState.PAUSED
+                    EasyLog.log("音频LOG测试 State changed from PLAYING to PAUSED")
+                }
+                PlaybackState.BUFFERING -> {
+                    // 保持缓冲状态，不改变
+                    EasyLog.log("音频LOG测试 Keeping BUFFERING state")
+                }
+                else -> {
+                    // 其他状态保持不变
+                    EasyLog.log("音频LOG测试 Keeping current state: ${_playbackState.value}")
+                }
             }
             stopPositionUpdate()
         }
@@ -565,5 +606,6 @@ data class AudioInfo(
     val artist: String? = null,
     val duration: Long? = null,
     val messageId: String? = null,
-    val agentId: String? = null
+    val agentId: String? = null,
+    val agentName: String? = null
 )

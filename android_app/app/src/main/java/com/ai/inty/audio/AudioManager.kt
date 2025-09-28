@@ -5,6 +5,7 @@ import com.inty.utils.log.EasyLog
 import com.inty.utils.storage.IntySetting
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 /**
@@ -13,7 +14,7 @@ import kotlinx.coroutines.launch
  */
 class AudioManager private constructor(
     private val context: Context,
-    private val scope: CoroutineScope
+    private var scope: CoroutineScope
 ) {
 
     companion object {
@@ -23,6 +24,9 @@ class AudioManager private constructor(
         fun getInstance(context: Context, scope: CoroutineScope): AudioManager {
             return INSTANCE ?: synchronized(this) {
                 INSTANCE ?: AudioManager(context.applicationContext, scope).also { INSTANCE = it }
+            }.also { instance ->
+                // 更新Scope以确保协程能正常执行
+                instance.scope = scope
             }
         }
     }
@@ -54,7 +58,8 @@ class AudioManager private constructor(
         isManualClick: Boolean = false,
         onTtsGenerated: ((String) -> Unit)? = null,
         onTtsFailed: ((String) -> Unit)? = null,
-        serverMessageId: String? = null // 服务器端消息ID，用于TTS生成
+        serverMessageId: String? = null, // 服务器端消息ID，用于TTS生成
+        agentName: String? = null // Agent名称，用于日志分析
     ) {
         // 参数验证
         if (messageId.isEmpty()) {
@@ -68,6 +73,13 @@ class AudioManager private constructor(
             onTtsFailed?.invoke("Agent ID不能为空")
             return
         }
+        
+        EasyLog.log("音频LOG测试 === AudioManager.playMessageVoice START ===")
+        EasyLog.log("音频LOG测试 Message ID: $messageId")
+        EasyLog.log("音频LOG测试 Agent ID: $agentId")
+        EasyLog.log("音频LOG测试 Audio URL: $audioUrl")
+        EasyLog.log("音频LOG测试 Auto play: $autoPlay")
+        EasyLog.log("音频LOG测试 Is manual click: $isManualClick")
 
         // 检查是否启用自动播放
         // 手动点击时不受自动播放设置影响
@@ -97,8 +109,8 @@ class AudioManager private constructor(
                     EasyLog.log("音频LOG测试 TTS generated successfully: $generatedUrl")
                     onTtsGenerated?.invoke(generatedUrl)
                     // 使用生成的URL播放
-                    EasyLog.log("音频LOG测试 Playing TTS generated audio: messageId=$messageId, generatedUrl=$generatedUrl, autoPlay=$autoPlay")
-                    playMessageWithUrl(messageId, generatedUrl, agentId, autoPlay)
+                    EasyLog.log("音频LOG测试 Playing TTS generated audio: messageId=$messageId, generatedUrl=$generatedUrl, autoPlay=$autoPlay (Agent: $agentName)")
+                    playMessageWithUrl(messageId, generatedUrl, agentId, autoPlay, agentName)
                 },
                 onError = { error ->
                     EasyLog.log("音频LOG测试 TTS generation failed: $error", EasyLog.ERROR)
@@ -107,7 +119,7 @@ class AudioManager private constructor(
             )
         } else {
             // 直接播放
-            playMessageWithUrl(messageId, audioUrl, agentId, autoPlay)
+            playMessageWithUrl(messageId, audioUrl, agentId, autoPlay, agentName)
         }
     }
 
@@ -118,21 +130,45 @@ class AudioManager private constructor(
         messageId: String,
         audioUrl: String,
         agentId: String,
-        autoPlay: Boolean
+        autoPlay: Boolean,
+        agentName: String? = null
     ) {
         val audioInfo = AudioInfo(
             url = audioUrl,
             title = "msg voice",
             artist = "AI",
             messageId = messageId,
-            agentId = agentId
+            agentId = agentId,
+            agentName = agentName
         )
 
-        EasyLog.log("音频LOG测试 Playing message voice for message: $messageId")
+        EasyLog.log("音频LOG测试 Playing message voice for message: $messageId (Agent: $agentName)")
+        EasyLog.log("音频LOG测试 AudioInfo created: url=${audioInfo.url}, messageId=${audioInfo.messageId}, agentId=${audioInfo.agentId}, agentName=${audioInfo.agentName}")
+        EasyLog.log("音频LOG测试 Scope is active: ${scope.isActive}")
+        EasyLog.log("音频LOG测试 PlaybackManager instance: ${playbackManager.hashCode()}")
         
-        // 确保在主线程上调用ExoPlayer
-        scope.launch {
-            playbackManager.playAudio(audioInfo, autoPlay = autoPlay)
+        // 检查Scope是否活跃，如果不活跃则直接调用playbackManager
+        if (!scope.isActive) {
+            EasyLog.log("音频LOG测试 Scope is not active, calling playbackManager directly on main thread")
+            try {
+                playbackManager.playAudio(audioInfo, autoPlay = autoPlay)
+                EasyLog.log("音频LOG测试 Direct playbackManager.playAudio call completed")
+            } catch (e: Exception) {
+                EasyLog.log("音频LOG测试 Error in direct playbackManager.playAudio: ${e.message}", EasyLog.ERROR)
+                e.printStackTrace()
+            }
+        } else {
+            // 确保在主线程上调用ExoPlayer
+            scope.launch {
+                try {
+                    EasyLog.log("音频LOG测试 Coroutine started, calling playbackManager.playAudio...")
+                    playbackManager.playAudio(audioInfo, autoPlay = autoPlay)
+                    EasyLog.log("音频LOG测试 playbackManager.playAudio call completed")
+                } catch (e: Exception) {
+                    EasyLog.log("音频LOG测试 Error in playbackManager.playAudio: ${e.message}", EasyLog.ERROR)
+                    e.printStackTrace()
+                }
+            }
         }
     }
 
@@ -151,20 +187,62 @@ class AudioManager private constructor(
      * 暂停语音播放
      */
     fun pausePlayback() {
-        EasyLog.log("音频LOG测试 Pausing voice playback")
-        scope.launch {
-            playbackManager.pausePlayback()
+        EasyLog.log("音频LOG测试 === AudioManager.pausePlayback START ===")
+        EasyLog.log("音频LOG测试 Scope is active: ${scope.isActive}")
+        EasyLog.log("音频LOG测试 Current audio info: ${playbackManager.getCurrentAudioInfo()?.messageId}")
+        EasyLog.log("音频LOG测试 Is playing: ${playbackManager.isPlaying()}")
+        
+        if (!scope.isActive) {
+            EasyLog.log("音频LOG测试 Scope is not active, calling playbackManager directly")
+            try {
+                playbackManager.pausePlayback()
+                EasyLog.log("音频LOG测试 Direct pausePlayback call completed")
+            } catch (e: Exception) {
+                EasyLog.log("音频LOG测试 Error in direct pausePlayback: ${e.message}", EasyLog.ERROR)
+            }
+        } else {
+            scope.launch {
+                try {
+                    EasyLog.log("音频LOG测试 Calling playbackManager.pausePlayback in coroutine")
+                    playbackManager.pausePlayback()
+                    EasyLog.log("音频LOG测试 pausePlayback coroutine completed")
+                } catch (e: Exception) {
+                    EasyLog.log("音频LOG测试 Error in pausePlayback coroutine: ${e.message}", EasyLog.ERROR)
+                }
+            }
         }
+        EasyLog.log("音频LOG测试 === AudioManager.pausePlayback END ===")
     }
 
     /**
      * 恢复语音播放
      */
     fun resumePlayback() {
-        EasyLog.log("音频LOG测试 Resuming voice playback")
-        scope.launch {
-            playbackManager.resumePlayback()
+        EasyLog.log("音频LOG测试 === AudioManager.resumePlayback START ===")
+        EasyLog.log("音频LOG测试 Scope is active: ${scope.isActive}")
+        EasyLog.log("音频LOG测试 Current audio info: ${playbackManager.getCurrentAudioInfo()?.messageId}")
+        EasyLog.log("音频LOG测试 Is playing: ${playbackManager.isPlaying()}")
+        
+        if (!scope.isActive) {
+            EasyLog.log("音频LOG测试 Scope is not active, calling playbackManager directly")
+            try {
+                playbackManager.resumePlayback()
+                EasyLog.log("音频LOG测试 Direct resumePlayback call completed")
+            } catch (e: Exception) {
+                EasyLog.log("音频LOG测试 Error in direct resumePlayback: ${e.message}", EasyLog.ERROR)
+            }
+        } else {
+            scope.launch {
+                try {
+                    EasyLog.log("音频LOG测试 Calling playbackManager.resumePlayback in coroutine")
+                    playbackManager.resumePlayback()
+                    EasyLog.log("音频LOG测试 resumePlayback coroutine completed")
+                } catch (e: Exception) {
+                    EasyLog.log("音频LOG测试 Error in resumePlayback coroutine: ${e.message}", EasyLog.ERROR)
+                }
+            }
         }
+        EasyLog.log("音频LOG测试 === AudioManager.resumePlayback END ===")
     }
 
     /**

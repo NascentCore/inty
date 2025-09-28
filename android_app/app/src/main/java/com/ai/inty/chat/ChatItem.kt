@@ -118,14 +118,15 @@ private fun ChatItemAI(item: MsgInfo, isCurrentPage: Boolean = true, chatViewMod
                 val viewModel = chatViewModel ?: viewModel<ChatViewModel>()
                 val agentInfo by viewModel.agentInfo.collectAsState()
                 
-                EasyLog.log("音频LOG测试 ChatItemAI: agentInfo=${agentInfo?.id}, messageId=${item.localMsgId}")
+                EasyLog.log("音频LOG测试 ChatItemAI: agentInfo=${agentInfo?.id}, agentName=${agentInfo?.name}, messageId=${item.localMsgId}")
                 // 为每个消息生成唯一的测试URL，避免状态混乱
                 val audioInfo = AudioInfo(
                     url = item.audio_url ?: "",
                     title = "Voice Message",
                     artist = "AI Agent",
                     messageId = item.localMsgId, // 使用localMsgId，包含_assistant_标识，用于播放状态管理
-                    agentId = agentInfo?.id ?: "" // 确保agentId不为null
+                    agentId = agentInfo?.id ?: "", // 确保agentId不为null
+                    agentName = agentInfo?.name // 添加Agent名称用于日志分析
                 )
                 
                 // 验证关键参数
@@ -150,7 +151,6 @@ private fun ChatItemAI(item: MsgInfo, isCurrentPage: Boolean = true, chatViewMod
                     EasyLog.WARN
                 )
                 // 开场白自动播放逻辑：只有开场白消息且未播放过
-                // 简化判断条件，确保逻辑清晰
                 val shouldAutoPlay = item.isOpening() && 
                     isOnlyOpeningMessage && 
                     !hasPlayedOpening && 

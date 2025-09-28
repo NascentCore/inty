@@ -33,7 +33,7 @@ object UserProfileManager {
             }
         }
         
-        EasyLog.log("Saved user profile: ${userProfile.nickname}")
+        EasyLog.log("Saved user profile: $userProfile")
     }
 
     fun getUserProfile(): UserProfile {

@@ -29,7 +29,7 @@ class ChatPagingRepository {
      */
     fun getChatAgentsFlow(
         useCache: Boolean = true,
-        sortSeed: Int = IntySetting.sortSeed()
+        sortSeed: Int = IntySetting.randomSortSeed()
     ): Flow<PagingData<AgentInfo>> {
         EasyLog.log("ChatPagingRepository - 创建Paging数据流，useCache: $useCache, sortSeed: $sortSeed")
         
@@ -54,9 +54,8 @@ class ChatPagingRepository {
      * 刷新数据（生成新的排序种子）
      */
     fun refreshChatAgents(): Flow<PagingData<AgentInfo>> {
-        val newSortSeed = IntySetting.sortSeed() + 1
-        IntySetting.updateSortSeed(newSortSeed)
-        EasyLog.log("ChatPagingRepository - 刷新数据，新sortSeed: $newSortSeed")
+        val newSortSeed = IntySetting.randomSortSeed()
+        EasyLog.log("ChatPagingRepository - 刷新数据，新randomSortSeed: $newSortSeed")
         
         return getChatAgentsFlow(
             useCache = false, // 刷新时不使用缓存

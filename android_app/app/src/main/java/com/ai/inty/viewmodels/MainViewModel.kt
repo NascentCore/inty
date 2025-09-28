@@ -185,7 +185,7 @@ class MainViewModel : BaseActivityViewModel() {
                     _userProfile.value = userProfile
                     // 更新本地缓存
                     UserProfileManager.saveUserProfile(userProfile)
-                    EasyLog.log("Updated user profile from server: ${userProfile.nickname}")
+                    EasyLog.log("Updated user profile from server: $userProfile")
                 } else {
                     EasyLog.log("getUserProfile failure: Failed to get user profile", EasyLog.ERROR)
                 }
