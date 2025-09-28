@@ -216,8 +216,9 @@ fun VoicePlayer(
         if (autoPlay && !isPlaying && !hasError && !(audioInfo.agentId.isNullOrEmpty())) {
             EasyLog.log("音频LOG测试 VoicePlayer conditions met, starting auto play...")
             
-            // 增加延迟，确保组件完全初始化
-            delay(300)
+            // 增加延迟，确保组件完全初始化和UI渲染稳定
+            // 开场白消息需要等待queryMsgs完成，所以延迟时间稍长一些
+            delay(500)
 
             // 再次检查状态，确保条件仍然满足
             if (!isPlaying && !hasError) {

@@ -64,6 +64,10 @@ class ChatViewModel : BaseActivityViewModel() {
     private var lastQueryTime = 0L
     private val QUERY_DEBOUNCE_TIME = 2000L // 2秒防抖
 
+    // 消息查询完成状态，用于控制开场白自动播放时机
+    private val _isQueryMsgsCompleted = MutableStateFlow<Boolean>(false)
+    val isQueryMsgsCompleted = _isQueryMsgsCompleted.asStateFlow()
+
     // 对话列表分页状态
     private var currentConversationsPage = 0
     private var _isLoadingConversations = MutableStateFlow(false)
@@ -95,6 +99,7 @@ class ChatViewModel : BaseActivityViewModel() {
             _msgs.update { emptyList() }
             lastQueryAgentId = null
             isQueryingMsgs = false
+            _isQueryMsgsCompleted.value = false
             // 停止语音播放
             audioManager?.stopAllPlayback()
             return
@@ -111,6 +116,7 @@ class ChatViewModel : BaseActivityViewModel() {
         _msgs.update { emptyList() }
         lastQueryAgentId = agentInfo.id
         isQueryingMsgs = false
+        _isQueryMsgsCompleted.value = false
 
         // 查询新 agent 的消息
         queryMsgs()
@@ -235,17 +241,23 @@ class ChatViewModel : BaseActivityViewModel() {
                             }
                             _msgs.update { uniqueMessages }
                             EasyLog.log("Successfully loaded ${uniqueMessages.size} unique messages for agent ${agent.id} (original: ${result.data.messages.size})")
+                            // 标记消息查询完成
+                            _isQueryMsgsCompleted.value = true
                         }
 
                         is HttpResult.Failure -> {
                             EasyLog.log("Failed to query messages: ${result.message}")
                             showNetworkAwareError(result.message)
+                            // 即使查询失败，也标记为完成，避免开场白永远不播放
+                            _isQueryMsgsCompleted.value = true
                         }
                     }
                 }
             } catch (e: Exception) {
                 EasyLog.log("queryMsgs exception: ${e.message}", priority = EasyLog.ERROR)
                 handleNetworkException(e)
+                // 即使出现异常，也标记为完成，避免开场白永远不播放
+                _isQueryMsgsCompleted.value = true
             } finally {
                 isQueryingMsgs = false
             }
@@ -753,6 +765,9 @@ class ChatViewModel : BaseActivityViewModel() {
 
         // 清理chatSettings
         _chatSettings.value = emptyMap()
+
+        // 清理消息查询完成状态
+        _isQueryMsgsCompleted.value = false
 
         EasyLog.log("All data cleared for ChatViewModel ${hashCode()}")
     }

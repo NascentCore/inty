@@ -136,6 +136,9 @@ private fun ChatItemAI(item: MsgInfo, isCurrentPage: Boolean = true, chatViewMod
                     EasyLog.log("音频LOG测试 AudioInfo created successfully: agentId=${audioInfo.agentId}, messageId=${audioInfo.messageId}")
                 }
 
+                // 检查queryMsgs是否完成
+                val isQueryMsgsCompleted by viewModel.isQueryMsgsCompleted.collectAsState()
+                
                 // 检查当前消息列表是否只有开场白消息,避免已经聊过多个消息后，再进入还播放开场白
                 val allMessages by viewModel.msgs.collectAsState()
                 // 更准确的消息过滤：只计算实际的聊天消息（排除intro和开场白）
@@ -147,19 +150,20 @@ private fun ChatItemAI(item: MsgInfo, isCurrentPage: Boolean = true, chatViewMod
                 // 检查开场白是否已播放过
                 val hasPlayedOpening = OpeningPlayState.agentOpeningPlayed(agentInfo?.id ?: "")
                 EasyLog.log(
-                    "音频LOG测试 音频消息allMessages.size ${allMessages.size}, actualChatMessages.size ${actualChatMessages.size}, isOnlyOpeningMessage:$isOnlyOpeningMessage, hasPlayedOpening:$hasPlayedOpening ",
+                    "音频LOG测试 音频消息allMessages.size ${allMessages.size}, actualChatMessages.size ${actualChatMessages.size}, isOnlyOpeningMessage:$isOnlyOpeningMessage, hasPlayedOpening:$hasPlayedOpening, isQueryMsgsCompleted:$isQueryMsgsCompleted ",
                     EasyLog.WARN
                 )
-                // 开场白自动播放逻辑：只有开场白消息且未播放过
+                // 开场白自动播放逻辑：只有开场白消息且未播放过，且queryMsgs已完成
                 val shouldAutoPlay = item.isOpening() && 
                     isOnlyOpeningMessage && 
                     !hasPlayedOpening && 
                     isCurrentPage &&
+                    isQueryMsgsCompleted &&
                     !(audioInfo.agentId.isNullOrEmpty()) &&
                     audioInfo.url.isNotEmpty()
                     
                 EasyLog.log(
-                    "音频LOG测试 开场白自动播放判断: shouldAutoPlay=$shouldAutoPlay, isOpening=${item.isOpening()}, isOnlyOpeningMessage=$isOnlyOpeningMessage, hasPlayedOpening=$hasPlayedOpening, isCurrentPage=$isCurrentPage, agentId='${audioInfo.agentId}', hasAudioUrl=${audioInfo.url.isNotEmpty()}",
+                    "音频LOG测试 开场白自动播放判断: shouldAutoPlay=$shouldAutoPlay, isOpening=${item.isOpening()}, isOnlyOpeningMessage=$isOnlyOpeningMessage, hasPlayedOpening=$hasPlayedOpening, isCurrentPage=$isCurrentPage, isQueryMsgsCompleted=$isQueryMsgsCompleted, agentId='${audioInfo.agentId}', hasAudioUrl=${audioInfo.url.isNotEmpty()}",
                     EasyLog.WARN
                 )
                 VoicePlayer(
