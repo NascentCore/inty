@@ -5,6 +5,7 @@ import com.ai.inty.MainActivity
 import com.ai.inty.base.BaseActivityViewModel
 import com.ai.inty.beans.GENDER
 import com.ai.inty.utils.IntyUserProfileSDK
+import com.ai.inty.utils.UnifiedStartupManager.userProfile
 import com.ai.inty.utils.UserProfileManager
 import com.inty.utils.AppEnv
 import com.inty.utils.log.EasyLog
@@ -29,6 +30,10 @@ class RegInfoViewModel : BaseActivityViewModel() {
             if (result != null) {
                 //用户信息更新成功
                 withContext(Dispatchers.Main) {
+                    // 更新本地缓存
+                    UserProfileManager.saveUserProfile(result)
+                    EasyLog.log("Updated user profile from server: $userProfile")
+
                     // 关闭当前设置页面
                     closeActivity()
 
