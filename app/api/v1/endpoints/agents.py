@@ -62,10 +62,9 @@ async def list_agents(
     """
     agents = await agent_service.get_user_agents(
         db,
-        user_id=current_user.id,
+        current_user=current_user,
         skip=skip,
         limit=limit,
-        current_user_id=current_user.id,
     )
     return schemas.APIResponse.success(data=agents)
 
@@ -87,7 +86,7 @@ async def search_agents(
     Support fuzzy search by name, description, category
     """
     pagination_data = await agent_service.search_agents(
-        db, keyword=q, page=page, page_size=page_size, current_user_id=current_user.id
+        db, keyword=q, page=page, page_size=page_size, current_user=current_user
     )
     return schemas.APIResponse.success(data=pagination_data)
 
@@ -131,11 +130,11 @@ async def recommend_agents(
     """
     pagination_data = await agent_service.get_recommended_agents_paginated(
         db,
+        current_user=current_user,
         page=page,
         page_size=page_size,
         sort_by=sort,
         sort_seed=sort_seed,
-        current_user_id=current_user.id,
     )
     return schemas.APIResponse.success(data=pagination_data)
 
