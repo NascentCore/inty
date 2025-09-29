@@ -224,10 +224,21 @@ private fun SupportAndHelpSection(
         SettingDivider()
 
         // 订阅管理
+        // VIP状态
+        val vipStatus by BillingRepository.vipStatusFlow.collectAsState()
+        val str = if (vipStatus.isSubscribed) {
+            stringResource(R.string.settings_subscription_management)
+        } else {
+            stringResource(R.string.settings_update_subscription)
+        }
         SettingNavigationItem(
-            title = stringResource(R.string.settings_subscription_management),
+            title = str,
             onClick = {
-                TheRouter.build(Constant.ROUTE_SUBSCRIPTION_MANAGEMENT).navigation(context)
+                if (vipStatus.isSubscribed) {
+                    TheRouter.build(Constant.ROUTE_SUBSCRIPTION_MANAGEMENT).navigation(context)
+                } else {
+                    TheRouter.build(Constant.ROUTE_VIP_CENTER).navigation(context)
+                }
             }
         )
 

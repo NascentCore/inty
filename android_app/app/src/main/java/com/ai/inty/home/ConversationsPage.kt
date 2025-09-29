@@ -234,7 +234,7 @@ private fun MessageTabContent(
 
 
 @Composable
-fun ChatHistoryItem(
+private fun ChatHistoryItem(
     modifier: Modifier,
     conversation: ConversationItem,
     placeholderID: Int = R.drawable.img_default_avatar,

@@ -117,7 +117,7 @@ class ReportViewModel : BaseActivityViewModel() {
 
                 when (result) {
                     is com.ai.inty.netapi.ApiResult.Success -> {
-                        showSnackbar("Submitted successfully. We’ll review it soon. Thank you for helping keep things safe.")
+                        showSnackbar("Submitted successfully. We’ll review it soon.")
                         closeActivity()
                     }
 
