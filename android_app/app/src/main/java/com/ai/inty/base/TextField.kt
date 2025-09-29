@@ -16,6 +16,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -29,7 +30,9 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.ai.inty.R
 import com.ai.inty.ui.theme.TextFieldColor
+import kotlinx.coroutines.launch
 
 
 @Composable
@@ -48,6 +51,8 @@ fun IntySmallTextField(
     onFocusChanged: ((Boolean) -> Unit)? = null,
     onSelectionChanged: ((Int) -> Unit)? = null,
     selection: Int = 0,
+    maxLines: Int = Int.MAX_VALUE,
+    maxLength: Int = -1,
 ) {
 
     Row(
@@ -104,7 +109,7 @@ fun IntySmallTextField(
                     text = value, selection = TextRange(selection)
                 )
             }
-
+            val scope = rememberCoroutineScope()
             TextField(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -115,9 +120,23 @@ fun IntySmallTextField(
                 singleLine = singleLine,
                 value = textFieldValue,
                 onValueChange = { newValue ->
-                    textFieldValue = newValue
-                    onValueChange(newValue.text)
-                    onSelectionChanged?.invoke(newValue.selection.start)
+                    var nextText = newValue.text
+                    var nextSelection = newValue.selection
+
+                    // 限制最大字符数（含粘贴场景）
+                    if (maxLength > 0 && nextText.length > maxLength) {
+                        // 仅在首次超过时提示
+                        scope.launch {
+                            ToastUtils.showToast(R.string.str_message_is_too_long)
+                        }
+                        nextText = nextText.substring(0, maxLength)
+                        val sel = nextSelection.start.coerceAtMost(maxLength)
+                        nextSelection = TextRange(sel)
+                    }
+
+                    textFieldValue = TextFieldValue(text = nextText, selection = nextSelection)
+                    onValueChange(nextText)
+                    onSelectionChanged?.invoke(nextSelection.start)
                 },
                 keyboardOptions = keyboardOptions,
                 keyboardActions = newActions,
@@ -133,7 +152,8 @@ fun IntySmallTextField(
                     disabledIndicatorColor = Color.Transparent,
                     cursorColor = TextFieldColor.Text
                 ),
-                placeholder = placeholder
+                placeholder = placeholder,
+                maxLines = maxLines
             )
         }
 
@@ -227,10 +247,6 @@ fun IntySmallTextField2(
                 placeholder?.let { it() }
             }
         }
-
-
         trailingIcon?.let { it() }
-
-
     }
 }
