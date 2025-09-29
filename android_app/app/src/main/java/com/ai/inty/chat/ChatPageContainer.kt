@@ -16,7 +16,6 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -92,6 +91,7 @@ fun ChatPageContainer(
         0 // 默认使用第一页
     }
     val pageState = rememberPagerState(initialPage = safeInitialPage) { agentList.size }
+    val prefetchThreshold = 5//距离本业末尾数据还有5个时，触发静默加载下一页
     val scope = rememberCoroutineScope()
 
     // 新用户引导状态
@@ -119,17 +119,21 @@ fun ChatPageContainer(
             delay(100)
         }
 
-        // 预加载逻辑：当用户接近最后一页时，触发加载更多数据
-        val currentPage = pageState.currentPage
-        val totalPages = agentList.size
-        if (currentPage >= totalPages - 2 && totalPages > 0) {
-            agentsPagingItems.retry()
+        // 静默预取：当滑到倒数第5个左右时，触发下一页加载（无可见提示）
+        val total = agentList.size
+        if (total > 0) {
+            val thresholdIndex = (total - prefetchThreshold).coerceAtLeast(0)
+            val appendState = agentsPagingItems.loadState.append
+            val refreshState = agentsPagingItems.loadState.refresh
+            val notEnd =
+                !(appendState is androidx.paging.LoadState.NotLoading && appendState.endOfPaginationReached)
+            val canPrefetch = refreshState is androidx.paging.LoadState.NotLoading
+            if (pageState.currentPage >= thresholdIndex && notEnd && canPrefetch) {
+                val nextIndex = agentsPagingItems.itemCount
+                // 访问下一索引以触发 Paging 的 append 加载
+                agentsPagingItems[nextIndex]
+            }
         }
-    }
-
-    // 监听Paging数据变化，更新页面状态
-    LaunchedEffect(agentsPagingItems.itemCount) {
-        // Paging数据更新时会自动触发UI重组
     }
 
     Box {
@@ -157,27 +161,12 @@ fun ChatPageContainer(
             ChatPage(
                 modifier = Modifier.fillMaxSize(),
                 chatViewModel = chatViewModel,
-                isCurrentPage = currentPage == pageState.currentPage
+                isCurrentPage = currentPage == pageState.currentPage,
             )
         }
 
-        // 加载状态指示器
-        if (agentsPagingItems.loadState.append is androidx.paging.LoadState.Loading) {
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(16.dp)
-            ) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(24.dp),
-                    strokeWidth = 2.dp
-                )
-            }
-        }
-        
         // 新用户聊天滑动引导
         NewUserGuide(
-            agentList = agentList,
             pageState = pageState,
             shouldShowGuide = shouldShowGuide,
             onGuideCompleted = { hasShowGuest = true }
@@ -191,7 +180,6 @@ fun ChatPageContainer(
  */
 @Composable
 private fun NewUserGuide(
-    agentList: List<AgentInfo>,
     pageState: PagerState,
     shouldShowGuide: Boolean,
     onGuideCompleted: () -> Unit,

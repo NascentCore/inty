@@ -77,13 +77,13 @@ fun ExploreContent(
 
     // 监听滚动到底部事件
     LaunchedEffect(isScrolledToBottom, lazyPagingItems?.loadState?.append) {
-        if (isScrolledToBottom && lazyPagingItems?.loadState?.append is androidx.paging.LoadState.Loading) {
+        if (isScrolledToBottom && lazyPagingItems?.loadState?.append is LoadState.Loading) {
             val currentTime = System.currentTimeMillis()
             // 关键修复：只有在用户主动滚动且不是首次加载时才显示loading
             // 首次进入时使用缓存数据，不应该显示加载更多loading
             if (currentTime - lastScrollTime < 1000 &&
                 lazyPagingItems.itemCount > 0 &&
-                lazyPagingItems.loadState.refresh is androidx.paging.LoadState.NotLoading
+                lazyPagingItems.loadState.refresh is LoadState.NotLoading
             ) {
                 showLoadMoreLoading = true
                 // 延迟隐藏loading
@@ -109,7 +109,7 @@ fun ExploreContent(
             onRetry = onRetry ?: { lazyPagingItems.retry() },
             modifier = modifier.fillMaxSize()
         )
-    } else if (loadState is LoadState.NotLoading && lazyPagingItems?.itemCount == 0) {
+    } else if (loadState is LoadState.NotLoading && lazyPagingItems.itemCount == 0) {
         // 如果没有数据且加载完成，显示空数据状态
         EmptyDataState(
             subtitle = stringResource(com.ai.inty.R.string.empty_explore_data),
