@@ -29,6 +29,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.paging.LoadState
 import androidx.paging.PagingData
 import androidx.paging.compose.collectAsLazyPagingItems
@@ -53,10 +54,11 @@ fun ExploreContent(
     onRetry: (() -> Unit)? = null
 ) {
     val lazyPagingItems = agentsFlow?.collectAsLazyPagingItems()
+    val vm: ExploreViewModel = viewModel()
 
     val gridState = rememberLazyStaggeredGridState(
-        initialFirstVisibleItemIndex = 0,
-        initialFirstVisibleItemScrollOffset = 0
+        initialFirstVisibleItemIndex = vm.savedFirstVisibleIndex.value,
+        initialFirstVisibleItemScrollOffset = vm.savedFirstVisibleOffset.value
     )
 
     // 检测用户是否主动滚动到底部触发加载更多
@@ -93,10 +95,16 @@ fun ExploreContent(
         }
     }
 
-    // 更新滚动时间
+    // 更新滚动时间与保存滚动位置
     LaunchedEffect(gridState.isScrollInProgress) {
         if (gridState.isScrollInProgress) {
             lastScrollTime = System.currentTimeMillis()
+        } else {
+            // 滚动停止时保存位置
+            vm.saveScrollPosition(
+                gridState.firstVisibleItemIndex,
+                gridState.firstVisibleItemScrollOffset
+            )
         }
     }
 
