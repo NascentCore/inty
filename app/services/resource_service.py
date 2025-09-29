@@ -33,7 +33,7 @@ def create_resource(
     Create new resource
     """
     # 排除 request_id 字段，因为 Resource 模型不接受这个参数
-    resource_data = resource_in.dict(exclude={"request_id"})
+    resource_data = resource_in.model_dump(exclude={"request_id"})
     db_resource = models.Resource(**resource_data, user_id=user_id)
     db.add(db_resource)
     db.commit()
@@ -47,7 +47,7 @@ def update_resource(
     """
     Update resource
     """
-    update_data = resource_in.dict(exclude_unset=True)
+    update_data = resource_in.model_dump(exclude_unset=True)
     for field, value in update_data.items():
         setattr(db_resource, field, value)
     db.add(db_resource)
@@ -107,7 +107,7 @@ async def async_create_resource(
     async_db: AsyncSession, resource_in: schemas.ResourceCreate, user_id: str
 ) -> models.Resource:
     # 排除 request_id 字段，因为 Resource 模型不接受这个参数
-    resource_data = resource_in.dict(exclude={"request_id"})
+    resource_data = resource_in.model_dump(exclude={"request_id"})
     db_resource = models.Resource(**resource_data, user_id=user_id)
     async_db.add(db_resource)
     await async_db.commit()
