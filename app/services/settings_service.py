@@ -30,8 +30,10 @@ def create_settings(
     创建新的用户设置
     """
     try:
+        # 排除 request_id 字段，因为 Settings 模型不接受这个参数
+        settings_data = settings_in.model_dump(exclude={"request_id"})
         db_settings = models.Settings(
-            id=str(uuid.uuid4()), **settings_in.dict(), user_id=user_id
+            id=str(uuid.uuid4()), **settings_data, user_id=user_id
         )
         db.add(db_settings)
         db.commit()
@@ -50,7 +52,7 @@ def update_settings(
     更新用户设置
     """
     try:
-        update_data = settings_in.dict(exclude_unset=True)
+        update_data = settings_in.model_dump(exclude_unset=True)
         for field, value in update_data.items():
             setattr(db_settings, field, value)
         db.add(db_settings)

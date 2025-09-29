@@ -177,7 +177,9 @@ async def create_chat(
         if not agent:
             raise HTTPException(status_code=404, detail="Agent not found")
 
-        db_chat = models.Chat(id=chat_id, **chat_in.dict(), user_id=user_id)
+        # 排除 request_id 字段，因为 Chat 模型不接受这个参数
+        chat_data = chat_in.dict(exclude={"request_id"})
+        db_chat = models.Chat(id=chat_id, **chat_data, user_id=user_id)
 
         db.add(db_chat)
         await db.commit()
