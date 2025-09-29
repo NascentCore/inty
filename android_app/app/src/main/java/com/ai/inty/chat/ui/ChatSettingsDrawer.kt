@@ -1,5 +1,6 @@
 package com.ai.inty.chat.ui
 
+import android.content.Context
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -15,11 +16,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -31,7 +35,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.LifecycleResumeEffect
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ai.inty.Constant
 import com.ai.inty.R
 import com.ai.inty.base.MyModalNavigationDrawer
@@ -39,9 +46,14 @@ import com.ai.inty.base.noRippleClickable
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.billing.BillingRepository
 import com.ai.inty.chat.ChatViewModel
+import com.ai.inty.ui.components.EditDialog
+import com.ai.inty.ui.components.EditKey
 import com.ai.inty.ui.components.MySettingItem
+import com.ai.inty.viewmodels.MySettingViewModel
 import com.inty.utils.storage.IntySetting
 import com.therouter.TheRouter
+import com.therouter.router.Navigator
+import com.therouter.router.action.interceptor.ActionInterceptor
 
 /**
  * 聊天设置抽屉组件
@@ -90,6 +102,36 @@ fun ChatSettingsDrawer(
 
     val horizontalPadding = 16
 
+    val userProfileState = chatViewModel.userProfile.collectAsState()
+
+    // 本地编辑状态（与 MySettingActivity 一致）
+    var editKey by rememberSaveable { mutableStateOf(EditKey.None) }
+    var editValue by rememberSaveable { mutableStateOf("") }
+
+    // 复用 MySettingViewModel 的保存逻辑
+    val mySettingViewModel: MySettingViewModel = viewModel()
+
+    LaunchedEffect(userProfileState.value.id) {
+        mySettingViewModel.init(userProfileState.value)
+    }
+
+    // 监听用户资料变更事件并刷新UI
+    val userProfileChangedInterceptor = remember {
+        object : ActionInterceptor() {
+            override fun handle(context: Context, navigator: Navigator): Boolean {
+                chatViewModel.updateUserInfo()
+                return super.handle(context, navigator)
+            }
+        }
+    }
+
+    DisposableEffect(Unit) {
+        TheRouter.addActionInterceptor(Constant.ACTION_USER_PROFILE_CHANGED, userProfileChangedInterceptor)
+        onDispose {
+            TheRouter.removeActionInterceptor(Constant.ACTION_USER_PROFILE_CHANGED, userProfileChangedInterceptor)
+        }
+    }
+
     MyModalNavigationDrawer(
         modifier = Modifier,
         drawerState = drawerState,
@@ -137,7 +179,7 @@ fun ChatSettingsDrawer(
                             shape = RoundedCornerShape(8.dp)
                         )
                 ) {
-                    val userProfile = chatViewModel.userProfile.collectAsState()
+                    val userProfile = userProfileState
                     MySettingItem(
                         key = stringResource(R.string.str_name),
                         value = userProfile.value.nickname,
@@ -145,9 +187,8 @@ fun ChatSettingsDrawer(
                         onClick = {
                             // 检查是否正式登录（非游客且已登录）
                             if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
-                                TheRouter.build(Constant.ROUTE_SETTING_MY)
-                                    .withObject("userProfile", userProfile.value)
-                                    .navigation(context)
+                                editKey = EditKey.Name
+                                editValue = userProfile.value.nickname
                             } else {
                                 // 未登录或游客时跳转到登录页面
                                 TheRouter.build(Constant.ROUTE_LOGIN)
@@ -162,9 +203,8 @@ fun ChatSettingsDrawer(
                         onClick = {
                             // 检查是否正式登录（非游客且已登录）
                             if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
-                                TheRouter.build(Constant.ROUTE_SETTING_MY)
-                                    .withObject("userProfile", userProfile.value)
-                                    .navigation(context)
+                                editKey = EditKey.Pronouns
+                                editValue = userProfile.value.gender ?: ""
                             } else {
                                 // 未登录或游客时跳转到登录页面
                                 TheRouter.build(Constant.ROUTE_LOGIN)
@@ -179,9 +219,8 @@ fun ChatSettingsDrawer(
                         onClick = {
                             // 检查是否正式登录（非游客且已登录）
                             if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
-                                TheRouter.build(Constant.ROUTE_SETTING_MY)
-                                    .withObject("userProfile", userProfile.value)
-                                    .navigation(context)
+                                editKey = EditKey.Persona
+                                editValue = userProfile.value.description ?: ""
                             } else {
                                 // 未登录或游客时跳转到登录页面
                                 TheRouter.build(Constant.ROUTE_LOGIN)
@@ -305,9 +344,35 @@ fun ChatSettingsDrawer(
                         }
                     }
                 }
+
             }
         }
     ) {
-        // 主屏内容
+        // 应该放主屏内容的位置
+        // 编辑弹窗（与 MySettingActivity 同样的 UI 交互）
+        if (editKey != EditKey.None) {
+            Dialog(
+                onDismissRequest = { editKey = EditKey.None },
+                properties = DialogProperties(usePlatformDefaultWidth = false)
+            ) {
+                EditDialog(
+                    editKey = editKey,
+                    editValue = editValue,
+                    onDismiss = {
+                        editKey = EditKey.None
+                    },
+                    onSave = { key, value ->
+                        mySettingViewModel.changeUserProfile(key, value)
+                        editKey = EditKey.None
+                        // 直接保存并刷新本地展示
+                        mySettingViewModel.onSave()
+                        chatViewModel.updateUserInfo()
+                    },
+                    onValueChange = { value ->
+                        editValue = value
+                    }
+                )
+            }
+        }
     }
 } 

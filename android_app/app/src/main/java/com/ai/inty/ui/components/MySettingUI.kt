@@ -285,7 +285,6 @@ fun EditDialog(
         modifier = Modifier
             .fillMaxSize()
             .imePadding()
-            .background(Color.Black.copy(0.6f))
             .noRippleClickable { onDismiss() },
     ) {
         Column(
