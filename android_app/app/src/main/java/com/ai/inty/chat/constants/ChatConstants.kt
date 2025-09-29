@@ -20,12 +20,7 @@ object ChatConstants {
      * 是否启用占位符 - 禁用占位符，提高性能
      */
     const val ENABLE_PLACEHOLDERS = false
-    
-    /**
-     * 最大缓存页数 - 最大缓存3页数据
-     */
-    const val MAX_CACHE_PAGES = 3
-    
+
     /**
      * 初始页码
      */

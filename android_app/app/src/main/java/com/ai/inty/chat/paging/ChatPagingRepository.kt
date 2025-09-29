@@ -27,19 +27,18 @@ class ChatPagingRepository {
      * @param useCache 是否使用缓存数据
      * @param sortSeed 排序种子，用于刷新时改变排序
      */
-    fun getChatAgentsFlow(
+    private fun getChatAgentsFlow(
         useCache: Boolean = true,
         sortSeed: Int = IntySetting.randomSortSeed()
     ): Flow<PagingData<AgentInfo>> {
         EasyLog.log("ChatPagingRepository - 创建Paging数据流，useCache: $useCache, sortSeed: $sortSeed")
-        
+
         return Pager(
             config = PagingConfig(
                 pageSize = PAGE_SIZE,
                 prefetchDistance = PREFETCH_DISTANCE,
                 enablePlaceholders = ENABLE_PLACEHOLDERS,
-                initialLoadSize = PAGE_SIZE,
-                maxSize = PAGE_SIZE * ChatConstants.MAX_CACHE_PAGES // 最大缓存页数
+                initialLoadSize = PAGE_SIZE
             ),
             pagingSourceFactory = {
                 ChatPagingSource(
@@ -56,7 +55,7 @@ class ChatPagingRepository {
     fun refreshChatAgents(): Flow<PagingData<AgentInfo>> {
         val newSortSeed = IntySetting.randomSortSeed()
         EasyLog.log("ChatPagingRepository - 刷新数据，新randomSortSeed: $newSortSeed")
-        
+
         return getChatAgentsFlow(
             useCache = false, // 刷新时不使用缓存
             sortSeed = newSortSeed
