@@ -156,7 +156,7 @@ class AgentCreate(AgentBase):
     - 优先级：角色卡字段 > prompt字段
     """
 
-    pass
+    request_id: Optional[str] = None
 
 
 class AgentUpdate(AgentBase):
@@ -191,6 +191,8 @@ class AgentUpdate(AgentBase):
 
     # 元数据
     meta_data: Optional[AgentMetaData] = None
+
+    request_id: Optional[str] = None
 
 
 class AgentInDB(AgentBase):
@@ -442,6 +444,7 @@ class TextToImageRequest(BaseModel):
         le=4,
         description="Number of images to generate",
     )
+    request_id: Optional[str] = None
 
     class Config:
         json_schema_extra = {

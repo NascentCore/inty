@@ -2,6 +2,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
+from loguru import logger
 from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -12,6 +13,7 @@ from app.core.user_privilege.superuser_check import (
     SUPERUSER_LIMIT_CHECK_RESULT,
     is_superuser,
 )
+from app.external_services.google_play_service import GooglePlayService
 from app.models.subscription import (
     SubscriptionPlan,
     SubscriptionStatus,
@@ -22,6 +24,7 @@ from app.models.subscription import (
 )
 from app.models.subscription_features import SubscriptionFeatures
 from app.models.user import User
+from app.schemas.exclude_fields import EXCLUDE_FIELDS
 from app.schemas.subscription import (
     FeatureInfo,
     GooglePlayPurchaseRequest,
@@ -34,11 +37,7 @@ from app.schemas.subscription import (
     UsageStatisticsResponse,
 )
 from app.schemas.subscription import UserSubscription as UserSubscriptionSchema
-from app.external_services.google_play_service import GooglePlayService
-
 from app.services.system_settings_service import system_settings_service
-
-from loguru import logger
 
 
 class SubscriptionService:
@@ -115,7 +114,9 @@ class SubscriptionService:
     ) -> SubscriptionPlan:
         """创建订阅计划"""
         try:
-            plan = SubscriptionPlan(id=str(uuid.uuid4()), **plan_data.model_dump())
+            # 排除数据库模型中不存在的字段
+            plan_data_dict = plan_data.model_dump(exclude=EXCLUDE_FIELDS)
+            plan = SubscriptionPlan(id=str(uuid.uuid4()), **plan_data_dict)
 
             db.add(plan)
             await db.commit()

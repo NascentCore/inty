@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app import models, schemas
+from app.schemas.exclude_fields import EXCLUDE_FIELDS
 from app.services import chat_history_service
 from app.services.cache_service import cache_service
 
@@ -177,7 +178,9 @@ async def create_chat(
         if not agent:
             raise HTTPException(status_code=404, detail="Agent not found")
 
-        db_chat = models.Chat(id=chat_id, **chat_in.dict(), user_id=user_id)
+        # 排除数据库模型中不存在的字段
+        chat_data = chat_in.model_dump(exclude=EXCLUDE_FIELDS)
+        db_chat = models.Chat(id=chat_id, **chat_data, user_id=user_id)
 
         db.add(db_chat)
         await db.commit()
@@ -280,7 +283,7 @@ async def update_chat(
         if not db_chat:
             raise HTTPException(status_code=404, detail="聊天不存在")
 
-        update_data = chat_in.dict(exclude_unset=True)
+        update_data = chat_in.model_dump(exclude_unset=True)
         if not update_data:
             raise HTTPException(status_code=400, detail="没有提供要更新的数据")
 
@@ -801,7 +804,7 @@ async def update_chat_settings(
             raise HTTPException(status_code=404, detail="聊天设置不存在")
 
         # 更新设置
-        update_data = settings_update.dict(exclude_unset=True)
+        update_data = settings_update.model_dump(exclude_unset=True)
         if not update_data:
             raise HTTPException(status_code=400, detail="没有提供要更新的数据")
 
@@ -1017,7 +1020,7 @@ async def save_debug_messages(
         for msg in messages:
             if hasattr(msg, "dict"):
                 # 如果是 Pydantic 模型或类似对象
-                serializable_messages.append(msg.dict())
+                serializable_messages.append(msg.model_dump())
             elif hasattr(msg, "__dict__"):
                 # 如果是普通对象
                 serializable_messages.append(msg.__dict__)

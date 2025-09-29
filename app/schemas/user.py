@@ -38,6 +38,7 @@ class UserCreate(UserBase):
 
     auth_type: str
     user_info: Optional[dict] = None
+    request_id: Optional[str] = None
 
 
 class UserUpdate(BaseModel):
@@ -51,6 +52,7 @@ class UserUpdate(BaseModel):
     age_group: Optional[str] = None
     description: Optional[str] = None
     system_language: Optional[str] = None
+    request_id: Optional[str] = None
 
     @validator("email")
     def validate_email(cls, v):
@@ -111,6 +113,7 @@ class DeviceTokenRegister(BaseModel):
     """设备token注册请求"""
 
     token: str
+    request_id: Optional[str] = None
 
 
 class UserListItem(BaseModel):

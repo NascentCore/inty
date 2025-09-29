@@ -27,6 +27,7 @@ from app.models.agent import AgentVisibility
 from app.models.associations import agent_followers
 from app.models.resource import ResourceType
 from app.schemas.agent import AgentSortOption
+from app.schemas.exclude_fields import EXCLUDE_FIELDS
 from app.services.cache_service import cache_service
 from app.services.image_transform_service import image_transform_service
 from app.services.resource_service import async_create_image_resource
@@ -727,7 +728,8 @@ async def create_agent(
         # 生成可读ID
         readable_id = await generate_next_readable_id(db)
 
-        agent_data = agent_in.model_dump()
+        # 排除数据库模型中不存在的字段
+        agent_data = agent_in.model_dump(exclude=EXCLUDE_FIELDS)
         logger.debug(f"原始Agent数据: {agent_data}")
 
         # 处理 llm_config 字段
