@@ -4,7 +4,9 @@ Cloudflare CDN代理服务
 """
 
 import re
-from typing import Optional, List
+from dataclasses import dataclass
+from typing import List, Optional
+
 from loguru import logger
 
 from app.core.config import global_config_loaded_from_config_yaml
@@ -12,7 +14,7 @@ from app.core.config import global_config_loaded_from_config_yaml
 
 class ImageTransformService:
     """Cloudflare CDN代理服务"""
-    
+
     def __init__(self):
         self.config = global_config_loaded_from_config_yaml.cloudflare
         self.gcs_pattern = re.compile(r'https?://storage\.googleapis\.com/([^/]+/.+)')
@@ -20,26 +22,26 @@ class ImageTransformService:
         self.cdn_pattern = None
         if self.config.domain:
             self.cdn_pattern = re.compile(rf'https://{re.escape(self.config.domain)}/(.+)')
-    
+
     def is_gcs_url(self, url: str) -> bool:
         """检查是否为GCS URL"""
         if not url:
             return False
         return bool(self.gcs_pattern.match(url))
-    
+
     def extract_gcs_path(self, gcs_url: str) -> Optional[str]:
         """从GCS URL中提取bucket和路径部分"""
         match = self.gcs_pattern.match(gcs_url)
         if match:
             return match.group(1)  # 返回bucket/path部分
         return None
-    
+
     def is_cloudflare_url(self, url: str) -> bool:
         """检查是否为Cloudflare CDN URL"""
         if not url or not self.cdn_pattern:
             return False
         return bool(self.cdn_pattern.match(url))
-    
+
     def cloudflare_to_gcs(self, cdn_url: str) -> Optional[str]:
         """
         将Cloudflare CDN URL转换回GCS URL
@@ -52,7 +54,7 @@ class ImageTransformService:
         """
         if not self.is_cloudflare_url(cdn_url):
             return None
-            
+
         try:
             match = self.cdn_pattern.match(cdn_url)
             if match:
@@ -62,9 +64,9 @@ class ImageTransformService:
                 return gcs_url
         except Exception as e:
             logger.error(f"Failed to convert CDN URL to GCS: {cdn_url}, error: {str(e)}")
-        
+
         return None
-    
+
     def transform_url(self, original_url: str) -> str:
         """
         转换GCS URL到Cloudflare CDN代理URL
@@ -78,48 +80,48 @@ class ImageTransformService:
         # 检查是否启用Cloudflare转换
         if not self.config.enabled:
             return original_url
-            
+
         # 检查是否为有效的GCS URL
         if not self.is_gcs_url(original_url):
             return original_url
-            
+
         # 检查domain配置
         if not self.config.domain:
             logger.warning("Cloudflare domain not configured, returning original URL")
             return original_url
-            
+
         try:
             # 从GCS URL提取路径部分
             gcs_path = self.extract_gcs_path(original_url)
             if not gcs_path:
                 logger.warning(f"Failed to extract path from GCS URL: {original_url}")
                 return original_url
-            
+
             # 构建Cloudflare CDN代理URL，简单的代理模式
             # 格式: https://domain.com/bucket/path (直接代理，无图片处理)
             cloudflare_url = f"https://{self.config.domain}/{gcs_path}"
-            
+
             logger.debug(f"Transformed URL: {original_url} -> {cloudflare_url}")
             return cloudflare_url
-            
+
         except Exception as e:
             logger.error(f"Failed to transform URL {original_url}: {str(e)}")
             if self.config.fallback_to_original:
                 return original_url
             raise
-    
+
     def transform_mobile(self, original_url: str) -> str:
         """转换为CDN代理URL"""
         return self.transform_url(original_url)
-    
+
     def transform_desktop(self, original_url: str) -> str:
         """转换为CDN代理URL"""
         return self.transform_url(original_url)
-    
+
     def transform_thumbnail(self, original_url: str) -> str:
         """转换为CDN代理URL"""
         return self.transform_url(original_url)
-    
+
     def transform_agent_images(self, agent_data: dict, client_type: str = "mobile") -> dict:
         """
         批量转换Agent中的所有图片URL为CDN代理URL
@@ -134,38 +136,38 @@ class ImageTransformService:
         # client_type参数保留用于兼容性，但不再使用
         if not self.config.enabled:
             return agent_data
-            
+
         # 图片字段列表
         image_fields = ['avatar', 'background']
         list_image_fields = ['background_images', 'photos']
-        
+
         # 转换单个图片字段
         for field in image_fields:
             if field in agent_data and agent_data[field]:
                 agent_data[field] = self.transform_url(agent_data[field])
-        
+
         # 转换图片列表字段
         for field in list_image_fields:
             if field in agent_data and isinstance(agent_data[field], list):
                 agent_data[field] = [
                     self.transform_url(url) for url in agent_data[field] if url
                 ]
-        
+
         return agent_data
-    
+
     def transform_url_list(self, urls: List[str], client_type: str = "mobile") -> List[str]:
         """批量转换URL列表为CDN代理URL"""
         # client_type参数保留用于兼容性，但不再使用
         if not self.config.enabled:
             return urls
-            
+
         return [self.transform_url(url) for url in urls if url]
-    
+
     def normalize_image_url_for_storage(self, url: str) -> str:
         """统一处理输入URL：CDN URL转换为GCS URL用于存储"""
         if not url:
             return url
-            
+
         if self.is_cloudflare_url(url):
             gcs_url = self.cloudflare_to_gcs(url)
             if gcs_url:
@@ -175,30 +177,48 @@ class ImageTransformService:
                 logger.warning(f"CDN URL转换失败，使用原URL: {url}")
                 return url
         return url  # 已经是GCS URL，直接返回
-    
+
     def batch_normalize_urls_for_storage(self, urls_dict: dict) -> dict:
         """批量处理多个URL字段，将CDN URL转换为GCS URL用于存储"""
         if not self.config.enabled:
             return urls_dict
-            
+
         url_fields = ['avatar', 'background']
         list_url_fields = ['background_images', 'photos']
-        
+
         result = urls_dict.copy()
-        
+
         # 处理单个URL字段
         for field in url_fields:
             if field in result and result[field]:
                 result[field] = self.normalize_image_url_for_storage(result[field])
-        
+
         # 处理URL列表字段
         for field in list_url_fields:
             if field in result and isinstance(result[field], list):
                 result[field] = [
                     self.normalize_image_url_for_storage(url) for url in result[field] if url
                 ]
-        
+
         return result
+
+    @dataclass
+    class CroppedArea:
+        """
+        来自于 agent info extension 字段的 avatar_crop 字段
+        {"avatar_crop": {"x": 197, "y": 97, "width": 444, "height": 445, "imageWidth": 832, "imageHeight": 1216}}
+        """
+
+        x: int
+        y: int
+        width: int
+        height: int
+
+    def transform_cropped_avatar_url(
+        self, background_url: str, avatar_crop: CroppedArea
+    ) -> str:
+        """转换裁剪后的头像URL为CDN URL"""
+        return None
 
 
 # 创建全局实例
