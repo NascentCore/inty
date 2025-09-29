@@ -238,6 +238,9 @@ class Agent(AgentInDB):
     avatar_size: Optional[ImageSize] = None
     # 从 resources 表中读取对应的图片尺寸；注意区分图片的字节大小，指的是文件本身的大小。
     background_size: Optional[ImageSize] = None
+    # 当前与该 agent 对话的用户名字，用于替换 opening 和 intro 中的 {{ user }} 变量。
+    # 如未制定，则使用默认的代词 "you"。
+    user: Optional[str] = "you"
 
     # TODO: 考虑如何使用 intro 从而避免重复使用手动变量替换
     @field_serializer("intro")
@@ -246,8 +249,17 @@ class Agent(AgentInDB):
         对intro字段进行变量替换，将 {{ char }} 替换为 agent.name
         """
         if intro and has_template_variable(intro):
-            return render_prompt_jinja2_template(intro, char=self.name, user="")
+            return render_prompt_jinja2_template(intro, char=self.name, user=self.user)
         return intro
+
+    @field_serializer("opening")
+    def serialize_opening(self, opening: Optional[str]) -> Optional[str]:
+        """
+        对opening字段进行变量替换，将 {{ char }} 替换为 agent.name，{{ user }} 替换为 "you"
+        """
+        if opening and has_template_variable(opening):
+            return render_prompt_jinja2_template(opening, char=self.name, user=self.user)
+        return opening
 
     @field_serializer("llm_config")
     def serialize_llm_config(
