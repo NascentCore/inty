@@ -76,7 +76,7 @@ fun ChatInput(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(48.dp, 80.dp),
+                .heightIn(min = 48.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             IntySmallTextField(
@@ -98,7 +98,9 @@ fun ChatInput(
                 onSelectionChanged = { selection ->
                     chatViewModel.inputSelection.value = selection
                 },
-                selection = inputSelection.value
+                selection = inputSelection.value,
+                maxLines = 6,
+                maxLength = 500
             )
 
             // 括号按钮区域 - 仅在输入框获得焦点时显示
