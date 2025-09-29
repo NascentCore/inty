@@ -1,13 +1,11 @@
-import logging
-
-logger = logging.getLogger(__name__)
+from loguru import logger
 
 # A list of emails whose associated Google account treated as super users.
 SUPER_USER_EMAILS = [
     "anonymoussocialforreal@gmail.com",
-    "arthurzhang0521@gmail.com",
+    # "arthurzhang0521@gmail.com",
     # "donggangcj@gmail.com",
-    "justicezyx@gmail.com",
+    # "justicezyx@gmail.com",
     "zhiwei9001@gmail.com",
     "xheuyyuki@gmail.com",
     # This is provided to Google Play reviewers.
