@@ -180,6 +180,7 @@ internal fun ChatPage(
     }
 
     var showMorePanel by remember { mutableStateOf(false) }
+    var morePanelHeight by remember { mutableStateOf(0.dp) }
     var showPremiumDialog by remember { mutableStateOf(false) }
 
     Box(
@@ -424,8 +425,8 @@ internal fun ChatPage(
                     }
                 }
 
-                // 输入框区域
-                Column {
+    // 输入框区域
+    Column {
                     //如果是已经删除的agent，则不可点击，并提示
                     if (agentInfo?.isDeleted == true) {
                         Box(
@@ -450,12 +451,13 @@ internal fun ChatPage(
                             onClick = { chatViewModel.sendKeepTalkingMessage() }
                         )
                         // 输入框
+                        val effectiveBottomPadding = if (showMorePanel) morePanelHeight else bottomPadding
                         ChatInput(
                             chatViewModel = chatViewModel,
                             onSendMessage = { chatViewModel.sendMsg() },
                             onToggleMorePanel = { showMorePanel = !showMorePanel },
                             showMorePanel = showMorePanel,
-                            bottomPadding = bottomPadding
+                            bottomPadding = effectiveBottomPadding
                         )
                     }
 
@@ -468,7 +470,8 @@ internal fun ChatPage(
             visible = showMorePanel,
             agentInfo = agentInfo,
             chatViewModel = chatViewModel,
-            onDismiss = { showMorePanel = false }
+            onDismiss = { showMorePanel = false },
+            onHeightChange = { h -> morePanelHeight = h }
         )
 
         // 聊天设置抽屉
