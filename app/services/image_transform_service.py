@@ -213,12 +213,73 @@ class ImageTransformService:
         y: int
         width: int
         height: int
+        image_width: int  # 原图宽度
+        image_height: int  # 原图高度
 
     def transform_cropped_avatar_url(
         self, background_url: str, avatar_crop: CroppedArea
     ) -> str:
-        """转换裁剪后的头像URL为CDN URL"""
-        return None
+        """
+        转换裁剪后的头像URL为带有 trim 参数的 Cloudflare CDN URL
+        
+        Args:
+            background_url: 背景图片的GCS URL
+            avatar_crop: 裁切区域信息，包含 x, y, width, height
+            
+        Returns:
+            带有裁切参数的CDN URL，如果转换失败则返回原始背景URL
+        """
+        # 检查是否启用Cloudflare转换
+        if not self.config.enabled:
+            return background_url
+            
+        # 检查是否为有效的GCS URL
+        if not self.is_gcs_url(background_url):
+            return background_url
+            
+        # 检查domain配置
+        if not self.config.domain:
+            logger.warning("Cloudflare domain not configured, returning original URL")
+            return background_url
+            
+        try:
+            # 从GCS URL提取路径部分
+            gcs_path = self.extract_gcs_path(background_url)
+            if not gcs_path:
+                logger.warning(f"Failed to extract path from GCS URL: {background_url}")
+                return background_url
+                
+            # 构建带有裁切参数的Cloudflare CDN URL
+            # 坐标转换：extension格式(保留区域) -> Cloudflare trim格式
+            # Extension格式：{x, y, width, height, imageWidth, imageHeight} 描述要保留的区域
+            # 
+            # 经过分析用户提供的工作示例，发现Cloudflare trim可能使用以下格式之一：
+            # 1. top;right;bottom;left (CSS margin顺序)
+            # 2. x;y;width;height (绝对坐标)
+            # 
+            # 基于用户工作URL trim=103;34;65;134 的分析，尝试不同的转换方式
+            
+            # 方案1：假设trim参数就是 x;y;width;height 格式（直接使用extension数据）
+            # 但这与文档不符，且数值与extension数据不匹配
+            
+            # 方案2：假设是 top;right;bottom;left 边距格式
+            trim_top = avatar_crop.y
+            trim_right = avatar_crop.image_width - (avatar_crop.x + avatar_crop.width)  
+            trim_bottom = avatar_crop.image_height - (avatar_crop.y + avatar_crop.height)
+            trim_left = avatar_crop.x
+            
+            # 构建Cloudflare CDN URL (format: top;right;bottom;left)
+            trim_params = f"{trim_top};{trim_right};{trim_bottom};{trim_left}"
+            cropped_url = f"https://{self.config.domain}/cdn-cgi/image/trim={trim_params}/{gcs_path}"
+            
+            logger.debug(f"Transformed cropped avatar URL: {background_url} -> {cropped_url} (keep area: x={avatar_crop.x},y={avatar_crop.y},w={avatar_crop.width},h={avatar_crop.height} -> trim margins top;right;bottom;left: {trim_top};{trim_right};{trim_bottom};{trim_left})")
+            return cropped_url
+            
+        except Exception as e:
+            logger.error(f"Failed to transform cropped avatar URL {background_url}: {str(e)}")
+            if self.config.fallback_to_original:
+                return background_url
+            raise
 
 
 # 创建全局实例
