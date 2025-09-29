@@ -22,7 +22,7 @@ class SystemSettingBase(BaseModel):
 class SystemSettingCreate(SystemSettingBase):
     """创建系统配置"""
 
-    request_id: Optional[str] = None
+    pass
 
 
 class SystemSettingUpdate(BaseModel):
@@ -30,7 +30,6 @@ class SystemSettingUpdate(BaseModel):
 
     value: str = Field(..., description="配置值")
     description: Optional[str] = Field(None, description="配置描述")
-    request_id: Optional[str] = None
 
 
 class SystemSetting(SystemSettingBase):
@@ -56,7 +55,6 @@ class SystemSettingUpdateRequest(BaseModel):
     """系统配置更新请求"""
 
     value: str = Field(..., description="新的配置值")
-    request_id: Optional[str] = None
 
 
 class FreeUserLimitsResponse(BaseModel):

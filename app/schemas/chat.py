@@ -17,7 +17,7 @@ class MessageBase(BaseModel):
 class MessageCreate(MessageBase):
     """创建消息"""
 
-    request_id: Optional[str] = None
+    pass
 
 
 class MessageUpdate(BaseModel):
@@ -26,7 +26,6 @@ class MessageUpdate(BaseModel):
     content: Optional[str] = None
     type: Optional[MessageType] = None
     sender_type: Optional[SenderType] = None
-    request_id: Optional[str] = None
 
 
 class MessageInDB(MessageBase):
@@ -70,7 +69,7 @@ class ChatSettingsBase(BaseModel):
 class ChatSettingsCreate(ChatSettingsBase):
     """创建聊天设置"""
 
-    request_id: Optional[str] = None
+    pass
 
 
 class ChatSettingsUpdate(ChatSettingsBase):
@@ -81,7 +80,6 @@ class ChatSettingsUpdate(ChatSettingsBase):
     # keep_talking 字段已弃用，不再在 API 中暴露
     style_prompt: Optional[str] = None  # 风格提示词，仅订阅用户可设置
     premium_mode: Optional[bool] = None  # 高级模式开关，仅订阅用户可设置
-    request_id: Optional[str] = None
 
 
 class ChatSettingsInDB(ChatSettingsBase):
@@ -133,13 +131,12 @@ class ChatCreate(ChatBase):
     """创建聊天"""
 
     agent_id: str
-    request_id: Optional[str] = None
 
 
 class ChatUpdate(ChatBase):
     """更新聊天"""
 
-    request_id: Optional[str] = None
+    pass
 
 
 class ChatInDB(ChatBase):
@@ -189,7 +186,6 @@ class ChatCompletionRequest(BaseModel):
     stream: bool = False
     model: str = "chatbot"
     language: str = "zh"  # 添加语言字段，默认中文
-    request_id: Optional[str] = None
 
 
 class ChatCompletionResponse(BaseModel):
@@ -226,7 +222,6 @@ class ClearMessagesRequest(BaseModel):
 
     message_id: Optional[int] = None  # 消息ID，清除该ID之后的所有消息
     timestamp: Optional[str] = None  # 时间戳，清除该时间之后的所有消息（ISO格式）
-    request_id: Optional[str] = None
 
     class Config:
         # 确保至少有一个字段被提供

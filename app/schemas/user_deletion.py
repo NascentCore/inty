@@ -8,7 +8,6 @@ class AccountDeletionRequest(BaseModel):
     """账户删除请求"""
 
     reason: Optional[str] = Field(None, max_length=255, description="删除原因")
-    request_id: Optional[str] = None
 
     class Config:
         json_schema_extra = {"example": {"reason": "隐私关注"}}

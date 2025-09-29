@@ -36,7 +36,7 @@ class SubscriptionPlanBase(BaseModel):
 class SubscriptionPlanCreate(SubscriptionPlanBase):
     """创建订阅计划"""
 
-    request_id: Optional[str] = None
+    pass
 
 
 class SubscriptionPlanUpdate(BaseModel):
@@ -52,7 +52,6 @@ class SubscriptionPlanUpdate(BaseModel):
     background_generation_limit_per_day: Optional[int] = None
     is_active: Optional[bool] = None
     sort_order: Optional[int] = None
-    request_id: Optional[str] = None
 
 
 class SubscriptionPlan(SubscriptionPlanBase):
@@ -92,7 +91,7 @@ class UserSubscriptionBase(BaseModel):
 class UserSubscriptionCreate(UserSubscriptionBase):
     """创建用户订阅"""
 
-    request_id: Optional[str] = None
+    pass
 
 
 class UserSubscriptionUpdate(BaseModel):
@@ -104,7 +103,6 @@ class UserSubscriptionUpdate(BaseModel):
     trial_end_date: Optional[datetime] = None
     auto_renew: Optional[bool] = None
     extra_data: Optional[Dict[str, Any]] = None
-    request_id: Optional[str] = None
 
 
 class UserSubscription(UserSubscriptionBase):
@@ -145,7 +143,6 @@ class SubscriptionTransactionCreate(SubscriptionTransactionBase):
 
     subscription_id: str = Field(..., description="订阅记录ID")
     user_id: str = Field(..., description="用户ID")
-    request_id: Optional[str] = None
 
 
 class SubscriptionTransaction(SubscriptionTransactionBase):
@@ -177,7 +174,6 @@ class SubscriptionUsageCreate(SubscriptionUsageBase):
 
     user_id: str = Field(..., description="用户ID")
     subscription_id: Optional[str] = Field(None, description="订阅记录ID")
-    request_id: Optional[str] = None
 
 
 class SubscriptionUsage(SubscriptionUsageBase):
@@ -200,7 +196,6 @@ class GooglePlayPurchaseRequest(BaseModel):
     purchase_token: str = Field(..., description="购买令牌")
     order_id: Optional[str] = Field(None, description="订单ID")
     subscription_id: Optional[str] = Field(None, description="订阅ID")
-    request_id: Optional[str] = None
 
 
 class GooglePlayWebhookRequest(BaseModel):
@@ -216,7 +211,6 @@ class GooglePlayWebhookRequest(BaseModel):
         None, description="一次性产品通知"
     )
     testNotification: Optional[Dict[str, Any]] = Field(None, description="测试通知")
-    request_id: Optional[str] = None
 
 
 # 订阅状态查询相关
@@ -298,7 +292,6 @@ class PurchaseVerificationRequest(BaseModel):
     product_id: str = Field(..., description="产品ID")
     purchase_token: str = Field(..., description="购买令牌")
     order_id: Optional[str] = Field(None, description="订单ID")
-    request_id: Optional[str] = None
 
 
 class PurchaseVerificationResponse(BaseModel):
@@ -318,7 +311,6 @@ class RefundRequest(BaseModel):
     subscription_id: str = Field(..., description="订阅ID")
     refund_amount: Optional[float] = Field(None, description="退款金额，不填写则退全款")
     reason: str = Field("manual_refund", description="退款原因")
-    request_id: Optional[str] = None
 
 
 class RefundResponse(BaseModel):
