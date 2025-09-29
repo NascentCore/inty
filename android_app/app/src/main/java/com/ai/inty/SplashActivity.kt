@@ -67,14 +67,14 @@ class SplashActivity : ComponentActivity() {
                                 .padding(bottom = 80.dp)
                                 .size(80.dp)
                                 .clip(RoundedCornerShape(10.dp)),
-                            painter = painterResource(R.mipmap.ic_launcher_foreground),
+                            painter = painterResource(R.drawable.icon_splash_icon),
                             contentDescription = "",
                             contentScale = ContentScale.Crop
                         )
 
                         // 显示启动进度
                         val startupProgress by UnifiedStartupManager.startupProgress.collectAsState()
-                        
+
                         // 只在有进度时显示进度条
                         if (startupProgress > 0f) {
                             CircularProgressIndicator(
