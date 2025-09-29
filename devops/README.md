@@ -69,7 +69,7 @@ nginx.conf:/etc/nginx/conf.d/sxwl.ai.conf
 * Cloud logging on prod container: [streaming logs](https://cloudlogging.app.goo.gl/o8QRPguGe78soGUY9)
   * 基于 [docker gcplogs 驱动](https://github.com/GoogleCloudPlatform/community/blob/master/archived/docker-gcplogs-driver/index.md)
   * [Docker run 命令行参数](https://github.com/NascentCore/inty-backend/blob/9fa17750b82d5eeaf5519d486cd20e04dff4370c/.github/workflows/build_and_deploy.yml#L73)
-  * [日志标签设置](https://github.com/NascentCore/inty-backend/blob/9fa17750b82d5eeaf5519d486cd20e04dff4370c/.github/workflows/build_and_deploy.yml#L80)，日志标签示例：<img width="600" height="1062" alt="image" src="https://github.com/user-attachments/assets/f0414fe4-053e-4ce2-b8d4-4fb39049a929" />
+  * [日志标签设置](https://github.com/NascentCore/inty-backend/blob/9fa17750b82d5eeaf5519d486cd20e04dff4370c/.github/workflows/build_and_deploy.yml#L80)，日志标签示例：<img width="600" alt="image" src="https://github.com/user-attachments/assets/f0414fe4-053e-4ce2-b8d4-4fb39049a929"/>
 * [GCP inty-prod endpoint check](https://console.cloud.google.com/monitoring/synthetic-monitoring?project=alien-paratext-461204-i9)
 * API endpoint: <https://app.inty.cc>
   * Monitoring: <https://app.checklyhq.com/accounts/1896e6d6-1599-414f-998e-3dabcc58fd7f>
