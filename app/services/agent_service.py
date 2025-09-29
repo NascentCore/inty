@@ -1,3 +1,7 @@
+"""
+将数据库中的 agent 记录转换为面向客户端端 agent 数据对象。
+"""
+
 import math
 import uuid
 from dataclasses import dataclass

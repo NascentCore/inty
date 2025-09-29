@@ -6,14 +6,15 @@ from fastapi import APIRouter, Depends
 from fastapi.security import OAuth2PasswordBearer
 from google.auth.transport import requests as google_requests
 from google.oauth2 import id_token
+from loguru import logger
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import schemas
 from app.api.utils.logger_route import LoggerRoute
-from app.core.config import global_config_loaded_from_config_yaml, API_V1_PREFIX
+from app.core.config import API_V1_PREFIX, global_config_loaded_from_config_yaml
 from app.core.security import create_access_token
-from app.core.uuid import uid
+from app.core.uuid import get_new_user_id
 from app.db.session import get_async_db
 from app.models import User
 from app.models.user import AuthType
@@ -21,8 +22,6 @@ from app.schemas.auth import GuestResponse, LoginResponse, LoginUserResponse
 from app.schemas.response import APIResponse
 from app.services.global_services import subscription_service
 from app.services.user_service import create_guest_user, generate_next_readable_id
-
-from loguru import logger
 
 router = APIRouter(prefix="/auth", route_class=LoggerRoute)
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{API_V1_PREFIX}/auth/login")
@@ -83,7 +82,7 @@ async def google_login(
 
         if existing_user and not existing_user.deleted_at:
             logger.debug(f"Google login user already exists: {existing_user.id}")
-            
+
             # 尝试恢复孤立的订阅记录
             try:
                 recovered_count = await subscription_service.recover_orphaned_subscriptions(
@@ -97,7 +96,7 @@ async def google_login(
             except Exception as e:
                 logger.error(f"用户 {existing_user.id} 恢复订阅失败: {str(e)}")
                 # 订阅恢复失败不影响登录流程
-            
+
             # 如果用户已存在且未被删除，直接返回 token
             access_token = create_access_token(existing_user.id)
             return APIResponse.success(
@@ -139,7 +138,7 @@ async def google_login(
         # 删除的用户重新登录时会创建新的账户
 
         # 创建新用户
-        user_id = uid(prefix="user")
+        user_id = get_new_user_id()
         readable_id = await generate_next_readable_id(db)
         new_user = User(
             id=user_id,

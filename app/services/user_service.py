@@ -3,6 +3,7 @@ import uuid
 from datetime import UTC, datetime
 from typing import Optional
 
+from loguru import logger
 from sqlalchemy import and_, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,7 +11,7 @@ from sqlalchemy.future import select
 from sqlalchemy.orm import Session
 
 from app.core.config import global_config_loaded_from_config_yaml
-from app.core.uuid import uid
+from app.core.uuid import get_new_user_id
 from app.models import User
 from app.models.chat import Chat
 from app.models.subscription import SubscriptionStatus, UserSubscription
@@ -18,9 +19,6 @@ from app.models.user import AuthType, DeviceToken
 from app.schemas import UserUpdate
 from app.services.cache_service import cache_service
 from app.services.subscription_service import SubscriptionService
-
-
-from loguru import logger
 
 
 async def generate_next_readable_id(db: AsyncSession) -> str:
@@ -55,42 +53,6 @@ def generate_next_readable_id_sync(db: Session) -> str:
         return str(random.randint(10000000, 99999999))
 
 
-def register_user(db: Session, user_in) -> User:
-    """Register user (phone number etc.)"""
-    try:
-        user_id = str(uuid.uuid4())
-        readable_id = generate_next_readable_id_sync(db)
-
-        user = User(
-            id=user_id,
-            readable_id=readable_id,
-            auth_type=user_in.auth_type,
-            system_language=(
-                user_in.user_info.system_language if user_in.user_info else "en"
-            ),
-            is_active=True,
-        )
-        if user_in.user_info:
-            user.gender = user_in.user_info.gender
-            user.age_group = user_in.user_info.age_group
-        db.add(user)
-        db.commit()
-        db.refresh(user)
-        return user
-    except IntegrityError as e:
-        db.rollback()
-        logger.error(f"Integrity error registering user: {str(e)}")
-        # If readable_id conflicts, try again with a new one
-        if "readable_id" in str(e):
-            return register_user(db, user_in)
-        raise e
-    except Exception as e:
-        db.rollback()
-        logger.error(f"Failed to register user: {str(e)}")
-        logger.error(f"Error stack: {traceback.format_exc()}")
-        raise e
-
-
 def get_user_by_phone(db: Session, phone: str) -> Optional[User]:
     """Get user by phone number"""
     return db.query(User).filter(User.phone == phone).first()
@@ -115,7 +77,7 @@ async def create_guest_user(
             if existing_user:
                 return existing_user
 
-        user_id = uid(prefix="user")
+        user_id = get_new_user_id()
         readable_id = await generate_next_readable_id(db)
 
         user = User(

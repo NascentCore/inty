@@ -1,17 +1,19 @@
-from unittest.mock import AsyncMock
-import uuid
-import pytest
-import psycopg2
 import asyncio
-from datetime import datetime, UTC
+import uuid
+from datetime import UTC, datetime
+from unittest.mock import AsyncMock
+
+import psycopg2
+import pytest
 from sqlalchemy import create_engine, select
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
+from app.db.session import get_async_db
 from app.models import Base
-from app.models.user import User, AuthType
+from app.models.user import AuthType, User
 from app.services.subscription_service import SubscriptionService
-from app.services.user_service import delete_user_account
+from app.services.user_service import delete_user_account, generate_next_readable_id
 
 
 class TestUserDeletion:
@@ -102,3 +104,12 @@ class TestUserDeletion:
             await session.commit()
 
         await engine.dispose()
+
+
+async def test_generate_next_readable_id():
+    """Test the generate_next_readable_id function"""
+    async for async_session in get_async_db():
+        readable_ids = []
+        for i in range(10):
+            readable_ids.append(await generate_next_readable_id(async_session))
+        assert len(set(readable_ids)) == 10, "all readable ids should be unique"
