@@ -900,14 +900,21 @@ export const ChatPage: React.FC = () => {
                     />
                     <div>
                       <Text strong>{selectedAgent.name}</Text>
-                      <br />
+                      <Text type="secondary" style={{
+                        fontSize: "12px",
+                        whiteSpace: "pre-wrap",
+                        wordBreak: "break-word",
+                        display: "block"
+                      }}>
+                        ID: {selectedAgent.id}
+                      </Text>
                       <Text type="secondary" style={{ 
                         fontSize: "12px",
                         whiteSpace: "pre-wrap",
                         wordBreak: "break-word",
                         display: "block"
                       }}>
-                        {selectedAgent.intro}
+                        INTRO: {selectedAgent.intro}
                       </Text>
                     </div>
                   </Space>

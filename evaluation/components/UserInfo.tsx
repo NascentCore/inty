@@ -78,8 +78,11 @@ export const UserInfo: React.FC<UserInfoProps> = ({ onShowApiKeyModal }) => {
           <div style={{ fontSize: "12px", color: "#666" }}>
             {userInfo.email || userInfo.readable_id}
           </div>
+          <div style={{ fontSize: "12px", color: "#999", marginTop: "2px" }}>
+            ID: {userInfo.id}
+          </div>
           {userInfo.is_superuser && (
-            <div style={{ fontSize: "12px", color: "#1890ff" }}>
+            <div style={{ fontSize: "12px", color: "#1890ff", marginTop: "2px" }}>
               管理员
             </div>
           )}
