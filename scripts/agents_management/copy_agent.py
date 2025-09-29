@@ -8,15 +8,20 @@ Usage:
 
 import argparse
 import asyncio
-import json
 import sys
 from pathlib import Path
 from typing import Optional
 
 from loguru import logger
-from sqlalchemy import text
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.sql.operators import and_, or_
+
+# Add the app directory to the Python path so we can import models
+sys.path.append(str(Path(__file__).parent.parent.parent))
+
+from app.models.agent import Agent
 
 
 def parse_pg_url(pg_url: str) -> str:
@@ -26,59 +31,35 @@ def parse_pg_url(pg_url: str) -> str:
     return pg_url
 
 
-async def get_agent_by_name(session: AsyncSession, name: str) -> Optional[dict]:
-    """Get agent data by name from the database."""
+async def get_agents_by_name(session: AsyncSession, name: str) -> list[Agent]:
+    """Get all agents with the given name from the database."""
     result = await session.execute(
-        text("SELECT * FROM agents WHERE name = :name"),
-        {"name": name}
+        select(Agent).where(and_(Agent.name == name, Agent.deleted_at.is_(None)))
     )
-    row = result.fetchone()
-    if not row:
-        return None
-    
-    # Convert row to dict
-    return dict(row._mapping)
+    agents = result.scalars().all()
+
+    if len(agents) == 0:
+        raise Exception("No rows were found")
+
+    return agents
 
 
-async def agent_exists_in_dest(session: AsyncSession, name: str) -> bool:
-    """Check if agent with given name already exists in destination database."""
-    result = await session.execute(
-        text("SELECT COUNT(*) FROM agents WHERE name = :name"),
-        {"name": name}
-    )
-    count = result.scalar()
-    return count > 0
-
-
-async def copy_agent(source_session: AsyncSession, dest_session: AsyncSession, agent_data: dict) -> bool:
+async def copy_agent(
+    source_session: AsyncSession,
+    dest_session: AsyncSession,
+    source_agent: Agent,
+) -> bool:
     """Copy agent data from source to destination database."""
     try:
-        # Convert dictionary and list fields to JSON strings
-        processed_data = {}
-        json_fields = {"settings", "character_book", "extensions", "meta_data"}
-        list_fields = {"photos", "background_images", "alternate_greetings", "tags"}
-
-        for key, value in agent_data.items():
-            if key in json_fields and isinstance(value, dict):
-                processed_data[key] = json.dumps(value) if value is not None else None
-            elif key in list_fields and isinstance(value, list):
-                processed_data[key] = json.dumps(value) if value is not None else None
-            else:
-                processed_data[key] = value
-
-        # Build dynamic INSERT statement
-        columns = list(processed_data.keys())
-        placeholders = [f":{col}" for col in columns]
-
-        insert_sql = f"""
-            INSERT INTO agents ({', '.join(columns)})
-            VALUES ({', '.join(placeholders)})
-        """
-
-        await dest_session.execute(text(insert_sql), processed_data)
+        # Detach the source agent from its session and add to destination session
+        # This is much simpler than manually copying all fields
+        source_session.expunge(source_agent)
+        dest_session.add(source_agent)
         await dest_session.commit()
 
-        logger.info(f"Successfully copied agent '{agent_data['name']}' (ID: {agent_data['id']})")
+        logger.info(
+            f"Successfully copied agent '{source_agent.name}' (ID: {source_agent.id})"
+        )
         return True
 
     except Exception as e:
@@ -87,7 +68,7 @@ async def copy_agent(source_session: AsyncSession, dest_session: AsyncSession, a
         return False
 
 
-async def main():
+def parse_args():
     parser = argparse.ArgumentParser(description="Copy an agent from one database to another")
     parser.add_argument("--name", required=True, help="Name of the agent to copy")
     parser.add_argument(
@@ -102,8 +83,11 @@ async def main():
         default="postgresql://postgres:sxwl666!@localhost:5432/inty",
         help="Destination PostgreSQL URL",
     )
+    return parser.parse_args()
 
-    args = parser.parse_args()
+
+async def main():
+    args = parse_args()
 
     # Parse database URLs
     try:
@@ -129,28 +113,31 @@ async def main():
 
     try:
         async with SourceSession() as source_session, DestSession() as dest_session:
-            # Get agent from source
-            agent_data = await get_agent_by_name(source_session, args.name)
-            if not agent_data:
-                logger.error(f"Agent '{args.name}' not found in source database")
-                sys.exit(1)
+            # Get all agents from source by name
+            source_agents = await get_agents_by_name(source_session, args.name)
+            logger.info(
+                f"Found {len(source_agents)} agent(s) with name '{args.name}' in source database"
+            )
 
-            logger.info(f"Found agent '{args.name}' in source database (ID: {agent_data['id']})")
+            # Copy all agents
+            success_count = 0
+            for i, source_agent in enumerate(source_agents, 1):
+                logger.info(
+                    f"Copying agent {i}/{len(source_agents)} (ID: {source_agent.id})"
+                )
+                if await copy_agent(source_session, dest_session, source_agent):
+                    success_count += 1
+                    logger.info(f"Successfully copied agent {i}/{len(source_agents)}")
+                else:
+                    logger.error(f"Failed to copy agent {i}/{len(source_agents)}")
 
-            # Check if agent already exists in destination
-            if await agent_exists_in_dest(dest_session, args.name):
+            if success_count == len(source_agents):
+                logger.info(f"All {success_count} agent(s) copied successfully!")
+            else:
                 logger.error(
-                    f"Agent '{args.name}' already exists in destination database. Use --force to overwrite."
+                    f"Only {success_count}/{len(source_agents)} agent(s) copied successfully!"
                 )
                 sys.exit(1)
-
-            # Copy the agent
-            if await copy_agent(source_session, dest_session, agent_data):
-                logger.info("Agent copy completed successfully!")
-            else:
-                logger.error("Agent copy failed!")
-                sys.exit(1)
-
     except Exception as e:
         logger.error(f"Database operation failed: {e}")
         sys.exit(1)
