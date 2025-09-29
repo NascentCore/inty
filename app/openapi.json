@@ -3296,6 +3296,18 @@
                                 "type": "null"
                             }
                         ]
+                    },
+                    "user": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "User",
+                        "default": "you"
                     }
                 },
                 "type": "object",
