@@ -48,6 +48,7 @@ class NotificationTemplateCreate(BaseModel):
     image_urls: Optional[List[str]] = None
     link_urls: Optional[List[str]] = None
     is_active: bool = True
+    request_id: Optional[str] = None
 
 
 class NotificationTemplateItem(BaseModel):
@@ -71,3 +72,4 @@ class NotificationSendRequest(BaseModel):
     all_users: bool = False
     user_ids: Optional[List[str]] = None
     params: Optional[dict] = {}
+    request_id: Optional[str] = None
