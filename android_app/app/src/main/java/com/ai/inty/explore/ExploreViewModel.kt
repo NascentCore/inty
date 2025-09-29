@@ -25,6 +25,12 @@ class ExploreViewModel : BaseViewModel() {
     
     // 是否已初始化
     private var isInitialized = false
+
+    // 保存滚动位置
+    private val _savedFirstVisibleIndex = MutableStateFlow(0)
+    val savedFirstVisibleIndex = _savedFirstVisibleIndex
+    private val _savedFirstVisibleOffset = MutableStateFlow(0)
+    val savedFirstVisibleOffset = _savedFirstVisibleOffset
     
     /**
      * 初始化Paging数据流
@@ -74,6 +80,11 @@ class ExploreViewModel : BaseViewModel() {
                 EasyLog.log("ExploreViewModel - refreshRecommendAgents异常: ${e.message}", EasyLog.ERROR)
             }
         }
+    }
+
+    fun saveScrollPosition(index: Int, offset: Int) {
+        _savedFirstVisibleIndex.value = index
+        _savedFirstVisibleOffset.value = offset
     }
 
     
