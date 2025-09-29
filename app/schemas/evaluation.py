@@ -20,6 +20,7 @@ class EvaluationSessionCreate(BaseModel):
     scoring_criteria: Optional[str] = Field(None, description="评分标准")
     use_new_user_identity: bool = Field(False, description="是否使用新用户身份")
     config: Optional[Dict[str, Any]] = Field(None, description="其他配置参数")
+    request_id: Optional[str] = None
 
     @validator("questions")
     def validate_questions(cls, v):
@@ -143,6 +144,7 @@ class EvaluationTemplateCreate(BaseModel):
     config: Optional[Dict[str, Any]] = Field(None, description="模板配置")
     tags: Optional[List[str]] = Field(None, description="标签")
     is_public: bool = Field(False, description="是否公开")
+    request_id: Optional[str] = None
 
 
 class EvaluationTemplateResponse(BaseModel):
@@ -214,6 +216,7 @@ class EvaluationSessionUpdate(BaseModel):
 
     name: Optional[str] = Field(None, min_length=1, max_length=255)
     scoring_criteria: Optional[str] = None
+    request_id: Optional[str] = None
 
 
 class BatchEvaluationRequest(BaseModel):
@@ -223,6 +226,7 @@ class BatchEvaluationRequest(BaseModel):
     sessions: List[EvaluationSessionCreate] = Field(
         ..., min_items=1, max_items=5, description="评测会话列表"
     )
+    request_id: Optional[str] = None
 
     @validator("sessions")
     def validate_sessions(cls, v):
@@ -247,3 +251,4 @@ class EvaluationExportRequest(BaseModel):
     format: str = Field("csv", pattern="^(csv|json|xlsx)$", description="导出格式")
     include_interactions: bool = Field(False, description="是否包含交互记录")
     include_metadata: bool = Field(False, description="是否包含元数据")
+    request_id: Optional[str] = None

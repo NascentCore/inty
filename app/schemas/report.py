@@ -29,6 +29,7 @@ class ReportCreate(BaseModel):
     reason_ids: List[int]
     image_urls: Optional[List[str]] = []
     description: Optional[str] = None
+    request_id: Optional[str] = None
 
 
 class ReportQuery(BaseModel):

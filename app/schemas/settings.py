@@ -15,7 +15,7 @@ class SettingsBase(BaseModel):
 class SettingsCreate(SettingsBase):
     """创建设置"""
 
-    pass
+    request_id: Optional[str] = None
 
 
 class SettingsUpdate(BaseModel):
@@ -24,6 +24,7 @@ class SettingsUpdate(BaseModel):
     language: Optional[str] = None
     voice_enabled: Optional[bool] = None
     # keep_talking 字段已弃用，不再在 API 中暴露
+    request_id: Optional[str] = None
 
 
 class SettingsInDB(SettingsBase):
