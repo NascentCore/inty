@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app import models, schemas
 from app.models.resource import ResourceType
+from app.schemas.exclude_fields import EXCLUDE_FIELDS
 from app.schemas.resource import ResourceCreate
 from app.utils.image import ImageFormat, ImageSize
 
@@ -32,8 +33,8 @@ def create_resource(
     """
     Create new resource
     """
-    # 排除 request_id 字段，因为 Resource 模型不接受这个参数
-    resource_data = resource_in.model_dump(exclude={"request_id"})
+    # 排除数据库模型中不存在的字段
+    resource_data = resource_in.model_dump(exclude=EXCLUDE_FIELDS)
     db_resource = models.Resource(**resource_data, user_id=user_id)
     db.add(db_resource)
     db.commit()
@@ -106,8 +107,8 @@ def create_image_resource(
 async def async_create_resource(
     async_db: AsyncSession, resource_in: schemas.ResourceCreate, user_id: str
 ) -> models.Resource:
-    # 排除 request_id 字段，因为 Resource 模型不接受这个参数
-    resource_data = resource_in.model_dump(exclude={"request_id"})
+    # 排除数据库模型中不存在的字段
+    resource_data = resource_in.model_dump(exclude=EXCLUDE_FIELDS)
     db_resource = models.Resource(**resource_data, user_id=user_id)
     async_db.add(db_resource)
     await async_db.commit()

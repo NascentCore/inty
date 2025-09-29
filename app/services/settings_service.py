@@ -6,6 +6,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app import models, schemas
+from app.schemas.exclude_fields import EXCLUDE_FIELDS
 
 logger = logging.getLogger(__name__)
 
@@ -30,8 +31,8 @@ def create_settings(
     创建新的用户设置
     """
     try:
-        # 排除 request_id 字段，因为 Settings 模型不接受这个参数
-        settings_data = settings_in.model_dump(exclude={"request_id"})
+        # 排除数据库模型中不存在的字段
+        settings_data = settings_in.model_dump(exclude=EXCLUDE_FIELDS)
         db_settings = models.Settings(
             id=str(uuid.uuid4()), **settings_data, user_id=user_id
         )
