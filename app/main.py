@@ -10,6 +10,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_async_db
+from app.api.middleware.endpoint_filter import create_endpoint_filter_middleware
 from app.api.v1.router import api_router
 from app.core.agent.agent import agent_manager
 
@@ -79,6 +80,12 @@ app.add_exception_handler(RequestValidationError, validation_exception_handler)
 app.add_exception_handler(JWTError, jwt_exception_handler)
 app.add_exception_handler(SQLAlchemyError, sqlalchemy_exception_handler)
 app.add_exception_handler(ValidationError, validation_error_handler)
+
+# Add endpoint filtering middleware
+app.add_middleware(
+    create_endpoint_filter_middleware,
+    restricted_endpoints=None,  # Use default restricted endpoints
+)
 
 app.include_router(api_router)
 

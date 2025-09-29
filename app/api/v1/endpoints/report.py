@@ -7,6 +7,7 @@ from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api import deps
+from app.api.decorators.environment_control import production_hidden
 from app.api.utils.logger_route import LoggerRoute
 from app.core.config import global_config_loaded_from_config_yaml
 from app.db.session import get_async_db
@@ -105,6 +106,7 @@ async def create_report(
     summary="Query report records (requires admin permission)",
     description="Query report records (requires admin permission), this should be moved out of the app's runtime.",
 )
+@production_hidden
 async def list_reports(
     reason_ids: Optional[List[int]] = Query(None),
     target_id: Optional[str] = None,

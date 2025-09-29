@@ -1,5 +1,6 @@
 from fastapi import APIRouter
 
+from app.api.utils.route_filter import get_environment_controlled_router
 from app.api.v1.endpoints import (
     agents,
     auth,
@@ -15,7 +16,7 @@ from app.api.v1.endpoints import (
     users,
     version,
 )
-from app.core.config import API_V1_PREFIX
+from app.core.config import API_V1_PREFIX, global_config_loaded_from_config_yaml
 
 api_router = APIRouter(prefix=API_V1_PREFIX)
 
@@ -53,8 +54,10 @@ api_router.include_router(subscription.router, tags=["subscription"])
 # This is used for evaluating AI characters, and is not part of the app's runtime.
 # Instead, we should have an internal service to evaluate AI characters.
 # Still keep the endpoint for now, as it's used for evaluating AI characters.
+# Apply environment control to evaluation router
+evaluation_router = get_environment_controlled_router(evaluation.router)
 api_router.include_router(
-    evaluation.router,
+    evaluation_router,
     tags=["evaluation"],
     include_in_schema=False,
 )
