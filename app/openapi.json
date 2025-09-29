@@ -2797,6 +2797,17 @@
                         ],
                         "title": "Reason",
                         "description": "\u5220\u9664\u539f\u56e0"
+                    },
+                    "request_id": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Request Id"
                     }
                 },
                 "type": "object",
@@ -3285,6 +3296,18 @@
                                 "type": "null"
                             }
                         ]
+                    },
+                    "user": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "User",
+                        "default": "you"
                     }
                 },
                 "type": "object",
@@ -3620,6 +3643,17 @@
                             }
                         ],
                         "description": "Agent \u5143\u6570\u636e\uff0c\u5305\u542b\u8bc4\u5206\u7b49\u4fe1\u606f"
+                    },
+                    "request_id": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Request Id"
                     }
                 },
                 "type": "object",
@@ -3635,16 +3669,14 @@
                     "score": {
                         "anyOf": [
                             {
-                                "type": "integer",
-                                "maximum": 5.0,
-                                "minimum": 1.0
+                                "type": "integer"
                             },
                             {
                                 "type": "null"
                             }
                         ],
                         "title": "Score",
-                        "description": "Agent \u8bc4\u5206\uff0c1-5 \u7684\u6574\u6570"
+                        "description": "Agent \u8bc4\u5206"
                     },
                     "comment": {
                         "anyOf": [
@@ -4019,6 +4051,17 @@
                                 "type": "null"
                             }
                         ]
+                    },
+                    "request_id": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Request Id"
                     }
                 },
                 "type": "object",
@@ -4194,6 +4237,17 @@
                         "type": "string",
                         "title": "Language",
                         "default": "zh"
+                    },
+                    "request_id": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Request Id"
                     }
                 },
                 "type": "object",
@@ -4207,6 +4261,17 @@
                     "agent_id": {
                         "type": "string",
                         "title": "Agent Id"
+                    },
+                    "request_id": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Request Id"
                     }
                 },
                 "type": "object",
@@ -4352,6 +4417,17 @@
                             }
                         ],
                         "title": "Premium Mode"
+                    },
+                    "request_id": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Request Id"
                     }
                 },
                 "type": "object",
@@ -4407,6 +4483,17 @@
                     "token": {
                         "type": "string",
                         "title": "Token"
+                    },
+                    "request_id": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Request Id"
                     }
                 },
                 "type": "object",
@@ -4492,6 +4579,17 @@
                                 "type": "null"
                             }
                         ]
+                    },
+                    "request_id": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Request Id"
                     }
                 },
                 "type": "object",
@@ -4535,6 +4633,17 @@
                             }
                         ],
                         "title": "Age Group"
+                    },
+                    "request_id": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Request Id"
                     }
                 },
                 "type": "object",
@@ -5020,6 +5129,17 @@
                         ],
                         "title": "Order Id",
                         "description": "\u8ba2\u5355ID"
+                    },
+                    "request_id": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Request Id"
                     }
                 },
                 "type": "object",
@@ -5098,6 +5218,17 @@
                         "title": "Reason",
                         "description": "\u9000\u6b3e\u539f\u56e0",
                         "default": "manual_refund"
+                    },
+                    "request_id": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Request Id"
                     }
                 },
                 "type": "object",
@@ -5194,6 +5325,17 @@
                             }
                         ],
                         "title": "Description"
+                    },
+                    "request_id": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Request Id"
                     }
                 },
                 "type": "object",
@@ -5274,6 +5416,17 @@
                             }
                         ],
                         "title": "Voice Enabled"
+                    },
+                    "request_id": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Request Id"
                     }
                 },
                 "type": "object",
@@ -5489,6 +5642,17 @@
                         "title": "Sort Order",
                         "description": "\u6392\u5e8f\u987a\u5e8f",
                         "default": 0
+                    },
+                    "request_id": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Request Id"
                     }
                 },
                 "type": "object",
@@ -6307,6 +6471,17 @@
                             }
                         ],
                         "title": "System Language"
+                    },
+                    "request_id": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Request Id"
                     }
                 },
                 "type": "object",
