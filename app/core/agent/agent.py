@@ -167,6 +167,7 @@ class Agent:
         tags: List[str] = None,
         character_version: str = "1.0",
         extensions: Dict[str, Any] = None,
+        intro: str = "",
     ):
 
         # 基础属性
@@ -194,6 +195,7 @@ class Agent:
         self.tags = tags or []
         self.character_version = character_version
         self.extensions = extensions or {}
+        self.intro = intro
 
         # 更新agent数据以包含所有信息
         self._agent_data = {
@@ -210,6 +212,7 @@ class Agent:
             "tags": tags,
             "character_version": character_version,
             "extensions": extensions,
+            "intro": intro,
         }
 
         # 线程池用于异步执行聊天任务
@@ -323,6 +326,9 @@ class Agent:
 
         if user_profile:
             system_messages.append(SystemMessage(content=user_profile))
+
+        if self.intro:
+            system_messages.append(SystemMessage(content=self.intro))
 
         return system_messages
 
@@ -918,6 +924,7 @@ class AgentManager:
                         tags=agent_data.get("tags", []),
                         character_version=agent_data.get("character_version", "1.0"),
                         extensions=agent_data.get("extensions", {}),
+                        intro=agent_data.get("intro", ""),
                     )
 
                     # 验证创建的Agent实例的agent_id
@@ -967,6 +974,7 @@ class AgentManager:
                     "tags": getattr(agent_db, "tags", []),
                     "character_version": getattr(agent_db, "character_version", "1.0"),
                     "extensions": getattr(agent_db, "extensions", {}),
+                    "intro": getattr(agent_db, "intro", ""),
                 }
                 await self.get_agent(agent_data)
 
@@ -1085,6 +1093,7 @@ class AgentManager:
                         tags=agent_data.get("tags", []),
                         character_version=agent_data.get("character_version", "1.0"),
                         extensions=agent_data.get("extensions", {}),
+                        intro=agent_data.get("intro", ""),
                     )
 
                     self.agents[agent_id] = agent
