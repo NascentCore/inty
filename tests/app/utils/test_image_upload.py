@@ -10,15 +10,41 @@ from unittest.mock import patch
 
 import pytest
 from fastapi import UploadFile
+from loguru import logger
 from sqlalchemy import create_engine
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm.session import Session
 
 from app.models import Base
 from app.models.resource import Resource
 from app.models.user import AuthType, User
 from app.schemas.response import APIResponse
-from app.services.user_service import register_user
+from app.services.user_service import generate_next_readable_id_sync
 from app.utils.image_upload import ImageUploadResponse, process_image_upload
+
+
+def register_user(db: Session, user_in) -> User:
+    """Register user (phone number etc.)"""
+    user_id = str(uuid.uuid4())
+    readable_id = generate_next_readable_id_sync(db)
+
+    user = User(
+        id=user_id,
+        readable_id=readable_id,
+        auth_type=user_in.auth_type,
+        system_language=(
+            user_in.user_info.system_language if user_in.user_info else "en"
+        ),
+        is_active=True,
+    )
+    if user_in.user_info:
+        user.gender = user_in.user_info.gender
+        user.age_group = user_in.user_info.age_group
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return user
 
 
 class TestUploadImage:

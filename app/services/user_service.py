@@ -53,42 +53,6 @@ def generate_next_readable_id_sync(db: Session) -> str:
         return str(random.randint(10000000, 99999999))
 
 
-def register_user(db: Session, user_in) -> User:
-    """Register user (phone number etc.)"""
-    try:
-        user_id = str(uuid.uuid4())
-        readable_id = generate_next_readable_id_sync(db)
-
-        user = User(
-            id=user_id,
-            readable_id=readable_id,
-            auth_type=user_in.auth_type,
-            system_language=(
-                user_in.user_info.system_language if user_in.user_info else "en"
-            ),
-            is_active=True,
-        )
-        if user_in.user_info:
-            user.gender = user_in.user_info.gender
-            user.age_group = user_in.user_info.age_group
-        db.add(user)
-        db.commit()
-        db.refresh(user)
-        return user
-    except IntegrityError as e:
-        db.rollback()
-        logger.error(f"Integrity error registering user: {str(e)}")
-        # If readable_id conflicts, try again with a new one
-        if "readable_id" in str(e):
-            return register_user(db, user_in)
-        raise e
-    except Exception as e:
-        db.rollback()
-        logger.error(f"Failed to register user: {str(e)}")
-        logger.error(f"Error stack: {traceback.format_exc()}")
-        raise e
-
-
 def get_user_by_phone(db: Session, phone: str) -> Optional[User]:
     """Get user by phone number"""
     return db.query(User).filter(User.phone == phone).first()
