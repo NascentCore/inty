@@ -131,11 +131,11 @@ async def recommend_agents(
     """
     pagination_data = await agent_service.get_recommended_agents_paginated(
         db,
+        current_user=current_user,
         page=page,
         page_size=page_size,
         sort_by=sort,
         sort_seed=sort_seed,
-        current_user_id=current_user.id,
     )
     return schemas.APIResponse.success(data=pagination_data)
 

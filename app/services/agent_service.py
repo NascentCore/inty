@@ -578,11 +578,11 @@ async def get_balanced_score_based_agents(
 
 async def get_recommended_agents_paginated(
     db: AsyncSession,
+    current_user: schemas.User,
     page: int = 1,
     page_size: int = 10,
     sort_by: Optional[AgentSortOption] = None,
     sort_seed: str = "",
-    current_user_id: Optional[str] = None,
 ) -> schemas.PaginationData[schemas.Agent]:
     """
     获取推荐的AI角色列表（分页版本）
@@ -616,7 +616,7 @@ async def get_recommended_agents_paginated(
         if sort_by == AgentSortOption.SCORE_BASED_RANDOM:
             # 使用新的平衡权重排序算法
             agents_list = await get_balanced_score_based_agents(
-                db, page, page_size, sort_seed, current_user_id
+                db, page, page_size, sort_seed, current_user.id
             )
             # 保持使用原来的总数计算（基于基础查询条件）
         else:
@@ -656,14 +656,16 @@ async def get_recommended_agents_paginated(
             # 临时禁用关注者数量查询以提高测试性能
             agent.follower_count = 0
             agent.is_followed = False  # 默认值
+            # 设置用户名字，用于模板变量替换
+            agent.user = current_user.nickname
             agents.append(agent)
             agent_ids.append(agent.id)
 
         # 批量检查当前用户是否关注了这些agents
-        if current_user_id and agent_ids:
+        if agent_ids:
             follow_query = select(agent_followers.c.agent_id).where(
                 and_(
-                    agent_followers.c.user_id == current_user_id,
+                    agent_followers.c.user_id == current_user.id,
                     agent_followers.c.agent_id.in_(agent_ids),
                 )
             )
