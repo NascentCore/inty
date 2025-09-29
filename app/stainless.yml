@@ -100,6 +100,7 @@ resources:
                   agent: '#/components/schemas/Agent'
                   agent_visibility: '#/components/schemas/AgentVisibility'
                   model_config: '#/components/schemas/ModelConfig'
+                  agent_meta_data: "#/components/schemas/AgentMetaData"
                 methods:
                   list: get /api/v1/ai/agents/me
                   search: get /api/v1/ai/agents/search
