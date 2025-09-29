@@ -17,7 +17,7 @@ class ResourceBase(BaseModel):
 class ResourceCreate(ResourceBase):
     """创建资源"""
 
-    request_id: Optional[str] = None
+    pass
 
 
 class ResourceUpdate(BaseModel):
@@ -26,7 +26,6 @@ class ResourceUpdate(BaseModel):
     type: Optional[ResourceType] = None
     url: Optional[str] = None
     resource_metadata: Optional[Dict[str, Any]] = None
-    request_id: Optional[str] = None
 
 
 class ResourceInDB(ResourceBase):

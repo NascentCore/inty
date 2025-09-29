@@ -62,7 +62,6 @@ class RegisterRequest(BaseModel):
     auth_type: AuthType
     auth_data: Dict[str, Any]  # PhoneAuthData 或 GoogleAuthData
     user_info: Optional[UserInfo] = None
-    request_id: Optional[str] = None
 
 
 class LoginRequest(BaseModel):
@@ -70,7 +69,6 @@ class LoginRequest(BaseModel):
 
     phone: str
     code: str
-    request_id: Optional[str] = None
 
 
 class GoogleCallbackRequest(BaseModel):
@@ -78,7 +76,6 @@ class GoogleCallbackRequest(BaseModel):
 
     code: str
     state: str
-    request_id: Optional[str] = None
 
 
 class GuestRequest(BaseModel):
@@ -87,7 +84,6 @@ class GuestRequest(BaseModel):
     device_id: Optional[str] = None
     system_language: Optional[str] = None
     age_group: Optional[str] = None
-    request_id: Optional[str] = None
 
 
 class UserCreate(BaseModel):
@@ -103,7 +99,6 @@ class GoogleAuthRequest(BaseModel):
 
     id_token: str
     user_info: Optional[UserInfo] = None
-    request_id: Optional[str] = None
 
 
 class UserResponse(BaseModel):
@@ -118,7 +113,6 @@ class GoogleLoginRequest(BaseModel):
 
     id_token: str
     user_info: Optional[UserInfo] = None
-    request_id: Optional[str] = None
 
 
 class TokenResponse(BaseModel):

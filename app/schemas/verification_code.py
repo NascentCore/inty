@@ -15,7 +15,7 @@ class VerificationCodeBase(BaseModel):
 class VerificationCodeCreate(VerificationCodeBase):
     """创建验证码"""
 
-    request_id: Optional[str] = None
+    pass
 
 
 class VerificationCodeInDB(VerificationCodeBase):
@@ -35,4 +35,3 @@ class VerificationCodeVerify(BaseModel):
 
     phone: str = Field(..., pattern=r"^1[3-9]\d{9}$")
     code: str = Field(..., min_length=4, max_length=6)
-    request_id: Optional[str] = None

@@ -98,7 +98,6 @@ class CharacterCardImportRequest(BaseModel):
     override_existing: bool = Field(False, description="是否覆盖现有同名角色")
     import_character_book: bool = Field(True, description="是否导入角色书")
     import_alternate_greetings: bool = Field(True, description="是否导入替代问候语")
-    request_id: Optional[str] = None
 
     class Config:
         json_schema_extra = {
@@ -146,7 +145,6 @@ class CharacterCardExportRequest(BaseModel):
     include_character_book: bool = Field(True, description="是否包含角色书")
     include_alternate_greetings: bool = Field(True, description="是否包含替代问候语")
     include_extensions: bool = Field(True, description="是否包含扩展数据")
-    request_id: Optional[str] = None
 
     class Config:
         json_schema_extra = {

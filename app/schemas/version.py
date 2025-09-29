@@ -1,14 +1,12 @@
 from typing import List, Optional
-
 from pydantic import BaseModel, Field
 
 
 class VersionCheckRequest(BaseModel):
     """版本检查请求模型"""
-
+    
     version: str = Field(..., description="客户端版本代码", example="123")
     platform: str = Field(default="android", description="平台类型", example="android")
-    request_id: Optional[str] = None
 
 
 class VersionCheckResponse(BaseModel):
