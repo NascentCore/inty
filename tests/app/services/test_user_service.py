@@ -112,4 +112,4 @@ async def test_generate_next_readable_id():
         readable_ids = []
         for i in range(10):
             readable_ids.append(await generate_next_readable_id(async_session))
-        assert len(set(readable_ids)) == 10
+        assert len(set(readable_ids)) == 10, "all readable ids should be unique"
