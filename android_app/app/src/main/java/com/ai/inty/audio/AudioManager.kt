@@ -1,6 +1,8 @@
 package com.ai.inty.audio
 
 import android.content.Context
+import android.os.Handler
+import android.os.Looper
 import com.inty.utils.log.EasyLog
 import com.inty.utils.storage.IntySetting
 import kotlinx.coroutines.CoroutineScope
@@ -27,6 +29,8 @@ class AudioManager private constructor(
             }.also { instance ->
                 // 更新Scope以确保协程能正常执行
                 instance.scope = scope
+                // 同步最新的TtsManager实例（内部使用稳定ioScope）
+                instance.ttsManager = TtsManager.getInstance(context)
             }
         }
     }
@@ -34,7 +38,8 @@ class AudioManager private constructor(
     // 子模块
     private val playbackManager = AudioPlaybackManager.getInstance(context)
     private val cacheManager = AudioCacheManager.getInstance(context)
-    private val ttsManager = TtsManager.getInstance(context, scope)
+    private var ttsManager = TtsManager.getInstance(context)
+    private val mainHandler = Handler(Looper.getMainLooper())
 
     // 业务状态管理（开场白状态管理已移至消息级别处理）
 
@@ -149,27 +154,15 @@ class AudioManager private constructor(
         EasyLog.log("音频LOG测试 Scope is active: ${scope.isActive}")
         EasyLog.log("音频LOG测试 PlaybackManager instance: ${playbackManager.hashCode()}")
         
-        // 检查Scope是否活跃，如果不活跃则直接调用playbackManager
-        if (!scope.isActive) {
-            EasyLog.log("音频LOG测试 Scope is not active, calling playbackManager directly on main thread")
+        // 始终在主线程调用ExoPlayer相关API
+        mainHandler.post {
             try {
+                EasyLog.log("音频LOG测试 Main thread posting playbackManager.playAudio ...")
                 playbackManager.playAudio(audioInfo, autoPlay = autoPlay)
-                EasyLog.log("音频LOG测试 Direct playbackManager.playAudio call completed")
+                EasyLog.log("音频LOG测试 playbackManager.playAudio call completed on main thread")
             } catch (e: Exception) {
-                EasyLog.log("音频LOG测试 Error in direct playbackManager.playAudio: ${e.message}", EasyLog.ERROR)
+                EasyLog.log("音频LOG测试 Error in playbackManager.playAudio (main): ${e.message}", EasyLog.ERROR)
                 e.printStackTrace()
-            }
-        } else {
-            // 确保在主线程上调用ExoPlayer
-            scope.launch {
-                try {
-                    EasyLog.log("音频LOG测试 Coroutine started, calling playbackManager.playAudio...")
-                    playbackManager.playAudio(audioInfo, autoPlay = autoPlay)
-                    EasyLog.log("音频LOG测试 playbackManager.playAudio call completed")
-                } catch (e: Exception) {
-                    EasyLog.log("音频LOG测试 Error in playbackManager.playAudio: ${e.message}", EasyLog.ERROR)
-                    e.printStackTrace()
-                }
             }
         }
     }
@@ -180,7 +173,8 @@ class AudioManager private constructor(
      */
     fun stopAllPlayback() {
         EasyLog.log("音频LOG测试 Stopping all voice playback")
-        scope.launch {
+        // 在主线程执行
+        mainHandler.post {
             playbackManager.stopPlayback()
         }
     }
@@ -194,24 +188,10 @@ class AudioManager private constructor(
         EasyLog.log("音频LOG测试 Current audio info: ${playbackManager.getCurrentAudioInfo()?.messageId}")
         EasyLog.log("音频LOG测试 Is playing: ${playbackManager.isPlaying()}")
         
-        if (!scope.isActive) {
-            EasyLog.log("音频LOG测试 Scope is not active, calling playbackManager directly")
+        mainHandler.post {
             try {
                 playbackManager.pausePlayback()
-                EasyLog.log("音频LOG测试 Direct pausePlayback call completed")
-            } catch (e: Exception) {
-                EasyLog.log("音频LOG测试 Error in direct pausePlayback: ${e.message}", EasyLog.ERROR)
-            }
-        } else {
-            scope.launch {
-                try {
-                    EasyLog.log("音频LOG测试 Calling playbackManager.pausePlayback in coroutine")
-                    playbackManager.pausePlayback()
-                    EasyLog.log("音频LOG测试 pausePlayback coroutine completed")
-                } catch (e: Exception) {
-                    EasyLog.log("音频LOG测试 Error in pausePlayback coroutine: ${e.message}", EasyLog.ERROR)
-                }
-            }
+            } catch (_: Exception) {}
         }
         EasyLog.log("音频LOG测试 === AudioManager.pausePlayback END ===")
     }
@@ -225,24 +205,10 @@ class AudioManager private constructor(
         EasyLog.log("音频LOG测试 Current audio info: ${playbackManager.getCurrentAudioInfo()?.messageId}")
         EasyLog.log("音频LOG测试 Is playing: ${playbackManager.isPlaying()}")
         
-        if (!scope.isActive) {
-            EasyLog.log("音频LOG测试 Scope is not active, calling playbackManager directly")
+        mainHandler.post {
             try {
                 playbackManager.resumePlayback()
-                EasyLog.log("音频LOG测试 Direct resumePlayback call completed")
-            } catch (e: Exception) {
-                EasyLog.log("音频LOG测试 Error in direct resumePlayback: ${e.message}", EasyLog.ERROR)
-            }
-        } else {
-            scope.launch {
-                try {
-                    EasyLog.log("音频LOG测试 Calling playbackManager.resumePlayback in coroutine")
-                    playbackManager.resumePlayback()
-                    EasyLog.log("音频LOG测试 resumePlayback coroutine completed")
-                } catch (e: Exception) {
-                    EasyLog.log("音频LOG测试 Error in resumePlayback coroutine: ${e.message}", EasyLog.ERROR)
-                }
-            }
+            } catch (_: Exception) {}
         }
         EasyLog.log("音频LOG测试 === AudioManager.resumePlayback END ===")
     }
@@ -252,7 +218,7 @@ class AudioManager private constructor(
      */
     fun resetForPageChange() {
         EasyLog.log("音频LOG测试 Resetting voice playback for page change")
-        scope.launch {
+        mainHandler.post {
             playbackManager.resetForPageChange()
         }
     }
@@ -332,3 +298,4 @@ class AudioManager private constructor(
         ttsManager.cancelAllGenerations()
     }
 }
+

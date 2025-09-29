@@ -59,8 +59,9 @@ fun VoicePlayer(
         )
     }
 
-    // 使用消息ID作为状态标识
+    // 本地播放状态使用本地messageId；TTS状态跟踪优先使用serverMessageId
     val messageId = audioInfo.messageId ?: audioInfo.url
+    val ttsTrackingId = serverMessageId ?: messageId
 
     // 本地状态 - 每个消息独立管理
     var duration by remember(messageId) { mutableLongStateOf(0L) }
@@ -70,18 +71,18 @@ fun VoicePlayer(
     var userClickedRecently by remember(messageId) { mutableStateOf(false) } // 用户最近是否点击过
     var ttsGenerationStartTime by remember(messageId) { mutableLongStateOf(0L) } // TTS生成开始时间
 
-    // 监听TTS生成状态
-    LaunchedEffect(messageId) {
+    // 监听TTS生成状态（使用serverMessageId优先作为跟踪ID）
+    LaunchedEffect(ttsTrackingId) {
         while (true) {
             // 从AudioManager获取TTS生成状态
-            val managerTtsState = audioManager.isGeneratingTtsForMessage(messageId)
+            val managerTtsState = audioManager.isGeneratingTtsForMessage(ttsTrackingId)
 
             // 同步TTS生成状态
             if (managerTtsState) {
                 if (!isGeneratingTts) {
                     // TTS刚开始生成，记录开始时间
                     ttsGenerationStartTime = System.currentTimeMillis()
-                    EasyLog.log("音频LOG测试 TTS generation started for message: $messageId")
+                    EasyLog.log("音频LOG测试 TTS generation started: trackingId=$ttsTrackingId (localMsgId=$messageId)")
                 }
                 isGeneratingTts = true
                 // 不要立即清除userClickedRecently，保持用户点击状态
@@ -90,14 +91,14 @@ fun VoicePlayer(
                 isGeneratingTts = false
                 userClickedRecently = false
                 ttsGenerationStartTime = 0L
-                EasyLog.log("音频LOG测试 TTS generation completed/failed for message: $messageId")
+                EasyLog.log("音频LOG测试 TTS generation completed/failed: trackingId=$ttsTrackingId (localMsgId=$messageId)")
             }
             
             // 检查TTS生成超时（30秒超时）
             if (isGeneratingTts && ttsGenerationStartTime > 0) {
                 val elapsedTime = System.currentTimeMillis() - ttsGenerationStartTime
                 if (elapsedTime > 30000) { // 30秒超时
-                    EasyLog.log("音频LOG测试 TTS generation timeout for message: $messageId, elapsed: ${elapsedTime}ms", EasyLog.ERROR)
+                    EasyLog.log("音频LOG测试 TTS generation timeout: trackingId=$ttsTrackingId (localMsgId=$messageId), elapsed: ${elapsedTime}ms", EasyLog.ERROR)
                     isGeneratingTts = false
                     ttsGenerationFailed = true
                     userClickedRecently = false

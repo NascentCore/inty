@@ -119,19 +119,24 @@ private fun ChatItemAI(item: MsgInfo, isCurrentPage: Boolean = true, chatViewMod
                 val agentInfo by viewModel.agentInfo.collectAsState()
                 
                 EasyLog.log("音频LOG测试 ChatItemAI: agentInfo=${agentInfo?.id}, agentName=${agentInfo?.name}, messageId=${item.localMsgId}")
+                // 解析agentId：优先使用chatViewModel.agentInfo.id，其次使用消息meta中的agentId
+                val vmAgentId = agentInfo?.id
+                val metaAgentId = item.agentId()
+                val safeAgentId = vmAgentId ?: metaAgentId ?: ""
+                EasyLog.log("音频LOG测试 AgentId resolve: vmAgentId=$vmAgentId, metaAgentId=$metaAgentId, chosen=$safeAgentId")
                 // 为每个消息生成唯一的测试URL，避免状态混乱
                 val audioInfo = AudioInfo(
                     url = item.audio_url ?: "",
                     title = "Voice Message",
                     artist = "AI Agent",
                     messageId = item.localMsgId, // 使用localMsgId，包含_assistant_标识，用于播放状态管理
-                    agentId = agentInfo?.id ?: "", // 确保agentId不为null
+                    agentId = safeAgentId,
                     agentName = agentInfo?.name // 添加Agent名称用于日志分析
                 )
                 
                 // 验证关键参数
-                if (audioInfo.agentId.isNullOrEmpty()) {
-                    EasyLog.log("音频LOG测试 Warning: agentId is empty for message: ${item.localMsgId}, agentInfo=${agentInfo?.id}, chatViewModel=${chatViewModel?.hashCode()}", EasyLog.WARN)
+                if (safeAgentId.isEmpty()) {
+                    EasyLog.log("音频LOG测试 Warning: agentId is empty for message: ${item.localMsgId}, vmAgentId=${vmAgentId}, metaAgentId=${metaAgentId}, chatViewModel=${chatViewModel?.hashCode()}", EasyLog.WARN)
                 } else {
                     EasyLog.log("音频LOG测试 AudioInfo created successfully: agentId=${audioInfo.agentId}, messageId=${audioInfo.messageId}")
                 }
@@ -159,28 +164,32 @@ private fun ChatItemAI(item: MsgInfo, isCurrentPage: Boolean = true, chatViewMod
                     !hasPlayedOpening && 
                     isCurrentPage &&
                     isQueryMsgsCompleted &&
-                    !(audioInfo.agentId.isNullOrEmpty()) &&
+                    !(safeAgentId.isEmpty()) &&
                     audioInfo.url.isNotEmpty()
                     
                 EasyLog.log(
                     "音频LOG测试 开场白自动播放判断: shouldAutoPlay=$shouldAutoPlay, isOpening=${item.isOpening()}, isOnlyOpeningMessage=$isOnlyOpeningMessage, hasPlayedOpening=$hasPlayedOpening, isCurrentPage=$isCurrentPage, isQueryMsgsCompleted=$isQueryMsgsCompleted, agentId='${audioInfo.agentId}', hasAudioUrl=${audioInfo.url.isNotEmpty()}",
                     EasyLog.WARN
                 )
-                VoicePlayer(
-                    audioInfo = audioInfo,
-                    autoPlay = shouldAutoPlay,
-                    modifier = Modifier.widthIn(38.dp),
-                    onPlayStateChange = { isPlaying ->
-                        // 播放状态变化回调
-                        EasyLog.log("音频LOG测试 VoicePlayer play state changed: $isPlaying for message: ${item.localMsgId}")
-                    },
-                    onTtsGenerated = { audioUrl ->
-                        // TTS生成成功，更新消息的音频URL
-                        // 使用localMsgId进行匹配，因为ChatViewModel中使用的是localMsgId
-                        viewModel.updateMessageAudioUrl(item.localMsgId, audioUrl)
-                    },
-                    serverMessageId = item.id // 传递服务器端ID用于TTS生成
-                )
+                if (safeAgentId.isEmpty()) {
+                    // agentId 为空时，跳过渲染播放器，避免前置校验导致TTS未调用
+                    EasyLog.log("音频LOG测试 Skip VoicePlayer: empty agentId, messageId=${item.localMsgId}, serverMessageId=${item.id}", EasyLog.WARN)
+                } else {
+                    EasyLog.log("音频LOG测试 Prepare VoicePlayer: messageId=${item.localMsgId}, serverMessageId=${item.id}, agentId=$safeAgentId, hasAudioUrl=${audioInfo.url.isNotEmpty()}")
+                    VoicePlayer(
+                        audioInfo = audioInfo,
+                        autoPlay = shouldAutoPlay,
+                        modifier = Modifier.widthIn(38.dp),
+                        onPlayStateChange = { isPlaying ->
+                            EasyLog.log("音频LOG测试 VoicePlayer play state changed: $isPlaying for message: ${item.localMsgId}")
+                        },
+                        onTtsGenerated = { audioUrl ->
+                            // 使用localMsgId进行匹配，因为ChatViewModel中使用的是localMsgId
+                            viewModel.updateMessageAudioUrl(item.localMsgId, audioUrl)
+                        },
+                        serverMessageId = item.id // 传递服务器端ID用于TTS生成
+                    )
+                }
             }
             //消息
             val msgShape = if (item.content.isNotEmpty() && item.content != "loading_animation")
