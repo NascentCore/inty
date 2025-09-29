@@ -7,10 +7,13 @@ import com.inty.utils.log.EasyLog
 import com.therouter.TheRouter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeout
 
 /**
  * TTS管理器
@@ -18,16 +21,15 @@ import kotlinx.coroutines.launch
  */
 class TtsManager private constructor(
     private val context: Context,
-    private val scope: CoroutineScope
 ) {
 
     companion object {
         @Volatile
         private var INSTANCE: TtsManager? = null
 
-        fun getInstance(context: Context, scope: CoroutineScope): TtsManager {
+        fun getInstance(context: Context): TtsManager {
             return INSTANCE ?: synchronized(this) {
-                INSTANCE ?: TtsManager(context.applicationContext, scope).also { INSTANCE = it }
+                INSTANCE ?: TtsManager(context.applicationContext).also { INSTANCE = it }
             }
         }
     }
@@ -35,6 +37,12 @@ class TtsManager private constructor(
     // TTS生成状态
     private val _isGeneratingTts = MutableStateFlow<Set<String>>(emptySet())
     val isGeneratingTts: StateFlow<Set<String>> = _isGeneratingTts.asStateFlow()
+
+    // 内部稳定作用域（应用级别，避免外部scope失活）
+    private val ioScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    // 去重与并发控制：同一个( agentId, messageId ) 在同一时刻只能有一个in-flight
+    private val inFlight = mutableMapOf<String, MutableList<(Result<String>) -> Unit>>()
 
     // 延迟获取API依赖
     private val chatApi by lazy {
@@ -65,6 +73,7 @@ class TtsManager private constructor(
     ) {
         EasyLog.log("音频LOG测试 TtsManager.generateMessageVoice called: messageId=$messageId, agentId=$agentId, forceRegenerate=$forceRegenerate")
         EasyLog.log("音频LOG测试 Current generating TTS messages: ${_isGeneratingTts.value}")
+        EasyLog.log("音频LOG测试 TtsManager ioScope isActive=${ioScope.isActive}")
 
         // 检查是否正在生成（除非强制重新生成）
         if (!forceRegenerate && _isGeneratingTts.value.contains(messageId)) {
@@ -72,10 +81,28 @@ class TtsManager private constructor(
             return
         }
 
-        // 添加到生成队列
+        val dedupKey = "$agentId::$messageId"
+        val callback: (Result<String>) -> Unit = { r ->
+            r.fold(
+                onSuccess = { url -> onSuccess(url) },
+                onFailure = { e -> onError(e.message ?: "TTS生成失败") }
+            )
+        }
+
+        // 去重：合并相同请求的回调
+        synchronized(inFlight) {
+            val list = inFlight.getOrPut(dedupKey) { mutableListOf() }
+            list.add(callback)
+            if (list.size > 1 && !forceRegenerate) {
+                EasyLog.log("音频LOG测试 TTS request deduped: $dedupKey, pendingCallbacks=${list.size}")
+                return
+            }
+        }
+
+        // 添加到生成队列（用于UI状态）
         _isGeneratingTts.value = _isGeneratingTts.value + messageId
 
-        scope.launch(Dispatchers.IO) {
+        ioScope.launch {
             try {
                 EasyLog.log("音频LOG测试 Generating TTS for message: $messageId, agent: $agentId")
                 EasyLog.log("音频LOG测试 About to call chatApi.fetchMsgVoice")
@@ -86,7 +113,8 @@ class TtsManager private constructor(
                         "音频LOG测试 TTS generation failed: agentId='$agentId', messageId='$messageId'",
                         EasyLog.ERROR
                     )
-                    return@launch onError("TTS生成失败：参数无效 - agentId='$agentId', messageId='$messageId'")
+                    completeWithError(dedupKey, messageId, "TTS生成失败：参数无效 - agentId='$agentId', messageId='$messageId'", onError)
+                    return@launch
                 }
                 
                 // 验证agentId和messageId格式
@@ -95,9 +123,12 @@ class TtsManager private constructor(
                         "音频LOG测试 TTS generation failed: Invalid ID format - agentId='$agentId', messageId='$messageId'",
                         EasyLog.ERROR
                     )
-                    return@launch onError("TTS生成失败：ID格式无效")
+                    completeWithError(dedupKey, messageId, "TTS生成失败：ID格式无效", onError)
+                    return@launch
                 }
-                val response = chatApi.fetchMsgVoice(agentId, messageId)
+                val response = withTimeout(30_000) {
+                    chatApi.fetchMsgVoice(agentId, messageId)
+                }
                 EasyLog.log("音频LOG测试 fetchMsgVoice response received: $response")
 
                 when (response) {
@@ -105,13 +136,13 @@ class TtsManager private constructor(
                         val audioUrl = response.data.audio_url
                         if (audioUrl != null && audioUrl.isNotEmpty()) {
                             EasyLog.log("音频LOG测试 TTS generated successfully: $audioUrl (Agent: $agentId)")
-                            onSuccess(audioUrl)
+                            completeWithSuccess(dedupKey, messageId, audioUrl, onSuccess)
                         } else {
                             EasyLog.log(
                                 "音频LOG测试 TTS generation returned empty audio_url (Agent: $agentId)",
                                 EasyLog.ERROR
                             )
-                            onError("TTS生成失败：返回空音频URL")
+                            completeWithError(dedupKey, messageId, "TTS生成失败：返回空音频URL", onError)
                         }
                     }
 
@@ -120,17 +151,41 @@ class TtsManager private constructor(
                             "音频LOG测试 TTS generation failed: ${response.message} (Agent: $agentId)",
                             EasyLog.ERROR
                         )
-                        onError("TTS生成失败：${response.message}")
+                        completeWithError(dedupKey, messageId, "TTS生成失败：${response.message}", onError)
                     }
                 }
             } catch (e: Exception) {
                 EasyLog.log("音频LOG测试 TTS generation exception: ${e.message} (Agent: $agentId)", EasyLog.ERROR)
-                onError("TTS生成异常：${e.message}")
+                completeWithError(dedupKey, messageId, "TTS生成异常：${e.message}", onError)
             } finally {
-                // 从生成队列中移除
+                // UI状态标记移除
                 _isGeneratingTts.value = _isGeneratingTts.value - messageId
             }
         }
+    }
+
+    private fun completeWithSuccess(
+        key: String,
+        messageId: String,
+        url: String,
+        directSuccess: (String) -> Unit
+    ) {
+        val callbacks = synchronized(inFlight) { inFlight.remove(key) ?: emptyList() }
+        if (callbacks.isEmpty()) return directSuccess(url)
+        callbacks.forEach { it(Result.success(url)) }
+        EasyLog.log("音频LOG测试 TTS complete success, dispatched to ${callbacks.size} callbacks for key=$key")
+    }
+
+    private fun completeWithError(
+        key: String,
+        messageId: String,
+        errorMsg: String,
+        directError: (String) -> Unit
+    ) {
+        val callbacks = synchronized(inFlight) { inFlight.remove(key) ?: emptyList() }
+        if (callbacks.isEmpty()) return directError(errorMsg)
+        callbacks.forEach { it(Result.failure(IllegalStateException(errorMsg))) }
+        EasyLog.log("音频LOG测试 TTS complete error, dispatched to ${callbacks.size} callbacks for key=$key : $errorMsg", EasyLog.ERROR)
     }
 
     /**
