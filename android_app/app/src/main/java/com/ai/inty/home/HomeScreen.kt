@@ -365,6 +365,7 @@ private fun ProfileTabContent(
     val userProfile = mainViewModel.userProfile.collectAsState()
     val userCreatedAgents = mainViewModel.userCreatedAgents
     val isLoadingUserAgents = mainViewModel.isLoadingUserAgents.collectAsState()
+    val isRefreshingUserAgents = mainViewModel.isRefreshingUserAgents.collectAsState()
 
     // 确保用户信息有效，避免崩溃
     val safeUserProfile = userProfile.value.let { profile ->
@@ -393,6 +394,7 @@ private fun ProfileTabContent(
         userProfile = safeUserProfile,
         agents = userCreatedAgents,
         isLoading = isLoadingUserAgents.value,
+        isRefreshing = isRefreshingUserAgents.value,
         onClickAgent = { agent ->
             TheRouter.build(Constant.ROUTE_CHAT)
                 .withObject("agent", agent)
