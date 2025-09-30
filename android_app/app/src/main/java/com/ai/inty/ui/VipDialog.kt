@@ -96,7 +96,7 @@ private fun OpenChatDialog(
                     Spacer(Modifier.height(170.dp))
                 }
                 Text(
-                    text = stringResource(R.string.heartmate_premium_full),
+                    text = stringResource(R.string.premium_subscription_title),
                     fontSize = 22.sp,
                     fontWeight = FontWeight.Normal,
                     color = Color.White,
@@ -325,7 +325,7 @@ internal fun ExpiredVipDialog(
                 Spacer(Modifier.height(20.dp))
 
                 Text(
-                    text = stringResource(R.string.heartmate_premium_full),
+                    text = stringResource(R.string.premium_subscription_title),
                     fontSize = 22.sp,
                     fontWeight = FontWeight.Normal,
                     color = Color.White,
