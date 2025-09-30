@@ -84,6 +84,7 @@ internal fun ProfilePage(
     onEditAgent: ((AgentInfo) -> Unit)? = null,
     onDeleteAgent: ((AgentInfo) -> Unit)? = null,
     isLoading: Boolean = false,
+    isRefreshing: Boolean = false,
     onLoadMore: () -> Unit = {},
 ) {
     val context = LocalContext.current
@@ -295,8 +296,8 @@ internal fun ProfilePage(
                             }
                         }.onFailure { it.printStackTrace() }
 
-                        // Loading indicator when loading more
-                        if (isLoading) {
+                        // Loading indicator when loading more (only show when there's no data)
+                        if (isLoading && agents.isEmpty()) {
                             item(span = {
                                 GridItemSpan(maxLineSpan)
                             }) {

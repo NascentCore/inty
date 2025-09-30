@@ -64,6 +64,10 @@ class MainViewModel : BaseActivityViewModel() {
     private var _isLoadingUserAgents = MutableStateFlow(false)
     val isLoadingUserAgents = _isLoadingUserAgents.asStateFlow()
     private var hasMoreUserAgents = true
+    
+    // 刷新状态，用于区分首次加载和刷新操作
+    private var _isRefreshingUserAgents = MutableStateFlow(false)
+    val isRefreshingUserAgents = _isRefreshingUserAgents.asStateFlow()
 
     private val _selectedTab = MutableStateFlow(HomeTabIndex.Chat)
     val selectedTab = _selectedTab.asStateFlow()
@@ -252,9 +256,9 @@ class MainViewModel : BaseActivityViewModel() {
         currentUserAgentsPage = 0
         hasMoreUserAgents = true
 
-        // 如果已经有数据，则不立即清空，保持显示已有数据，等加载成功后再更新
+        // 如果已经有数据，则使用静默刷新，不显示loading
         if (userCreatedAgents.isNotEmpty()) {
-            EasyLog.log("getUserCreatedAgents - 已有数据，后台刷新，不立即清空")
+            EasyLog.log("getUserCreatedAgents - 已有数据，静默刷新，不显示loading")
             loadUserCreatedAgentsSilently()
         } else {
             // 没有数据时才清空并显示loading
@@ -272,8 +276,9 @@ class MainViewModel : BaseActivityViewModel() {
     }
 
     private fun loadUserCreatedAgentsSilently() {
-        if (_isLoadingUserAgents.value) return
+        if (_isRefreshingUserAgents.value) return
 
+        _isRefreshingUserAgents.value = true
         EasyLog.log("loadUserCreatedAgentsSilently - 静默刷新，不显示loading")
         val skip = currentUserAgentsPage * 10
         EasyLog.log("loadUserCreatedAgentsSilently - page: $currentUserAgentsPage, skip: $skip")
@@ -308,6 +313,8 @@ class MainViewModel : BaseActivityViewModel() {
                     "loadUserCreatedAgentsSilently exception: ${e.message}",
                     priority = EasyLog.ERROR
                 )
+            } finally {
+                _isRefreshingUserAgents.value = false
             }
         }
     }
@@ -373,7 +380,7 @@ class MainViewModel : BaseActivityViewModel() {
     fun refreshCreatedAgentsListIfOnTab() {
         if (_selectedTab.value == HomeTabIndex.Profile) {
             // 如果已经在加载中，避免重复请求
-            if (!_isLoadingUserAgents.value) {
+            if (!_isLoadingUserAgents.value && !_isRefreshingUserAgents.value) {
                 EasyLog.log("refreshCreatedAgentsListIfOnTab - 刷新Profile tab数据")
                 getUserCreatedAgents()
             } else {
