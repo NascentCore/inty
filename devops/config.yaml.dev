@@ -50,8 +50,6 @@ google_play:
   webhook_secret: ""
   enable_version_check: true
   min_supported_version: 100
-  release_track: internal
-  fallback_tracks: [internal]
 
 elevenlabs:
   api_key: "sk_1976538731e00d58493ed27e63165adfa8d513c4c327c68c"
@@ -60,3 +58,8 @@ elevenlabs:
   output_format: "mp3_22050_32"  # 优化的移动端格式：更小文件，更快传输
   enabled: true
   max_text_length: 5000  # 最大文本长度限制
+
+cloudflare:
+  domain: "images.sxwl.dev"
+  enabled: true
+  fallback_to_original: true
