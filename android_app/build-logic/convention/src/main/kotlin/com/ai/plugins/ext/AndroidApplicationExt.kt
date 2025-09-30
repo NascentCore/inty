@@ -10,30 +10,24 @@ import java.io.File
 
 /**
  * 获取git commit信息的函数
+ * 使用Provider来避免配置缓存问题
  */
-private fun getGitCommitInfo(): String {
-    return runCatching {
-        val process = ProcessBuilder("git", "rev-parse", "--short", "HEAD").start()
-        process.waitFor()
-        if (process.exitValue() == 0) {
-            process.inputStream.bufferedReader().readText().trim()
-        } else {
-            "-Debug"
-        }
-    }.getOrNull() ?: "-Debug"
+private fun getGitCommitInfo(project: Project): String {
+    return project.providers.exec {
+        commandLine("git", "rev-parse", "--short", "HEAD")
+        workingDir(project.rootDir)
+    }.standardOutput.asText.get().trim()
 }
 
 /**
  * 获取git的提交次数，作为versionCode
+ * 使用Provider来避免配置缓存问题
  */
-private fun getCommitCount(): Int {
-    val process = ProcessBuilder("git", "rev-list", "--count", "HEAD").start()
-    process.waitFor()
-    if (process.exitValue() != 0) {
-        throw GradleException("Git commit count failed")
-    }
-    val gitCommitCount = process.inputStream.bufferedReader().readText().trim().toInt()
-    return gitCommitCount
+private fun getCommitCount(project: Project): Int {
+    return project.providers.exec {
+        commandLine("git", "rev-list", "--count", "HEAD")
+        workingDir(project.rootDir)
+    }.standardOutput.asText.get().trim().toInt()
 }
 
 /**
@@ -43,7 +37,7 @@ private fun getCommitCount(): Int {
 internal fun ApplicationExtension.commonAppConfig(project: Project) {
     defaultConfig {
         versionName = ProjectConfig.versionName
-        versionCode = getCommitCount()
+        versionCode = getCommitCount(project)
         targetSdk = ProjectConfig.targetVersion
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -73,7 +67,7 @@ internal fun ApplicationExtension.commonAppConfig(project: Project) {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
-            versionNameSuffix = "-${getGitCommitInfo()}-$name"
+            versionNameSuffix = "-${getGitCommitInfo(project)}-$name"
             signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
@@ -81,7 +75,7 @@ internal fun ApplicationExtension.commonAppConfig(project: Project) {
             )
         }
         debug {
-            versionNameSuffix = "-${getGitCommitInfo()}-$name"
+            versionNameSuffix = "-${getGitCommitInfo(project)}-$name"
             signingConfig = signingConfigs.getByName("dev")
             isMinifyEnabled = false
             isShrinkResources = false
@@ -97,12 +91,12 @@ internal fun ApplicationExtension.commonAppConfig(project: Project) {
             initWith(getByName("release"))
             isMinifyEnabled = false
             isShrinkResources = false
-            versionNameSuffix = "-${getGitCommitInfo()}-$name"
+            versionNameSuffix = "-${getGitCommitInfo(project)}-$name"
         }
 
         create("local") {
             initWith(getByName("debug"))
-            versionNameSuffix = "-${getGitCommitInfo()}-$name"
+            versionNameSuffix = "-${getGitCommitInfo(project)}-$name"
         }
     }
 
