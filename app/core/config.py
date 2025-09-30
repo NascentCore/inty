@@ -141,8 +141,8 @@ class AgentConfig:
 @dataclass
 class GCSConfig:
     bucket: str
-    # 与 GooglePlayConfig.service_account_key 相同
-    # DEPRECATED: 保留作为兼容
+    # DEPRECATED: 保留作为兼容；被 app.gcp_service_account_key 取代
+    # 删除部署环境中的配置文件使用，然后删除这个代码。
     credentials: str = "<deprecated-do-not-use>"
 
 
@@ -155,15 +155,19 @@ class FirebaseConfig:
 class GooglePlayConfig:
     """Google Play配置"""
 
-    # 与 GCSConfig.credentials 相同
-    # DEPRECATED: 保留作为兼容
+    # DEPRECATED: 保留作为兼容；被 app.gcp_service_account_key 取代
+    # 删除部署环境中的配置文件使用，然后删除这个代码。
     service_account_key: str = "inty-backend-key.json"
     package_name: str = "com.ai.intellimate"
     webhook_secret: Optional[str] = None  # Webhook密钥（可选）
     # 版本检查相关配置
     enable_version_check: bool = True  # 是否启用版本检查
     min_supported_version: int = 1  # 最低支持版本代码
+    # DEPRECATED: 未被使用过。
+    # 删除部署环境中的配置文件使用，然后删除这个代码。
     release_track: str = "production"  # 发布轨道：internal/closed/open/production
+    # DEPRECATED: 未被使用过。
+    # 删除部署环境中的配置文件使用，然后删除这个代码。
     fallback_tracks: List[str] = None  # 备用轨道列表
     # 新增版本检查配置
     max_minor_version_gap: int = 10  # Minor版本号最大差距，超过则强制更新
