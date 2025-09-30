@@ -16,7 +16,6 @@ from app.api import deps
 from app.api.utils.logger_route import LoggerRoute
 from app.core.agent.agent import agent_manager
 from app.core.config import global_config_loaded_from_config_yaml
-from app.core.user_privilege.superuser_check import is_superuser
 from app.schemas.agent import AgentSortConfig
 from app.schemas.character_card import (
     CharacterCardExportRequest,
@@ -806,8 +805,8 @@ async def get_openrouter_models(
     """
     获取OpenRouter模型列表
     """
-    if is_superuser(current_user):
-        return schemas.APIResponse.success(data=[])
+    if not current_user.is_superuser:
+        return schemas.APIResponse.error(message="Unauthorized access")
 
     try:
         from app.services.scoring_service import ScoringService
