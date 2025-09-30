@@ -13,6 +13,14 @@ SUPER_USER_EMAILS = [
     "test.heartmate@gmail.com",
 ]
 
+SHARED_EMAILS = [
+    # Company IT email, has Google Account
+    "it@sxwl.ai",
+    # Generic testing accounts
+    "sxwlai001@gmail.com",
+    "sxwlai002@gmail.com",
+]
+
 logger.debug(f"SUPER_USER_EMAILS: {SUPER_USER_EMAILS}")
 
 
