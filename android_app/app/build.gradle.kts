@@ -72,11 +72,13 @@ dependencies {
     // ===== AndroidX 核心库 =====
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.lifecycle.runtimeCompose)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.activity.ktx)
     implementation(libs.androidx.constraintlayout.compose)
     implementation(libs.androidx.paging.compose)
+    implementation(libs.androidx.core.splashscreen)
 
     // ===== 路由 =====
     implementation(libs.router)

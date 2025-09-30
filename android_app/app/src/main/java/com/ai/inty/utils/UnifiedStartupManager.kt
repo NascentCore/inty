@@ -53,10 +53,8 @@ object UnifiedStartupManager {
      * 启动状态枚举
      */
     enum class StartupState {
-        Initializing,    // 初始化中
-        CacheLoaded,     // 缓存已加载
-        UserReady,       // 用户准备就绪
-        NetworkUpdated,  // 网络数据已更新
+        Initializing,    // 初始化中 - 显示 SplashUI
+        EssentialReady,  // 必要初始化完成 - 可以隐藏 SplashUI
         Completed,       // 启动完成
         Failed          // 启动失败
     }
@@ -74,18 +72,16 @@ object UnifiedStartupManager {
 
     /**
      * 初始化启动管理器 - 只做必要的登录判断，不阻塞启动
+     * 注意：保持Initializing状态直到SplashUI主动检查完成
      */
     fun initializeEssential(context: Context) {
         EasyLog.log("UnifiedStartupManager - 开始必要初始化")
         _startupState.value = StartupState.Initializing
         _currentPhase.value = StartupPhase.Initializing
 
-        // 异步进行必要的登录判断，给splash页面显示时间
+        // 异步进行必要的登录判断，基于实际任务完成状态
         startupScope.launch {
             try {
-                // 给splash页面一些显示时间
-                kotlinx.coroutines.delay(800) // 至少显示800ms
-
                 // 检查登录状态，确保有有效的token
                 if (!isUserLoggedIn()) {
                     EasyLog.log("UnifiedStartupManager - 用户未登录或token无效，创建游客账户")
@@ -97,15 +93,15 @@ object UnifiedStartupManager {
                             "UnifiedStartupManager - 游客账户创建失败: ${e.message}",
                             EasyLog.ERROR
                         )
-                        // 游客账户创建失败，仍然标记为用户就绪，避免阻塞启动
+                        // 游客账户创建失败，仍然继续，避免阻塞启动
                     }
                 } else {
                     EasyLog.log("UnifiedStartupManager - 用户已登录，token有效")
                 }
 
-                _startupState.value = StartupState.UserReady
+                // 注意：不在这里设置EssentialReady，让SplashUI主动控制何时完成
                 _startupProgress.value = 0.3f
-                EasyLog.log("UnifiedStartupManager - 必要初始化完成")
+                EasyLog.log("UnifiedStartupManager - 必要初始化完成，等待SplashUI检查")
 
                 // 立即开始关键数据预加载，不等待异步初始化
                 loadCriticalData()
@@ -115,7 +111,7 @@ object UnifiedStartupManager {
                     "UnifiedStartupManager - 必要初始化失败，但不阻塞启动: ${e.message}",
                     EasyLog.WARN
                 )
-                _startupState.value = StartupState.UserReady // 即使失败也标记为用户就绪，不阻塞启动
+                // 即使失败也继续，让SplashUI处理
             }
         }
     }
@@ -230,7 +226,7 @@ object UnifiedStartupManager {
         _recommendedAgents.value = agentsDeferred.await()
         _chatAgents.value = chatAgentsDeferred.await()
 
-        _startupState.value = StartupState.CacheLoaded
+        _startupState.value = StartupState.EssentialReady
         _startupProgress.value = 0.3f
         EasyLog.log("UnifiedStartupManager - 缓存数据加载完成")
     }
@@ -274,7 +270,7 @@ object UnifiedStartupManager {
             createGuestAccount()
         }
 
-        _startupState.value = StartupState.UserReady
+        _startupState.value = StartupState.EssentialReady
         _startupProgress.value = 0.6f
         EasyLog.log("UnifiedStartupManager - 用户设置完成")
     }
@@ -310,7 +306,7 @@ object UnifiedStartupManager {
         agentsTask.await()
         chatAgentsTask.await()
 
-        _startupState.value = StartupState.NetworkUpdated
+        _startupState.value = StartupState.Completed
         _startupProgress.value = 0.9f
         EasyLog.log("UnifiedStartupManager - 网络同步完成")
     }
@@ -542,6 +538,15 @@ object UnifiedStartupManager {
         startupScope.launch {
             syncUserProfile()
         }
+    }
+
+    /**
+     * 标记必要初始化完成 - 由SplashUI调用
+     * 用于控制SplashUI的显示时机
+     */
+    fun markEssentialInitializationComplete() {
+        _startupState.value = StartupState.EssentialReady
+        EasyLog.log("UnifiedStartupManager - SplashUI标记必要初始化完成")
     }
 
     /**

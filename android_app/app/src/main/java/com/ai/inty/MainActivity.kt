@@ -8,8 +8,25 @@ import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.lifecycleScope
 import com.ai.inty.base.BaseActivity
@@ -50,6 +67,7 @@ class MainActivity : BaseActivity() {
     private var exitJob: Job? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // 不安装系统SplashScreen，完全使用自定义SplashUI
         super.onCreate(savedInstanceState)
 
         enableEdgeToEdge()
@@ -64,26 +82,27 @@ class MainActivity : BaseActivity() {
 
         mainViewModel.setChatViewModel(chatViewModel)
 
+
         // 立即显示UI，不等待启动管理器完成
-        // 启动管理器会在后台继续加载数据，UI会通过Paging自动更新
+        // 二次进入应用（进程未被杀）的场景不会再看到自定义 SplashActivity
         lifecycleScope.launch {
             // 等待启动管理器完成必要初始化（但不等缓存数据）
             while (UnifiedStartupManager.startupState.value == UnifiedStartupManager.StartupState.Initializing) {
                 delay(50) // 50ms检查一次，更快响应
             }
-            
+
             EasyLog.log("MainActivity - 启动管理器初始化完成，开始加载用户数据")
-            
+
             // 确保用户已登录后再加载需要认证的数据
             if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
                 EasyLog.log("MainActivity - 用户已登录，开始加载业务数据")
-                
+
                 // 加载业务数据（包括版本检查等）
                 mainViewModel.loadBusinessData()
-                
+
                 // Load user created agents
                 mainViewModel.getUserCreatedAgents()
-                
+
                 // 初始化 BillingRepository（在用户登录后）
                 delay(500) // 给登录流程一些时间
                 BillingRepository.initialize(this@MainActivity)
@@ -100,13 +119,26 @@ class MainActivity : BaseActivity() {
         }
 
         setContent {
+            // 手动控制SplashUI显示，类似HeartMate模式
+            var showSplash by remember { mutableStateOf(true) }
+
             IntyTheme {
-                HomeScreen(
-                    modifier = Modifier.fillMaxSize(),
-                    mainViewModel = mainViewModel,
-                    chatViewModel = chatViewModel,
-                    viewModelFactory = defaultViewModelProviderFactory
-                )
+                if (showSplash) {
+                    // 显示自定义SplashUI
+                    SplashUI(
+                        onSplashComplete = {
+                            showSplash = false
+                        }
+                    )
+                } else {
+                    // 显示主界面
+                    HomeScreen(
+                        modifier = Modifier.fillMaxSize(),
+                        mainViewModel = mainViewModel,
+                        chatViewModel = chatViewModel,
+                        viewModelFactory = defaultViewModelProviderFactory
+                    )
+                }
             }
         }
     }
@@ -236,5 +268,78 @@ class MainActivity : BaseActivity() {
         super.onDestroy()
         // 取消协程
         exitJob?.cancel()
+    }
+}
+
+@Preview
+@Composable
+private fun SplashUI(
+    modifier: Modifier = Modifier,
+    onSplashComplete: () -> Unit = {}
+) {
+    // 使用LaunchedEffect来执行初始化逻辑
+    LaunchedEffect(Unit) {
+        // 等待初始化完成
+        waitForInitializationComplete(onSplashComplete)
+    }
+
+    Box(modifier) {
+        Image(
+            modifier = Modifier.fillMaxSize(),
+            painter = painterResource(R.drawable.app_bg),
+            contentScale = ContentScale.Crop,
+            alignment = Alignment.TopCenter,
+            contentDescription = ""
+        )
+        Image(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 80.dp)
+                .size(80.dp)
+                .clip(RoundedCornerShape(10.dp)),
+            painter = painterResource(R.drawable.icon_splash_icon),
+            contentDescription = "",
+            contentScale = ContentScale.Crop
+        )
+    }
+}
+
+/**
+ * 等待初始化完成
+ * 处理初始化流程中的异常情况，确保即使失败也能进入主界面
+ */
+private suspend fun waitForInitializationComplete(onComplete: () -> Unit) {
+    try {
+        EasyLog.log("SplashUI - 开始等待初始化完成")
+
+        // 等待启动管理器完成必要初始化
+        var waitTime = 0L
+        val maxWaitTime = 5000L // 最多等待5秒，避免无限等待
+
+        while (UnifiedStartupManager.startupState.value == UnifiedStartupManager.StartupState.Initializing && waitTime < maxWaitTime) {
+            kotlinx.coroutines.delay(50) // 50ms检查一次
+            waitTime += 50
+        }
+
+        if (waitTime >= maxWaitTime) {
+            EasyLog.log("SplashUI - 等待超时，强制进入主界面", EasyLog.WARN)
+        } else {
+            EasyLog.log("SplashUI - 启动管理器初始化完成")
+        }
+
+        // 标记初始化完成
+        UnifiedStartupManager.markEssentialInitializationComplete()
+
+        // 确保有最小显示时间，提供良好的用户体验
+        kotlinx.coroutines.delay(1000) // 至少显示1秒
+
+        EasyLog.log("SplashUI - 初始化完成，准备进入主界面")
+        onComplete()
+
+    } catch (e: Exception) {
+        EasyLog.log("SplashUI - 初始化等待过程中发生异常: ${e.message}", EasyLog.ERROR)
+        // 即使发生异常，也要确保进入主界面
+        kotlinx.coroutines.delay(500) // 给一点时间显示错误状态
+        onComplete()
     }
 }
