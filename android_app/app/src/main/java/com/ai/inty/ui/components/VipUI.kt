@@ -80,7 +80,7 @@ fun PremiumPlanCard(
                 )
                 .then(subModifier)
                 .clickable(enabled = !isSubscribed) { onClick() }
-                .padding(vertical = 8.dp),
+                .padding(vertical = 16.dp),
         contentAlignment = Alignment.TopCenter,
     ) {
         Column(
@@ -95,7 +95,7 @@ fun PremiumPlanCard(
                         else -> Color.White
                     },
                 fontWeight = FontWeight.Bold,
-                fontSize = 20.sp,
+                fontSize = 18.sp,
                 modifier = subModifier,
             )
             Spacer(modifier = Modifier.height(4.dp))
@@ -106,7 +106,7 @@ fun PremiumPlanCard(
                         isSubscribed -> Color.White.copy(alpha = 0.5f)
                         else -> Color.White
                     },
-                fontSize = 32.sp,
+                fontSize = 28.sp,
                 fontWeight = FontWeight.Normal,
                 modifier = subModifier,
             )
@@ -139,11 +139,11 @@ fun PremiumPlanCard(
                         fontWeight = FontWeight.Bold,
                         modifier = subModifier,
                     )
-                    Spacer(modifier = Modifier.width(4.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         text = stringResource(R.string.discount_save),
                         color = Color.Black,
-                        fontSize = 12.sp,
+                        fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
                         modifier = subModifier,
                     )
