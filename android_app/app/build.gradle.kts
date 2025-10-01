@@ -77,9 +77,9 @@ dependencies {
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.activity.ktx)
-    implementation(libs.androidx.constraintlayout.compose)
     implementation(libs.androidx.paging.compose)
     implementation(libs.androidx.core.splashscreen)
+    // constraintlayout-compose is included in compose-ui-bundle
 
     // ===== 路由 =====
     implementation(libs.router)
@@ -100,7 +100,11 @@ dependencies {
     implementation(libs.retrofit2.kotlin.coroutines.adapter)
 
     // ===== 图片加载 =====
-    implementation(libs.bundles.coil.bundle)
+    implementation(libs.coil.kt)
+    implementation(libs.coil.network.okhttp)
+    implementation(libs.coil.network.cache.control)
+    implementation(libs.coil.kt.compose)
+    // Removed: coil-svg, coil-gif, coil-video, coil-network-ktor3 (likely unused)
 
     // ===== Google 服务 =====
     implementation(libs.billing.client)
@@ -112,8 +116,8 @@ dependencies {
     api(libs.ucrop)
 
     // ===== Media3 音频播放 =====
-    implementation(libs.androidx.media3.datasource.okhttp)
     implementation(libs.bundles.androidx.media3.bundle)
+    implementation(libs.androidx.media3.datasource.okhttp)
 
     // ===== compose ui bundle =====
     implementation(libs.bundles.compose.ui.bundle)

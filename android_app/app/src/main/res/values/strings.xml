@@ -222,7 +222,7 @@
 
     <!-- Subscription popup title -->
     <string name="premium_subscription_title">IntelliMate Premium</string>
-    <string name="auto_renews_cancel">Auto–renews, cancel anytime</string>
+    <string name="auto_renews_cancel">Auto-renew, cancel at any time</string>
     <string name="more_information">More Information</string>
     <string name="subscription_consent">By subscribing you agree to our</string>
     <string name="subscription_description_placeholder">Will be charged at the next billing date</string>
