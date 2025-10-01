@@ -234,7 +234,7 @@
     <string name="chat_settings_settings_title">Settings</string>
 
     <!-- VIP Components -->
-    <string name="discount">discount</string>
+    <string name="discount_save">Save</string>
     <string name="no_subscription_plans">No subscription plans</string>
 
     <!-- Agent Info -->

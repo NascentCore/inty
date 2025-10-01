@@ -135,17 +135,17 @@ fun PremiumPlanCard(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = String.format(Locale.getDefault(), "%d%%", kotlin.math.ceil((1-plan.discountRate) * 100).toInt()),
+                        text = stringResource(R.string.discount_save),
                         color = Color.Black,
-                        fontSize = 14.sp,
+                        fontSize = 8.sp,
                         fontWeight = FontWeight.Bold,
                         modifier = subModifier,
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = stringResource(R.string.discount),
+                        text = String.format(Locale.getDefault(), "%d%%", kotlin.math.ceil((1-plan.discountRate) * 100).toInt()),
                         color = Color.Black,
-                        fontSize = 8.sp,
+                        fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
                         modifier = subModifier,
                     )
