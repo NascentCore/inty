@@ -85,42 +85,38 @@ fun PremiumPlanCard(
                 .padding(vertical = 8.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Text(
-            text = plan.name,
-            color =
-                when {
-                    isSubscribed -> Color.White.copy(alpha = 0.5f)
-                    else -> Color.White
-                },
-            fontWeight = FontWeight.Bold,
-            fontSize = 16.sp,
-            modifier = Modifier.align(Alignment.TopCenter).then(subModifier),
-        )
-
-        val priceStr = buildAnnotatedString {
-            append(plan.price.substringBefore('$'))
-            append("$")
-            withStyle(style = SpanStyle(fontSize = 24.sp, fontWeight = FontWeight.Bold)) {
-                append(plan.price.substringAfterLast('$'))
-            }
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = plan.name,
+                color =
+                    when {
+                        isSubscribed -> Color.White.copy(alpha = 0.5f)
+                        else -> Color.White
+                    },
+                fontWeight = FontWeight.Bold,
+                fontSize = 16.sp,
+                modifier = subModifier,
+            )
+            Text(
+                text = String.format("%s", plan.price),
+                color =
+                    when {
+                        isSubscribed -> Color.White.copy(alpha = 0.5f)
+                        else -> Color.White
+                    },
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Normal,
+                modifier = subModifier,
+            )
         }
-
-        Text(
-            text = priceStr,
-            color =
-                when {
-                    isSubscribed -> Color.White.copy(alpha = 0.5f)
-                    else -> Color.White
-                },
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Normal,
-            modifier = subModifier,
-        )
 
         // 折扣标签
         if (plan.discountRate < 1) {
             Box(
-                Modifier.size(64.dp, 22.dp)
+                Modifier.fillMaxWidth(0.7f)
                     .clip(RoundedCornerShape(12.dp))
                     .background(
                         brush =
@@ -133,17 +129,26 @@ fun PremiumPlanCard(
                     .align(Alignment.BottomCenter),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(
-                    text =
-                        stringResource(
-                            R.string.save_percentage,
-                            ((1 - plan.discountRate) * 100).toInt(),
-                        ),
-                    color = Color.Black,
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = subModifier,
-                )
+                Row(
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = String.format("%d%%", kotlin.math.ceil((1-plan.discountRate) * 100).toInt()),
+                        color = Color.Black,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = subModifier,
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = stringResource(R.string.discount),
+                        color = Color.Black,
+                        fontSize = 8.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = subModifier,
+                    )
+                }
             }
         }
     }
@@ -204,7 +209,7 @@ fun PurchaseButton(
                 if (isSubscribed) {
                     stringResource(R.string.premium_subscribed)
                 } else {
-                    stringResource(R.string.premium_continue)
+                    stringResource(R.string.premium_subscribe)
                 },
             fontSize = 18.sp,
             fontWeight = FontWeight.Bold,
