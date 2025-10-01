@@ -96,6 +96,36 @@ class SubscriptionPlan(Base):
     # 关系
     user_subscriptions = relationship("UserSubscription", back_populates="plan")
 
+    def calculate_discount_rate(self, monthly_price: float) -> float:
+        """
+        根据月付价格计算折扣率
+        月付: 1.0 (无折扣)
+        季付: (季付价格/3) / 月付价格
+        年付: (年付价格/12) / 月付价格
+        """
+        if self.plan_type == SubscriptionPlanType.MONTHLY:
+            return 1.0
+        elif self.plan_type == SubscriptionPlanType.QUARTERLY:
+            # 季付相当于3个月，计算月均价格
+            monthly_equivalent = self.price / 3
+            return monthly_equivalent / monthly_price
+        elif self.plan_type == SubscriptionPlanType.YEARLY:
+            # 年付相当于12个月，计算月均价格
+            monthly_equivalent = self.price / 12
+            return monthly_equivalent / monthly_price
+        else:
+            return 1.0
+
+    @property
+    def calculated_discount_rate(self) -> float:
+        """
+        计算出的折扣率属性
+        需要先获取月付价格作为基准
+        """
+        # 这里需要从数据库查询月付价格，暂时返回存储的折扣率
+        # 在实际使用中，应该通过服务层传入月付价格
+        return self.discount_rate
+
 
 # DEPRECATED: 存储用户订阅状态，这个可以从 subscription_transactions 中的用户的订阅付费记录来推导，
 # 因此并不需要保留这个表，同时这个表带来了额外的复杂度，维护成本；

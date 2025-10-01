@@ -61,6 +61,46 @@ async def create_subscription_plan_direct(db: AsyncSession, plan_data: dict):
         raise
 
 
+async def calculate_and_update_discount_rates(db: AsyncSession):
+    """计算并更新所有计划的折扣率"""
+    try:
+        from sqlalchemy import select
+        
+        # 获取所有计划
+        result = await db.execute(select(SubscriptionPlan))
+        plans = result.scalars().all()
+        
+        # 找到月付计划作为基准
+        monthly_plan = None
+        for plan in plans:
+            if plan.plan_type == SubscriptionPlanType.MONTHLY:
+                monthly_plan = plan
+                break
+        
+        if not monthly_plan:
+            print("❌ 未找到月付计划，无法计算折扣率")
+            return
+        
+        monthly_price = monthly_plan.price
+        print(f"📊 使用月付价格 {monthly_price} 作为折扣率计算基准")
+        
+        # 计算并更新每个计划的折扣率
+        for plan in plans:
+            calculated_discount_rate = plan.calculate_discount_rate(monthly_price)
+            old_discount_rate = plan.discount_rate
+            plan.discount_rate = calculated_discount_rate
+            
+            print(f"✅ {plan.name} ({plan.plan_type}): {old_discount_rate:.2f} → {calculated_discount_rate:.2f}")
+        
+        await db.commit()
+        print("✅ 折扣率计算和更新完成")
+        
+    except Exception as e:
+        await db.rollback()
+        print(f"❌ 计算折扣率失败: {str(e)}")
+        raise
+
+
 async def init_subscription_plans():
     """初始化三种订阅计划"""
 
@@ -73,7 +113,7 @@ async def init_subscription_plans():
             "price": 9.99,
             "currency": "USD",
             "google_play_product_id": "com.ai.inty.premium.monthly",
-            "discount_rate": 1.0,  # 无折扣
+            "discount_rate": 1.0,  # 月付基准，无折扣
             "features": {
                 "features": [
                     {
@@ -147,7 +187,7 @@ async def init_subscription_plans():
             "price": 24.99,  # 相比月付每月8.33，节省17%
             "currency": "USD",
             "google_play_product_id": "com.ai.inty.premium.quarterly",
-            "discount_rate": 0.9,  # 9折优惠
+            "discount_rate": 0.9,  # 将根据月付价格动态计算
             "features": {
                 "features": [
                     {
@@ -221,7 +261,7 @@ async def init_subscription_plans():
             "price": 79.99,  # 相比月付每月6.67，节省33%
             "currency": "USD",
             "google_play_product_id": "com.ai.inty.premium.annual",
-            "discount_rate": 0.8,  # 8折优惠
+            "discount_rate": 0.8,  # 将根据月付价格动态计算
             "features": {
                 "features": [
                     {
@@ -315,6 +355,11 @@ async def init_subscription_plans():
 
             print("订阅计划初始化完成！")
             print("=" * 50)
+            
+            # 计算并更新折扣率
+            print("开始计算动态折扣率...")
+            await calculate_and_update_discount_rates(db)
+            print("=" * 50)
 
         except Exception as e:
             print(f"❌ 初始化订阅计划失败: {str(e)}")
@@ -359,9 +404,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="订阅计划管理脚本（简化版）")
     parser.add_argument(
         "--action",
-        choices=["init", "list"],
+        choices=["init", "list", "update_discounts"],
         default="init",
-        help="执行的操作: init=初始化计划, list=列出计划",
+        help="执行的操作: init=初始化计划, list=列出计划, update_discounts=更新折扣率",
     )
 
     args = parser.parse_args()
@@ -370,3 +415,8 @@ if __name__ == "__main__":
         asyncio.run(init_subscription_plans())
     elif args.action == "list":
         asyncio.run(list_subscription_plans())
+    elif args.action == "update_discounts":
+        async def update_discounts():
+            async with AsyncSessionLocal() as db:
+                await calculate_and_update_discount_rates(db)
+        asyncio.run(update_discounts())

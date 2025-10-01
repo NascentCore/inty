@@ -125,7 +125,7 @@
     <string name="premium_sku_monthly">Monthly</string>
     <string name="premium_sku_quarterly">Quarterly</string>
     <string name="premium_sku_annually">Annually</string>
-    <string name="premium_continue">Continue</string>
+    <string name="premium_subscribe">Subscribe</string>
     <string name="premium_autorenew">Auto–renews, cancel anytime</string>
     <string name="privacy_policy">Privacy Policy</string>
     <string name="terms_of_use">Terms of Use</string>

@@ -16,6 +16,7 @@ from app.core.user_privilege.superuser_check import (
 from app.external_services.google_play_service import GooglePlayService
 from app.models.subscription import (
     SubscriptionPlan,
+    SubscriptionPlanType,
     SubscriptionStatus,
     SubscriptionTransaction,
     SubscriptionUsage,
@@ -64,12 +65,40 @@ class SubscriptionService:
             result = await db.execute(query)
             plans = result.scalars().all()
 
+            # 计算动态折扣率
+            plans_with_calculated_discounts = await self._calculate_discount_rates(plans)
+
             # 将 SQLAlchemy 模型转换为 Pydantic 模型
-            return [SubscriptionPlanSchema.model_validate(plan) for plan in plans]
+            return [SubscriptionPlanSchema.model_validate(plan) for plan in plans_with_calculated_discounts]
 
         except Exception as e:
             logger.error(f"获取订阅计划列表失败: {str(e)}")
             raise
+
+    async def _calculate_discount_rates(self, plans: List[SubscriptionPlan]) -> List[SubscriptionPlan]:
+        """计算所有计划的动态折扣率"""
+        # 找到月付计划作为基准价格
+        monthly_plan = None
+        for plan in plans:
+            if plan.plan_type == SubscriptionPlanType.MONTHLY:
+                monthly_plan = plan
+                break
+        
+        if not monthly_plan:
+            logger.warning("未找到月付计划，无法计算折扣率，使用存储的折扣率")
+            return plans
+        
+        monthly_price = monthly_plan.price
+        logger.info(f"使用月付价格 {monthly_price} 作为折扣率计算基准")
+        
+        # 为每个计划计算折扣率
+        for plan in plans:
+            calculated_discount_rate = plan.calculate_discount_rate(monthly_price)
+            # 更新计划对象的折扣率（这里我们直接修改对象，实际应用中可能需要更谨慎的处理）
+            plan.discount_rate = calculated_discount_rate
+            logger.debug(f"计划 {plan.name} ({plan.plan_type}): 原折扣率={plan.discount_rate}, 计算折扣率={calculated_discount_rate}")
+        
+        return plans
 
     async def get_subscription_plan(
         self, db: AsyncSession, plan_id: str
