@@ -13,6 +13,7 @@ from sqlalchemy import Integer, and_, desc, func, or_, select, text
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+from typing_extensions import deprecated
 
 from app import models, schemas
 from app.core.agent.agent import agent_manager
@@ -139,6 +140,7 @@ async def generate_agent_opening_voice(
         return None
 
 
+@deprecated("app 不在显示 readable_id 字段，请使用 id 字段")
 async def generate_next_readable_id(db: AsyncSession) -> str:
     """
     Generate next readable ID for agent, starting from 10000000

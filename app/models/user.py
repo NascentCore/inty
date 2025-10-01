@@ -1,8 +1,8 @@
 import enum
 from datetime import UTC, datetime
-from loguru import logger
 
 import sqlalchemy as sa
+from loguru import logger
 from sqlalchemy import (
     JSON,
     Boolean,
@@ -47,6 +47,7 @@ class User(Base):
     # category prefixes like user-<uuid> for better readability.
     id = Column(String, primary_key=True, comment="用户唯一标识符")
 
+    # DEPRECATED: app 显示 ID 而非 readable_id
     readable_id = Column(
         String(8), unique=True, index=True, nullable=False, comment="用户可读ID"
     )

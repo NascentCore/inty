@@ -31,6 +31,7 @@ class Agent(Base):
     __tablename__ = "agents"
 
     id = Column(String, primary_key=True, index=True)
+    # DEPRECATED: app 显示 ID 而非 readable_id
     readable_id = Column(String(8), unique=True, index=True, nullable=False)
     name = Column(String(30), index=True, nullable=False)
     gender = Column(Enum(Gender, name="gender"), nullable=False)

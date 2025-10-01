@@ -45,6 +45,7 @@ async def get_profile(
     # 创建用户响应对象，包含connector_count
     user_dict = {
         "id": current_user.id,
+        # DEPRECATED: app 显示 ID 而非 readable_id
         "readable_id": current_user.readable_id,
         "nickname": current_user.nickname,
         "avatar": current_user.avatar,
