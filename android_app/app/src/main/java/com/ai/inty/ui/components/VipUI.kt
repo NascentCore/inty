@@ -80,7 +80,7 @@ fun PremiumPlanCard(
                 )
                 .then(subModifier)
                 .clickable(enabled = !isSubscribed) { onClick() }
-                .padding(vertical = 16.dp),
+                .padding(vertical = 14.dp),
         contentAlignment = Alignment.TopCenter,
     ) {
         Column(
