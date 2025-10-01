@@ -81,7 +81,7 @@ fun PremiumPlanCard(
                 .then(subModifier)
                 .clickable(enabled = !isSubscribed) { onClick() }
                 .padding(vertical = 8.dp),
-        contentAlignment = Alignment.Center,
+        contentAlignment = Alignment.TopCenter,
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -95,7 +95,7 @@ fun PremiumPlanCard(
                         else -> Color.White
                     },
                 fontWeight = FontWeight.Bold,
-                fontSize = 16.sp,
+                fontSize = 20.sp,
                 modifier = subModifier,
             )
             Text(
@@ -105,7 +105,7 @@ fun PremiumPlanCard(
                         isSubscribed -> Color.White.copy(alpha = 0.5f)
                         else -> Color.White
                     },
-                fontSize = 24.sp,
+                fontSize = 30.sp,
                 fontWeight = FontWeight.Normal,
                 modifier = subModifier,
             )
@@ -129,20 +129,20 @@ fun PremiumPlanCard(
             ) {
                 Row(
                     horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.Bottom
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
                         text = stringResource(R.string.discount_save),
                         color = Color.Black,
-                        fontSize = 8.sp,
+                        fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
                         modifier = subModifier,
                     )
-                    Spacer(modifier = Modifier.width(4.dp))
+                    Spacer(modifier = Modifier.width(2.dp))
                     Text(
                         text = String.format(Locale.getDefault(), "%d%%", kotlin.math.ceil((1-plan.discountRate) * 100).toInt()),
                         color = Color.Black,
-                        fontSize = 14.sp,
+                        fontSize = 24.sp,
                         fontWeight = FontWeight.Bold,
                         modifier = subModifier,
                     )
