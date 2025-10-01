@@ -27,7 +27,7 @@ import com.ai.inty.base.noRippleClickable
 import com.ai.inty.billing.BillingRepository
 import com.ai.inty.ui.components.SettingDivider
 import com.ai.inty.ui.components.SubscriptionManagementContainer
-import com.ai.inty.ui.components.SubscriptionManagementItem
+import com.ai.inty.ui.components.SettingNavigationItem
 import com.ai.inty.ui.components.openPlayStoreSubscriptions
 import com.ai.inty.viewmodels.SubsManageViewModel
 import com.ai.inty.viewmodels.SubscriptionUiEvent
@@ -86,14 +86,12 @@ fun SubscriptionManagementScreen(
     ) { innerPadding ->
         Column(modifier = Modifier.padding(innerPadding)) {
             SubscriptionManagementContainer {
-                SubscriptionManagementItem(
-                    icon = R.drawable.icon_list_row_3,
+                SettingNavigationItem(
                     title = stringResource(R.string.cancel_subscription),
                     onClick = { viewModel.navigateToGooglePlaySubscription() },
                 )
                 SettingDivider()
-                SubscriptionManagementItem(
-                    icon = R.drawable.icon_list_row_1,
+                SettingNavigationItem(
                     title = stringResource(R.string.restore_subscription),
                     onClick = { viewModel.navigateToGooglePlaySubscription() },
                 )
