@@ -148,13 +148,8 @@ internal fun AiAgentInfoScreen(agent: AgentInfo, onBack: () -> Unit) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Spacer(Modifier.width(16.dp))
                                     Text(
-                                        modifier = Modifier.widthIn(0.dp, 100.dp),
-                                        text =
-                                            stringResource(
-                                                R.string.ID,
-                                                agent.readableId.takeIf { it.isNotEmpty() }
-                                                    ?: agent.id,
-                                            ),
+                                        modifier = Modifier.fillMaxWidth(),
+                                        text = stringResource(R.string.ID, agent.id),
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.Light,
                                         color = Color.White.copy(0.55f),

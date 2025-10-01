@@ -93,10 +93,8 @@ internal fun ProfilePage(
         screenClass = "MainActivity",
         additionalParams =
             mapOf(
-                //            "user_id" to userProfile.id,
                 "agent_count" to agents.size,
                 "is_loading" to isLoading,
-                //            "user_type" to (userProfile.gender ?: "unknown")
             ),
     )
 
@@ -151,7 +149,7 @@ internal fun ProfilePage(
                         )
                         Spacer(Modifier.height(6.dp))
                         Text(
-                            text = stringResource(R.string.ID, userProfile.readableId),
+                            text = stringResource(R.string.ID, userProfile.id),
                             color = Color.White.copy(0.55f),
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Light,
