@@ -16,6 +16,8 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
+
+
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -26,6 +28,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+
+
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -38,6 +43,20 @@ import com.ai.inty.ui.components.PremiumBenefitItem
 import com.ai.inty.ui.components.PremiumPlanList
 import com.ai.inty.ui.components.PurchaseButton
 import com.ai.inty.viewmodels.VipCenterViewModel
+
+/** 订阅描述文本组件 */
+@Composable
+private fun SubscriptionDescriptionText(text: String) {
+    Text(
+            text = text,
+            color = Color.Gray,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Normal,
+            textAlign = TextAlign.Center,
+            // 保证文字居中
+            modifier = Modifier.fillMaxWidth(),
+    )
+}
 
 /** 会员中心页面主内容 */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -93,6 +112,30 @@ fun VipCenterContent(
                     isSubscribed = vipStatus.isSubscribed,
                     onPlanSelected = { index -> viewModel.selectPlan(index) },
                 )
+
+                Spacer(Modifier.height(8.dp))
+
+                // 动态显示选中计划的计费信息
+                val selectedPlan =
+                        if (selectedPlanIndex >= 0 && selectedPlanIndex < plans.size) {
+                            plans[selectedPlanIndex]
+                        } else null
+
+                selectedPlan?.let { plan ->
+                    SubscriptionDescriptionText(
+                            text =
+                                    stringResource(
+                                            R.string.subscription_description_fmt_str,
+                                            plan.price,
+                                            plan.name.lowercase()
+                                    )
+                    )
+                }
+                        ?: run {
+                            SubscriptionDescriptionText(
+                                    text = stringResource(R.string.subscription_description_placeholder),
+                            )
+                        }
 
                 Spacer(Modifier.height(32.dp))
 
@@ -162,9 +205,7 @@ private fun VipCenterBenefits() {
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
         PremiumBenefitItem(stringResource(R.string.premium_benefit_unlimited))
         PremiumBenefitItem(stringResource(R.string.premium_benefit_model))
-        PremiumBenefitItem(stringResource(R.string.premium_benefit_inspiration))
         PremiumBenefitItem(stringResource(R.string.premium_benefit_customize))
-        PremiumBenefitItem(stringResource(R.string.premium_benefit_memory))
         PremiumBenefitItem(stringResource(R.string.premium_benefit_newfeature))
     }
 }

@@ -1,6 +1,7 @@
 package com.ai.inty.ui.components
 
 import androidx.compose.foundation.Image
+import java.util.Locale
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -27,11 +28,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -83,44 +81,41 @@ fun PremiumPlanCard(
                 .then(subModifier)
                 .clickable(enabled = !isSubscribed) { onClick() }
                 .padding(vertical = 8.dp),
-        contentAlignment = Alignment.Center,
+        contentAlignment = Alignment.TopCenter,
     ) {
-        Text(
-            text = plan.name,
-            color =
-                when {
-                    isSubscribed -> Color.White.copy(alpha = 0.5f)
-                    else -> Color.White
-                },
-            fontWeight = FontWeight.Bold,
-            fontSize = 16.sp,
-            modifier = Modifier.align(Alignment.TopCenter).then(subModifier),
-        )
-
-        val priceStr = buildAnnotatedString {
-            append(plan.price.substringBefore('$'))
-            append("$")
-            withStyle(style = SpanStyle(fontSize = 24.sp, fontWeight = FontWeight.Bold)) {
-                append(plan.price.substringAfterLast('$'))
-            }
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Text(
+                text = plan.name,
+                color =
+                    when {
+                        isSubscribed -> Color.White.copy(alpha = 0.5f)
+                        else -> Color.White
+                    },
+                fontWeight = FontWeight.Bold,
+                fontSize = 20.sp,
+                modifier = subModifier,
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = String.format("%s", plan.price),
+                color =
+                    when {
+                        isSubscribed -> Color.White.copy(alpha = 0.5f)
+                        else -> Color.White
+                    },
+                fontSize = 32.sp,
+                fontWeight = FontWeight.Normal,
+                modifier = subModifier,
+            )
         }
-
-        Text(
-            text = priceStr,
-            color =
-                when {
-                    isSubscribed -> Color.White.copy(alpha = 0.5f)
-                    else -> Color.White
-                },
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Normal,
-            modifier = subModifier,
-        )
 
         // 折扣标签
         if (plan.discountRate < 1) {
             Box(
-                Modifier.size(64.dp, 22.dp)
+                Modifier.fillMaxWidth(0.8f)
                     .clip(RoundedCornerShape(12.dp))
                     .background(
                         brush =
@@ -133,17 +128,26 @@ fun PremiumPlanCard(
                     .align(Alignment.BottomCenter),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(
-                    text =
-                        stringResource(
-                            R.string.save_percentage,
-                            ((1 - plan.discountRate) * 100).toInt(),
-                        ),
-                    color = Color.Black,
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = subModifier,
-                )
+                Row(
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = String.format(Locale.getDefault(), "%d%%", kotlin.math.ceil((1-plan.discountRate) * 100).toInt()),
+                        color = Color.Black,
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = subModifier,
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = stringResource(R.string.discount_save),
+                        color = Color.Black,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = subModifier,
+                    )
+                }
             }
         }
     }
@@ -204,7 +208,7 @@ fun PurchaseButton(
                 if (isSubscribed) {
                     stringResource(R.string.premium_subscribed)
                 } else {
-                    stringResource(R.string.premium_continue)
+                    stringResource(R.string.premium_subscribe)
                 },
             fontSize = 18.sp,
             fontWeight = FontWeight.Bold,
@@ -223,7 +227,10 @@ fun AutoRenewalNotice(modifier: Modifier = Modifier) {
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
-            text = stringResource(R.string.premium_autorenew),
+            text =
+                stringResource(R.string.auto_renews_cancel) +
+                    ". " +
+                    stringResource(R.string.subscription_consent),
             fontSize = 12.sp,
             color = Color.White,
         )

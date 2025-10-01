@@ -115,18 +115,12 @@
     <string name="edge_swipe_exit_hint">Swipe again to exit</string>
 
     <string name="premium_title">IntelliMate Premium</string>
-    <string name="premium_subtitle">Enjoy a comfortable experience!</string>
-    <string name="premium_benefit_unlimited">Unlimited messages</string>
-    <string name="premium_benefit_model">Premium model usage</string>
-    <string name="premium_benefit_inspiration">extra chat inspiration</string>
-    <string name="premium_benefit_customize">customize conversation style</string>
-    <string name="premium_benefit_memory">chat memory</string>
-    <string name="premium_benefit_newfeature">experience new features</string>
-    <string name="premium_sku_monthly">Monthly</string>
-    <string name="premium_sku_quarterly">Quarterly</string>
-    <string name="premium_sku_annually">Annually</string>
-    <string name="premium_continue">Continue</string>
-    <string name="premium_autorenew">Auto–renews, cancel anytime</string>
+    <string name="premium_subtitle">Experience your imagination!</string>
+    <string name="premium_benefit_unlimited">Unlimited text and voice messages</string>
+    <string name="premium_benefit_model">Premium AI models</string>
+    <string name="premium_benefit_customize">Customize AI\'s reply style</string>
+    <string name="premium_benefit_newfeature">Priority access to new features</string>
+    <string name="premium_subscribe">Subscribe</string>
     <string name="privacy_policy">Privacy Policy</string>
     <string name="terms_of_use">Terms of Use</string>
     <string name="premium_subscribed">Subscribed</string>
@@ -230,6 +224,9 @@
     <string name="premium_subscription_title">IntelliMate Premium</string>
     <string name="auto_renews_cancel">Auto–renews, cancel anytime</string>
     <string name="more_information">More Information</string>
+    <string name="subscription_consent">By subscribing you agree to our</string>
+    <string name="subscription_description_placeholder">Will be charged at the next billing date</string>
+    <string name="subscription_description_fmt_str">%s will be charged %s, cancel at any time</string>
 
     <!-- Chat -->
     <string name="play_button">▶</string>
@@ -238,7 +235,7 @@
     <string name="chat_settings_settings_title">Settings</string>
 
     <!-- VIP Components -->
-    <string name="save_percentage">Save %d%%</string>
+    <string name="discount_save">off</string>
     <string name="no_subscription_plans">No subscription plans</string>
 
     <!-- Agent Info -->
@@ -301,7 +298,6 @@
     <string name="star_symbol">★</string>
     <string name="visibility_required_title_full">Visibility *</string>
     <string name="become_a_premium">Become a Premium Member</string>
-    <string name="auto_renews_cancel_full">Auto-renews, cancel anytime</string>
     <string name="more_information_full">More Information</string>
     <string name="play_button_symbol">▶</string>
     <string name="empty_parentheses_symbol">()</string>

@@ -113,7 +113,7 @@ private fun OpenChatDialog(
                 HeartPrimaryButton(btnText = dialogData.btnText, onClick = onSure)
                 Spacer(Modifier.height(12.dp))
                 Text(
-                    text = stringResource(R.string.auto_renews_cancel_full),
+                    text = stringResource(R.string.auto_renews_cancel),
                     fontSize = 13.sp,
                     lineHeight = 20.sp,
                     fontWeight = FontWeight.Normal,
