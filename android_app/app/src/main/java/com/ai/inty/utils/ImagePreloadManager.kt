@@ -12,36 +12,32 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 
-/**
- * 图片预加载管理器
- * 负责在启动时预加载agents的图片资源，优化Explore页面渲染体验
- */
+/** 图片预加载管理器 负责在启动时预加载agents的图片资源，优化Explore页面渲染体验 */
 object ImagePreloadManager {
 
     private var isInitialized = false
     private var imageLoader: ImageLoader? = null
 
-    /**
-     * 初始化图片预加载管理器
-     */
+    /** 初始化图片预加载管理器 */
     fun init(context: Context) {
         if (isInitialized) return
 
         try {
             // 获取全局ImageLoader实例
-            imageLoader = ImageLoader.Builder(context)
-                .memoryCache {
-                    coil3.memory.MemoryCache.Builder()
-                        .maxSizePercent(context, 0.4) // 40% 内存缓存
-                        .build()
-                }
-                .diskCache {
-                    coil3.disk.DiskCache.Builder()
-                        .directory(context.cacheDir.resolve("image_cache"))
-                        .maxSizePercent(0.05) // 5% 磁盘缓存
-                        .build()
-                }
-                .build()
+            imageLoader =
+                ImageLoader.Builder(context)
+                    .memoryCache {
+                        coil3.memory.MemoryCache.Builder()
+                            .maxSizePercent(context, 0.4) // 40% 内存缓存
+                            .build()
+                    }
+                    .diskCache {
+                        coil3.disk.DiskCache.Builder()
+                            .directory(context.cacheDir.resolve("image_cache"))
+                            .maxSizePercent(0.05) // 5% 磁盘缓存
+                            .build()
+                    }
+                    .build()
 
             isInitialized = true
             EasyLog.log("ImagePreloadManager - 初始化完成")
@@ -52,13 +48,11 @@ object ImagePreloadManager {
 
     /**
      * 预加载agents的图片资源
+     *
      * @param agents 需要预加载的agents列表
      * @param maxConcurrent 最大并发预加载数量
      */
-    suspend fun preloadAgentsImages(
-        agents: List<AgentInfo>,
-        maxConcurrent: Int = 5
-    ) {
+    suspend fun preloadAgentsImages(agents: List<AgentInfo>, maxConcurrent: Int = 5) {
         if (!isInitialized || imageLoader == null) {
             EasyLog.log("ImagePreloadManager - 未初始化，跳过预加载", EasyLog.WARN)
             return
@@ -85,16 +79,12 @@ object ImagePreloadManager {
             }
 
             EasyLog.log("ImagePreloadManager - 所有图片预加载完成")
-
         } catch (e: Exception) {
             EasyLog.log("ImagePreloadManager - 预加载异常: ${e.message}", EasyLog.ERROR)
         }
     }
 
-    /**
-     * 收集agents中的所有图片URL
-     * 使用与ExploreCharacterCard相同的逻辑，确保URL一致性
-     */
+    /** 收集agents中的所有图片URL 使用与ExploreCharacterCard相同的逻辑，确保URL一致性 */
     private fun collectImageUrls(agents: List<AgentInfo>): List<String> {
         val imageUrls = mutableSetOf<String>()
 
@@ -110,13 +100,11 @@ object ImagePreloadManager {
 
     /**
      * 预加载关键图片（前几屏的图片）
+     *
      * @param agents 需要预加载的agents列表
      * @param criticalCount 关键图片数量（前几屏）
      */
-    suspend fun preloadCriticalImages(
-        agents: List<AgentInfo>,
-        criticalCount: Int = 10
-    ) {
+    suspend fun preloadCriticalImages(agents: List<AgentInfo>, criticalCount: Int = 10) {
         if (!isInitialized || imageLoader == null) {
             EasyLog.log("ImagePreloadManager - 未初始化，跳过关键图片预加载", EasyLog.WARN)
             return
@@ -142,7 +130,6 @@ object ImagePreloadManager {
             }
 
             EasyLog.log("ImagePreloadManager - 关键图片预加载完成")
-
         } catch (e: Exception) {
             EasyLog.log("ImagePreloadManager - 关键图片预加载异常: ${e.message}", EasyLog.ERROR)
         }
@@ -150,39 +137,34 @@ object ImagePreloadManager {
 
     /**
      * 使用Coil预加载图片到缓存
+     *
      * @param imageUrls 需要预加载的图片URL列表
      * @param maxConcurrent 最大并发数
      */
-    private suspend fun preloadImagesToCoilCache(
-        imageUrls: List<String>,
-        maxConcurrent: Int = 5
-    ) {
+    private suspend fun preloadImagesToCoilCache(imageUrls: List<String>, maxConcurrent: Int = 5) {
         val loader = imageLoader ?: return
 
         coroutineScope {
             // 分批处理，控制并发数
             imageUrls.chunked(maxConcurrent).forEach { batch ->
-                val deferred = batch.map { imageUrl ->
-                    async {
-                        try {
-                            val request = ImageRequest.Builder(AppEnv.context)
-                                .data(imageUrl)
-                                .build()
+                val deferred =
+                    batch.map { imageUrl ->
+                        async {
+                            try {
+                                val request =
+                                    ImageRequest.Builder(AppEnv.context).data(imageUrl).build()
 
-                            // 执行预加载，图片会被缓存到Coil的内存和磁盘缓存中
-                            loader.execute(request)
-                            EasyLog.log(
-                                "ImagePreloadManager - 预加载成功: $imageUrl",
-                                EasyLog.DEBUG
-                            )
-                        } catch (e: Exception) {
-                            EasyLog.log(
-                                "ImagePreloadManager - 预加载失败: $imageUrl, 错误: ${e.message}",
-                                EasyLog.WARN
-                            )
+                                // 执行预加载，图片会被缓存到Coil的内存和磁盘缓存中
+                                loader.execute(request)
+                                EasyLog.log("ImagePreloadManager - 预加载成功: $imageUrl", EasyLog.DEBUG)
+                            } catch (e: Exception) {
+                                EasyLog.log(
+                                    "ImagePreloadManager - 预加载失败: $imageUrl, 错误: ${e.message}",
+                                    EasyLog.WARN,
+                                )
+                            }
                         }
                     }
-                }
 
                 // 等待当前批次完成
                 deferred.forEach { it.await() }
@@ -192,6 +174,7 @@ object ImagePreloadManager {
 
     /**
      * 预加载单个图片到Coil缓存
+     *
      * @param imageUrl 图片URL
      */
     suspend fun preloadSingleImage(imageUrl: String) {
@@ -202,39 +185,33 @@ object ImagePreloadManager {
         try {
             withContext(Dispatchers.IO) {
                 val loader = imageLoader!!
-                val request = ImageRequest.Builder(AppEnv.context)
-                    .data(imageUrl)
-                    .build()
+                val request = ImageRequest.Builder(AppEnv.context).data(imageUrl).build()
 
                 loader.execute(request)
                 EasyLog.log("ImagePreloadManager - 单图片预加载成功: $imageUrl", EasyLog.DEBUG)
             }
         } catch (e: Exception) {
-            EasyLog.log(
-                "ImagePreloadManager - 单图片预加载失败: $imageUrl, 错误: ${e.message}",
-                EasyLog.WARN
-            )
+            EasyLog.log("ImagePreloadManager - 单图片预加载失败: $imageUrl, 错误: ${e.message}", EasyLog.WARN)
         }
     }
 
-    /**
-     * 获取预加载状态
-     */
+    /** 获取预加载状态 */
     fun isInitialized(): Boolean {
         return isInitialized
     }
-
 }
 
 /**
- * 使用cdn自动裁剪图片的示例
- * 原图url是 https://images.sxwl.dev/inty-static/backgrounds/user-01JWZ34Y4D1C92GD86A5R6EWYJ/b4cb39bfe2fc4a92aec3bd406cc2ebaa/1758095758195/sample_0.jpg
- * 拼接/cdn-cgi/image/quality=75/后 https://images.sxwl.dev/cdn-cgi/image/quality=75/inty-static/backgrounds/user-01JWZ34Y4D1C92GD86A5R6EWYJ/b4cb39bfe2fc4a92aec3bd406cc2ebaa/1758095758195/sample_0.jpg
+ * 使用cdn自动裁剪图片的示例 原图url是
+ * https://images.sxwl.dev/inty-static/backgrounds/user-01JWZ34Y4D1C92GD86A5R6EWYJ/b4cb39bfe2fc4a92aec3bd406cc2ebaa/1758095758195/sample_0.jpg
+ * 拼接/cdn-cgi/image/quality=75/后
+ * https://images.sxwl.dev/cdn-cgi/image/quality=75/inty-static/backgrounds/user-01JWZ34Y4D1C92GD86A5R6EWYJ/b4cb39bfe2fc4a92aec3bd406cc2ebaa/1758095758195/sample_0.jpg
  * 也可以是/cdn-cgi/image/width=720,quality=75,format=webp/这样（目前webp转化不生效）
  */
 
 /**
  * 获取cdn裁剪图片的url
+ *
  * @param originUrl 原始图片url
  * @param width 需要的宽度
  * @param quality 需要的图片质量 默认75%的原图质量
@@ -244,14 +221,14 @@ fun getCdnImageUrl(originUrl: String?, width: Int = 1080, quality: Int = 75): St
     originUrl ?: return null
     return when {
         originUrl.contains("/cdn-cgi/image/") -> originUrl
-        //google gsc原图，这个url不支持拼接cdn访问
+        // google gsc原图，这个url不支持拼接cdn访问
         originUrl.startsWith("https://storage.googleapis.com") -> originUrl
 
         originUrl.contains("/inty-static") -> {
             originUrl.replace(
                 "/inty-static",
                 "/cdn-cgi/image/width=$width,quality=$quality/inty-static",
-                ignoreCase = true
+                ignoreCase = true,
             )
         }
 

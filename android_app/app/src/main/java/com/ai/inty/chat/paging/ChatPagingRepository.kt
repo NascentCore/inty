@@ -9,10 +9,7 @@ import com.inty.utils.log.EasyLog
 import com.inty.utils.storage.IntySetting
 import kotlinx.coroutines.flow.Flow
 
-/**
- * Chat页面的Paging数据仓库
- * 负责管理聊天agents的Paging数据流、配置和传统数据请求
- */
+/** Chat页面的Paging数据仓库 负责管理聊天agents的Paging数据流、配置和传统数据请求 */
 class ChatPagingRepository {
 
     companion object {
@@ -24,47 +21,41 @@ class ChatPagingRepository {
 
     /**
      * 获取聊天agents的Paging数据流
+     *
      * @param useCache 是否使用缓存数据
      * @param sortSeed 排序种子，用于刷新时改变排序
      */
     private fun getChatAgentsFlow(
         useCache: Boolean = true,
-        sortSeed: Int = IntySetting.randomSortSeed()
+        sortSeed: Int = IntySetting.randomSortSeed(),
     ): Flow<PagingData<AgentInfo>> {
         EasyLog.log("ChatPagingRepository - 创建Paging数据流，useCache: $useCache, sortSeed: $sortSeed")
 
         return Pager(
-            config = PagingConfig(
-                pageSize = PAGE_SIZE,
-                prefetchDistance = PREFETCH_DISTANCE,
-                enablePlaceholders = ENABLE_PLACEHOLDERS,
-                initialLoadSize = PAGE_SIZE
-            ),
-            pagingSourceFactory = {
-                ChatPagingSource(
-                    useCache = useCache,
-                    sortSeed = sortSeed
-                )
-            }
-        ).flow
+                config =
+                    PagingConfig(
+                        pageSize = PAGE_SIZE,
+                        prefetchDistance = PREFETCH_DISTANCE,
+                        enablePlaceholders = ENABLE_PLACEHOLDERS,
+                        initialLoadSize = PAGE_SIZE,
+                    ),
+                pagingSourceFactory = { ChatPagingSource(useCache = useCache, sortSeed = sortSeed) },
+            )
+            .flow
     }
 
-    /**
-     * 刷新数据（生成新的排序种子）
-     */
+    /** 刷新数据（生成新的排序种子） */
     fun refreshChatAgents(): Flow<PagingData<AgentInfo>> {
         val newSortSeed = IntySetting.randomSortSeed()
         EasyLog.log("ChatPagingRepository - 刷新数据，新randomSortSeed: $newSortSeed")
 
         return getChatAgentsFlow(
             useCache = false, // 刷新时不使用缓存
-            sortSeed = newSortSeed
+            sortSeed = newSortSeed,
         )
     }
 
-    /**
-     * 获取初始数据（优先使用缓存）
-     */
+    /** 获取初始数据（优先使用缓存） */
     fun getInitialChatAgents(): Flow<PagingData<AgentInfo>> {
         return getChatAgentsFlow(useCache = true)
     }

@@ -2,21 +2,21 @@
 
 ## Proposed architecture
 
-* worker-comfyui endpoint
-* attached network volume with all models, loras and other data items
-* Use cpu pod to download models to correct path on network volume
+- worker-comfyui endpoint
+- attached network volume with all models, loras and other data items
+- Use cpu pod to download models to correct path on network volume
 
 Verification:
 
-* Use the default template with [workflow_sd3.json](https://github.com/runpod-workers/worker-comfyui/blob/main/test_resources/workflows/workflow_sd3.json)
-* Created [library_night_seductive_api.json](./experimental/comfyui/library_night_seductive_api.json)
+- Use the default template with [workflow_sd3.json](https://github.com/runpod-workers/worker-comfyui/blob/main/test_resources/workflows/workflow_sd3.json)
+- Created [library_night_seductive_api.json](./experimental/comfyui/library_night_seductive_api.json)
   based on [civitai](https://civitai.com/images/86482829)
-* Worker image cannot be run on pod
-* Launch comfyui pod on runpod
-* Attach network volume to `/runpod-volume` (required by worker image)
-* Open comfyui webui, open terminal, download extra models
-  * As required by the workflow
-  * Open workflow on civitai, find the model download link, and download with `curl`:
+- Worker image cannot be run on pod
+- Launch comfyui pod on runpod
+- Attach network volume to `/runpod-volume` (required by worker image)
+- Open comfyui webui, open terminal, download extra models
+  - As required by the workflow
+  - Open workflow on civitai, find the model download link, and download with `curl`:
 
     ```bash
     cd /workspace/comfyui/models/checkpoints
@@ -25,28 +25,27 @@ Verification:
         "https://civitai.com/api/download/models/1761560?type=Model&format=SafeTensor&size=pruned&fp=fp16&Token=<your-token>"
     ```
 
-    [download with curl](
-      https://stackoverflow.com/questions/6881034/curl-to-grab-remote-filename-after-following-location)
+    [download with curl](https://stackoverflow.com/questions/6881034/curl-to-grab-remote-filename-after-following-location)
 
 ## Demos
 
-* [runpod_serverless_endpoint_comfyui_sd3](./runpod_serverless_endpoint_comfyui_sd3.py):
+- [runpod_serverless_endpoint_comfyui_sd3](./runpod_serverless_endpoint_comfyui_sd3.py):
   shows how to make request to runpod comfyui serverless endpoint.
   It writes output images to local png files.
 
 ## Sample workflows
 
-* [civitai link](https://civitai.com/images/86482829)
-  * [workflow.json](workflow.json)
-  * [workflow_advanced.json](workflow_advanced.json)
+- [civitai link](https://civitai.com/images/86482829)
+  - [workflow.json](workflow.json)
+  - [workflow_advanced.json](workflow_advanced.json)
 
 ## Pointers
 
-* [Runpod worker comfyui testing](https://github.com/runpod-workers/worker-comfyui/blob/main/docs/development.md#local-api)
-* ComfyUI-Manager
-  * Config file path: ComfyUI/user/default/ComfyUI-Manager/config.ini
-* [Wiki](https://comfyui-wiki.com/en)
-* Installing comfyui, there is multiple options, use `comfy-cli`, which seems most reliable
+- [Runpod worker comfyui testing](https://github.com/runpod-workers/worker-comfyui/blob/main/docs/development.md#local-api)
+- ComfyUI-Manager
+  - Config file path: ComfyUI/user/default/ComfyUI-Manager/config.ini
+- [Wiki](https://comfyui-wiki.com/en)
+- Installing comfyui, there is multiple options, use `comfy-cli`, which seems most reliable
 
   ```bash
   mkdir comfyui # Or another dir as the parent dir to install comfyui
@@ -57,35 +56,35 @@ Verification:
   comfy install # Install comfyui and comfyui-manager
   ```
 
-* [base_api_example.py](./basic_api_example.py) showcases caching.
+- [base_api_example.py](./basic_api_example.py) showcases caching.
   The same prompt will instantly return the saved image.
 
 ## Key concepts
 
-* **Nodes:** Individual functions (e.g., Load Checkpoint, KSampler) that are the building blocks of a workflow.
-* **Workflows:** A graph or flowchart of connected nodes that defines the entire image generation process.
-* **Procedural:** The process is broken down into a series of visual, sequential steps.
-* **Modular:** Nodes can be easily swapped in and out to change the pipeline.
-* **Data Flow:** Information (e.g., latent images, text prompts) travels from one node's output to another's input.
-* **Execution Caching:** Only nodes with changed inputs or parameters are re-run, saving time and resources.
-* **Customization:** The ability to add new functionality through community-made custom nodes.
-* **Workflows in PNGs:** The entire workflow metadata is saved directly within the generated image file, allowing for easy sharing.
+- **Nodes:** Individual functions (e.g., Load Checkpoint, KSampler) that are the building blocks of a workflow.
+- **Workflows:** A graph or flowchart of connected nodes that defines the entire image generation process.
+- **Procedural:** The process is broken down into a series of visual, sequential steps.
+- **Modular:** Nodes can be easily swapped in and out to change the pipeline.
+- **Data Flow:** Information (e.g., latent images, text prompts) travels from one node's output to another's input.
+- **Execution Caching:** Only nodes with changed inputs or parameters are re-run, saving time and resources.
+- **Customization:** The ability to add new functionality through community-made custom nodes.
+- **Workflows in PNGs:** The entire workflow metadata is saved directly within the generated image file, allowing for easy sharing.
 
 ## Saving Images from ComfyUI
 
 ### Automatic Saving
 
-* Images are automatically saved to `ComfyUI/output/` directory
+- Images are automatically saved to `ComfyUI/output/` directory
 
-* Filenames include timestamps and workflow information
-* Parameters are embedded in PNG metadata
+- Filenames include timestamps and workflow information
+- Parameters are embedded in PNG metadata
 
 ### Manual Saving
 
-* Right-click on generated image in ComfyUI
+- Right-click on generated image in ComfyUI
 
-* Select "Save Image"
-* Choose your desired location
+- Select "Save Image"
+- Choose your desired location
 
 ## Using Images in Automatic1111
 

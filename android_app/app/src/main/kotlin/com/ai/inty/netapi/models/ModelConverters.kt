@@ -3,14 +3,9 @@ package com.ai.inty.netapi.models
 import com.ai.inty.beans.UserProfile
 import com.inty.api.models.api.v1.users.profile.User as IntyUser
 
-/**
- * 数据模型转换工具
- * 将Inty SDK的模型转换为业务层模型
- */
+/** 数据模型转换工具 将Inty SDK的模型转换为业务层模型 */
 
-/**
- * 将Inty SDK的User对象转换为UserProfile对象
- */
+/** 将Inty SDK的User对象转换为UserProfile对象 */
 fun IntyUser.toUserProfile(): UserProfile {
     return UserProfile(
         id = this.id(),
@@ -31,6 +26,6 @@ fun IntyUser.toUserProfile(): UserProfile {
         publicAgentsCount = this.publicAgentsCount()?.toInt() ?: 0,
         totalAgentsFollows = this.totalPublicAgentsFollows()?.toInt() ?: 0,
         followerCount = this.followersCount()?.toInt() ?: 0,
-        connectorCount = this.connectorCount()?.toInt() ?: 0
+        connectorCount = this.connectorCount()?.toInt() ?: 0,
     )
 }

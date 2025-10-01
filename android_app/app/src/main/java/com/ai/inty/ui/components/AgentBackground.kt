@@ -29,11 +29,7 @@ import com.ai.inty.beans.AgentInfo
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
-
-/**
- * 通用角色背景组件
- * 可用于聊天页面、角色主页等需要角色背景的地方
- */
+/** 通用角色背景组件 可用于聊天页面、角色主页等需要角色背景的地方 */
 @Composable
 fun AgentBackground(
     agentInfo: AgentInfo?,
@@ -43,12 +39,8 @@ fun AgentBackground(
     val density = LocalDensity.current
     val configuration = LocalConfiguration.current
 
-    var imageWidthDp by remember {
-        mutableIntStateOf(configuration.screenWidthDp)
-    }
-    var imageHeightDp by remember {
-        mutableIntStateOf(configuration.screenHeightDp)
-    }
+    var imageWidthDp by remember { mutableIntStateOf(configuration.screenWidthDp) }
+    var imageHeightDp by remember { mutableIntStateOf(configuration.screenHeightDp) }
 
     if (configuration.screenWidthDp > imageWidthDp) {
         imageWidthDp = configuration.screenWidthDp
@@ -65,12 +57,17 @@ fun AgentBackground(
     val currentImageWidth = imageWidth
     val currentImageHeight = imageHeight
     val optimalContentScale =
-        if (currentImageWidth != null && currentImageHeight != null && currentImageWidth > 0 && currentImageHeight > 0) {
+        if (
+            currentImageWidth != null &&
+                currentImageHeight != null &&
+                currentImageWidth > 0 &&
+                currentImageHeight > 0
+        ) {
             calculateOptimalContentScale(
                 containerWidth = imageWidthDp,
                 containerHeight = imageHeightDp,
                 imageWidth = currentImageWidth,
-                imageHeight = currentImageHeight
+                imageHeight = currentImageHeight,
             )
         } else {
             ContentScale.Crop // 默认值，当图片尺寸未知时
@@ -78,21 +75,16 @@ fun AgentBackground(
 
     Box(modifier = modifier) {
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState(), false)
-                .onSizeChanged {
-                    val newHeight = with(density) {
-                        it.height.toDp().value.roundToInt()
-                    }
+            modifier =
+                Modifier.fillMaxSize().verticalScroll(rememberScrollState(), false).onSizeChanged {
+                    val newHeight = with(density) { it.height.toDp().value.roundToInt() }
                     if (newHeight > imageHeightDp) {
                         imageHeightDp = newHeight
                     }
                 }
         ) {
             IntyImage(
-                modifier = Modifier
-                    .size(imageWidthDp.dp, imageHeightDp.dp),
+                modifier = Modifier.size(imageWidthDp.dp, imageHeightDp.dp),
                 model = agentInfo?.getAlbumImage(),
                 alignment = Alignment.TopCenter,
                 contentScale = optimalContentScale,
@@ -101,7 +93,7 @@ fun AgentBackground(
                     val drawable = state.painter
                     imageWidth = drawable.intrinsicSize.width.toInt()
                     imageHeight = drawable.intrinsicSize.height.toInt()
-                }
+                },
             )
         }
 
@@ -110,37 +102,28 @@ fun AgentBackground(
             // 顶部渐变遮罩 - 固定位置
             val colors = listOf(Color(0xFF000000), Color(0x00000000))
             Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(120.dp)
-                    .background(
-                        brush = Brush.verticalGradient(colors),
-                    )
+                modifier =
+                    Modifier.fillMaxWidth()
+                        .height(120.dp)
+                        .background(brush = Brush.verticalGradient(colors))
             )
 
             // 底部渐变遮罩 - 固定位置
-            val bottomColors = listOf(
-                Color(0x001C1523),
-                Color(0xFF1C1523)
-            )
+            val bottomColors = listOf(Color(0x001C1523), Color(0xFF1C1523))
             Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(300.dp)
-                    .background(
-                        brush = Brush.verticalGradient(bottomColors),
-                    )
-                    .align(Alignment.BottomCenter)
+                modifier =
+                    Modifier.fillMaxWidth()
+                        .height(300.dp)
+                        .background(brush = Brush.verticalGradient(bottomColors))
+                        .align(Alignment.BottomCenter)
             )
         }
     }
 }
 
-
 /**
- * 根据容器和图片的宽高比计算最佳的 ContentScale
- * 只支持人像模式屏幕显示，即尽量不留左右两侧空白。
- * 当容器高宽比大于图片高宽比时，使用 FillHeight 填充高度，否则使用 FillWidth 填充宽度。
+ * 根据容器和图片的宽高比计算最佳的 ContentScale 只支持人像模式屏幕显示，即尽量不留左右两侧空白。 当容器高宽比大于图片高宽比时，使用 FillHeight 填充高度，否则使用
+ * FillWidth 填充宽度。
  *
  * @param containerWidth 容器宽度（dp）
  * @param containerHeight 容器高度（dp）
@@ -152,7 +135,7 @@ fun calculateOptimalContentScale(
     containerWidth: Int,
     containerHeight: Int,
     imageWidth: Int,
-    imageHeight: Int
+    imageHeight: Int,
 ): ContentScale {
     val screenAspectRatio = containerWidth.toFloat() / containerHeight.toFloat()
     val imageAspectRatio = imageWidth.toFloat() / imageHeight.toFloat()

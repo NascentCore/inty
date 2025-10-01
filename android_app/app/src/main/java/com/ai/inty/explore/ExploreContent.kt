@@ -41,9 +41,7 @@ import com.ai.inty.ui.components.ShimmerPlaceholder
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 
-/**
- * Explore页面的主要内容组件
- */
+/** Explore页面的主要内容组件 */
 @Composable
 fun ExploreContent(
     modifier: Modifier = Modifier,
@@ -51,15 +49,16 @@ fun ExploreContent(
     innerPadding: PaddingValues,
     onClickAgent: (AgentInfo) -> Unit,
     isRefreshing: Boolean = false,
-    onRetry: (() -> Unit)? = null
+    onRetry: (() -> Unit)? = null,
 ) {
     val lazyPagingItems = agentsFlow?.collectAsLazyPagingItems()
     val vm: ExploreViewModel = viewModel()
 
-    val gridState = rememberLazyStaggeredGridState(
-        initialFirstVisibleItemIndex = vm.savedFirstVisibleIndex.value,
-        initialFirstVisibleItemScrollOffset = vm.savedFirstVisibleOffset.value
-    )
+    val gridState =
+        rememberLazyStaggeredGridState(
+            initialFirstVisibleItemIndex = vm.savedFirstVisibleIndex.value,
+            initialFirstVisibleItemScrollOffset = vm.savedFirstVisibleOffset.value,
+        )
 
     // 检测用户是否主动滚动到底部触发加载更多
     var showLoadMoreLoading by remember { mutableStateOf(false) }
@@ -83,9 +82,10 @@ fun ExploreContent(
             val currentTime = System.currentTimeMillis()
             // 关键修复：只有在用户主动滚动且不是首次加载时才显示loading
             // 首次进入时使用缓存数据，不应该显示加载更多loading
-            if (currentTime - lastScrollTime < 1000 &&
-                lazyPagingItems.itemCount > 0 &&
-                lazyPagingItems.loadState.refresh is LoadState.NotLoading
+            if (
+                currentTime - lastScrollTime < 1000 &&
+                    lazyPagingItems.itemCount > 0 &&
+                    lazyPagingItems.loadState.refresh is LoadState.NotLoading
             ) {
                 showLoadMoreLoading = true
                 // 延迟隐藏loading
@@ -103,7 +103,7 @@ fun ExploreContent(
             // 滚动停止时保存位置
             vm.saveScrollPosition(
                 gridState.firstVisibleItemIndex,
-                gridState.firstVisibleItemScrollOffset
+                gridState.firstVisibleItemScrollOffset,
             )
         }
     }
@@ -115,13 +115,13 @@ fun ExploreContent(
     if (loadState is LoadState.Error && lazyPagingItems.itemCount == 0) {
         NetworkErrorState(
             onRetry = onRetry ?: { lazyPagingItems.retry() },
-            modifier = modifier.fillMaxSize()
+            modifier = modifier.fillMaxSize(),
         )
     } else if (loadState is LoadState.NotLoading && lazyPagingItems.itemCount == 0) {
         // 如果没有数据且加载完成，显示空数据状态
         EmptyDataState(
             subtitle = stringResource(com.ai.inty.R.string.empty_explore_data),
-            modifier = modifier.fillMaxSize()
+            modifier = modifier.fillMaxSize(),
         )
     } else {
         LazyVerticalStaggeredGrid(
@@ -134,35 +134,34 @@ fun ExploreContent(
         ) {
             // 如果没有Paging数据，显示加载状态
             if (lazyPagingItems == null) {
-                item(span = StaggeredGridItemSpan.FullLine) {
-                    EmptyStateIndicator()
-                }
+                item(span = StaggeredGridItemSpan.FullLine) { EmptyStateIndicator() }
             } else {
                 // 使用Paging的items
                 items(
                     count = lazyPagingItems.itemCount,
-                    key = lazyPagingItems.itemKey { agent ->
-                        // 确保key的唯一性，避免空id导致的重复key问题
-                        agent.id.ifEmpty {
-                            // 如果id为空，使用其他字段组合生成唯一key
-                            "${agent.name}_${agent.avatar}_${agent.createdAt}"
-                        }
-                    }
+                    key =
+                        lazyPagingItems.itemKey { agent ->
+                            // 确保key的唯一性，避免空id导致的重复key问题
+                            agent.id.ifEmpty {
+                                // 如果id为空，使用其他字段组合生成唯一key
+                                "${agent.name}_${agent.avatar}_${agent.createdAt}"
+                            }
+                        },
                 ) { index ->
                     val agent = lazyPagingItems[index]
                     if (agent != null) {
                         ExploreCharacterCard(
                             modifier = Modifier.fillMaxWidth(),
                             agentInfo = agent,
-                            onClick = { onClickAgent(agent) }
+                            onClick = { onClickAgent(agent) },
                         )
                     } else {
                         // 显示加载占位符
                         ShimmerPlaceholder(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(200.dp)
-                                .clip(RoundedCornerShape(8.dp))
+                            modifier =
+                                Modifier.fillMaxWidth()
+                                    .height(200.dp)
+                                    .clip(RoundedCornerShape(8.dp))
                         )
                     }
                 }
@@ -173,27 +172,15 @@ fun ExploreContent(
                 }
             }
 
-            item {
-                Spacer(Modifier.height(16.dp))
-            }
+            item { Spacer(Modifier.height(16.dp)) }
         }
     }
 }
 
-/**
- * 空状态指示器
- */
+/** 空状态指示器 */
 @Composable
 private fun EmptyStateIndicator() {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .height(200.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        CircularProgressIndicator(
-            modifier = Modifier.size(24.dp),
-            color = Color.White.copy(0.7f)
-        )
+    Box(modifier = Modifier.fillMaxSize().height(200.dp), contentAlignment = Alignment.Center) {
+        CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White.copy(0.7f))
     }
 }

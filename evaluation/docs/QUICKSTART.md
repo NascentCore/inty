@@ -6,7 +6,7 @@
 ✅ **API 端点就绪** - 所有评测API已实现并注册  
 ✅ **数据模型完整** - 数据库模型和迁移文件已创建  
 ✅ **现有API集成** - 复用现有的聊天和智能体API  
-⚠️ **前端需构建** - React/TypeScript代码需要构建才能运行  
+⚠️ **前端需构建** - React/TypeScript代码需要构建才能运行
 
 ## 🔧 立即开始
 
@@ -22,6 +22,7 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 打开浏览器访问：**http://localhost:8000/static/evaluation/simple.html**
 
 这个页面提供：
+
 - ✅ API 连通性测试
 - ✅ 完整的 API 文档链接
 - ✅ 开发指导信息
@@ -42,7 +43,7 @@ python app/static/evaluation/test_integration.py
 ## 📖 重要链接
 
 - **🎮 测试页面**: http://localhost:8000/static/evaluation/simple.html
-- **📖 API 文档**: http://localhost:8000/docs  
+- **📖 API 文档**: http://localhost:8000/docs
 - **❤️ 健康检查**: http://localhost:8000/
 - **📚 完整文档**: [README.md](./README.md)
 
@@ -59,6 +60,7 @@ python app/static/evaluation/test_integration.py
 当前前端是完整的 React + TypeScript 代码，支持现代化开发：
 
 ### 快速启动 (推荐)
+
 ```bash
 cd app/static/evaluation
 
@@ -71,7 +73,8 @@ cd app/static/evaluation
 
 **⚡ 立即访问**: http://localhost:3000
 
-**🔧 当前状态**: 
+**🔧 当前状态**:
+
 - ✅ API路径重复问题已彻底修复
 - ✅ 前端开发服务器运行正常 (http://localhost:3000)
 - ✅ 前端API代理连接正常 (/api → http://localhost:8000/api)
@@ -82,6 +85,7 @@ cd app/static/evaluation
 - ✅ 所有功能现在完全可用并稳定
 
 ### 手动构建
+
 ```bash
 cd app/static/evaluation
 
@@ -99,6 +103,7 @@ npm run preview  # http://localhost:4173
 ```
 
 ### 环境要求
+
 - Node.js 16+ (当前: $(node --version))
 - npm 8+ (当前: $(npm --version))
 
@@ -109,11 +114,13 @@ npm run preview  # http://localhost:4173
 评测系统使用**自动游客认证**，无需手动配置token：
 
 ### 自动认证流程
+
 1. **首次访问**: 前端自动创建游客用户并获取token
 2. **后续使用**: token自动保存在localStorage中，持续使用
 3. **侧边栏显示**: 可查看当前认证状态和用户ID
 
 ### 手动测试认证
+
 ```bash
 # 测试游客认证API
 curl -X POST http://localhost:8000/api/v1/auth/guest \
@@ -126,6 +133,7 @@ curl -H "Authorization: Bearer YOUR_TOKEN" \
 ```
 
 ### 认证测试页面
+
 - **测试页面**: http://localhost:8000/static/evaluation/test-auth.html
 - **功能**: 手动测试游客认证和API调用
 
@@ -134,20 +142,25 @@ curl -H "Authorization: Bearer YOUR_TOKEN" \
 ## 🆘 故障排除
 
 ### 问题1: 404 - 找不到页面
+
 **解决**: 确保访问 `/static/evaluation/simple.html` 而不是 `/static/evaluation/index.html`
 
-### 问题2: API 调用失败  
+### 问题2: API 调用失败
+
 **解决**: 检查后端服务是否正常运行在 8000 端口
 
 ### 问题3: 数据库错误
+
 **解决**: 运行 `alembic upgrade head` 进行数据库迁移
 
 ### 问题4: 智能体列表为空
+
 **解决**: 确保数据库中有智能体数据，或先创建一些测试智能体
 
 ## 📞 技术支持
 
 如有问题，请检查：
+
 1. 后端服务日志
 2. 浏览器控制台错误
 3. API 文档 (http://localhost:8000/docs)

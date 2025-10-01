@@ -75,13 +75,13 @@ git push
    ```bash
    git clone git@github.com:NascentCore/inty-backend.git
    cd inty-backend
-  
+
    # 拷贝 config.yaml 文件到代码库顶层目录下
    # 拷贝 cosmic-gizmo-424300-t1-6499a9d5bd94.json inty-firebase-key.json inty-backend-key.json
    # 这三个文件到代码库顶层目录下 .secrets/ 目录下
    # 然后运行下面的命令，服务在 http://localhost:8000
    docker compose up --build --detach
-  
+
    # 删除所有容器和其挂在的存储卷
    # 数据库存储卷如果不删除，则会使用旧的景象，如果修改了数据库默认数据库，
    # 老得存储卷会导致数据库启动失败
@@ -119,7 +119,6 @@ python scripts/generate_openapi_json.py
 
 <img width="480" height="932" alt="image" src="https://github.com/user-attachments/assets/5ba171a1-c387-404d-9ab2-c81c1c85ef74" />
 
-
 ## 系统架构
 
 ```ascii
@@ -137,7 +136,7 @@ python scripts/generate_openapi_json.py
                   ▼
           ┌──────────────┐   (/api/v1/endpoints/* – auth, users, agents,
           │ API Routers  │    chats, settings, report, subscription, evaluation…)
-          └───────┬──────┘   
+          └───────┬──────┘
                   │
                   ▼
           ┌──────────────────────────────┐
@@ -206,13 +205,13 @@ cp config.yaml.example config.yaml
 
 config.yaml 指明依赖服务的配置选项
 
-* PostgreSQL 12+ (需要 pgvector 扩展)
-* Redis（可选，用于缓存）
-* Google Cloud Storage 账户
-* Google Play
-* Google OAuth
-* JWT 密钥
-* 相关 AI 模型 API 密钥 (OpenRouter ElevenLabs API Key)
+- PostgreSQL 12+ (需要 pgvector 扩展)
+- Redis（可选，用于缓存）
+- Google Cloud Storage 账户
+- Google Play
+- Google OAuth
+- JWT 密钥
+- 相关 AI 模型 API 密钥 (OpenRouter ElevenLabs API Key)
 
 ### 初始化数据库
 
@@ -244,9 +243,9 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 服务器将在 <http://localhost:8000> 运行
 启动服务器后，可以访问以下地址查看 API 文档：
 
-* **Swagger UI**: <http://localhost:8000/docs>
-* **ReDoc**: <http://localhost:8000/redoc>
-* **OpenAPI JSON**: <http://localhost:8000/api/v1/openapi.json>
+- **Swagger UI**: <http://localhost:8000/docs>
+- **ReDoc**: <http://localhost:8000/redoc>
+- **OpenAPI JSON**: <http://localhost:8000/api/v1/openapi.json>
 
 ### 开发
 
@@ -292,19 +291,29 @@ docker run -p 8000:8000 -v $(pwd)/config.yaml:/app/config.yaml inty-backend
 
 ### Firebase 服务账号密钥生成
 
-  1. 进入 Firebase Console：
+1. 进入 Firebase Console：
+
+
     - 访问 <https://console.firebase.google.com/>
     - 选择项目（Inty）
-  2. 生成服务账号密钥：
+
+2. 生成服务账号密钥：
+
+
     - 在项目设置 -> 服务账号 -> 生成新的私钥
     - 下载的文件重命名为：inty-firebase-key.json
 
 ### Google Cloud Storage 服务账号密钥生成
 
-  1. 进入 Google Cloud Console：
+1. 进入 Google Cloud Console：
+
+
     - 访问 <https://console.cloud.google.com/>
     - 选择项目（Inty）
-  2. 创建服务账号（service account）：
+
+2. 创建服务账号（service account）：
+
+
     - 设置 “roles/storage.admin” 角色
     - 点击创建的服务帐号 -> 密钥 -> 创建新密钥
     - 下载的文件重命名为：inty-backend-key.json
@@ -313,36 +322,36 @@ docker run -p 8000:8000 -v $(pwd)/config.yaml:/app/config.yaml inty-backend
 
 ### 🚀 核心框架
 
-* **Python 3.8+** - 编程语言
-* **FastAPI** - 高性能异步 Web 框架
-* **PostgreSQL** - 关系型数据库
-* **SQLAlchemy** - 异步 ORM 框架
-* **Alembic** - 数据库迁移工具
-* **Uvicorn** - ASGI 服务器
+- **Python 3.8+** - 编程语言
+- **FastAPI** - 高性能异步 Web 框架
+- **PostgreSQL** - 关系型数据库
+- **SQLAlchemy** - 异步 ORM 框架
+- **Alembic** - 数据库迁移工具
+- **Uvicorn** - ASGI 服务器
 
 ### 🤖 AI 技术栈
 
-* **LangChain** - AI 应用开发框架
-* **LangGraph** - 智能体状态管理和工作流
-* **OpenRouter API** - GPT 模型集成
-* **Google Gemini API** - Gemini 模型集成
-* **LangMem** - 记忆管理系统
-* **向量数据库** - pgvector 扩展
+- **LangChain** - AI 应用开发框架
+- **LangGraph** - 智能体状态管理和工作流
+- **OpenRouter API** - GPT 模型集成
+- **Google Gemini API** - Gemini 模型集成
+- **LangMem** - 记忆管理系统
+- **向量数据库** - pgvector 扩展
 
 ### 🔐 身份认证
 
-* **JWT** - 令牌认证
-* **Google OAuth** - 第三方登录
-* **Firebase** - 身份验证服务
-* **bcrypt** - 密码哈希
+- **JWT** - 令牌认证
+- **Google OAuth** - 第三方登录
+- **Firebase** - 身份验证服务
+- **bcrypt** - 密码哈希
 
 ### ☁️ 云服务
 
-* **Google Cloud Storage** - 文件存储和语音文件管理
-* **Google Search API** - 搜索功能
-* **Google Play Developer API** - 订阅管理
-* **Firebase Cloud Messaging** - 消息推送
-* **ElevenLabs API** - 高质量语音合成服务
-  * Gemini TTS: [pricing](https://cloud.google.com/text-to-speech/pricing?hl=en)
-    * 同类型的版本和层级 2.5-flash 语音价格按 1M token 计算是 $10（语音）$2.50（文字）
-    * [简单的预估语音生成成本是文字 40 倍](https://g.co/gemini/share/261be14cc60b)
+- **Google Cloud Storage** - 文件存储和语音文件管理
+- **Google Search API** - 搜索功能
+- **Google Play Developer API** - 订阅管理
+- **Firebase Cloud Messaging** - 消息推送
+- **ElevenLabs API** - 高质量语音合成服务
+  - Gemini TTS: [pricing](https://cloud.google.com/text-to-speech/pricing?hl=en)
+    - 同类型的版本和层级 2.5-flash 语音价格按 1M token 计算是 $10（语音）$2.50（文字）
+    - [简单的预估语音生成成本是文字 40 倍](https://g.co/gemini/share/261be14cc60b)

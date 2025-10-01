@@ -21,17 +21,13 @@ import com.inty.utils.log.EasyLog
 import com.therouter.router.Autowired
 import com.therouter.router.Route
 
-/**
- * 私聊的聊天页面
- */
+/** 私聊的聊天页面 */
 @Route(path = Constant.ROUTE_CHAT)
 class ChatActivity : BaseActivity() {
 
-    @Autowired
-    var agent: AgentInfo? = null
+    @Autowired var agent: AgentInfo? = null
 
-    @Autowired
-    var agent_id: String? = null
+    @Autowired var agent_id: String? = null
 
     private val chatViewModel: ChatViewModel by viewModels()
 
@@ -42,9 +38,7 @@ class ChatActivity : BaseActivity() {
         setupUI()
     }
 
-    /**
-     * 设置窗口属性
-     */
+    /** 设置窗口属性 */
     private fun setupWindow() {
         enableEdgeToEdge()
         // 设置状态栏图标为白色（深色主题）
@@ -53,9 +47,7 @@ class ChatActivity : BaseActivity() {
         windowInsetsController.isAppearanceLightStatusBars = false
     }
 
-    /**
-     * 初始化聊天ViewModel
-     */
+    /** 初始化聊天ViewModel */
     private fun initializeChatViewModel() {
         when {
             agent != null -> {
@@ -76,37 +68,32 @@ class ChatActivity : BaseActivity() {
         chatViewModel.updateUserInfo()
     }
 
-    /**
-     * 设置UI
-     */
+    /** 设置UI */
     private fun setupUI() {
         setContent {
             IntyTheme {
                 ChatPage(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(DarkPurple)
-                        .imePadding()
-                        .navigationBarsPadding(),
+                    modifier =
+                        Modifier.fillMaxSize()
+                            .background(DarkPurple)
+                            .imePadding()
+                            .navigationBarsPadding(),
                     chatViewModel = chatViewModel,
                     showBackButton = true,
                     onBack = { finish() },
                 )
             }
         }
-        
+
         // 跟踪ChatActivity页面访问
         val agentId = agent?.id ?: agent_id ?: "unknown"
         FirebaseAnalyticsHelper.trackScreenView(
             screenName = "ChatScreen",
             screenClass = "ChatActivity",
-            additionalParams = mapOf(
-                "agent_id" to agentId,
-                "agent_name" to (agent?.name ?: "unknown")
-            )
+            additionalParams =
+                mapOf("agent_id" to agentId, "agent_name" to (agent?.name ?: "unknown")),
         )
     }
-
 
     override fun onDestroy() {
         super.onDestroy()

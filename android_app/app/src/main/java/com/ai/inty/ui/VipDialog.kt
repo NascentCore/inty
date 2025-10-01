@@ -46,10 +46,7 @@ import androidx.compose.ui.window.DialogProperties
 import com.ai.inty.R
 import com.ai.inty.base.noRippleClickable
 
-/**
- * 解锁更多聊天的拦截弹窗
- */
-
+/** 解锁更多聊天的拦截弹窗 */
 @Composable
 private fun OpenChatDialog(
     isUnlimited: Boolean = false,
@@ -60,18 +57,19 @@ private fun OpenChatDialog(
 ) {
     Dialog(
         onDismissRequest = onCancel,
-        properties = DialogProperties(
-            dismissOnBackPress = false,
-            dismissOnClickOutside = false,
-            usePlatformDefaultWidth = false
-        )
+        properties =
+            DialogProperties(
+                dismissOnBackPress = false,
+                dismissOnClickOutside = false,
+                usePlatformDefaultWidth = false,
+            ),
     ) {
         Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(430.dp)
-                .padding(horizontal = 24.dp)
-                .clip(RoundedCornerShape(8.dp)),
+            modifier =
+                Modifier.fillMaxWidth()
+                    .heightIn(430.dp)
+                    .padding(horizontal = 24.dp)
+                    .clip(RoundedCornerShape(8.dp))
         ) {
             Image(
                 painter = painterResource(dialogData.imageRes),
@@ -80,11 +78,9 @@ private fun OpenChatDialog(
                 modifier = Modifier.matchParentSize(),
             )
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 18.dp, vertical = 16.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.SpaceBetween
+                verticalArrangement = Arrangement.SpaceBetween,
             ) {
                 if (isUnlimited) {
                     Image(
@@ -110,9 +106,7 @@ private fun OpenChatDialog(
                     fontWeight = FontWeight.Normal,
                     color = Color(0x8CFFFFFF),
                     textAlign = TextAlign.Center,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp)
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
                 )
 
                 Spacer(Modifier.height(40.dp))
@@ -133,28 +127,18 @@ private fun OpenChatDialog(
                     fontWeight = FontWeight.Normal,
                     color = Color(0x59FFFFFF),
                     textAlign = TextAlign.Center,
-                    modifier = Modifier.noRippleClickable(onClick = onMoreInfo)
+                    modifier = Modifier.noRippleClickable(onClick = onMoreInfo),
                 )
             }
             IconButton(onClick = onCancel, Modifier.align(Alignment.TopEnd)) {
-                Image(
-                    painter = painterResource(R.drawable.close),
-                    contentDescription = "",
-                )
+                Image(painter = painterResource(R.drawable.close), contentDescription = "")
             }
         }
     }
 }
 
-/**
- * 弹窗内容信息
- */
-internal data class ChatDialogData(
-    val imageRes: Int,
-    val content: String,
-    val btnText: String,
-)
-
+/** 弹窗内容信息 */
+internal data class ChatDialogData(val imageRes: Int, val content: String, val btnText: String)
 
 @Composable
 internal fun UnlimitChatDialog(
@@ -169,14 +153,14 @@ internal fun UnlimitChatDialog(
 @Preview
 @Composable
 private fun PreviewUnlimitChatDialog() {
-    val data = ChatDialogData(
-        R.drawable.img_unlimit_dialog_bg,
-        stringResource(R.string.str_unlimit_dialog_content),
-        stringResource(R.string.str_unlimit_btn_text)
-    )
+    val data =
+        ChatDialogData(
+            R.drawable.img_unlimit_dialog_bg,
+            stringResource(R.string.str_unlimit_dialog_content),
+            stringResource(R.string.str_unlimit_btn_text),
+        )
     UnlimitChatDialog(data)
 }
-
 
 @Composable
 internal fun AdvancedModelChatDialog(
@@ -191,11 +175,12 @@ internal fun AdvancedModelChatDialog(
 @Preview
 @Composable
 private fun PreviewAdvancedModelChatDialog() {
-    val data = ChatDialogData(
-        R.drawable.img_advanced_model_dialog_bg,
-        stringResource(R.string.str_premium_mode_dialog_content),
-        stringResource(R.string.settings_premium_model)
-    )
+    val data =
+        ChatDialogData(
+            R.drawable.img_advanced_model_dialog_bg,
+            stringResource(R.string.str_premium_mode_dialog_content),
+            stringResource(R.string.settings_premium_model),
+        )
     AdvancedModelChatDialog(data)
 }
 
@@ -212,37 +197,32 @@ internal fun PremiumChatDialog(
 @Preview
 @Composable
 private fun PreviewPremiumChatDialog() {
-    val data = ChatDialogData(
-        R.drawable.img_premium_dialog_bg,
-        stringResource(R.string.str_premium_chat_dialog_content),
-        stringResource(R.string.str_beeter_ai_responeses)
-    )
+    val data =
+        ChatDialogData(
+            R.drawable.img_premium_dialog_bg,
+            stringResource(R.string.str_premium_chat_dialog_content),
+            stringResource(R.string.str_beeter_ai_responeses),
+        )
     PremiumChatDialog(data)
 }
 
 @Composable
-internal fun HeartPrimaryButton(
-    btnText: String,
-    enable: Boolean = true,
-    onClick: () -> Unit = {},
-) {
+internal fun HeartPrimaryButton(btnText: String, enable: Boolean = true, onClick: () -> Unit = {}) {
 
     Box(
-        modifier = Modifier
-            .fillMaxWidth(.95f)
-            .height(50.dp)
-            .clip(RoundedCornerShape(25.dp))
-            .alpha(if (enable) 1f else .4f)
-            .background(
-                brush = Brush.horizontalGradient(
-                    colors = listOf(
-                        Color(0xFFC122FF),
-                        Color(0xFFFF905D),
-                    )
+        modifier =
+            Modifier.fillMaxWidth(.95f)
+                .height(50.dp)
+                .clip(RoundedCornerShape(25.dp))
+                .alpha(if (enable) 1f else .4f)
+                .background(
+                    brush =
+                        Brush.horizontalGradient(
+                            colors = listOf(Color(0xFFC122FF), Color(0xFFFF905D))
+                        )
                 )
-            )
-            .clickable(enabled = enable, onClick = onClick),
-        contentAlignment = Alignment.Center
+                .clickable(enabled = enable, onClick = onClick),
+        contentAlignment = Alignment.Center,
     ) {
         Text(
             text = btnText,
@@ -255,26 +235,17 @@ internal fun HeartPrimaryButton(
     }
 }
 
-
-/**
- * 购买会员成功的弹窗
- */
+/** 购买会员成功的弹窗 */
 @Preview
 @Composable
 internal fun BePremiumDialog(onDismiss: () -> Unit = {}) {
     Dialog(onDismissRequest = onDismiss) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = 300.dp)
-                .padding(vertical = 20.dp),
+            modifier = Modifier.fillMaxWidth().heightIn(min = 300.dp).padding(vertical = 20.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+            verticalArrangement = Arrangement.Center,
         ) {
-            Image(
-                painter = painterResource(R.drawable.img_king_premium),
-                contentDescription = "",
-            )
+            Image(painter = painterResource(R.drawable.img_king_premium), contentDescription = "")
             Spacer(Modifier.height(30.dp))
             Text(
                 text = stringResource(R.string.become_a_premium),
@@ -287,9 +258,7 @@ internal fun BePremiumDialog(onDismiss: () -> Unit = {}) {
     }
 }
 
-/**
- * 会员过期的弹窗提醒
- */
+/** 会员过期的弹窗提醒 */
 @Composable
 internal fun ExpiredVipDialog(
     dialogData: ChatDialogData,
@@ -298,11 +267,12 @@ internal fun ExpiredVipDialog(
 ) {
     Dialog(
         onDismissRequest = onCancel,
-        properties = DialogProperties(
-            dismissOnBackPress = false,
-            dismissOnClickOutside = false,
-            usePlatformDefaultWidth = true
-        )
+        properties =
+            DialogProperties(
+                dismissOnBackPress = false,
+                dismissOnClickOutside = false,
+                usePlatformDefaultWidth = true,
+            ),
     ) {
         Box(modifier = Modifier.clip(RoundedCornerShape(20.dp))) {
             Image(
@@ -312,12 +282,9 @@ internal fun ExpiredVipDialog(
                 modifier = Modifier.matchParentSize(),
             )
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 18.dp, vertical = 16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-
                 Image(
                     painter = painterResource(R.drawable.img_king_premium),
                     contentDescription = "",
@@ -350,14 +317,11 @@ internal fun ExpiredVipDialog(
                     fontWeight = FontWeight.Normal,
                     color = Color(0x59FFFFFF),
                     textAlign = TextAlign.Center,
-                    modifier = Modifier.noRippleClickable(onClick = onCancel)
+                    modifier = Modifier.noRippleClickable(onClick = onCancel),
                 )
             }
             IconButton(onClick = onCancel, Modifier.align(Alignment.TopEnd)) {
-                Image(
-                    painter = painterResource(R.drawable.close),
-                    contentDescription = "",
-                )
+                Image(painter = painterResource(R.drawable.close), contentDescription = "")
             }
         }
     }
@@ -366,14 +330,14 @@ internal fun ExpiredVipDialog(
 @Preview
 @Composable
 private fun PreviewExpiredVipDialog() {
-    val data = ChatDialogData(
-        R.drawable.img_unlimit_dialog_bg,
-        stringResource(R.string.str_expired_vip_dialog_content),
-        stringResource(R.string.subscribe)
-    )
+    val data =
+        ChatDialogData(
+            R.drawable.img_unlimit_dialog_bg,
+            stringResource(R.string.str_expired_vip_dialog_content),
+            stringResource(R.string.subscribe),
+        )
     ExpiredVipDialog(data)
 }
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -391,28 +355,23 @@ internal fun ReplyStyleSheet(
         onDismissRequest = onDismiss,
         dragHandle = null,
         sheetState = sheetState,
-        contentWindowInsets = { WindowInsets.waterfall }
+        contentWindowInsets = { WindowInsets.waterfall },
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
-                .background(
-                    brush = Brush.verticalGradient(
-                        colors = listOf(
-                            Color(0xFF322341),
-                            Color(0xFF120E24),
-                        )
+            modifier =
+                Modifier.fillMaxWidth()
+                    .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
+                    .background(
+                        brush =
+                            Brush.verticalGradient(
+                                colors = listOf(Color(0xFF322341), Color(0xFF120E24))
+                            )
                     )
-                )
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             IconButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) {
-                Image(
-                    painter = painterResource(R.drawable.close),
-                    contentDescription = ""
-                )
+                Image(painter = painterResource(R.drawable.close), contentDescription = "")
             }
             Text(
                 text = stringResource(R.string.custom_reply_style),
@@ -424,8 +383,7 @@ internal fun ReplyStyleSheet(
             )
             Spacer(Modifier.height(20.dp))
             HeartMultiLineEditor(
-                Modifier
-                    .fillMaxWidth()
+                Modifier.fillMaxWidth()
                     .height(168.dp)
                     .clip(RoundedCornerShape(8.dp))
                     .background(Color(0x1AFFFFFF)),
@@ -433,13 +391,14 @@ internal fun ReplyStyleSheet(
                 onInputChange = { replyStr = it },
                 maxLength = maxLength,
                 supportStr = "${replyStr.length}/$maxLength",
-                hintStr = hintStr
+                hintStr = hintStr,
             )
             Spacer(Modifier.height(40.dp))
             HeartPrimaryButton(
                 stringResource(R.string.save),
                 enable = replyStr.isNotBlank(),
-                onClick = { onSave(replyStr) })
+                onClick = { onSave(replyStr) },
+            )
             Spacer(Modifier.height(40.dp))
         }
     }
@@ -453,6 +412,6 @@ private fun PreviewReplyStyleSheet() {
         sheetState = rememberStandardBottomSheetState(initialValue = SheetValue.Expanded),
         inputStr = "I'm a teacher ...",
         onDismiss = {},
-        onSave = {}
+        onSave = {},
     )
 }

@@ -109,7 +109,10 @@ export const VoicePreviewPlayer: React.FC<VoicePreviewPlayerProps> = ({
       }
     };
 
-    globalPreviewAudioManager.registerListener(playerId, handleGlobalPlayStateChange);
+    globalPreviewAudioManager.registerListener(
+      playerId,
+      handleGlobalPlayStateChange,
+    );
 
     return () => {
       globalPreviewAudioManager.unregisterListener(playerId);
@@ -272,9 +275,15 @@ export const VoicePreviewPlayer: React.FC<VoicePreviewPlayerProps> = ({
         onClick={handleClick}
         disabled={isLoading || !previewUrl}
         style={{
-          color: hasError ? "#ff4d4f" : isPlaying ? "#1890ff" : previewUrl ? "#52c41a" : "#d9d9d9",
-          border: 'none',
-          boxShadow: 'none',
+          color: hasError
+            ? "#ff4d4f"
+            : isPlaying
+              ? "#1890ff"
+              : previewUrl
+                ? "#52c41a"
+                : "#d9d9d9",
+          border: "none",
+          boxShadow: "none",
           ...style,
         }}
       >

@@ -15,9 +15,7 @@ import com.ai.inty.viewmodels.MainViewModel
 import com.therouter.TheRouter
 import com.therouter.router.Route
 
-/**
- * 设置页面
- */
+/** 设置页面 */
 @Route(path = Constant.ROUTE_SETTING)
 class SettingActivity : BaseActivity() {
 
@@ -29,27 +27,20 @@ class SettingActivity : BaseActivity() {
         setContent {
             IntyTheme {
                 SettingContent(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(DarkPurple),
-                    onBack = {
-                        finish()
-                    },
+                    modifier = Modifier.fillMaxSize().background(DarkPurple),
+                    onBack = { finish() },
                     onLogout = { isDelete ->
                         // 使用MainViewModel的logout方法，不重启应用
                         mainViewModel.logout()
                         // 显示退出成功提示
-                        val str = if (isDelete) getString(R.string.delete_account_successfully)
-                        else getString(R.string.logout_successfully)
-                        Toast.makeText(
-                            this@SettingActivity,
-                            str,
-                            Toast.LENGTH_SHORT
-                        ).show()
+                        val str =
+                            if (isDelete) getString(R.string.delete_account_successfully)
+                            else getString(R.string.logout_successfully)
+                        Toast.makeText(this@SettingActivity, str, Toast.LENGTH_SHORT).show()
                         // 返回到主页面
                         TheRouter.build(Constant.ROUTE_MAIN).navigation(this@SettingActivity)
                         finish()
-                    }
+                    },
                 )
             }
         }

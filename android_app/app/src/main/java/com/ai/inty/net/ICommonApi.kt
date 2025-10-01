@@ -5,7 +5,6 @@ import com.architecture.httplib.core.HttpResult
 import com.therouter.inject.Singleton
 import retrofit2.http.POST
 
-
 @Singleton
 interface ICommonApi {
     @POST("api/v1/version/check")

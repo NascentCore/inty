@@ -15,17 +15,13 @@ import com.ai.inty.viewmodels.AgentInfoViewModel
 import com.therouter.router.Autowired
 import com.therouter.router.Route
 
-/**
- * Ai模型的信息介绍页面
- */
+/** Ai模型的信息介绍页面 */
 @Route(path = Constant.ROUTE_AGENT_INFO)
 class AgentInfoActivity : BaseActivity() {
 
-    @Autowired
-    var agent: AgentInfo? = null
+    @Autowired var agent: AgentInfo? = null
 
-    @Autowired
-    var agent_id: String? = null
+    @Autowired var agent_id: String? = null
 
     val viewModel: AgentInfoViewModel by viewModels()
 
@@ -50,9 +46,7 @@ class AgentInfoActivity : BaseActivity() {
         setContent {
             IntyTheme {
                 val agentInfo = viewModel.agentInfo.collectAsState()
-                agentInfo.value?.let { agent ->
-                    AiAgentInfoScreen(agent, onBack = { finish() })
-                }
+                agentInfo.value?.let { agent -> AiAgentInfoScreen(agent, onBack = { finish() }) }
             }
         }
     }

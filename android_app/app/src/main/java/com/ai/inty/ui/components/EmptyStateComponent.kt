@@ -21,9 +21,7 @@ import androidx.compose.ui.unit.sp
 import com.ai.inty.R
 import com.ai.inty.base.IntyImage
 
-/**
- * 空状态类型枚举
- */
+/** 空状态类型枚举 */
 enum class EmptyStateType {
     /** 数据为空 */
     EMPTY_DATA,
@@ -32,13 +30,10 @@ enum class EmptyStateType {
     NETWORK_ERROR,
 
     /** 加载失败 */
-    LOAD_ERROR
+    LOAD_ERROR,
 }
 
-/**
- * 统一的空状态组件
- * 支持不同的空状态类型，包含重试按钮
- */
+/** 统一的空状态组件 支持不同的空状态类型，包含重试按钮 */
 @Composable
 fun EmptyStateComponent(
     type: EmptyStateType,
@@ -46,20 +41,15 @@ fun EmptyStateComponent(
     subtitle: String? = null,
     showRetryButton: Boolean = true,
     onRetry: (() -> Unit)? = null,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(16.dp),
+        modifier = modifier.fillMaxSize().padding(16.dp),
         verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         // 空状态图标
-        IntyImage(
-            model = R.drawable.img_content_empty,
-            modifier = Modifier.size(120.dp)
-        )
+        IntyImage(model = R.drawable.img_content_empty, modifier = Modifier.size(120.dp))
 
         Spacer(Modifier.height(16.dp))
 
@@ -71,7 +61,7 @@ fun EmptyStateComponent(
                 fontSize = 14.sp,
                 fontWeight = FontWeight.SemiBold,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.padding(horizontal = 16.dp)
+                modifier = Modifier.padding(horizontal = 16.dp),
             )
         }
 
@@ -84,7 +74,7 @@ fun EmptyStateComponent(
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Normal,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.padding(horizontal = 16.dp)
+                modifier = Modifier.padding(horizontal = 16.dp),
             )
         }
 
@@ -94,22 +84,20 @@ fun EmptyStateComponent(
             GradientButton(
                 text = stringResource(R.string.retry_button),
                 onSave = onRetry,
-                modifier = Modifier.padding(horizontal = 32.dp)
+                modifier = Modifier.padding(horizontal = 32.dp),
             )
         }
     }
 }
 
-/**
- * 数据为空状态组件
- */
+/** 数据为空状态组件 */
 @Composable
 fun EmptyDataState(
     title: String? = null,
     subtitle: String? = null,
     showRetryButton: Boolean = false,
     onRetry: (() -> Unit)? = null,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     EmptyStateComponent(
         type = EmptyStateType.EMPTY_DATA,
@@ -117,19 +105,17 @@ fun EmptyDataState(
         subtitle = subtitle,
         showRetryButton = showRetryButton,
         onRetry = onRetry,
-        modifier = modifier
+        modifier = modifier,
     )
 }
 
-/**
- * 网络错误状态组件
- */
+/** 网络错误状态组件 */
 @Composable
 fun NetworkErrorState(
     title: String = stringResource(R.string.empty_explore_error),
     subtitle: String? = null,
     onRetry: (() -> Unit)? = null,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     EmptyStateComponent(
         type = EmptyStateType.NETWORK_ERROR,
@@ -137,19 +123,17 @@ fun NetworkErrorState(
         subtitle = subtitle,
         showRetryButton = true,
         onRetry = onRetry,
-        modifier = modifier
+        modifier = modifier,
     )
 }
 
-/**
- * 加载失败状态组件
- */
+/** 加载失败状态组件 */
 @Composable
 fun LoadErrorState(
     title: String,
     subtitle: String? = null,
     onRetry: (() -> Unit)? = null,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     EmptyStateComponent(
         type = EmptyStateType.LOAD_ERROR,
@@ -157,7 +141,7 @@ fun LoadErrorState(
         subtitle = subtitle,
         showRetryButton = true,
         onRetry = onRetry,
-        modifier = modifier
+        modifier = modifier,
     )
 }
 
@@ -167,7 +151,7 @@ fun LoadErrorState(
 private fun EmptyDataStatePreview() {
     EmptyDataState(
         title = "No conversations yet",
-        subtitle = "Start chatting with your favorite characters!"
+        subtitle = "Start chatting with your favorite characters!",
     )
 }
 
@@ -177,16 +161,12 @@ private fun NetworkErrorStatePreview() {
     NetworkErrorState(
         title = "Failed to load characters",
         subtitle = "Check your connection and try again",
-        onRetry = {}
+        onRetry = {},
     )
 }
 
 @Preview(showBackground = true)
 @Composable
 private fun LoadErrorStatePreview() {
-    LoadErrorState(
-        title = "Loading failed",
-        subtitle = "Something went wrong",
-        onRetry = {}
-    )
+    LoadErrorState(title = "Loading failed", subtitle = "Something went wrong", onRetry = {})
 }

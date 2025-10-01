@@ -10,10 +10,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.TextUnit
 
-/**
- * 聊天文本格式化工具类
- * 将括号内容转换为斜体，支持嵌套括号
- */
+/** 聊天文本格式化工具类 将括号内容转换为斜体，支持嵌套括号 */
 object ChatTextFormatter {
 
     /**
@@ -46,7 +43,7 @@ object ChatTextFormatter {
                         fontSize = fontSize,
                         fontWeight = fontWeight,
                         fontStyle = FontStyle.Italic,
-                        fontFamily = FontFamily.Default
+                        fontFamily = FontFamily.Default,
                     )
                 ) {
                     append(text[currentIndex])
@@ -61,7 +58,7 @@ object ChatTextFormatter {
                         fontSize = fontSize,
                         fontWeight = fontWeight,
                         fontStyle = FontStyle.Italic,
-                        fontFamily = FontFamily.Default
+                        fontFamily = FontFamily.Default,
                     )
                 ) {
                     append(text.substring(currentIndex, endIndex))
@@ -74,7 +71,7 @@ object ChatTextFormatter {
                         fontSize = fontSize,
                         fontWeight = fontWeight,
                         fontStyle = FontStyle.Italic,
-                        fontFamily = FontFamily.Default
+                        fontFamily = FontFamily.Default,
                     )
                 ) {
                     append(text[endIndex])
@@ -83,18 +80,19 @@ object ChatTextFormatter {
                 pairIndex++
             } else {
                 // 普通文本 - 按字符串片段添加而不是逐字符，避免破坏emoji
-                val nextBracketIndex = if (pairIndex < bracketPairs.size) {
-                    bracketPairs[pairIndex].first
-                } else {
-                    text.length
-                }
-                
+                val nextBracketIndex =
+                    if (pairIndex < bracketPairs.size) {
+                        bracketPairs[pairIndex].first
+                    } else {
+                        text.length
+                    }
+
                 withStyle(
                     SpanStyle(
                         color = normalColor,
                         fontSize = fontSize,
                         fontWeight = fontWeight,
-                        fontFamily = FontFamily.Default
+                        fontFamily = FontFamily.Default,
                     )
                 ) {
                     append(text.substring(currentIndex, nextBracketIndex))
@@ -104,17 +102,17 @@ object ChatTextFormatter {
         }
     }
 
-    /**
-     * 查找匹配的括号对
-     */
+    /** 查找匹配的括号对 */
     private fun findBracketPairs(text: String): List<Pair<Int, Int>> {
         val bracketPairs = mutableListOf<Pair<Int, Int>>()
         val stack = mutableListOf<Pair<Char, Int>>()
 
         text.forEachIndexed { index, char ->
             when (char) {
-                '(', '（' -> stack.add(Pair(char, index))
-                ')', '）' -> {
+                '(',
+                '（' -> stack.add(Pair(char, index))
+                ')',
+                '）' -> {
                     val matchingStart = if (char == ')') '(' else '（'
                     for (i in stack.size - 1 downTo 0) {
                         if (stack[i].first == matchingStart) {
@@ -129,4 +127,4 @@ object ChatTextFormatter {
 
         return bracketPairs.sortedBy { it.first }
     }
-} 
+}

@@ -5,9 +5,11 @@ The version check API allows clients to verify if they need to update to the lat
 ## Endpoints
 
 ### POST /api/v1/version/check
+
 Check if the client app needs to update.
 
 **Request Body:**
+
 ```json
 {
   "version": "1.2.3",
@@ -16,6 +18,7 @@ Check if the client app needs to update.
 ```
 
 **Response:**
+
 ```json
 {
   "code": 200,
@@ -36,9 +39,11 @@ Check if the client app needs to update.
 ```
 
 ### GET /api/v1/version/latest
+
 Get latest version information (Admin only).
 
 **Response:**
+
 ```json
 {
   "code": 200,
@@ -64,9 +69,9 @@ google_play:
   service_account_key: inty-backend-key.json
   enable_version_check: true
   min_supported_version: "1.0.0"
-  force_update_versions: ["1.0.5", "1.1.2"]  # Versions that require force update
-  release_track: internal  # Track to query: internal/closed/open/production
-  fallback_tracks: [production, internal]  # Fallback tracks if primary fails
+  force_update_versions: ["1.0.5", "1.1.2"] # Versions that require force update
+  release_track: internal # Track to query: internal/closed/open/production
+  fallback_tracks: [production, internal] # Fallback tracks if primary fails
 ```
 
 ### Track Configuration
@@ -120,21 +125,21 @@ If the Google Play API is unavailable, the service will return a safe response a
 ```typescript
 async function checkForUpdates() {
   try {
-    const response = await fetch('/api/v1/version/check', {
-      method: 'POST',
+    const response = await fetch("/api/v1/version/check", {
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({
-        version: '1.2.3',
-        platform: 'android'
-      })
+        version: "1.2.3",
+        platform: "android",
+      }),
     });
-    
+
     const result = await response.json();
     const versionData = result.data;
-    
+
     if (versionData.force_update) {
       // Show mandatory update dialog
       showForceUpdateDialog(versionData);
@@ -142,9 +147,8 @@ async function checkForUpdates() {
       // Show optional update prompt
       showUpdatePrompt(versionData);
     }
-    
   } catch (error) {
-    console.log('Version check failed, continuing normally');
+    console.log("Version check failed, continuing normally");
   }
 }
 ```

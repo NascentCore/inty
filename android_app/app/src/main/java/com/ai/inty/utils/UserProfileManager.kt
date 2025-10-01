@@ -4,9 +4,7 @@ import com.ai.inty.beans.UserProfile
 import com.inty.utils.log.EasyLog
 import com.inty.utils.storage.IntySetting
 
-/**
- * 用户信息的数据管理类
- */
+/** 用户信息的数据管理类 */
 object UserProfileManager {
 
     fun saveUserProfile(userProfile: UserProfile) {
@@ -23,7 +21,7 @@ object UserProfileManager {
         IntySetting.setUserProfileBoolean("is_active", userProfile.isActive)
         IntySetting.setUserProfileBoolean("is_superuser", userProfile.isSuperuser)
         IntySetting.setUserProfileData("phone", userProfile.phone ?: "")
-        
+
         // 处理 ageGroup（可能是字符串或其他类型）
         userProfile.ageGroup?.let { ageGroup ->
             when (ageGroup) {
@@ -32,7 +30,7 @@ object UserProfileManager {
                 else -> IntySetting.setUserProfileData("age_group", ageGroup.toString())
             }
         }
-        
+
         EasyLog.log("Saved user profile: $userProfile")
     }
 
@@ -51,8 +49,9 @@ object UserProfileManager {
             isActive = IntySetting.getUserProfileBoolean("is_active", false),
             isSuperuser = IntySetting.getUserProfileBoolean("is_superuser", false),
             phone = IntySetting.getUserProfileData("phone")?.takeIf { it.isNotEmpty() },
-            ageGroup = IntySetting.getUserProfileData("age_group") ?: 
-                      IntySetting.getUserProfileInt("age_group_int", 0).takeIf { it > 0 }
+            ageGroup =
+                IntySetting.getUserProfileData("age_group")
+                    ?: IntySetting.getUserProfileInt("age_group_int", 0).takeIf { it > 0 },
         )
     }
 
@@ -64,4 +63,4 @@ object UserProfileManager {
         IntySetting.clearAllUserProfileData()
         EasyLog.log("Cleared user profile data")
     }
-} 
+}

@@ -34,17 +34,15 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-
 enum class HomeTabIndex {
     Chat,
     Conversation,
     Create,
     Explore,
-    Profile
+    Profile,
 }
 
 class MainViewModel : BaseActivityViewModel() {
-
 
     private val agentApi: IAgentApi by lazy {
         TheRouter.get(IAgentApi::class.java)
@@ -56,15 +54,15 @@ class MainViewModel : BaseActivityViewModel() {
             ?: throw IllegalStateException("ICommonApi not found in TheRouter")
     }
 
-    val followingAgents = mutableStateListOf<AgentInfo>()//关注的agents列表数据
-    val userCreatedAgents = mutableStateListOf<AgentInfo>()//用户自创建的agents数据
+    val followingAgents = mutableStateListOf<AgentInfo>() // 关注的agents列表数据
+    val userCreatedAgents = mutableStateListOf<AgentInfo>() // 用户自创建的agents数据
 
     // Pagination state for user created agents
     private var currentUserAgentsPage = 0
     private var _isLoadingUserAgents = MutableStateFlow(false)
     val isLoadingUserAgents = _isLoadingUserAgents.asStateFlow()
     private var hasMoreUserAgents = true
-    
+
     // 刷新状态，用于区分首次加载和刷新操作
     private var _isRefreshingUserAgents = MutableStateFlow(false)
     val isRefreshingUserAgents = _isRefreshingUserAgents.asStateFlow()
@@ -77,18 +75,18 @@ class MainViewModel : BaseActivityViewModel() {
 
     private var chatViewModel: ChatViewModel? = null
 
-    //使用flow数据流的形式，感知用户数据
+    // 使用flow数据流的形式，感知用户数据
     private val _userProfile = MutableStateFlow(UserProfile())
     val userProfile = _userProfile.asStateFlow()
 
-    //用户切换触发更新数据的拦截器
-    private val userProfileChanged = object : ActionInterceptor() {
-        override fun handle(context: Context, navigator: Navigator): Boolean {
-            getUserProfile()
-            return super.handle(context, navigator)
+    // 用户切换触发更新数据的拦截器
+    private val userProfileChanged =
+        object : ActionInterceptor() {
+            override fun handle(context: Context, navigator: Navigator): Boolean {
+                getUserProfile()
+                return super.handle(context, navigator)
+            }
         }
-    }
-
 
     init {
         EasyLog.log("MainViewModel init - current user: ${IntySetting.getCurUserID()}")
@@ -99,10 +97,7 @@ class MainViewModel : BaseActivityViewModel() {
         TheRouter.addActionInterceptor(Constant.ACTION_USER_PROFILE_CHANGED, userProfileChanged)
     }
 
-    /**
-     * 加载启动数据（快速展示）
-     * 从统一启动管理器获取预加载的数据
-     */
+    /** 加载启动数据（快速展示） 从统一启动管理器获取预加载的数据 */
     private fun loadStartupData() {
         // 从统一启动管理器获取用户信息
         val startupUserProfile = UnifiedStartupManager.getCurrentUserProfile()
@@ -117,21 +112,20 @@ class MainViewModel : BaseActivityViewModel() {
         checkAppVersion()
     }
 
-
     fun selectTab(tab: Int) {
         // 防止数组越界，确保tab索引在有效范围内
         val tabEntries = HomeTabIndex.entries.toTypedArray()
         if (tab < 0 || tab >= tabEntries.size) {
             EasyLog.log(
                 "selectTab - 无效的tab索引: $tab, 有效范围: 0-${tabEntries.size - 1}",
-                priority = EasyLog.ERROR
+                priority = EasyLog.ERROR,
             )
             return
         }
-        
+
         // 切换tab时停止所有音频播放
         stopAllAudioPlayback()
-        
+
         _selectedTab.value = tabEntries[tab]
         when (_selectedTab.value) {
             HomeTabIndex.Conversation -> {
@@ -144,23 +138,16 @@ class MainViewModel : BaseActivityViewModel() {
                 refreshCreatedAgentsListIfOnTab()
             }
 
-            else -> {
-
-            }
+            else -> {}
         }
     }
-    
-    /**
-     * 停止所有音频播放
-     * 用于tab切换时确保音频停止
-     */
+
+    /** 停止所有音频播放 用于tab切换时确保音频停止 */
     private fun stopAllAudioPlayback() {
         try {
             // 通过AudioManager单例停止所有播放
-            val audioManager = com.ai.inty.audio.AudioManager.getInstance(
-                AppEnv.context, 
-                viewModelScope
-            )
+            val audioManager =
+                com.ai.inty.audio.AudioManager.getInstance(AppEnv.context, viewModelScope)
             audioManager.stopAllPlayback()
             EasyLog.log("MainViewModel - Tab切换时停止所有音频播放")
         } catch (e: Exception) {
@@ -172,15 +159,12 @@ class MainViewModel : BaseActivityViewModel() {
         this.chatViewModel = chatViewModel
     }
 
-
     fun updateCurrentChatPageIndex(index: Int) {
         _currentChatPageIndex.value = index
         EasyLog.log("Updated current chat page index to: $index")
     }
 
-    /**
-     * 接口请求获取用户信息
-     */
+    /** 接口请求获取用户信息 */
     fun getUserProfile() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
@@ -205,14 +189,11 @@ class MainViewModel : BaseActivityViewModel() {
         TheRouter.removeActionInterceptor(Constant.ACTION_USER_PROFILE_CHANGED, userProfileChanged)
     }
 
-
-    //感知接口获取到的用户订阅状态
+    // 感知接口获取到的用户订阅状态
     val vipStatusFlow = BillingRepository.vipStatusFlow
     val vipPlanFlow = BillingRepository.plansFlow
 
-    /**
-     * 异步更新订阅计划列表和会员状态
-     */
+    /** 异步更新订阅计划列表和会员状态 */
     fun updatePlans() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
@@ -239,12 +220,14 @@ class MainViewModel : BaseActivityViewModel() {
                 BillingRepository.fetchRemote()
                 EasyLog.log("BillingRepository MainViewModel 会员状态更新完成")
             } catch (e: kotlinx.coroutines.CancellationException) {
-                EasyLog.log("BillingRepository MainViewModel Member status update cancelled: ${e.message}")
+                EasyLog.log(
+                    "BillingRepository MainViewModel Member status update cancelled: ${e.message}"
+                )
                 // 协程被取消是正常情况，不需要特殊处理
             } catch (e: Exception) {
                 EasyLog.log(
                     "BillingRepository MainViewModel Member status update failed: ${e.message}",
-                    EasyLog.ERROR
+                    EasyLog.ERROR,
                 )
                 // 不影响主流程，静默处理
             }
@@ -292,26 +275,30 @@ class MainViewModel : BaseActivityViewModel() {
                     is HttpResult.Success -> {
                         if (result.data.isEmpty()) {
                             hasMoreUserAgents = false
-                            EasyLog.log("loadUserCreatedAgentsSilently - No more user created agents to load")
+                            EasyLog.log(
+                                "loadUserCreatedAgentsSilently - No more user created agents to load"
+                            )
                         } else {
                             // 静默更新数据，直接替换
                             userCreatedAgents.clear()
                             userCreatedAgents.addAll(result.data)
-                            EasyLog.log("loadUserCreatedAgentsSilently - 静默更新数据: ${result.data.size}个")
+                            EasyLog.log(
+                                "loadUserCreatedAgentsSilently - 静默更新数据: ${result.data.size}个"
+                            )
                         }
                     }
 
                     is HttpResult.Failure -> {
                         EasyLog.log(
                             "loadUserCreatedAgentsSilently - API failure: ${result.message}",
-                            priority = EasyLog.ERROR
+                            priority = EasyLog.ERROR,
                         )
                     }
                 }
             } catch (e: Exception) {
                 EasyLog.log(
                     "loadUserCreatedAgentsSilently exception: ${e.message}",
-                    priority = EasyLog.ERROR
+                    priority = EasyLog.ERROR,
                 )
             } finally {
                 _isRefreshingUserAgents.value = false
@@ -345,7 +332,9 @@ class MainViewModel : BaseActivityViewModel() {
                             } else {
                                 // 后续页，追加到现有列表
                                 userCreatedAgents.addAll(result.data)
-                                EasyLog.log("loadUserCreatedAgents - 追加第${currentUserAgentsPage + 1}页数据: ${result.data.size}个，总计: ${userCreatedAgents.size}个")
+                                EasyLog.log(
+                                    "loadUserCreatedAgents - 追加第${currentUserAgentsPage + 1}页数据: ${result.data.size}个，总计: ${userCreatedAgents.size}个"
+                                )
                             }
                         }
                     }
@@ -353,9 +342,9 @@ class MainViewModel : BaseActivityViewModel() {
                     is HttpResult.Failure -> {
                         EasyLog.log(
                             "loadUserCreatedAgents - API failure: ${result.message}",
-                            priority = EasyLog.ERROR
+                            priority = EasyLog.ERROR,
                         )
-//                        showNetworkAwareError(result.message)
+                        //                        showNetworkAwareError(result.message)
                         // If loading failed, rollback page counter
                         if (currentUserAgentsPage > 0) {
                             currentUserAgentsPage--
@@ -365,7 +354,7 @@ class MainViewModel : BaseActivityViewModel() {
             } catch (e: Exception) {
                 EasyLog.log(
                     "loadUserCreatedAgents exception: ${e.message}",
-                    priority = EasyLog.ERROR
+                    priority = EasyLog.ERROR,
                 )
                 EasyLog.log(e)
                 // If loading failed, rollback page counter
@@ -389,9 +378,7 @@ class MainViewModel : BaseActivityViewModel() {
         }
     }
 
-    /**
-     * 创建Ai Agent的接口
-     */
+    /** 创建Ai Agent的接口 */
     fun createAgent(
         request: CreateAgentRequest,
         onSuccess: (AgentInfo) -> Unit,
@@ -417,7 +404,9 @@ class MainViewModel : BaseActivityViewModel() {
                         is HttpResult.Failure -> {
                             EasyLog.log("createAgent error: $result", priority = EasyLog.ERROR)
                             val errorMessage =
-                                result.message.ifBlank { "Creation failed, please check network connection" }
+                                result.message.ifBlank {
+                                    "Creation failed, please check network connection"
+                                }
                             onError(errorMessage)
                         }
                     }
@@ -426,19 +415,15 @@ class MainViewModel : BaseActivityViewModel() {
                 // 专门处理HTTP异常
                 EasyLog.log(
                     "createAgent HTTP Exception: ${e.code()} - ${e.message()}",
-                    EasyLog.ERROR
+                    EasyLog.ERROR,
                 )
                 val errorMessage = handleHttpException(e, "create")
-                withContext(Dispatchers.Main) {
-                    onError(errorMessage)
-                }
+                withContext(Dispatchers.Main) { onError(errorMessage) }
             } catch (e: Exception) {
                 EasyLog.log("createAgent exception: ${e.message}", priority = EasyLog.ERROR)
                 EasyLog.log(e)
                 val errorMessage = handleGeneralException(e, "create")
-                withContext(Dispatchers.Main) {
-                    onError(errorMessage)
-                }
+                withContext(Dispatchers.Main) { onError(errorMessage) }
             }
         }
     }
@@ -461,7 +446,8 @@ class MainViewModel : BaseActivityViewModel() {
         UserProfileManager.clearUserProfile()
 
         // 清除凭证状态 - 通知所有凭证提供者清除存储的凭证会话
-        // 参考: https://developer.android.com/identity/sign-in/credential-manager-siwg#handle-sign-out
+        // 参考:
+        // https://developer.android.com/identity/sign-in/credential-manager-siwg#handle-sign-out
         viewModelScope.launch {
             try {
                 clearCredentialState(AppEnv.context)
@@ -469,7 +455,7 @@ class MainViewModel : BaseActivityViewModel() {
             } catch (e: Exception) {
                 EasyLog.log(
                     "Failed to clear credential state during logout: ${e.message}",
-                    EasyLog.ERROR
+                    EasyLog.ERROR,
                 )
             }
         }
@@ -496,11 +482,7 @@ class MainViewModel : BaseActivityViewModel() {
         }
     }
 
-    fun deleteAgent(
-        agentId: String,
-        onSuccess: () -> Unit,
-        onError: (String) -> Unit,
-    ) {
+    fun deleteAgent(agentId: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
         EasyLog.log("deleteAgent: $agentId")
         launchWithNetCheck {
             try {
@@ -525,13 +507,14 @@ class MainViewModel : BaseActivityViewModel() {
 
                         is HttpResult.Failure -> {
                             EasyLog.log("deleteAgent error: $result", priority = EasyLog.ERROR)
-                            val errorMessage = result.message.ifBlank {
-                                AppEnv.context.getString(
-                                    R.string.operation_failed_check_network,
-                                    AppEnv.context.getString(R.string.delete_failed),
-                                    AppEnv.context.getString(R.string.check_network_connection)
-                                )
-                            }
+                            val errorMessage =
+                                result.message.ifBlank {
+                                    AppEnv.context.getString(
+                                        R.string.operation_failed_check_network,
+                                        AppEnv.context.getString(R.string.delete_failed),
+                                        AppEnv.context.getString(R.string.check_network_connection),
+                                    )
+                                }
                             ToastUtils.showToast(R.string.delete_failed_with_reason, errorMessage)
                             onError(errorMessage)
                         }
@@ -541,7 +524,7 @@ class MainViewModel : BaseActivityViewModel() {
                 // 专门处理HTTP异常
                 EasyLog.log(
                     "deleteAgent HTTP Exception: ${e.code()} - ${e.message()}",
-                    EasyLog.ERROR
+                    EasyLog.ERROR,
                 )
                 val errorMessage = handleHttpException(e, "delete")
                 withContext(Dispatchers.Main) {
@@ -584,13 +567,14 @@ class MainViewModel : BaseActivityViewModel() {
 
                         is HttpResult.Failure -> {
                             EasyLog.log("updateAgent error: $result", priority = EasyLog.ERROR)
-                            val errorMessage = result.message.ifBlank {
-                                AppEnv.context.getString(
-                                    R.string.operation_failed_check_network,
-                                    AppEnv.context.getString(R.string.update_failed),
-                                    AppEnv.context.getString(R.string.check_network_connection)
-                                )
-                            }
+                            val errorMessage =
+                                result.message.ifBlank {
+                                    AppEnv.context.getString(
+                                        R.string.operation_failed_check_network,
+                                        AppEnv.context.getString(R.string.update_failed),
+                                        AppEnv.context.getString(R.string.check_network_connection),
+                                    )
+                                }
                             ToastUtils.showToast(R.string.update_failed_with_reason, errorMessage)
                             onError(errorMessage)
                         }
@@ -600,7 +584,7 @@ class MainViewModel : BaseActivityViewModel() {
                 // 专门处理HTTP异常
                 EasyLog.log(
                     "updateAgent HTTP Exception: ${e.code()} - ${e.message()}",
-                    EasyLog.ERROR
+                    EasyLog.ERROR,
                 )
                 val errorMessage = handleHttpException(e, "update")
                 withContext(Dispatchers.Main) {
@@ -619,17 +603,16 @@ class MainViewModel : BaseActivityViewModel() {
         }
     }
 
-    /**
-     * 检查app版本更新
-     */
+    /** 检查app版本更新 */
     val needForceUpgrade = MutableStateFlow<AppVersionRsp.AppVersionData?>(null)
+
     private fun checkAppVersion() = launchWithNetCheck {
         val result = commonApi.checkAppUpgrade()
         when (result) {
             is HttpResult.Success -> {
                 val rsp = result.data
                 if (rsp.update_required && rsp.force_update) {
-                    //有更新，且需要强制更新
+                    // 有更新，且需要强制更新
                     needForceUpgrade.emit(rsp)
                 }
                 IntySetting.setAppUpdateTips(rsp.update_required)

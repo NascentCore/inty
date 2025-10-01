@@ -325,7 +325,9 @@ class VoiceService:
         """
         all_voices = []
         # 如果没有指定page_size，获取所有音色；否则使用指定的page_size
-        actual_page_size = page_size if page_size is not None else 1000  # 使用足够大的数字获取所有音色
+        actual_page_size = (
+            page_size if page_size is not None else 1000
+        )  # 使用足够大的数字获取所有音色
 
         try:
             # 1. 获取用户音色和预置音色
@@ -381,7 +383,9 @@ class VoiceService:
         搜索常规音色（用户音色 + 预置音色 + professional音色）
         """
         try:
-            logger.info(f"开始获取所有常规音色 (参数: search={search}, page_size={page_size}, voice_type={voice_type}, category={category})")
+            logger.info(
+                f"开始获取所有常规音色 (参数: search={search}, page_size={page_size}, voice_type={voice_type}, category={category})"
+            )
 
             # 1. 获取所有基础语音，包括legacy音色
             voices_response = self.client.voices.get_all(show_legacy=True)
@@ -392,37 +396,37 @@ class VoiceService:
             personal_count = 0
             preset_count = 0
             professional_count = 0
-            
+
             for voice in voices_response.voices:
                 voice_dict = voice.model_dump()
-                
+
                 # 根据category和is_owner确定source和voice_type
                 voice_category = voice_dict.get("category", "unknown")
                 is_owner = voice_dict.get("is_owner", False)
-                
+
                 if voice_category == "professional":
                     voice_dict["source"] = "professional"  # 标记为professional音色
                     professional_count += 1
                 else:
                     voice_dict["source"] = "regular"  # 标记为常规音色
-                
+
                 # 根据is_owner字段区分个人音色和预置音色
                 if is_owner:
                     voice_dict["voice_type"] = "personal"  # 个人音色
                     personal_count += 1
                 else:
-                    voice_dict["voice_type"] = "preset"    # 预置音色
+                    voice_dict["voice_type"] = "preset"  # 预置音色
                     preset_count += 1
-                
+
                 # 应用筛选逻辑
                 # 检查voice_type筛选
                 if voice_type and voice_dict["voice_type"] != voice_type:
                     continue
-                
+
                 # 检查category筛选
                 if category and voice_category != category:
                     continue
-                
+
                 # 应用搜索筛选
                 if search:
                     voice_name = voice_dict.get("name", "").lower()
@@ -430,10 +434,12 @@ class VoiceService:
                     search_term = search.lower()
                     if search_term not in voice_name and search_term not in voice_id:
                         continue
-                
+
                 voices_list.append(voice_dict)
 
-            logger.info(f"处理完成: 总计 {len(voices_list)} 个音色 (个人: {personal_count}, 预置: {preset_count}, professional: {professional_count})")
+            logger.info(
+                f"处理完成: 总计 {len(voices_list)} 个音色 (个人: {personal_count}, 预置: {preset_count}, professional: {professional_count})"
+            )
             return voices_list
 
         except Exception as e:

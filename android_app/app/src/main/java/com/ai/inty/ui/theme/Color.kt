@@ -13,7 +13,6 @@ val Pink40 = Color(0xFF7D5260)
 val DarkPurple = Color(0xFF1C1523)
 val MediumPurple = Color(0xFF9C27B0)
 
-
 class TextFieldColor {
     companion object {
         val unfocusedIndicatorColor = Color(0xfff7f7f7)

@@ -10,7 +10,9 @@ interface LoadingProviderProps {
   children: ReactNode;
 }
 
-export const LoadingProvider: React.FC<LoadingProviderProps> = ({ children }) => {
+export const LoadingProvider: React.FC<LoadingProviderProps> = ({
+  children,
+}) => {
   const [isLoading, setIsLoading] = useState(true);
 
   // 组件挂载时初始化应用状态

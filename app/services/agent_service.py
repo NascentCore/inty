@@ -1128,14 +1128,18 @@ def process_agent_image_urls(agent_data: dict) -> dict:
     返回所有有效的图片URL，包括头像、背景图和相册图片。
     同时将CDN URL转换为GCS URL用于存储。
     """
-    logger.debug(f"开始处理Agent图片URLs - 原始数据: avatar={agent_data.get('avatar')}, background={agent_data.get('background')}, background_images={agent_data.get('background_images')}")
+    logger.debug(
+        f"开始处理Agent图片URLs - 原始数据: avatar={agent_data.get('avatar')}, background={agent_data.get('background')}, background_images={agent_data.get('background_images')}"
+    )
 
     # 先将CDN URL转换为GCS URL用于存储
     processed_data = image_transform_service.batch_normalize_urls_for_storage(
         agent_data
     )
 
-    logger.debug(f"URL转换完成 - 转换后数据: avatar={processed_data.get('avatar')}, background={processed_data.get('background')}, background_images={processed_data.get('background_images')}")
+    logger.debug(
+        f"URL转换完成 - 转换后数据: avatar={processed_data.get('avatar')}, background={processed_data.get('background')}, background_images={processed_data.get('background_images')}"
+    )
     images_urls = []
 
     def add_image_url(image_url):
@@ -1146,20 +1150,28 @@ def process_agent_image_urls(agent_data: dict) -> dict:
     if processed_data.get("avatar"):
         avatar_url = processed_data["avatar"]
         if is_valid_gcs_url(avatar_url):
-            logger.debug(f"头像URL验证通过: {avatar_url} (原始: {agent_data.get('avatar')})")
+            logger.debug(
+                f"头像URL验证通过: {avatar_url} (原始: {agent_data.get('avatar')})"
+            )
             add_image_url(avatar_url)
         else:
-            logger.warning(f"无效的头像URL: {avatar_url} (原始: {agent_data.get('avatar')})")
+            logger.warning(
+                f"无效的头像URL: {avatar_url} (原始: {agent_data.get('avatar')})"
+            )
             processed_data["avatar"] = None
 
     # 验证背景图URL
     if processed_data.get("background"):
         background_url = processed_data["background"]
         if is_valid_gcs_url(background_url):
-            logger.debug(f"背景图URL验证通过: {background_url} (原始: {agent_data.get('background')})")
+            logger.debug(
+                f"背景图URL验证通过: {background_url} (原始: {agent_data.get('background')})"
+            )
             add_image_url(background_url)
         else:
-            logger.warning(f"无效的背景图URL: {background_url} (原始: {agent_data.get('background')})")
+            logger.warning(
+                f"无效的背景图URL: {background_url} (原始: {agent_data.get('background')})"
+            )
             processed_data["background"] = None
 
     # 验证相册图片URLs，但不添加到images_urls（避免重复）

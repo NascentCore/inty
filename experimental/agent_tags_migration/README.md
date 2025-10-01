@@ -71,18 +71,21 @@ python extract_tags_from_personality.py --update --no-normalize
 工具可以解析以下格式的 Character info：
 
 ### 格式1：标准JSON格式
+
 ```
 ##Charactor info:
 {'name': 'Layla', 'age': 26, 'gender': 'FEMALE', 'tags': 'Dancer, Sexy, Exotic, Singer'}
 ```
 
 ### 格式2：双引号JSON格式
+
 ```
 ##Character info:
 {"name": "Layla", "age": 26, "gender": "FEMALE", "tags": "Dancer, Sexy, Exotic, Singer"}
 ```
 
 ### 格式3：混合引号格式
+
 ```
 ##角色信息:
 {'name': "Layla", 'tags': "Dancer, Sexy, Exotic, Singer"}
@@ -134,40 +137,50 @@ python extract_tags_from_personality.py --update --no-normalize
 ## 安全特性
 
 ### 1. 分析模式
+
 - 先运行分析模式查看结果，确认无误后再执行迁移
 
 ### 2. 自动备份
+
 - 更新前自动备份相关数据
 - 备份文件保存为 `backup_batch_N_timestamp.json`
 
 ### 3. 事务控制
+
 - 批量更新使用数据库事务，确保数据一致性
 
 ### 4. 跳过已有标签
+
 - 默认跳过已有标签的智能体，避免覆盖现有数据
 
 ## 故障排除
 
 ### 1. 数据库连接失败
+
 ```
 错误: 无法连接到数据库: connection refused
 ```
+
 - 检查 config.yaml 中的数据库配置
 - 确认数据库服务正在运行
 - 检查网络连接和防火墙设置
 
 ### 2. 没有找到可提取的标签
+
 ```
 统计信息显示成功提取为0
 ```
+
 - 检查 personality 字段中是否包含 Character info 结构
 - 确认 tags 字段格式是否正确
 - 可以设置 `--log-level DEBUG` 查看详细解析过程
 
 ### 3. 权限错误
+
 ```
 错误: permission denied
 ```
+
 - 确认数据库用户有相应的读写权限
 - 检查表结构是否正确
 

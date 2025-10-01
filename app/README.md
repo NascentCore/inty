@@ -8,13 +8,13 @@ stl auth login
 stl init
 ```
 
-* <https://app.stainless.com/inty/inty/overview> Stainless OpenAPI SDK generation project.
+- <https://app.stainless.com/inty/inty/overview> Stainless OpenAPI SDK generation project.
 
 [Stainless core concepts](https://www.stainless.com/docs/guides/configure#core-concepts)
 
-* Methods are invoked for actual APIs [defined in YAML](stainless.yml)
-* Models are types reused throughout the SDKs
-* Resources are a collection actual artifacts used in Client code.
+- Methods are invoked for actual APIs [defined in YAML](stainless.yml)
+- Models are types reused throughout the SDKs
+- Resources are a collection actual artifacts used in Client code.
 
 There are 3 phases on Stainless:
 
@@ -41,13 +41,13 @@ pip install git+ssh://git@github.com/NascentCore/inty-python.git/
 
 ## Deployment
 
-* Run [build_and_deploy.yml](../.github/workflows/build_and_deploy.yml)
+- Run [build_and_deploy.yml](../.github/workflows/build_and_deploy.yml)
   to deploy the app to production server
-* Open Google Cloud Console, login with `it@sxwl.ai` (or your own account)
-* Open Compute Engine, and find `dev-intance`
-* `/etc/nginx/conf.d/sxwl.ai.conf` has the host's nginx config
+- Open Google Cloud Console, login with `it@sxwl.ai` (or your own account)
+- Open Compute Engine, and find `dev-intance`
+- `/etc/nginx/conf.d/sxwl.ai.conf` has the host's nginx config
 
-* Launch postgres with pgvector extensions
+- Launch postgres with pgvector extensions
 
 ```bash
 docker run --name dev-postgres \
@@ -70,6 +70,6 @@ createdb -h localhost -U postgres inty_prd
 alembic upgrade head
 ```
 
-* If alembic shows multiple heads error, you can delete the heads shown by `alembic show heads`
+- If alembic shows multiple heads error, you can delete the heads shown by `alembic show heads`
 
-* Install alembic and update database `alembic upgrade head`
+- Install alembic and update database `alembic upgrade head`
