@@ -98,6 +98,7 @@ fun PremiumPlanCard(
                 fontSize = 20.sp,
                 modifier = subModifier,
             )
+            Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = String.format("%s", plan.price),
                 color =
@@ -105,7 +106,7 @@ fun PremiumPlanCard(
                         isSubscribed -> Color.White.copy(alpha = 0.5f)
                         else -> Color.White
                     },
-                fontSize = 30.sp,
+                fontSize = 32.sp,
                 fontWeight = FontWeight.Normal,
                 modifier = subModifier,
             )
@@ -114,7 +115,7 @@ fun PremiumPlanCard(
         // 折扣标签
         if (plan.discountRate < 1) {
             Box(
-                Modifier.fillMaxWidth(0.7f)
+                Modifier.fillMaxWidth(0.8f)
                     .clip(RoundedCornerShape(12.dp))
                     .background(
                         brush =
@@ -138,11 +139,11 @@ fun PremiumPlanCard(
                         fontWeight = FontWeight.Bold,
                         modifier = subModifier,
                     )
-                    Spacer(modifier = Modifier.width(2.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         text = stringResource(R.string.discount_save),
                         color = Color.Black,
-                        fontSize = 10.sp,
+                        fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
                         modifier = subModifier,
                     )
