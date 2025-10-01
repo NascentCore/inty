@@ -199,6 +199,7 @@ class AgentInDB(AgentBase):
     """数据库中的AI角色，与 sqlalchemy 模型一一对应"""
 
     id: str
+    # DEPRECATED: app 显示 ID 而非 readable_id
     readable_id: str
     status: AgentStatus
     creator_id: Optional[str] = None

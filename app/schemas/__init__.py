@@ -4,8 +4,8 @@ from app.schemas.agent import (
     AgentInDB,
     AgentSortOption,
     AgentUpdate,
-    TextToImageRequest,
     CreatorAgentStats,
+    TextToImageRequest,
 )
 from app.schemas.auth import (
     GoogleAuthRequest,
@@ -56,12 +56,5 @@ from app.schemas.resource import Resource, ResourceCreate, ResourceInDB, Resourc
 from app.schemas.response import APIResponse, PaginationData, PaginationResponse
 from app.schemas.settings import Settings, SettingsCreate, SettingsInDB, SettingsUpdate
 from app.schemas.token import Token, TokenPayload
-from app.schemas.user import (
-    User,
-    UserCreate,
-    UserInDB,
-    UserList,
-    UserListItem,
-    UserUpdate,
-)
+from app.schemas.user import User, UserCreate, UserList, UserListItem, UserUpdate
 from app.schemas.verification_code import VerificationCodeCreate, VerificationCodeVerify

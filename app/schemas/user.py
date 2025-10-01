@@ -9,6 +9,7 @@ from app.models.user import AuthType, Gender
 class UserBase(BaseModel):
     """用户基础信息"""
 
+    # DEPRECATED: app 显示 ID 而非 readable_id
     readable_id: Optional[str] = None
     nickname: Optional[str] = None
     avatar: Optional[str] = None
@@ -70,6 +71,7 @@ class UserInDBBase(UserBase):
     """数据库中的用户信息"""
 
     id: str
+    # DEPRECATED: app 显示 ID 而非 readable_id
     readable_id: str
     auth_type: str
     is_active: bool
@@ -88,12 +90,6 @@ class User(UserInDBBase):
     total_public_agents_follows: Optional[int] = 0
     followers_count: Optional[int] = 0
     connector_count: Optional[int] = 0
-
-
-class UserInDB(UserInDBBase):
-    """数据库中的完整用户信息"""
-
-    pass
 
 
 class Token(BaseModel):

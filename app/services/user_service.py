@@ -9,6 +9,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import Session
+from typing_extensions import deprecated
 
 from app.core.config import global_config_loaded_from_config_yaml
 from app.core.uuid import get_new_user_id
@@ -21,6 +22,7 @@ from app.services.cache_service import cache_service
 from app.services.subscription_service import SubscriptionService
 
 
+@deprecated("app 不在显示 readable_id 字段，请使用 id 字段")
 async def generate_next_readable_id(db: AsyncSession) -> str:
     """
     Generate next readable ID for user using database sequence for thread safety
