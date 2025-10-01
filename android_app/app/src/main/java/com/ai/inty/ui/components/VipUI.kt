@@ -100,7 +100,7 @@ fun PremiumPlanCard(
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = String.format("%s", plan.price),
+                text = plan.price,
                 color =
                     when {
                         isSubscribed -> Color.White.copy(alpha = 0.5f)
