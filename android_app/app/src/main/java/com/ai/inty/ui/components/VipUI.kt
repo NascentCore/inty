@@ -131,7 +131,6 @@ fun PremiumPlanCard(
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    
                     Text(
                         text = String.format(Locale.getDefault(), "%d%%", kotlin.math.ceil((1-plan.discountRate) * 100).toInt()),
                         color = Color.Black,
