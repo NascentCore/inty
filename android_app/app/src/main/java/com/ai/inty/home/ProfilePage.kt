@@ -512,7 +512,7 @@ private fun PremiumBanner(
                 val str =
                     when (status) {
                         VipStatus.UI_SUBSCRIBED -> "Since $purchaseTime"
-                        VipStatus.UI_SUBSCRIBED_EXPIRE_SOON -> "Expire on $expireTime"
+                        VipStatus.UI_SUBSCRIBED_EXPIRE_SOON -> "Expires on $expireTime"
                         else -> "Activate now"
                     }
 
