@@ -11,9 +11,7 @@ import org.gradle.kotlin.dsl.configure
 import org.gradle.kotlin.dsl.dependencies
 import org.gradle.kotlin.dsl.project
 
-/**
- * 用于Android 动态模块的plugin定义
- */
+/** 用于Android 动态模块的plugin定义 */
 class AndroidFeaturePlugin : Plugin<Project> {
     override fun apply(target: Project) {
         with(target) {
@@ -32,7 +30,6 @@ class AndroidFeaturePlugin : Plugin<Project> {
 
                 add("androidTestImplementation", libs.findLibrary("androidx.annotation").get())
             }
-
         }
     }
 }

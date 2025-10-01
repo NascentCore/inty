@@ -8,7 +8,6 @@ android {
     compileSdk = 36
 }
 
-
 dependencies {
     // ===== 调试工具 =====
     debugImplementation(libs.chucker.library)

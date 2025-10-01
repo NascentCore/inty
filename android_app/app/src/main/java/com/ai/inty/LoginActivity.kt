@@ -22,9 +22,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
- * 登录页面
- * 使用最新的 Credential Manager API 进行 Google 登录
- * 参考: https://developer.android.com/identity/sign-in/credential-manager-siwg
+ * 登录页面 使用最新的 Credential Manager API 进行 Google 登录 参考:
+ * https://developer.android.com/identity/sign-in/credential-manager-siwg
  */
 @Route(path = Constant.ROUTE_LOGIN)
 class LoginActivity : BaseActivity() {
@@ -39,17 +38,15 @@ class LoginActivity : BaseActivity() {
             IntyTheme {
                 LoginContent(
                     onClose = { finish() },
-                    onGoogleLoginSuccess = { idToken ->
-                        viewModel.onGoogleLoginSuccess(idToken)
-                    }
+                    onGoogleLoginSuccess = { idToken -> viewModel.onGoogleLoginSuccess(idToken) },
                 )
             }
         }
-        
+
         // 跟踪LoginActivity页面访问
         FirebaseAnalyticsHelper.trackScreenView(
             screenName = "LoginScreen",
-            screenClass = "LoginActivity"
+            screenClass = "LoginActivity",
         )
 
         lifecycleScope.launch {
@@ -68,8 +65,7 @@ class LoginActivity : BaseActivity() {
             EasyLog.log("User has not set gender, showing RegInfoActivity")
             CoroutineScope(Dispatchers.Main).launch {
                 delay(300)
-                TheRouter.build(Constant.ROUTE_REG_INFO)
-                    .navigation(this@LoginActivity)
+                TheRouter.build(Constant.ROUTE_REG_INFO).navigation(this@LoginActivity)
             }
         } else {
             EasyLog.log("User has set gender, no need to show RegInfoActivity")
@@ -84,8 +80,9 @@ class LoginActivity : BaseActivity() {
         if (
             // 用户没有用户档案（未登录成功）
             !UserProfileManager.hasUserProfile() &&
-            // Activity 不是正常结束状态
-            !isFinishing) {
+                // Activity 不是正常结束状态
+                !isFinishing
+        ) {
             lifecycleScope.launch {
                 CredentialManagerHelper.clearCredentialState(this@LoginActivity)
             }
@@ -93,16 +90,8 @@ class LoginActivity : BaseActivity() {
     }
 }
 
-/**
- * 登录内容组件
- */
+/** 登录内容组件 */
 @Composable
-private fun LoginContent(
-    onClose: () -> Unit,
-    onGoogleLoginSuccess: (idToken: String) -> Unit
-) {
-    LoginScreen(
-        onClose = onClose,
-        onGoogleLoginSuccess = onGoogleLoginSuccess
-    )
+private fun LoginContent(onClose: () -> Unit, onGoogleLoginSuccess: (idToken: String) -> Unit) {
+    LoginScreen(onClose = onClose, onGoogleLoginSuccess = onGoogleLoginSuccess)
 }

@@ -30,6 +30,7 @@ from app.utils.image import (
 
 class ImageUploadResponse(BaseModel):
     """Image upload response"""
+
     # Uploaded compressed image
     url: str
     size: ImageSize
@@ -91,7 +92,7 @@ async def process_image_upload(
                 "error_code": "FILE_SIZE_EXCEEDED",
                 "max_size_mb": max_size_mb,
                 "actual_size_bytes": file_size,
-            }
+            },
         )
 
     # Validate filename
@@ -122,7 +123,7 @@ async def process_image_upload(
                 "error_code": "UNSUPPORTED_FILE_TYPE",
                 "supported_formats": allowed_extensions,
                 "received_format": file_ext,
-            }
+            },
         )
 
     # Store original file data before compression
@@ -137,7 +138,10 @@ async def process_image_upload(
     # PNG is a lossless format, so we can compress it to JPEG to save space.
     # TODO: Explicitly add parameter compress_image in request body to control this.
     # Not always compress png files.
-    compression_threshold_size_bytes = global_config_loaded_from_config_yaml.app.limits.image_compression_threshold_size_kb * 1024
+    compression_threshold_size_bytes = (
+        global_config_loaded_from_config_yaml.app.limits.image_compression_threshold_size_kb
+        * 1024
+    )
     was_compressed = False
     if file_ext == ImageFormat.PNG or len(file_data) > compression_threshold_size_bytes:
         file_data = compress_png_to_jpeg(file_data)
@@ -165,11 +169,14 @@ async def process_image_upload(
 
     # Convert GCS URL to CDN URL
     from app.services.image_transform_service import image_transform_service
+
     try:
         url = image_transform_service.transform_mobile(gcs_url)
         logger.debug(f"图片 上传 GCS 成功，CDN URL: {url}")
     except Exception as transform_error:
-        logger.warning(f"Failed to transform URL to CDN: {gcs_url}, error: {str(transform_error)}")
+        logger.warning(
+            f"Failed to transform URL to CDN: {gcs_url}, error: {str(transform_error)}"
+        )
         url = gcs_url  # Fallback to original GCS URL
 
     result = ImageUploadResponse(url=url, size=size)
@@ -190,10 +197,14 @@ async def process_image_upload(
 
         # Convert uncompressed GCS URL to CDN URL
         try:
-            uncompressed_url = image_transform_service.transform_mobile(uncompressed_gcs_url)
+            uncompressed_url = image_transform_service.transform_mobile(
+                uncompressed_gcs_url
+            )
             logger.debug(f"Uploaded original image, CDN URL: {uncompressed_url}")
         except Exception as transform_error:
-            logger.warning(f"Failed to transform original URL to CDN: {uncompressed_gcs_url}, error: {str(transform_error)}")
+            logger.warning(
+                f"Failed to transform original URL to CDN: {uncompressed_gcs_url}, error: {str(transform_error)}"
+            )
             uncompressed_url = uncompressed_gcs_url  # Fallback to original GCS URL
 
         result.original_url = uncompressed_url
@@ -255,10 +266,14 @@ async def process_image_upload(
 
         # Convert cropped avatar GCS URL to CDN URL
         try:
-            cropped_avatar_url = image_transform_service.transform_mobile(cropped_avatar_gcs_url)
+            cropped_avatar_url = image_transform_service.transform_mobile(
+                cropped_avatar_gcs_url
+            )
             logger.debug(f"扣脸图片上传 GCS 成功, CDN URL: {cropped_avatar_url}")
         except Exception as transform_error:
-            logger.warning(f"Failed to transform avatar URL to CDN: {cropped_avatar_gcs_url}, error: {str(transform_error)}")
+            logger.warning(
+                f"Failed to transform avatar URL to CDN: {cropped_avatar_gcs_url}, error: {str(transform_error)}"
+            )
             cropped_avatar_url = cropped_avatar_gcs_url  # Fallback to original GCS URL
 
         result.avatar_url = cropped_avatar_url

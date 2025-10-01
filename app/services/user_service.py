@@ -34,6 +34,7 @@ async def generate_next_readable_id(db: AsyncSession) -> str:
         logger.error(f"Error generating readable ID from sequence: {str(e)}")
         # Fallback to a random 8-digit number starting from 10000000
         import random
+
         return str(random.randint(10000000, 99999999))
 
 
@@ -50,6 +51,7 @@ def generate_next_readable_id_sync(db: Session) -> str:
         logger.error(f"Error generating readable ID from sequence: {str(e)}")
         # Fallback to a random 8-digit number starting from 10000000
         import random
+
         return str(random.randint(10000000, 99999999))
 
 
@@ -121,9 +123,14 @@ async def update_user(db: AsyncSession, user_id: str, user_in: UserUpdate) -> Us
         update_data = user_in.model_dump(exclude_unset=True)
 
         # 处理头像URL：如果是CDN URL则转换为GCS URL用于存储
-        if 'avatar' in update_data and update_data['avatar']:
+        if "avatar" in update_data and update_data["avatar"]:
             from app.services.image_transform_service import image_transform_service
-            update_data['avatar'] = image_transform_service.normalize_image_url_for_storage(update_data['avatar'])
+
+            update_data["avatar"] = (
+                image_transform_service.normalize_image_url_for_storage(
+                    update_data["avatar"]
+                )
+            )
 
         # 过滤掉不应该被用户更新的字段
         excluded_fields = {

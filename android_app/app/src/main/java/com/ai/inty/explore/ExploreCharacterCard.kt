@@ -32,65 +32,48 @@ import com.ai.inty.beans.AgentInfo
 import com.ai.inty.ui.components.ShimmerPlaceholder
 import com.ai.inty.ui.components.SmartTagsLayout
 
-
-/**
- * Explore页面的角色卡片组件
- */
+/** Explore页面的角色卡片组件 */
 @Composable
-fun ExploreCharacterCard(
-    modifier: Modifier = Modifier,
-    agentInfo: AgentInfo,
-    onClick: () -> Unit
-) {
+fun ExploreCharacterCard(modifier: Modifier = Modifier, agentInfo: AgentInfo, onClick: () -> Unit) {
     // 缓存渐变画笔，避免每次重组时重新创建
     val gradientBrush = remember {
         Brush.verticalGradient(
-            colors = listOf(
-                Color.Transparent,
-                Color.Black.copy(.6f),
-                Color.Black.copy(.95f),
-            )
+            colors = listOf(Color.Transparent, Color.Black.copy(.6f), Color.Black.copy(.95f))
         )
     }
 
     // 缓存过滤后的标签，避免每次重组时重新计算
-    val filteredTags = remember(agentInfo.tags) {
-        agentInfo.tags?.filterNotNull() ?: emptyList()
-    }
+    val filteredTags = remember(agentInfo.tags) { agentInfo.tags?.filterNotNull() ?: emptyList() }
 
     // 获取图片URL
-    val imageUrl = remember(agentInfo.id, agentInfo.background, agentInfo.avatar) {
-        agentInfo.getAlbumImage()
-    }
+    val imageUrl =
+        remember(agentInfo.id, agentInfo.background, agentInfo.avatar) { agentInfo.getAlbumImage() }
 
     // 图片加载状态 - 使用稳定的key避免不必要的重组
     var imageLoaded by remember(agentInfo.id) { mutableStateOf(false) }
 
     Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .aspectRatio(agentInfo.imageAspectRatio())
-            .noRippleClickable { onClick() }
+        modifier =
+            modifier.fillMaxWidth().aspectRatio(agentInfo.imageAspectRatio()).noRippleClickable {
+                onClick()
+            }
     ) {
         // 背景图片层
         Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .clip(
-                    RoundedCornerShape(
-                        topStart = 7.dp,
-                        topEnd = 7.dp,
-                        bottomStart = 8.dp,
-                        bottomEnd = 8.dp
+            modifier =
+                Modifier.fillMaxSize()
+                    .clip(
+                        RoundedCornerShape(
+                            topStart = 7.dp,
+                            topEnd = 7.dp,
+                            bottomStart = 8.dp,
+                            bottomEnd = 8.dp,
+                        )
                     )
-                )
         ) {
             // 使用 Shimmer 占位符
             if (!imageLoaded) {
-                ShimmerPlaceholder(
-                    modifier = Modifier.fillMaxSize(),
-                    cornerRadius = 8.dp
-                )
+                ShimmerPlaceholder(modifier = Modifier.fillMaxSize(), cornerRadius = 8.dp)
             }
 
             IntyImage(
@@ -108,24 +91,25 @@ fun ExploreCharacterCard(
                     if (imageLoaded) {
                         imageLoaded = false
                     }
-                }
+                },
             )
         }
 
         // 文本内容层 - 立即显示，不依赖图片加载状态
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(
-                    brush = gradientBrush,
-                    shape = RoundedCornerShape(
-                        bottomStart = 7.dp,
-                        bottomEnd = 7.dp
-                    )//比图片的倒角8.dp小1，来遮挡像素级白边
-                )
-                .padding(start = 8.dp, end = 8.dp, top = 16.dp, bottom = 8.dp)
-                .align(Alignment.BottomCenter),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
+            modifier =
+                Modifier.fillMaxWidth()
+                    .background(
+                        brush = gradientBrush,
+                        shape =
+                            RoundedCornerShape(
+                                bottomStart = 7.dp,
+                                bottomEnd = 7.dp,
+                            ), // 比图片的倒角8.dp小1，来遮挡像素级白边
+                    )
+                    .padding(start = 8.dp, end = 8.dp, top = 16.dp, bottom = 8.dp)
+                    .align(Alignment.BottomCenter),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             Text(
                 modifier = Modifier,
@@ -144,19 +128,15 @@ fun ExploreCharacterCard(
                 fontWeight = FontWeight.Normal,
                 color = Color(0xB2FFFFFF),
                 maxLines = 3,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
             )
 
             if (filteredTags.isNotEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(16.dp)
-                ) {
+                Box(modifier = Modifier.fillMaxWidth().height(16.dp)) {
                     SmartTagsLayout(
                         modifier = Modifier.matchParentSize(),
                         tags = filteredTags,
-                        isCardTag = true
+                        isCardTag = true,
                     )
                 }
             }

@@ -14,13 +14,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-/**
- * Explore页面的Paging数据源
- * 负责处理推荐agents的分页加载、缓存管理
- */
+/** Explore页面的Paging数据源 负责处理推荐agents的分页加载、缓存管理 */
 class ExplorePagingSource(
     private val useCache: Boolean = true,
-    private val sortSeed: Int = IntySetting.sortSeed()
+    private val sortSeed: Int = IntySetting.sortSeed(),
 ) : PagingSource<Int, AgentInfo>() {
 
     private val agentApi: IAgentApi by lazy {
@@ -39,7 +36,7 @@ class ExplorePagingSource(
             try {
                 val page = params.key ?: INITIAL_PAGE
                 val pageSize = params.loadSize.coerceAtMost(PAGE_SIZE)
-                
+
                 EasyLog.log("ExplorePagingSource - 加载第${page}页，页面大小: ${pageSize}")
 
                 // 第一页特殊处理：优先使用缓存数据
@@ -48,55 +45,56 @@ class ExplorePagingSource(
                     if (cachedAgents.isNotEmpty()) {
                         // 过滤掉id为空的agent，避免key重复问题
                         val validCachedAgents = cachedAgents.filter { it.id.isNotEmpty() }
-                        EasyLog.log("ExplorePagingSource - 使用缓存数据: ${validCachedAgents.size}个 (过滤后)")
-                        
+                        EasyLog.log(
+                            "ExplorePagingSource - 使用缓存数据: ${validCachedAgents.size}个 (过滤后)"
+                        )
+
                         // 如果有缓存数据，返回缓存数据，同时后台加载网络数据
                         if (shouldUpdateFromNetwork()) {
                             // 后台静默刷新，不阻塞UI
                             loadFromNetworkAsync(page, pageSize)
                         }
-                        
+
                         // 关键修复：即使缓存数据不足一页，也假设有更多数据
                         // 这样Paging会继续尝试加载下一页，确保分页功能正常
                         // 但是要确保缓存数据不为空，避免无限循环
                         return@withContext LoadResult.Page(
                             data = validCachedAgents,
                             prevKey = null,
-                            nextKey = if (validCachedAgents.isNotEmpty()) page + 1 else null
+                            nextKey = if (validCachedAgents.isNotEmpty()) page + 1 else null,
                         )
                     }
                 }
 
                 // 从网络加载数据
                 val result = loadFromNetwork(page, pageSize)
-                
+
                 when (result) {
                     is NetworkResult.Success -> {
                         val agents = result.data.list ?: emptyList()
                         // 过滤掉id为空的agent，避免key重复问题
                         val validAgents = agents.filter { it.id.isNotEmpty() }
                         val hasMore = validAgents.isNotEmpty() && validAgents.size >= pageSize
-                        
+
                         // 缓存第一页数据
                         if (page == INITIAL_PAGE && validAgents.isNotEmpty()) {
                             AgentCacheManager.cacheAgents(validAgents)
                             UnifiedStartupManager.refreshRecommendedAgents()
                             EasyLog.log("ExplorePagingSource - 缓存第一页数据: ${validAgents.size}个 (过滤后)")
                         }
-                        
+
                         LoadResult.Page(
                             data = validAgents,
                             prevKey = if (page == INITIAL_PAGE) null else page - 1,
-                            nextKey = if (hasMore) page + 1 else null
+                            nextKey = if (hasMore) page + 1 else null,
                         )
                     }
-                    
+
                     is NetworkResult.Error -> {
                         EasyLog.log("ExplorePagingSource - 网络加载失败: ${result.error}", EasyLog.ERROR)
                         LoadResult.Error(Exception(result.error))
                     }
                 }
-                
             } catch (e: Exception) {
                 EasyLog.log("ExplorePagingSource - 加载异常: ${e.message}", EasyLog.ERROR)
                 LoadResult.Error(e)
@@ -112,16 +110,15 @@ class ExplorePagingSource(
         }
     }
 
-    /**
-     * 从网络加载数据
-     */
+    /** 从网络加载数据 */
     private suspend fun loadFromNetwork(page: Int, pageSize: Int): NetworkResult {
         return try {
-            val result = agentApi.exploreAgents(
-                page = page,
-                pageSize = pageSize,
-                sort_seed = sortSeed.toString()
-            )
+            val result =
+                agentApi.exploreAgents(
+                    page = page,
+                    pageSize = pageSize,
+                    sort_seed = sortSeed.toString(),
+                )
 
             when (result) {
                 is HttpResult.Success -> {
@@ -136,9 +133,7 @@ class ExplorePagingSource(
         }
     }
 
-    /**
-     * 异步从网络加载数据（不阻塞UI）
-     */
+    /** 异步从网络加载数据（不阻塞UI） */
     private fun loadFromNetworkAsync(page: Int, pageSize: Int) {
         // 在后台协程中执行，不阻塞当前加载
         kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launch {
@@ -160,18 +155,15 @@ class ExplorePagingSource(
         }
     }
 
-    /**
-     * 检查是否需要从网络更新数据
-     */
+    /** 检查是否需要从网络更新数据 */
     private fun shouldUpdateFromNetwork(): Boolean {
         return IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()
     }
 }
 
-/**
- * 网络请求结果
- */
+/** 网络请求结果 */
 sealed class NetworkResult {
     data class Success(val data: com.ai.inty.beans.AgentInfoResponse) : NetworkResult()
+
     data class Error(val error: String) : NetworkResult()
 }

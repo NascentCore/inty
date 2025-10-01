@@ -61,10 +61,7 @@ import com.ai.inty.viewmodels.MainViewModel
 import com.inty.utils.storage.IntySetting
 import com.therouter.TheRouter
 
-
-/**
- * 主页面，包含五个tab
- */
+/** 主页面，包含五个tab */
 @Composable
 fun HomeScreen(
     modifier: Modifier = Modifier,
@@ -77,7 +74,7 @@ fun HomeScreen(
 
     // 创建ExploreViewModel实例，用于ExploreTab
     val exploreViewModel: ExploreViewModel = viewModel()
-    
+
     // 创建ChatTabViewModel实例，用于ChatTab
     val chatTabViewModel: ChatTabViewModel = viewModel()
 
@@ -86,34 +83,26 @@ fun HomeScreen(
         exploreViewModel.initializePagingData()
         chatTabViewModel.initializePagingData()
     }
-    
+
     // 启动预加载数据监听
     LaunchedEffect(Unit) {
         exploreViewModel.startListeningPreloadUpdates()
         chatTabViewModel.startListeningPreloadUpdates()
     }
-    
+
     // 跟踪HomeScreen页面访问
-    TrackScreenView(
-        screenName = "HomeScreen",
-        screenClass = "MainActivity"
-    )
+    TrackScreenView(screenName = "HomeScreen", screenClass = "MainActivity")
 
     Scaffold(
-        modifier = modifier
-            .fillMaxSize()
-            .background(DarkPurple)
-            .navigationBarsPadding(),
+        modifier = modifier.fillMaxSize().background(DarkPurple).navigationBarsPadding(),
         containerColor = Color.Transparent,
         bottomBar = {
             AppBottomNavigationBar(
                 modifier = Modifier,
                 selectedTab = selectedTab.value.ordinal,
-                onSelectTab = { tabIndex ->
-                    handleTabSelection(tabIndex, context, mainViewModel)
-                }
+                onSelectTab = { tabIndex -> handleTabSelection(tabIndex, context, mainViewModel) },
             )
-        }
+        },
     ) { innerPadding ->
         HomeContent(
             selectedTab = selectedTab.value,
@@ -123,7 +112,7 @@ fun HomeScreen(
             chatTabViewModel = chatTabViewModel,
             viewModelFactory = viewModelFactory,
             context = context,
-            innerPadding = innerPadding
+            innerPadding = innerPadding,
         )
 
         ExpiredDialogLogic(mainViewModel)
@@ -132,7 +121,7 @@ fun HomeScreen(
     }
 }
 
-//App检查更新的逻辑，强制更新则弹窗
+// App检查更新的逻辑，强制更新则弹窗
 @Composable
 private fun AppVersionLogic(mainViewModel: MainViewModel) {
     val uriHandler = LocalUriHandler.current
@@ -141,40 +130,38 @@ private fun AppVersionLogic(mainViewModel: MainViewModel) {
         ForceUpgradeDialog(
             content = rsp?.message ?: stringResource(R.string.str_upgrade_content),
             onConfirm = {
-                runCatching {
-                    rsp?.download_url?.let { url ->
-                        uriHandler.openUri(url)
-                    }
-                }
-            }
+                runCatching { rsp?.download_url?.let { url -> uriHandler.openUri(url) } }
+            },
         )
     }
 }
 
-
 @Composable
 private fun ExpiredDialogLogic(mainViewModel: MainViewModel) {
-    //感知vip订阅过期的提示弹窗
+    // 感知vip订阅过期的提示弹窗
     var showExpiredDialog by remember { mutableStateOf(false) }
     val vipStatue by mainViewModel.vipStatusFlow.collectAsState()
     val vipPlan by mainViewModel.vipPlanFlow.collectAsState()
     LifecycleResumeEffect(mainViewModel) {
         if (!vipStatue.isSubscribed && vipStatue.everSubscribed) {
-            //未订阅状态，且曾经订阅过，表示已过期;如果app未曾提示过一次，则弹窗。有过提示记录，则不弹窗
-            if (!IntySetting.hasTipsVipExpired() && IntySetting.isLogin() && !IntySetting.isGuestUser()) {
+            // 未订阅状态，且曾经订阅过，表示已过期;如果app未曾提示过一次，则弹窗。有过提示记录，则不弹窗
+            if (
+                !IntySetting.hasTipsVipExpired() &&
+                    IntySetting.isLogin() &&
+                    !IntySetting.isGuestUser()
+            ) {
                 showExpiredDialog = true
             }
         }
-        onPauseOrDispose {
-
-        }
+        onPauseOrDispose {}
     }
     if (showExpiredDialog) {
-        val data = ChatDialogData(
-            R.drawable.img_unlimit_dialog_bg,
-            stringResource(R.string.str_expired_vip_dialog_content),
-            stringResource(R.string.subscribe)
-        )
+        val data =
+            ChatDialogData(
+                R.drawable.img_unlimit_dialog_bg,
+                stringResource(R.string.str_expired_vip_dialog_content),
+                stringResource(R.string.subscribe),
+            )
         val context = LocalContext.current
         ExpiredVipDialog(
             data,
@@ -182,7 +169,7 @@ private fun ExpiredDialogLogic(mainViewModel: MainViewModel) {
             onSure = {
                 // 检查是否正式登录（非游客且已登录）
                 if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
-                    //判断如果之前订阅的档位还在，则继续原订阅。如果没有了，则跳转到订阅中心
+                    // 判断如果之前订阅的档位还在，则继续原订阅。如果没有了，则跳转到订阅中心
                     val plan =
                         vipPlan.find { plan -> plan.googleProductId == vipStatue.previous_plan_id }
                             ?: vipPlan.firstOrNull()
@@ -193,30 +180,24 @@ private fun ExpiredDialogLogic(mainViewModel: MainViewModel) {
                         if (context is Activity)
                             BillingRepository.launchBillingFlow(context, googleProductId)
                     } else {
-                        //跳转到订阅中心
+                        // 跳转到订阅中心
                         TheRouter.build(Constant.ROUTE_VIP_CENTER).navigation()
                     }
                 } else {
-                    //如果未登录，要求先登录
-                    TheRouter.build(Constant.ROUTE_LOGIN)
-                        .navigation(context)
+                    // 如果未登录，要求先登录
+                    TheRouter.build(Constant.ROUTE_LOGIN).navigation(context)
                 }
 
                 showExpiredDialog = false
-            })
-        //标记已经展示了tips的dialog
+            },
+        )
+        // 标记已经展示了tips的dialog
         IntySetting.setTipsVipExpired(true)
     }
 }
 
-/**
- * 处理Tab选择逻辑
- */
-private fun handleTabSelection(
-    tabIndex: Int,
-    context: Context,
-    mainViewModel: MainViewModel,
-) {
+/** 处理Tab选择逻辑 */
+private fun handleTabSelection(tabIndex: Int, context: Context, mainViewModel: MainViewModel) {
     if (tabIndex == HomeTabIndex.Create.ordinal) {
         if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
             TheRouter.build(Constant.ROUTE_CREATE_ROLE).navigation(context)
@@ -228,9 +209,7 @@ private fun handleTabSelection(
     mainViewModel.selectTab(tabIndex)
 }
 
-/**
- * 主页面内容
- */
+/** 主页面内容 */
 @Composable
 private fun HomeContent(
     selectedTab: HomeTabIndex,
@@ -247,15 +226,12 @@ private fun HomeContent(
             ChatTabContent(
                 mainViewModel = mainViewModel,
                 chatTabViewModel = chatTabViewModel,
-                viewModelFactory = viewModelFactory
+                viewModelFactory = viewModelFactory,
             )
         }
 
         HomeTabIndex.Conversation -> {
-            ConversationsTabContent(
-                chatViewModel = chatViewModel,
-                context = context
-            )
+            ConversationsTabContent(chatViewModel = chatViewModel, context = context)
         }
 
         HomeTabIndex.Create -> {
@@ -266,22 +242,17 @@ private fun HomeContent(
             ExploreTabContent(
                 exploreViewModel = exploreViewModel,
                 context = context,
-                innerPadding = innerPadding
+                innerPadding = innerPadding,
             )
         }
 
         HomeTabIndex.Profile -> {
-            ProfileTabContent(
-                mainViewModel = mainViewModel,
-                context = context
-            )
+            ProfileTabContent(mainViewModel = mainViewModel, context = context)
         }
     }
 }
 
-/**
- * 聊天Tab内容
- */
+/** 聊天Tab内容 */
 @Composable
 private fun ChatTabContent(
     mainViewModel: MainViewModel,
@@ -297,20 +268,13 @@ private fun ChatTabContent(
         chatTabViewModel = chatTabViewModel,
         userProfile = userProfile.value,
         currentPageIndex = currentChatPageIndex.value,
-        onPageChanged = { index ->
-            mainViewModel.updateCurrentChatPageIndex(index)
-        }
+        onPageChanged = { index -> mainViewModel.updateCurrentChatPageIndex(index) },
     )
 }
 
-/**
- * 会话Tab内容
- */
+/** 会话Tab内容 */
 @Composable
-private fun ConversationsTabContent(
-    chatViewModel: ChatViewModel,
-    context: Context,
-) {
+private fun ConversationsTabContent(chatViewModel: ChatViewModel, context: Context) {
     val conversations by chatViewModel.conversations.collectAsState()
     val isLoadingConversations by chatViewModel.isLoadingConversations.collectAsState()
     val isRefreshingConversations by chatViewModel.isRefreshingConversations.collectAsState()
@@ -320,22 +284,18 @@ private fun ConversationsTabContent(
         conversations = conversations,
         onClickConversationItem = { conversation ->
             chatViewModel.setConversationReaded(conversation)
-            //从会话列表 跳转到聊天页面，
+            // 从会话列表 跳转到聊天页面，
             TheRouter.build(Constant.ROUTE_CHAT)
                 .withObject("agent", conversation.convertToAgentInfo())
                 .navigation(context)
         },
         isLoadingConversations = isLoadingConversations,
         isRefreshingConversations = isRefreshingConversations,
-        onLoadMoreConversations = {
-            chatViewModel.loadMoreConversations()
-        },
+        onLoadMoreConversations = { chatViewModel.loadMoreConversations() },
     )
 }
 
-/**
- * 推荐Tab内容
- */
+/** 推荐Tab内容 */
 @Composable
 private fun ExploreTabContent(
     exploreViewModel: ExploreViewModel,
@@ -346,48 +306,40 @@ private fun ExploreTabContent(
         modifier = Modifier,
         innerPadding = innerPadding,
         onClickAgent = { agent ->
-            TheRouter.build(Constant.ROUTE_CHAT)
-                .withObject("agent", agent)
-                .navigation(context)
+            TheRouter.build(Constant.ROUTE_CHAT).withObject("agent", agent).navigation(context)
         },
-        viewModel = exploreViewModel
+        viewModel = exploreViewModel,
     )
 }
 
-/**
- * 我的Tab内容
- */
+/** 我的Tab内容 */
 @Composable
-private fun ProfileTabContent(
-    mainViewModel: MainViewModel,
-    context: Context,
-) {
+private fun ProfileTabContent(mainViewModel: MainViewModel, context: Context) {
     val userProfile = mainViewModel.userProfile.collectAsState()
     val userCreatedAgents = mainViewModel.userCreatedAgents
     val isLoadingUserAgents = mainViewModel.isLoadingUserAgents.collectAsState()
     val isRefreshingUserAgents = mainViewModel.isRefreshingUserAgents.collectAsState()
 
     // 确保用户信息有效，避免崩溃
-    val safeUserProfile = userProfile.value.let { profile ->
-        if (profile.id.isEmpty()) {
-            UserProfile(
-                id = "loading",
-                nickname = "Loading...",
-                avatar = null,
-                description = "UserInfo Loading..."
-            )
-        } else {
-            profile
+    val safeUserProfile =
+        userProfile.value.let { profile ->
+            if (profile.id.isEmpty()) {
+                UserProfile(
+                    id = "loading",
+                    nickname = "Loading...",
+                    avatar = null,
+                    description = "UserInfo Loading...",
+                )
+            } else {
+                profile
+            }
         }
-    }
-    //确保更新用户信息，处理切换账号后的信息同步
+    // 确保更新用户信息，处理切换账号后的信息同步
     LifecycleResumeEffect(mainViewModel) {
         mainViewModel.getUserProfile()
-        //刷新订阅状态
+        // 刷新订阅状态
         VipStatusHelper.refreshSubscriptionStatus()
-        onPauseOrDispose {
-
-        }
+        onPauseOrDispose {}
     }
     ProfilePage(
         modifier = Modifier,
@@ -396,9 +348,7 @@ private fun ProfileTabContent(
         isLoading = isLoadingUserAgents.value,
         isRefreshing = isRefreshingUserAgents.value,
         onClickAgent = { agent ->
-            TheRouter.build(Constant.ROUTE_CHAT)
-                .withObject("agent", agent)
-                .navigation(context)
+            TheRouter.build(Constant.ROUTE_CHAT).withObject("agent", agent).navigation(context)
         },
         onEditAgent = { agent ->
             TheRouter.build(Constant.ROUTE_CREATE_ROLE)
@@ -413,31 +363,35 @@ private fun ProfileTabContent(
                 },
                 onError = { _ ->
                     // 错误处理已在ViewModel中完成
-                }
+                },
             )
         },
-        onLoadMore = {
-            mainViewModel.loadMoreUserCreatedAgents()
-        }
+        onLoadMore = { mainViewModel.loadMoreUserCreatedAgents() },
     )
 }
 
+private data class TabInfo(val icon: Int, val iconSelected: Int, val label: Int)
 
-private data class TabInfo(
-    val icon: Int,
-    val iconSelected: Int,
-    val label: Int,
-)
-
-
-private val MAIN_TAB_LIST = listOf(
-    TabInfo(R.drawable.tab_icon_home, R.drawable.tab_icon_home_selected, R.string.tab_home),
-    TabInfo(R.drawable.tab_icon_messages, R.drawable.tab_icon_messages_selected, R.string.tab_messages),
-    TabInfo(R.drawable.tab_icon_create, R.drawable.tab_icon_create, R.string.tab_create), // Create tab 不需要文字标签
-    TabInfo(R.drawable.tab_icon_explore, R.drawable.tab_icon_explore_selected, R.string.tab_explore),
-    TabInfo(R.drawable.tab_icon_me, R.drawable.tab_icon_me_selected, R.string.tab_me),
-)
-
+private val MAIN_TAB_LIST =
+    listOf(
+        TabInfo(R.drawable.tab_icon_home, R.drawable.tab_icon_home_selected, R.string.tab_home),
+        TabInfo(
+            R.drawable.tab_icon_messages,
+            R.drawable.tab_icon_messages_selected,
+            R.string.tab_messages,
+        ),
+        TabInfo(
+            R.drawable.tab_icon_create,
+            R.drawable.tab_icon_create,
+            R.string.tab_create,
+        ), // Create tab 不需要文字标签
+        TabInfo(
+            R.drawable.tab_icon_explore,
+            R.drawable.tab_icon_explore_selected,
+            R.string.tab_explore,
+        ),
+        TabInfo(R.drawable.tab_icon_me, R.drawable.tab_icon_me_selected, R.string.tab_me),
+    )
 
 val BottomNavigationBarHeight = 64.dp
 
@@ -448,20 +402,13 @@ private fun AppBottomNavigationBar(
     onSelectTab: (Int) -> Unit,
 ) {
     Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(DarkPurple)
-            .height(BottomNavigationBarHeight),
-        verticalAlignment = Alignment.CenterVertically
+        modifier = modifier.fillMaxWidth().background(DarkPurple).height(BottomNavigationBarHeight),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         MAIN_TAB_LIST.forEachIndexed { index, tab ->
             BottomNavigationBarItem(
-                modifier = Modifier
-                    .fillMaxHeight()
-                    .weight(1f)
-                    .noRippleClickable {
-                        onSelectTab(index)
-                    },
+                modifier =
+                    Modifier.fillMaxHeight().weight(1f).noRippleClickable { onSelectTab(index) },
                 tabInfo = tab,
                 selected = (index == selectedTab),
             )
@@ -469,15 +416,10 @@ private fun AppBottomNavigationBar(
     }
 }
 
-
 val TabIconSize = 26.dp
 
 @Composable
-private fun BottomNavigationBarItem(
-    modifier: Modifier,
-    tabInfo: TabInfo,
-    selected: Boolean,
-) {
+private fun BottomNavigationBarItem(modifier: Modifier, tabInfo: TabInfo, selected: Boolean) {
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -487,20 +429,22 @@ private fun BottomNavigationBarItem(
             modifier = Modifier.size(TabIconSize),
             model = if (selected) tabInfo.iconSelected else tabInfo.icon,
             contentScale = ContentScale.Fit, // 保持图片宽高比不变
-            alignment = Alignment.Center
+            alignment = Alignment.Center,
         )
-        
+
         val spacerRatio = 0.05f
         val spacerHeight = TabIconSize.value * spacerRatio
-        Spacer(modifier = Modifier.height(spacerHeight.dp)) // Vertical spacing between icon and text
-        
+        Spacer(
+            modifier = Modifier.height(spacerHeight.dp)
+        ) // Vertical spacing between icon and text
+
         val tabTextFontSizeRatio = 0.45f
         val tabTextFontSize = TabIconSize.value * tabTextFontSizeRatio
         Text(
             text = stringResource(tabInfo.label),
             fontSize = tabTextFontSize.sp,
             fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-            color = if (selected) MediumPurple else Color.White // 选中时使用紫色，未选中时使用白色
+            color = if (selected) MediumPurple else Color.White, // 选中时使用紫色，未选中时使用白色
         )
     }
 }
@@ -510,15 +454,15 @@ private fun BottomNavigationBarItem(
 fun AppBottomNavigationBarPreview() {
     // Preview for the entire bottom navigation bar positioned in the middle
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black), // Dark background to match the app theme
-        contentAlignment = Alignment.Center
+        modifier =
+            Modifier.fillMaxSize()
+                .background(Color.Black), // Dark background to match the app theme
+        contentAlignment = Alignment.Center,
     ) {
         AppBottomNavigationBar(
             modifier = Modifier,
             selectedTab = 0, // Home tab selected
-            onSelectTab = { /* Preview doesn't need actual functionality */ }
+            onSelectTab = { /* Preview doesn't need actual functionality */ },
         )
     }
 }

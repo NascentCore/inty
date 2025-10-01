@@ -7,10 +7,7 @@ import com.squareup.moshi.Moshi
 import com.squareup.moshi.Types
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 
-/**
- * Agent缓存管理器
- * 负责缓存推荐agents和关注agents数据
- */
+/** Agent缓存管理器 负责缓存推荐agents和关注agents数据 */
 object AgentCacheManager {
 
     private const val KEY_RECOMMENDED_AGENTS = "cached_recommended_agents"
@@ -20,23 +17,19 @@ object AgentCacheManager {
     private const val KEY_CHAT_CACHE_TIMESTAMP = "chat_agents_cache_timestamp"
     private const val CACHE_EXPIRY_TIME = 30 * 60 * 1000L // 30分钟缓存过期时间
 
-    private val moshi = Moshi.Builder()
-        .addLast(KotlinJsonAdapterFactory())
-        .build()
+    private val moshi = Moshi.Builder().addLast(KotlinJsonAdapterFactory()).build()
 
     private val agentListType = Types.newParameterizedType(List::class.java, AgentInfo::class.java)
     private val agentListAdapter = moshi.adapter<List<AgentInfo>>(agentListType)
 
-    /**
-     * 缓存推荐agents
-     */
+    /** 缓存推荐agents */
     fun cacheAgents(agents: List<AgentInfo>) {
         try {
             val agentsJson = agentListAdapter.toJson(agents)
             IntySetting.setUserProfileData(KEY_RECOMMENDED_AGENTS, agentsJson)
             IntySetting.setUserProfileData(
                 KEY_CACHE_TIMESTAMP,
-                System.currentTimeMillis().toString()
+                System.currentTimeMillis().toString(),
             )
             EasyLog.log("AgentCacheManager - 缓存推荐agents成功: ${agents.size}个")
         } catch (e: Exception) {
@@ -44,9 +37,7 @@ object AgentCacheManager {
         }
     }
 
-    /**
-     * 获取缓存的推荐agents
-     */
+    /** 获取缓存的推荐agents */
     fun getCachedAgents(): List<AgentInfo> {
         return try {
             val agentsJson = IntySetting.getUserProfileData(KEY_RECOMMENDED_AGENTS)
@@ -63,16 +54,14 @@ object AgentCacheManager {
         }
     }
 
-    /**
-     * 缓存聊天agents
-     */
+    /** 缓存聊天agents */
     fun cacheChatAgents(agents: List<AgentInfo>) {
         try {
             val agentsJson = agentListAdapter.toJson(agents)
             IntySetting.setUserProfileData(KEY_CHAT_AGENTS, agentsJson)
             IntySetting.setUserProfileData(
                 KEY_CHAT_CACHE_TIMESTAMP,
-                System.currentTimeMillis().toString()
+                System.currentTimeMillis().toString(),
             )
             EasyLog.log("AgentCacheManager - 缓存聊天agents成功: ${agents.size}个")
         } catch (e: Exception) {
@@ -80,9 +69,7 @@ object AgentCacheManager {
         }
     }
 
-    /**
-     * 获取缓存的聊天agents
-     */
+    /** 获取缓存的聊天agents */
     fun getCachedChatAgents(): List<AgentInfo> {
         return try {
             val agentsJson = IntySetting.getUserProfileData(KEY_CHAT_AGENTS)
@@ -99,9 +86,7 @@ object AgentCacheManager {
         }
     }
 
-    /**
-     * 缓存关注agents
-     */
+    /** 缓存关注agents */
     fun cacheFollowingAgents(agents: List<AgentInfo>) {
         try {
             val agentsJson = agentListAdapter.toJson(agents)
@@ -112,9 +97,7 @@ object AgentCacheManager {
         }
     }
 
-    /**
-     * 获取缓存的关注agents
-     */
+    /** 获取缓存的关注agents */
     fun getCachedFollowingAgents(): List<AgentInfo> {
         return try {
             val agentsJson = IntySetting.getUserProfileData(KEY_FOLLOWING_AGENTS)
@@ -131,9 +114,7 @@ object AgentCacheManager {
         }
     }
 
-    /**
-     * 检查缓存是否过期
-     */
+    /** 检查缓存是否过期 */
     fun isCacheExpired(): Boolean {
         val timestampStr = IntySetting.getUserProfileData(KEY_CACHE_TIMESTAMP)
         if (timestampStr.isNullOrEmpty()) {
@@ -152,9 +133,7 @@ object AgentCacheManager {
         }
     }
 
-    /**
-     * 更新单个agent的关注状态
-     */
+    /** 更新单个agent的关注状态 */
     fun updateAgentFollowState(agentId: String, isFollowed: Boolean) {
         try {
             // 更新推荐agents列表中的关注状态
@@ -187,9 +166,7 @@ object AgentCacheManager {
         }
     }
 
-    /**
-     * 添加用户创建的agent到缓存
-     */
+    /** 添加用户创建的agent到缓存 */
     fun addUserCreatedAgent(agent: AgentInfo) {
         try {
             val recommendedAgents = getCachedAgents().toMutableList()
@@ -207,9 +184,7 @@ object AgentCacheManager {
         }
     }
 
-    /**
-     * 从缓存中删除agent
-     */
+    /** 从缓存中删除agent */
     fun removeAgent(agentId: String) {
         try {
             // 从推荐列表移除
@@ -228,9 +203,7 @@ object AgentCacheManager {
         }
     }
 
-    /**
-     * 清理所有缓存
-     */
+    /** 清理所有缓存 */
     fun clearCache() {
         try {
             IntySetting.setUserProfileData(KEY_RECOMMENDED_AGENTS, "")
@@ -244,9 +217,7 @@ object AgentCacheManager {
         }
     }
 
-    /**
-     * 获取缓存统计信息
-     */
+    /** 获取缓存统计信息 */
     fun getCacheStats(): CacheStats {
         val recommendedCount = getCachedAgents().size
         val chatCount = getCachedChatAgents().size
@@ -257,17 +228,15 @@ object AgentCacheManager {
             recommendedAgentsCount = recommendedCount,
             chatAgentsCount = chatCount,
             followingAgentsCount = followingCount,
-            isExpired = isExpired
+            isExpired = isExpired,
         )
     }
 
-    /**
-     * 缓存统计信息数据类
-     */
+    /** 缓存统计信息数据类 */
     data class CacheStats(
         val recommendedAgentsCount: Int,
         val chatAgentsCount: Int,
         val followingAgentsCount: Int,
-        val isExpired: Boolean
+        val isExpired: Boolean,
     )
 }

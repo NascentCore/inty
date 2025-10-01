@@ -5,7 +5,6 @@ import com.inty.utils.log.EasyLog
 import com.tencent.mmkv.MMKV
 import kotlin.random.Random
 
-
 object IntySetting {
 
     private val allUserSetting: MMKV
@@ -30,24 +29,18 @@ object IntySetting {
         return allUserSetting.decodeString("guest_uid") ?: ""
     }
 
-    /**
-     * 判断当前用户是否是 游客
-     */
+    /** 判断当前用户是否是 游客 */
     fun isGuestUser(): Boolean {
         return getCurUserID() == geGuestUserID()
     }
 
-    /**
-     * 判断是否有年龄，当前业务逻辑，>18岁的选择，age_group就不会null，<18岁，无法进行选择交互，也不会存储到服务端
-     */
+    /** 判断是否有年龄，当前业务逻辑，>18岁的选择，age_group就不会null，<18岁，无法进行选择交互，也不会存储到服务端 */
     private fun userAgeYoung(): Boolean {
         val ageGroup = getUserProfileData("age_group")
         return ageGroup == null || ageGroup.trim() == "<18"
     }
 
-    /**
-     * 游客状态，且年龄未设置（<18岁也不让设置，所以设置必然>18岁），则不能使用聊天
-     */
+    /** 游客状态，且年龄未设置（<18岁也不让设置，所以设置必然>18岁），则不能使用聊天 */
     fun needBlockInput(): Boolean {
         return isGuestUser() && userAgeYoung()
     }
@@ -59,7 +52,7 @@ object IntySetting {
         curUserSetting = MMKV.mmkvWithID("user_$curUid", MMKV.MULTI_PROCESS_MODE)
         allUserSetting.putString("cur_uid", uid)
 
-//        last.close()
+        //        last.close()
     }
 
     fun setToken(token: String) {
@@ -100,7 +93,6 @@ object IntySetting {
         EasyLog.log("$agentID = $lastMessage")
         curUserSetting.putString("conversation_last_$agentID", lastMessage)
     }
-
 
     fun setShowKeepTalking(show: Boolean) {
         curUserSetting.putBoolean("show_keep_talking", show)
@@ -150,20 +142,16 @@ object IntySetting {
         }
     }
 
-    //region Premium model相关设置
+    // region Premium model相关设置
 
-    /**
-     * 设置全局app的模型，都使用高级vip模型
-     */
+    /** 设置全局app的模型，都使用高级vip模型 */
     fun setShowPremiumModel(show: Boolean) {
         curUserSetting.putBoolean("show_premium_model", show)
         // 当全局设置改变时，重置所有角色的premium model设置为与全局一致
         resetAllAgentPremiumModelToGlobal(show)
     }
 
-    /**
-     * 判断是否使用全局 高级vip模型
-     */
+    /** 判断是否使用全局 高级vip模型 */
     fun isShowPremiumModel(): Boolean {
         return curUserSetting.decodeBool("show_premium_model", false)
     }
@@ -197,9 +185,10 @@ object IntySetting {
             }
         }
     }
-    //endregion
 
-    //标记是否已经提示过订阅过期的弹窗
+    // endregion
+
+    // 标记是否已经提示过订阅过期的弹窗
     fun hasTipsVipExpired(): Boolean {
         return curUserSetting.getBoolean("has_tips_vip_expired", false)
     }
@@ -208,7 +197,7 @@ object IntySetting {
         curUserSetting.putBoolean("has_tips_vip_expired", showed)
     }
 
-    //标记是否已经有可用的App更新，用于红点标记
+    // 标记是否已经有可用的App更新，用于红点标记
     fun hasAppUpdateTips(): Boolean {
         return curUserSetting.getBoolean("has_app_update_tips", false)
     }
@@ -225,7 +214,6 @@ object IntySetting {
         curUserSetting.putString("app_google_play_url", url)
     }
 
-
     private var isLoggingOut = false
 
     fun logout() {
@@ -237,36 +225,35 @@ object IntySetting {
         }
         changeUser(geGuestUserID())
         // 延迟重置标志，确保401处理器有时间识别
-        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-            isLoggingOut = false
-        }, 2000)
+        android.os
+            .Handler(android.os.Looper.getMainLooper())
+            .postDelayed({ isLoggingOut = false }, 2000)
     }
 
     fun isLoggingOut(): Boolean {
         return isLoggingOut
     }
 
-
-    //用于推荐接口后端sort随机排序的seed种子
+    // 用于推荐接口后端sort随机排序的seed种子
     fun sortSeed(): Int {
         return curUserSetting.getInt("current_sort_seed", 0)
     }
-    
-    //用于首页chat的页面请求数据的seed，每次app启动时生成固定值
+
+    // 用于首页chat的页面请求数据的seed，每次app启动时生成固定值
     private var _randomSortSeed: Int? = null
+
     fun randomSortSeed(): Int {
         if (_randomSortSeed == null) {
             _randomSortSeed = Random.nextInt()
         }
         return _randomSortSeed!!
     }
-    
+
     fun updateSortSeed(seed: Int) {
         curUserSetting.putInt("current_sort_seed", seed)
     }
 
-
-    //region 通用的用户信息存储方法（不依赖具体的 UserProfile 类）
+    // region 通用的用户信息存储方法（不依赖具体的 UserProfile 类）
     fun setUserProfileData(key: String, value: String) {
         curUserSetting.putString("user_profile_$key", value)
     }
@@ -316,7 +303,6 @@ object IntySetting {
     fun setShowGuested() {
         allUserSetting.putBoolean("show_guest", true)
     }
-    //endregion
-
+    // endregion
 
 }

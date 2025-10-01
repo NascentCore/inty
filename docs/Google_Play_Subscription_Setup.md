@@ -11,12 +11,10 @@
 每种订阅计划都需要在 Google Play Console 中创建一个独立的商品：
 
 1. **登录 Google Play Console**
-
    - 访问 [Google Play Console](https://play.google.com/console)
    - 选择您的应用
 
 2. **进入订阅设置**
-
    - 左侧菜单：`盈利` -> `应用内产品` -> `订阅`
    - 点击 `创建订阅`
 
@@ -31,7 +29,6 @@
    | Premium Yearly    | `com.ai.inty.premium.annual`    | $79.99 | 12 个月 | 年度高级订阅 |
 
    **⚠️ 重要说明：**
-
    - `Product ID` 必须与数据库中的 `google_play_product_id` 字段完全一致
    - 不能修改已发布的 Product ID
    - 建议使用版本号（如 v1）以便将来升级
@@ -41,19 +38,16 @@
 为每个订阅商品配置：
 
 1. **基本信息**
-
    - 商品名称：用户可见的名称
    - 商品描述：详细的功能说明
    - 价格：根据目标市场设置
 
 2. **订阅周期**
-
    - 月度：1 个月
    - 季度：3 个月
    - 年度：12 个月
 
 3. **免费试用期**（可选）
-
    - 建议设置 7 天免费试用
    - 有助于提高转化率
 
@@ -74,7 +68,6 @@
 #### 方案二：使用不同 Google 账号
 
 1. **Google Cloud Console 操作**（技术团队账号）
-
    - 访问 [Google Cloud Console](https://console.cloud.google.com/)
    - 创建或选择项目
    - 启用 `Google Play Developer API`
@@ -86,7 +79,6 @@
    - 记录服务账号邮箱地址（如：`my-service@my-project.iam.gserviceaccount.com`）
 
 2. **Google Play Console 操作**（发布者账号）
-
    - 登录 [Google Play Console](https://play.google.com/console)
    - 进入 `设置` -> `API权限`
    - 点击 `关联项目`
@@ -284,7 +276,6 @@ private fun verifyPurchaseWithBackend(purchase: Purchase) {
 ### 4.1 测试账号设置
 
 1. **设置测试账号**
-
    - 在 Google Play Console 中添加测试账号
    - 测试账号可以免费购买订阅
 
@@ -353,12 +344,10 @@ JWT_SECRET_KEY=your-jwt-secret
 ### 5.2 安全注意事项
 
 1. **服务账号密钥安全**
-
    - 不要将密钥文件提交到代码仓库
    - 使用环境变量或安全的密钥管理服务
 
 2. **Webhook 验证**
-
    - 验证 Webhook 请求的签名
    - 使用 HTTPS 确保通信安全
 

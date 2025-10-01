@@ -19,10 +19,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-/**
- * 统一启动管理器
- * 整合所有启动相关功能：缓存加载、网络预加载、用户管理、进度跟踪
- */
+/** 统一启动管理器 整合所有启动相关功能：缓存加载、网络预加载、用户管理、进度跟踪 */
 object UnifiedStartupManager {
 
     private val startupScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -49,31 +46,24 @@ object UnifiedStartupManager {
     private val _currentPhase = MutableStateFlow(StartupPhase.Initializing)
     val currentPhase: StateFlow<StartupPhase> = _currentPhase.asStateFlow()
 
-    /**
-     * 启动状态枚举
-     */
+    /** 启动状态枚举 */
     enum class StartupState {
-        Initializing,    // 初始化中 - 显示 SplashUI
-        EssentialReady,  // 必要初始化完成 - 可以隐藏 SplashUI
-        Completed,       // 启动完成
-        Failed          // 启动失败
+        Initializing, // 初始化中 - 显示 SplashUI
+        EssentialReady, // 必要初始化完成 - 可以隐藏 SplashUI
+        Completed, // 启动完成
+        Failed, // 启动失败
     }
 
-    /**
-     * 启动阶段枚举
-     */
+    /** 启动阶段枚举 */
     enum class StartupPhase {
-        Initializing,    // 初始化
-        LoadingCache,    // 加载缓存
-        UserSetup,       // 用户设置
-        NetworkSync,     // 网络同步
-        Completed        // 完成
+        Initializing, // 初始化
+        LoadingCache, // 加载缓存
+        UserSetup, // 用户设置
+        NetworkSync, // 网络同步
+        Completed, // 完成
     }
 
-    /**
-     * 初始化启动管理器 - 只做必要的登录判断，不阻塞启动
-     * 注意：保持Initializing状态直到SplashUI主动检查完成
-     */
+    /** 初始化启动管理器 - 只做必要的登录判断，不阻塞启动 注意：保持Initializing状态直到SplashUI主动检查完成 */
     fun initializeEssential(context: Context) {
         EasyLog.log("UnifiedStartupManager - 开始必要初始化")
         _startupState.value = StartupState.Initializing
@@ -89,10 +79,7 @@ object UnifiedStartupManager {
                         createGuestAccount()
                         EasyLog.log("UnifiedStartupManager - 游客账户创建成功")
                     } catch (e: Exception) {
-                        EasyLog.log(
-                            "UnifiedStartupManager - 游客账户创建失败: ${e.message}",
-                            EasyLog.ERROR
-                        )
+                        EasyLog.log("UnifiedStartupManager - 游客账户创建失败: ${e.message}", EasyLog.ERROR)
                         // 游客账户创建失败，仍然继续，避免阻塞启动
                     }
                 } else {
@@ -105,20 +92,14 @@ object UnifiedStartupManager {
 
                 // 立即开始关键数据预加载，不等待异步初始化
                 loadCriticalData()
-
             } catch (e: Exception) {
-                EasyLog.log(
-                    "UnifiedStartupManager - 必要初始化失败，但不阻塞启动: ${e.message}",
-                    EasyLog.WARN
-                )
+                EasyLog.log("UnifiedStartupManager - 必要初始化失败，但不阻塞启动: ${e.message}", EasyLog.WARN)
                 // 即使失败也继续，让SplashUI处理
             }
         }
     }
 
-    /**
-     * 异步初始化 - 进行数据预加载和缓存，不阻塞启动
-     */
+    /** 异步初始化 - 进行数据预加载和缓存，不阻塞启动 */
     fun initializeAsync(context: Context) {
         EasyLog.log("UnifiedStartupManager - 开始异步初始化")
 
@@ -138,7 +119,6 @@ object UnifiedStartupManager {
                 _startupProgress.value = 1.0f
 
                 EasyLog.log("UnifiedStartupManager - 异步初始化完成")
-
             } catch (e: Exception) {
                 EasyLog.log("UnifiedStartupManager - 异步初始化失败: ${e.message}", EasyLog.ERROR)
                 _startupState.value = StartupState.Failed
@@ -146,9 +126,7 @@ object UnifiedStartupManager {
         }
     }
 
-    /**
-     * 加载关键数据 - 优先加载recommend agents，确保UI有数据展示
-     */
+    /** 加载关键数据 - 优先加载recommend agents，确保UI有数据展示 */
     private fun loadCriticalData() {
         startupScope.launch {
             try {
@@ -170,9 +148,7 @@ object UnifiedStartupManager {
         }
     }
 
-    /**
-     * 阶段0：初始化预加载管理器
-     */
+    /** 阶段0：初始化预加载管理器 */
     private suspend fun initializePreloadManagers(context: Context) {
         try {
             // 初始化图片预加载管理器
@@ -183,43 +159,41 @@ object UnifiedStartupManager {
             AudioPreloadManager.init(context)
             EasyLog.log("UnifiedStartupManager - 音频预加载管理器初始化完成")
         } catch (e: Exception) {
-            EasyLog.log(
-                "UnifiedStartupManager - 预加载管理器初始化失败: ${e.message}",
-                EasyLog.ERROR
-            )
+            EasyLog.log("UnifiedStartupManager - 预加载管理器初始化失败: ${e.message}", EasyLog.ERROR)
         }
     }
 
-    /**
-     * 阶段1：加载缓存数据
-     */
+    /** 阶段1：加载缓存数据 */
     private suspend fun loadCacheData() {
         _currentPhase.value = StartupPhase.LoadingCache
         EasyLog.log("UnifiedStartupManager - 开始加载缓存数据")
 
         // 并行加载缓存数据
-        val userProfileDeferred = startupScope.async {
-            if (UserProfileManager.hasUserProfile()) {
-                val profile = UserProfileManager.getUserProfile()
-                EasyLog.log("UnifiedStartupManager - 加载缓存用户信息: ${profile.nickname}")
-                profile
-            } else {
-                EasyLog.log("UnifiedStartupManager - 无缓存用户信息")
-                null
+        val userProfileDeferred =
+            startupScope.async {
+                if (UserProfileManager.hasUserProfile()) {
+                    val profile = UserProfileManager.getUserProfile()
+                    EasyLog.log("UnifiedStartupManager - 加载缓存用户信息: ${profile.nickname}")
+                    profile
+                } else {
+                    EasyLog.log("UnifiedStartupManager - 无缓存用户信息")
+                    null
+                }
             }
-        }
 
-        val agentsDeferred = startupScope.async {
-            val cachedAgents = AgentCacheManager.getCachedAgents()
-            EasyLog.log("UnifiedStartupManager - 加载缓存agents: ${cachedAgents.size}个")
-            cachedAgents
-        }
+        val agentsDeferred =
+            startupScope.async {
+                val cachedAgents = AgentCacheManager.getCachedAgents()
+                EasyLog.log("UnifiedStartupManager - 加载缓存agents: ${cachedAgents.size}个")
+                cachedAgents
+            }
 
-        val chatAgentsDeferred = startupScope.async {
-            val cachedChatAgents = AgentCacheManager.getCachedChatAgents()
-            EasyLog.log("UnifiedStartupManager - 加载缓存chat agents: ${cachedChatAgents.size}个")
-            cachedChatAgents
-        }
+        val chatAgentsDeferred =
+            startupScope.async {
+                val cachedChatAgents = AgentCacheManager.getCachedChatAgents()
+                EasyLog.log("UnifiedStartupManager - 加载缓存chat agents: ${cachedChatAgents.size}个")
+                cachedChatAgents
+            }
 
         // 等待缓存数据加载完成
         _userProfile.value = userProfileDeferred.await()
@@ -231,9 +205,7 @@ object UnifiedStartupManager {
         EasyLog.log("UnifiedStartupManager - 缓存数据加载完成")
     }
 
-    /**
-     * 加载缓存数据（非阻塞版本，用于关键数据加载）
-     */
+    /** 加载缓存数据（非阻塞版本，用于关键数据加载） */
     private suspend fun loadCacheDataNonBlocking() {
         try {
             EasyLog.log("UnifiedStartupManager - 开始加载缓存数据（非阻塞）")
@@ -252,15 +224,12 @@ object UnifiedStartupManager {
             val cachedChatAgents = AgentCacheManager.getCachedChatAgents()
             _chatAgents.value = cachedChatAgents
             EasyLog.log("UnifiedStartupManager - 加载缓存chat agents: ${cachedChatAgents.size}个")
-
         } catch (e: Exception) {
             EasyLog.log("UnifiedStartupManager - 缓存数据加载异常: ${e.message}", EasyLog.ERROR)
         }
     }
 
-    /**
-     * 阶段2：用户设置
-     */
+    /** 阶段2：用户设置 */
     private suspend fun setupUser() {
         _currentPhase.value = StartupPhase.UserSetup
         EasyLog.log("UnifiedStartupManager - 开始用户设置")
@@ -275,9 +244,7 @@ object UnifiedStartupManager {
         EasyLog.log("UnifiedStartupManager - 用户设置完成")
     }
 
-    /**
-     * 阶段3：网络同步
-     */
+    /** 阶段3：网络同步 */
     private suspend fun syncNetworkData() {
         _currentPhase.value = StartupPhase.NetworkSync
         EasyLog.log("UnifiedStartupManager - 开始网络同步")
@@ -289,17 +256,11 @@ object UnifiedStartupManager {
         }
 
         // 并行同步网络数据
-        val userProfileTask = startupScope.async {
-            syncUserProfile()
-        }
+        val userProfileTask = startupScope.async { syncUserProfile() }
 
-        val agentsTask = startupScope.async {
-            syncRecommendedAgents()
-        }
+        val agentsTask = startupScope.async { syncRecommendedAgents() }
 
-        val chatAgentsTask = startupScope.async {
-            syncChatAgents()
-        }
+        val chatAgentsTask = startupScope.async { syncChatAgents() }
 
         // 等待网络同步完成
         userProfileTask.await()
@@ -311,9 +272,7 @@ object UnifiedStartupManager {
         EasyLog.log("UnifiedStartupManager - 网络同步完成")
     }
 
-    /**
-     * 检查用户是否已登录且token有效
-     */
+    /** 检查用户是否已登录且token有效 */
     private fun isUserLoggedIn(): Boolean {
         return try {
             val isLogin = IntySetting.isLogin()
@@ -321,7 +280,9 @@ object UnifiedStartupManager {
             val userId = IntySetting.getCurUserID()
 
             val isValid = isLogin && token.isNotEmpty() && userId.isNotEmpty()
-            EasyLog.log("UnifiedStartupManager - 登录状态检查: isLogin=$isLogin, hasToken=${token.isNotEmpty()}, hasUserId=${userId.isNotEmpty()}, isValid=$isValid")
+            EasyLog.log(
+                "UnifiedStartupManager - 登录状态检查: isLogin=$isLogin, hasToken=${token.isNotEmpty()}, hasUserId=${userId.isNotEmpty()}, isValid=$isValid"
+            )
             isValid
         } catch (e: Exception) {
             EasyLog.log("UnifiedStartupManager - 登录状态检查异常: ${e.message}", EasyLog.ERROR)
@@ -329,9 +290,7 @@ object UnifiedStartupManager {
         }
     }
 
-    /**
-     * 创建游客账户
-     */
+    /** 创建游客账户 */
     private suspend fun createGuestAccount() {
         try {
             val result = com.ai.inty.netapi.services.AuthService.createGuest()
@@ -345,7 +304,7 @@ object UnifiedStartupManager {
                 is com.ai.inty.netapi.ApiResult.Error -> {
                     EasyLog.log(
                         "UnifiedStartupManager - 游客账户创建失败: ${result.message}",
-                        EasyLog.ERROR
+                        EasyLog.ERROR,
                     )
                     throw Exception("Guest account creation failed: ${result.message}")
                 }
@@ -356,9 +315,7 @@ object UnifiedStartupManager {
         }
     }
 
-    /**
-     * 同步用户信息
-     */
+    /** 同步用户信息 */
     private suspend fun syncUserProfile() {
         try {
             val userProfile = IntyUserProfileSDK.getUserProfile()
@@ -374,20 +331,20 @@ object UnifiedStartupManager {
         }
     }
 
-    /**
-     * 同步推荐agents
-     */
+    /** 同步推荐agents */
     private suspend fun syncRecommendedAgents() {
         try {
-            val agentApi: IAgentApi = TheRouter.get(IAgentApi::class.java)
-                ?: throw IllegalStateException("IAgentApi not found")
+            val agentApi: IAgentApi =
+                TheRouter.get(IAgentApi::class.java)
+                    ?: throw IllegalStateException("IAgentApi not found")
 
             val sortSeed = IntySetting.sortSeed()
-            val result = agentApi.exploreAgents(
-                page = 1,
-                pageSize = ExploreConstants.PAGE_SIZE, // 使用统一的页面大小
-                sort_seed = sortSeed.toString()
-            )
+            val result =
+                agentApi.exploreAgents(
+                    page = 1,
+                    pageSize = ExploreConstants.PAGE_SIZE, // 使用统一的页面大小
+                    sort_seed = sortSeed.toString(),
+                )
 
             when (result) {
                 is HttpResult.Success -> {
@@ -408,7 +365,7 @@ object UnifiedStartupManager {
                         } catch (e: Exception) {
                             EasyLog.log(
                                 "UnifiedStartupManager - 资源预加载异常: ${e.message}",
-                                EasyLog.ERROR
+                                EasyLog.ERROR,
                             )
                         }
                     }
@@ -417,7 +374,7 @@ object UnifiedStartupManager {
                 is HttpResult.Failure -> {
                     EasyLog.log(
                         "UnifiedStartupManager - 推荐agents同步失败: ${result.message}",
-                        EasyLog.WARN
+                        EasyLog.WARN,
                     )
                 }
             }
@@ -426,20 +383,20 @@ object UnifiedStartupManager {
         }
     }
 
-    /**
-     * 同步聊天agents
-     */
+    /** 同步聊天agents */
     private suspend fun syncChatAgents() {
         try {
-            val agentApi: IAgentApi = TheRouter.get(IAgentApi::class.java)
-                ?: throw IllegalStateException("IAgentApi not found")
+            val agentApi: IAgentApi =
+                TheRouter.get(IAgentApi::class.java)
+                    ?: throw IllegalStateException("IAgentApi not found")
 
             val sortSeed = IntySetting.randomSortSeed()
-            val result = agentApi.chatAgents(
-                page = 1,
-                pageSize = ChatConstants.PAGE_SIZE, // 使用聊天页面大小
-                sort_seed = sortSeed.toString()
-            )
+            val result =
+                agentApi.chatAgents(
+                    page = 1,
+                    pageSize = ChatConstants.PAGE_SIZE, // 使用聊天页面大小
+                    sort_seed = sortSeed.toString(),
+                )
 
             when (result) {
                 is HttpResult.Success -> {
@@ -460,7 +417,7 @@ object UnifiedStartupManager {
                         } catch (e: Exception) {
                             EasyLog.log(
                                 "UnifiedStartupManager - 聊天agents资源预加载异常: ${e.message}",
-                                EasyLog.ERROR
+                                EasyLog.ERROR,
                             )
                         }
                     }
@@ -469,7 +426,7 @@ object UnifiedStartupManager {
                 is HttpResult.Failure -> {
                     EasyLog.log(
                         "UnifiedStartupManager - 聊天agents同步失败: ${result.message}",
-                        EasyLog.WARN
+                        EasyLog.WARN,
                     )
                 }
             }
@@ -478,80 +435,55 @@ object UnifiedStartupManager {
         }
     }
 
-    /**
-     * 获取当前用户信息
-     */
+    /** 获取当前用户信息 */
     fun getCurrentUserProfile(): UserProfile? {
         return _userProfile.value
     }
 
-    /**
-     * 获取当前推荐agents
-     */
+    /** 获取当前推荐agents */
     fun getCurrentRecommendedAgents(): List<AgentInfo> {
         return _recommendedAgents.value
     }
 
-    /**
-     * 获取当前聊天agents
-     */
+    /** 获取当前聊天agents */
     fun getCurrentChatAgents(): List<AgentInfo> {
         return _chatAgents.value
     }
 
-    /**
-     * 检查是否已完成启动
-     */
+    /** 检查是否已完成启动 */
     fun isStartupCompleted(): Boolean {
         return _startupState.value == StartupState.Completed
     }
 
-    /**
-     * 检查是否有缓存数据
-     */
+    /** 检查是否有缓存数据 */
     fun hasCacheData(): Boolean {
-        return _recommendedAgents.value.isNotEmpty() || _chatAgents.value.isNotEmpty() || _userProfile.value != null
+        return _recommendedAgents.value.isNotEmpty() ||
+            _chatAgents.value.isNotEmpty() ||
+            _userProfile.value != null
     }
 
-    /**
-     * 手动刷新推荐agents
-     */
+    /** 手动刷新推荐agents */
     fun refreshRecommendedAgents() {
-        startupScope.launch {
-            syncRecommendedAgents()
-        }
+        startupScope.launch { syncRecommendedAgents() }
     }
 
-    /**
-     * 手动刷新聊天agents
-     */
+    /** 手动刷新聊天agents */
     fun refreshChatAgents() {
-        startupScope.launch {
-            syncChatAgents()
-        }
+        startupScope.launch { syncChatAgents() }
     }
 
-    /**
-     * 手动刷新用户信息
-     */
+    /** 手动刷新用户信息 */
     fun refreshUserProfile() {
-        startupScope.launch {
-            syncUserProfile()
-        }
+        startupScope.launch { syncUserProfile() }
     }
 
-    /**
-     * 标记必要初始化完成 - 由SplashUI调用
-     * 用于控制SplashUI的显示时机
-     */
+    /** 标记必要初始化完成 - 由SplashUI调用 用于控制SplashUI的显示时机 */
     fun markEssentialInitializationComplete() {
         _startupState.value = StartupState.EssentialReady
         EasyLog.log("UnifiedStartupManager - SplashUI标记必要初始化完成")
     }
 
-    /**
-     * 清理所有启动数据（用于用户登出等场景）
-     */
+    /** 清理所有启动数据（用于用户登出等场景） */
     fun clearAllData() {
         _userProfile.value = null
         _recommendedAgents.value = emptyList()

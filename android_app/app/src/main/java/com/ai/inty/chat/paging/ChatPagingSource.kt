@@ -15,14 +15,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-/**
- * Chat页面的Paging数据源
- * 负责处理聊天agents的分页加载、缓存管理
- * 使用chatAgents API，与exploreAgents区分开
- */
+/** Chat页面的Paging数据源 负责处理聊天agents的分页加载、缓存管理 使用chatAgents API，与exploreAgents区分开 */
 class ChatPagingSource(
     private val useCache: Boolean = true,
-    private val sortSeed: Int = IntySetting.randomSortSeed()
+    private val sortSeed: Int = IntySetting.randomSortSeed(),
 ) : PagingSource<Int, AgentInfo>() {
 
     private val agentApi: IAgentApi by lazy {
@@ -41,7 +37,7 @@ class ChatPagingSource(
             try {
                 val page = params.key ?: INITIAL_PAGE
                 val pageSize = params.loadSize.coerceAtMost(PAGE_SIZE)
-                
+
                 EasyLog.log("ChatPagingSource - 加载第${page}页，页面大小: ${pageSize}")
 
                 // 第一页特殊处理：优先使用缓存数据
@@ -53,44 +49,43 @@ class ChatPagingSource(
                             // 后台静默刷新，不阻塞UI
                             loadFromNetworkAsync(page, pageSize)
                         }
-                        
+
                         // 返回缓存数据，假设有更多数据以支持分页
                         return@withContext LoadResult.Page(
                             data = cachedAgents,
                             prevKey = null,
-                            nextKey = if (cachedAgents.isNotEmpty()) page + 1 else null
+                            nextKey = if (cachedAgents.isNotEmpty()) page + 1 else null,
                         )
                     }
                 }
 
                 // 从网络加载数据
                 val result = loadFromNetwork(page, pageSize)
-                
+
                 when (result) {
                     is NetworkResult.Success -> {
                         val agents = result.data.list ?: emptyList()
                         val hasMore = agents.isNotEmpty() && agents.size >= pageSize
-                        
+
                         // 缓存第一页数据
                         if (page == INITIAL_PAGE && agents.isNotEmpty()) {
                             AgentCacheManager.cacheChatAgents(agents)
                             UnifiedStartupManager.refreshChatAgents()
                             EasyLog.log("ChatPagingSource - 缓存第一页数据: ${agents.size}个")
                         }
-                        
+
                         LoadResult.Page(
                             data = agents,
                             prevKey = if (page == INITIAL_PAGE) null else page - 1,
-                            nextKey = if (hasMore) page + 1 else null
+                            nextKey = if (hasMore) page + 1 else null,
                         )
                     }
-                    
+
                     is NetworkResult.Error -> {
                         EasyLog.log("ChatPagingSource - 网络加载失败: ${result.error}", EasyLog.ERROR)
                         LoadResult.Error(Exception(result.error))
                     }
                 }
-                
             } catch (e: Exception) {
                 EasyLog.log("ChatPagingSource - 加载异常: ${e.message}", EasyLog.ERROR)
                 LoadResult.Error(e)
@@ -106,16 +101,15 @@ class ChatPagingSource(
         }
     }
 
-    /**
-     * 从网络加载数据
-     */
+    /** 从网络加载数据 */
     private suspend fun loadFromNetwork(page: Int, pageSize: Int): NetworkResult {
         return try {
-            val result = agentApi.chatAgents(
-                page = page,
-                pageSize = pageSize,
-                sort_seed = sortSeed.toString()
-            )
+            val result =
+                agentApi.chatAgents(
+                    page = page,
+                    pageSize = pageSize,
+                    sort_seed = sortSeed.toString(),
+                )
 
             when (result) {
                 is HttpResult.Success -> {
@@ -130,9 +124,7 @@ class ChatPagingSource(
         }
     }
 
-    /**
-     * 异步从网络加载数据（不阻塞UI）
-     */
+    /** 异步从网络加载数据（不阻塞UI） */
     private fun loadFromNetworkAsync(page: Int, pageSize: Int) {
         // 在后台协程中执行，不阻塞当前加载
         kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launch {
@@ -152,18 +144,15 @@ class ChatPagingSource(
         }
     }
 
-    /**
-     * 检查是否需要从网络更新数据
-     */
+    /** 检查是否需要从网络更新数据 */
     private fun shouldUpdateFromNetwork(): Boolean {
         return IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()
     }
 }
 
-/**
- * 网络请求结果
- */
+/** 网络请求结果 */
 sealed class NetworkResult {
     data class Success(val data: com.ai.inty.beans.AgentInfoResponse) : NetworkResult()
+
     data class Error(val error: String) : NetworkResult()
 }

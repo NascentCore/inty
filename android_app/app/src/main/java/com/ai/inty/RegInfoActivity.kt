@@ -12,9 +12,7 @@ import com.ai.inty.viewmodels.RegInfoViewModel
 import com.therouter.router.Route
 import kotlinx.coroutines.launch
 
-/**
- * 注册信息完善页面，性别和年龄
- */
+/** 注册信息完善页面，性别和年龄 */
 @Route(path = Constant.ROUTE_REG_INFO)
 class RegInfoActivity : BaseActivity() {
 
@@ -27,9 +25,7 @@ class RegInfoActivity : BaseActivity() {
             IntyTheme {
                 RegInfoContent(
                     onClose = { finish() },
-                    onSave = { gender, age ->
-                        viewModel.onSave(gender, age)
-                    }
+                    onSave = { gender, age -> viewModel.onSave(gender, age) },
                 )
             }
         }
@@ -44,16 +40,11 @@ class RegInfoActivity : BaseActivity() {
     }
 }
 
-/**
- * 注册信息内容组件
- */
+/** 注册信息内容组件 */
 @Composable
 private fun RegInfoContent(
     onClose: () -> Unit,
-    onSave: (gender: com.ai.inty.beans.GENDER, age: String) -> Unit
+    onSave: (gender: com.ai.inty.beans.GENDER, age: String) -> Unit,
 ) {
-    RegInfoScreen(
-        onClose = onClose,
-        onSave = onSave
-    )
+    RegInfoScreen(onClose = onClose, onSave = onSave)
 }

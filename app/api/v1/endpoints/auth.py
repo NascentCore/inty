@@ -85,14 +85,15 @@ async def google_login(
 
             # 尝试恢复孤立的订阅记录
             try:
-                recovered_count = await subscription_service.recover_orphaned_subscriptions(
-                    db, 
-                    existing_user.id, 
-                    idinfo.get("email"), 
-                    idinfo["sub"]
+                recovered_count = (
+                    await subscription_service.recover_orphaned_subscriptions(
+                        db, existing_user.id, idinfo.get("email"), idinfo["sub"]
+                    )
                 )
                 if recovered_count > 0:
-                    logger.info(f"用户 {existing_user.id} 登录时恢复了 {recovered_count} 个订阅")
+                    logger.info(
+                        f"用户 {existing_user.id} 登录时恢复了 {recovered_count} 个订阅"
+                    )
             except Exception as e:
                 logger.error(f"用户 {existing_user.id} 恢复订阅失败: {str(e)}")
                 # 订阅恢复失败不影响登录流程
@@ -165,10 +166,7 @@ async def google_login(
         # 尝试恢复孤立的订阅记录（新用户也可能需要恢复之前的订阅）
         try:
             recovered_count = await subscription_service.recover_orphaned_subscriptions(
-                db, 
-                new_user.id, 
-                idinfo.get("email"), 
-                idinfo["sub"]
+                db, new_user.id, idinfo.get("email"), idinfo["sub"]
             )
             if recovered_count > 0:
                 logger.info(f"新用户 {new_user.id} 恢复了 {recovered_count} 个历史订阅")

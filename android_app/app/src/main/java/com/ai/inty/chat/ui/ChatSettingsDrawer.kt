@@ -55,9 +55,7 @@ import com.therouter.TheRouter
 import com.therouter.router.Navigator
 import com.therouter.router.action.interceptor.ActionInterceptor
 
-/**
- * 聊天设置抽屉组件
- */
+/** 聊天设置抽屉组件 */
 @Composable
 fun ChatSettingsDrawer(
     chatViewModel: ChatViewModel,
@@ -71,33 +69,35 @@ fun ChatSettingsDrawer(
     val vipStatus by BillingRepository.vipStatusFlow.collectAsState()
 
     // Keep talking二状态设置：默认跟随全局设置
-    var agentKeepTalking by remember(agentInfo?.id) {
-        mutableStateOf(
-            agentInfo?.let {
-                // 获取角色专用设置，如果不存在则使用全局设置
-                IntySetting.getAgentKeepTalking(it.id) ?: IntySetting.isShowKeepTalking()
-            } ?: false
-        )
-    }
-
-    // Premium model二状态设置：默认跟随全局设置，但受VIP状态限制
-    var agentPremiumModel by remember(agentInfo?.id, vipStatus.isSubscribed) {
-        mutableStateOf(
-            if (!vipStatus.isSubscribed) {
-                // 如果不是VIP，强制关闭Premium model
-                false
-            } else {
+    var agentKeepTalking by
+        remember(agentInfo?.id) {
+            mutableStateOf(
                 agentInfo?.let {
                     // 获取角色专用设置，如果不存在则使用全局设置
-                    IntySetting.getAgentPremiumModel(it.id) ?: IntySetting.isShowPremiumModel()
+                    IntySetting.getAgentKeepTalking(it.id) ?: IntySetting.isShowKeepTalking()
                 } ?: false
-            }
-        )
-    }
+            )
+        }
+
+    // Premium model二状态设置：默认跟随全局设置，但受VIP状态限制
+    var agentPremiumModel by
+        remember(agentInfo?.id, vipStatus.isSubscribed) {
+            mutableStateOf(
+                if (!vipStatus.isSubscribed) {
+                    // 如果不是VIP，强制关闭Premium model
+                    false
+                } else {
+                    agentInfo?.let {
+                        // 获取角色专用设置，如果不存在则使用全局设置
+                        IntySetting.getAgentPremiumModel(it.id) ?: IntySetting.isShowPremiumModel()
+                    } ?: false
+                }
+            )
+        }
 
     LifecycleResumeEffect(chatViewModel) {
         chatViewModel.updateUserInfo()
-        onPauseOrDispose { }
+        onPauseOrDispose {}
     }
 
     val horizontalPadding = 16
@@ -111,9 +111,7 @@ fun ChatSettingsDrawer(
     // 复用 MySettingViewModel 的保存逻辑
     val mySettingViewModel: MySettingViewModel = viewModel()
 
-    LaunchedEffect(userProfileState.value.id) {
-        mySettingViewModel.init(userProfileState.value)
-    }
+    LaunchedEffect(userProfileState.value.id) { mySettingViewModel.init(userProfileState.value) }
 
     // 监听用户资料变更事件并刷新UI
     val userProfileChangedInterceptor = remember {
@@ -126,9 +124,15 @@ fun ChatSettingsDrawer(
     }
 
     DisposableEffect(Unit) {
-        TheRouter.addActionInterceptor(Constant.ACTION_USER_PROFILE_CHANGED, userProfileChangedInterceptor)
+        TheRouter.addActionInterceptor(
+            Constant.ACTION_USER_PROFILE_CHANGED,
+            userProfileChangedInterceptor,
+        )
         onDispose {
-            TheRouter.removeActionInterceptor(Constant.ACTION_USER_PROFILE_CHANGED, userProfileChangedInterceptor)
+            TheRouter.removeActionInterceptor(
+                Constant.ACTION_USER_PROFILE_CHANGED,
+                userProfileChangedInterceptor,
+            )
         }
     }
 
@@ -137,47 +141,44 @@ fun ChatSettingsDrawer(
         drawerState = drawerState,
         drawerContent = {
             Column(
-                modifier = Modifier
-                    .width(319.dp)
-                    .fillMaxHeight()
-                    .background(
-                        brush = Brush.verticalGradient(
-                            colors = listOf(
-                                Color(0xFF322341),
-                                Color(0xFF120E24)
-                            )
+                modifier =
+                    Modifier.width(319.dp)
+                        .fillMaxHeight()
+                        .background(
+                            brush =
+                                Brush.verticalGradient(
+                                    colors = listOf(Color(0xFF322341), Color(0xFF120E24))
+                                )
                         )
-                    )
             ) {
                 Text(
                     text = stringResource(R.string.chat_settings_my_persona_title),
                     modifier = Modifier.padding(top = 58.dp, start = 16.dp),
                     fontSize = 20.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color.White
+                    color = Color.White,
                 )
 
                 Spacer(Modifier.height(14.dp))
 
                 Column(
-                    modifier = Modifier
-                        .padding(horizontal = horizontalPadding.dp)
-                        .fillMaxWidth()
-                        .border(
-                            brush = Brush.linearGradient(
-                                colors = listOf(
-                                    Color.Transparent,
-                                    Color.White.copy(0.2f),
-                                    Color.Transparent
-                                )
-                            ),
-                            width = 1.dp,
-                            shape = RoundedCornerShape(8.dp)
-                        )
-                        .background(
-                            color = Color(0x3378599A),
-                            shape = RoundedCornerShape(8.dp)
-                        )
+                    modifier =
+                        Modifier.padding(horizontal = horizontalPadding.dp)
+                            .fillMaxWidth()
+                            .border(
+                                brush =
+                                    Brush.linearGradient(
+                                        colors =
+                                            listOf(
+                                                Color.Transparent,
+                                                Color.White.copy(0.2f),
+                                                Color.Transparent,
+                                            )
+                                    ),
+                                width = 1.dp,
+                                shape = RoundedCornerShape(8.dp),
+                            )
+                            .background(color = Color(0x3378599A), shape = RoundedCornerShape(8.dp))
                 ) {
                     val userProfile = userProfileState
                     MySettingItem(
@@ -191,10 +192,9 @@ fun ChatSettingsDrawer(
                                 editValue = userProfile.value.nickname
                             } else {
                                 // 未登录或游客时跳转到登录页面
-                                TheRouter.build(Constant.ROUTE_LOGIN)
-                                    .navigation(context)
+                                TheRouter.build(Constant.ROUTE_LOGIN).navigation(context)
                             }
-                        }
+                        },
                     )
                     MySettingItem(
                         key = stringResource(R.string.str_pronouns),
@@ -207,10 +207,9 @@ fun ChatSettingsDrawer(
                                 editValue = userProfile.value.gender ?: ""
                             } else {
                                 // 未登录或游客时跳转到登录页面
-                                TheRouter.build(Constant.ROUTE_LOGIN)
-                                    .navigation(context)
+                                TheRouter.build(Constant.ROUTE_LOGIN).navigation(context)
                             }
-                        }
+                        },
                     )
                     MySettingItem(
                         key = stringResource(R.string.str_persona),
@@ -223,10 +222,9 @@ fun ChatSettingsDrawer(
                                 editValue = userProfile.value.description ?: ""
                             } else {
                                 // 未登录或游客时跳转到登录页面
-                                TheRouter.build(Constant.ROUTE_LOGIN)
-                                    .navigation(context)
+                                TheRouter.build(Constant.ROUTE_LOGIN).navigation(context)
                             }
-                        }
+                        },
                     )
                 }
 
@@ -237,104 +235,103 @@ fun ChatSettingsDrawer(
                     modifier = Modifier.padding(start = 16.dp),
                     fontSize = 20.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color.White
+                    color = Color.White,
                 )
 
                 Spacer(Modifier.height(14.dp))
 
                 Column(
-                    modifier = Modifier
-                        .padding(horizontal = horizontalPadding.dp)
-                        .fillMaxWidth()
-                        .border(
-                            brush = Brush.linearGradient(
-                                colors = listOf(
-                                    Color.Transparent,
-                                    Color.White.copy(0.2f),
-                                    Color.Transparent
-                                )
-                            ),
-                            width = 1.dp,
-                            shape = RoundedCornerShape(8.dp)
-                        )
-                        .background(
-                            color = Color(0x3378599A),
-                            shape = RoundedCornerShape(8.dp)
-                        )
+                    modifier =
+                        Modifier.padding(horizontal = horizontalPadding.dp)
+                            .fillMaxWidth()
+                            .border(
+                                brush =
+                                    Brush.linearGradient(
+                                        colors =
+                                            listOf(
+                                                Color.Transparent,
+                                                Color.White.copy(0.2f),
+                                                Color.Transparent,
+                                            )
+                                    ),
+                                width = 1.dp,
+                                shape = RoundedCornerShape(8.dp),
+                            )
+                            .background(color = Color(0x3378599A), shape = RoundedCornerShape(8.dp))
                 ) {
                     agentInfo?.let { agent ->
 
                         // Premium model设置（二状态，与全局设置同步）
                         Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(56.dp)
-                                .padding(horizontal = horizontalPadding.dp)
-                                .noRippleClickable {
-                                    // 检查是否正式登录（非游客且已登录）
-                                    if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
-                                        // 检查VIP状态
-                                        if (!vipStatus.isSubscribed) {
-                                            // 如果不是VIP，显示提示
-                                            onPremiumDialogShow(true)
+                            modifier =
+                                Modifier.fillMaxWidth()
+                                    .height(56.dp)
+                                    .padding(horizontal = horizontalPadding.dp)
+                                    .noRippleClickable {
+                                        // 检查是否正式登录（非游客且已登录）
+                                        if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
+                                            // 检查VIP状态
+                                            if (!vipStatus.isSubscribed) {
+                                                // 如果不是VIP，显示提示
+                                                onPremiumDialogShow(true)
+                                            } else {
+                                                // 如果是VIP，允许切换
+                                                agentPremiumModel = agentPremiumModel.not()
+                                                IntySetting.setAgentPremiumModel(
+                                                    agent.id,
+                                                    agentPremiumModel,
+                                                )
+                                                onPremiumModeChange(agentPremiumModel)
+                                            }
                                         } else {
-                                            // 如果是VIP，允许切换
-                                            agentPremiumModel = agentPremiumModel.not()
-                                            IntySetting.setAgentPremiumModel(
-                                                agent.id,
-                                                agentPremiumModel
-                                            )
-                                            onPremiumModeChange(agentPremiumModel)
+                                            // 未登录或游客时跳转到登录页面
+                                            TheRouter.build(Constant.ROUTE_LOGIN)
+                                                .navigation(context)
                                         }
-                                    } else {
-                                        // 未登录或游客时跳转到登录页面
-                                        TheRouter.build(Constant.ROUTE_LOGIN)
-                                            .navigation(context)
-                                    }
-                                },
-                            verticalAlignment = Alignment.CenterVertically
+                                    },
+                            verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Text(
                                 text = stringResource(R.string.settings_premium_model),
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Normal,
-                                color = Color.White
+                                color = Color.White,
                             )
                             Spacer(Modifier.weight(1f))
                             Image(
-                                painter = if (agentPremiumModel) painterResource(R.drawable.opened) else painterResource(
-                                    R.drawable.closed
-                                ),
+                                painter =
+                                    if (agentPremiumModel) painterResource(R.drawable.opened)
+                                    else painterResource(R.drawable.closed),
                                 contentDescription = null,
                             )
                         }
 
                         // 举报入口
                         Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(56.dp)
-                                .padding(horizontal = horizontalPadding.dp)
-                                .noRippleClickable {
-                                    // 检查是否正式登录（非游客且已登录）
-                                    if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
-                                        TheRouter.build(Constant.ROUTE_REPORT)
-                                            .withString("targetID", agent.id)
-                                            .withString("targetType", "AGENT")
-                                            .navigation(context)
-                                    } else {
-                                        // 未登录或游客时跳转到登录页面
-                                        TheRouter.build(Constant.ROUTE_LOGIN)
-                                            .navigation(context)
-                                    }
-                                },
-                            verticalAlignment = Alignment.CenterVertically
+                            modifier =
+                                Modifier.fillMaxWidth()
+                                    .height(56.dp)
+                                    .padding(horizontal = horizontalPadding.dp)
+                                    .noRippleClickable {
+                                        // 检查是否正式登录（非游客且已登录）
+                                        if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
+                                            TheRouter.build(Constant.ROUTE_REPORT)
+                                                .withString("targetID", agent.id)
+                                                .withString("targetType", "AGENT")
+                                                .navigation(context)
+                                        } else {
+                                            // 未登录或游客时跳转到登录页面
+                                            TheRouter.build(Constant.ROUTE_LOGIN)
+                                                .navigation(context)
+                                        }
+                                    },
+                            verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Text(
                                 text = stringResource(R.string.report),
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Normal,
-                                color = Color.White
+                                color = Color.White,
                             )
                             Spacer(Modifier.weight(1f))
                             Image(
@@ -344,23 +341,20 @@ fun ChatSettingsDrawer(
                         }
                     }
                 }
-
             }
-        }
+        },
     ) {
         // 应该放主屏内容的位置
         // 编辑弹窗（与 MySettingActivity 同样的 UI 交互）
         if (editKey != EditKey.None) {
             Dialog(
                 onDismissRequest = { editKey = EditKey.None },
-                properties = DialogProperties(usePlatformDefaultWidth = false)
+                properties = DialogProperties(usePlatformDefaultWidth = false),
             ) {
                 EditDialog(
                     editKey = editKey,
                     editValue = editValue,
-                    onDismiss = {
-                        editKey = EditKey.None
-                    },
+                    onDismiss = { editKey = EditKey.None },
                     onSave = { key, value ->
                         mySettingViewModel.changeUserProfile(key, value)
                         editKey = EditKey.None
@@ -368,11 +362,9 @@ fun ChatSettingsDrawer(
                         mySettingViewModel.onSave()
                         chatViewModel.updateUserInfo()
                     },
-                    onValueChange = { value ->
-                        editValue = value
-                    }
+                    onValueChange = { value -> editValue = value },
                 )
             }
         }
     }
-} 
+}

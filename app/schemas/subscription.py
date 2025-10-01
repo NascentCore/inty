@@ -236,7 +236,9 @@ class SubscriptionStatusResponse(BaseModel):
     """订阅状态响应"""
 
     is_subscribed: bool = Field(..., description="是否订阅")
-    subscription_status: str = Field(..., description="订阅详细状态：subscribed/subscribed_expiring/unsubscribed")
+    subscription_status: str = Field(
+        ..., description="订阅详细状态：subscribed/subscribed_expiring/unsubscribed"
+    )
     has_ever_subscribed: bool = Field(False, description="是否曾经有过订阅记录")
     subscription: Optional[UserSubscription] = Field(None, description="订阅信息")
     plan: Optional[SubscriptionPlan] = Field(None, description="计划信息")
@@ -268,7 +270,9 @@ class UsageStatisticsResponse(BaseModel):
     total_chat_limit: Optional[int] = Field(
         None, description="总聊天次数限制（免费用户）"
     )
-    chat_24h_count: Optional[int] = Field(None, description="24小时内聊天次数（免费用户）")
+    chat_24h_count: Optional[int] = Field(
+        None, description="24小时内聊天次数（免费用户）"
+    )
     chat_24h_limit: Optional[int] = Field(
         None, description="24小时内聊天次数限制（免费用户）"
     )

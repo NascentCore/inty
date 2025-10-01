@@ -6,11 +6,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { message } from "antd";
 import api from "../services/api";
-import type {
-  Agent,
-  AgentCreateRequest,
-  AgentUpdateRequest,
-} from "../types";
+import type { Agent, AgentCreateRequest, AgentUpdateRequest } from "../types";
 import type { AgentVisibility } from "../inty_sdk/src/resources/api/v1/ai/agents";
 
 interface UseAgentsOptions {
@@ -129,22 +125,15 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
         let response = await api.getIntyClient().api.v1.ai.agents.list({
           // 增加限制以获取更多智能体；后端限制最多 1000 个，这是分页设计；以后需要调整
           limit: 1000,
-          skip: 0
+          skip: 0,
         });
         let data = response.data;
         console.log("agent data:", data, "total:", data?.length);
 
-
         if (type !== "all" && Array.isArray(data)) {
           data = data.filter((agent) => {
-            if (type === "public")
-              return (
-                agent.visibility === "PUBLIC"
-              );
-            if (type === "private")
-              return (
-                agent.visibility === "PRIVATE"
-              );
+            if (type === "public") return agent.visibility === "PUBLIC";
+            if (type === "private") return agent.visibility === "PRIVATE";
             return true;
           });
         }
@@ -181,13 +170,17 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
         // 如果有头像文件，先上传头像
         if (data.avatar) {
           try {
-            const uploadResponse = await api.getIntyClient().api.v1.uploadImage({
-              file: data.avatar,
-              cropping_avatar: true
-            });
+            const uploadResponse = await api
+              .getIntyClient()
+              .api.v1.uploadImage({
+                file: data.avatar,
+                cropping_avatar: true,
+              });
             console.log("uploadResponse:", uploadResponse);
-            (agentData as AgentCreateRequest).avatar = uploadResponse.data?.avatar_url as string;
-            (agentData as AgentCreateRequest).background = uploadResponse.data?.url as string;
+            (agentData as AgentCreateRequest).avatar = uploadResponse.data
+              ?.avatar_url as string;
+            (agentData as AgentCreateRequest).background = uploadResponse.data
+              ?.url as string;
           } catch (error) {
             console.error("头像上传失败:", error);
             message.error("头像上传失败，但智能体创建将继续");
@@ -201,7 +194,9 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
           agentData.voice_id = data.voice_id;
         }
 
-        const response = await api.getIntyClient().api.v1.ai.agents.create(agentData);
+        const response = await api
+          .getIntyClient()
+          .api.v1.ai.agents.create(agentData);
         const newAgent = response.data as unknown as Agent;
 
         // 清理缓存并重新加载 agents 列表以确保获取完整数据（包括 avatar_size 和 background_size）
@@ -235,19 +230,29 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
         // 如果有头像文件，先上传头像
         if (data.avatar) {
           try {
-            const uploadResponse = await api.getIntyClient().api.v1.uploadImage({
-              file: data.avatar,
-              cropping_avatar: true
-            });
+            const uploadResponse = await api
+              .getIntyClient()
+              .api.v1.uploadImage({
+                file: data.avatar,
+                cropping_avatar: true,
+              });
             console.log("uploadResponse:", uploadResponse);
-            (updateData as AgentUpdateRequest).avatar = uploadResponse.data?.avatar_url as string;
-            (updateData as AgentUpdateRequest).background = uploadResponse.data?.url as string;
+            (updateData as AgentUpdateRequest).avatar = uploadResponse.data
+              ?.avatar_url as string;
+            (updateData as AgentUpdateRequest).background = uploadResponse.data
+              ?.url as string;
 
-            const currentAgent = await api.getIntyClient().api.v1.ai.agents.retrieve(agentId) as unknown as Agent;
-            if (currentAgent.extensions && currentAgent.extensions.avatar_crop) {
+            const currentAgent = (await api
+              .getIntyClient()
+              .api.v1.ai.agents.retrieve(agentId)) as unknown as Agent;
+            if (
+              currentAgent.extensions &&
+              currentAgent.extensions.avatar_crop
+            ) {
               const restExtensions = { ...currentAgent.extensions };
               delete restExtensions.avatar_crop;
-              updateData.extensions = Object.keys(restExtensions).length > 0 ? restExtensions : null;
+              updateData.extensions =
+                Object.keys(restExtensions).length > 0 ? restExtensions : null;
               console.log("已清除 avatar_crop 扩展信息");
             }
           } catch (error) {
@@ -263,7 +268,9 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
           updateData.voice_id = data.voice_id;
         }
 
-        const updatedAgent = await api.getIntyClient().api.v1.ai.agents.update(agentId, updateData) as unknown as Agent;
+        const updatedAgent = (await api
+          .getIntyClient()
+          .api.v1.ai.agents.update(agentId, updateData)) as unknown as Agent;
 
         // 清理缓存并重新加载 agents 列表以确保获取完整数据（包括 avatar_size 和 background_size）
         clearCache();

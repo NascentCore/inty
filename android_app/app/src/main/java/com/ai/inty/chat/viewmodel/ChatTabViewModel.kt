@@ -12,75 +12,59 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 
-/**
- * ChatTab页面ViewModel
- * 负责管理聊天agents的Paging数据流、刷新、缓存等逻辑
- * 独立于ExploreTab，使用chatAgents API
- */
+/** ChatTab页面ViewModel 负责管理聊天agents的Paging数据流、刷新、缓存等逻辑 独立于ExploreTab，使用chatAgents API */
 class ChatTabViewModel : BaseViewModel() {
-    
+
     private val pagingRepository = ChatPagingRepository()
-    
+
     // Paging数据流
     private val _agentsFlow = MutableStateFlow<Flow<PagingData<AgentInfo>>?>(null)
-    
+
     // 是否已初始化
     private var isInitialized = false
-    
-    /**
-     * 初始化Paging数据流
-     */
+
+    /** 初始化Paging数据流 */
     fun initializePagingData() {
         if (isInitialized) return
-        
+
         EasyLog.log("ChatTabViewModel - 初始化Paging数据流")
-        
+
         // 创建初始数据流（优先使用缓存）
-        val initialFlow = pagingRepository.getInitialChatAgents()
-            .cachedIn(viewModelScope) // 在ViewModel作用域内缓存
-        
+        val initialFlow =
+            pagingRepository.getInitialChatAgents().cachedIn(viewModelScope) // 在ViewModel作用域内缓存
+
         _agentsFlow.value = initialFlow
         isInitialized = true
-        
+
         EasyLog.log("ChatTabViewModel - Paging数据流初始化完成")
     }
-    
-    /**
-     * 获取聊天agents的Paging数据流
-     */
+
+    /** 获取聊天agents的Paging数据流 */
     fun getChatAgentsFlow(): Flow<PagingData<AgentInfo>>? {
         if (!isInitialized) {
             initializePagingData()
         }
         return _agentsFlow.value
     }
-    
-    /**
-     * 强制刷新聊天agents
-     * 简化策略：直接使用Paging的刷新机制，让Paging处理状态
-     */
+
+    /** 强制刷新聊天agents 简化策略：直接使用Paging的刷新机制，让Paging处理状态 */
     fun refreshChatAgents() {
         EasyLog.log("ChatTabViewModel - 强制刷新聊天agents")
 
         viewModelScope.launch {
             try {
                 // 直接创建新的刷新数据流，让Paging处理状态
-                val refreshFlow = pagingRepository.refreshChatAgents()
-                    .cachedIn(viewModelScope)
-                
+                val refreshFlow = pagingRepository.refreshChatAgents().cachedIn(viewModelScope)
+
                 _agentsFlow.value = refreshFlow
                 EasyLog.log("ChatTabViewModel - 刷新数据流创建成功")
-
             } catch (e: Exception) {
                 EasyLog.log("ChatTabViewModel - refreshChatAgents异常: ${e.message}", EasyLog.ERROR)
             }
         }
     }
 
-    
-    /**
-     * 监听预加载数据更新
-     */
+    /** 监听预加载数据更新 */
     fun startListeningPreloadUpdates() {
         viewModelScope.launch {
             // 监听统一启动管理器的预加载数据更新
@@ -97,17 +81,13 @@ class ChatTabViewModel : BaseViewModel() {
             }
         }
     }
-    
-    /**
-     * 获取缓存的agents列表（用于快速访问）
-     */
+
+    /** 获取缓存的agents列表（用于快速访问） */
     fun getCachedAgentsList(): List<AgentInfo> {
         return UnifiedStartupManager.getCurrentChatAgents()
     }
-    
-    /**
-     * 清空数据（用于用户登出等场景）
-     */
+
+    /** 清空数据（用于用户登出等场景） */
     fun clearData() {
         _agentsFlow.value = null
         isInitialized = false

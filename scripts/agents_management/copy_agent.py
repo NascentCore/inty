@@ -69,7 +69,9 @@ async def copy_agent(
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Copy an agent from one database to another")
+    parser = argparse.ArgumentParser(
+        description="Copy an agent from one database to another"
+    )
     parser.add_argument("--name", required=True, help="Name of the agent to copy")
     parser.add_argument(
         "--source-pg",
@@ -103,8 +105,12 @@ async def main():
         dest_engine = create_async_engine(dest_url)
 
         # Create session makers
-        SourceSession = sessionmaker(bind=source_engine, class_=AsyncSession, expire_on_commit=False)
-        DestSession = sessionmaker(bind=dest_engine, class_=AsyncSession, expire_on_commit=False)
+        SourceSession = sessionmaker(
+            bind=source_engine, class_=AsyncSession, expire_on_commit=False
+        )
+        DestSession = sessionmaker(
+            bind=dest_engine, class_=AsyncSession, expire_on_commit=False
+        )
 
         logger.info(f"Connected to databases")
     except Exception as e:

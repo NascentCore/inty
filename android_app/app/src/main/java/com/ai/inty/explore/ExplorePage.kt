@@ -33,9 +33,7 @@ import com.ai.inty.beans.AgentInfo
 import com.ai.inty.utils.ImagePreloadManager
 import com.ai.inty.utils.TrackScreenView
 
-/**
- * Explore页面 - 推荐agents展示
- */
+/** Explore页面 - 推荐agents展示 */
 @OptIn(ExperimentalMaterial3Api::class)
 @SuppressLint("ConfigurationScreenWidthHeight")
 @Composable
@@ -43,7 +41,7 @@ fun ExplorePage(
     modifier: Modifier = Modifier,
     innerPadding: PaddingValues,
     onClickAgent: (AgentInfo) -> Unit,
-    viewModel: ExploreViewModel = viewModel()
+    viewModel: ExploreViewModel = viewModel(),
 ) {
     val context = LocalContext.current
 
@@ -55,43 +53,33 @@ fun ExplorePage(
     TrackScreenView(
         screenName = "ExplorePage",
         screenClass = "MainActivity",
-        additionalParams = mapOf(
-            "agent_count" to (lazyPagingItems?.itemCount ?: 0),
-            "is_loading" to (lazyPagingItems?.loadState?.refresh is LoadState.Loading)
-        )
+        additionalParams =
+            mapOf(
+                "agent_count" to (lazyPagingItems?.itemCount ?: 0),
+                "is_loading" to (lazyPagingItems?.loadState?.refresh is LoadState.Loading),
+            ),
     )
 
     // 初始化图片尺寸缓存管理器和图片预加载管理器
-    LaunchedEffect(Unit) {
-        ImagePreloadManager.init(context)
-    }
+    LaunchedEffect(Unit) { ImagePreloadManager.init(context) }
 
     // 初始化Paging数据
-    LaunchedEffect(Unit) {
-        viewModel.initializePagingData()
-    }
+    LaunchedEffect(Unit) { viewModel.initializePagingData() }
 
     Box(modifier = modifier) {
-        IntyImage(
-            modifier = Modifier.align(Alignment.TopEnd),
-            model = R.drawable.notify_header_bg
-        )
+        IntyImage(modifier = Modifier.align(Alignment.TopEnd), model = R.drawable.notify_header_bg)
 
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Transparent)
-        ) {
+        Column(modifier = Modifier.fillMaxSize().background(Color.Transparent)) {
             TopAppBar(
                 title = {
                     Image(
                         painter = painterResource(R.drawable.img_explore_title),
                         contentDescription = null,
-                        modifier = Modifier.size(132.dp, 28.dp)
+                        modifier = Modifier.size(132.dp, 28.dp),
                     )
                 },
                 modifier = Modifier,
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
             )
 
             // 使用原生下拉刷新状态
@@ -133,7 +121,7 @@ fun ExplorePage(
                     isRefreshing = true
                     viewModel.refreshRecommendAgents()
                 },
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier.fillMaxSize(),
             ) {
                 ExploreContent(
                     modifier = Modifier.fillMaxSize(),
@@ -141,7 +129,7 @@ fun ExplorePage(
                     innerPadding = innerPadding,
                     onClickAgent = onClickAgent,
                     isRefreshing = isRefreshing,
-                    onRetry = { viewModel.refreshRecommendAgents() }
+                    onRetry = { viewModel.refreshRecommendAgents() },
                 )
             }
         }

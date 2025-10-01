@@ -31,7 +31,7 @@
     - [从一开始就设置异步测试客户端](#从一开始就设置异步测试客户端)
     - [使用ruff](#使用ruff)
   - [额外部分](#额外部分)
-  
+
 ## 项目结构
 
 项目结构有很多种，但最好的结构是一致、直观且没有意外的。
@@ -160,27 +160,27 @@ async def perfect_ping():
 **当我们调用时会发生什么：**
 
 1. `GET /terrible-ping`
-    1. FastAPI服务器接收请求并开始处理
-    2. 服务器的事件循环和队列中的所有任务都将等待`time.sleep()`完成
-        1. 服务器认为`time.sleep()`不是I/O任务，所以会等待它完成
-        2. 等待期间，服务器不会接受任何新请求
-    3. 服务器返回响应。
-        1. 响应之后，服务器开始接受新请求
+   1. FastAPI服务器接收请求并开始处理
+   2. 服务器的事件循环和队列中的所有任务都将等待`time.sleep()`完成
+      1. 服务器认为`time.sleep()`不是I/O任务，所以会等待它完成
+      2. 等待期间，服务器不会接受任何新请求
+   3. 服务器返回响应。
+      1. 响应之后，服务器开始接受新请求
 2. `GET /good-ping`
-    1. FastAPI服务器接收请求并开始处理
-    2. FastAPI将整个路由`good_ping`发送到线程池，工作线程将在那里运行该函数
-    3. 在`good_ping`执行期间，事件循环从队列中选择下一个任务并处理它们（例如接受新请求、调用数据库）
-        - 独立于主线程（即我们的FastAPI应用），工作线程将等待`time.sleep`完成。
-        - 同步操作只阻塞子线程，而不是主线程。
-    4. 当`good_ping`完成工作后，服务器向客户端返回响应
+   1. FastAPI服务器接收请求并开始处理
+   2. FastAPI将整个路由`good_ping`发送到线程池，工作线程将在那里运行该函数
+   3. 在`good_ping`执行期间，事件循环从队列中选择下一个任务并处理它们（例如接受新请求、调用数据库）
+      - 独立于主线程（即我们的FastAPI应用），工作线程将等待`time.sleep`完成。
+      - 同步操作只阻塞子线程，而不是主线程。
+   4. 当`good_ping`完成工作后，服务器向客户端返回响应
 3. `GET /perfect-ping`
-    1. FastAPI服务器接收请求并开始处理
-    2. FastAPI等待`asyncio.sleep(10)`
-    3. 事件循环从队列中选择下一个任务并处理它们（例如接受新请求、调用数据库）
-    4. 当`asyncio.sleep(10)`完成后，服务器完成路由的执行并向客户端返回响应
+   1. FastAPI服务器接收请求并开始处理
+   2. FastAPI等待`asyncio.sleep(10)`
+   3. 事件循环从队列中选择下一个任务并处理它们（例如接受新请求、调用数据库）
+   4. 当`asyncio.sleep(10)`完成后，服务器完成路由的执行并向客户端返回响应
 
 > [!WARNING]
-关于线程池的注意事项：
+> 关于线程池的注意事项：
 >
 > - 线程比协程需要更多资源，因此它们不像异步I/O操作那样轻量。
 > - 线程池的线程数量是有限的，也就是说，你可能会耗尽线程，导致应用变慢。[了解更多](https://github.com/Kludex/fastapi-tips?tab=readme-ov-file#2-be-careful-with-non-async-functions)（外部链接）
@@ -196,7 +196,7 @@ async def perfect_ping():
 **困惑用户的相关 StackOverflow 问题**
 
 1. [https://stackoverflow.com/questions/62976648/architecture-flask-vs-fastapi/70309597#70309597](https://stackoverflow.com/questions/62976648/architecture-flask-vs-fastapi/70309597#70309597)
-    - 在这里你也可以查看[我的回答](https://stackoverflow.com/a/70309597/6927498)
+   - 在这里你也可以查看[我的回答](https://stackoverflow.com/a/70309597/6927498)
 2. [https://stackoverflow.com/questions/65342833/fastapi-uploadfile-is-slow-compared-to-flask](https://stackoverflow.com/questions/65342833/fastapi-uploadfile-is-slow-compared-to-flask)
 3. [https://stackoverflow.com/questions/71516140/fastapi-runs-api-calls-in-serial-instead-of-parallel-fashion](https://stackoverflow.com/questions/71516140/fastapi-runs-api-calls-in-serial-instead-of-parallel-fashion)
 
@@ -334,8 +334,8 @@ async def get_post_by_id(post: dict[str, Any] = Depends(valid_post_id)):
 
 @router.put("/posts/{post_id}", response_model=PostResponse)
 async def update_post(
-    update_data: PostUpdate,  
-    post: dict[str, Any] = Depends(valid_post_id), 
+    update_data: PostUpdate,
+    post: dict[str, Any] = Depends(valid_post_id),
 ):
     updated_post = await service.update(id=post["id"], data=update_data)
     return updated_post
@@ -375,7 +375,7 @@ async def parse_jwt_data(
     return {"user_id": payload["id"]}
 
 async def valid_owned_post(
-    post: dict[str, Any] = Depends(valid_post_id), 
+    post: dict[str, Any] = Depends(valid_post_id),
     token_data: dict[str, Any] = Depends(parse_jwt_data),
 ) -> dict[str, Any]:
     if post["creator_id"] != token_data["user_id"]:
@@ -427,7 +427,7 @@ async def parse_jwt_data(
     return {"user_id": payload["id"]}
 
 async def valid_owned_post(
-    post: Mapping = Depends(valid_post_id), 
+    post: Mapping = Depends(valid_post_id),
     token_data: dict = Depends(parse_jwt_data),
 ) -> Mapping:
     if post["creator_id"] != token_data["user_id"]:
@@ -441,12 +441,12 @@ async def valid_active_creator(
     user = await users_service.get_by_id(token_data["user_id"])
     if not user["is_active"]:
         raise UserIsBanned()
-    
+
     if not user["is_creator"]:
        raise UserNotCreator()
-    
+
     return user
-        
+
 
 # router.py
 @router.get("/users/{user_id}/posts/{post_id}", response_model=PostResponse)
@@ -560,7 +560,7 @@ async def root():
 ```python
 from fastapi import FastAPI
 from fastapi.concurrency import run_in_threadpool
-from my_sync_library import SyncAPIClient 
+from my_sync_library import SyncAPIClient
 
 app = FastAPI()
 
@@ -582,7 +582,7 @@ from pydantic import BaseModel, field_validator
 
 class ProfileCreate(BaseModel):
     username: str
-    
+
     @field_validator("password", mode="after")
     @classmethod
     def valid_password(cls, password: str) -> str:
@@ -632,8 +632,8 @@ app = FastAPI(**app_configs)
 ```
 
 1. 帮助FastAPI生成易于理解的文档
-    1. 设置`response_model`、`status_code`、`description`等。
-    2. 如果模型和状态不同，使用`responses`路由属性为不同的响应添加文档
+   1. 设置`response_model`、`status_code`、`description`等。
+   2. 如果模型和状态不同，使用`responses`路由属性为不同的响应添加文档
 
 ```python
 from fastapi import APIRouter, status
@@ -642,7 +642,7 @@ router = APIRouter()
 
 @router.post(
     "/endpoints",
-    response_model=DefaultResponseModel,  # default response pydantic model 
+    response_model=DefaultResponseModel,  # default response pydantic model
     status_code=status.HTTP_201_CREATED,  # default status code
     description="Description of the well documented endpoint",
     tags=["Endpoint Category"],
@@ -706,8 +706,8 @@ file_template = %%(year)d-%%(month).2d-%%(day).2d_%%(slug)s
 2. 单数形式（例如`post`、`post_like`、`user_playlist`）
 3. 用模块前缀对类似的表进行分组，例如`payment_account`、`payment_bill`、`post`、`post_like`
 4. 在表之间保持一致，但具体命名也可以，例如
-    1. 在所有表中使用`profile_id`，但如果其中一些表只需要作为创作者的个人资料，则使用`creator_id`
-    2. 在`post_like`、`post_view`等抽象表中使用`post_id`，但在相关模块中使用具体命名，如`chapters.course_id`中的`course_id`
+   1. 在所有表中使用`profile_id`，但如果其中一些表只需要作为创作者的个人资料，则使用`creator_id`
+   2. 在`post_like`、`post_view`等抽象表中使用`post_id`，但在相关模块中使用具体命名，如`chapters.course_id`中的`course_id`
 5. datetime类型字段使用`_at`后缀
 6. date类型字段使用`_date`后缀
 
@@ -729,7 +729,7 @@ from src.database import database, posts, profiles, post_review, products
 
 async def get_posts(
     creator_id: UUID4, *, limit: int = 10, offset: int = 0
-) -> list[dict[str, Any]]: 
+) -> list[dict[str, Any]]:
     select_query = (
         select(
             (
@@ -763,7 +763,7 @@ async def get_posts(
             desc(coalesce(posts.c.updated_at, posts.c.published_at, posts.c.created_at))
         )
     )
-    
+
     return await database.fetch_all(select_query)
 
 # src.posts.schemas
@@ -771,7 +771,7 @@ from typing import Any
 
 from pydantic import BaseModel, UUID4
 
-   
+
 class Creator(BaseModel):
     id: UUID4
     first_name: str
@@ -784,7 +784,7 @@ class Post(BaseModel):
     title: str
     creator: Creator
 
-    
+
 # src.posts.router
 from fastapi import APIRouter, Depends
 

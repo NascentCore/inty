@@ -44,10 +44,7 @@ import com.inty.utils.storage.IntySetting
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-/**
- * ChatPageContainer - 支持分页加载的聊天页面容器
- * 使用Paging库实现分页加载更多agents，提供更流畅的滑动体验
- */
+/** ChatPageContainer - 支持分页加载的聊天页面容器 使用Paging库实现分页加载更多agents，提供更流畅的滑动体验 */
 @Composable
 fun ChatPageContainer(
     modifier: Modifier,
@@ -62,22 +59,18 @@ fun ChatPageContainer(
     val agentsPagingItems = agentsFlow?.collectAsLazyPagingItems() ?: return
 
     // 获取当前加载的agents列表
-    val agentList = remember(agentsPagingItems.itemCount) {
-        val list = mutableListOf<AgentInfo>()
-        for (i in 0 until agentsPagingItems.itemCount) {
-            agentsPagingItems[i]?.let { agent ->
-                list.add(agent)
+    val agentList =
+        remember(agentsPagingItems.itemCount) {
+            val list = mutableListOf<AgentInfo>()
+            for (i in 0 until agentsPagingItems.itemCount) {
+                agentsPagingItems[i]?.let { agent -> list.add(agent) }
             }
+            list
         }
-        list
-    }
 
     // 如果 agentList 为空，显示空状态
     if (agentList.isEmpty()) {
-        Box(
-            modifier = modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
+        Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             // 可以在这里显示加载中或空状态的UI
             // 暂时显示空白，等待数据加载
         }
@@ -85,20 +78,20 @@ fun ChatPageContainer(
     }
 
     // 防止初始页面索引越界
-    val safeInitialPage = if (currentPageIndex >= 0 && currentPageIndex < agentList.size) {
-        currentPageIndex
-    } else {
-        0 // 默认使用第一页
-    }
+    val safeInitialPage =
+        if (currentPageIndex >= 0 && currentPageIndex < agentList.size) {
+            currentPageIndex
+        } else {
+            0 // 默认使用第一页
+        }
     val pageState = rememberPagerState(initialPage = safeInitialPage) { agentList.size }
-    val prefetchThreshold = 5//距离本业末尾数据还有5个时，触发静默加载下一页
+    val prefetchThreshold = 5 // 距离本业末尾数据还有5个时，触发静默加载下一页
     val scope = rememberCoroutineScope()
 
     // 新用户引导状态
     var hasShowGuest by remember { mutableStateOf(IntySetting.hasShowGuest()) }
-    val shouldShowGuide = remember(agentList.size, hasShowGuest) {
-        !hasShowGuest && agentList.size > 1
-    }
+    val shouldShowGuide =
+        remember(agentList.size, hasShowGuest) { !hasShowGuest && agentList.size > 1 }
 
     // 监听页面变化
     LaunchedEffect(pageState.currentPage) {
@@ -108,10 +101,8 @@ fun ChatPageContainer(
         val currentAgent = agentList.getOrNull(pageState.currentPage)
         if (currentAgent != null) {
             try {
-                val audioManager = com.ai.inty.audio.AudioManager.getInstance(
-                    com.inty.utils.AppEnv.context,
-                    scope
-                )
+                val audioManager =
+                    com.ai.inty.audio.AudioManager.getInstance(com.inty.utils.AppEnv.context, scope)
                 audioManager.stopAllPlayback()
             } catch (e: Exception) {
                 EasyLog.log("ChatPageContainer - 停止音频播放失败: ${e.message}", EasyLog.ERROR)
@@ -126,7 +117,8 @@ fun ChatPageContainer(
             val appendState = agentsPagingItems.loadState.append
             val refreshState = agentsPagingItems.loadState.refresh
             val notEnd =
-                !(appendState is androidx.paging.LoadState.NotLoading && appendState.endOfPaginationReached)
+                !(appendState is androidx.paging.LoadState.NotLoading &&
+                    appendState.endOfPaginationReached)
             val canPrefetch = refreshState is androidx.paging.LoadState.NotLoading
             if (pageState.currentPage >= thresholdIndex && notEnd && canPrefetch) {
                 val nextIndex = agentsPagingItems.itemCount
@@ -148,10 +140,7 @@ fun ChatPageContainer(
                 return@HorizontalPager
             }
             val agent = agentList[currentPage]
-            val chatViewModel: ChatViewModel = viewModel(
-                key = agent.id,
-                factory = viewModelFactory
-            )
+            val chatViewModel: ChatViewModel = viewModel(key = agent.id, factory = viewModelFactory)
 
             LaunchedEffect(key1 = agent.id, key2 = agent.isFollowed) {
                 chatViewModel.setAgentInfo(agent)
@@ -169,15 +158,12 @@ fun ChatPageContainer(
         NewUserGuide(
             pageState = pageState,
             shouldShowGuide = shouldShowGuide,
-            onGuideCompleted = { hasShowGuest = true }
+            onGuideCompleted = { hasShowGuest = true },
         )
-
     }
 }
 
-/**
- * 新用户引导组件
- */
+/** 新用户引导组件 */
 @Composable
 private fun NewUserGuide(
     pageState: PagerState,
@@ -208,18 +194,17 @@ private fun NewUserGuide(
 
         AnimatedVisibility(
             visible = showHand,
-            enter = fadeIn() + slideInHorizontally(
-                initialOffsetX = { fullWidth -> fullWidth / 6 } // 从屏幕右侧1/6处出现
-            ),
-            exit = fadeOut(targetAlpha = 0.01f) + slideOutHorizontally(
-                targetOffsetX = { it }
-            )
+            enter =
+                fadeIn() +
+                    slideInHorizontally(
+                        initialOffsetX = { fullWidth -> fullWidth / 6 } // 从屏幕右侧1/6处出现
+                    ),
+            exit = fadeOut(targetAlpha = 0.01f) + slideOutHorizontally(targetOffsetX = { it }),
         ) {
             val scope = rememberCoroutineScope()
             Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .noRippleClickable {
+                modifier =
+                    Modifier.fillMaxSize().noRippleClickable {
                         // 只有在引导期间才响应点击
                         if (isGuideActive) {
                             scope.launch {
@@ -234,31 +219,28 @@ private fun NewUserGuide(
             ) {
                 // 背景渐变框
                 Box(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(top = 340.dp)
-                        .size(210.dp, 40.dp)
-                        .background(
-                            brush = Brush.horizontalGradient(
-                                colors = listOf(
-                                    Color.White.copy(0.7f),
-                                    Color.White.copy(0.1f)
-                                )
-                            ),
-                            shape = RoundedCornerShape(
-                                topStart = 20.dp, bottomStart = 20.dp
+                    modifier =
+                        Modifier.align(Alignment.TopEnd)
+                            .padding(top = 340.dp)
+                            .size(210.dp, 40.dp)
+                            .background(
+                                brush =
+                                    Brush.horizontalGradient(
+                                        colors =
+                                            listOf(Color.White.copy(0.7f), Color.White.copy(0.1f))
+                                    ),
+                                shape = RoundedCornerShape(topStart = 20.dp, bottomStart = 20.dp),
                             )
-                        )
                 )
 
                 // 手势图标
                 Image(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(top = 340.dp, end = 92.dp)
-                        .size(112.dp),
+                    modifier =
+                        Modifier.align(Alignment.TopEnd)
+                            .padding(top = 340.dp, end = 92.dp)
+                            .size(112.dp),
                     painter = painterResource(R.drawable.scroll_hand),
-                    contentDescription = stringResource(R.string.content_desc_swipe_guide)
+                    contentDescription = stringResource(R.string.content_desc_swipe_guide),
                 )
             }
         }

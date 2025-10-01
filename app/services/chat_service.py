@@ -59,7 +59,9 @@ async def get_chat(db: AsyncSession, chat_id: str) -> Optional[models.Chat]:
             # Set agent name and avatar
             chat.agent_name = chat.agent.name if chat.agent else None
             chat.agent_avatar = chat.agent.avatar if chat.agent else None
-            chat.agent_is_deleted = chat.agent.deleted_at is not None if chat.agent else None
+            chat.agent_is_deleted = (
+                chat.agent.deleted_at is not None if chat.agent else None
+            )
         return chat
     except SQLAlchemyError as e:
         logger.error(f"Database query error - get chat {chat_id}: {str(e)}")
@@ -139,7 +141,9 @@ async def get_chats(
 
             chat.agent_name = chat.agent.name if chat.agent else None
             chat.agent_avatar = chat.agent.avatar if chat.agent else None
-            chat.agent_is_deleted = chat.agent.deleted_at is not None if chat.agent else None
+            chat.agent_is_deleted = (
+                chat.agent.deleted_at is not None if chat.agent else None
+            )
             chats_with_message_time.append(chat)
 
         # Sort by recent message time (chats without messages go last, sorted by creation time)
@@ -248,7 +252,9 @@ async def create_chat(
             chat.last_message_time = None
         chat.agent_name = chat.agent.name if chat.agent else None
         chat.agent_avatar = chat.agent.avatar if chat.agent else None
-        chat.agent_is_deleted = chat.agent.deleted_at is not None if chat.agent else None
+        chat.agent_is_deleted = (
+            chat.agent.deleted_at is not None if chat.agent else None
+        )
 
         return chat
 
@@ -419,7 +425,9 @@ async def get_or_create_chat_by_agent(
                         )
                     )
                     agent_info = agent_result.first()
-                    existing_chat.agent_is_deleted = agent_info[0] is not None if agent_info else None
+                    existing_chat.agent_is_deleted = (
+                        agent_info[0] is not None if agent_info else None
+                    )
                 else:
                     # 数据库查询Agent信息
                     agent_result = await db.execute(
@@ -467,9 +475,9 @@ async def get_or_create_chat_by_agent(
                     else:
                         # 如果缓存中没有开场白，从数据库查询
                         agent_result = await db.execute(
-                            select(models.Agent.opening, models.Agent.opening_audio_url).where(
-                                models.Agent.id == agent_id
-                            )
+                            select(
+                                models.Agent.opening, models.Agent.opening_audio_url
+                            ).where(models.Agent.id == agent_id)
                         )
                         agent_info = agent_result.first()
                         if agent_info:

@@ -1,277 +1,292 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>InTy 智能体评测系统</title>
     <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif;
-            margin: 0;
-            padding: 20px;
-            background: #f0f2f5;
-            color: #333;
-        }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            padding: 24px;
-        }
-        .header {
-            text-align: center;
-            margin-bottom: 32px;
-            padding-bottom: 16px;
-            border-bottom: 1px solid #f0f0f0;
-        }
-        .title {
-            font-size: 28px;
-            font-weight: bold;
-            color: #1890ff;
-            margin: 0 0 8px 0;
-        }
-        .subtitle {
-            color: #666;
-            font-size: 14px;
-        }
-        .section {
-            margin-bottom: 24px;
-        }
-        .section-title {
-            font-size: 16px;
-            font-weight: 600;
-            margin-bottom: 12px;
-            color: #262626;
-        }
-        .api-list {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 16px;
-        }
-        .api-item {
-            padding: 16px;
-            background: #fafafa;
-            border-radius: 6px;
-            border-left: 4px solid #1890ff;
-        }
-        .api-method {
-            font-weight: bold;
-            color: #1890ff;
-            font-family: monospace;
-        }
-        .api-path {
-            color: #52c41a;
-            font-family: monospace;
-            margin-left: 8px;
-        }
-        .api-desc {
-            margin-top: 4px;
-            font-size: 12px;
-            color: #666;
-        }
-        .btn {
-            background: #1890ff;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 4px;
-            cursor: pointer;
-            text-decoration: none;
-            display: inline-block;
-            margin: 4px;
-        }
-        .btn:hover {
-            background: #40a9ff;
-        }
-        .status {
-            padding: 12px;
-            margin-bottom: 16px;
-            border-radius: 4px;
-            font-size: 14px;
-        }
-        .status.success {
-            background: #f6ffed;
-            border: 1px solid #b7eb8f;
-            color: #52c41a;
-        }
-        .status.warning {
-            background: #fffbe6;
-            border: 1px solid #ffe58f;
-            color: #faad14;
-        }
-        .code {
-            background: #f5f5f5;
-            padding: 12px;
-            border-radius: 4px;
-            font-family: monospace;
-            font-size: 12px;
-            overflow-x: auto;
-        }
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+          sans-serif;
+        margin: 0;
+        padding: 20px;
+        background: #f0f2f5;
+        color: #333;
+      }
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        padding: 24px;
+      }
+      .header {
+        text-align: center;
+        margin-bottom: 32px;
+        padding-bottom: 16px;
+        border-bottom: 1px solid #f0f0f0;
+      }
+      .title {
+        font-size: 28px;
+        font-weight: bold;
+        color: #1890ff;
+        margin: 0 0 8px 0;
+      }
+      .subtitle {
+        color: #666;
+        font-size: 14px;
+      }
+      .section {
+        margin-bottom: 24px;
+      }
+      .section-title {
+        font-size: 16px;
+        font-weight: 600;
+        margin-bottom: 12px;
+        color: #262626;
+      }
+      .api-list {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 16px;
+      }
+      .api-item {
+        padding: 16px;
+        background: #fafafa;
+        border-radius: 6px;
+        border-left: 4px solid #1890ff;
+      }
+      .api-method {
+        font-weight: bold;
+        color: #1890ff;
+        font-family: monospace;
+      }
+      .api-path {
+        color: #52c41a;
+        font-family: monospace;
+        margin-left: 8px;
+      }
+      .api-desc {
+        margin-top: 4px;
+        font-size: 12px;
+        color: #666;
+      }
+      .btn {
+        background: #1890ff;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 4px;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-block;
+        margin: 4px;
+      }
+      .btn:hover {
+        background: #40a9ff;
+      }
+      .status {
+        padding: 12px;
+        margin-bottom: 16px;
+        border-radius: 4px;
+        font-size: 14px;
+      }
+      .status.success {
+        background: #f6ffed;
+        border: 1px solid #b7eb8f;
+        color: #52c41a;
+      }
+      .status.warning {
+        background: #fffbe6;
+        border: 1px solid #ffe58f;
+        color: #faad14;
+      }
+      .code {
+        background: #f5f5f5;
+        padding: 12px;
+        border-radius: 4px;
+        font-family: monospace;
+        font-size: 12px;
+        overflow-x: auto;
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <div class="container">
-        <div class="header">
-            <h1 class="title">🤖 InTy 智能体评测系统</h1>
-            <p class="subtitle">全面评测智能体的对话质量、角色一致性和表达能力</p>
+      <div class="header">
+        <h1 class="title">🤖 InTy 智能体评测系统</h1>
+        <p class="subtitle">全面评测智能体的对话质量、角色一致性和表达能力</p>
+      </div>
+
+      <div class="status success">✅ 评测系统后端已成功集成到 InTy 后端</div>
+
+      <div class="status warning">
+        ⚠️ 前端界面需要构建后才能使用。当前显示的是 API 测试页面。
+      </div>
+
+      <div class="section">
+        <h2 class="section-title">🔗 快速访问</h2>
+        <a href="/docs" class="btn">📖 API 文档</a>
+        <a href="/static/evaluation/README.md" class="btn">📚 系统文档</a>
+        <a href="/" class="btn">❤️ 健康检查</a>
+        <button class="btn" onclick="testAPI()">🧪 测试 API</button>
+      </div>
+
+      <div class="section">
+        <h2 class="section-title">📋 评测系统 API</h2>
+        <div class="api-list">
+          <div class="api-item">
+            <div>
+              <span class="api-method">POST</span>
+              <span class="api-path">/api/v1/evaluation/sessions</span>
+            </div>
+            <div class="api-desc">创建评测会话</div>
+          </div>
+          <div class="api-item">
+            <div>
+              <span class="api-method">GET</span>
+              <span class="api-path">/api/v1/evaluation/sessions</span>
+            </div>
+            <div class="api-desc">获取评测会话列表</div>
+          </div>
+          <div class="api-item">
+            <div>
+              <span class="api-method">POST</span>
+              <span class="api-path"
+                >/api/v1/evaluation/sessions/{id}/start</span
+              >
+            </div>
+            <div class="api-desc">启动评测</div>
+          </div>
+          <div class="api-item">
+            <div>
+              <span class="api-method">GET</span>
+              <span class="api-path"
+                >/api/v1/evaluation/sessions/{id}/results</span
+              >
+            </div>
+            <div class="api-desc">获取评测结果</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2 class="section-title">🤖 现有智能体 API (已集成)</h2>
+        <div class="api-list">
+          <div class="api-item">
+            <div>
+              <span class="api-method">GET</span>
+              <span class="api-path">/api/v1/ai/agents/</span>
+            </div>
+            <div class="api-desc">获取智能体列表</div>
+          </div>
+          <div class="api-item">
+            <div>
+              <span class="api-method">POST</span>
+              <span class="api-path"
+                >/api/v1/chats/agents/{id}/chat/completions</span
+              >
+            </div>
+            <div class="api-desc">OpenAI 风格聊天接口</div>
+          </div>
+          <div class="api-item">
+            <div>
+              <span class="api-method">GET</span>
+              <span class="api-path">/api/v1/chats/agents/{id}/detail</span>
+            </div>
+            <div class="api-desc">获取聊天详情</div>
+          </div>
+          <div class="api-item">
+            <div>
+              <span class="api-method">POST</span>
+              <span class="api-path"
+                >/api/v1/chats/agents/{id}/clear-messages</span
+              >
+            </div>
+            <div class="api-desc">清除聊天消息</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2 class="section-title">🛠️ 开发指南</h2>
+        <div style="margin-bottom: 16px">
+          <h3>1. 启动服务器</h3>
+          <div class="code">
+            uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+          </div>
         </div>
 
-        <div class="status success">
-            ✅ 评测系统后端已成功集成到 InTy 后端
+        <div style="margin-bottom: 16px">
+          <h3>2. 运行数据库迁移</h3>
+          <div class="code">alembic upgrade head</div>
         </div>
 
-        <div class="status warning">
-            ⚠️ 前端界面需要构建后才能使用。当前显示的是 API 测试页面。
+        <div style="margin-bottom: 16px">
+          <h3>3. 测试 API 连通性</h3>
+          <div class="code">
+            python app/static/evaluation/test_integration.py
+          </div>
         </div>
 
-        <div class="section">
-            <h2 class="section-title">🔗 快速访问</h2>
-            <a href="/docs" class="btn">📖 API 文档</a>
-            <a href="/static/evaluation/README.md" class="btn">📚 系统文档</a>
-            <a href="/" class="btn">❤️ 健康检查</a>
-            <button class="btn" onclick="testAPI()">🧪 测试 API</button>
+        <div style="margin-bottom: 16px">
+          <h3>4. 构建前端 (未来)</h3>
+          <div class="code">
+            # 未来需要添加前端构建流程 # npm install && npm run build # 或使用
+            Webpack/Vite 构建
+          </div>
         </div>
+      </div>
 
-        <div class="section">
-            <h2 class="section-title">📋 评测系统 API</h2>
-            <div class="api-list">
-                <div class="api-item">
-                    <div>
-                        <span class="api-method">POST</span>
-                        <span class="api-path">/api/v1/evaluation/sessions</span>
-                    </div>
-                    <div class="api-desc">创建评测会话</div>
-                </div>
-                <div class="api-item">
-                    <div>
-                        <span class="api-method">GET</span>
-                        <span class="api-path">/api/v1/evaluation/sessions</span>
-                    </div>
-                    <div class="api-desc">获取评测会话列表</div>
-                </div>
-                <div class="api-item">
-                    <div>
-                        <span class="api-method">POST</span>
-                        <span class="api-path">/api/v1/evaluation/sessions/{id}/start</span>
-                    </div>
-                    <div class="api-desc">启动评测</div>
-                </div>
-                <div class="api-item">
-                    <div>
-                        <span class="api-method">GET</span>
-                        <span class="api-path">/api/v1/evaluation/sessions/{id}/results</span>
-                    </div>
-                    <div class="api-desc">获取评测结果</div>
-                </div>
-            </div>
+      <div class="section">
+        <h2 class="section-title">📊 API 测试结果</h2>
+        <div id="test-results" style="min-height: 100px">
+          <p style="color: #666">点击上方 "🧪 测试 API" 按钮查看结果</p>
         </div>
-
-        <div class="section">
-            <h2 class="section-title">🤖 现有智能体 API (已集成)</h2>
-            <div class="api-list">
-                <div class="api-item">
-                    <div>
-                        <span class="api-method">GET</span>
-                        <span class="api-path">/api/v1/ai/agents/</span>
-                    </div>
-                    <div class="api-desc">获取智能体列表</div>
-                </div>
-                <div class="api-item">
-                    <div>
-                        <span class="api-method">POST</span>
-                        <span class="api-path">/api/v1/chats/agents/{id}/chat/completions</span>
-                    </div>
-                    <div class="api-desc">OpenAI 风格聊天接口</div>
-                </div>
-                <div class="api-item">
-                    <div>
-                        <span class="api-method">GET</span>
-                        <span class="api-path">/api/v1/chats/agents/{id}/detail</span>
-                    </div>
-                    <div class="api-desc">获取聊天详情</div>
-                </div>
-                <div class="api-item">
-                    <div>
-                        <span class="api-method">POST</span>
-                        <span class="api-path">/api/v1/chats/agents/{id}/clear-messages</span>
-                    </div>
-                    <div class="api-desc">清除聊天消息</div>
-                </div>
-            </div>
-        </div>
-
-        <div class="section">
-            <h2 class="section-title">🛠️ 开发指南</h2>
-            <div style="margin-bottom: 16px;">
-                <h3>1. 启动服务器</h3>
-                <div class="code">uvicorn app.main:app --reload --host 0.0.0.0 --port 8000</div>
-            </div>
-            
-            <div style="margin-bottom: 16px;">
-                <h3>2. 运行数据库迁移</h3>
-                <div class="code">alembic upgrade head</div>
-            </div>
-            
-            <div style="margin-bottom: 16px;">
-                <h3>3. 测试 API 连通性</h3>
-                <div class="code">python app/static/evaluation/test_integration.py</div>
-            </div>
-            
-            <div style="margin-bottom: 16px;">
-                <h3>4. 构建前端 (未来)</h3>
-                <div class="code">
-# 未来需要添加前端构建流程
-# npm install && npm run build
-# 或使用 Webpack/Vite 构建
-</div>
-            </div>
-        </div>
-
-        <div class="section">
-            <h2 class="section-title">📊 API 测试结果</h2>
-            <div id="test-results" style="min-height: 100px;">
-                <p style="color: #666;">点击上方 "🧪 测试 API" 按钮查看结果</p>
-            </div>
-        </div>
+      </div>
     </div>
 
     <script>
-        async function testAPI() {
-            const resultsDiv = document.getElementById('test-results');
-            resultsDiv.innerHTML = '<p>🔄 正在测试 API...</p>';
-            
-            const tests = [
-                { name: '健康检查', url: '/api/v1/', method: 'GET' },
-                { name: '智能体列表', url: '/api/v1/ai/agents/', method: 'GET' },
-                { name: '评测会话列表', url: '/api/v1/evaluation/sessions', method: 'GET' },
-            ];
-            
-            let results = '<h3>测试结果:</h3>';
-            
-            for (const test of tests) {
-                try {
-                    const response = await fetch(test.url, { method: test.method });
-                    const status = response.ok ? '✅' : '❌';
-                    const statusText = `${response.status} ${response.statusText}`;
-                    results += `<div style="margin: 8px 0; padding: 8px; background: ${response.ok ? '#f6ffed' : '#fff2f0'}; border-radius: 4px;">
+      async function testAPI() {
+        const resultsDiv = document.getElementById("test-results");
+        resultsDiv.innerHTML = "<p>🔄 正在测试 API...</p>";
+
+        const tests = [
+          { name: "健康检查", url: "/api/v1/", method: "GET" },
+          { name: "智能体列表", url: "/api/v1/ai/agents/", method: "GET" },
+          {
+            name: "评测会话列表",
+            url: "/api/v1/evaluation/sessions",
+            method: "GET",
+          },
+        ];
+
+        let results = "<h3>测试结果:</h3>";
+
+        for (const test of tests) {
+          try {
+            const response = await fetch(test.url, { method: test.method });
+            const status = response.ok ? "✅" : "❌";
+            const statusText = `${response.status} ${response.statusText}`;
+            results += `<div style="margin: 8px 0; padding: 8px; background: ${response.ok ? "#f6ffed" : "#fff2f0"}; border-radius: 4px;">
                         ${status} <strong>${test.name}</strong>: ${statusText}
                     </div>`;
-                } catch (error) {
-                    results += `<div style="margin: 8px 0; padding: 8px; background: #fff2f0; border-radius: 4px;">
+          } catch (error) {
+            results += `<div style="margin: 8px 0; padding: 8px; background: #fff2f0; border-radius: 4px;">
                         ❌ <strong>${test.name}</strong>: ${error.message}
                     </div>`;
-                }
-            }
-            
-            resultsDiv.innerHTML = results;
+          }
         }
-        
-        // 页面加载时显示欢迎信息
-        console.log('🎯 InTy 评测系统后端已成功集成！');
-        console.log('📖 访问 /docs 查看完整 API 文档');
-        console.log('🧪 点击页面上的测试按钮验证 API 连通性');
+
+        resultsDiv.innerHTML = results;
+      }
+
+      // 页面加载时显示欢迎信息
+      console.log("🎯 InTy 评测系统后端已成功集成！");
+      console.log("📖 访问 /docs 查看完整 API 文档");
+      console.log("🧪 点击页面上的测试按钮验证 API 连通性");
     </script>
-</body>
+  </body>
 </html>

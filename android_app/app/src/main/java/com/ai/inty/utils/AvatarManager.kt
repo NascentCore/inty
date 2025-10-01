@@ -55,14 +55,14 @@ object AvatarManager {
         clearGeneratedAvatarUrl()
         EasyLog.log(
             "AvatarManager: Cleared all avatar and background data",
-            priority = EasyLog.DEBUG
+            priority = EasyLog.DEBUG,
         )
     }
 
     fun getCurrentAvatarUrl(): String? {
         EasyLog.log(
             "AvatarManager: Current avatar URL: $generatedAvatarUrl",
-            priority = EasyLog.DEBUG
+            priority = EasyLog.DEBUG,
         )
         return generatedAvatarUrl
     }
@@ -70,7 +70,7 @@ object AvatarManager {
     fun getCurrentAvatarUrls(): List<String> {
         EasyLog.log(
             "AvatarManager: Current avatar URLs: $generatedAvatarUrls",
-            priority = EasyLog.DEBUG
+            priority = EasyLog.DEBUG,
         )
         return generatedAvatarUrls
     }
@@ -102,5 +102,4 @@ object AvatarManager {
         chatBackgroundUrl = url
         EasyLog.log("AvatarManager: Set chat background URL: $url")
     }
-
 }

@@ -9,9 +9,9 @@ import com.ai.inty.netapi.services.ReportService
 import com.inty.api.models.api.v1.report.ReportCreateParams
 import com.inty.utils.AppEnv
 import com.inty.utils.log.EasyLog
+import java.io.InputStream
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import java.io.InputStream
 
 class ReportViewModel : BaseActivityViewModel() {
 
@@ -19,45 +19,34 @@ class ReportViewModel : BaseActivityViewModel() {
     var targetType: String = "USER"
 
     // Hard-coded list of report reasons
-    private val _reasons = MutableStateFlow(
-        listOf(
-            ReportItem(
-                id = 1,
-                description = "Sensitive or sexual content",
-                code = "SENSITIVE_CONTENT"
-            ),
-            ReportItem(
-                id = 2,
-                description = "Misinformation",
-                code = "MISINFORMATION"
-            ),
-            ReportItem(
-                id = 3,
-                description = "Fraud or scams",
-                code = "FRAUD_SCAMS"
-            ),
-            ReportItem(
-                id = 4,
-                description = "Violation of privacy",
-                code = "PRIVACY_VIOLATION"
-            ),
-            ReportItem(
-                id = 5,
-                description = "Harmful to minors",
-                code = "HARMFUL_MINORS"
-            ),
-            ReportItem(
-                id = 6,
-                description = "Violations of my intellectual property",
-                code = "IP_VIOLATION"
-            ),
-            ReportItem(
-                id = 0,
-                description = "Other, details in report description",
-                code = "OTHER"
-            ),
+    private val _reasons =
+        MutableStateFlow(
+            listOf(
+                ReportItem(
+                    id = 1,
+                    description = "Sensitive or sexual content",
+                    code = "SENSITIVE_CONTENT",
+                ),
+                ReportItem(id = 2, description = "Misinformation", code = "MISINFORMATION"),
+                ReportItem(id = 3, description = "Fraud or scams", code = "FRAUD_SCAMS"),
+                ReportItem(
+                    id = 4,
+                    description = "Violation of privacy",
+                    code = "PRIVACY_VIOLATION",
+                ),
+                ReportItem(id = 5, description = "Harmful to minors", code = "HARMFUL_MINORS"),
+                ReportItem(
+                    id = 6,
+                    description = "Violations of my intellectual property",
+                    code = "IP_VIOLATION",
+                ),
+                ReportItem(
+                    id = 0,
+                    description = "Other, details in report description",
+                    code = "OTHER",
+                ),
+            )
         )
-    )
     val reasons = _reasons.asStateFlow()
 
     var selectIDS = mutableStateSetOf<Int>()
@@ -103,17 +92,19 @@ class ReportViewModel : BaseActivityViewModel() {
                     }
                 }
 
-                val result = ReportService.createReport(
-                    reasonIds = selectIDS.map { it.toLong() },
-                    targetId = targetID,
-                    targetType = if (targetType == "USER") {
-                        ReportCreateParams.TargetType.USER
-                    } else {
-                        ReportCreateParams.TargetType.AGENT
-                    },
-                    description = description.value.trim(),
-                    imageUrls = uploadedImageUrls + remoteImages.toList()
-                )
+                val result =
+                    ReportService.createReport(
+                        reasonIds = selectIDS.map { it.toLong() },
+                        targetId = targetID,
+                        targetType =
+                            if (targetType == "USER") {
+                                ReportCreateParams.TargetType.USER
+                            } else {
+                                ReportCreateParams.TargetType.AGENT
+                            },
+                        description = description.value.trim(),
+                        imageUrls = uploadedImageUrls + remoteImages.toList(),
+                    )
 
                 when (result) {
                     is com.ai.inty.netapi.ApiResult.Success -> {
@@ -154,5 +145,4 @@ class ReportViewModel : BaseActivityViewModel() {
             }
         }
     }
-
 }

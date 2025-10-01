@@ -22,10 +22,10 @@
 
 ### App 进行变量替代
 
-* 示例：https://github.com/NascentCore/inty/pull/614/files
-* 问题：多客户端需要重复实现，如明确的 web 评测和 app
+- 示例：https://github.com/NascentCore/inty/pull/614/files
+- 问题：多客户端需要重复实现，如明确的 web 评测和 app
 
 ### Backend 进行变量替代，App 仅展示
 
-* 仅支持 {{ char }} {{ user }}，其他内容无法提供对应的 context
-* App 须了解如何组合相关数据
+- 仅支持 {{ char }} {{ user }}，其他内容无法提供对应的 context
+- App 须了解如何组合相关数据

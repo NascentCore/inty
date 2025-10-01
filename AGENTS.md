@@ -1,4 +1,4 @@
-# Inty: long term AI companionship: start with intimacy for young adults 
+# Inty: long term AI companionship: start with intimacy for young adults
 
 Based on [AGENTS.md](https://agents.md/)
 

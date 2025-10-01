@@ -260,7 +260,9 @@ class Agent(AgentInDB):
         对opening字段进行变量替换，将 {{ char }} 替换为 agent.name，{{ user }} 替换为 "you"
         """
         if opening and has_template_variable(opening):
-            return render_prompt_jinja2_template(opening, char=self.name, user=self.user)
+            return render_prompt_jinja2_template(
+                opening, char=self.name, user=self.user
+            )
         return opening
 
     @field_serializer("llm_config")
@@ -292,47 +294,78 @@ class Agent(AgentInDB):
         """转换avatar URL为CDN URL，支持基于extension裁切数据的avatar生成"""
         try:
             from app.services.image_transform_service import image_transform_service
-            
+
             # 优先检查是否存在裁切数据，如果存在则使用裁切数据而不是独立的avatar
-            if (self.background and 
-                self.extensions and 
-                isinstance(self.extensions, dict) and 
-                "avatar_crop" in self.extensions):
-                
+            if (
+                self.background
+                and self.extensions
+                and isinstance(self.extensions, dict)
+                and "avatar_crop" in self.extensions
+            ):
+
                 avatar_crop_data = self.extensions["avatar_crop"]
-                
+
                 # 验证裁切数据的完整性
-                if (isinstance(avatar_crop_data, dict) and 
-                    all(key in avatar_crop_data for key in ["x", "y", "width", "height", "imageWidth", "imageHeight"]) and
-                    all(isinstance(avatar_crop_data[key], (int, float)) for key in ["x", "y", "width", "height", "imageWidth", "imageHeight"]) and
-                    avatar_crop_data["width"] > 0 and avatar_crop_data["height"] > 0):
-                    
+                if (
+                    isinstance(avatar_crop_data, dict)
+                    and all(
+                        key in avatar_crop_data
+                        for key in [
+                            "x",
+                            "y",
+                            "width",
+                            "height",
+                            "imageWidth",
+                            "imageHeight",
+                        ]
+                    )
+                    and all(
+                        isinstance(avatar_crop_data[key], (int, float))
+                        for key in [
+                            "x",
+                            "y",
+                            "width",
+                            "height",
+                            "imageWidth",
+                            "imageHeight",
+                        ]
+                    )
+                    and avatar_crop_data["width"] > 0
+                    and avatar_crop_data["height"] > 0
+                ):
+
                     # 创建 CroppedArea 对象
-                    from app.services.image_transform_service import ImageTransformService
+                    from app.services.image_transform_service import (
+                        ImageTransformService,
+                    )
+
                     cropped_area = ImageTransformService.CroppedArea(
                         x=int(avatar_crop_data["x"]),
                         y=int(avatar_crop_data["y"]),
                         width=int(avatar_crop_data["width"]),
                         height=int(avatar_crop_data["height"]),
                         image_width=int(avatar_crop_data["imageWidth"]),
-                        image_height=int(avatar_crop_data["imageHeight"])
+                        image_height=int(avatar_crop_data["imageHeight"]),
                     )
-                    
+
                     # 使用裁切功能生成avatar URL
                     return image_transform_service.transform_cropped_avatar_url(
                         self.background, cropped_area
                     )
-            
+
             # 如果没有裁切数据但有独立的avatar，使用常规转换
             if avatar:
                 return image_transform_service.transform_mobile(avatar)
-                
+
             return avatar
-            
+
         except Exception as e:
             # 记录错误但不抛出异常，返回原始avatar
             from loguru import logger
-            logger.warning(f"Failed to serialize avatar for agent {getattr(self, 'id', 'unknown')}: {str(e)}")
+
+            logger.warning(
+                f"Failed to serialize avatar for agent {getattr(self, 'id', 'unknown')}: {str(e)}"
+            )
             return avatar
 
     @field_serializer("background")
