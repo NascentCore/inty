@@ -65,9 +65,20 @@ internal class BillingRemoteManager(
                             "BillingRepository BillingRemoteManager 会员状态更新:vipStatus:$vipStatus \n isSubscribed=$isSubscribed, subscriptionId=$subscriptionId"
                         )
 
-                        // 保存到本地并更新Flow
-                        BillingStorage.saveLocalVipStatus(vipStatus)
-                        vipStatusFlow.value = vipStatus
+                        // 检查状态是否真的发生了变化，避免不必要的UI更新
+                        val currentStatus = vipStatusFlow.value
+                        val hasStatusChanged = currentStatus.isSubscribed != vipStatus.isSubscribed ||
+                                currentStatus.subscriptionId != vipStatus.subscriptionId ||
+                                currentStatus.purchaseTime != vipStatus.purchaseTime
+
+                        if (hasStatusChanged) {
+                            EasyLog.log("BillingRepository BillingRemoteManager - 检测到状态变化，更新状态")
+                            // 保存到本地并更新Flow
+                            BillingStorage.saveLocalVipStatus(vipStatus)
+                            vipStatusFlow.value = vipStatus
+                        } else {
+                            EasyLog.log("BillingRepository BillingRemoteManager - 状态无变化，跳过更新")
+                        }
 
                         // 更新订阅计划列表
                         val vipPlans =

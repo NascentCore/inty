@@ -46,8 +46,7 @@ internal class BillingPurchaseManager(
                     )
                     for (purchase in purchases) {
                         handlePurchase(purchase)
-                        // 发送购买成功事件
-                        eventScope.launch { eventFlow.emit(BillingEvent.PurchaseSuccess(purchase)) }
+                        // 不立即发送购买成功事件，等待验证完成后再发送
                     }
                 } else {
                     EasyLog.log("BillingRepository BillingPurchaseManager - 购买成功但购买列表为空")
@@ -204,21 +203,13 @@ internal class BillingPurchaseManager(
     /** 处理购买 */
     private fun handlePurchase(purchase: Purchase) {
         if (purchase.purchaseState == Purchase.PurchaseState.PURCHASED) {
-            // 先更新状态，如果后续确认失败再回滚
-            val newStatus =
-                VipStatus(
-                    isSubscribed = true,
-                    subscriptionId = purchase.products.firstOrNull(),
-                    purchaseTime = purchase.purchaseTime,
-                )
-            vipStatusFlow.value = newStatus
-            BillingStorage.saveLocalVipStatus(newStatus)
-
+            EasyLog.log("BillingRepository BillingPurchaseManager - 购买成功，开始处理购买流程")
+            
             if (!purchase.isAcknowledged) {
                 acknowledgePurchase(purchase)
             }
 
-            // 调用后端验证订阅信息
+            // 调用后端验证订阅信息，验证成功后再更新状态
             verifySubscriptionWithServer(purchase)
         }
     }
@@ -230,20 +221,14 @@ internal class BillingPurchaseManager(
         billingClient.acknowledgePurchase(acknowledgePurchaseParams) { billingResult ->
             if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
                 EasyLog.log("BillingRepository BillingPurchaseManager - 购买确认成功")
-                // 确认成功，通知购买成功事件
-                eventScope.launch { eventFlow.emit(BillingEvent.PurchaseSuccess(purchase)) }
+                // 不立即发送购买成功事件，等待验证完成后再发送
             } else {
                 EasyLog.log(
                     "BillingRepository BillingPurchaseManager - 购买确认失败: ${billingResult.debugMessage}"
                 )
                 showError("Purchase acknowledgment failed")
 
-                // 购买确认失败，回滚订阅状态
-                val oldStatus = VipStatus(isSubscribed = false)
-                vipStatusFlow.value = oldStatus
-                BillingStorage.saveLocalVipStatus(oldStatus)
-                EasyLog.log("BillingRepository BillingPurchaseManager - 已回滚订阅状态")
-
+                // 购买确认失败，发送失败事件（状态更新由验证流程控制）
                 eventScope.launch {
                     eventFlow.emit(
                         BillingEvent.PurchaseFailed(
@@ -280,6 +265,20 @@ internal class BillingPurchaseManager(
                         val response = result.data
                         if (response.isVerified) {
                             EasyLog.log("BillingRepository BillingPurchaseManager ✅ 订阅验证成功")
+                            
+                            // 验证成功后更新订阅状态
+                            val newStatus = VipStatus(
+                                isSubscribed = true,
+                                subscriptionId = purchase.products.firstOrNull(),
+                                purchaseTime = purchase.purchaseTime,
+                            )
+                            vipStatusFlow.value = newStatus
+                            BillingStorage.saveLocalVipStatus(newStatus)
+                            
+                            EasyLog.log("BillingRepository BillingPurchaseManager - 订阅状态已更新为已订阅")
+                            
+                            // 验证成功并更新状态后，发送购买成功事件
+                            eventScope.launch { eventFlow.emit(BillingEvent.PurchaseSuccess(purchase)) }
                         } else {
                             EasyLog.log(
                                 "BillingRepository BillingPurchaseManager ⚠️ 订阅验证失败: ${response.message}"
