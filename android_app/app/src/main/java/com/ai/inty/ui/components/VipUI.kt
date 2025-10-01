@@ -63,7 +63,9 @@ fun PremiumPlanCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val subModifier = if (isSubscribed) Modifier.alpha(.4f) else Modifier
+    // 统一管理透明度，避免双重应用
+    val containerAlpha = if (isSubscribed) 0.4f else 1f
+    val textColor = if (isSubscribed) Color.White.copy(alpha = 0.5f) else Color.White
 
     Box(
         modifier =
@@ -78,7 +80,7 @@ fun PremiumPlanCard(
                     color = if (isSelected) Color.White else Color.Transparent,
                     shape = RoundedCornerShape(8.dp),
                 )
-                .then(subModifier)
+                .alpha(containerAlpha)  // 统一应用容器透明度
                 .clickable(enabled = !isSubscribed) { onClick() }
                 .padding(vertical = 8.dp),
         contentAlignment = Alignment.TopCenter,
@@ -89,26 +91,16 @@ fun PremiumPlanCard(
         ) {
             Text(
                 text = plan.name,
-                color =
-                    when {
-                        isSubscribed -> Color.White.copy(alpha = 0.5f)
-                        else -> Color.White
-                    },
+                color = textColor,  // 使用统一计算的颜色
                 fontWeight = FontWeight.Bold,
                 fontSize = 20.sp,
-                modifier = subModifier,
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = String.format("%s", plan.price),
-                color =
-                    when {
-                        isSubscribed -> Color.White.copy(alpha = 0.5f)
-                        else -> Color.White
-                    },
+                text = plan.price,
+                color = textColor,  // 使用统一计算的颜色
                 fontSize = 32.sp,
                 fontWeight = FontWeight.Normal,
-                modifier = subModifier,
             )
         }
 
@@ -124,7 +116,7 @@ fun PremiumPlanCard(
                                     listOf(Color(0xFFC1F9FD), Color(0xFFD4AEFD), Color(0xFF7B96FB))
                             )
                     )
-                    .then(subModifier)
+                    .alpha(containerAlpha)  // 使用统一的容器透明度
                     .align(Alignment.BottomCenter),
                 contentAlignment = Alignment.Center,
             ) {
@@ -137,7 +129,6 @@ fun PremiumPlanCard(
                         color = Color.Black,
                         fontSize = 24.sp,
                         fontWeight = FontWeight.Bold,
-                        modifier = subModifier,
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
@@ -145,7 +136,6 @@ fun PremiumPlanCard(
                         color = Color.Black,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
-                        modifier = subModifier,
                     )
                 }
             }
@@ -180,7 +170,7 @@ fun PremiumPlanList(
 
 /** 购买按钮组件 */
 @Composable
-fun PurchaseButton(
+fun SubscribeButton(
     isSubscribed: Boolean,
     hasSelectedPlan: Boolean,
     onPurchase: () -> Unit,
@@ -258,6 +248,6 @@ private fun PremiumBenefitItemPreview() {
 
 @Preview(showBackground = true)
 @Composable
-private fun PurchaseButtonPreview() {
-    PurchaseButton(isSubscribed = false, hasSelectedPlan = true, onPurchase = {})
+private fun SubscribeButtonPreview() {
+    SubscribeButton(isSubscribed = false, hasSelectedPlan = true, onPurchase = {})
 }

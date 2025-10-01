@@ -41,7 +41,7 @@ import com.ai.inty.ui.components.BackgroundVideoPlayer
 import com.ai.inty.ui.components.EmptyPlanState
 import com.ai.inty.ui.components.PremiumBenefitItem
 import com.ai.inty.ui.components.PremiumPlanList
-import com.ai.inty.ui.components.PurchaseButton
+import com.ai.inty.ui.components.SubscribeButton
 import com.ai.inty.viewmodels.VipCenterViewModel
 
 /** 订阅描述文本组件 */
@@ -139,7 +139,7 @@ fun VipCenterContent(
 
                 Spacer(Modifier.height(32.dp))
 
-                PurchaseButton(
+                SubscribeButton(
                     isSubscribed = vipStatus.isSubscribed,
                     hasSelectedPlan = viewModel.hasSelectedPlan(),
                     onPurchase = onPurchase,
