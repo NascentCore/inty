@@ -132,7 +132,8 @@ fun PremiumPlanCard(
             ) {
                 Row(
                     horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
+verticalAlignment = Alignment.Bottom
+
                 ) {
                     Text(
                         text = stringResource(R.string.discount_save),
@@ -229,7 +230,7 @@ fun AutoRenewalNotice(modifier: Modifier = Modifier) {
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
-            text = stringResource(R.string.premium_autorenew),
+            text = stringResource(R.string.auto_renews_cancel) + ", " + stringResource(R.string.subscription_consent),
             fontSize = 12.sp,
             color = Color.White,
         )
