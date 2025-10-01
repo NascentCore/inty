@@ -1,6 +1,7 @@
 package com.ai.inty.ui.components
 
 import androidx.compose.foundation.Image
+import java.util.Locale
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -134,7 +135,7 @@ fun PremiumPlanCard(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = String.format("%d%%", kotlin.math.ceil((1-plan.discountRate) * 100).toInt()),
+                        text = String.format(Locale.getDefault(), "%d%%", kotlin.math.ceil((1-plan.discountRate) * 100).toInt()),
                         color = Color.Black,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
