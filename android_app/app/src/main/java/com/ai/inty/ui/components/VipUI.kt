@@ -28,11 +28,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -88,7 +85,7 @@ fun PremiumPlanCard(
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+            verticalArrangement = Arrangement.Center,
         ) {
             Text(
                 text = plan.name,
@@ -132,8 +129,7 @@ fun PremiumPlanCard(
             ) {
                 Row(
                     horizontalArrangement = Arrangement.Center,
-verticalAlignment = Alignment.Bottom
-
+                    verticalAlignment = Alignment.Bottom
                 ) {
                     Text(
                         text = stringResource(R.string.discount_save),
@@ -230,7 +226,10 @@ fun AutoRenewalNotice(modifier: Modifier = Modifier) {
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
-            text = stringResource(R.string.auto_renews_cancel) + ", " + stringResource(R.string.subscription_consent),
+            text =
+                stringResource(R.string.auto_renews_cancel) +
+                    ". " +
+                    stringResource(R.string.subscription_consent),
             fontSize = 12.sp,
             color = Color.White,
         )
