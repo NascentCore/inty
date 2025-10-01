@@ -129,9 +129,9 @@
     <string name="subscribed">Subscribed</string>
     <string name="subscribe">Subscribe</string>
     <string name="unsubscribed">Unsubscribed</string>
-    <string name="restore_subscription">Restore Subscription</string>
+    <string name="restore_subscription">Restore</string>
     <string name="redemption_code">Redemption Code</string>
-    <string name="cancel_subscription">Cancel Subscription</string>
+    <string name="cancel_subscription">Cancel</string>
     <string name="you_are_not_vip">You are not vip</string>
     <string name="settings_premium_model">Premium Model</string>
 
