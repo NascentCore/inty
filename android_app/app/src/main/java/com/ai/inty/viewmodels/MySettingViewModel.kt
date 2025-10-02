@@ -77,7 +77,6 @@ class MySettingViewModel : BaseActivityViewModel() {
                         userApi.uploadAvatar(
                             MultipartBody.Part.createFormData("file", "file.png", requestBody)
                         )
-                    //                EasyLog.log("upload avatar = $result")
 
                     when (result) {
                         is HttpResult.Success -> {
