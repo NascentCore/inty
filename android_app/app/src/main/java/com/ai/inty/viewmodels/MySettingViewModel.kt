@@ -29,6 +29,9 @@ class MySettingViewModel : BaseActivityViewModel() {
     val userProfile = _userProfile.asStateFlow()
 
     private val _avatarChanged = MutableStateFlow(false)
+    
+    private val _isSaving = MutableStateFlow(false)
+    val isSaving = _isSaving.asStateFlow()
 
     // 延迟获取依赖，避免在构造函数中立即获取导致空指针异常
     private val userApi by lazy {
@@ -57,55 +60,59 @@ class MySettingViewModel : BaseActivityViewModel() {
 
     fun onSave() {
         launchWithNetCheck {
-            if (_avatarChanged.value) {
-                val fileUri = _userProfile.value.avatar?.toUri()
+            _isSaving.value = true
+            try {
+                if (_avatarChanged.value) {
+                    val fileUri = _userProfile.value.avatar?.toUri()
 
-                if (fileUri?.path == null) {
-                    showNetworkAwareError("Invalid avatar file")
-                    return@launchWithNetCheck
-                }
+                    if (fileUri?.path == null) {
+                        showNetworkAwareError("Invalid avatar file")
+                        return@launchWithNetCheck
+                    }
 
-                val requestBody =
-                    File(fileUri?.path ?: return@launchWithNetCheck)
-                        .asRequestBody(contentType = "image/jpg".toMediaTypeOrNull())
-                val result =
-                    userApi.uploadAvatar(
-                        MultipartBody.Part.createFormData("file", "file.png", requestBody)
-                    )
-                //                EasyLog.log("upload avatar = $result")
+                    val requestBody =
+                        File(fileUri.path!!)
+                            .asRequestBody(contentType = "image/jpg".toMediaTypeOrNull())
+                    val result =
+                        userApi.uploadAvatar(
+                            MultipartBody.Part.createFormData("file", "file.png", requestBody)
+                        )
 
-                when (result) {
-                    is HttpResult.Success -> {
-                        _userProfile.value =
-                            _userProfile.value.copy(
-                                // No cropping, just use the provided url.
-                                avatar = result.data.url
-                            )
-                        // Show success toast for avatar upload
-                        viewModelScope.launch(Dispatchers.Main) {
-                            ToastUtils.showToast(R.string.saved_successfully)
+                    when (result) {
+                        is HttpResult.Success -> {
+                            _userProfile.value =
+                                _userProfile.value.copy(
+                                    // No cropping, just use the provided url.
+                                    avatar = result.data.url
+                                )
+                            // Show success toast for avatar upload
+                            viewModelScope.launch(Dispatchers.Main) {
+                                ToastUtils.showToast(R.string.saved_successfully)
+                            }
+                        }
+                        is HttpResult.Failure -> {
+                            showNetworkAwareError(result.message)
+                            return@launchWithNetCheck
                         }
                     }
-                    is HttpResult.Failure -> {
-                        showNetworkAwareError(result.message)
+                }
+
+                val updatedProfile = IntyUserProfileSDK.updateUserProfile(_userProfile.value)
+                if (updatedProfile != null) {
+                    // Show success toast for profile update
+                    viewModelScope.launch(Dispatchers.Main) {
+                        ToastUtils.showToast(R.string.saved_successfully)
+                        UserProfileManager.saveUserProfile(updatedProfile)
                     }
+                    
+                    TheRouter.build(Constant.ACTION_USER_PROFILE_CHANGED).action()
+                    closeActivity()
+                } else {
+                    showNetworkAwareError("Failed to update user profile")
                 }
+            } finally {
+                _isSaving.value = false
             }
-
-            val updatedProfile = IntyUserProfileSDK.updateUserProfile(_userProfile.value)
-            if (updatedProfile != null) {
-                // Show success toast for profile update
-                viewModelScope.launch(Dispatchers.Main) {
-                    ToastUtils.showToast(R.string.saved_successfully)
-                    UserProfileManager.saveUserProfile(updatedProfile)
-                }
-            } else {
-                showNetworkAwareError("Failed to update user profile")
-            }
-
-            TheRouter.build(Constant.ACTION_USER_PROFILE_CHANGED).action()
-
-            closeActivity()
         }
     }
 

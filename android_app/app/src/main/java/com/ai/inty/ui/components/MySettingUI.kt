@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -80,6 +81,7 @@ fun MySettingScreen(
     onClickPronouns: () -> Unit = {},
     onClickPersona: () -> Unit = {},
     onSave: () -> Unit = {},
+    isSaving: Boolean = false,
 ) {
     Scaffold(
         modifier = Modifier.background(DarkPurple),
@@ -144,7 +146,7 @@ fun MySettingScreen(
 
             Spacer(Modifier.weight(1f))
 
-            SaveButton(onSave = onSave)
+            SaveButton(onSave = onSave, isSaving = isSaving)
 
             Spacer(Modifier.height(60.dp))
         }
@@ -214,7 +216,7 @@ fun MySettingItem(
 
 /** 保存按钮组件 */
 @Composable
-fun SaveButton(onSave: () -> Unit) {
+fun SaveButton(onSave: () -> Unit, isSaving: Boolean = false) {
     Box(
         modifier =
             Modifier.fillMaxWidth()
@@ -222,18 +224,38 @@ fun SaveButton(onSave: () -> Unit) {
                 .height(50.dp)
                 .background(
                     brush =
-                        Brush.linearGradient(colors = listOf(Color(0xFFC122FF), Color(0xFFFF905D))),
+                        Brush.linearGradient(
+                            colors =
+                                if (isSaving) {
+                                    listOf(Color(0xFF666666), Color(0xFF888888))
+                                } else {
+                                    listOf(Color(0xFFC122FF), Color(0xFFFF905D))
+                                }
+                        ),
                     shape = RoundedCornerShape(25.dp),
                 )
-                .noRippleClickable { onSave() }
+                .noRippleClickable {
+                    if (!isSaving) {
+                        onSave()
+                    }
+                }
     ) {
-        Text(
-            modifier = Modifier.align(Alignment.Center),
-            text = stringResource(R.string.save),
-            fontSize = 16.sp,
-            fontWeight = FontWeight.Normal,
-            color = Color.White,
-        )
+        if (isSaving) {
+            // 显示加载动画
+            CircularProgressIndicator(
+                modifier = Modifier.align(Alignment.Center).size(24.dp),
+                color = Color.White,
+                strokeWidth = 2.dp,
+            )
+        } else {
+            Text(
+                modifier = Modifier.align(Alignment.Center),
+                text = stringResource(R.string.save),
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Normal,
+                color = Color.White,
+            )
+        }
     }
 }
 
@@ -464,4 +486,16 @@ private fun RowScope.PronounsItem(
 @Composable
 private fun MySettingScreenPreview() {
     MySettingScreen(userProfile = UserProfile(nickname = "nick", id = "12345", avatar = ""))
+}
+
+@Preview(showBackground = true)
+@Composable
+fun SaveButtonPreview() {
+    SaveButton(onSave = {}, isSaving = false)
+}
+
+@Preview(showBackground = true)
+@Composable
+fun SaveButtonLoadingPreview() {
+    SaveButton(onSave = {}, isSaving = true)
 }
