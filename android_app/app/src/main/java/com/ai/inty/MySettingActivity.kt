@@ -74,8 +74,7 @@ class MySettingActivity : BaseActivity() {
                     }
 
                 val galleryLauncher =
-                    rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) {
-                        imageUri ->
+                    rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { imageUri ->
                         imageUri?.let { uri ->
                             runCatching {
                                     // Check file size before cropping - limit to 10MB
@@ -108,6 +107,7 @@ class MySettingActivity : BaseActivity() {
                     }
 
                 val userProfile = viewModel.userProfile.collectAsState()
+                val isSaving = viewModel.isSaving.collectAsState()
                 var editKey by remember { mutableStateOf(EditKey.None) }
                 var editValue by rememberSaveable { mutableStateOf("") }
 
@@ -129,6 +129,7 @@ class MySettingActivity : BaseActivity() {
                         },
                         onSelectAvatar = { galleryLauncher.launch("image/*") },
                         onSave = { viewModel.onSave() },
+                        isSaving = isSaving.value,
                     )
 
                     if (editKey != EditKey.None) {
