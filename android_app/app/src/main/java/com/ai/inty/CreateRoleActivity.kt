@@ -1123,11 +1123,11 @@ private fun AvatarUploadSection(
                     ) {
                         Image(
                             painter = painterResource(R.drawable.ic_crop),
-                            contentDescription = stringResource(R.string.content_desc_face_edit),
+                            contentDescription = stringResource(R.string.face_edit),
                             modifier = Modifier.size(16.dp),
                         )
                         Text(
-                            text = stringResource(R.string.face_edit_full),
+                            text = stringResource(R.string.face_edit),
                             color = Color.White,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Medium,
