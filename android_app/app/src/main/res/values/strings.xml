@@ -178,7 +178,7 @@
 
     <!-- Character Creation -->
     <string name="generate_avatar_title">Generate\nAvatar</string>
-    <string name="face_edit">Face edit</string>
+    <string name="face_edit">Crop</string>
     <string name="gender_unmodified">Gender (Unmodified after Creation) *</string>
     <string name="sound_required">Sound *</string>
     <string name="inty_voice_option">Inty Voice</string>
@@ -265,7 +265,6 @@
     <string name="content_desc_generated_avatar_index">Generated Avatar %d</string>
     <string name="content_desc_swipe_guide">Swipe guide gesture</string>
     <string name="content_desc_selected_avatar">Selected Avatar</string>
-    <string name="content_desc_face_edit">Face edit</string>
     <string name="content_desc_back">back</string>
 
     <!-- Additional UI Text -->
@@ -286,7 +285,6 @@
     <string name="reply_style">Reply Style</string>
     <string name="cancel_button">Cancel</string>
     <string name="generate_avatar_title_full">Generate\nAvatar</string>
-    <string name="face_edit_full">Face edit</string>
     <string name="gender_unmodified_full">Gender (Unmodified after Creation) *</string>
     <string name="male_full">Male</string>
     <string name="female_full">Female</string>
