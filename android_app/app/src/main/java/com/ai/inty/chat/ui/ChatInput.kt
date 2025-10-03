@@ -133,11 +133,12 @@ fun ChatInput(
                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp),
                 contentAlignment = Alignment.Center
             ) {
+                val sendButtonSize = 24.dp
                 // 有输入内容时，发送按钮显示
                 if (inputData.value.isNotEmpty()) {
                     IntyImage(
                         modifier =
-                            Modifier.size(24.dp).noRippleClickable {
+                            Modifier.size(sendButtonSize).noRippleClickable {
                                 onSendMessage()
                             },
                         model = R.drawable.btn_send,
@@ -145,7 +146,7 @@ fun ChatInput(
                 } else {
                     IntyImage(
                         modifier =
-                            Modifier.size(24.dp).noRippleClickable {
+                            Modifier.size(sendButtonSize).noRippleClickable {
                                 onToggleMorePanel()
                             },
                         model = if (showMorePanel) R.drawable.btn_down else R.drawable.btn_add2,
