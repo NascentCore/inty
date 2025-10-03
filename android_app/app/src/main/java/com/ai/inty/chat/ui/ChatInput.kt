@@ -119,10 +119,11 @@ fun ChatInput(
                             },
                     contentAlignment = Alignment.Center,
                 ) {
+                    val narrationInputFontSize = 14.sp
                     Text(
                         text = stringResource(R.string.empty_parentheses_symbol),
                         color = Color.White,
-                        fontSize = 14.sp,
+                        fontSize = narrationInputFontSize,
                         fontWeight = FontWeight.Medium,
                     )
                 }
