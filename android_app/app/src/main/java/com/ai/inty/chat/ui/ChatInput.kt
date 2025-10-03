@@ -104,30 +104,12 @@ fun ChatInput(
             }
 
             // 发送/更多按钮区域
-            Box(
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                val sendButtonSize = 24.dp
-                // 有输入内容时，发送按钮显示
-                if (inputData.value.isNotEmpty()) {
-                    IntyImage(
-                        modifier =
-                            Modifier.size(sendButtonSize).noRippleClickable {
-                                onSendMessage()
-                            },
-                        model = R.drawable.btn_send,
-                    )
-                } else {
-                    IntyImage(
-                        modifier =
-                            Modifier.size(sendButtonSize).noRippleClickable {
-                                onToggleMorePanel()
-                            },
-                        model = if (showMorePanel) R.drawable.btn_down else R.drawable.btn_add2,
-                    )
-                }
-            }
+            MultiUseAccess(
+                hasInput = inputData.value.isNotEmpty(),
+                showMorePanel = showMorePanel,
+                onSendMessage = onSendMessage,
+                onToggleMorePanel = onToggleMorePanel
+            )
         }
     }
 }
@@ -236,4 +218,44 @@ internal fun isCursorInsideParentheses(text: String, cursorPosition: Int): Boole
     }
     
     return false
+}
+
+/**
+ * 多功能访问按钮组件（发送/更多按钮）
+ * @param hasInput 是否有输入内容
+ * @param showMorePanel 是否显示更多面板
+ * @param onSendMessage 发送消息回调
+ * @param onToggleMorePanel 切换更多面板回调
+ */
+@Composable
+private fun MultiUseAccess(
+    hasInput: Boolean,
+    showMorePanel: Boolean,
+    onSendMessage: () -> Unit,
+    onToggleMorePanel: () -> Unit,
+) {
+    Box(
+        modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        val sendButtonSize = 24.dp
+        // 有输入内容时，发送按钮显示
+        if (hasInput) {
+            IntyImage(
+                modifier =
+                    Modifier.size(sendButtonSize).noRippleClickable {
+                        onSendMessage()
+                    },
+                model = R.drawable.btn_send,
+            )
+        } else {
+            IntyImage(
+                modifier =
+                    Modifier.size(sendButtonSize).noRippleClickable {
+                        onToggleMorePanel()
+                    },
+                model = if (showMorePanel) R.drawable.btn_down else R.drawable.btn_add2,
+            )
+        }
+    }
 }
