@@ -1382,12 +1382,7 @@ private fun CustomTextField(
                         shape = RoundedCornerShape(12.dp),
                     )
                     .padding(16.dp)
-                    .let { 
-                        if (minLines > 1) 
-                            it.height((minLines * 24 + 32).dp) 
-                        else 
-                            it.height(56.dp) // 为单行输入设置固定高度
-                    },
+                    .let { if (minLines > 1) it.height((minLines * 24 + 32).dp) else it },
             textStyle = TextStyle(color = Color.White, fontSize = 16.sp),
             cursorBrush = SolidColor(Color.White),
             decorationBox = { innerTextField ->
