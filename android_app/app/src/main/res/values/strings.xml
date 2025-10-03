@@ -339,6 +339,6 @@
     <string name="str_edit_my_persona">Edit My Profile</string>
     <string name="str_name">Name</string>
     <string name="str_pronouns">Pronouns</string>
-    <string name="str_persona">Persona Description</string>
+    <string name="str_persona">Persona</string>
     <string name="str_message_is_too_long">message is too long. Please send it in parts.</string>
 </resources>
