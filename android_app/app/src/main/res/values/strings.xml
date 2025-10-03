@@ -170,7 +170,7 @@
 
     <!-- Avatar Generation -->
     <string name="generate_avatar">Generate Avatar</string>
-    <string name="preview_generated_avatar">Preview\nGenerated Avatar</string>
+    <string name="preview_generated_avatar">Preview Generated Avatar</string>
     <string name="describe_desired_avatar">Describe your desired avatar *</string>
     <string name="avatar_creation_hint_full">e.g.: A cute anime girl with long hair, big eyes, wearing a white dress…</string>
     <string name="use_this_avatar">Use This Avatar</string>
@@ -268,7 +268,7 @@
     <string name="content_desc_back">back</string>
 
     <!-- Additional UI Text -->
-    <string name="generate_avatar_button">Generate Avatar</string>
+    <string name="generate_avatar_button">Generate</string>
     <string name="use_this_avatar_button">Use This Avatar</string>
     <string name="regen_button">Regen.</string>
     <string name="by_continuing_agree_full">By continuing, you agree to IntelliMate\'s</string>
