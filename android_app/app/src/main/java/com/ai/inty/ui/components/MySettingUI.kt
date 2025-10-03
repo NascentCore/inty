@@ -388,7 +388,7 @@ private fun PersonaEditField(value: String, onValueChange: (String) -> Unit) {
                 Text(
                     text = stringResource(R.string.please_enter_character_full),
                     color = Color.White.copy(0.55f),
-                    fontSize = 14.sp,
+                    fontSize = 12.sp,
                     fontWeight = FontWeight.Normal,
                 )
             },
