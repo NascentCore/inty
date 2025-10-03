@@ -37,6 +37,8 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
@@ -66,6 +68,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.graphics.toColorInt
@@ -81,6 +84,7 @@ import com.ai.inty.base.noRippleClickable
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.beans.CreateAgentRequest
 import com.ai.inty.net.IAgentApi
+import com.ai.inty.ui.SingleLineTextInputField
 import com.ai.inty.ui.theme.DarkPurple
 import com.ai.inty.ui.theme.IntyTheme
 import com.ai.inty.utils.AvatarManager
@@ -681,11 +685,13 @@ private fun CreateRolePage(
             Spacer(modifier = Modifier.height(32.dp))
 
             // Name Field
-            CustomTextField(
+            SingleLineTextInputField(
                 label = "Name *",
-                value = name,
+                labelFontSize = 16.sp,
+                inputValue = name,
                 onValueChange = { name = it },
-                placeholder = "Name your IntelliMate",
+                inputFontSize = 16.sp,
+                placeholder = "Name your IntelliMate"
             )
 
             // Gender Selection已经创建后的，也就是在修改模式下，性别选项则不显示
