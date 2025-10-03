@@ -177,6 +177,11 @@ private fun insertTextAtCursor(
     // 确保光标位置在有效范围内
     val safeSelection = currentSelection.coerceIn(0, currentText.length)
 
+    // 检查当前光标是否已经在括号内
+    if (isCursorInsideParentheses(currentText, safeSelection)) {
+        return // 如果已经在括号内，直接返回，不做任何动作
+    }
+
     // 在光标位置插入文本
     var tmpText = "()"
     val beforeCursor = currentText.substring(0, safeSelection)
@@ -194,4 +199,41 @@ private fun insertTextAtCursor(
 
     // 设置光标位置到插入文本的中间（对于括号，光标应该在中间）
     onSelectionUpdate(safeSelection + 1)
+}
+
+/**
+ * 检查光标是否在括号内
+ * @param text 文本内容
+ * @param cursorPosition 光标位置
+ * @return true 如果光标在括号内，false 否则
+ */
+private fun isCursorInsideParentheses(text: String, cursorPosition: Int): Boolean {
+    if (text.isEmpty() || cursorPosition >= text.length) return false
+    
+    // 从光标位置向前查找最近的 '('
+    var openParenIndex = -1
+    for (i in cursorPosition - 1 downTo 0) {
+        if (text[i] == '(') {
+            openParenIndex = i
+            break
+        } else if (text[i] == ')') {
+            // 如果遇到 ')'，说明光标不在括号内
+            break
+        }
+    }
+    
+    // 如果没有找到 '('，光标不在括号内
+    if (openParenIndex == -1) return false
+    
+    // 从光标位置向后查找对应的 ')'
+    for (i in cursorPosition until text.length) {
+        if (text[i] == ')') {
+            return true // 找到了对应的 ')'，光标在括号内
+        } else if (text[i] == '(') {
+            // 如果遇到新的 '('，说明光标不在当前括号内
+            break
+        }
+    }
+    
+    return false
 }
