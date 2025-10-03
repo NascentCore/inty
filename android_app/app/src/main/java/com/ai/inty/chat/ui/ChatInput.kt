@@ -97,7 +97,7 @@ fun ChatInput(
             // 括号按钮区域 - 仅在输入框获得焦点时显示
             if (isInputFocused.value) {
                 NarrationInputButton(
-                    modifier = Modifier.padding(bottom = 8.dp),
+                    modifier = Modifier.padding(bottom = bottomPadding),
                     onInsertParentheses = {
                         insertTextAtCursor(
                             currentText = inputData.value,
@@ -111,7 +111,7 @@ fun ChatInput(
 
             // 发送/更多按钮区域
             MultiUseAccessButton(
-                modifier = Modifier.padding(bottom = 8.dp),
+                modifier = Modifier.padding(bottom = bottomPadding),
                 hasInput = inputData.value.isNotEmpty(),
                 showMorePanel = showMorePanel,
                 onSendMessage = onSendMessage,
