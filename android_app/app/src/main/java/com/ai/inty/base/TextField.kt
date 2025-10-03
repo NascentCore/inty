@@ -38,7 +38,6 @@ import kotlinx.coroutines.launch
 fun IntySmallTextField(
     modifier: Modifier = Modifier,
     value: String,
-    isError: Boolean = false,
     singleLine: Boolean = false,
     enabled: Boolean = true,
     placeholder: @Composable (() -> Unit)? = null,
@@ -151,7 +150,6 @@ fun IntySmallTextField(
 fun IntySmallTextField2(
     modifier: Modifier = Modifier,
     value: String,
-    isError: Boolean = false,
     singleLine: Boolean = false,
     enabled: Boolean = true,
     maxLength: Int = -1, // 限制最大输入字数，-1 表示不限制
