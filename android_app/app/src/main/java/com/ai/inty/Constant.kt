@@ -36,6 +36,6 @@ class Constant {
 
         const val ACTION_USER_PROFILE_CHANGED = "ACTION_USER_PROFILE_CHANGED"
 
-        const val PAGE_TAB_TITLE_HEIGHT = 80
+        const val PAGE_TAB_TITLE_HEIGHT = 30
     }
 }
