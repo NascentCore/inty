@@ -2,6 +2,7 @@ package com.ai.inty.home
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -37,6 +38,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.ai.inty.Constant
 import com.ai.inty.R
 import com.ai.inty.base.IntyImage
 import com.ai.inty.base.RedDot
@@ -97,7 +99,11 @@ private fun Content(
                     Image(
                         painter = painterResource(R.drawable.img_message_title),
                         contentDescription = null,
-                        modifier = Modifier.size(132.dp, 28.dp),
+                        modifier = Modifier
+                            .height(Constant.PAGE_TAB_TITLE_HEIGHT.dp)
+                            .fillMaxWidth(),
+                        contentScale = ContentScale.Fit,
+                        alignment = Alignment.CenterStart,
                     )
                 },
                 modifier = Modifier,

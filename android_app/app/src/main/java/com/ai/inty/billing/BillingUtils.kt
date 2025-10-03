@@ -103,16 +103,24 @@ internal object BillingUtils {
     fun correctCurrencySymbol(price: String, currencyCode: String): String {
         val numberPart = price.filter { it.isDigit() || it == '.' }
 
+        // 删除小数点后的 .00
+        val formattedNumberPart =
+            if (numberPart.endsWith(".00")) {
+                numberPart.dropLast(3)
+            } else {
+                numberPart
+            }
+
         return when (currencyCode) {
-            "TWD" -> "NT$$numberPart"
-            "USD" -> "$$numberPart"
-            "EUR" -> "€$numberPart"
-            "JPY" -> "¥$numberPart"
-            "CNY" -> "¥$numberPart"
-            "GBP" -> "£$numberPart"
-            "KRW" -> "₩$numberPart"
-            "SGD" -> "S$$numberPart"
-            "HKD" -> "HK$$numberPart"
+            "TWD" -> "NT$$formattedNumberPart"
+            "USD" -> "$$formattedNumberPart"
+            "EUR" -> "€$formattedNumberPart"
+            "JPY" -> "¥$formattedNumberPart"
+            "CNY" -> "¥$formattedNumberPart"
+            "GBP" -> "£$formattedNumberPart"
+            "KRW" -> "₩$formattedNumberPart"
+            "SGD" -> "S$$formattedNumberPart"
+            "HKD" -> "HK$$formattedNumberPart"
             else -> price // 如果不知道货币代码，保持原样
         }
     }

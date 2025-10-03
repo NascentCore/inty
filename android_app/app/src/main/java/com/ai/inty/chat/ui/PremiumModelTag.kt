@@ -22,6 +22,18 @@ import androidx.compose.ui.unit.sp
 import com.ai.inty.R
 import com.ai.inty.base.noRippleClickable
 
+// 激活状态的渐变背景
+private val premiumActiveBrush =
+    Brush.horizontalGradient(
+        colors = listOf(Color(0xFF00EEFF), Color(0xFF0B50FF), Color(0xFFFF00D0))
+    )
+
+// 置灰状态的渐变背景
+private val premiumInactiveBrush =
+    Brush.horizontalGradient(
+        colors = listOf(Color(0xFF595959), Color(0xFF9E9E9E), Color(0xFF686868))
+    )
+
 /** Premium Model标签组件 */
 @Composable
 fun PremiumModelTag(isPremiumModel: Boolean, onClick: () -> Unit) {
@@ -30,20 +42,7 @@ fun PremiumModelTag(isPremiumModel: Boolean, onClick: () -> Unit) {
             Modifier.padding(horizontal = 16.dp)
                 .height(28.dp)
                 .background(
-                    brush =
-                        if (isPremiumModel) {
-                            // 激活状态：渐变背景
-                            Brush.horizontalGradient(
-                                colors =
-                                    listOf(Color(0xFF00EEFF), Color(0xFF0B50FF), Color(0xFFFF00D0))
-                            )
-                        } else {
-                            // 置灰状态：半透明灰色
-                            Brush.horizontalGradient(
-                                colors =
-                                    listOf(Color(0xFF595959), Color(0xFF9E9E9E), Color(0xFF686868))
-                            )
-                        },
+                    brush = if (isPremiumModel) premiumActiveBrush else premiumInactiveBrush,
                     shape = RoundedCornerShape(16.dp),
                 )
                 .noRippleClickable { onClick() }
@@ -58,13 +57,13 @@ fun PremiumModelTag(isPremiumModel: Boolean, onClick: () -> Unit) {
                     if (isPremiumModel) R.drawable.icon_vip_flag_on
                     else R.drawable.icon_vip_flag_off
                 ),
-            contentDescription = "",
+            contentDescription = "upgrade to premium icon",
             modifier = Modifier.size(20.dp),
         )
 
         // Premium model文本
         Text(
-            text = stringResource(R.string.settings_premium_model),
+            text = stringResource(R.string.premium_tag_on_chat_page),
             color = Color.White,
             fontSize = 10.sp,
             lineHeight = 10.sp,

@@ -1,7 +1,6 @@
 package com.ai.inty.ui.components
 
 import androidx.compose.foundation.Image
-import java.util.Locale
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -26,6 +25,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -35,6 +35,54 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ai.inty.R
 import com.ai.inty.billing.VipPlan
+import java.util.Locale
+
+/** 折扣标签组件 */
+@Composable
+private fun DiscountTag(discountRate: Double, modifier: Modifier = Modifier) {
+    Box(
+        modifier =
+            modifier
+                .fillMaxWidth(0.8f)
+                .clip(RoundedCornerShape(6.dp))
+                .background(
+                    brush =
+                        Brush.horizontalGradient(
+                            colors =
+                                listOf(
+                                    colorResource(R.color.light_blue),
+                                    colorResource(R.color.light_purple),
+                                    colorResource(R.color.blue),
+                                )
+                        )
+                ),
+        contentAlignment = Alignment.Center,
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text =
+                    String.format(
+                        Locale.getDefault(),
+                        "%d%%",
+                        kotlin.math.ceil((1 - discountRate) * 100).toInt(),
+                    ),
+                color = Color.Black,
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold,
+            )
+            Spacer(modifier = Modifier.width(2.dp))
+            Text(
+                text = stringResource(R.string.discount_save),
+                color = Color.Black,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+            )
+        }
+    }
+}
 
 /** 会员权益项组件 */
 @Composable
@@ -106,7 +154,7 @@ fun PremiumPlanCard(
                         isSubscribed -> Color.White.copy(alpha = 0.5f)
                         else -> Color.White
                     },
-                fontSize = 28.sp,
+                fontSize = 24.sp,
                 fontWeight = FontWeight.Normal,
                 modifier = subModifier,
             )
@@ -114,44 +162,15 @@ fun PremiumPlanCard(
 
         // 折扣标签
         if (plan.discountRate < 1) {
-            Box(
-                Modifier.fillMaxWidth(0.8f)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(
-                        brush =
-                            Brush.horizontalGradient(
-                                colors =
-                                    listOf(Color(0xFFC1F9FD), Color(0xFFD4AEFD), Color(0xFF7B96FB))
-                            )
-                    )
-                    .then(subModifier)
-                    .align(Alignment.BottomCenter),
-                contentAlignment = Alignment.Center,
-            ) {
-                Row(
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = String.format(Locale.getDefault(), "%d%%", kotlin.math.ceil((1-plan.discountRate) * 100).toInt()),
-                        color = Color.Black,
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = subModifier,
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = stringResource(R.string.discount_save),
-                        color = Color.Black,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = subModifier,
-                    )
-                }
-            }
+            DiscountTag(
+                discountRate = plan.discountRate,
+                modifier = Modifier.then(subModifier).align(Alignment.BottomCenter),
+            )
         }
     }
 }
+
+val premiumPlanCardHeight = 132.dp
 
 /** 订阅计划列表组件 */
 @Composable
@@ -163,8 +182,9 @@ fun PremiumPlanList(
     modifier: Modifier = Modifier,
 ) {
     Row(
-        modifier = modifier.fillMaxWidth().height(132.dp).padding(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        modifier =
+            modifier.fillMaxWidth().height(premiumPlanCardHeight).padding(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         plans.forEachIndexed { idx, plan ->
             PremiumPlanCard(

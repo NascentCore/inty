@@ -29,7 +29,7 @@ class MySettingViewModel : BaseActivityViewModel() {
     val userProfile = _userProfile.asStateFlow()
 
     private val _avatarChanged = MutableStateFlow(false)
-    
+
     private val _isSaving = MutableStateFlow(false)
     val isSaving = _isSaving.asStateFlow()
 
@@ -104,7 +104,7 @@ class MySettingViewModel : BaseActivityViewModel() {
                         ToastUtils.showToast(R.string.saved_successfully)
                         UserProfileManager.saveUserProfile(updatedProfile)
                     }
-                    
+
                     TheRouter.build(Constant.ACTION_USER_PROFILE_CHANGED).action()
                     closeActivity()
                 } else {

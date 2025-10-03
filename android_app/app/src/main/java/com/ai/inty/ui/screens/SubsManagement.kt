@@ -26,8 +26,8 @@ import com.ai.inty.R
 import com.ai.inty.base.noRippleClickable
 import com.ai.inty.billing.BillingRepository
 import com.ai.inty.ui.components.SettingDivider
-import com.ai.inty.ui.components.SubscriptionManagementContainer
 import com.ai.inty.ui.components.SettingNavigationItem
+import com.ai.inty.ui.components.SubscriptionManagementContainer
 import com.ai.inty.ui.components.openPlayStoreSubscriptions
 import com.ai.inty.viewmodels.SubsManageViewModel
 import com.ai.inty.viewmodels.SubscriptionUiEvent

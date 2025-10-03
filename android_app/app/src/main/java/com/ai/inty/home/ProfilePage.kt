@@ -47,7 +47,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.foundation.Image
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -92,11 +91,7 @@ internal fun ProfilePage(
     TrackScreenView(
         screenName = "ProfilePage",
         screenClass = "MainActivity",
-        additionalParams =
-            mapOf(
-                "agent_count" to agents.size,
-                "is_loading" to isLoading,
-            ),
+        additionalParams = mapOf("agent_count" to agents.size, "is_loading" to isLoading),
     )
 
     Box(modifier = modifier) {

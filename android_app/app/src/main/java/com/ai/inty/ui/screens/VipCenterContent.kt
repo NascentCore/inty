@@ -16,8 +16,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
-
-
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -29,8 +27,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-
-
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -48,13 +44,13 @@ import com.ai.inty.viewmodels.VipCenterViewModel
 @Composable
 private fun SubscriptionDescriptionText(text: String) {
     Text(
-            text = text,
-            color = Color.Gray,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Normal,
-            textAlign = TextAlign.Center,
-            // 保证文字居中
-            modifier = Modifier.fillMaxWidth(),
+        text = text,
+        color = Color.Gray,
+        fontSize = 14.sp,
+        fontWeight = FontWeight.Normal,
+        textAlign = TextAlign.Center,
+        // 保证文字居中
+        modifier = Modifier.fillMaxWidth(),
     )
 }
 
@@ -117,25 +113,25 @@ fun VipCenterContent(
 
                 // 动态显示选中计划的计费信息
                 val selectedPlan =
-                        if (selectedPlanIndex >= 0 && selectedPlanIndex < plans.size) {
-                            plans[selectedPlanIndex]
-                        } else null
+                    if (selectedPlanIndex >= 0 && selectedPlanIndex < plans.size) {
+                        plans[selectedPlanIndex]
+                    } else null
 
                 selectedPlan?.let { plan ->
                     SubscriptionDescriptionText(
-                            text =
-                                    stringResource(
-                                            R.string.subscription_description_fmt_str,
-                                            plan.price,
-                                            plan.name.lowercase()
-                                    )
+                        text =
+                            stringResource(
+                                R.string.subscription_description_fmt_str,
+                                plan.price,
+                                plan.name.lowercase(),
+                            )
                     )
                 }
-                        ?: run {
-                            SubscriptionDescriptionText(
-                                    text = stringResource(R.string.subscription_description_placeholder),
-                            )
-                        }
+                    ?: run {
+                        SubscriptionDescriptionText(
+                            text = stringResource(R.string.subscription_description_placeholder)
+                        )
+                    }
 
                 Spacer(Modifier.height(32.dp))
 

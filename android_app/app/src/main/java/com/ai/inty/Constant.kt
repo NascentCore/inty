@@ -35,5 +35,7 @@ class Constant {
         const val ROUTE_SUBSCRIPTION_MANAGEMENT = "${ROUTE_HOME_URL}subscription_management"
 
         const val ACTION_USER_PROFILE_CHANGED = "ACTION_USER_PROFILE_CHANGED"
+
+        const val PAGE_TAB_TITLE_HEIGHT = 30
     }
 }
