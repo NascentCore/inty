@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
@@ -17,6 +18,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
@@ -55,14 +58,11 @@ fun SingleLineTextInputField(
         val cornerRadius = cornerRadiusRatio * inputFontSize.value
         OutlinedTextField(
             value = inputValue,
-            onValueChange = { newValue ->
-                val processedValue = if (capitalizeFirstLetter && newValue.isNotEmpty()) {
-                    newValue.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
-                } else {
-                    newValue
-                }
-                onValueChange(processedValue)
-            },
+            onValueChange = onValueChange,
+            keyboardOptions = KeyboardOptions(
+                imeAction = ImeAction.Done,
+                capitalization = if (capitalizeFirstLetter) KeyboardCapitalization.Sentences else KeyboardCapitalization.None
+            ),
             placeholder = { 
                 Text(
                     text = placeholder,
