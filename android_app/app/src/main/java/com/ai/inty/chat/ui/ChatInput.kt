@@ -53,11 +53,14 @@ fun ChatInput(
     val inputSelection = chatViewModel.inputSelection.collectAsState()
     val isInputFocused = remember { mutableStateOf(false) }
 
+    val horizontalPadding = 16.dp
+    val topPadding = 16.dp
+
     Column(
         modifier =
-            Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = bottomPadding)
+            Modifier.padding(start = horizontalPadding, top = topPadding, end = horizontalPadding, bottom = bottomPadding)
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(24.dp))
+                .clip(RoundedCornerShape(horizontalPadding))
                 .background(colorResource(id = R.color.dark_purple_60_percent))
                 .clickable(enabled = IntySetting.needBlockInput()) {
                     // 游客 未登录的用户，需要弹出年龄段选择，18岁以下的，不让输入。
@@ -86,7 +89,7 @@ fun ChatInput(
                     chatViewModel.inputSelection.value = selection
                 },
                 selection = inputSelection.value,
-                maxLines = 6,
+                maxLines = 4,
                 maxLength = 500,
             )
 
