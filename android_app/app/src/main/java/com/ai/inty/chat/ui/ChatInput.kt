@@ -238,12 +238,12 @@ private fun MultiUseAccess(
         modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp),
         contentAlignment = Alignment.Center
     ) {
-        val sendButtonSize = 24.dp
+        val buttonSize = 24.dp
         // 有输入内容时，发送按钮显示
         if (hasInput) {
             IntyImage(
                 modifier =
-                    Modifier.size(sendButtonSize).noRippleClickable {
+                    Modifier.size(buttonSize).noRippleClickable {
                         onSendMessage()
                     },
                 model = R.drawable.btn_send,
@@ -251,7 +251,7 @@ private fun MultiUseAccess(
         } else {
             IntyImage(
                 modifier =
-                    Modifier.size(sendButtonSize).noRippleClickable {
+                    Modifier.size(buttonSize).noRippleClickable {
                         onToggleMorePanel()
                     },
                 model = if (showMorePanel) R.drawable.btn_down else R.drawable.btn_add2,
