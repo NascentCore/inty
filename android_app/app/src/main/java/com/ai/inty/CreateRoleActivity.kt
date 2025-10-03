@@ -1475,3 +1475,61 @@ private fun CreateButton(isLoading: Boolean, isEditMode: Boolean = false, onClic
         }
     }
 }
+
+/**
+ * 单行文本输入框组件
+ * @param label 标签文本
+ * @param labelFontSize 标签字体大小
+ * @param inputValue 输入值
+ * @param onValueChange 值变化回调
+ * @param inputFontSize 输入框字体大小
+ * @param placeholder 占位符文本
+ */
+@Composable
+private fun SingleLineTextInputField(
+    label: String,
+    labelFontSize: TextUnit,
+    inputValue: String,
+    onValueChange: (String) -> Unit,
+    inputFontSize: TextUnit,
+    placeholder: String,
+) {
+    Column {
+        Text(
+            text = label, 
+            fontSize = labelFontSize, 
+            color = Color.White, 
+            fontWeight = FontWeight.Medium
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+
+        val cornerRadiusRatio = 0.7f
+        val cornerRadius = cornerRadiusRatio * inputFontSize.value
+        OutlinedTextField(
+            value = inputValue,
+            onValueChange = onValueChange,
+            placeholder = { 
+                Text(
+                    text = placeholder,
+                    fontSize = inputFontSize,
+                    color = Color.White.copy(0.5f)
+                )
+            },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            textStyle = TextStyle(color = Color.White, fontSize = inputFontSize),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = Color.White.copy(0.2f),
+                unfocusedBorderColor = Color.White.copy(0.2f),
+                focusedTextColor = Color.White,
+                unfocusedTextColor = Color.White,
+                focusedPlaceholderColor = Color.White.copy(0.5f),
+                unfocusedPlaceholderColor = Color.White.copy(0.5f),
+                focusedContainerColor = Color(0x1A78599A),
+                unfocusedContainerColor = Color(0x1A78599A),
+                cursorColor = Color.White
+            ),
+            shape = RoundedCornerShape(cornerRadius.dp)
+        )
+    }
+}
