@@ -1,11 +1,9 @@
 package com.ai.inty.chat.ui
 
-import org.junit.Test
 import org.junit.Assert.*
+import org.junit.Test
 
-/**
- * ChatInput 相关函数的测试
- */
+/** ChatInput 相关函数的测试 */
 class ChatInputTest {
 
     @Test
@@ -21,7 +19,7 @@ class ChatInputTest {
             currentText = currentText,
             currentSelection = currentSelection,
             onTextUpdate = onTextUpdate,
-            onSelectionUpdate = onSelectionUpdate
+            onSelectionUpdate = onSelectionUpdate,
         )
 
         // Then
@@ -42,7 +40,7 @@ class ChatInputTest {
             currentText = currentText,
             currentSelection = currentSelection,
             onTextUpdate = onTextUpdate,
-            onSelectionUpdate = onSelectionUpdate
+            onSelectionUpdate = onSelectionUpdate,
         )
 
         // Then

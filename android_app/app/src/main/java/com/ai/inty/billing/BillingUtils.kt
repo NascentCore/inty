@@ -102,13 +102,14 @@ internal object BillingUtils {
     /** 根据货币代码修正货币符号 */
     fun correctCurrencySymbol(price: String, currencyCode: String): String {
         val numberPart = price.filter { it.isDigit() || it == '.' }
-        
+
         // 删除小数点后的 .00
-        val formattedNumberPart = if (numberPart.endsWith(".00")) {
-            numberPart.dropLast(3)
-        } else {
-            numberPart
-        }
+        val formattedNumberPart =
+            if (numberPart.endsWith(".00")) {
+                numberPart.dropLast(3)
+            } else {
+                numberPart
+            }
 
         return when (currencyCode) {
             "TWD" -> "NT$$formattedNumberPart"

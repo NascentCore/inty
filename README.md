@@ -292,31 +292,23 @@ docker run -p 8000:8000 -v $(pwd)/config.yaml:/app/config.yaml inty-backend
 ### Firebase 服务账号密钥生成
 
 1. 进入 Firebase Console：
-
-
-    - 访问 <https://console.firebase.google.com/>
-    - 选择项目（Inty）
+   - 访问 <https://console.firebase.google.com/>
+   - 选择项目（Inty）
 
 2. 生成服务账号密钥：
-
-
-    - 在项目设置 -> 服务账号 -> 生成新的私钥
-    - 下载的文件重命名为：inty-firebase-key.json
+   - 在项目设置 -> 服务账号 -> 生成新的私钥
+   - 下载的文件重命名为：inty-firebase-key.json
 
 ### Google Cloud Storage 服务账号密钥生成
 
 1. 进入 Google Cloud Console：
-
-
-    - 访问 <https://console.cloud.google.com/>
-    - 选择项目（Inty）
+   - 访问 <https://console.cloud.google.com/>
+   - 选择项目（Inty）
 
 2. 创建服务账号（service account）：
-
-
-    - 设置 “roles/storage.admin” 角色
-    - 点击创建的服务帐号 -> 密钥 -> 创建新密钥
-    - 下载的文件重命名为：inty-backend-key.json
+   - 设置 “roles/storage.admin” 角色
+   - 点击创建的服务帐号 -> 密钥 -> 创建新密钥
+   - 下载的文件重命名为：inty-backend-key.json
 
 ## 技术栈
 

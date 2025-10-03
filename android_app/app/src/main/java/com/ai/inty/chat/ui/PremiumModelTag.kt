@@ -23,14 +23,16 @@ import com.ai.inty.R
 import com.ai.inty.base.noRippleClickable
 
 // 激活状态的渐变背景
-private val premiumActiveBrush = Brush.horizontalGradient(
-    colors = listOf(Color(0xFF00EEFF), Color(0xFF0B50FF), Color(0xFFFF00D0))
-)
+private val premiumActiveBrush =
+    Brush.horizontalGradient(
+        colors = listOf(Color(0xFF00EEFF), Color(0xFF0B50FF), Color(0xFFFF00D0))
+    )
 
 // 置灰状态的渐变背景
-private val premiumInactiveBrush = Brush.horizontalGradient(
-    colors = listOf(Color(0xFF595959), Color(0xFF9E9E9E), Color(0xFF686868))
-)
+private val premiumInactiveBrush =
+    Brush.horizontalGradient(
+        colors = listOf(Color(0xFF595959), Color(0xFF9E9E9E), Color(0xFF686868))
+    )
 
 /** Premium Model标签组件 */
 @Composable

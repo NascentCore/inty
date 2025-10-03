@@ -39,23 +39,23 @@ import java.util.Locale
 
 /** 折扣标签组件 */
 @Composable
-private fun DiscountTag(
-    discountRate: Double,
-    modifier: Modifier = Modifier,
-) {
+private fun DiscountTag(discountRate: Double, modifier: Modifier = Modifier) {
     Box(
-        modifier = modifier
-            .fillMaxWidth(0.8f)
-            .clip(RoundedCornerShape(6.dp))
-            .background(
-                brush = Brush.horizontalGradient(
-                    colors = listOf(
-                        colorResource(R.color.light_blue),
-                        colorResource(R.color.light_purple),
-                        colorResource(R.color.blue),
-                    )
-                )
-            ),
+        modifier =
+            modifier
+                .fillMaxWidth(0.8f)
+                .clip(RoundedCornerShape(6.dp))
+                .background(
+                    brush =
+                        Brush.horizontalGradient(
+                            colors =
+                                listOf(
+                                    colorResource(R.color.light_blue),
+                                    colorResource(R.color.light_purple),
+                                    colorResource(R.color.blue),
+                                )
+                        )
+                ),
         contentAlignment = Alignment.Center,
     ) {
         Row(
@@ -63,11 +63,12 @@ private fun DiscountTag(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = String.format(
-                    Locale.getDefault(),
-                    "%d%%",
-                    kotlin.math.ceil((1 - discountRate) * 100).toInt(),
-                ),
+                text =
+                    String.format(
+                        Locale.getDefault(),
+                        "%d%%",
+                        kotlin.math.ceil((1 - discountRate) * 100).toInt(),
+                    ),
                 color = Color.Black,
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
@@ -181,7 +182,8 @@ fun PremiumPlanList(
     modifier: Modifier = Modifier,
 ) {
     Row(
-        modifier = modifier.fillMaxWidth().height(premiumPlanCardHeight).padding(horizontal = 16.dp),
+        modifier =
+            modifier.fillMaxWidth().height(premiumPlanCardHeight).padding(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         plans.forEachIndexed { idx, plan ->

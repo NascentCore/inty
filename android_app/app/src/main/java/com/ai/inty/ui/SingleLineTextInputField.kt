@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.sp
 
 /**
  * 单行文本输入框组件
+ *
  * @param label 标签文本
  * @param labelFontSize 标签字体大小
  * @param inputValue 输入值
@@ -47,10 +48,10 @@ fun SingleLineTextInputField(
 ) {
     Column {
         Text(
-            text = label, 
-            fontSize = labelFontSize, 
-            color = Color.White, 
-            fontWeight = FontWeight.Medium
+            text = label,
+            fontSize = labelFontSize,
+            color = Color.White,
+            fontWeight = FontWeight.Medium,
         )
         Spacer(modifier = Modifier.height(12.dp))
 
@@ -59,32 +60,32 @@ fun SingleLineTextInputField(
         OutlinedTextField(
             value = inputValue,
             onValueChange = onValueChange,
-            keyboardOptions = KeyboardOptions(
-                imeAction = ImeAction.Done,
-                capitalization = if (capitalizeFirstLetter) KeyboardCapitalization.Sentences else KeyboardCapitalization.None
-            ),
-            placeholder = { 
-                Text(
-                    text = placeholder,
-                    fontSize = inputFontSize,
-                    color = Color.White.copy(0.5f)
-                )
+            keyboardOptions =
+                KeyboardOptions(
+                    imeAction = ImeAction.Done,
+                    capitalization =
+                        if (capitalizeFirstLetter) KeyboardCapitalization.Sentences
+                        else KeyboardCapitalization.None,
+                ),
+            placeholder = {
+                Text(text = placeholder, fontSize = inputFontSize, color = Color.White.copy(0.5f))
             },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
             textStyle = TextStyle(color = Color.White, fontSize = inputFontSize),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = Color.White.copy(0.2f),
-                unfocusedBorderColor = Color.White.copy(0.2f),
-                focusedTextColor = Color.White,
-                unfocusedTextColor = Color.White,
-                focusedPlaceholderColor = Color.White.copy(0.5f),
-                unfocusedPlaceholderColor = Color.White.copy(0.5f),
-                focusedContainerColor = Color(0x1A78599A),
-                unfocusedContainerColor = Color(0x1A78599A),
-                cursorColor = Color.White
-            ),
-            shape = RoundedCornerShape(cornerRadius.dp)
+            colors =
+                OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Color.White.copy(0.2f),
+                    unfocusedBorderColor = Color.White.copy(0.2f),
+                    focusedTextColor = Color.White,
+                    unfocusedTextColor = Color.White,
+                    focusedPlaceholderColor = Color.White.copy(0.5f),
+                    unfocusedPlaceholderColor = Color.White.copy(0.5f),
+                    focusedContainerColor = Color(0x1A78599A),
+                    unfocusedContainerColor = Color(0x1A78599A),
+                    cursorColor = Color.White,
+                ),
+            shape = RoundedCornerShape(cornerRadius.dp),
         )
     }
 }
@@ -93,7 +94,7 @@ fun SingleLineTextInputField(
 @Composable
 private fun SingleLineTextInputFieldPreview() {
     var text by remember { mutableStateOf("") }
-    
+
     SingleLineTextInputField(
         label = "Name *",
         labelFontSize = 16.sp,
@@ -101,7 +102,7 @@ private fun SingleLineTextInputFieldPreview() {
         onValueChange = { text = it },
         inputFontSize = 16.sp,
         placeholder = "Name your IntelliMate",
-        capitalizeFirstLetter = true
+        capitalizeFirstLetter = true,
     )
 }
 
@@ -109,7 +110,7 @@ private fun SingleLineTextInputFieldPreview() {
 @Composable
 private fun SingleLineTextInputFieldWithTextPreview() {
     var text by remember { mutableStateOf("My IntelliMate") }
-    
+
     SingleLineTextInputField(
         label = "Character Name *",
         labelFontSize = 18.sp,
@@ -117,7 +118,7 @@ private fun SingleLineTextInputFieldWithTextPreview() {
         onValueChange = { text = it },
         inputFontSize = 18.sp,
         placeholder = "Enter character name",
-        capitalizeFirstLetter = true
+        capitalizeFirstLetter = true,
     )
 }
 
@@ -125,7 +126,7 @@ private fun SingleLineTextInputFieldWithTextPreview() {
 @Composable
 private fun SingleLineTextInputFieldNoCapitalizePreview() {
     var text by remember { mutableStateOf("") }
-    
+
     SingleLineTextInputField(
         label = "Description",
         labelFontSize = 16.sp,
@@ -133,6 +134,6 @@ private fun SingleLineTextInputFieldNoCapitalizePreview() {
         onValueChange = { text = it },
         inputFontSize = 16.sp,
         placeholder = "Enter description (no auto-capitalize)",
-        capitalizeFirstLetter = false
+        capitalizeFirstLetter = false,
     )
 }

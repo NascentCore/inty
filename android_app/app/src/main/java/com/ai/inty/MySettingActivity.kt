@@ -74,7 +74,8 @@ class MySettingActivity : BaseActivity() {
                     }
 
                 val galleryLauncher =
-                    rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { imageUri ->
+                    rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) {
+                        imageUri ->
                         imageUri?.let { uri ->
                             runCatching {
                                     // Check file size before cropping - limit to 10MB

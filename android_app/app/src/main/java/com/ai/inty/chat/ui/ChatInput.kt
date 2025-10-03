@@ -58,7 +58,12 @@ fun ChatInput(
 
     Column(
         modifier =
-            Modifier.padding(start = horizontalPadding, top = topPadding, end = horizontalPadding, bottom = bottomPadding)
+            Modifier.padding(
+                    start = horizontalPadding,
+                    top = topPadding,
+                    end = horizontalPadding,
+                    bottom = bottomPadding,
+                )
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(horizontalPadding))
                 .background(colorResource(id = R.color.dark_purple_60_percent))
@@ -105,9 +110,11 @@ fun ChatInput(
                             currentText = inputData.value,
                             currentSelection = chatViewModel.inputSelection.value,
                             onTextUpdate = { newText -> chatViewModel.inputData.value = newText },
-                            onSelectionUpdate = { newSelection -> chatViewModel.inputSelection.value = newSelection }
+                            onSelectionUpdate = { newSelection ->
+                                chatViewModel.inputSelection.value = newSelection
+                            },
                         )
-                    }
+                    },
                 )
             }
 
@@ -117,7 +124,7 @@ fun ChatInput(
                 hasInput = inputData.value.isNotEmpty(),
                 showMorePanel = showMorePanel,
                 onSendMessage = onSendMessage,
-                onToggleMorePanel = onToggleMorePanel
+                onToggleMorePanel = onToggleMorePanel,
             )
         }
     }
@@ -125,26 +132,25 @@ fun ChatInput(
 
 /**
  * 旁白输入按钮组件
+ *
  * @param modifier 修饰符
  * @param onInsertParentheses 插入括号的回调函数
  */
 @Composable
 private fun NarrationInputButton(
     modifier: Modifier = Modifier,
-    onInsertParentheses: (String) -> Unit
+    onInsertParentheses: (String) -> Unit,
 ) {
     val parenthesesText = stringResource(R.string.empty_parentheses_symbol)
     val narrationInputFontSize = 14.sp
-    
+
     Box(
         modifier =
             modifier
                 .size(40.dp)
                 .padding(horizontal = 8.dp, vertical = 8.dp)
                 .background(Color.White.copy(alpha = 0.1f), RoundedCornerShape(16.dp))
-                .noRippleClickable {
-                    onInsertParentheses(parenthesesText)
-                },
+                .noRippleClickable { onInsertParentheses(parenthesesText) },
         contentAlignment = Alignment.Center,
     ) {
         Text(
@@ -158,6 +164,7 @@ private fun NarrationInputButton(
 
 /**
  * 在光标位置插入文本的辅助函数
+ *
  * @param currentText 当前文本内容
  * @param currentSelection 当前光标位置
  * @param onTextUpdate 文本更新回调
@@ -198,13 +205,14 @@ internal fun insertParenthesesAtCursor(
 
 /**
  * 检查光标是否在括号内
+ *
  * @param text 文本内容
  * @param cursorPosition 光标位置
  * @return true 如果光标在括号内，false 否则
  */
 internal fun isCursorInsideParentheses(text: String, cursorPosition: Int): Boolean {
     if (text.isEmpty() || cursorPosition >= text.length) return false
-    
+
     // 从光标位置向前查找最近的 '('
     var openParenIndex = -1
     for (i in cursorPosition - 1 downTo 0) {
@@ -216,10 +224,10 @@ internal fun isCursorInsideParentheses(text: String, cursorPosition: Int): Boole
             break
         }
     }
-    
+
     // 如果没有找到 '('，光标不在括号内
     if (openParenIndex == -1) return false
-    
+
     // 从光标位置向后查找对应的 ')'
     for (i in cursorPosition until text.length) {
         if (text[i] == ')') {
@@ -229,12 +237,13 @@ internal fun isCursorInsideParentheses(text: String, cursorPosition: Int): Boole
             break
         }
     }
-    
+
     return false
 }
 
 /**
  * 多功能访问按钮组件（发送/更多按钮）
+ *
  * @param modifier 修饰符
  * @param hasInput 是否有输入内容
  * @param showMorePanel 是否显示更多面板
@@ -251,24 +260,18 @@ private fun MultiUseAccessButton(
 ) {
     Box(
         modifier = modifier.padding(horizontal = 8.dp, vertical = 8.dp),
-        contentAlignment = Alignment.Center
+        contentAlignment = Alignment.Center,
     ) {
         val buttonSize = 24.dp
         // 有输入内容时，发送按钮显示
         if (hasInput) {
             IntyImage(
-                modifier =
-                    Modifier.size(buttonSize).noRippleClickable {
-                        onSendMessage()
-                    },
+                modifier = Modifier.size(buttonSize).noRippleClickable { onSendMessage() },
                 model = R.drawable.btn_send,
             )
         } else {
             IntyImage(
-                modifier =
-                    Modifier.size(buttonSize).noRippleClickable {
-                        onToggleMorePanel()
-                    },
+                modifier = Modifier.size(buttonSize).noRippleClickable { onToggleMorePanel() },
                 model = if (showMorePanel) R.drawable.btn_down else R.drawable.btn_add2,
             )
         }
