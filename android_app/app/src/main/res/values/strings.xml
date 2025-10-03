@@ -133,7 +133,7 @@
     <string name="redemption_code">Redemption Code</string>
     <string name="cancel_subscription">Cancel</string>
     <string name="you_are_not_vip">You are not vip</string>
-    <string name="settings_premium_model">Premium Model</string>
+    <string name="settings_premium_model">Upgrade to Premium</string>
 
     <string name="settings_str_delete_account">Delete My Account</string>
     <string name="url_user_agreement">https://app.termly.io/policy-viewer/policy.html?policyUUID=97416d63-aebb-4ea5-b990-eccc5aa6cff1</string>
