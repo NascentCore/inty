@@ -9,7 +9,7 @@ import org.junit.Assert.*
 class ChatInputTest {
 
     @Test
-    fun `insertTextAtCursor should be callable`() {
+    fun `insertParenthesesAtCursor should be callable`() {
         // Given
         var currentText = "hello world"
         var currentSelection = 5
@@ -17,7 +17,7 @@ class ChatInputTest {
         val onSelectionUpdate: (Int) -> Unit = { currentSelection = it }
 
         // When
-        insertTextAtCursor(
+        insertParenthesesAtCursor(
             currentText = currentText,
             currentSelection = currentSelection,
             onTextUpdate = onTextUpdate,
@@ -30,7 +30,7 @@ class ChatInputTest {
     }
 
     @Test
-    fun `insertTextAtCursor should handle empty text`() {
+    fun `insertParenthesesAtCursor should handle empty text`() {
         // Given
         var currentText = ""
         var currentSelection = 0
@@ -38,7 +38,7 @@ class ChatInputTest {
         val onSelectionUpdate: (Int) -> Unit = { currentSelection = it }
 
         // When
-        insertTextAtCursor(
+        insertParenthesesAtCursor(
             currentText = currentText,
             currentSelection = currentSelection,
             onTextUpdate = onTextUpdate,

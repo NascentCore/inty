@@ -30,7 +30,6 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.tooling.preview.Preview
 import com.ai.inty.Constant
 import com.ai.inty.R
 import com.ai.inty.base.IntyImage
@@ -99,7 +98,7 @@ fun ChatInput(
                 NarrationInputButton(
                     modifier = Modifier.padding(bottom = bottomPadding),
                     onInsertParentheses = {
-                        insertTextAtCursor(
+                        insertParenthesesAtCursor(
                             currentText = inputData.value,
                             currentSelection = chatViewModel.inputSelection.value,
                             onTextUpdate = { newText -> chatViewModel.inputData.value = newText },
@@ -158,11 +157,10 @@ private fun NarrationInputButton(
  * 在光标位置插入文本的辅助函数
  * @param currentText 当前文本内容
  * @param currentSelection 当前光标位置
- * @param textToInsert 要插入的文本
  * @param onTextUpdate 文本更新回调
  * @param onSelectionUpdate 光标位置更新回调
  */
-internal fun insertTextAtCursor(
+internal fun insertParenthesesAtCursor(
     currentText: String,
     currentSelection: Int,
     onTextUpdate: (String) -> Unit,
