@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -29,6 +30,7 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.tooling.preview.Preview
 import com.ai.inty.Constant
 import com.ai.inty.R
 import com.ai.inty.base.IntyImage
@@ -57,7 +59,7 @@ fun ChatInput(
             Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = bottomPadding)
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(24.dp))
-                .background(Color(0x9937303D))
+                .background(colorResource(id = R.color.dark_purple_60_percent))
                 .clickable(enabled = IntySetting.needBlockInput()) {
                     // 游客 未登录的用户，需要弹出年龄段选择，18岁以下的，不让输入。
                     TheRouter.build(Constant.ROUTE_REG_INFO).navigation(context)
@@ -89,9 +91,13 @@ fun ChatInput(
                 maxLength = 500,
             )
 
+            // 视觉上保持与底部 8.dp 的坚决，这样初始，只有一行输入时，其位置位于
+            // 输入框垂直方向中央位置。增加输入行数，则位置不变。
+            val bottomPadding = 8.dp
             // 括号按钮区域 - 仅在输入框获得焦点时显示
             if (isInputFocused.value) {
                 NarrationInputButton(
+                    modifier = Modifier.padding(bottom = 8.dp),
                     onInsertParentheses = {
                         insertTextAtCursor(
                             currentText = inputData.value,
@@ -104,7 +110,8 @@ fun ChatInput(
             }
 
             // 发送/更多按钮区域
-            MultiUseAccess(
+            MultiUseAccessButton(
+                modifier = Modifier.padding(bottom = 8.dp),
                 hasInput = inputData.value.isNotEmpty(),
                 showMorePanel = showMorePanel,
                 onSendMessage = onSendMessage,
@@ -116,16 +123,21 @@ fun ChatInput(
 
 /**
  * 旁白输入按钮组件
+ * @param modifier 修饰符
  * @param onInsertParentheses 插入括号的回调函数
  */
 @Composable
-private fun NarrationInputButton(onInsertParentheses: (String) -> Unit) {
+private fun NarrationInputButton(
+    modifier: Modifier = Modifier,
+    onInsertParentheses: (String) -> Unit
+) {
     val parenthesesText = stringResource(R.string.empty_parentheses_symbol)
     val narrationInputFontSize = 14.sp
     
     Box(
         modifier =
-            Modifier.size(40.dp)
+            modifier
+                .size(40.dp)
                 .padding(horizontal = 8.dp, vertical = 8.dp)
                 .background(Color.White.copy(alpha = 0.1f), RoundedCornerShape(16.dp))
                 .noRippleClickable {
@@ -222,20 +234,22 @@ internal fun isCursorInsideParentheses(text: String, cursorPosition: Int): Boole
 
 /**
  * 多功能访问按钮组件（发送/更多按钮）
+ * @param modifier 修饰符
  * @param hasInput 是否有输入内容
  * @param showMorePanel 是否显示更多面板
  * @param onSendMessage 发送消息回调
  * @param onToggleMorePanel 切换更多面板回调
  */
 @Composable
-private fun MultiUseAccess(
+private fun MultiUseAccessButton(
+    modifier: Modifier = Modifier,
     hasInput: Boolean,
     showMorePanel: Boolean,
     onSendMessage: () -> Unit,
     onToggleMorePanel: () -> Unit,
 ) {
     Box(
-        modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp),
+        modifier = modifier.padding(horizontal = 8.dp, vertical = 8.dp),
         contentAlignment = Alignment.Center
     ) {
         val buttonSize = 24.dp
