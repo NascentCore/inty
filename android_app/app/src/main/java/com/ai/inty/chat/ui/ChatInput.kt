@@ -168,7 +168,7 @@ private fun NarrationInputButton(onInsertParentheses: (String) -> Unit) {
  * @param onTextUpdate 文本更新回调
  * @param onSelectionUpdate 光标位置更新回调
  */
-private fun insertTextAtCursor(
+internal fun insertTextAtCursor(
     currentText: String,
     currentSelection: Int,
     onTextUpdate: (String) -> Unit,
@@ -207,7 +207,7 @@ private fun insertTextAtCursor(
  * @param cursorPosition 光标位置
  * @return true 如果光标在括号内，false 否则
  */
-private fun isCursorInsideParentheses(text: String, cursorPosition: Int): Boolean {
+internal fun isCursorInsideParentheses(text: String, cursorPosition: Int): Boolean {
     if (text.isEmpty() || cursorPosition >= text.length) return false
     
     // 从光标位置向前查找最近的 '('
