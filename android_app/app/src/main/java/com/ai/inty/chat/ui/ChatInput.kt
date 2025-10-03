@@ -91,42 +91,17 @@ fun ChatInput(
 
             // 括号按钮区域 - 仅在输入框获得焦点时显示
             if (isInputFocused.value) {
-                val stringResource = stringResource(R.string.empty_parentheses_symbol)
-                Box(
-                    modifier =
-                        Modifier.size(40.dp)
-                            .padding(horizontal = 8.dp, vertical = 8.dp)
-                            .background(Color.White.copy(alpha = 0.1f), RoundedCornerShape(16.dp))
-                            .noRippleClickable {
-                                // 获取当前光标位置
-                                val currentText = inputData.value
-                                val currentSelection = chatViewModel.inputSelection.value
-
-                                // 确保光标位置在有效范围内
-                                val safeSelection = currentSelection.coerceIn(0, currentText.length)
-
-                                // 在光标位置插入一对括号
-                                val beforeCursor = currentText.substring(0, safeSelection)
-                                val afterCursor = currentText.substring(safeSelection)
-                                val newText = "$beforeCursor$stringResource$afterCursor"
-
-                                // 更新文本
-                                chatViewModel.inputData.value = newText
-
-                                // 设置光标位置到括号中间
-                                val newCursorPosition = safeSelection + 1
-                                chatViewModel.inputSelection.value = newCursorPosition
-                            },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    val narrationInputFontSize = 14.sp
-                    Text(
-                        text = stringResource(R.string.empty_parentheses_symbol),
-                        color = Color.White,
-                        fontSize = narrationInputFontSize,
-                        fontWeight = FontWeight.Medium,
-                    )
-                }
+                NarrationInputButton(
+                    onInsertParentheses = { parenthesesText ->
+                        insertTextAtCursor(
+                            currentText = inputData.value,
+                            currentSelection = chatViewModel.inputSelection.value,
+                            textToInsert = parenthesesText,
+                            onTextUpdate = { newText -> chatViewModel.inputData.value = newText },
+                            onSelectionUpdate = { newSelection -> chatViewModel.inputSelection.value = newSelection }
+                        )
+                    }
+                )
             }
 
             // 发送/更多按钮区域
@@ -156,4 +131,69 @@ fun ChatInput(
             }
         }
     }
+}
+
+/**
+ * 旁白输入按钮组件
+ * @param onInsertParentheses 插入括号的回调函数
+ */
+@Composable
+private fun NarrationInputButton(onInsertParentheses: (String) -> Unit) {
+    val parenthesesText = stringResource(R.string.empty_parentheses_symbol)
+    val narrationInputFontSize = 14.sp
+    
+    Box(
+        modifier =
+            Modifier.size(40.dp)
+                .padding(horizontal = 8.dp, vertical = 8.dp)
+                .background(Color.White.copy(alpha = 0.1f), RoundedCornerShape(16.dp))
+                .noRippleClickable {
+                    onInsertParentheses(parenthesesText)
+                },
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = parenthesesText,
+            color = Color.White,
+            fontSize = narrationInputFontSize,
+            fontWeight = FontWeight.Medium,
+        )
+    }
+}
+
+/**
+ * 在光标位置插入文本的辅助函数
+ * @param currentText 当前文本内容
+ * @param currentSelection 当前光标位置
+ * @param textToInsert 要插入的文本
+ * @param onTextUpdate 文本更新回调
+ * @param onSelectionUpdate 光标位置更新回调
+ */
+private fun insertTextAtCursor(
+    currentText: String,
+    currentSelection: Int,
+    textToInsert: String,
+    onTextUpdate: (String) -> Unit,
+    onSelectionUpdate: (Int) -> Unit,
+) {
+    // 确保光标位置在有效范围内
+    val safeSelection = currentSelection.coerceIn(0, currentText.length)
+
+    // 在光标位置插入文本
+    var tmpText = textToInsert
+    val beforeCursor = currentText.substring(0, safeSelection)
+    if (beforeCursor.isNotEmpty() && beforeCursor.last() != ' ') {
+        tmpText = " $tmpText"
+    }
+    val afterCursor = currentText.substring(safeSelection)
+    if (afterCursor.isNotEmpty() && afterCursor.first() != ' ') {
+        tmpText = "$tmpText "
+    }
+    val newText = "$beforeCursor$tmpText$afterCursor"
+
+    // 更新文本
+    onTextUpdate(newText)
+
+    // 设置光标位置到插入文本的中间（对于括号，光标应该在中间）
+    onSelectionUpdate(safeSelection + 1)
 }
