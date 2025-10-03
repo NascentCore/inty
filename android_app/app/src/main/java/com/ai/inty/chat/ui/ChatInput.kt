@@ -92,11 +92,10 @@ fun ChatInput(
             // 括号按钮区域 - 仅在输入框获得焦点时显示
             if (isInputFocused.value) {
                 NarrationInputButton(
-                    onInsertParentheses = { parenthesesText ->
+                    onInsertParentheses = {
                         insertTextAtCursor(
                             currentText = inputData.value,
                             currentSelection = chatViewModel.inputSelection.value,
-                            textToInsert = parenthesesText,
                             onTextUpdate = { newText -> chatViewModel.inputData.value = newText },
                             onSelectionUpdate = { newSelection -> chatViewModel.inputSelection.value = newSelection }
                         )
@@ -172,7 +171,6 @@ private fun NarrationInputButton(onInsertParentheses: (String) -> Unit) {
 private fun insertTextAtCursor(
     currentText: String,
     currentSelection: Int,
-    textToInsert: String,
     onTextUpdate: (String) -> Unit,
     onSelectionUpdate: (Int) -> Unit,
 ) {
@@ -180,7 +178,7 @@ private fun insertTextAtCursor(
     val safeSelection = currentSelection.coerceIn(0, currentText.length)
 
     // 在光标位置插入文本
-    var tmpText = textToInsert
+    var tmpText = "()"
     val beforeCursor = currentText.substring(0, safeSelection)
     if (beforeCursor.isNotEmpty() && beforeCursor.last() != ' ') {
         tmpText = " $tmpText"
