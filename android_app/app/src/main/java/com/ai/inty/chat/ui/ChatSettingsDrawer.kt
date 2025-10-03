@@ -292,7 +292,7 @@ fun ChatSettingsDrawer(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Text(
-                                text = stringResource(R.string.settings_premium_model),
+                                text = stringResource(R.string.premium_tag_on_chat_page),
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Normal,
                                 color = Color.White,

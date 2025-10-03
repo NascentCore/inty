@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.sp
  * @param onValueChange 值变化回调
  * @param inputFontSize 输入框字体大小
  * @param placeholder 占位符文本
+ * @param capitalizeFirstLetter 是否将首字母大写，默认为 true
  */
 @Composable
 fun SingleLineTextInputField(
@@ -39,6 +40,7 @@ fun SingleLineTextInputField(
     onValueChange: (String) -> Unit,
     inputFontSize: TextUnit,
     placeholder: String,
+    capitalizeFirstLetter: Boolean = true,
 ) {
     Column {
         Text(
@@ -53,7 +55,14 @@ fun SingleLineTextInputField(
         val cornerRadius = cornerRadiusRatio * inputFontSize.value
         OutlinedTextField(
             value = inputValue,
-            onValueChange = onValueChange,
+            onValueChange = { newValue ->
+                val processedValue = if (capitalizeFirstLetter && newValue.isNotEmpty()) {
+                    newValue.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
+                } else {
+                    newValue
+                }
+                onValueChange(processedValue)
+            },
             placeholder = { 
                 Text(
                     text = placeholder,
@@ -91,7 +100,8 @@ private fun SingleLineTextInputFieldPreview() {
         inputValue = text,
         onValueChange = { text = it },
         inputFontSize = 16.sp,
-        placeholder = "Name your IntelliMate"
+        placeholder = "Name your IntelliMate",
+        capitalizeFirstLetter = true
     )
 }
 
@@ -106,6 +116,23 @@ private fun SingleLineTextInputFieldWithTextPreview() {
         inputValue = text,
         onValueChange = { text = it },
         inputFontSize = 18.sp,
-        placeholder = "Enter character name"
+        placeholder = "Enter character name",
+        capitalizeFirstLetter = true
+    )
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun SingleLineTextInputFieldNoCapitalizePreview() {
+    var text by remember { mutableStateOf("") }
+    
+    SingleLineTextInputField(
+        label = "Description",
+        labelFontSize = 16.sp,
+        inputValue = text,
+        onValueChange = { text = it },
+        inputFontSize = 16.sp,
+        placeholder = "Enter description (no auto-capitalize)",
+        capitalizeFirstLetter = false
     )
 }

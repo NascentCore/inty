@@ -6,11 +6,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -68,7 +66,7 @@ fun ChatInput(
         // 主输入区域
         Row(
             modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
-            verticalAlignment = Alignment.CenterVertically,
+            verticalAlignment = Alignment.Bottom,
         ) {
             IntySmallTextField(
                 modifier = Modifier.weight(1f),
@@ -96,8 +94,8 @@ fun ChatInput(
                 val stringResource = stringResource(R.string.empty_parentheses_symbol)
                 Box(
                     modifier =
-                        Modifier.width(40.dp)
-                            .height(32.dp)
+                        Modifier.size(40.dp)
+                            .padding(horizontal = 8.dp, vertical = 8.dp)
                             .background(Color.White.copy(alpha = 0.1f), RoundedCornerShape(16.dp))
                             .noRippleClickable {
                                 // 获取当前光标位置
@@ -130,23 +128,29 @@ fun ChatInput(
                 }
             }
 
-            // 有输入内容时，发送按钮显示
-            if (inputData.value.isNotEmpty()) {
-                IntyImage(
-                    modifier =
-                        Modifier.padding(horizontal = 16.dp).size(24.dp).noRippleClickable {
-                            onSendMessage()
-                        },
-                    model = R.drawable.btn_send,
-                )
-            } else {
-                IntyImage(
-                    modifier =
-                        Modifier.padding(horizontal = 16.dp).size(24.dp).noRippleClickable {
-                            onToggleMorePanel()
-                        },
-                    model = if (showMorePanel) R.drawable.btn_down else R.drawable.btn_add2,
-                )
+            // 发送/更多按钮区域
+            Box(
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                // 有输入内容时，发送按钮显示
+                if (inputData.value.isNotEmpty()) {
+                    IntyImage(
+                        modifier =
+                            Modifier.size(24.dp).noRippleClickable {
+                                onSendMessage()
+                            },
+                        model = R.drawable.btn_send,
+                    )
+                } else {
+                    IntyImage(
+                        modifier =
+                            Modifier.size(24.dp).noRippleClickable {
+                                onToggleMorePanel()
+                            },
+                        model = if (showMorePanel) R.drawable.btn_down else R.drawable.btn_add2,
+                    )
+                }
             }
         }
     }

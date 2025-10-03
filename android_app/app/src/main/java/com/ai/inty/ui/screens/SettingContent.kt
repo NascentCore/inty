@@ -136,7 +136,7 @@ private fun SettingTopBar(onBack: () -> Unit) {
 private fun SettingOptionsSection(settingsState: SettingsState, onTogglePremiumMode: () -> Unit) {
     SettingSection {
         SettingSwitchItem(
-            title = stringResource(R.string.settings_premium_model),
+            title = stringResource(R.string.premium_tag_on_chat_page),
             isEnabled = settingsState.premiumMode,
             onToggle = onTogglePremiumMode,
         )
@@ -263,7 +263,7 @@ private fun SettingDialogs(
             ChatDialogData(
                 R.drawable.img_advanced_model_dialog_bg,
                 stringResource(R.string.str_premium_mode_dialog_content),
-                stringResource(R.string.settings_premium_model),
+                stringResource(R.string.premium_tag_on_chat_page),
             )
         val context = LocalContext.current
         val viewmodel = viewModel<SettingViewModel>()

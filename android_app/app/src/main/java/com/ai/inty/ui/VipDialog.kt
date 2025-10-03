@@ -179,7 +179,7 @@ private fun PreviewAdvancedModelChatDialog() {
         ChatDialogData(
             R.drawable.img_advanced_model_dialog_bg,
             stringResource(R.string.str_premium_mode_dialog_content),
-            stringResource(R.string.settings_premium_model),
+            stringResource(R.string.premium_tag_on_chat_page),
         )
     AdvancedModelChatDialog(data)
 }
