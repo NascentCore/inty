@@ -47,6 +47,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.foundation.Image
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -311,23 +312,36 @@ private fun MyAgentCard(
     var showDeleteDialog by remember { mutableStateOf(false) }
     var lastClickTime by remember { mutableLongStateOf(0L) }
 
+    // 判断是否有头像需要加载
+    val hasAvatarToLoad = agentInfo.avatar.isNotEmpty()
+
     // 图片加载状态
     var imageLoaded by remember { mutableStateOf(false) }
 
     Box(modifier = modifier.size(165.dp, 220.dp).clip(RoundedCornerShape(12.dp))) {
-        // 使用 Shimmer 占位符
-        if (!imageLoaded) {
-            ShimmerPlaceholder(modifier = Modifier.fillMaxSize(), cornerRadius = 12.dp)
-        }
+        if (hasAvatarToLoad) {
+            // 有头像需要加载时，使用 Shimmer 占位符
+            if (!imageLoaded) {
+                ShimmerPlaceholder(modifier = Modifier.fillMaxSize(), cornerRadius = 12.dp)
+            }
 
-        IntyImage(
-            modifier = Modifier.fillMaxSize(),
-            model = agentInfo.avatar,
-            placeholder = null, // 使用自定义的 Shimmer 占位符
-            error = null, // 错误时也使用 Shimmer
-            onSuccess = { imageLoaded = true },
-            onError = { imageLoaded = false },
-        )
+            IntyImage(
+                modifier = Modifier.fillMaxSize(),
+                model = agentInfo.avatar,
+                placeholder = null, // 使用自定义的 Shimmer 占位显示
+                error = null, // 加载失败时也使用 Shimmer 占位显示
+                onSuccess = { imageLoaded = true },
+                onError = { imageLoaded = false },
+            )
+        } else {
+            // 没有头像需要加载时，直接显示默认头像
+            Image(
+                modifier = Modifier.fillMaxSize(),
+                painter = painterResource(R.drawable.img_default_avatar),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+            )
+        }
 
         // 缓存渐变画笔，避免每次重组时重新创建
         val gradientBrush = remember {
