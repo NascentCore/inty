@@ -37,6 +37,52 @@ import com.ai.inty.R
 import com.ai.inty.billing.VipPlan
 import java.util.Locale
 
+/** 折扣标签组件 */
+@Composable
+private fun DiscountTag(
+    discountRate: Double,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth(0.8f)
+            .clip(RoundedCornerShape(6.dp))
+            .background(
+                brush = Brush.horizontalGradient(
+                    colors = listOf(
+                        colorResource(R.color.light_blue),
+                        colorResource(R.color.light_purple),
+                        colorResource(R.color.blue),
+                    )
+                )
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = String.format(
+                    Locale.getDefault(),
+                    "%d%%",
+                    kotlin.math.ceil((1 - discountRate) * 100).toInt(),
+                ),
+                color = Color.Black,
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold,
+            )
+            Spacer(modifier = Modifier.width(2.dp))
+            Text(
+                text = stringResource(R.string.discount_save),
+                color = Color.Black,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+            )
+        }
+    }
+}
+
 /** 会员权益项组件 */
 @Composable
 fun PremiumBenefitItem(text: String) {
@@ -115,50 +161,10 @@ fun PremiumPlanCard(
 
         // 折扣标签
         if (plan.discountRate < 1) {
-            Box(
-                Modifier.fillMaxWidth(0.8f)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(
-                        brush =
-                            Brush.horizontalGradient(
-                                colors =
-                                    listOf(
-                                        colorResource(R.color.light_blue),
-                                        colorResource(R.color.light_purple),
-                                        colorResource(R.color.blue),
-                                    )
-                            )
-                    )
-                    .then(subModifier)
-                    .align(Alignment.BottomCenter),
-                contentAlignment = Alignment.Center,
-            ) {
-                Row(
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text =
-                            String.format(
-                                Locale.getDefault(),
-                                "%d%%",
-                                kotlin.math.ceil((1 - plan.discountRate) * 100).toInt(),
-                            ),
-                        color = Color.Black,
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = subModifier,
-                    )
-                    Spacer(modifier = Modifier.width(2.dp))
-                    Text(
-                        text = stringResource(R.string.discount_save),
-                        color = Color.Black,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = subModifier,
-                    )
-                }
-            }
+            DiscountTag(
+                discountRate = plan.discountRate,
+                modifier = Modifier.then(subModifier).align(Alignment.BottomCenter),
+            )
         }
     }
 }
