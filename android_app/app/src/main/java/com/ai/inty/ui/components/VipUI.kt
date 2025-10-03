@@ -169,6 +169,8 @@ fun PremiumPlanCard(
     }
 }
 
+val premiumPlanCardHeight = 132.dp
+
 /** 订阅计划列表组件 */
 @Composable
 fun PremiumPlanList(
@@ -179,8 +181,8 @@ fun PremiumPlanList(
     modifier: Modifier = Modifier,
 ) {
     Row(
-        modifier = modifier.fillMaxWidth().height(132.dp).padding(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(2.dp),
+        modifier = modifier.fillMaxWidth().height(premiumPlanCardHeight).padding(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         plans.forEachIndexed { idx, plan ->
             PremiumPlanCard(
