@@ -366,14 +366,7 @@ async def get_agent_chat_messages(
         )
 
 
-@router.post(
-    "/agents/{agent_id}/chat/completions",
-    response_model=schemas.APIResponse[dict],
-    deprecated=True,
-    include_in_schema=False,
-    summary="用于支持 v1.0.3 app replaced by /chat/completions/{agent_id}",
-    description="基于Agent ID的OpenAI风格聊天接口，已弃用，请使用 /chat/completions/{agent_id} 代替",
-)
+@router.post("/agents/{agent_id}/chat/completions")
 async def agent_chat_completions(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
@@ -384,7 +377,6 @@ async def agent_chat_completions(
     """
     基于Agent ID的OpenAI风格聊天接口
     如果用户还没有和该Agent创建会话，则自动创建
-    The following code is copied from tag:v1.0.3
     """
     try:
         import time
@@ -542,6 +534,7 @@ async def agent_chat_completions(
                     user_id=current_user.id,
                     session_id=session_id,
                     messages=messages,
+                    db_session=db,
                 )
                 chat_processing_time = time.time() - chat_processing_start
                 logger.info(
@@ -566,20 +559,13 @@ async def agent_chat_completions(
                         f"开始语音生成: voice_id={agent_voice_id}, text_length={len(response_content)}, language={request.language}"
                     )
 
-                    voice_result = await voice_service.generate_voice(
+                    audio_url = await voice_service.generate_voice(
                         text=response_content,
                         voice_id=agent_voice_id,
                         language=request.language,
                         db=db,
-                        agent_gender=agent_data.get("gender"),
                     )
-                    if voice_result:
-                        audio_url, audio_duration = voice_result
-                        logger.info(
-                            f"语音自动生成成功: {audio_url}, 时长: {audio_duration:.2f}秒"
-                        )
-                    else:
-                        audio_url, audio_duration = None, None
+                    logger.info(f"语音自动生成成功: {audio_url}")
                 else:
                     logger.debug("语音未启用，跳过语音生成")
 
@@ -614,31 +600,12 @@ async def agent_chat_completions(
                 message["audio_url"] = audio_url
                 logger.info(f"响应包含语音URL: {audio_url}")
 
-            # 获取最新AI消息的完整信息
-            try:
-                latest_message_info = (
-                    await chat_history_service.get_latest_ai_message_info(
-                        db, session_id
-                    )
-                )
-            except Exception as e:
-                logger.warning(f"获取最新消息信息失败: {str(e)}")
-                latest_message_info = None
-
-            # 添加消息的完整信息（id, meta_data, timestamp等）
-            if latest_message_info:
-                message["id"] = latest_message_info["id"]
-                message["meta_data"] = latest_message_info["meta_data"]
-                message["timestamp"] = latest_message_info["timestamp"]
-                # 如果数据库中有audio_url，使用数据库的，否则使用新生成的
-                if latest_message_info["audio_url"]:
-                    message["audio_url"] = latest_message_info["audio_url"]
-
             total_request_time = time.time() - request_start_time
-
-            # 构建符合客户端期望的响应格式 (HttpResult<SendMsgResponse>)
-            response_data = {
-                "id": f"chatcmpl-{uuid.uuid4().hex[:12]}",  # 保持随机生成的外层ID
+            logger.info(
+                f"聊天请求处理成功: agent_id={agent_id}, response_length={len(response_content)}, 总耗时: {total_request_time:.3f}秒"
+            )
+            return {
+                "id": f"chatcmpl-{uuid.uuid4().hex[:12]}",
                 "object": "chat.completion",
                 "created": int(time.time()),
                 "model": request.model,
@@ -650,14 +617,6 @@ async def agent_chat_completions(
                     + len(response_content.split()),
                 },
             }
-
-            # 包装成客户端期望的HttpResult格式
-            response = {"code": 200, "message": "success", "data": response_data}
-
-            logger.info(
-                f"聊天请求处理成功: agent_id={agent_id}, response={response}, 总耗时: {total_request_time:.3f}秒"
-            )
-            return response
 
     except Exception as e:
         logger.error(f"聊天请求处理失败: {str(e)}")
