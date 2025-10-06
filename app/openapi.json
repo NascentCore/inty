@@ -95,14 +95,14 @@
                 ]
             }
         },
-        "/api/v1/users/profile": {
+        "/api/v1/profile": {
             "get": {
                 "tags": [
                     "users"
                 ],
                 "summary": "Get Profile",
                 "description": "Get current user profile.",
-                "operationId": "get_profile_api_v1_users_profile_get",
+                "operationId": "get_profile_api_v1_profile_get",
                 "responses": {
                     "200": {
                         "description": "Successful Response",
@@ -127,7 +127,7 @@
                 ],
                 "summary": "Update Profile",
                 "description": "Update current user profile.",
-                "operationId": "update_profile_api_v1_users_profile_put",
+                "operationId": "update_profile_api_v1_profile_put",
                 "requestBody": {
                     "content": {
                         "application/json": {
@@ -167,14 +167,14 @@
                 ]
             }
         },
-        "/api/v1/users/me": {
+        "/api/v1/me": {
             "get": {
                 "tags": [
                     "users"
                 ],
                 "summary": "Get Me",
                 "description": "Get current user profile.",
-                "operationId": "get_me_api_v1_users_me_get",
+                "operationId": "get_me_api_v1_me_get",
                 "responses": {
                     "200": {
                         "description": "Successful Response",
@@ -194,14 +194,14 @@
                 ]
             }
         },
-        "/api/v1/users/device/register": {
+        "/api/v1/device/register": {
             "post": {
                 "tags": [
                     "users"
                 ],
                 "summary": "Register Device Token",
                 "description": "\u6ce8\u518c\u6216\u66f4\u65b0\u8bbe\u5907token",
-                "operationId": "register_device_token_api_v1_users_device_register_post",
+                "operationId": "register_device_token_api_v1_device_register_post",
                 "requestBody": {
                     "content": {
                         "application/json": {
@@ -241,14 +241,14 @@
                 ]
             }
         },
-        "/api/v1/users/deletion/check": {
+        "/api/v1/deletion/check": {
             "get": {
                 "tags": [
                     "users"
                 ],
                 "summary": "Check Deletion Eligibility",
                 "description": "\u68c0\u67e5\u7528\u6237\u662f\u5426\u53ef\u4ee5\u5220\u9664\u8d26\u6237",
-                "operationId": "check_deletion_eligibility_api_v1_users_deletion_check_get",
+                "operationId": "check_deletion_eligibility_api_v1_deletion_check_get",
                 "responses": {
                     "200": {
                         "description": "Successful Response",
@@ -268,14 +268,14 @@
                 ]
             }
         },
-        "/api/v1/users/delete-account": {
+        "/api/v1/delete-account": {
             "post": {
                 "tags": [
                     "users"
                 ],
                 "summary": "Delete User Account",
                 "description": "\u5220\u9664\u7528\u6237\u8d26\u6237",
-                "operationId": "delete_user_account_api_v1_users_delete_account_post",
+                "operationId": "delete_user_account_api_v1_delete_account_post",
                 "requestBody": {
                     "content": {
                         "application/json": {
