@@ -368,10 +368,9 @@ async def get_agent_chat_messages(
 
 @router.post(
     "/agents/{agent_id}/chat/completions",
-    response_model=schemas.APIResponse[dict],
     deprecated=True,
     include_in_schema=False,
-    summary="用于支持 v1.0.3 app replaced by /chat/completions/{agent_id}",
+    summary="用于支持 v1.0.3 app 新版 app 请勿使用本 API",
     description="基于Agent ID的OpenAI风格聊天接口，已弃用，请使用 /chat/completions/{agent_id} 代替",
 )
 async def agent_chat_completions(
@@ -606,7 +605,6 @@ async def agent_chat_completions(
                 logger.warning(f"记录聊天使用情况失败: {str(e)}")
 
             # 构建响应消息
-            logger.debug("构建聊天响应消息")
             message = {"role": "assistant", "content": response_content}
 
             # 如果生成了语音，添加到响应中
@@ -651,13 +649,11 @@ async def agent_chat_completions(
                 },
             }
 
-            # 包装成客户端期望的HttpResult格式
-            response = {"code": 200, "message": "success", "data": response_data}
-
             logger.info(
-                f"聊天请求处理成功: agent_id={agent_id}, response={response}, 总耗时: {total_request_time:.3f}秒"
+                f"聊天请求处理成功: agent_id={agent_id}, 总耗时: {total_request_time:.3f}秒"
             )
-            return response
+
+            return response_data
 
     except Exception as e:
         logger.error(f"聊天请求处理失败: {str(e)}")
