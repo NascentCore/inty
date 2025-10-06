@@ -368,7 +368,6 @@ async def get_agent_chat_messages(
 
 @router.post(
     "/agents/{agent_id}/chat/completions",
-    response_model=schemas.APIResponse[dict],
     deprecated=True,
     include_in_schema=False,
     summary="用于支持 v1.0.3 app replaced by /chat/completions/{agent_id}",
@@ -505,6 +504,13 @@ async def agent_chat_completions(
         logger.info(f"Session ID生成耗时: {session_id_time:.3f}秒")
 
         if request.stream:
+            logger.info(
+                f"开始流式聊天响应: agent_id={agent_id}, session_id={session_id}"
+            )
+            logger.debug(
+                f"流式响应参数: model={request.model}, user_id={current_user.id}"
+            )
+
             return StreamingResponse(
                 generate_chat_stream(
                     agent=agent,
@@ -608,6 +614,7 @@ async def agent_chat_completions(
             # 构建响应消息
             logger.debug("构建聊天响应消息")
             message = {"role": "assistant", "content": response_content}
+            logger.debug(f"基础消息内容: {message}")
 
             # 如果生成了语音，添加到响应中
             if audio_url:
@@ -621,6 +628,7 @@ async def agent_chat_completions(
                         db, session_id
                     )
                 )
+                logger.debug(f"获取到最新消息信息: {latest_message_info}")
             except Exception as e:
                 logger.warning(f"获取最新消息信息失败: {str(e)}")
                 latest_message_info = None
@@ -633,6 +641,7 @@ async def agent_chat_completions(
                 # 如果数据库中有audio_url，使用数据库的，否则使用新生成的
                 if latest_message_info["audio_url"]:
                     message["audio_url"] = latest_message_info["audio_url"]
+                logger.debug(f"添加消息元数据后的消息: {message}")
 
             total_request_time = time.time() - request_start_time
 
@@ -650,14 +659,21 @@ async def agent_chat_completions(
                     + len(response_content.split()),
                 },
             }
+            logger.debug(f"构建的响应数据: {response_data}")
 
-            # 包装成客户端期望的HttpResult格式
-            response = {"code": 200, "message": "success", "data": response_data}
-
+            # 记录完整的响应信息
             logger.info(
-                f"聊天请求处理成功: agent_id={agent_id}, response={response}, 总耗时: {total_request_time:.3f}秒"
+                f"聊天请求处理成功: agent_id={agent_id}, 总耗时: {total_request_time:.3f}秒"
             )
-            return response
+            logger.info(f"完整响应数据: {response_data}")
+            logger.debug(
+                f"响应数据结构: id={response_data['id']}, object={response_data['object']}"
+            )
+            logger.debug(f"响应数据内容: {response_data}")
+            logger.debug(f"AI消息内容: {message}")
+            logger.debug(f"使用情况统计: usage={response_data['usage']}")
+
+            return response_data
 
     except Exception as e:
         logger.error(f"聊天请求处理失败: {str(e)}")
