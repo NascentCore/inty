@@ -12,7 +12,7 @@ object UserService {
     /** 获取用户信息 替换: IUserApi.getUserProfile() */
     suspend fun getUserProfile(): ApiResult<UserProfile> {
         return IntyNetworkManager.executeRequest("Get User Profile") {
-            val response = IntyNetworkManager.getClient().api().v1().users().profile().retrieve()
+            val response = IntyNetworkManager.getClient().api().v1().users().profile().me()
 
             response.data()?.toUserProfile() ?: throw IllegalStateException("User data is null")
         }
@@ -71,7 +71,7 @@ object UserService {
     /** 获取用户统计信息 替换: IUserApi.getUserStats() */
     suspend fun getUserStats(): ApiResult<UserStats> {
         return IntyNetworkManager.executeRequest("Get User Stats") {
-            val response = IntyNetworkManager.getClient().api().v1().users().profile().retrieve()
+            val response = IntyNetworkManager.getClient().api().v1().users().profile().me()
 
             val user = response.data() ?: throw IllegalStateException("User data is null")
             UserStats(

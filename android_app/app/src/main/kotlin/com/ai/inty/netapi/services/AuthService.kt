@@ -79,7 +79,7 @@ object AuthService {
             // 通过获取用户信息来验证token有效性
             try {
                 val response =
-                    IntyNetworkManager.getClient().api().v1().users().profile().retrieve()
+                    IntyNetworkManager.getClient().api().v1().users().profile().me()
                 response.code() == 200L
             } catch (e: Exception) {
                 false
