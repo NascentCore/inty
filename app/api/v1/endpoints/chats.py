@@ -366,7 +366,7 @@ async def get_agent_chat_messages(
         )
 
 
-@router.post("/agents/{agent_id}/chat/completions")
+@router.post("/agents/{agent_id}/chat/completions", response_model=schemas.APIResponse[dict])
 async def agent_chat_completions(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
@@ -604,7 +604,7 @@ async def agent_chat_completions(
             logger.info(
                 f"聊天请求处理成功: agent_id={agent_id}, response_length={len(response_content)}, 总耗时: {total_request_time:.3f}秒"
             )
-            return {
+            data = {
                 "id": f"chatcmpl-{uuid.uuid4().hex[:12]}",
                 "object": "chat.completion",
                 "created": int(time.time()),
@@ -617,6 +617,7 @@ async def agent_chat_completions(
                     + len(response_content.split()),
                 },
             }
+            return schemas.APIResponse.success(data=data)
 
     except Exception as e:
         logger.error(f"聊天请求处理失败: {str(e)}")
