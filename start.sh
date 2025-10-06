@@ -25,7 +25,10 @@ echo "Starting database migrations..."
 export PYTHONPATH=.
 # 初始化管理员用户 user-01JWZ34Y4D1C92GD86A5R6EWYJ，这个算是预置的用户。
 # 所有预置角色均由这个用户创建。也支持管理系统的登录。
-python scripts/init_admin_user.py
+# 只能手动运行下面的命令，因为其与后面的 alembic upgrade head 命令冲突。
+# 即：init_admin_user.py 需要 users 表存在。所以要先运行 alembic upgrade head。
+# 但 alembic upgrade head 需要 init_admin_user.py 运行完成生成的默认管理员 id。
+# python scripts/init_admin_user.py
 alembic upgrade head
 
 if [ "$DEV" = true ]; then
