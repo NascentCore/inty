@@ -370,7 +370,7 @@ async def get_agent_chat_messages(
     "/agents/{agent_id}/chat/completions",
     deprecated=True,
     include_in_schema=False,
-    summary="用于支持 v1.0.3 app replaced by /chat/completions/{agent_id}",
+    summary="用于支持 v1.0.3 app 新版 app 请勿使用本 API",
     description="基于Agent ID的OpenAI风格聊天接口，已弃用，请使用 /chat/completions/{agent_id} 代替",
 )
 async def agent_chat_completions(
