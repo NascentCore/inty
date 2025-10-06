@@ -78,6 +78,7 @@ resources:
                 methods:
                   retrieve: get /api/v1/users/profile
                   update: put /api/v1/users/profile
+                  me: get /api/v1/users/me
               device:
                 models:
                   api_response: "#/components/schemas/APIResponse"

@@ -6,3 +6,5 @@ android_app/library/inty_sdk
 .github/workflows/gemini-*
 # GitHub auto generated issue templates
 .github/ISSUE_TEMPLATE
+# Generated openapi spec
+app/openapi.json
