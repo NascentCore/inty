@@ -31,7 +31,13 @@ from app.services.global_services import subscription_service
 router = APIRouter(prefix="/users", route_class=LoggerRoute)
 
 
-@router.get("/profile", response_model=User)
+@router.get(
+    "/profile",
+    deprecated=True,
+    include_in_schema=False,
+    summary="[Deprecated, use /me, kept for v1.0.3 compatibility]",
+    response_model=User,
+)
 async def get_profile(
     current_user: User = Depends(deps.get_current_active_user),
     db: AsyncSession = Depends(get_async_db),

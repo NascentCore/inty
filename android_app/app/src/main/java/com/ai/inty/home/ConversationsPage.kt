@@ -2,7 +2,6 @@ package com.ai.inty.home
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -32,6 +31,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -99,9 +99,8 @@ private fun Content(
                     Image(
                         painter = painterResource(R.drawable.img_message_title),
                         contentDescription = null,
-                        modifier = Modifier
-                            .height(Constant.PAGE_TAB_TITLE_HEIGHT.dp)
-                            .fillMaxWidth(),
+                        modifier =
+                            Modifier.height(Constant.PAGE_TAB_TITLE_HEIGHT.dp).fillMaxWidth(),
                         contentScale = ContentScale.Fit,
                         alignment = Alignment.CenterStart,
                     )

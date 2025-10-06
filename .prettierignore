@@ -8,3 +8,5 @@ android_app/library/inty_sdk
 .github/ISSUE_TEMPLATE
 # Generated openapi spec
 app/openapi.json
+# routeMap.json is auto generated
+android_app/app/src/main/assets/therouter/routeMap.json
