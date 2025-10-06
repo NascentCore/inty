@@ -382,14 +382,15 @@ async def agent_chat_completions(
         import time
 
         request_start_time = time.time()
-        logger.info(
-            f"开始处理聊天请求 - Agent ID: {agent_id}, User ID: {current_user.id}"
-        )
-        logger.debug(f"请求参数: {request.dict()}")
-        logger.debug(f"request.messages详情: {request.messages}")
-        logger.debug(
-            f"request.messages数量: {len(request.messages) if request.messages else 0}"
-        )
+        logger.info(f"=== 开始处理聊天请求 ===")
+        logger.info(f"Agent ID: {agent_id}")
+        logger.info(f"User ID: {current_user.id}")
+        logger.info(f"Request Model: {request.model}")
+        logger.info(f"Request Stream: {request.stream}")
+        logger.info(f"Request Language: {request.language}")
+        logger.info(f"Request Messages Count: {len(request.messages) if request.messages else 0}")
+        logger.info(f"Request Messages: {[{'role': msg.role, 'content': msg.content[:50] + '...' if len(msg.content) > 50 else msg.content} for msg in request.messages]}")
+        logger.debug(f"完整请求参数: {request.dict()}")
 
         # 检查用户聊天次数限制
         # is_allowed, used_count, daily_limit = await subscription_service.check_chat_limit(
@@ -530,16 +531,22 @@ async def agent_chat_completions(
                 )
 
                 # 然后处理AI回复
+                logger.info(f"=== 开始调用Agent聊天 ===")
+                logger.info(f"Session ID: {session_id}")
+                logger.info(f"Messages: {messages}")
+                
                 response_content = await agent.chat(
                     user_id=current_user.id,
                     session_id=session_id,
                     messages=messages,
-                    db_session=db,
                 )
+                
                 chat_processing_time = time.time() - chat_processing_start
-                logger.info(
-                    f"Agent聊天响应成功: {response_content[:100]}..., 耗时: {chat_processing_time:.3f}秒"
-                )
+                logger.info(f"=== Agent聊天响应结果 ===")
+                logger.info(f"Response Content Length: {len(response_content) if response_content else 0}")
+                logger.info(f"Response Content: {response_content}")
+                logger.info(f"Response Content Type: {type(response_content)}")
+                logger.info(f"处理耗时: {chat_processing_time:.3f}秒")
                 logger.debug(
                     f"聊天设置获取成功: voice_enabled={chat_settings.voice_enabled}"
                 )
@@ -604,6 +611,8 @@ async def agent_chat_completions(
             logger.info(
                 f"聊天请求处理成功: agent_id={agent_id}, response_length={len(response_content)}, 总耗时: {total_request_time:.3f}秒"
             )
+            
+            # 构建响应数据
             data = {
                 "id": f"chatcmpl-{uuid.uuid4().hex[:12]}",
                 "object": "chat.completion",
@@ -617,7 +626,35 @@ async def agent_chat_completions(
                     + len(response_content.split()),
                 },
             }
-            return schemas.APIResponse.success(data=data)
+            
+            # 详细记录响应数据
+            logger.info(f"=== 构建的响应数据 ===")
+            logger.info(f"Response ID: {data['id']}")
+            logger.info(f"Response Object: {data['object']}")
+            logger.info(f"Response Created: {data['created']}")
+            logger.info(f"Response Model: {data['model']}")
+            logger.info(f"Response Choices Count: {len(data['choices'])}")
+            logger.info(f"Response Message Content: {data['choices'][0]['message']['content'][:100]}...")
+            logger.info(f"Response Usage: {data['usage']}")
+            
+            # 创建APIResponse包装器
+            api_response = schemas.APIResponse.success(data=data)
+            logger.info(f"=== APIResponse包装器 ===")
+            logger.info(f"APIResponse Code: {api_response.code}")
+            logger.info(f"APIResponse Message: {api_response.message}")
+            logger.info(f"APIResponse Data Type: {type(api_response.data)}")
+            logger.info(f"APIResponse Data Keys: {list(api_response.data.keys()) if isinstance(api_response.data, dict) else 'Not a dict'}")
+            
+            # 记录最终返回的JSON
+            import json
+            try:
+                response_json = json.dumps(api_response.dict(), ensure_ascii=False, indent=2)
+                logger.info(f"=== 最终返回的JSON响应 ===")
+                logger.info(f"Response JSON: {response_json}")
+            except Exception as e:
+                logger.error(f"序列化响应JSON失败: {str(e)}")
+            
+            return api_response
 
     except Exception as e:
         logger.error(f"聊天请求处理失败: {str(e)}")
