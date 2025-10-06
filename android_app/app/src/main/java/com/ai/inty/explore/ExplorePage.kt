@@ -3,7 +3,6 @@ package com.ai.inty.explore
 import android.annotation.SuppressLint
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -23,6 +22,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
@@ -78,9 +78,8 @@ fun ExplorePage(
                     Image(
                         painter = painterResource(R.drawable.img_explore_title),
                         contentDescription = null,
-                        modifier = Modifier
-                            .height(Constant.PAGE_TAB_TITLE_HEIGHT.dp)
-                            .fillMaxWidth(),
+                        modifier =
+                            Modifier.height(Constant.PAGE_TAB_TITLE_HEIGHT.dp).fillMaxWidth(),
                         contentScale = ContentScale.Fit,
                         alignment = Alignment.CenterStart,
                     )
