@@ -133,6 +133,7 @@ fun ChatPageContainer(
             modifier = modifier,
             state = pageState,
             userScrollEnabled = !shouldShowGuide, // 在引导期间禁用用户滑动
+            beyondViewportPageCount = 3//左右预先处理个page个数
         ) { currentPage ->
             // 防止数组越界
             if (currentPage < 0 || currentPage >= agentList.size) {
