@@ -3,6 +3,9 @@ package com.ai.inty.net
 import android.content.Context
 import android.content.Intent
 import com.ai.inty.Constant
+import com.ai.inty.utils.FirebaseManager
+import com.ai.inty.utils.FirebasePerformanceHelper
+import com.ai.inty.utils.PageTrackingHelper
 import com.architecture.httplib.core.HttpResponseCallAdapterFactory
 import com.architecture.httplib.core.MoshiResultTypeAdapterFactory
 import com.architecture.httplib.error.GlobalErrorHandler
@@ -15,8 +18,6 @@ import com.squareup.moshi.DefaultIfNullFactory
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import com.therouter.inject.ServiceProvider
-import java.net.InetAddress
-import java.util.concurrent.TimeUnit
 import okhttp3.ConnectionPool
 import okhttp3.Dns
 import okhttp3.Interceptor
@@ -27,6 +28,8 @@ import okhttp3.Response
 import okhttp3.ResponseBody.Companion.toResponseBody
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
+import java.net.InetAddress
+import java.util.concurrent.TimeUnit
 
 /** 获取基础URL 根据构建类型返回对应的API基础URL */
 fun getBaseUrl(): String {
@@ -58,6 +61,31 @@ class AuthInterceptor : Interceptor {
         when (response.code) {
             401 -> {
                 EasyLog.log("http 401 for ${request.url}", EasyLog.ERROR)
+
+                // Firebase Analytics - 记录认证失败
+                FirebaseManager.logEvent(
+                    "auth_failure",
+                    mapOf(
+                        "http_code" to 401,
+                        "url" to request.url.toString(),
+                        "user_logged_out" to IntySetting.isLoggingOut(),
+                    ),
+                )
+
+                // Firebase Crashlytics - 记录认证失败
+                FirebaseManager.setCustomKey("last_401_url", request.url.toString())
+                FirebaseManager.recordException(
+                    Exception("HTTP 401 Unauthorized: ${request.url}")
+                )
+
+                // 追踪认证失败
+                PageTrackingHelper.trackError(
+                    "HTTP 401 Unauthorized", "auth_failure", mapOf(
+                        "url" to request.url.toString(),
+                        "user_logged_out" to IntySetting.isLoggingOut()
+                    )
+                )
+
                 // 检查是否正在退出登录过程中，避免重复重启
                 if (IntySetting.isLoggingOut()) {
                     EasyLog.log("Ignoring 401 during logout process")
@@ -94,6 +122,17 @@ class RetryInterceptor(private val maxRetries: Int = 3) : Interceptor {
                     EasyLog.log(
                         "Retry attempt ${attempt + 1} for ${request.url} due to server error ${currentResponse.code}"
                     )
+
+                    // Firebase Analytics - 记录服务器错误重试
+                    FirebaseManager.logEvent(
+                        "network_retry",
+                        mapOf(
+                            "attempt" to (attempt + 1),
+                            "http_code" to currentResponse.code,
+                            "url" to request.url.toString(),
+                        ),
+                    )
+
                     currentResponse.close()
                     if (attempt < maxRetries - 1) {
                         Thread.sleep(1000L * (attempt + 1)) // 指数退避
@@ -114,6 +153,23 @@ class RetryInterceptor(private val maxRetries: Int = 3) : Interceptor {
         EasyLog.log(
             "All retry attempts failed for ${request.url} after $maxRetries attempts",
             EasyLog.ERROR,
+        )
+
+        // Firebase Analytics - 记录网络请求最终失败
+        FirebaseManager.logEvent(
+            "network_final_failure",
+            mapOf(
+                "max_retries" to maxRetries,
+                "url" to request.url.toString(),
+                "last_error" to (lastException?.message ?: "unknown"),
+            ),
+        )
+
+        // Firebase Crashlytics - 记录网络失败
+        FirebaseManager.setCustomKey("network_failure_url", request.url.toString())
+        FirebaseManager.setCustomKey("network_failure_retries", maxRetries.toString())
+        FirebaseManager.recordException(
+            Exception("Network request failed after $maxRetries attempts: ${lastException?.message}")
         )
 
         // 如果没有响应但有异常，创建一个错误响应
@@ -139,10 +195,17 @@ private class PerformanceInterceptor : Interceptor {
 
         EasyLog.log("🌐 Starting request: ${request.method} ${request.url}")
 
+        // 创建 Firebase Performance HTTP Metric
+        val httpMetric = FirebasePerformanceHelper.createHttpMetric(request)
+        FirebasePerformanceHelper.startHttpMetric(httpMetric)
+
         return try {
             val response = chain.proceed(request)
             val endTime = System.currentTimeMillis()
             val duration = endTime - startTime
+
+            // 停止 Firebase Performance HTTP Metric
+            FirebasePerformanceHelper.stopHttpMetric(httpMetric, response)
 
             // 记录请求性能
             when {
@@ -171,6 +234,10 @@ private class PerformanceInterceptor : Interceptor {
         } catch (e: Exception) {
             val endTime = System.currentTimeMillis()
             val duration = endTime - startTime
+
+            // 停止 Firebase Performance HTTP Metric (即使请求失败)
+            FirebasePerformanceHelper.stopHttpMetric(httpMetric, null)
+
             EasyLog.log(
                 "❌ Request failed: ${request.method} ${request.url} (${duration}ms): ${e.message}",
                 EasyLog.ERROR,

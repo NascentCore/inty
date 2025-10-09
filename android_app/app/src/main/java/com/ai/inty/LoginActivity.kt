@@ -10,7 +10,7 @@ import com.ai.inty.base.BaseActivity
 import com.ai.inty.ui.screens.LoginScreen
 import com.ai.inty.ui.theme.IntyTheme
 import com.ai.inty.utils.CredentialManagerHelper
-import com.ai.inty.utils.FirebaseAnalyticsHelper
+import com.ai.inty.utils.FirebaseManager
 import com.ai.inty.utils.UserProfileManager
 import com.ai.inty.viewmodels.LoginViewModel
 import com.inty.utils.log.EasyLog
@@ -44,7 +44,7 @@ class LoginActivity : BaseActivity() {
         }
 
         // 跟踪LoginActivity页面访问
-        FirebaseAnalyticsHelper.trackScreenView(
+        FirebaseManager.logScreenView(
             screenName = "LoginScreen",
             screenClass = "LoginActivity",
         )
