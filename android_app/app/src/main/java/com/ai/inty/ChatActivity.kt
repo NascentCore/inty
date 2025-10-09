@@ -16,7 +16,7 @@ import com.ai.inty.chat.ChatPage
 import com.ai.inty.chat.ChatViewModel
 import com.ai.inty.ui.theme.DarkPurple
 import com.ai.inty.ui.theme.IntyTheme
-import com.ai.inty.utils.FirebaseAnalyticsHelper
+import com.ai.inty.utils.FirebaseManager
 import com.inty.utils.log.EasyLog
 import com.therouter.router.Autowired
 import com.therouter.router.Route
@@ -87,7 +87,7 @@ class ChatActivity : BaseActivity() {
 
         // 跟踪ChatActivity页面访问
         val agentId = agent?.id ?: agent_id ?: "unknown"
-        FirebaseAnalyticsHelper.trackScreenView(
+        FirebaseManager.logScreenView(
             screenName = "ChatScreen",
             screenClass = "ChatActivity",
             additionalParams =

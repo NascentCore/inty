@@ -5,6 +5,7 @@ import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import com.ai.inty.base.BaseViewModel
 import com.ai.inty.beans.AgentInfo
+import com.ai.inty.utils.FirebaseManager
 import com.ai.inty.utils.UnifiedStartupManager
 import com.inty.utils.log.EasyLog
 import kotlinx.coroutines.flow.Flow
@@ -33,6 +34,15 @@ class ExploreViewModel : BaseViewModel() {
         if (isInitialized) return
 
         EasyLog.log("ExploreViewModel - 初始化Paging数据流")
+
+        // Firebase Analytics - 记录探索页面访问
+        FirebaseManager.logEvent(
+            "explore_page_view",
+            mapOf(
+                "page_type" to "recommendations",
+                "is_initial_load" to true,
+            ),
+        )
 
         // 创建初始数据流（优先使用缓存）
         val initialFlow =

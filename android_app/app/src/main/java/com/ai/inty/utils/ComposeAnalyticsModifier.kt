@@ -25,7 +25,7 @@ fun TrackScreenView(
 
     DisposableEffect(screenName, screenClass) {
         // 页面显示时发送跟踪事件
-        FirebaseAnalyticsHelper.trackScreenView(
+        FirebaseManager.logScreenView(
             screenName = screenName,
             screenClass = screenClass,
             additionalParams = additionalParams,
@@ -36,7 +36,7 @@ fun TrackScreenView(
             when (event) {
                 Lifecycle.Event.ON_RESUME -> {
                     // 页面重新显示时也发送跟踪事件
-                    FirebaseAnalyticsHelper.trackScreenView(
+                    FirebaseManager.logScreenView(
                         screenName = screenName,
                         screenClass = screenClass,
                         additionalParams = additionalParams,
@@ -63,7 +63,7 @@ fun TrackScreenView(
 @Composable
 fun TrackEvent(eventName: String, params: Map<String, Any> = emptyMap()) {
     DisposableEffect(eventName) {
-        FirebaseAnalyticsHelper.trackEvent(eventName, params)
+        FirebaseManager.logEvent(eventName, params)
         onDispose { /* 事件跟踪不需要清理 */ }
     }
 }

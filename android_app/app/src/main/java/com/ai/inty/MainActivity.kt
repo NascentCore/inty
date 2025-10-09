@@ -34,24 +34,26 @@ import com.ai.inty.billing.BillingRepository
 import com.ai.inty.chat.ChatViewModel
 import com.ai.inty.home.HomeScreen
 import com.ai.inty.ui.theme.IntyTheme
+import com.ai.inty.utils.PageTrackingHelper
 import com.ai.inty.utils.UnifiedStartupManager
 import com.ai.inty.viewmodels.MainViewModel
 import com.inty.utils.log.EasyLog
 import com.inty.utils.storage.IntySetting
 import com.therouter.router.Autowired
 import com.therouter.router.Route
-import kotlin.math.abs
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 
 /** 主页面，包含聊天、消息与关注、创建模型、模型列表、"我的" */
 @Route(path = Constant.ROUTE_MAIN)
 class MainActivity : BaseActivity() {
 
-    @Autowired var action: String = ""
+    @Autowired
+    var action: String = ""
 
     val mainViewModel: MainViewModel by viewModels()
     val chatViewModel: ChatViewModel by viewModels()
@@ -66,6 +68,9 @@ class MainActivity : BaseActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         // 不安装系统SplashScreen，完全使用自定义SplashUI
         super.onCreate(savedInstanceState)
+
+        // 追踪页面访问
+        PageTrackingHelper.trackPageView("MainActivity", "MainActivity")
 
         enableEdgeToEdge()
 
@@ -85,7 +90,7 @@ class MainActivity : BaseActivity() {
             // 等待启动管理器完成必要初始化（但不等缓存数据）
             while (
                 UnifiedStartupManager.startupState.value ==
-                    UnifiedStartupManager.StartupState.Initializing
+                UnifiedStartupManager.StartupState.Initializing
             ) {
                 delay(50) // 50ms检查一次，更快响应
             }
@@ -285,7 +290,8 @@ private fun SplashUI(modifier: Modifier = Modifier, onSplashComplete: () -> Unit
         )
         Image(
             modifier =
-                Modifier.align(Alignment.BottomCenter)
+                Modifier
+                    .align(Alignment.BottomCenter)
                     .padding(bottom = 80.dp)
                     .size(80.dp)
                     .clip(RoundedCornerShape(10.dp)),
@@ -307,7 +313,7 @@ private suspend fun waitForInitializationComplete(onComplete: () -> Unit) {
 
         while (
             UnifiedStartupManager.startupState.value ==
-                UnifiedStartupManager.StartupState.Initializing && waitTime < maxWaitTime
+            UnifiedStartupManager.StartupState.Initializing && waitTime < maxWaitTime
         ) {
             kotlinx.coroutines.delay(50) // 50ms检查一次
             waitTime += 50

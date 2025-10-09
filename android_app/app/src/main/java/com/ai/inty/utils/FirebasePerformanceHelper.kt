@@ -13,7 +13,8 @@ import okhttp3.Response
  */
 object FirebasePerformanceHelper {
 
-    private val firebasePerf = FirebasePerformance.getInstance()
+    private val firebasePerf: FirebasePerformance?
+        get() = FirebaseManager.getPerformance()
 
     /**
      * 开始一个自定义追踪
@@ -22,7 +23,8 @@ object FirebasePerformanceHelper {
      */
     fun startTrace(traceName: String): Trace? {
         return try {
-            val trace = firebasePerf.newTrace(traceName)
+            val perf = firebasePerf ?: return null
+            val trace = perf.newTrace(traceName)
             trace.start()
             EasyLog.log("Firebase Performance: Started trace '$traceName'")
             trace
@@ -89,7 +91,8 @@ object FirebasePerformanceHelper {
      */
     fun createHttpMetric(request: Request): HttpMetric? {
         return try {
-            val httpMetric = firebasePerf.newHttpMetric(request.url.toString(), request.method)
+            val perf = firebasePerf ?: return null
+            val httpMetric = perf.newHttpMetric(request.url.toString(), request.method)
             EasyLog.log("Firebase Performance: Created HTTP metric for ${request.method} ${request.url}")
             httpMetric
         } catch (e: Exception) {

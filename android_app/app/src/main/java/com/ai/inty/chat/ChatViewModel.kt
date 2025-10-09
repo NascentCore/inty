@@ -15,7 +15,9 @@ import com.ai.inty.beans.SendMsgReq
 import com.ai.inty.beans.UserProfile
 import com.ai.inty.billing.VipStatusHelper
 import com.ai.inty.net.IChatApi
+import com.ai.inty.utils.FirebaseManager
 import com.ai.inty.utils.FirebasePerformanceHelper
+import com.ai.inty.utils.PageTrackingHelper
 import com.ai.inty.utils.UserProfileManager
 import com.architecture.httplib.core.HttpResult
 import com.inty.utils.AppEnv
@@ -91,6 +93,33 @@ class ChatViewModel : BaseActivityViewModel() {
     fun setAgentInfo(agentInfo: AgentInfo?) {
         EasyLog.log("setAgentInfo called with agent: ${agentInfo?.id}")
 
+        // Firebase Analytics - 记录聊天会话开始
+        agentInfo?.let { agent ->
+            FirebaseManager.logEvent(
+                "chat_session_start",
+                mapOf(
+                    "agent_id" to agent.id,
+                    "agent_name" to agent.name,
+                    "agent_category" to (agent.category ?: "unknown"),
+                    "is_followed" to agent.isFollowed,
+                    "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                ),
+            )
+
+            // Firebase Crashlytics - 设置自定义键
+            FirebaseManager.setCustomKey("current_agent_id", agent.id)
+            FirebaseManager.setCustomKey("current_agent_name", agent.name)
+
+            // 追踪聊天会话开始
+            PageTrackingHelper.trackUserInteraction(
+                "chat_session_start", agent.name, mapOf(
+                    "agent_id" to agent.id,
+                    "agent_category" to (agent.category ?: "unknown"),
+                    "is_followed" to agent.isFollowed
+                )
+            )
+        }
+
         // 如果 agent 为空，清理所有状态
         if (agentInfo == null) {
             _agentInfo.value = null
@@ -100,6 +129,9 @@ class ChatViewModel : BaseActivityViewModel() {
             _isQueryMsgsCompleted.value = false
             // 停止语音播放
             audioManager?.stopAllPlayback()
+
+            // Firebase Analytics - 记录聊天会话结束
+            FirebaseManager.logEvent("chat_session_end", mapOf("reason" to "agent_cleared"))
             return
         }
 
@@ -326,6 +358,29 @@ class ChatViewModel : BaseActivityViewModel() {
                     val req = SendMsgReq(listOf(msgInfo))
                     val currentAgent = agentInfo.value
                     currentAgent?.let { agent ->
+
+                        // Firebase Analytics - 记录消息发送
+                        FirebaseManager.logEvent(
+                            "message_sent",
+                            mapOf(
+                                "agent_id" to agent.id,
+                                "message_length" to inputMsg.length,
+                                "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                            ),
+                        )
+
+                        // Firebase Crashlytics - 记录消息发送上下文
+                        FirebaseManager.setCustomKey("last_message_length", inputMsg.length.toString())
+                        FirebaseManager.setCustomKey("last_message_preview", inputMsg.take(50))
+
+                        // 追踪消息发送
+                        PageTrackingHelper.trackUserInteraction(
+                            "message_send", "chat_input", mapOf(
+                                "agent_id" to agent.id,
+                                "message_length" to inputMsg.length,
+                                "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free"
+                            )
+                        )
                         val result = chatApi.sendMsg(agent.id, req)
 
                         EasyLog.log("sendMsg($agent, $req) -> $result")
@@ -340,9 +395,27 @@ class ChatViewModel : BaseActivityViewModel() {
 
                         when (result) {
                             is HttpResult.Success -> {
+                                // Firebase Analytics - 记录消息发送成功
+                                FirebaseManager.logEvent(
+                                    "message_send_success",
+                                    mapOf(
+                                        "agent_id" to agent.id,
+                                        "response_code" to (result.data.code ?: 0),
+                                        "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                                    ),
+                                )
+
                                 runCatching {
                                     // 有免费次数限制，需要vip订阅
                                     if (result.data.code == 10001001) {
+                                        // Firebase Analytics - 记录免费次数限制
+                                        FirebaseManager.logEvent(
+                                            "free_limit_reached",
+                                            mapOf(
+                                                "agent_id" to agent.id,
+                                                "user_type" to "free",
+                                            ),
+                                        )
                                         showLimitDialog.emit(true)
                                     }
                                     // 添加AI回复
@@ -385,6 +458,21 @@ class ChatViewModel : BaseActivityViewModel() {
                             }
 
                             is HttpResult.Failure -> {
+                                // Firebase Analytics - 记录消息发送失败
+                                FirebaseManager.logEvent(
+                                    "message_send_failure",
+                                    mapOf(
+                                        "agent_id" to agent.id,
+                                        "error_message" to result.message,
+                                        "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                                    ),
+                                )
+
+                                // Firebase Crashlytics - 记录非致命错误
+                                FirebaseManager.recordException(
+                                    Exception("Message send failed: ${result.message}")
+                                )
+
                                 showNetworkAwareError(result.message)
                                 // 错误恢复：确保状态正确
                                 _isWaitingForReply.value = false

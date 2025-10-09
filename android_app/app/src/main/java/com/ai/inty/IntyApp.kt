@@ -5,10 +5,10 @@ import android.content.Context
 import com.ai.inty.base.initImageLoader
 import com.ai.inty.billing.BillingRepository
 import com.ai.inty.netapi.IntyNetworkManager
-import com.ai.inty.utils.FirebaseAnalyticsHelper
+import com.ai.inty.utils.FirebaseManager
+import com.ai.inty.utils.GlobalExceptionHandler
 import com.ai.inty.utils.NetworkManager
 import com.ai.inty.utils.UnifiedStartupManager
-import com.google.firebase.perf.FirebasePerformance
 import com.inty.utils.AppEnv
 import com.inty.utils.log.EasyLog
 import com.inty.utils.log.defaultInit
@@ -45,11 +45,27 @@ class IntyApp : Application() {
         // 立即初始化统一启动管理器（只做必要的登录判断，不阻塞）
         UnifiedStartupManager.initializeEssential(this)
 
-        // 初始化Firebase Analytics Helper
-        FirebaseAnalyticsHelper.initialize(this)
-        
-        // 初始化Firebase Performance Monitoring
-        FirebasePerformance.getInstance()
+        // 统一初始化 Firebase 服务
+        FirebaseManager.initialize(this)
+        // 默认开关：可由你后续策略化控制（Remote Config / 本地开关）
+        FirebaseManager.updateSwitches(
+            enableAnalytics = true,
+            enableCrashlytics = true,
+            enablePerformance = true,
+            // 可禁用低价值事件示例：
+            disabledEvents = emptySet(),
+            // 采样/限频默认值已在 FirebaseManager 内设置，可按需覆盖：
+            samplingRates = null,
+            minIntervalMsPerEvent = null,
+        )
+
+        // 兼容层已弃用，不再初始化 FirebaseAnalyticsHelper
+
+        // 记录应用启动事件
+        FirebaseManager.logEvent("app_start")
+
+        // 安装全局异常处理器
+        GlobalExceptionHandler.install(this)
 
         // 异步初始化所有可能阻塞的组件
         kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
