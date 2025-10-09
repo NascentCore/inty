@@ -62,8 +62,14 @@ fun ChatPageContainer(
     val agentList =
         remember(agentsPagingItems.itemCount) {
             val list = mutableListOf<AgentInfo>()
-            for (i in 0 until agentsPagingItems.itemCount) {
-                agentsPagingItems[i]?.let { agent -> list.add(agent) }
+            try {
+                for (i in 0 until agentsPagingItems.itemCount) {
+                    agentsPagingItems[i]?.let { agent -> list.add(agent) }
+                }
+            } catch (e: IndexOutOfBoundsException) {
+                EasyLog.log("ChatPageContainer - 构建agentList时索引越界: ${e.message}", EasyLog.WARN)
+            } catch (e: Exception) {
+                EasyLog.log("ChatPageContainer - 构建agentList时发生异常: ${e.message}", EasyLog.ERROR)
             }
             list
         }
@@ -121,9 +127,20 @@ fun ChatPageContainer(
                     appendState.endOfPaginationReached)
             val canPrefetch = refreshState is androidx.paging.LoadState.NotLoading
             if (pageState.currentPage >= thresholdIndex && notEnd && canPrefetch) {
-                val nextIndex = agentsPagingItems.itemCount
-                // 访问下一索引以触发 Paging 的 append 加载
-                agentsPagingItems[nextIndex]
+                // 修复：使用更安全的预取方式
+                // 通过访问最后一个有效索引来触发Paging的append加载
+                try {
+                    val lastValidIndex = (agentsPagingItems.itemCount - 1).coerceAtLeast(0)
+                    if (lastValidIndex >= 0 && lastValidIndex < agentsPagingItems.itemCount) {
+                        // 访问最后一个有效索引，这会触发Paging库自动加载下一页
+                        agentsPagingItems[lastValidIndex]
+                        EasyLog.log("ChatPageContainer - 触发预取加载，当前索引: $lastValidIndex, 总数: ${agentsPagingItems.itemCount}")
+                    }
+                } catch (e: IndexOutOfBoundsException) {
+                    EasyLog.log("ChatPageContainer - 索引越界，跳过预取: ${e.message}", EasyLog.WARN)
+                } catch (e: Exception) {
+                    EasyLog.log("ChatPageContainer - 预取触发失败: ${e.message}", EasyLog.WARN)
+                }
             }
         }
     }
@@ -137,10 +154,15 @@ fun ChatPageContainer(
         ) { currentPage ->
             // 防止数组越界
             if (currentPage < 0 || currentPage >= agentList.size) {
+                EasyLog.log("ChatPageContainer - HorizontalPager索引越界: currentPage=$currentPage, agentList.size=${agentList.size}", EasyLog.WARN)
                 // 如果索引无效，显示空页面或返回
                 return@HorizontalPager
             }
-            val agent = agentList[currentPage]
+            val agent = agentList.getOrNull(currentPage)
+            if (agent == null) {
+                EasyLog.log("ChatPageContainer - 获取agent失败: currentPage=$currentPage", EasyLog.WARN)
+                return@HorizontalPager
+            }
             val chatViewModel: ChatViewModel = viewModel(key = agent.id, factory = viewModelFactory)
 
             LaunchedEffect(key1 = agent.id, key2 = agent.isFollowed) {
