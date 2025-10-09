@@ -99,7 +99,7 @@ fun PremiumBenefitItem(text: String) {
         Spacer(Modifier.width(8.dp))
         Text(text = text, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Light)
     }
-    Spacer(Modifier.height(4.dp))
+    Spacer(Modifier.height(2.dp))
 }
 
 /** 订阅计划卡片组件 */
@@ -249,9 +249,10 @@ fun AutoRenewalNotice(modifier: Modifier = Modifier) {
         Text(
             text =
                 stringResource(R.string.auto_renews_cancel) +
-                    ". " +
+                    ".\n" +
                     stringResource(R.string.subscription_consent),
             fontSize = 12.sp,
+            lineHeight = 12.sp,
             color = Color.White,
         )
         PolicyRow(context = LocalContext.current, fontSize = 12.sp)
