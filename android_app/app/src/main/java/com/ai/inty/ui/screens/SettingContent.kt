@@ -43,10 +43,8 @@ import com.ai.inty.ui.components.SettingDivider
 import com.ai.inty.ui.components.SettingInfoItem
 import com.ai.inty.ui.components.SettingNavigationItem
 import com.ai.inty.ui.components.SettingSection
-import com.ai.inty.ui.components.SettingSwitchItem
 import com.ai.inty.viewmodels.DialogState
 import com.ai.inty.viewmodels.SettingViewModel
-import com.ai.inty.viewmodels.SettingsState
 import com.inty.utils.storage.IntySetting
 import com.therouter.TheRouter
 import kotlinx.coroutines.flow.collectLatest
@@ -77,14 +75,6 @@ fun SettingContent(
 
     Scaffold(modifier = modifier, topBar = { SettingTopBar(onBack = onBack) }) { innerPadding ->
         Column(modifier = Modifier.padding(innerPadding)) {
-
-            // 设置选项区域
-            SettingOptionsSection(
-                settingsState = settingsState,
-                onTogglePremiumMode = { viewModel.togglePremiumMode() },
-            )
-
-            Spacer(Modifier.height(16.dp))
 
             // 支持与帮助区域
             SupportAndHelpSection(
@@ -129,18 +119,6 @@ private fun SettingTopBar(onBack: () -> Unit) {
             )
         },
     )
-}
-
-/** 设置选项区域 */
-@Composable
-private fun SettingOptionsSection(settingsState: SettingsState, onTogglePremiumMode: () -> Unit) {
-    SettingSection {
-        SettingSwitchItem(
-            title = stringResource(R.string.premium_tag_on_chat_page),
-            isEnabled = settingsState.premiumMode,
-            onToggle = onTogglePremiumMode,
-        )
-    }
 }
 
 /** 支持与帮助区域 */
