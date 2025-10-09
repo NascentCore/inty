@@ -204,21 +204,11 @@ internal class BillingPurchaseManager(
     /** 处理购买 */
     private fun handlePurchase(purchase: Purchase) {
         if (purchase.purchaseState == Purchase.PurchaseState.PURCHASED) {
-            // 先更新状态，如果后续确认失败再回滚
-            val newStatus =
-                VipStatus(
-                    isSubscribed = true,
-                    subscriptionId = purchase.products.firstOrNull(),
-                    purchaseTime = purchase.purchaseTime,
-                )
-            vipStatusFlow.value = newStatus
-            BillingStorage.saveLocalVipStatus(newStatus)
-
             if (!purchase.isAcknowledged) {
                 acknowledgePurchase(purchase)
             }
 
-            // 调用后端验证订阅信息
+            // 调用后端验证订阅信息，验证成功后再更新状态
             verifySubscriptionWithServer(purchase)
         }
     }
@@ -280,6 +270,14 @@ internal class BillingPurchaseManager(
                         val response = result.data
                         if (response.isVerified) {
                             EasyLog.log("BillingRepository BillingPurchaseManager ✅ 订阅验证成功")
+                            // 验证成功后更新状态
+                            val newStatus = VipStatus(
+                                isSubscribed = true,
+                                subscriptionId = purchase.products.firstOrNull(),
+                                purchaseTime = purchase.purchaseTime,
+                            )
+                            vipStatusFlow.value = newStatus
+                            BillingStorage.saveLocalVipStatus(newStatus)
                         } else {
                             EasyLog.log(
                                 "BillingRepository BillingPurchaseManager ⚠️ 订阅验证失败: ${response.message}"

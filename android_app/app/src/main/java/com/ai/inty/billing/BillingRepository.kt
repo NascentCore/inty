@@ -325,7 +325,9 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
             _eventFlow.collect { event ->
                 when (event) {
                     is BillingEvent.PurchaseSuccess -> {
-                        log("购买成功，刷新状态")
+                        log("购买成功，延迟刷新状态")
+                        // 延迟刷新，等待服务器处理完成
+                        delay(1000)
                         refreshSubscriptionStatus()
                     }
 
