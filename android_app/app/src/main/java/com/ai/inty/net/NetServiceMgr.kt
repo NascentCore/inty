@@ -3,6 +3,7 @@ package com.ai.inty.net
 import android.content.Context
 import android.content.Intent
 import com.ai.inty.Constant
+import com.ai.inty.utils.FirebasePerformanceHelper
 import com.architecture.httplib.core.HttpResponseCallAdapterFactory
 import com.architecture.httplib.core.MoshiResultTypeAdapterFactory
 import com.architecture.httplib.error.GlobalErrorHandler
@@ -15,8 +16,6 @@ import com.squareup.moshi.DefaultIfNullFactory
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import com.therouter.inject.ServiceProvider
-import java.net.InetAddress
-import java.util.concurrent.TimeUnit
 import okhttp3.ConnectionPool
 import okhttp3.Dns
 import okhttp3.Interceptor
@@ -27,6 +26,8 @@ import okhttp3.Response
 import okhttp3.ResponseBody.Companion.toResponseBody
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
+import java.net.InetAddress
+import java.util.concurrent.TimeUnit
 
 /** 获取基础URL 根据构建类型返回对应的API基础URL */
 fun getBaseUrl(): String {
@@ -139,10 +140,17 @@ private class PerformanceInterceptor : Interceptor {
 
         EasyLog.log("🌐 Starting request: ${request.method} ${request.url}")
 
+        // 创建 Firebase Performance HTTP Metric
+        val httpMetric = FirebasePerformanceHelper.createHttpMetric(request)
+        FirebasePerformanceHelper.startHttpMetric(httpMetric)
+
         return try {
             val response = chain.proceed(request)
             val endTime = System.currentTimeMillis()
             val duration = endTime - startTime
+
+            // 停止 Firebase Performance HTTP Metric
+            FirebasePerformanceHelper.stopHttpMetric(httpMetric, response)
 
             // 记录请求性能
             when {
@@ -171,6 +179,10 @@ private class PerformanceInterceptor : Interceptor {
         } catch (e: Exception) {
             val endTime = System.currentTimeMillis()
             val duration = endTime - startTime
+            
+            // 停止 Firebase Performance HTTP Metric (即使请求失败)
+            FirebasePerformanceHelper.stopHttpMetric(httpMetric, null)
+            
             EasyLog.log(
                 "❌ Request failed: ${request.method} ${request.url} (${duration}ms): ${e.message}",
                 EasyLog.ERROR,

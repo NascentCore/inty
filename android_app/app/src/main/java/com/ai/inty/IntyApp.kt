@@ -8,6 +8,7 @@ import com.ai.inty.netapi.IntyNetworkManager
 import com.ai.inty.utils.FirebaseAnalyticsHelper
 import com.ai.inty.utils.NetworkManager
 import com.ai.inty.utils.UnifiedStartupManager
+import com.google.firebase.perf.FirebasePerformance
 import com.inty.utils.AppEnv
 import com.inty.utils.log.EasyLog
 import com.inty.utils.log.defaultInit
@@ -46,6 +47,9 @@ class IntyApp : Application() {
 
         // 初始化Firebase Analytics Helper
         FirebaseAnalyticsHelper.initialize(this)
+        
+        // 初始化Firebase Performance Monitoring
+        FirebasePerformance.getInstance()
 
         // 异步初始化所有可能阻塞的组件
         kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {

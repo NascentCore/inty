@@ -6,6 +6,7 @@ plugins {
     alias(libs.plugins.kotlin.parcelize)
     alias(libs.plugins.google.services)
     alias(libs.plugins.firebase.crashlytics)
+    alias(libs.plugins.firebase.perf)
     alias(libs.plugins.ksp)
 
     id("therouter")
@@ -110,6 +111,7 @@ dependencies {
     implementation(libs.billing.client)
     implementation(platform(libs.firebase.bom))
     implementation(libs.bundles.firebase.core)
+    implementation(libs.firebase.perf)
     implementation(libs.bundles.credentials)
 
     // ===== 图片处理 =====

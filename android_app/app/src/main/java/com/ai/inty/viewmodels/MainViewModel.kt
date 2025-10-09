@@ -17,6 +17,7 @@ import com.ai.inty.net.IAgentApi
 import com.ai.inty.net.ICommonApi
 import com.ai.inty.utils.AgentCacheManager
 import com.ai.inty.utils.CredentialManagerHelper.clearCredentialState
+import com.ai.inty.utils.FirebasePerformanceHelper
 import com.ai.inty.utils.IntyUserProfileSDK
 import com.ai.inty.utils.UnifiedStartupManager
 import com.ai.inty.utils.UserProfileManager
@@ -387,43 +388,59 @@ class MainViewModel : BaseActivityViewModel() {
         EasyLog.log("createAgent: ${request.name}")
         EasyLog.log("createAgent request full details: $request")
         EasyLog.log("createAgent avatar URL: ${request.avatar}")
-        launchWithNetCheck {
-            try {
-                val result = agentApi.createAgent(request)
-                EasyLog.log("createAgent = $result")
 
-                withContext(Dispatchers.Main) {
-                    when (result) {
-                        is HttpResult.Success -> {
-                            EasyLog.log("createAgent success: ${result.data}")
-                            // 刷新用户创建的角色列表
-                            refreshCreatedAgentsListIfOnTab()
-                            onSuccess(result.data)
-                        }
+        // 开始性能追踪
+        FirebasePerformanceHelper.trace("create_agent") { trace ->
+            FirebasePerformanceHelper.putAttribute(trace, "agent_name", request.name)
+            FirebasePerformanceHelper.putAttribute(
+                trace,
+                "has_avatar",
+                (request.avatar?.isNotEmpty() == true).toString()
+            )
+            FirebasePerformanceHelper.putAttribute(
+                trace,
+                "visibility",
+                request.visibility ?: "unknown"
+            )
 
-                        is HttpResult.Failure -> {
-                            EasyLog.log("createAgent error: $result", priority = EasyLog.ERROR)
-                            val errorMessage =
-                                result.message.ifBlank {
-                                    "Creation failed, please check network connection"
-                                }
-                            onError(errorMessage)
+            launchWithNetCheck {
+                try {
+                    val result = agentApi.createAgent(request)
+                    EasyLog.log("createAgent = $result")
+
+                    withContext(Dispatchers.Main) {
+                        when (result) {
+                            is HttpResult.Success -> {
+                                EasyLog.log("createAgent success: ${result.data}")
+                                // 刷新用户创建的角色列表
+                                refreshCreatedAgentsListIfOnTab()
+                                onSuccess(result.data)
+                            }
+
+                            is HttpResult.Failure -> {
+                                EasyLog.log("createAgent error: $result", priority = EasyLog.ERROR)
+                                val errorMessage =
+                                    result.message.ifBlank {
+                                        "Creation failed, please check network connection"
+                                    }
+                                onError(errorMessage)
+                            }
                         }
                     }
+                } catch (e: retrofit2.HttpException) {
+                    // 专门处理HTTP异常
+                    EasyLog.log(
+                        "createAgent HTTP Exception: ${e.code()} - ${e.message()}",
+                        EasyLog.ERROR,
+                    )
+                    val errorMessage = handleHttpException(e, "create")
+                    withContext(Dispatchers.Main) { onError(errorMessage) }
+                } catch (e: Exception) {
+                    EasyLog.log("createAgent exception: ${e.message}", priority = EasyLog.ERROR)
+                    EasyLog.log(e)
+                    val errorMessage = handleGeneralException(e, "create")
+                    withContext(Dispatchers.Main) { onError(errorMessage) }
                 }
-            } catch (e: retrofit2.HttpException) {
-                // 专门处理HTTP异常
-                EasyLog.log(
-                    "createAgent HTTP Exception: ${e.code()} - ${e.message()}",
-                    EasyLog.ERROR,
-                )
-                val errorMessage = handleHttpException(e, "create")
-                withContext(Dispatchers.Main) { onError(errorMessage) }
-            } catch (e: Exception) {
-                EasyLog.log("createAgent exception: ${e.message}", priority = EasyLog.ERROR)
-                EasyLog.log(e)
-                val errorMessage = handleGeneralException(e, "create")
-                withContext(Dispatchers.Main) { onError(errorMessage) }
             }
         }
     }
