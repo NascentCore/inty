@@ -1,6 +1,5 @@
 package com.ai.inty.chat
 
-import android.app.Activity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
@@ -51,7 +50,6 @@ import com.ai.inty.chat.ui.ChatTopBar
 import com.ai.inty.chat.ui.KeepTalkingButton
 import com.ai.inty.chat.ui.PremiumModelTag
 import com.ai.inty.home.BottomNavigationBarHeight
-import com.ai.inty.ui.AdvancedModelChatDialog
 import com.ai.inty.ui.ChatDialogData
 import com.ai.inty.ui.UnlimitChatDialog
 import com.ai.inty.ui.components.AgentBackground
@@ -258,40 +256,15 @@ internal fun ChatPage(
                     Spacer(Modifier.height(8.dp))
                     // 高级模型弹窗
                     if (showPremiumDialog) {
-                        val data =
-                            ChatDialogData(
-                                R.drawable.img_advanced_model_dialog_bg,
-                                stringResource(R.string.str_premium_mode_dialog_content),
-                                stringResource(R.string.premium_tag_on_chat_page),
-                            )
-                        AdvancedModelChatDialog(
-                            data,
-                            onCancel = { showPremiumDialog = false },
-                            onSure = {
-                                // 检查是否正式登录（非游客且已登录）
-                                if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
-                                    if (context is Activity) {
-                                        // 购买最低档位的订阅
-                                        chatViewModel.purchaseFirstVip(context)
-                                    }
-                                } else {
-                                    // 如果未登录，要求先登录
-                                    TheRouter.build(Constant.ROUTE_LOGIN).navigation(context)
-                                }
-                                showPremiumDialog = false
-                            },
-                            onMoreInfo = {
-                                // 检查是否正式登录（非游客且已登录）
-                                if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
-                                    // 去会员中心
-                                    TheRouter.build(Constant.ROUTE_VIP_CENTER).navigation()
-                                } else {
-                                    // 如果未登录，要求先登录
-                                    TheRouter.build(Constant.ROUTE_LOGIN).navigation(context)
-                                }
-                                showPremiumDialog = false
-                            },
-                        )
+                        // 检查是否正式登录（非游客且已登录）
+                        if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
+                            // 去会员中心
+                            TheRouter.build(Constant.ROUTE_VIP_CENTER).navigation()
+                        } else {
+                            // 如果未登录，要求先登录
+                            TheRouter.build(Constant.ROUTE_LOGIN).navigation(context)
+                        }
+                        showPremiumDialog = false
                     }
                 }
                 val chatMessages by chatViewModel.msgs.collectAsState()
@@ -493,10 +466,8 @@ private fun ShowLimitDialog(chatViewModel: ChatViewModel) {
             onSure = {
                 // 检查是否正式登录（非游客且已登录）
                 if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
-                    if (context is Activity) {
-                        // 最低档位购买会员订阅
-                        chatViewModel.purchaseFirstVip(context)
-                    }
+                    // 去会员中心
+                    TheRouter.build(Constant.ROUTE_VIP_CENTER).navigation()
                 } else {
                     // 如果未登录，要求先登录
                     TheRouter.build(Constant.ROUTE_LOGIN).navigation(context)
