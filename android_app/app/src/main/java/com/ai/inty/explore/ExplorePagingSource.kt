@@ -66,6 +66,16 @@ class ExplorePagingSource(
                     }
                 }
 
+                // 检查用户账户是否已就绪，如果未就绪则返回空数据
+                if (!UnifiedStartupManager.isUserAccountReady()) {
+                    EasyLog.log("ExplorePagingSource - 用户账户未就绪，返回空数据")
+                    return@withContext LoadResult.Page(
+                        data = emptyList(),
+                        prevKey = null,
+                        nextKey = null,
+                    )
+                }
+
                 // 从网络加载数据
                 val result = loadFromNetwork(page, pageSize)
 
@@ -157,7 +167,10 @@ class ExplorePagingSource(
 
     /** 检查是否需要从网络更新数据 */
     private fun shouldUpdateFromNetwork(): Boolean {
-        return IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()
+        // 确保用户账户已就绪（包括游客账户）且token有效
+        return UnifiedStartupManager.isUserAccountReady() && 
+               IntySetting.isLogin() && 
+               IntySetting.getCurToken().isNotEmpty()
     }
 }
 

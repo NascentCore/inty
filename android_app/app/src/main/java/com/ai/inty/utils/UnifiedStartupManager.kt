@@ -28,6 +28,10 @@ object UnifiedStartupManager {
     private val _startupState = MutableStateFlow(StartupState.Initializing)
     val startupState: StateFlow<StartupState> = _startupState.asStateFlow()
 
+    // 用户账户状态 - 用于确保PagingSource在有效token下发起请求
+    private val _userAccountReady = MutableStateFlow(false)
+    val userAccountReady: StateFlow<Boolean> = _userAccountReady.asStateFlow()
+
     // 预加载数据
     private val _userProfile = MutableStateFlow<UserProfile?>(null)
     val userProfile: StateFlow<UserProfile?> = _userProfile.asStateFlow()
@@ -86,7 +90,8 @@ object UnifiedStartupManager {
                     EasyLog.log("UnifiedStartupManager - 用户已登录，token有效")
                 }
 
-                // 注意：不在这里设置EssentialReady，让SplashUI主动控制何时完成
+                // 确保用户账户状态已就绪（无论是正式用户还是游客）
+                _userAccountReady.value = true
                 _startupProgress.value = 0.3f
                 EasyLog.log("UnifiedStartupManager - 必要初始化完成，等待SplashUI检查")
 
@@ -455,6 +460,11 @@ object UnifiedStartupManager {
         return _startupState.value == StartupState.Completed
     }
 
+    /** 检查用户账户是否已就绪（包括游客账户） */
+    fun isUserAccountReady(): Boolean {
+        return _userAccountReady.value
+    }
+
     /** 检查是否有缓存数据 */
     fun hasCacheData(): Boolean {
         return _recommendedAgents.value.isNotEmpty() ||
@@ -485,6 +495,7 @@ object UnifiedStartupManager {
 
     /** 清理所有启动数据（用于用户登出等场景） */
     fun clearAllData() {
+        _userAccountReady.value = false
         _userProfile.value = null
         _recommendedAgents.value = emptyList()
         _chatAgents.value = emptyList()
