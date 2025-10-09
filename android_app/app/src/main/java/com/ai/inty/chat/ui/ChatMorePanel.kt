@@ -1,6 +1,5 @@
 package com.ai.inty.chat.ui
 
-import android.app.Activity
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -45,8 +44,6 @@ import com.ai.inty.base.noRippleClickable
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.billing.BillingRepository
 import com.ai.inty.chat.ChatViewModel
-import com.ai.inty.ui.ChatDialogData
-import com.ai.inty.ui.PremiumChatDialog
 import com.ai.inty.ui.ReplyStyleSheet
 import com.ai.inty.ui.theme.DarkPurple
 import com.inty.utils.storage.IntySetting
@@ -163,42 +160,17 @@ fun ChatMorePanel(
             },
         )
     }
-    // 会员定制回复的拦截弹窗
+    // 会员定制回复的拦截跳转到vip center
     if (showDialog) {
-        val data =
-            ChatDialogData(
-                R.drawable.img_premium_dialog_bg,
-                stringResource(R.string.str_premium_chat_dialog_content),
-                stringResource(R.string.str_beeter_ai_responeses),
-            )
-        PremiumChatDialog(
-            data,
-            onCancel = { showDialog = false },
-            onSure = {
-                // 检查是否正式登录（非游客且已登录）
-                if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
-                    // 购买最低档位的vip会员订阅
-                    if (context is Activity) {
-                        chatViewModel.purchaseFirstVip(context)
-                    }
-                } else {
-                    // 如果未登录，要求先登录
-                    TheRouter.build(Constant.ROUTE_LOGIN).navigation(context)
-                }
-                showDialog = false
-            },
-            onMoreInfo = {
-                // 检查是否正式登录（非游客且已登录）
-                if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
-                    // 去会员中心
-                    TheRouter.build(Constant.ROUTE_VIP_CENTER).navigation()
-                } else {
-                    // 如果未登录，要求先登录
-                    TheRouter.build(Constant.ROUTE_LOGIN).navigation(context)
-                }
-                showDialog = false
-            },
-        )
+        // 检查是否正式登录（非游客且已登录）
+        if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
+            // 去会员中心
+            TheRouter.build(Constant.ROUTE_VIP_CENTER).navigation()
+        } else {
+            // 如果未登录，要求先登录
+            TheRouter.build(Constant.ROUTE_LOGIN).navigation(context)
+        }
+        showDialog = false
     }
 }
 

@@ -1,6 +1,5 @@
 package com.ai.inty.ui.screens
 
-import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.widget.Toast
@@ -35,18 +34,14 @@ import com.ai.inty.Constant
 import com.ai.inty.R
 import com.ai.inty.base.noRippleClickable
 import com.ai.inty.billing.BillingRepository
-import com.ai.inty.ui.AdvancedModelChatDialog
-import com.ai.inty.ui.ChatDialogData
 import com.ai.inty.ui.components.DeleteAccountDialog
 import com.ai.inty.ui.components.LogoutButton
 import com.ai.inty.ui.components.SettingDivider
 import com.ai.inty.ui.components.SettingInfoItem
 import com.ai.inty.ui.components.SettingNavigationItem
 import com.ai.inty.ui.components.SettingSection
-import com.ai.inty.ui.components.SettingSwitchItem
 import com.ai.inty.viewmodels.DialogState
 import com.ai.inty.viewmodels.SettingViewModel
-import com.ai.inty.viewmodels.SettingsState
 import com.inty.utils.storage.IntySetting
 import com.therouter.TheRouter
 import kotlinx.coroutines.flow.collectLatest
@@ -77,14 +72,6 @@ fun SettingContent(
 
     Scaffold(modifier = modifier, topBar = { SettingTopBar(onBack = onBack) }) { innerPadding ->
         Column(modifier = Modifier.padding(innerPadding)) {
-
-            // 设置选项区域
-            SettingOptionsSection(
-                settingsState = settingsState,
-                onTogglePremiumMode = { viewModel.togglePremiumMode() },
-            )
-
-            Spacer(Modifier.height(16.dp))
 
             // 支持与帮助区域
             SupportAndHelpSection(
@@ -123,24 +110,14 @@ private fun SettingTopBar(onBack: () -> Unit) {
         },
         navigationIcon = {
             Image(
-                modifier = Modifier.padding(horizontal = 12.dp).noRippleClickable { onBack() },
+                modifier = Modifier
+                    .padding(horizontal = 12.dp)
+                    .noRippleClickable { onBack() },
                 painter = painterResource(R.drawable.back),
                 contentDescription = null,
             )
         },
     )
-}
-
-/** 设置选项区域 */
-@Composable
-private fun SettingOptionsSection(settingsState: SettingsState, onTogglePremiumMode: () -> Unit) {
-    SettingSection {
-        SettingSwitchItem(
-            title = stringResource(R.string.premium_tag_on_chat_page),
-            isEnabled = settingsState.premiumMode,
-            onToggle = onTogglePremiumMode,
-        )
-    }
 }
 
 /** 支持与帮助区域 */
@@ -259,43 +236,16 @@ private fun SettingDialogs(
 
     // 高级模型对话框
     if (dialogState.showPremiumDialog) {
-        val data =
-            ChatDialogData(
-                R.drawable.img_advanced_model_dialog_bg,
-                stringResource(R.string.str_premium_mode_dialog_content),
-                stringResource(R.string.premium_tag_on_chat_page),
-            )
         val context = LocalContext.current
-        val viewmodel = viewModel<SettingViewModel>()
-        AdvancedModelChatDialog(
-            data,
-            onCancel = onHidePremiumDialog,
-            onSure = {
-                // 检查是否正式登录（非游客且已登录）
-                if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
-                    // 购买最低档位的vip会员订阅
-                    if (context is Activity) {
-                        // 购买最低档位的订阅
-                        viewmodel.purchaseFirstVip(context)
-                    }
-                } else {
-                    // 如果未登录，要求先登录
-                    TheRouter.build(Constant.ROUTE_LOGIN).navigation(context)
-                }
-                onHidePremiumDialog()
-            },
-            onMoreInfo = {
-                // 检查是否正式登录（非游客且已登录）
-                if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
-                    // 去会员中心
-                    TheRouter.build(Constant.ROUTE_VIP_CENTER).navigation()
-                } else {
-                    // 如果未登录，要求先登录
-                    TheRouter.build(Constant.ROUTE_LOGIN).navigation(context)
-                }
-                onHidePremiumDialog()
-            },
-        )
+        // 检查是否正式登录（非游客且已登录）
+        if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
+            // 去会员中心
+            TheRouter.build(Constant.ROUTE_VIP_CENTER).navigation()
+        } else {
+            // 如果未登录，要求先登录
+            TheRouter.build(Constant.ROUTE_LOGIN).navigation(context)
+        }
+        onHidePremiumDialog()
     }
 }
 
