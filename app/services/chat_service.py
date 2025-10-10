@@ -59,6 +59,7 @@ async def get_chat(db: AsyncSession, chat_id: str) -> Optional[models.Chat]:
             # Set agent name and avatar
             chat.agent_name = chat.agent.name if chat.agent else None
             chat.agent_avatar = chat.agent.avatar if chat.agent else None
+            chat.agent_background = chat.agent.background if chat.agent else None
             chat.agent_is_deleted = (
                 chat.agent.deleted_at is not None if chat.agent else None
             )
@@ -141,6 +142,7 @@ async def get_chats(
 
             chat.agent_name = chat.agent.name if chat.agent else None
             chat.agent_avatar = chat.agent.avatar if chat.agent else None
+            chat.agent_background = chat.agent.background if chat.agent else None
             chat.agent_is_deleted = (
                 chat.agent.deleted_at is not None if chat.agent else None
             )
@@ -382,6 +384,7 @@ async def get_or_create_chat_by_agent(
             )
             chat.agent_name = cached_session.get("agent_name")
             chat.agent_avatar = cached_session.get("agent_avatar")
+            chat.agent_background = cached_session.get("agent_background")
             return chat
 
         # 2. 数据库查询（使用简单查询，减少预加载）
