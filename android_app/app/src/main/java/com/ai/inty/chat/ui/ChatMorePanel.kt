@@ -111,7 +111,7 @@ fun ChatMorePanel(
                         Spacer(Modifier.width(16.dp))
                         MorePanelItem(
                             icon = R.drawable.icon_report,
-                            text = stringResource(R.string.report_button),
+                            text = stringResource(R.string.str_report),
                             onClick = {
                                 // 检查是否正式登录（非游客且已登录）
                                 if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {

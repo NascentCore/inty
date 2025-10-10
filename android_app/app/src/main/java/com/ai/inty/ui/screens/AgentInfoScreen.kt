@@ -320,7 +320,7 @@ private fun BottomSheetContent(onReportClick: () -> Unit, onCancelClick: () -> U
             shape = RoundedCornerShape(16.dp),
         ) {
             Text(
-                text = stringResource(R.string.report_button),
+                text = stringResource(R.string.str_report),
                 color = Color.White,
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Normal,

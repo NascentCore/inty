@@ -101,10 +101,7 @@ dependencies {
     implementation(libs.retrofit2.kotlin.coroutines.adapter)
 
     // ===== 图片加载 =====
-    implementation(libs.coil.kt)
-    implementation(libs.coil.network.okhttp)
-    implementation(libs.coil.network.cache.control)
-    implementation(libs.coil.kt.compose)
+    implementation(libs.bundles.coil.bundle)
     // Removed: coil-svg, coil-gif, coil-video, coil-network-ktor3 (likely unused)
 
     // ===== Google 服务 =====
