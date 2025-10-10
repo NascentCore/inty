@@ -2,12 +2,13 @@ from loguru import logger
 
 # A list of emails whose associated Google account treated as super users.
 SUPER_USER_EMAILS = [
-    "anonymoussocialforreal@gmail.com",
+    # "anonymoussocialforreal@gmail.com",
     # "arthurzhang0521@gmail.com",
     # "donggangcj@gmail.com",
     # "justicezyx@gmail.com",
-    "zhiwei9001@gmail.com",
-    "xheuyyuki@gmail.com",
+    # "zhiwei9001@gmail.com",
+    # "xheuyyuki@gmail.com",
+
     # This is provided to Google Play reviewers.
     # They require to access all features without any restrictions.
     "test.heartmate@gmail.com",
