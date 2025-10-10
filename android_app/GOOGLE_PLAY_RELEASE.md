@@ -41,14 +41,5 @@
   <img width="1028" height="1776" alt="image" src="https://github.com/user-attachments/assets/5d0b7b02-027b-4f73-b546-30f121475c24" />
 - 上传使用 Android studio 生成签名过的 App Bundle
   ![image](https://github.com/user-attachments/assets/e4db0d37-976b-4f42-aaeb-e98c148a3df5)
-- 使用 Bundletool 确认 version code：`bundletool dump manifest --bundle app/release/app-release.aab | grep versionCode`
-  - 应显示上面设置的 versioncode
-  - ![image](https://github.com/user-attachments/assets/9f69ba9d-9ef0-41e5-92ef-0d6eeba56fee)
-- 打开 Google Play Console 上传刚刚构建的 AAB 文件，注意确认路径正确
-  - 首先，点击创建新的版本
-    - ![image](https://github.com/user-attachments/assets/32672101-5a56-4266-a600-af479c335694)
-  - 然后，点击上传
-    - ![image](https://github.com/user-attachments/assets/9a3028f8-7881-4c55-8f03-0e25606724bd)
-    - ![image](https://github.com/user-attachments/assets/76041017-8aa7-4d73-8732-c1cbd9df8b0f)
-  - 上传完成后，如下所示，后续点击下一步即可，最后点击 Save and Publish
-    ![image](https://github.com/user-attachments/assets/4a74c6e2-83c7-429e-99a3-cbfdc6fd3963)
+- 上传完成后，如下所示，后续点击下一步即可，最后点击 Save and Publish
+  ![image](https://github.com/user-attachments/assets/4a74c6e2-83c7-429e-99a3-cbfdc6fd3963)
