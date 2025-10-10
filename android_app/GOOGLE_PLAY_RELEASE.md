@@ -37,13 +37,10 @@
 ## 手动构建 AAB 并上传到内测（Internal Testing）轨道
 
 - 打开 [IntelliMate 发布页面](https://play.google.com/console/u/0/developers/8311322450209629787/app/4972036709846537052/app-dashboard)
-- 检查最近一次 release version code
-  - ![image](https://github.com/user-attachments/assets/96a4bc1c-a4d9-423a-b7a7-f8b17dd71393)
-- 更新 app/build.gradle.kts 内的 version code 到最近一次 release version code +1，如上图所示，应该将 version code 改为 349
-  - 此改动不应该提交
-  - ![image](https://github.com/user-attachments/assets/5e79445e-3693-4d41-b419-9287d91214b6)
-- 使用 Android studio 生成签名过的 App Bundle
-  - ![image](https://github.com/user-attachments/assets/e4db0d37-976b-4f42-aaeb-e98c148a3df5)
+- 打开内测轨道上传页面
+  <img width="1028" height="1776" alt="image" src="https://github.com/user-attachments/assets/5d0b7b02-027b-4f73-b546-30f121475c24" />
+- 上传使用 Android studio 生成签名过的 App Bundle
+  ![image](https://github.com/user-attachments/assets/e4db0d37-976b-4f42-aaeb-e98c148a3df5)
 - 使用 Bundletool 确认 version code：`bundletool dump manifest --bundle app/release/app-release.aab | grep versionCode`
   - 应显示上面设置的 versioncode
   - ![image](https://github.com/user-attachments/assets/9f69ba9d-9ef0-41e5-92ef-0d6eeba56fee)
@@ -53,6 +50,6 @@
   - 然后，点击上传
     - ![image](https://github.com/user-attachments/assets/9a3028f8-7881-4c55-8f03-0e25606724bd)
     - ![image](https://github.com/user-attachments/assets/76041017-8aa7-4d73-8732-c1cbd9df8b0f)
-  - 上传完成后，如下所示，后续点击下一步即可
+  - 上传完成后，如下所示，后续点击下一步即可，最后点击 Save and Publish
     - ![image](https://github.com/user-attachments/assets/48e12f83-eaa2-418a-be90-630b8e14ebee)
     - ![image](https://github.com/user-attachments/assets/4a74c6e2-83c7-429e-99a3-cbfdc6fd3963)
