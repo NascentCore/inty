@@ -94,7 +94,7 @@ fun VipCenterContent(
 
             VipCenterTopBar(onClose = onClose)
 
-            Spacer(Modifier.height(100.dp))
+            Spacer(Modifier.height(110.dp))
 
             VipCenterHeader()
 
@@ -135,7 +135,7 @@ fun VipCenterContent(
                         )
                     }
 
-                Spacer(Modifier.height(26.dp))
+                Spacer(Modifier.height(32.dp))
 
                 PurchaseButton(
                     isSubscribed = vipStatus.isSubscribed,
@@ -193,7 +193,7 @@ private fun VipCenterHeader() {
             fontWeight = FontWeight.Medium,
             color = Color.White,
         )
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(10.dp))
     }
 }
 
@@ -201,12 +201,12 @@ private fun VipCenterHeader() {
 @Composable
 private fun VipCenterBenefits() {
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-        PremiumBenefitItem(stringResource(R.string.premium_benefit_unlimited_messages))
-        PremiumBenefitItem(stringResource(R.string.premium_benefit_smarter_emotional_experience))
-        PremiumBenefitItem(stringResource(R.string.premium_benefit_extra_chat_inspiration))
-        PremiumBenefitItem(stringResource(R.string.premium_benefit_customize_chat_style))
-        PremiumBenefitItem(stringResource(R.string.premium_benefit_enhanced_chat_memory))
-        PremiumBenefitItem(stringResource(R.string.premium_benefit_experience_new))
+
+        PremiumBenefitItem(stringResource(R.string.premium_benefit_unlimited))
+        PremiumBenefitItem(stringResource(R.string.premium_benefit_model))
+        PremiumBenefitItem(stringResource(R.string.premium_benefit_customize))
+        PremiumBenefitItem(stringResource(R.string.premium_benefit_newfeature))
+
     }
 }
 

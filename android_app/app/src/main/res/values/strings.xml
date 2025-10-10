@@ -116,12 +116,12 @@
 
     <string name="premium_title">IntelliMate Premium</string>
     <string name="premium_subtitle">Experience your imagination!</string>
-    <string name="premium_benefit_unlimited_messages">Unlimited Messages</string>
-    <string name="premium_benefit_smarter_emotional_experience">Smarter, More Emotional Experience</string>
-    <string name="premium_benefit_extra_chat_inspiration">Extra chat inspiration</string>
-    <string name="premium_benefit_customize_chat_style">Shape Your Ideal Chat Style</string>
-    <string name="premium_benefit_enhanced_chat_memory">Enhanced Chat Memory</string>
-    <string name="premium_benefit_experience_new">Experience new</string>
+
+    <string name="premium_benefit_unlimited">Unlimited text and voice messages</string>
+    <string name="premium_benefit_model">Premium AI models</string>
+    <string name="premium_benefit_customize">Customize AI\'s reply style</string>
+    <string name="premium_benefit_newfeature">Priority access to new features</string>
+
     <string name="premium_subscribe">Subscribe</string>
     <string name="privacy_policy">Privacy Policy</string>
     <string name="terms_of_use">Terms of Use</string>
