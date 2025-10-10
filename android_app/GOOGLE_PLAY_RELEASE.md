@@ -51,5 +51,4 @@
     - ![image](https://github.com/user-attachments/assets/9a3028f8-7881-4c55-8f03-0e25606724bd)
     - ![image](https://github.com/user-attachments/assets/76041017-8aa7-4d73-8732-c1cbd9df8b0f)
   - 上传完成后，如下所示，后续点击下一步即可，最后点击 Save and Publish
-    - ![image](https://github.com/user-attachments/assets/48e12f83-eaa2-418a-be90-630b8e14ebee)
-    - ![image](https://github.com/user-attachments/assets/4a74c6e2-83c7-429e-99a3-cbfdc6fd3963)
+    ![image](https://github.com/user-attachments/assets/4a74c6e2-83c7-429e-99a3-cbfdc6fd3963)
