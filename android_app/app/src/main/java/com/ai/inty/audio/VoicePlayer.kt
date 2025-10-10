@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -27,8 +26,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ai.inty.R
@@ -155,12 +156,14 @@ fun VoicePlayer(
                     PlaybackState.BUFFERING -> {
                         isLoading = true
                     }
+
                     PlaybackState.PLAYING,
                     PlaybackState.READY,
                     PlaybackState.ENDED,
                     PlaybackState.ERROR -> {
                         isLoading = false
                     }
+
                     else -> {
                         // 保持当前loading状态
                     }
@@ -429,7 +432,7 @@ private fun ChatVoicePlayer(
                 else -> {
                     Icon(
                         imageVector =
-                            if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                            if (isPlaying) ImageVector.vectorResource(R.drawable.ic_pause_voice) else Icons.Default.PlayArrow,
                         contentDescription = if (isPlaying) "Pause" else "Play",
                         tint = Color.White,
                         modifier = Modifier.size(16.dp),
