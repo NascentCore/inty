@@ -62,7 +62,9 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
     fun initialize(context: Context) {
         if (::billingClient.isInitialized) return
 
-        logDeviceInfo(context)
+        runCatching {
+            logDeviceInfo(context)
+        }.onFailure { it.printStackTrace() }
 
         // 预检查Google Play服务
         val hasGooglePlayServices = BillingUtils.isGooglePlayServicesAvailable(context)
@@ -81,14 +83,27 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
     /** 记录设备信息 */
     private fun logDeviceInfo(context: Context) {
         val locale = context.resources.configuration.locales[0]
-        val currency = java.util.Currency.getInstance(locale)
+
+        // 安全获取货币信息，避免使用无效的国家代码
+        val currencyInfo = try {
+            val country = locale.country
+            if (country.isNotEmpty()) {
+                val currency = java.util.Currency.getInstance(country)
+                "货币: ${currency.displayName} (${currency.currencyCode})"
+            } else {
+                "货币: 无法获取 (国家代码为空)"
+            }
+        } catch (e: IllegalArgumentException) {
+            "货币: 无法获取 (无效的国家代码: ${locale.country})"
+        }
         log(
-            "设备区域: ${locale.displayCountry} (${locale.country}), 货币: ${currency.displayName} (${currency.currencyCode})"
+            "设备区域: ${locale.displayCountry} (${locale.country}), $currencyInfo"
         )
         log(
             "设备信息: ${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}, Android ${android.os.Build.VERSION.RELEASE}"
         )
         log("是否模拟器: ${BillingUtils.isEmulator()}")
+
     }
 
     /** 处理Google Play服务不可用的情况 */

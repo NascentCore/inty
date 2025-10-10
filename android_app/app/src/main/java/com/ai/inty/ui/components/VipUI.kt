@@ -99,7 +99,7 @@ fun PremiumBenefitItem(text: String) {
         Spacer(Modifier.width(8.dp))
         Text(text = text, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Light)
     }
-    Spacer(Modifier.height(2.dp))
+    Spacer(Modifier.height(4.dp))
 }
 
 /** 订阅计划卡片组件 */
