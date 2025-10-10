@@ -36,6 +36,7 @@
 
 ## 手动构建 AAB 并上传到内测（Internal Testing）轨道
 
+- 打开 [IntelliMate 发布页面](https://play.google.com/console/u/0/developers/8311322450209629787/app/4972036709846537052/app-dashboard)
 - 检查最近一次 release version code
   - ![image](https://github.com/user-attachments/assets/96a4bc1c-a4d9-423a-b7a7-f8b17dd71393)
 - 更新 app/build.gradle.kts 内的 version code 到最近一次 release version code +1，如上图所示，应该将 version code 改为 349
