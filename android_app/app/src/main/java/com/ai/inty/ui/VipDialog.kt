@@ -66,7 +66,8 @@ private fun OpenChatDialog(
     ) {
         Box(
             modifier =
-                Modifier.fillMaxWidth()
+                Modifier
+                    .fillMaxWidth()
                     .heightIn(430.dp)
                     .padding(horizontal = 24.dp)
                     .clip(RoundedCornerShape(8.dp))
@@ -78,7 +79,9 @@ private fun OpenChatDialog(
                 modifier = Modifier.matchParentSize(),
             )
             Column(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 16.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 18.dp, vertical = 16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.SpaceBetween,
             ) {
@@ -106,7 +109,9 @@ private fun OpenChatDialog(
                     fontWeight = FontWeight.Normal,
                     color = Color(0x8CFFFFFF),
                     textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp),
                 )
 
                 Spacer(Modifier.height(40.dp))
@@ -163,55 +168,12 @@ private fun PreviewUnlimitChatDialog() {
 }
 
 @Composable
-internal fun AdvancedModelChatDialog(
-    dialogData: ChatDialogData,
-    onCancel: () -> Unit = {},
-    onSure: () -> Unit = {},
-    onMoreInfo: () -> Unit = {},
-) {
-    OpenChatDialog(false, dialogData, onCancel, onSure, onMoreInfo)
-}
-
-@Preview
-@Composable
-private fun PreviewAdvancedModelChatDialog() {
-    val data =
-        ChatDialogData(
-            R.drawable.img_advanced_model_dialog_bg,
-            stringResource(R.string.str_premium_mode_dialog_content),
-            stringResource(R.string.premium_tag_on_chat_page),
-        )
-    AdvancedModelChatDialog(data)
-}
-
-@Composable
-internal fun PremiumChatDialog(
-    dialogData: ChatDialogData,
-    onCancel: () -> Unit = {},
-    onSure: () -> Unit = {},
-    onMoreInfo: () -> Unit = {},
-) {
-    OpenChatDialog(false, dialogData, onCancel, onSure, onMoreInfo)
-}
-
-@Preview
-@Composable
-private fun PreviewPremiumChatDialog() {
-    val data =
-        ChatDialogData(
-            R.drawable.img_premium_dialog_bg,
-            stringResource(R.string.str_premium_chat_dialog_content),
-            stringResource(R.string.str_beeter_ai_responeses),
-        )
-    PremiumChatDialog(data)
-}
-
-@Composable
 internal fun HeartPrimaryButton(btnText: String, enable: Boolean = true, onClick: () -> Unit = {}) {
 
     Box(
         modifier =
-            Modifier.fillMaxWidth(.95f)
+            Modifier
+                .fillMaxWidth(.95f)
                 .height(50.dp)
                 .clip(RoundedCornerShape(25.dp))
                 .alpha(if (enable) 1f else .4f)
@@ -241,7 +203,10 @@ internal fun HeartPrimaryButton(btnText: String, enable: Boolean = true, onClick
 internal fun BePremiumDialog(onDismiss: () -> Unit = {}) {
     Dialog(onDismissRequest = onDismiss) {
         Column(
-            modifier = Modifier.fillMaxWidth().heightIn(min = 300.dp).padding(vertical = 20.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 300.dp)
+                .padding(vertical = 20.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
@@ -282,7 +247,9 @@ internal fun ExpiredVipDialog(
                 modifier = Modifier.matchParentSize(),
             )
             Column(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 16.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 18.dp, vertical = 16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Image(
@@ -359,7 +326,8 @@ internal fun ReplyStyleSheet(
     ) {
         Column(
             modifier =
-                Modifier.fillMaxWidth()
+                Modifier
+                    .fillMaxWidth()
                     .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
                     .background(
                         brush =
@@ -383,7 +351,8 @@ internal fun ReplyStyleSheet(
             )
             Spacer(Modifier.height(20.dp))
             HeartMultiLineEditor(
-                Modifier.fillMaxWidth()
+                Modifier
+                    .fillMaxWidth()
                     .height(168.dp)
                     .clip(RoundedCornerShape(8.dp))
                     .background(Color(0x1AFFFFFF)),

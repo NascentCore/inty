@@ -136,7 +136,7 @@ private fun SupportAndHelpSection(context: Context, onShowDeleteDialog: () -> Un
 
         // 举报
         SettingNavigationItem(
-            title = stringResource(R.string.report),
+            title = stringResource(R.string.str_report),
             onClick = { TheRouter.build(Constant.ROUTE_REPORT).navigation(context) },
         )
 

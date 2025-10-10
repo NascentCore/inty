@@ -10,8 +10,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -432,7 +430,7 @@ private fun ChatVoicePlayer(
                 else -> {
                     Icon(
                         imageVector =
-                            if (isPlaying) ImageVector.vectorResource(R.drawable.ic_pause_voice) else Icons.Default.PlayArrow,
+                            ImageVector.vectorResource(if (isPlaying) R.drawable.ic_pause_voice else R.drawable.ic_play_voice),
                         contentDescription = if (isPlaying) "Pause" else "Play",
                         tint = Color.White,
                         modifier = Modifier.size(16.dp),

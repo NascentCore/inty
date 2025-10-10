@@ -328,7 +328,7 @@ fun ChatSettingsDrawer(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Text(
-                                text = stringResource(R.string.report),
+                                text = stringResource(R.string.str_report),
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Normal,
                                 color = Color.White,

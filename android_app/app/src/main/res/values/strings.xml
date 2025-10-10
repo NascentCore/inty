@@ -12,49 +12,16 @@
 -->
 <resources>
     <string name="app_name">IntelliMate</string>
-    <string name="tab_message">Message</string>
-    <string name="tab_following">Following</string>
     <string name="ID">ID:%s</string>
     <string name="no_agent">Create your own characters now!</string>
     <string name="settings">Settings</string>
-    <string name="settings_keep_talking">Show Keep Talking Button</string>
-    <string name="settings_auto_play_audio">Auto-play Audio</string>
     <string name="settings_email_support">Email Support</string>
     <string name="settings_email_inty">IntelliMate@inty.cc</string>
     <string name="settings_about">Version</string>
     <string name="logout">Log out</string>
     <string name="crop_image">Crop Image</string>
-    <string name="sys_notify_title">System Notification</string>
-    <string name="creator">Creator:</string>
-    <string name="info">Info:</string>
     <string name="introduction">Introduction</string>
     <string name="opening">Opening</string>
-    <string name="creation_info">Creation Info</string>
-    <string name="inspiration">Inspiration</string>
-    <string name="create_time">Create time %s</string>
-    <string name="report">Report</string>
-    <string name="create_role">Create Role</string>
-    <string name="create_my_inty">Create My IntelliMate</string>
-    <string name="click_to_set_appearance">Click to Set\nAppearance</string>
-    <string name="sound">Sound</string>
-    <string name="inty">IntelliMate</string>
-    <string name="name_required">Name *</string>
-    <string name="name_placeholder">Name your IntelliMate</string>
-    <string name="gender_required">Gender (Unmodified after Creation) *</string>
-    <string name="male">Male</string>
-    <string name="female">Female</string>
-    <string name="non_binary">Non-Binary</string>
-    <string name="settings_required">Settings (Determines dialogue effect) *</string>
-    <string name="settings_placeholder">Enter character settings…</string>
-    <string name="intro_required">Intro (No impact on dialogue effect) *</string>
-    <string name="intro_placeholder">Enter character introduction…</string>
-    <string name="opening_required">Opening *</string>
-    <string name="opening_placeholder">Enter opening message…</string>
-    <string name="visibility_required">Visibility *</string>
-    <string name="public_visibility">Public</string>
-    <string name="private_visibility">Private</string>
-    <string name="inty_voice">IntelliMate Voice</string>
-    <string name="add_voice">Add Voice &gt;</string>
 
 
     <string name="login_successfully">Login successfully</string>
@@ -68,43 +35,24 @@
     <!-- Success messages -->
     <string name="character_updated_successfully">Updated</string>
     <string name="character_deleted_successfully">Deleted</string>
-    <string name="followed_successfully">Followed</string>
-    <string name="unfollowed_successfully">Unfollowed</string>
     <string name="saved_successfully">Saved</string>
 
     <!-- Error messages -->
-    <string name="follow_failed">Follow failed</string>
-    <string name="unfollow_failed">Unfollow failed</string>
     <string name="update_failed">Update failed</string>
     <string name="delete_failed">Delete failed</string>
     <string name="creation_failed">Creation failed</string>
-    <string name="generation_failed">Generation failed</string>
-    <string name="get_user_info_failed">Failed to get user information</string>
     <string name="user_avatar_size_too_large_with_size_format">File must be smaller than %s, got %s</string>
 
     <!-- Network error messages -->
-    <string name="network_timeout">Network timeout, please try again later</string>
-    <string name="network_connection_failed">Network connection failed, please check network</string>
-    <string name="data_format_error">Data format error, please try again later</string>
     <string name="unknown_error">Unknown error</string>
     <string name="check_network_connection">please check network connection</string>
     <string name="please_try_again_later">please try again later</string>
 
-    <!-- Loading messages -->
-    <string name="loading">Loading…</string>
-    <string name="loading_user_info">Loading user information…</string>
-
-    <!-- Content descriptions -->
-    <string name="unfollow">Unfollow</string>
 
     <!-- Error message formats -->
     <string name="update_failed_with_reason">Update failed: %s</string>
     <string name="delete_failed_with_reason">Delete failed: %s</string>
     <string name="creation_failed_with_reason">Creation failed: %s</string>
-    <string name="generation_failed_with_reason">Generation failed: %s</string>
-    <string name="follow_failed_with_reason">Follow failed: %s</string>
-    <string name="unfollow_failed_with_reason">Unfollow failed: %s</string>
-    <string name="get_user_info_failed_with_reason">Failed to get user information: %s</string>
 
     <!-- Generic error patterns -->
     <string name="operation_error_with_reason" formatted="false">%s error: %s</string>
@@ -128,22 +76,15 @@
     <string name="premium_subscribed">Subscribed</string>
     <string name="settings_subscription_management">Manage Subscription</string>
     <string name="settings_update_subscription">Upgrade to Premium</string>
-    <string name="subscribed">Subscribed</string>
     <string name="subscribe">Subscribe</string>
-    <string name="unsubscribed">Unsubscribed</string>
     <string name="restore_subscription">Restore</string>
-    <string name="redemption_code">Redemption Code</string>
     <string name="cancel_subscription">Cancel</string>
-    <string name="you_are_not_vip">You are not vip</string>
     <string name="premium_tag_on_chat_page">Upgrade to Premium</string>
 
     <string name="settings_str_delete_account">Delete My Account</string>
     <string name="url_user_agreement">https://app.termly.io/policy-viewer/policy.html?policyUUID=97416d63-aebb-4ea5-b990-eccc5aa6cff1</string>
     <string name="url_privacy_policy">https://app.termly.io/policy-viewer/policy.html?policyUUID=c82c3bfa-10a0-4075-a7f1-a98d5146d71c</string>
-    <string name="str_premium_mode_dialog_content">Advanced models can reply to you more intelligently, more humanely and more efficiently. Become a member and enjoy a better conversation experience!</string>
-    <string name="str_premium_chat_dialog_content">If you want AI to reply to you in a more vivid and human tone, please purchase a membership and enjoy a better experience!</string>
     <string name="str_expired_vip_dialog_content">Your Premium membership has expired and you will lose your benefits,Do you want to continue subscribing to a premium membership?</string>
-    <string name="str_beeter_ai_responeses">Customize better ai responses</string>
     <string name="str_unlimit_dialog_content">If you want to continue chatting, you need to purchase a membership, which provides unlimited chats and more features for a comfortable experience!</string>
     <string name="str_unlimit_btn_text">Unlimited Messages</string>
 
@@ -151,8 +92,6 @@
     <string name="welcome_to_intellimate">Welcome to IntelliMate</string>
     <string name="create_account_or_login">Create an account or log in to continue</string>
     <string name="continue_with_google">Continue with Google</string>
-    <string name="by_continuing_agree">By continuing, you agree to IntelliMate\'s</string>
-    <string name="and">&amp;</string>
     <string name="hello_wave">Hello 👋</string>
     <string name="tell_us_more">Tell us more for a better personalized experience</string>
     <string name="which_pronoun_use">Which pronoun do you use? *</string>
@@ -175,38 +114,19 @@
     <string name="preview_generated_avatar">Preview Generated Avatar</string>
     <string name="describe_desired_avatar">Describe your desired avatar *</string>
     <string name="avatar_creation_hint_full">e.g.: A cute anime girl with long hair, big eyes, wearing a white dress…</string>
-    <string name="use_this_avatar">Use This Avatar</string>
-    <string name="regen">Regen.</string>
 
     <!-- Character Creation -->
-    <string name="generate_avatar_title">Generate\nAvatar</string>
     <string name="face_edit">Crop</string>
-    <string name="gender_unmodified">Gender (Unmodified after Creation) *</string>
-    <string name="sound_required">Sound *</string>
-    <string name="inty_voice_option">Inty Voice</string>
-    <string name="greater_than">&gt;</string>
-    <string name="star">★</string>
-    <string name="visibility_required_title">Visibility *</string>
-    <string name="music_note">🎵</string>
 
     <!-- Report -->
-    <string name="npc_asterisk">NPC *</string>
     <string name="report_description">Report description</string>
-    <string name="please_fill_feedback">Please fill in the feedback content…</string>
-    <string name="character_count_format">%d/400</string>
-    <string name="image_evidence">Image evidence</string>
-    <string name="submit">Submit</string>
 
     <!-- Settings -->
-    <string name="please_enter_character">Please enter your character…</string>
     <string name="he_him">He/Him</string>
     <string name="she_her">She/Her</string>
     <string name="they_them">They/Them</string>
     <string name="save">Save</string>
     <string name="persona_placeholder">Your persona shows up here…</string>
-
-    <!-- System Messages -->
-    <string name="click_to_check">Click to check</string>
 
     <!-- Dialog Components -->
     <string name="are_you_sure">Are you sure?</string>
@@ -215,24 +135,15 @@
     <string name="cancel">Cancel</string>
     <string name="delete">Delete</string>
 
-    <!-- My Page -->
-    <string name="connectors">Connectors</string>
-    <string name="followers">Followers</string>
-    <string name="edit">Edit</string>
-    <string name="delete_character">Delete Character</string>
-    <string name="delete_character_confirm">Are you sure you want to delete "%s"? This action cannot be undone.</string>
 
     <!-- Subscription popup title -->
     <string name="premium_subscription_title">IntelliMate Premium</string>
     <string name="auto_renews_cancel">Auto-renew, cancel at any time</string>
-    <string name="more_information">More Information</string>
     <string name="subscription_consent">By subscribing you agree to our</string>
     <string name="subscription_description_placeholder">Will be charged at the next billing date</string>
     <string name="subscription_description_fmt_str">%s will be charged %s, cancel at any time</string>
 
     <!-- Chat -->
-    <string name="play_button">▶</string>
-    <string name="empty_parentheses">()</string>
     <string name="chat_settings_my_persona_title">My Persona</string>
     <string name="chat_settings_settings_title">Settings</string>
 
@@ -254,15 +165,12 @@
     <string name="toast_email_error">email error</string>
     <string name="toast_age_screen_not_eligible">You are not eligible to use IntelliMate</string>
     <string name="toast_age_screen_required_select_age">Please select your age group</string>
-    <string name="toast_check_terms_privacy">Please check Terms of Use &amp; Privacy Policy</string>
-    <string name="toast_error_message">%s</string>
     <string name="toast_cancel_subscription_first">Please cancel the subscription before proceeding</string>
     <string name="toast_check_account_deletion_error">Check Account Deletion Server Error !</string>
     <string name="toast_account_deletion_error">Account Deletion Server Error !</string>
 
     <!-- Content Descriptions -->
     <string name="content_desc_google_login">Google Login</string>
-    <string name="content_desc_vip_banner">vip banner</string>
     <string name="content_desc_generated_avatar">Generated Avatar</string>
     <string name="content_desc_generated_avatar_index">Generated Avatar %d</string>
     <string name="content_desc_swipe_guide">Swipe guide gesture</string>
@@ -274,7 +182,6 @@
     <string name="use_this_avatar_button">Use This Avatar</string>
     <string name="regen_button">Regen.</string>
     <string name="by_continuing_agree_full">By continuing, you agree to IntelliMate\'s</string>
-    <string name="and_symbol">&amp;</string>
     <string name="npc_asterisk_full">NPC *</string>
     <string name="please_fill_feedback_full">Please fill in the feedback content…</string>
     <string name="character_count_format_full">%d/400</string>
@@ -282,8 +189,7 @@
     <string name="submit_button">Submit</string>
     <string name="please_enter_character_full">Please enter your character…</string>
     <string name="character_count_format_my">%d/400</string>
-    <string name="click_to_check_full">Click to check</string>
-    <string name="report_button">Report</string>
+    <string name="str_report">Report</string>
     <string name="reply_style">Reply Style</string>
     <string name="cancel_button">Cancel</string>
     <string name="generate_avatar_title_full">Generate\nAvatar</string>
@@ -301,8 +207,6 @@
     <string name="more_information_full">More Information</string>
     <string name="play_button_symbol">▶</string>
     <string name="empty_parentheses_symbol">()</string>
-    <string name="connectors_full">Connectors</string>
-    <string name="followers_full">Followers</string>
     <string name="edit_button">Edit</string>
     <string name="delete_character_full">Delete Character</string>
     <string name="delete_character_confirm_full">Are you sure you want to delete "%s"? This action cannot be undone.</string>
@@ -329,7 +233,6 @@
     <string name="empty_explore_data">No characters available\nTry refreshing or check your connection</string>
     <string name="empty_explore_error">Failed to load characters\nCheck your connection and try again</string>
     <string name="retry_button">Retry</string>
-    <string name="refresh_button">Refresh</string>
 
     <!-- Bottom Navigation Tab Labels -->
     <string name="tab_home">Chats</string>

@@ -122,7 +122,7 @@ fun ReportScreen(
                     .copy(containerColor = Color(0XFF1C1523)),
             title = {
                 Text(
-                    text = stringResource(R.string.report),
+                    text = stringResource(R.string.str_report),
                     color = Color.White,
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 20.sp,
