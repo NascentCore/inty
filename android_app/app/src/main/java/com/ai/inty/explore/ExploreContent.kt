@@ -9,14 +9,15 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
-import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
-import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
-import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
@@ -55,9 +56,9 @@ fun ExploreContent(
     val vm: ExploreViewModel = viewModel()
 
     val gridState =
-        rememberLazyStaggeredGridState(
-            initialFirstVisibleItemIndex = vm.savedFirstVisibleIndex.value,
-            initialFirstVisibleItemScrollOffset = vm.savedFirstVisibleOffset.value,
+        rememberLazyGridState(
+            initialFirstVisibleItemIndex = vm.savedFirstVisibleIndex.collectAsState().value,
+            initialFirstVisibleItemScrollOffset = vm.savedFirstVisibleOffset.collectAsState().value,
         )
 
     // 检测用户是否主动滚动到底部触发加载更多
@@ -84,8 +85,8 @@ fun ExploreContent(
             // 首次进入时使用缓存数据，不应该显示加载更多loading
             if (
                 currentTime - lastScrollTime < 1000 &&
-                    lazyPagingItems.itemCount > 0 &&
-                    lazyPagingItems.loadState.refresh is LoadState.NotLoading
+                lazyPagingItems.itemCount > 0 &&
+                lazyPagingItems.loadState.refresh is LoadState.NotLoading
             ) {
                 showLoadMoreLoading = true
                 // 延迟隐藏loading
@@ -124,17 +125,17 @@ fun ExploreContent(
             modifier = modifier.fillMaxSize(),
         )
     } else {
-        LazyVerticalStaggeredGrid(
-            columns = StaggeredGridCells.Fixed(2),
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(2),
             modifier = modifier.padding(bottom = innerPadding.calculateBottomPadding()),
             state = gridState,
             contentPadding = PaddingValues(16.dp),
             horizontalArrangement = Arrangement.spacedBy(6.dp),
-            verticalItemSpacing = 8.dp,
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             // 如果没有Paging数据，显示加载状态
             if (lazyPagingItems == null) {
-                item(span = StaggeredGridItemSpan.FullLine) { EmptyStateIndicator() }
+                item(span = { GridItemSpan(maxLineSpan) }) { EmptyStateIndicator() }
             } else {
                 // 使用Paging的items
                 items(
@@ -159,7 +160,8 @@ fun ExploreContent(
                         // 显示加载占位符
                         ShimmerPlaceholder(
                             modifier =
-                                Modifier.fillMaxWidth()
+                                Modifier
+                                    .fillMaxWidth()
                                     .height(200.dp)
                                     .clip(RoundedCornerShape(8.dp))
                         )
@@ -167,7 +169,7 @@ fun ExploreContent(
                 }
 
                 // 加载状态指示器
-                item(span = StaggeredGridItemSpan.FullLine) {
+                item(span = { GridItemSpan(maxLineSpan) }) {
                     ExploreLoadingStates(lazyPagingItems, showLoadMoreLoading, isRefreshing)
                 }
             }
@@ -180,7 +182,11 @@ fun ExploreContent(
 /** 空状态指示器 */
 @Composable
 private fun EmptyStateIndicator() {
-    Box(modifier = Modifier.fillMaxSize().height(200.dp), contentAlignment = Alignment.Center) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .height(200.dp), contentAlignment = Alignment.Center
+    ) {
         CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White.copy(0.7f))
     }
 }
