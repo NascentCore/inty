@@ -833,13 +833,25 @@ export const AgentManagePage: React.FC = () => {
             </Space>
           </Col>
           <Col>
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => setCreateModalVisible(true)}
-            >
-              新建智能体
-            </Button>
+            <Space>
+              <div style={{
+                color: "#666",
+                fontSize: "14px",
+                padding: "4px 12px",
+                backgroundColor: "#f5f5f5",
+                borderRadius: "6px",
+                border: "1px solid #d9d9d9"
+              }}>
+                共 {localAgents.length} 个角色
+              </div>
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={() => setCreateModalVisible(true)}
+              >
+                新建智能体
+              </Button>
+            </Space>
           </Col>
         </Row>
       </Card>
