@@ -455,7 +455,7 @@ class MainViewModel : BaseActivityViewModel() {
         _userProfile.value = UserProfile()
         chatViewModel?.clearAllData()
 
-        // 清理统一启动管理器的数据
+        // 清理统一启动管理器的数据（清空正式用户的数据）
         UnifiedStartupManager.clearAllData()
 
         // 清理本地存储（这会切换到游客模式）
@@ -477,21 +477,25 @@ class MainViewModel : BaseActivityViewModel() {
             }
         }
 
-        // 切换到游客模式后，只加载本地数据，不进行网络请求
+        // 切换到游客模式后，重新加载数据
         loadGuestModeData()
         EasyLog.log("User logged out successfully - switched to guest mode")
     }
 
-    // 游客模式数据加载，不涉及需要认证的API调用
+    // 游客模式数据加载，游客用户仍然可以访问推荐数据
     private fun loadGuestModeData() {
         EasyLog.log("Loading guest mode data")
 
-        // 只加载不需要认证的数据
         viewModelScope.launch {
             try {
-                // 可以在这里加载一些公开的推荐数据等
-                // 但暂时保持简单，只更新UI状态
+                // 更新UI状态
                 _userProfile.value = UserProfile()
+                
+                // 游客用户仍然有有效的token，可以重新加载数据
+                // 重新加载agents数据（游客模式也应该有推荐数据）
+                UnifiedStartupManager.refreshRecommendedAgents()
+                UnifiedStartupManager.refreshChatAgents()
+                
                 EasyLog.log("Guest mode data loaded successfully")
             } catch (e: Exception) {
                 EasyLog.log("Failed to load guest mode data: ${e.message}", EasyLog.ERROR)

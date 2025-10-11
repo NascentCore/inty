@@ -11,6 +11,7 @@ import com.inty.utils.log.EasyLog
 import com.inty.utils.storage.IntySetting
 import com.therouter.TheRouter
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -66,14 +67,25 @@ class ExplorePagingSource(
                     }
                 }
 
-                // 检查用户账户是否已就绪，如果未就绪则返回空数据
+                // 检查用户账户是否已就绪，如果未就绪则等待或返回空数据
                 if (!UnifiedStartupManager.isUserAccountReady()) {
-                    EasyLog.log("ExplorePagingSource - 用户账户未就绪，返回空数据")
-                    return@withContext LoadResult.Page(
-                        data = emptyList(),
-                        prevKey = null,
-                        nextKey = null,
-                    )
+                    EasyLog.log("ExplorePagingSource - 用户账户未就绪，等待账户就绪")
+                    
+                    // 等待用户账户就绪，最多等待3秒
+                    var waitTime = 0
+                    while (!UnifiedStartupManager.isUserAccountReady() && waitTime < 3000) {
+                        delay(100)
+                        waitTime += 100
+                    }
+                    
+                    if (!UnifiedStartupManager.isUserAccountReady()) {
+                        EasyLog.log("ExplorePagingSource - 等待超时，返回空数据")
+                        return@withContext LoadResult.Page(
+                            data = emptyList(),
+                            prevKey = null,
+                            nextKey = null,
+                        )
+                    }
                 }
 
                 // 从网络加载数据
