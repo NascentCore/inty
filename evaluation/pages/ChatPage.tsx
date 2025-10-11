@@ -93,9 +93,9 @@ export const ChatPage: React.FC = () => {
     autoLoad: true,
   });
 
-  // 处理图片生成
-  const handleImageGenerated = useCallback((messageId: string, imageUrl: string) => {
-    setGeneratedImages(prev => new Map(prev.set(messageId, imageUrl)));
+  // 处理图片生成 - 使用消息内容作为键，因为消息ID会变化
+  const handleImageGenerated = useCallback((messageContent: string, imageUrl: string) => {
+    setGeneratedImages(prev => new Map(prev.set(messageContent, imageUrl)));
   }, []);
 
   // 重新发送和删除消息相关状态
@@ -1230,7 +1230,7 @@ export const ChatPage: React.FC = () => {
                                   <MessageToImageIcon
                                     messageContent={message.content}
                                     size="small"
-                                      onImageGenerated={(imageUrl) => handleImageGenerated(message.id, imageUrl)}
+                                    onImageGenerated={(imageUrl) => handleImageGenerated(message.content, imageUrl)}
                                   />
 
                                   {/* 只有历史消息才显示重新发送和删除按钮 */}
@@ -1290,7 +1290,7 @@ export const ChatPage: React.FC = () => {
                         </List.Item>
 
                           {/* 显示该消息生成的图片 */}
-                          {generatedImages.get(message.id) && (
+                          {generatedImages.get(message.content) && (
                             <div
                               style={{
                                 display: "flex",
@@ -1308,7 +1308,7 @@ export const ChatPage: React.FC = () => {
                                 }}
                               >
                                 <Image
-                                  src={generatedImages.get(message.id)!}
+                                  src={generatedImages.get(message.content)!}
                                   alt="Generated image"
                                   style={{
                                     width: "100%",
@@ -1316,8 +1316,8 @@ export const ChatPage: React.FC = () => {
                                     display: "block",
                                   }}
                                   placeholder={
-                                    <div style={{
-                                      textAlign: "center",
+                                    <div style={{ 
+                                      textAlign: "center", 
                                       padding: "40px",
                                       backgroundColor: "#f5f5f5",
                                       borderRadius: "8px"
