@@ -98,6 +98,12 @@ class ExplorePagingSource(
                         val validAgents = agents.filter { it.id.isNotEmpty() }
                         val hasMore = validAgents.isNotEmpty() && validAgents.size >= pageSize
 
+// 记录角色总数（仅在第一次拉取时）
+if (page == INITIAL_PAGE) {
+    val totalCount = result.data.total
+    EasyLog.log("ExplorePagingSource - 角色总数统计: ${totalCount}个")
+}
+
                         // 缓存第一页数据
                         if (page == INITIAL_PAGE && validAgents.isNotEmpty()) {
                             AgentCacheManager.cacheAgents(validAgents)

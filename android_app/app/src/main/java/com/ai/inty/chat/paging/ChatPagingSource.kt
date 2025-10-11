@@ -89,6 +89,12 @@ class ChatPagingSource(
                         val agents = result.data.list ?: emptyList()
                         val hasMore = agents.isNotEmpty() && agents.size >= pageSize
 
+                        // 记录角色总数（仅在第一次拉取时）
+                        if (page == INITIAL_PAGE) {
+                            val totalCount = result.data.total
+                            EasyLog.log("ChatPagingSource - 角色总数统计: ${totalCount}个")
+                        }
+
                         // 缓存第一页数据
                         if (page == INITIAL_PAGE && agents.isNotEmpty()) {
                             AgentCacheManager.cacheChatAgents(agents)
