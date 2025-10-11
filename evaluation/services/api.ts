@@ -890,19 +890,15 @@ export const imageApi = {
     enhance_prompt?: boolean;
     count?: number;
   }): Promise<{
-    success: boolean;
-    data?: {
-      urls: string[];
-      count: number;
-      format: string;
-      remaining_usage: {
-        used_count: number;
-        limit: number;
-      };
-      rai_filtered_count?: number;
-      rai_reasons?: string[];
+    urls: string[];
+    count: number;
+    format: string;
+    remaining_usage: {
+      used_count: number;
+      limit: number;
     };
-    message?: string;
+    rai_filtered_count?: number;
+    rai_reasons?: string[];
   }> => apiClient.post("/ai/agents/text-to-image", data),
 };
 

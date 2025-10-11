@@ -45,27 +45,23 @@ export const MessageToImageIcon: React.FC<MessageToImageIconProps> = ({
 
       // 使用 Promise.race 来实现超时控制
       const response = await Promise.race([apiPromise, timeoutPromise]) as {
-        success: boolean;
-        data?: {
-          urls: string[];
-          count: number;
-          format: string;
-          remaining_usage: {
-            used_count: number;
-            limit: number;
-          };
-          rai_filtered_count?: number;
-          rai_reasons?: string[];
+        urls: string[];
+        count: number;
+        format: string;
+        remaining_usage: {
+          used_count: number;
+          limit: number;
         };
-        message?: string;
+        rai_filtered_count?: number;
+        rai_reasons?: string[];
       };
 
-      if (response.success && response.data) {
-        setGeneratedImages(response.data.urls);
+      if (response && response.urls && response.urls.length > 0) {
+        setGeneratedImages(response.urls);
         setModalVisible(true);
         message.success("图片生成成功！");
       } else {
-        message.error(response.message || "图片生成失败");
+        message.error("图片生成失败：未返回有效图片");
       }
     } catch (error) {
       console.error("Image generation error:", error);
