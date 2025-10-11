@@ -1218,6 +1218,12 @@ export const ChatPage: React.FC = () => {
                                       />
                                     )}
 
+                                  {/* 图片生成按钮 - 对所有消息显示 */}
+                                  <MessageToImageIcon
+                                    messageContent={message.content}
+                                    size="small"
+                                  />
+
                                   {/* 只有历史消息才显示重新发送和删除按钮 */}
                                   {message.remoteId &&
                                     !message.remoteId.startsWith("user_") &&
@@ -1391,10 +1397,6 @@ export const ChatPage: React.FC = () => {
                           <Text type="secondary" style={{ fontSize: "12px" }}>
                             {new Date(message.timestamp).toLocaleString()}
                           </Text>
-                          <MessageToImageIcon
-                            messageContent={message.content}
-                            size="small"
-                          />
                         </Space>
                       }
                       description={

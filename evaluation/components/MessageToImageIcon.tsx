@@ -68,6 +68,12 @@ export const MessageToImageIcon: React.FC<MessageToImageIconProps> = ({
           disabled={disabled || loading}
           size={buttonSize}
           loading={loading}
+          style={{
+            color: "#666",
+            padding: "2px 4px",
+            height: "auto",
+            minWidth: "auto",
+          }}
         />
       </Tooltip>
 
