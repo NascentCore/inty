@@ -22,6 +22,7 @@ import {
   Col,
   Empty,
   message,
+  Image,
 } from "antd";
 import {
   SendOutlined,
@@ -41,6 +42,7 @@ import type { Agent } from "../types";
 import VoicePlayer from "../components/common/VoicePlayer";
 import { PremiumModeToggle } from "../components/common/PremiumModeToggle";
 import { AvatarDisplay } from "../components/common/AvatarDisplay";
+import { MessageToImageIcon } from "../components/MessageToImageIcon";
 
 const { Content } = Layout;
 const { Text, Paragraph } = Typography;
@@ -74,6 +76,7 @@ export const ChatPage: React.FC = () => {
   const [chatHistory, setChatHistory] = useState<ChatSession[]>([]);
   const [showHistory, setShowHistory] = useState(false);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [generatedImages, setGeneratedImages] = useState<Map<string, string>>(new Map());
 
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -89,6 +92,30 @@ export const ChatPage: React.FC = () => {
     type: "all", // 获取所有角色（包括公开和私有）
     autoLoad: true,
   });
+
+  // 从localStorage加载已生成的图片
+  useEffect(() => {
+    const savedImages = localStorage.getItem('generatedImages');
+    if (savedImages) {
+      try {
+        const parsedImages = JSON.parse(savedImages);
+        setGeneratedImages(new Map(Object.entries(parsedImages)));
+      } catch (error) {
+        console.error('Failed to parse saved images:', error);
+      }
+    }
+  }, []);
+
+  // 处理图片生成 - 使用消息内容作为键，因为消息ID会变化
+  const handleImageGenerated = useCallback((messageContent: string, imageUrl: string) => {
+    setGeneratedImages(prev => {
+      const newMap = new Map(prev.set(messageContent, imageUrl));
+      // 保存到localStorage
+      const imagesObj = Object.fromEntries(newMap);
+      localStorage.setItem('generatedImages', JSON.stringify(imagesObj));
+      return newMap;
+    });
+  }, []);
 
   // 重新发送和删除消息相关状态
   const [resending, setResending] = useState<string | null>(null);
@@ -1082,7 +1109,8 @@ export const ChatPage: React.FC = () => {
                     <List
                       dataSource={messages}
                       renderItem={(message) => (
-                        <List.Item
+                        <div>
+                          <List.Item
                           style={{
                             border: "none",
                             padding: "8px 0",
@@ -1137,18 +1165,6 @@ export const ChatPage: React.FC = () => {
                                     ? "1px solid #f0f0f0"
                                     : "none",
                               }}
-                              onMouseEnter={(e) => {
-                                const actions = e.currentTarget.querySelector(
-                                  ".message-actions",
-                                ) as HTMLElement;
-                                if (actions) actions.style.opacity = "1";
-                              }}
-                              onMouseLeave={(e) => {
-                                const actions = e.currentTarget.querySelector(
-                                  ".message-actions",
-                                ) as HTMLElement;
-                                if (actions) actions.style.opacity = "0";
-                              }}
                             >
                               <Paragraph
                                 style={{
@@ -1186,8 +1202,7 @@ export const ChatPage: React.FC = () => {
                                 <div
                                   className="message-actions"
                                   style={{
-                                    opacity: 0,
-                                    transition: "opacity 0.2s",
+                                    opacity: 1,
                                     display: "flex",
                                     gap: "4px",
                                     alignItems: "center",
@@ -1216,6 +1231,13 @@ export const ChatPage: React.FC = () => {
                                         }}
                                       />
                                     )}
+
+                                  {/* 图片生成按钮 - 对所有消息显示 */}
+                                  <MessageToImageIcon
+                                    messageContent={message.content}
+                                    size="small"
+                                    onImageGenerated={(imageUrl) => handleImageGenerated(message.content, imageUrl)}
+                                  />
 
                                   {/* 只有历史消息才显示重新发送和删除按钮 */}
                                   {message.remoteId &&
@@ -1272,9 +1294,52 @@ export const ChatPage: React.FC = () => {
                             </div>
                           </div>
                         </List.Item>
+
+                          {/* 显示该消息生成的图片 */}
+                          {generatedImages.get(message.content) && (
+                            <div
+                              style={{
+                                display: "flex",
+                                justifyContent: "center",
+                                margin: "8px 0",
+                                padding: "0 16px",
+                              }}
+                            >
+                              <div
+                                style={{
+                                  maxWidth: "400px",
+                                  borderRadius: "8px",
+                                  overflow: "hidden",
+                                  boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
+                                }}
+                              >
+                                <Image
+                                  src={generatedImages.get(message.content)!}
+                                  alt="Generated image"
+                                  style={{
+                                    width: "100%",
+                                    height: "auto",
+                                    display: "block",
+                                  }}
+                                  placeholder={
+                                    <div style={{ 
+                                      textAlign: "center", 
+                                      padding: "40px",
+                                      backgroundColor: "#f5f5f5",
+                                      borderRadius: "8px"
+                                    }}>
+                                      <Spin size="large" />
+                                    </div>
+                                  }
+                                />
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       )}
                     />
                   )}
+
                   <div ref={messagesEndRef} />
                 </div>
 

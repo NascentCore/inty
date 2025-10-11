@@ -1,0 +1,147 @@
+/**
+ * MessageToImageIcon component for generating images from message content
+ */
+
+import React, { useState } from "react";
+import { Button, Tooltip, Modal, Image, Spin, message } from "antd";
+import { PictureOutlined, LoadingOutlined } from "@ant-design/icons";
+import { imageApi } from "../services/api";
+
+interface MessageToImageIconProps {
+  messageContent: string;
+  disabled?: boolean;
+  size?: "small" | "middle" | "large";
+  onImageGenerated?: (imageUrl: string) => void;
+}
+
+export const MessageToImageIcon: React.FC<MessageToImageIconProps> = ({
+  messageContent,
+  disabled = false,
+  size = "middle",
+  onImageGenerated,
+}) => {
+  const [loading, setLoading] = useState(false);
+  const [generatedImages, setGeneratedImages] = useState<string[]>([]);
+  const [modalVisible, setModalVisible] = useState(false);
+
+  const handleGenerateImage = async () => {
+    if (!messageContent.trim()) {
+      message.warning("消息内容为空，无法生成图片");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // 创建带超时的 Promise
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => {
+          reject(new Error("图片生成超时，请稍后重试"));
+        }, 20000); // 20秒超时
+      });
+
+      const apiPromise = imageApi.textToImage({
+        prompt: messageContent,
+        enhance_prompt: false, // Don't enhance for message content
+        count: 1, // Generate only 1 image
+      });
+
+      // 使用 Promise.race 来实现超时控制
+      const response = await Promise.race([apiPromise, timeoutPromise]) as {
+        urls: string[];
+        count: number;
+        format: string;
+        remaining_usage: {
+          used_count: number;
+          limit: number;
+        };
+        rai_filtered_count?: number;
+        rai_reasons?: string[];
+      };
+
+      if (response && response.urls && response.urls.length > 0) {
+        const imageUrl = response.urls[0]; // 取第一张图片
+        if (onImageGenerated) {
+          // 如果提供了回调函数，调用它来在聊天窗口中显示图片
+          onImageGenerated(imageUrl);
+          message.success("图片生成成功！");
+        } else {
+        // 否则使用模态框显示（向后兼容）
+          setGeneratedImages(response.urls);
+          setModalVisible(true);
+          message.success("图片生成成功！");
+        }
+      } else {
+        message.error("图片生成失败：未返回有效图片");
+      }
+    } catch (error) {
+      console.error("Image generation error:", error);
+      const errorMessage = error instanceof Error ? error.message : "图片生成失败，请稍后重试";
+      message.error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleModalClose = () => {
+    setModalVisible(false);
+    setGeneratedImages([]);
+  };
+
+  const buttonSize = size === "small" ? "small" : size === "large" ? "large" : "middle";
+
+  return (
+    <>
+      <Tooltip title="根据消息内容生成图片">
+        <Button
+          type="text"
+          icon={loading ? <LoadingOutlined /> : <PictureOutlined />}
+          onClick={handleGenerateImage}
+          disabled={disabled || loading}
+          size={buttonSize}
+          loading={loading}
+          style={{
+            color: "#666",
+            padding: "2px 4px",
+            height: "auto",
+            minWidth: "auto",
+          }}
+        />
+      </Tooltip>
+
+      <Modal
+        title="生成的图片"
+        open={modalVisible}
+        onCancel={handleModalClose}
+        footer={null}
+        width={600}
+        centered
+      >
+        <div style={{ textAlign: "center" }}>
+          {generatedImages.length > 0 ? (
+            <div>
+              {generatedImages.map((url, index) => (
+                <div key={index} style={{ marginBottom: 16 }}>
+                  <Image
+                    src={url}
+                    alt={`Generated image ${index + 1}`}
+                    style={{ maxWidth: "100%", maxHeight: "400px" }}
+                    placeholder={
+                      <div style={{ textAlign: "center", padding: "50px" }}>
+                        <Spin size="large" />
+                      </div>
+                    }
+                  />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{ padding: "50px" }}>
+              <Spin size="large" />
+              <div style={{ marginTop: 16 }}>正在生成图片...</div>
+            </div>
+          )}
+        </div>
+      </Modal>
+    </>
+  );
+};

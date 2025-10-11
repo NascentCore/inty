@@ -879,6 +879,30 @@ export const userApi = {
 };
 
 // =============================================================================
+// 图片生成API
+// =============================================================================
+
+export const imageApi = {
+  // 文本生成图片 - 使用与 Inty SDK 相同的认证方式
+  textToImage: (data: {
+    prompt: string;
+    negative_prompt?: string;
+    enhance_prompt?: boolean;
+    count?: number;
+  }): Promise<{
+    urls: string[];
+    count: number;
+    format: string;
+    remaining_usage: {
+      used_count: number;
+      limit: number;
+    };
+    rai_filtered_count?: number;
+    rai_reasons?: string[];
+  }> => apiClient.post("/ai/agents/text-to-image", data),
+};
+
+// =============================================================================
 // 导出默认API实例
 // =============================================================================
 
@@ -892,6 +916,7 @@ export default {
   chat: chatApi,
   users: userApi,
   voices: voiceApi,
+  images: imageApi,
   inty: intyClient,
   WebSocketManager,
   // 获取 Inty 客户端的函数，确保只有在有 API Key 时才返回客户端
