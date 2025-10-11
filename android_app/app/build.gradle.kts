@@ -79,8 +79,6 @@ dependencies {
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.activity.ktx)
     implementation(libs.androidx.paging.compose)
-    implementation(libs.androidx.core.splashscreen)
-    // constraintlayout-compose is included in compose-ui-bundle
 
     // ===== 路由 =====
     implementation(libs.router)
