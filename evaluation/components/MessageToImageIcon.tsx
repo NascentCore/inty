@@ -30,11 +30,35 @@ export const MessageToImageIcon: React.FC<MessageToImageIconProps> = ({
 
     setLoading(true);
     try {
-      const response = await imageApi.textToImage({
+      // 创建带超时的 Promise
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => {
+          reject(new Error("图片生成超时，请稍后重试"));
+        }, 20000); // 20秒超时
+      });
+
+      const apiPromise = imageApi.textToImage({
         prompt: messageContent,
         enhance_prompt: false, // Don't enhance for message content
         count: 1, // Generate only 1 image
       });
+
+      // 使用 Promise.race 来实现超时控制
+      const response = await Promise.race([apiPromise, timeoutPromise]) as {
+        success: boolean;
+        data?: {
+          urls: string[];
+          count: number;
+          format: string;
+          remaining_usage: {
+            used_count: number;
+            limit: number;
+          };
+          rai_filtered_count?: number;
+          rai_reasons?: string[];
+        };
+        message?: string;
+      };
 
       if (response.success && response.data) {
         setGeneratedImages(response.data.urls);
@@ -45,7 +69,8 @@ export const MessageToImageIcon: React.FC<MessageToImageIconProps> = ({
       }
     } catch (error) {
       console.error("Image generation error:", error);
-      message.error("图片生成失败，请稍后重试");
+      const errorMessage = error instanceof Error ? error.message : "图片生成失败，请稍后重试";
+      message.error(errorMessage);
     } finally {
       setLoading(false);
     }
