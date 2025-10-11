@@ -95,14 +95,14 @@
                 ]
             }
         },
-        "/api/v1/users/me": {
+        "/api/v1/users/profile": {
             "get": {
                 "tags": [
                     "users"
                 ],
-                "summary": "Get Me",
+                "summary": "Get Profile",
                 "description": "Get current user profile.",
-                "operationId": "get_me_api_v1_users_me_get",
+                "operationId": "get_profile_api_v1_users_profile_get",
                 "responses": {
                     "200": {
                         "description": "Successful Response",
@@ -120,9 +120,7 @@
                         "Bearer": []
                     }
                 ]
-            }
-        },
-        "/api/v1/users/profile": {
+            },
             "put": {
                 "tags": [
                     "users"
@@ -157,6 +155,33 @@
                             "application/json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/users/me": {
+            "get": {
+                "tags": [
+                    "users"
+                ],
+                "summary": "Get Me",
+                "description": "Get current user profile.",
+                "operationId": "get_me_api_v1_users_me_get",
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/APIResponse_User_"
                                 }
                             }
                         }
@@ -1013,54 +1038,6 @@
                         }
                     }
                 }
-            }
-        },
-        "/api/v1/ai/agents/text-to-image": {
-            "post": {
-                "tags": [
-                    "agents",
-                    "characters"
-                ],
-                "summary": "Generate images based on text description",
-                "description": "Generate background images based on prompt, save directly to GCS, return image URLs",
-                "operationId": "generate_background_api_v1_ai_agents_text_to_image_post",
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/TextToImageRequest"
-                            }
-                        }
-                    },
-                    "required": true
-                },
-                "responses": {
-                    "200": {
-                        "description": "Successful Response",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/APIResponse_dict_"
-                                }
-                            }
-                        }
-                    },
-                    "422": {
-                        "description": "Validation Error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/HTTPValidationError"
-                                }
-                            }
-                        }
-                    }
-                },
-                "security": [
-                    {
-                        "Bearer": []
-                    }
-                ]
             }
         },
         "/api/v1/chats/": {
@@ -4232,17 +4209,6 @@
                         ],
                         "title": "Agent Avatar"
                     },
-                    "agent_background": {
-                        "anyOf": [
-                            {
-                                "type": "string"
-                            },
-                            {
-                                "type": "null"
-                            }
-                        ],
-                        "title": "Agent Background"
-                    },
                     "agent_is_deleted": {
                         "anyOf": [
                             {
@@ -5995,71 +5961,6 @@
                     "AGENT"
                 ],
                 "title": "TargetType"
-            },
-            "TextToImageRequest": {
-                "properties": {
-                    "prompt": {
-                        "type": "string",
-                        "title": "Prompt",
-                        "description": "Text description of the image, typically a list of comma separated keywords/tags/properties"
-                    },
-                    "negative_prompt": {
-                        "anyOf": [
-                            {
-                                "type": "string"
-                            },
-                            {
-                                "type": "null"
-                            }
-                        ],
-                        "title": "Negative Prompt",
-                        "description": "Negative prompt to avoid generating images with certain features, e.g. 'blurry, low quality, explicit, NSFW'"
-                    },
-                    "enhance_prompt": {
-                        "anyOf": [
-                            {
-                                "type": "boolean"
-                            },
-                            {
-                                "type": "null"
-                            }
-                        ],
-                        "title": "Enhance Prompt",
-                        "description": "Whether to enhance the prompt to improve the quality of the image. The default is True for backward comaptibility. This enhancement is different than the underlying imagen API's own enhancement. This parameter is also required to allow this api to be used as a text-to-image wrapper. As a wrapper, we'll not want to apply enhancement to the prompt. ",
-                        "default": true
-                    },
-                    "count": {
-                        "type": "integer",
-                        "maximum": 4.0,
-                        "minimum": 1.0,
-                        "title": "Count",
-                        "description": "Number of images to generate",
-                        "default": 4
-                    },
-                    "request_id": {
-                        "anyOf": [
-                            {
-                                "type": "string"
-                            },
-                            {
-                                "type": "null"
-                            }
-                        ],
-                        "title": "Request Id"
-                    }
-                },
-                "type": "object",
-                "required": [
-                    "prompt"
-                ],
-                "title": "TextToImageRequest",
-                "description": "Text to image request",
-                "example": {
-                    "count": 2,
-                    "enhance_prompt": true,
-                    "negative_prompt": "blurry, low quality, explicit, NSFW",
-                    "prompt": "A beautiful mountain landscape with sunset"
-                }
             },
             "UsageStatisticsResponse": {
                 "properties": {
