@@ -391,7 +391,9 @@ def process_generated_images(generated_images: List[ImagenGeneratedImage]) -> di
 @router.post(
     "/text-to-image",
     response_model=APIResponse[dict],
-    summary="Generate images based on text description",
+    summary="[Deprecated, use /api/v1/images/text-to-image instead] Generate images based on text description",
+    deprecated=True,
+    include_in_schema=False,
 )
 async def generate_background(
     request: schemas.TextToImageRequest,
