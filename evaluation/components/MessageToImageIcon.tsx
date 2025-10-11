@@ -11,12 +11,14 @@ interface MessageToImageIconProps {
   messageContent: string;
   disabled?: boolean;
   size?: "small" | "middle" | "large";
+  onImageGenerated?: (imageUrl: string) => void;
 }
 
 export const MessageToImageIcon: React.FC<MessageToImageIconProps> = ({
   messageContent,
   disabled = false,
   size = "middle",
+  onImageGenerated,
 }) => {
   const [loading, setLoading] = useState(false);
   const [generatedImages, setGeneratedImages] = useState<string[]>([]);
@@ -57,9 +59,17 @@ export const MessageToImageIcon: React.FC<MessageToImageIconProps> = ({
       };
 
       if (response && response.urls && response.urls.length > 0) {
-        setGeneratedImages(response.urls);
-        setModalVisible(true);
-        message.success("图片生成成功！");
+        const imageUrl = response.urls[0]; // 取第一张图片
+        if (onImageGenerated) {
+          // 如果提供了回调函数，调用它来在聊天窗口中显示图片
+          onImageGenerated(imageUrl);
+          message.success("图片生成成功！");
+        } else {
+        // 否则使用模态框显示（向后兼容）
+          setGeneratedImages(response.urls);
+          setModalVisible(true);
+          message.success("图片生成成功！");
+        }
       } else {
         message.error("图片生成失败：未返回有效图片");
       }
