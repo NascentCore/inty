@@ -96,6 +96,7 @@ data class ConversationItem(
     @Json(name = "agent_id") val agentId: String = "",
     @Json(name = "agent_name") val agentName: String = "",
     @Json(name = "agent_avatar") val agentAvatar: String = "",
+    @Json(name = "agent_background") val agentBackground: String = "",
     @Json(name = "created_at") val createdAt: String = "",
     val id: String = "",
     @Json(name = "last_message") val lastMessage: String = "",
@@ -111,7 +112,12 @@ data class ConversationItem(
     }
 
     fun convertToAgentInfo(): AgentInfo {
-        return AgentInfo(avatar = agentAvatar, id = agentId, name = agentName).also { info ->
+        return AgentInfo(
+            avatar = agentAvatar,
+            background = agentBackground,
+            id = agentId,
+            name = agentName
+        ).also { info ->
             info.isDeleted = this.isDeleted
         }
     }
