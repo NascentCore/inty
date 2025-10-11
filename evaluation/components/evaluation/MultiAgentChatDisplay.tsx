@@ -30,6 +30,7 @@ import {
   EyeOutlined,
 } from "@ant-design/icons";
 import type { EvaluationSession, EvaluationResult } from "../../types";
+import { MessageToImageIcon } from "../MessageToImageIcon";
 
 const { Text, Paragraph } = Typography;
 const {} = Collapse;
@@ -433,9 +434,17 @@ export const MultiAgentChatDisplay: React.FC<MultiAgentChatDisplayProps> = ({
 
                 <div>
                   {result.is_success ? (
-                    <Paragraph style={{ margin: 0, whiteSpace: "pre-wrap" }}>
-                      {result.agent_response || "等待回答..."}
-                    </Paragraph>
+                    <div>
+                      <Paragraph style={{ margin: 0, whiteSpace: "pre-wrap" }}>
+                        {result.agent_response || "等待回答..."}
+                      </Paragraph>
+                      <div style={{ marginTop: 8, textAlign: "right" }}>
+                        <MessageToImageIcon
+                          messageContent={result.agent_response || ""}
+                          size="small"
+                        />
+                      </div>
+                    </div>
                   ) : (
                     <Text type="danger">
                       {result.error_message ||

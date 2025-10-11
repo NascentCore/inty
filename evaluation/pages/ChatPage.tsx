@@ -41,6 +41,7 @@ import type { Agent } from "../types";
 import VoicePlayer from "../components/common/VoicePlayer";
 import { PremiumModeToggle } from "../components/common/PremiumModeToggle";
 import { AvatarDisplay } from "../components/common/AvatarDisplay";
+import { MessageToImageIcon } from "../components/MessageToImageIcon";
 
 const { Content } = Layout;
 const { Text, Paragraph } = Typography;
@@ -1390,6 +1391,10 @@ export const ChatPage: React.FC = () => {
                           <Text type="secondary" style={{ fontSize: "12px" }}>
                             {new Date(message.timestamp).toLocaleString()}
                           </Text>
+                          <MessageToImageIcon
+                            messageContent={message.content}
+                            size="small"
+                          />
                         </Space>
                       }
                       description={
