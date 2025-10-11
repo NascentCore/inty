@@ -93,9 +93,28 @@ export const ChatPage: React.FC = () => {
     autoLoad: true,
   });
 
+  // 从localStorage加载已生成的图片
+  useEffect(() => {
+    const savedImages = localStorage.getItem('generatedImages');
+    if (savedImages) {
+      try {
+        const parsedImages = JSON.parse(savedImages);
+        setGeneratedImages(new Map(Object.entries(parsedImages)));
+      } catch (error) {
+        console.error('Failed to parse saved images:', error);
+      }
+    }
+  }, []);
+
   // 处理图片生成 - 使用消息内容作为键，因为消息ID会变化
   const handleImageGenerated = useCallback((messageContent: string, imageUrl: string) => {
-    setGeneratedImages(prev => new Map(prev.set(messageContent, imageUrl)));
+    setGeneratedImages(prev => {
+      const newMap = new Map(prev.set(messageContent, imageUrl));
+      // 保存到localStorage
+      const imagesObj = Object.fromEntries(newMap);
+      localStorage.setItem('generatedImages', JSON.stringify(imagesObj));
+      return newMap;
+    });
   }, []);
 
   // 重新发送和删除消息相关状态
