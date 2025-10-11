@@ -97,26 +97,36 @@ class MainActivity : BaseActivity() {
 
             EasyLog.log("MainActivity - 启动管理器初始化完成，开始加载用户数据")
 
-            // 确保用户已登录后再加载需要认证的数据
+            // 检查用户登录状态（包括游客用户）
             if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
-                EasyLog.log("MainActivity - 用户已登录，开始加载业务数据")
+                EasyLog.log("MainActivity - 用户已登录（包括游客用户），开始加载业务数据")
 
                 // 加载业务数据（包括版本检查等）
                 mainViewModel.loadBusinessData()
 
-                // Load user created agents
-                mainViewModel.getUserCreatedAgents()
+                // 异步加载explore agents（不阻塞启动）
+                UnifiedStartupManager.loadExploreAgentsAsync()
 
-                // 初始化 BillingRepository（在用户登录后）
-                delay(500) // 给登录流程一些时间
-                BillingRepository.initialize(this@MainActivity)
+                // 只有正式用户才加载需要认证的数据
+                if (!IntySetting.isGuestUser()) {
+                    EasyLog.log("MainActivity - 正式用户，加载需要认证的数据")
+                    
+                    // Load user created agents
+                    mainViewModel.getUserCreatedAgents()
 
-                // BillingRepository初始化完成后，再调用updatePlans
-                delay(500) // 给BillingRepository一些初始化时间
-                mainViewModel.updatePlans()
+                    // 初始化 BillingRepository（在用户登录后）
+                    delay(500) // 给登录流程一些时间
+                    BillingRepository.initialize(this@MainActivity)
 
-                // 启动订阅状态监控
-                BillingRepository.startEnhancedSubscriptionMonitoring()
+                    // BillingRepository初始化完成后，再调用updatePlans
+                    delay(500) // 给BillingRepository一些初始化时间
+                    mainViewModel.updatePlans()
+
+                    // 启动订阅状态监控
+                    BillingRepository.startEnhancedSubscriptionMonitoring()
+                } else {
+                    EasyLog.log("MainActivity - 游客用户，跳过需要认证的数据加载")
+                }
             } else {
                 EasyLog.log("MainActivity - 用户未登录，跳过需要认证的数据加载", EasyLog.WARN)
             }
@@ -309,7 +319,7 @@ private suspend fun waitForInitializationComplete(onComplete: () -> Unit) {
 
         // 等待启动管理器完成必要初始化
         var waitTime = 0L
-        val maxWaitTime = 5000L // 最多等待5秒，避免无限等待
+        val maxWaitTime = 8000L // 增加等待时间到8秒，确保数据加载完成
 
         while (
             UnifiedStartupManager.startupState.value ==
@@ -323,6 +333,27 @@ private suspend fun waitForInitializationComplete(onComplete: () -> Unit) {
             EasyLog.log("SplashUI - 等待超时，强制进入主界面", EasyLog.WARN)
         } else {
             EasyLog.log("SplashUI - 启动管理器初始化完成")
+        }
+
+        // 等待关键数据加载完成（只等待chat agents）
+        EasyLog.log("SplashUI - 等待关键数据chat agents加载完成")
+        var dataWaitTime = 0L
+        val maxDataWaitTime = 5000L // 最多等待5秒数据加载
+        
+        while (dataWaitTime < maxDataWaitTime) {
+            val hasChatData = UnifiedStartupManager.getCurrentChatAgents().isNotEmpty()
+            
+            if (hasChatData) {
+                EasyLog.log("SplashUI - 关键数据chat agents加载完成: ${UnifiedStartupManager.getCurrentChatAgents().size}个")
+                break
+            }
+            
+            delay(100) // 100ms检查一次
+            dataWaitTime += 100
+        }
+        
+        if (dataWaitTime >= maxDataWaitTime) {
+            EasyLog.log("SplashUI - chat agents数据加载超时，但继续进入主界面", EasyLog.WARN)
         }
 
         // 标记初始化完成
