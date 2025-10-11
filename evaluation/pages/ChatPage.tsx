@@ -1146,18 +1146,6 @@ export const ChatPage: React.FC = () => {
                                     ? "1px solid #f0f0f0"
                                     : "none",
                               }}
-                              onMouseEnter={(e) => {
-                                const actions = e.currentTarget.querySelector(
-                                  ".message-actions",
-                                ) as HTMLElement;
-                                if (actions) actions.style.opacity = "1";
-                              }}
-                              onMouseLeave={(e) => {
-                                const actions = e.currentTarget.querySelector(
-                                  ".message-actions",
-                                ) as HTMLElement;
-                                if (actions) actions.style.opacity = "0";
-                              }}
                             >
                               <Paragraph
                                 style={{
@@ -1195,8 +1183,7 @@ export const ChatPage: React.FC = () => {
                                 <div
                                   className="message-actions"
                                   style={{
-                                    opacity: 0,
-                                    transition: "opacity 0.2s",
+                                    opacity: 1,
                                     display: "flex",
                                     gap: "4px",
                                     alignItems: "center",
