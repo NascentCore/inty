@@ -316,7 +316,7 @@ internal fun ReplyStyleSheet(
     onDismiss: () -> Unit,
     onSave: (String) -> Unit,
 ) {
-    var replyStr by remember { mutableStateOf(inputStr) }
+    var replyStr by remember(inputStr) { mutableStateOf(inputStr) }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
