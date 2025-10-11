@@ -64,9 +64,9 @@ class ChatPagingSource(
                 if (!UnifiedStartupManager.isUserAccountReady()) {
                     EasyLog.log("ChatPagingSource - 用户账户未就绪，等待账户就绪")
                     
-                    // 等待用户账户就绪，最多等待3秒
+                    // 等待用户账户就绪，最多等待5秒
                     var waitTime = 0
-                    while (!UnifiedStartupManager.isUserAccountReady() && waitTime < 3000) {
+                    while (!UnifiedStartupManager.isUserAccountReady() && waitTime < 5000) {
                         delay(100)
                         waitTime += 100
                     }

@@ -140,10 +140,23 @@ object UnifiedStartupManager {
                 // 优先加载缓存数据（非阻塞）
                 loadCacheDataNonBlocking()
 
-                // 如果已登录，立即同步recommend agents和chat agents
+                // 确保用户账户已就绪且有有效token后，才加载关键数据
                 if (isUserLoggedIn()) {
-                    syncRecommendedAgents()
+                    // 优先加载chat agents（关键数据），阻塞等待完成
                     syncChatAgents()
+                    EasyLog.log("UnifiedStartupManager - 关键数据chat agents加载完成")
+                    
+                    // 异步加载explore agents（非关键数据），不阻塞启动
+                    startupScope.launch {
+                        try {
+                            syncRecommendedAgents()
+                            EasyLog.log("UnifiedStartupManager - 异步数据explore agents加载完成")
+                        } catch (e: Exception) {
+                            EasyLog.log("UnifiedStartupManager - 异步加载explore agents失败: ${e.message}", EasyLog.ERROR)
+                        }
+                    }
+                } else {
+                    EasyLog.log("UnifiedStartupManager - 用户未登录或token无效，跳过数据加载", EasyLog.WARN)
                 }
 
                 EasyLog.log("UnifiedStartupManager - 关键数据加载完成")
@@ -474,12 +487,41 @@ object UnifiedStartupManager {
 
     /** 手动刷新推荐agents */
     fun refreshRecommendedAgents() {
-        startupScope.launch { syncRecommendedAgents() }
+        startupScope.launch {
+            try {
+                EasyLog.log("UnifiedStartupManager - 开始刷新recommended agents")
+                syncRecommendedAgents()
+                EasyLog.log("UnifiedStartupManager - recommended agents刷新完成")
+            } catch (e: Exception) {
+                EasyLog.log("UnifiedStartupManager - recommended agents刷新失败: ${e.message}", EasyLog.ERROR)
+            }
+        }
+    }
+
+    /** 异步加载explore agents（不阻塞启动） */
+    fun loadExploreAgentsAsync() {
+        startupScope.launch {
+            try {
+                EasyLog.log("UnifiedStartupManager - 开始异步加载explore agents")
+                syncRecommendedAgents()
+                EasyLog.log("UnifiedStartupManager - explore agents异步加载完成")
+            } catch (e: Exception) {
+                EasyLog.log("UnifiedStartupManager - explore agents异步加载失败: ${e.message}", EasyLog.ERROR)
+            }
+        }
     }
 
     /** 手动刷新聊天agents */
     fun refreshChatAgents() {
-        startupScope.launch { syncChatAgents() }
+        startupScope.launch { 
+            try {
+                EasyLog.log("UnifiedStartupManager - 开始刷新chat agents")
+                syncChatAgents()
+                EasyLog.log("UnifiedStartupManager - chat agents刷新完成")
+            } catch (e: Exception) {
+                EasyLog.log("UnifiedStartupManager - chat agents刷新失败: ${e.message}", EasyLog.ERROR)
+            }
+        }
     }
 
     /** 手动刷新用户信息 */
@@ -503,5 +545,11 @@ object UnifiedStartupManager {
         _startupState.value = StartupState.Initializing
         _currentPhase.value = StartupPhase.Initializing
         EasyLog.log("UnifiedStartupManager - 清理所有启动数据")
+    }
+
+    /** 标记用户账户已就绪（用于logout后恢复状态） */
+    fun markUserAccountReady() {
+        _userAccountReady.value = true
+        EasyLog.log("UnifiedStartupManager - 标记用户账户已就绪")
     }
 }
