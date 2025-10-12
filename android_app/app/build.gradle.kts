@@ -29,6 +29,8 @@ android {
 
     defaultConfig {
         applicationId = "com.ai.intellimate"
+        // Enable MultiDex to handle large number of methods
+        multiDexEnabled = true
         // Google OAuth client ID
         // TODO: This is the same now for debug and release builds for convenience.
         // Create a new client ID for debug build, but keep the production one for backward
@@ -79,6 +81,8 @@ dependencies {
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.activity.ktx)
     implementation(libs.androidx.paging.compose)
+    // MultiDex support for large apps
+    implementation("androidx.multidex:multidex:2.0.1")
 
     // ===== 路由 =====
     implementation(libs.router)
