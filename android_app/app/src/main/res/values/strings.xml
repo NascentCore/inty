@@ -63,11 +63,13 @@
     <string name="edge_swipe_exit_hint">Swipe again to exit</string>
 
     <string name="premium_title">IntelliMate Premium</string>
-    <string name="premium_subtitle">Experience your imagination!</string>
+    <string name="premium_subtitle">Experience your imagination without limits!</string>
 
-    <string name="premium_benefit_unlimited">Unlimited text and voice messages</string>
-    <string name="premium_benefit_model">Premium AI models</string>
-    <string name="premium_benefit_customize">Customize AI\'s reply style</string>
+    <string name="premium_benefit_unlimited_chat">Unlimited chat</string>
+    <string name="premium_benefit_higher_other_limits">Higher image speech synthesis limits</string>
+    <string name="premium_benefit_model">Empathetic AI</string>
+    <string name="premium_benefit_chat_style">Customizable chat style</string>
+    
     <string name="premium_benefit_newfeature">Priority access to new features</string>
 
     <string name="premium_subscribe">Subscribe</string>
