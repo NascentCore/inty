@@ -145,14 +145,17 @@ object UnifiedStartupManager {
                     // 优先加载chat agents（关键数据），阻塞等待完成
                     syncChatAgents()
                     EasyLog.log("UnifiedStartupManager - 关键数据chat agents加载完成")
-                    
+
                     // 异步加载explore agents（非关键数据），不阻塞启动
                     startupScope.launch {
                         try {
                             syncRecommendedAgents()
                             EasyLog.log("UnifiedStartupManager - 异步数据explore agents加载完成")
                         } catch (e: Exception) {
-                            EasyLog.log("UnifiedStartupManager - 异步加载explore agents失败: ${e.message}", EasyLog.ERROR)
+                            EasyLog.log(
+                                "UnifiedStartupManager - 异步加载explore agents失败: ${e.message}",
+                                EasyLog.ERROR,
+                            )
                         }
                     }
                 } else {
@@ -493,7 +496,10 @@ object UnifiedStartupManager {
                 syncRecommendedAgents()
                 EasyLog.log("UnifiedStartupManager - recommended agents刷新完成")
             } catch (e: Exception) {
-                EasyLog.log("UnifiedStartupManager - recommended agents刷新失败: ${e.message}", EasyLog.ERROR)
+                EasyLog.log(
+                    "UnifiedStartupManager - recommended agents刷新失败: ${e.message}",
+                    EasyLog.ERROR,
+                )
             }
         }
     }
@@ -506,14 +512,17 @@ object UnifiedStartupManager {
                 syncRecommendedAgents()
                 EasyLog.log("UnifiedStartupManager - explore agents异步加载完成")
             } catch (e: Exception) {
-                EasyLog.log("UnifiedStartupManager - explore agents异步加载失败: ${e.message}", EasyLog.ERROR)
+                EasyLog.log(
+                    "UnifiedStartupManager - explore agents异步加载失败: ${e.message}",
+                    EasyLog.ERROR,
+                )
             }
         }
     }
 
     /** 手动刷新聊天agents */
     fun refreshChatAgents() {
-        startupScope.launch { 
+        startupScope.launch {
             try {
                 EasyLog.log("UnifiedStartupManager - 开始刷新chat agents")
                 syncChatAgents()

@@ -112,11 +112,13 @@ class ChatViewModel : BaseActivityViewModel() {
 
             // 追踪聊天会话开始
             PageTrackingHelper.trackUserInteraction(
-                "chat_session_start", agent.name, mapOf(
+                "chat_session_start",
+                agent.name,
+                mapOf(
                     "agent_id" to agent.id,
                     "agent_category" to (agent.category ?: "unknown"),
-                    "is_followed" to agent.isFollowed
-                )
+                    "is_followed" to agent.isFollowed,
+                ),
             )
         }
 
@@ -307,12 +309,12 @@ class ChatViewModel : BaseActivityViewModel() {
             FirebasePerformanceHelper.putAttribute(
                 trace,
                 "agent_id",
-                agentInfo.value?.id ?: "unknown"
+                agentInfo.value?.id ?: "unknown",
             )
             FirebasePerformanceHelper.putAttribute(
                 trace,
                 "message_length",
-                inputData.value.length.toString()
+                inputData.value.length.toString(),
             )
 
             launchWithNetCheck {
@@ -343,7 +345,9 @@ class ChatViewModel : BaseActivityViewModel() {
                             newMsgs.add(msgInfo) // 添加用户消息
                             // 创建当前消息的副本以避免并发修改
                             newMsgs.addAll(currentMsgs.toList())
-                            EasyLog.log("Successfully updated messages - new count: ${newMsgs.size}")
+                            EasyLog.log(
+                                "Successfully updated messages - new count: ${newMsgs.size}"
+                            )
                             newMsgs
                         } catch (e: Exception) {
                             EasyLog.log(
@@ -370,16 +374,21 @@ class ChatViewModel : BaseActivityViewModel() {
                         )
 
                         // Firebase Crashlytics - 记录消息发送上下文
-                        FirebaseManager.setCustomKey("last_message_length", inputMsg.length.toString())
+                        FirebaseManager.setCustomKey(
+                            "last_message_length",
+                            inputMsg.length.toString(),
+                        )
                         FirebaseManager.setCustomKey("last_message_preview", inputMsg.take(50))
 
                         // 追踪消息发送
                         PageTrackingHelper.trackUserInteraction(
-                            "message_send", "chat_input", mapOf(
+                            "message_send",
+                            "chat_input",
+                            mapOf(
                                 "agent_id" to agent.id,
                                 "message_length" to inputMsg.length,
-                                "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free"
-                            )
+                                "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                            ),
                         )
                         val result = chatApi.sendMsg(agent.id, req)
 
@@ -401,51 +410,49 @@ class ChatViewModel : BaseActivityViewModel() {
                                     mapOf(
                                         "agent_id" to agent.id,
                                         "response_code" to (result.data.code ?: 0),
-                                        "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                                        "user_type" to
+                                            if (VipStatusHelper.isUserVip()) "vip" else "free",
                                     ),
                                 )
 
                                 runCatching {
-                                    // 有免费次数限制，需要vip订阅
-                                    if (result.data.code == 10001001) {
-                                        // Firebase Analytics - 记录免费次数限制
-                                        FirebaseManager.logEvent(
-                                            "free_limit_reached",
-                                            mapOf(
-                                                "agent_id" to agent.id,
-                                                "user_type" to "free",
-                                            ),
-                                        )
-                                        showLimitDialog.emit(true)
-                                    }
-                                    // 添加AI回复
-                                    _msgs.update { currentMsgs ->
-                                        try {
-                                            val newMsgs = mutableListOf<MsgInfo>()
-                                            result.data.data?.choices?.forEach { choice ->
-                                                newMsgs.add(choice.message)
-                                            }
-                                            // 创建当前消息的副本以避免并发修改
-                                            newMsgs.addAll(currentMsgs.toList())
-                                            newMsgs
-                                        } catch (e: Exception) {
-                                            EasyLog.log(
-                                                "Error adding AI response: ${e.message}",
-                                                priority = EasyLog.ERROR,
+                                        // 有免费次数限制，需要vip订阅
+                                        if (result.data.code == 10001001) {
+                                            // Firebase Analytics - 记录免费次数限制
+                                            FirebaseManager.logEvent(
+                                                "free_limit_reached",
+                                                mapOf("agent_id" to agent.id, "user_type" to "free"),
                                             )
-                                            currentMsgs // 返回原列表，避免数据丢失
+                                            showLimitDialog.emit(true)
                                         }
-                                    }
+                                        // 添加AI回复
+                                        _msgs.update { currentMsgs ->
+                                            try {
+                                                val newMsgs = mutableListOf<MsgInfo>()
+                                                result.data.data?.choices?.forEach { choice ->
+                                                    newMsgs.add(choice.message)
+                                                }
+                                                // 创建当前消息的副本以避免并发修改
+                                                newMsgs.addAll(currentMsgs.toList())
+                                                newMsgs
+                                            } catch (e: Exception) {
+                                                EasyLog.log(
+                                                    "Error adding AI response: ${e.message}",
+                                                    priority = EasyLog.ERROR,
+                                                )
+                                                currentMsgs // 返回原列表，避免数据丢失
+                                            }
+                                        }
 
-                                    result.data.data
-                                        ?.choices
-                                        ?.lastOrNull()
-                                        ?.message
-                                        ?.content
-                                        ?.let { str ->
-                                            IntySetting.setConversationReaded(agent.id, str)
-                                        }
-                                }
+                                        result.data.data
+                                            ?.choices
+                                            ?.lastOrNull()
+                                            ?.message
+                                            ?.content
+                                            ?.let { str ->
+                                                IntySetting.setConversationReaded(agent.id, str)
+                                            }
+                                    }
                                     .onFailure {
                                         EasyLog.log(
                                             "Error processing AI response: ${it.message}",
@@ -464,7 +471,8 @@ class ChatViewModel : BaseActivityViewModel() {
                                     mapOf(
                                         "agent_id" to agent.id,
                                         "error_message" to result.message,
-                                        "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                                        "user_type" to
+                                            if (VipStatusHelper.isUserVip()) "vip" else "free",
                                     ),
                                 )
 
@@ -490,7 +498,7 @@ class ChatViewModel : BaseActivityViewModel() {
                 } catch (e: Exception) {
                     EasyLog.log(
                         "Unexpected error in sendMsg: ${e.message}",
-                        priority = EasyLog.ERROR
+                        priority = EasyLog.ERROR,
                     )
                     _isWaitingForReply.value = false
                     showNetworkAwareError("An unexpected error occurred while sending message")
@@ -558,26 +566,26 @@ class ChatViewModel : BaseActivityViewModel() {
                 when (result) {
                     is HttpResult.Success -> {
                         runCatching {
-                            // 有免费次数限制，需要vip订阅
-                            if (result.data.code == 10001001) {
-                                showLimitDialog.emit(true)
-                            }
-                            // 添加AI回复
-                            _msgs.update { currentMsgs ->
-                                val newMsgs = mutableListOf<MsgInfo>()
-                                result.data.data?.choices?.forEach { choice ->
-                                    newMsgs.add(choice.message)
+                                // 有免费次数限制，需要vip订阅
+                                if (result.data.code == 10001001) {
+                                    showLimitDialog.emit(true)
                                 }
-                                // 创建当前消息的副本以避免并发修改
-                                newMsgs.addAll(currentMsgs.toList())
-                                newMsgs
-                            }
+                                // 添加AI回复
+                                _msgs.update { currentMsgs ->
+                                    val newMsgs = mutableListOf<MsgInfo>()
+                                    result.data.data?.choices?.forEach { choice ->
+                                        newMsgs.add(choice.message)
+                                    }
+                                    // 创建当前消息的副本以避免并发修改
+                                    newMsgs.addAll(currentMsgs.toList())
+                                    newMsgs
+                                }
 
-                            result.data.data?.choices?.lastOrNull()?.message?.content?.let { str
-                                ->
-                                IntySetting.setConversationReaded(agent.id, str)
+                                result.data.data?.choices?.lastOrNull()?.message?.content?.let { str
+                                    ->
+                                    IntySetting.setConversationReaded(agent.id, str)
+                                }
                             }
-                        }
                             .onFailure {
                                 EasyLog.log(
                                     "Error processing keep talking AI response: ${it.message}",
@@ -847,7 +855,7 @@ class ChatViewModel : BaseActivityViewModel() {
             currentConversations.map { conversation ->
                 if (
                     conversation.id == conversationItem.id &&
-                    conversation.agentId == conversationItem.agentId
+                        conversation.agentId == conversationItem.agentId
                 ) {
                     conversation.copy(isNew = false)
                 } else {

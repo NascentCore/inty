@@ -430,7 +430,10 @@ private fun ChatVoicePlayer(
                 else -> {
                     Icon(
                         imageVector =
-                            ImageVector.vectorResource(if (isPlaying) R.drawable.ic_pause_voice else R.drawable.ic_play_voice),
+                            ImageVector.vectorResource(
+                                if (isPlaying) R.drawable.ic_pause_voice
+                                else R.drawable.ic_play_voice
+                            ),
                         contentDescription = if (isPlaying) "Pause" else "Play",
                         tint = Color.White,
                         modifier = Modifier.size(16.dp),

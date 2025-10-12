@@ -97,9 +97,7 @@ internal fun ProfilePage(
     Box(modifier = modifier) {
         IntyImage(modifier = Modifier.align(Alignment.TopEnd), model = R.drawable.notify_header_bg)
         Scaffold(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Transparent),
+            modifier = Modifier.fillMaxSize().background(Color.Transparent),
             containerColor = Color.Transparent,
         ) { innerPadding ->
             Column(Modifier.fillMaxWidth()) {
@@ -124,8 +122,7 @@ internal fun ProfilePage(
                     Spacer(Modifier.width(16.dp))
                     Box(
                         modifier =
-                            Modifier
-                                .size(120.dp)
+                            Modifier.size(120.dp)
                                 .background(color = Color.White, shape = CircleShape)
                                 .padding(4.dp)
                     ) {
@@ -216,8 +213,7 @@ internal fun ProfilePage(
 
                     Text(
                         modifier =
-                            Modifier
-                                .padding(horizontal = 16.dp)
+                            Modifier.padding(horizontal = 16.dp)
                                 .align(Alignment.CenterHorizontally),
                         text = stringResource(R.string.no_agent),
                         color = Color.White.copy(0.55f),
@@ -240,10 +236,10 @@ internal fun ProfilePage(
 
                                 if (
                                     lastVisibleItem != null &&
-                                    lastVisibleItem.index >=
-                                    totalItems - 3 && // Trigger 3 items before end
-                                    !isLoading &&
-                                    agents.isNotEmpty()
+                                        lastVisibleItem.index >=
+                                            totalItems - 3 && // Trigger 3 items before end
+                                        !isLoading &&
+                                        agents.isNotEmpty()
                                 ) {
                                     onLoadMore()
                                 }
@@ -258,23 +254,23 @@ internal fun ProfilePage(
                         verticalArrangement = Arrangement.spacedBy(16.dp),
                     ) {
                         runCatching {
-                            if (agents.isNotEmpty()) {
-                                itemsIndexed(
-                                    items = agents,
-                                    key = { index, agent -> "${agent.id}_$index" },
-                                ) { index, agent ->
-                                    MyAgentCard(
-                                        modifier =
-                                            Modifier.noRippleClickable { onClickAgent(agent) },
-                                        agentInfo = agent,
-                                        onEditAgent = onEditAgent,
-                                        onDeleteAgent = onDeleteAgent,
-                                    )
+                                if (agents.isNotEmpty()) {
+                                    itemsIndexed(
+                                        items = agents,
+                                        key = { index, agent -> "${agent.id}_$index" },
+                                    ) { index, agent ->
+                                        MyAgentCard(
+                                            modifier =
+                                                Modifier.noRippleClickable { onClickAgent(agent) },
+                                            agentInfo = agent,
+                                            onEditAgent = onEditAgent,
+                                            onDeleteAgent = onDeleteAgent,
+                                        )
+                                    }
+                                    // 添加一个底部空白，便于更好操作交互
+                                    item { Spacer(Modifier.height(80.dp)) }
                                 }
-                                // 添加一个底部空白，便于更好操作交互
-                                item { Spacer(Modifier.height(80.dp)) }
                             }
-                        }
                             .onFailure { it.printStackTrace() }
 
                         // Loading indicator when loading more (only show when there's no data)
@@ -317,9 +313,7 @@ private fun MyAgentCard(
     // 图片加载状态
     var imageLoaded by remember { mutableStateOf(false) }
 
-    Box(modifier = modifier
-        .size(165.dp, 220.dp)
-        .clip(RoundedCornerShape(12.dp))) {
+    Box(modifier = modifier.size(165.dp, 220.dp).clip(RoundedCornerShape(12.dp))) {
         if (hasAvatarToLoad) {
             // 有头像需要加载时，使用 Shimmer 占位符
             if (!imageLoaded) {
@@ -352,8 +346,7 @@ private fun MyAgentCard(
         }
         Column(
             modifier =
-                Modifier
-                    .fillMaxWidth()
+                Modifier.fillMaxWidth()
                     .background(brush = gradientBrush)
                     .padding(8.dp)
                     .align(Alignment.BottomCenter),
@@ -379,13 +372,10 @@ private fun MyAgentCard(
 
         // 右下角的菜单按钮
         if (onEditAgent != null || onDeleteAgent != null) {
-            Box(modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(4.dp)) {
+            Box(modifier = Modifier.align(Alignment.BottomEnd).padding(4.dp)) {
                 Box(
                     modifier =
-                        Modifier
-                            .size(28.dp)
+                        Modifier.size(28.dp)
                             .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(4.dp))
                             .noRippleClickable(
                                 onClick = {
@@ -502,10 +492,7 @@ private fun PremiumBanner(
     onClick: () -> Unit = {},
 ) {
     AuthClickable(
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(120.dp)
-            .padding(horizontal = 12.dp),
+        modifier = Modifier.fillMaxWidth().heightIn(120.dp).padding(horizontal = 12.dp),
         onClick = onClick,
     ) { authModifier ->
         Box(modifier = authModifier) {
@@ -517,8 +504,7 @@ private fun PremiumBanner(
             )
 
             Row(
-                Modifier
-                    .border(
+                Modifier.border(
                         width = 0.5.dp,
                         color = Color(0x61D523FF),
                         shape = RoundedCornerShape(size = 12.dp),

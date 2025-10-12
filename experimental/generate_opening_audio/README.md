@@ -20,11 +20,13 @@
 ### 前置要求
 
 1. 确保已安装项目依赖：
+
    ```bash
    pip install -r requirements.txt
    ```
 
 2. 确保 `config.yaml` 中配置了正确的数据库和 ElevenLabs API 信息：
+
    ```yaml
    database:
      host: localhost
@@ -82,13 +84,13 @@ python generate_missing_opening_audio.py --batch-size 20
 
 ### 命令行参数
 
-| 参数 | 类型 | 默认值 | 说明 |
-|------|------|--------|------|
-| `--config` | string | `../../config.yaml` | 配置文件路径 |
-| `--batch-size` | int | `10` | 每批处理的数量 |
-| `--dry-run` | flag | `false` | 只查询和生成语音，不更新数据库 |
-| `--limit` | int | 无 | 限制处理的数量（用于测试） |
-| `--agent-id` | string | 无 | 只处理指定的 agent ID |
+| 参数           | 类型   | 默认值              | 说明                           |
+| -------------- | ------ | ------------------- | ------------------------------ |
+| `--config`     | string | `../../config.yaml` | 配置文件路径                   |
+| `--batch-size` | int    | `10`                | 每批处理的数量                 |
+| `--dry-run`    | flag   | `false`             | 只查询和生成语音，不更新数据库 |
+| `--limit`      | int    | 无                  | 限制处理的数量（用于测试）     |
+| `--agent-id`   | string | 无                  | 只处理指定的 agent ID          |
 
 ### 查看帮助
 
@@ -196,6 +198,7 @@ python generate_missing_opening_audio.py --help
 ### ElevenLabs API 错误
 
 检查：
+
 1. API key 是否正确
 2. `elevenlabs.enabled` 是否为 `true`
 3. 网络连接是否正常
@@ -204,6 +207,7 @@ python generate_missing_opening_audio.py --help
 ### 语音生成失败
 
 检查日志中的详细错误信息。常见原因：
+
 - 文本长度超过限制（默认 5000 字符）
 - voice_id 无效
 - 网络超时

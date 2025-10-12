@@ -44,10 +44,7 @@ class LoginActivity : BaseActivity() {
         }
 
         // 跟踪LoginActivity页面访问
-        FirebaseManager.logScreenView(
-            screenName = "LoginScreen",
-            screenClass = "LoginActivity",
-        )
+        FirebaseManager.logScreenView(screenName = "LoginScreen", screenClass = "LoginActivity")
 
         lifecycleScope.launch {
             viewModel.finishActivity.collect {

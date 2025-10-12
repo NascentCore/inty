@@ -70,14 +70,14 @@ class ExplorePagingSource(
                 // 检查用户账户是否已就绪，如果未就绪则等待或返回空数据
                 if (!UnifiedStartupManager.isUserAccountReady()) {
                     EasyLog.log("ExplorePagingSource - 用户账户未就绪，等待账户就绪")
-                    
+
                     // 等待用户账户就绪，最多等待3秒
                     var waitTime = 0
                     while (!UnifiedStartupManager.isUserAccountReady() && waitTime < 3000) {
                         delay(100)
                         waitTime += 100
                     }
-                    
+
                     if (!UnifiedStartupManager.isUserAccountReady()) {
                         EasyLog.log("ExplorePagingSource - 等待超时，返回空数据")
                         return@withContext LoadResult.Page(
@@ -180,9 +180,9 @@ class ExplorePagingSource(
     /** 检查是否需要从网络更新数据 */
     private fun shouldUpdateFromNetwork(): Boolean {
         // 确保用户账户已就绪（包括游客账户）且token有效
-        return UnifiedStartupManager.isUserAccountReady() && 
-               IntySetting.isLogin() && 
-               IntySetting.getCurToken().isNotEmpty()
+        return UnifiedStartupManager.isUserAccountReady() &&
+            IntySetting.isLogin() &&
+            IntySetting.getCurToken().isNotEmpty()
     }
 }
 

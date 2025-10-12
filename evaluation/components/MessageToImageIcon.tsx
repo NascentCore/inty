@@ -46,7 +46,7 @@ export const MessageToImageIcon: React.FC<MessageToImageIconProps> = ({
       });
 
       // 使用 Promise.race 来实现超时控制
-      const response = await Promise.race([apiPromise, timeoutPromise]) as {
+      const response = (await Promise.race([apiPromise, timeoutPromise])) as {
         urls: string[];
         count: number;
         format: string;
@@ -65,7 +65,7 @@ export const MessageToImageIcon: React.FC<MessageToImageIconProps> = ({
           onImageGenerated(imageUrl);
           message.success("图片生成成功！");
         } else {
-        // 否则使用模态框显示（向后兼容）
+          // 否则使用模态框显示（向后兼容）
           setGeneratedImages(response.urls);
           setModalVisible(true);
           message.success("图片生成成功！");
@@ -75,7 +75,8 @@ export const MessageToImageIcon: React.FC<MessageToImageIconProps> = ({
       }
     } catch (error) {
       console.error("Image generation error:", error);
-      const errorMessage = error instanceof Error ? error.message : "图片生成失败，请稍后重试";
+      const errorMessage =
+        error instanceof Error ? error.message : "图片生成失败，请稍后重试";
       message.error(errorMessage);
     } finally {
       setLoading(false);
@@ -87,7 +88,8 @@ export const MessageToImageIcon: React.FC<MessageToImageIconProps> = ({
     setGeneratedImages([]);
   };
 
-  const buttonSize = size === "small" ? "small" : size === "large" ? "large" : "middle";
+  const buttonSize =
+    size === "small" ? "small" : size === "large" ? "large" : "middle";
 
   return (
     <>

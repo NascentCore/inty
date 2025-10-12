@@ -4,3 +4,5 @@ ktfmt --kotlinlang-style android_app/*.{kt,kts} android_app/{app,build-logic} an
 black app/ scripts/
 # 格式化包括 json md 等等
 npx prettier --write .
+
+git commit --all --message "fmt all code: ktfmt black prettier"

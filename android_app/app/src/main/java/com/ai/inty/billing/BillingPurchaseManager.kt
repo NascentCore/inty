@@ -271,11 +271,12 @@ internal class BillingPurchaseManager(
                         if (response.isVerified) {
                             EasyLog.log("BillingRepository BillingPurchaseManager ✅ 订阅验证成功")
                             // 验证成功后更新状态
-                            val newStatus = VipStatus(
-                                isSubscribed = true,
-                                subscriptionId = purchase.products.firstOrNull(),
-                                purchaseTime = purchase.purchaseTime,
-                            )
+                            val newStatus =
+                                VipStatus(
+                                    isSubscribed = true,
+                                    subscriptionId = purchase.products.firstOrNull(),
+                                    purchaseTime = purchase.purchaseTime,
+                                )
                             vipStatusFlow.value = newStatus
                             BillingStorage.saveLocalVipStatus(newStatus)
                         } else {
