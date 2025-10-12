@@ -34,7 +34,7 @@ alembic upgrade head
 if [ "$DEV" = true ]; then
   echo "Starting in development mode..."
   python scripts/init_admin_user.py
-  ./build_evaluation.sh
+  # ./build_evaluation.sh
   uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 else
   echo "Starting in normal mode without reloading..."

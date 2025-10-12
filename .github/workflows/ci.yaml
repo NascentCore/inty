@@ -72,9 +72,9 @@ jobs:
         run: |
           cp config.yaml.example config.yaml
           # alembic upgrade head: no need to run, as start.sh already includes it
-          ./start.sh &
+          ./start.sh --dev &
           # Wait for the server to start. If the time is too short, it needs to be increased.
-          sleep 5
+          sleep 10
           # noci marker is defined in pytest.ini
           # applied on test functions with noci marker will be skipped on CI
-          pytest tests/ -m "not noci" -v -s
+          pytest -m "not noci" -v -s tests/
