@@ -6,24 +6,21 @@ import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.crashlytics.FirebaseCrashlytics
 import com.google.firebase.perf.FirebasePerformance
 import com.inty.utils.log.EasyLog
+import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import java.util.concurrent.ConcurrentHashMap
 
-/**
- * Firebase 统一管理器
- * 负责 Firebase 服务的初始化、管理和错误处理
- */
+/** Firebase 统一管理器 负责 Firebase 服务的初始化、管理和错误处理 */
 object FirebaseManager {
-    
+
     private var isInitialized = false
-    
+
     // 缓存 Firebase 实例，避免重复获取
     private var analytics: FirebaseAnalytics? = null
     private var crashlytics: FirebaseCrashlytics? = null
     private var performance: FirebasePerformance? = null
-    
+
     private data class Config(
         val analyticsEnabled: Boolean = true,
         val crashlyticsEnabled: Boolean = true,
@@ -34,67 +31,58 @@ object FirebaseManager {
     )
 
     @Volatile
-    private var config: Config = Config(
-        analyticsEnabled = true,
-        crashlyticsEnabled = true,
-        performanceEnabled = true,
-        // 低价值事件默认加入采样
-        samplingRates = mapOf(
-            "user_interaction" to 0.1,
-            "message_sent" to 0.5,
-            // 保留高价值 100%：失败/401/最终失败/页面
-        ),
-        minIntervalMsPerEvent = mapOf(
-            "user_interaction" to 5_000L,
-            "message_sent" to 1_000L,
-        ),
-    )
+    private var config: Config =
+        Config(
+            analyticsEnabled = true,
+            crashlyticsEnabled = true,
+            performanceEnabled = true,
+            // 低价值事件默认加入采样
+            samplingRates =
+                mapOf(
+                    "user_interaction" to 0.1,
+                    "message_sent" to 0.5,
+                    // 保留高价值 100%：失败/401/最终失败/页面
+                ),
+            minIntervalMsPerEvent = mapOf("user_interaction" to 5_000L, "message_sent" to 1_000L),
+        )
 
     // 错误统计，避免重复错误日志
     private val errorCounts = ConcurrentHashMap<String, Int>()
     private val maxErrorLogs = 5 // 每种错误最多记录5次
 
     private val lastEventTimes = ConcurrentHashMap<String, Long>()
-    
-    /**
-     * 初始化 Firebase 服务
-     * 应该在 Application.onCreate() 中调用
-     */
+
+    /** 初始化 Firebase 服务 应该在 Application.onCreate() 中调用 */
     fun initialize(context: Context) {
         if (isInitialized) {
             EasyLog.log("FirebaseManager - 已经初始化，跳过重复初始化")
             return
         }
-        
+
         try {
             val appContext = context.applicationContext
-            
+
             // 初始化 Firebase Analytics
             analytics = FirebaseAnalytics.getInstance(appContext)
-            
+
             // 初始化 Firebase Crashlytics
             crashlytics = FirebaseCrashlytics.getInstance()
-            
+
             // 初始化 Firebase Performance
             performance = FirebasePerformance.getInstance()
-            
+
             isInitialized = true
             EasyLog.log("FirebaseManager - 初始化完成")
-            
         } catch (e: Exception) {
             EasyLog.log("FirebaseManager - 初始化失败: ${e.message}", EasyLog.ERROR)
             // 即使初始化失败，也不应该崩溃应用
         }
     }
-    
-    /**
-     * 检查是否已初始化
-     */
+
+    /** 检查是否已初始化 */
     fun isInitialized(): Boolean = isInitialized
-    
-    /**
-     * 安全地获取 Analytics 实例
-     */
+
+    /** 安全地获取 Analytics 实例 */
     fun getAnalytics(): FirebaseAnalytics? {
         if (!isInitialized) {
             logError("getAnalytics", "FirebaseManager not initialized")
@@ -103,10 +91,8 @@ object FirebaseManager {
         if (!config.analyticsEnabled) return null
         return analytics
     }
-    
-    /**
-     * 安全地获取 Crashlytics 实例
-     */
+
+    /** 安全地获取 Crashlytics 实例 */
     fun getCrashlytics(): FirebaseCrashlytics? {
         if (!isInitialized) {
             logError("getCrashlytics", "FirebaseManager not initialized")
@@ -115,10 +101,8 @@ object FirebaseManager {
         if (!config.crashlyticsEnabled) return null
         return crashlytics
     }
-    
-    /**
-     * 安全地获取 Performance 实例
-     */
+
+    /** 安全地获取 Performance 实例 */
     fun getPerformance(): FirebasePerformance? {
         if (!isInitialized) {
             logError("getPerformance", "FirebaseManager not initialized")
@@ -127,15 +111,13 @@ object FirebaseManager {
         if (!config.performanceEnabled) return null
         return performance
     }
-    
-    /**
-     * 安全地记录事件到 Analytics
-     */
+
+    /** 安全地记录事件到 Analytics */
     fun logEvent(eventName: String, parameters: Map<String, Any> = emptyMap()) {
         try {
             if (!shouldLogEvent(eventName)) return
             val analytics = getAnalytics() ?: return
-            
+
             // 在后台线程执行，避免阻塞主线程
             CoroutineScope(Dispatchers.IO).launch {
                 try {
@@ -150,21 +132,24 @@ object FirebaseManager {
             logError("logEvent", "Failed to create event: ${e.message}")
         }
     }
-    
-    /**
-     * 安全地记录页面访问
-     */
-    fun logScreenView(screenName: String, screenClass: String, additionalParams: Map<String, Any> = emptyMap()) {
+
+    /** 安全地记录页面访问 */
+    fun logScreenView(
+        screenName: String,
+        screenClass: String,
+        additionalParams: Map<String, Any> = emptyMap(),
+    ) {
         try {
             val analytics = getAnalytics() ?: return
-            
+
             CoroutineScope(Dispatchers.IO).launch {
                 try {
-                    val bundle = Bundle().apply {
-                        putString(FirebaseAnalytics.Param.SCREEN_NAME, screenName)
-                        putString(FirebaseAnalytics.Param.SCREEN_CLASS, screenClass)
-                        putParamsToBundle(this, additionalParams)
-                    }
+                    val bundle =
+                        Bundle().apply {
+                            putString(FirebaseAnalytics.Param.SCREEN_NAME, screenName)
+                            putString(FirebaseAnalytics.Param.SCREEN_CLASS, screenClass)
+                            putParamsToBundle(this, additionalParams)
+                        }
                     analytics.logEvent(FirebaseAnalytics.Event.SCREEN_VIEW, bundle)
                     EasyLog.log("Firebase Analytics: Screen view - $screenName")
                 } catch (e: Exception) {
@@ -175,14 +160,12 @@ object FirebaseManager {
             logError("logScreenView", "Failed to create screen view: ${e.message}")
         }
     }
-    
-    /**
-     * 安全地设置自定义键
-     */
+
+    /** 安全地设置自定义键 */
     fun setCustomKey(key: String, value: String) {
         try {
             val crashlytics = getCrashlytics() ?: return
-            
+
             CoroutineScope(Dispatchers.IO).launch {
                 try {
                     crashlytics.setCustomKey(key, value)
@@ -195,19 +178,15 @@ object FirebaseManager {
             logError("setCustomKey", "Failed to create custom key: ${e.message}")
         }
     }
-    
-    /**
-     * 安全地记录异常
-     */
+
+    /** 安全地记录异常 */
     fun recordException(exception: Throwable, customKeys: Map<String, String> = emptyMap()) {
         try {
             val crashlytics = getCrashlytics() ?: return
-            
+
             CoroutineScope(Dispatchers.IO).launch {
                 try {
-                    customKeys.forEach { (key, value) ->
-                        crashlytics.setCustomKey(key, value)
-                    }
+                    customKeys.forEach { (key, value) -> crashlytics.setCustomKey(key, value) }
                     crashlytics.recordException(exception)
                     EasyLog.log("Firebase Crashlytics: Recorded exception - ${exception.message}")
                 } catch (e: Exception) {
@@ -218,15 +197,13 @@ object FirebaseManager {
             logError("recordException", "Failed to create exception record: ${e.message}")
         }
     }
-    
-    /**
-     * 安全地设置用户ID
-     */
+
+    /** 安全地设置用户ID */
     fun setUserId(userId: String) {
         try {
             val analytics = getAnalytics()
             val crashlytics = getCrashlytics()
-            
+
             CoroutineScope(Dispatchers.IO).launch {
                 try {
                     analytics?.setUserId(userId)
@@ -240,15 +217,13 @@ object FirebaseManager {
             logError("setUserId", "Failed to create user ID: ${e.message}")
         }
     }
-    
-    /**
-     * 安全地设置用户属性
-     */
+
+    /** 安全地设置用户属性 */
     fun setUserProperty(property: String, value: String) {
         try {
             val analytics = getAnalytics()
             val crashlytics = getCrashlytics()
-            
+
             CoroutineScope(Dispatchers.IO).launch {
                 try {
                     analytics?.setUserProperty(property, value)
@@ -263,9 +238,7 @@ object FirebaseManager {
         }
     }
 
-    /**
-     * 更新日志开关与采样配置
-     */
+    /** 更新日志开关与采样配置 */
     fun updateSwitches(
         enableAnalytics: Boolean? = null,
         enableCrashlytics: Boolean? = null,
@@ -274,14 +247,15 @@ object FirebaseManager {
         samplingRates: Map<String, Double>? = null,
         minIntervalMsPerEvent: Map<String, Long>? = null,
     ) {
-        config = config.copy(
-            analyticsEnabled = enableAnalytics ?: config.analyticsEnabled,
-            crashlyticsEnabled = enableCrashlytics ?: config.crashlyticsEnabled,
-            performanceEnabled = enablePerformance ?: config.performanceEnabled,
-            disabledEvents = disabledEvents ?: config.disabledEvents,
-            samplingRates = samplingRates ?: config.samplingRates,
-            minIntervalMsPerEvent = minIntervalMsPerEvent ?: config.minIntervalMsPerEvent,
-        )
+        config =
+            config.copy(
+                analyticsEnabled = enableAnalytics ?: config.analyticsEnabled,
+                crashlyticsEnabled = enableCrashlytics ?: config.crashlyticsEnabled,
+                performanceEnabled = enablePerformance ?: config.performanceEnabled,
+                disabledEvents = disabledEvents ?: config.disabledEvents,
+                samplingRates = samplingRates ?: config.samplingRates,
+                minIntervalMsPerEvent = minIntervalMsPerEvent ?: config.minIntervalMsPerEvent,
+            )
         EasyLog.log("FirebaseManager - switches updated")
     }
 
@@ -303,19 +277,13 @@ object FirebaseManager {
         if (rate >= 1.0) return true
         return Math.random() < rate
     }
-    
-    /**
-     * 创建 Bundle 对象
-     */
+
+    /** 创建 Bundle 对象 */
     private fun createBundle(parameters: Map<String, Any>): Bundle {
-        return Bundle().apply {
-            putParamsToBundle(this, parameters)
-        }
+        return Bundle().apply { putParamsToBundle(this, parameters) }
     }
-    
-    /**
-     * 将参数添加到 Bundle
-     */
+
+    /** 将参数添加到 Bundle */
     private fun putParamsToBundle(bundle: Bundle, parameters: Map<String, Any>) {
         parameters.forEach { (key, value) ->
             when (value) {
@@ -329,23 +297,19 @@ object FirebaseManager {
             }
         }
     }
-    
-    /**
-     * 记录错误，避免重复日志
-     */
+
+    /** 记录错误，避免重复日志 */
     private fun logError(operation: String, message: String) {
         val key = "$operation:$message"
         val count = errorCounts.getOrDefault(key, 0)
-        
+
         if (count < maxErrorLogs) {
             errorCounts[key] = count + 1
             EasyLog.log("FirebaseManager - $operation failed: $message", EasyLog.ERROR)
         }
     }
-    
-    /**
-     * 清理资源
-     */
+
+    /** 清理资源 */
     fun cleanup() {
         isInitialized = false
         analytics = null

@@ -91,7 +91,6 @@ fun VipCenterContent(
         )
 
         Column(modifier = Modifier.fillMaxSize()) {
-
             VipCenterTopBar(onClose = onClose)
 
             Spacer(Modifier.height(110.dp))
@@ -201,12 +200,10 @@ private fun VipCenterHeader() {
 @Composable
 private fun VipCenterBenefits() {
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-
         PremiumBenefitItem(stringResource(R.string.premium_benefit_unlimited))
         PremiumBenefitItem(stringResource(R.string.premium_benefit_model))
         PremiumBenefitItem(stringResource(R.string.premium_benefit_customize))
         PremiumBenefitItem(stringResource(R.string.premium_benefit_newfeature))
-
     }
 }
 

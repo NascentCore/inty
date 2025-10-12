@@ -7,10 +7,7 @@ import com.inty.utils.log.EasyLog
 import okhttp3.Request
 import okhttp3.Response
 
-/**
- * Firebase Performance Monitoring 工具类
- * 提供性能追踪和网络请求监控功能
- */
+/** Firebase Performance Monitoring 工具类 提供性能追踪和网络请求监控功能 */
 object FirebasePerformanceHelper {
 
     private val firebasePerf: FirebasePerformance?
@@ -18,6 +15,7 @@ object FirebasePerformanceHelper {
 
     /**
      * 开始一个自定义追踪
+     *
      * @param traceName 追踪名称
      * @return Trace 对象，用于后续操作
      */
@@ -31,7 +29,7 @@ object FirebasePerformanceHelper {
         } catch (e: Exception) {
             EasyLog.log(
                 "Firebase Performance: Failed to start trace '$traceName': ${e.message}",
-                EasyLog.ERROR
+                EasyLog.ERROR,
             )
             null
         }
@@ -39,6 +37,7 @@ object FirebasePerformanceHelper {
 
     /**
      * 停止追踪并记录
+     *
      * @param trace Trace 对象
      */
     fun stopTrace(trace: Trace?) {
@@ -52,6 +51,7 @@ object FirebasePerformanceHelper {
 
     /**
      * 为追踪添加自定义属性
+     *
      * @param trace Trace 对象
      * @param attributeName 属性名
      * @param value 属性值
@@ -62,13 +62,14 @@ object FirebasePerformanceHelper {
         } catch (e: Exception) {
             EasyLog.log(
                 "Firebase Performance: Failed to put attribute '$attributeName': ${e.message}",
-                EasyLog.ERROR
+                EasyLog.ERROR,
             )
         }
     }
 
     /**
      * 为追踪添加自定义指标
+     *
      * @param trace Trace 对象
      * @param metricName 指标名
      * @param value 指标值
@@ -79,13 +80,14 @@ object FirebasePerformanceHelper {
         } catch (e: Exception) {
             EasyLog.log(
                 "Firebase Performance: Failed to put metric '$metricName': ${e.message}",
-                EasyLog.ERROR
+                EasyLog.ERROR,
             )
         }
     }
 
     /**
      * 创建网络请求监控
+     *
      * @param request OkHttp Request 对象
      * @return HttpMetric 对象
      */
@@ -93,12 +95,14 @@ object FirebasePerformanceHelper {
         return try {
             val perf = firebasePerf ?: return null
             val httpMetric = perf.newHttpMetric(request.url.toString(), request.method)
-            EasyLog.log("Firebase Performance: Created HTTP metric for ${request.method} ${request.url}")
+            EasyLog.log(
+                "Firebase Performance: Created HTTP metric for ${request.method} ${request.url}"
+            )
             httpMetric
         } catch (e: Exception) {
             EasyLog.log(
                 "Firebase Performance: Failed to create HTTP metric: ${e.message}",
-                EasyLog.ERROR
+                EasyLog.ERROR,
             )
             null
         }
@@ -106,6 +110,7 @@ object FirebasePerformanceHelper {
 
     /**
      * 开始网络请求监控
+     *
      * @param httpMetric HttpMetric 对象
      */
     fun startHttpMetric(httpMetric: HttpMetric?) {
@@ -114,13 +119,14 @@ object FirebasePerformanceHelper {
         } catch (e: Exception) {
             EasyLog.log(
                 "Firebase Performance: Failed to start HTTP metric: ${e.message}",
-                EasyLog.ERROR
+                EasyLog.ERROR,
             )
         }
     }
 
     /**
      * 停止网络请求监控
+     *
      * @param httpMetric HttpMetric 对象
      * @param response OkHttp Response 对象
      */
@@ -132,13 +138,14 @@ object FirebasePerformanceHelper {
         } catch (e: Exception) {
             EasyLog.log(
                 "Firebase Performance: Failed to stop HTTP metric: ${e.message}",
-                EasyLog.ERROR
+                EasyLog.ERROR,
             )
         }
     }
 
     /**
      * 便捷方法：执行带性能监控的操作
+     *
      * @param traceName 追踪名称
      * @param operation 要执行的操作
      * @return 操作结果

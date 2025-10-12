@@ -113,13 +113,12 @@ data class ConversationItem(
 
     fun convertToAgentInfo(): AgentInfo {
         return AgentInfo(
-            avatar = agentAvatar,
-            background = agentBackground,
-            id = agentId,
-            name = agentName
-        ).also { info ->
-            info.isDeleted = this.isDeleted
-        }
+                avatar = agentAvatar,
+                background = agentBackground,
+                id = agentId,
+                name = agentName,
+            )
+            .also { info -> info.isDeleted = this.isDeleted }
     }
 }
 

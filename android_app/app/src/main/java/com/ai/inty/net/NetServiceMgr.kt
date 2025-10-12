@@ -18,6 +18,8 @@ import com.squareup.moshi.DefaultIfNullFactory
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import com.therouter.inject.ServiceProvider
+import java.net.InetAddress
+import java.util.concurrent.TimeUnit
 import okhttp3.ConnectionPool
 import okhttp3.Dns
 import okhttp3.Interceptor
@@ -28,8 +30,6 @@ import okhttp3.Response
 import okhttp3.ResponseBody.Companion.toResponseBody
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
-import java.net.InetAddress
-import java.util.concurrent.TimeUnit
 
 /** 获取基础URL 根据构建类型返回对应的API基础URL */
 fun getBaseUrl(): String {
@@ -74,16 +74,16 @@ class AuthInterceptor : Interceptor {
 
                 // Firebase Crashlytics - 记录认证失败
                 FirebaseManager.setCustomKey("last_401_url", request.url.toString())
-                FirebaseManager.recordException(
-                    Exception("HTTP 401 Unauthorized: ${request.url}")
-                )
+                FirebaseManager.recordException(Exception("HTTP 401 Unauthorized: ${request.url}"))
 
                 // 追踪认证失败
                 PageTrackingHelper.trackError(
-                    "HTTP 401 Unauthorized", "auth_failure", mapOf(
+                    "HTTP 401 Unauthorized",
+                    "auth_failure",
+                    mapOf(
                         "url" to request.url.toString(),
-                        "user_logged_out" to IntySetting.isLoggingOut()
-                    )
+                        "user_logged_out" to IntySetting.isLoggingOut(),
+                    ),
                 )
 
                 // 检查是否正在退出登录过程中，避免重复重启
@@ -169,7 +169,9 @@ class RetryInterceptor(private val maxRetries: Int = 3) : Interceptor {
         FirebaseManager.setCustomKey("network_failure_url", request.url.toString())
         FirebaseManager.setCustomKey("network_failure_retries", maxRetries.toString())
         FirebaseManager.recordException(
-            Exception("Network request failed after $maxRetries attempts: ${lastException?.message}")
+            Exception(
+                "Network request failed after $maxRetries attempts: ${lastException?.message}"
+            )
         )
 
         // 如果没有响应但有异常，创建一个错误响应

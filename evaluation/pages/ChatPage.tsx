@@ -76,7 +76,9 @@ export const ChatPage: React.FC = () => {
   const [chatHistory, setChatHistory] = useState<ChatSession[]>([]);
   const [showHistory, setShowHistory] = useState(false);
   const [historyLoading, setHistoryLoading] = useState(false);
-  const [generatedImages, setGeneratedImages] = useState<Map<string, string>>(new Map());
+  const [generatedImages, setGeneratedImages] = useState<Map<string, string>>(
+    new Map(),
+  );
 
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -95,27 +97,30 @@ export const ChatPage: React.FC = () => {
 
   // 从localStorage加载已生成的图片
   useEffect(() => {
-    const savedImages = localStorage.getItem('generatedImages');
+    const savedImages = localStorage.getItem("generatedImages");
     if (savedImages) {
       try {
         const parsedImages = JSON.parse(savedImages);
         setGeneratedImages(new Map(Object.entries(parsedImages)));
       } catch (error) {
-        console.error('Failed to parse saved images:', error);
+        console.error("Failed to parse saved images:", error);
       }
     }
   }, []);
 
   // 处理图片生成 - 使用消息内容作为键，因为消息ID会变化
-  const handleImageGenerated = useCallback((messageContent: string, imageUrl: string) => {
-    setGeneratedImages(prev => {
-      const newMap = new Map(prev.set(messageContent, imageUrl));
-      // 保存到localStorage
-      const imagesObj = Object.fromEntries(newMap);
-      localStorage.setItem('generatedImages', JSON.stringify(imagesObj));
-      return newMap;
-    });
-  }, []);
+  const handleImageGenerated = useCallback(
+    (messageContent: string, imageUrl: string) => {
+      setGeneratedImages((prev) => {
+        const newMap = new Map(prev.set(messageContent, imageUrl));
+        // 保存到localStorage
+        const imagesObj = Object.fromEntries(newMap);
+        localStorage.setItem("generatedImages", JSON.stringify(imagesObj));
+        return newMap;
+      });
+    },
+    [],
+  );
 
   // 重新发送和删除消息相关状态
   const [resending, setResending] = useState<string | null>(null);
@@ -1111,148 +1116,179 @@ export const ChatPage: React.FC = () => {
                       renderItem={(message) => (
                         <div>
                           <List.Item
-                          style={{
-                            border: "none",
-                            padding: "8px 0",
-                            justifyContent:
-                              message.role === "user"
-                                ? "flex-end"
-                                : "flex-start",
-                          }}
-                        >
-                          <div
                             style={{
-                              maxWidth: "70%",
-                              display: "flex",
-                              flexDirection:
-                                message.role === "user" ? "row-reverse" : "row",
-                              alignItems: "flex-start",
-                              gap: "8px",
+                              border: "none",
+                              padding: "8px 0",
+                              justifyContent:
+                                message.role === "user"
+                                  ? "flex-end"
+                                  : "flex-start",
                             }}
                           >
-                            {message.role === "user" ? (
-                              <Avatar
-                                size="small"
-                                icon={<UserOutlined />}
-                                style={{
-                                  backgroundColor: "#1890ff",
-                                  flexShrink: 0,
-                                }}
-                              />
-                            ) : (
-                              <AvatarDisplay
-                                agent={selectedAgent}
-                                size={24}
-                                style={{
-                                  flexShrink: 0,
-                                }}
-                              />
-                            )}
                             <div
                               style={{
-                                backgroundColor:
+                                maxWidth: "70%",
+                                display: "flex",
+                                flexDirection:
                                   message.role === "user"
-                                    ? "rgba(24, 144, 255, 0.8)"
-                                    : "rgba(255, 255, 255, 0.8)",
-                                color:
-                                  message.role === "user" ? "#fff" : "#000",
-                                padding: "12px 16px",
-                                borderRadius: "18px",
-                                boxShadow: "0 1px 2px rgba(0,0,0,0.1)",
-                                position: "relative",
-                                border:
-                                  message.role === "assistant"
-                                    ? "1px solid #f0f0f0"
-                                    : "none",
+                                    ? "row-reverse"
+                                    : "row",
+                                alignItems: "flex-start",
+                                gap: "8px",
                               }}
                             >
-                              <Paragraph
-                                style={{
-                                  margin: 0,
-                                  color:
-                                    message.role === "user" ? "#fff" : "#000",
-                                  whiteSpace: "pre-wrap",
-                                  wordBreak: "break-word",
-                                }}
-                              >
-                                {message.role === "assistant"
-                                  ? formatMessageContent(message.content)
-                                  : message.content}
-                              </Paragraph>
+                              {message.role === "user" ? (
+                                <Avatar
+                                  size="small"
+                                  icon={<UserOutlined />}
+                                  style={{
+                                    backgroundColor: "#1890ff",
+                                    flexShrink: 0,
+                                  }}
+                                />
+                              ) : (
+                                <AvatarDisplay
+                                  agent={selectedAgent}
+                                  size={24}
+                                  style={{
+                                    flexShrink: 0,
+                                  }}
+                                />
+                              )}
                               <div
                                 style={{
-                                  fontSize: "10px",
-                                  opacity: 0.7,
-                                  marginTop: "4px",
-                                  textAlign:
-                                    message.role === "user" ? "right" : "left",
-                                  display: "flex",
-                                  justifyContent: "space-between",
-                                  alignItems: "center",
+                                  backgroundColor:
+                                    message.role === "user"
+                                      ? "rgba(24, 144, 255, 0.8)"
+                                      : "rgba(255, 255, 255, 0.8)",
+                                  color:
+                                    message.role === "user" ? "#fff" : "#000",
+                                  padding: "12px 16px",
+                                  borderRadius: "18px",
+                                  boxShadow: "0 1px 2px rgba(0,0,0,0.1)",
+                                  position: "relative",
+                                  border:
+                                    message.role === "assistant"
+                                      ? "1px solid #f0f0f0"
+                                      : "none",
                                 }}
                               >
-                                <span>
-                                  <ClockCircleOutlined
-                                    style={{ marginRight: "2px" }}
-                                  />
-                                  {new Date(
-                                    message.timestamp,
-                                  ).toLocaleTimeString()}
-                                </span>
-                                <div
-                                  className="message-actions"
+                                <Paragraph
                                   style={{
-                                    opacity: 1,
+                                    margin: 0,
+                                    color:
+                                      message.role === "user" ? "#fff" : "#000",
+                                    whiteSpace: "pre-wrap",
+                                    wordBreak: "break-word",
+                                  }}
+                                >
+                                  {message.role === "assistant"
+                                    ? formatMessageContent(message.content)
+                                    : message.content}
+                                </Paragraph>
+                                <div
+                                  style={{
+                                    fontSize: "10px",
+                                    opacity: 0.7,
+                                    marginTop: "4px",
+                                    textAlign:
+                                      message.role === "user"
+                                        ? "right"
+                                        : "left",
                                     display: "flex",
-                                    gap: "4px",
+                                    justifyContent: "space-between",
                                     alignItems: "center",
                                   }}
                                 >
-                                  {/* 语音播放按钮 - 只对AI回复且有真实消息ID的消息显示 */}
-                                  {message.role === "assistant" &&
-                                    message.remoteId &&
-                                    !message.remoteId.startsWith(
-                                      "assistant_",
-                                    ) &&
-                                    !message.remoteId.startsWith("error_") &&
-                                    !message.remoteId.startsWith("remote_") &&
-                                    selectedAgent && (
-                                      <VoicePlayer
-                                        agentId={selectedAgent.id}
-                                        messageId={message.remoteId}
-                                        messageText={message.content}
-                                        language="zh"
-                                        size="small"
-                                        style={{
-                                          color: "#666",
-                                          padding: "2px 4px",
-                                          height: "auto",
-                                          minWidth: "auto",
-                                        }}
-                                      />
-                                    )}
+                                  <span>
+                                    <ClockCircleOutlined
+                                      style={{ marginRight: "2px" }}
+                                    />
+                                    {new Date(
+                                      message.timestamp,
+                                    ).toLocaleTimeString()}
+                                  </span>
+                                  <div
+                                    className="message-actions"
+                                    style={{
+                                      opacity: 1,
+                                      display: "flex",
+                                      gap: "4px",
+                                      alignItems: "center",
+                                    }}
+                                  >
+                                    {/* 语音播放按钮 - 只对AI回复且有真实消息ID的消息显示 */}
+                                    {message.role === "assistant" &&
+                                      message.remoteId &&
+                                      !message.remoteId.startsWith(
+                                        "assistant_",
+                                      ) &&
+                                      !message.remoteId.startsWith("error_") &&
+                                      !message.remoteId.startsWith("remote_") &&
+                                      selectedAgent && (
+                                        <VoicePlayer
+                                          agentId={selectedAgent.id}
+                                          messageId={message.remoteId}
+                                          messageText={message.content}
+                                          language="zh"
+                                          size="small"
+                                          style={{
+                                            color: "#666",
+                                            padding: "2px 4px",
+                                            height: "auto",
+                                            minWidth: "auto",
+                                          }}
+                                        />
+                                      )}
 
-                                  {/* 图片生成按钮 - 对所有消息显示 */}
-                                  <MessageToImageIcon
-                                    messageContent={message.content}
-                                    size="small"
-                                    onImageGenerated={(imageUrl) => handleImageGenerated(message.content, imageUrl)}
-                                  />
+                                    {/* 图片生成按钮 - 对所有消息显示 */}
+                                    <MessageToImageIcon
+                                      messageContent={message.content}
+                                      size="small"
+                                      onImageGenerated={(imageUrl) =>
+                                        handleImageGenerated(
+                                          message.content,
+                                          imageUrl,
+                                        )
+                                      }
+                                    />
 
-                                  {/* 只有历史消息才显示重新发送和删除按钮 */}
-                                  {message.remoteId &&
-                                    !message.remoteId.startsWith("user_") &&
-                                    !message.remoteId.startsWith(
-                                      "assistant_",
-                                    ) &&
-                                    !message.remoteId.startsWith("error_") && (
-                                      <>
-                                        {message.role === "user" && (
-                                          <Tooltip title="重新发送">
+                                    {/* 只有历史消息才显示重新发送和删除按钮 */}
+                                    {message.remoteId &&
+                                      !message.remoteId.startsWith("user_") &&
+                                      !message.remoteId.startsWith(
+                                        "assistant_",
+                                      ) &&
+                                      !message.remoteId.startsWith(
+                                        "error_",
+                                      ) && (
+                                        <>
+                                          {message.role === "user" && (
+                                            <Tooltip title="重新发送">
+                                              <Button
+                                                type="text"
+                                                size="small"
+                                                icon={<RedoOutlined />}
+                                                style={{
+                                                  color:
+                                                    message.role === "user"
+                                                      ? "#fff"
+                                                      : "#666",
+                                                  padding: "2px 4px",
+                                                  height: "auto",
+                                                  minWidth: "auto",
+                                                }}
+                                                onClick={() =>
+                                                  handleResendMessage(message)
+                                                }
+                                              />
+                                            </Tooltip>
+                                          )}
+                                          <Tooltip title="删除消息">
                                             <Button
                                               type="text"
                                               size="small"
-                                              icon={<RedoOutlined />}
+                                              icon={<DeleteOutlined />}
                                               style={{
                                                 color:
                                                   message.role === "user"
@@ -1263,37 +1299,17 @@ export const ChatPage: React.FC = () => {
                                                 minWidth: "auto",
                                               }}
                                               onClick={() =>
-                                                handleResendMessage(message)
+                                                handleDeleteMessage(message)
                                               }
                                             />
                                           </Tooltip>
-                                        )}
-                                        <Tooltip title="删除消息">
-                                          <Button
-                                            type="text"
-                                            size="small"
-                                            icon={<DeleteOutlined />}
-                                            style={{
-                                              color:
-                                                message.role === "user"
-                                                  ? "#fff"
-                                                  : "#666",
-                                              padding: "2px 4px",
-                                              height: "auto",
-                                              minWidth: "auto",
-                                            }}
-                                            onClick={() =>
-                                              handleDeleteMessage(message)
-                                            }
-                                          />
-                                        </Tooltip>
-                                      </>
-                                    )}
+                                        </>
+                                      )}
+                                  </div>
                                 </div>
                               </div>
                             </div>
-                          </div>
-                        </List.Item>
+                          </List.Item>
 
                           {/* 显示该消息生成的图片 */}
                           {generatedImages.get(message.content) && (
@@ -1322,12 +1338,14 @@ export const ChatPage: React.FC = () => {
                                     display: "block",
                                   }}
                                   placeholder={
-                                    <div style={{ 
-                                      textAlign: "center", 
-                                      padding: "40px",
-                                      backgroundColor: "#f5f5f5",
-                                      borderRadius: "8px"
-                                    }}>
+                                    <div
+                                      style={{
+                                        textAlign: "center",
+                                        padding: "40px",
+                                        backgroundColor: "#f5f5f5",
+                                        borderRadius: "8px",
+                                      }}
+                                    >
                                       <Spin size="large" />
                                     </div>
                                   }

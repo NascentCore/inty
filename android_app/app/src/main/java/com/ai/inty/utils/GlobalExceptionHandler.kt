@@ -4,13 +4,10 @@ import android.content.Context
 import com.inty.utils.log.EasyLog
 import java.lang.Thread.UncaughtExceptionHandler
 
-/**
- * 全局异常处理器
- * 捕获未处理的异常并记录到 Firebase Crashlytics
- */
+/** 全局异常处理器 捕获未处理的异常并记录到 Firebase Crashlytics */
 class GlobalExceptionHandler(
     private val context: Context,
-    private val defaultHandler: UncaughtExceptionHandler?
+    private val defaultHandler: UncaughtExceptionHandler?,
 ) : UncaughtExceptionHandler {
 
     override fun uncaughtException(thread: Thread, exception: Throwable) {
@@ -24,11 +21,10 @@ class GlobalExceptionHandler(
             // 记录到本地日志
             EasyLog.log(
                 "GlobalExceptionHandler: Uncaught exception in thread ${thread.name}",
-                EasyLog.ERROR
+                EasyLog.ERROR,
             )
             EasyLog.log("Exception: ${exception.message}", EasyLog.ERROR)
             exception.printStackTrace()
-
         } catch (e: Exception) {
             EasyLog.log("Failed to handle global exception: ${e.message}", EasyLog.ERROR)
         } finally {
@@ -76,9 +72,7 @@ class GlobalExceptionHandler(
     }
 
     companion object {
-        /**
-         * 安装全局异常处理器
-         */
+        /** 安装全局异常处理器 */
         fun install(context: Context) {
             val defaultHandler = Thread.getDefaultUncaughtExceptionHandler()
             val globalHandler = GlobalExceptionHandler(context, defaultHandler)

@@ -81,8 +81,7 @@ fun ChatMorePanel(
                 val density = LocalDensity.current
                 Column(
                     modifier =
-                        Modifier
-                            .fillMaxWidth()
+                        Modifier.fillMaxWidth()
                             .background(color = DarkPurple)
                             .onGloballyPositioned { coords ->
                                 val h = with(density) { coords.size.height.toDp() }
@@ -140,21 +139,19 @@ fun ChatMorePanel(
 
     // 监听chatSettings的变化，确保数据同步
     val chatSettings by chatViewModel.chatSettings.collectAsState()
-    
+
     // 获取当前agent的聊天设置，确保按agent隔离，并监听chatSettings变化
     val currentChatSetting by
-    remember(agentInfo?.id, chatSettings) {
-        derivedStateOf {
-            agentInfo?.id?.let { agentId -> chatViewModel.getChatSettingForAgent(agentId) }
+        remember(agentInfo?.id, chatSettings) {
+            derivedStateOf {
+                agentInfo?.id?.let { agentId -> chatViewModel.getChatSettingForAgent(agentId) }
+            }
         }
-    }
 
     val replyStr by
-    remember(agentInfo?.id, currentChatSetting) {
-        derivedStateOf {
-            (currentChatSetting?.style_prompt ?: "")
+        remember(agentInfo?.id, currentChatSetting) {
+            derivedStateOf { (currentChatSetting?.style_prompt ?: "") }
         }
-    }
     if (showSheet) {
         ReplyStyleSheet(
             sheetState = sheetState,
@@ -192,14 +189,11 @@ private fun MorePanelItem(icon: Int, text: String, onClick: () -> Unit) {
         Spacer(Modifier.height(20.dp))
         Box(
             modifier =
-                Modifier
-                    .size(64.dp)
+                Modifier.size(64.dp)
                     .background(color = Color.White.copy(0.05f), shape = RoundedCornerShape(8.dp))
         ) {
             Image(
-                modifier = Modifier
-                    .size(36.dp)
-                    .align(Alignment.Center),
+                modifier = Modifier.size(36.dp).align(Alignment.Center),
                 painter = painterResource(id = icon),
                 contentDescription = null,
             )

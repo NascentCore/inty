@@ -38,10 +38,7 @@ class ExploreViewModel : BaseViewModel() {
         // Firebase Analytics - 记录探索页面访问
         FirebaseManager.logEvent(
             "explore_page_view",
-            mapOf(
-                "page_type" to "recommendations",
-                "is_initial_load" to true,
-            ),
+            mapOf("page_type" to "recommendations", "is_initial_load" to true),
         )
 
         // 创建初始数据流（优先使用缓存）

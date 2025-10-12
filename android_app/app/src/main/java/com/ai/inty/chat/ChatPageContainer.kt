@@ -134,7 +134,9 @@ fun ChatPageContainer(
                     if (lastValidIndex >= 0 && lastValidIndex < agentsPagingItems.itemCount) {
                         // 访问最后一个有效索引，这会触发Paging库自动加载下一页
                         agentsPagingItems[lastValidIndex]
-                        EasyLog.log("ChatPageContainer - 触发预取加载，当前索引: $lastValidIndex, 总数: ${agentsPagingItems.itemCount}")
+                        EasyLog.log(
+                            "ChatPageContainer - 触发预取加载，当前索引: $lastValidIndex, 总数: ${agentsPagingItems.itemCount}"
+                        )
                     }
                 } catch (e: IndexOutOfBoundsException) {
                     EasyLog.log("ChatPageContainer - 索引越界，跳过预取: ${e.message}", EasyLog.WARN)
@@ -150,11 +152,14 @@ fun ChatPageContainer(
             modifier = modifier,
             state = pageState,
             userScrollEnabled = !shouldShowGuide, // 在引导期间禁用用户滑动
-            beyondViewportPageCount = 3//左右预先处理个page个数
+            beyondViewportPageCount = 3, // 左右预先处理个page个数
         ) { currentPage ->
             // 防止数组越界
             if (currentPage < 0 || currentPage >= agentList.size) {
-                EasyLog.log("ChatPageContainer - HorizontalPager索引越界: currentPage=$currentPage, agentList.size=${agentList.size}", EasyLog.WARN)
+                EasyLog.log(
+                    "ChatPageContainer - HorizontalPager索引越界: currentPage=$currentPage, agentList.size=${agentList.size}",
+                    EasyLog.WARN,
+                )
                 // 如果索引无效，显示空页面或返回
                 return@HorizontalPager
             }
