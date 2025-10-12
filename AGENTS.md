@@ -18,6 +18,10 @@ Based on [AGENTS.md](https://agents.md/)
 
 ## Coding style
 
+### Do not use magic number/string/values
+
+Whenever possible define constants to name magic number/string/values to aid code readability.
+
 ### Prefer early return
 
 Prefer:
