@@ -268,14 +268,6 @@ internal fun ChatPage(
                     }
                 }
                 val chatMessages by chatViewModel.msgs.collectAsState()
-EasyLog.log("=== CHAT DEBUG: ChatPage - Received ${chatMessages.size} messages from ViewModel")
-
-chatMessages.forEachIndexed { index, msg ->
-    EasyLog.log(
-            "=== CHAT DEBUG: Message $index - Role: ${msg.role}, Content: '${msg.content}', LocalId: ${msg.localMsgId}"
-    )
-}
-
                 LazyColumn(
                     modifier = Modifier.weight(1f).padding(horizontal = 16.dp),
                     reverseLayout = true, // ⚠️此处使用了reverse，导致布局列表是反向的
@@ -284,17 +276,6 @@ chatMessages.forEachIndexed { index, msg ->
                     // 1. 用户和 agent 的对话消息（显示在底部，因为是反向列表）
                     // 过滤掉 chatMessages 中的开场白消息
                     val filteredChatMessages = chatMessages.filter { !it.isOpening() }
-EasyLog.log(
-        "=== CHAT DEBUG: Filtered messages count: ${filteredChatMessages.size} (removed ${chatMessages.size - filteredChatMessages.size} opening messages)"
-)
-
-// 调试：检查每条消息的 meta_data 状态
-chatMessages.forEachIndexed { index, msg ->
-    EasyLog.log(
-            "=== CHAT DEBUG: Message $index meta_data: ${msg.meta_data}, isOpening: ${msg.isOpening()}"
-    )
-}
-
                     // 添加安全检查
                     runCatching {
                             if (filteredChatMessages.isNotEmpty()) {
@@ -304,14 +285,6 @@ chatMessages.forEachIndexed { index, msg ->
                                     messagesCopy.filter {
                                         !(it.role == "user" && it.content == "continue")
                                     }
-EasyLog.log("=== CHAT DEBUG: Final items to display: ${items.size}")
-
-items.forEachIndexed { idx, item ->
-    EasyLog.log(
-            "=== CHAT DEBUG: Display item $idx - Role: ${item.role}, Content: '${item.content}'"
-    )
-}
-
                                 if (items.isNotEmpty()) {
                                     itemsIndexed(
                                         items,
@@ -322,10 +295,6 @@ items.forEachIndexed { idx, item ->
                                             }
                                         },
                                     ) { index, item ->
-EasyLog.log(
-        "=== CHAT DEBUG: Rendering message $index - Role: ${item.role}, Content: '${item.content}'"
-)
-
                                         runCatching {
                                                 // 明确数据边界
                                                 if (index < items.size) {
