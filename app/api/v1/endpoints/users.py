@@ -23,7 +23,6 @@ from app.schemas.user_deletion import (
     AccountDeletionRequest,
     AccountDeletionResponse,
     AnonymizationStatsResponse,
-    DeletionCheckResponse,
 )
 from app.services import user_service
 from app.services.global_services import subscription_service
@@ -152,33 +151,6 @@ async def register_device_token(
         return APIResponse.error(message=str(e))
 
 
-@router.get("/deletion/check", response_model=APIResponse[DeletionCheckResponse])
-async def check_deletion_eligibility(
-    db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(deps.get_current_active_user),
-) -> Any:
-    """
-    检查用户是否可以删除账户
-    """
-    try:
-        can_delete, error_message = await user_service.check_user_can_delete_account(
-            db, current_user.id
-        )
-
-        response_data = DeletionCheckResponse(
-            can_delete=can_delete,
-            error_message=error_message if not can_delete else None,
-            active_subscription=not can_delete and "订阅" in (error_message or ""),
-        )
-
-        return APIResponse.success(data=response_data)
-
-    except Exception as e:
-        logger.error(f"检查删除权限失败: {str(e)}")
-        logger.error(f"错误堆栈: {traceback.format_exc()}")
-        return APIResponse.error(message="Failed to check deletion permissions")
-
-
 @router.post("/delete-account", response_model=APIResponse[AccountDeletionResponse])
 async def delete_user_account(
     db: AsyncSession = Depends(get_async_db),
@@ -186,9 +158,26 @@ async def delete_user_account(
     request: Optional[AccountDeletionRequest] = None,
 ) -> Any:
     """
-    删除用户账户
+    删除用户账户 - 包含删除权限检查
     """
     try:
+        # 首先检查用户是否可以删除账户
+        can_delete, error_message = await user_service.check_user_can_delete_account(
+            db, current_user.id
+        )
+
+        # 如果无法删除，返回检查结果
+        if not can_delete:
+            response_data = AccountDeletionResponse(
+                success=False,
+                message=error_message,
+                user_id=current_user.id,
+                can_delete=can_delete,
+                error_message=error_message,
+                active_subscription=not can_delete and "订阅" in (error_message or ""),
+            )
+            return APIResponse.success(data=response_data)
+
         # 执行账户删除
         deletion_reason = "用户主动删除"
         if request and request.reason:
@@ -202,12 +191,23 @@ async def delete_user_account(
         )
 
         if not deletion_result["success"]:
-            return APIResponse.error(message=deletion_result["message"])
+            response_data = AccountDeletionResponse(
+                success=False,
+                message=deletion_result["message"],
+                user_id=deletion_result["user_id"],
+                can_delete=True,  # 检查通过但删除失败
+                error_message=deletion_result["message"],
+                active_subscription=False,
+            )
+            return APIResponse.success(data=response_data)
 
         response_data = AccountDeletionResponse(
             success=deletion_result["success"],
             message=deletion_result["message"],
             user_id=deletion_result["user_id"],
+            can_delete=True,
+            error_message=None,
+            active_subscription=False,
         )
 
         return APIResponse.success(data=response_data)

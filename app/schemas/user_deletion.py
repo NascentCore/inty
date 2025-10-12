@@ -24,6 +24,9 @@ class AccountDeletionResponse(BaseModel):
     anonymized_fields: Optional[List[str]] = Field(
         None, description="已匿名化的字段列表"
     )
+    can_delete: Optional[bool] = Field(None, description="是否可以删除")
+    error_message: Optional[str] = Field(None, description="错误信息")
+    active_subscription: Optional[bool] = Field(None, description="是否有活跃订阅")
 
     class Config:
         json_schema_extra = {
@@ -33,6 +36,9 @@ class AccountDeletionResponse(BaseModel):
                 "user_id": "user_123",
                 "deletion_log_id": "del_log_456",
                 "anonymized_fields": ["email", "phone", "nickname"],
+                "can_delete": True,
+                "error_message": None,
+                "active_subscription": False,
             }
         }
 
