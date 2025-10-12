@@ -200,12 +200,12 @@ private fun VipCenterHeader() {
 @Composable
 private fun VipCenterBenefits() {
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-PremiumBenefitItem(stringResource(R.string.premium_benefit_unlimited_chat))
+        PremiumBenefitItem(stringResource(R.string.premium_benefit_unlimited_chat))
 
-PremiumBenefitItem(stringResource(R.string.premium_benefit_higher_other_limits))
+        PremiumBenefitItem(stringResource(R.string.premium_benefit_higher_other_limits))
 
         PremiumBenefitItem(stringResource(R.string.premium_benefit_model))
-PremiumBenefitItem(stringResource(R.string.premium_benefit_chat_style))
+        PremiumBenefitItem(stringResource(R.string.premium_benefit_chat_style))
 
         PremiumBenefitItem(stringResource(R.string.premium_benefit_newfeature))
     }

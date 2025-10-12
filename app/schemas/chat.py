@@ -210,8 +210,8 @@ class ChatCompletionRequest(BaseModel):
     language: str = "zh"  # 添加语言字段，默认中文
     request_id: Optional[str] = None
 
-    @model_validator(mode='after')
-    def check_deprecated_fields(self) -> 'ChatCompletionRequest':
+    @model_validator(mode="after")
+    def check_deprecated_fields(self) -> "ChatCompletionRequest":
         if self.stream:
             logger.warning("DEPRECATED: 'stream' parameter has no effect")
         if self.model != "chatbot":

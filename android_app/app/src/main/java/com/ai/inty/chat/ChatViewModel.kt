@@ -418,7 +418,10 @@ class ChatViewModel : BaseActivityViewModel() {
 
                                 runCatching {
                                         // 有免费次数限制，需要vip订阅
-                                        if (result.data.code == BusinessErrorCodes.SUBSCRIPTION_REQUIRED_CODE) {
+                                        if (
+                                            result.data.code ==
+                                                BusinessErrorCodes.SUBSCRIPTION_REQUIRED_CODE
+                                        ) {
                                             // Firebase Analytics - 记录免费次数限制
                                             FirebaseManager.logEvent(
                                                 "free_limit_reached",
@@ -568,7 +571,10 @@ class ChatViewModel : BaseActivityViewModel() {
                     is HttpResult.Success -> {
                         runCatching {
                                 // 有免费次数限制，需要vip订阅
-                                if (result.data.code == BusinessErrorCodes.SUBSCRIPTION_REQUIRED_CODE) {
+                                if (
+                                    result.data.code ==
+                                        BusinessErrorCodes.SUBSCRIPTION_REQUIRED_CODE
+                                ) {
                                     showLimitDialog.emit(true)
                                 }
                                 // 添加AI回复
