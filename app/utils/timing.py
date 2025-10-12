@@ -28,7 +28,7 @@ def log_time(operation_name: str) -> Generator[None, None, None]:
         logger.debug(f"{operation_name}耗时: {elapsed_time:.3f}秒")
 
 
-class Timeer:
+class Timer:
     """计时器
     用于记录某个操作的耗时，使用方法：
     timer = Timeer("测试操作")

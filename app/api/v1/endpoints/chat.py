@@ -25,7 +25,7 @@ from app.services import agent_service, chat_history_service, chat_service
 from app.services.chat_service import generate_session_id
 from app.services.global_services import subscription_service
 from app.services.voice_service import voice_service
-from app.utils.timing import Timeer, log_time
+from app.utils.timing import Timer, log_time
 
 router = APIRouter(prefix="/chat", route_class=LoggerRoute)
 
@@ -53,7 +53,7 @@ async def agent_chat_completions(
     try:
         import time
 
-        request_handling_timeer = Timeer("请求处理")
+        request_handling_timeer = Timer("请求处理")
         logger.debug(
             f"开始处理聊天请求 - Agent ID: {agent_id}, User ID: {current_user.id}"
         )
