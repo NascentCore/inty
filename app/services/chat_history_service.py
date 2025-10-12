@@ -303,33 +303,31 @@ async def get_latest_ai_message_info(
         result = await db.execute(stmt)
         chat_history = result.scalar_one_or_none()
 
-        if chat_history:
-            # 解析消息内容
-            content = ""
-            try:
-                message_data = chat_history.message
-                if "data" in message_data and "content" in message_data["data"]:
-                    content = message_data["data"]["content"]
-                elif "content" in message_data:
-                    content = message_data["content"]
-
-            except (TypeError, KeyError) as e:
-                logger.warning(f"解析AI消息内容失败: {str(e)}")
-                content = str(chat_history.message) if chat_history.message else ""
-
-            return {
-                "id": chat_history.id,
-                "content": content,
-                "audio_url": chat_history.audio_url,
-                "meta_data": chat_history.meta_data,
-                "timestamp": (
-                    chat_history.created_at.isoformat()
-                    if chat_history.created_at
-                    else None
-                ),
-            }
-        else:
+        if chat_history is None:
             return None
+
+        # 解析消息内容
+        content = ""
+        try:
+            message_data = chat_history.message
+            if "data" in message_data and "content" in message_data["data"]:
+                content = message_data["data"]["content"]
+            elif "content" in message_data:
+                content = message_data["content"]
+
+        except (TypeError, KeyError) as e:
+            logger.warning(f"解析AI消息内容失败: {str(e)}")
+            content = str(chat_history.message) if chat_history.message else ""
+
+        return {
+            "id": chat_history.id,
+            "content": content,
+            "audio_url": chat_history.audio_url,
+            "meta_data": chat_history.meta_data,
+            "timestamp": (
+                chat_history.created_at.isoformat() if chat_history.created_at else None
+            ),
+        }
 
     except Exception as e:
         logger.error(f"获取最新AI消息信息失败 {session_id}: {str(e)}")
