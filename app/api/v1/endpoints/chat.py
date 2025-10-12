@@ -92,9 +92,6 @@ async def agent_chat_completions(
                 detail=f"Agent ID mismatch: expected={agent_id}, actual={chat.agent_id}",
             )
 
-        # 记录实际使用的agent_id
-        logger.debug(f"实际聊天的Agent ID: {chat.agent_id}")
-
         # 获取最后一条用户消息
         user_messages = [msg for msg in request.messages if msg.role == "user"]
         if not user_messages:
@@ -106,7 +103,7 @@ async def agent_chat_completions(
         messages = {"messages": [HumanMessage(content=last_user_message)]}
 
         # 使用高性能的聊天专用Agent获取方法
-        with log_time(f"获取 Agent 实例 {chat.agent_id}"):
+        with log_time(f"查询 Agent 数据: {chat.agent_id}"):
             agent_data = await agent_service.get_agent_for_chat(
                 db, agent_id=chat.agent_id
             )
@@ -114,11 +111,11 @@ async def agent_chat_completions(
         if not agent_data:
             logger.error(f"Agent数据未找到: {chat.agent_id}")
             raise HTTPException(status_code=404, detail="Agent not found")
-        agent = await agent_manager.get_agent(agent_data)
 
-        # 使用统一的session_id生成规则
-        with log_time("生成 Session ID"):
-            session_id = generate_session_id(chat.id)
+        with log_time(f"获取 Agent 实例: {chat.agent_id}"):
+            agent = await agent_manager.get_agent(agent_data)
+
+        session_id = generate_session_id(chat.id)
 
         is_allowed, used_count, daily_limit = (
             await subscription_service.check_chat_limit(db, current_user)

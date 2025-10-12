@@ -77,4 +77,4 @@ jobs:
           sleep 10
           # noci marker is defined in pytest.ini
           # applied on test functions with noci marker will be skipped on CI
-          pytest tests/ -m "not noci" -v -s
+          pytest -m "not noci" -v -s tests/
