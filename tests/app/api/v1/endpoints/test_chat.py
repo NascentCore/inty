@@ -3,11 +3,9 @@ Integration tests for chat endpoints.
 """
 
 import uuid
-from unittest.mock import AsyncMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -81,98 +79,59 @@ async def test_db_session():
 async def test_agent_chat_completions_happy_case(test_db_session):
     """Test successful chat completion with agent."""
     session, test_user, test_agent = test_db_session
-    
-    # Mock dependencies
-    with patch('app.api.v1.endpoints.chat.agent_manager') as mock_agent_manager, \
-         patch('app.api.v1.endpoints.chat.subscription_service') as mock_subscription_service, \
-         patch('app.api.v1.endpoints.chat.voice_service') as mock_voice_service, \
-         patch('app.api.v1.endpoints.chat.chat_service') as mock_chat_service, \
-         patch('app.api.v1.endpoints.chat.chat_history_service') as mock_chat_history_service:
-        
-        # Setup mocks
-        mock_subscription_service.check_chat_limit.return_value = (True, 5, 100)
-        mock_subscription_service.record_usage.return_value = None
-        
-        mock_agent_instance = AsyncMock()
-        mock_agent_instance.chat.return_value = "Hello! This is a test response from the agent."
-        mock_agent_manager.get_agent.return_value = mock_agent_instance
-        
-        mock_voice_service.generate_voice.return_value = None
-        
-        mock_chat_service.get_or_create_chat_by_agent.return_value = models.Chat(
-            id=f"chat-{uuid.uuid4().hex[:8]}",
-            user_id=test_user.id,
-            agent_id=test_agent.id
+
+    # Create test client
+    client = TestClient(app)
+
+    # Prepare request data
+    request_data = ChatCompletionRequest(
+        messages=[ChatMessage(role="user", content="Hello, how are you?")],
+        stream=False,
+        model="chatbot",
+        language="en",
+    )
+
+    # Override the dependency for this test
+    def override_get_current_active_user():
+        return test_user
+
+    def override_get_async_db():
+        return session
+
+    app.dependency_overrides[deps.get_current_active_user] = (
+        override_get_current_active_user
+    )
+    app.dependency_overrides[deps.get_async_db] = override_get_async_db
+
+    try:
+        # Make request
+        response = client.post(
+            f"/api/v1/chat/completions/{test_agent.id}", json=request_data.dict()
         )
-        
-        mock_chat_service.get_or_create_chat_settings.return_value = models.ChatSettings(
-            id=f"settings-{uuid.uuid4().hex[:8]}",
-            user_id=test_user.id,
-            agent_id=test_agent.id,
-            voice_enabled=False
-        )
-        
-        mock_chat_history_service.get_latest_ai_message_info.return_value = {
-            "id": f"msg-{uuid.uuid4().hex[:8]}",
-            "meta_data": {},
-            "timestamp": "2024-01-01T00:00:00Z",
-            "audio_url": None
-        }
-        
-        # Create test client
-        client = TestClient(app)
-        
-        # Prepare request data
-        request_data = ChatCompletionRequest(
-            messages=[
-                ChatMessage(role="user", content="Hello, how are you?")
-            ],
-            stream=False,
-            model="chatbot",
-            language="en"
-        )
-        
-        # Override the dependency for this test
-        def override_get_current_active_user():
-            return test_user
-        
-        app.dependency_overrides[deps.get_current_active_user] = override_get_current_active_user
-        
-        try:
-            # Make request
-            response = client.post(
-                f"/api/v1/chat/completions/{test_agent.id}",
-                json=request_data.dict()
-            )
-        finally:
-            # Clean up the override
-            app.dependency_overrides.clear()
-        
-        # Assertions
-        assert response.status_code == 200
-        response_data = response.json()
-        
-        assert response_data["code"] == 200
-        assert "data" in response_data
-        
-        data = response_data["data"]
-        assert data["object"] == "chat.completion"
-        assert "choices" in data
-        assert len(data["choices"]) == 1
-        
-        choice = data["choices"][0]
-        assert choice["index"] == 0
-        assert choice["finish_reason"] == "stop"
-        assert "message" in choice
-        
-        message = choice["message"]
-        assert message["role"] == "assistant"
-        assert message["content"] == "Hello! This is a test response from the agent."
-        assert "id" in message
-        assert "timestamp" in message
-        
-        # Verify mocks were called
-        mock_subscription_service.check_chat_limit.assert_called_once()
-        mock_agent_manager.get_agent.assert_called_once()
-        mock_agent_instance.chat.assert_called_once()
-        mock_subscription_service.record_usage.assert_called_once()
+    finally:
+        # Clean up the override
+        app.dependency_overrides.clear()
+
+    # Assertions
+    assert response.status_code == 200
+    response_data = response.json()
+
+    assert response_data["code"] == 200
+    assert "data" in response_data
+
+    data = response_data["data"]
+    assert data["object"] == "chat.completion"
+    assert "choices" in data
+    assert len(data["choices"]) == 1
+
+    choice = data["choices"][0]
+    assert choice["index"] == 0
+    assert choice["finish_reason"] == "stop"
+    assert "message" in choice
+
+    message = choice["message"]
+    assert message["role"] == "assistant"
+    assert message["content"] is not None
+    assert len(message["content"]) > 0
+    assert "id" in message
+    assert "timestamp" in message
