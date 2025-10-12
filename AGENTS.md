@@ -16,6 +16,28 @@ Based on [AGENTS.md](https://agents.md/)
 - `devops/` Inty IntelliMate 运维相关代码
 - `docs/` 文档
 
+## Coding style
+
+### Prefer early return
+
+Prefer:
+
+```python
+if false:
+  return None
+
+...
+```
+
+Over
+
+```python
+if true:
+  ...
+else:
+  return None
+```
+
 ## Python
 
 - 避免使用 `try ... except Exception` 来覆盖所有异常，而应该至拦截函数能处理的异常
