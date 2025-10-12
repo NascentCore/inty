@@ -162,8 +162,7 @@ object IntyNetworkManager {
         return try {
             if (NetworkConfig.shouldEnableDetailedLogging()) {
                 EasyLog.log("🔄 Executing $operation")
-EasyLog.log("🔄 Timeout configured: ${actualConfig.timeoutMs}ms")
-
+                EasyLog.log("🔄 Timeout configured: ${actualConfig.timeoutMs}ms")
             }
 
             val result = withTimeout(actualConfig.timeoutMs) { apiCall() }
@@ -176,12 +175,11 @@ EasyLog.log("🔄 Timeout configured: ${actualConfig.timeoutMs}ms")
         } catch (e: Exception) {
             if (NetworkConfig.shouldEnableDetailedLogging()) {
                 EasyLog.log("❌ $operation failed: ${e.message}")
-EasyLog.log("❌ Exception type: ${e.javaClass.simpleName}")
+                EasyLog.log("❌ Exception type: ${e.javaClass.simpleName}")
 
-if (e is kotlinx.coroutines.TimeoutCancellationException) {
-    EasyLog.log("❌ Request timed out after ${actualConfig.timeoutMs}ms")
-}
-
+                if (e is kotlinx.coroutines.TimeoutCancellationException) {
+                    EasyLog.log("❌ Request timed out after ${actualConfig.timeoutMs}ms")
+                }
             }
             e.toApiResult()
         }

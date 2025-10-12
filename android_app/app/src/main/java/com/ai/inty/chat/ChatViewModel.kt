@@ -82,12 +82,11 @@ class ChatViewModel : BaseActivityViewModel() {
     private var _isRefreshingConversations = MutableStateFlow(false)
     val isRefreshingConversations = _isRefreshingConversations.asStateFlow()
 
-// 延迟获取依赖，避免在构造函数中立即获取导致空指针异常
-private val chatApi by lazy {
-    TheRouter.get(IChatApi::class.java)
+    // 延迟获取依赖，避免在构造函数中立即获取导致空指针异常
+    private val chatApi by lazy {
+        TheRouter.get(IChatApi::class.java)
             ?: throw IllegalStateException("IChatApi not found in TheRouter")
-}
-
+    }
 
     init {
         EasyLog.log("ChatViewModel = ${hashCode()}")
@@ -225,7 +224,7 @@ private val chatApi by lazy {
 
     fun queryMsgs() {
         EasyLog.log("=== CHAT DEBUG: queryMsgs() called")
-        
+
         // 防重复请求检查
         val currentTime = System.currentTimeMillis()
         val currentAgentId = agentInfo.value?.id
@@ -260,19 +259,27 @@ private val chatApi by lazy {
                     EasyLog.log("=== CHAT DEBUG: queryMsgs result for ${agent.id} = $result")
                     when (result) {
                         is HttpResult.Success -> {
-                            EasyLog.log("=== CHAT DEBUG: Successfully received messages from server")
-                            EasyLog.log("=== CHAT DEBUG: Raw messages count: ${result.data.messages.size}")
+                            EasyLog.log(
+                                "=== CHAT DEBUG: Successfully received messages from server"
+                            )
+                            EasyLog.log(
+                                "=== CHAT DEBUG: Raw messages count: ${result.data.messages.size}"
+                            )
                             result.data.messages.forEachIndexed { index, msg ->
-                                EasyLog.log("=== CHAT DEBUG: Raw message $index - Role: ${msg.role}, Content: '${msg.content}', LocalId: ${msg.localMsgId}")
+                                EasyLog.log(
+                                    "=== CHAT DEBUG: Raw message $index - Role: ${msg.role}, Content: '${msg.content}', LocalId: ${msg.localMsgId}"
+                                )
                             }
-                            
+
                             // 去重处理：基于内容和角色的组合去重，同时考虑时间戳
                             val uniqueMessages =
                                 result.data.messages.distinctBy { msg ->
                                     "${msg.role}_${msg.content}_${msg.localMsgId}"
                                 }
-                            EasyLog.log("=== CHAT DEBUG: Unique messages count: ${uniqueMessages.size}")
-                            
+                            EasyLog.log(
+                                "=== CHAT DEBUG: Unique messages count: ${uniqueMessages.size}"
+                            )
+
                             _msgs.update { uniqueMessages }
                             EasyLog.log(
                                 "=== CHAT DEBUG: Successfully loaded ${uniqueMessages.size} unique messages for agent ${agent.id} (original: ${result.data.messages.size})"
@@ -304,7 +311,7 @@ private val chatApi by lazy {
 
     fun sendMsg() {
         EasyLog.log("=== CHAT DEBUG: sendMsg() called")
-        
+
         // 防抖检查
         val currentTime = System.currentTimeMillis()
         if (currentTime - lastSendTime < SEND_DEBOUNCE_TIME) {
@@ -336,7 +343,7 @@ private val chatApi by lazy {
                 try {
                     val inputMsg = inputData.value
                     EasyLog.log("=== CHAT DEBUG: Input message from inputData: '$inputMsg'")
-                    
+
                     if (inputMsg.isBlank()) {
                         EasyLog.log("=== CHAT DEBUG: Empty message, ignoring send request")
                         return@launchWithNetCheck
@@ -346,7 +353,9 @@ private val chatApi by lazy {
                     EasyLog.log("=== CHAT DEBUG: Cleared inputData, sending message: '$inputMsg'")
 
                     val msgInfo = MsgInfo(content = inputMsg.trimEnd(), role = "user")
-                    EasyLog.log("=== CHAT DEBUG: Created MsgInfo - Content: '${msgInfo.content}', Role: '${msgInfo.role}'")
+                    EasyLog.log(
+                        "=== CHAT DEBUG: Created MsgInfo - Content: '${msgInfo.content}', Role: '${msgInfo.role}'"
+                    )
 
                     // 添加临时的加载消息
                     val loadingMsg =
@@ -380,16 +389,23 @@ private val chatApi by lazy {
                     EasyLog.log("=== CHAT DEBUG: Set _isWaitingForReply to true")
 
                     val req = SendMsgReq(listOf(msgInfo))
-                    EasyLog.log("=== CHAT DEBUG: Created SendMsgReq with ${req.messages.size} messages")
-                    
+                    EasyLog.log(
+                        "=== CHAT DEBUG: Created SendMsgReq with ${req.messages.size} messages"
+                    )
+
                     val currentAgent = agentInfo.value
                     if (currentAgent == null) {
-                        EasyLog.log("=== CHAT DEBUG: No current agent found!", priority = EasyLog.ERROR)
+                        EasyLog.log(
+                            "=== CHAT DEBUG: No current agent found!",
+                            priority = EasyLog.ERROR,
+                        )
                         return@launchWithNetCheck
                     }
-                    
-                    EasyLog.log("=== CHAT DEBUG: Current agent - ID: ${currentAgent.id}, Name: ${currentAgent.name}")
-                    
+
+                    EasyLog.log(
+                        "=== CHAT DEBUG: Current agent - ID: ${currentAgent.id}, Name: ${currentAgent.name}"
+                    )
+
                     currentAgent.let { agent ->
 
                         // Firebase Analytics - 记录消息发送
@@ -419,17 +435,23 @@ private val chatApi by lazy {
                                 "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
                             ),
                         )
-                        EasyLog.log("=== CHAT DEBUG: Calling ChatService.sendMessage with agentId: ${agent.id}, model: ${req.model}, stream: ${req.stream}")
-                        val result = ChatService.sendMessage(agent.id, req.messages, req.model, req.stream)
+                        EasyLog.log(
+                            "=== CHAT DEBUG: Calling ChatService.sendMessage with agentId: ${agent.id}, model: ${req.model}, stream: ${req.stream}"
+                        )
+                        val result =
+                            ChatService.sendMessage(agent.id, req.messages, req.model, req.stream)
 
                         EasyLog.log("=== CHAT DEBUG: ChatService.sendMessage result: $result")
 
                         // 移除加载消息
                         _msgs.update { currentMsgs ->
-                            val filteredMsgs = currentMsgs.filterNot {
-                                it.content == "loading_animation" && it.role == "assistant"
-                            }
-                            EasyLog.log("=== CHAT DEBUG: Removed loading message, remaining messages: ${filteredMsgs.size}")
+                            val filteredMsgs =
+                                currentMsgs.filterNot {
+                                    it.content == "loading_animation" && it.role == "assistant"
+                                }
+                            EasyLog.log(
+                                "=== CHAT DEBUG: Removed loading message, remaining messages: ${filteredMsgs.size}"
+                            )
                             filteredMsgs
                         }
                         _isWaitingForReply.value = false
@@ -437,12 +459,20 @@ private val chatApi by lazy {
 
                         when (result) {
                             is ApiResult.Success -> {
-                                EasyLog.log("=== CHAT DEBUG: Received successful response from ChatService")
+                                EasyLog.log(
+                                    "=== CHAT DEBUG: Received successful response from ChatService"
+                                )
                                 EasyLog.log("=== CHAT DEBUG: Response data: ${result.data}")
                                 EasyLog.log("=== CHAT DEBUG: Response code: ${result.data.code}")
-                                EasyLog.log("=== CHAT DEBUG: Response message: ${result.data.message}")
-                                EasyLog.log("=== CHAT DEBUG: Response data.data: ${result.data.data}")
-                                EasyLog.log("=== CHAT DEBUG: Response choices count: ${result.data.data?.choices?.size ?: 0}")
+                                EasyLog.log(
+                                    "=== CHAT DEBUG: Response message: ${result.data.message}"
+                                )
+                                EasyLog.log(
+                                    "=== CHAT DEBUG: Response data.data: ${result.data.data}"
+                                )
+                                EasyLog.log(
+                                    "=== CHAT DEBUG: Response choices count: ${result.data.data?.choices?.size ?: 0}"
+                                )
                                 // Firebase Analytics - 记录消息发送成功
                                 FirebaseManager.logEvent(
                                     "message_send_success",
@@ -457,7 +487,9 @@ private val chatApi by lazy {
                                 runCatching {
                                         // 有免费次数限制，需要vip订阅
                                         if (result.data.code == 10001001) {
-                                            EasyLog.log("=== CHAT DEBUG: Free limit reached (code: 10001001)")
+                                            EasyLog.log(
+                                                "=== CHAT DEBUG: Free limit reached (code: 10001001)"
+                                            )
                                             // Firebase Analytics - 记录免费次数限制
                                             FirebaseManager.logEvent(
                                                 "free_limit_reached",
@@ -470,16 +502,22 @@ private val chatApi by lazy {
                                             try {
                                                 val newMsgs = mutableListOf<MsgInfo>()
                                                 val choices = result.data.data?.choices
-                                                EasyLog.log("=== CHAT DEBUG: Processing ${choices?.size ?: 0} choices")
-                                                
+                                                EasyLog.log(
+                                                    "=== CHAT DEBUG: Processing ${choices?.size ?: 0} choices"
+                                                )
+
                                                 choices?.forEachIndexed { index, choice ->
-                                                    EasyLog.log("=== CHAT DEBUG: Choice $index - Role: ${choice.message.role}, Content: '${choice.message.content}'")
+                                                    EasyLog.log(
+                                                        "=== CHAT DEBUG: Choice $index - Role: ${choice.message.role}, Content: '${choice.message.content}'"
+                                                    )
                                                     newMsgs.add(choice.message)
                                                 }
-                                                
+
                                                 // 创建当前消息的副本以避免并发修改
                                                 newMsgs.addAll(currentMsgs.toList())
-                                                EasyLog.log("=== CHAT DEBUG: Added AI responses, total messages: ${newMsgs.size}")
+                                                EasyLog.log(
+                                                    "=== CHAT DEBUG: Added AI responses, total messages: ${newMsgs.size}"
+                                                )
                                                 newMsgs
                                             } catch (e: Exception) {
                                                 EasyLog.log(
@@ -511,10 +549,19 @@ private val chatApi by lazy {
                             }
 
                             is ApiResult.Error -> {
-                                EasyLog.log("=== CHAT DEBUG: Received error response from ChatService", priority = EasyLog.ERROR)
-                                EasyLog.log("=== CHAT DEBUG: Error message: ${result.message}", priority = EasyLog.ERROR)
-                                EasyLog.log("=== CHAT DEBUG: Error details: $result", priority = EasyLog.ERROR)
-                                
+                                EasyLog.log(
+                                    "=== CHAT DEBUG: Received error response from ChatService",
+                                    priority = EasyLog.ERROR,
+                                )
+                                EasyLog.log(
+                                    "=== CHAT DEBUG: Error message: ${result.message}",
+                                    priority = EasyLog.ERROR,
+                                )
+                                EasyLog.log(
+                                    "=== CHAT DEBUG: Error details: $result",
+                                    priority = EasyLog.ERROR,
+                                )
+
                                 // Firebase Analytics - 记录消息发送失败
                                 FirebaseManager.logEvent(
                                     "message_send_failure",
@@ -534,7 +581,9 @@ private val chatApi by lazy {
                                 showNetworkAwareError(result.message ?: "Unknown error")
                                 // 错误恢复：确保状态正确
                                 _isWaitingForReply.value = false
-                                EasyLog.log("=== CHAT DEBUG: Set _isWaitingForReply to false due to error")
+                                EasyLog.log(
+                                    "=== CHAT DEBUG: Set _isWaitingForReply to false due to error"
+                                )
                             }
                         }
                     }
