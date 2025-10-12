@@ -53,7 +53,7 @@ async def agent_chat_completions(
     try:
         import time
 
-        request_handling_timeer = Timer("请求处理")
+        request_handling_timer = Timer("请求处理")
         logger.debug(
             f"开始处理聊天请求 - Agent ID: {agent_id}, User ID: {current_user.id}"
         )
@@ -250,7 +250,7 @@ async def agent_chat_completions(
         if audio_url or (latest_message_info and latest_message_info.get("audio_url")):
             logger.debug(f"响应包含语音URL: {message.get('audio_url')}")
 
-        timing_message = request_handling_timeer.stop()
+        timing_message = request_handling_timer.stop()
         logger.debug(
             f"聊天请求处理成功: agent_id={agent_id}, response_length={len(response_content)}, {timing_message}"
         )
