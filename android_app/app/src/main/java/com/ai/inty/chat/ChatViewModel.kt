@@ -14,6 +14,7 @@ import com.ai.inty.beans.MsgInfo
 import com.ai.inty.beans.SendMsgReq
 import com.ai.inty.beans.UserProfile
 import com.ai.inty.billing.VipStatusHelper
+import com.ai.inty.net.IChatApi
 import com.ai.inty.netapi.ApiResult
 import com.ai.inty.netapi.services.ChatService
 import com.ai.inty.utils.FirebaseManager
@@ -81,8 +82,12 @@ class ChatViewModel : BaseActivityViewModel() {
     private var _isRefreshingConversations = MutableStateFlow(false)
     val isRefreshingConversations = _isRefreshingConversations.asStateFlow()
 
-    // 使用新的 ChatService 替代原有的 IChatApi
-    // ChatService 已经通过 IntyNetworkManager 管理，无需依赖注入
+// 延迟获取依赖，避免在构造函数中立即获取导致空指针异常
+private val chatApi by lazy {
+    TheRouter.get(IChatApi::class.java)
+            ?: throw IllegalStateException("IChatApi not found in TheRouter")
+}
+
 
     init {
         EasyLog.log("ChatViewModel = ${hashCode()}")
@@ -98,7 +103,7 @@ class ChatViewModel : BaseActivityViewModel() {
                 mapOf(
                     "agent_id" to agent.id,
                     "agent_name" to agent.name,
-                    "agent_category" to (agent.category ?: "unknown"),
+                    "agent_category" to agent.category,
                     "is_followed" to agent.isFollowed,
                     "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
                 ),
@@ -114,7 +119,7 @@ class ChatViewModel : BaseActivityViewModel() {
                 agent.name,
                 mapOf(
                     "agent_id" to agent.id,
-                    "agent_category" to (agent.category ?: "unknown"),
+                    "agent_category" to agent.category,
                     "is_followed" to agent.isFollowed,
                 ),
             )
@@ -468,7 +473,7 @@ class ChatViewModel : BaseActivityViewModel() {
                                     "message_send_failure",
                                     mapOf(
                                         "agent_id" to agent.id,
-                                        "error_message" to result.message,
+                                        "error_message" to (result.message ?: "Unknown error"),
                                         "user_type" to
                                             if (VipStatusHelper.isUserVip()) "vip" else "free",
                                     ),
@@ -479,7 +484,7 @@ class ChatViewModel : BaseActivityViewModel() {
                                     Exception("Message send failed: ${result.message}")
                                 )
 
-                                showNetworkAwareError(result.message)
+                                showNetworkAwareError(result.message ?: "Unknown error")
                                 // 错误恢复：确保状态正确
                                 _isWaitingForReply.value = false
                             }
@@ -596,7 +601,7 @@ class ChatViewModel : BaseActivityViewModel() {
                     }
 
                     is ApiResult.Error -> {
-                        showNetworkAwareError(result.message)
+                        showNetworkAwareError(result.message ?: "Unknown error")
                         // 错误恢复：确保状态正确
                         _isWaitingForReply.value = false
                     }

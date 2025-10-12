@@ -2,6 +2,7 @@ package com.ai.inty.netapi.services
 
 import com.ai.inty.beans.MsgInfo
 import com.ai.inty.beans.SendMsgResponse
+import com.ai.inty.beans.Usage
 import com.ai.inty.netapi.ApiResult
 import com.ai.inty.netapi.IntyNetworkManager
 import com.inty.api.core.JsonValue
@@ -136,28 +137,28 @@ object ChatService {
         val data = apiResponse.data()
         
         // 从 data 的 additionalProperties 中提取实际的响应数据
-        val responseData = data?._additionalProperties() ?: emptyMap()
+        val responseData: Map<String, Any> = data?._additionalProperties() ?: emptyMap()
         
         // 提取 choices 数据
-        val choices = responseData["choices"]?.let { _ ->
+        val choices: List<com.ai.inty.beans.Choice> = responseData["choices"]?.let { _ ->
             // 这里需要根据实际的 choices 结构进行解析
             // 暂时返回空列表，实际使用时需要根据 ApiResponseDict.Data 的结构进行解析
-            emptyList()
-        } ?: emptyList()
+            emptyList<com.ai.inty.beans.Choice>()
+        } ?: emptyList<com.ai.inty.beans.Choice>()
         
         return SendMsgResponse(
             code = code,
             message = message,
             data = SendMsgResponse.SentMsgRspData(
                 choices = choices,
-                created = responseData["created"]?.asNumber()?.toInt() ?: System.currentTimeMillis().toInt(),
-                id = responseData["id"]?.asString() ?: "",
-                model = responseData["model"]?.asString() ?: "chatbot",
-                objectX = responseData["object"]?.asString() ?: "chat.completion",
-                usage = SendMsgResponse.Usage(
-                    promptTokens = responseData["usage"]?.asObject()?.get("prompt_tokens")?.asNumber()?.toInt() ?: 0,
-                    completionTokens = responseData["usage"]?.asObject()?.get("completion_tokens")?.asNumber()?.toInt() ?: 0,
-                    totalTokens = responseData["usage"]?.asObject()?.get("total_tokens")?.asNumber()?.toInt() ?: 0
+                created = (responseData["created"] as? Number)?.toInt() ?: System.currentTimeMillis().toInt(),
+                id = responseData["id"] as? String ?: "",
+                model = responseData["model"] as? String ?: "chatbot",
+                objectX = responseData["object"] as? String ?: "chat.completion",
+                usage = Usage(
+                    promptTokens = ((responseData["usage"] as? Map<String, Any>)?.get("prompt_tokens") as? Number)?.toInt() ?: 0,
+                    completionTokens = ((responseData["usage"] as? Map<String, Any>)?.get("completion_tokens") as? Number)?.toInt() ?: 0,
+                    totalTokens = ((responseData["usage"] as? Map<String, Any>)?.get("total_tokens") as? Number)?.toInt() ?: 0
                 )
             )
         )

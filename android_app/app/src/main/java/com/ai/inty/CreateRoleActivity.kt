@@ -150,7 +150,8 @@ private fun CreateRolePage(
     var gender by remember { mutableStateOf(editAgent?.gender ?: "FEMALE") }
     var settings by remember {
         mutableStateOf(
-            editAgent?.settings?.get("description") as? String ?: editAgent?.prompt ?: ""
+(editAgent?.settings?.get("description") as? String) ?: editAgent?.prompt ?: ""
+
         )
     }
     var intro by remember { mutableStateOf(editAgent?.intro ?: "") }
