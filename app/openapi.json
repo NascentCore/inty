@@ -95,14 +95,14 @@
                 ]
             }
         },
-        "/api/v1/users/profile": {
+        "/api/v1/users/me": {
             "get": {
                 "tags": [
                     "users"
                 ],
-                "summary": "Get Profile",
+                "summary": "Get Me",
                 "description": "Get current user profile.",
-                "operationId": "get_profile_api_v1_users_profile_get",
+                "operationId": "get_me_api_v1_users_me_get",
                 "responses": {
                     "200": {
                         "description": "Successful Response",
@@ -120,7 +120,9 @@
                         "Bearer": []
                     }
                 ]
-            },
+            }
+        },
+        "/api/v1/users/profile": {
             "put": {
                 "tags": [
                     "users"
@@ -155,33 +157,6 @@
                             "application/json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/HTTPValidationError"
-                                }
-                            }
-                        }
-                    }
-                },
-                "security": [
-                    {
-                        "Bearer": []
-                    }
-                ]
-            }
-        },
-        "/api/v1/users/me": {
-            "get": {
-                "tags": [
-                    "users"
-                ],
-                "summary": "Get Me",
-                "description": "Get current user profile.",
-                "operationId": "get_me_api_v1_users_me_get",
-                "responses": {
-                    "200": {
-                        "description": "Successful Response",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/APIResponse_User_"
                                 }
                             }
                         }
@@ -241,40 +216,13 @@
                 ]
             }
         },
-        "/api/v1/users/deletion/check": {
-            "get": {
-                "tags": [
-                    "users"
-                ],
-                "summary": "Check Deletion Eligibility",
-                "description": "\u68c0\u67e5\u7528\u6237\u662f\u5426\u53ef\u4ee5\u5220\u9664\u8d26\u6237",
-                "operationId": "check_deletion_eligibility_api_v1_users_deletion_check_get",
-                "responses": {
-                    "200": {
-                        "description": "Successful Response",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/APIResponse_DeletionCheckResponse_"
-                                }
-                            }
-                        }
-                    }
-                },
-                "security": [
-                    {
-                        "Bearer": []
-                    }
-                ]
-            }
-        },
         "/api/v1/users/delete-account": {
             "post": {
                 "tags": [
                     "users"
                 ],
                 "summary": "Delete User Account",
-                "description": "\u5220\u9664\u7528\u6237\u8d26\u6237",
+                "description": "\u5220\u9664\u7528\u6237\u8d26\u6237 - \u5305\u542b\u5220\u9664\u6743\u9650\u68c0\u67e5",
                 "operationId": "delete_user_account_api_v1_users_delete_account_post",
                 "requestBody": {
                     "content": {
@@ -1522,8 +1470,8 @@
                 "tags": [
                     "chat"
                 ],
-                "summary": "Agent Chat Completions",
-                "description": "\u57fa\u4e8eAgent ID\u7684OpenAI\u98ce\u683c\u804a\u5929\u63a5\u53e3\n\u5982\u679c\u7528\u6237\u8fd8\u6ca1\u6709\u548c\u8be5Agent\u521b\u5efa\u4f1a\u8bdd\uff0c\u5219\u81ea\u52a8\u521b\u5efa",
+                "summary": "\u8fd4\u56de\u4e0e\u6307\u5b9a Agent \u804a\u5929\u7684\u4e0b\u4e00\u6761\u6d88\u606f",
+                "description": "\u53ef\u4ee5\u5904\u7406\u5305\u62ec\u56fe\u7247\u5728\u5185\u7684\u5404\u79cd\u6d88\u606f\u7c7b\u578b\uff0c\u5a92\u4f53\u7c7b\u578b\u5e94\u8be5\u5148\u4e0a\u4f20\uff0c\u7136\u540e\u5c06 URL \u4f5c\u4e3a\u7d22\u5f15\u53d1\u9001\u5230\u6b64 API",
                 "operationId": "agent_chat_completions_api_v1_chat_completions__agent_id__post",
                 "security": [
                     {
@@ -2384,32 +2332,6 @@
                 "type": "object",
                 "title": "APIResponse[ChatSettings]"
             },
-            "APIResponse_DeletionCheckResponse_": {
-                "properties": {
-                    "code": {
-                        "type": "integer",
-                        "title": "Code",
-                        "default": 200
-                    },
-                    "message": {
-                        "type": "string",
-                        "title": "Message",
-                        "default": "success"
-                    },
-                    "data": {
-                        "anyOf": [
-                            {
-                                "$ref": "#/components/schemas/DeletionCheckResponse"
-                            },
-                            {
-                                "type": "null"
-                            }
-                        ]
-                    }
-                },
-                "type": "object",
-                "title": "APIResponse[DeletionCheckResponse]"
-            },
             "APIResponse_GuestResponse_": {
                 "properties": {
                     "code": {
@@ -2887,6 +2809,42 @@
                         ],
                         "title": "Anonymized Fields",
                         "description": "\u5df2\u533f\u540d\u5316\u7684\u5b57\u6bb5\u5217\u8868"
+                    },
+                    "can_delete": {
+                        "anyOf": [
+                            {
+                                "type": "boolean"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Can Delete",
+                        "description": "\u662f\u5426\u53ef\u4ee5\u5220\u9664"
+                    },
+                    "error_message": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Error Message",
+                        "description": "\u9519\u8bef\u4fe1\u606f"
+                    },
+                    "active_subscription": {
+                        "anyOf": [
+                            {
+                                "type": "boolean"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Active Subscription",
+                        "description": "\u662f\u5426\u6709\u6d3b\u8dc3\u8ba2\u9605"
                     }
                 },
                 "type": "object",
@@ -2898,11 +2856,13 @@
                 "title": "AccountDeletionResponse",
                 "description": "\u8d26\u6237\u5220\u9664\u54cd\u5e94",
                 "example": {
+                    "active_subscription": false,
                     "anonymized_fields": [
                         "email",
                         "phone",
                         "nickname"
                     ],
+                    "can_delete": true,
                     "deletion_log_id": "del_log_456",
                     "message": "\u8d26\u6237\u5220\u9664\u6210\u529f",
                     "success": true,
@@ -4209,6 +4169,17 @@
                         ],
                         "title": "Agent Avatar"
                     },
+                    "agent_background": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Agent Background"
+                    },
                     "agent_is_deleted": {
                         "anyOf": [
                             {
@@ -4460,50 +4431,6 @@
                 "type": "object",
                 "title": "ChatSettingsUpdate",
                 "description": "\u66f4\u65b0\u804a\u5929\u8bbe\u7f6e"
-            },
-            "DeletionCheckResponse": {
-                "properties": {
-                    "can_delete": {
-                        "type": "boolean",
-                        "title": "Can Delete",
-                        "description": "\u662f\u5426\u53ef\u4ee5\u5220\u9664"
-                    },
-                    "error_message": {
-                        "anyOf": [
-                            {
-                                "type": "string"
-                            },
-                            {
-                                "type": "null"
-                            }
-                        ],
-                        "title": "Error Message",
-                        "description": "\u9519\u8bef\u4fe1\u606f"
-                    },
-                    "active_subscription": {
-                        "anyOf": [
-                            {
-                                "type": "boolean"
-                            },
-                            {
-                                "type": "null"
-                            }
-                        ],
-                        "title": "Active Subscription",
-                        "description": "\u662f\u5426\u6709\u6d3b\u8dc3\u8ba2\u9605"
-                    }
-                },
-                "type": "object",
-                "required": [
-                    "can_delete"
-                ],
-                "title": "DeletionCheckResponse",
-                "description": "\u5220\u9664\u68c0\u67e5\u54cd\u5e94",
-                "example": {
-                    "active_subscription": true,
-                    "can_delete": false,
-                    "error_message": "\u5b58\u5728\u6d3b\u8dc3\u8ba2\u9605\uff0c\u8bf7\u5148\u53d6\u6d88\u8ba2\u9605\u540e\u518d\u5220\u9664\u8d26\u6237"
-                }
             },
             "DeviceTokenRegister": {
                 "properties": {
