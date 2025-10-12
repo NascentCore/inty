@@ -1,7 +1,8 @@
 from datetime import datetime
 from typing import List, Optional
 
-from pydantic import BaseModel, field_serializer
+from loguru import logger
+from pydantic import BaseModel, field_serializer, model_validator
 
 from app.models.message import MessageType, SenderType
 
@@ -201,10 +202,23 @@ class ChatMessage(BaseModel):
 
 class ChatCompletionRequest(BaseModel):
     messages: List[ChatMessage]
+    # DEPRECATED: Currently this parameter has no effect.
     stream: bool = False
+    # DEPRECATED: Currently this parameter has no use.
     model: str = "chatbot"
+    # DEPRECATED: Currently this parameter has no use.
     language: str = "zh"  # 添加语言字段，默认中文
     request_id: Optional[str] = None
+
+    @model_validator(mode='after')
+    def check_deprecated_fields(self) -> 'ChatCompletionRequest':
+        if self.stream:
+            logger.warning("DEPRECATED: 'stream' parameter has no effect")
+        if self.model != "chatbot":
+            logger.warning("DEPRECATED: 'model' parameter has no use")
+        if self.language != "zh":
+            logger.warning("DEPRECATED: 'language' parameter has no use")
+        return self
 
 
 class ChatCompletionResponse(BaseModel):
