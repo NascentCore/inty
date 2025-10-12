@@ -46,20 +46,27 @@ object ChatService {
             EasyLog.log("=== CHAT DEBUG: Created ChatCreateCompletionParams: $params")
 
             EasyLog.log("=== CHAT DEBUG: Making API call to createCompletion")
-            val response: ApiResponseDict = IntyNetworkManager.getClient()
-                .api()
-                .v1()
-                .chats()
-                .createCompletion(
-                    agentId = agentId,
-                    params = params
-                )
-            EasyLog.log("=== CHAT DEBUG: Received API response: $response")
-
-            // 将 ApiResponseDict 转换为 SendMsgResponse
-            val convertedResponse = convertApiResponseToSendMsgResponse(response)
-            EasyLog.log("=== CHAT DEBUG: Converted response: $convertedResponse")
-            convertedResponse
+            try {
+                val response: ApiResponseDict = IntyNetworkManager.getClient()
+                    .api()
+                    .v1()
+                    .chats()
+                    .createCompletion(
+                        agentId = agentId,
+                        params = params
+                    )
+                EasyLog.log("=== CHAT DEBUG: Received API response: $response")
+                EasyLog.log("=== CHAT DEBUG: API call completed successfully")
+                // 将 ApiResponseDict 转换为 SendMsgResponse
+                val convertedResponse = convertApiResponseToSendMsgResponse(response)
+                EasyLog.log("=== CHAT DEBUG: Converted response: $convertedResponse")
+                convertedResponse
+            } catch (e: Exception) {
+                EasyLog.log("=== CHAT DEBUG: API call failed with exception: ${e.message}", priority = EasyLog.ERROR)
+                EasyLog.log("=== CHAT DEBUG: Exception type: ${e.javaClass.simpleName}", priority = EasyLog.ERROR)
+                e.printStackTrace()
+                throw e
+            }
         }
     }
 
@@ -164,9 +171,92 @@ object ChatService {
         // 提取 choices 数据
         val choices: List<com.ai.inty.beans.Choice> = responseData["choices"]?.let { choicesData ->
             EasyLog.log("=== CHAT DEBUG: Found choices data: $choicesData")
-            // 这里需要根据实际的 choices 结构进行解析
-            // 暂时返回空列表，实际使用时需要根据 ApiResponseDict.Data 的结构进行解析
-            emptyList<com.ai.inty.beans.Choice>()
+            EasyLog.log("=== CHAT DEBUG: Choices data type: ${choicesData.javaClass.simpleName}")
+            EasyLog.log("=== CHAT DEBUG: Choices data class: ${choicesData.javaClass.name}")
+            
+            // 解析 choices 数据 - 使用通用方法处理不同类型的集合
+            val parsedChoices = mutableListOf<com.ai.inty.beans.Choice>()
+            
+            try {
+                // 尝试将 choicesData 转换为可迭代的集合
+                val iterable = when (choicesData) {
+                    is List<*> -> {
+                        EasyLog.log("=== CHAT DEBUG: Choices data is List, size: ${choicesData.size}")
+                        choicesData
+                    }
+                    is Array<*> -> {
+                        EasyLog.log("=== CHAT DEBUG: Choices data is Array, size: ${choicesData.size}")
+                        choicesData.toList()
+                    }
+                    else -> {
+                        EasyLog.log("=== CHAT DEBUG: Choices data is other type, trying reflection")
+                        // 尝试使用反射获取 size 和 get 方法
+                        val sizeMethod = choicesData.javaClass.getMethod("size")
+                        val getMethod = choicesData.javaClass.getMethod("get", Int::class.java)
+                        val size = sizeMethod.invoke(choicesData) as Int
+                        EasyLog.log("=== CHAT DEBUG: Reflection found size: $size")
+                        (0 until size).map { getMethod.invoke(choicesData, it) }
+                    }
+                }
+                
+                EasyLog.log("=== CHAT DEBUG: Iterable size: ${iterable.size}")
+                
+                iterable.forEachIndexed { index, choiceItem ->
+                    try {
+                        if (choiceItem != null) {
+                            // 尝试获取 choice 对象的属性
+                            val choiceMap = when (choiceItem) {
+                                is Map<*, *> -> choiceItem as Map<String, Any>
+                                else -> {
+                                    // 使用反射获取属性
+                                    val itemClass = choiceItem.javaClass
+                                    val messageField = itemClass.getDeclaredField("message")
+                                    val indexField = itemClass.getDeclaredField("index")
+                                    val finishReasonField = itemClass.getDeclaredField("finish_reason")
+                                    
+                                    messageField.isAccessible = true
+                                    indexField.isAccessible = true
+                                    finishReasonField.isAccessible = true
+                                    
+                                    mapOf(
+                                        "message" to messageField.get(choiceItem),
+                                        "index" to indexField.get(choiceItem),
+                                        "finish_reason" to finishReasonField.get(choiceItem)
+                                    )
+                                }
+                            }
+                            
+                            val messageData = choiceMap["message"] as? Map<String, Any>
+                            
+                            if (messageData != null) {
+                                val message = com.ai.inty.beans.MsgInfo(
+                                    content = messageData["content"] as? String ?: "",
+                                    role = messageData["role"] as? String ?: "assistant",
+                                    localMsgId = messageData["id"] as? String ?: "",
+                                    timestamp = messageData["timestamp"] as? String ?: ""
+                                )
+                                
+                                val choice = com.ai.inty.beans.Choice(
+                                    index = (choiceMap["index"] as? Number)?.toInt() ?: index,
+                                    message = message,
+                                    finishReason = choiceMap["finish_reason"] as? String ?: "stop"
+                                )
+                                parsedChoices.add(choice)
+                                EasyLog.log("=== CHAT DEBUG: Parsed choice $index: role=${message.role}, content='${message.content}'")
+                            }
+                        }
+                    } catch (e: Exception) {
+                        EasyLog.log("=== CHAT DEBUG: Error parsing choice $index: ${e.message}", priority = EasyLog.ERROR)
+                    }
+                }
+                
+                EasyLog.log("=== CHAT DEBUG: Successfully parsed ${parsedChoices.size} choices")
+                parsedChoices
+            } catch (e: Exception) {
+                EasyLog.log("=== CHAT DEBUG: Error parsing choices data: ${e.message}", priority = EasyLog.ERROR)
+                EasyLog.log("=== CHAT DEBUG: Choices data type: ${choicesData.javaClass.simpleName}", priority = EasyLog.ERROR)
+                emptyList<com.ai.inty.beans.Choice>()
+            }
         } ?: run {
             EasyLog.log("=== CHAT DEBUG: No choices data found in response")
             emptyList<com.ai.inty.beans.Choice>()

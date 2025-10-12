@@ -288,6 +288,13 @@ EasyLog.log(
         "=== CHAT DEBUG: Filtered messages count: ${filteredChatMessages.size} (removed ${chatMessages.size - filteredChatMessages.size} opening messages)"
 )
 
+// 调试：检查每条消息的 meta_data 状态
+chatMessages.forEachIndexed { index, msg ->
+    EasyLog.log(
+            "=== CHAT DEBUG: Message $index meta_data: ${msg.meta_data}, isOpening: ${msg.isOpening()}"
+    )
+}
+
                     // 添加安全检查
                     runCatching {
                             if (filteredChatMessages.isNotEmpty()) {
