@@ -303,7 +303,7 @@ async def get_latest_ai_message_info(
         result = await db.execute(stmt)
         chat_history = result.scalar_one_or_none()
 
-        if chat_history is None:
+        if not chat_history:
             return None
 
         # 解析消息内容
