@@ -5,6 +5,7 @@ import com.ai.inty.beans.SendMsgResponse
 import com.ai.inty.beans.Usage
 import com.ai.inty.netapi.ApiResult
 import com.ai.inty.netapi.IntyNetworkManager
+import com.inty.utils.log.EasyLog
 import com.inty.api.core.JsonValue
 import com.inty.api.models.api.v1.chats.ChatCreateCompletionParams
 import com.inty.api.models.api.v1.report.ApiResponseDict
@@ -19,31 +20,46 @@ object ChatService {
         model: String = "chatbot",
         stream: Boolean = false,
     ): ApiResult<SendMsgResponse> {
+        EasyLog.log("=== CHAT DEBUG: ChatService.sendMessage called")
+        EasyLog.log("=== CHAT DEBUG: agentId: $agentId")
+        EasyLog.log("=== CHAT DEBUG: messages count: ${messages.size}")
+        EasyLog.log("=== CHAT DEBUG: model: $model")
+        EasyLog.log("=== CHAT DEBUG: stream: $stream")
+        
         return IntyNetworkManager.executeRequest("Send Message") {
             // 将 MsgInfo 转换为 inty_sdk 的 Message 格式
             val sdkMessages = messages.map { msgInfo ->
+                EasyLog.log("=== CHAT DEBUG: Converting message - Role: ${msgInfo.role}, Content: '${msgInfo.content}'")
                 ChatCreateCompletionParams.Message.builder()
                     .content(msgInfo.content)
                     .role(msgInfo.role)
                     .build()
             }
+            EasyLog.log("=== CHAT DEBUG: Converted ${sdkMessages.size} messages to SDK format")
 
+            val params = ChatCreateCompletionParams.builder()
+                .agentId(agentId)
+                .messages(sdkMessages)
+                .model(model)
+                .stream(stream)
+                .build()
+            EasyLog.log("=== CHAT DEBUG: Created ChatCreateCompletionParams: $params")
+
+            EasyLog.log("=== CHAT DEBUG: Making API call to createCompletion")
             val response: ApiResponseDict = IntyNetworkManager.getClient()
                 .api()
                 .v1()
                 .chats()
                 .createCompletion(
                     agentId = agentId,
-                    params = ChatCreateCompletionParams.builder()
-                        .agentId(agentId)
-                        .messages(sdkMessages)
-                        .model(model)
-                        .stream(stream)
-                        .build()
+                    params = params
                 )
+            EasyLog.log("=== CHAT DEBUG: Received API response: $response")
 
             // 将 ApiResponseDict 转换为 SendMsgResponse
-            convertApiResponseToSendMsgResponse(response)
+            val convertedResponse = convertApiResponseToSendMsgResponse(response)
+            EasyLog.log("=== CHAT DEBUG: Converted response: $convertedResponse")
+            convertedResponse
         }
     }
 
@@ -131,22 +147,34 @@ object ChatService {
 
     /** 将 ApiResponseDict 转换为 SendMsgResponse */
     private fun convertApiResponseToSendMsgResponse(apiResponse: ApiResponseDict): SendMsgResponse {
+        EasyLog.log("=== CHAT DEBUG: Converting ApiResponseDict to SendMsgResponse")
+        
         // 从 ApiResponseDict 中提取数据并转换为 SendMsgResponse 格式
         val code = apiResponse.code()?.toInt() ?: 200
         val message = apiResponse.message() ?: "Success"
         val data = apiResponse.data()
         
+        EasyLog.log("=== CHAT DEBUG: Extracted code: $code, message: $message")
+        EasyLog.log("=== CHAT DEBUG: Data object: $data")
+        
         // 从 data 的 additionalProperties 中提取实际的响应数据
         val responseData: Map<String, Any> = data?._additionalProperties() ?: emptyMap()
+        EasyLog.log("=== CHAT DEBUG: Response data map: $responseData")
         
         // 提取 choices 数据
-        val choices: List<com.ai.inty.beans.Choice> = responseData["choices"]?.let { _ ->
+        val choices: List<com.ai.inty.beans.Choice> = responseData["choices"]?.let { choicesData ->
+            EasyLog.log("=== CHAT DEBUG: Found choices data: $choicesData")
             // 这里需要根据实际的 choices 结构进行解析
             // 暂时返回空列表，实际使用时需要根据 ApiResponseDict.Data 的结构进行解析
             emptyList<com.ai.inty.beans.Choice>()
-        } ?: emptyList<com.ai.inty.beans.Choice>()
+        } ?: run {
+            EasyLog.log("=== CHAT DEBUG: No choices data found in response")
+            emptyList<com.ai.inty.beans.Choice>()
+        }
         
-        return SendMsgResponse(
+        EasyLog.log("=== CHAT DEBUG: Final choices count: ${choices.size}")
+        
+        val finalResponse = SendMsgResponse(
             code = code,
             message = message,
             data = SendMsgResponse.SentMsgRspData(
@@ -162,5 +190,8 @@ object ChatService {
                 )
             )
         )
+        
+        EasyLog.log("=== CHAT DEBUG: Final converted response: $finalResponse")
+        return finalResponse
     }
 }
