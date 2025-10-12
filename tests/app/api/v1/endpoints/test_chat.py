@@ -49,6 +49,7 @@ def agent_ids_to_cleanup(inty_client):
         logger.info(f"Deleted agent: {agent_id}")
 
 
+@pytest.mark.noci
 def test_agent_chat_completions_with_sdk(inty_client, agent_ids_to_cleanup):
     """Test chat completions using the Python SDK."""
     create_agent_response = inty_client.api.v1.ai.agents.create(
