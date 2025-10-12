@@ -1,8 +1,12 @@
 package com.ai.inty.netapi.services
 
 import com.ai.inty.beans.MsgInfo
+import com.ai.inty.beans.SendMsgResponse
 import com.ai.inty.netapi.ApiResult
 import com.ai.inty.netapi.IntyNetworkManager
+import com.inty.api.core.JsonValue
+import com.inty.api.models.api.v1.chats.ChatCreateCompletionParams
+import com.inty.api.models.api.v1.report.ApiResponseDict
 
 /** 聊天服务 封装所有聊天相关的API调用 替换原有的 IChatApi */
 object ChatService {
@@ -10,28 +14,35 @@ object ChatService {
     /** 发送聊天消息 替换: IChatApi.sendMessage() */
     suspend fun sendMessage(
         agentId: String,
-        message: String,
-        conversationId: String? = null,
-    ): ApiResult<MsgInfo> {
+        messages: List<MsgInfo>,
+        model: String = "chatbot",
+        stream: Boolean = false,
+    ): ApiResult<SendMsgResponse> {
         return IntyNetworkManager.executeRequest("Send Message") {
-            val response =
-                IntyNetworkManager.getClient()
-                    .api()
-                    .v1()
-                    .chats()
-                    .agents()
-                    .generateMessageVoice(
-                        com.inty.api.models.api.v1.chats.agents.AgentGenerateMessageVoiceParams
-                            .builder()
-                            .agentId(agentId)
-                            .messageId("temp_message_id") // 这里需要根据实际情况处理
-                            .language("en") // 这里需要根据实际情况处理
-                            .build()
-                    )
+            // 将 MsgInfo 转换为 inty_sdk 的 Message 格式
+            val sdkMessages = messages.map { msgInfo ->
+                ChatCreateCompletionParams.Message.builder()
+                    .content(msgInfo.content)
+                    .role(msgInfo.role)
+                    .build()
+            }
 
-            // 当前 IntySDK 的 Chat 数据结构与业务层不匹配
-            // 需要根据实际返回结构进行数据转换
-            throw Exception("Chat message conversion not implemented, need data mapping")
+            val response: ApiResponseDict = IntyNetworkManager.getClient()
+                .api()
+                .v1()
+                .chats()
+                .createCompletion(
+                    agentId = agentId,
+                    params = ChatCreateCompletionParams.builder()
+                        .agentId(agentId)
+                        .messages(sdkMessages)
+                        .model(model)
+                        .stream(stream)
+                        .build()
+                )
+
+            // 将 ApiResponseDict 转换为 SendMsgResponse
+            convertApiResponseToSendMsgResponse(response)
         }
     }
 
@@ -116,4 +127,39 @@ object ChatService {
         val lastMessageTime: Long,
         val messageCount: Int,
     )
+
+    /** 将 ApiResponseDict 转换为 SendMsgResponse */
+    private fun convertApiResponseToSendMsgResponse(apiResponse: ApiResponseDict): SendMsgResponse {
+        // 从 ApiResponseDict 中提取数据并转换为 SendMsgResponse 格式
+        val code = apiResponse.code()?.toInt() ?: 200
+        val message = apiResponse.message() ?: "Success"
+        val data = apiResponse.data()
+        
+        // 从 data 的 additionalProperties 中提取实际的响应数据
+        val responseData = data?._additionalProperties() ?: emptyMap()
+        
+        // 提取 choices 数据
+        val choices = responseData["choices"]?.let { _ ->
+            // 这里需要根据实际的 choices 结构进行解析
+            // 暂时返回空列表，实际使用时需要根据 ApiResponseDict.Data 的结构进行解析
+            emptyList()
+        } ?: emptyList()
+        
+        return SendMsgResponse(
+            code = code,
+            message = message,
+            data = SendMsgResponse.SentMsgRspData(
+                choices = choices,
+                created = responseData["created"]?.asNumber()?.toInt() ?: System.currentTimeMillis().toInt(),
+                id = responseData["id"]?.asString() ?: "",
+                model = responseData["model"]?.asString() ?: "chatbot",
+                objectX = responseData["object"]?.asString() ?: "chat.completion",
+                usage = SendMsgResponse.Usage(
+                    promptTokens = responseData["usage"]?.asObject()?.get("prompt_tokens")?.asNumber()?.toInt() ?: 0,
+                    completionTokens = responseData["usage"]?.asObject()?.get("completion_tokens")?.asNumber()?.toInt() ?: 0,
+                    totalTokens = responseData["usage"]?.asObject()?.get("total_tokens")?.asNumber()?.toInt() ?: 0
+                )
+            )
+        )
+    }
 }

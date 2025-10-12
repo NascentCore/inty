@@ -14,7 +14,8 @@ import com.ai.inty.beans.MsgInfo
 import com.ai.inty.beans.SendMsgReq
 import com.ai.inty.beans.UserProfile
 import com.ai.inty.billing.VipStatusHelper
-import com.ai.inty.net.IChatApi
+import com.ai.inty.netapi.ApiResult
+import com.ai.inty.netapi.services.ChatService
 import com.ai.inty.utils.FirebaseManager
 import com.ai.inty.utils.FirebasePerformanceHelper
 import com.ai.inty.utils.PageTrackingHelper
@@ -80,11 +81,8 @@ class ChatViewModel : BaseActivityViewModel() {
     private var _isRefreshingConversations = MutableStateFlow(false)
     val isRefreshingConversations = _isRefreshingConversations.asStateFlow()
 
-    // 延迟获取依赖，避免在构造函数中立即获取导致空指针异常
-    private val chatApi by lazy {
-        TheRouter.get(IChatApi::class.java)
-            ?: throw IllegalStateException("IChatApi not found in TheRouter")
-    }
+    // 使用新的 ChatService 替代原有的 IChatApi
+    // ChatService 已经通过 IntyNetworkManager 管理，无需依赖注入
 
     init {
         EasyLog.log("ChatViewModel = ${hashCode()}")
@@ -390,7 +388,7 @@ class ChatViewModel : BaseActivityViewModel() {
                                 "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
                             ),
                         )
-                        val result = chatApi.sendMsg(agent.id, req)
+                        val result = ChatService.sendMessage(agent.id, req.messages, req.model, req.stream)
 
                         EasyLog.log("sendMsg($agent, $req) -> $result")
 
@@ -403,7 +401,7 @@ class ChatViewModel : BaseActivityViewModel() {
                         _isWaitingForReply.value = false
 
                         when (result) {
-                            is HttpResult.Success -> {
+                            is ApiResult.Success -> {
                                 // Firebase Analytics - 记录消息发送成功
                                 FirebaseManager.logEvent(
                                     "message_send_success",
@@ -464,7 +462,7 @@ class ChatViewModel : BaseActivityViewModel() {
                                     }
                             }
 
-                            is HttpResult.Failure -> {
+                            is ApiResult.Error -> {
                                 // Firebase Analytics - 记录消息发送失败
                                 FirebaseManager.logEvent(
                                     "message_send_failure",
@@ -551,7 +549,7 @@ class ChatViewModel : BaseActivityViewModel() {
             val req = SendMsgReq(listOf(msgInfo))
 
             agentInfo.value?.let { agent ->
-                val result = chatApi.sendMsg(agent.id, req)
+                val result = ChatService.sendMessage(agent.id, req.messages, req.model, req.stream)
 
                 EasyLog.log("sendKeepTalkingMessage($agent, $req) -> $result")
 
@@ -564,7 +562,7 @@ class ChatViewModel : BaseActivityViewModel() {
                 _isWaitingForReply.value = false
 
                 when (result) {
-                    is HttpResult.Success -> {
+                    is ApiResult.Success -> {
                         runCatching {
                                 // 有免费次数限制，需要vip订阅
                                 if (result.data.code == 10001001) {
@@ -597,7 +595,7 @@ class ChatViewModel : BaseActivityViewModel() {
                             }
                     }
 
-                    is HttpResult.Failure -> {
+                    is ApiResult.Error -> {
                         showNetworkAwareError(result.message)
                         // 错误恢复：确保状态正确
                         _isWaitingForReply.value = false
