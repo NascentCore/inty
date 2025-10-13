@@ -79,11 +79,6 @@ internal fun ApplicationExtension.commonAppConfig(project: Project) {
             signingConfig = signingConfigs.getByName("dev")
             isMinifyEnabled = false
             isShrinkResources = false
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro",
-                "consumer-rules.pro",
-            )
         }
 
         create("playdebug") {
