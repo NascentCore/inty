@@ -64,6 +64,7 @@ class ChatCompletionResponse(BaseModel):
     object: str = "chat.completion"
     created: int
     model: str
+    # 当前只会返回 1 个 choice，但是保留列表，以便未来实现其他功能，比如 ai 帮答。
     choices: List[ChatChoice]
     usage: ChatUsage
 
