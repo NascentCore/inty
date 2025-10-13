@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from langchain_core.messages import HumanMessage
 from loguru import logger
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -28,44 +28,6 @@ from app.services.voice_service import voice_service
 from app.utils.timing import Timer, log_time
 
 router = APIRouter(prefix="/chat", route_class=LoggerRoute)
-
-
-class ChatMessage(BaseModel):
-    """Chat message model for OpenAI-style responses"""
-
-    role: str
-    content: str
-    id: Optional[str] = None
-    meta_data: Optional[dict] = None
-    timestamp: Optional[str] = None
-    audio_url: Optional[str] = None
-
-
-class ChatChoice(BaseModel):
-    """Chat choice model for OpenAI-style responses"""
-
-    index: int
-    message: ChatMessage
-    finish_reason: str
-
-
-class ChatUsage(BaseModel):
-    """Token usage model for OpenAI-style responses"""
-
-    prompt_tokens: int
-    completion_tokens: int
-    total_tokens: int
-
-
-class ChatCompletionResponse(BaseModel):
-    """OpenAI-style chat completion response model"""
-
-    id: str
-    object: str = "chat.completion"
-    created: int
-    model: str
-    choices: List[ChatChoice]
-    usage: ChatUsage
 
 
 @router.post(
