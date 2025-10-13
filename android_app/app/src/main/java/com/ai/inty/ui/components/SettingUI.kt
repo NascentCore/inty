@@ -116,6 +116,7 @@ fun SettingInfoItem(
     value: String,
     modifier: Modifier = Modifier,
     hasRedDot: Boolean = false,
+    showArrow: Boolean = false,
 ) {
     Row(
         modifier = modifier.fillMaxWidth().height(48.dp).padding(horizontal = 12.dp),
@@ -124,12 +125,16 @@ fun SettingInfoItem(
         Text(text = title, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
         Spacer(Modifier.weight(1f))
         Text(
-            text = value,
+            text = if (hasRedDot) stringResource(R.string.version_update_available, value) else value,
             fontSize = 14.sp,
             fontWeight = FontWeight.Normal,
             color = Color.White.copy(0.55f),
         )
         if (hasRedDot) RedDot()
+        if (showArrow) {
+            Spacer(Modifier.width(10.dp))
+            Image(painter = painterResource(R.drawable.icon_next), contentDescription = null)
+        }
     }
 }
 

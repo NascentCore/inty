@@ -215,6 +215,7 @@ private fun SupportAndHelpSection(context: Context, onShowDeleteDialog: () -> Un
                     }
                 ),
             hasRedDot = IntySetting.hasAppUpdateTips(),
+            showArrow = true,
         )
     }
 }
