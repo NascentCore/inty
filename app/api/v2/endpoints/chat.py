@@ -70,7 +70,7 @@ class ChatCompletionResponse(BaseModel):
 
 @router.post(
     "/completions/{agent_id}",
-    response_model=schemas.APIResponse[dict],
+    response_model=schemas.APIResponse[ChatCompletionResponse],
     summary="返回与指定 Agent 聊天的下一条消息",
     description="可以处理包括图片在内的各种消息类型，媒体类型应该先上传，然后将 URL 作为索引发送到此 API",
 )
@@ -292,20 +292,37 @@ async def agent_chat_completions(
         logger.debug(
             f"聊天请求处理成功: agent_id={agent_id}, response_length={len(response_content)}, {timing_message}"
         )
-        data = {
-            "id": f"chatcmpl-{uuid.uuid4().hex[:12]}",  # 保持随机生成的外层ID
-            "object": "chat.completion",
-            "created": int(time.time()),
-            "model": request.model,
-            "choices": [{"index": 0, "message": message, "finish_reason": "stop"}],
-            "usage": {
-                "prompt_tokens": len(last_user_message.split()),
-                "completion_tokens": len(response_content.split()),
-                "total_tokens": len(last_user_message.split())
-                + len(response_content.split()),
-            },
-        }
-        return schemas.APIResponse.success(data=data)
+        # Create ChatMessage object
+        chat_message = ChatMessage(
+            role=message["role"],
+            content=message["content"],
+            id=message.get("id"),
+            meta_data=message.get("meta_data"),
+            timestamp=message.get("timestamp"),
+            audio_url=message.get("audio_url"),
+        )
+
+        # Create ChatChoice object
+        chat_choice = ChatChoice(index=0, message=chat_message, finish_reason="stop")
+
+        # Create ChatUsage object
+        chat_usage = ChatUsage(
+            prompt_tokens=len(last_user_message.split()),
+            completion_tokens=len(response_content.split()),
+            total_tokens=len(last_user_message.split()) + len(response_content.split()),
+        )
+
+        # Create ChatCompletionResponse object
+        response_data = ChatCompletionResponse(
+            id=f"chatcmpl-{uuid.uuid4().hex[:12]}",  # 保持随机生成的外层ID
+            object="chat.completion",
+            created=int(time.time()),
+            model=request.model,
+            choices=[chat_choice],
+            usage=chat_usage,
+        )
+
+        return schemas.APIResponse.success(data=response_data)
 
     except Exception as e:
         logger.error(f"聊天请求处理失败: {str(e)}")
