@@ -132,7 +132,16 @@ async def update_profile(
         return APIResponse.error(message=str(e))
 
 
-@router.post("/device/register", response_model=APIResponse)
+# TODO: https://github.com/NascentCore/inty/issues/771
+# 基于设备推送实现主动发消息
+# TODO：考虑将改 API 合并到另一个已有的 API，比如用户登录 API
+@router.post(
+    "/device/register",
+    response_model=APIResponse,
+    include_in_schema=False,
+    summary="Registers or updates Firebase Cloud Messaging (FCM) device tokens for push notifications",
+    description="在用户未打开 app 时向设备推送消息",
+)
 async def register_device_token(
     device_in: DeviceTokenRegister,
     db: AsyncSession = Depends(get_async_db),
