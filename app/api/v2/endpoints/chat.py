@@ -168,21 +168,10 @@ async def agent_chat_completions(
             except Exception as e:
                 logger.warning(f"保存用户消息失败: {str(e)}")
 
-            # 根据用户类型返回不同错误码
-            from app.models.user import AuthType
-
-            if current_user.auth_type == AuthType.GUEST:
-                # 游客用户：提示登录
-                return create_business_error_response(
-                    error_info=BusinessErrorCode.GUEST_LOGIN_REQUIRED,
-                    extra_data={"used_count": used_count, "daily_limit": daily_limit},
-                )
-            else:
-                # 已登录用户：提示订阅
-                return create_business_error_response(
-                    error_info=BusinessErrorCode.SUBSCRIPTION_REQUIRED,
-                    extra_data={"used_count": used_count, "daily_limit": daily_limit},
-                )
+            return create_business_error_response(
+                error_info=BusinessErrorCode.SUBSCRIPTION_REQUIRED,
+                extra_data={"used_count": used_count, "daily_limit": daily_limit},
+            )
 
         logger.debug(f"开始非流式聊天处理: session_id={session_id}")
         chat_processing_start = time.time()
@@ -240,14 +229,9 @@ async def agent_chat_completions(
                         language=request.language,
                         db=db,
                         agent_gender=agent_data.get("gender"),
-                        user=current_user,
                     )
                 if voice_result:
                     audio_url, audio_duration = voice_result
-                else:
-                    logger.warning(
-                        f"用户 {current_user.id} 语音生成失败或达到限制，聊天文本正常返回"
-                    )
             else:
                 logger.debug("语音未启用，跳过语音生成")
 

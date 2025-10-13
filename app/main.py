@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_async_db
 from app.api.v1.router import api_router
+from app.api.v2.router import api_v2_router
 from app.core.agent.agent import agent_manager
 
 # ！！！ 这个 import 必须在所有导入其他应用代码之前。
@@ -81,6 +82,7 @@ app.add_exception_handler(SQLAlchemyError, sqlalchemy_exception_handler)
 app.add_exception_handler(ValidationError, validation_error_handler)
 
 app.include_router(api_router)
+app.include_router(api_v2_router)
 
 # 配置静态文件服务 - 用于评测系统前端
 import os
