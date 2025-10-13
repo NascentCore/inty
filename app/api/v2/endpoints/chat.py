@@ -61,7 +61,6 @@ class ChatCompletionResponse(BaseModel):
     """OpenAI-style chat completion response model"""
 
     id: str
-    object: str = "chat.completion"
     created: int
     model: str
     # 当前只会返回 1 个 choice，但是保留列表，以便未来实现其他功能，比如 ai 帮答。
@@ -316,7 +315,6 @@ async def agent_chat_completions(
         # Create ChatCompletionResponse object
         response_data = ChatCompletionResponse(
             id=f"chatcmpl-{uuid.uuid4().hex[:12]}",  # 保持随机生成的外层ID
-            object="chat.completion",
             created=int(time.time()),
             model=request.model,
             choices=[chat_choice],
