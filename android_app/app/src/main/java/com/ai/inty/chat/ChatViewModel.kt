@@ -16,22 +16,14 @@ import com.ai.inty.beans.UserProfile
 import com.ai.inty.billing.VipStatusHelper
 import com.ai.inty.net.IChatApi
 import com.ai.inty.netapi.BusinessErrorCodes
-import com.ai.inty.netapi.IntyNetworkManager
-
-
 import com.ai.inty.utils.FirebaseManager
 import com.ai.inty.utils.FirebasePerformanceHelper
 import com.ai.inty.utils.PageTrackingHelper
 import com.ai.inty.utils.UserProfileManager
 import com.architecture.httplib.core.HttpResult
-import com.inty.api.models.api.v1.chats.ChatCreateCompletionParams
-
-
 import com.inty.utils.AppEnv
 import com.inty.utils.log.EasyLog
 import com.inty.utils.storage.IntySetting
-
-
 import com.therouter.TheRouter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -407,8 +399,7 @@ class ChatViewModel : BaseActivityViewModel() {
                     }
 
                     inputData.update { "" }
-EasyLog.log("send msg $inputMsg", EasyLog.DEBUG)
-
+                    EasyLog.log("send msg $inputMsg")
 
                     val msgInfo = MsgInfo(content = inputMsg.trimEnd(), role = "user")
 
@@ -442,7 +433,6 @@ EasyLog.log("send msg $inputMsg", EasyLog.DEBUG)
                     _isWaitingForReply.value = true
 
                     val req = SendMsgReq(listOf(msgInfo))
-
                     val currentAgent = agentInfo.value
                     currentAgent?.let { agent ->
 
@@ -476,29 +466,6 @@ EasyLog.log("send msg $inputMsg", EasyLog.DEBUG)
                         val result = chatApi.sendMsg(agent.id, req)
 
                         EasyLog.log("sendMsg($agent, $req) -> $result")
-
-                        val chatCompletionReq =
-                            ChatCreateCompletionParams.builder()
-                                .agentId(agent.id)
-                                .messages(
-                                    listOf(
-                                        ChatCreateCompletionParams.Message.builder()
-                                            .content(msgInfo.content)
-                                            .role(msgInfo.role)
-                                            .build()
-                                    )
-                                )
-                                .build()
-                        val chatCreateCompletionResponse =
-                            IntyNetworkManager.getClient()
-                                .api()
-                                .v1()
-                                .chats()
-                                .createCompletion(
-                                    agentId = agent.id,
-                                    params = chatCompletionReq,
-                                )
-                        EasyLog.log("chatCompletionResponse: $chatCreateCompletionResponse")
 
                         // 移除加载消息
                         _msgs.update { currentMsgs ->
