@@ -484,8 +484,8 @@ class ChatViewModel : BaseActivityViewModel() {
                                 FirebaseManager.recordException(
                                     Exception("Message send failed: ${result.message}")
                                 )
-
-                                showNetworkAwareError(result.message)
+                                //所有消息接口错误，暂时统一文案
+                                showNetworkAwareError("Something went wrong. Please try again later.")
                                 // 错误恢复：确保状态正确
                                 _isWaitingForReply.value = false
                             }
