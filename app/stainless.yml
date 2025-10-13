@@ -29,6 +29,9 @@ targets:
     production_repo: NascentCore/inty-kotlin
     publish:
       maven: false
+    options:
+      renameValue:
+        object: objectCategory
 
 # `environments` are a map of the name of the environment (e.g. "sandbox",
 # "production") to the corresponding url to use.
