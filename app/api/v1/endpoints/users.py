@@ -113,7 +113,14 @@ async def get_me(
     return APIResponse.success(data=User(**user_dict))
 
 
-@router.put("/profile", response_model=APIResponse[User])
+# TODO: 考虑路径更改为 /me 这样与 GET /me 一致。GET /me 最早改动是为了兼容 v1.0.3 的 API。
+# 可能这个 api 也有同样的问题。需要考虑 1.0.3 tag inty-app 里是否与这个 API 兼容。
+@router.put(
+    "/profile",
+    response_model=APIResponse[User],
+    summary="Update current user profile",
+    description="Update current user profile, support avatar update",
+)
 async def update_profile(
     *,
     db: AsyncSession = Depends(get_async_db),
@@ -134,7 +141,8 @@ async def update_profile(
 
 # TODO: https://github.com/NascentCore/inty/issues/771
 # 基于设备推送实现主动发消息
-# TODO：考虑将改 API 合并到另一个已有的 API，比如用户登录 API
+# TODO：考虑将改 API 合并到另一个已有的 API，比如用户登录 API，直接注册对应的 device ID，
+# 以此来减少 endpoint 数量
 @router.post(
     "/device/register",
     response_model=APIResponse,
