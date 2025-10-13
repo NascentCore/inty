@@ -9,5 +9,6 @@ object ProjectConfig {
     val targetVersion = 36
     val minSdkVersion = 29
 
-    val versionName = "1.1.1"
+val versionName = "1.30.1"
+
 }
