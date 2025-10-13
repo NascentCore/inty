@@ -38,14 +38,10 @@ def create_user(
     # Create database session
     db: Session = SessionLocal()
     # Check if admin user already exists
-    existing_user = (
-        db.query(User).filter(User.id == "user-01JWZ34Y4D1C92GD86A5R6EWYJ").first()
-    )
+    existing_user = db.query(User).filter(User.id == user_id).first()
 
     if existing_user:
-        logger.warning(
-            "Admin user already exists with ID: user-01JWZ34Y4D1C92GD86A5R6EWYJ"
-        )
+        logger.warning(f"Admin user already exists with ID: {user_id}")
         created_user = existing_user
     else:
         # Create new admin user
