@@ -18,6 +18,23 @@ Based on [AGENTS.md](https://agents.md/)
 
 ## Coding style
 
+### Do not repeat in comments what's already obvious in the code
+
+Do not generate comments like below.
+
+```python
+# Get current setting
+def get_current_setting():
+  ...
+```
+
+Instead, just let the function name or the code to speak for itself:
+
+```python
+def get_current_setting():
+  ...
+```
+
 ### Do not use magic number/string/values
 
 Whenever possible define constants to name magic number/string/values to aid code readability.
