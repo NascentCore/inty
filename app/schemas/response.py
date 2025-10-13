@@ -66,6 +66,16 @@ class BusinessErrorCode:
         "error_code": "AGENT_CREATION_LIMIT_REACHED",
         "message": "Character creation limit reached",
     }
+    VOICE_GENERATION_LIMIT_REACHED = {
+        "code": 10001004,
+        "error_code": "VOICE_GENERATION_LIMIT_REACHED",
+        "message": "Voice generation limit reached",
+    }
+    GUEST_LOGIN_REQUIRED = {
+        "code": 10001005,
+        "error_code": "GUEST_LOGIN_REQUIRED",
+        "message": "Guest login required - Please sign in with Google",
+    }
 
 
 # 业务错误消息定义

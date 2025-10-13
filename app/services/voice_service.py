@@ -76,6 +76,7 @@ class VoiceService:
         model: Optional[str] = None,
         db: Optional[AsyncSession] = None,
         agent_gender: Optional[str] = None,
+        user: Optional[Any] = None,
     ) -> Optional[Tuple[str, float]]:
         """
         生成语音并上传到GCS
@@ -87,6 +88,7 @@ class VoiceService:
             model: 模型名称，默认使用配置中的
             db: 数据库会话，用于缓存查询
             agent_gender: Agent性别，用于选择默认音色（MALE/FEMALE/OTHER）
+            user: 用户对象，用于限制检查和用量记录
 
         Returns:
             语音文件的GCS URL和音频时长(秒)的元组，失败返回None
@@ -98,6 +100,22 @@ class VoiceService:
         if not text.strip():
             logger.warning("文本内容为空，跳过语音生成")
             return None
+
+        # 如果提供了用户信息，检查语音生成限制
+        if user and db:
+            from app.services.global_services import subscription_service
+
+            (
+                is_allowed,
+                used_count,
+                limit,
+            ) = await subscription_service.check_voice_generation_limit(db, user)
+
+            if not is_allowed:
+                logger.warning(
+                    f"用户 {user.id} 已达到语音生成限制: {used_count}/{limit}"
+                )
+                return None
 
         # 清理文本内容，移除心理和动作描写
         original_text = text
@@ -151,6 +169,28 @@ class VoiceService:
                     cached_url, cached_duration = cached_result
                     logger.debug(f"使用缓存的语音文件: {cached_url}")
                     # 访问统计已经在get_cached_voice中异步更新了，这里不需要重复更新
+
+                    # 记录语音生成用量（包括缓存命中）
+                    if user:
+                        try:
+                            from app.services.global_services import (
+                                subscription_service,
+                            )
+
+                            await subscription_service.record_usage(
+                                db,
+                                user.id,
+                                "voice_generation",
+                                1,
+                                extra_data={
+                                    "text_length": len(text),
+                                    "voice_id": voice_id,
+                                    "cached": True,
+                                },
+                            )
+                        except Exception as e:
+                            logger.warning(f"记录语音生成用量失败: {str(e)}")
+
                     return (cached_url, cached_duration)
                 logger.debug("未找到缓存，开始新的语音生成")
 
@@ -210,6 +250,25 @@ class VoiceService:
                     )
                 )
                 logger.debug("语音缓存保存任务已启动")
+
+            # 记录语音生成用量（新生成）
+            if user and db:
+                try:
+                    from app.services.global_services import subscription_service
+
+                    await subscription_service.record_usage(
+                        db,
+                        user.id,
+                        "voice_generation",
+                        1,
+                        extra_data={
+                            "text_length": len(text),
+                            "voice_id": voice_id,
+                            "cached": False,
+                        },
+                    )
+                except Exception as e:
+                    logger.warning(f"记录语音生成用量失败: {str(e)}")
 
             logger.debug(f"语音生成成功: {file_name}, 时长: {duration:.2f}秒")
             return (audio_url, duration)

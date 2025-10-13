@@ -251,6 +251,13 @@ class SubscriptionStatusResponse(BaseModel):
     chat_24h_limit: Optional[int] = Field(
         None, description="24小时内聊天次数限制（免费用户）"
     )
+    guest_chat_24h_limit: Optional[int] = Field(
+        None, description="24小时内聊天次数限制（游客用户）"
+    )
+    voice_24h_limit: Optional[int] = Field(None, description="24小时内语音生成次数限制")
+    guest_voice_24h_limit: Optional[int] = Field(
+        None, description="24小时内语音生成次数限制（游客用户）"
+    )
     agent_creation_limit: int = Field(6, description="Agent创建数量限制")
     background_generation_limit_per_day: int = Field(
         3, description="每日背景图生成次数限制"
