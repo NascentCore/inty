@@ -4383,11 +4383,6 @@
                         "type": "string",
                         "title": "Id"
                     },
-                    "object": {
-                        "type": "string",
-                        "title": "Object",
-                        "default": "chat.completion"
-                    },
                     "created": {
                         "type": "integer",
                         "title": "Created"
