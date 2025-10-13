@@ -192,7 +192,7 @@
     <string name="please_enter_character_full">Please enter your character…</string>
     <string name="character_count_format_my">%d/400</string>
     <string name="str_report">Report</string>
-    <string name="reply_style">Reply Style</string>
+    <string name="reply_style">Chat Style</string>
     <string name="cancel_button">Cancel</string>
     <string name="generate_avatar_title_full">Generate\nAvatar</string>
     <string name="gender_unmodified_full">Gender (Unmodified after Creation) *</string>
@@ -222,7 +222,7 @@
     <string name="about">About</string>
     <string name="custom_reply_style">Customize Conversation Style</string>
     <string name="custom_reply_successful">Style Updated</string>
-    <string name="reply_hint_str">Customize the AI\'s reply style, like tone, language, else.</string>
+    <string name="reply_hint_str">Customize the AI\'s chat style, like tone, language, else.</string>
     <string name="str_upgrade_required">Update Required</string>
     <string name="str_upgrade_content">We\'ve made some important improvements to make your IntelliMate experience even better! To ensure you have access to the latest features and security updates, please update your app now. This update is required to continue using IntelliMate.</string>
     <string name="str_upgrade_now">Update Now</string>
