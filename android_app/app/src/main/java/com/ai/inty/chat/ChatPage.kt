@@ -539,6 +539,14 @@ internal fun ChatPage(
 
         // 免费聊天次数限制的dialog
         ShowLimitDialog(chatViewModel)
+
+        // 监听需要登录事件并跳转
+        val needLogin by chatViewModel.requestLogin.collectAsState()
+        if (needLogin) {
+            // 如果未登录或为游客，则跳转登录
+            TheRouter.build(Constant.ROUTE_LOGIN).navigation(context)
+            chatViewModel.dismissLoginRequest()
+        }
     }
 }
 

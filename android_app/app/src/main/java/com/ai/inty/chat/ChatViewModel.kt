@@ -360,6 +360,7 @@ class ChatViewModel : BaseActivityViewModel() {
     }
 
     val showLimitDialog = MutableStateFlow(false)
+    val requestLogin = MutableStateFlow(false)
 
     fun sendMsg() {
         // 防抖检查
@@ -488,6 +489,13 @@ class ChatViewModel : BaseActivityViewModel() {
                                 )
 
                                 runCatching {
+                                        if (
+                                            result.data.code ==
+                                                BusinessErrorCodes.GUEST_NEED_LOGIN_CODE
+                                        ) {
+                                            requestLogin.emit(true)
+                                            return@runCatching
+                                        }
                                         // 有免费次数限制，需要vip订阅
                                         if (
                                             result.data.code ==
@@ -590,6 +598,7 @@ class ChatViewModel : BaseActivityViewModel() {
 
     // 关闭limit次数 拦截消息的弹窗
     fun dismissDialog() = viewModelScope.launch { showLimitDialog.emit(false) }
+    fun dismissLoginRequest() = viewModelScope.launch { requestLogin.emit(false) }
 
     fun sendKeepTalkingMessage() {
         // 防抖检查
@@ -641,6 +650,13 @@ class ChatViewModel : BaseActivityViewModel() {
                 when (result) {
                     is HttpResult.Success -> {
                         runCatching {
+                                if (
+                                    result.data.code ==
+                                        BusinessErrorCodes.GUEST_NEED_LOGIN_CODE
+                                ) {
+                                    requestLogin.emit(true)
+                                    return@runCatching
+                                }
                                 // 有免费次数限制，需要vip订阅
                                 if (
                                     result.data.code ==
