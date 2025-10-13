@@ -146,6 +146,7 @@ async def update_profile(
 @router.post(
     "/device/register",
     response_model=APIResponse,
+    include_in_schema=False,
     summary="Registers or updates Firebase Cloud Messaging (FCM) device tokens for push notifications",
     description="在用户未打开 app 时向设备推送消息",
 )
