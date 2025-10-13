@@ -145,6 +145,7 @@ class StructuredPrompt(BaseModel):
             {"role": "system", "content": self.mode_prompt},
         ]
 
+
 PROACTIVE_CHAT_SYSTEM_PROMPT = """
 The user has no message for {{ time_no_messages }} hours, write something to get the user back to chat with you.
 {{ time_no_messages }} hours have passed, do not repeat the same topic.

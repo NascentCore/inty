@@ -86,6 +86,7 @@ fun SettingNavigationItem(
     subtitle: String? = null,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    showRedDot: Boolean = false,
 ) {
     Row(
         modifier =
@@ -96,6 +97,10 @@ fun SettingNavigationItem(
     ) {
         Text(text = title, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
         Spacer(Modifier.weight(1f))
+        if (showRedDot) {
+            RedDot()
+            Spacer(Modifier.width(10.dp))
+        }
         if (subtitle != null) {
             Text(
                 text = subtitle,
@@ -116,7 +121,6 @@ fun SettingInfoItem(
     value: String,
     modifier: Modifier = Modifier,
     hasRedDot: Boolean = false,
-    showArrow: Boolean = false,
 ) {
     val SPACER_WIDTH = 10.dp
     Row(
@@ -128,15 +132,13 @@ fun SettingInfoItem(
         if (hasRedDot) RedDot()
         Spacer(Modifier.width(SPACER_WIDTH))
         Text(
-            text = if (hasRedDot) stringResource(R.string.version_update_available, value) else value,
+            text = value,
             fontSize = 14.sp,
             fontWeight = FontWeight.Normal,
             color = Color.White.copy(0.55f),
-        )        
-        if (showArrow) {
-            Spacer(Modifier.width(SPACER_WIDTH))
-            Image(painter = painterResource(R.drawable.icon_next), contentDescription = null)
-        }
+        )
+        Spacer(Modifier.width(SPACER_WIDTH))
+        Image(painter = painterResource(R.drawable.icon_next), contentDescription = null)
     }
 }
 

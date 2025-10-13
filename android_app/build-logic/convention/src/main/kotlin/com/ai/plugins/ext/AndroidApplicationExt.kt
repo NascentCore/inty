@@ -38,7 +38,7 @@ private fun getCommitCount(project: Project): Int {
 internal fun ApplicationExtension.commonAppConfig(project: Project) {
     defaultConfig {
         versionName = ProjectConfig.versionName
-versionCode = 1600
+        versionCode = 1600
 
         targetSdk = ProjectConfig.targetVersion
 

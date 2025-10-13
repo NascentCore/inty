@@ -37,7 +37,6 @@ import com.ai.inty.billing.BillingRepository
 import com.ai.inty.ui.components.DeleteAccountDialog
 import com.ai.inty.ui.components.LogoutButton
 import com.ai.inty.ui.components.SettingDivider
-import com.ai.inty.ui.components.SettingInfoItem
 import com.ai.inty.ui.components.SettingNavigationItem
 import com.ai.inty.ui.components.SettingSection
 import com.ai.inty.viewmodels.DialogState
@@ -202,20 +201,19 @@ private fun SupportAndHelpSection(context: Context, onShowDeleteDialog: () -> Un
 
         // 版本号
         val uriHandler = LocalUriHandler.current
-        SettingInfoItem(
+        SettingNavigationItem(
             title = stringResource(R.string.settings_about),
-            value = BuildConfig.VERSION_NAME,
-            modifier =
-                Modifier.noRippleClickable(
-                    onClick = {
-                        runCatching {
-                            val url = IntySetting.appGooglePlayUrl()
-                            if (url.isNotBlank()) uriHandler.openUri(url)
-                        }
-                    }
-                ),
-            hasRedDot = IntySetting.hasAppUpdateTips(),
-            showArrow = true,
+            subtitle =
+                if (IntySetting.hasAppUpdateTips())
+                    stringResource(R.string.version_update_available, BuildConfig.VERSION_NAME)
+                else BuildConfig.VERSION_NAME,
+            onClick = {
+                runCatching {
+                    val url = IntySetting.appGooglePlayUrl()
+                    if (url.isNotBlank()) uriHandler.openUri(url)
+                }
+            },
+            showRedDot = IntySetting.hasAppUpdateTips(),
         )
     }
 }
