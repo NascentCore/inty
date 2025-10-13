@@ -196,6 +196,21 @@ class SystemSettingsService:
                 "free_user_chat_24h_limit",
                 global_config_loaded_from_config_yaml.app.limits.free_user_chat_24h_limit,
             ),
+            "guest_chat_24h_limit": await self.get_setting(
+                db,
+                "guest_user_chat_24h_limit",
+                global_config_loaded_from_config_yaml.app.limits.guest_user_chat_24h_limit,
+            ),
+            "voice_24h_limit": await self.get_setting(
+                db,
+                "free_user_voice_24h_limit",
+                global_config_loaded_from_config_yaml.app.limits.free_user_voice_24h_limit,
+            ),
+            "guest_voice_24h_limit": await self.get_setting(
+                db,
+                "guest_user_voice_24h_limit",
+                global_config_loaded_from_config_yaml.app.limits.guest_user_voice_24h_limit,
+            ),
             "agent_creation_limit": await self.get_setting(
                 db, "free_user_agent_creation_limit", 6
             ),

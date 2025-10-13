@@ -571,6 +571,7 @@ async def agent_chat_completions(
                         language=request.language,
                         db=db,
                         agent_gender=agent_data.get("gender"),
+                        user=current_user,
                     )
                     if voice_result:
                         audio_url, audio_duration = voice_result
@@ -709,9 +710,35 @@ async def generate_message_voice(
             language=language,
             db=db,
             agent_gender=agent_data.get("gender"),
+            user=current_user,
         )
 
         if not voice_result:
+            # 检查是否是因为达到限制
+            from app.services.global_services import subscription_service
+
+            (
+                is_allowed,
+                used_count,
+                limit,
+            ) = await subscription_service.check_voice_generation_limit(
+                db, current_user
+            )
+            if not is_allowed:
+                from app.models.user import AuthType
+
+                if current_user.auth_type == AuthType.GUEST:
+                    # 游客用户：提示登录
+                    return create_business_error_response(
+                        error_info=BusinessErrorCode.GUEST_LOGIN_REQUIRED,
+                        extra_data={"used_count": used_count, "limit": limit},
+                    )
+                else:
+                    # 已登录用户：提示达到限制
+                    return create_business_error_response(
+                        error_info=BusinessErrorCode.VOICE_GENERATION_LIMIT_REACHED,
+                        extra_data={"used_count": used_count, "limit": limit},
+                    )
             raise HTTPException(status_code=500, detail="Voice generation failed")
 
         audio_url, audio_duration = voice_result

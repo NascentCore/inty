@@ -23,7 +23,7 @@ from app.models.subscription import (
     UserSubscription,
 )
 from app.models.subscription_features import SubscriptionFeatures
-from app.models.user import User
+from app.models.user import AuthType, User
 from app.schemas.exclude_fields import EXCLUDE_FIELDS
 from app.schemas.subscription import (
     FeatureInfo,
@@ -259,6 +259,9 @@ class SubscriptionService:
                     chat_limit_per_day=subscription.plan.chat_limit_per_day,
                     total_chat_limit=None,  # 付费用户不使用总次数限制
                     chat_24h_limit=None,  # 付费用户不使用24小时限制
+                    guest_chat_24h_limit=None,  # 付费用户不需要游客限制
+                    voice_24h_limit=global_config_loaded_from_config_yaml.app.limits.subscribed_user_voice_24h_limit,
+                    guest_voice_24h_limit=None,  # 付费用户不需要游客限制
                     agent_creation_limit=subscription.plan.agent_creation_limit,
                     background_generation_limit_per_day=getattr(
                         subscription.plan, "background_generation_limit_per_day", -1
@@ -300,6 +303,9 @@ class SubscriptionService:
                     chat_limit_per_day=-1,  # 免费用户不限制每日聊天次数
                     total_chat_limit=free_limits["chat_total_limit"],
                     chat_24h_limit=free_limits["chat_24h_limit"],
+                    guest_chat_24h_limit=free_limits["guest_chat_24h_limit"],
+                    voice_24h_limit=free_limits["voice_24h_limit"],
+                    guest_voice_24h_limit=free_limits["guest_voice_24h_limit"],
                     agent_creation_limit=free_limits["agent_creation_limit"],
                     background_generation_limit_per_day=free_limits[
                         "background_generation_limit"
@@ -853,12 +859,21 @@ class SubscriptionService:
 
             # 免费用户：检查24小时聊天次数限制
             if subscription_status.chat_24h_limit is not None:
-                chat_limit = subscription_status.chat_24h_limit
+                # 如果是游客用户，使用游客限制；否则使用普通免费用户限制
+                if user.auth_type == AuthType.GUEST:
+                    chat_limit = subscription_status.guest_chat_24h_limit
+                else:
+                    chat_limit = subscription_status.chat_24h_limit
             elif not subscription_status.is_subscribed:
-                # 免费用户使用静态配置作为回退
-                chat_limit = (
-                    global_config_loaded_from_config_yaml.app.limits.free_user_chat_24h_limit
-                )
+                # 回退配置：根据用户类型使用不同的限制
+                if user.auth_type == AuthType.GUEST:
+                    chat_limit = (
+                        global_config_loaded_from_config_yaml.app.limits.guest_user_chat_24h_limit
+                    )
+                else:
+                    chat_limit = (
+                        global_config_loaded_from_config_yaml.app.limits.free_user_chat_24h_limit
+                    )
             else:
                 chat_limit = None
 
@@ -918,6 +933,63 @@ class SubscriptionService:
 
         except Exception as e:
             logger.error(f"检查聊天次数限制失败: {str(e)}")
+            # 出错时默认允许，避免影响用户体验
+            return True, 0, -1
+
+    async def check_voice_generation_limit(
+        self, db: AsyncSession, user: schemas.User
+    ) -> Tuple[bool, int, int]:
+        """
+        检查用户语音生成次数限制
+
+        Returns:
+            Tuple[bool, int, int]: (是否允许生成, 已用次数, 限制次数)
+        """
+        try:
+            if is_superuser(user):
+                logger.debug(f"Superuser {user.id} has unlimited voice generation")
+                return SUPERUSER_LIMIT_CHECK_RESULT
+
+            # 获取订阅状态
+            subscription_status = await self.get_user_subscription_status(db, user.id)
+
+            # 确定语音生成限制
+            if subscription_status.is_subscribed:
+                # 付费用户使用订阅限制
+                voice_limit = subscription_status.voice_24h_limit
+            else:
+                # 免费用户根据类型使用不同限制
+                if user.auth_type == AuthType.GUEST:
+                    voice_limit = subscription_status.guest_voice_24h_limit
+                else:
+                    voice_limit = subscription_status.voice_24h_limit
+
+            if voice_limit is None:
+                # 如果没有限制，返回允许
+                return True, 0, -1
+
+            # 获取过去24小时内的语音生成次数
+            now = datetime.now(timezone.utc)
+            hours_24_ago = now - timedelta(hours=24)
+
+            voice_count_result = await db.execute(
+                select(func.sum(SubscriptionUsage.usage_count)).where(
+                    and_(
+                        SubscriptionUsage.user_id == user.id,
+                        SubscriptionUsage.usage_type == "voice_generation",
+                        SubscriptionUsage.usage_date >= hours_24_ago,
+                    )
+                )
+            )
+            voice_24h_count = voice_count_result.scalar() or 0
+
+            # 检查是否超出限制
+            is_allowed = voice_24h_count < voice_limit
+
+            return is_allowed, voice_24h_count, voice_limit
+
+        except Exception as e:
+            logger.error(f"检查语音生成次数限制失败: {str(e)}")
             # 出错时默认允许，避免影响用户体验
             return True, 0, -1
 
