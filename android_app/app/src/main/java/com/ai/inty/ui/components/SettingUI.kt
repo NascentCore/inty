@@ -86,6 +86,7 @@ fun SettingNavigationItem(
     subtitle: String? = null,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    showRedDot: Boolean = false,
 ) {
     Row(
         modifier =
@@ -94,8 +95,13 @@ fun SettingNavigationItem(
             },
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        val SPACER_WIDTH = 10.dp
         Text(text = title, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
         Spacer(Modifier.weight(1f))
+        if (showRedDot) {
+            RedDot()
+            Spacer(Modifier.width(SPACER_WIDTH))
+        }
         if (subtitle != null) {
             Text(
                 text = subtitle,
@@ -103,7 +109,7 @@ fun SettingNavigationItem(
                 fontWeight = FontWeight.Normal,
                 color = Color.White.copy(0.55f),
             )
-            Spacer(Modifier.width(10.dp))
+            Spacer(Modifier.width(SPACER_WIDTH))
         }
         Image(painter = painterResource(R.drawable.icon_next), contentDescription = null)
     }
