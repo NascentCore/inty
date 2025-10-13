@@ -7,10 +7,9 @@ from typing import Any, Dict, Optional, Tuple
 from google.oauth2 import service_account
 from googleapiclient.discovery import Resource, build
 from googleapiclient.errors import HttpError
+from loguru import logger
 
 from app.core.config import global_config_loaded_from_config_yaml
-
-from loguru import logger
 
 
 class GooglePlayService:
@@ -554,7 +553,7 @@ class GooglePlayService:
                 min_supported_version_code = 1
 
             if client_version_code < min_supported_version_code:
-                reason = f"版本代码低于最低支持版本: {client_version_code} < {min_supported_version_code}"
+                reason = f"Version code below minimum supported version: {client_version_code} < {min_supported_version_code}"
                 force_update_reasons.append(reason)
                 logger.info(f"最低版本检查触发强制更新: {reason}")
 
@@ -584,11 +583,13 @@ class GooglePlayService:
             # 添加详细的更新原因
             if force_update:
                 result["force_update_reasons"] = force_update_reasons
-                result["message"] = f"强制更新: {'; '.join(force_update_reasons)}"
+                result["message"] = (
+                    f"Force update required: {'; '.join(force_update_reasons)}"
+                )
             elif update_required:
-                result["message"] = "有新版本可用"
+                result["message"] = "New version available"
             else:
-                result["message"] = "应用已是最新版本"
+                result["message"] = "App is up to date"
 
             # 详细日志记录
             log_msg = (
@@ -641,9 +642,12 @@ class GooglePlayService:
     ) -> Optional[Tuple[int, int, int]]:
         """
         解析语义化版本号 (major.minor.patch)
+        支持两种格式：
+        1. 纯语义化版本：如 "1.2.3"
+        2. Google Play 格式：如 "1628 (1.30.1-f61d9662-playdebug)"
 
         Args:
-            version_name: 版本名称，如 "1.2.3"
+            version_name: 版本名称
 
         Returns:
             Tuple[int, int, int]: (major, minor, patch) 如果解析失败返回None
@@ -652,9 +656,22 @@ class GooglePlayService:
             if not version_name:
                 return None
 
-            # 使用正则表达式匹配 major.minor.patch 格式
-            pattern = r"^(\d+)\.(\d+)\.(\d+)"
-            match = re.match(pattern, version_name.strip())
+            version_to_parse = version_name.strip()
+
+            # 检测是否为 Google Play 格式：versionCode (versionName)
+            new_format_pattern = r"^\d+\s+\((.+)\)$"
+            new_format_match = re.match(new_format_pattern, version_to_parse)
+
+            if new_format_match:
+                # 提取括号内的版本名称
+                version_to_parse = new_format_match.group(1).strip()
+                logger.debug(
+                    f"检测到 Google Play 格式，提取版本名称: {version_to_parse}"
+                )
+
+            # 使用正则表达式匹配 major.minor.patch 格式（支持后面带额外信息）
+            semantic_pattern = r"^(\d+)\.(\d+)\.(\d+)"
+            match = re.match(semantic_pattern, version_to_parse)
 
             if not match:
                 logger.debug(f"版本名称不符合语义化版本格式: {version_name}")
@@ -698,20 +715,26 @@ class GooglePlayService:
             client_version = self._parse_semantic_version(client_version_name)
             if not client_version:
                 logger.debug(f"无法解析客户端版本名称: {client_version_name}")
-                return False, "客户端版本名称格式无效，跳过版本检查"
+                return (
+                    False,
+                    "Invalid client version name format, skipping version check",
+                )
 
             # 解析最新版本
             latest_version = self._parse_semantic_version(latest_version_name)
             if not latest_version:
                 logger.debug(f"无法解析最新版本名称: {latest_version_name}")
-                return False, "最新版本名称格式无效，跳过版本检查"
+                return (
+                    False,
+                    "Invalid latest version name format, skipping version check",
+                )
 
             client_major, client_minor, _ = client_version
             latest_major, latest_minor, _ = latest_version
 
             # 检查Major版本是否小于最新版本
             if client_major < latest_major:
-                reason = f"Major版本低于最新版本: {client_major} < {latest_major}"
+                reason = f"Major version below latest: {client_major} < {latest_major}"
                 logger.info(f"Major版本检查触发强制更新: {reason}")
                 return True, reason
 
@@ -719,7 +742,7 @@ class GooglePlayService:
             if client_major == latest_major:
                 minor_gap = latest_minor - client_minor
                 if minor_gap > max_minor_gap:
-                    reason = f"Minor版本号差距过大: {minor_gap} > {max_minor_gap}限制"
+                    reason = f"Minor version gap too large: {minor_gap} > {max_minor_gap} limit"
                     logger.info(f"Minor版本差距检查触发强制更新: {reason}")
                     return True, reason
 
@@ -728,14 +751,17 @@ class GooglePlayService:
                 )
                 return (
                     False,
-                    f"版本差距在允许范围内: Minor差距={minor_gap} <= {max_minor_gap}",
+                    f"Version gap within allowed range: Minor gap={minor_gap} <= {max_minor_gap}",
                 )
 
             logger.debug(
                 f"版本检查: 客户端={client_version_name}, 最新={latest_version_name}"
             )
-            return False, f"Major版本号相同或客户端更新，无需强制更新"
+            return (
+                False,
+                f"Major version same or client is newer, no force update needed",
+            )
 
         except Exception as e:
             logger.warning(f"版本差距检查失败: {e}")
-            return False, f"版本差距检查异常: {str(e)}"
+            return False, f"Version gap check failed: {str(e)}"
