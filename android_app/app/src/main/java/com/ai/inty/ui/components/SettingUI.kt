@@ -118,21 +118,23 @@ fun SettingInfoItem(
     hasRedDot: Boolean = false,
     showArrow: Boolean = false,
 ) {
+    val SPACER_WIDTH = 10.dp
     Row(
         modifier = modifier.fillMaxWidth().height(48.dp).padding(horizontal = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(text = title, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
         Spacer(Modifier.weight(1f))
+        if (hasRedDot) RedDot()
+        Spacer(Modifier.width(SPACER_WIDTH))
         Text(
             text = if (hasRedDot) stringResource(R.string.version_update_available, value) else value,
             fontSize = 14.sp,
             fontWeight = FontWeight.Normal,
             color = Color.White.copy(0.55f),
-        )
-        if (hasRedDot) RedDot()
+        )        
         if (showArrow) {
-            Spacer(Modifier.width(10.dp))
+            Spacer(Modifier.width(SPACER_WIDTH))
             Image(painter = painterResource(R.drawable.icon_next), contentDescription = null)
         }
     }

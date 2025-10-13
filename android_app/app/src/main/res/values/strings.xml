@@ -248,5 +248,5 @@
     <string name="str_pronouns">Pronouns</string>
     <string name="str_persona">Persona Description</string>
     <string name="str_message_is_too_long">message is too long. Please send it in parts.</string>
-    <string name="version_update_available">%s\n(new version available, click to update)</string>
+    <string name="version_update_available">%s\n(new version available)</string>
 </resources>
