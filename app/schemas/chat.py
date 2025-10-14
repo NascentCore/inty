@@ -165,6 +165,9 @@ class Chat(ChatInDB):
     agent_avatar: Optional[str] = None
     agent_background: Optional[str] = None
     agent_is_deleted: Optional[bool] = None
+    agent_intro: Optional[str] = None
+    agent_opening: Optional[str] = None
+    agent_opening_audio_url: Optional[str] = None
     settings: Optional[ChatSettings] = None
 
     @field_serializer("agent_avatar")
