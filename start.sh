@@ -31,6 +31,9 @@ export PYTHONPATH=.
 # python scripts/init_admin_user.py
 alembic upgrade head
 
+# 初始化订阅计划，写入信息会提供给 app 作为向 google play 查询订阅计划详情到依据。
+python scripts/init_subscription_plans_simple.py
+
 if [ "$DEV" = true ]; then
   echo "Starting in development mode..."
   python scripts/init_admin_user.py --user-id user-testing --is-superuser false
