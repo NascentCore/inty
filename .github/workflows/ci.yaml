@@ -5,6 +5,7 @@ on:
     branches:
       - main
     paths:
+      - "start.sh"
       - "app/**/*.py"
       - "tests/**/*.py"
       - "scripts/init_admin_user.py"
@@ -16,6 +17,7 @@ on:
     branches:
       - main
     paths:
+      - "start.sh"
       - "app/**/*.py"
       - "tests/**/*.py"
       - "scripts/init_admin_user.py"
