@@ -5,7 +5,13 @@ object BusinessErrorCodes {
 
     /** Guest用户聊天受限，需要登录 */
     const val GUEST_NEED_LOGIN_CODE = 10001005
+    const val GUEST_NEED_LOGIN_ERROR_CODE = "Guest Login Required"
+    const val GUEST_NEED_LOGIN_ERROR_MESSAGE = "Guest Login Required, Please sign in with Google"
 
+    /** 音频tts生成，次数超限制 */
+    const val VOICE_TTS_LIMIT_CODE = 10001004
+    const val VOICE_TTS_LIMIT_ERROR_CODE = "VOICE_GENERATION_LIMIT_REACHED"
+    const val VOICE_TTS_LIMIT_ERROR_MESSAGE = "voice generation limit reached"
     /** 订阅要求错误 */
     const val SUBSCRIPTION_REQUIRED_CODE = 10001001
     const val SUBSCRIPTION_REQUIRED_ERROR_CODE = "SUBSCRIPTION_REQUIRED"
