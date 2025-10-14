@@ -225,7 +225,8 @@ fun getCdnImageUrl(originUrl: String?, width: Int = 1080, quality: Int = 75): St
         originUrl.startsWith("https://storage.googleapis.com") -> originUrl
 
         originUrl.contains("/inty-static") -> {
-            originUrl.replace(
+            //有这样的 https://images.sxwl.dev/inty-static//inty-static/agents/a9d14f3d-8306-45cd-9d23-200722f94e73/avatar-3ac67f42c36a4d9b8f6935bee20b94b1.jpeg
+            originUrl.replaceFirst(
                 "/inty-static",
                 "/cdn-cgi/image/width=$width,quality=$quality/inty-static",
                 ignoreCase = true,
