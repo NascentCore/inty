@@ -76,14 +76,8 @@ resources:
                   gender: "#/components/schemas/Gender"
                   user: "#/components/schemas/User"
                 methods:
-                  retrieve: get /api/v1/users/profile
                   update: put /api/v1/users/profile
                   me: get /api/v1/users/me
-              device:
-                models:
-                  api_response: "#/components/schemas/APIResponse"
-                methods:
-                  register: post /api/v1/users/device/register
               deletion:
                 methods:
                   check_eligibility: get /api/v1/users/deletion/check
@@ -170,6 +164,11 @@ resources:
           text_to_speech:
             methods:
               list_voices: get /api/v1/text-to-speech/list-voices
+  v2:
+    subresources:
+      chat:
+        methods:
+          send_message: post /api/v2/chat/completions/{agent_id}
 
 settings:
   # All generated integration tests that hit the prism mock http server are marked

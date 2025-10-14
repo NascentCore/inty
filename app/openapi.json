@@ -95,78 +95,6 @@
                 ]
             }
         },
-        "/api/v1/users/profile": {
-            "get": {
-                "tags": [
-                    "users"
-                ],
-                "summary": "Get Profile",
-                "description": "Get current user profile.",
-                "operationId": "get_profile_api_v1_users_profile_get",
-                "responses": {
-                    "200": {
-                        "description": "Successful Response",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/APIResponse_User_"
-                                }
-                            }
-                        }
-                    }
-                },
-                "security": [
-                    {
-                        "Bearer": []
-                    }
-                ]
-            },
-            "put": {
-                "tags": [
-                    "users"
-                ],
-                "summary": "Update Profile",
-                "description": "Update current user profile.",
-                "operationId": "update_profile_api_v1_users_profile_put",
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/UserUpdate"
-                            }
-                        }
-                    },
-                    "required": true
-                },
-                "responses": {
-                    "200": {
-                        "description": "Successful Response",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/APIResponse_User_"
-                                }
-                            }
-                        }
-                    },
-                    "422": {
-                        "description": "Validation Error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/HTTPValidationError"
-                                }
-                            }
-                        }
-                    }
-                },
-                "security": [
-                    {
-                        "Bearer": []
-                    }
-                ]
-            }
-        },
         "/api/v1/users/me": {
             "get": {
                 "tags": [
@@ -194,19 +122,19 @@
                 ]
             }
         },
-        "/api/v1/users/device/register": {
-            "post": {
+        "/api/v1/users/profile": {
+            "put": {
                 "tags": [
                     "users"
                 ],
-                "summary": "Register Device Token",
-                "description": "\u6ce8\u518c\u6216\u66f4\u65b0\u8bbe\u5907token",
-                "operationId": "register_device_token_api_v1_users_device_register_post",
+                "summary": "Update current user profile",
+                "description": "Update current user profile, support avatar update",
+                "operationId": "update_profile_api_v1_users_profile_put",
                 "requestBody": {
                     "content": {
                         "application/json": {
                             "schema": {
-                                "$ref": "#/components/schemas/DeviceTokenRegister"
+                                "$ref": "#/components/schemas/UserUpdate"
                             }
                         }
                     },
@@ -218,7 +146,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/APIResponse"
+                                    "$ref": "#/components/schemas/APIResponse_User_"
                                 }
                             }
                         }
@@ -1522,9 +1450,10 @@
                 "tags": [
                     "chat"
                 ],
-                "summary": "Agent Chat Completions",
-                "description": "\u57fa\u4e8eAgent ID\u7684OpenAI\u98ce\u683c\u804a\u5929\u63a5\u53e3\n\u5982\u679c\u7528\u6237\u8fd8\u6ca1\u6709\u548c\u8be5Agent\u521b\u5efa\u4f1a\u8bdd\uff0c\u5219\u81ea\u52a8\u521b\u5efa",
+                "summary": "[Deprecated use /api/v2/chat/completions/{agent_id} instead] \u8fd4\u56de\u4e0e\u6307\u5b9a Agent \u804a\u5929\u7684\u4e0b\u4e00\u6761\u6d88\u606f",
+                "description": "\u53ef\u4ee5\u5904\u7406\u5305\u62ec\u56fe\u7247\u5728\u5185\u7684\u5404\u79cd\u6d88\u606f\u7c7b\u578b\uff0c\u5a92\u4f53\u7c7b\u578b\u5e94\u8be5\u5148\u4e0a\u4f20\uff0c\u7136\u540e\u5c06 URL \u4f5c\u4e3a\u7d22\u5f15\u53d1\u9001\u5230\u6b64 API",
                 "operationId": "agent_chat_completions_api_v1_chat_completions__agent_id__post",
+                "deprecated": true,
                 "security": [
                     {
                         "Bearer": []
@@ -2277,6 +2206,64 @@
                     }
                 ]
             }
+        },
+        "/api/v2/chat/completions/{agent_id}": {
+            "post": {
+                "tags": [
+                    "chat"
+                ],
+                "summary": "\u8fd4\u56de\u4e0e\u6307\u5b9a Agent \u804a\u5929\u7684\u4e0b\u4e00\u6761\u6d88\u606f",
+                "description": "\u53ef\u4ee5\u5904\u7406\u5305\u62ec\u56fe\u7247\u5728\u5185\u7684\u5404\u79cd\u6d88\u606f\u7c7b\u578b\uff0c\u5a92\u4f53\u7c7b\u578b\u5e94\u8be5\u5148\u4e0a\u4f20\uff0c\u7136\u540e\u5c06 URL \u4f5c\u4e3a\u7d22\u5f15\u53d1\u9001\u5230\u6b64 API",
+                "operationId": "agent_chat_completions_api_v2_chat_completions__agent_id__post",
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "agent_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "title": "Agent Id"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ChatCompletionRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/APIResponse_ChatCompletionResponse_"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     },
     "components": {
@@ -2357,6 +2344,32 @@
                 },
                 "type": "object",
                 "title": "APIResponse[Agent]"
+            },
+            "APIResponse_ChatCompletionResponse_": {
+                "properties": {
+                    "code": {
+                        "type": "integer",
+                        "title": "Code",
+                        "default": 200
+                    },
+                    "message": {
+                        "type": "string",
+                        "title": "Message",
+                        "default": "success"
+                    },
+                    "data": {
+                        "anyOf": [
+                            {
+                                "$ref": "#/components/schemas/ChatCompletionResponse"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
+                    }
+                },
+                "type": "object",
+                "title": "APIResponse[ChatCompletionResponse]"
             },
             "APIResponse_ChatSettings_": {
                 "properties": {
@@ -4209,6 +4222,17 @@
                         ],
                         "title": "Agent Avatar"
                     },
+                    "agent_background": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Agent Background"
+                    },
                     "agent_is_deleted": {
                         "anyOf": [
                             {
@@ -4241,11 +4265,34 @@
                 "title": "Chat",
                 "description": "\u804a\u5929"
             },
+            "ChatChoice": {
+                "properties": {
+                    "index": {
+                        "type": "integer",
+                        "title": "Index"
+                    },
+                    "message": {
+                        "$ref": "#/components/schemas/ChatMessage-Output"
+                    },
+                    "finish_reason": {
+                        "type": "string",
+                        "title": "Finish Reason"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "index",
+                    "message",
+                    "finish_reason"
+                ],
+                "title": "ChatChoice",
+                "description": "Chat choice model for OpenAI-style responses"
+            },
             "ChatCompletionRequest": {
                 "properties": {
                     "messages": {
                         "items": {
-                            "$ref": "#/components/schemas/ChatMessage"
+                            "$ref": "#/components/schemas/ChatMessage-Input"
                         },
                         "type": "array",
                         "title": "Messages"
@@ -4283,6 +4330,42 @@
                 ],
                 "title": "ChatCompletionRequest"
             },
+            "ChatCompletionResponse": {
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "title": "Id"
+                    },
+                    "created": {
+                        "type": "integer",
+                        "title": "Created"
+                    },
+                    "model": {
+                        "type": "string",
+                        "title": "Model"
+                    },
+                    "choices": {
+                        "items": {
+                            "$ref": "#/components/schemas/ChatChoice"
+                        },
+                        "type": "array",
+                        "title": "Choices"
+                    },
+                    "usage": {
+                        "$ref": "#/components/schemas/ChatUsage"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "id",
+                    "created",
+                    "model",
+                    "choices",
+                    "usage"
+                ],
+                "title": "ChatCompletionResponse",
+                "description": "OpenAI-style chat completion response model"
+            },
             "ChatCreate": {
                 "properties": {
                     "agent_id": {
@@ -4308,7 +4391,7 @@
                 "title": "ChatCreate",
                 "description": "\u521b\u5efa\u804a\u5929"
             },
-            "ChatMessage": {
+            "ChatMessage-Input": {
                 "properties": {
                     "role": {
                         "type": "string",
@@ -4325,6 +4408,70 @@
                     "content"
                 ],
                 "title": "ChatMessage"
+            },
+            "ChatMessage-Output": {
+                "properties": {
+                    "role": {
+                        "type": "string",
+                        "title": "Role"
+                    },
+                    "content": {
+                        "type": "string",
+                        "title": "Content"
+                    },
+                    "id": {
+                        "anyOf": [
+                            {
+                                "type": "integer"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Id"
+                    },
+                    "meta_data": {
+                        "anyOf": [
+                            {
+                                "additionalProperties": true,
+                                "type": "object"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Meta Data"
+                    },
+                    "timestamp": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Timestamp"
+                    },
+                    "audio_url": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Audio Url"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "role",
+                    "content"
+                ],
+                "title": "ChatMessage",
+                "description": "Chat message model for OpenAI-style responses"
             },
             "ChatSettings": {
                 "properties": {
@@ -4461,6 +4608,30 @@
                 "title": "ChatSettingsUpdate",
                 "description": "\u66f4\u65b0\u804a\u5929\u8bbe\u7f6e"
             },
+            "ChatUsage": {
+                "properties": {
+                    "prompt_tokens": {
+                        "type": "integer",
+                        "title": "Prompt Tokens"
+                    },
+                    "completion_tokens": {
+                        "type": "integer",
+                        "title": "Completion Tokens"
+                    },
+                    "total_tokens": {
+                        "type": "integer",
+                        "title": "Total Tokens"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "prompt_tokens",
+                    "completion_tokens",
+                    "total_tokens"
+                ],
+                "title": "ChatUsage",
+                "description": "Token usage model for OpenAI-style responses"
+            },
             "DeletionCheckResponse": {
                 "properties": {
                     "can_delete": {
@@ -4504,31 +4675,6 @@
                     "can_delete": false,
                     "error_message": "\u5b58\u5728\u6d3b\u8dc3\u8ba2\u9605\uff0c\u8bf7\u5148\u53d6\u6d88\u8ba2\u9605\u540e\u518d\u5220\u9664\u8d26\u6237"
                 }
-            },
-            "DeviceTokenRegister": {
-                "properties": {
-                    "token": {
-                        "type": "string",
-                        "title": "Token"
-                    },
-                    "request_id": {
-                        "anyOf": [
-                            {
-                                "type": "string"
-                            },
-                            {
-                                "type": "null"
-                            }
-                        ],
-                        "title": "Request Id"
-                    }
-                },
-                "type": "object",
-                "required": [
-                    "token"
-                ],
-                "title": "DeviceTokenRegister",
-                "description": "\u8bbe\u5907token\u6ce8\u518c\u8bf7\u6c42"
             },
             "FeatureInfo": {
                 "properties": {
@@ -5850,6 +5996,42 @@
                         ],
                         "title": "Chat 24H Limit",
                         "description": "24\u5c0f\u65f6\u5185\u804a\u5929\u6b21\u6570\u9650\u5236\uff08\u514d\u8d39\u7528\u6237\uff09"
+                    },
+                    "guest_chat_24h_limit": {
+                        "anyOf": [
+                            {
+                                "type": "integer"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Guest Chat 24H Limit",
+                        "description": "24\u5c0f\u65f6\u5185\u804a\u5929\u6b21\u6570\u9650\u5236\uff08\u6e38\u5ba2\u7528\u6237\uff09"
+                    },
+                    "voice_24h_limit": {
+                        "anyOf": [
+                            {
+                                "type": "integer"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Voice 24H Limit",
+                        "description": "24\u5c0f\u65f6\u5185\u8bed\u97f3\u751f\u6210\u6b21\u6570\u9650\u5236"
+                    },
+                    "guest_voice_24h_limit": {
+                        "anyOf": [
+                            {
+                                "type": "integer"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Guest Voice 24H Limit",
+                        "description": "24\u5c0f\u65f6\u5185\u8bed\u97f3\u751f\u6210\u6b21\u6570\u9650\u5236\uff08\u6e38\u5ba2\u7528\u6237\uff09"
                     },
                     "agent_creation_limit": {
                         "type": "integer",
