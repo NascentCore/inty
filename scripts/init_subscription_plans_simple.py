@@ -74,7 +74,7 @@ async def init_subscription_plans():
     subscription_plans = [
         {
             "id": "premium_monthly",
-            "name": "Premium Monthly",
+            "name": "Monthly",
             "description": "月度高级订阅，无聊天次数限制，更多Agent创建权限",
             "plan_type": SubscriptionPlanType.MONTHLY,
             "price": 9.99,
@@ -149,7 +149,7 @@ async def init_subscription_plans():
         },
         {
             "id": "premium_quarterly",
-            "name": "Premium Quarterly",
+            "name": "Quarterly",
             "description": "季度高级订阅，无聊天次数限制，更多Agent创建权限，季度优惠",
             "plan_type": SubscriptionPlanType.QUARTERLY,
             "price": 19.99,  # 相比月付每月8.33，节省17%
@@ -224,7 +224,7 @@ async def init_subscription_plans():
         },
         {
             "id": "premium_yearly",
-            "name": "Premium Yearly",
+            "name": "Annually",
             "description": "年度高级订阅，无聊天次数限制，最多Agent创建权限，年度最优惠",
             "plan_type": SubscriptionPlanType.YEARLY,
             "price": 59.99,  # 相比月付每月6.67，节省33%
