@@ -26,7 +26,7 @@ SEND_SAMPLE_RATE = 16000
 RECEIVE_SAMPLE_RATE = 24000
 CHUNK_SIZE = 1024
 
-MODEL = "models/gemini-2.5-flash-native-audio-preview-09-2025"
+MODEL = "gemini-live-2.5-flash-preview-native-audio-09-2025"
 
 client = get_genai_client()
 
