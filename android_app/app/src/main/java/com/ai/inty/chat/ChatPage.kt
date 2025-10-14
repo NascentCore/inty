@@ -208,9 +208,11 @@ internal fun ChatPage(
             containerColor = Color.Transparent,
             contentWindowInsets = WindowInsets(0),
         ) { innerPadding ->
-            Column(modifier = Modifier
-                .padding(innerPadding)
-                .imePadding()) {
+            Column(
+                modifier = Modifier
+                    .padding(innerPadding)
+                    .imePadding()
+            ) {
                 Spacer(Modifier.height(48.dp))
 
                 agentInfo?.let { info ->
@@ -290,10 +292,14 @@ internal fun ChatPage(
                 val visibleItemsForUi = layoutInfo.visibleItemsInfo
                 val totalItemsForUi = layoutInfo.totalItemsCount
                 val lastVisibleIndexForUi = visibleItemsForUi.maxOfOrNull { it.index } ?: -1
-                val hasEnoughDataForUi = totalItemsForUi > visibleItemsForUi.size + LOAD_MORE_MIN_EXTRA_ITEMS
-                val isNearTopForUi = totalItemsForUi > 0 && lastVisibleIndexForUi >= (totalItemsForUi - LOAD_MORE_NEAR_TOP_THRESHOLD)
-                val hasScrolledForUi = listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 0
-                val showLoadMoreUi = hasMoreMessages && (isLoadingMore || (hasEnoughDataForUi && isNearTopForUi && hasScrolledForUi))
+                val hasEnoughDataForUi =
+                    totalItemsForUi > visibleItemsForUi.size + LOAD_MORE_MIN_EXTRA_ITEMS
+                val isNearTopForUi =
+                    totalItemsForUi > 0 && lastVisibleIndexForUi >= (totalItemsForUi - LOAD_MORE_NEAR_TOP_THRESHOLD)
+                val hasScrolledForUi =
+                    listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 0
+                val showLoadMoreUi =
+                    hasMoreMessages && (isLoadingMore || (hasEnoughDataForUi && isNearTopForUi && hasScrolledForUi))
 
                 LazyColumn(
                     modifier = Modifier
@@ -462,15 +468,17 @@ internal fun ChatPage(
                         // 2. 在反向布局中，当滚动到接近顶部时触发
                         // 3. 确保还有更多消息可加载
                         // 4. 避免在数据量不足时误触发
-                        val hasEnoughData = totalItemsCount > visibleItems.size + LOAD_MORE_MIN_EXTRA_ITEMS
+                        val hasEnoughData =
+                            totalItemsCount > visibleItems.size + LOAD_MORE_MIN_EXTRA_ITEMS
                         // 反向布局：接近顶部意味着可见的最大index接近总items末尾
-                        val isNearTop = totalItemsCount > 0 && lastVisibleIndex >= (totalItemsCount - LOAD_MORE_NEAR_TOP_THRESHOLD)
+                        val isNearTop =
+                            totalItemsCount > 0 && lastVisibleIndex >= (totalItemsCount - LOAD_MORE_NEAR_TOP_THRESHOLD)
                         // 在反向布局中，firstVisibleItemIndex=0表示在底部（最新消息），需要滚动到更早的消息才算滚动过
                         val hasScrolled = firstVisibleIndex > 0 || scrollOffset > 0
                         val shouldLoadMore = hasEnoughData && isNearTop && hasScrolled
-                        
+
                         EasyLog.log("Smart scroll check: shouldLoadMore=$shouldLoadMore, hasEnoughData=$hasEnoughData (totalItemsCount=$totalItemsCount > visibleItems=${visibleItems.size}+${LOAD_MORE_MIN_EXTRA_ITEMS}), isNearTop=$isNearTop (lastVisibleIndex=$lastVisibleIndex, threshold=${totalItemsCount - LOAD_MORE_NEAR_TOP_THRESHOLD}), hasScrolled=$hasScrolled (firstVisibleIndex=$firstVisibleIndex, scrollOffset=$scrollOffset), hasMoreMessages=$hasMoreMessages, isLoadingMore=$isLoadingMore")
-                        
+
                         if (shouldLoadMore && hasMoreMessages && !isLoadingMore) {
                             EasyLog.log("Triggering smart load more messages")
                             chatViewModel.loadMoreMessages()
