@@ -1,6 +1,6 @@
 import os
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List, Optional
 
@@ -96,6 +96,8 @@ class AppConfig:
     version: str = "1.1.0"
     environment: str = "dev"
     gcp_service_account_key: str = ".secrets/gcp-service-account-key.json"
+
+    api_endpoints: APIEndpointsConfig = field(default_factory=APIEndpointsConfig)
 
     @dataclass
     class LimitsConfig:
