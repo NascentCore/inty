@@ -76,7 +76,7 @@ async def init_subscription_plans():
             "plan_type": SubscriptionPlanType.MONTHLY,
             "price": 9.99,
             "currency": "USD",
-            "google_play_product_id": "com.ai.inty.premium.monthly",
+            "google_play_product_id": "com.ai.intellimate.premium.monthly",
             "discount_rate": 1.0,  # 无折扣
             "features": {
                 "features": [
@@ -151,7 +151,7 @@ async def init_subscription_plans():
             "plan_type": SubscriptionPlanType.QUARTERLY,
             "price": 24.99,  # 相比月付每月8.33，节省17%
             "currency": "USD",
-            "google_play_product_id": "com.ai.inty.premium.quarterly",
+            "google_play_product_id": "com.ai.intellimate.premium.quarterly",
             "discount_rate": 0.9,  # 9折优惠
             "features": {
                 "features": [
@@ -226,7 +226,7 @@ async def init_subscription_plans():
             "plan_type": SubscriptionPlanType.YEARLY,
             "price": 79.99,  # 相比月付每月6.67，节省33%
             "currency": "USD",
-            "google_play_product_id": "com.ai.inty.premium.annual",
+            "google_play_product_id": "com.ai.intellimate.premium.annual",
             "discount_rate": 0.8,  # 8折优惠
             "features": {
                 "features": [
