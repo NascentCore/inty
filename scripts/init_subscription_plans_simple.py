@@ -17,56 +17,59 @@ sys.path.insert(0, str(project_root))
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import global_config_loaded_from_config_yaml
 from app.db.session import AsyncSessionLocal
 from app.models.subscription import SubscriptionPlan, SubscriptionPlanType
 
 
 async def create_subscription_plan_direct(db: AsyncSession, plan_data: dict):
-    """直接创建订阅计划到数据库"""
-    try:
-        # 检查是否已存在
-        existing_plan = await db.get(SubscriptionPlan, plan_data["id"])
-        if existing_plan:
-            print(f"订阅计划 {plan_data['name']} 已存在，跳过...")
-            return existing_plan
+    """直接创建或更新订阅计划到数据库"""
+    existing_plan = await db.get(SubscriptionPlan, plan_data["id"])
+    if existing_plan:
+        print(f"订阅计划 {plan_data['name']} 已存在，更新字段...")
+        # 自动化更新现有计划的字段
+        for key, value in plan_data.items():
+            if key != "id" and hasattr(existing_plan, key):
+                setattr(existing_plan, key, value)
 
-        # 创建新的订阅计划
-        plan = SubscriptionPlan(
-            id=plan_data["id"],
-            name=plan_data["name"],
-            description=plan_data["description"],
-            plan_type=plan_data["plan_type"],
-            price=plan_data["price"],
-            currency=plan_data["currency"],
-            google_play_product_id=plan_data["google_play_product_id"],
-            discount_rate=plan_data.get("discount_rate", 1.0),
-            features=plan_data["features"],
-            chat_limit_per_day=plan_data["chat_limit_per_day"],
-            agent_creation_limit=plan_data["agent_creation_limit"],
-            background_generation_limit_per_day=plan_data.get(
+        # 设置默认值
+        if (
+            not hasattr(existing_plan, "discount_rate")
+            or existing_plan.discount_rate is None
+        ):
+            existing_plan.discount_rate = plan_data.get("discount_rate", 1.0)
+        if (
+            not hasattr(existing_plan, "background_generation_limit_per_day")
+            or existing_plan.background_generation_limit_per_day is None
+        ):
+            existing_plan.background_generation_limit_per_day = plan_data.get(
                 "background_generation_limit_per_day", 3
-            ),
-            is_active=plan_data["is_active"],
-            sort_order=plan_data["sort_order"],
-            created_at=datetime.now(UTC),
-            updated_at=datetime.now(UTC),
-        )
+            )
 
-        db.add(plan)
+        existing_plan.updated_at = datetime.now(UTC)
+
         await db.commit()
-        await db.refresh(plan)
+        await db.refresh(existing_plan)
+        return existing_plan
 
-        return plan
+    # 创建新的订阅计划
+    # 准备创建数据，设置默认值
+    create_data = plan_data.copy()
+    create_data.setdefault("discount_rate", 1.0)
+    create_data.setdefault("background_generation_limit_per_day", 3)
+    create_data["created_at"] = datetime.now(UTC)
+    create_data["updated_at"] = datetime.now(UTC)
 
-    except Exception as e:
-        await db.rollback()
-        print(f"创建订阅计划失败: {str(e)}")
-        raise
+    plan = SubscriptionPlan(**create_data)
+
+    db.add(plan)
+    await db.commit()
+    await db.refresh(plan)
+
+    return plan
 
 
 async def init_subscription_plans():
-    """初始化三种订阅计划"""
+    """初始化或更新三种订阅计划"""
 
     subscription_plans = [
         {
@@ -149,7 +152,7 @@ async def init_subscription_plans():
             "name": "Premium Quarterly",
             "description": "季度高级订阅，无聊天次数限制，更多Agent创建权限，季度优惠",
             "plan_type": SubscriptionPlanType.QUARTERLY,
-            "price": 24.99,  # 相比月付每月8.33，节省17%
+            "price": 19.99,  # 相比月付每月8.33，节省17%
             "currency": "USD",
             "google_play_product_id": "com.ai.intellimate.premium.quarterly",
             "discount_rate": 0.9,  # 9折优惠
@@ -224,7 +227,7 @@ async def init_subscription_plans():
             "name": "Premium Yearly",
             "description": "年度高级订阅，无聊天次数限制，最多Agent创建权限，年度最优惠",
             "plan_type": SubscriptionPlanType.YEARLY,
-            "price": 79.99,  # 相比月付每月6.67，节省33%
+            "price": 59.99,  # 相比月付每月6.67，节省33%
             "currency": "USD",
             "google_play_product_id": "com.ai.intellimate.premium.annual",
             "discount_rate": 0.8,  # 8折优惠
@@ -297,83 +300,24 @@ async def init_subscription_plans():
     ]
 
     async with AsyncSessionLocal() as db:
-        try:
-            print("开始初始化订阅计划...")
-            print("=" * 50)
+        print("开始初始化/更新订阅计划...")
+        print("=" * 50)
 
-            for plan_data in subscription_plans:
-                try:
-                    created_plan = await create_subscription_plan_direct(db, plan_data)
+        for plan_data in subscription_plans:
+            created_plan = await create_subscription_plan_direct(db, plan_data)
 
-                    print(f"✅ 订阅计划: {created_plan.name}")
-                    print(f"   - ID: {created_plan.id}")
-                    print(f"   - 类型: {created_plan.plan_type}")
-                    print(f"   - 价格: {created_plan.price} {created_plan.currency}")
-                    print(
-                        f"   - Google Play Product ID: {created_plan.google_play_product_id}"
-                    )
-                    print(f"   - 聊天限制: {created_plan.chat_limit_per_day}")
-                    print(f"   - Agent创建限制: {created_plan.agent_creation_limit}")
-                    print()
+            print(f"✅ 订阅计划: {created_plan.name}")
+            print(f"   - ID: {created_plan.id}")
+            print(f"   - 类型: {created_plan.plan_type}")
+            print(f"   - 价格: {created_plan.price} {created_plan.currency}")
+            print(f"   - Google Play Product ID: {created_plan.google_play_product_id}")
+            print(f"   - 聊天限制: {created_plan.chat_limit_per_day}")
+            print(f"   - Agent创建限制: {created_plan.agent_creation_limit}")
+            print()
 
-                except Exception as e:
-                    print(f"❌ 创建订阅计划 {plan_data['name']} 失败: {str(e)}")
-                    continue
-
-            print("订阅计划初始化完成！")
-            print("=" * 50)
-
-        except Exception as e:
-            print(f"❌ 初始化订阅计划失败: {str(e)}")
-            raise
-
-
-async def list_subscription_plans():
-    """列出所有订阅计划"""
-    async with AsyncSessionLocal() as db:
-        try:
-            from sqlalchemy import select
-
-            # 查询所有订阅计划
-            result = await db.execute(select(SubscriptionPlan))
-            plans = result.scalars().all()
-
-            print("当前所有订阅计划:")
-            print("=" * 80)
-
-            for plan in plans:
-                print(f"ID: {plan.id}")
-                print(f"名称: {plan.name}")
-                print(f"描述: {plan.description}")
-                print(f"类型: {plan.plan_type}")
-                print(f"价格: {plan.price} {plan.currency}")
-                print(f"Google Play Product ID: {plan.google_play_product_id}")
-                print(f"聊天限制: {plan.chat_limit_per_day}")
-                print(f"Agent创建限制: {plan.agent_creation_limit}")
-                print(f"是否激活: {plan.is_active}")
-                print(f"排序: {plan.sort_order}")
-                print(f"创建时间: {plan.created_at}")
-                print(f"功能特性: {plan.features}")
-                print("-" * 80)
-
-        except Exception as e:
-            print(f"❌ 获取订阅计划失败: {str(e)}")
+        print("订阅计划初始化/更新完成！")
+        print("=" * 50)
 
 
 if __name__ == "__main__":
-    import argparse
-
-    parser = argparse.ArgumentParser(description="订阅计划管理脚本（简化版）")
-    parser.add_argument(
-        "--action",
-        choices=["init", "list"],
-        default="init",
-        help="执行的操作: init=初始化计划, list=列出计划",
-    )
-
-    args = parser.parse_args()
-
-    if args.action == "init":
-        asyncio.run(init_subscription_plans())
-    elif args.action == "list":
-        asyncio.run(list_subscription_plans())
+    asyncio.run(init_subscription_plans())
