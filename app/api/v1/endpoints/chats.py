@@ -15,7 +15,11 @@ from app.core.chat import generate_chat_stream
 from app.core.config import global_config_loaded_from_config_yaml
 from app.core.user_privilege.premium_check import is_eligible_for_premium
 from app.schemas.chat import ChatCompletionRequest
-from app.schemas.response import BusinessErrorCode, create_business_error_response
+from app.schemas.response import (
+    APIResponse,
+    BusinessErrorCode,
+    create_business_error_response,
+)
 from app.services import agent_service, chat_history_service, chat_service
 from app.services.chat_service import generate_session_id
 from app.services.global_services import subscription_service
@@ -762,22 +766,22 @@ async def generate_message_voice(
             logger.error(f"更新chat_history的audio_url时发生异常: {str(e)}")
             # 继续执行，不影响API响应
 
-        return {
-            "audio_url": audio_url,
-            "message_id": message_id,
-            "voice_id": agent_voice_id
-            or global_config_loaded_from_config_yaml.elevenlabs.voice_id,
-            "language": language,
-            "audio_duration": audio_duration,  # 音频时长（秒）
-            "cached": False,  # 这里可以后续实现缓存检测
-            "generation_time": None,  # 可以记录生成时间
-        }
+        return APIResponse.success(
+            data={
+                "audio_url": audio_url,
+                "message_id": message_id,
+                "voice_id": agent_voice_id
+                or global_config_loaded_from_config_yaml.elevenlabs.voice_id,
+                "language": language,
+                "audio_duration": audio_duration,  # 音频时长（秒）
+                "cached": False,  # 这里可以后续实现缓存检测
+                "generation_time": None,  # 可以记录生成时间
+            }
+        )
 
     except Exception as e:
         logger.error(f"按需语音生成失败: {str(e)}")
-        raise HTTPException(
-            status_code=500, detail=f"Voice generation failed: {str(e)}"
-        )
+        return APIResponse.error(message=f"Voice generation failed: {str(e)}", code=500)
 
 
 @router.get(

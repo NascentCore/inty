@@ -135,12 +135,12 @@ export const VoicePlayer: React.FC<VoicePlayerProps> = ({
         language,
       );
 
-      if (!response.audio_url) {
+      if (response.code !== 200 || !response.data?.audio_url) {
         throw new Error("语音生成失败：未返回音频URL");
       }
 
-      setAudioUrl(response.audio_url);
-      return response.audio_url;
+      setAudioUrl(response.data.audio_url);
+      return response.data.audio_url;
     } catch (error) {
       console.error("语音生成失败:", error);
       setHasError(true);

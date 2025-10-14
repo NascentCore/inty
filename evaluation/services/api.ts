@@ -812,12 +812,16 @@ export const chatApi = {
     messageId: string,
     language: string = "zh",
   ): Promise<{
-    audio_url: string;
-    message_id: string;
-    voice_id: string;
-    language: string;
-    cached: boolean;
-    generation_time: number | null;
+    code: number;
+    message: string;
+    data: {
+      audio_url: string;
+      message_id: string;
+      voice_id: string;
+      language: string;
+      cached: boolean;
+      generation_time: number | null;
+    };
   }> =>
     apiClient.post(
       `/chats/agents/${agentId}/messages/${messageId}/voice?language=${language}`,

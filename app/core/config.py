@@ -1,6 +1,6 @@
 import os
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List, Optional
 
@@ -19,6 +19,7 @@ from pydantic import AnyHttpUrl
 GEMINI_2_5_FLASH = "google/gemini-2.5-flash"
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 API_V1_PREFIX = "/api/v1"
+API_V2_PREFIX = "/api/v2"
 
 
 @dataclass
@@ -78,6 +79,11 @@ class VerificationConfig:
 
 
 @dataclass
+class APIEndpointsConfig:
+    disable_api_v1_chat_completions: bool = False
+
+
+@dataclass
 class AppConfig:
     name: str = "inty-backend"
     # The app tolerates more failures, and does more logging in the debug mode.
@@ -90,6 +96,8 @@ class AppConfig:
     version: str = "1.1.0"
     environment: str = "dev"
     gcp_service_account_key: str = ".secrets/gcp-service-account-key.json"
+
+    api_endpoints: APIEndpointsConfig = field(default_factory=APIEndpointsConfig)
 
     @dataclass
     class LimitsConfig:
