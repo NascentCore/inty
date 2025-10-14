@@ -155,7 +155,7 @@ async def init_subscription_plans():
             "price": 19.99,  # 相比月付每月8.33，节省17%
             "currency": "USD",
             "google_play_product_id": "com.ai.intellimate.premium.quarterly",
-            "discount_rate": 0.9,  # 9折优惠
+            "discount_rate": 0.673,
             "features": {
                 "features": [
                     {
@@ -230,7 +230,7 @@ async def init_subscription_plans():
             "price": 59.99,  # 相比月付每月6.67，节省33%
             "currency": "USD",
             "google_play_product_id": "com.ai.intellimate.premium.annual",
-            "discount_rate": 0.8,  # 8折优惠
+            "discount_rate": 0.505,
             "features": {
                 "features": [
                     {
