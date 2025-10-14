@@ -128,7 +128,7 @@ async def add_agent_opening_message(
         await db.commit()
 
         logger.debug(
-            f"添加开场白到会话 {session_id}: {processed_opening}, audio_url: {audio_url}"
+            f"添加开场白到会话 {session_id}: {opening_message}, audio_url: {audio_url}"
         )
 
     except Exception as e:
