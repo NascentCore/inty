@@ -101,7 +101,6 @@ jobs:
               --label application=inty-backend \
               --label environment=${{ steps.set-environment.outputs.environment }} \
               --log-opt labels=application,environment \
-              --volume /opt/inty-${{ steps.set-environment.outputs.environment }}/config.yaml:/config.yaml \
               --volume /opt/inty-${{ steps.set-environment.outputs.environment }}/inty-backend-key.json:/inty-backend-key.json \
               --volume /opt/inty-${{ steps.set-environment.outputs.environment }}/inty-firebase-key.json:/inty-firebase-key.json \
               ${{ env.INTY_SERVER_IMAGE }}@${{ steps.build-docker-image.outputs.digest }}
