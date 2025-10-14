@@ -78,11 +78,6 @@ resources:
                 methods:
                   update: put /api/v1/users/profile
                   me: get /api/v1/users/me
-              device:
-                models:
-                  api_response: "#/components/schemas/APIResponse"
-                methods:
-                  register: post /api/v1/users/device/register
               deletion:
                 methods:
                   check_eligibility: get /api/v1/users/deletion/check
