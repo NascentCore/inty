@@ -35,8 +35,13 @@ RUN --mount=type=cache,target=/root/.cache/pip pip install -r requirements.txt
 
 FROM base
 
-# 添加配置文件参数
-ARG CONFIG_FILE=config.yaml
+ARG CONFIG_FILE
+
+RUN if [ -z "$CONFIG_FILE" ]; then \
+    echo "ERROR: CONFIG_FILE build argument is required but not provided" && \
+    echo "Usage: docker build --build-arg CONFIG_FILE=path/to/config.yaml -t your-app ." && \
+    exit 1; \
+fi
 
 # 复制应用代码
 COPY app/ app/
