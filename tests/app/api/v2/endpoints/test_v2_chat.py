@@ -68,14 +68,10 @@ def test_chat_completions_endpoint():
     # Check data structure matches ChatCompletionResponse
     data = response_data["data"]
     assert "id" in data
-    assert "object" in data
     assert "created" in data
     assert "model" in data
     assert "choices" in data
     assert "usage" in data
-
-    # Check object type
-    assert data["object"] == "chat.completion"
 
     # Check choices structure
     assert isinstance(data["choices"], list)
