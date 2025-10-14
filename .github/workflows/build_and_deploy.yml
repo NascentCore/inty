@@ -69,6 +69,8 @@ jobs:
           # https://docs.docker.com/build/ci/github-actions/cache/#cache-backend-api
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          build-args: |
+            CONFIG_FILE=devops/config.yaml.${{ steps.set-environment.outputs.environment }}
 
       - name: Deploy to ${{ steps.set-environment.outputs.environment }}
         uses: appleboy/ssh-action@master
