@@ -89,3 +89,15 @@
 # Ktor 相关规则
 -keep class io.ktor.** { *; }
 -dontwarn io.ktor.**
+
+# R8 缺失类警告抑制规则
+# 这些类在 Android 运行时中不可用，但被某些库引用
+-dontwarn java.beans.ConstructorProperties
+-dontwarn java.beans.Transient
+-dontwarn org.brotli.dec.BrotliInputStream
+-dontwarn org.ietf.jgss.GSSContext
+-dontwarn org.ietf.jgss.GSSCredential
+-dontwarn org.ietf.jgss.GSSException
+-dontwarn org.ietf.jgss.GSSManager
+-dontwarn org.ietf.jgss.GSSName
+-dontwarn org.ietf.jgss.Oid
