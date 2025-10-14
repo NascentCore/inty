@@ -5,20 +5,21 @@
 """
 
 import asyncio
-import sys
 import os
-from pathlib import Path
-from datetime import datetime, UTC
+import sys
 import uuid
+from datetime import UTC, datetime
+from pathlib import Path
 
 # 添加项目根目录到Python路径
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.config import global_config_loaded_from_config_yaml
 from app.db.session import AsyncSessionLocal
 from app.models.subscription import SubscriptionPlan, SubscriptionPlanType
-from app.core.config import global_config_loaded_from_config_yaml
 
 
 async def create_subscription_plan_direct(db: AsyncSession, plan_data: dict):
@@ -43,6 +44,9 @@ async def create_subscription_plan_direct(db: AsyncSession, plan_data: dict):
             features=plan_data["features"],
             chat_limit_per_day=plan_data["chat_limit_per_day"],
             agent_creation_limit=plan_data["agent_creation_limit"],
+            background_generation_limit_per_day=plan_data.get(
+                "background_generation_limit_per_day", 3
+            ),
             is_active=plan_data["is_active"],
             sort_order=plan_data["sort_order"],
             created_at=datetime.now(UTC),
@@ -136,6 +140,7 @@ async def init_subscription_plans():
             },
             "chat_limit_per_day": -1,  # 无限制
             "agent_creation_limit": 50,
+            "background_generation_limit_per_day": -1,  # 无限制
             "is_active": True,
             "sort_order": 1,
         },
@@ -210,6 +215,7 @@ async def init_subscription_plans():
             },
             "chat_limit_per_day": -1,  # 无限制
             "agent_creation_limit": 75,
+            "background_generation_limit_per_day": -1,  # 无限制
             "is_active": True,
             "sort_order": 2,
         },
@@ -284,6 +290,7 @@ async def init_subscription_plans():
             },
             "chat_limit_per_day": -1,  # 无限制
             "agent_creation_limit": 100,
+            "background_generation_limit_per_day": -1,  # 无限制
             "is_active": True,
             "sort_order": 3,
         },
