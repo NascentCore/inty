@@ -93,6 +93,8 @@ def test_chat_completions_endpoint():
     assert message["role"] == "assistant"
     assert isinstance(message["content"], str)
     assert len(message["content"]) > 0
+    # assert message["content"] == "I'm wonderful now that you're here, admin."
+    # Content keeps changing, so we don't check it.
 
     # Check usage structure
     usage = data["usage"]
