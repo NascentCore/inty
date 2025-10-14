@@ -1,175 +1,252 @@
 """
-Real-time Voice Chat Demo using Google Gemini Live API
+## Documentation
+Quickstart: https://github.com/google-gemini/cookbook/blob/main/quickstarts/Get_started_LiveAPI.py
 
-Installation:
-# On Linux
-sudo apt-get install portaudio19-dev
+## Setup
 
-# On Mac
-brew install portaudio
+To install the dependencies for this script, run:
 
-# Install dependencies
-pip install google-genai pyaudio
+```
+pip install google-genai opencv-python pyaudio pillow mss
+```
 
-Based on: https://github.com/GoogleCloudPlatform/generative-ai/blob/main/gemini/multimodal-live-api/intro_multimodal_live_api_genai_sdk.ipynb
+Copied from Gemini AI studio live api get code.
 """
 
+import argparse
 import asyncio
-import signal
-import sys
-from typing import Optional
+import base64
+import io
+import os
+import traceback
 
+import cv2
+import mss
+import PIL.Image
 import pyaudio
+from google import genai
 from google.genai import types
-from loguru import logger
 
 from app.utils.gemini import get_genai_client
 
-# Audio configuration
-CHUNK = 1024
 FORMAT = pyaudio.paInt16
 CHANNELS = 1
-INPUT_RATE = 16000
-OUTPUT_RATE = 24000
+SEND_SAMPLE_RATE = 16000
+RECEIVE_SAMPLE_RATE = 24000
+CHUNK_SIZE = 1024
 
-# Model configuration
-MODEL = 'gemini-2.0-flash-exp'
-CONFIG = {
-    "response_modalities": ["AUDIO"],
-    "input_audio_transcription": {},
-    "output_audio_transcription": {},
-}
+MODEL = "models/gemini-2.5-flash-native-audio-preview-09-2025"
 
-class VoiceChatDemo:
-    def __init__(self):
-        self.client = get_genai_client()
-        self.p = pyaudio.PyAudio()
-        self.input_stream: Optional[pyaudio.Stream] = None
-        self.output_stream: Optional[pyaudio.Stream] = None
-        self.running = False
-        
-    def setup_audio_streams(self):
-        """Setup input and output audio streams"""
-        try:
-            self.input_stream = self.p.open(
-                format=FORMAT,
-                channels=CHANNELS,
-                rate=INPUT_RATE,
-                input=True,
-                frames_per_buffer=CHUNK
+DEFAULT_MODE = "camera"
+
+client = get_genai_client()
+
+
+CONFIG = types.LiveConnectConfig(
+    response_modalities=[
+        "AUDIO",
+    ],
+    media_resolution="MEDIA_RESOLUTION_MEDIUM",
+    speech_config=types.SpeechConfig(
+        voice_config=types.VoiceConfig(
+            prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name="Zephyr")
+        )
+    ),
+    context_window_compression=types.ContextWindowCompressionConfig(
+        trigger_tokens=25600,
+        sliding_window=types.SlidingWindow(target_tokens=12800),
+    ),
+)
+
+pya = pyaudio.PyAudio()
+
+
+class AudioLoop:
+    def __init__(self, video_mode=DEFAULT_MODE):
+        self.video_mode = video_mode
+
+        self.audio_in_queue = None
+        self.out_queue = None
+
+        self.session = None
+
+        self.send_text_task = None
+        self.receive_audio_task = None
+        self.play_audio_task = None
+
+    async def send_text(self):
+        while True:
+            text = await asyncio.to_thread(
+                input,
+                "message > ",
             )
-            
-            self.output_stream = self.p.open(
-                format=FORMAT,
-                channels=CHANNELS,
-                rate=OUTPUT_RATE,
-                output=True,
-                frames_per_buffer=CHUNK
-            )
-            logger.info("Audio streams initialized successfully")
-        except Exception as e:
-            logger.error(f"Failed to initialize audio streams: {e}")
-            raise
-    
-    def cleanup_audio_streams(self):
-        """Clean up audio streams"""
-        if self.input_stream:
-            self.input_stream.stop_stream()
-            self.input_stream.close()
-        if self.output_stream:
-            self.output_stream.stop_stream()
-            self.output_stream.close()
-        self.p.terminate()
-        logger.info("Audio streams cleaned up")
-    
-    async def send_audio(self, session):
-        """Continuously send audio data to the session"""
-        try:
-            while self.running:
-                if self.input_stream:
-                    # Read audio data from microphone
-                    audio_data = self.input_stream.read(CHUNK, exception_on_overflow=False)
-                    
-                    # Send audio data to Gemini
-                    await session.send(input={"data": audio_data, "mime_type": "audio/pcm"})
-                    
-                    # Small delay to prevent overwhelming the API
-                    await asyncio.sleep(0.1)
-        except Exception as e:
-            logger.error(f"Error in send_audio: {e}")
-    
-    async def receive_responses(self, session):
-        """Receive and process responses from Gemini"""
-        try:
-            async for message in session.receive():
-                if not self.running:
-                    break
-                    
-                # Handle input transcription (what you said)
-                if message.server_content.input_transcription:
-                    transcription = message.server_content.input_transcription
-                    if transcription.text:
-                        print(f"🎤 You: {transcription.text}")
-                
-                # Handle output transcription (what Gemini said)
-                if message.server_content.output_transcription:
-                    transcription = message.server_content.output_transcription
-                    if transcription.text:
-                        print(f"🤖 Gemini: {transcription.text}")
-                
-                # Handle audio response
-                if message.server_content.model_turn:
-                    for part in message.server_content.model_turn.parts:
-                        if part.inline_data and part.inline_data.data:
-                            # Play the audio response
-                            if self.output_stream:
-                                self.output_stream.write(part.inline_data.data)
-                                
-        except Exception as e:
-            logger.error(f"Error in receive_responses: {e}")
-    
+            if text.lower() == "q":
+                break
+            await self.session.send(input=text or ".", end_of_turn=True)
+
+    def _get_frame(self, cap):
+        # Read the frameq
+        ret, frame = cap.read()
+        # Check if the frame was read successfully
+        if not ret:
+            return None
+        # Fix: Convert BGR to RGB color space
+        # OpenCV captures in BGR but PIL expects RGB format
+        # This prevents the blue tint in the video feed
+        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        img = PIL.Image.fromarray(frame_rgb)  # Now using RGB frame
+        img.thumbnail([1024, 1024])
+
+        image_io = io.BytesIO()
+        img.save(image_io, format="jpeg")
+        image_io.seek(0)
+
+        mime_type = "image/jpeg"
+        image_bytes = image_io.read()
+        return {"mime_type": mime_type, "data": base64.b64encode(image_bytes).decode()}
+
+    async def get_frames(self):
+        # This takes about a second, and will block the whole program
+        # causing the audio pipeline to overflow if you don't to_thread it.
+        cap = await asyncio.to_thread(
+            cv2.VideoCapture, 0
+        )  # 0 represents the default camera
+
+        while True:
+            frame = await asyncio.to_thread(self._get_frame, cap)
+            if frame is None:
+                break
+
+            await asyncio.sleep(1.0)
+
+            await self.out_queue.put(frame)
+
+        # Release the VideoCapture object
+        cap.release()
+
+    def _get_screen(self):
+        sct = mss.mss()
+        monitor = sct.monitors[0]
+
+        i = sct.grab(monitor)
+
+        mime_type = "image/jpeg"
+        image_bytes = mss.tools.to_png(i.rgb, i.size)
+        img = PIL.Image.open(io.BytesIO(image_bytes))
+
+        image_io = io.BytesIO()
+        img.save(image_io, format="jpeg")
+        image_io.seek(0)
+
+        image_bytes = image_io.read()
+        return {"mime_type": mime_type, "data": base64.b64encode(image_bytes).decode()}
+
+    async def get_screen(self):
+
+        while True:
+            frame = await asyncio.to_thread(self._get_screen)
+            if frame is None:
+                break
+
+            await asyncio.sleep(1.0)
+
+            await self.out_queue.put(frame)
+
+    async def send_realtime(self):
+        while True:
+            msg = await self.out_queue.get()
+            await self.session.send(input=msg)
+
+    async def listen_audio(self):
+        mic_info = pya.get_default_input_device_info()
+        self.audio_stream = await asyncio.to_thread(
+            pya.open,
+            format=FORMAT,
+            channels=CHANNELS,
+            rate=SEND_SAMPLE_RATE,
+            input=True,
+            input_device_index=mic_info["index"],
+            frames_per_buffer=CHUNK_SIZE,
+        )
+        if __debug__:
+            kwargs = {"exception_on_overflow": False}
+        else:
+            kwargs = {}
+        while True:
+            data = await asyncio.to_thread(self.audio_stream.read, CHUNK_SIZE, **kwargs)
+            await self.out_queue.put({"data": data, "mime_type": "audio/pcm"})
+
+    async def receive_audio(self):
+        "Background task to reads from the websocket and write pcm chunks to the output queue"
+        while True:
+            turn = self.session.receive()
+            async for response in turn:
+                if data := response.data:
+                    self.audio_in_queue.put_nowait(data)
+                    continue
+                if text := response.text:
+                    print(text, end="")
+
+            # If you interrupt the model, it sends a turn_complete.
+            # For interruptions to work, we need to stop playback.
+            # So empty out the audio queue because it may have loaded
+            # much more audio than has played yet.
+            while not self.audio_in_queue.empty():
+                self.audio_in_queue.get_nowait()
+
+    async def play_audio(self):
+        stream = await asyncio.to_thread(
+            pya.open,
+            format=FORMAT,
+            channels=CHANNELS,
+            rate=RECEIVE_SAMPLE_RATE,
+            output=True,
+        )
+        while True:
+            bytestream = await self.audio_in_queue.get()
+            await asyncio.to_thread(stream.write, bytestream)
+
     async def run(self):
-        """Main chat loop"""
-        print("🎙️  Starting Gemini Voice Chat Demo")
-        print("📝 Speak into your microphone to chat with Gemini")
-        print("⏹️  Press Ctrl+C to stop")
-        print("-" * 50)
-        
-        self.setup_audio_streams()
-        self.running = True
-        
         try:
-            async with self.client.aio.live.connect(model=MODEL, config=CONFIG) as session:
-                logger.info(f"Connected to {MODEL}")
-                
-                # Start both tasks concurrently
-                send_task = asyncio.create_task(self.send_audio(session))
-                receive_task = asyncio.create_task(self.receive_responses(session))
-                
-                # Wait for both tasks to complete
-                await asyncio.gather(send_task, receive_task)
-                
-        except KeyboardInterrupt:
-            logger.info("Received interrupt signal")
-        except Exception as e:
-            logger.error(f"Error in main loop: {e}")
-        finally:
-            self.running = False
-            self.cleanup_audio_streams()
-            print("\n👋 Voice chat ended")
+            async with (
+                client.aio.live.connect(model=MODEL, config=CONFIG) as session,
+                asyncio.TaskGroup() as tg,
+            ):
+                self.session = session
 
-def signal_handler(signum, frame):
-    """Handle Ctrl+C gracefully"""
-    print("\n🛑 Stopping voice chat...")
-    sys.exit(0)
+                self.audio_in_queue = asyncio.Queue()
+                self.out_queue = asyncio.Queue(maxsize=5)
 
-async def main():
-    """Main entry point"""
-    # Set up signal handler for graceful shutdown
-    signal.signal(signal.SIGINT, signal_handler)
-    
-    demo = VoiceChatDemo()
-    await demo.run()
+                send_text_task = tg.create_task(self.send_text())
+                tg.create_task(self.send_realtime())
+                tg.create_task(self.listen_audio())
+                if self.video_mode == "camera":
+                    tg.create_task(self.get_frames())
+                elif self.video_mode == "screen":
+                    tg.create_task(self.get_screen())
+
+                tg.create_task(self.receive_audio())
+                tg.create_task(self.play_audio())
+
+                await send_text_task
+                raise asyncio.CancelledError("User requested exit")
+
+        except asyncio.CancelledError:
+            pass
+        except ExceptionGroup as EG:
+            self.audio_stream.close()
+            traceback.print_exception(EG)
+
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--mode",
+        type=str,
+        default=DEFAULT_MODE,
+        help="pixels to stream from",
+        choices=["camera", "screen", "none"],
+    )
+    args = parser.parse_args()
+    main = AudioLoop(video_mode=args.mode)
+    asyncio.run(main.run())
