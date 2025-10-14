@@ -4336,6 +4336,11 @@
                         "type": "string",
                         "title": "Id"
                     },
+                    "object": {
+                        "type": "string",
+                        "title": "Object",
+                        "default": "chat.completion"
+                    },
                     "created": {
                         "type": "integer",
                         "title": "Created"
@@ -4422,7 +4427,7 @@
                     "id": {
                         "anyOf": [
                             {
-                                "type": "string"
+                                "type": "integer"
                             },
                             {
                                 "type": "null"
