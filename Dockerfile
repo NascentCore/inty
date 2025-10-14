@@ -35,6 +35,9 @@ RUN --mount=type=cache,target=/root/.cache/pip pip install -r requirements.txt
 
 FROM base
 
+# 添加配置文件参数
+ARG CONFIG_FILE=config.yaml
+
 # 复制应用代码
 COPY app/ app/
 COPY alembic/ alembic/
@@ -42,6 +45,9 @@ COPY alembic.ini .
 # Used for manipulate backend system with bundled configurations.
 COPY scripts/ scripts/
 COPY start.sh .
+
+# 复制指定的配置文件到 config.yaml
+COPY ${CONFIG_FILE} config.yaml
 
 # 从前端构建阶段复制构建结果
 COPY --from=frontend-builder /app/static/evaluation/ app/static/evaluation/
