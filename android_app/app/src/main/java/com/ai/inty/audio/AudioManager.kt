@@ -65,13 +65,13 @@ private constructor(private val context: Context, private var scope: CoroutineSc
         // 参数验证
         if (messageId.isEmpty()) {
             EasyLog.log("音频LOG测试 playMessageVoice failed: messageId is empty", EasyLog.ERROR)
-            onTtsFailed?.invoke("消息ID不能为空")
+            onTtsFailed?.invoke("MessageId Can't be null")
             return
         }
 
         if (agentId.isEmpty()) {
             EasyLog.log("音频LOG测试 playMessageVoice failed: agentId is empty", EasyLog.ERROR)
-            onTtsFailed?.invoke("Agent ID不能为空")
+            onTtsFailed?.invoke("Agent ID Can't be null")
             return
         }
 

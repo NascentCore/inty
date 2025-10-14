@@ -1,7 +1,9 @@
 package com.ai.inty.audio
 
 import android.content.Context
+import com.ai.inty.base.ToastUtils
 import com.ai.inty.net.IChatApi
+import com.ai.inty.netapi.BusinessErrorCodes
 import com.architecture.httplib.core.HttpResult
 import com.inty.utils.log.EasyLog
 import com.therouter.TheRouter
@@ -83,7 +85,7 @@ class TtsManager private constructor(private val context: Context) {
         val callback: (Result<String>) -> Unit = { r ->
             r.fold(
                 onSuccess = { url -> onSuccess(url) },
-                onFailure = { e -> onError(e.message ?: "TTS生成失败") },
+                onFailure = { e -> onError(e.message ?: "TTS Failed") },
             )
         }
 
@@ -136,19 +138,30 @@ class TtsManager private constructor(private val context: Context) {
 
                 when (response) {
                     is HttpResult.Success -> {
-                        val audioUrl = response.data.audio_url
-                        if (audioUrl != null && audioUrl.isNotEmpty()) {
+                        if (response.data.code== BusinessErrorCodes.VOICE_TTS_LIMIT_CODE){
+                            //音频生成到达次数限制，需要给用户toast提示文案
+                            ToastUtils.showToast("${response.data.message}")
                             EasyLog.log(
-                                "音频LOG测试 TTS generated successfully: $audioUrl (Agent: $agentId)"
-                            )
-                            completeWithSuccess(dedupKey, messageId, audioUrl, onSuccess)
-                        } else {
-                            EasyLog.log(
-                                "音频LOG测试 TTS generation returned empty audio_url (Agent: $agentId)",
+                                "音频LOG测试 TTS 生成次数到达限制 (Agent: $agentId)",
                                 EasyLog.ERROR,
                             )
-                            completeWithError(dedupKey, messageId, "TTS生成失败：返回空音频URL", onError)
+                            completeWithError(dedupKey, messageId, "${response.data.message}", onError)
+                        }else{
+                            val audioUrl = response.data.data?.audio_url
+                            if (audioUrl != null && audioUrl.isNotEmpty()) {
+                                EasyLog.log(
+                                    "音频LOG测试 TTS generated successfully: $audioUrl (Agent: $agentId)"
+                                )
+                                completeWithSuccess(dedupKey, messageId, audioUrl, onSuccess)
+                            } else {
+                                EasyLog.log(
+                                    "音频LOG测试 TTS generation returned empty audio_url (Agent: $agentId)",
+                                    EasyLog.ERROR,
+                                )
+                                completeWithError(dedupKey, messageId, "TTS生成失败：返回空音频URL", onError)
+                            }
                         }
+
                     }
 
                     is HttpResult.Failure -> {

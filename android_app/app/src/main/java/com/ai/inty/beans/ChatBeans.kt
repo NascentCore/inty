@@ -166,11 +166,23 @@ data class ChatSettingsResponse(
     )
 }
 
+@JsonClass(generateAdapter = true)
 data class MsgVoiceRsp(
-    val audio_url: String? = null,
-    val message_id: String? = null,
-    val voice_id: String? = null,
-    val language: String? = null,
-    val cached: Boolean = false,
-    val generation_time: String? = null,
-)
+    val code: Int? = null,
+    val message: String? = null,
+    val data: MsgVoiceData? = null,
+) {
+    data class MsgVoiceData(
+        val audio_url: String? = null,
+        val message_id: String? = null,
+        val voice_id: String? = null,
+        val language: String? = null,
+        val cached: Boolean = false,
+        val generation_time: String? = null,
+        //出现limit次数限制时的错误字段
+        val error_code: String? = null,
+        val description: String? = null,
+        val used_count: Int = 0,
+        val limit: Int = 0,
+    )
+}
