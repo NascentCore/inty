@@ -3,6 +3,9 @@ package com.ai.inty.netapi
 /** 业务错误码定义 与后端 app/schemas/response.py 中的 BusinessErrorCode 保持一致 */
 object BusinessErrorCodes {
 
+    /** Guest用户聊天受限，需要登录 */
+    const val GUEST_NEED_LOGIN_CODE = 10001005
+
     /** 订阅要求错误 */
     const val SUBSCRIPTION_REQUIRED_CODE = 10001001
     const val SUBSCRIPTION_REQUIRED_ERROR_CODE = "SUBSCRIPTION_REQUIRED"

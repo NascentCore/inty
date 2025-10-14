@@ -97,6 +97,9 @@ data class ConversationItem(
     @Json(name = "agent_name") val agentName: String = "",
     @Json(name = "agent_avatar") val agentAvatar: String = "",
     @Json(name = "agent_background") val agentBackground: String = "",
+    @Json(name = "agent_intro") val agentIntro: String = "",
+    @Json(name = "agent_opening") val agentOpening: String = "",
+    @Json(name = "agent_opening_audio_url") val agentOpeningAudioUrl: String = "",
     @Json(name = "created_at") val createdAt: String = "",
     val id: String = "",
     @Json(name = "last_message") val lastMessage: String = "",
@@ -113,11 +116,14 @@ data class ConversationItem(
 
     fun convertToAgentInfo(): AgentInfo {
         return AgentInfo(
-                avatar = agentAvatar,
-                background = agentBackground,
-                id = agentId,
-                name = agentName,
-            )
+            avatar = agentAvatar,
+            background = agentBackground,
+            id = agentId,
+            name = agentName,
+            intro = agentIntro,
+            opening = agentOpening,
+            opening_audio_url = agentOpeningAudioUrl
+        )
             .also { info -> info.isDeleted = this.isDeleted }
     }
 }
