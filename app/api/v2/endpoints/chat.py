@@ -35,7 +35,7 @@ class ChatMessage(BaseModel):
 
     role: str
     content: str
-    id: Optional[str] = None
+    id: Optional[int] = None
     meta_data: Optional[dict] = None
     timestamp: Optional[str] = None
     audio_url: Optional[str] = None

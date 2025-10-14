@@ -48,6 +48,12 @@ async def agent_chat_completions(
     基于Agent ID的OpenAI风格聊天接口
     如果用户还没有和该Agent创建会话，则自动创建
     """
+    if (
+        global_config_loaded_from_config_yaml.api_endpoints_config.disable_api_v1_chat_completions
+    ):
+        raise HTTPException(
+            status_code=404, detail="API v1 chat completions is disabled"
+        )
     if request.stream:
         raise HTTPException(status_code=400, detail="Stream is not supported")
 

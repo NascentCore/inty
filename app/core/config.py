@@ -79,6 +79,11 @@ class VerificationConfig:
 
 
 @dataclass
+class APIEndpointsConfig:
+    disable_api_v1_chat_completions: bool = False
+
+
+@dataclass
 class AppConfig:
     name: str = "inty-backend"
     # The app tolerates more failures, and does more logging in the debug mode.
