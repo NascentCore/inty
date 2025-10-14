@@ -276,6 +276,7 @@ async def get_agent_for_chat(db: AsyncSession, agent_id: str) -> Optional[dict]:
             models.Agent.avatar,
             models.Agent.opening,
             models.Agent.voice_id,
+            models.Agent.opening_audio_url,
             models.Agent.created_at,
             models.Agent.updated_at,
         ).where(and_(models.Agent.id == agent_id, models.Agent.deleted_at.is_(None)))
@@ -306,8 +307,9 @@ async def get_agent_for_chat(db: AsyncSession, agent_id: str) -> Optional[dict]:
             "avatar": row[14],
             "opening": row[15],
             "voice_id": row[16],
-            "created_at": row[17],
-            "updated_at": row[18],
+            "opening_audio_url": row[17],
+            "created_at": row[18],
+            "updated_at": row[19],
             "_complete_data": True,  # 标记为完整数据
         }
 
