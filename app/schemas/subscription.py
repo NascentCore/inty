@@ -258,9 +258,12 @@ class SubscriptionStatusResponse(BaseModel):
     guest_voice_24h_limit: Optional[int] = Field(
         None, description="24小时内语音生成次数限制（游客用户）"
     )
+    image_gen_24h_limit: Optional[int] = Field(
+        None, description="24小时内图片生成次数限制"
+    )
     agent_creation_limit: int = Field(6, description="Agent创建数量限制")
     background_generation_limit_per_day: int = Field(
-        3, description="每日背景图生成次数限制"
+        3, description="每日背景图生成次数限制（已废弃，使用image_gen_24h_limit）"
     )
     features: Dict[str, Any] = Field(default_factory=dict, description="功能权益")
     feature_list: List[FeatureInfo] = Field(

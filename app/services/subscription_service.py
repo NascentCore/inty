@@ -262,6 +262,7 @@ class SubscriptionService:
                     guest_chat_24h_limit=None,  # 付费用户不需要游客限制
                     voice_24h_limit=global_config_loaded_from_config_yaml.app.limits.subscribed_user_voice_24h_limit,
                     guest_voice_24h_limit=None,  # 付费用户不需要游客限制
+                    image_gen_24h_limit=global_config_loaded_from_config_yaml.app.limits.subscribed_user_image_gen_24h_limit,
                     agent_creation_limit=subscription.plan.agent_creation_limit,
                     background_generation_limit_per_day=getattr(
                         subscription.plan, "background_generation_limit_per_day", -1
@@ -306,6 +307,7 @@ class SubscriptionService:
                     guest_chat_24h_limit=free_limits["guest_chat_24h_limit"],
                     voice_24h_limit=free_limits["voice_24h_limit"],
                     guest_voice_24h_limit=free_limits["guest_voice_24h_limit"],
+                    image_gen_24h_limit=free_limits["image_gen_24h_limit"],
                     agent_creation_limit=free_limits["agent_creation_limit"],
                     background_generation_limit_per_day=free_limits[
                         "background_generation_limit"
@@ -1033,7 +1035,7 @@ class SubscriptionService:
         self, db: AsyncSession, user: schemas.User
     ) -> Tuple[bool, int, int]:
         """
-        检查用户背景图生成次数限制
+        检查用户图片生成次数限制（24小时滚动窗口）
 
         Returns:
             Tuple[bool, int, int]: (是否允许生成, 已用次数, 限制次数)
@@ -1043,52 +1045,52 @@ class SubscriptionService:
                 logger.debug(f"Superuser {user.id} has unlimited image generation")
                 return SUPERUSER_LIMIT_CHECK_RESULT
 
+            # 游客用户不允许生成图片
+            if user.auth_type == AuthType.GUEST:
+                logger.debug(f"Guest user {user.id} is not allowed to generate images")
+                return False, 0, 0
+
             # 获取订阅状态
             subscription_status = await self.get_user_subscription_status(db, user.id)
 
-            # 获取今日背景图生成次数（免费和付费用户都使用每日限制）
-            today = datetime.now(timezone.utc).date()
-            today_start = datetime.combine(today, datetime.min.time()).replace(
-                tzinfo=timezone.utc
-            )
-            today_end = today_start + timedelta(days=1)
+            # 确定图片生成限制
+            if subscription_status.is_subscribed:
+                # 付费用户使用订阅限制
+                image_limit = (
+                    global_config_loaded_from_config_yaml.app.limits.subscribed_user_image_gen_24h_limit
+                )
+            else:
+                # 免费用户使用免费限制
+                image_limit = (
+                    global_config_loaded_from_config_yaml.app.limits.free_user_image_gen_24h_limit
+                )
+
+            if image_limit is None:
+                # 如果没有限制，返回允许
+                return True, 0, -1
+
+            # 获取过去24小时内的图片生成次数
+            now = datetime.now(timezone.utc)
+            hours_24_ago = now - timedelta(hours=24)
 
             generation_count_result = await db.execute(
                 select(func.sum(SubscriptionUsage.usage_count)).where(
                     and_(
                         SubscriptionUsage.user_id == user.id,
                         SubscriptionUsage.usage_type == "background_generation",
-                        SubscriptionUsage.usage_date >= today_start,
-                        SubscriptionUsage.usage_date < today_end,
+                        SubscriptionUsage.usage_date >= hours_24_ago,
                     )
                 )
             )
-            today_generation_count = generation_count_result.scalar() or 0
-
-            # 获取用户的具体限制
-            if subscription_status.is_subscribed:
-                # 付费用户：使用订阅计划中的限制
-                # TODO: 写死 SubscriptionPlan，与 Google Play 中的订阅配置保持一致
-                # 上线后，再未来新版将 SubscriptionPlan 改为从数据库存取。
-                background_limit = getattr(
-                    subscription_status, "background_generation_limit_per_day", -1
-                )
-
-                # 如果是无限制，直接返回允许
-                if background_limit == -1:
-                    return True, today_generation_count, -1
-            else:
-                background_limit = (
-                    global_config_loaded_from_config_yaml.app.limits.free_user_image_gen_daily_limit
-                )
+            image_24h_count = generation_count_result.scalar() or 0
 
             # 检查是否超出限制
-            is_allowed = today_generation_count < background_limit
+            is_allowed = image_24h_count < image_limit
 
-            return is_allowed, today_generation_count, background_limit
+            return is_allowed, image_24h_count, image_limit
 
         except Exception as e:
-            logger.error(f"检查背景图生成次数限制失败: {str(e)}")
+            logger.error(f"检查图片生成次数限制失败: {str(e)}")
             # 出错时默认允许，避免影响用户体验
             return True, 0, -1
 
@@ -1888,4 +1890,6 @@ class SubscriptionService:
             return self._make_json_serializable(data.__dict__)
         else:
             # 基本数据类型（str, int, float, bool, None）
+            return data
+
             return data
