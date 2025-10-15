@@ -1,6 +1,6 @@
 app:
   debug: true
-  evironment: dev
+  environment: dev
   limits:
     free_user_chat_24h_limit: 10
     guest_user_chat_24h_limit: 5

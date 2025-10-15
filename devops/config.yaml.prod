@@ -1,5 +1,5 @@
 app:
-  evironment: prod
+  environment: prod
   limits:
     free_user_chat_24h_limit: 2
     guest_user_chat_24h_limit: 1
