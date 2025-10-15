@@ -186,26 +186,23 @@ class TestSubscriptionService:
         assert limit == 8  # subscribed_user_image_gen_24h_limit
 
     @pytest.mark.asyncio
-    async def test_check_agent_creation_limit_free_user(self):
-        """Test agent creation limit check for free user who has exceeded the limit"""
-        # Arrange
+    async def test_check_agent_creation_limit_free_user_within_limit(self):
+        """Test agent creation limit check for free user within 24h limit"""
         mock_google_play_service = AsyncMock(spec=GooglePlayService)
         mock_db = AsyncMock(spec=AsyncSession)
         mock_subscription_status = MagicMock(spec=SubscriptionStatusResponse)
-        mock_subscription_status.agent_creation_limit = 4  # Free user limit
+        mock_subscription_status.is_subscribed = False
 
-        # Mock the subscription status call
         subscription_service = SubscriptionService(mock_google_play_service)
         subscription_service.get_user_subscription_status = AsyncMock(
             return_value=mock_subscription_status
         )
 
-        # Mock the database query for agent count
+        # Mock the database query for 24h agent creation count
         mock_result = MagicMock()
-        mock_result.scalar.return_value = 5  # User has created 5 agents
+        mock_result.scalar.return_value = 3  # User has created 3 agents in 24h
         mock_db.execute.return_value = mock_result
 
-        # Create a mock user object
         user = User(
             id="user-123",
             readable_id="user123",
@@ -216,24 +213,81 @@ class TestSubscriptionService:
             is_superuser=False,
         )
 
-        # Act
         is_allowed, agent_count, limit = (
             await subscription_service.check_agent_creation_limit(mock_db, user)
         )
+        assert is_allowed is True  # 3 < 6 (free user limit)
+        assert agent_count == 3
+        assert limit == 6  # free_user_agent_creation_24h_limit
 
-        # Assert
-        assert is_allowed is False  # 5 >= 4, so not allowed
-        assert agent_count == 5
-        assert limit == 4
+    @pytest.mark.asyncio
+    async def test_check_agent_creation_limit_subscribed_user_within_limit(self):
+        """Test agent creation limit check for subscribed user within 24h limit"""
+        mock_google_play_service = AsyncMock(spec=GooglePlayService)
+        mock_db = AsyncMock(spec=AsyncSession)
+        mock_subscription_status = MagicMock(spec=SubscriptionStatusResponse)
+        mock_subscription_status.is_subscribed = True
 
-        # Verify the subscription status was called
-        subscription_service.get_user_subscription_status.assert_called_once_with(
-            mock_db, "user-123"
+        subscription_service = SubscriptionService(mock_google_play_service)
+        subscription_service.get_user_subscription_status = AsyncMock(
+            return_value=mock_subscription_status
         )
 
-        # Verify the database query was executed
-        mock_db.execute.assert_called_once()
-        call_args = mock_db.execute.call_args[0][0]
-        assert isinstance(call_args, Select)
-        # Verify it's counting agents for the specific user
-        assert "creator_id = :creator_id_1" in str(call_args)
+        # Mock the database query for 24h agent creation count
+        mock_result = MagicMock()
+        mock_result.scalar.return_value = 8  # User has created 8 agents in 24h
+        mock_db.execute.return_value = mock_result
+
+        user = User(
+            id="user-123",
+            readable_id="user123",
+            email="test@example.com",
+            auth_type="google",
+            is_active=True,
+            created_at=datetime.now(timezone.utc),
+            is_superuser=False,
+        )
+
+        is_allowed, agent_count, limit = (
+            await subscription_service.check_agent_creation_limit(mock_db, user)
+        )
+        assert is_allowed is True  # 8 < 12 (subscribed user limit)
+        assert agent_count == 8
+        assert limit == 12  # subscribed_user_agent_creation_24h_limit
+
+    @pytest.mark.asyncio
+    async def test_check_agent_creation_limit_free_user_over_limit(self):
+        """Test agent creation limit check for free user over 24h limit"""
+        mock_google_play_service = AsyncMock(spec=GooglePlayService)
+        mock_db = AsyncMock(spec=AsyncSession)
+        mock_subscription_status = MagicMock(spec=SubscriptionStatusResponse)
+        mock_subscription_status.is_subscribed = False
+
+        subscription_service = SubscriptionService(mock_google_play_service)
+        subscription_service.get_user_subscription_status = AsyncMock(
+            return_value=mock_subscription_status
+        )
+
+        # Mock the database query for 24h agent creation count
+        mock_result = MagicMock()
+        mock_result.scalar.return_value = (
+            7  # User has created 7 agents in 24h (over limit of 6)
+        )
+        mock_db.execute.return_value = mock_result
+
+        user = User(
+            id="user-123",
+            readable_id="user123",
+            email="test@example.com",
+            auth_type="google",
+            is_active=True,
+            created_at=datetime.now(timezone.utc),
+            is_superuser=False,
+        )
+
+        is_allowed, agent_count, limit = (
+            await subscription_service.check_agent_creation_limit(mock_db, user)
+        )
+        assert is_allowed is False  # 7 >= 6 (free user limit)
+        assert agent_count == 7
+        assert limit == 6  # free_user_agent_creation_24h_limit

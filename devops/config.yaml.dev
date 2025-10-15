@@ -10,6 +10,8 @@ app:
     # guest（游客）无法生图，必须登录，因此没有对应的设置
     free_user_image_gen_24h_limit: 4
     subscribed_user_image_gen_24h_limit: 8
+    free_user_agent_creation_24h_limit: 1
+    subscribed_user_agent_creation_24h_limit: 2
   gcp_service_account_key: "inty-backend-key.json"
 
 security:

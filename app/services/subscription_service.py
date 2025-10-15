@@ -263,6 +263,7 @@ class SubscriptionService:
                     voice_24h_limit=global_config_loaded_from_config_yaml.app.limits.subscribed_user_voice_24h_limit,
                     guest_voice_24h_limit=None,  # 付费用户不需要游客限制
                     image_gen_24h_limit=global_config_loaded_from_config_yaml.app.limits.subscribed_user_image_gen_24h_limit,
+                    agent_creation_24h_limit=global_config_loaded_from_config_yaml.app.limits.subscribed_user_agent_creation_24h_limit,
                     agent_creation_limit=subscription.plan.agent_creation_limit,
                     background_generation_limit_per_day=getattr(
                         subscription.plan, "background_generation_limit_per_day", -1
@@ -308,6 +309,7 @@ class SubscriptionService:
                     voice_24h_limit=free_limits["voice_24h_limit"],
                     guest_voice_24h_limit=free_limits["guest_voice_24h_limit"],
                     image_gen_24h_limit=free_limits["image_gen_24h_limit"],
+                    agent_creation_24h_limit=free_limits["agent_creation_24h_limit"],
                     agent_creation_limit=free_limits["agent_creation_limit"],
                     background_generation_limit_per_day=free_limits[
                         "background_generation_limit"
@@ -999,7 +1001,7 @@ class SubscriptionService:
         self, db: AsyncSession, user: schemas.User
     ) -> Tuple[bool, int, int]:
         """
-        检查用户Agent创建数量限制
+        检查用户Agent创建数量限制（24小时滚动窗口）
 
         Returns:
             Tuple[bool, int, int]: (是否允许创建, 已创建数量, 限制数量)
@@ -1011,25 +1013,48 @@ class SubscriptionService:
             # 获取订阅状态
             subscription_status = await self.get_user_subscription_status(db, user.id)
 
-            # 获取用户创建的Agent数量
+            # 确定Agent创建限制
+            if subscription_status.is_subscribed:
+                # 付费用户使用订阅限制
+                agent_limit = (
+                    global_config_loaded_from_config_yaml.app.limits.subscribed_user_agent_creation_24h_limit
+                )
+            else:
+                # 免费用户使用免费限制
+                agent_limit = (
+                    global_config_loaded_from_config_yaml.app.limits.free_user_agent_creation_24h_limit
+                )
+
+            if agent_limit is None:
+                # 如果没有限制，返回允许
+                return True, 0, -1
+
+            # 获取过去24小时内创建的Agent数量
             from app.models.agent import Agent
+
+            now = datetime.now(timezone.utc)
+            hours_24_ago = now - timedelta(hours=24)
 
             agent_count_result = await db.execute(
                 select(func.count(Agent.id)).where(
-                    and_(Agent.creator_id == user.id, Agent.deleted_at.is_(None))
+                    and_(
+                        Agent.creator_id == user.id,
+                        Agent.created_at >= hours_24_ago,
+                        Agent.deleted_at.is_(None),
+                    )
                 )
             )
-            agent_count = agent_count_result.scalar() or 0
+            agent_24h_count = agent_count_result.scalar() or 0
 
             # 检查是否超出限制
-            is_allowed = agent_count < subscription_status.agent_creation_limit
+            is_allowed = agent_24h_count < agent_limit
 
-            return is_allowed, agent_count, subscription_status.agent_creation_limit
+            return is_allowed, agent_24h_count, agent_limit
 
         except Exception as e:
             logger.error(f"检查Agent创建数量限制失败: {str(e)}")
             # 出错时默认允许，避免影响用户体验
-            return True, 0, 6
+            return True, 0, -1
 
     async def check_image_gen_limit(
         self, db: AsyncSession, user: schemas.User

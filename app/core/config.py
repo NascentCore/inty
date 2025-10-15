@@ -107,6 +107,8 @@ class AppConfig:
         free_user_image_gen_daily_limit: int = 4
         free_user_image_gen_24h_limit: int = 4
         subscribed_user_image_gen_24h_limit: int = 8
+        free_user_agent_creation_24h_limit: int = 6
+        subscribed_user_agent_creation_24h_limit: int = 12
         free_user_chat_total_limit: int = 100
         free_user_chat_24h_limit: int = 100
         guest_user_chat_24h_limit: int = 10
