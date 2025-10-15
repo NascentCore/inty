@@ -261,7 +261,12 @@ class SubscriptionStatusResponse(BaseModel):
     image_gen_24h_limit: Optional[int] = Field(
         None, description="24小时内图片生成次数限制"
     )
-    agent_creation_limit: int = Field(6, description="Agent创建数量限制")
+    agent_creation_24h_limit: Optional[int] = Field(
+        None, description="24小时内Agent创建数量限制"
+    )
+    agent_creation_limit: int = Field(
+        6, description="Agent创建数量限制（已废弃，使用agent_creation_24h_limit）"
+    )
     background_generation_limit_per_day: int = Field(
         3, description="每日背景图生成次数限制（已废弃，使用image_gen_24h_limit）"
     )
