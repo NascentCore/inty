@@ -298,11 +298,17 @@ class ChatViewModel : BaseActivityViewModel() {
                                 currentOffset += PAGE_SIZE
                             } else {
                                 // 首次加载：替换消息列表
-                                val uniqueMessages = newMessages.distinctBy { msg ->
-                                    "${msg.role}_${msg.content}_${msg.localMsgId}"
+                                // 修复：只有当currentOffset为0时才进行首次加载，避免错误清空数据
+                                if (currentOffset == 0) {
+                                    val uniqueMessages = newMessages.distinctBy { msg ->
+                                        "${msg.role}_${msg.content}_${msg.localMsgId}"
+                                    }
+                                    _msgs.update { uniqueMessages }
+                                    currentOffset = PAGE_SIZE
+                                } else {
+                                    // 如果currentOffset不为0，说明这不是真正的首次加载，跳过数据替换
+                                    EasyLog.log("Skipping data replacement for non-first load: currentOffset=$currentOffset")
                                 }
-                                _msgs.update { uniqueMessages }
-                                currentOffset = PAGE_SIZE
                             }
                             
                             _hasMoreMessages.value = hasMore
