@@ -34,6 +34,7 @@
 
 由于 version code 采用了 git commit count，老版本可能无法得到足够大的 version code，因此需要手动给 [versionCode 赋值](app/build.gradle.kts)
 
+
 ## 手动构建 AAB 并上传到内测（Internal Testing）轨道
 
 - 打开 [IntelliMate 发布页面](https://play.google.com/console/u/0/developers/8311322450209629787/app/4972036709846537052/app-dashboard)
