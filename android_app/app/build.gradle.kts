@@ -71,6 +71,7 @@ dependencies {
     // ===== Inty SDK（Stainless https://app.stainless.com/ 根据 app/openapi.json 生成的代码）=====
     // Dynamic version, 本地的 library/inty_sdk 自动替换了这里的依赖，从而无需从 Maven Central 下载。
     // 换句话说，这里的版本号对于实际构建来说是没有任何影响的。
+    //noinspection GradleDynamicVersion
     implementation("com.inty.api:inty-kotlin:+")
 
     // ===== AndroidX 核心库 =====
