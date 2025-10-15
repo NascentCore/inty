@@ -41,7 +41,7 @@ firebase:
 
 agent:
   model: "google/gemini-2.5-flash"
-  api_key: "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"
+  api_key: "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"
   base_url: "https://openrouter.ai/api/v1"
   langchain_api_key: "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"
   force_default_prompts: true
