@@ -2,10 +2,13 @@ app:
   debug: true
   environment: dev
   limits:
-    # free user 指登录但是没有订阅/付费的用户
     free_user_chat_24h_limit: 1
     guest_user_chat_24h_limit: 1
+    free_user_voice_24h_limit: 1  
+    guest_user_voice_24h_limit: 1 
     subscribed_user_voice_24h_limit: 1
+    free_user_image_gen_24h_limit: 4
+    subscribed_user_image_gen_24h_limit: 8
   gcp_service_account_key: "inty-backend-key.json"
 
 security:

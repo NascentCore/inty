@@ -103,7 +103,10 @@ class AppConfig:
     class LimitsConfig:
         # Maximal image size in MB, for any uploaded images.
         max_image_size_mb: int = 4
+        # DEPRECATED: Use free_user_image_gen_24h_limit instead
         free_user_image_gen_daily_limit: int = 4
+        free_user_image_gen_24h_limit: int = 4
+        subscribed_user_image_gen_24h_limit: int = 8
         free_user_chat_total_limit: int = 100
         free_user_chat_24h_limit: int = 100
         guest_user_chat_24h_limit: int = 10
@@ -260,7 +263,7 @@ def load_config(path: str) -> Config:
 
 
 def _validate_config(config: Config):
-    """Validate config values"""
+    """Validate config values with auto-correction"""
     if not config.app.gcp_service_account_key:
         raise ValueError("app.gcp_service_account_key is required")
     if not config.agent.api_key:
@@ -273,6 +276,42 @@ def _validate_config(config: Config):
         raise ValueError("firebase.service_account_path is required")
     if not config.elevenlabs.api_key:
         raise ValueError("elevenlabs.api_key is required")
+
+    # 校验并自动修正 limits 配置
+    limits = config.app.limits
+
+    # 规则1: 游客语音生成次数应该等于聊天次数，否则以聊天次数为准
+    if limits.guest_user_voice_24h_limit != limits.guest_user_chat_24h_limit:
+        logger.warning(
+            f"Config issue: guest_user_voice_24h_limit ({limits.guest_user_voice_24h_limit}) "
+            f"!= guest_user_chat_24h_limit ({limits.guest_user_chat_24h_limit}). "
+            f"Auto-correcting to {limits.guest_user_chat_24h_limit}"
+        )
+        limits.guest_user_voice_24h_limit = limits.guest_user_chat_24h_limit
+
+    # 规则2: 登录用户语音生成次数应该等于聊天次数，否则以聊天次数为准
+    if limits.free_user_voice_24h_limit != limits.free_user_chat_24h_limit:
+        logger.warning(
+            f"Config issue: free_user_voice_24h_limit ({limits.free_user_voice_24h_limit}) "
+            f"!= free_user_chat_24h_limit ({limits.free_user_chat_24h_limit}). "
+            f"Auto-correcting to {limits.free_user_chat_24h_limit}"
+        )
+        limits.free_user_voice_24h_limit = limits.free_user_chat_24h_limit
+
+    # 规则3: 游客聊天次数应该 <= 登录用户，否则使用默认值
+    if limits.guest_user_chat_24h_limit > limits.free_user_chat_24h_limit:
+        default_guest = 10
+        default_free = 100
+        logger.warning(
+            f"Config issue: guest_user_chat_24h_limit ({limits.guest_user_chat_24h_limit}) "
+            f"> free_user_chat_24h_limit ({limits.free_user_chat_24h_limit}). "
+            f"Auto-correcting to defaults: guest={default_guest}, free={default_free}"
+        )
+        limits.guest_user_chat_24h_limit = default_guest
+        limits.free_user_chat_24h_limit = default_free
+        # 同步修正语音限制
+        limits.guest_user_voice_24h_limit = default_guest
+        limits.free_user_voice_24h_limit = default_free
 
 
 global_config_loaded_from_config_yaml = load_config("config.yaml")
