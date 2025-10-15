@@ -1,9 +1,9 @@
 app:
   evironment: prod
   limits:
-    free_user_chat_24h_limit: 10
-    guest_user_chat_24h_limit: 5
-    subscribed_user_voice_24h_limit: 15
+    free_user_chat_24h_limit: 2
+    guest_user_chat_24h_limit: 1
+    subscribed_user_voice_24h_limit: 3
   gcp_service_account_key: "inty-backend-key.json"
 
 security:
