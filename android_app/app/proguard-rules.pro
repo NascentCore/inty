@@ -52,6 +52,12 @@
     public static com.squareup.moshi.JsonAdapter create();
 }
 
+# Jackson 混淆规则
+-keep class com.fasterxml.jackson.** { *; }
+-keep class * extends com.fasterxml.jackson.databind.ser.std.StdSerializer { *; }
+-keep class * extends com.fasterxml.jackson.databind.deser.std.StdDeserializer { *; }
+-keep class com.fasterxml.jackson.databind.ser.std.NullSerializer { *; }
+
 # 保留Kotlin反射相关类
 -keep class kotlin.reflect.** { *; }
 -keep class kotlin.Metadata { *; }
@@ -59,6 +65,7 @@
 # 保留数据类
 -keepclassmembers class * {
     @com.squareup.moshi.* <methods>;
+    @com.fasterxml.jackson.annotation.* <methods>;
 }
 
 # TheRouter 混淆规则
