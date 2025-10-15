@@ -1,5 +1,6 @@
 package com.ai.inty
 
+import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.compose.setContent
@@ -38,7 +39,9 @@ class SettingActivity : BaseActivity() {
                             else getString(R.string.logout_successfully)
                         Toast.makeText(this@SettingActivity, str, Toast.LENGTH_SHORT).show()
                         // 返回到主页面
-                        TheRouter.build(Constant.ROUTE_MAIN).navigation(this@SettingActivity)
+                        val intent = Intent(this@SettingActivity, MainActivity::class.java)
+                        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                        startActivity(intent)
                         finish()
                     },
                 )
