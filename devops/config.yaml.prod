@@ -1,6 +1,8 @@
 app:
   limits:
-    free_user_chat_24h_limit: 100
+    free_user_chat_24h_limit: 10
+    guest_user_chat_24h_limit: 5
+    subscribed_user_voice_24h_limit: 15
   gcp_service_account_key: "inty-backend-key.json"
 
 security:
