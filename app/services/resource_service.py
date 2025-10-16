@@ -96,6 +96,7 @@ def create_image_resource(
     uncompressed_image_url: Optional[str] = None,
     cropped: bool = False,
     uncropped_image_url: Optional[str] = None,
+    gcs_url: Optional[str] = None,
 ) -> None:
     """
     创建图片资源记录的辅助函数
@@ -110,6 +111,10 @@ def create_image_resource(
         "cropped": cropped,
         "uncropped_image_url": uncropped_image_url,
     }
+
+    # Add GCS URL to metadata if provided
+    if gcs_url:
+        resource_metadata["gcs_url"] = gcs_url
     resource = create_resource(
         db=db,
         resource_in=ResourceCreate(
@@ -118,7 +123,7 @@ def create_image_resource(
             resource_metadata=resource_metadata,
         ),
         user_id=user_id,
-        on_conflict_do_nothing=True,
+        on_conflict_do_nothing=False,  # Disable conflict handling for now
     )
     if resource:
         logger.debug(

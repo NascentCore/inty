@@ -209,6 +209,7 @@ async def process_image_upload(
 
         result.original_url = uncompressed_url
 
+        # Only store CDN URL, save GCS URL in metadata
         create_image_resource(
             db=db,
             user_id=user_id,
@@ -216,17 +217,11 @@ async def process_image_upload(
             size=size,
             format=ImageFormat(original_file_ext),
             byte_size=len(original_file_data),
-        )
-        create_image_resource(
-            db=db,
-            user_id=user_id,
-            url=uncompressed_gcs_url,
-            size=size,
-            format=ImageFormat(original_file_ext),
-            byte_size=len(original_file_data),
+            gcs_url=uncompressed_gcs_url,  # Store GCS URL in metadata
         )
 
     # Create resource record for the compressed image
+    # Only store CDN URL, save GCS URL in metadata
     create_image_resource(
         db=db,
         user_id=user_id,
@@ -234,14 +229,7 @@ async def process_image_upload(
         size=size,
         format=ImageFormat(file_ext),
         byte_size=len(file_data),
-    )
-    create_image_resource(
-        db=db,
-        user_id=user_id,
-        url=gcs_url,
-        size=size,
-        format=ImageFormat(file_ext),
-        byte_size=len(file_data),
+        gcs_url=gcs_url,  # Store GCS URL in metadata
     )
 
     # Handle cropping if enabled
@@ -279,6 +267,7 @@ async def process_image_upload(
         result.avatar_url = cropped_avatar_url
 
         # Write the metadata of the uploaded image, which might be compressed.
+        # Only store CDN URL, save GCS URL in metadata
         create_image_resource(
             db=db,
             user_id=user_id,
@@ -288,16 +277,7 @@ async def process_image_upload(
             byte_size=len(jpg_data),
             cropped=True,
             uncropped_image_url=result.url,
-        )
-        create_image_resource(
-            db=db,
-            user_id=user_id,
-            url=cropped_avatar_gcs_url,
-            size=crop_avatar_result.size,
-            format=ImageFormat.JPEG,
-            byte_size=len(jpg_data),
-            cropped=True,
-            uncropped_image_url=result.url,
+            gcs_url=cropped_avatar_gcs_url,  # Store GCS URL in metadata
         )
 
     return APIResponse.success(data=result)

@@ -299,7 +299,7 @@ class TestUploadImage:
         assert result.code == 200
 
         # 检查资源记录数量 - 这里应该发现重复记录的问题
-        all_resources = db.query(Resource).filter(Resource.creator == user_id).all()
+        all_resources = db.query(Resource).filter(Resource.user_id == user_id).all()
 
         print(f"Total resource records created: {len(all_resources)}")
         for i, resource in enumerate(all_resources):
