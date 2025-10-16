@@ -1,7 +1,6 @@
 from typing import List, Optional
 
 from loguru import logger
-from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio.session import AsyncSession
 from sqlalchemy.orm import Session
 
@@ -32,32 +31,19 @@ def create_resource(
     db: Session,
     resource_in: schemas.ResourceCreate,
     user_id: str,
-    on_conflict_do_nothing: bool = False,
-) -> Optional[models.Resource]:
+) -> models.Resource:
     """
     Create new resource
     """
     # 排除数据库模型中不存在的字段
     resource_data = resource_in.model_dump(exclude=EXCLUDE_FIELDS)
 
-    if on_conflict_do_nothing:
-        # 使用 PostgreSQL 的 INSERT ... ON CONFLICT DO NOTHING
-        stmt = (
-            insert(models.Resource)
-            .values(**resource_data, user_id=user_id)
-            .on_conflict_do_nothing(index_elements=["url"])
-        )
-        db.execute(stmt)
-        db.commit()
-        # 冲突时返回 None,不抛异常
-        return None
-    else:
-        # 保持原有逻辑
-        db_resource = models.Resource(**resource_data, user_id=user_id)
-        db.add(db_resource)
-        db.commit()
-        db.refresh(db_resource)
-        return db_resource
+    # 创建资源记录，如果发生冲突则抛出异常
+    db_resource = models.Resource(**resource_data, user_id=user_id)
+    db.add(db_resource)
+    db.commit()
+    db.refresh(db_resource)
+    return db_resource
 
 
 def update_resource(
@@ -126,40 +112,24 @@ def create_image_resource(
             resource_metadata=resource_metadata,
         ),
         user_id=user_id,
-        on_conflict_do_nothing=False,  # Disable conflict handling for now
     )
-    if resource:
-        logger.debug(
-            f"创建图片资源记录成功，URL: {resource.url} 数据：{resource_metadata}"
-        )
-    else:
-        logger.debug(f"图片资源记录已存在，跳过插入，URL: {url}")
+    logger.debug(f"创建图片资源记录成功，URL: {resource.url} 数据：{resource_metadata}")
 
 
 async def async_create_resource(
     async_db: AsyncSession,
     resource_in: schemas.ResourceCreate,
     user_id: str,
-    on_conflict_do_nothing: bool = False,
-) -> Optional[models.Resource]:
+) -> models.Resource:
     # 排除数据库模型中不存在的字段
     resource_data = resource_in.model_dump(exclude=EXCLUDE_FIELDS)
 
-    if on_conflict_do_nothing:
-        stmt = (
-            insert(models.Resource)
-            .values(**resource_data, user_id=user_id)
-            .on_conflict_do_nothing(index_elements=["url"])
-        )
-        await async_db.execute(stmt)
-        await async_db.commit()
-        return None
-    else:
-        db_resource = models.Resource(**resource_data, user_id=user_id)
-        async_db.add(db_resource)
-        await async_db.commit()
-        await async_db.refresh(db_resource)
-        return db_resource
+    # 创建资源记录，如果发生冲突则抛出异常
+    db_resource = models.Resource(**resource_data, user_id=user_id)
+    async_db.add(db_resource)
+    await async_db.commit()
+    await async_db.refresh(db_resource)
+    return db_resource
 
 
 async def async_create_image_resource(
@@ -182,11 +152,7 @@ async def async_create_image_resource(
             resource_metadata=resource_metadata,
         ),
         user_id=user_id,
-        on_conflict_do_nothing=True,
     )
-    if resource:
-        logger.debug(
-            f"创建图片资源记录成功，URL: {resource.url} 数据：{resource_metadata}"
-        )
-    else:
-        logger.debug(f"图片资源记录已存在，跳过插入，URL: {url}")
+    logger.debug(
+        f"创建图片资源记录成功，URL: {resource.url} 数据：{resource_metadata}"
+    )
