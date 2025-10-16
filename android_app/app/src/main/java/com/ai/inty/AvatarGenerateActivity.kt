@@ -66,6 +66,7 @@ import com.ai.inty.base.noRippleClickable
 import com.ai.inty.ui.theme.DarkPurple
 import com.ai.inty.ui.theme.IntyTheme
 import com.ai.inty.utils.AvatarManager
+import com.ai.inty.utils.getCdnImageUrl
 import com.ai.inty.viewmodels.AvatarGenerateViewModel
 import com.inty.utils.log.EasyLog
 import com.therouter.router.Route
@@ -431,6 +432,11 @@ private fun AvatarGridSection(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             imageUrls.take(4).forEachIndexed { index, imageUrl ->
+                val thumbnailWidth = 80
+                val thumbnailQuality = 60
+                // 使用 CDN 裁切获取缩略图，根据屏幕密度计算合适的宽度
+                val thumbnailUrl = getCdnImageUrl(imageUrl, width = thumbnailWidth, quality = thumbnailQuality)
+                EasyLog.log("AvatarGridSection: Displaying avatar with URL: $imageUrl, thumbnail: $thumbnailUrl")
                 Box(
                     modifier =
                         Modifier.weight(1f)
@@ -447,7 +453,7 @@ private fun AvatarGridSection(
                     contentAlignment = Alignment.Center,
                 ) {
                     AsyncImage(
-                        model = imageUrl,
+                        model = thumbnailUrl ?: imageUrl, // 如果 CDN 处理失败，回退到原图
                         contentDescription =
                             stringResource(R.string.content_desc_generated_avatar_index, index),
                         modifier = Modifier.fillMaxSize().padding(4.dp),
