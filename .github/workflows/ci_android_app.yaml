@@ -43,4 +43,4 @@ jobs:
       - name: Run unit tests
         run: |
           cd android_app
-          ./gradlew testDebugUnitTest --stacktrace
+          ./gradlew :app:testDebugUnitTest
