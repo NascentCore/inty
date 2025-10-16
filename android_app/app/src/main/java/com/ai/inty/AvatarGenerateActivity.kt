@@ -162,6 +162,7 @@ private fun AvatarGeneratePage(
             Spacer(modifier = Modifier.height(24.dp))
 
             // Image Preview Section
+            EasyLog.log("AvatarGeneratePage: generatedImageUrls.isEmpty() = ${generatedImageUrls.isEmpty()}, generatedImageUrl = $generatedImageUrl, isLoading = $isLoading", EasyLog.INFO)
             if (generatedImageUrls.isEmpty()) {
                 AvatarPreviewSection(imageUrl = generatedImageUrl, isLoading = isLoading)
             } else {
@@ -231,7 +232,7 @@ private fun AvatarPreviewSection(imageUrl: String?, isLoading: Boolean) {
                         width = Config.TextToImage.Preview.WIDTH,
                         quality = Config.TextToImage.Preview.QUALITY,
                     )
-                EasyLog.log("Displaying image with URL: $imageUrl, preview: $previewUrl")
+                EasyLog.log("Displaying image with URL: $imageUrl, preview: $previewUrl", EasyLog.INFO)
                 AsyncImage(
                     model = previewUrl ?: imageUrl, // 如果 CDN 处理失败，回退到原图
                     contentDescription = stringResource(R.string.content_desc_generated_avatar),
