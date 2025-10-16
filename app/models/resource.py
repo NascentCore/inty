@@ -1,11 +1,14 @@
 import enum
+from typing import Optional
 
 import sqlalchemy as sa
+from pydantic import BaseModel
 from sqlalchemy import JSON, Column, DateTime, Enum, ForeignKey, String
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
 from app.models import Base
+from app.utils.image import ImageSize
 
 
 class ResourceType(str, enum.Enum):
@@ -34,3 +37,29 @@ class Resource(Base):
     # 关系
     user = relationship("User", back_populates="resources")
     agent = relationship("Agent", back_populates="resources")
+
+
+class ImageResourceMetadata(BaseModel):
+    """
+    图像资源元数据模型
+
+    用于定义 Resource 表中 resource_metadata JSON 字段的结构，
+    当 Resource.type = ResourceType.IMAGE 时使用此模型。
+
+    对应数据库表：resources
+    对应字段：resource_metadata (JSON)
+    对应类型：ResourceType.IMAGE
+    """
+
+    creator: str
+    size: ImageSize
+    content_type: str
+    byte_size: int
+    compressed: bool
+    uncompressed_image_url: Optional[str] = None
+    cropped: bool
+    uncropped_image_url: Optional[str] = None
+    gcs_url: Optional[str] = None
+
+    class Config:
+        from_attributes = True

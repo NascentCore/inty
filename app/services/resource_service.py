@@ -1,12 +1,11 @@
 from typing import List, Optional
 
 from loguru import logger
-from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio.session import AsyncSession
 from sqlalchemy.orm import Session
 
 from app import models, schemas
-from app.models.resource import ResourceType
+from app.models.resource import ImageResourceMetadata, ResourceType
 from app.schemas.exclude_fields import EXCLUDE_FIELDS
 from app.schemas.resource import ResourceCreate
 from app.utils.image import ImageFormat, ImageSize
@@ -32,32 +31,19 @@ def create_resource(
     db: Session,
     resource_in: schemas.ResourceCreate,
     user_id: str,
-    on_conflict_do_nothing: bool = False,
-) -> Optional[models.Resource]:
+) -> models.Resource:
     """
     Create new resource
     """
     # 排除数据库模型中不存在的字段
     resource_data = resource_in.model_dump(exclude=EXCLUDE_FIELDS)
 
-    if on_conflict_do_nothing:
-        # 使用 PostgreSQL 的 INSERT ... ON CONFLICT DO NOTHING
-        stmt = (
-            insert(models.Resource)
-            .values(**resource_data, user_id=user_id)
-            .on_conflict_do_nothing(index_elements=["url"])
-        )
-        db.execute(stmt)
-        db.commit()
-        # 冲突时返回 None,不抛异常
-        return None
-    else:
-        # 保持原有逻辑
-        db_resource = models.Resource(**resource_data, user_id=user_id)
-        db.add(db_resource)
-        db.commit()
-        db.refresh(db_resource)
-        return db_resource
+    # 创建资源记录，如果发生冲突则抛出异常
+    db_resource = models.Resource(**resource_data, user_id=user_id)
+    db.add(db_resource)
+    db.commit()
+    db.refresh(db_resource)
+    return db_resource
 
 
 def update_resource(
@@ -96,20 +82,29 @@ def create_image_resource(
     uncompressed_image_url: Optional[str] = None,
     cropped: bool = False,
     uncropped_image_url: Optional[str] = None,
+    gcs_url: Optional[str] = None,
 ) -> None:
     """
     创建图片资源记录的辅助函数
+    一个记录存储 CDN URL（如 https://cdn.example.com/image.jpg）
+    另一个记录存储 GCS URL（如 https://storage.googleapis.com/bucket/image.jpg）
+    GCS URL 用于内部存储，CDN URL 用于外部 app 访问，其会做压缩裁切等功能。
     """
-    resource_metadata = {
-        "creator": user_id,
-        "size": size.model_dump(),
-        "content_type": f"image/{format.value}",
-        "byte_size": byte_size,
-        "compressed": compressed,
-        "uncompressed_image_url": uncompressed_image_url,
-        "cropped": cropped,
-        "uncropped_image_url": uncropped_image_url,
-    }
+    # Create image resource metadata using the new Pydantic model
+    image_metadata = ImageResourceMetadata(
+        creator=user_id,
+        size=size,
+        content_type=f"image/{format.value}",
+        byte_size=byte_size,
+        compressed=compressed,
+        uncompressed_image_url=uncompressed_image_url,
+        cropped=cropped,
+        uncropped_image_url=uncropped_image_url,
+        gcs_url=gcs_url,
+    )
+
+    # Convert to dict for database storage
+    resource_metadata = image_metadata.model_dump()
     resource = create_resource(
         db=db,
         resource_in=ResourceCreate(
@@ -118,40 +113,24 @@ def create_image_resource(
             resource_metadata=resource_metadata,
         ),
         user_id=user_id,
-        on_conflict_do_nothing=True,
     )
-    if resource:
-        logger.debug(
-            f"创建图片资源记录成功，URL: {resource.url} 数据：{resource_metadata}"
-        )
-    else:
-        logger.debug(f"图片资源记录已存在，跳过插入，URL: {url}")
+    logger.debug(f"创建图片资源记录成功，URL: {resource.url} 数据：{resource_metadata}")
 
 
 async def async_create_resource(
     async_db: AsyncSession,
     resource_in: schemas.ResourceCreate,
     user_id: str,
-    on_conflict_do_nothing: bool = False,
-) -> Optional[models.Resource]:
+) -> models.Resource:
     # 排除数据库模型中不存在的字段
     resource_data = resource_in.model_dump(exclude=EXCLUDE_FIELDS)
 
-    if on_conflict_do_nothing:
-        stmt = (
-            insert(models.Resource)
-            .values(**resource_data, user_id=user_id)
-            .on_conflict_do_nothing(index_elements=["url"])
-        )
-        await async_db.execute(stmt)
-        await async_db.commit()
-        return None
-    else:
-        db_resource = models.Resource(**resource_data, user_id=user_id)
-        async_db.add(db_resource)
-        await async_db.commit()
-        await async_db.refresh(db_resource)
-        return db_resource
+    # 创建资源记录，如果发生冲突则抛出异常
+    db_resource = models.Resource(**resource_data, user_id=user_id)
+    async_db.add(db_resource)
+    await async_db.commit()
+    await async_db.refresh(db_resource)
+    return db_resource
 
 
 async def async_create_image_resource(
@@ -159,13 +138,35 @@ async def async_create_image_resource(
     user_id: str,
     url: str,
     size: ImageSize,
+    format: ImageFormat,
+    byte_size: int,
+    compressed: bool = False,
+    uncompressed_image_url: Optional[str] = None,
+    cropped: bool = False,
+    uncropped_image_url: Optional[str] = None,
+    gcs_url: Optional[str] = None,
 ) -> None:
     """
-    创建图片资源记录的辅助函数
+    创建图片资源记录的辅助函数 (异步版本)
+    一个记录存储 CDN URL（如 https://cdn.example.com/image.jpg）
+    另一个记录存储 GCS URL（如 https://storage.googleapis.com/bucket/image.jpg）
+    GCS URL 用于内部存储，CDN URL 用于外部 app 访问，其会做压缩裁切等功能。
     """
-    resource_metadata = {
-        "size": size.model_dump(),
-    }
+    # Create image resource metadata using the new Pydantic model
+    image_metadata = ImageResourceMetadata(
+        creator=user_id,
+        size=size,
+        content_type=f"image/{format.value}",
+        byte_size=byte_size,
+        compressed=compressed,
+        uncompressed_image_url=uncompressed_image_url,
+        cropped=cropped,
+        uncropped_image_url=uncropped_image_url,
+        gcs_url=gcs_url,
+    )
+
+    # Convert to dict for database storage
+    resource_metadata = image_metadata.model_dump()
     resource = await async_create_resource(
         async_db=async_db,
         resource_in=ResourceCreate(
@@ -174,11 +175,5 @@ async def async_create_image_resource(
             resource_metadata=resource_metadata,
         ),
         user_id=user_id,
-        on_conflict_do_nothing=True,
     )
-    if resource:
-        logger.debug(
-            f"创建图片资源记录成功，URL: {resource.url} 数据：{resource_metadata}"
-        )
-    else:
-        logger.debug(f"图片资源记录已存在，跳过插入，URL: {url}")
+    logger.debug(f"创建图片资源记录成功，URL: {resource.url} 数据：{resource_metadata}")

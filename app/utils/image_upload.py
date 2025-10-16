@@ -11,14 +11,14 @@ from fastapi import UploadFile
 from loguru import logger
 from PIL import Image
 from pydantic import BaseModel
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import global_config_loaded_from_config_yaml
 from app.external_services.gcs import append_filename_suffix, upload_to_gcs
 from app.models.resource import ResourceType
 from app.schemas.resource import ResourceCreate
 from app.schemas.response import APIResponse
-from app.services.resource_service import create_image_resource
+from app.services.resource_service import async_create_image_resource
 from app.utils.crop_avatar import CROPPED_AVATAR_FILENAME_SUFFIX, crop_avatar
 from app.utils.image import (
     ImageFormat,
@@ -44,7 +44,7 @@ class ImageUploadResponse(BaseModel):
 async def process_image_upload(
     file: UploadFile,
     user_id: str,
-    db: Session,
+    async_db: AsyncSession,
     base_path: str = "uploads/images",
     cropping_avatar: bool = False,
     max_size_mb: int = global_config_loaded_from_config_yaml.app.limits.max_image_size_mb,
@@ -209,39 +209,27 @@ async def process_image_upload(
 
         result.original_url = uncompressed_url
 
-        create_image_resource(
-            db=db,
+        # Only store CDN URL, save GCS URL in metadata
+        await async_create_image_resource(
+            async_db=async_db,
             user_id=user_id,
             url=uncompressed_url,
             size=size,
             format=ImageFormat(original_file_ext),
             byte_size=len(original_file_data),
-        )
-        create_image_resource(
-            db=db,
-            user_id=user_id,
-            url=uncompressed_gcs_url,
-            size=size,
-            format=ImageFormat(original_file_ext),
-            byte_size=len(original_file_data),
+            gcs_url=uncompressed_gcs_url,  # Store GCS URL in metadata
         )
 
     # Create resource record for the compressed image
-    create_image_resource(
-        db=db,
+    # Only store CDN URL, save GCS URL in metadata
+    await async_create_image_resource(
+        async_db=async_db,
         user_id=user_id,
         url=url,
         size=size,
         format=ImageFormat(file_ext),
         byte_size=len(file_data),
-    )
-    create_image_resource(
-        db=db,
-        user_id=user_id,
-        url=gcs_url,
-        size=size,
-        format=ImageFormat(file_ext),
-        byte_size=len(file_data),
+        gcs_url=gcs_url,  # Store GCS URL in metadata
     )
 
     # Handle cropping if enabled
@@ -279,8 +267,9 @@ async def process_image_upload(
         result.avatar_url = cropped_avatar_url
 
         # Write the metadata of the uploaded image, which might be compressed.
-        create_image_resource(
-            db=db,
+        # Only store CDN URL, save GCS URL in metadata
+        await async_create_image_resource(
+            async_db=async_db,
             user_id=user_id,
             url=cropped_avatar_url,
             size=crop_avatar_result.size,
@@ -288,16 +277,7 @@ async def process_image_upload(
             byte_size=len(jpg_data),
             cropped=True,
             uncropped_image_url=result.url,
-        )
-        create_image_resource(
-            db=db,
-            user_id=user_id,
-            url=cropped_avatar_gcs_url,
-            size=crop_avatar_result.size,
-            format=ImageFormat.JPEG,
-            byte_size=len(jpg_data),
-            cropped=True,
-            uncropped_image_url=result.url,
+            gcs_url=cropped_avatar_gcs_url,  # Store GCS URL in metadata
         )
 
     return APIResponse.success(data=result)
