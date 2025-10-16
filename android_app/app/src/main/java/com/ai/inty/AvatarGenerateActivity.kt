@@ -212,6 +212,7 @@ private fun AvatarGeneratePage(
 
 @Composable
 private fun AvatarPreviewSection(imageUrl: String?, isLoading: Boolean) {
+    EasyLog.log("AvatarPreviewSection: imageUrl = $imageUrl, isLoading = $isLoading", EasyLog.INFO)
     Box(
         modifier =
             Modifier.fillMaxWidth()
