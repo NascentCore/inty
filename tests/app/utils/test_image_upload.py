@@ -17,6 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.session import Session
 
+from app.core.config import global_config_loaded_from_config_yaml
 from app.models import Base
 from app.models.resource import Resource
 from app.models.user import AuthType, User
@@ -58,7 +59,7 @@ class TestUploadImage:
         Test that uploading a PNG file creates resource records with correct metadata.
         """
         # 使用本地数据库
-        DATABASE_URL = "postgresql://postgres:sxwl666!@localhost/inty"
+        DATABASE_URL = global_config_loaded_from_config_yaml.database.url
 
         # 创建测试数据库引擎和会话
         engine = create_engine(DATABASE_URL)
@@ -68,7 +69,7 @@ class TestUploadImage:
 
         # 创建一个 async session
         async_engine = create_async_engine(
-            "postgresql+asyncpg://postgres:sxwl666!@localhost/inty"
+            global_config_loaded_from_config_yaml.database.async_url
         )
         async_session = sessionmaker(
             bind=async_engine, class_=AsyncSession, expire_on_commit=False
@@ -232,7 +233,7 @@ class TestUploadImage:
         Actual behavior: Creates 6 resource records (duplicates for CDN and GCS URLs)
         """
         # 使用本地数据库
-        DATABASE_URL = "postgresql://postgres:sxwl666!@localhost/inty"
+        DATABASE_URL = global_config_loaded_from_config_yaml.database.url
 
         # 创建测试数据库引擎和会话
         engine = create_engine(DATABASE_URL)
@@ -242,7 +243,7 @@ class TestUploadImage:
 
         # 创建一个 async session
         async_engine = create_async_engine(
-            "postgresql+asyncpg://postgres:sxwl666!@localhost/inty"
+            global_config_loaded_from_config_yaml.database.async_url
         )
         async_session = sessionmaker(
             bind=async_engine, class_=AsyncSession, expire_on_commit=False

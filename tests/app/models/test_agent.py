@@ -5,6 +5,7 @@ from loguru import logger
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+from app.core.config import global_config_loaded_from_config_yaml
 from app.models.agent import Agent, AgentStatus, AgentVisibility
 from app.models.user import AuthType, Gender, User
 
@@ -13,7 +14,7 @@ def test_agent_extensions_field():
     """测试 Agent 模型的 extensions 字段的读写操作"""
 
     # 数据库连接配置
-    DATABASE_URL = "postgresql://postgres:sxwl666!@localhost/inty"
+    DATABASE_URL = global_config_loaded_from_config_yaml.database.url
 
     # 创建数据库引擎和会话
     engine = create_engine(DATABASE_URL)
@@ -25,7 +26,7 @@ def test_agent_extensions_field():
     # 1. 首先创建一个测试用户
     user_id = f"test-user-{uuid.uuid4().hex[:8]}"
     user_readable_id = f"user{uuid.uuid4().hex[:4]}"
-    
+
     test_user = User(
         id=user_id,
         readable_id=user_readable_id,
