@@ -224,14 +224,16 @@ private fun AvatarPreviewSection(imageUrl: String?, isLoading: Boolean) {
             }
 
             imageUrl != null -> {
-                EasyLog.log("Displaying image with URL: $imageUrl")
+                // 使用 CDN 裁切获取预览图，使用配置的宽度和质量
+                val previewUrl = getCdnImageUrl(imageUrl, width = Config.TextToImage.Preview.WIDTH, quality = Config.TextToImage.Preview.QUALITY)
+                EasyLog.log("Displaying image with URL: $imageUrl, preview: $previewUrl")
                 AsyncImage(
-                    model = imageUrl,
+                    model = previewUrl ?: imageUrl, // 如果 CDN 处理失败，回退到原图
                     contentDescription = stringResource(R.string.content_desc_generated_avatar),
                     modifier = Modifier.fillMaxSize().padding(4.dp),
                     contentScale = ContentScale.Crop,
-                    onSuccess = { EasyLog.log("Image loaded successfully: $imageUrl") },
-                    onError = { EasyLog.log("Failed to load image: $imageUrl", EasyLog.ERROR) },
+                    onSuccess = { EasyLog.log("Image loaded successfully: $previewUrl") },
+                    onError = { EasyLog.log("Failed to load image: $previewUrl", EasyLog.ERROR) },
                 )
             }
 
@@ -432,10 +434,14 @@ private fun AvatarGridSection(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             imageUrls.take(4).forEachIndexed { index, imageUrl ->
-                val thumbnailWidth = 80
-                val thumbnailQuality = 60
-                // 使用 CDN 裁切获取缩略图，根据屏幕密度计算合适的宽度
-                val thumbnailUrl = getCdnImageUrl(imageUrl, width = thumbnailWidth, quality = thumbnailQuality)
+// 使用 CDN 裁切获取缩略图，使用配置的宽度和质量
+val thumbnailUrl =
+        getCdnImageUrl(
+                imageUrl,
+                width = Config.TextToImage.Thumbnail.WIDTH,
+                quality = Config.TextToImage.Thumbnail.QUALITY
+        )
+
                 EasyLog.log("AvatarGridSection: Displaying avatar with URL: $imageUrl, thumbnail: $thumbnailUrl")
                 Box(
                     modifier =
