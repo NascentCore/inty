@@ -207,3 +207,124 @@ class TestUploadImage:
             "cropped": True,
             "uncropped_image_url": f"https://storage.googleapis.com/test-bucket/{user_id}/image.jpg",
         }, f"扣脸图片资源记录不正确，实际结果：{avatar_resource.resource_metadata}"
+
+    @pytest.mark.asyncio
+    @pytest.mark.noci
+    async def test_image_upload_creates_duplicate_resource_records(self):
+        """
+        Test that confirms the bug: image upload creates duplicate resource records
+        for the same URLs (both CDN and GCS versions).
+
+        Expected behavior: Should create 3 unique resource records
+        Actual behavior: Creates 6 resource records (duplicates for CDN and GCS URLs)
+        """
+        # 使用本地数据库
+        DATABASE_URL = "postgresql://postgres:sxwl666!@localhost/inty"
+
+        # 创建测试数据库引擎和会话
+        engine = create_engine(DATABASE_URL)
+        Base.metadata.create_all(bind=engine)
+        SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+        db = SessionLocal()
+
+        # 创建测试用户
+        user_id = f"testuser-duplicate-{uuid.uuid4().hex}"
+        readable_id = str(random.randint(10000000, 99999999))
+
+        # 检查用户是否已存在，如果存在则删除
+        existing_user = db.query(User).filter(User.id == user_id).one_or_none()
+        if not existing_user:
+            test_user = User(
+                id=user_id,
+                readable_id=readable_id,
+                auth_type=AuthType.GUEST,
+                system_language="en",
+                is_active=True,
+            )
+            db.add(test_user)
+            db.commit()
+            db.refresh(test_user)
+
+        # 准备测试文件
+        test_file_path = "tests/files/test.png"
+        with open(test_file_path, "rb") as f:
+            file_content = f.read()
+        file_obj = BytesIO(file_content)
+        upload_file = UploadFile(
+            file=file_obj, filename="test.png", headers={"content-type": "image/png"}
+        )
+        base_path = "images/uploads"
+
+        # Mock GCS 上传函数
+        mock_gcs_url = f"https://storage.googleapis.com/test-bucket/{user_id}/image.jpg"
+        mock_gcs_avatar_url = (
+            f"https://storage.googleapis.com/test-bucket/{user_id}/avatar.jpg"
+        )
+        mock_gcs_original_url = (
+            f"https://storage.googleapis.com/test-bucket/{user_id}/original.png"
+        )
+
+        with patch("app.utils.image_upload.upload_to_gcs") as mock_upload:
+
+            def mock_upload_side_effect(file_data, content_type, bucket_name, path):
+                if "original" in path:
+                    return mock_gcs_original_url
+                elif "avatar" in path or "cropped" in path:
+                    return mock_gcs_avatar_url
+                else:
+                    return mock_gcs_url
+
+            mock_upload.side_effect = mock_upload_side_effect
+
+            # Mock CDN 转换服务
+            with patch(
+                "app.services.image_transform_service.image_transform_service"
+            ) as mock_transform:
+
+                def mock_transform_side_effect(url):
+                    # Return a different CDN URL to distinguish from GCS URL
+                    return url.replace("storage.googleapis.com", "cdn.example.com")
+
+                mock_transform.transform_mobile.side_effect = mock_transform_side_effect
+
+                result = await process_image_upload(
+                    file=upload_file,
+                    user_id=user_id,
+                    db=db,
+                    base_path=base_path,
+                    cropping_avatar=True,
+                )
+
+        # 验证上传结果成功
+        assert result.code == 200
+
+        # 检查资源记录数量 - 这里应该发现重复记录的问题
+        all_resources = db.query(Resource).filter(Resource.creator == user_id).all()
+
+        print(f"Total resource records created: {len(all_resources)}")
+        for i, resource in enumerate(all_resources):
+            print(
+                f"Resource {i+1}: URL={resource.url}, Size={resource.resource_metadata.get('size')}, Cropped={resource.resource_metadata.get('cropped')}"
+            )
+
+        # 预期的资源记录数量应该是3个（压缩图片、原始图片、扣脸图片）
+        # 但实际上由于bug，会创建6个记录（每个图片的CDN和GCS版本都被记录）
+        expected_unique_images = 3  # compressed, original, cropped
+        actual_records = len(all_resources)
+
+        # 这个测试会失败，证明bug存在
+        assert actual_records == expected_unique_images, (
+            f"Expected {expected_unique_images} unique resource records, "
+            f"but got {actual_records}. This confirms the duplicate URL bug exists. "
+            f"The bug creates both CDN and GCS URL records for the same image."
+        )
+
+        # 验证URL的唯一性
+        urls = [resource.url for resource in all_resources]
+        unique_urls = set(urls)
+
+        assert len(urls) == len(unique_urls), (
+            f"Found duplicate URLs in resource records. "
+            f"Total URLs: {len(urls)}, Unique URLs: {len(unique_urls)}. "
+            f"URLs: {urls}"
+        )
