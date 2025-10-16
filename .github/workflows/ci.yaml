@@ -5,6 +5,7 @@ on:
     branches:
       - main
     paths:
+      - "alembic/versions/**/*.py"
       - "start.sh"
       - "app/**/*.py"
       - "tests/**/*.py"
@@ -17,6 +18,7 @@ on:
     branches:
       - main
     paths:
+      - "alembic/versions/**/*.py"
       - "start.sh"
       - "app/**/*.py"
       - "tests/**/*.py"
