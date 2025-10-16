@@ -31,12 +31,9 @@ from app.schemas.response import (
 from app.services import agent_service
 from app.services.character_card_service import character_card_service
 from app.services.global_services import subscription_service
-from app.services.resource_service import (
-    async_create_image_resource,
-    create_image_resource,
-)
+from app.services.resource_service import async_create_image_resource
 from app.utils.gemini import ImagenGeneratedImage, text_to_image
-from app.utils.image import AspectRatio, ImageFormat, ImageSize
+from app.utils.image import AspectRatio, ImageFormat
 
 router = APIRouter(prefix="/ai/agents", route_class=LoggerRoute)
 

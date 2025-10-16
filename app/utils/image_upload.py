@@ -11,14 +11,14 @@ from fastapi import UploadFile
 from loguru import logger
 from PIL import Image
 from pydantic import BaseModel
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import global_config_loaded_from_config_yaml
 from app.external_services.gcs import append_filename_suffix, upload_to_gcs
 from app.models.resource import ResourceType
 from app.schemas.resource import ResourceCreate
 from app.schemas.response import APIResponse
-from app.services.resource_service import create_image_resource
+from app.services.resource_service import async_create_image_resource
 from app.utils.crop_avatar import CROPPED_AVATAR_FILENAME_SUFFIX, crop_avatar
 from app.utils.image import (
     ImageFormat,
@@ -44,7 +44,7 @@ class ImageUploadResponse(BaseModel):
 async def process_image_upload(
     file: UploadFile,
     user_id: str,
-    db: Session,
+    async_db: AsyncSession,
     base_path: str = "uploads/images",
     cropping_avatar: bool = False,
     max_size_mb: int = global_config_loaded_from_config_yaml.app.limits.max_image_size_mb,
@@ -210,8 +210,8 @@ async def process_image_upload(
         result.original_url = uncompressed_url
 
         # Only store CDN URL, save GCS URL in metadata
-        create_image_resource(
-            db=db,
+        await async_create_image_resource(
+            async_db=async_db,
             user_id=user_id,
             url=uncompressed_url,
             size=size,
@@ -222,8 +222,8 @@ async def process_image_upload(
 
     # Create resource record for the compressed image
     # Only store CDN URL, save GCS URL in metadata
-    create_image_resource(
-        db=db,
+    await async_create_image_resource(
+        async_db=async_db,
         user_id=user_id,
         url=url,
         size=size,
@@ -268,8 +268,8 @@ async def process_image_upload(
 
         # Write the metadata of the uploaded image, which might be compressed.
         # Only store CDN URL, save GCS URL in metadata
-        create_image_resource(
-            db=db,
+        await async_create_image_resource(
+            async_db=async_db,
             user_id=user_id,
             url=cropped_avatar_url,
             size=crop_avatar_result.size,

@@ -8,7 +8,6 @@ from typing import Any
 from fastapi import APIRouter, Depends, File, Form, UploadFile
 from loguru import logger
 from sqlalchemy.ext.asyncio.session import AsyncSession
-from sqlalchemy.orm import Session
 
 from app import schemas
 from app.api import deps
@@ -30,7 +29,7 @@ async def upload_image(
     cropping_avatar: bool = Form(False),
     current_user: schemas.User = Depends(deps.get_current_active_user),
     # 更新图片元数据
-    db: Session = Depends(deps.get_db),
+    async_db: AsyncSession = Depends(deps.get_async_db),
 ) -> APIResponse[dict]:
     """
     Upload image file with validation, compression, and GCS storage.
@@ -53,7 +52,7 @@ async def upload_image(
         result = await process_image_upload(
             file=file,
             user_id=current_user.id,
-            db=db,
+            async_db=async_db,
             base_path=base_path,
             cropping_avatar=cropping_avatar,  # Use the direct parameter
         )
