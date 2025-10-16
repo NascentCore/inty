@@ -4,7 +4,7 @@ Agents endpoints for accessing agents for interactions.
 
 import traceback
 import uuid
-from typing import Any, List
+from typing import Any, Dict, List, Union
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from loguru import logger
@@ -177,7 +177,7 @@ async def get_following_agents(
 ########################################################
 @router.post(
     "/",
-    response_model=schemas.APIResponse[schemas.Agent],
+    response_model=schemas.APIResponse[Union[schemas.Agent, Dict[str, Any]]],
     deprecated=True,
     include_in_schema=False,
     summary="Deprecated, use /api/v1/ai/agents instead, kept for v1.0.3 compatibility",
@@ -185,7 +185,7 @@ async def get_following_agents(
 )
 @router.post(
     "",
-    response_model=schemas.APIResponse[schemas.Agent],
+    response_model=schemas.APIResponse[Union[schemas.Agent, Dict[str, Any]]],
     tags=["app", "inty-eval"],
     summary="Create new AI agent",
     description="Create new AI agent, used by app and inty-eval",
