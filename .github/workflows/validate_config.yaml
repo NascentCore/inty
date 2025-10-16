@@ -1,0 +1,59 @@
+name: Validate configs
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "devops/config.yaml.*"
+      - ".github/workflows/test_config.yaml"
+      - "devops/test_configs.py"
+      - "app/core/config.py"
+
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "devops/config.yaml.*"
+      - ".github/workflows/test_config.yaml"
+      - "devops/test_configs.py"
+      - "app/core/config.py"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: 3.12
+          # This does not seem to work: https://github.com/actions/setup-python/issues/330
+          # Keep for posterity, we do want to use this such that we do not need to manage cache ourselves.
+          # cache: 'pip'
+
+      # Based on https://adamj.eu/tech/2023/11/02/github-actions-faster-python-virtual-environments/
+      - uses: actions/cache@v4
+        with:
+          path: .venv
+          # Unique key for the cache
+          key: ${{ runner.os }}-venv-${{ hashFiles('requirements.txt', 'test_requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-venv-
+
+      - name: Install dependencies
+        run: |
+          python -m venv .venv
+          source .venv/bin/activate
+          python -m pip install -r requirements.txt
+          python -m pip install -r test_requirements.txt
+          # https://stackoverflow.com/a/74669486
+          echo "$VIRTUAL_ENV/bin" >> $GITHUB_PATH
+          echo "VIRTUAL_ENV=$VIRTUAL_ENV" >> $GITHUB_ENV
+
+      - name: Validate configs
+        run: |
+          # config.py 默认加载 config.yaml 文件，因此需要创建一份
+          cp config.yaml.example config.yaml
+          pytest -v -s devops/test_configs.py
