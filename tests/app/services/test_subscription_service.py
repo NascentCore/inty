@@ -23,6 +23,7 @@ class TestSubscriptionService:
         mock_google_play_service = AsyncMock(spec=GooglePlayService)
         mock_db = AsyncMock(spec=AsyncSession)
         mock_subscription_status = MagicMock(spec=SubscriptionStatusResponse)
+        mock_subscription_status.is_subscribed = True
         mock_subscription_status.agent_creation_limit = 5
 
         # Mock the subscription status call
@@ -53,9 +54,9 @@ class TestSubscriptionService:
         )
 
         # Assert
-        assert is_allowed is True  # 3 < 5, so allowed
+        assert is_allowed is True  # 3 < 12, so allowed
         assert agent_count == 3
-        assert limit == 5
+        assert limit == 12  # subscribed_user_agent_creation_24h_limit from config
 
         # Verify the subscription status was called
         subscription_service.get_user_subscription_status.assert_called_once_with(
