@@ -50,7 +50,7 @@ fun IntySmallTextField(
     onSelectionChanged: ((Int) -> Unit)? = null,
     selection: Int = 0,
     maxLines: Int = Int.MAX_VALUE,
-    maxLength: Int = 1000,//输入文案默认最大1000个字符
+    maxLength: Int = 1000, // 输入文案默认最大1000个字符
 ) {
 
     Row(modifier = modifier.wrapContentHeight(), verticalAlignment = Alignment.CenterVertically) {
@@ -101,11 +101,9 @@ fun IntySmallTextField(
             val scope = rememberCoroutineScope()
             TextField(
                 modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .onFocusChanged { focusState ->
-                            onFocusChanged?.invoke(focusState.isFocused)
-                        },
+                    Modifier.fillMaxWidth().onFocusChanged { focusState ->
+                        onFocusChanged?.invoke(focusState.isFocused)
+                    },
                 enabled = enabled,
                 singleLine = singleLine,
                 value = textFieldValue,
@@ -198,10 +196,7 @@ fun IntySmallTextField2(
 
         Box(
             modifier =
-                Modifier
-                    .fillMaxHeight()
-                    .weight(1f)
-                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                Modifier.fillMaxHeight().weight(1f).padding(horizontal = 8.dp, vertical = 4.dp),
             contentAlignment = if (singleLine) Alignment.CenterStart else Alignment.TopStart,
         ) {
             BasicTextField(

@@ -77,7 +77,6 @@ fun ChatSettingsDrawer(
             )
         }
 
-
     LifecycleResumeEffect(chatViewModel) {
         chatViewModel.updateUserInfo()
         onPauseOrDispose {}

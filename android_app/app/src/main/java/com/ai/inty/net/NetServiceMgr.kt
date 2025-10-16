@@ -18,6 +18,8 @@ import com.squareup.moshi.DefaultIfNullFactory
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import com.therouter.inject.ServiceProvider
+import java.net.InetAddress
+import java.util.concurrent.TimeUnit
 import okhttp3.ConnectionPool
 import okhttp3.Dns
 import okhttp3.Interceptor
@@ -28,8 +30,6 @@ import okhttp3.Response
 import okhttp3.ResponseBody.Companion.toResponseBody
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
-import java.net.InetAddress
-import java.util.concurrent.TimeUnit
 
 /** 获取基础URL 根据构建类型返回对应的API基础URL */
 fun getBaseUrl(): String {
@@ -275,7 +275,7 @@ object NetServiceMgr {
         get() {
             val authInterceptor = AuthInterceptor()
             val performanceInterceptor = PerformanceInterceptor()
-//            val retryInterceptor = RetryInterceptor(maxRetries = 3)
+            //            val retryInterceptor = RetryInterceptor(maxRetries = 3)
 
             val builder: OkHttpClient.Builder =
                 OkHttpClient.Builder()
@@ -289,7 +289,7 @@ object NetServiceMgr {
                     .dns(CachedDns())
                     // 拦截器（注意顺序：性能监控 -> 重试 -> 认证 -> 调试）
                     .addInterceptor(performanceInterceptor)
-//                    .addInterceptor(retryInterceptor)
+                    //                    .addInterceptor(retryInterceptor)
                     .addInterceptor(authInterceptor)
                     .addInterceptor(ChuckerInterceptor(AppEnv.context))
             return builder.build()

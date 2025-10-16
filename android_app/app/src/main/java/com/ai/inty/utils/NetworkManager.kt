@@ -25,8 +25,7 @@ class NetworkManager private constructor() {
     companion object {
         private const val TAG = "NetworkManager"
 
-        @Volatile
-        private var INSTANCE: NetworkManager? = null
+        @Volatile private var INSTANCE: NetworkManager? = null
 
         fun getInstance(): NetworkManager {
             return INSTANCE
@@ -137,8 +136,7 @@ class NetworkManager private constructor() {
     }
 
     /**
-     * 判断网络是否真正可用（排除飞行模式下的VPN连接等虚假连接）
-     * 通过检查网络传输类型来判断是否为真实网络连接
+     * 判断网络是否真正可用（排除飞行模式下的VPN连接等虚假连接） 通过检查网络传输类型来判断是否为真实网络连接
      *
      * @return true 表示网络真正可用，false 表示网络不可用
      */
@@ -156,12 +154,14 @@ class NetworkManager private constructor() {
         }
 
         // 检查是否有有效的传输类型（排除仅VPN连接的情况）
-        val hasValidTransport = capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ||
+        val hasValidTransport =
+            capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ||
                 capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) ||
                 capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)
 
         // 如果只有VPN传输，检查是否在飞行模式下
-        val hasOnlyVpn = capabilities.hasTransport(NetworkCapabilities.TRANSPORT_VPN) &&
+        val hasOnlyVpn =
+            capabilities.hasTransport(NetworkCapabilities.TRANSPORT_VPN) &&
                 !capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) &&
                 !capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) &&
                 !capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)
@@ -240,20 +240,20 @@ class NetworkManager private constructor() {
      */
     fun getNetworkStateFlow(): Flow<NetworkState> =
         callbackFlow {
-            val listener =
-                object : NetworkStateListener {
-                    override fun onNetworkStateChanged(
-                        isConnected: Boolean,
-                        networkType: NetworkType,
-                    ) {
-                        trySend(NetworkState(isConnected, networkType))
+                val listener =
+                    object : NetworkStateListener {
+                        override fun onNetworkStateChanged(
+                            isConnected: Boolean,
+                            networkType: NetworkType,
+                        ) {
+                            trySend(NetworkState(isConnected, networkType))
+                        }
                     }
-                }
 
-            addNetworkStateListener(listener)
+                addNetworkStateListener(listener)
 
-            awaitClose { removeNetworkStateListener(listener) }
-        }
+                awaitClose { removeNetworkStateListener(listener) }
+            }
             .distinctUntilChanged()
 
     /** 网络状态数据类 */
