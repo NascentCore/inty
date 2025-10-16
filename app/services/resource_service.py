@@ -102,8 +102,7 @@ def create_image_resource(
     创建图片资源记录的辅助函数
     一个记录存储 CDN URL（如 https://cdn.example.com/image.jpg）
     另一个记录存储 GCS URL（如 https://storage.googleapis.com/bucket/image.jpg）
-    GCS URL 用于长期存储，CDN URL 用于短期访问。
-    这样可以避免重复存储同一图片的多个版本。
+    GCS URL 用于内部存储，CDN URL 用于外部 app 访问，其会做压缩裁切等功能。
     """
     resource_metadata = {
         "creator": user_id,
