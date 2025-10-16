@@ -138,17 +138,15 @@ class TtsManager private constructor(private val context: Context) {
 
                 when (response) {
                     is HttpResult.Success -> {
-                        if (response.data.code == BusinessErrorCodes.VOICE_TTS_LIMIT_CODE) {
-                            // 音频生成到达次数限制，需要给用户toast提示文案
+                        if (response.data.code== BusinessErrorCodes.VOICE_TTS_LIMIT_CODE){
+                            //音频生成到达次数限制，需要给用户toast提示文案
                             ToastUtils.showToast("${response.data.message}")
-                            EasyLog.log("音频LOG测试 TTS 生成次数到达限制 (Agent: $agentId)", EasyLog.ERROR)
-                            completeWithError(
-                                dedupKey,
-                                messageId,
-                                "${response.data.message}",
-                                onError,
+                            EasyLog.log(
+                                "音频LOG测试 TTS 生成次数到达限制 (Agent: $agentId)",
+                                EasyLog.ERROR,
                             )
-                        } else {
+                            completeWithError(dedupKey, messageId, "${response.data.message}", onError)
+                        }else{
                             val audioUrl = response.data.data?.audio_url
                             if (audioUrl != null && audioUrl.isNotEmpty()) {
                                 EasyLog.log(
@@ -163,6 +161,7 @@ class TtsManager private constructor(private val context: Context) {
                                 completeWithError(dedupKey, messageId, "TTS生成失败：返回空音频URL", onError)
                             }
                         }
+
                     }
 
                     is HttpResult.Failure -> {
