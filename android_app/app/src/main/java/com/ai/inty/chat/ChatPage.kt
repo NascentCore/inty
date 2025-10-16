@@ -53,6 +53,7 @@ import com.ai.inty.chat.ui.ChatMorePanel
 import com.ai.inty.chat.ui.ChatSettingsDrawer
 import com.ai.inty.chat.ui.ChatTopBar
 import com.ai.inty.chat.ui.KeepTalkingButton
+import com.ai.inty.chat.ui.PremiumModelTag
 
 
 import com.ai.inty.home.BottomNavigationBarHeight
