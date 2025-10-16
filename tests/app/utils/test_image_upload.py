@@ -13,6 +13,7 @@ from fastapi import UploadFile
 from loguru import logger
 from sqlalchemy import create_engine
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.session import Session
 
@@ -64,6 +65,14 @@ class TestUploadImage:
         Base.metadata.create_all(bind=engine)
         SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
         db = SessionLocal()
+
+        # 创建一个 async session
+        async_engine = create_async_engine(
+            "postgresql+asyncpg://postgres:sxwl666!@localhost/inty"
+        )
+        async_session = sessionmaker(
+            bind=async_engine, class_=AsyncSession, expire_on_commit=False
+        )
 
         # 创建测试用户，使用随机后缀来区分不同测试用例
         user_id = f"testuser-{uuid.uuid4().hex}"
@@ -126,13 +135,14 @@ class TestUploadImage:
 
                 mock_transform.transform_mobile.side_effect = mock_transform_side_effect
 
-                result = await process_image_upload(
-                    file=upload_file,
-                    user_id=user_id,
-                    db=db,
-                    base_path=base_path,
-                    cropping_avatar=True,
-                )
+                async with async_session() as async_db:
+                    result = await process_image_upload(
+                        file=upload_file,
+                        user_id=user_id,
+                        async_db=async_db,
+                        base_path=base_path,
+                        cropping_avatar=True,
+                    )
 
         # 验证上传结果
         assert result.code == 200
@@ -230,6 +240,14 @@ class TestUploadImage:
         SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
         db = SessionLocal()
 
+        # 创建一个 async session
+        async_engine = create_async_engine(
+            "postgresql+asyncpg://postgres:sxwl666!@localhost/inty"
+        )
+        async_session = sessionmaker(
+            bind=async_engine, class_=AsyncSession, expire_on_commit=False
+        )
+
         # 创建测试用户
         user_id = f"testuser-duplicate-{uuid.uuid4().hex}"
         readable_id = str(random.randint(10000000, 99999999))
@@ -290,13 +308,14 @@ class TestUploadImage:
 
                 mock_transform.transform_mobile.side_effect = mock_transform_side_effect
 
-                result = await process_image_upload(
-                    file=upload_file,
-                    user_id=user_id,
-                    db=db,
-                    base_path=base_path,
-                    cropping_avatar=True,
-                )
+                async with async_session() as async_db:
+                    result = await process_image_upload(
+                        file=upload_file,
+                        user_id=user_id,
+                        async_db=async_db,
+                        base_path=base_path,
+                        cropping_avatar=True,
+                    )
 
         # 验证上传结果成功
         assert result.code == 200
