@@ -32,6 +32,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ai.inty.BuildConfig
 import com.ai.inty.Constant
 import com.ai.inty.R
+import com.ai.inty.base.noRippleClickable
 import com.ai.inty.ui.components.DeleteAccountDialog
 import com.ai.inty.ui.components.LogoutButton
 import com.ai.inty.ui.components.SettingDivider

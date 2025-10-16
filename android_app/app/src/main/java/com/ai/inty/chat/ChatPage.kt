@@ -53,7 +53,6 @@ import com.ai.inty.chat.ui.ChatMorePanel
 import com.ai.inty.chat.ui.ChatSettingsDrawer
 import com.ai.inty.chat.ui.ChatTopBar
 import com.ai.inty.chat.ui.KeepTalkingButton
-import com.ai.inty.chat.ui.PremiumModelTag
 import com.ai.inty.home.BottomNavigationBarHeight
 import com.ai.inty.ui.ChatDialogData
 import com.ai.inty.ui.UnlimitChatDialog
@@ -171,25 +170,9 @@ internal fun ChatPage(
     // VIP状态
     val vipStatus by BillingRepository.vipStatusFlow.collectAsState()
 
-    // Premium model二状态设置：默认跟随全局设置，但受VIP状态限制
-    var agentPremiumModel by
-        remember(agentInfo?.id, vipStatus.isSubscribed) {
-            mutableStateOf(
-                if (!vipStatus.isSubscribed) {
-                    // 如果不是VIP，强制关闭Premium model
-                    false
-                } else {
-                    agentInfo?.let {
-                        // 获取角色专用设置，如果不存在则使用全局设置
-                        IntySetting.getAgentPremiumModel(it.id) ?: IntySetting.isShowPremiumModel()
-                    } ?: false
-                }
-            )
-        }
 
     var showMorePanel by remember { mutableStateOf(false) }
     var morePanelHeight by remember { mutableStateOf(0.dp) }
-    var showPremiumDialog by remember { mutableStateOf(false) }
 
     Box(
         modifier =
@@ -234,46 +217,6 @@ internal fun ChatPage(
 
                 Spacer(Modifier.height(16.dp))
 
-                // Premium model标签
-                if (agentInfo != null) {
-                    PremiumModelTag(
-                        isPremiumModel = agentPremiumModel,
-                        onClick = {
-                            scope.launch {
-                                // 如果是已经删除的agent，则不可点击，并提示
-                                if (agentInfo?.isDeleted == true) {
-                                    ToastUtils.showToast(R.string.str_agent_is_deleted)
-                                } else {
-                                    // 检查VIP状态
-                                    if (!vipStatus.isSubscribed) {
-                                        // 如果不是VIP，显示高级模型的弹窗
-                                        showPremiumDialog = true
-                                    } else {
-                                        // 如果是VIP，打开聊天设置抽屉，让用户手动设置开关
-                                        if (drawerState.value == DrawerValue.Closed) {
-                                            drawerState.value = DrawerValue.Open
-                                        } else {
-                                            drawerState.value = DrawerValue.Closed
-                                        }
-                                    }
-                                }
-                            }
-                        },
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    // 高级模型弹窗
-                    if (showPremiumDialog) {
-                        // 检查是否正式登录（非游客且已登录）
-                        if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
-                            // 去会员中心
-                            TheRouter.build(Constant.ROUTE_VIP_CENTER).navigation()
-                        } else {
-                            // 如果未登录，要求先登录
-                            TheRouter.build(Constant.ROUTE_LOGIN).navigation(context)
-                        }
-                        showPremiumDialog = false
-                    }
-                }
                 val chatMessages by chatViewModel.msgs.collectAsState()
                 val isLoadingMore by chatViewModel.isLoadingMore.collectAsState()
                 val hasMoreMessages by chatViewModel.hasMoreMessages.collectAsState()
@@ -534,8 +477,6 @@ internal fun ChatPage(
             chatViewModel = chatViewModel,
             agentInfo = agentInfo,
             drawerState = drawerState,
-            onPremiumDialogShow = { show -> showPremiumDialog = show },
-            onPremiumModeChange = { mode -> agentPremiumModel = mode },
             onKeepTalkingChange = { enabled -> onKeepTalkingChange(enabled) },
         )
 
