@@ -235,7 +235,7 @@ internal fun ChatPage(
                 Spacer(Modifier.height(16.dp))
 
                 // Premium model标签
-                if (agentInfo != null) {
+                if (agentInfo != null && !vipStatus.isSubscribed) {
                     PremiumModelTag(
                         isPremiumModel = agentPremiumModel,
                         onClick = {
@@ -244,18 +244,8 @@ internal fun ChatPage(
                                 if (agentInfo?.isDeleted == true) {
                                     ToastUtils.showToast(R.string.str_agent_is_deleted)
                                 } else {
-                                    // 检查VIP状态
-                                    if (!vipStatus.isSubscribed) {
-                                        // 如果不是VIP，显示高级模型的弹窗
-                                        showPremiumDialog = true
-                                    } else {
-                                        // 如果是VIP，打开聊天设置抽屉，让用户手动设置开关
-                                        if (drawerState.value == DrawerValue.Closed) {
-                                            drawerState.value = DrawerValue.Open
-                                        } else {
-                                            drawerState.value = DrawerValue.Closed
-                                        }
-                                    }
+                                    // 如果不是VIP，显示高级模型的弹窗
+                                    showPremiumDialog = true
                                 }
                             }
                         },
