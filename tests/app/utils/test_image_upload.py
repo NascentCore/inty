@@ -163,10 +163,11 @@ class TestUploadImage:
             "size": {"width": 320, "height": 214},
             "content_type": "image/jpeg",
             "byte_size": 15456,
-            "compressed": True,
-            "uncompressed_image_url": f"https://storage.googleapis.com/test-bucket/{user_id}/original.png",
+            "compressed": False,
+            "uncompressed_image_url": None,
             "cropped": False,
             "uncropped_image_url": None,
+            "gcs_url": f"https://storage.googleapis.com/test-bucket/{user_id}/image.jpg",
         }, f"图片资源记录不正确，实际结果：{image_resource.resource_metadata}"
 
         original_resource = (
@@ -186,6 +187,7 @@ class TestUploadImage:
             "uncompressed_image_url": None,
             "cropped": False,
             "uncropped_image_url": None,
+            "gcs_url": f"https://storage.googleapis.com/test-bucket/{user_id}/original.png",
         }, f"原始图片资源记录不正确，实际结果：{original_resource.resource_metadata}"
 
         avatar_resource = (
@@ -202,10 +204,11 @@ class TestUploadImage:
             "size": {"width": 214, "height": 214},
             "content_type": "image/jpeg",
             "byte_size": 11178,
-            "compressed": True,
+            "compressed": False,
             "uncompressed_image_url": None,
             "cropped": True,
             "uncropped_image_url": f"https://storage.googleapis.com/test-bucket/{user_id}/image.jpg",
+            "gcs_url": f"https://storage.googleapis.com/test-bucket/{user_id}/avatar.jpg",
         }, f"扣脸图片资源记录不正确，实际结果：{avatar_resource.resource_metadata}"
 
     @pytest.mark.asyncio
