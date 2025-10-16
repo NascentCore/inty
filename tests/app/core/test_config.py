@@ -214,7 +214,6 @@ def test_guest_equals_free_is_valid():
 
 
 def test_local_only_guest_user_image_gen_limit_in_non_local_environment(config):
-    """测试在非local环境下设置local_only_guest_user_image_gen_24h_limit > 0会抛出异常"""
     config.app.environment = Environment.DEV
     config.app.limits.local_only_guest_user_image_gen_24h_limit = 5
 
@@ -226,7 +225,6 @@ def test_local_only_guest_user_image_gen_limit_in_non_local_environment(config):
 
 
 def test_local_only_guest_user_image_gen_limit_in_local_environment(config):
-    """测试在local环境下设置local_only_guest_user_image_gen_24h_limit > 0是合法的"""
     config.app.environment = Environment.LOCAL
     config.app.limits.local_only_guest_user_image_gen_24h_limit = 5
 
@@ -236,7 +234,6 @@ def test_local_only_guest_user_image_gen_limit_in_local_environment(config):
 
 
 def test_local_only_guest_user_image_gen_limit_zero_in_non_local_environment(config):
-    """测试在非local环境下设置local_only_guest_user_image_gen_24h_limit = 0是合法的"""
     config.app.environment = Environment.PROD
     config.app.limits.local_only_guest_user_image_gen_24h_limit = 0
 
