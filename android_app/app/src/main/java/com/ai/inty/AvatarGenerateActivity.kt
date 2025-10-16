@@ -225,7 +225,12 @@ private fun AvatarPreviewSection(imageUrl: String?, isLoading: Boolean) {
 
             imageUrl != null -> {
                 // 使用 CDN 裁切获取预览图，使用配置的宽度和质量
-                val previewUrl = getCdnImageUrl(imageUrl, width = Config.TextToImage.Preview.WIDTH, quality = Config.TextToImage.Preview.QUALITY)
+                val previewUrl =
+                    getCdnImageUrl(
+                        imageUrl,
+                        width = Config.TextToImage.Preview.WIDTH,
+                        quality = Config.TextToImage.Preview.QUALITY,
+                    )
                 EasyLog.log("Displaying image with URL: $imageUrl, preview: $previewUrl")
                 AsyncImage(
                     model = previewUrl ?: imageUrl, // 如果 CDN 处理失败，回退到原图
@@ -434,15 +439,17 @@ private fun AvatarGridSection(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             imageUrls.take(4).forEachIndexed { index, imageUrl ->
-// 使用 CDN 裁切获取缩略图，使用配置的宽度和质量
-val thumbnailUrl =
-        getCdnImageUrl(
-                imageUrl,
-                width = Config.TextToImage.Thumbnail.WIDTH,
-                quality = Config.TextToImage.Thumbnail.QUALITY
-        )
+                // 使用 CDN 裁切获取缩略图，使用配置的宽度和质量
+                val thumbnailUrl =
+                    getCdnImageUrl(
+                        imageUrl,
+                        width = Config.TextToImage.Thumbnail.WIDTH,
+                        quality = Config.TextToImage.Thumbnail.QUALITY,
+                    )
 
-                EasyLog.log("AvatarGridSection: Displaying avatar with URL: $imageUrl, thumbnail: $thumbnailUrl")
+                EasyLog.log(
+                    "AvatarGridSection: Displaying avatar with URL: $imageUrl, thumbnail: $thumbnailUrl"
+                )
                 Box(
                     modifier =
                         Modifier.weight(1f)

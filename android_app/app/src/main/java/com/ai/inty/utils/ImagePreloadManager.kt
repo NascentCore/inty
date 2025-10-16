@@ -200,7 +200,3 @@ object ImagePreloadManager {
         return isInitialized
     }
 }
-
-
-
-

@@ -1,15 +1,13 @@
 package com.ai.inty.utils
 
 /**
- * 使用cdn自动裁剪图片的示例 原图url是
+ * 获取cdn裁剪图片的url
+ *
+ * 使用cdn自动裁剪图片的示例，原图url是
  * https://images.sxwl.dev/inty-static/backgrounds/user-01JWZ34Y4D1C92GD86A5R6EWYJ/b4cb39bfe2fc4a92aec3bd406cc2ebaa/1758095758195/sample_0.jpg
  * 拼接/cdn-cgi/image/quality=75/后
  * https://images.sxwl.dev/cdn-cgi/image/quality=75/inty-static/backgrounds/user-01JWZ34Y4D1C92GD86A5R6EWYJ/b4cb39bfe2fc4a92aec3bd406cc2ebaa/1758095758195/sample_0.jpg
  * 也可以是/cdn-cgi/image/width=720,quality=75,format=webp/这样（目前webp转化不生效）
- */
-
-/**
- * 获取cdn裁剪图片的url
  *
  * @param originUrl 原始图片url
  * @param width 需要的宽度
@@ -27,7 +25,10 @@ fun getCdnImageUrl(originUrl: String?, width: Int = 1080, quality: Int = 75): St
             // 有这样的
             // https://images.sxwl.dev/inty-static//inty-static/agents/a9d14f3d-8306-45cd-9d23-200722f94e73/avatar-3ac67f42c36a4d9b8f6935bee20b94b1.jpeg
             val regex = Regex("/inty-static", RegexOption.IGNORE_CASE)
-            originUrl.replaceFirst(regex, "/cdn-cgi/image/width=$width,quality=$quality/inty-static")
+            originUrl.replaceFirst(
+                regex,
+                "/cdn-cgi/image/width=$width,quality=$quality/inty-static",
+            )
         }
 
         else -> originUrl

@@ -5,13 +5,13 @@ on:
     branches:
       - main
     paths:
-      - 'android_app/**'
+      - "android_app/**"
 
   pull_request:
     branches:
       - main
     paths:
-      - 'android_app/**'
+      - "android_app/**"
 
 jobs:
   test:

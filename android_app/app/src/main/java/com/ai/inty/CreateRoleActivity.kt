@@ -1172,15 +1172,17 @@ private fun AvatarUploadSection(
                             if (avatarUrls.isNotEmpty()) {
                                 items(items = avatarUrls.indices.toList()) { index ->
                                     val imageUrl = avatarUrls[index]
-// 使用 CDN 裁切获取缩略图，使用配置的宽度和质量
-val thumbnailUrl =
-        getCdnImageUrl(
-                imageUrl,
-                width = Config.TextToImage.Thumbnail.WIDTH,
-                quality = Config.TextToImage.Thumbnail.QUALITY
-        )
+                                    // 使用 CDN 裁切获取缩略图，使用配置的宽度和质量
+                                    val thumbnailUrl =
+                                        getCdnImageUrl(
+                                            imageUrl,
+                                            width = Config.TextToImage.Thumbnail.WIDTH,
+                                            quality = Config.TextToImage.Thumbnail.QUALITY,
+                                        )
 
-                                    EasyLog.log("AvatarUploadSection: Displaying avatar with URL: $imageUrl, thumbnail: $thumbnailUrl")
+                                    EasyLog.log(
+                                        "AvatarUploadSection: Displaying avatar with URL: $imageUrl, thumbnail: $thumbnailUrl"
+                                    )
                                     Box(
                                         modifier =
                                             Modifier.width(88.dp)
