@@ -11,7 +11,6 @@ logging:
 
 database:
   host: "localhost"
-  password: "sxwl666!"
 
 google_oauth:
   client_id: "<your-google-client-id>"
