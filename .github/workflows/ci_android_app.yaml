@@ -6,12 +6,14 @@ on:
       - main
     paths:
       - "android_app/**"
+      - ".github/workflows/ci_android_app.yaml"
 
   pull_request:
     branches:
       - main
     paths:
       - "android_app/**"
+      - ".github/workflows/ci_android_app.yaml"
 
 jobs:
   test:
@@ -19,6 +21,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - uses: actions/setup-java@v4
         with:
@@ -43,4 +48,4 @@ jobs:
       - name: Run unit tests
         run: |
           cd android_app
-          ./gradlew testDebugUnitTest --stacktrace
+          ./gradlew :app:testDebugUnitTest

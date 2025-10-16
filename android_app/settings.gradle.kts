@@ -12,8 +12,8 @@ pluginManagement {
         }
         gradlePluginPortal()
         mavenCentral()
-        maven("https://maven.aliyun.com/repository/public")
         maven("https://jitpack.io")
+        maven("https://maven.aliyun.com/repository/public")
     }
 }
 
