@@ -118,7 +118,7 @@ class AppConfig:
         # DEPRECATED: Use free_user_image_gen_24h_limit instead
         free_user_image_gen_daily_limit: int = 4
         # Only used for testing purpose to allow easier integration with test client.
-        test_only_guest_user_image_gen_24h_limit: int = 0
+        local_only_guest_user_image_gen_24h_limit: int = 0
         free_user_image_gen_24h_limit: int = 4
         subscribed_user_image_gen_24h_limit: int = 8
         free_user_agent_creation_24h_limit: int = 6
@@ -335,10 +335,10 @@ def _validate_config(config: Config):
 
     if (
         config.app.environment != Environment.LOCAL
-        and limits.test_only_guest_user_image_gen_24h_limit > 0
+        and limits.local_only_guest_user_image_gen_24h_limit > 0
     ):
         raise ValueError(
-            "test_only_guest_user_image_gen_24h_limit is only allowed in local environment"
+            "local_only_guest_user_image_gen_24h_limit is only allowed in local environment"
         )
 
 

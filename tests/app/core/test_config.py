@@ -8,6 +8,7 @@ from app.core.config import (
     DatabaseSettings,
     ElevenLabsConfig,
     EmbeddingConfig,
+    Environment,
     FirebaseConfig,
     GCSConfig,
     GoogleOAuthConfig,
@@ -185,3 +186,92 @@ def test_guest_equals_free_is_valid():
     assert config.app.limits.free_user_chat_24h_limit == 10
     assert config.app.limits.guest_user_voice_24h_limit == 10
     assert config.app.limits.free_user_voice_24h_limit == 10
+
+
+def test_local_only_guest_user_image_gen_limit_in_non_local_environment():
+    """测试在非local环境下设置local_only_guest_user_image_gen_24h_limit > 0会抛出异常"""
+    config = Config(
+        app=AppConfig(
+            name="test",
+            environment=Environment.DEV,  # 非local环境
+            limits=AppConfig.LimitsConfig(
+                local_only_guest_user_image_gen_24h_limit=5,  # 错误配置
+            ),
+        ),
+        security=SecurityConfig(secret_key="test"),
+        database=DatabaseSettings(),
+        google_oauth=GoogleOAuthConfig(),
+        verification=VerificationConfig(),
+        logging=LoggingConfig(),
+        embedding=EmbeddingConfig(),
+        agent=AgentConfig(api_key="test", langchain_api_key="test"),
+        gcs=GCSConfig(bucket="test"),
+        firebase=FirebaseConfig(service_account_path="test"),
+        google_play=GooglePlayConfig(),
+        elevenlabs=ElevenLabsConfig(api_key="test"),
+        cloudflare=CloudflareConfig(),
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="local_only_guest_user_image_gen_24h_limit is only allowed in local environment",
+    ):
+        _validate_config(config)
+
+
+def test_local_only_guest_user_image_gen_limit_in_local_environment():
+    """测试在local环境下设置local_only_guest_user_image_gen_24h_limit > 0是合法的"""
+    config = Config(
+        app=AppConfig(
+            name="test",
+            environment=Environment.LOCAL,  # local环境
+            limits=AppConfig.LimitsConfig(
+                local_only_guest_user_image_gen_24h_limit=5,  # 合法配置
+            ),
+        ),
+        security=SecurityConfig(secret_key="test"),
+        database=DatabaseSettings(),
+        google_oauth=GoogleOAuthConfig(),
+        verification=VerificationConfig(),
+        logging=LoggingConfig(),
+        embedding=EmbeddingConfig(),
+        agent=AgentConfig(api_key="test", langchain_api_key="test"),
+        gcs=GCSConfig(bucket="test"),
+        firebase=FirebaseConfig(service_account_path="test"),
+        google_play=GooglePlayConfig(),
+        elevenlabs=ElevenLabsConfig(api_key="test"),
+        cloudflare=CloudflareConfig(),
+    )
+
+    # 应该不抛出异常
+    _validate_config(config)
+    assert config.app.limits.local_only_guest_user_image_gen_24h_limit == 5
+
+
+def test_local_only_guest_user_image_gen_limit_zero_in_non_local_environment():
+    """测试在非local环境下设置local_only_guest_user_image_gen_24h_limit = 0是合法的"""
+    config = Config(
+        app=AppConfig(
+            name="test",
+            environment=Environment.PROD,  # 非local环境
+            limits=AppConfig.LimitsConfig(
+                local_only_guest_user_image_gen_24h_limit=0,  # 合法配置
+            ),
+        ),
+        security=SecurityConfig(secret_key="test"),
+        database=DatabaseSettings(),
+        google_oauth=GoogleOAuthConfig(),
+        verification=VerificationConfig(),
+        logging=LoggingConfig(),
+        embedding=EmbeddingConfig(),
+        agent=AgentConfig(api_key="test", langchain_api_key="test"),
+        gcs=GCSConfig(bucket="test"),
+        firebase=FirebaseConfig(service_account_path="test"),
+        google_play=GooglePlayConfig(),
+        elevenlabs=ElevenLabsConfig(api_key="test"),
+        cloudflare=CloudflareConfig(),
+    )
+
+    # 应该不抛出异常
+    _validate_config(config)
+    assert config.app.limits.local_only_guest_user_image_gen_24h_limit == 0
