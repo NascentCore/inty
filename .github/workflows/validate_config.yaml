@@ -20,7 +20,7 @@ on:
       - "app/core/config.py"
 
 jobs:
-  test:
+  validate:
     runs-on: ubuntu-latest
 
     steps:
