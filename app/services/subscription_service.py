@@ -1072,6 +1072,7 @@ class SubscriptionService:
 
             # 游客用户不允许生成图片
             if user.auth_type == AuthType.GUEST:
+
                 logger.debug(f"Guest user {user.id} is not allowed to generate images")
                 return False, 0, 0
 
