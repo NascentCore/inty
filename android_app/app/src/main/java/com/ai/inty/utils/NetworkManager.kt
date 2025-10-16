@@ -25,7 +25,8 @@ class NetworkManager private constructor() {
     companion object {
         private const val TAG = "NetworkManager"
 
-        @Volatile private var INSTANCE: NetworkManager? = null
+        @Volatile
+        private var INSTANCE: NetworkManager? = null
 
         fun getInstance(): NetworkManager {
             return INSTANCE
@@ -132,9 +133,46 @@ class NetworkManager private constructor() {
      * @return true 表示有网络连接，false 表示无网络连接
      */
     fun isNetworkConnected(): Boolean {
+        return isNetworkActuallyAvailable()
+    }
+
+    /**
+     * 判断网络是否真正可用（排除飞行模式下的VPN连接等虚假连接）
+     * 通过检查网络传输类型来判断是否为真实网络连接
+     *
+     * @return true 表示网络真正可用，false 表示网络不可用
+     */
+    private fun isNetworkActuallyAvailable(): Boolean {
         val network = connectivityManager?.activeNetwork
         val capabilities = connectivityManager?.getNetworkCapabilities(network)
-        return capabilities?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true
+
+        if (capabilities == null) {
+            return false
+        }
+
+        // 检查是否有互联网能力
+        if (!capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)) {
+            return false
+        }
+
+        // 检查是否有有效的传输类型（排除仅VPN连接的情况）
+        val hasValidTransport = capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ||
+                capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) ||
+                capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)
+
+        // 如果只有VPN传输，检查是否在飞行模式下
+        val hasOnlyVpn = capabilities.hasTransport(NetworkCapabilities.TRANSPORT_VPN) &&
+                !capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) &&
+                !capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) &&
+                !capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)
+
+        if (hasOnlyVpn) {
+            // 如果只有VPN连接，检查是否在飞行模式下
+            // 在飞行模式下，即使VPN显示连接，实际上也无法访问互联网
+            return false
+        }
+
+        return hasValidTransport
     }
 
     /**
@@ -165,6 +203,7 @@ class NetworkManager private constructor() {
             capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> NetworkType.MOBILE
             capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) ->
                 NetworkType.ETHERNET
+
             capabilities.hasTransport(NetworkCapabilities.TRANSPORT_VPN) -> NetworkType.VPN
             else -> NetworkType.UNKNOWN
         }
@@ -201,20 +240,20 @@ class NetworkManager private constructor() {
      */
     fun getNetworkStateFlow(): Flow<NetworkState> =
         callbackFlow {
-                val listener =
-                    object : NetworkStateListener {
-                        override fun onNetworkStateChanged(
-                            isConnected: Boolean,
-                            networkType: NetworkType,
-                        ) {
-                            trySend(NetworkState(isConnected, networkType))
-                        }
+            val listener =
+                object : NetworkStateListener {
+                    override fun onNetworkStateChanged(
+                        isConnected: Boolean,
+                        networkType: NetworkType,
+                    ) {
+                        trySend(NetworkState(isConnected, networkType))
                     }
+                }
 
-                addNetworkStateListener(listener)
+            addNetworkStateListener(listener)
 
-                awaitClose { removeNetworkStateListener(listener) }
-            }
+            awaitClose { removeNetworkStateListener(listener) }
+        }
             .distinctUntilChanged()
 
     /** 网络状态数据类 */
