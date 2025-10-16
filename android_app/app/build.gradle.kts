@@ -69,10 +69,8 @@ TheRouter {
 
 dependencies {
     // ===== Inty SDK（Stainless https://app.stainless.com/ 根据 app/openapi.json 生成的代码）=====
-    // Dynamic version, 本地的 library/inty_sdk 自动替换了这里的依赖，从而无需从 Maven Central 下载。
-    // 换句话说，这里的版本号对于实际构建来说是没有任何影响的。
-    //noinspection GradleDynamicVersion
-    implementation("com.inty.api:inty-kotlin:+")
+    // 使用本地 library/inty_sdk 的版本，避免动态版本在测试时的依赖解析问题
+    implementation("com.inty.api:inty-kotlin:0.15.0")
 
     // ===== AndroidX 核心库 =====
     implementation(libs.androidx.core.ktx)
