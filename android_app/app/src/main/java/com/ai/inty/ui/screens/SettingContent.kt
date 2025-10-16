@@ -55,9 +55,7 @@ fun SettingContent(
     viewModel: SettingViewModel = viewModel(),
 ) {
     val context = LocalContext.current
-    val settingsState by viewModel.settingsState.collectAsState()
     val dialogState by viewModel.dialogState.collectAsState()
-    val vipStatus by BillingRepository.vipStatusFlow.collectAsState()
 
     // 监听删除账号结果
     LaunchedEffect(viewModel) {
@@ -251,7 +249,7 @@ private fun mailTo(context: Context, email: String) {
     val intent = Intent(Intent.ACTION_SENDTO).apply { data = "mailto:$email".toUri() }
     try {
         context.startActivity(Intent.createChooser(intent, "email"))
-    } catch (e: Exception) {
+    } catch (_: Exception) {
         Toast.makeText(context, context.getString(R.string.toast_email_error), Toast.LENGTH_SHORT)
             .show()
     }
