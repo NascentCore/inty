@@ -39,12 +39,14 @@ fun EmptyStateComponent(
     type: EmptyStateType,
     title: String? = null,
     subtitle: String? = null,
-    showRetryButton: Boolean = true,
+    showRetryButton: Boolean = false,
     onRetry: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     Column(
-        modifier = modifier.fillMaxSize().padding(16.dp),
+        modifier = modifier
+            .fillMaxSize()
+            .padding(16.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -121,7 +123,7 @@ fun NetworkErrorState(
         type = EmptyStateType.NETWORK_ERROR,
         title = title,
         subtitle = subtitle,
-        showRetryButton = true,
+        showRetryButton = false,
         onRetry = onRetry,
         modifier = modifier,
     )
@@ -139,7 +141,7 @@ fun LoadErrorState(
         type = EmptyStateType.LOAD_ERROR,
         title = title,
         subtitle = subtitle,
-        showRetryButton = true,
+        showRetryButton = false,
         onRetry = onRetry,
         modifier = modifier,
     )
