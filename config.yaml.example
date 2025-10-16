@@ -11,6 +11,7 @@ logging:
 
 database:
   host: "localhost"
+  db: {{ PG_DB }}
 
 google_oauth:
   client_id: "<your-google-client-id>"

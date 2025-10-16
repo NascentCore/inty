@@ -79,6 +79,7 @@ jobs:
       - name: Run python tests
         run: |
           cp config.yaml.example config.yaml
+          sed -i "s/{{ PG_DB }}/$PG_DB/g" config.yaml
           # alembic upgrade head: no need to run, as start.sh already includes it
           ./start.sh --dev &
           # Wait for the server to start. If the time is too short, it needs to be increased.
