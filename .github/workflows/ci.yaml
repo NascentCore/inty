@@ -30,8 +30,7 @@ on:
 env:
   PG_USER: postgres
   PG_PASSWORD: sxwl666!
-  # 使用全新的 db 来确保验证环节的隔离性
-  PG_DB: inty_${{ github.run_id }}
+  PG_DB: inty
 
 jobs:
   test:
@@ -78,16 +77,7 @@ jobs:
 
       - name: Run python tests
         run: |
-          echo "[CI] Environment variables:"
-          echo "  PG_DB: $PG_DB"
-          echo "  PG_USER: $PG_USER"
-          echo "  PG_PASSWORD: $PG_PASSWORD"
           cp config.yaml.example config.yaml
-          echo "[CI] Config file before sed:"
-          grep -A 5 -B 5 "database:" config.yaml
-          sed -i "s/DATABASE_DB/$PG_DB/g" config.yaml
-          echo "[CI] Config file after sed:"
-          grep -A 5 -B 5 "database:" config.yaml
           # alembic upgrade head: no need to run, as start.sh already includes it
           ./start.sh --dev &
           # Wait for the server to start. If the time is too short, it needs to be increased.
