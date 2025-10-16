@@ -18,8 +18,6 @@ import com.squareup.moshi.DefaultIfNullFactory
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import com.therouter.inject.ServiceProvider
-import java.net.InetAddress
-import java.util.concurrent.TimeUnit
 import okhttp3.ConnectionPool
 import okhttp3.Dns
 import okhttp3.Interceptor
@@ -30,6 +28,8 @@ import okhttp3.Response
 import okhttp3.ResponseBody.Companion.toResponseBody
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
+import java.net.InetAddress
+import java.util.concurrent.TimeUnit
 
 /** 获取基础URL 根据构建类型返回对应的API基础URL */
 fun getBaseUrl(): String {
@@ -175,7 +175,7 @@ class RetryInterceptor(private val maxRetries: Int = 3) : Interceptor {
         )
 
         // 如果没有响应但有异常，创建一个错误响应
-        val errorMessage = lastException?.message ?: "Request failed after $maxRetries attempts"
+        val errorMessage = lastException?.message ?: ""
         EasyLog.log("Creating error response for ${request.url}: $errorMessage", EasyLog.ERROR)
 
         // 创建一个表示网络错误的响应
@@ -183,7 +183,7 @@ class RetryInterceptor(private val maxRetries: Int = 3) : Interceptor {
             .request(request)
             .protocol(Protocol.HTTP_1_1)
             .code(500) // 内部服务器错误
-            .message("Network Error")
+            .message("RetryInterceptor Network Error")
             .body(errorMessage.toResponseBody("text/plain".toMediaType()))
             .build()
     }
