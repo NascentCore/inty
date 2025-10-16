@@ -31,7 +31,10 @@ from app.schemas.response import (
 from app.services import agent_service
 from app.services.character_card_service import character_card_service
 from app.services.global_services import subscription_service
-from app.services.resource_service import create_image_resource
+from app.services.resource_service import (
+    async_create_image_resource,
+    create_image_resource,
+)
 from app.utils.gemini import ImagenGeneratedImage, text_to_image
 from app.utils.image import AspectRatio, ImageFormat, ImageSize
 
@@ -481,35 +484,28 @@ async def generate_background(
                 cdn_url_to_img_dict[gcs_url] = gcs_url_to_img_dict[gcs_url]
 
         # Create image resource records for each generated image
-        # Note: We need to use sync session for create_image_resource
-        # next() 是从生成器中手动提取数据库会话对象的方法，因为我们需要同步会话来调用 create_image_resource 函数。
-        sync_db = next(deps.get_db())
-        try:
-            # Also create resource records for the original GCS URLs
-            for gcs_url in gcs_urls:
-                create_image_resource(
-                    db=sync_db,
-                    user_id=current_user.id,
-                    url=gcs_url,
-                    size=gcs_url_to_img_dict[gcs_url].size,
-                    byte_size=gcs_url_to_img_dict[gcs_url].byte_size,
-                    format=gcs_url_to_img_dict[gcs_url].format,
-                )
-                logger.debug(f"Created image resource record for: {gcs_url}")
-            for cdn_url in cdn_urls:
-                # For generated images, we don't have exact size/format info from the API
-                # We'll use default values and let the system handle it
-                create_image_resource(
-                    db=sync_db,
-                    user_id=current_user.id,
-                    url=cdn_url,
-                    size=cdn_url_to_img_dict[cdn_url].size,
-                    byte_size=cdn_url_to_img_dict[cdn_url].byte_size,
-                    format=cdn_url_to_img_dict[cdn_url].format,
-                )
-                logger.debug(f"Created image resource record for: {cdn_url}")
-        finally:
-            sync_db.close()
+        # Only create CDN URL records, store GCS URL in metadata to avoid duplicates
+        for i, cdn_url in enumerate(cdn_urls):
+            # Get corresponding GCS URL for this CDN URL
+            gcs_url = gcs_urls[i] if i < len(gcs_urls) else None
+
+            # Get image info from CDN URL dict
+            img_info = cdn_url_to_img_dict[cdn_url]
+
+            await async_create_image_resource(
+                async_db=db,
+                user_id=current_user.id,
+                url=cdn_url,
+                size=img_info.size,
+                format=img_info.format,
+                byte_size=img_info.byte_size,
+                compressed=False,  # Generated images are not compressed
+                cropped=False,  # Generated images are not cropped
+                gcs_url=gcs_url,  # Store GCS URL in metadata
+            )
+            logger.debug(
+                f"Created image resource record for CDN URL: {cdn_url}, GCS URL: {gcs_url}"
+            )
 
         # 记录背景图生成使用次数
         try:
