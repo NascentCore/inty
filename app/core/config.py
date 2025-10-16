@@ -253,6 +253,7 @@ def load_config(path: str) -> Config:
         print(f"config file {path} not found!")
         sys.exit(1)
 
+    print(f"[CONFIG] Loading config from: {config_path.absolute()}")
     with open(path, "r", encoding="utf-8") as f:
         data = yaml.safe_load(f)
 
@@ -343,6 +344,7 @@ def _validate_config(config: Config):
 
 
 global_config_loaded_from_config_yaml = load_config("config.yaml")
+print(f"[CONFIG] Database URL: {global_config_loaded_from_config_yaml.database.url}")
 _validate_config(global_config_loaded_from_config_yaml)
 
 

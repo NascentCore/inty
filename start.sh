@@ -23,12 +23,16 @@ done
 # Run database migrations
 echo "Starting database migrations..."
 export PYTHONPATH=.
+echo "[START.SH] PYTHONPATH set to: $PYTHONPATH"
+echo "[START.SH] Current working directory: $(pwd)"
+echo "[START.SH] Config file exists: $(test -f config.yaml && echo 'YES' || echo 'NO')"
 # 初始化管理员用户 user-01JWZ34Y4D1C92GD86A5R6EWYJ，这个算是预置的用户。
 # 所有预置角色均由这个用户创建。也支持管理系统的登录。
 # 只能手动运行下面的命令，因为其与后面的 alembic upgrade head 命令冲突。
 # 即：init_admin_user.py 需要 users 表存在。所以要先运行 alembic upgrade head。
 # 但 alembic upgrade head 需要 init_admin_user.py 运行完成生成的默认管理员 id。
 # python scripts/init_admin_user.py
+echo "[START.SH] Running alembic upgrade head..."
 alembic upgrade head
 
 # 初始化订阅计划，写入信息会提供给 app 作为向 google play 查询订阅计划详情到依据。
