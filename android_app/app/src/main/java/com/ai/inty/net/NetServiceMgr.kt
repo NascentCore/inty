@@ -275,7 +275,7 @@ object NetServiceMgr {
         get() {
             val authInterceptor = AuthInterceptor()
             val performanceInterceptor = PerformanceInterceptor()
-            val retryInterceptor = RetryInterceptor(maxRetries = 3)
+//            val retryInterceptor = RetryInterceptor(maxRetries = 3)
 
             val builder: OkHttpClient.Builder =
                 OkHttpClient.Builder()
@@ -289,7 +289,7 @@ object NetServiceMgr {
                     .dns(CachedDns())
                     // 拦截器（注意顺序：性能监控 -> 重试 -> 认证 -> 调试）
                     .addInterceptor(performanceInterceptor)
-                    .addInterceptor(retryInterceptor)
+//                    .addInterceptor(retryInterceptor)
                     .addInterceptor(authInterceptor)
                     .addInterceptor(ChuckerInterceptor(AppEnv.context))
             return builder.build()
