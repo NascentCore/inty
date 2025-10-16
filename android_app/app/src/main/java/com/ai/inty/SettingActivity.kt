@@ -13,7 +13,6 @@ import com.ai.inty.ui.screens.SettingContent
 import com.ai.inty.ui.theme.DarkPurple
 import com.ai.inty.ui.theme.IntyTheme
 import com.ai.inty.viewmodels.MainViewModel
-import com.therouter.TheRouter
 import com.therouter.router.Route
 
 /** 设置页面 */
@@ -40,7 +39,8 @@ class SettingActivity : BaseActivity() {
                         Toast.makeText(this@SettingActivity, str, Toast.LENGTH_SHORT).show()
                         // 返回到主页面
                         val intent = Intent(this@SettingActivity, MainActivity::class.java)
-                        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                        intent.flags =
+                            Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                         startActivity(intent)
                         finish()
                     },

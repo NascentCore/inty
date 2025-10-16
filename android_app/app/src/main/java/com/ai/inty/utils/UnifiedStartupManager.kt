@@ -82,13 +82,10 @@ object UnifiedStartupManager {
                     try {
                         createGuestAccount()
                         EasyLog.log("UnifiedStartupManager - 游客账户创建成功")
-                        //这里需拉取用户信息
+                        // 这里需拉取用户信息
                         refreshUserProfile()
                     } catch (e: Exception) {
-                        EasyLog.log(
-                            "UnifiedStartupManager - 游客账户创建失败: ${e.message}",
-                            EasyLog.ERROR
-                        )
+                        EasyLog.log("UnifiedStartupManager - 游客账户创建失败: ${e.message}", EasyLog.ERROR)
                         // 游客账户创建失败，仍然继续，避免阻塞启动
                     }
                 } else {
@@ -103,10 +100,7 @@ object UnifiedStartupManager {
                 // 立即开始关键数据预加载，不等待异步初始化
                 loadCriticalData()
             } catch (e: Exception) {
-                EasyLog.log(
-                    "UnifiedStartupManager - 必要初始化失败，但不阻塞启动: ${e.message}",
-                    EasyLog.WARN
-                )
+                EasyLog.log("UnifiedStartupManager - 必要初始化失败，但不阻塞启动: ${e.message}", EasyLog.WARN)
                 // 即使失败也继续，让SplashUI处理
             }
         }
@@ -167,10 +161,7 @@ object UnifiedStartupManager {
                         }
                     }
                 } else {
-                    EasyLog.log(
-                        "UnifiedStartupManager - 用户未登录或token无效，跳过数据加载",
-                        EasyLog.WARN
-                    )
+                    EasyLog.log("UnifiedStartupManager - 用户未登录或token无效，跳过数据加载", EasyLog.WARN)
                 }
 
                 EasyLog.log("UnifiedStartupManager - 关键数据加载完成")
@@ -191,10 +182,7 @@ object UnifiedStartupManager {
             AudioPreloadManager.init(context)
             EasyLog.log("UnifiedStartupManager - 音频预加载管理器初始化完成")
         } catch (e: Exception) {
-            EasyLog.log(
-                "UnifiedStartupManager - 预加载管理器初始化失败: ${e.message}",
-                EasyLog.ERROR
-            )
+            EasyLog.log("UnifiedStartupManager - 预加载管理器初始化失败: ${e.message}", EasyLog.ERROR)
         }
     }
 
@@ -498,8 +486,8 @@ object UnifiedStartupManager {
     /** 检查是否有缓存数据 */
     fun hasCacheData(): Boolean {
         return _recommendedAgents.value.isNotEmpty() ||
-                _chatAgents.value.isNotEmpty() ||
-                _userProfile.value != null
+            _chatAgents.value.isNotEmpty() ||
+            _userProfile.value != null
     }
 
     /** 手动刷新推荐agents */
@@ -542,10 +530,7 @@ object UnifiedStartupManager {
                 syncChatAgents()
                 EasyLog.log("UnifiedStartupManager - chat agents刷新完成")
             } catch (e: Exception) {
-                EasyLog.log(
-                    "UnifiedStartupManager - chat agents刷新失败: ${e.message}",
-                    EasyLog.ERROR
-                )
+                EasyLog.log("UnifiedStartupManager - chat agents刷新失败: ${e.message}", EasyLog.ERROR)
             }
         }
     }

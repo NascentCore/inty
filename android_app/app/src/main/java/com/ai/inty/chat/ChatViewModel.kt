@@ -41,14 +41,14 @@ class ChatViewModel : BaseActivityViewModel() {
     // 使用 StateFlow 替代 mutableStateListOf 来解决并发问题
     private val _msgs = MutableStateFlow<List<MsgInfo>>(emptyList())
     val msgs = _msgs.asStateFlow()
-    
+
     // 分页相关状态
     private val _isLoadingMore = MutableStateFlow(false)
     val isLoadingMore = _isLoadingMore.asStateFlow()
-    
+
     private val _hasMoreMessages = MutableStateFlow(true)
     val hasMoreMessages = _hasMoreMessages.asStateFlow()
-    
+
     private var currentOffset = 0
     private val PAGE_SIZE = 20
     private val _conversations = MutableStateFlow<List<ConversationItem>>(emptyList())
@@ -160,7 +160,7 @@ class ChatViewModel : BaseActivityViewModel() {
         lastQueryAgentId = agentInfo.id
         isQueryingMsgs = false
         _isQueryMsgsCompleted.value = false
-        
+
         // 重置分页状态
         currentOffset = 0
         _hasMoreMessages.value = true
@@ -239,7 +239,7 @@ class ChatViewModel : BaseActivityViewModel() {
     fun queryMsgs() {
         queryMsgs(loadMore = false)
     }
-    
+
     fun queryMsgs(loadMore: Boolean = false) {
         // 防重复请求检查
         val currentTime = System.currentTimeMillis()
@@ -256,17 +256,21 @@ class ChatViewModel : BaseActivityViewModel() {
         }
 
         // 加载更多时完全跳过防抖检查，首次加载使用完整防抖时间
-        if (!loadMore && 
-            lastQueryAgentId == currentAgentId && currentTime - lastQueryTime < QUERY_DEBOUNCE_TIME
+        if (
+            !loadMore &&
+                lastQueryAgentId == currentAgentId &&
+                currentTime - lastQueryTime < QUERY_DEBOUNCE_TIME
         ) {
-            EasyLog.log("Query debounced for agent $currentAgentId (loadMore: $loadMore, debounceTime: ${QUERY_DEBOUNCE_TIME}ms)")
+            EasyLog.log(
+                "Query debounced for agent $currentAgentId (loadMore: $loadMore, debounceTime: ${QUERY_DEBOUNCE_TIME}ms)"
+            )
             return
         }
 
         isQueryingMsgs = true
         lastQueryAgentId = currentAgentId
         lastQueryTime = currentTime
-        
+
         if (loadMore) {
             _isLoadingMore.value = true
         }
@@ -275,24 +279,27 @@ class ChatViewModel : BaseActivityViewModel() {
             try {
                 val currentAgentValue = agentInfo.value
                 currentAgentValue?.let { agent ->
-                    EasyLog.log("Querying messages for agent: ${agent.id}, offset: $currentOffset, loadMore: $loadMore")
+                    EasyLog.log(
+                        "Querying messages for agent: ${agent.id}, offset: $currentOffset, loadMore: $loadMore"
+                    )
                     val result = chatApi.getMsgs(agent.id, PAGE_SIZE, currentOffset)
                     EasyLog.log("queryMsgs result for ${agent.id} = $result")
                     when (result) {
                         is HttpResult.Success -> {
                             val newMessages = result.data.messages
                             val hasMore = result.data.hasMore
-                            
+
                             EasyLog.log("Loaded ${newMessages.size} messages, hasMore: $hasMore")
-                            
+
                             if (loadMore) {
                                 // 加载更多：旧数据应追加到列表尾部（在 reverseLayout 下显示在顶部）
                                 _msgs.update { currentMsgs ->
                                     val combinedMessages = currentMsgs + newMessages
                                     // 去重处理
-                                    val uniqueMessages = combinedMessages.distinctBy { msg ->
-                                        "${msg.role}_${msg.content}_${msg.localMsgId}"
-                                    }
+                                    val uniqueMessages =
+                                        combinedMessages.distinctBy { msg ->
+                                            "${msg.role}_${msg.content}_${msg.localMsgId}"
+                                        }
                                     uniqueMessages
                                 }
                                 currentOffset += PAGE_SIZE
@@ -300,22 +307,25 @@ class ChatViewModel : BaseActivityViewModel() {
                                 // 首次加载：替换消息列表
                                 // 修复：只有当currentOffset为0时才进行首次加载，避免错误清空数据
                                 if (currentOffset == 0) {
-                                    val uniqueMessages = newMessages.distinctBy { msg ->
-                                        "${msg.role}_${msg.content}_${msg.localMsgId}"
-                                    }
+                                    val uniqueMessages =
+                                        newMessages.distinctBy { msg ->
+                                            "${msg.role}_${msg.content}_${msg.localMsgId}"
+                                        }
                                     _msgs.update { uniqueMessages }
                                     currentOffset = PAGE_SIZE
                                 } else {
                                     // 如果currentOffset不为0，说明这不是真正的首次加载，跳过数据替换
-                                    EasyLog.log("Skipping data replacement for non-first load: currentOffset=$currentOffset")
+                                    EasyLog.log(
+                                        "Skipping data replacement for non-first load: currentOffset=$currentOffset"
+                                    )
                                 }
                             }
-                            
+
                             _hasMoreMessages.value = hasMore
                             EasyLog.log(
                                 "Successfully loaded messages. Total: ${_msgs.value.size}, hasMore: $hasMore"
                             )
-                            
+
                             // 标记消息查询完成
                             _isQueryMsgsCompleted.value = true
                         }
@@ -339,28 +349,28 @@ class ChatViewModel : BaseActivityViewModel() {
             }
         }
     }
-    
-    /**
-     * 加载更多消息
-     */
+
+    /** 加载更多消息 */
     fun loadMoreMessages() {
-        EasyLog.log("loadMoreMessages called: hasMore=${_hasMoreMessages.value}, isLoading=${_isLoadingMore.value}, isQueryingMsgs=$isQueryingMsgs, currentOffset=$currentOffset")
-        
+        EasyLog.log(
+            "loadMoreMessages called: hasMore=${_hasMoreMessages.value}, isLoading=${_isLoadingMore.value}, isQueryingMsgs=$isQueryingMsgs, currentOffset=$currentOffset"
+        )
+
         if (!_hasMoreMessages.value) {
             EasyLog.log("Cannot load more messages: no more messages available")
             return
         }
-        
+
         if (_isLoadingMore.value) {
             EasyLog.log("Cannot load more messages: already loading more")
             return
         }
-        
+
         if (isQueryingMsgs) {
             EasyLog.log("Cannot load more messages: already querying messages")
             return
         }
-        
+
         EasyLog.log("Loading more messages, current offset: $currentOffset")
         queryMsgs(loadMore = true)
     }
@@ -569,8 +579,10 @@ class ChatViewModel : BaseActivityViewModel() {
                                 FirebaseManager.recordException(
                                     Exception("Message send failed: ${result.message}")
                                 )
-                                //所有消息接口错误，暂时统一文案
-                                showNetworkAwareError("Something went wrong. Please try again later.")
+                                // 所有消息接口错误，暂时统一文案
+                                showNetworkAwareError(
+                                    "Something went wrong. Please try again later."
+                                )
                                 // 错误恢复：确保状态正确
                                 _isWaitingForReply.value = false
                             }
@@ -604,6 +616,7 @@ class ChatViewModel : BaseActivityViewModel() {
 
     // 关闭limit次数 拦截消息的弹窗
     fun dismissDialog() = viewModelScope.launch { showLimitDialog.emit(false) }
+
     fun dismissLoginRequest() = viewModelScope.launch { requestLogin.emit(false) }
 
     fun sendKeepTalkingMessage() {
@@ -656,10 +669,7 @@ class ChatViewModel : BaseActivityViewModel() {
                 when (result) {
                     is HttpResult.Success -> {
                         runCatching {
-                                if (
-                                    result.data.code ==
-                                        BusinessErrorCodes.GUEST_NEED_LOGIN_CODE
-                                ) {
+                                if (result.data.code == BusinessErrorCodes.GUEST_NEED_LOGIN_CODE) {
                                     requestLogin.emit(true)
                                     return@runCatching
                                 }
@@ -1011,4 +1021,3 @@ class ChatViewModel : BaseActivityViewModel() {
         VipStatusHelper.purchaseFirstVip(activity) { error -> showNetworkAwareError(error) }
     }
 }
-

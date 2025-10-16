@@ -132,6 +132,7 @@ D. Output Format
 - When the output can contain multiple dialogues, always keep the same pair of " "; when inserting () in the middle"", please close the quotation marks first. Do not use: *, **, [], <> and any Markdown tags.
 """
 
+
 class StructuredPrompt(BaseModel):
     """
     Prompt, in a moderately accurate way, refers to the *tokens* given to the LLM.
@@ -167,6 +168,7 @@ class StructuredPrompt(BaseModel):
             {"role": "system", "content": self.main_prompt},
             {"role": "system", "content": self.mode_prompt},
         ]
+
 
 PROACTIVE_CHAT_SYSTEM_PROMPT = """
 The user has no message for {{ time_no_messages }} hours, write something to get the user back to chat with you.
