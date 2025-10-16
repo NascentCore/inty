@@ -66,6 +66,7 @@ import com.ai.inty.base.noRippleClickable
 import com.ai.inty.ui.theme.DarkPurple
 import com.ai.inty.ui.theme.IntyTheme
 import com.ai.inty.utils.AvatarManager
+import com.ai.inty.utils.getCdnImageUrl
 import com.ai.inty.viewmodels.AvatarGenerateViewModel
 import com.inty.utils.log.EasyLog
 import com.therouter.router.Route
@@ -161,6 +162,7 @@ private fun AvatarGeneratePage(
             Spacer(modifier = Modifier.height(24.dp))
 
             // Image Preview Section
+            EasyLog.log("AvatarGeneratePage: generatedImageUrls.isEmpty() = ${generatedImageUrls.isEmpty()}, generatedImageUrl = $generatedImageUrl, isLoading = $isLoading", EasyLog.INFO)
             if (generatedImageUrls.isEmpty()) {
                 AvatarPreviewSection(imageUrl = generatedImageUrl, isLoading = isLoading)
             } else {
@@ -210,6 +212,7 @@ private fun AvatarGeneratePage(
 
 @Composable
 private fun AvatarPreviewSection(imageUrl: String?, isLoading: Boolean) {
+    EasyLog.log("AvatarPreviewSection: imageUrl = $imageUrl, isLoading = $isLoading", EasyLog.INFO)
     Box(
         modifier =
             Modifier.fillMaxWidth()
@@ -223,14 +226,21 @@ private fun AvatarPreviewSection(imageUrl: String?, isLoading: Boolean) {
             }
 
             imageUrl != null -> {
-                EasyLog.log("Displaying image with URL: $imageUrl")
+                // 使用 CDN 裁切获取预览图，使用配置的宽度和质量
+                val previewUrl =
+                    getCdnImageUrl(
+                        imageUrl,
+                        width = Config.TextToImage.Preview.WIDTH,
+                        quality = Config.TextToImage.Preview.QUALITY,
+                    )
+                EasyLog.log("Displaying image with URL: $imageUrl, preview: $previewUrl", EasyLog.INFO)
                 AsyncImage(
-                    model = imageUrl,
+                    model = previewUrl ?: imageUrl, // 如果 CDN 处理失败，回退到原图
                     contentDescription = stringResource(R.string.content_desc_generated_avatar),
                     modifier = Modifier.fillMaxSize().padding(4.dp),
                     contentScale = ContentScale.Crop,
-                    onSuccess = { EasyLog.log("Image loaded successfully: $imageUrl") },
-                    onError = { EasyLog.log("Failed to load image: $imageUrl", EasyLog.ERROR) },
+                    onSuccess = { EasyLog.log("Image loaded successfully: $previewUrl") },
+                    onError = { EasyLog.log("Failed to load image: $previewUrl", EasyLog.ERROR) },
                 )
             }
 
@@ -431,6 +441,17 @@ private fun AvatarGridSection(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             imageUrls.take(4).forEachIndexed { index, imageUrl ->
+                // 使用 CDN 裁切获取缩略图，使用配置的宽度和质量
+                val thumbnailUrl =
+                    getCdnImageUrl(
+                        imageUrl,
+                        width = Config.TextToImage.Thumbnail.WIDTH,
+                        quality = Config.TextToImage.Thumbnail.QUALITY,
+                    )
+
+                EasyLog.log(
+                    "AvatarGridSection: Displaying avatar with URL: $imageUrl, thumbnail: $thumbnailUrl"
+                )
                 Box(
                     modifier =
                         Modifier.weight(1f)
@@ -447,7 +468,7 @@ private fun AvatarGridSection(
                     contentAlignment = Alignment.Center,
                 ) {
                     AsyncImage(
-                        model = imageUrl,
+                        model = thumbnailUrl ?: imageUrl, // 如果 CDN 处理失败，回退到原图
                         contentDescription =
                             stringResource(R.string.content_desc_generated_avatar_index, index),
                         modifier = Modifier.fillMaxSize().padding(4.dp),

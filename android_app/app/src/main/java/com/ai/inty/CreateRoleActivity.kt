@@ -85,6 +85,7 @@ import com.ai.inty.ui.SingleLineTextInputField
 import com.ai.inty.ui.theme.DarkPurple
 import com.ai.inty.ui.theme.IntyTheme
 import com.ai.inty.utils.AvatarManager
+import com.ai.inty.utils.getCdnImageUrl
 import com.ai.inty.viewmodels.MainViewModel
 import com.inty.utils.log.EasyLog
 import com.therouter.TheRouter
@@ -1171,6 +1172,17 @@ private fun AvatarUploadSection(
                             if (avatarUrls.isNotEmpty()) {
                                 items(items = avatarUrls.indices.toList()) { index ->
                                     val imageUrl = avatarUrls[index]
+                                    // 使用 CDN 裁切获取缩略图，使用配置的宽度和质量
+                                    val thumbnailUrl =
+                                        getCdnImageUrl(
+                                            imageUrl,
+                                            width = Config.TextToImage.Thumbnail.WIDTH,
+                                            quality = Config.TextToImage.Thumbnail.QUALITY,
+                                        )
+
+                                    EasyLog.log(
+                                        "AvatarUploadSection: Displaying avatar with URL: $imageUrl, thumbnail: $thumbnailUrl"
+                                    )
                                     Box(
                                         modifier =
                                             Modifier.width(88.dp)
@@ -1192,7 +1204,7 @@ private fun AvatarUploadSection(
                                         contentAlignment = Alignment.Center,
                                     ) {
                                         AsyncImage(
-                                            model = imageUrl,
+                                            model = thumbnailUrl ?: imageUrl, // 如果 CDN 处理失败，回退到原图
                                             contentDescription =
                                                 stringResource(
                                                     R.string.content_desc_generated_avatar_index,
