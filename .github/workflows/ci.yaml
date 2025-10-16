@@ -30,7 +30,8 @@ on:
 env:
   PG_USER: postgres
   PG_PASSWORD: sxwl666!
-  PG_DB: inty
+  # 使用全新的 db 来验证
+  PG_DB: inty_${{ github.run_id }}
 
 jobs:
   test:
