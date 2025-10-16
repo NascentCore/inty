@@ -534,8 +534,6 @@ internal fun ChatPage(
             chatViewModel = chatViewModel,
             agentInfo = agentInfo,
             drawerState = drawerState,
-            onPremiumDialogShow = { show -> showPremiumDialog = show },
-            onPremiumModeChange = { mode -> agentPremiumModel = mode },
             onKeepTalkingChange = { enabled -> onKeepTalkingChange(enabled) },
         )
 

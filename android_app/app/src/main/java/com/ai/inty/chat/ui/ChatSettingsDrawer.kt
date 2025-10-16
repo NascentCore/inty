@@ -61,8 +61,6 @@ fun ChatSettingsDrawer(
     chatViewModel: ChatViewModel,
     agentInfo: AgentInfo?,
     drawerState: MutableState<DrawerValue>,
-    onPremiumDialogShow: (Boolean) -> Unit,
-    onPremiumModeChange: (Boolean) -> Unit,
     onKeepTalkingChange: (Boolean) -> Unit,
 ) {
     val context = LocalContext.current
@@ -79,21 +77,6 @@ fun ChatSettingsDrawer(
             )
         }
 
-    // Premium model二状态设置：默认跟随全局设置，但受VIP状态限制
-    var agentPremiumModel by
-        remember(agentInfo?.id, vipStatus.isSubscribed) {
-            mutableStateOf(
-                if (!vipStatus.isSubscribed) {
-                    // 如果不是VIP，强制关闭Premium model
-                    false
-                } else {
-                    agentInfo?.let {
-                        // 获取角色专用设置，如果不存在则使用全局设置
-                        IntySetting.getAgentPremiumModel(it.id) ?: IntySetting.isShowPremiumModel()
-                    } ?: false
-                }
-            )
-        }
 
     LifecycleResumeEffect(chatViewModel) {
         chatViewModel.updateUserInfo()
@@ -260,51 +243,6 @@ fun ChatSettingsDrawer(
                             .background(color = Color(0x3378599A), shape = RoundedCornerShape(8.dp))
                 ) {
                     agentInfo?.let { agent ->
-
-                        // Premium model设置（二状态，与全局设置同步）
-                        Row(
-                            modifier =
-                                Modifier.fillMaxWidth()
-                                    .height(56.dp)
-                                    .padding(horizontal = horizontalPadding.dp)
-                                    .noRippleClickable {
-                                        // 检查是否正式登录（非游客且已登录）
-                                        if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
-                                            // 检查VIP状态
-                                            if (!vipStatus.isSubscribed) {
-                                                // 如果不是VIP，显示提示
-                                                onPremiumDialogShow(true)
-                                            } else {
-                                                // 如果是VIP，允许切换
-                                                agentPremiumModel = agentPremiumModel.not()
-                                                IntySetting.setAgentPremiumModel(
-                                                    agent.id,
-                                                    agentPremiumModel,
-                                                )
-                                                onPremiumModeChange(agentPremiumModel)
-                                            }
-                                        } else {
-                                            // 未登录或游客时跳转到登录页面
-                                            TheRouter.build(Constant.ROUTE_LOGIN)
-                                                .navigation(context)
-                                        }
-                                    },
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Text(
-                                text = stringResource(R.string.premium_tag_on_chat_page),
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Normal,
-                                color = Color.White,
-                            )
-                            Spacer(Modifier.weight(1f))
-                            Image(
-                                painter =
-                                    if (agentPremiumModel) painterResource(R.drawable.opened)
-                                    else painterResource(R.drawable.closed),
-                                contentDescription = null,
-                            )
-                        }
 
                         // 举报入口
                         Row(
