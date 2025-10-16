@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio.session import AsyncSession
 from sqlalchemy.orm import Session
 
 from app import models, schemas
-from app.models.resource import ResourceType
+from app.models.resource import ImageResourceMetadata, ResourceType
 from app.schemas.exclude_fields import EXCLUDE_FIELDS
 from app.schemas.resource import ResourceCreate
 from app.utils.image import ImageFormat, ImageSize
@@ -90,20 +90,21 @@ def create_image_resource(
     另一个记录存储 GCS URL（如 https://storage.googleapis.com/bucket/image.jpg）
     GCS URL 用于内部存储，CDN URL 用于外部 app 访问，其会做压缩裁切等功能。
     """
-    resource_metadata = {
-        "creator": user_id,
-        "size": size.model_dump(),
-        "content_type": f"image/{format.value}",
-        "byte_size": byte_size,
-        "compressed": compressed,
-        "uncompressed_image_url": uncompressed_image_url,
-        "cropped": cropped,
-        "uncropped_image_url": uncropped_image_url,
-    }
+    # Create image resource metadata using the new Pydantic model
+    image_metadata = ImageResourceMetadata(
+        creator=user_id,
+        size=size,
+        content_type=f"image/{format.value}",
+        byte_size=byte_size,
+        compressed=compressed,
+        uncompressed_image_url=uncompressed_image_url,
+        cropped=cropped,
+        uncropped_image_url=uncropped_image_url,
+        gcs_url=gcs_url,
+    )
 
-    # Add GCS URL to metadata if provided
-    if gcs_url:
-        resource_metadata["gcs_url"] = gcs_url
+    # Convert to dict for database storage
+    resource_metadata = image_metadata.model_dump()
     resource = create_resource(
         db=db,
         resource_in=ResourceCreate(
