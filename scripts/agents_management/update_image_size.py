@@ -4,17 +4,18 @@ Script to check agents' avatar and background URLs against resources table
 and create/update resource records with proper image metadata.
 """
 
+import asyncio
 import io
 
 from loguru import logger
 from PIL import Image
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio.session import AsyncSession
 
-from app.db.base import SessionLocal
+from app.db.session import AsyncSessionLocal
 from app.external_services.gcs import download_from_gcs, is_valid_gcs_url
 from app.models import Agent, Resource
-from app.services.resource_service import create_image_resource
+from app.services.resource_service import async_create_image_resource
 from app.utils.image import ImageFormat, ImageSize
 
 
@@ -28,7 +29,7 @@ def get_image_metadata(image_bytes: bytes) -> tuple[ImageSize, int]:
 _process_single_url = set()
 
 
-def process_agent_urls(db: Session, agent: Agent) -> None:
+async def process_agent_urls(db: AsyncSession, agent: Agent) -> None:
     """
     Process avatar and background URLs for a single agent
     """
@@ -40,7 +41,7 @@ def process_agent_urls(db: Session, agent: Agent) -> None:
         and is_valid_gcs_url(agent.avatar)
         and agent.avatar not in _process_single_url
     ):
-        process_single_url(db, agent.avatar, agent.creator_id, agent.id, "avatar")
+        await process_single_url(db, agent.avatar, agent.creator_id, agent.id, "avatar")
         _process_single_url.add(agent.avatar)
 
     # Process background URL
@@ -49,7 +50,7 @@ def process_agent_urls(db: Session, agent: Agent) -> None:
         and is_valid_gcs_url(agent.background)
         and agent.background not in _process_single_url
     ):
-        process_single_url(
+        await process_single_url(
             db, agent.background, agent.creator_id, agent.id, "background"
         )
         _process_single_url.add(agent.background)
@@ -61,7 +62,7 @@ def process_agent_urls(db: Session, agent: Agent) -> None:
                 and is_valid_gcs_url(bg_url)
                 and bg_url not in _process_single_url
             ):
-                process_single_url(
+                await process_single_url(
                     db, bg_url, agent.creator_id, agent.id, "background_image"
                 )
                 _process_single_url.add(bg_url)
@@ -84,8 +85,8 @@ def _check_metadata(metadata: dict, size: ImageSize, byte_size: int) -> bool:
     )
 
 
-def process_single_url(
-    db: Session, url: str, user_id: str, agent_id: str, url_type: str
+async def process_single_url(
+    db: AsyncSession, url: str, user_id: str, agent_id: str, url_type: str
 ) -> None:
     """
     Process a single URL - check if it exists in resources table and create/update if needed
@@ -101,7 +102,8 @@ def process_single_url(
         return
 
     # Check if resource already exists
-    existing_resource = db.query(Resource).filter(Resource.url == url).first()
+    result = await db.execute(select(Resource).filter(Resource.url == url))
+    existing_resource = result.scalar_one_or_none()
 
     if existing_resource:
         # Resource exists, check if metadata needs updating
@@ -115,7 +117,7 @@ def process_single_url(
                 }
             )
             existing_resource.resource_metadata = metadata
-            db.commit()
+            await db.commit()
             logger.info(f"Updated metadata for {url}")
         else:
             logger.info(f"Metadata is correct for {url}")
@@ -132,8 +134,8 @@ def process_single_url(
             elif url.lower().endswith(".jpg") or url.lower().endswith(".jpeg"):
                 format = ImageFormat.JPEG
 
-            create_image_resource(
-                db=db,
+            await async_create_image_resource(
+                async_db=db,
                 user_id=user_id,
                 url=url,
                 size=size,
@@ -144,47 +146,46 @@ def process_single_url(
             )
 
             # Update agent_id for the resource
-            resource = db.query(Resource).filter(Resource.url == url).first()
+            result = await db.execute(select(Resource).filter(Resource.url == url))
+            resource = result.scalar_one_or_none()
             if resource:
                 resource.agent_id = agent_id
-                db.commit()
+                await db.commit()
 
             logger.info(f"Created resource record for {url}")
         except Exception as e:
             logger.error(f"Error creating resource for {url}: {e}")
 
 
-def main():
+async def main():
     """
     Main function to process all agents
     """
     logger.info("Starting image size update script")
 
-    db = SessionLocal()
-    # Get all agents with avatar or background URLs
-    agents = (
-        db.query(Agent)
-        .filter(
-            (Agent.avatar.isnot(None))
-            | (Agent.background.isnot(None))
-            | (Agent.background_images.isnot(None))
-        )
-        .all()
-    )
-
-    logger.info(f"Found {len(agents)} agents with image URLs")
-    for agent in agents:
-        try:
-            logger.info(f"Processing agent {agent.id} ({agent.name})")
-            process_agent_urls(db, agent)
-            logger.info(f"Processed agent {agent.id} ({agent.name})")
-        except Exception as e:
-            logger.error(
-                f"Skipping, error when processing agent {agent.id} ({agent.name}): {e}"
+    async with AsyncSessionLocal() as db:
+        # Get all agents with avatar or background URLs
+        result = await db.execute(
+            select(Agent).filter(
+                (Agent.avatar.isnot(None))
+                | (Agent.background.isnot(None))
+                | (Agent.background_images.isnot(None))
             )
+        )
+        agents = result.scalars().all()
+
+        logger.info(f"Found {len(agents)} agents with image URLs")
+        for agent in agents:
+            try:
+                logger.info(f"Processing agent {agent.id} ({agent.name})")
+                await process_agent_urls(db, agent)
+                logger.info(f"Processed agent {agent.id} ({agent.name})")
+            except Exception as e:
+                logger.error(
+                    f"Skipping, error when processing agent {agent.id} ({agent.name}): {e}"
+                )
     logger.info("Image size update script completed")
-    db.close()
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
