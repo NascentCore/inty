@@ -116,14 +116,14 @@ data class ConversationItem(
 
     fun convertToAgentInfo(): AgentInfo {
         return AgentInfo(
-            avatar = agentAvatar,
-            background = agentBackground,
-            id = agentId,
-            name = agentName,
-            intro = agentIntro,
-            opening = agentOpening,
-            opening_audio_url = agentOpeningAudioUrl
-        )
+                avatar = agentAvatar,
+                background = agentBackground,
+                id = agentId,
+                name = agentName,
+                intro = agentIntro,
+                opening = agentOpening,
+                opening_audio_url = agentOpeningAudioUrl,
+            )
             .also { info -> info.isDeleted = this.isDeleted }
     }
 }
@@ -179,7 +179,7 @@ data class MsgVoiceRsp(
         val language: String? = null,
         val cached: Boolean = false,
         val generation_time: String? = null,
-        //出现limit次数限制时的错误字段
+        // 出现limit次数限制时的错误字段
         val error_code: String? = null,
         val description: String? = null,
         val used_count: Int = 0,
