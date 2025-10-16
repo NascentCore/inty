@@ -32,8 +32,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ai.inty.BuildConfig
 import com.ai.inty.Constant
 import com.ai.inty.R
-import com.ai.inty.base.noRippleClickable
-import com.ai.inty.billing.BillingRepository
 import com.ai.inty.ui.components.DeleteAccountDialog
 import com.ai.inty.ui.components.LogoutButton
 import com.ai.inty.ui.components.SettingDivider
@@ -57,7 +55,6 @@ fun SettingContent(
     val context = LocalContext.current
     val settingsState by viewModel.settingsState.collectAsState()
     val dialogState by viewModel.dialogState.collectAsState()
-    val vipStatus by BillingRepository.vipStatusFlow.collectAsState()
 
     // 监听删除账号结果
     LaunchedEffect(viewModel) {
@@ -173,28 +170,6 @@ private fun SupportAndHelpSection(context: Context, onShowDeleteDialog: () -> Un
         SettingNavigationItem(
             title = stringResource(R.string.settings_str_delete_account),
             onClick = onShowDeleteDialog,
-        )
-
-        SettingDivider()
-
-        // 订阅管理
-        // VIP状态
-        val vipStatus by BillingRepository.vipStatusFlow.collectAsState()
-        val str =
-            if (vipStatus.isSubscribed) {
-                stringResource(R.string.settings_subscription_management)
-            } else {
-                stringResource(R.string.settings_update_subscription)
-            }
-        SettingNavigationItem(
-            title = str,
-            onClick = {
-                if (vipStatus.isSubscribed) {
-                    TheRouter.build(Constant.ROUTE_SUBSCRIPTION_MANAGEMENT).navigation(context)
-                } else {
-                    TheRouter.build(Constant.ROUTE_VIP_CENTER).navigation(context)
-                }
-            },
         )
 
         SettingDivider()
