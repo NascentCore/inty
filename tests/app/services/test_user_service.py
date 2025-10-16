@@ -9,6 +9,7 @@ from sqlalchemy import create_engine, select
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
+from app.core.config import global_config_loaded_from_config_yaml
 from app.db.session import get_async_db
 from app.models import Base
 from app.models.user import AuthType, User
@@ -24,9 +25,7 @@ class TestUserDeletion:
         """Test the real delete_user_account function with async database"""
 
         # Create async database engine
-        engine = create_async_engine(
-            "postgresql+asyncpg://postgres:sxwl666!@localhost:5432/inty"
-        )
+        engine = create_async_engine(global_config_loaded_from_config_yaml.database.async_url)
 
         # Create all tables
         async with engine.begin() as conn:

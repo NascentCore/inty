@@ -8,6 +8,7 @@ from app.core.config import (
     DatabaseSettings,
     ElevenLabsConfig,
     EmbeddingConfig,
+    Environment,
     FirebaseConfig,
     GCSConfig,
     GoogleOAuthConfig,
@@ -17,6 +18,31 @@ from app.core.config import (
     VerificationConfig,
     _validate_config,
 )
+
+
+@pytest.fixture
+def config():
+    return Config(
+        app=AppConfig(
+            name="test",
+            environment=Environment.PROD,  # 非local环境
+            limits=AppConfig.LimitsConfig(
+                local_only_guest_user_image_gen_24h_limit=0,  # 合法配置
+            ),
+        ),
+        security=SecurityConfig(secret_key="test"),
+        database=DatabaseSettings(),
+        google_oauth=GoogleOAuthConfig(),
+        verification=VerificationConfig(),
+        logging=LoggingConfig(),
+        embedding=EmbeddingConfig(),
+        agent=AgentConfig(api_key="test", langchain_api_key="test"),
+        gcs=GCSConfig(bucket="test"),
+        firebase=FirebaseConfig(service_account_path="test"),
+        google_play=GooglePlayConfig(),
+        elevenlabs=ElevenLabsConfig(api_key="test"),
+        cloudflare=CloudflareConfig(),
+    )
 
 
 def test_guest_voice_auto_correction():
@@ -185,3 +211,92 @@ def test_guest_equals_free_is_valid():
     assert config.app.limits.free_user_chat_24h_limit == 10
     assert config.app.limits.guest_user_voice_24h_limit == 10
     assert config.app.limits.free_user_voice_24h_limit == 10
+
+
+def test_local_only_guest_user_image_gen_limit_in_non_local_environment(config):
+    config.app.environment = Environment.DEV
+    config.app.limits.local_only_guest_user_image_gen_24h_limit = 5
+
+    with pytest.raises(
+        ValueError,
+        match="local_only_guest_user_image_gen_24h_limit is only allowed in local environment",
+    ):
+        _validate_config(config)
+
+
+def test_local_only_guest_user_image_gen_limit_in_local_environment(config):
+    config.app.environment = Environment.LOCAL
+    config.app.limits.local_only_guest_user_image_gen_24h_limit = 5
+
+    # 应该不抛出异常
+    _validate_config(config)
+    assert config.app.limits.local_only_guest_user_image_gen_24h_limit == 5
+
+
+def test_local_only_guest_user_image_gen_limit_zero_in_non_local_environment(config):
+    config.app.environment = Environment.PROD
+    config.app.limits.local_only_guest_user_image_gen_24h_limit = 0
+
+    # 应该不抛出异常
+    _validate_config(config)
+    assert config.app.limits.local_only_guest_user_image_gen_24h_limit == 0
+
+
+def test_name_for_openrouter_dev_environment():
+    """测试DEV环境下的name_for_openrouter属性"""
+    app_config = AppConfig(
+        name="inty-backend",
+        environment=Environment.DEV,
+    )
+
+    assert app_config.name_for_openrouter == "https://inty-backend-dev"
+
+
+def test_name_for_openrouter_prod_environment():
+    """测试PROD环境下的name_for_openrouter属性"""
+    app_config = AppConfig(
+        name="inty-backend",
+        environment=Environment.PROD,
+    )
+
+    assert app_config.name_for_openrouter == "https://inty-backend-prod"
+
+
+def test_name_for_openrouter_local_environment():
+    """测试LOCAL环境下的name_for_openrouter属性"""
+    app_config = AppConfig(
+        name="inty-backend",
+        environment=Environment.LOCAL,
+    )
+
+    assert app_config.name_for_openrouter == "https://inty-backend-local"
+
+
+def test_name_for_openrouter_unspecified_environment():
+    """测试UNSPECIFIED环境下的name_for_openrouter属性"""
+    app_config = AppConfig(
+        name="inty-backend",
+        environment=Environment.UNSPECIFIED,
+    )
+
+    assert app_config.name_for_openrouter == "https://inty-backend-unspecified"
+
+
+def test_name_for_openrouter_custom_app_name():
+    """测试自定义应用名称的name_for_openrouter属性"""
+    app_config = AppConfig(
+        name="my-custom-app",
+        environment=Environment.DEV,
+    )
+
+    assert app_config.name_for_openrouter == "https://my-custom-app-dev"
+
+
+def test_name_for_openrouter_with_special_characters():
+    """测试包含特殊字符的应用名称的name_for_openrouter属性"""
+    app_config = AppConfig(
+        name="inty-backend-v2",
+        environment=Environment.PROD,
+    )
+
+    assert app_config.name_for_openrouter == "https://inty-backend-v2-prod"

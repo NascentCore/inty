@@ -1,6 +1,7 @@
 import os
 import sys
 from dataclasses import dataclass, field
+from enum import Enum
 from pathlib import Path
 from typing import List, Optional
 
@@ -19,6 +20,17 @@ from pydantic import AnyHttpUrl
 GEMINI_2_5_FLASH = "google/gemini-2.5-flash"
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 API_V1_PREFIX = "/api/v1"
+
+
+class Environment(str, Enum):
+    """Environment enum for application deployment environments."""
+
+    DEV = "dev"
+    PROD = "prod"
+    LOCAL = "local"
+    UNSPECIFIED = "unspecified"
+
+
 API_V2_PREFIX = "/api/v2"
 
 
@@ -94,7 +106,7 @@ class AppConfig:
     api_v1_prefix: str = API_V1_PREFIX
     backend_cors_origins: List[AnyHttpUrl] = None
     version: str = "1.1.0"
-    environment: str = "dev"
+    environment: Environment = Environment.DEV
     gcp_service_account_key: str = ".secrets/gcp-service-account-key.json"
 
     api_endpoints: APIEndpointsConfig = field(default_factory=APIEndpointsConfig)
@@ -105,6 +117,8 @@ class AppConfig:
         max_image_size_mb: int = 4
         # DEPRECATED: Use free_user_image_gen_24h_limit instead
         free_user_image_gen_daily_limit: int = 4
+        # Only used for testing purpose to allow easier integration with test client.
+        local_only_guest_user_image_gen_24h_limit: int = 0
         free_user_image_gen_24h_limit: int = 4
         subscribed_user_image_gen_24h_limit: int = 8
         free_user_agent_creation_24h_limit: int = 6
@@ -127,7 +141,7 @@ class AppConfig:
     def name_for_openrouter(self) -> str:
         # https:// is required to make it recognized by open router.
         # Normal string will be rejected by open router.
-        return f"https://{self.name}-{self.environment}"
+        return f"https://{self.name}-{self.environment.value}"
 
 
 @dataclass
@@ -239,6 +253,7 @@ def load_config(path: str) -> Config:
         print(f"config file {path} not found!")
         sys.exit(1)
 
+    print(f"[CONFIG] Loading config from: {config_path.absolute()}")
     with open(path, "r", encoding="utf-8") as f:
         data = yaml.safe_load(f)
 
@@ -246,6 +261,10 @@ def load_config(path: str) -> Config:
     app_data = data.get("app", {})
     if "limits" in app_data and isinstance(app_data["limits"], dict):
         app_data["limits"] = AppConfig.LimitsConfig(**app_data["limits"])
+
+    # Convert environment string to Environment enum if present
+    if "environment" in app_data and isinstance(app_data["environment"], str):
+        app_data["environment"] = Environment(app_data["environment"])
 
     return Config(
         app=AppConfig(**app_data),
@@ -315,15 +334,24 @@ def _validate_config(config: Config):
         limits.guest_user_voice_24h_limit = default_guest
         limits.free_user_voice_24h_limit = default_free
 
+    if (
+        config.app.environment != Environment.LOCAL
+        and limits.local_only_guest_user_image_gen_24h_limit > 0
+    ):
+        raise ValueError(
+            "local_only_guest_user_image_gen_24h_limit is only allowed in local environment"
+        )
+
 
 global_config_loaded_from_config_yaml = load_config("config.yaml")
+print(f"[CONFIG] Database URL: {global_config_loaded_from_config_yaml.database.url}")
 _validate_config(global_config_loaded_from_config_yaml)
 
 
 # 设置 LangSmith 环境变量用于支持 tracing，因为其只支持从环境变量读取设置，而非依赖注入。
 os.environ["LANGSMITH_TRACING_V2"] = "true"
 os.environ["LANGSMITH_PROJECT"] = (
-    f"{global_config_loaded_from_config_yaml.app.name}-{global_config_loaded_from_config_yaml.app.environment}"
+    f"{global_config_loaded_from_config_yaml.app.name}-{global_config_loaded_from_config_yaml.app.environment.value}"
 )
 os.environ["LANGCHAIN_API_KEY"] = (
     global_config_loaded_from_config_yaml.agent.langchain_api_key
