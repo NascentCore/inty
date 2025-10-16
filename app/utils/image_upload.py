@@ -209,41 +209,6 @@ async def process_image_upload(
 
         result.original_url = uncompressed_url
 
-        create_image_resource(
-            db=db,
-            user_id=user_id,
-            url=uncompressed_url,
-            size=size,
-            format=ImageFormat(original_file_ext),
-            byte_size=len(original_file_data),
-        )
-        create_image_resource(
-            db=db,
-            user_id=user_id,
-            url=uncompressed_gcs_url,
-            size=size,
-            format=ImageFormat(original_file_ext),
-            byte_size=len(original_file_data),
-        )
-
-    # Create resource record for the compressed image
-    create_image_resource(
-        db=db,
-        user_id=user_id,
-        url=url,
-        size=size,
-        format=ImageFormat(file_ext),
-        byte_size=len(file_data),
-    )
-    create_image_resource(
-        db=db,
-        user_id=user_id,
-        url=gcs_url,
-        size=size,
-        format=ImageFormat(file_ext),
-        byte_size=len(file_data),
-    )
-
     # Handle cropping if enabled
     if cropping_avatar:
         crop_avatar_result = crop_avatar(file_data)
@@ -278,26 +243,32 @@ async def process_image_upload(
 
         result.avatar_url = cropped_avatar_url
 
-        # Write the metadata of the uploaded image, which might be compressed.
+    if result.original_url:
         create_image_resource(
             db=db,
             user_id=user_id,
-            url=cropped_avatar_url,
-            size=crop_avatar_result.size,
-            format=ImageFormat.JPEG,
-            byte_size=len(jpg_data),
-            cropped=True,
-            uncropped_image_url=result.url,
+            url=result.original_url,
+            size=size,
+            format=ImageFormat(original_file_ext),
+            byte_size=len(original_file_data),
         )
+    if result.avatar_url:
         create_image_resource(
             db=db,
             user_id=user_id,
-            url=cropped_avatar_gcs_url,
+            url=result.avatar_url,
             size=crop_avatar_result.size,
             format=ImageFormat.JPEG,
             byte_size=len(jpg_data),
-            cropped=True,
-            uncropped_image_url=result.url,
+        )
+    if result.url:
+        create_image_resource(
+            db=db,
+            user_id=user_id,
+            url=result.url,
+            size=size,
+            format=ImageFormat(file_ext),
+            byte_size=len(file_data),
         )
 
     return APIResponse.success(data=result)
