@@ -5,6 +5,12 @@ app:
   debug: true
   backend_cors_origins: ["http://localhost:3000"]
   environment: "unspecified"
+  limits:
+    # Configurable counting cycle in hours for all time-based limits
+    # When None or not set, defaults to 24 hours for backward compatibility
+    # Example: limit_counting_cycle_hours: 12  # Use 12-hour rolling windows
+    # Example: limit_counting_cycle_hours: 48  # Use 48-hour rolling windows
+    # limit_counting_cycle_hours: null  # Use default 24-hour rolling windows
 
 logging:                                                                         
   level: "DEBUG"

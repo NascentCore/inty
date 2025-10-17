@@ -268,6 +268,7 @@ class SubscriptionService:
                     background_generation_limit_per_day=getattr(
                         subscription.plan, "background_generation_limit_per_day", -1
                     ),
+                    limit_counting_cycle_hours=global_config_loaded_from_config_yaml.app.limits.limit_counting_cycle_hours,
                     features=subscription.plan.features or {},
                     feature_list=feature_list,
                 )
@@ -314,6 +315,7 @@ class SubscriptionService:
                     background_generation_limit_per_day=free_limits[
                         "background_generation_limit"
                     ],
+                    limit_counting_cycle_hours=global_config_loaded_from_config_yaml.app.limits.limit_counting_cycle_hours,
                     features={},
                     feature_list=feature_list,
                 )
@@ -845,7 +847,7 @@ class SubscriptionService:
             raise
 
     async def check_chat_limit(
-        self, db: AsyncSession, user: schemas.User
+        self, db: AsyncSession, user: schemas.User, cycle_hours: Optional[int] = None
     ) -> Tuple[bool, int, int]:
         """
         检查用户聊天次数限制
@@ -882,27 +884,33 @@ class SubscriptionService:
                 chat_limit = None
 
             if chat_limit is not None:
-                # 获取过去24小时内的聊天次数
+                # 获取过去指定时间内的聊天次数
                 now = datetime.now(timezone.utc)
-                hours_24_ago = now - timedelta(hours=24)
+                # Use provided cycle_hours or fall back to config, defaulting to 24
+                if cycle_hours is None:
+                    cycle_hours = (
+                        global_config_loaded_from_config_yaml.app.limits.limit_counting_cycle_hours
+                        or 24
+                    )
+                hours_ago = now - timedelta(hours=cycle_hours)
 
-                chat_24h_count_result = await db.execute(
+                chat_count_result = await db.execute(
                     select(func.sum(SubscriptionUsage.usage_count)).where(
                         and_(
                             SubscriptionUsage.user_id == user.id,
                             SubscriptionUsage.usage_type == "chat",
-                            SubscriptionUsage.usage_date >= hours_24_ago,
+                            SubscriptionUsage.usage_date >= hours_ago,
                         )
                     )
                 )
-                chat_24h_count = chat_24h_count_result.scalar() or 0
+                chat_count = chat_count_result.scalar() or 0
 
-                # 检查是否超出24小时限制
-                is_allowed = chat_24h_count < chat_limit
+                # 检查是否超出限制
+                is_allowed = chat_count < chat_limit
 
                 return (
                     is_allowed,
-                    chat_24h_count,
+                    chat_count,
                     chat_limit,
                 )
 
@@ -941,7 +949,7 @@ class SubscriptionService:
             return True, 0, -1
 
     async def check_voice_generation_limit(
-        self, db: AsyncSession, user: schemas.User
+        self, db: AsyncSession, user: schemas.User, cycle_hours: Optional[int] = None
     ) -> Tuple[bool, int, int]:
         """
         检查用户语音生成次数限制
@@ -972,25 +980,31 @@ class SubscriptionService:
                 # 如果没有限制，返回允许
                 return True, 0, -1
 
-            # 获取过去24小时内的语音生成次数
+            # 获取过去指定时间内的语音生成次数
             now = datetime.now(timezone.utc)
-            hours_24_ago = now - timedelta(hours=24)
+            # Use provided cycle_hours or fall back to config, defaulting to 24
+            if cycle_hours is None:
+                cycle_hours = (
+                    global_config_loaded_from_config_yaml.app.limits.limit_counting_cycle_hours
+                    or 24
+                )
+            hours_ago = now - timedelta(hours=cycle_hours)
 
             voice_count_result = await db.execute(
                 select(func.sum(SubscriptionUsage.usage_count)).where(
                     and_(
                         SubscriptionUsage.user_id == user.id,
                         SubscriptionUsage.usage_type == "voice_generation",
-                        SubscriptionUsage.usage_date >= hours_24_ago,
+                        SubscriptionUsage.usage_date >= hours_ago,
                     )
                 )
             )
-            voice_24h_count = voice_count_result.scalar() or 0
+            voice_count = voice_count_result.scalar() or 0
 
             # 检查是否超出限制
-            is_allowed = voice_24h_count < voice_limit
+            is_allowed = voice_count < voice_limit
 
-            return is_allowed, voice_24h_count, voice_limit
+            return is_allowed, voice_count, voice_limit
 
         except Exception as e:
             logger.error(f"检查语音生成次数限制失败: {str(e)}")
@@ -998,7 +1012,7 @@ class SubscriptionService:
             return True, 0, -1
 
     async def check_agent_creation_limit(
-        self, db: AsyncSession, user: schemas.User
+        self, db: AsyncSession, user: schemas.User, cycle_hours: Optional[int] = None
     ) -> Tuple[bool, int, int]:
         """
         检查用户Agent创建数量限制（24小时滚动窗口）
@@ -1029,27 +1043,33 @@ class SubscriptionService:
                 # 如果没有限制，返回允许
                 return True, 0, -1
 
-            # 获取过去24小时内创建的Agent数量
+            # 获取过去指定时间内创建的Agent数量
             from app.models.agent import Agent
 
             now = datetime.now(timezone.utc)
-            hours_24_ago = now - timedelta(hours=24)
+            # Use provided cycle_hours or fall back to config, defaulting to 24
+            if cycle_hours is None:
+                cycle_hours = (
+                    global_config_loaded_from_config_yaml.app.limits.limit_counting_cycle_hours
+                    or 24
+                )
+            hours_ago = now - timedelta(hours=cycle_hours)
 
             agent_count_result = await db.execute(
                 select(func.count(Agent.id)).where(
                     and_(
                         Agent.creator_id == user.id,
-                        Agent.created_at >= hours_24_ago,
+                        Agent.created_at >= hours_ago,
                         Agent.deleted_at.is_(None),
                     )
                 )
             )
-            agent_24h_count = agent_count_result.scalar() or 0
+            agent_count = agent_count_result.scalar() or 0
 
             # 检查是否超出限制
-            is_allowed = agent_24h_count < agent_limit
+            is_allowed = agent_count < agent_limit
 
-            return is_allowed, agent_24h_count, agent_limit
+            return is_allowed, agent_count, agent_limit
 
         except Exception as e:
             logger.error(f"检查Agent创建数量限制失败: {str(e)}")
@@ -1057,7 +1077,7 @@ class SubscriptionService:
             return True, 0, -1
 
     async def check_image_gen_limit(
-        self, db: AsyncSession, user: schemas.User
+        self, db: AsyncSession, user: schemas.User, cycle_hours: Optional[int] = None
     ) -> Tuple[bool, int, int]:
         """
         检查用户图片生成次数限制（24小时滚动窗口）
@@ -1094,25 +1114,31 @@ class SubscriptionService:
                 # 如果没有限制，返回允许
                 return True, 0, -1
 
-            # 获取过去24小时内的图片生成次数
+            # 获取过去指定时间内的图片生成次数
             now = datetime.now(timezone.utc)
-            hours_24_ago = now - timedelta(hours=24)
+            # Use provided cycle_hours or fall back to config, defaulting to 24
+            if cycle_hours is None:
+                cycle_hours = (
+                    global_config_loaded_from_config_yaml.app.limits.limit_counting_cycle_hours
+                    or 24
+                )
+            hours_ago = now - timedelta(hours=cycle_hours)
 
             generation_count_result = await db.execute(
                 select(func.sum(SubscriptionUsage.usage_count)).where(
                     and_(
                         SubscriptionUsage.user_id == user.id,
                         SubscriptionUsage.usage_type == "background_generation",
-                        SubscriptionUsage.usage_date >= hours_24_ago,
+                        SubscriptionUsage.usage_date >= hours_ago,
                     )
                 )
             )
-            image_24h_count = generation_count_result.scalar() or 0
+            image_count = generation_count_result.scalar() or 0
 
             # 检查是否超出限制
-            is_allowed = image_24h_count < image_limit
+            is_allowed = image_count < image_limit
 
-            return is_allowed, image_24h_count, image_limit
+            return is_allowed, image_count, image_limit
 
         except Exception as e:
             logger.error(f"检查图片生成次数限制失败: {str(e)}")

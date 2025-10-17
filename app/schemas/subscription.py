@@ -270,6 +270,9 @@ class SubscriptionStatusResponse(BaseModel):
     background_generation_limit_per_day: int = Field(
         3, description="每日背景图生成次数限制（已废弃，使用image_gen_24h_limit）"
     )
+    limit_counting_cycle_hours: Optional[int] = Field(
+        None, description="限制计数周期（小时），None表示使用默认24小时"
+    )
     features: Dict[str, Any] = Field(default_factory=dict, description="功能权益")
     feature_list: List[FeatureInfo] = Field(
         default_factory=list, description="权益功能列表"

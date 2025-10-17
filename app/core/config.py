@@ -130,6 +130,9 @@ class AppConfig:
         guest_user_voice_24h_limit: int = 10
         subscribed_user_voice_24h_limit: int = 100
         image_compression_threshold_size_kb: int = 500
+        # Configurable counting cycle in hours for all time-based limits
+        # When None, defaults to 24 hours for backward compatibility
+        limit_counting_cycle_hours: Optional[int] = None
 
     limits: LimitsConfig = None
 
@@ -341,6 +344,13 @@ def _validate_config(config: Config):
         raise ValueError(
             "local_only_guest_user_image_gen_24h_limit is only allowed in local environment"
         )
+
+    # Validate limit_counting_cycle_hours if set
+    if limits.limit_counting_cycle_hours is not None:
+        if limits.limit_counting_cycle_hours <= 0:
+            raise ValueError(
+                f"limit_counting_cycle_hours must be positive, got {limits.limit_counting_cycle_hours}"
+            )
 
 
 global_config_loaded_from_config_yaml = load_config("config.yaml")

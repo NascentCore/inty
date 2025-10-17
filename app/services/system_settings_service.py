@@ -224,6 +224,7 @@ class SystemSettingsService:
             "agent_creation_limit": await self.get_setting(
                 db, "free_user_agent_creation_limit", 6
             ),
+            "limit_counting_cycle_hours": global_config_loaded_from_config_yaml.app.limits.limit_counting_cycle_hours,
         }
 
 
