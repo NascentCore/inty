@@ -14,6 +14,7 @@
 * App name: IntelliMate
 * Short description: IntelliMate: Ultimate companionship, reimagined with AI
 * Full description: Role-play with AI characters. Create your own AI companion. Experience your own imagination.
+* Figma: GPlay store listing graphics 1.1.x
 
 ## Google Play release note
 
