@@ -53,7 +53,7 @@ firebase:
 agent:
   api_key: "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"
   # inty-dev api key personal access token
-  langchain_api_key: "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"
+  langchain_api_key: "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"
 
 google_play:
   service_account_key: "inty-backend-key.json"
