@@ -19,7 +19,6 @@ object UCropHelper {
         // So that the preview can be viewed after first modification,
         // but the future update will always be stale.
         val avatarTempFile = File(AppEnv.dirs.imagecache, "my_avatar_${timestamp}.jpg")
-        android.util.Log.d("UCropHelper", "Creating crop file: ${avatarTempFile.absolutePath}")
 
         val uCropOptions = UCrop.Options()
         uCropOptions.apply {

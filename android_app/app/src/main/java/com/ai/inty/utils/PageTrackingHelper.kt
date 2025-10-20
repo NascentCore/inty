@@ -53,8 +53,6 @@ object PageTrackingHelper {
                 pageClass,
                 additionalParams + mapOf("timestamp" to System.currentTimeMillis()),
             )
-
-            EasyLog.log("Page tracking: $pageName ($pageClass)")
         } catch (e: Exception) {
             EasyLog.log("Failed to track page view: ${e.message}", EasyLog.ERROR)
         }
@@ -88,7 +86,6 @@ object PageTrackingHelper {
                 ) + additionalParams,
             )
 
-            EasyLog.log("User interaction: $action on $target")
         } catch (e: Exception) {
             EasyLog.log("Failed to track user interaction: ${e.message}", EasyLog.ERROR)
         }
@@ -130,7 +127,6 @@ object PageTrackingHelper {
             FirebaseManager.setCustomKey("last_network_request", "$method $url")
             FirebaseManager.setCustomKey("last_network_success", success.toString())
 
-            EasyLog.log("Network request: $method $url - ${if (success) "success" else "failed"}")
         } catch (e: Exception) {
             EasyLog.log("Failed to track network request: ${e.message}", EasyLog.ERROR)
         }
@@ -159,7 +155,6 @@ object PageTrackingHelper {
             FirebaseManager.setCustomKey("last_error_type", errorType)
             FirebaseManager.setCustomKey("error_page", currentPage ?: "unknown")
 
-            EasyLog.log("Error tracked: $error ($errorType)")
         } catch (e: Exception) {
             EasyLog.log("Failed to track error: ${e.message}", EasyLog.ERROR)
         }
@@ -182,7 +177,6 @@ object PageTrackingHelper {
         try {
             FirebaseManager.setUserId(userId)
             FirebaseManager.setCustomKey("user_id", userId)
-            EasyLog.log("User ID set: $userId")
         } catch (e: Exception) {
             EasyLog.log("Failed to set user ID: ${e.message}", EasyLog.ERROR)
         }
@@ -193,7 +187,6 @@ object PageTrackingHelper {
         try {
             FirebaseManager.setUserProperty(property, value)
             FirebaseManager.setCustomKey("user_$property", value)
-            EasyLog.log("User property set: $property = $value")
         } catch (e: Exception) {
             EasyLog.log("Failed to set user property: ${e.message}", EasyLog.ERROR)
         }

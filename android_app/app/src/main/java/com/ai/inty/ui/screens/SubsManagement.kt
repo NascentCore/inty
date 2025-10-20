@@ -11,8 +11,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -24,7 +22,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ai.inty.R
 import com.ai.inty.base.noRippleClickable
-import com.ai.inty.billing.BillingRepository
 import com.ai.inty.ui.components.SettingDivider
 import com.ai.inty.ui.components.SettingNavigationItem
 import com.ai.inty.ui.components.SubscriptionManagementContainer
@@ -41,9 +38,6 @@ fun SubscriptionManagementScreen(
     viewModel: SubsManageViewModel,
 ) {
     val context = LocalContext.current
-
-    // 获取订阅状态
-    val vipStatus by BillingRepository.vipStatusFlow.collectAsState()
 
     // 观察来自 ViewModel 的 UI 事件
     LaunchedEffect(Unit) {
@@ -76,7 +70,9 @@ fun SubscriptionManagementScreen(
                 navigationIcon = {
                     Image(
                         modifier =
-                            Modifier.padding(horizontal = 12.dp).noRippleClickable { onBack() },
+                            Modifier
+                                .padding(horizontal = 12.dp)
+                                .noRippleClickable { onBack() },
                         painter = painterResource(R.drawable.back),
                         contentDescription = null,
                     )
@@ -101,7 +97,7 @@ fun SubscriptionManagementScreen(
 }
 
 @SuppressLint("ViewModelConstructorInComposable")
-@Preview(showBackground = true)
+@Preview
 @Composable
 private fun SubscriptionManagementScreenPreview() {
     // 这里需要模拟 ViewModel，实际使用时会在 Activity 中传入

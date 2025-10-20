@@ -21,7 +21,6 @@ object AudioPreloadManager {
 
         audioCacheManager = AudioCacheManager.getInstance(context)
         isInitialized = true
-        EasyLog.log("AudioPreloadManager - 初始化完成")
     }
 
     /**
@@ -41,22 +40,17 @@ object AudioPreloadManager {
             return
         }
 
-        EasyLog.log("AudioPreloadManager - 开始预加载 ${agents.size} 个agents的开场白音频")
-
         try {
             withContext(Dispatchers.IO) {
                 // 收集所有需要预加载的音频URL
                 val audioUrls = collectOpeningAudioUrls(agents)
-                EasyLog.log("AudioPreloadManager - 收集到 ${audioUrls.size} 个音频URL")
 
                 if (audioUrls.isNotEmpty()) {
                     // 使用并发预加载，提高效率
                     preloadAudioUrls(audioUrls, maxConcurrent)
-                    EasyLog.log("AudioPreloadManager - 批量预加载音频完成")
+                    EasyLog.log("AudioPreloadManager - 批量预加载${audioUrls.size}个音频完成")
                 }
             }
-
-            EasyLog.log("AudioPreloadManager - 所有音频预加载完成")
         } catch (e: Exception) {
             EasyLog.log("AudioPreloadManager - 预加载异常: ${e.message}", EasyLog.ERROR)
         }
@@ -80,8 +74,6 @@ object AudioPreloadManager {
             return
         }
 
-        EasyLog.log("AudioPreloadManager - 开始预加载前 $criticalCount 个关键开场白音频")
-
         try {
             withContext(Dispatchers.IO) {
                 val audioUrls = collectOpeningAudioUrls(criticalAgents)
@@ -89,11 +81,8 @@ object AudioPreloadManager {
                 if (audioUrls.isNotEmpty()) {
                     // 优先预加载关键音频，使用更高的并发数
                     preloadAudioUrls(audioUrls, 5)
-                    EasyLog.log("AudioPreloadManager - 关键音频批量预加载完成")
                 }
             }
-
-            EasyLog.log("AudioPreloadManager - 关键音频预加载完成")
         } catch (e: Exception) {
             EasyLog.log("AudioPreloadManager - 关键音频预加载异常: ${e.message}", EasyLog.ERROR)
         }
@@ -108,7 +97,6 @@ object AudioPreloadManager {
             val audioUrl = agent.opening_audio_url
             if (audioUrl.isNotBlank()) {
                 audioUrls.add(audioUrl)
-                EasyLog.log("AudioPreloadManager - 收集到音频URL: ${agent.name} -> $audioUrl")
             }
         }
 

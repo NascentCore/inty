@@ -70,8 +70,6 @@ class NetworkManager private constructor() {
             val networkType = getNetworkType(network)
             val isConnected = networkType != NetworkType.NONE
 
-            Log.d(TAG, "Network connected: $networkType")
-
             // 通知所有监听器
             networkStateListeners.forEach { listener ->
                 listener.onNetworkStateChanged(isConnected, networkType)
@@ -83,7 +81,6 @@ class NetworkManager private constructor() {
 
         override fun onLost(network: Network) {
             super.onLost(network)
-            Log.d(TAG, "Network disconnected")
 
             // 通知所有监听器
             networkStateListeners.forEach { listener ->

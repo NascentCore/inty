@@ -1,7 +1,5 @@
 package com.ai.inty.utils
 
-import com.inty.utils.log.EasyLog
-
 object AvatarManager {
 
     private var generatedAvatarUrl: String? = null
@@ -15,7 +13,6 @@ object AvatarManager {
     fun setGeneratedAvatarUrl(url: String) {
         generatedAvatarUrl = url
         generatedAvatarUrls = emptyList() // Clear multiple URLs when setting single URL
-        EasyLog.log("AvatarManager: Set generated avatar URL: $url")
     }
 
     fun setGeneratedAvatarUrls(urls: List<String>) {
@@ -24,20 +21,17 @@ object AvatarManager {
         selectedImageIndex = 0 // Reset selection to first image
         isGenerating = false
         generationError = null
-        EasyLog.log("AvatarManager: Set generated avatar URLs: $urls")
     }
 
     fun setGenerationPrompt(prompt: String) {
         generationPrompt = prompt
         isGenerating = true
         generationError = null
-        EasyLog.log("AvatarManager: Set generation prompt and started generating")
     }
 
     fun setGenerationError(error: String) {
         generationError = error
         isGenerating = false
-        EasyLog.log("AvatarManager: Set generation error: $error")
     }
 
     fun clearGeneratedAvatarUrl() {
@@ -48,30 +42,17 @@ object AvatarManager {
         generationError = null
         generationPrompt = ""
         chatBackgroundUrl = null
-        EasyLog.log("AvatarManager: Cleared all avatar data")
     }
 
     fun clearAllAvatarData() {
         clearGeneratedAvatarUrl()
-        EasyLog.log(
-            "AvatarManager: Cleared all avatar and background data",
-            priority = EasyLog.DEBUG,
-        )
     }
 
     fun getCurrentAvatarUrl(): String? {
-        EasyLog.log(
-            "AvatarManager: Current avatar URL: $generatedAvatarUrl",
-            priority = EasyLog.DEBUG,
-        )
         return generatedAvatarUrl
     }
 
     fun getCurrentAvatarUrls(): List<String> {
-        EasyLog.log(
-            "AvatarManager: Current avatar URLs: $generatedAvatarUrls",
-            priority = EasyLog.DEBUG,
-        )
         return generatedAvatarUrls
     }
 
@@ -81,7 +62,6 @@ object AvatarManager {
 
     fun setSelectedImageIndex(index: Int) {
         selectedImageIndex = index
-        EasyLog.log("AvatarManager: Set selected image index: $index")
     }
 
     fun isGenerating(): Boolean {
@@ -100,6 +80,5 @@ object AvatarManager {
 
     fun setChatBackgroundUrl(url: String) {
         chatBackgroundUrl = url
-        EasyLog.log("AvatarManager: Set chat background URL: $url")
     }
 }

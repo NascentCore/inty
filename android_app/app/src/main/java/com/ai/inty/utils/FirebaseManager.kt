@@ -6,10 +6,10 @@ import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.crashlytics.FirebaseCrashlytics
 import com.google.firebase.perf.FirebasePerformance
 import com.inty.utils.log.EasyLog
-import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import java.util.concurrent.ConcurrentHashMap
 
 /** Firebase 统一管理器 负责 Firebase 服务的初始化、管理和错误处理 */
 object FirebaseManager {
@@ -72,7 +72,6 @@ object FirebaseManager {
             performance = FirebasePerformance.getInstance()
 
             isInitialized = true
-            EasyLog.log("FirebaseManager - 初始化完成")
         } catch (e: Exception) {
             EasyLog.log("FirebaseManager - 初始化失败: ${e.message}", EasyLog.ERROR)
             // 即使初始化失败，也不应该崩溃应用
@@ -123,7 +122,6 @@ object FirebaseManager {
                 try {
                     val bundle = createBundle(parameters)
                     analytics.logEvent(eventName, bundle)
-                    EasyLog.log("Firebase Analytics: $eventName")
                 } catch (e: Exception) {
                     logError("logEvent", "Failed to log event: ${e.message}")
                 }
@@ -151,7 +149,6 @@ object FirebaseManager {
                             putParamsToBundle(this, additionalParams)
                         }
                     analytics.logEvent(FirebaseAnalytics.Event.SCREEN_VIEW, bundle)
-                    EasyLog.log("Firebase Analytics: Screen view - $screenName")
                 } catch (e: Exception) {
                     logError("logScreenView", "Failed to log screen view: ${e.message}")
                 }
@@ -169,7 +166,6 @@ object FirebaseManager {
             CoroutineScope(Dispatchers.IO).launch {
                 try {
                     crashlytics.setCustomKey(key, value)
-                    EasyLog.log("Firebase Crashlytics: Set custom key - $key: $value")
                 } catch (e: Exception) {
                     logError("setCustomKey", "Failed to set custom key: ${e.message}")
                 }
@@ -188,7 +184,6 @@ object FirebaseManager {
                 try {
                     customKeys.forEach { (key, value) -> crashlytics.setCustomKey(key, value) }
                     crashlytics.recordException(exception)
-                    EasyLog.log("Firebase Crashlytics: Recorded exception - ${exception.message}")
                 } catch (e: Exception) {
                     logError("recordException", "Failed to record exception: ${e.message}")
                 }
@@ -208,7 +203,6 @@ object FirebaseManager {
                 try {
                     analytics?.setUserId(userId)
                     crashlytics?.setUserId(userId)
-                    EasyLog.log("Firebase: Set user ID - $userId")
                 } catch (e: Exception) {
                     logError("setUserId", "Failed to set user ID: ${e.message}")
                 }
@@ -228,7 +222,6 @@ object FirebaseManager {
                 try {
                     analytics?.setUserProperty(property, value)
                     crashlytics?.setCustomKey("user_$property", value)
-                    EasyLog.log("Firebase: Set user property - $property = $value")
                 } catch (e: Exception) {
                     logError("setUserProperty", "Failed to set user property: ${e.message}")
                 }
@@ -256,7 +249,6 @@ object FirebaseManager {
                 samplingRates = samplingRates ?: config.samplingRates,
                 minIntervalMsPerEvent = minIntervalMsPerEvent ?: config.minIntervalMsPerEvent,
             )
-        EasyLog.log("FirebaseManager - switches updated")
     }
 
     private fun shouldLogEvent(eventName: String): Boolean {
