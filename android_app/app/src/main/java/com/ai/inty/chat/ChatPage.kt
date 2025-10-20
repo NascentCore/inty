@@ -102,7 +102,6 @@ internal fun ChatPage(
     // 统一生命周期：页面进入 onPause（包括 Activity 或应用退到后台）时停止音频
     LifecycleResumeEffect(isCurrentPage) {
         onPauseOrDispose {
-            EasyLog.log("音频LOG测试 ChatPage onPause -> stopAllPlayback")
             chatViewModel.pauseVoicePlayback()
         }
     }
@@ -111,14 +110,7 @@ internal fun ChatPage(
     DisposableEffect(chatViewModel, isCurrentPage) {
         onDispose {
             if (!isCurrentPage) {
-                EasyLog.log("音频LOG测试 ChatPage disposed, resetting voice playback")
                 chatViewModel.resetVoicePlayback()
-                // 清理OpeningPlayState中可能存在的错误状态
-                agentInfo?.id?.let { agentId ->
-                    // 注意：这里不清理已播放状态，因为用户可能希望保持已播放记录
-                    // 只在应用重启时清理，通过OpeningPlayState的clearAllPlayed方法
-                    EasyLog.log("音频LOG测试 ChatPage disposed for agent: $agentId")
-                }
             }
         }
     }
@@ -129,7 +121,6 @@ internal fun ChatPage(
         if (currentAgentId != null) {
             // 当agent切换时，停止非当前agent的音频播放
             chatViewModel.stopNonCurrentAgentPlayback()
-            EasyLog.log("Agent切换，停止非当前agent的音频播放: $currentAgentId")
         }
     }
 
@@ -459,10 +450,6 @@ internal fun ChatPage(
                             // 在反向布局中，firstVisibleItemIndex=0表示在底部（最新消息），需要滚动到更早的消息才算滚动过
                             val hasScrolled = firstVisibleIndex > 0 || scrollOffset > 0
                             val shouldLoadMore = hasEnoughData && isNearTop && hasScrolled
-
-                            EasyLog.log(
-                                "Smart scroll check: shouldLoadMore=$shouldLoadMore, hasEnoughData=$hasEnoughData (totalItemsCount=$totalItemsCount > visibleItems=${visibleItems.size}+${LOAD_MORE_MIN_EXTRA_ITEMS}), isNearTop=$isNearTop (lastVisibleIndex=$lastVisibleIndex, threshold=${totalItemsCount - LOAD_MORE_NEAR_TOP_THRESHOLD}), hasScrolled=$hasScrolled (firstVisibleIndex=$firstVisibleIndex, scrollOffset=$scrollOffset), hasMoreMessages=$hasMoreMessages, isLoadingMore=$isLoadingMore"
-                            )
 
                             if (shouldLoadMore && hasMoreMessages && !isLoadingMore) {
                                 EasyLog.log("Triggering smart load more messages")

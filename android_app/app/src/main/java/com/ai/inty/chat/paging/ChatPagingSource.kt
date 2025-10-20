@@ -39,7 +39,7 @@ class ChatPagingSource(
                 val page = params.key ?: INITIAL_PAGE
                 val pageSize = params.loadSize.coerceAtMost(PAGE_SIZE)
 
-                EasyLog.log("ChatPagingSource - 加载第${page}页，页面大小: ${pageSize}")
+                EasyLog.log("ChatPagingSource - 加载第${page}页，页面大小: $pageSize")
 
                 // 第一页特殊处理：优先使用缓存数据
                 if (page == INITIAL_PAGE && useCache) {
@@ -138,7 +138,7 @@ class ChatPagingSource(
                     NetworkResult.Success(result.data)
                 }
                 is HttpResult.Failure -> {
-                    NetworkResult.Error(result.message ?: "Unknown error")
+                    NetworkResult.Error(result.message)
                 }
             }
         } catch (e: Exception) {

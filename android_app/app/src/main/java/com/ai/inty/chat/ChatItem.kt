@@ -68,28 +68,31 @@ private fun debugOnlyCopyToClipboard(context: Context, text: String) {
 @Composable
 fun ChatItem(item: MsgInfo, isCurrentPage: Boolean = true, chatViewModel: ChatViewModel? = null) {
     runCatching {
-            when (item.role) {
-                "assistant" -> {
-                    ChatItemAI(item, isCurrentPage, chatViewModel)
-                }
+        when (item.role) {
+            "assistant" -> {
+                ChatItemAI(item, isCurrentPage, chatViewModel)
+            }
 
-                "user" -> {
-                    ChatItemUser(item)
-                }
+            "user" -> {
+                ChatItemUser(item)
+            }
 
-                else -> {
-                    EasyLog.log("unknown role: $item")
-                    // 未知角色的消息显示为普通文本
-                    ChatItemUser(item)
-                }
+            else -> {
+                EasyLog.log("unknown role: $item")
+                // 未知角色的消息显示为普通文本
+                ChatItemUser(item)
             }
         }
+    }
         .onFailure { e ->
             EasyLog.log("Error rendering chat item: ${e.message}", priority = EasyLog.ERROR)
             // 渲染失败时显示错误占位符
             Box(
                 modifier =
-                    Modifier.fillMaxWidth().height(60.dp).background(Color.Red.copy(alpha = 0.1f))
+                    Modifier
+                        .fillMaxWidth()
+                        .height(60.dp)
+                        .background(Color.Red.copy(alpha = 0.1f))
             ) {
                 Text(
                     text = "Message display failed",
@@ -108,65 +111,45 @@ private fun ChatItemAI(
     chatViewModel: ChatViewModel? = null,
 ) {
     runCatching {
-            Column {
-                // 播放器按钮
-                if (item.content.isNotEmpty() && item.content != "loading_animation") {
-                    // 使用传入的chatViewModel，如果没有则创建一个新的（向后兼容）
-                    val viewModel = chatViewModel ?: viewModel<ChatViewModel>()
-                    val agentInfo by viewModel.agentInfo.collectAsState()
+        Column {
+            // 播放器按钮
+            if (item.content.isNotEmpty() && item.content != "loading_animation") {
+                // 使用传入的chatViewModel，如果没有则创建一个新的（向后兼容）
+                val viewModel = chatViewModel ?: viewModel<ChatViewModel>()
+                val agentInfo by viewModel.agentInfo.collectAsState()
 
-                    EasyLog.log(
-                        "音频LOG测试 ChatItemAI: agentInfo=${agentInfo?.id}, agentName=${agentInfo?.name}, messageId=${item.localMsgId}"
+                // 解析agentId：优先使用chatViewModel.agentInfo.id，其次使用消息meta中的agentId
+                val vmAgentId = agentInfo?.id
+                val metaAgentId = item.agentId()
+                val safeAgentId = vmAgentId ?: metaAgentId ?: ""
+
+                // 为每个消息生成唯一的测试URL，避免状态混乱
+                val audioInfo =
+                    AudioInfo(
+                        url = item.audio_url ?: "",
+                        title = "Voice Message",
+                        artist = "AI Agent",
+                        messageId = item.localMsgId, // 使用localMsgId，包含_assistant_标识，用于播放状态管理
+                        agentId = safeAgentId,
+                        agentName = agentInfo?.name, // 添加Agent名称用于日志分析
                     )
-                    // 解析agentId：优先使用chatViewModel.agentInfo.id，其次使用消息meta中的agentId
-                    val vmAgentId = agentInfo?.id
-                    val metaAgentId = item.agentId()
-                    val safeAgentId = vmAgentId ?: metaAgentId ?: ""
-                    EasyLog.log(
-                        "音频LOG测试 AgentId resolve: vmAgentId=$vmAgentId, metaAgentId=$metaAgentId, chosen=$safeAgentId"
-                    )
-                    // 为每个消息生成唯一的测试URL，避免状态混乱
-                    val audioInfo =
-                        AudioInfo(
-                            url = item.audio_url ?: "",
-                            title = "Voice Message",
-                            artist = "AI Agent",
-                            messageId = item.localMsgId, // 使用localMsgId，包含_assistant_标识，用于播放状态管理
-                            agentId = safeAgentId,
-                            agentName = agentInfo?.name, // 添加Agent名称用于日志分析
-                        )
 
-                    // 验证关键参数
-                    if (safeAgentId.isEmpty()) {
-                        EasyLog.log(
-                            "音频LOG测试 Warning: agentId is empty for message: ${item.localMsgId}, vmAgentId=${vmAgentId}, metaAgentId=${metaAgentId}, chatViewModel=${chatViewModel?.hashCode()}",
-                            EasyLog.WARN,
-                        )
-                    } else {
-                        EasyLog.log(
-                            "音频LOG测试 AudioInfo created successfully: agentId=${audioInfo.agentId}, messageId=${audioInfo.messageId}"
-                        )
-                    }
+                // 检查queryMsgs是否完成
+                val isQueryMsgsCompleted by viewModel.isQueryMsgsCompleted.collectAsState()
 
-                    // 检查queryMsgs是否完成
-                    val isQueryMsgsCompleted by viewModel.isQueryMsgsCompleted.collectAsState()
+                // 检查当前消息列表是否只有开场白消息,避免已经聊过多个消息后，再进入还播放开场白
+                val allMessages by viewModel.msgs.collectAsState()
+                // 更准确的消息过滤：只计算实际的聊天消息（排除intro和开场白）
+                val actualChatMessages =
+                    allMessages.filter { !it.isOpening() && it.role != "system" }
+                val isOnlyOpeningMessage = actualChatMessages.isEmpty()
 
-                    // 检查当前消息列表是否只有开场白消息,避免已经聊过多个消息后，再进入还播放开场白
-                    val allMessages by viewModel.msgs.collectAsState()
-                    // 更准确的消息过滤：只计算实际的聊天消息（排除intro和开场白）
-                    val actualChatMessages =
-                        allMessages.filter { !it.isOpening() && it.role != "system" }
-                    val isOnlyOpeningMessage = actualChatMessages.isEmpty()
+                // 检查开场白是否已播放过
+                val hasPlayedOpening = OpeningPlayState.agentOpeningPlayed(agentInfo?.id ?: "")
 
-                    // 检查开场白是否已播放过
-                    val hasPlayedOpening = OpeningPlayState.agentOpeningPlayed(agentInfo?.id ?: "")
-                    EasyLog.log(
-                        "音频LOG测试 音频消息allMessages.size ${allMessages.size}, actualChatMessages.size ${actualChatMessages.size}, isOnlyOpeningMessage:$isOnlyOpeningMessage, hasPlayedOpening:$hasPlayedOpening, isQueryMsgsCompleted:$isQueryMsgsCompleted ",
-                        EasyLog.WARN,
-                    )
-                    // 开场白自动播放逻辑：只有开场白消息且未播放过，且queryMsgs已完成
-                    val shouldAutoPlay =
-                        item.isOpening() &&
+                // 开场白自动播放逻辑：只有开场白消息且未播放过，且queryMsgs已完成
+                val shouldAutoPlay =
+                    item.isOpening() &&
                             isOnlyOpeningMessage &&
                             !hasPlayedOpening &&
                             isCurrentPage &&
@@ -174,86 +157,36 @@ private fun ChatItemAI(
                             !(safeAgentId.isEmpty()) &&
                             audioInfo.url.isNotEmpty()
 
-                    EasyLog.log(
-                        "音频LOG测试 开场白自动播放判断: shouldAutoPlay=$shouldAutoPlay, isOpening=${item.isOpening()}, isOnlyOpeningMessage=$isOnlyOpeningMessage, hasPlayedOpening=$hasPlayedOpening, isCurrentPage=$isCurrentPage, isQueryMsgsCompleted=$isQueryMsgsCompleted, agentId='${audioInfo.agentId}', hasAudioUrl=${audioInfo.url.isNotEmpty()}",
-                        EasyLog.WARN,
-                    )
-                    if (safeAgentId.isEmpty()) {
-                        // agentId 为空时，跳过渲染播放器，避免前置校验导致TTS未调用
-                        EasyLog.log(
-                            "音频LOG测试 Skip VoicePlayer: empty agentId, messageId=${item.localMsgId}, serverMessageId=${item.id}",
-                            EasyLog.WARN,
-                        )
-                    } else {
-                        EasyLog.log(
-                            "音频LOG测试 Prepare VoicePlayer: messageId=${item.localMsgId}, serverMessageId=${item.id}, agentId=$safeAgentId, hasAudioUrl=${audioInfo.url.isNotEmpty()}"
-                        )
-                        VoicePlayer(
-                            audioInfo = audioInfo,
-                            autoPlay = shouldAutoPlay,
-                            modifier = Modifier.widthIn(38.dp),
-                            onPlayStateChange = { isPlaying ->
-                                EasyLog.log(
-                                    "音频LOG测试 VoicePlayer play state changed: $isPlaying for message: ${item.localMsgId}"
-                                )
-                            },
-                            onTtsGenerated = { audioUrl ->
-                                // 使用localMsgId进行匹配，因为ChatViewModel中使用的是localMsgId
-                                viewModel.updateMessageAudioUrl(item.localMsgId, audioUrl)
-                            },
-                            serverMessageId = item.id, // 传递服务器端ID用于TTS生成
-                        )
-                    }
-                }
-                // 消息
-                val msgShape =
-                    if (item.content.isNotEmpty() && item.content != "loading_animation")
-                        RoundedCornerShape(topEnd = 12.dp, bottomStart = 12.dp, bottomEnd = 12.dp)
-                    else RoundedCornerShape(12.dp)
-
-                Row {
-                    val context = LocalContext.current
-                    Box(
-                        modifier =
-                            Modifier.background(Color.Black.copy(alpha = 0.5f), msgShape)
-                                .padding(12.dp, 13.dp)
-                                .widthIn(1.dp, 300.dp)
-                                .pointerInput(item.content) {
-                                    detectTapGestures(
-                                        onLongPress = {
-                                            debugOnlyCopyToClipboard(context, item.content)
-                                        }
-                                    )
-                                }
-                    ) {
-                        if (item.content == "loading_animation") {
-                            LoadingAnimation()
-                        } else {
-                            // 消息文本
-                            StyledMessageText(
-                                text = item.content,
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Normal,
-                                normalColor = Color.White,
-                                actionColor = Color.White.copy(0.55f),
+                if (safeAgentId.isNotEmpty()) {
+                    VoicePlayer(
+                        audioInfo = audioInfo,
+                        autoPlay = shouldAutoPlay,
+                        modifier = Modifier.widthIn(38.dp),
+                        onPlayStateChange = { isPlaying ->
+                            EasyLog.log(
+                                "音频LOG测试 VoicePlayer play state changed: $isPlaying for message: ${item.localMsgId}"
                             )
-                        }
-                    }
-                    Spacer(modifier = Modifier.widthIn(80.dp).weight(1f))
+                        },
+                        onTtsGenerated = { audioUrl ->
+                            // 使用localMsgId进行匹配，因为ChatViewModel中使用的是localMsgId
+                            viewModel.updateMessageAudioUrl(item.localMsgId, audioUrl)
+                        },
+                        serverMessageId = item.id, // 传递服务器端ID用于TTS生成
+                    )
                 }
             }
-        }
-        .onFailure { e ->
-            EasyLog.log("Error rendering AI chat item: ${e.message}", priority = EasyLog.ERROR)
-            // 渲染失败时显示简化版本
+            // 消息
+            val msgShape =
+                if (item.content.isNotEmpty() && item.content != "loading_animation")
+                    RoundedCornerShape(topEnd = 12.dp, bottomStart = 12.dp, bottomEnd = 12.dp)
+                else RoundedCornerShape(12.dp)
+
             Row {
                 val context = LocalContext.current
                 Box(
                     modifier =
-                        Modifier.background(
-                                Color.Black.copy(alpha = 0.5f),
-                                RoundedCornerShape(12.dp),
-                            )
+                        Modifier
+                            .background(Color.Black.copy(alpha = 0.5f), msgShape)
                             .padding(12.dp, 13.dp)
                             .widthIn(1.dp, 300.dp)
                             .pointerInput(item.content) {
@@ -264,80 +197,133 @@ private fun ChatItemAI(
                                 )
                             }
                 ) {
-                    Text(
-                        text = item.content.ifEmpty { "Message content is empty" },
-                        color = Color.White,
-                        fontSize = 14.sp,
-                    )
+                    if (item.content == "loading_animation") {
+                        LoadingAnimation()
+                    } else {
+                        // 消息文本
+                        StyledMessageText(
+                            text = item.content,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Normal,
+                            normalColor = Color.White,
+                            actionColor = Color.White.copy(0.55f),
+                        )
+                    }
                 }
-                Spacer(modifier = Modifier.widthIn(80.dp).weight(1f))
+                Spacer(
+                    modifier = Modifier
+                        .widthIn(80.dp)
+                        .weight(1f)
+                )
             }
         }
+    }.onFailure { e ->
+        // 渲染失败时显示简化版本
+        Row {
+            val context = LocalContext.current
+            Box(
+                modifier =
+                    Modifier
+                        .background(
+                            Color.Black.copy(alpha = 0.5f),
+                            RoundedCornerShape(12.dp),
+                        )
+                        .padding(12.dp, 13.dp)
+                        .widthIn(1.dp, 300.dp)
+                        .pointerInput(item.content) {
+                            detectTapGestures(
+                                onLongPress = {
+                                    debugOnlyCopyToClipboard(context, item.content)
+                                }
+                            )
+                        }
+            ) {
+                Text(
+                    text = item.content.ifEmpty { "Message content is empty" },
+                    color = Color.White,
+                    fontSize = 14.sp,
+                )
+            }
+            Spacer(
+                modifier = Modifier
+                    .widthIn(80.dp)
+                    .weight(1f)
+            )
+        }
+    }
 }
 
 /** 用户消息显示组件 */
 @Composable
 private fun ChatItemUser(item: MsgInfo) {
     runCatching {
-            Row {
-                Spacer(modifier = Modifier.widthIn(80.dp).weight(1f))
-                val context = LocalContext.current
-                Box(
-                    modifier =
-                        Modifier.background(
-                                Color.White.copy(alpha = 0.6f),
-                                RoundedCornerShape(12.dp),
+        Row {
+            Spacer(
+                modifier = Modifier
+                    .widthIn(80.dp)
+                    .weight(1f)
+            )
+            val context = LocalContext.current
+            Box(
+                modifier =
+                    Modifier
+                        .background(
+                            Color.White.copy(alpha = 0.6f),
+                            RoundedCornerShape(12.dp),
+                        )
+                        .padding(12.dp, 13.dp)
+                        .widthIn(1.dp, 300.dp)
+                        .pointerInput(item.content) {
+                            detectTapGestures(
+                                onLongPress = {
+                                    debugOnlyCopyToClipboard(context, item.content)
+                                }
                             )
-                            .padding(12.dp, 13.dp)
-                            .widthIn(1.dp, 300.dp)
-                            .pointerInput(item.content) {
-                                detectTapGestures(
-                                    onLongPress = {
-                                        debugOnlyCopyToClipboard(context, item.content)
-                                    }
-                                )
-                            }
-                ) {
-                    StyledMessageText(
-                        text = item.content,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Normal,
-                        normalColor = Color(0xff090909),
-                        actionColor = Color(0xff090909).copy(0.6f),
-                    )
-                }
+                        }
+            ) {
+                StyledMessageText(
+                    text = item.content,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Normal,
+                    normalColor = Color(0xff090909),
+                    actionColor = Color(0xff090909).copy(0.6f),
+                )
             }
         }
-        .onFailure { e ->
-            EasyLog.log("Error rendering user chat item: ${e.message}", priority = EasyLog.ERROR)
-            // 渲染失败时显示简化版本
-            Row {
-                Spacer(modifier = Modifier.widthIn(80.dp).weight(1f))
-                val context = LocalContext.current
-                Box(
-                    modifier =
-                        Modifier.background(
-                                Color.White.copy(alpha = 0.6f),
-                                RoundedCornerShape(12.dp),
+    }.onFailure { e ->
+        // 渲染失败时显示简化版本
+        Row {
+            Spacer(
+                modifier = Modifier
+                    .widthIn(80.dp)
+                    .weight(1f)
+            )
+            val context = LocalContext.current
+            Box(
+                modifier =
+                    Modifier
+                        .background(
+                            Color.White.copy(alpha = 0.6f),
+                            RoundedCornerShape(12.dp),
+                        )
+                        .padding(12.dp, 13.dp)
+                        .widthIn(1.dp, 300.dp)
+                        .pointerInput(item.content) {
+                            detectTapGestures(
+                                onLongPress = {
+                                    debugOnlyCopyToClipboard(context, item.content)
+                                }
                             )
-                            .padding(12.dp, 13.dp)
-                            .widthIn(1.dp, 300.dp)
-                            .pointerInput(item.content) {
-                                detectTapGestures(
-                                    onLongPress = {
-                                        debugOnlyCopyToClipboard(context, item.content)
-                                    }
-                                )
-                            }
-                ) {
-                    Text(
-                        text = item.content.ifEmpty { "Message content is empty" },
-                        color = Color(0xff090909),
-                        fontSize = 14.sp,
-                    )
-                }
+                        }
+            ) {
+                Text(
+                    text = item.content.ifEmpty { "Message content is empty" },
+                    color = Color(0xff090909),
+                    fontSize = 14.sp,
+                )
             }
         }
+    }
 }
 
 /** 样式化消息文本组件 */
@@ -350,27 +336,25 @@ private fun StyledMessageText(
     actionColor: Color,
 ) {
     runCatching {
-            Text(
-                text =
-                    ChatTextFormatter.formatChatMessage(
-                        text = text,
-                        fontSize = fontSize,
-                        fontWeight = fontWeight,
-                        normalColor = normalColor,
-                        italicColor = actionColor,
-                    )
-            )
-        }
-        .onFailure { e ->
-            EasyLog.log("Error formatting chat message: ${e.message}", priority = EasyLog.ERROR)
-            // 格式化失败时显示原始文本
-            Text(
-                text = text.ifEmpty { "Message content is empty" },
-                fontSize = fontSize,
-                fontWeight = fontWeight,
-                color = normalColor,
-            )
-        }
+        Text(
+            text =
+                ChatTextFormatter.formatChatMessage(
+                    text = text,
+                    fontSize = fontSize,
+                    fontWeight = fontWeight,
+                    normalColor = normalColor,
+                    italicColor = actionColor,
+                )
+        )
+    }.onFailure { e ->
+        // 格式化失败时显示原始文本
+        Text(
+            text = text.ifEmpty { "Message content is empty" },
+            fontSize = fontSize,
+            fontWeight = fontWeight,
+            color = normalColor,
+        )
+    }
 }
 
 /** 加载动画组件 */
@@ -385,16 +369,17 @@ private fun LoadingAnimation() {
         repeat(3) { index ->
             val delay = index * 200
             val dotAlpha by
-                infiniteTransition.animateFloat(
-                    initialValue = 0.3f,
-                    targetValue = 1.0f,
-                    animationSpec = infiniteRepeatable(animation = tween(600, delayMillis = delay)),
-                    label = "dot_alpha_$index",
-                )
+            infiniteTransition.animateFloat(
+                initialValue = 0.3f,
+                targetValue = 1.0f,
+                animationSpec = infiniteRepeatable(animation = tween(600, delayMillis = delay)),
+                label = "dot_alpha_$index",
+            )
 
             Box(
                 modifier =
-                    Modifier.size(6.dp)
+                    Modifier
+                        .size(6.dp)
                         .background(color = Color.White.copy(dotAlpha * 0.7f), shape = CircleShape)
             )
         }
@@ -412,7 +397,8 @@ fun AgentInfoChatCard(info: String) {
 
     Box(
         modifier =
-            Modifier.background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+            Modifier
+                .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
                 .padding(12.dp)
     ) {
         ExpandableTextWithButton(
@@ -443,7 +429,9 @@ private fun ExpandableTextWithButton(
         var pd by remember { mutableIntStateOf(0) }
         Text(
             text = text,
-            modifier = Modifier.fillMaxWidth().padding(end = pd.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(end = pd.dp),
             style = textStyle,
             maxLines = if (isExpanded) Int.MAX_VALUE else collapsedMaxLines,
             overflow = TextOverflow.Ellipsis,
@@ -465,7 +453,8 @@ private fun ExpandableTextWithButton(
                     ),
                 contentDescription = null,
                 modifier =
-                    Modifier.size(18.dp)
+                    Modifier
+                        .size(18.dp)
                         .align(Alignment.BottomEnd)
                         .noRippleClickable(onClick = { isExpanded = isExpanded.not() }),
                 tint = Color.White,

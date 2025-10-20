@@ -134,9 +134,6 @@ fun ChatPageContainer(
                     if (lastValidIndex >= 0 && lastValidIndex < agentsPagingItems.itemCount) {
                         // 访问最后一个有效索引，这会触发Paging库自动加载下一页
                         agentsPagingItems[lastValidIndex]
-                        EasyLog.log(
-                            "ChatPageContainer - 触发预取加载，当前索引: $lastValidIndex, 总数: ${agentsPagingItems.itemCount}"
-                        )
                     }
                 } catch (e: IndexOutOfBoundsException) {
                     EasyLog.log("ChatPageContainer - 索引越界，跳过预取: ${e.message}", EasyLog.WARN)
