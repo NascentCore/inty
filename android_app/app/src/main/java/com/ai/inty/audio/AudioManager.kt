@@ -7,7 +7,6 @@ import com.inty.utils.log.EasyLog
 import com.inty.utils.storage.IntySetting
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 /** 统一音频管理器 协调各个音频子模块，提供统一的音频服务接口 */
@@ -15,16 +14,17 @@ class AudioManager
 private constructor(private val context: Context, private var scope: CoroutineScope) {
 
     companion object {
-        @Volatile private var INSTANCE: AudioManager? = null
+        @Volatile
+        private var INSTANCE: AudioManager? = null
 
         fun getInstance(context: Context, scope: CoroutineScope): AudioManager {
             return INSTANCE
                 ?: synchronized(this) {
-                        INSTANCE
-                            ?: AudioManager(context.applicationContext, scope).also {
-                                INSTANCE = it
-                            }
-                    }
+                    INSTANCE
+                        ?: AudioManager(context.applicationContext, scope).also {
+                            INSTANCE = it
+                        }
+                }
                     .also { instance ->
                         // 更新Scope以确保协程能正常执行
                         instance.scope = scope
@@ -75,13 +75,6 @@ private constructor(private val context: Context, private var scope: CoroutineSc
             return
         }
 
-        EasyLog.log("音频LOG测试 === AudioManager.playMessageVoice START ===")
-        EasyLog.log("音频LOG测试 Message ID: $messageId")
-        EasyLog.log("音频LOG测试 Agent ID: $agentId")
-        EasyLog.log("音频LOG测试 Audio URL: $audioUrl")
-        EasyLog.log("音频LOG测试 Auto play: $autoPlay")
-        EasyLog.log("音频LOG测试 Is manual click: $isManualClick")
-
         // 检查是否启用自动播放
         // 手动点击时不受自动播放设置影响
         // 开场白消息的自动播放不受用户设置影响（业务逻辑必需）
@@ -104,19 +97,13 @@ private constructor(private val context: Context, private var scope: CoroutineSc
         // 如果audioUrl为空，生成TTS
         if (audioUrl.isNullOrEmpty()) {
             val ttsMessageId = serverMessageId ?: messageId
-            EasyLog.log(
-                "音频LOG测试 Audio URL is empty, generating TTS for message: $messageId (serverId: $ttsMessageId)"
-            )
+
             ttsManager.generateMessageVoice(
                 messageId = ttsMessageId, // 使用服务器端ID进行TTS生成
                 agentId = agentId,
                 onSuccess = { generatedUrl ->
-                    EasyLog.log("音频LOG测试 TTS generated successfully: $generatedUrl")
                     onTtsGenerated?.invoke(generatedUrl)
                     // 使用生成的URL播放
-                    EasyLog.log(
-                        "音频LOG测试 Playing TTS generated audio: messageId=$messageId, generatedUrl=$generatedUrl, autoPlay=$autoPlay (Agent: $agentName)"
-                    )
                     playMessageWithUrl(messageId, generatedUrl, agentId, autoPlay, agentName)
                 },
                 onError = { error ->
@@ -149,19 +136,10 @@ private constructor(private val context: Context, private var scope: CoroutineSc
                 agentName = agentName,
             )
 
-        EasyLog.log("音频LOG测试 Playing message voice for message: $messageId (Agent: $agentName)")
-        EasyLog.log(
-            "音频LOG测试 AudioInfo created: url=${audioInfo.url}, messageId=${audioInfo.messageId}, agentId=${audioInfo.agentId}, agentName=${audioInfo.agentName}"
-        )
-        EasyLog.log("音频LOG测试 Scope is active: ${scope.isActive}")
-        EasyLog.log("音频LOG测试 PlaybackManager instance: ${playbackManager.hashCode()}")
-
         // 始终在主线程调用ExoPlayer相关API
         mainHandler.post {
             try {
-                EasyLog.log("音频LOG测试 Main thread posting playbackManager.playAudio ...")
                 playbackManager.playAudio(audioInfo, autoPlay = autoPlay)
-                EasyLog.log("音频LOG测试 playbackManager.playAudio call completed on main thread")
             } catch (e: Exception) {
                 EasyLog.log(
                     "音频LOG测试 Error in playbackManager.playAudio (main): ${e.message}",
@@ -174,48 +152,32 @@ private constructor(private val context: Context, private var scope: CoroutineSc
 
     /** 停止所有语音播放 */
     fun stopAllPlayback() {
-        EasyLog.log("音频LOG测试 Stopping all voice playback")
         // 在主线程执行
         mainHandler.post { playbackManager.stopPlayback() }
     }
 
     /** 暂停语音播放 */
     fun pausePlayback() {
-        EasyLog.log("音频LOG测试 === AudioManager.pausePlayback START ===")
-        EasyLog.log("音频LOG测试 Scope is active: ${scope.isActive}")
-        EasyLog.log(
-            "音频LOG测试 Current audio info: ${playbackManager.getCurrentAudioInfo()?.messageId}"
-        )
-        EasyLog.log("音频LOG测试 Is playing: ${playbackManager.isPlaying()}")
-
         mainHandler.post {
             try {
                 playbackManager.pausePlayback()
-            } catch (_: Exception) {}
+            } catch (_: Exception) {
+            }
         }
-        EasyLog.log("音频LOG测试 === AudioManager.pausePlayback END ===")
     }
 
     /** 恢复语音播放 */
     fun resumePlayback() {
-        EasyLog.log("音频LOG测试 === AudioManager.resumePlayback START ===")
-        EasyLog.log("音频LOG测试 Scope is active: ${scope.isActive}")
-        EasyLog.log(
-            "音频LOG测试 Current audio info: ${playbackManager.getCurrentAudioInfo()?.messageId}"
-        )
-        EasyLog.log("音频LOG测试 Is playing: ${playbackManager.isPlaying()}")
-
         mainHandler.post {
             try {
                 playbackManager.resumePlayback()
-            } catch (_: Exception) {}
+            } catch (_: Exception) {
+            }
         }
-        EasyLog.log("音频LOG测试 === AudioManager.resumePlayback END ===")
     }
 
     /** 重置播放状态（页面切换时调用） */
     fun resetForPageChange() {
-        EasyLog.log("音频LOG测试 Resetting voice playback for page change")
         mainHandler.post { playbackManager.resetForPageChange() }
     }
 
@@ -229,9 +191,6 @@ private constructor(private val context: Context, private var scope: CoroutineSc
     fun stopNonCurrentAgentPlayback(currentAgentId: String) {
         val currentAudioInfo = playbackManager.getCurrentAudioInfo()
         if (currentAudioInfo?.agentId != currentAgentId && playbackManager.isPlaying()) {
-            EasyLog.log(
-                "音频LOG测试 Stopping non-current agent playback: current=${currentAudioInfo?.agentId}, target=$currentAgentId"
-            )
             scope.launch { playbackManager.stopPlayback() }
         }
     }
@@ -265,7 +224,6 @@ private constructor(private val context: Context, private var scope: CoroutineSc
 
     /** 释放资源 */
     fun release() {
-        EasyLog.log("音频LOG测试 Releasing AudioManager")
         stopAllPlayback()
         playbackManager.release()
         ttsManager.cancelAllGenerations()

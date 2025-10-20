@@ -3,21 +3,23 @@ package com.ai.inty.audio
 import android.content.Context
 import android.util.LruCache
 import com.inty.utils.log.EasyLog
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
+import okhttp3.Request
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
 import java.security.MessageDigest
 import java.util.concurrent.TimeUnit
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
-import okhttp3.Request
 
 /** 音频缓存管理器 提供内存缓存和本地文件缓存功能 */
 class AudioCacheManager private constructor(private val context: Context) {
 
     companion object {
-        @Volatile private var INSTANCE: AudioCacheManager? = null
+        @Volatile
+        private var INSTANCE: AudioCacheManager? = null
 
         fun getInstance(context: Context): AudioCacheManager {
             return INSTANCE
@@ -67,7 +69,6 @@ class AudioCacheManager private constructor(private val context: Context) {
                 if (data != null) {
                     memoryCache.put(cacheKey, data)
                     saveToFile(getCachedFile(cacheKey), data)
-                    EasyLog.log("音频LOG测试 Audio preloaded: $url")
                 }
             } catch (e: Exception) {
                 EasyLog.log("音频LOG测试 Failed to preload audio: ${e.message}", EasyLog.ERROR)
@@ -100,7 +101,6 @@ class AudioCacheManager private constructor(private val context: Context) {
                 }
             }
 
-            EasyLog.log("音频LOG测试 Audio cache cleared")
         } catch (e: Exception) {
             EasyLog.log("音频LOG测试 Failed to clear cache: ${e.message}", EasyLog.ERROR)
         }
@@ -118,7 +118,6 @@ class AudioCacheManager private constructor(private val context: Context) {
                 }
             }
 
-            EasyLog.log("音频LOG测试 Expired audio cache cleaned")
         } catch (e: Exception) {
             EasyLog.log("音频LOG测试 Failed to clean expired cache: ${e.message}", EasyLog.ERROR)
         }
@@ -160,9 +159,6 @@ class AudioCacheManager private constructor(private val context: Context) {
                         if (response.isSuccessful) {
                             val body = response.body?.bytes()
                             if (body != null && body.isNotEmpty()) {
-                                EasyLog.log(
-                                    "音频LOG测试 Audio downloaded successfully: $url, size: ${body.size} bytes"
-                                )
                                 return@withContext body
                             } else {
                                 EasyLog.log(
@@ -195,6 +191,7 @@ class AudioCacheManager private constructor(private val context: Context) {
                         when {
                             e.message?.contains("Connection reset", ignoreCase = true) == true ->
                                 "连接被重置"
+
                             e.message?.contains("timeout", ignoreCase = true) == true -> "连接超时"
                             e.message?.contains("network", ignoreCase = true) == true -> "网络错误"
                             else -> e.message ?: "未知错误"
@@ -214,10 +211,7 @@ class AudioCacheManager private constructor(private val context: Context) {
                 if (retryCount <= maxRetries) {
                     // 指数退避重试
                     val delayMs = 1000L * (1 shl (retryCount - 1))
-                    EasyLog.log(
-                        "音频LOG测试 Retrying audio download in ${delayMs}ms (attempt ${retryCount + 1}/$maxRetries)"
-                    )
-                    kotlinx.coroutines.delay(delayMs)
+                    delay(delayMs)
                 }
             }
 
