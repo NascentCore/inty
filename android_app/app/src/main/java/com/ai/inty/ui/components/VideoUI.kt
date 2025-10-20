@@ -1,5 +1,6 @@
 package com.ai.inty.ui.components
 
+import android.content.Context
 import android.view.Gravity
 import android.view.ViewGroup
 import android.widget.FrameLayout
@@ -16,7 +17,7 @@ import androidx.core.net.toUri
 import androidx.lifecycle.compose.LifecycleResumeEffect
 
 /** 自定义全屏视频播放器。 继承VideoView并重写onMeasure方法确保全屏显示。 */
-private class FullScreenVideoView(context: android.content.Context) : VideoView(context) {
+private class FullScreenVideoView(context: Context) : VideoView(context) {
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         val width = getDefaultSize(0, widthMeasureSpec)

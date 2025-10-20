@@ -24,13 +24,13 @@ fun ShimmerPlaceholder(
 ) {
     val infiniteTransition = rememberInfiniteTransition(label = "shimmer")
     val alpha by
-        infiniteTransition.animateFloat(
-            initialValue = 0.2f,
-            targetValue = 0.6f,
-            animationSpec =
-                infiniteRepeatable(animation = tween(1000), repeatMode = RepeatMode.Reverse),
-            label = "shimmer_alpha",
-        )
+    infiniteTransition.animateFloat(
+        initialValue = 0.2f,
+        targetValue = 0.6f,
+        animationSpec =
+            infiniteRepeatable(animation = tween(1000), repeatMode = RepeatMode.Reverse),
+        label = "shimmer_alpha",
+    )
 
     Box(
         modifier =

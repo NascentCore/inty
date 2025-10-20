@@ -4,7 +4,6 @@ import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import com.ai.inty.beans.AgentInfo
-import com.inty.utils.log.EasyLog
 import com.inty.utils.storage.IntySetting
 import kotlinx.coroutines.flow.Flow
 
@@ -28,32 +27,25 @@ class ExplorePagingRepository {
         useCache: Boolean = true,
         sortSeed: Int = IntySetting.sortSeed(),
     ): Flow<PagingData<AgentInfo>> {
-        EasyLog.log(
-            "ExplorePagingRepository - 创建Paging数据流，useCache: $useCache, sortSeed: $sortSeed"
-        )
-
         return Pager(
-                config =
-                    PagingConfig(
-                        pageSize = PAGE_SIZE,
-                        prefetchDistance = PREFETCH_DISTANCE,
-                        enablePlaceholders = ENABLE_PLACEHOLDERS,
-                        initialLoadSize = PAGE_SIZE,
-                        maxSize = PAGE_SIZE * ExploreConstants.MAX_CACHE_PAGES, // 最大缓存页数
-                    ),
-                pagingSourceFactory = {
-                    ExplorePagingSource(useCache = useCache, sortSeed = sortSeed)
-                },
-            )
-            .flow
+            config =
+                PagingConfig(
+                    pageSize = PAGE_SIZE,
+                    prefetchDistance = PREFETCH_DISTANCE,
+                    enablePlaceholders = ENABLE_PLACEHOLDERS,
+                    initialLoadSize = PAGE_SIZE,
+                    maxSize = PAGE_SIZE * ExploreConstants.MAX_CACHE_PAGES, // 最大缓存页数
+                ),
+            pagingSourceFactory = {
+                ExplorePagingSource(useCache = useCache, sortSeed = sortSeed)
+            },
+        ).flow
     }
 
     /** 刷新数据（生成新的排序种子） */
     fun refreshRecommendAgents(): Flow<PagingData<AgentInfo>> {
         val newSortSeed = IntySetting.sortSeed() + 1
         IntySetting.updateSortSeed(newSortSeed)
-        EasyLog.log("ExplorePagingRepository - 刷新数据，新sortSeed: $newSortSeed")
-
         return getRecommendAgentsFlow(
             useCache = false, // 刷新时不使用缓存
             sortSeed = newSortSeed,

@@ -28,7 +28,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ai.inty.R
@@ -39,9 +38,12 @@ import com.ai.inty.base.noRippleClickable
 internal fun LoginCloseButton(onClose: () -> Unit) {
     Image(
         modifier =
-            Modifier.padding(end = 16.dp, top = 16.dp).size(18.dp, 18.dp).noRippleClickable {
-                onClose()
-            },
+            Modifier
+                .padding(end = 16.dp, top = 16.dp)
+                .size(18.dp, 18.dp)
+                .noRippleClickable {
+                    onClose()
+                },
         painter = painterResource(R.drawable.close),
         contentDescription = null,
     )
@@ -101,7 +103,10 @@ internal fun GoogleLoginButton(isLoading: Boolean, onLoginClick: () -> Unit) {
             Image(
                 painter = painterResource(id = R.drawable.google),
                 contentDescription = stringResource(R.string.content_desc_google_login),
-                modifier = Modifier.align(Alignment.CenterStart).padding(start = 20.dp).size(24.dp),
+                modifier = Modifier
+                    .align(Alignment.CenterStart)
+                    .padding(start = 20.dp)
+                    .size(24.dp),
             )
             Text(
                 text = stringResource(R.string.continue_with_google),
@@ -144,41 +149,4 @@ internal fun PolicyText() {
 
         PolicyRow(context = context, fontSize = 12.sp)
     }
-}
-
-// Preview 函数
-@Preview(showBackground = true)
-@Composable
-private fun LoginCloseButtonPreview() {
-    LoginCloseButton(onClose = {})
-}
-
-@Preview(showBackground = true)
-@Composable
-private fun LogoImagePreview() {
-    LogoImage()
-}
-
-@Preview(showBackground = true)
-@Composable
-private fun WelcomeTitlePreview() {
-    WelcomeTitle()
-}
-
-@Preview(showBackground = true)
-@Composable
-private fun WelcomeSubtitlePreview() {
-    WelcomeSubtitle()
-}
-
-@Preview(showBackground = true)
-@Composable
-private fun GoogleLoginButtonPreview() {
-    GoogleLoginButton(isLoading = false, onLoginClick = {})
-}
-
-@Preview(showBackground = true)
-@Composable
-private fun PolicyTextPreview() {
-    PolicyText()
 }
