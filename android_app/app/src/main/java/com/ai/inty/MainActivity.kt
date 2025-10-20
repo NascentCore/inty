@@ -41,12 +41,12 @@ import com.inty.utils.log.EasyLog
 import com.inty.utils.storage.IntySetting
 import com.therouter.router.Autowired
 import com.therouter.router.Route
-import kotlin.math.abs
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 
 /** 主页面，包含聊天、消息与关注、创建模型、模型列表、"我的" */
 @Route(path = Constant.ROUTE_MAIN)
@@ -94,11 +94,9 @@ class MainActivity : BaseActivity() {
                 delay(50) // 50ms检查一次，更快响应
             }
 
-            EasyLog.log("MainActivity - 启动管理器初始化完成，开始加载用户数据")
 
             // 检查用户登录状态（包括游客用户）
             if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
-                EasyLog.log("MainActivity - 用户已登录（包括游客用户），开始加载业务数据")
 
                 // 加载业务数据（包括版本检查等）
                 mainViewModel.loadBusinessData()
@@ -108,7 +106,6 @@ class MainActivity : BaseActivity() {
 
                 // 只有正式用户才加载需要认证的数据
                 if (!IntySetting.isGuestUser()) {
-                    EasyLog.log("MainActivity - 正式用户，加载需要认证的数据")
 
                     // Load user created agents
                     mainViewModel.getUserCreatedAgents()
@@ -299,7 +296,8 @@ private fun SplashUI(modifier: Modifier = Modifier, onSplashComplete: () -> Unit
         )
         Image(
             modifier =
-                Modifier.align(Alignment.BottomCenter)
+                Modifier
+                    .align(Alignment.BottomCenter)
                     .padding(bottom = 80.dp)
                     .size(80.dp)
                     .clip(RoundedCornerShape(10.dp)),
@@ -313,7 +311,6 @@ private fun SplashUI(modifier: Modifier = Modifier, onSplashComplete: () -> Unit
 /** 等待初始化完成 处理初始化流程中的异常情况，确保即使失败也能进入主界面 */
 private suspend fun waitForInitializationComplete(onComplete: () -> Unit) {
     try {
-        EasyLog.log("SplashUI - 开始等待初始化完成")
 
         // 等待启动管理器完成必要初始化
         var waitTime = 0L
@@ -323,7 +320,7 @@ private suspend fun waitForInitializationComplete(onComplete: () -> Unit) {
             UnifiedStartupManager.startupState.value ==
                 UnifiedStartupManager.StartupState.Initializing && waitTime < maxWaitTime
         ) {
-            kotlinx.coroutines.delay(50) // 50ms检查一次
+            delay(50) // 50ms检查一次
             waitTime += 50
         }
 
@@ -334,7 +331,6 @@ private suspend fun waitForInitializationComplete(onComplete: () -> Unit) {
         }
 
         // 等待关键数据加载完成（只等待chat agents）
-        EasyLog.log("SplashUI - 等待关键数据chat agents加载完成")
         var dataWaitTime = 0L
         val maxDataWaitTime = 5000L // 最多等待5秒数据加载
 
@@ -360,14 +356,13 @@ private suspend fun waitForInitializationComplete(onComplete: () -> Unit) {
         UnifiedStartupManager.markEssentialInitializationComplete()
 
         // 确保有最小显示时间，提供良好的用户体验
-        kotlinx.coroutines.delay(1000) // 至少显示1秒
+        delay(1000) // 至少显示1秒
 
-        EasyLog.log("SplashUI - 初始化完成，准备进入主界面")
         onComplete()
     } catch (e: Exception) {
         EasyLog.log("SplashUI - 初始化等待过程中发生异常: ${e.message}", EasyLog.ERROR)
         // 即使发生异常，也要确保进入主界面
-        kotlinx.coroutines.delay(500) // 给一点时间显示错误状态
+        delay(500) // 给一点时间显示错误状态
         onComplete()
     }
 }

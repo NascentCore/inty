@@ -50,28 +50,6 @@ class VipCenterViewModel : BaseViewModel() {
         }
     }
 
-    /** 获取选中的订阅计划 */
-    fun getSelectedPlan(): VipPlan? {
-        val selectedIndex = _selectedPlanIndex.value
-        val currentPlans = plansFlow.value
-
-        return if (selectedIndex >= 0 && selectedIndex < currentPlans.size) {
-            currentPlans[selectedIndex]
-        } else {
-            null
-        }
-    }
-
-    /** 检查用户是否为会员 */
-    fun isUserSubscribed(): Boolean {
-        return VipStatusHelper.isUserVip()
-    }
-
-    /** 获取用户订阅信息 */
-    fun getUserSubscriptionInfo(): VipStatus {
-        return VipStatusHelper.getVipStatus()
-    }
-
     /** 检查是否有选中的计划 */
     fun hasSelectedPlan(): Boolean {
         val selectedIndex = _selectedPlanIndex.value

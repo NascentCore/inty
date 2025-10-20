@@ -59,7 +59,6 @@ class LoginActivity : BaseActivity() {
     private fun checkAndShowRegInfo() {
         val userProfile = UserProfileManager.getUserProfile()
         if (userProfile.gender.isNullOrEmpty()) {
-            EasyLog.log("User has not set gender, showing RegInfoActivity")
             CoroutineScope(Dispatchers.Main).launch {
                 delay(300)
                 TheRouter.build(Constant.ROUTE_REG_INFO).navigation(this@LoginActivity)
@@ -74,12 +73,8 @@ class LoginActivity : BaseActivity() {
         // 1. **避免误清理**：如果用户已经登录成功，不应该清除凭证
         // 2. **区分退出方式**：正常退出不需要清理，异常退出需要清理
         // 3. **安全考虑**：确保在用户未成功认证的情况下清理敏感信息
-        if (
-            // 用户没有用户档案（未登录成功）
-            !UserProfileManager.hasUserProfile() &&
-                // Activity 不是正常结束状态
-                !isFinishing
-        ) {
+        // 用户没有用户档案（未登录成功） // Activity 不是正常结束状态
+        if (!UserProfileManager.hasUserProfile() && !isFinishing) {
             lifecycleScope.launch {
                 CredentialManagerHelper.clearCredentialState(this@LoginActivity)
             }

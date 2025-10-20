@@ -1,6 +1,5 @@
 package com.ai.inty.viewmodels
 
-import android.app.Activity
 import androidx.lifecycle.viewModelScope
 import com.ai.inty.R
 import com.ai.inty.base.BaseViewModel
@@ -85,24 +84,16 @@ class SettingViewModel : BaseViewModel() {
         _dialogState.value = _dialogState.value.copy(showPremiumDialog = false)
     }
 
-    // 购买vip会员订阅，最低档
-    fun purchaseFirstVip(activity: Activity) {
-        VipStatusHelper.purchaseFirstVip(activity)
-    }
-
     /** 检查账号是否有订阅需要取消，才能用来删除账号 */
     fun checkAccountSubscribe() {
-        EasyLog.log("检查账号需要取消订阅 ---> ")
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val result = userApi.userDeletionCheck()
 
-                EasyLog.log("检查账号需要取消订阅的结果 = $result")
 
                 withContext(Dispatchers.Main) {
                     when (result) {
                         is HttpResult.Success -> {
-                            EasyLog.log("检查账号需要取消订阅的结果 success: ${result.data}")
                             if (result.data.canDelete && !result.data.activeSubscription) {
                                 deleteUserAccount()
                             } else {
@@ -115,7 +106,6 @@ class SettingViewModel : BaseViewModel() {
                         }
 
                         is HttpResult.Failure -> {
-                            EasyLog.log("检查账号需要取消订阅的结果 error: $result", priority = EasyLog.ERROR)
                             ToastUtils.showToast(
                                 AppEnv.context.getString(
                                     R.string.toast_check_account_deletion_error
@@ -133,8 +123,10 @@ class SettingViewModel : BaseViewModel() {
                 val errorMessage = handleHttpException(e, "account")
                 withContext(Dispatchers.Main) { ToastUtils.showToast(errorMessage) }
             } catch (e: Exception) {
-                EasyLog.log("检查账号需要取消订阅 exception: ${e.message}", priority = EasyLog.ERROR)
-                EasyLog.log(e)
+                EasyLog.log(
+                    "检查账号需要取消订阅 exception: ${e.message}",
+                    priority = EasyLog.ERROR
+                )
                 val errorMessage = handleGeneralException(e, "account")
                 withContext(Dispatchers.Main) { ToastUtils.showToast(errorMessage) }
             }
@@ -146,22 +138,18 @@ class SettingViewModel : BaseViewModel() {
 
     /** 删除账号的接口 */
     private fun deleteUserAccount() {
-        EasyLog.log("删除用户账号 ---> ")
         launchWithNetCheck {
             try {
                 val result = userApi.userDeleteAccount()
 
-                EasyLog.log("删除用户账号的结果 = $result")
 
                 withContext(Dispatchers.Main) {
                     when (result) {
                         is HttpResult.Success -> {
-                            EasyLog.log("删除用户账号的结果 success: ${result.data}")
                             deleteAccountResultFlow.emit(true)
                         }
 
                         is HttpResult.Failure -> {
-                            EasyLog.log("删除用户账号的结果 error: $result", priority = EasyLog.ERROR)
                             ToastUtils.showToast(
                                 AppEnv.context.getString(R.string.toast_account_deletion_error)
                             )
@@ -178,7 +166,6 @@ class SettingViewModel : BaseViewModel() {
                 withContext(Dispatchers.Main) { ToastUtils.showToast(errorMessage) }
             } catch (e: Exception) {
                 EasyLog.log("删除用户账号 exception: ${e.message}", priority = EasyLog.ERROR)
-                EasyLog.log(e)
                 val errorMessage = handleGeneralException(e, "account")
                 withContext(Dispatchers.Main) { ToastUtils.showToast(errorMessage) }
             }

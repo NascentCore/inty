@@ -1,6 +1,5 @@
 package com.ai.inty
 
-import android.graphics.Color as AndroidColor
 import android.net.Uri
 import android.os.Bundle
 import android.widget.Toast
@@ -93,9 +92,6 @@ import com.therouter.router.Autowired
 import com.therouter.router.Route
 import com.yalantis.ucrop.UCrop
 import com.yalantis.ucrop.UCropActivity
-import java.io.File
-import java.util.UUID
-import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -105,12 +101,17 @@ import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.asRequestBody
+import java.io.File
+import java.util.UUID
+import java.util.concurrent.TimeUnit
+import android.graphics.Color as AndroidColor
 
 /** 创建角色的页面 */
 @Route(path = Constant.ROUTE_CREATE_ROLE)
 class CreateRoleActivity : BaseActivity() {
 
-    @Autowired var agent: AgentInfo? = null
+    @Autowired
+    var agent: AgentInfo? = null
 
     private val mainViewModel: MainViewModel by viewModels()
 
@@ -269,10 +270,10 @@ private fun CreateRolePage(
                                             withContext(Dispatchers.Main) {
                                                 croppedAvatarUrl = uploadedUrl
                                                 Toast.makeText(
-                                                        context,
-                                                        "Avatar cropped and uploaded",
-                                                        Toast.LENGTH_SHORT,
-                                                    )
+                                                    context,
+                                                    "Avatar cropped and uploaded",
+                                                    Toast.LENGTH_SHORT,
+                                                )
                                                     .show()
                                             }
                                         }
@@ -284,10 +285,10 @@ private fun CreateRolePage(
                                             )
                                             withContext(Dispatchers.Main) {
                                                 Toast.makeText(
-                                                        context,
-                                                        "Upload failed: ${response.message}",
-                                                        Toast.LENGTH_LONG,
-                                                    )
+                                                    context,
+                                                    "Upload failed: ${response.message}",
+                                                    Toast.LENGTH_LONG,
+                                                )
                                                     .show()
                                             }
                                         }
@@ -296,10 +297,10 @@ private fun CreateRolePage(
                                     EasyLog.log("Upload exception: ${e.message}", EasyLog.ERROR)
                                     withContext(Dispatchers.Main) {
                                         Toast.makeText(
-                                                context,
-                                                "Upload failed: ${e.message}",
-                                                Toast.LENGTH_LONG,
-                                            )
+                                            context,
+                                            "Upload failed: ${e.message}",
+                                            Toast.LENGTH_LONG,
+                                        )
                                             .show()
                                     }
                                 }
@@ -307,10 +308,10 @@ private fun CreateRolePage(
                         } catch (e: Exception) {
                             EasyLog.log("Failed to prepare upload: ${e.message}", EasyLog.ERROR)
                             Toast.makeText(
-                                    context,
-                                    "Failed to prepare upload: ${e.message}",
-                                    Toast.LENGTH_SHORT,
-                                )
+                                context,
+                                "Failed to prepare upload: ${e.message}",
+                                Toast.LENGTH_SHORT,
+                            )
                                 .show()
                         }
                     }
@@ -320,10 +321,10 @@ private fun CreateRolePage(
                     val cropError = UCrop.getError(data)
                     EasyLog.log("UCrop error: ${cropError?.message}", EasyLog.ERROR)
                     Toast.makeText(
-                            context,
-                            context.getString(R.string.toast_crop_failed, cropError?.message ?: ""),
-                            Toast.LENGTH_LONG,
-                        )
+                        context,
+                        context.getString(R.string.toast_crop_failed, cropError?.message ?: ""),
+                        Toast.LENGTH_LONG,
+                    )
                         .show()
                 }
             }
@@ -332,12 +333,10 @@ private fun CreateRolePage(
     // 检查是否有生成的头像URL - 使用DisposableEffect来监听生命周期
     DisposableEffect(Unit) {
         val checkAvatarStatus = {
-            EasyLog.log("Initial avatar generation status check...")
 
             // Check if generation is in progress
             val generatingStatus = AvatarManager.isGenerating()
             isGeneratingAvatar = generatingStatus
-            EasyLog.log("Generation status: $generatingStatus")
 
             // Check for multiple generated URLs
             val currentUrls = AvatarManager.getCurrentAvatarUrls()
@@ -345,21 +344,18 @@ private fun CreateRolePage(
                 avatarUrls = currentUrls
                 selectedImageIndex = AvatarManager.getSelectedImageIndex()
                 avatarUrl = null // Clear single URL when we have multiple
-                EasyLog.log("Retrieved generated avatar URLs: $currentUrls")
             } else {
                 // Check for single generated URL
                 val generatedUrl = AvatarManager.getCurrentAvatarUrl()
                 if (generatedUrl != null && generatedUrl.isNotBlank()) {
                     avatarUrl = generatedUrl
                     avatarUrls = emptyList()
-                    EasyLog.log("Retrieved generated avatar URL: $generatedUrl")
                 }
             }
 
             // Check for generation errors
             val error = AvatarManager.getGenerationError()
             if (error != null) {
-                EasyLog.log("Generation error found: $error")
                 Toast.makeText(context, error, Toast.LENGTH_LONG).show()
                 isGeneratingAvatar = false
             }
@@ -381,7 +377,6 @@ private fun CreateRolePage(
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
-                EasyLog.log("Activity resumed - checking for new avatar status")
 
                 // Check generation status
                 isGeneratingAvatar = AvatarManager.isGenerating()
@@ -389,7 +384,6 @@ private fun CreateRolePage(
                 // Check for multiple URLs
                 val currentUrls = AvatarManager.getCurrentAvatarUrls()
                 if (currentUrls.isNotEmpty() && currentUrls != avatarUrls) {
-                    EasyLog.log("Detected new avatar URLs on resume: $currentUrls")
                     avatarUrls = currentUrls
                     selectedImageIndex = AvatarManager.getSelectedImageIndex()
                     avatarUrl = null
@@ -397,7 +391,6 @@ private fun CreateRolePage(
                     // Check for single URL
                     val currentUrl = AvatarManager.getCurrentAvatarUrl()
                     if (currentUrl != null && currentUrl != avatarUrl) {
-                        EasyLog.log("Detected new avatar URL on resume: $currentUrl")
                         avatarUrl = currentUrl
                         avatarUrls = emptyList()
                     }
@@ -425,24 +418,18 @@ private fun CreateRolePage(
 
             val currentGenerationStatus = AvatarManager.isGenerating()
             if (currentGenerationStatus != isGeneratingAvatar) {
-                EasyLog.log(
-                    "Generation status changed: $isGeneratingAvatar -> $currentGenerationStatus"
-                )
                 isGeneratingAvatar = currentGenerationStatus
             }
 
             // 只在状态发生变化时记录，减少日志噪音
             val currentUrls = AvatarManager.getCurrentAvatarUrls()
             if (currentUrls.isNotEmpty() && currentUrls != avatarUrls) {
-                EasyLog.log("Detected new avatar URLs via polling: $currentUrls")
                 avatarUrls = currentUrls
                 selectedImageIndex = AvatarManager.getSelectedImageIndex()
                 avatarUrl = null
-                EasyLog.log("Updated UI with ${currentUrls.size} generated avatars")
             } else {
                 val currentUrl = AvatarManager.getCurrentAvatarUrl()
                 if (currentUrl != null && currentUrl != avatarUrl) {
-                    EasyLog.log("Detected new avatar URL via polling: $currentUrl")
                     avatarUrl = currentUrl
                     avatarUrls = emptyList()
                 }
@@ -450,22 +437,11 @@ private fun CreateRolePage(
 
             val error = AvatarManager.getGenerationError()
             if (error != null) {
-                EasyLog.log("Generation error detected via polling: $error")
                 Toast.makeText(context, error, Toast.LENGTH_LONG).show()
                 isGeneratingAvatar = false
             }
-
-            // 每10秒输出一次当前状态（减少日志频率）
-            if (System.currentTimeMillis() % 10000 < 2000) {
-                EasyLog.log(
-                    "Polling status - Generating: $isGeneratingAvatar, URLs: ${avatarUrls.size}, Single URL: ${avatarUrl != null}"
-                )
-            }
         }
     }
-
-    // 监听avatarUrl变化
-    LaunchedEffect(avatarUrl) { EasyLog.log("Avatar URL updated: $avatarUrl") }
 
     Scaffold(
         modifier = modifier.background(DarkPurple),
@@ -486,7 +462,9 @@ private fun CreateRolePage(
                 navigationIcon = {
                     Image(
                         modifier =
-                            Modifier.padding(horizontal = 12.dp).noRippleClickable { onBack() },
+                            Modifier
+                                .padding(horizontal = 12.dp)
+                                .noRippleClickable { onBack() },
                         painter = painterResource(R.drawable.close),
                         contentDescription = null,
                     )
@@ -496,7 +474,8 @@ private fun CreateRolePage(
     ) { padding ->
         Column(
             modifier =
-                Modifier.fillMaxSize()
+                Modifier
+                    .fillMaxSize()
                     .imePadding()
                     .padding(
                         top = padding.calculateTopPadding(),
@@ -550,17 +529,10 @@ private fun CreateRolePage(
                                 }
 
                             val selectedUrl = avatarUrls.getOrNull(safeIndex)
-                            EasyLog.log(
-                                "Face edit - selectedImageIndex: $selectedImageIndex, safeIndex: $safeIndex, avatarUrls.size: ${avatarUrls.size}"
-                            )
-                            EasyLog.log("Face edit - selectedUrl: $selectedUrl")
-                            EasyLog.log("Face edit - all avatarUrls: $avatarUrls")
                             selectedUrl ?: avatarUrls.first()
                         } else {
                             avatarUrl
                         }
-
-                    EasyLog.log("Face edit - final imageUrl to crop: $imageUrl")
 
                     if (imageUrl != null) {
                         // Check if it's a web URL or local file
@@ -569,14 +541,12 @@ private fun CreateRolePage(
                             val isValidUrl =
                                 try {
                                     java.net.URL(imageUrl) // Test if URL is valid
-                                    EasyLog.log("Face edit - Valid URL format: $imageUrl")
                                     true
                                 } catch (e: Exception) {
                                     EasyLog.log(
-                                        "Face edit - Invalid URL format: $imageUrl",
-                                        EasyLog.ERROR,
+                                        "Face edit - Invalid URL format: $imageUrl URL validation error: ${e.message}",
+                                        EasyLog.ERROR
                                     )
-                                    EasyLog.log("URL validation error: ${e.message}", EasyLog.ERROR)
                                     false
                                 }
 
@@ -601,27 +571,11 @@ private fun CreateRolePage(
 
                                         val response = client.newCall(request).execute()
                                         EasyLog.log(
-                                            "Face edit download - HTTP response code: ${response.code}"
-                                        )
-                                        EasyLog.log(
                                             "Face edit download - HTTP response message: ${response.message}"
                                         )
 
                                         if (response.isSuccessful) {
                                             response.body?.let { body ->
-                                                EasyLog.log(
-                                                    "Face edit download - Content length: ${body.contentLength()}"
-                                                )
-                                                body.byteStream().use { inputStream ->
-                                                    tempFile.outputStream().use { outputStream ->
-                                                        val bytesWritten =
-                                                            inputStream.copyTo(outputStream)
-                                                        EasyLog.log(
-                                                            "Face edit download - Bytes written: $bytesWritten"
-                                                        )
-                                                    }
-                                                }
-
                                                 withContext(Dispatchers.Main) {
                                                     startUCropWithLocalFile(
                                                         tempFile,
@@ -637,27 +591,24 @@ private fun CreateRolePage(
                                         }
                                     } catch (e: Exception) {
                                         EasyLog.log(
-                                            "Failed to download image for cropping: $imageUrl",
-                                            EasyLog.ERROR,
+                                            "Failed to download image for cropping: $imageUrl Error details: ${e.message}",
+                                            EasyLog.ERROR
                                         )
-                                        EasyLog.log("Error details: ${e.message}", EasyLog.ERROR)
                                         withContext(Dispatchers.Main) {
                                             Toast.makeText(
-                                                    context,
-                                                    "Failed to download image for editing",
-                                                    Toast.LENGTH_SHORT,
-                                                )
-                                                .show()
+                                                context,
+                                                "Failed to download image for editing",
+                                                Toast.LENGTH_SHORT,
+                                            ).show()
                                         }
                                     }
                                 }
                             } else {
                                 Toast.makeText(
-                                        context,
-                                        context.getString(R.string.toast_invalid_image_url),
-                                        Toast.LENGTH_SHORT,
-                                    )
-                                    .show()
+                                    context,
+                                    context.getString(R.string.toast_invalid_image_url),
+                                    Toast.LENGTH_SHORT,
+                                ).show()
                             }
                         } else {
                             // Local file URI
@@ -671,11 +622,10 @@ private fun CreateRolePage(
                         }
                     } else {
                         Toast.makeText(
-                                context,
-                                context.getString(R.string.toast_no_avatar_image),
-                                Toast.LENGTH_SHORT,
-                            )
-                            .show()
+                            context,
+                            context.getString(R.string.toast_no_avatar_image),
+                            Toast.LENGTH_SHORT,
+                        ).show()
                     }
                 },
             )
@@ -731,19 +681,6 @@ private fun CreateRolePage(
                 minLines = 3,
             )
 
-            // Spacer(modifier = Modifier.height(24.dp))
-
-            // Sound Section
-            // SoundSelectionSection()
-
-            // Spacer(modifier = Modifier.height(24.dp))
-
-            // Visibility Section
-            // VisibilitySelectionSection(
-            //     selectedVisibility = visibility,
-            //     onVisibilityChange = { visibility = it }
-            // )
-
             Spacer(modifier = Modifier.height(40.dp))
 
             // Create Button
@@ -756,10 +693,10 @@ private fun CreateRolePage(
                         name.isBlank() || intro.isBlank() || opening.isBlank() || settings.isBlank()
                     ) {
                         Toast.makeText(
-                                context,
-                                context.getString(R.string.please_fill_required_fields),
-                                Toast.LENGTH_SHORT,
-                            )
+                            context,
+                            context.getString(R.string.please_fill_required_fields),
+                            Toast.LENGTH_SHORT,
+                        )
                             .show()
                         return@CreateButton
                     }
@@ -795,10 +732,6 @@ private fun CreateRolePage(
                     isLoading = true
 
                     try {
-                        // Create API request
-                        EasyLog.log(
-                            "${if (isEditMode) "Updating" else "Creating"} agent with avatar URL: $finalAvatarUrl"
-                        )
                         val request =
                             CreateAgentRequest(
                                 name = name,
@@ -812,9 +745,6 @@ private fun CreateRolePage(
                                 visibility = visibility,
                                 prompt = settings,
                             )
-                        EasyLog.log(
-                            "${if (isEditMode) "Update" else "Create"} agent request: $request"
-                        )
                         // Call API through ViewModel
                         if (isEditMode) {
                             mainViewModel.updateAgent(
@@ -823,12 +753,12 @@ private fun CreateRolePage(
                                 onSuccess = { agentInfo ->
                                     isLoading = false
                                     Toast.makeText(
-                                            context,
-                                            context.getString(
-                                                R.string.character_updated_successfully
-                                            ),
-                                            Toast.LENGTH_SHORT,
-                                        )
+                                        context,
+                                        context.getString(
+                                            R.string.character_updated_successfully
+                                        ),
+                                        Toast.LENGTH_SHORT,
+                                    )
                                         .show()
                                     onCreateSuccess()
                                 },
@@ -856,10 +786,10 @@ private fun CreateRolePage(
                                 onSuccess = { agentInfo ->
                                     isLoading = false
                                     Toast.makeText(
-                                            context,
-                                            context.getString(R.string.create_ai_successfully),
-                                            Toast.LENGTH_SHORT,
-                                        )
+                                        context,
+                                        context.getString(R.string.create_ai_successfully),
+                                        Toast.LENGTH_SHORT,
+                                    )
                                         .show()
                                     onCreateSuccess()
                                 },
@@ -916,16 +846,11 @@ private fun startUCropWithLocalFile(
 ) {
     try {
         if (!sourceFile.exists() || sourceFile.length() == 0L) {
-            EasyLog.log(
-                "Source file does not exist or is empty: ${sourceFile.absolutePath}",
-                EasyLog.ERROR,
-            )
             Toast.makeText(
-                    context,
-                    context.getString(R.string.toast_image_file_not_found),
-                    Toast.LENGTH_SHORT,
-                )
-                .show()
+                context,
+                context.getString(R.string.toast_image_file_not_found),
+                Toast.LENGTH_SHORT,
+            ).show()
             return
         }
 
@@ -962,16 +887,13 @@ private fun startUCropWithLocalFile(
                 )
                 .getIntent(context)
 
-        EasyLog.log("Starting UCrop with local file: ${sourceFile.absolutePath}")
         cropLauncher.launch(cropIntent)
     } catch (e: Exception) {
-        EasyLog.log("Failed to start UCrop with local file: ${e.message}", EasyLog.ERROR)
         Toast.makeText(
-                context,
-                context.getString(R.string.toast_failed_open_crop_editor),
-                Toast.LENGTH_SHORT,
-            )
-            .show()
+            context,
+            context.getString(R.string.toast_failed_open_crop_editor),
+            Toast.LENGTH_SHORT,
+        ).show()
     }
 }
 
@@ -992,10 +914,11 @@ private fun AvatarUploadSection(
         Box(
             modifier =
                 Modifier.then(
-                        if (isEmpty) Modifier.size(200.dp)
-                        else Modifier.fillMaxWidth().aspectRatio(9.div(16f))
-                    )
-                    .let { modifier ->
+                    if (isEmpty) Modifier.size(200.dp)
+                    else Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(9.div(16f))
+                ).let { modifier ->
                         if (isEmpty) {
                             modifier
                                 .background(
@@ -1019,9 +942,6 @@ private fun AvatarUploadSection(
 
                 avatarUrls.isNotEmpty() -> {
                     val displayUrl = avatarUrls.getOrNull(selectedIndex) ?: avatarUrls.first()
-                    EasyLog.log(
-                        "AvatarUploadSection: Displaying selected avatar with URL: $displayUrl"
-                    )
                     AsyncImage(
                         model = displayUrl,
                         contentDescription = stringResource(R.string.content_desc_selected_avatar),
@@ -1042,7 +962,6 @@ private fun AvatarUploadSection(
                 }
 
                 avatarUrl != null -> {
-                    EasyLog.log("AvatarUploadSection: Displaying avatar with URL: $avatarUrl")
                     AsyncImage(
                         model = avatarUrl,
                         contentDescription = stringResource(R.string.content_desc_generated_avatar),
@@ -1112,7 +1031,8 @@ private fun AvatarUploadSection(
             if (avatarUrls.isNotEmpty() || avatarUrl != null) {
                 Box(
                     modifier =
-                        Modifier.align(Alignment.TopEnd)
+                        Modifier
+                            .align(Alignment.TopEnd)
                             .padding(8.dp)
                             .background(
                                 color = Color.Black.copy(alpha = 0.5f),
@@ -1145,7 +1065,8 @@ private fun AvatarUploadSection(
         if (avatarUrls.isNotEmpty()) {
             Row(
                 modifier =
-                    Modifier.fillMaxWidth()
+                    Modifier
+                        .fillMaxWidth()
                         .background(
                             color = Color.Black.copy(alpha = 0.5f),
                             shape = RoundedCornerShape(12.dp),
@@ -1155,7 +1076,11 @@ private fun AvatarUploadSection(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 // Fixed Regen button on the left
-                Box(modifier = Modifier.width(88.dp).aspectRatio(9 / 16f)) {
+                Box(
+                    modifier = Modifier
+                        .width(88.dp)
+                        .aspectRatio(9 / 16f)
+                ) {
                     RegenButton(
                         onClick = { onRegenerate(AvatarManager.getGenerationPrompt()) },
                         enabled = !isGenerating,
@@ -1169,55 +1094,53 @@ private fun AvatarUploadSection(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     runCatching {
-                            if (avatarUrls.isNotEmpty()) {
-                                items(items = avatarUrls.indices.toList()) { index ->
-                                    val imageUrl = avatarUrls[index]
-                                    // 使用 CDN 裁切获取缩略图，使用配置的宽度和质量
-                                    val thumbnailUrl =
-                                        getCdnImageUrl(
-                                            imageUrl,
-                                            width = Config.TextToImage.Thumbnail.WIDTH,
-                                            quality = Config.TextToImage.Thumbnail.QUALITY,
-                                        )
-
-                                    EasyLog.log(
-                                        "AvatarUploadSection: Displaying avatar with URL: $imageUrl, thumbnail: $thumbnailUrl"
+                        if (avatarUrls.isNotEmpty()) {
+                            items(items = avatarUrls.indices.toList()) { index ->
+                                val imageUrl = avatarUrls[index]
+                                // 使用 CDN 裁切获取缩略图，使用配置的宽度和质量
+                                val thumbnailUrl =
+                                    getCdnImageUrl(
+                                        imageUrl,
+                                        width = Config.TextToImage.Thumbnail.WIDTH,
+                                        quality = Config.TextToImage.Thumbnail.QUALITY,
                                     )
-                                    Box(
-                                        modifier =
-                                            Modifier.width(88.dp)
-                                                .aspectRatio(9 / 16f)
-                                                .background(
-                                                    color = Color(0x1A78599A),
-                                                    shape = RoundedCornerShape(8.dp),
-                                                )
-                                                .border(
-                                                    width =
-                                                        if (index == selectedIndex) 3.dp else 1.dp,
-                                                    color =
-                                                        if (index == selectedIndex)
-                                                            Color(0xFFE91E63)
-                                                        else Color.Transparent,
-                                                    shape = RoundedCornerShape(8.dp),
-                                                )
-                                                .noRippleClickable { onImageSelected(index) },
-                                        contentAlignment = Alignment.Center,
-                                    ) {
-                                        AsyncImage(
-                                            model = thumbnailUrl ?: imageUrl, // 如果 CDN 处理失败，回退到原图
-                                            contentDescription =
-                                                stringResource(
-                                                    R.string.content_desc_generated_avatar_index,
-                                                    index,
-                                                ),
-                                            modifier = Modifier.fillMaxSize().padding(4.dp),
-                                            contentScale = ContentScale.Crop,
-                                        )
-                                    }
+                                Box(
+                                    modifier =
+                                        Modifier
+                                            .width(88.dp)
+                                            .aspectRatio(9 / 16f)
+                                            .background(
+                                                color = Color(0x1A78599A),
+                                                shape = RoundedCornerShape(8.dp),
+                                            )
+                                            .border(
+                                                width =
+                                                    if (index == selectedIndex) 3.dp else 1.dp,
+                                                color =
+                                                    if (index == selectedIndex)
+                                                        Color(0xFFE91E63)
+                                                    else Color.Transparent,
+                                                shape = RoundedCornerShape(8.dp),
+                                            )
+                                            .noRippleClickable { onImageSelected(index) },
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    AsyncImage(
+                                        model = thumbnailUrl ?: imageUrl, // 如果 CDN 处理失败，回退到原图
+                                        contentDescription =
+                                            stringResource(
+                                                R.string.content_desc_generated_avatar_index,
+                                                index,
+                                            ),
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .padding(4.dp),
+                                        contentScale = ContentScale.Crop,
+                                    )
                                 }
                             }
                         }
-                        .onFailure { it.printStackTrace() }
+                    }.onFailure { it.printStackTrace() }
                 }
             }
         }
@@ -1258,112 +1181,6 @@ private fun GenderSelectionSection(selectedGender: String, onGenderChange: (Stri
                 modifier = Modifier.weight(1.1f),
             )
         }
-    }
-}
-
-@Composable
-private fun SoundSelectionSection() {
-    Row(
-        modifier =
-            Modifier.fillMaxWidth()
-                .height(56.dp)
-                .background(color = Color(0x1A78599A), shape = RoundedCornerShape(12.dp))
-                .border(
-                    width = 1.dp,
-                    color = Color.White.copy(0.2f),
-                    shape = RoundedCornerShape(12.dp),
-                )
-                .padding(horizontal = 16.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(
-            modifier =
-                Modifier.size(32.dp)
-                    .background(color = Color(0xFFE91E63), shape = RoundedCornerShape(8.dp)),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(text = stringResource(R.string.music_note_symbol), fontSize = 16.sp)
-        }
-
-        Spacer(modifier = Modifier.width(12.dp))
-
-        Text(
-            text = stringResource(R.string.sound_required_full),
-            fontSize = 16.sp,
-            color = Color.White,
-            fontWeight = FontWeight.Medium,
-            modifier = Modifier.weight(1f),
-        )
-
-        Text(
-            text = stringResource(R.string.inty_voice_option_full),
-            fontSize = 14.sp,
-            color = Color.White.copy(0.7f),
-        )
-
-        Spacer(modifier = Modifier.width(8.dp))
-
-        Text(
-            text = stringResource(R.string.greater_than_symbol),
-            fontSize = 16.sp,
-            color = Color.White.copy(0.7f),
-        )
-    }
-}
-
-@Composable
-private fun VisibilitySelectionSection(
-    selectedVisibility: String,
-    onVisibilityChange: (String) -> Unit,
-) {
-    Row(
-        modifier =
-            Modifier.fillMaxWidth()
-                .height(56.dp)
-                .background(color = Color(0x1A78599A), shape = RoundedCornerShape(12.dp))
-                .border(
-                    width = 1.dp,
-                    color = Color.White.copy(0.2f),
-                    shape = RoundedCornerShape(12.dp),
-                )
-                .padding(horizontal = 16.dp)
-                .noRippleClickable {
-                    onVisibilityChange(if (selectedVisibility == "PUBLIC") "PRIVATE" else "PUBLIC")
-                },
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(
-            modifier =
-                Modifier.size(32.dp)
-                    .background(color = Color(0xFF2196F3), shape = RoundedCornerShape(8.dp)),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(text = stringResource(R.string.star_symbol), fontSize = 16.sp, color = Color.White)
-        }
-
-        Spacer(modifier = Modifier.width(12.dp))
-
-        Text(
-            text = stringResource(R.string.visibility_required_title_full),
-            fontSize = 16.sp,
-            color = Color.White,
-            fontWeight = FontWeight.Medium,
-            modifier = Modifier.weight(1f),
-        )
-
-        Text(
-            text = selectedVisibility.lowercase().replaceFirstChar { it.uppercase() },
-            fontSize = 14.sp,
-            color = Color.White.copy(0.7f),
-        )
-
-        Spacer(modifier = Modifier.width(8.dp))
-
-        Text(
-            text = stringResource(R.string.greater_than_symbol),
-            fontSize = 16.sp,
-            color = Color.White.copy(0.7f),
-        )
     }
 }
 
@@ -1457,7 +1274,8 @@ private fun CreateButton(isLoading: Boolean, isEditMode: Boolean = false, onClic
         colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
         shape = RoundedCornerShape(25.dp),
         modifier =
-            Modifier.fillMaxWidth()
+            Modifier
+                .fillMaxWidth()
                 .height(56.dp)
                 .background(
                     brush =

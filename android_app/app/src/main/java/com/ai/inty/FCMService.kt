@@ -16,7 +16,7 @@ class FCMService : FirebaseMessagingService() {
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
         // 1. 处理数据消息（应用前后台均触发）
         if (remoteMessage.data.isNotEmpty()) {
-            EasyLog.log("Data: " + remoteMessage.data)
+            EasyLog.log("FCMService onMessageReceived: " + remoteMessage.data, EasyLog.INFO)
         }
 
         // 2. 处理通知消息（仅前台触发；后台时由系统自动显示）
@@ -33,7 +33,7 @@ class FCMService : FirebaseMessagingService() {
 
     override fun onNewToken(token: String) {
         // 将新Token发送至服务器
-        EasyLog.log("FCM onNewToken: $token")
+
         //        sendTokenToServer(token)
     }
 

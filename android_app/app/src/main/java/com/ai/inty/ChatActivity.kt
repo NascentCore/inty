@@ -17,7 +17,6 @@ import com.ai.inty.chat.ChatViewModel
 import com.ai.inty.ui.theme.DarkPurple
 import com.ai.inty.ui.theme.IntyTheme
 import com.ai.inty.utils.FirebaseManager
-import com.inty.utils.log.EasyLog
 import com.therouter.router.Autowired
 import com.therouter.router.Route
 
@@ -25,9 +24,11 @@ import com.therouter.router.Route
 @Route(path = Constant.ROUTE_CHAT)
 class ChatActivity : BaseActivity() {
 
-    @Autowired var agent: AgentInfo? = null
+    @Autowired
+    var agent: AgentInfo? = null
 
-    @Autowired var agent_id: String? = null
+    @Autowired
+    var agent_id: String? = null
 
     private val chatViewModel: ChatViewModel by viewModels()
 
@@ -60,7 +61,6 @@ class ChatActivity : BaseActivity() {
 
             else -> {
                 // 既没有agent对象也没有agent_id，说明参数传递有问题
-                EasyLog.log("ChatActivity: No agent or agent_id provided, finishing activity")
                 finish()
                 return
             }
@@ -74,7 +74,8 @@ class ChatActivity : BaseActivity() {
             IntyTheme {
                 ChatPage(
                     modifier =
-                        Modifier.fillMaxSize()
+                        Modifier
+                            .fillMaxSize()
                             .background(DarkPurple)
                             .imePadding()
                             .navigationBarsPadding(),

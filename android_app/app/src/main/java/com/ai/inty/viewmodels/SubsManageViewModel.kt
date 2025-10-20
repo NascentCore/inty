@@ -28,7 +28,6 @@ class SubsManageViewModel : BaseViewModel() {
                 // ViewModel只负责逻辑判断和事件发出
                 // 具体的Intent启动逻辑由View层负责
                 _uiEvent.emit(SubscriptionUiEvent.NavigateToPlayStoreSubscriptions)
-                EasyLog.log("✅ ViewModel发出跳转 Google Play 订阅管理页面的事件")
             } catch (e: Exception) {
                 EasyLog.log("❌ 发送跳转事件失败: ${e.message}")
                 // 也可以发出一个事件让View显示错误信息
