@@ -40,7 +40,6 @@ object ImagePreloadManager {
                     .build()
 
             isInitialized = true
-            EasyLog.log("ImagePreloadManager - 初始化完成")
         } catch (e: Exception) {
             EasyLog.log("ImagePreloadManager - 初始化失败: ${e.message}", EasyLog.ERROR)
         }
@@ -63,22 +62,15 @@ object ImagePreloadManager {
             return
         }
 
-        EasyLog.log("ImagePreloadManager - 开始预加载 ${agents.size} 个agents的图片资源")
-
         try {
             withContext(Dispatchers.IO) {
                 // 收集所有需要预加载的图片URL
                 val imageUrls = collectImageUrls(agents)
-                EasyLog.log("ImagePreloadManager - 收集到 ${imageUrls.size} 个图片URL")
-
                 if (imageUrls.isNotEmpty()) {
                     // 使用Coil进行真正的图片预加载缓存
                     preloadImagesToCoilCache(imageUrls, maxConcurrent)
-                    EasyLog.log("ImagePreloadManager - 批量预加载图片到Coil缓存完成")
                 }
             }
-
-            EasyLog.log("ImagePreloadManager - 所有图片预加载完成")
         } catch (e: Exception) {
             EasyLog.log("ImagePreloadManager - 预加载异常: ${e.message}", EasyLog.ERROR)
         }
@@ -125,10 +117,8 @@ object ImagePreloadManager {
                 if (imageUrls.isNotEmpty()) {
                     // 使用Coil进行关键图片预加载缓存，提高并发数
                     preloadImagesToCoilCache(imageUrls, maxConcurrent = 8)
-                    EasyLog.log("ImagePreloadManager - 关键图片批量预加载到Coil缓存完成")
                 }
             }
-
             EasyLog.log("ImagePreloadManager - 关键图片预加载完成")
         } catch (e: Exception) {
             EasyLog.log("ImagePreloadManager - 关键图片预加载异常: ${e.message}", EasyLog.ERROR)
@@ -153,10 +143,8 @@ object ImagePreloadManager {
                             try {
                                 val request =
                                     ImageRequest.Builder(AppEnv.context).data(imageUrl).build()
-
                                 // 执行预加载，图片会被缓存到Coil的内存和磁盘缓存中
                                 loader.execute(request)
-                                EasyLog.log("ImagePreloadManager - 预加载成功: $imageUrl", EasyLog.DEBUG)
                             } catch (e: Exception) {
                                 EasyLog.log(
                                     "ImagePreloadManager - 预加载失败: $imageUrl, 错误: ${e.message}",
@@ -186,9 +174,7 @@ object ImagePreloadManager {
             withContext(Dispatchers.IO) {
                 val loader = imageLoader!!
                 val request = ImageRequest.Builder(AppEnv.context).data(imageUrl).build()
-
                 loader.execute(request)
-                EasyLog.log("ImagePreloadManager - 单图片预加载成功: $imageUrl", EasyLog.DEBUG)
             }
         } catch (e: Exception) {
             EasyLog.log("ImagePreloadManager - 单图片预加载失败: $imageUrl, 错误: ${e.message}", EasyLog.WARN)

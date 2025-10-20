@@ -5,7 +5,6 @@ import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.chat.constants.ChatConstants
-import com.inty.utils.log.EasyLog
 import com.inty.utils.storage.IntySetting
 import kotlinx.coroutines.flow.Flow
 
@@ -29,7 +28,6 @@ class ChatPagingRepository {
         useCache: Boolean = true,
         sortSeed: Int = IntySetting.randomSortSeed(),
     ): Flow<PagingData<AgentInfo>> {
-        EasyLog.log("ChatPagingRepository - 创建Paging数据流，useCache: $useCache, sortSeed: $sortSeed")
 
         return Pager(
                 config =
@@ -47,7 +45,6 @@ class ChatPagingRepository {
     /** 刷新数据（生成新的排序种子） */
     fun refreshChatAgents(): Flow<PagingData<AgentInfo>> {
         val newSortSeed = IntySetting.randomSortSeed()
-        EasyLog.log("ChatPagingRepository - 刷新数据，新randomSortSeed: $newSortSeed")
 
         return getChatAgentsFlow(
             useCache = false, // 刷新时不使用缓存

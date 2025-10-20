@@ -33,7 +33,8 @@ fun DeleteAccountDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
     Dialog(onDismissRequest = onDismiss) {
         Column(
             modifier =
-                Modifier.fillMaxWidth()
+                Modifier
+                    .fillMaxWidth()
                     .clip(RoundedCornerShape(12.dp))
                     .background(color = Color(0xFF1B0130))
                     .padding(12.dp)
@@ -78,7 +79,9 @@ fun DeleteAccountDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
             // 按钮
             Button(
                 onClick = onDismiss,
-                modifier = Modifier.fillMaxWidth(.85f).align(Alignment.CenterHorizontally),
+                modifier = Modifier
+                    .fillMaxWidth(.85f)
+                    .align(Alignment.CenterHorizontally),
             ) {
                 Text(stringResource(R.string.cancel), fontSize = 18.sp, color = Color.White)
             }
@@ -109,7 +112,8 @@ fun ForceUpgradeDialog(
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(false, false, true)) {
         Column(
             modifier =
-                Modifier.fillMaxWidth()
+                Modifier
+                    .fillMaxWidth()
                     .clip(RoundedCornerShape(20.dp))
                     .background(color = Color(0xFF1B0130))
                     .padding(12.dp)
@@ -124,13 +128,7 @@ fun ForceUpgradeDialog(
                     color = Color.White,
                 )
                 Spacer(Modifier.weight(1f))
-                IconButton(onClick = onDismiss, enabled = false) {
-                    //                    Icon(
-                    //                        painter = painterResource(R.drawable.close),
-                    //                        contentDescription = "",
-                    //                        tint = Color.White
-                    //                    )
-                }
+                IconButton(onClick = onDismiss, enabled = false) {}
             }
 
             Spacer(Modifier.height(8.dp))
@@ -142,7 +140,9 @@ fun ForceUpgradeDialog(
             // 按钮
             Button(
                 onClick = onConfirm,
-                modifier = Modifier.fillMaxWidth(.85f).align(Alignment.CenterHorizontally),
+                modifier = Modifier
+                    .fillMaxWidth(.85f)
+                    .align(Alignment.CenterHorizontally),
             ) {
                 Text(
                     stringResource(R.string.str_upgrade_now),

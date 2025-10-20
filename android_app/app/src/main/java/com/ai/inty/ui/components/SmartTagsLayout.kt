@@ -53,9 +53,11 @@ fun SmartTagsLayout(
 
     FlowRow(
         modifier =
-            modifier.fillMaxWidth().onGloballyPositioned { layoutCoordinates ->
-                availableWidth = layoutCoordinates.size.width.toFloat()
-            },
+            modifier
+                .fillMaxWidth()
+                .onGloballyPositioned { layoutCoordinates ->
+                    availableWidth = layoutCoordinates.size.width.toFloat()
+                },
         horizontalArrangement = horizontalArrangement,
         maxItemsInEachRow = Int.MAX_VALUE,
     ) {
@@ -88,13 +90,13 @@ private fun calculateVisibleTags(
 
         if (
             currentLineWidth + estimatedTagWidth + tagSpacing > availableWidth &&
-                currentLine < maxLines
+            currentLine < maxLines
         ) {
             currentLine++
             currentLineWidth = estimatedTagWidth
         } else if (
             currentLineWidth + estimatedTagWidth + tagSpacing > availableWidth &&
-                currentLine >= maxLines
+            currentLine >= maxLines
         ) {
             break
         } else {
@@ -118,7 +120,8 @@ private fun estimateTagWidth(text: String, density: androidx.compose.ui.unit.Den
 private fun TagItem(text: String) {
     Box(
         modifier =
-            Modifier.background(color = Color(0xff1C1523), shape = RoundedCornerShape(4.dp))
+            Modifier
+                .background(color = Color(0xff1C1523), shape = RoundedCornerShape(4.dp))
                 .border(
                     width = 1.dp,
                     brush =
@@ -147,7 +150,8 @@ private fun TagItem(text: String) {
 private fun LiteTagItem(text: String) {
     Box(
         modifier =
-            Modifier.background(color = Color(0xff1C1523), shape = RoundedCornerShape(4.dp))
+            Modifier
+                .background(color = Color(0xff1C1523), shape = RoundedCornerShape(4.dp))
                 .border(
                     width = .5.dp,
                     brush =

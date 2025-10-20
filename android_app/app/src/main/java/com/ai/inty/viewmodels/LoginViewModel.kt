@@ -33,8 +33,7 @@ class LoginViewModel : BaseActivityViewModel() {
                     // 现在我们可以同时获取到 token 和 userProfile
                     val token = result.data.token
                     val userProfile = result.data.user
-                    EasyLog.log("Token: $token")
-                    EasyLog.log("UserProfile: $userProfile")
+                    EasyLog.log("Token: $token ,, UserProfile: $userProfile")
 
                     // 保存用户信息和 token
                     IntySetting.login(false, userProfile.id, token) // false 表示不是游客用户
@@ -46,8 +45,7 @@ class LoginViewModel : BaseActivityViewModel() {
                                 AppEnv.context,
                                 AppEnv.context.getString(R.string.login_successfully),
                                 Toast.LENGTH_SHORT,
-                            )
-                            .show()
+                        ).show()
 
                         // 关闭当前登录页面
                         closeActivity()

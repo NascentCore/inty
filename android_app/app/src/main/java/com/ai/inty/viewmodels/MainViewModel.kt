@@ -90,11 +90,8 @@ class MainViewModel : BaseActivityViewModel() {
         }
 
     init {
-        EasyLog.log("MainViewModel init - current user: ${IntySetting.getCurUserID()}")
-
         // 使用统一启动管理器的数据快速初始化UI
         loadStartupData()
-
         TheRouter.addActionInterceptor(Constant.ACTION_USER_PROFILE_CHANGED, userProfileChanged)
     }
 
@@ -150,7 +147,6 @@ class MainViewModel : BaseActivityViewModel() {
             val audioManager =
                 com.ai.inty.audio.AudioManager.getInstance(AppEnv.context, viewModelScope)
             audioManager.stopAllPlayback()
-            EasyLog.log("MainViewModel - Tab切换时停止所有音频播放")
         } catch (e: Exception) {
             EasyLog.log("MainViewModel - 停止音频播放失败: ${e.message}", EasyLog.ERROR)
         }
@@ -162,7 +158,6 @@ class MainViewModel : BaseActivityViewModel() {
 
     fun updateCurrentChatPageIndex(index: Int) {
         _currentChatPageIndex.value = index
-        EasyLog.log("Updated current chat page index to: $index")
     }
 
     /** 接口请求获取用户信息 */
@@ -186,7 +181,6 @@ class MainViewModel : BaseActivityViewModel() {
 
     override fun onCleared() {
         super.onCleared()
-
         TheRouter.removeActionInterceptor(Constant.ACTION_USER_PROFILE_CHANGED, userProfileChanged)
     }
 
@@ -198,8 +192,6 @@ class MainViewModel : BaseActivityViewModel() {
     fun updatePlans() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                EasyLog.log("BillingRepository MainViewModel 开始更新会员状态...")
-
                 // 等待BillingRepository初始化完成
                 var retryCount = 0
                 while (!BillingRepository.isInitialized() && retryCount < 10) {
@@ -219,7 +211,6 @@ class MainViewModel : BaseActivityViewModel() {
                 }
 
                 BillingRepository.fetchRemote()
-                EasyLog.log("BillingRepository MainViewModel 会员状态更新完成")
             } catch (e: kotlinx.coroutines.CancellationException) {
                 EasyLog.log(
                     "BillingRepository MainViewModel Member status update cancelled: ${e.message}"
@@ -236,17 +227,14 @@ class MainViewModel : BaseActivityViewModel() {
     }
 
     fun getUserCreatedAgents() {
-        EasyLog.log("getUserCreatedAgents - Loading first page")
         currentUserAgentsPage = 0
         hasMoreUserAgents = true
 
         // 如果已经有数据，则使用静默刷新，不显示loading
         if (userCreatedAgents.isNotEmpty()) {
-            EasyLog.log("getUserCreatedAgents - 已有数据，静默刷新，不显示loading")
             loadUserCreatedAgentsSilently()
         } else {
             // 没有数据时才清空并显示loading
-            EasyLog.log("getUserCreatedAgents - 无数据，清空并显示loading")
             userCreatedAgents.clear()
             loadUserCreatedAgents()
         }
@@ -263,14 +251,11 @@ class MainViewModel : BaseActivityViewModel() {
         if (_isRefreshingUserAgents.value) return
 
         _isRefreshingUserAgents.value = true
-        EasyLog.log("loadUserCreatedAgentsSilently - 静默刷新，不显示loading")
         val skip = currentUserAgentsPage * 10
-        EasyLog.log("loadUserCreatedAgentsSilently - page: $currentUserAgentsPage, skip: $skip")
 
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val result = agentApi.getUserCreatedAgents(skip, 10)
-                EasyLog.log("loadUserCreatedAgentsSilently API result = $result")
 
                 when (result) {
                     is HttpResult.Success -> {
@@ -312,18 +297,15 @@ class MainViewModel : BaseActivityViewModel() {
 
         _isLoadingUserAgents.value = true
         val skip = currentUserAgentsPage * 10
-        EasyLog.log("loadUserCreatedAgents - page: $currentUserAgentsPage, skip: $skip")
 
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val result = agentApi.getUserCreatedAgents(skip, 10)
-                EasyLog.log("loadUserCreatedAgents API result = $result")
 
                 when (result) {
                     is HttpResult.Success -> {
                         if (result.data.isEmpty()) {
                             hasMoreUserAgents = false
-                            EasyLog.log("No more user created agents to load")
                         } else {
                             if (currentUserAgentsPage == 0) {
                                 // 第一页，直接替换（这里才清空并替换数据）
@@ -357,7 +339,6 @@ class MainViewModel : BaseActivityViewModel() {
                     "loadUserCreatedAgents exception: ${e.message}",
                     priority = EasyLog.ERROR,
                 )
-                EasyLog.log(e)
                 // If loading failed, rollback page counter
                 if (currentUserAgentsPage > 0) {
                     currentUserAgentsPage--
@@ -371,7 +352,6 @@ class MainViewModel : BaseActivityViewModel() {
         if (_selectedTab.value == HomeTabIndex.Profile) {
             // 如果已经在加载中，避免重复请求
             if (!_isLoadingUserAgents.value && !_isRefreshingUserAgents.value) {
-                EasyLog.log("refreshCreatedAgentsListIfOnTab - 刷新Profile tab数据")
                 getUserCreatedAgents()
             } else {
                 EasyLog.log("refreshCreatedAgentsListIfOnTab - 跳过刷新，正在加载中")
@@ -385,10 +365,6 @@ class MainViewModel : BaseActivityViewModel() {
         onSuccess: (AgentInfo) -> Unit,
         onError: (String) -> Unit,
     ) {
-        EasyLog.log("createAgent: ${request.name}")
-        EasyLog.log("createAgent request full details: $request")
-        EasyLog.log("createAgent avatar URL: ${request.avatar}")
-
         // 开始性能追踪
         FirebasePerformanceHelper.trace("create_agent") { trace ->
             FirebasePerformanceHelper.putAttribute(trace, "agent_name", request.name)
@@ -400,18 +376,16 @@ class MainViewModel : BaseActivityViewModel() {
             FirebasePerformanceHelper.putAttribute(
                 trace,
                 "visibility",
-                request.visibility ?: "unknown",
+                request.visibility,
             )
 
             launchWithNetCheck {
                 try {
                     val result = agentApi.createAgent(request)
-                    EasyLog.log("createAgent = $result")
 
                     withContext(Dispatchers.Main) {
                         when (result) {
                             is HttpResult.Success -> {
-                                EasyLog.log("createAgent success: ${result.data}")
                                 // 刷新用户创建的角色列表
                                 refreshCreatedAgentsListIfOnTab()
                                 onSuccess(result.data)
@@ -447,8 +421,6 @@ class MainViewModel : BaseActivityViewModel() {
 
     // 新增：用户登出方法
     fun logout() {
-        EasyLog.log("User logout - clearing all data")
-
         // 清理内存数据
         followingAgents.clear()
         userCreatedAgents.clear()
@@ -468,7 +440,6 @@ class MainViewModel : BaseActivityViewModel() {
         viewModelScope.launch {
             try {
                 clearCredentialState(AppEnv.context)
-                EasyLog.log("Credential state cleared successfully during logout")
             } catch (e: Exception) {
                 EasyLog.log(
                     "Failed to clear credential state during logout: ${e.message}",
@@ -479,12 +450,10 @@ class MainViewModel : BaseActivityViewModel() {
 
         // 切换到游客模式后，重新加载数据
         loadGuestModeData()
-        EasyLog.log("User logged out successfully - switched to guest mode")
     }
 
     // 游客模式数据加载，游客用户仍然可以访问推荐数据
     private fun loadGuestModeData() {
-        EasyLog.log("Loading guest mode data")
 
         viewModelScope.launch {
             try {
@@ -506,8 +475,6 @@ class MainViewModel : BaseActivityViewModel() {
                 // 重新加载agents数据（游客模式也应该有推荐数据）
                 UnifiedStartupManager.refreshRecommendedAgents()
                 UnifiedStartupManager.refreshChatAgents()
-
-                EasyLog.log("Guest mode data loaded successfully")
             } catch (e: Exception) {
                 EasyLog.log("Failed to load guest mode data: ${e.message}", EasyLog.ERROR)
             }
@@ -515,16 +482,13 @@ class MainViewModel : BaseActivityViewModel() {
     }
 
     fun deleteAgent(agentId: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
-        EasyLog.log("deleteAgent: $agentId")
         launchWithNetCheck {
             try {
                 val result = agentApi.deleteAgent(agentId)
-                EasyLog.log("deleteAgent = $result")
 
                 withContext(Dispatchers.Main) {
                     when (result) {
                         is HttpResult.Success -> {
-                            EasyLog.log("deleteAgent success: ${result.data}")
                             // 从用户创建的角色列表中移除
                             userCreatedAgents.removeAll { it.id == agentId }
                             // 从关注列表中移除（如果存在）
@@ -538,7 +502,6 @@ class MainViewModel : BaseActivityViewModel() {
                         }
 
                         is HttpResult.Failure -> {
-                            EasyLog.log("deleteAgent error: $result", priority = EasyLog.ERROR)
                             val errorMessage =
                                 result.message.ifBlank {
                                     AppEnv.context.getString(
@@ -565,7 +528,6 @@ class MainViewModel : BaseActivityViewModel() {
                 }
             } catch (e: Exception) {
                 EasyLog.log("deleteAgent exception: ${e.message}", priority = EasyLog.ERROR)
-                EasyLog.log(e)
                 val errorMessage = handleGeneralException(e, "delete")
                 withContext(Dispatchers.Main) {
                     ToastUtils.showToast(errorMessage)
@@ -585,12 +547,10 @@ class MainViewModel : BaseActivityViewModel() {
         launchWithNetCheck {
             try {
                 val result = agentApi.updateAgent(agentId, request)
-                EasyLog.log("updateAgent = $result")
 
                 withContext(Dispatchers.Main) {
                     when (result) {
                         is HttpResult.Success -> {
-                            EasyLog.log("updateAgent success: ${result.data}")
                             // 刷新用户创建的角色列表
                             refreshCreatedAgentsListIfOnTab()
                             // Toast removed to avoid duplicate - handled by calling activity
@@ -625,7 +585,6 @@ class MainViewModel : BaseActivityViewModel() {
                 }
             } catch (e: Exception) {
                 EasyLog.log("updateAgent exception: ${e.message}", priority = EasyLog.ERROR)
-                EasyLog.log(e)
                 val errorMessage = handleGeneralException(e, "update")
                 withContext(Dispatchers.Main) {
                     ToastUtils.showToast(errorMessage)

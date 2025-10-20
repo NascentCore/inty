@@ -138,39 +138,5 @@ object BillingErrorHandler {
         EasyLog.log("BillingErrorHandler - 解决建议:")
         suggestions.forEach { suggestion -> EasyLog.log("BillingErrorHandler - $suggestion") }
 
-        // 如果是BILLING_UNAVAILABLE，提供额外的诊断信息
-        if (
-            billingResult.responseCode == BillingClient.BillingResponseCode.BILLING_UNAVAILABLE &&
-                context != null
-        ) {
-            provideBillingUnavailableDiagnostics(context)
-        }
-    }
-
-    /** 提供BILLING_UNAVAILABLE的详细诊断 */
-    private fun provideBillingUnavailableDiagnostics(context: Context) {
-        EasyLog.log("BillingErrorHandler - 开始BILLING_UNAVAILABLE诊断...")
-
-        // 检查Google Play服务状态
-        val googlePlayStatus = BillingUtils.getGooglePlayServicesErrorDescription(context)
-        EasyLog.log("BillingErrorHandler - Google Play服务状态: $googlePlayStatus")
-
-        // 检查设备信息
-        EasyLog.log("BillingErrorHandler - 设备信息:")
-        EasyLog.log("BillingErrorHandler -   制造商: ${android.os.Build.MANUFACTURER}")
-        EasyLog.log("BillingErrorHandler -   型号: ${android.os.Build.MODEL}")
-        EasyLog.log("BillingErrorHandler -   Android版本: ${android.os.Build.VERSION.RELEASE}")
-        EasyLog.log("BillingErrorHandler -   是否为模拟器: ${BillingUtils.isEmulator()}")
-
-        // 检查应用信息
-        try {
-            val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
-            EasyLog.log("BillingErrorHandler - 应用信息:")
-            EasyLog.log("BillingErrorHandler -   包名: ${packageInfo.packageName}")
-            EasyLog.log("BillingErrorHandler -   版本名: ${packageInfo.versionName}")
-            EasyLog.log("BillingErrorHandler -   版本码: ${packageInfo.versionCode}")
-        } catch (e: Exception) {
-            EasyLog.log("BillingErrorHandler - 获取应用信息失败: ${e.message}")
-        }
     }
 }

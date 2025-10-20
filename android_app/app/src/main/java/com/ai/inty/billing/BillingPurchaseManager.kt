@@ -378,7 +378,6 @@ internal class BillingPurchaseManager(
             isSupported
         } catch (e: Exception) {
             EasyLog.log("BillingRepository BillingPurchaseManager 检查计费支持时出错: ${e.message}")
-            EasyLog.log("BillingRepository BillingPurchaseManager 异常堆栈: ${e.stackTraceToString()}")
             showError("Error checking billing support: ${e.message}")
             false
         }
@@ -439,30 +438,18 @@ internal class BillingPurchaseManager(
                         EasyLog.log(
                             "BillingRepository BillingPurchaseManager ✅ 购买流程启动结果: $launchResult"
                         )
-                    }
-                        ?: run {
+                    } ?: run {
                             EasyLog.log(
                                 "BillingRepository BillingPurchaseManager ❌ 未找到商品详情: $productId"
                             )
-                            EasyLog.log("BillingRepository BillingPurchaseManager 可能原因:")
-                            EasyLog.log(
-                                "BillingRepository BillingPurchaseManager   1. 商品ID不存在于Google Play Console"
-                            )
-                            EasyLog.log("BillingRepository BillingPurchaseManager   2. 商品未激活或未发布")
-                            EasyLog.log(
-                                "BillingRepository BillingPurchaseManager   3. 应用签名与Google Play Console不匹配"
-                            )
-                            EasyLog.log("BillingRepository BillingPurchaseManager   4. 测试用户未正确设置")
-
                             showError(activity, "Product details not found: $productId")
                         }
                 }
 
                 BillingClient.BillingResponseCode.DEVELOPER_ERROR -> {
                     EasyLog.log(
-                        "BillingRepository BillingPurchaseManager ❌ 开发者错误 (12): 请检查商品ID配置、应用签名、测试用户设置"
+                        "BillingRepository BillingPurchaseManager 商品ID: $productId ❌ 开发者错误 (12): 请检查商品ID配置、应用签名、测试用户设置"
                     )
-                    EasyLog.log("BillingRepository BillingPurchaseManager 当前查询的商品ID: $productId")
                     showError(
                         activity,
                         "Developer error: Please check product ID configuration, app signature, test user settings",

@@ -30,9 +30,6 @@ object VipStatusHelper {
         val currentPlans = BillingRepository.plansFlow.value
         if (currentPlans.isNotEmpty()) {
             val selectedPlan = currentPlans[0]
-            EasyLog.log(
-                "VipStatusHelper - 准备购买订阅计划: ${selectedPlan.name} (${selectedPlan.googleProductId}) - ${selectedPlan.price}"
-            )
 
             // 检查用户是否已经订阅
             if (isUserVip()) {

@@ -10,27 +10,22 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
 import com.ai.inty.R
-import com.inty.utils.log.EasyLog
 
 /** 订阅管理容器组件 */
 @Composable
 fun SubscriptionManagementContainer(content: @Composable () -> Unit) {
     Column(
         modifier =
-            Modifier.padding(horizontal = 16.dp)
+            Modifier
+                .padding(horizontal = 16.dp)
                 .fillMaxWidth()
                 .border(
                     brush =
@@ -57,33 +52,19 @@ fun openPlayStoreSubscriptions(context: Context) {
 
         if (intent.resolveActivity(context.packageManager) != null) {
             context.startActivity(intent)
-            EasyLog.log("✅ 成功跳转到 Google Play 订阅管理页面")
         } else {
-            EasyLog.log("❌ 没有找到可以处理 Google Play 订阅管理页面的应用")
             Toast.makeText(
-                    context,
-                    context.getString(R.string.toast_google_play_unavailable),
-                    Toast.LENGTH_LONG,
-                )
+                context,
+                context.getString(R.string.toast_google_play_unavailable),
+                Toast.LENGTH_LONG,
+            )
                 .show()
         }
     } catch (e: Exception) {
-        EasyLog.log("❌ 跳转到 Google Play 订阅管理页面失败: ${e.message}")
         Toast.makeText(
-                context,
-                context.getString(R.string.toast_navigation_failed),
-                Toast.LENGTH_LONG,
-            )
-            .show()
-    }
-}
-
-// Preview 函数
-@Preview(showBackground = true)
-@Composable
-fun SubscriptionManagementContainerPreview() {
-    SubscriptionManagementContainer {
-        // 预览容器组件
-        Text(text = "恢复订阅", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
+            context,
+            context.getString(R.string.toast_navigation_failed),
+            Toast.LENGTH_LONG,
+        ).show()
     }
 }

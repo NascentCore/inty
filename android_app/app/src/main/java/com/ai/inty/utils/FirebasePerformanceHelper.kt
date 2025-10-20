@@ -24,7 +24,6 @@ object FirebasePerformanceHelper {
             val perf = firebasePerf ?: return null
             val trace = perf.newTrace(traceName)
             trace.start()
-            EasyLog.log("Firebase Performance: Started trace '$traceName'")
             trace
         } catch (e: Exception) {
             EasyLog.log(
@@ -43,7 +42,6 @@ object FirebasePerformanceHelper {
     fun stopTrace(trace: Trace?) {
         try {
             trace?.stop()
-            EasyLog.log("Firebase Performance: Stopped trace")
         } catch (e: Exception) {
             EasyLog.log("Firebase Performance: Failed to stop trace: ${e.message}", EasyLog.ERROR)
         }
@@ -95,9 +93,6 @@ object FirebasePerformanceHelper {
         return try {
             val perf = firebasePerf ?: return null
             val httpMetric = perf.newHttpMetric(request.url.toString(), request.method)
-            EasyLog.log(
-                "Firebase Performance: Created HTTP metric for ${request.method} ${request.url}"
-            )
             httpMetric
         } catch (e: Exception) {
             EasyLog.log(
@@ -134,7 +129,6 @@ object FirebasePerformanceHelper {
         try {
             // Firebase Performance HttpMetric 会自动记录响应信息
             httpMetric?.stop()
-            EasyLog.log("Firebase Performance: Stopped HTTP metric")
         } catch (e: Exception) {
             EasyLog.log(
                 "Firebase Performance: Failed to stop HTTP metric: ${e.message}",

@@ -13,7 +13,6 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
 
@@ -43,13 +42,11 @@ class TtsManager private constructor(private val context: Context) {
 
     // 延迟获取API依赖
     private val chatApi by lazy {
-        EasyLog.log("音频LOG测试 Getting IChatApi from TheRouter")
         val api = TheRouter.get(IChatApi::class.java)
         if (api == null) {
             EasyLog.log("音频LOG测试 IChatApi not found in TheRouter", EasyLog.ERROR)
             throw IllegalStateException("IChatApi not found in TheRouter")
         }
-        EasyLog.log("音频LOG测试 IChatApi obtained successfully")
         api
     }
 
@@ -69,12 +66,6 @@ class TtsManager private constructor(private val context: Context) {
         onError: (String) -> Unit,
         forceRegenerate: Boolean = false,
     ) {
-        EasyLog.log(
-            "音频LOG测试 TtsManager.generateMessageVoice called: messageId=$messageId, agentId=$agentId, forceRegenerate=$forceRegenerate"
-        )
-        EasyLog.log("音频LOG测试 Current generating TTS messages: ${_isGeneratingTts.value}")
-        EasyLog.log("音频LOG测试 TtsManager ioScope isActive=${ioScope.isActive}")
-
         // 检查是否正在生成（除非强制重新生成）
         if (!forceRegenerate && _isGeneratingTts.value.contains(messageId)) {
             EasyLog.log("音频LOG测试 TTS already generating for message: $messageId")
@@ -104,12 +95,6 @@ class TtsManager private constructor(private val context: Context) {
 
         ioScope.launch {
             try {
-                EasyLog.log("音频LOG测试 Generating TTS for message: $messageId, agent: $agentId")
-                EasyLog.log("音频LOG测试 About to call chatApi.fetchMsgVoice")
-                EasyLog.log(
-                    "音频LOG测试 Request URL will be: /api/v1/chats/agents/$agentId/messages/$messageId/voice"
-                )
-
                 if (agentId.isEmpty() || messageId.isEmpty()) {
                     EasyLog.log(
                         "音频LOG测试 TTS generation failed: agentId='$agentId', messageId='$messageId'",
@@ -134,7 +119,6 @@ class TtsManager private constructor(private val context: Context) {
                     return@launch
                 }
                 val response = withTimeout(30_000) { chatApi.fetchMsgVoice(agentId, messageId) }
-                EasyLog.log("音频LOG测试 fetchMsgVoice response received: $response")
 
                 when (response) {
                     is HttpResult.Success -> {
@@ -151,15 +135,8 @@ class TtsManager private constructor(private val context: Context) {
                         } else {
                             val audioUrl = response.data.data?.audio_url
                             if (audioUrl != null && audioUrl.isNotEmpty()) {
-                                EasyLog.log(
-                                    "音频LOG测试 TTS generated successfully: $audioUrl (Agent: $agentId)"
-                                )
                                 completeWithSuccess(dedupKey, messageId, audioUrl, onSuccess)
                             } else {
-                                EasyLog.log(
-                                    "音频LOG测试 TTS generation returned empty audio_url (Agent: $agentId)",
-                                    EasyLog.ERROR,
-                                )
                                 completeWithError(dedupKey, messageId, "TTS生成失败：返回空音频URL", onError)
                             }
                         }
@@ -200,9 +177,6 @@ class TtsManager private constructor(private val context: Context) {
         val callbacks = synchronized(inFlight) { inFlight.remove(key) ?: emptyList() }
         if (callbacks.isEmpty()) return directSuccess(url)
         callbacks.forEach { it(Result.success(url)) }
-        EasyLog.log(
-            "音频LOG测试 TTS complete success, dispatched to ${callbacks.size} callbacks for key=$key"
-        )
     }
 
     private fun completeWithError(

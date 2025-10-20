@@ -33,8 +33,6 @@ class ExploreViewModel : BaseViewModel() {
     fun initializePagingData() {
         if (isInitialized) return
 
-        EasyLog.log("ExploreViewModel - 初始化Paging数据流")
-
         // Firebase Analytics - 记录探索页面访问
         FirebaseManager.logEvent(
             "explore_page_view",
@@ -50,7 +48,6 @@ class ExploreViewModel : BaseViewModel() {
         _agentsFlow.value = initialFlow
         isInitialized = true
 
-        EasyLog.log("ExploreViewModel - Paging数据流初始化完成")
     }
 
     /** 获取推荐agents的Paging数据流 */
@@ -63,7 +60,6 @@ class ExploreViewModel : BaseViewModel() {
 
     /** 强制刷新推荐agents 简化策略：直接使用Paging的刷新机制，让Paging处理状态 */
     fun refreshRecommendAgents() {
-        EasyLog.log("ExploreViewModel - 强制刷新推荐agents")
 
         viewModelScope.launch {
             try {
@@ -71,7 +67,6 @@ class ExploreViewModel : BaseViewModel() {
                 val refreshFlow = pagingRepository.refreshRecommendAgents().cachedIn(viewModelScope)
 
                 _agentsFlow.value = refreshFlow
-                EasyLog.log("ExploreViewModel - 刷新数据流创建成功")
             } catch (e: Exception) {
                 EasyLog.log(
                     "ExploreViewModel - refreshRecommendAgents异常: ${e.message}",
@@ -94,25 +89,17 @@ class ExploreViewModel : BaseViewModel() {
                 if (preloadedAgents.isEmpty()) {
                     // 监听数据清理（如用户登出）
                     clearData()
-                    EasyLog.log("ExploreViewModel - 监听到数据清理")
                 } else if (!isInitialized) {
                     // 如果还未初始化且有预加载数据，则初始化
                     initializePagingData()
-                    EasyLog.log("ExploreViewModel - 监听到预加载数据，初始化Paging: ${preloadedAgents.size}个")
                 }
             }
         }
-    }
-
-    /** 获取缓存的agents列表（用于ChatTab显示） */
-    fun getCachedAgentsList(): List<AgentInfo> {
-        return UnifiedStartupManager.getCurrentRecommendedAgents()
     }
 
     /** 清空数据（用于用户登出等场景） */
     fun clearData() {
         _agentsFlow.value = null
         isInitialized = false
-        EasyLog.log("ExploreViewModel - 清空Paging数据")
     }
 }

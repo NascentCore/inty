@@ -61,6 +61,5 @@ object UserProfileManager {
 
     fun clearUserProfile() {
         IntySetting.clearAllUserProfileData()
-        EasyLog.log("Cleared user profile data")
     }
 }

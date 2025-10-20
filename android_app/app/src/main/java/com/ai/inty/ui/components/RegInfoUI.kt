@@ -35,6 +35,7 @@ internal fun GenderItem(gender: GENDER, selected: Boolean, onClick: () -> Unit) 
             GENDER.MALE -> if (selected) R.drawable.gender_male_selected else R.drawable.gender_male
             GENDER.FEMALE ->
                 if (selected) R.drawable.gender_female_selected else R.drawable.gender_female
+
             GENDER.OTHER ->
                 if (selected) R.drawable.gender_other_selected else R.drawable.gender_other
         }
@@ -52,7 +53,8 @@ internal fun GenderItem(gender: GENDER, selected: Boolean, onClick: () -> Unit) 
     ) {
         Box(
             modifier =
-                Modifier.size(80.dp)
+                Modifier
+                    .size(80.dp)
                     .background(color = Color.White.copy(0.1f), shape = CircleShape)
                     .then(
                         if (selected) {
@@ -145,9 +147,12 @@ internal fun AgeItem(
 internal fun CloseButton(onClose: () -> Unit) {
     Image(
         modifier =
-            Modifier.padding(end = 16.dp, top = 16.dp).size(18.dp, 18.dp).noRippleClickable {
-                onClose()
-            },
+            Modifier
+                .padding(end = 16.dp, top = 16.dp)
+                .size(18.dp, 18.dp)
+                .noRippleClickable {
+                    onClose()
+                },
         painter = painterResource(R.drawable.close),
         contentDescription = null,
     )
@@ -200,15 +205,11 @@ private fun GenderItemPreview() {
 @Composable
 private fun AgeItemPreview() {
     AgeItem(
-        modifier = Modifier.fillMaxWidth().height(48.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(48.dp),
         text = "18-20",
         isSelected = true,
         onSelected = {},
     )
-}
-
-@Preview(showBackground = true)
-@Composable
-private fun CloseButtonPreview() {
-    CloseButton(onClose = {})
 }

@@ -135,7 +135,9 @@ private fun AvatarGeneratePage(
                 navigationIcon = {
                     Image(
                         modifier =
-                            Modifier.padding(horizontal = 12.dp).noRippleClickable { onBack() },
+                            Modifier
+                                .padding(horizontal = 12.dp)
+                                .noRippleClickable { onBack() },
                         painter = painterResource(R.drawable.close),
                         contentDescription = null,
                     )
@@ -145,7 +147,8 @@ private fun AvatarGeneratePage(
     ) { padding ->
         Column(
             modifier =
-                Modifier.fillMaxSize()
+                Modifier
+                    .fillMaxSize()
                     .imePadding()
                     .padding(
                         top = padding.calculateTopPadding(),
@@ -162,7 +165,6 @@ private fun AvatarGeneratePage(
             Spacer(modifier = Modifier.height(24.dp))
 
             // Image Preview Section
-            EasyLog.log("AvatarGeneratePage: generatedImageUrls.isEmpty() = ${generatedImageUrls.isEmpty()}, generatedImageUrl = $generatedImageUrl, isLoading = $isLoading", EasyLog.INFO)
             if (generatedImageUrls.isEmpty()) {
                 AvatarPreviewSection(imageUrl = generatedImageUrl, isLoading = isLoading)
             } else {
@@ -212,10 +214,10 @@ private fun AvatarGeneratePage(
 
 @Composable
 private fun AvatarPreviewSection(imageUrl: String?, isLoading: Boolean) {
-    EasyLog.log("AvatarPreviewSection: imageUrl = $imageUrl, isLoading = $isLoading", EasyLog.INFO)
     Box(
         modifier =
-            Modifier.fillMaxWidth()
+            Modifier
+                .fillMaxWidth()
                 .height(320.dp)
                 .background(color = Color(0x1A78599A), shape = RoundedCornerShape(16.dp)),
         contentAlignment = Alignment.Center,
@@ -233,11 +235,12 @@ private fun AvatarPreviewSection(imageUrl: String?, isLoading: Boolean) {
                         width = Config.TextToImage.Preview.WIDTH,
                         quality = Config.TextToImage.Preview.QUALITY,
                     )
-                EasyLog.log("Displaying image with URL: $imageUrl, preview: $previewUrl", EasyLog.INFO)
                 AsyncImage(
                     model = previewUrl ?: imageUrl, // 如果 CDN 处理失败，回退到原图
                     contentDescription = stringResource(R.string.content_desc_generated_avatar),
-                    modifier = Modifier.fillMaxSize().padding(4.dp),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(4.dp),
                     contentScale = ContentScale.Crop,
                     onSuccess = { EasyLog.log("Image loaded successfully: $previewUrl") },
                     onError = { EasyLog.log("Failed to load image: $previewUrl", EasyLog.ERROR) },
@@ -306,7 +309,8 @@ private fun PromptInputField(value: String, onValueChange: (String) -> Unit) {
             value = value,
             onValueChange = onValueChange,
             modifier =
-                Modifier.fillMaxWidth()
+                Modifier
+                    .fillMaxWidth()
                     .background(color = Color(0x1A78599A), shape = RoundedCornerShape(12.dp))
                     .border(
                         width = 1.dp,
@@ -345,7 +349,8 @@ private fun GenerateButton(isLoading: Boolean, enabled: Boolean, onClick: () -> 
             ),
         shape = RoundedCornerShape(25.dp),
         modifier =
-            Modifier.fillMaxWidth()
+            Modifier
+                .fillMaxWidth()
                 .height(56.dp)
                 .background(
                     brush =
@@ -379,7 +384,9 @@ private fun UseAvatarButton(onClick: () -> Unit) {
         onClick = onClick,
         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3)),
         shape = RoundedCornerShape(25.dp),
-        modifier = Modifier.fillMaxWidth().height(48.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(48.dp),
     ) {
         Text(
             text = stringResource(R.string.use_this_avatar_button),
@@ -401,16 +408,17 @@ fun ThreeDotLoadingAnimation() {
         repeat(3) { index ->
             val delay = index * 200
             val alpha by
-                infiniteTransition.animateFloat(
-                    initialValue = 0.3f,
-                    targetValue = 1.0f,
-                    animationSpec = infiniteRepeatable(animation = tween(600, delayMillis = delay)),
-                    label = "dot_alpha_$index",
-                )
+            infiniteTransition.animateFloat(
+                initialValue = 0.3f,
+                targetValue = 1.0f,
+                animationSpec = infiniteRepeatable(animation = tween(600, delayMillis = delay)),
+                label = "dot_alpha_$index",
+            )
 
             Box(
                 modifier =
-                    Modifier.size(12.dp)
+                    Modifier
+                        .size(12.dp)
                         .background(
                             color = Color(0xFFE91E63).copy(alpha = alpha),
                             shape = CircleShape,
@@ -448,13 +456,10 @@ private fun AvatarGridSection(
                         width = Config.TextToImage.Thumbnail.WIDTH,
                         quality = Config.TextToImage.Thumbnail.QUALITY,
                     )
-
-                EasyLog.log(
-                    "AvatarGridSection: Displaying avatar with URL: $imageUrl, thumbnail: $thumbnailUrl"
-                )
                 Box(
                     modifier =
-                        Modifier.weight(1f)
+                        Modifier
+                            .weight(1f)
                             .aspectRatio(9 / 16f)
                             .background(color = Color(0x1A78599A), shape = RoundedCornerShape(8.dp))
                             .border(
@@ -471,7 +476,9 @@ private fun AvatarGridSection(
                         model = thumbnailUrl ?: imageUrl, // 如果 CDN 处理失败，回退到原图
                         contentDescription =
                             stringResource(R.string.content_desc_generated_avatar_index, index),
-                        modifier = Modifier.fillMaxSize().padding(4.dp),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(4.dp),
                         contentScale = ContentScale.Crop,
                     )
                 }
@@ -484,7 +491,8 @@ private fun AvatarGridSection(
 fun RegenButton(onClick: () -> Unit, enabled: Boolean = true) {
     Box(
         modifier =
-            Modifier.fillMaxSize()
+            Modifier
+                .fillMaxSize()
                 .heightIn(112.dp)
                 .background(color = Color(0x1A78599A), shape = RoundedCornerShape(8.dp))
                 .border(

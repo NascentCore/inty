@@ -72,7 +72,6 @@ class AvatarGenerateViewModel : BaseViewModel() {
                 // Start generation in background - this will continue even after navigation
                 val response = generateBackground(request = request)
                 withContext(Dispatchers.Main) {
-                    EasyLog.log("Background generation completed successfully")
                     EasyLog.log("Generated image URLs: ${response.imageUrls}")
 
                     if (response.imageUrls.isNotEmpty()) {
@@ -96,9 +95,6 @@ class AvatarGenerateViewModel : BaseViewModel() {
 
                 // 生成成功后，返回到Ai形象创建页面 Immediately navigate back to CreateRoleActivity
                 withContext(Dispatchers.Main) {
-                    EasyLog.log(
-                        "Generation request submitted, navigating back to CreateRoleActivity"
-                    )
                     onNavigateBack()
                 }
             } catch (e: Exception) {
@@ -165,7 +161,6 @@ class AvatarGenerateViewModel : BaseViewModel() {
                     val errorMessage = e.message?.substringBefore(':') ?: "Unknown error"
                     _errorMessage.value = errorMessage
                     EasyLog.log("Regenerate avatar error: ${e.message}", EasyLog.ERROR)
-                    EasyLog.log(e)
                     _isLoading.value = false
                 }
             }

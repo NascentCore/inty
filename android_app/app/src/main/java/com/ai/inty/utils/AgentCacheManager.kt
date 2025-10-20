@@ -86,34 +86,6 @@ object AgentCacheManager {
         }
     }
 
-    /** 缓存关注agents */
-    fun cacheFollowingAgents(agents: List<AgentInfo>) {
-        try {
-            val agentsJson = agentListAdapter.toJson(agents)
-            IntySetting.setUserProfileData(KEY_FOLLOWING_AGENTS, agentsJson)
-            EasyLog.log("AgentCacheManager - 缓存关注agents成功: ${agents.size}个")
-        } catch (e: Exception) {
-            EasyLog.log("AgentCacheManager - 缓存关注agents失败: ${e.message}", EasyLog.ERROR)
-        }
-    }
-
-    /** 获取缓存的关注agents */
-    fun getCachedFollowingAgents(): List<AgentInfo> {
-        return try {
-            val agentsJson = IntySetting.getUserProfileData(KEY_FOLLOWING_AGENTS)
-            if (agentsJson.isNullOrEmpty()) {
-                emptyList()
-            } else {
-                val agents = agentListAdapter.fromJson(agentsJson) ?: emptyList()
-                EasyLog.log("AgentCacheManager - 获取缓存关注agents: ${agents.size}个")
-                agents
-            }
-        } catch (e: Exception) {
-            EasyLog.log("AgentCacheManager - 获取缓存关注agents失败: ${e.message}", EasyLog.ERROR)
-            emptyList()
-        }
-    }
-
     /** 检查缓存是否过期 */
     fun isCacheExpired(): Boolean {
         val timestampStr = IntySetting.getUserProfileData(KEY_CACHE_TIMESTAMP)
@@ -133,57 +105,6 @@ object AgentCacheManager {
         }
     }
 
-    /** 更新单个agent的关注状态 */
-    fun updateAgentFollowState(agentId: String, isFollowed: Boolean) {
-        try {
-            // 更新推荐agents列表中的关注状态
-            val recommendedAgents = getCachedAgents().toMutableList()
-            val recommendedIndex = recommendedAgents.indexOfFirst { it.id == agentId }
-            if (recommendedIndex != -1) {
-                recommendedAgents[recommendedIndex] =
-                    recommendedAgents[recommendedIndex].copy(isFollowed = isFollowed)
-                cacheAgents(recommendedAgents)
-            }
-
-            // 更新关注agents列表
-            val followingAgents = getCachedFollowingAgents().toMutableList()
-            if (isFollowed) {
-                // 添加到关注列表
-                val agent = recommendedAgents.find { it.id == agentId }
-                if (agent != null && followingAgents.none { it.id == agentId }) {
-                    followingAgents.add(agent.copy(isFollowed = true))
-                    cacheFollowingAgents(followingAgents)
-                }
-            } else {
-                // 从关注列表移除
-                followingAgents.removeAll { it.id == agentId }
-                cacheFollowingAgents(followingAgents)
-            }
-
-            EasyLog.log("AgentCacheManager - 更新agent关注状态: $agentId -> $isFollowed")
-        } catch (e: Exception) {
-            EasyLog.log("AgentCacheManager - 更新agent关注状态失败: ${e.message}", EasyLog.ERROR)
-        }
-    }
-
-    /** 添加用户创建的agent到缓存 */
-    fun addUserCreatedAgent(agent: AgentInfo) {
-        try {
-            val recommendedAgents = getCachedAgents().toMutableList()
-            // 检查是否已存在
-            val existingIndex = recommendedAgents.indexOfFirst { it.id == agent.id }
-            if (existingIndex != -1) {
-                recommendedAgents[existingIndex] = agent
-            } else {
-                recommendedAgents.add(agent)
-            }
-            cacheAgents(recommendedAgents)
-            EasyLog.log("AgentCacheManager - 添加用户创建agent到缓存: ${agent.name}")
-        } catch (e: Exception) {
-            EasyLog.log("AgentCacheManager - 添加用户创建agent失败: ${e.message}", EasyLog.ERROR)
-        }
-    }
-
     /** 从缓存中删除agent */
     fun removeAgent(agentId: String) {
         try {
@@ -191,12 +112,6 @@ object AgentCacheManager {
             val recommendedAgents = getCachedAgents().toMutableList()
             recommendedAgents.removeAll { it.id == agentId }
             cacheAgents(recommendedAgents)
-
-            // 从关注列表移除
-            val followingAgents = getCachedFollowingAgents().toMutableList()
-            followingAgents.removeAll { it.id == agentId }
-            cacheFollowingAgents(followingAgents)
-
             EasyLog.log("AgentCacheManager - 从缓存移除agent: $agentId")
         } catch (e: Exception) {
             EasyLog.log("AgentCacheManager - 从缓存移除agent失败: ${e.message}", EasyLog.ERROR)
@@ -221,13 +136,11 @@ object AgentCacheManager {
     fun getCacheStats(): CacheStats {
         val recommendedCount = getCachedAgents().size
         val chatCount = getCachedChatAgents().size
-        val followingCount = getCachedFollowingAgents().size
         val isExpired = isCacheExpired()
 
         return CacheStats(
             recommendedAgentsCount = recommendedCount,
             chatAgentsCount = chatCount,
-            followingAgentsCount = followingCount,
             isExpired = isExpired,
         )
     }
@@ -236,7 +149,6 @@ object AgentCacheManager {
     data class CacheStats(
         val recommendedAgentsCount: Int,
         val chatAgentsCount: Int,
-        val followingAgentsCount: Int,
         val isExpired: Boolean,
     )
 }

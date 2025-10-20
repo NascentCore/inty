@@ -2,7 +2,6 @@ package com.ai.inty.base
 
 import androidx.lifecycle.ViewModel
 import com.ai.inty.utils.FirebaseManager
-import com.inty.utils.log.EasyLog
 
 /** 带有Analytics功能的ViewModel基类 提供统一的页面跟踪和事件跟踪功能 */
 abstract class AnalyticsViewModel : ViewModel() {
@@ -28,7 +27,6 @@ abstract class AnalyticsViewModel : ViewModel() {
                 additionalParams = additionalParams,
             )
             hasTrackedScreenView = true
-            EasyLog.log("AnalyticsViewModel - 页面跟踪: $screenName ($screenClass)")
         }
     }
 
@@ -40,7 +38,6 @@ abstract class AnalyticsViewModel : ViewModel() {
      */
     fun trackEvent(eventName: String, params: Map<String, Any> = emptyMap()) {
         FirebaseManager.logEvent(eventName, params)
-        EasyLog.log("AnalyticsViewModel - 事件跟踪: $eventName")
     }
 
     /**
@@ -70,7 +67,6 @@ abstract class AnalyticsViewModel : ViewModel() {
                     "screen_class" to screenClass,
                 )
         trackEvent("error_occurred", errorParams)
-        EasyLog.log("AnalyticsViewModel - 错误跟踪: $error in $screenName", EasyLog.ERROR)
     }
 
     /**

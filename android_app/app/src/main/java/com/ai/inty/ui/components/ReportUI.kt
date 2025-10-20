@@ -23,7 +23,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ai.inty.R
@@ -35,7 +34,10 @@ import com.ai.inty.base.noRippleClickable
 @Composable
 fun ReportItem(text: String, selected: Boolean, onClick: () -> Unit = {}) {
     Row(
-        modifier = Modifier.fillMaxWidth().height(48.dp).noRippleClickable { onClick() },
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(48.dp)
+            .noRippleClickable { onClick() },
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(text = text, fontSize = 14.sp, color = Color.White.copy(0.55f))
@@ -53,7 +55,8 @@ fun ReportItem(text: String, selected: Boolean, onClick: () -> Unit = {}) {
 fun ReportReasonsContainer(title: String, content: @Composable () -> Unit) {
     Column(
         modifier =
-            Modifier.background(color = Color(0x1A78599A), shape = RoundedCornerShape(8.dp))
+            Modifier
+                .background(color = Color(0x1A78599A), shape = RoundedCornerShape(8.dp))
                 .border(
                     brush =
                         Brush.linearGradient(
@@ -94,7 +97,8 @@ fun ReportDescriptionContainer(
 ) {
     Column(
         modifier =
-            Modifier.fillMaxWidth()
+            Modifier
+                .fillMaxWidth()
                 .background(color = Color(0x1A78599A), shape = RoundedCornerShape(8.dp))
                 .border(
                     brush =
@@ -120,18 +124,23 @@ fun ReportDescriptionContainer(
 
         Box(
             modifier =
-                Modifier.fillMaxWidth()
+                Modifier
+                    .fillMaxWidth()
                     .height(112.dp)
                     .background(color = Color.White.copy(0.1f), shape = RoundedCornerShape(8.dp))
                     .padding(vertical = 10.dp)
         ) {
             IntySmallTextField2(
-                modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp),
                 value = description,
                 maxLength = maxLength,
                 placeholder = {
                     Text(
-                        modifier = Modifier.matchParentSize().align(Alignment.TopStart),
+                        modifier = Modifier
+                            .matchParentSize()
+                            .align(Alignment.TopStart),
                         text = placeholder,
                         fontWeight = FontWeight.Normal,
                         color = Color.White.copy(0.55f),
@@ -142,7 +151,9 @@ fun ReportDescriptionContainer(
             )
 
             Text(
-                modifier = Modifier.align(Alignment.BottomEnd).padding(horizontal = 12.dp),
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(horizontal = 12.dp),
                 text = stringResource(R.string.character_count_format_full, description.length),
                 fontSize = 12.sp,
                 color = Color.White.copy(0.55f),
@@ -157,7 +168,8 @@ fun ReportDescriptionContainer(
 fun ReportImageEvidenceContainer(title: String, images: List<String>, onClickAddImage: () -> Unit) {
     Column(
         modifier =
-            Modifier.fillMaxWidth()
+            Modifier
+                .fillMaxWidth()
                 .background(color = Color(0x1A78599A), shape = RoundedCornerShape(8.dp))
                 .border(
                     brush =
@@ -183,7 +195,8 @@ fun ReportImageEvidenceContainer(title: String, images: List<String>, onClickAdd
 
         Box(
             modifier =
-                Modifier.size(88.dp)
+                Modifier
+                    .size(88.dp)
                     .align(Alignment.Start)
                     .background(color = Color.White.copy(0.1f), shape = RoundedCornerShape(8.dp))
                     .clip(RoundedCornerShape(8.dp))
@@ -193,9 +206,12 @@ fun ReportImageEvidenceContainer(title: String, images: List<String>, onClickAdd
             } else {
                 Image(
                     modifier =
-                        Modifier.size(26.dp).align(Alignment.Center).noRippleClickable {
-                            onClickAddImage()
-                        },
+                        Modifier
+                            .size(26.dp)
+                            .align(Alignment.Center)
+                            .noRippleClickable {
+                                onClickAddImage()
+                            },
                     painter = painterResource(R.drawable.btn_add6),
                     contentDescription = null,
                 )
@@ -211,7 +227,8 @@ fun ReportImageEvidenceContainer(title: String, images: List<String>, onClickAdd
 fun SaveBtn(onSave: () -> Unit, isSubmitting: Boolean = false) {
     Box(
         modifier =
-            Modifier.fillMaxWidth()
+            Modifier
+                .fillMaxWidth()
                 .padding(horizontal = 16.dp)
                 .height(50.dp)
                 .background(
@@ -251,43 +268,4 @@ fun SaveBtn(onSave: () -> Unit, isSubmitting: Boolean = false) {
             )
         }
     }
-}
-
-// Preview 函数
-@Preview(showBackground = true)
-@Composable
-fun ReportItemPreview() {
-    ReportItem(text = "不当内容", selected = true, onClick = {})
-}
-
-@Preview(showBackground = true)
-@Composable
-fun ReportReasonsContainerPreview() {
-    ReportReasonsContainer(title = "举报原因") {
-        ReportItem(text = "不当内容", selected = true, onClick = {})
-        ReportItem(text = "垃圾信息", selected = false, onClick = {})
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun ReportDescriptionContainerPreview() {
-    ReportDescriptionContainer(
-        title = "举报描述",
-        description = "这是一条举报描述",
-        onDescriptionChange = {},
-        placeholder = "请填写反馈内容",
-    )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun ReportImageEvidenceContainerPreview() {
-    ReportImageEvidenceContainer(title = "图片证据", images = listOf(), onClickAddImage = {})
-}
-
-@Preview(showBackground = true)
-@Composable
-fun SaveBtnPreview() {
-    SaveBtn(onSave = {})
 }

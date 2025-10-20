@@ -18,8 +18,6 @@ import com.squareup.moshi.DefaultIfNullFactory
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import com.therouter.inject.ServiceProvider
-import java.net.InetAddress
-import java.util.concurrent.TimeUnit
 import okhttp3.ConnectionPool
 import okhttp3.Dns
 import okhttp3.Interceptor
@@ -30,6 +28,8 @@ import okhttp3.Response
 import okhttp3.ResponseBody.Companion.toResponseBody
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
+import java.net.InetAddress
+import java.util.concurrent.TimeUnit
 
 /** 获取基础URL 根据构建类型返回对应的API基础URL */
 fun getBaseUrl(): String {
@@ -90,7 +90,7 @@ class AuthInterceptor : Interceptor {
                 if (IntySetting.isLoggingOut()) {
                     EasyLog.log("Ignoring 401 during logout process")
                 } else {
-                    EasyLog.log("401 unauthorized - switching to guest mode")
+                    EasyLog.log("401 unauthorized - switching to guest mode", EasyLog.ERROR)
                     IntySetting.logout()
                     restartAppProcess(context = AppEnv.context)
                 }
@@ -401,7 +401,3 @@ fun getSubscriptionApi(): ISubscriptionApi {
 fun getCommonApi(): ICommonApi {
     return NetServiceMgr.retrofitNormal.create(ICommonApi::class.java)
 }
-
-// Inty 后端会在 response body 提供 code，来表示实际的业务错误信息
-// 这个 code 与 http status code 无关
-const val INTY_CLIENT_SUCCESS_CODE = 200L

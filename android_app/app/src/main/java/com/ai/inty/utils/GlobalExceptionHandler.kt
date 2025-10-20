@@ -77,7 +77,6 @@ class GlobalExceptionHandler(
             val defaultHandler = Thread.getDefaultUncaughtExceptionHandler()
             val globalHandler = GlobalExceptionHandler(context, defaultHandler)
             Thread.setDefaultUncaughtExceptionHandler(globalHandler)
-            EasyLog.log("GlobalExceptionHandler installed")
         }
     }
 }

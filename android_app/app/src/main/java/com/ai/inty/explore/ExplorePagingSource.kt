@@ -38,17 +38,12 @@ class ExplorePagingSource(
                 val page = params.key ?: INITIAL_PAGE
                 val pageSize = params.loadSize.coerceAtMost(PAGE_SIZE)
 
-                EasyLog.log("ExplorePagingSource - 加载第${page}页，页面大小: ${pageSize}")
-
                 // 第一页特殊处理：优先使用缓存数据
                 if (page == INITIAL_PAGE && useCache) {
                     val cachedAgents = UnifiedStartupManager.getCurrentRecommendedAgents()
                     if (cachedAgents.isNotEmpty()) {
                         // 过滤掉id为空的agent，避免key重复问题
                         val validCachedAgents = cachedAgents.filter { it.id.isNotEmpty() }
-                        EasyLog.log(
-                            "ExplorePagingSource - 使用缓存数据: ${validCachedAgents.size}个 (过滤后)"
-                        )
 
                         // 如果有缓存数据，返回缓存数据，同时后台加载网络数据
                         if (shouldUpdateFromNetwork()) {
@@ -69,7 +64,6 @@ class ExplorePagingSource(
 
                 // 检查用户账户是否已就绪，如果未就绪则等待或返回空数据
                 if (!UnifiedStartupManager.isUserAccountReady()) {
-                    EasyLog.log("ExplorePagingSource - 用户账户未就绪，等待账户就绪")
 
                     // 等待用户账户就绪，最多等待3秒
                     var waitTime = 0
@@ -79,7 +73,6 @@ class ExplorePagingSource(
                     }
 
                     if (!UnifiedStartupManager.isUserAccountReady()) {
-                        EasyLog.log("ExplorePagingSource - 等待超时，返回空数据")
                         return@withContext LoadResult.Page(
                             data = emptyList(),
                             prevKey = null,
@@ -102,7 +95,6 @@ class ExplorePagingSource(
                         if (page == INITIAL_PAGE && validAgents.isNotEmpty()) {
                             AgentCacheManager.cacheAgents(validAgents)
                             UnifiedStartupManager.refreshRecommendedAgents()
-                            EasyLog.log("ExplorePagingSource - 缓存第一页数据: ${validAgents.size}个 (过滤后)")
                         }
 
                         LoadResult.Page(
@@ -147,7 +139,7 @@ class ExplorePagingSource(
                     NetworkResult.Success(result.data)
                 }
                 is HttpResult.Failure -> {
-                    NetworkResult.Error(result.message ?: "Unknown error")
+                    NetworkResult.Error(result.message)
                 }
             }
         } catch (e: Exception) {
@@ -168,7 +160,6 @@ class ExplorePagingSource(
                     if (validAgents.isNotEmpty()) {
                         AgentCacheManager.cacheAgents(validAgents)
                         UnifiedStartupManager.refreshRecommendedAgents()
-                        EasyLog.log("ExplorePagingSource - 后台刷新完成: ${validAgents.size}个 (过滤后)")
                     }
                 }
             } catch (e: Exception) {

@@ -2,7 +2,6 @@ package com.ai.inty.utils
 
 import com.ai.inty.beans.UserProfile
 import com.ai.inty.netapi.services.UserService
-import com.inty.api.models.api.v1.users.profile.User as IntyUser
 import com.inty.utils.log.EasyLog
 
 /** 使用 inty-sdk 进行用户信息操作的工具类 */
@@ -11,8 +10,6 @@ object IntyUserProfileSDK {
     /** 获取用户信息 */
     suspend fun getUserProfile(): UserProfile? {
         return try {
-            EasyLog.log("Getting user profile with inty-sdk...")
-
             val result = UserService.getUserProfile()
 
             when (result) {
@@ -39,7 +36,6 @@ object IntyUserProfileSDK {
     /** 更新用户信息 */
     suspend fun updateUserProfile(userProfile: UserProfile): UserProfile? {
         return try {
-            EasyLog.log("Updating user profile with inty-sdk...")
 
             val result = UserService.updateUserProfile(userProfile)
 
@@ -67,30 +63,5 @@ object IntyUserProfileSDK {
             )
             null
         }
-    }
-
-    /** 将 inty-sdk 的 User 对象转换为 UserProfile 对象 */
-    private fun convertIntyUserToUserProfile(intyUser: IntyUser): UserProfile {
-        return UserProfile(
-            id = intyUser.id(),
-            nickname = intyUser.nickname() ?: "",
-            avatar = intyUser.avatar(),
-            description = intyUser.description(),
-            email = intyUser.email(),
-            gender = intyUser.gender()?.toString(),
-            authType = intyUser.authType(),
-            createdAt = intyUser.createdAt().toString(),
-            updatedAt = intyUser.updatedAt()?.toString(),
-            systemLanguage = intyUser.systemLanguage() ?: "",
-            isActive = intyUser.isActive(),
-            isSuperuser = intyUser.isSuperuser() ?: false,
-            phone = intyUser.phone(),
-            ageGroup = intyUser.ageGroup(),
-            readableId = intyUser.readableId(),
-            publicAgentsCount = intyUser.publicAgentsCount()?.toInt() ?: 0,
-            totalAgentsFollows = intyUser.totalPublicAgentsFollows()?.toInt() ?: 0,
-            followerCount = intyUser.followersCount()?.toInt() ?: 0,
-            connectorCount = intyUser.connectorCount()?.toInt() ?: 0,
-        )
     }
 }

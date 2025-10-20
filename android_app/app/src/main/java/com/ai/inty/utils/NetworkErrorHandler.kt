@@ -119,30 +119,9 @@ object NetworkErrorHandler {
             // This is to work around the limitations of the error received from the server side.
             // As the server side does not allow enum like error cases.
             exception.message?.contains("Image generation limit reached", ignoreCase = true) ==
-                true -> exception.message!!
+                    true -> exception.message!!
 
             else -> "Network request failed"
         }
-    }
-
-    /**
-     * 检查是否为网络相关错误
-     *
-     * @param errorMessage 错误信息
-     * @return true 表示是网络相关错误
-     */
-    fun isNetworkRelatedError(errorMessage: String): Boolean {
-        val networkKeywords =
-            listOf(
-                "timeout",
-                "network",
-                "connection",
-                "unable to resolve host",
-                "no route to host",
-                "connection refused",
-                "connection reset",
-            )
-
-        return networkKeywords.any { keyword -> errorMessage.contains(keyword, ignoreCase = true) }
     }
 }
