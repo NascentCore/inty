@@ -268,7 +268,7 @@ class ChatViewModel : BaseActivityViewModel() {
                     EasyLog.log("queryMsgs result for ${agent.id} = $result")
                     when (result) {
                         is HttpResult.Success -> {
-                            val newMessages = result.data.messages
+                            val newMessages = result.data.messages ?: emptyList()
                             val hasMore = result.data.hasMore
 
                             EasyLog.log("Loaded ${newMessages.size} messages, hasMore: $hasMore")
@@ -532,14 +532,14 @@ class ChatViewModel : BaseActivityViewModel() {
                                             IntySetting.setConversationReaded(agent.id, str)
                                         }
                                 }.onFailure {
-                                        EasyLog.log(
-                                            "Error processing AI response: ${it.message}",
-                                            priority = EasyLog.ERROR,
-                                        )
-                                        it.printStackTrace()
-                                        // 错误恢复：确保状态正确
-                                        _isWaitingForReply.value = false
-                                    }
+                                    EasyLog.log(
+                                        "Error processing AI response: ${it.message}",
+                                        priority = EasyLog.ERROR,
+                                    )
+                                    it.printStackTrace()
+                                    // 错误恢复：确保状态正确
+                                    _isWaitingForReply.value = false
+                                }
                             }
 
                             is HttpResult.Failure -> {
@@ -567,13 +567,13 @@ class ChatViewModel : BaseActivityViewModel() {
                             }
                         }
                     } ?: run {
-                            // 如果没有 agent 信息，恢复状态
-                            _isWaitingForReply.value = false
-                            EasyLog.log(
-                                "No agent info available for sending message",
-                                priority = EasyLog.ERROR,
-                            )
-                        }
+                        // 如果没有 agent 信息，恢复状态
+                        _isWaitingForReply.value = false
+                        EasyLog.log(
+                            "No agent info available for sending message",
+                            priority = EasyLog.ERROR,
+                        )
+                    }
                 } catch (e: Exception) {
                     EasyLog.log(
                         "Unexpected error in sendMsg: ${e.message}",
@@ -673,14 +673,14 @@ class ChatViewModel : BaseActivityViewModel() {
                                 IntySetting.setConversationReaded(agent.id, str)
                             }
                         }.onFailure {
-                                EasyLog.log(
-                                    "Error processing keep talking AI response: ${it.message}",
-                                    priority = EasyLog.ERROR,
-                                )
-                                it.printStackTrace()
-                                // 错误恢复：确保状态正确
-                                _isWaitingForReply.value = false
-                            }
+                            EasyLog.log(
+                                "Error processing keep talking AI response: ${it.message}",
+                                priority = EasyLog.ERROR,
+                            )
+                            it.printStackTrace()
+                            // 错误恢复：确保状态正确
+                            _isWaitingForReply.value = false
+                        }
                     }
 
                     is HttpResult.Failure -> {

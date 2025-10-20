@@ -51,7 +51,7 @@ data class QueryMsgReq(val page: String = "", @Json(name = "page_size") val page
 data class QueryMsgsResponse(
     @Json(name = "has_more") val hasMore: Boolean = false,
     val limit: Int = 0,
-    val messages: List<MsgInfo> = listOf(),
+    val messages: List<MsgInfo>? = listOf(),
     val offset: Int = 0,
     val page: Int = 0,
     val total: Int = 0,
@@ -116,15 +116,14 @@ data class ConversationItem(
 
     fun convertToAgentInfo(): AgentInfo {
         return AgentInfo(
-                avatar = agentAvatar,
-                background = agentBackground,
-                id = agentId,
-                name = agentName,
-                intro = agentIntro,
-                opening = agentOpening,
-                opening_audio_url = agentOpeningAudioUrl,
-            )
-            .also { info -> info.isDeleted = this.isDeleted }
+            avatar = agentAvatar,
+            background = agentBackground,
+            id = agentId,
+            name = agentName,
+            intro = agentIntro,
+            opening = agentOpening,
+            opening_audio_url = agentOpeningAudioUrl,
+        ).also { info -> info.isDeleted = this.isDeleted }
     }
 }
 
