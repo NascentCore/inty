@@ -696,7 +696,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/APIResponse_Agent_"
+                                    "$ref": "#/components/schemas/APIResponse_Union_Agent__Dict_str__Any___"
                                 }
                             }
                         }
@@ -2212,9 +2212,10 @@
                 "tags": [
                     "chat"
                 ],
-                "summary": "\u8fd4\u56de\u4e0e\u6307\u5b9a Agent \u804a\u5929\u7684\u4e0b\u4e00\u6761\u6d88\u606f",
+                "summary": "\u3010\u76ee\u524d\u8fd8\u672a\u5b8c\u6210\u3011\u8fd4\u56de\u4e0e\u6307\u5b9a Agent \u804a\u5929\u7684\u4e0b\u4e00\u6761\u6d88\u606f",
                 "description": "\u53ef\u4ee5\u5904\u7406\u5305\u62ec\u56fe\u7247\u5728\u5185\u7684\u5404\u79cd\u6d88\u606f\u7c7b\u578b\uff0c\u5a92\u4f53\u7c7b\u578b\u5e94\u8be5\u5148\u4e0a\u4f20\uff0c\u7136\u540e\u5c06 URL \u4f5c\u4e3a\u7d22\u5f15\u53d1\u9001\u5230\u6b64 API",
                 "operationId": "agent_chat_completions_api_v2_chat_completions__agent_id__post",
+                "deprecated": true,
                 "security": [
                     {
                         "Bearer": []
@@ -2716,6 +2717,37 @@
                 },
                 "type": "object",
                 "title": "APIResponse[SubscriptionStatusResponse]"
+            },
+            "APIResponse_Union_Agent__Dict_str__Any___": {
+                "properties": {
+                    "code": {
+                        "type": "integer",
+                        "title": "Code",
+                        "default": 200
+                    },
+                    "message": {
+                        "type": "string",
+                        "title": "Message",
+                        "default": "success"
+                    },
+                    "data": {
+                        "anyOf": [
+                            {
+                                "$ref": "#/components/schemas/Agent"
+                            },
+                            {
+                                "additionalProperties": true,
+                                "type": "object"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Data"
+                    }
+                },
+                "type": "object",
+                "title": "APIResponse[Union[Agent, Dict[str, Any]]]"
             },
             "APIResponse_UsageStatisticsResponse_": {
                 "properties": {
@@ -4244,6 +4276,39 @@
                         ],
                         "title": "Agent Is Deleted"
                     },
+                    "agent_intro": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Agent Intro"
+                    },
+                    "agent_opening": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Agent Opening"
+                    },
+                    "agent_opening_audio_url": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Agent Opening Audio Url"
+                    },
                     "settings": {
                         "anyOf": [
                             {
@@ -4960,6 +5025,17 @@
                             }
                         ],
                         "title": "System Language"
+                    },
+                    "description": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Description"
                     },
                     "is_new_user": {
                         "type": "boolean",
@@ -6033,16 +6109,40 @@
                         "title": "Guest Voice 24H Limit",
                         "description": "24\u5c0f\u65f6\u5185\u8bed\u97f3\u751f\u6210\u6b21\u6570\u9650\u5236\uff08\u6e38\u5ba2\u7528\u6237\uff09"
                     },
+                    "image_gen_24h_limit": {
+                        "anyOf": [
+                            {
+                                "type": "integer"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Image Gen 24H Limit",
+                        "description": "24\u5c0f\u65f6\u5185\u56fe\u7247\u751f\u6210\u6b21\u6570\u9650\u5236"
+                    },
+                    "agent_creation_24h_limit": {
+                        "anyOf": [
+                            {
+                                "type": "integer"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Agent Creation 24H Limit",
+                        "description": "24\u5c0f\u65f6\u5185Agent\u521b\u5efa\u6570\u91cf\u9650\u5236"
+                    },
                     "agent_creation_limit": {
                         "type": "integer",
                         "title": "Agent Creation Limit",
-                        "description": "Agent\u521b\u5efa\u6570\u91cf\u9650\u5236",
+                        "description": "Agent\u521b\u5efa\u6570\u91cf\u9650\u5236\uff08\u5df2\u5e9f\u5f03\uff0c\u4f7f\u7528agent_creation_24h_limit\uff09",
                         "default": 6
                     },
                     "background_generation_limit_per_day": {
                         "type": "integer",
                         "title": "Background Generation Limit Per Day",
-                        "description": "\u6bcf\u65e5\u80cc\u666f\u56fe\u751f\u6210\u6b21\u6570\u9650\u5236",
+                        "description": "\u6bcf\u65e5\u80cc\u666f\u56fe\u751f\u6210\u6b21\u6570\u9650\u5236\uff08\u5df2\u5e9f\u5f03\uff0c\u4f7f\u7528image_gen_24h_limit\uff09",
                         "default": 3
                     },
                     "features": {
