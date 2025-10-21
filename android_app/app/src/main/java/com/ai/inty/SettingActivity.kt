@@ -3,6 +3,7 @@ package com.ai.inty
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
+import com.ai.inty.base.ToastUtils
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.foundation.background
