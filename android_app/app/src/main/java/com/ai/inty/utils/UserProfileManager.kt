@@ -51,7 +51,8 @@ object UserProfileManager {
             phone = IntySetting.getUserProfileData("phone")?.takeIf { it.isNotEmpty() },
             ageGroup =
                 IntySetting.getUserProfileData("age_group")
-                    ?: IntySetting.getUserProfileInt("age_group_int", 0).takeIf { it > 0 },
+                    ?: IntySetting.getUserProfileInt("age_group_int", 0).takeIf { it > 0 }
+                        .toString(),
         )
     }
 

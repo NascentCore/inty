@@ -13,7 +13,7 @@ import com.squareup.moshi.JsonClass
  */
 @JsonClass(generateAdapter = true)
 data class UserProfile(
-    @Json(name = "age_group") val ageGroup: Any? = null,
+    @Json(name = "age_group") val ageGroup: String? = null,
     @Json(name = "auth_type") val authType: String = "",
     val avatar: String? = null,
     @Json(name = "created_at") val createdAt: String = "",
