@@ -1,6 +1,4 @@
 package com.ai.inty.newchat.data
-
-import android.util.Log
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.beans.ConversationItem
 import com.ai.inty.beans.MsgInfo
@@ -8,6 +6,7 @@ import com.ai.inty.beans.SendMsgReq
 import com.ai.inty.net.IAgentApi
 import com.ai.inty.net.IChatApi
 import com.architecture.httplib.core.HttpResult
+import com.inty.utils.log.EasyLog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -42,12 +41,22 @@ sealed class MessageEvent {
 }
 
 /**
+ * 错误事件（携带本地消息ID以便前端精确匹配）
+ */
+data class ErrorEvent(
+    val agentId: String,
+    val message: String,
+    val localMessageId: String,
+)
+
+/**
  * 全局聊天数据管理器
  * 负责统一管理所有聊天数据，实现多UI数据同步
  */
 class ChatDataManager(
     private val chatApi: IChatApi,
-    private val agentApi: IAgentApi
+    private val agentApi: IAgentApi,
+    private val coroutineScope: CoroutineScope
 ) {
 
     // 按Agent分组的消息缓存
@@ -61,8 +70,11 @@ class ChatDataManager(
     val messageEvents: SharedFlow<MessageEvent> = _messageEvents.asSharedFlow()
 
     // 错误事件总线
-    private val _errorEvents = MutableSharedFlow<String>()
-    val errorEvents: SharedFlow<String> = _errorEvents.asSharedFlow()
+    private val _errorEvents = MutableSharedFlow<ErrorEvent>(
+        replay = 0,
+        extraBufferCapacity = 64
+    )
+    val errorEvents: SharedFlow<ErrorEvent> = _errorEvents.asSharedFlow()
 
     // 当前活跃的Agent
     private val _activeAgentId = MutableStateFlow<String?>(null)
@@ -93,17 +105,21 @@ class ChatDataManager(
         _activeAgentId.value = agentId
     }
 
+
     /**
      * 添加消息到指定Agent
      */
-    suspend fun addMessage(agentId: String, message: MsgInfo) {
+    private suspend fun addMessage(agentId: String, message: MsgInfo) {
         val messagesFlow = messagesCache.getOrPut(agentId) {
             MutableStateFlow(emptyList())
         }
 
         messagesFlow.update { currentMessages ->
             val newMessages = currentMessages.toMutableList()
-            newMessages.add(message)
+            newMessages.add(
+                0,
+                message
+            )//因为消息messages的列表数据，是最新的在最前面，所以新发送的消息，也是添加到最前面。在UI上是reverseLayout实现了聊天列表的底部最新消息效果
             // 不排序，保持添加顺序，配合reverseLayout使用
             newMessages
         }
@@ -115,7 +131,11 @@ class ChatDataManager(
     /**
      * 更新消息状态
      */
-    suspend fun updateMessageStatus(agentId: String, messageId: String, status: MessageStatus) {
+    private suspend fun updateMessageStatus(
+        agentId: String,
+        messageId: String,
+        status: MessageStatus
+    ) {
         val messagesFlow = messagesCache[agentId] ?: return
 
         messagesFlow.update { currentMessages ->
@@ -136,7 +156,7 @@ class ChatDataManager(
     /**
      * 批量更新消息
      */
-    suspend fun updateMessages(agentId: String, messages: List<MsgInfo>) {
+    private suspend fun updateMessages(agentId: String, messages: List<MsgInfo>) {
         val messagesFlow = messagesCache.getOrPut(agentId) {
             MutableStateFlow(emptyList())
         }
@@ -173,8 +193,14 @@ class ChatDataManager(
             addMessage(agentId, localMessage)
             addMessage(agentId, loadingMessage)
 
-            // 4. 异步发送到服务器
-            sendMessageToServer(agentId, localMessage, content)
+            // 4. 异步发送到服务器（确保在协程作用域内启动）
+            try {
+                sendMessageToServer(agentId, localMessage, content)
+            } catch (e: Exception) {
+                // 如果启动异步任务失败，更新消息状态为失败
+                updateMessageStatus(agentId, localMessage.id, MessageStatus.FAILED)
+                throw e
+            }
 
             Result.success(localMessage)
         } catch (e: Exception) {
@@ -186,7 +212,8 @@ class ChatDataManager(
      * 异步发送消息到服务器
      */
     private fun sendMessageToServer(agentId: String, localMessage: MsgInfo, content: String) {
-        CoroutineScope(Dispatchers.IO).launch {
+        // 使用注入的全局作用域，避免因页面生命周期取消
+        coroutineScope.launch(Dispatchers.IO) {
             try {
                 val request = SendMsgReq(
                     messages = listOf(
@@ -205,44 +232,68 @@ class ChatDataManager(
                 when (result) {
                     is HttpResult.Success -> {
                         // 移除loading消息
-                        CoroutineScope(Dispatchers.IO).launch {
-                            removeLoadingMessage(agentId)
-                        }
+                        removeLoadingMessage(agentId)
 
                         // 检查业务错误码
                         val responseData = result.data
-                        if (responseData?.code == 10001001) {
+                        if (responseData.code in arrayOf(10001001, 10001002, 10001004, 10001005)) {
                             // 订阅错误，发送错误事件
                             val errorMessage =
                                 responseData.data?.description ?: responseData.data?.error_code
                                 ?: "Subscription required"
-                            _errorEvents.tryEmit(errorMessage)
+
+                            // 发送错误事件（包含本地消息ID）
+                            _errorEvents.emit(
+                                ErrorEvent(
+                                    agentId = agentId,
+                                    message = errorMessage,
+                                    localMessageId = localMessage.id,
+                                )
+                            )
+
+                            // 更新消息状态为发送失败
+                            updateMessageStatus(agentId, localMessage.id, MessageStatus.FAILED)
                         } else {
                             // 更新消息状态为已发送
                             updateMessageStatus(agentId, localMessage.id, MessageStatus.SENT)
 
-                            // 添加AI回复消息 - 暂时注释，需要调试API响应结构
-                            // TODO: 修复AI回复消息显示问题
-                            /*
-                            if (responseData != null && responseData.choices.isNotEmpty()) {
-                                responseData.choices.forEach { choice ->
-                                    val aiMessage = choice.message.copy(
-                                        id = generateMessageId(),
-                                        timestamp = System.currentTimeMillis().toString()
-                                    )
-                                    addMessage(agentId, aiMessage)
-                                }
+                            responseData.data?.choices?.forEach { choice ->
+                                val aiMessage = choice.message.copy(
+                                    id = generateMessageId(),
+                                    timestamp = System.currentTimeMillis().toString()
+                                )
+                                addMessage(agentId, aiMessage)
                             }
-                            */
+
                         }
                     }
 
                     is HttpResult.Failure -> {
+                        // 发送网络错误事件
+                        val errorMessage = "网络请求失败"
+                        _errorEvents.emit(
+                            ErrorEvent(
+                                agentId = agentId,
+                                message = errorMessage,
+                                localMessageId = localMessage.id,
+                            )
+                        )
+
                         // 更新消息状态为发送失败
                         updateMessageStatus(agentId, localMessage.id, MessageStatus.FAILED)
                     }
                 }
             } catch (e: Exception) {
+                // 发送异常错误事件
+                val errorMessage = "发送消息失败: ${e.message ?: "未知错误"}"
+                _errorEvents.emit(
+                    ErrorEvent(
+                        agentId = agentId,
+                        message = errorMessage,
+                        localMessageId = localMessage.id,
+                    )
+                )
+
                 // 更新消息状态为发送失败
                 updateMessageStatus(agentId, localMessage.id, MessageStatus.FAILED)
             }
@@ -272,12 +323,18 @@ class ChatDataManager(
 
                 is HttpResult.Failure -> {
                     // 处理加载失败
-                    Log.w("ChatDataManager", "加载$agentId 的消息历史 失败${result.message}")
+                    EasyLog.log(
+                        "ChatDataManager - 加载$agentId 的消息历史 失败${result.message}",
+                        EasyLog.WARN
+                    )
                 }
             }
         } catch (e: Exception) {
             // 处理加载失败
-            Log.e("ChatDataManager", "加载$agentId 的消息历史 接口异常${e.message}")
+            EasyLog.log(
+                "ChatDataManager - 加载$agentId 的消息历史 接口异常${e.message}",
+                EasyLog.ERROR
+            )
         }
     }
 
@@ -328,7 +385,7 @@ class ChatDataManager(
     /**
      * 清理指定Agent的缓存
      */
-    fun clearAgentCache(agentId: String) {
+    private fun clearAgentCache(agentId: String) {
         messagesCache.remove(agentId)
         agentInfosCache.remove(agentId)
     }
@@ -336,7 +393,7 @@ class ChatDataManager(
     /**
      * 获取会话列表
      */
-    suspend fun getConversations(): Result<List<ConversationItem>> {
+    private suspend fun getConversations(): Result<List<ConversationItem>> {
         return try {
             val result = chatApi.getConversations(0, 20)
 
@@ -347,7 +404,7 @@ class ChatDataManager(
                 }
 
                 is HttpResult.Failure -> {
-                    Result.failure(Exception(result.message ?: "加载失败"))
+                    Result.failure(Exception(result.message))
                 }
             }
         } catch (e: Exception) {
@@ -371,7 +428,7 @@ class ChatDataManager(
     /**
      * 清理所有缓存
      */
-    fun clearAllCache() {
+    private fun clearAllCache() {
         messagesCache.clear()
         agentInfosCache.clear()
     }

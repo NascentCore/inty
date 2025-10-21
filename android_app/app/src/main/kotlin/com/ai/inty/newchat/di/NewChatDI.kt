@@ -1,0 +1,30 @@
+package com.ai.inty.newchat.di
+
+import com.ai.inty.net.IAgentApi
+import com.ai.inty.net.IChatApi
+import com.ai.inty.newchat.data.ChatDataManager
+import com.therouter.TheRouter
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+
+/**
+ * newchat 模块内部的简易 DI 容器
+ * 提供应用级单例的 ChatDataManager，确保 Chat 与 独立聊天页共享同一数据源
+ */
+object NewChatDI {
+
+    // 应用级作用域，避免随页面销毁
+    private val applicationScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    // 懒加载的单例 ChatDataManager
+    val chatDataManager: ChatDataManager by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
+        val chatApi = TheRouter.get(IChatApi::class.java)
+            ?: throw IllegalStateException("IChatApi not found")
+        val agentApi = TheRouter.get(IAgentApi::class.java)
+            ?: throw IllegalStateException("IAgentApi not found")
+        ChatDataManager(chatApi, agentApi, applicationScope)
+    }
+}
+
+

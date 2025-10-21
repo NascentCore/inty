@@ -9,17 +9,15 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.ai.inty.newchat.data.ChatDataManager
 import com.ai.inty.newchat.ui.components.ChatPage
-import com.ai.inty.newchat.viewmodel.ChatViewModel
-import com.ai.inty.newchat.viewmodel.ExploreViewModel
-import com.ai.inty.newchat.viewmodel.GlobalChatViewModel
+import com.ai.inty.newchat.viewmodel.ChatTabViewModel
 
 /**
  * Chat Tab页面
@@ -29,13 +27,13 @@ import com.ai.inty.newchat.viewmodel.GlobalChatViewModel
 @Composable
 fun ChatTabScreen(
     modifier: Modifier = Modifier,
-    exploreViewModel: ExploreViewModel,
-    globalChatViewModel: GlobalChatViewModel,
+    chatTabViewModel: ChatTabViewModel,
     chatDataManager: ChatDataManager
 ) {
-    val agents by exploreViewModel.agents.collectAsState()
-    val isLoading by exploreViewModel.isLoading.collectAsState()
-    val error by exploreViewModel.error.collectAsState()
+    val agents by chatTabViewModel.agents.collectAsState()
+    val isLoading by chatTabViewModel.isLoading.collectAsState()
+    val error by chatTabViewModel.error.collectAsState()
+    val currentPage by chatTabViewModel.currentPage.collectAsState()
 
     if (isLoading) {
         Box(
@@ -66,23 +64,31 @@ fun ChatTabScreen(
         }
     } else {
         val pagerState = rememberPagerState(
-            initialPage = 0,
+            initialPage = currentPage,
             pageCount = { agents.size }
         )
 
+        // 监听页面变化，更新ViewModel状态
+        LaunchedEffect(pagerState.currentPage) {
+            chatTabViewModel.setCurrentPage(pagerState.currentPage)
+        }
+
         HorizontalPager(
             state = pagerState,
-            modifier = modifier.fillMaxSize()
+            modifier = modifier.fillMaxSize(),
+            beyondViewportPageCount = 3
         ) { pageIndex ->
             val agent = agents[pageIndex]
-            // 暂时直接创建ChatViewModel，避免ViewModelProvider的复杂性
-            val chatViewModel = remember { ChatViewModel(globalChatViewModel, chatDataManager) }
+            // 从ChatTabViewModel获取或创建ChatViewModel实例，确保实例持久化
+            val chatViewModel = chatTabViewModel.getChatViewModel(agent.id)
 
             ChatPage(
                 agentId = agent.id,
                 agentName = agent.name,
                 modifier = Modifier.fillMaxSize(),
-                chatViewModel = chatViewModel
+                chatViewModel = chatViewModel,
+                chatDataManager = chatDataManager,
+                isCurrentPage = pageIndex == pagerState.currentPage
             )
         }
     }

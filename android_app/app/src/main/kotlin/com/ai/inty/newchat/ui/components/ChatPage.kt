@@ -1,7 +1,6 @@
 package com.ai.inty.newchat.ui.components
 
 import android.widget.Toast
-import com.ai.inty.base.ToastUtils
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -23,6 +22,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -41,6 +41,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.ai.inty.R
 import com.ai.inty.beans.MsgInfo
+import com.ai.inty.newchat.data.ChatDataManager
 import com.ai.inty.newchat.viewmodel.ChatViewModel
 import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
@@ -57,7 +58,9 @@ fun ChatPage(
     agentId: String,
     agentName: String,
     modifier: Modifier = Modifier,
-    chatViewModel: ChatViewModel
+    chatViewModel: ChatViewModel,
+    chatDataManager: ChatDataManager,
+    isCurrentPage: Boolean
 ) {
     val messages by chatViewModel.messagesFlow.collectAsState()
     val inputText by chatViewModel.inputText.collectAsState()
@@ -73,10 +76,11 @@ fun ChatPage(
         chatViewModel.setAgent(agentId)
     }
 
-    // 暂时注释错误处理
-    LaunchedEffect(errorMessage) {
-        errorMessage?.let { message ->
-            ToastUtils.showError(context, message)
+    // 在 ChatPage 级别监听错误事件 - 仅在当前页并由本页最近一次发送触发的错误时提示
+    LaunchedEffect(agentId, isCurrentPage) {
+        if (!isCurrentPage) return@LaunchedEffect
+        chatViewModel.uiErrorEvents.collect { msg ->
+            Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
         }
     }
 
@@ -137,20 +141,14 @@ fun ChatPage(
                     items(messages) { message ->
                         if (message.content == "loading_animation" && message.role == "assistant") {
                             // 显示loading动画
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(16.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                CircularProgressIndicator()
-                            }
+                            LinearProgressIndicator()
                         } else {
                             MessageItem(
                                 message = message,
                                 onRetryClick = { chatViewModel.retryMessage(message.id) }
                             )
                         }
+
                     }
                 }
             }

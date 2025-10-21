@@ -15,15 +15,13 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import com.ai.inty.net.IAgentApi
-import com.ai.inty.net.IChatApi
 import com.ai.inty.newchat.data.ChatDataManager
+import com.ai.inty.newchat.di.NewChatDI
 import com.ai.inty.newchat.ui.components.BottomNavigationBar
 import com.ai.inty.newchat.ui.screens.ChatTabScreen
 import com.ai.inty.newchat.ui.screens.ExploreTabScreen
+import com.ai.inty.newchat.viewmodel.ChatTabViewModel
 import com.ai.inty.newchat.viewmodel.ExploreViewModel
-import com.ai.inty.newchat.viewmodel.GlobalChatViewModel
-import com.therouter.TheRouter
 
 /**
  * 新的主界面Activity
@@ -33,7 +31,7 @@ class NewMainActivity : ComponentActivity() {
 
     // 依赖管理
     private lateinit var chatDataManager: ChatDataManager
-    private lateinit var globalChatViewModel: GlobalChatViewModel
+    private lateinit var chatTabViewModel: ChatTabViewModel
     private lateinit var exploreViewModel: ExploreViewModel
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -51,7 +49,7 @@ class NewMainActivity : ComponentActivity() {
                 ) {
                     NewMainScreen(
                         chatDataManager = chatDataManager,
-                        globalChatViewModel = globalChatViewModel,
+                        chatTabViewModel = chatTabViewModel,
                         exploreViewModel = exploreViewModel,
                     )
                 }
@@ -60,17 +58,11 @@ class NewMainActivity : ComponentActivity() {
     }
 
     private fun initDependencies() {
-        // 获取网络接口
-        val chatApi = TheRouter.get(IChatApi::class.java)
-            ?: throw IllegalStateException("IChatApi not found")
-        val agentApi = TheRouter.get(IAgentApi::class.java)
-            ?: throw IllegalStateException("IAgentApi not found")
-
-        // 创建数据管理器
-        chatDataManager = ChatDataManager(chatApi, agentApi)
+        // 获取 newchat 模块内共享的单例数据管理器
+        chatDataManager = NewChatDI.chatDataManager
 
         // 创建ViewModel
-        globalChatViewModel = GlobalChatViewModel(chatDataManager)
+        chatTabViewModel = ChatTabViewModel(chatDataManager)
         exploreViewModel = ExploreViewModel(chatDataManager)
     }
 
@@ -80,7 +72,7 @@ class NewMainActivity : ComponentActivity() {
     @Composable
     fun NewMainScreen(
         chatDataManager: ChatDataManager,
-        globalChatViewModel: GlobalChatViewModel,
+        chatTabViewModel: ChatTabViewModel,
         exploreViewModel: ExploreViewModel,
     ) {
         var selectedTab by remember { mutableIntStateOf(0) }
@@ -96,8 +88,7 @@ class NewMainActivity : ComponentActivity() {
             when (selectedTab) {
                 0 -> ChatTabScreen(
                     modifier = Modifier.padding(innerPadding),
-                    exploreViewModel = exploreViewModel,
-                    globalChatViewModel = globalChatViewModel,
+                    chatTabViewModel = chatTabViewModel,
                     chatDataManager = chatDataManager
                 )
 
