@@ -157,6 +157,7 @@ class LoginUserResponse(BaseModel):
     gender: Optional[Gender] = None
     age_group: Optional[str] = None
     system_language: Optional[str] = None
+    description: Optional[str] = None
     is_new_user: bool
 
 

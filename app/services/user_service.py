@@ -146,6 +146,12 @@ async def update_user(db: AsyncSession, user_id: str, user_in: UserUpdate) -> Us
         }
         update_data = {k: v for k, v in update_data.items() if k not in excluded_fields}
 
+        # 过滤掉值为 None 或空字符串的字段，防止误清空数据库中的有效数据
+        # 这样可以保护已有数据不被客户端误传的 None 值覆盖
+        update_data = {
+            k: v for k, v in update_data.items() if v is not None and v != ""
+        }
+
         for field, value in update_data.items():
             setattr(user, field, value)
 
