@@ -87,7 +87,7 @@ internal class BillingRemoteManager(
 
                         // 如果 BillingClient 已连接，立即查询价格
                         if (isConnected) {
-                            priceManager.querySkuDetails(isConnected)
+priceManager.querySkuDetails()
                         } else {
                             EasyLog.log(
                                 "BillingRepository BillingRemoteManager BillingClient 未连接，等待连接成功后查询价格",

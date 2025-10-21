@@ -18,13 +18,7 @@ internal class BillingPriceManager(
 ) {
 
     /** 查询商品详情并更新价格 */
-    fun querySkuDetails(isConnected: Boolean) {
-        // 检查BillingClient连接状态
-        if (!isConnected) {
-            EasyLog.log("BillingRepository BillingPriceManager - BillingClient 未连接，无法查询商品")
-            return
-        }
-
+    fun querySkuDetails() {
         // 从 plansFlow 获取商品ID列表
         val currentPlans = plansFlow.value
         if (currentPlans.isEmpty()) {
