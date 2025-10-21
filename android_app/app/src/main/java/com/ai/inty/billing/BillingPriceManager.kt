@@ -71,19 +71,20 @@ internal class BillingPriceManager(
                                 )
                             }
                         }
-                    } ?: run {
-                        EasyLog.log(
-                            "BillingRepository BillingPriceManager - Google Play返回的商品列表为null"
-                        )
-                        eventScope.launch {
-                            eventFlow.emit(
-                                BillingEvent.SkuDetailsQueryFailed(
-                                    billingResult.responseCode,
-                                    "Google Play返回的商品列表为null",
-                                )
-                            )
-                        }
                     }
+                        ?: run {
+                            EasyLog.log(
+                                "BillingRepository BillingPriceManager - Google Play返回的商品列表为null"
+                            )
+                            eventScope.launch {
+                                eventFlow.emit(
+                                    BillingEvent.SkuDetailsQueryFailed(
+                                        billingResult.responseCode,
+                                        "Google Play返回的商品列表为null",
+                                    )
+                                )
+                            }
+                        }
                 }
 
                 BillingClient.BillingResponseCode.BILLING_UNAVAILABLE,
@@ -141,8 +142,8 @@ internal class BillingPriceManager(
                 // 检查价格是否有变化
                 if (
                     currentPlan.price != correctedPrice ||
-                    currentPlan.currencyCode != currencyCode ||
-                    currentPlan.priceAmountMicros != micros
+                        currentPlan.currencyCode != currencyCode ||
+                        currentPlan.priceAmountMicros != micros
                 ) {
 
                     val oldPrice = currentPlan.price

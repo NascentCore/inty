@@ -49,11 +49,11 @@ internal class BillingRemoteManager(
                                 subscriptionStatus =
                                     when {
                                         currentSubscription?.status == "ACTIVE" &&
-                                                currentSubscription.autoRenew == true ->
+                                            currentSubscription.autoRenew == true ->
                                             VipStatus.UI_SUBSCRIBED
 
                                         currentSubscription?.status == "ACTIVE" &&
-                                                currentSubscription.autoRenew == false ->
+                                            currentSubscription.autoRenew == false ->
                                             VipStatus.UI_SUBSCRIBED_EXPIRE_SOON
 
                                         currentSubscription?.status == "CANCELLED" ->
@@ -87,11 +87,11 @@ internal class BillingRemoteManager(
 
                         // 如果 BillingClient 已连接，立即查询价格
                         if (isConnected) {
-priceManager.querySkuDetails()
+                            priceManager.querySkuDetails()
                         } else {
                             EasyLog.log(
                                 "BillingRepository BillingRemoteManager BillingClient 未连接，等待连接成功后查询价格",
-                                EasyLog.WARN
+                                EasyLog.WARN,
                             )
                         }
                     }
@@ -99,23 +99,24 @@ priceManager.querySkuDetails()
                     is HttpResult.Failure -> {
                         EasyLog.log(
                             "BillingRepository BillingRemoteManager 获取订阅计划失败: ${result.message}",
-                            EasyLog.ERROR
+                            EasyLog.ERROR,
                         )
                     }
                 }
-            }.onFailure { exception ->
+            }
+            .onFailure { exception ->
                 when (exception) {
                     is kotlinx.coroutines.CancellationException -> {
                         EasyLog.log(
                             "BillingRepository BillingRemoteManager 获取订阅计划被取消: ${exception.message}",
-                            EasyLog.ERROR
+                            EasyLog.ERROR,
                         )
                     }
 
                     else -> {
                         EasyLog.log(
                             "BillingRepository BillingRemoteManager 获取订阅计划异常: ${exception.message}",
-                            EasyLog.ERROR
+                            EasyLog.ERROR,
                         )
                     }
                 }
