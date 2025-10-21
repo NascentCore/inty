@@ -1,8 +1,76 @@
 #!/bin/bash -e
 
-ktfmt --kotlinlang-style android_app/*.{kt,kts} android_app/{app,build-logic} android_app/library/{network,utils}
-black app/ scripts/
-# 格式化包括 json md 等等
-npx prettier --write .
+# Check for --all flag
+FORMAT_ALL=false
+if [ "$1" = "--all" ]; then
+    FORMAT_ALL=true
+fi
 
-git commit --all --message "fmt all code: ktfmt black prettier"
+if [ "$FORMAT_ALL" = true ]; then
+    echo "Formatting all files..."
+    # Format all Kotlin files
+    ktfmt --kotlinlang-style android_app/
+    # Format all Python files
+    black app/ scripts/ experimental/
+    # Format all other files
+    npx prettier --write evaluation/
+    echo "Formatting complete!"
+    echo
+    
+    git commit --all --message "fmt all code: ktfmt black prettier"
+    echo "Committing complete!"
+    echo
+    exit 0
+fi
+
+# Get list of files changed compared to main branch
+CHANGED_FILES=$(git diff --name-only main)
+
+if [ -z "$CHANGED_FILES" ]; then
+    echo "No files changed compared to main branch"
+    exit 0
+fi
+
+# Collect files by type
+KOTLIN_FILES=""
+PYTHON_FILES=""
+OTHER_FILES=""
+
+for file in $CHANGED_FILES; do
+    case "$file" in
+        *.kt|*.kts)
+            KOTLIN_FILES="$KOTLIN_FILES $file"
+            ;;
+        *.py)
+            PYTHON_FILES="$PYTHON_FILES $file"
+            ;;
+        *.json|*.md|*.js|*.ts|*.tsx|*.css|*.html|*.yaml|*.yml)
+            OTHER_FILES="$OTHER_FILES $file"
+            ;;
+    esac
+done
+
+# Format Kotlin files
+if [ -n "$KOTLIN_FILES" ]; then
+    echo "Formatting Kotlin files with ktfmt..."
+    ktfmt --kotlinlang-style $KOTLIN_FILES
+fi
+
+# Format Python files
+if [ -n "$PYTHON_FILES" ]; then
+    echo "Formatting Python files with black..."
+    black $PYTHON_FILES
+fi
+
+# Format other files with prettier
+if [ -n "$OTHER_FILES" ]; then
+    echo "Formatting other files with prettier..."
+    npx prettier --write $OTHER_FILES
+fi
+
+echo "Formatting complete!"
+echo
+
+git commit --all --message "fmt changed files: ktfmt black prettier"
+echo "Committing complete!"
+echo
