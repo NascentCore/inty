@@ -41,6 +41,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.ai.inty.R
 import com.ai.inty.beans.MsgInfo
+import com.ai.inty.newchat.data.ChatDataManager
 import com.ai.inty.newchat.viewmodel.ChatViewModel
 import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
@@ -57,7 +58,9 @@ fun ChatPage(
     agentId: String,
     agentName: String,
     modifier: Modifier = Modifier,
-    chatViewModel: ChatViewModel
+    chatViewModel: ChatViewModel,
+    chatDataManager: ChatDataManager,
+    isCurrentPage: Boolean
 ) {
     val messages by chatViewModel.messagesFlow.collectAsState()
     val inputText by chatViewModel.inputText.collectAsState()
@@ -73,10 +76,11 @@ fun ChatPage(
         chatViewModel.setAgent(agentId)
     }
 
-    // 暂时注释错误处理
-    LaunchedEffect(errorMessage) {
-        errorMessage?.let { message ->
-            Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+    // 在 ChatPage 级别监听错误事件 - 仅在当前页并由本页最近一次发送触发的错误时提示
+    LaunchedEffect(agentId, isCurrentPage) {
+        if (!isCurrentPage) return@LaunchedEffect
+        chatViewModel.uiErrorEvents.collect { msg ->
+            Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
         }
     }
 

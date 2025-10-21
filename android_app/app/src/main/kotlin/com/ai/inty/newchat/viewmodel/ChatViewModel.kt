@@ -4,8 +4,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ai.inty.beans.MsgInfo
 import com.ai.inty.newchat.data.ChatDataManager
+import com.ai.inty.newchat.data.ErrorEvent
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
@@ -20,10 +25,11 @@ class ChatViewModel(
     // 当前Agent ID
     private var _agentId: String? = null
 
-    // 消息流 - 从数据管理器获取
-    private var _messagesFlow: StateFlow<List<MsgInfo>>? = null
-    val messagesFlow: StateFlow<List<MsgInfo>>
-        get() = _messagesFlow ?: MutableStateFlow<List<MsgInfo>>(emptyList()).asStateFlow()
+    // 固定实例的消息流，避免 Compose 绑定到临时空 Flow
+    private val _messages = MutableStateFlow<List<MsgInfo>>(emptyList())
+    val messagesFlow: StateFlow<List<MsgInfo>> = _messages.asStateFlow()
+
+    private var messagesCollectJob: Job? = null
 
     // 输入文本 - 独立管理
     private val _inputText = MutableStateFlow("")
@@ -41,31 +47,73 @@ class ChatViewModel(
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
 
-    init {
-        // 监听错误事件
-        viewModelScope.launch {
-            chatDataManager.errorEvents.collect { errorMessage ->
-                _errorMessage.value = errorMessage
-            }
-        }
-    }
+    // 最近一次发送的本地消息ID
+    private val _lastSentLocalMessageId = MutableStateFlow<String?>(null)
+    val lastSentLocalMessageId: StateFlow<String?> = _lastSentLocalMessageId.asStateFlow()
+
+    // UI 层错误事件（仅匹配最近一次发送）
+    private val _uiErrorEvents = MutableSharedFlow<String>(replay = 0, extraBufferCapacity = 16)
+    val uiErrorEvents: SharedFlow<String> = _uiErrorEvents.asSharedFlow()
 
     /**
      * 设置Agent
      */
     fun setAgent(agentId: String) {
+        // 如果已经是同一个Agent，不需要重新加载
+        if (_agentId == agentId) return
+
         _agentId = agentId
-        _messagesFlow = chatDataManager.getMessagesFlow(agentId)
+        val source = chatDataManager.getMessagesFlow(agentId)
 
         // 设置数据管理器的活跃Agent
         chatDataManager.setActiveAgent(agentId)
 
-        // 加载历史消息
-        viewModelScope.launch {
-            _isLoading.value = true
-            chatDataManager.loadHistoryMessages(agentId, limit = 20, offset = 0)
-            _isLoading.value = false
+        // 检查是否已经有消息数据，如果没有才加载历史消息
+        val currentMessages = source.value
+        if (currentMessages.isEmpty()) {
+            viewModelScope.launch {
+                _isLoading.value = true
+                chatDataManager.loadHistoryMessages(agentId, limit = 20, offset = 0)
+                _isLoading.value = false
+            }
         }
+
+        // 切换源并收集到固定 StateFlow 中
+        messagesCollectJob?.cancel()
+        messagesCollectJob = viewModelScope.launch {
+            source.collect { list ->
+                _messages.value = list
+            }
+        }
+
+        // 启动错误事件收集（仅处理当前agent且匹配最近一次发送的消息ID）
+        viewModelScope.launch {
+            chatDataManager.errorEvents.collect { event: ErrorEvent ->
+                val currentAgent = _agentId
+                val lastLocalId = _lastSentLocalMessageId.value
+                if (currentAgent != null &&
+                    event.agentId == currentAgent &&
+                    lastLocalId != null &&
+                    event.localMessageId == lastLocalId
+                ) {
+                    _uiErrorEvents.emit(event.message)
+                }
+            }
+        }
+    }
+
+    /**
+     * 检查是否已经设置了Agent
+     */
+    fun isAgentSet(): Boolean {
+        return _agentId != null
+    }
+
+    /**
+     * 获取当前Agent ID
+     */
+    fun getCurrentAgentId(): String? {
+        return _agentId
     }
 
     /**
@@ -85,6 +133,8 @@ class ChatViewModel(
             if (result.isFailure) {
                 // 发送失败，恢复输入内容
                 _inputText.value = originalText
+            } else {
+                _lastSentLocalMessageId.value = result.getOrNull()?.id
             }
 
             _isSending.value = false
