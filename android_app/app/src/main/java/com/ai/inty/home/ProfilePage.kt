@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -78,6 +79,7 @@ internal fun ProfilePage(
     modifier: Modifier,
     userProfile: UserProfile,
     agents: List<AgentInfo>,
+    outerPadding: PaddingValues,
     onClickAgent: (AgentInfo) -> Unit,
     onEditAgent: ((AgentInfo) -> Unit)? = null,
     onDeleteAgent: ((AgentInfo) -> Unit)? = null,
@@ -260,7 +262,12 @@ internal fun ProfilePage(
 
                     LazyVerticalGrid(
                         state = listState,
-                        modifier = Modifier.padding(horizontal = 16.dp),
+                        modifier =
+                            Modifier.padding(
+                                start = 16.dp,
+                                end = 16.dp,
+                                bottom = outerPadding.calculateBottomPadding(),
+                            ),
                         columns = GridCells.Fixed(2),
                         horizontalArrangement = Arrangement.spacedBy(13.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -279,8 +286,8 @@ internal fun ProfilePage(
                                         onDeleteAgent = onDeleteAgent,
                                     )
                                 }
-                                // 添加一个底部空白，便于更好操作交互
-                                item { Spacer(Modifier.height(80.dp)) }
+                                // 末尾预留少量间距
+                                item { Spacer(Modifier.height(16.dp)) }
                             }
                         }
                             .onFailure { it.printStackTrace() }

@@ -251,7 +251,11 @@ private fun HomeContent(
         }
 
         HomeTabIndex.Profile -> {
-            ProfileTabContent(mainViewModel = mainViewModel, context = context)
+            ProfileTabContent(
+                mainViewModel = mainViewModel,
+                context = context,
+                innerPadding = innerPadding,
+            )
         }
     }
 }
@@ -318,7 +322,11 @@ private fun ExploreTabContent(
 
 /** 我的Tab内容 */
 @Composable
-private fun ProfileTabContent(mainViewModel: MainViewModel, context: Context) {
+private fun ProfileTabContent(
+    mainViewModel: MainViewModel,
+    context: Context,
+    innerPadding: PaddingValues,
+) {
     val userProfile by mainViewModel.userProfile.collectAsStateWithLifecycle()
     val userCreatedAgents = mainViewModel.userCreatedAgents
     val isLoadingUserAgents = mainViewModel.isLoadingUserAgents.collectAsState()
@@ -352,6 +360,7 @@ private fun ProfileTabContent(mainViewModel: MainViewModel, context: Context) {
         modifier = Modifier,
         userProfile = safeUserProfile,
         agents = userCreatedAgents,
+        innerPadding = innerPadding,
         isLoading = isLoadingUserAgents.value,
         isRefreshing = isRefreshingUserAgents.value,
         onClickAgent = { agent ->
