@@ -903,8 +903,17 @@ private fun AvatarUploadSection(
                 }
                 avatarUrls.isNotEmpty() -> {
                     val displayUrl = avatarUrls.getOrNull(selectedIndex) ?: avatarUrls.first()
+                    EasyLog.log(
+                        "AvatarUploadSection: Displaying selected avatar with URL: $displayUrl"
+                    )
+                    val previewUrl =
+                        getCdnImageUrl(
+                            displayUrl,
+                            width = Config.TextToImage.Preview.WIDTH,
+                            quality = Config.TextToImage.Preview.QUALITY,
+                        )
                     AsyncImage(
-                        model = displayUrl,
+                        model = previewUrl ?: displayUrl,
                         contentDescription = stringResource(R.string.content_desc_selected_avatar),
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop,
@@ -921,8 +930,15 @@ private fun AvatarUploadSection(
                     )
                 }
                 avatarUrl != null -> {
+                    EasyLog.log("AvatarUploadSection: Displaying avatar with URL: $avatarUrl")
+                    val previewUrl =
+                        getCdnImageUrl(
+                            avatarUrl,
+                            width = Config.TextToImage.Preview.WIDTH,
+                            quality = Config.TextToImage.Preview.QUALITY,
+                        )
                     AsyncImage(
-                        model = avatarUrl,
+                        model = previewUrl ?: avatarUrl,
                         contentDescription = stringResource(R.string.content_desc_generated_avatar),
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop,
