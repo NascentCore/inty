@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.LifecycleResumeEffect
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ai.inty.Constant
 import com.ai.inty.R
@@ -94,7 +95,10 @@ fun HomeScreen(
     TrackScreenView(screenName = "HomeScreen", screenClass = "MainActivity")
 
     Scaffold(
-        modifier = modifier.fillMaxSize().background(DarkPurple).navigationBarsPadding(),
+        modifier = modifier
+            .fillMaxSize()
+            .background(DarkPurple)
+            .navigationBarsPadding(),
         containerColor = Color.Transparent,
         bottomBar = {
             AppBottomNavigationBar(
@@ -147,8 +151,8 @@ private fun ExpiredDialogLogic(mainViewModel: MainViewModel) {
             // 未订阅状态，且曾经订阅过，表示已过期;如果app未曾提示过一次，则弹窗。有过提示记录，则不弹窗
             if (
                 !IntySetting.hasTipsVipExpired() &&
-                    IntySetting.isLogin() &&
-                    !IntySetting.isGuestUser()
+                IntySetting.isLogin() &&
+                !IntySetting.isGuestUser()
             ) {
                 showExpiredDialog = true
             }
@@ -315,14 +319,14 @@ private fun ExploreTabContent(
 /** 我的Tab内容 */
 @Composable
 private fun ProfileTabContent(mainViewModel: MainViewModel, context: Context) {
-    val userProfile = mainViewModel.userProfile.collectAsState()
+    val userProfile by mainViewModel.userProfile.collectAsStateWithLifecycle()
     val userCreatedAgents = mainViewModel.userCreatedAgents
     val isLoadingUserAgents = mainViewModel.isLoadingUserAgents.collectAsState()
     val isRefreshingUserAgents = mainViewModel.isRefreshingUserAgents.collectAsState()
 
     // 确保用户信息有效，避免崩溃
     val safeUserProfile =
-        userProfile.value.let { profile ->
+        userProfile.let { profile ->
             if (profile.id.isEmpty()) {
                 UserProfile(
                     id = "loading",
@@ -334,6 +338,9 @@ private fun ProfileTabContent(mainViewModel: MainViewModel, context: Context) {
                 profile
             }
         }
+    LaunchedEffect(mainViewModel) {
+        mainViewModel.updateUserInfoLocal()
+    }
     // 确保更新用户信息，处理切换账号后的信息同步
     LifecycleResumeEffect(mainViewModel) {
         mainViewModel.getUserProfile()
@@ -402,13 +409,19 @@ private fun AppBottomNavigationBar(
     onSelectTab: (Int) -> Unit,
 ) {
     Row(
-        modifier = modifier.fillMaxWidth().background(DarkPurple).height(BottomNavigationBarHeight),
+        modifier = modifier
+            .fillMaxWidth()
+            .background(DarkPurple)
+            .height(BottomNavigationBarHeight),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         MAIN_TAB_LIST.forEachIndexed { index, tab ->
             BottomNavigationBarItem(
                 modifier =
-                    Modifier.fillMaxHeight().weight(1f).noRippleClickable { onSelectTab(index) },
+                    Modifier
+                        .fillMaxHeight()
+                        .weight(1f)
+                        .noRippleClickable { onSelectTab(index) },
                 tabInfo = tab,
                 selected = (index == selectedTab),
             )
@@ -455,7 +468,8 @@ fun AppBottomNavigationBarPreview() {
     // Preview for the entire bottom navigation bar positioned in the middle
     Box(
         modifier =
-            Modifier.fillMaxSize()
+            Modifier
+                .fillMaxSize()
                 .background(Color.Black), // Dark background to match the app theme
         contentAlignment = Alignment.Center,
     ) {

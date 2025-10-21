@@ -21,26 +21,31 @@ object UserService {
     /** 更新用户信息 替换: IUserApi.setUserProfile() */
     suspend fun updateUserProfile(userProfile: UserProfile): ApiResult<UserProfile> {
         return IntyNetworkManager.executeRequest("Update User Profile") {
-            val updateParams =
-                ProfileUpdateParams.builder()
-                    .nickname(userProfile.nickname)
-                    .avatar(userProfile.avatar)
-                    .description(userProfile.description)
-                    .email(userProfile.email)
-                    .gender(
-                        userProfile.gender?.let {
-                            when (it) {
-                                "MALE" -> com.inty.api.models.api.v1.users.profile.Gender.MALE
-                                "FEMALE" -> com.inty.api.models.api.v1.users.profile.Gender.FEMALE
-                                "OTHER" -> com.inty.api.models.api.v1.users.profile.Gender.OTHER
-                                else -> null
-                            }
-                        }
-                    )
-                    .ageGroup(userProfile.ageGroup?.toString())
-                    .phone(userProfile.phone)
-                    .systemLanguage(userProfile.systemLanguage)
-                    .build()
+            val builder = ProfileUpdateParams.builder()
+            if (userProfile.nickname.isNotEmpty()) {
+                builder.nickname(userProfile.nickname)
+            }
+            if (!userProfile.avatar.isNullOrEmpty()) {
+                builder.avatar(userProfile.avatar)
+            }
+            if (!userProfile.description.isNullOrEmpty()) {
+                builder.description(userProfile.description)
+            }
+            if (!userProfile.ageGroup.isNullOrEmpty()) {
+                builder.ageGroup(userProfile.ageGroup)
+            }
+            val genderObj = userProfile.gender?.let {
+                when (it) {
+                    "MALE" -> com.inty.api.models.api.v1.users.profile.Gender.MALE
+                    "FEMALE" -> com.inty.api.models.api.v1.users.profile.Gender.FEMALE
+                    "OTHER" -> com.inty.api.models.api.v1.users.profile.Gender.OTHER
+                    else -> null
+                }
+            }
+            if (genderObj != null) {
+                builder.gender(genderObj)
+            }
+            val updateParams = builder.build()
 
             val response =
                 IntyNetworkManager.getClient().api().v1().users().profile().update(updateParams)

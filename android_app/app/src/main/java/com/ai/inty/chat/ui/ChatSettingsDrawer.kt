@@ -68,23 +68,29 @@ fun ChatSettingsDrawer(
 
     // Keep talking二状态设置：默认跟随全局设置
     var agentKeepTalking by
-        remember(agentInfo?.id) {
-            mutableStateOf(
-                agentInfo?.let {
-                    // 获取角色专用设置，如果不存在则使用全局设置
-                    IntySetting.getAgentKeepTalking(it.id) ?: IntySetting.isShowKeepTalking()
-                } ?: false
-            )
-        }
+    remember(agentInfo?.id) {
+        mutableStateOf(
+            agentInfo?.let {
+                // 获取角色专用设置，如果不存在则使用全局设置
+                IntySetting.getAgentKeepTalking(it.id) ?: IntySetting.isShowKeepTalking()
+            } ?: false
+        )
+    }
+
+    val horizontalPadding = 16
+
+    // 在组件初始化时立即更新用户信息,未添加这部分触发更新userInfo的时候，会因为在chatViewModel中虽然更新了userProfile
+    //但是userProfileState并没有正确触发数据流的更新，引起UI层数据不能正确显示真实数据的问题。
+    LaunchedEffect(chatViewModel) {
+        chatViewModel.updateUserInfo()
+    }
+
+    val userProfileState by chatViewModel.userProfile.collectAsState()
 
     LifecycleResumeEffect(chatViewModel) {
         chatViewModel.updateUserInfo()
         onPauseOrDispose {}
     }
-
-    val horizontalPadding = 16
-
-    val userProfileState = chatViewModel.userProfile.collectAsState()
 
     // 本地编辑状态（与 MySettingActivity 一致）
     var editKey by rememberSaveable { mutableStateOf(EditKey.None) }
@@ -93,7 +99,7 @@ fun ChatSettingsDrawer(
     // 复用 MySettingViewModel 的保存逻辑
     val mySettingViewModel: MySettingViewModel = viewModel()
 
-    LaunchedEffect(userProfileState.value.id) { mySettingViewModel.init(userProfileState.value) }
+    LaunchedEffect(userProfileState) { mySettingViewModel.init(userProfileState) }
 
     // 监听用户资料变更事件并刷新UI
     val userProfileChangedInterceptor = remember {
@@ -124,7 +130,8 @@ fun ChatSettingsDrawer(
         drawerContent = {
             Column(
                 modifier =
-                    Modifier.width(319.dp)
+                    Modifier
+                        .width(319.dp)
                         .fillMaxHeight()
                         .background(
                             brush =
@@ -145,7 +152,8 @@ fun ChatSettingsDrawer(
 
                 Column(
                     modifier =
-                        Modifier.padding(horizontal = horizontalPadding.dp)
+                        Modifier
+                            .padding(horizontal = horizontalPadding.dp)
                             .fillMaxWidth()
                             .border(
                                 brush =
@@ -162,16 +170,15 @@ fun ChatSettingsDrawer(
                             )
                             .background(color = Color(0x3378599A), shape = RoundedCornerShape(8.dp))
                 ) {
-                    val userProfile = userProfileState
                     MySettingItem(
                         key = stringResource(R.string.str_name),
-                        value = userProfile.value.nickname,
+                        value = userProfileState.nickname,
                         horizontalPadding = horizontalPadding,
                         onClick = {
                             // 检查是否正式登录（非游客且已登录）
                             if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
                                 editKey = EditKey.Name
-                                editValue = userProfile.value.nickname
+                                editValue = userProfileState.nickname
                             } else {
                                 // 未登录或游客时跳转到登录页面
                                 TheRouter.build(Constant.ROUTE_LOGIN).navigation(context)
@@ -180,13 +187,13 @@ fun ChatSettingsDrawer(
                     )
                     MySettingItem(
                         key = stringResource(R.string.str_pronouns),
-                        value = userProfile.value.pronouns(),
+                        value = userProfileState.pronouns(),
                         horizontalPadding = horizontalPadding,
                         onClick = {
                             // 检查是否正式登录（非游客且已登录）
                             if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
                                 editKey = EditKey.Pronouns
-                                editValue = userProfile.value.gender ?: ""
+                                editValue = userProfileState.gender ?: ""
                             } else {
                                 // 未登录或游客时跳转到登录页面
                                 TheRouter.build(Constant.ROUTE_LOGIN).navigation(context)
@@ -195,13 +202,13 @@ fun ChatSettingsDrawer(
                     )
                     MySettingItem(
                         key = stringResource(R.string.str_persona),
-                        value = userProfile.value.description ?: "Edit",
+                        value = userProfileState.description ?: "Edit",
                         horizontalPadding = horizontalPadding,
                         onClick = {
                             // 检查是否正式登录（非游客且已登录）
                             if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
                                 editKey = EditKey.Persona
-                                editValue = userProfile.value.description ?: ""
+                                editValue = userProfileState.description ?: ""
                             } else {
                                 // 未登录或游客时跳转到登录页面
                                 TheRouter.build(Constant.ROUTE_LOGIN).navigation(context)
@@ -224,7 +231,8 @@ fun ChatSettingsDrawer(
 
                 Column(
                     modifier =
-                        Modifier.padding(horizontal = horizontalPadding.dp)
+                        Modifier
+                            .padding(horizontal = horizontalPadding.dp)
                             .fillMaxWidth()
                             .border(
                                 brush =
@@ -246,7 +254,8 @@ fun ChatSettingsDrawer(
                         // 举报入口
                         Row(
                             modifier =
-                                Modifier.fillMaxWidth()
+                                Modifier
+                                    .fillMaxWidth()
                                     .height(56.dp)
                                     .padding(horizontal = horizontalPadding.dp)
                                     .noRippleClickable {
