@@ -32,7 +32,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ai.inty.R
-import com.ai.inty.billing.BillingRepository
 import com.ai.inty.ui.components.AutoRenewalNotice
 import com.ai.inty.ui.components.BackgroundVideoPlayer
 import com.ai.inty.ui.components.EmptyPlanState
@@ -66,7 +65,6 @@ fun VipCenterContent(
     val plans by viewModel.plansFlow.collectAsState()
     val selectedPlanIndex by viewModel.selectedPlanIndex.collectAsState()
     val vipStatus by viewModel.vipStatusFlow.collectAsState()
-    val initState by BillingRepository.initStateFlow.collectAsState()
 
     Box(modifier = Modifier.fillMaxSize()) {
         // 全屏视频播放器
@@ -138,17 +136,11 @@ fun VipCenterContent(
 
                 Spacer(Modifier.height(32.dp))
 
-                // 根据 billing 状态决定是否显示购买按钮
-                if (initState.hasGooglePlayServices && initState.isConnected) {
-                    PurchaseButton(
-                        isSubscribed = vipStatus.isSubscribed,
-                        hasSelectedPlan = viewModel.hasSelectedPlan(),
-                        onPurchase = onPurchase,
-                    )
-                } else {
-                    // 显示 billing 不可用时的提示
-                    BillingUnavailableNotice()
-                }
+                PurchaseButton(
+                    isSubscribed = vipStatus.isSubscribed,
+                    hasSelectedPlan = viewModel.hasSelectedPlan(),
+                    onPurchase = onPurchase,
+                )
             } else {
                 EmptyPlanState()
             }
@@ -158,21 +150,6 @@ fun VipCenterContent(
             Spacer(Modifier.height(20.dp))
         }
     }
-}
-
-/** Billing 不可用时的提示组件 */
-@Composable
-private fun BillingUnavailableNotice() {
-    Text(
-        text = "当前设备不支持 Google Play 计费功能\n价格仅供参考，请联系客服了解订阅方式",
-        color = Color.Gray,
-        fontSize = 12.sp,
-        fontWeight = FontWeight.Normal,
-        textAlign = TextAlign.Center,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp),
-    )
 }
 
 /** 会员中心顶部栏 */
