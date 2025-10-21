@@ -465,9 +465,6 @@ async def generate_background(
         # Convert GCS URLs to CDN URLs
         from app.services.image_transform_service import image_transform_service
 
-        # Convert request to dict for storage
-        request_data = request.model_dump()
-
         cdn_urls = []
         cdn_url_to_img_dict = {}
         for gcs_url in gcs_urls:
@@ -502,7 +499,7 @@ async def generate_background(
                 compressed=False,  # Generated images are not compressed
                 cropped=False,  # Generated images are not cropped
                 gcs_url=gcs_url,  # Store GCS URL in metadata
-                request_data=request_data,  # Store original request data
+                request_data=request,  # Store original request data
             )
             logger.debug(
                 f"Created image resource record for CDN URL: {cdn_url}, GCS URL: {gcs_url}"

@@ -60,7 +60,7 @@ class ImageResourceMetadata(BaseModel):
     cropped: bool
     uncropped_image_url: Optional[str] = None
     gcs_url: Optional[str] = None
-    request_data: Optional[Dict[str, Any]] = None
+    request_data: Optional["TextToImageRequest"] = None
 
     class Config:
         from_attributes = True

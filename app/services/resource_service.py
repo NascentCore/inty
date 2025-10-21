@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app import models, schemas
 from app.models.resource import ImageResourceMetadata, ResourceType
+from app.schemas.agent import TextToImageRequest
 from app.schemas.exclude_fields import EXCLUDE_FIELDS
 from app.schemas.resource import ResourceCreate
 from app.utils.image import ImageFormat, ImageSize
@@ -83,7 +84,7 @@ def create_image_resource(
     cropped: bool = False,
     uncropped_image_url: Optional[str] = None,
     gcs_url: Optional[str] = None,
-    request_data: Optional[Dict[str, Any]] = None,
+    request_data: Optional[TextToImageRequest] = None,
 ) -> None:
     """
     创建图片资源记录的辅助函数
@@ -147,7 +148,7 @@ async def async_create_image_resource(
     cropped: bool = False,
     uncropped_image_url: Optional[str] = None,
     gcs_url: Optional[str] = None,
-    request_data: Optional[Dict[str, Any]] = None,
+    request_data: Optional[TextToImageRequest] = None,
 ) -> None:
     """
     创建图片资源记录的辅助函数 (异步版本)
