@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.view.GestureDetector
 import android.view.MotionEvent
 import android.widget.Toast
+import com.ai.inty.base.ToastUtils
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -251,7 +252,7 @@ class MainActivity : BaseActivity() {
 
     /** 显示退出提示 */
     private fun showExitHint() {
-        Toast.makeText(this, getString(R.string.edge_swipe_exit_hint), Toast.LENGTH_SHORT).show()
+        ToastUtils.showMessage(this, getString(R.string.edge_swipe_exit_hint))
     }
 
     override fun onResume() {

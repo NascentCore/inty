@@ -3,6 +3,7 @@ package com.ai.inty
 import android.net.Uri
 import android.os.Bundle
 import android.widget.Toast
+import com.ai.inty.base.ToastUtils
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
@@ -356,7 +357,7 @@ private fun CreateRolePage(
             // Check for generation errors
             val error = AvatarManager.getGenerationError()
             if (error != null) {
-                Toast.makeText(context, error, Toast.LENGTH_LONG).show()
+                ToastUtils.showError(context, error)
                 isGeneratingAvatar = false
             }
 
@@ -399,7 +400,7 @@ private fun CreateRolePage(
                 // Check for errors
                 val error = AvatarManager.getGenerationError()
                 if (error != null) {
-                    Toast.makeText(context, error, Toast.LENGTH_LONG).show()
+                    ToastUtils.showError(context, error)
                     isGeneratingAvatar = false
                 }
             }
@@ -437,7 +438,7 @@ private fun CreateRolePage(
 
             val error = AvatarManager.getGenerationError()
             if (error != null) {
-                Toast.makeText(context, error, Toast.LENGTH_LONG).show()
+                ToastUtils.showError(context, error)
                 isGeneratingAvatar = false
             }
         }
@@ -777,7 +778,7 @@ private fun CreateRolePage(
                                                 error,
                                             )
                                         }
-                                    Toast.makeText(context, errorMessage, Toast.LENGTH_LONG).show()
+                                    ToastUtils.showError(context, errorMessage)
                                 },
                             )
                         } else {
@@ -785,12 +786,10 @@ private fun CreateRolePage(
                                 request = request,
                                 onSuccess = { agentInfo ->
                                     isLoading = false
-                                    Toast.makeText(
+                                    ToastUtils.showSuccess(
                                         context,
-                                        context.getString(R.string.create_ai_successfully),
-                                        Toast.LENGTH_SHORT,
+                                        context.getString(R.string.create_ai_successfully)
                                     )
-                                        .show()
                                     onCreateSuccess()
                                 },
                                 onError = { error ->
@@ -808,7 +807,7 @@ private fun CreateRolePage(
                                                 error,
                                             )
                                         }
-                                    Toast.makeText(context, errorMessage, Toast.LENGTH_LONG).show()
+                                    ToastUtils.showError(context, errorMessage)
                                 },
                             )
                         }
@@ -823,7 +822,7 @@ private fun CreateRolePage(
                                 operation,
                                 e.message ?: context.getString(R.string.unknown_error),
                             )
-                        Toast.makeText(context, errorMessage, Toast.LENGTH_LONG).show()
+                        ToastUtils.showError(context, errorMessage)
                         EasyLog.log(
                             "${if (isEditMode) "UpdateRole" else "CreateRole"} error: ${e.message}",
                             EasyLog.ERROR,

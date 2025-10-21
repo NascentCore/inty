@@ -7,7 +7,11 @@ import com.inty.utils.parseIsoTimeToTimestamp
 import com.therouter.TheRouter
 import kotlinx.coroutines.flow.MutableStateFlow
 
-/** 计费远程数据管理类 */
+/* 从后端获取订阅计划：
+ * 获取订阅计划列表
+ * 更新本地订阅状态
+ * 更新本地订阅计划列表
+ */
 internal class BillingRemoteManager(
     private val vipStatusFlow: MutableStateFlow<VipStatus>,
     private val plansFlow: MutableStateFlow<List<VipPlan>>,

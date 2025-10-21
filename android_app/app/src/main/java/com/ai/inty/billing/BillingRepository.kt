@@ -21,7 +21,19 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-/** 计费仓库主类 */
+/* 计费系统的中央枢纽，协调所有计费操作：
+ * 初始化: 创建 BillingClient 并连接到 Google Play Billing
+ * 状态管理: 维护多个 StateFlow:
+ * - vipStatusFlow - 当前订阅状态
+ * - plansFlow - 可用的订阅计划
+ * - initStateFlow - 连接状态
+ * - eventFlow - 计费事件流（购买、错误等）
+ * 连接处理:
+ * - 智能重连机制，根据错误类型使用不同延迟（5秒-30秒）
+ * - Google Play 服务可用性检查
+ * - 服务不可用时的优雅降级
+ * 生命周期: 在 MainActivity 中集成，用户登录后初始化
+ */
 object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener {
 
     private const val DISCONNECT_RECONNECT_DELAY_MS = 1000L
