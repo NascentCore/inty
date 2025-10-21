@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 from loguru import logger
 from sqlalchemy.ext.asyncio.session import AsyncSession
@@ -83,6 +83,7 @@ def create_image_resource(
     cropped: bool = False,
     uncropped_image_url: Optional[str] = None,
     gcs_url: Optional[str] = None,
+    request_data: Optional[Dict[str, Any]] = None,
 ) -> None:
     """
     创建图片资源记录的辅助函数
@@ -101,6 +102,7 @@ def create_image_resource(
         cropped=cropped,
         uncropped_image_url=uncropped_image_url,
         gcs_url=gcs_url,
+        request_data=request_data,
     )
 
     # Convert to dict for database storage
@@ -145,6 +147,7 @@ async def async_create_image_resource(
     cropped: bool = False,
     uncropped_image_url: Optional[str] = None,
     gcs_url: Optional[str] = None,
+    request_data: Optional[Dict[str, Any]] = None,
 ) -> None:
     """
     创建图片资源记录的辅助函数 (异步版本)
@@ -163,6 +166,7 @@ async def async_create_image_resource(
         cropped=cropped,
         uncropped_image_url=uncropped_image_url,
         gcs_url=gcs_url,
+        request_data=request_data,
     )
 
     # Convert to dict for database storage

@@ -1,5 +1,5 @@
 import enum
-from typing import Optional
+from typing import Any, Dict, Optional
 
 import sqlalchemy as sa
 from pydantic import BaseModel
@@ -60,6 +60,7 @@ class ImageResourceMetadata(BaseModel):
     cropped: bool
     uncropped_image_url: Optional[str] = None
     gcs_url: Optional[str] = None
+    request_data: Optional[Dict[str, Any]] = None
 
     class Config:
         from_attributes = True
