@@ -18,7 +18,13 @@ internal class BillingPriceManager(
 ) {
 
     /** 查询商品详情并更新价格 */
-    fun querySkuDetails() {
+    fun querySkuDetails(isConnected: Boolean) {
+        // 检查BillingClient连接状态
+        if (!isConnected) {
+            EasyLog.log("BillingRepository BillingPriceManager - BillingClient 未连接，无法查询商品")
+            return
+        }
+
         // 从 plansFlow 获取商品ID列表
         val currentPlans = plansFlow.value
         if (currentPlans.isEmpty()) {
@@ -71,20 +77,19 @@ internal class BillingPriceManager(
                                 )
                             }
                         }
-                    }
-                        ?: run {
-                            EasyLog.log(
-                                "BillingRepository BillingPriceManager - Google Play返回的商品列表为null"
-                            )
-                            eventScope.launch {
-                                eventFlow.emit(
-                                    BillingEvent.SkuDetailsQueryFailed(
-                                        billingResult.responseCode,
-                                        "Google Play返回的商品列表为null",
-                                    )
+                    } ?: run {
+                        EasyLog.log(
+                            "BillingRepository BillingPriceManager - Google Play返回的商品列表为null"
+                        )
+                        eventScope.launch {
+                            eventFlow.emit(
+                                BillingEvent.SkuDetailsQueryFailed(
+                                    billingResult.responseCode,
+                                    "Google Play返回的商品列表为null",
                                 )
-                            }
+                            )
                         }
+                    }
                 }
 
                 BillingClient.BillingResponseCode.BILLING_UNAVAILABLE,
@@ -142,8 +147,8 @@ internal class BillingPriceManager(
                 // 检查价格是否有变化
                 if (
                     currentPlan.price != correctedPrice ||
-                        currentPlan.currencyCode != currencyCode ||
-                        currentPlan.priceAmountMicros != micros
+                    currentPlan.currencyCode != currencyCode ||
+                    currentPlan.priceAmountMicros != micros
                 ) {
 
                     val oldPrice = currentPlan.price
