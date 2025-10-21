@@ -68,6 +68,8 @@ async def google_login(
             global_config_loaded_from_config_yaml.google_oauth.client_id,
         )
 
+        logger.info(f"Google login idinfo: {idinfo}")
+
         # 验证发行者
         if idinfo["iss"] not in ["accounts.google.com", "https://accounts.google.com"]:
             logger.error(f"invalid google token issuer: {idinfo['iss']}")
