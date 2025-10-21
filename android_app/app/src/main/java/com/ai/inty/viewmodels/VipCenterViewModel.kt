@@ -21,6 +21,9 @@ class VipCenterViewModel : BaseViewModel() {
 
     // 订阅计划Flow，从BillingRepository订阅
     val plansFlow: StateFlow<List<VipPlan>> = BillingRepository.plansFlow
+    
+// Billing 初始化状态Flow
+val initStateFlow: StateFlow<com.ai.inty.billing.BillingInitState> = BillingRepository.initStateFlow
 
     /** 选择订阅计划 */
     fun selectPlan(index: Int) {
@@ -36,6 +39,14 @@ class VipCenterViewModel : BaseViewModel() {
 
     /** 购买选中的订阅计划 */
     fun purchaseSelectedPlan(activity: Activity) {
+val initState = initStateFlow.value
+
+// 检查 billing 是否可用
+if (!initState.hasGooglePlayServices || !initState.isConnected) {
+    showNetworkAwareError("当前设备不支持 Google Play 计费功能，请联系客服了解订阅方式")
+    return
+}
+
         val selectedIndex = _selectedPlanIndex.value
         val currentPlans = plansFlow.value
 

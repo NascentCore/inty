@@ -78,8 +78,12 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
 
     /** 处理Google Play服务不可用的情况 */
     private fun handleGooglePlayServicesUnavailable() {
-        log("Google Play 服务不可用，跳过BillingClient初始化")
+log("Google Play 服务不可用，使用降级方案")
+
         updateInitState(errorMessage = "Google Play 服务不可用")
+// 即使 Google Play 服务不可用，也尝试获取远程数据并显示静态价格
+eventScope.launch { fetchRemote(isConnected = false) }
+
         emitEvent(BillingEvent.InitializationFailed("Google Play 服务不可用"))
     }
 

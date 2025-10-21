@@ -93,6 +93,11 @@ internal class BillingPriceManager(
                 BillingClient.BillingResponseCode.NETWORK_ERROR -> {
                     // 使用统一的错误处理
                     BillingErrorHandler.handlePriceQueryError(billingResult)
+// 即使查询失败，也使用静态价格显示
+EasyLog.log("BillingRepository BillingPriceManager - 价格查询失败，使用静态价格显示")
+
+updatePlansWithStaticPrices()
+
                     eventScope.launch {
                         eventFlow.emit(
                             BillingEvent.SkuDetailsQueryFailed(
@@ -106,6 +111,11 @@ internal class BillingPriceManager(
                 else -> {
                     // 使用统一的错误处理
                     BillingErrorHandler.handlePriceQueryError(billingResult)
+                    
+// 即使查询失败，也使用静态价格显示
+EasyLog.log("BillingRepository BillingPriceManager - 未知错误，使用静态价格显示")
+
+updatePlansWithStaticPrices()
 
                     eventScope.launch {
                         eventFlow.emit(
@@ -119,6 +129,55 @@ internal class BillingPriceManager(
             }
         }
     }
+
+/** 使用静态价格更新计划（当 billing 不可用时） */
+private fun updatePlansWithStaticPrices() {
+    val currentPlans = plansFlow.value
+    if (currentPlans.isEmpty()) {
+        EasyLog.log("BillingRepository BillingPriceManager - plansFlow 为空，无法设置静态价格")
+        return
+    }
+
+    val updatedPlans =
+            currentPlans.map { plan ->
+                // 如果价格还是占位符 "-"，则设置静态价格
+                if (plan.price == "-" || plan.price.isEmpty()) {
+                    val staticPrice = getStaticPriceForPlan(plan)
+                    EasyLog.log(
+                            "BillingRepository BillingPriceManager - 设置静态价格: ${plan.name} -> $staticPrice"
+                    )
+                    plan.copy(
+                            price = staticPrice,
+                            originalPrice = staticPrice,
+                            currencyCode = "USD", // 默认货币
+                            priceAmountMicros = 0L // 静态价格不设置微秒值
+                    )
+                } else {
+                    plan // 保持现有价格
+                }
+            }
+
+    // 更新 plansFlow
+    plansFlow.value = updatedPlans
+    BillingStorage.saveLocalPlans(updatedPlans)
+    EasyLog.log("BillingRepository BillingPriceManager - 静态价格更新完成")
+}
+
+/** 根据计划类型获取静态价格 */
+private fun getStaticPriceForPlan(plan: VipPlan): String {
+    return when {
+        plan.name.contains("monthly", ignoreCase = true) ||
+                plan.name.contains("月", ignoreCase = true) -> "$9.99/月"
+        plan.name.contains("yearly", ignoreCase = true) ||
+                plan.name.contains("年", ignoreCase = true) -> "$99.99/年"
+        plan.name.contains("weekly", ignoreCase = true) ||
+                plan.name.contains("周", ignoreCase = true) -> "$2.99/周"
+        plan.name.contains("premium", ignoreCase = true) -> "$9.99/月"
+        plan.name.contains("pro", ignoreCase = true) -> "$19.99/月"
+        plan.name.contains("basic", ignoreCase = true) -> "$4.99/月"
+        else -> "$9.99/月" // 默认价格
+    }
+}
 
     /** 根据SkuDetails更新计划价格（旧API方法） */
     private fun updateLocalPlans(currentPlans: List<VipPlan>, skuDetailsList: List<SkuDetails>) {

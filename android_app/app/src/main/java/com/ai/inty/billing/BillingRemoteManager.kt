@@ -93,6 +93,8 @@ internal class BillingRemoteManager(
                                 "BillingRepository BillingRemoteManager BillingClient 未连接，等待连接成功后查询价格",
                                 EasyLog.WARN,
                             )
+                            // 即使未连接，也尝试设置静态价格
+                            priceManager.querySkuDetails(isConnected)
                         }
                     }
 
