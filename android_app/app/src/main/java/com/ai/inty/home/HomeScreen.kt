@@ -360,7 +360,7 @@ private fun ProfileTabContent(
         modifier = Modifier,
         userProfile = safeUserProfile,
         agents = userCreatedAgents,
-        innerPadding = innerPadding,
+        outerPadding = innerPadding,
         isLoading = isLoadingUserAgents.value,
         isRefreshing = isRefreshingUserAgents.value,
         onClickAgent = { agent ->
