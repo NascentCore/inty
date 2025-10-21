@@ -15,6 +15,11 @@ if [ "$FORMAT_ALL" = true ]; then
     # Format all other files
     npx prettier --write evaluation/
     echo "Formatting complete!"
+    echo
+    
+    git commit --all --message "fmt all code: ktfmt black prettier"
+    echo "Committing complete!"
+    echo
     exit 0
 fi
 
@@ -64,3 +69,8 @@ if [ -n "$OTHER_FILES" ]; then
 fi
 
 echo "Formatting complete!"
+echo
+
+git commit --all --message "fmt changed files: ktfmt black prettier"
+echo "Committing complete!"
+echo
