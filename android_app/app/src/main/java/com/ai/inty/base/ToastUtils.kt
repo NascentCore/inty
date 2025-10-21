@@ -248,4 +248,56 @@ object ToastUtils {
         val lastTime = lastToastInfo[message] ?: 0L
         return currentTime - lastTime <= debounceTimeMs
     }
+
+    /**
+     * 显示错误消息的简单辅助方法
+     * 用于替换重复的 Toast.makeText(context, error, Toast.LENGTH_LONG).show() 模式
+     *
+     * @param context 上下文
+     * @param error 错误消息
+     */
+    fun showError(context: Context, error: String?) {
+        if (error != null && error.isNotBlank()) {
+            try {
+                Toast.makeText(context, error, Toast.LENGTH_LONG).show()
+            } catch (e: Exception) {
+                Log.e("ToastUtils", "showError error: ${e.message}")
+            }
+        }
+    }
+
+    /**
+     * 显示成功消息的简单辅助方法
+     * 用于替换重复的 Toast.makeText(context, message, Toast.LENGTH_SHORT).show() 模式
+     *
+     * @param context 上下文
+     * @param message 成功消息
+     */
+    fun showSuccess(context: Context, message: String?) {
+        if (message != null && message.isNotBlank()) {
+            try {
+                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+            } catch (e: Exception) {
+                Log.e("ToastUtils", "showSuccess error: ${e.message}")
+            }
+        }
+    }
+
+    /**
+     * 显示消息的通用辅助方法
+     * 用于替换重复的 Toast.makeText 模式
+     *
+     * @param context 上下文
+     * @param message 要显示的消息
+     * @param duration Toast 显示时长，默认为 LENGTH_SHORT
+     */
+    fun showMessage(context: Context, message: String?, duration: Int = Toast.LENGTH_SHORT) {
+        if (message != null && message.isNotBlank()) {
+            try {
+                Toast.makeText(context, message, duration).show()
+            } catch (e: Exception) {
+                Log.e("ToastUtils", "showMessage error: ${e.message}")
+            }
+        }
+    }
 }

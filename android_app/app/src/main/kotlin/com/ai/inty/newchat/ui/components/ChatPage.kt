@@ -1,6 +1,7 @@
 package com.ai.inty.newchat.ui.components
 
 import android.widget.Toast
+import com.ai.inty.base.ToastUtils
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -75,7 +76,7 @@ fun ChatPage(
     // 暂时注释错误处理
     LaunchedEffect(errorMessage) {
         errorMessage?.let { message ->
-            Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+            ToastUtils.showError(context, message)
         }
     }
 
