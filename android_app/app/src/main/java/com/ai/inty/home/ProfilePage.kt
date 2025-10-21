@@ -67,6 +67,7 @@ import com.ai.inty.beans.UserProfile
 import com.ai.inty.billing.BillingRepository
 import com.ai.inty.billing.VipStatus
 import com.ai.inty.ui.components.ShimmerPlaceholder
+import com.ai.inty.explore.ExploreCharacterCard
 import com.ai.inty.utils.AuthClickable
 import com.ai.inty.utils.TrackScreenView
 import com.ai.inty.utils.getCdnImageUrl
@@ -279,9 +280,9 @@ internal fun ProfilePage(
                                     key = { index, agent -> "${agent.id}_$index" },
                                 ) { index, agent ->
                                     MyAgentCard(
-                                        modifier =
-                                            Modifier.noRippleClickable { onClickAgent(agent) },
+                                        modifier = Modifier,
                                         agentInfo = agent,
+                                        onClick = { onClickAgent(agent) },
                                         onEditAgent = onEditAgent,
                                         onDeleteAgent = onDeleteAgent,
                                     )
@@ -319,6 +320,7 @@ internal fun ProfilePage(
 private fun MyAgentCard(
     modifier: Modifier,
     agentInfo: AgentInfo,
+    onClick: () -> Unit,
     onEditAgent: ((AgentInfo) -> Unit)? = null,
     onDeleteAgent: ((AgentInfo) -> Unit)? = null,
 ) {
@@ -326,80 +328,12 @@ private fun MyAgentCard(
     var showDeleteDialog by remember { mutableStateOf(false) }
     var lastClickTime by remember { mutableLongStateOf(0L) }
 
-    // 判断是否有头像需要加载
-    val hasAvatarToLoad = agentInfo.avatar.isNotEmpty()
+    Box(modifier = modifier) {
+        ExploreCharacterCard(modifier = Modifier, agentInfo = agentInfo, onClick = onClick)
 
-    // 图片加载状态
-    var imageLoaded by remember { mutableStateOf(false) }
-
-    Box(
-        modifier = modifier
-            .size(165.dp, 220.dp)
-            .clip(RoundedCornerShape(12.dp))
-    ) {
-        if (hasAvatarToLoad) {
-            // 有头像需要加载时，使用 Shimmer 占位符
-            if (!imageLoaded) {
-                ShimmerPlaceholder(modifier = Modifier.fillMaxSize(), cornerRadius = 12.dp)
-            }
-
-            IntyImage(
-                modifier = Modifier.fillMaxSize(),
-                model = agentInfo.avatar,
-                placeholder = null, // 使用自定义的 Shimmer 占位显示
-                error = null, // 加载失败时也使用 Shimmer 占位显示
-                onSuccess = { imageLoaded = true },
-                onError = { imageLoaded = false },
-            )
-        } else {
-            // 没有头像需要加载时，直接显示默认头像
-            Image(
-                modifier = Modifier.fillMaxSize(),
-                painter = painterResource(R.drawable.img_default_avatar),
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-            )
-        }
-
-        // 缓存渐变画笔，避免每次重组时重新创建
-        val gradientBrush = remember {
-            Brush.verticalGradient(
-                colors = listOf(Color.Transparent, Color.Black.copy(.5f), Color.Black.copy(.9f))
-            )
-        }
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .background(brush = gradientBrush)
-                    .padding(8.dp)
-                    .align(Alignment.BottomCenter),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            Text(
-                modifier = Modifier,
-                text = agentInfo.name,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = Color.White,
-            )
-            Text(
-                modifier = Modifier,
-                text = agentInfo.intro,
-                fontSize = 12.sp,
-                lineHeight = 12.sp,
-                color = Color.White.copy(.7f),
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-
-        // 右下角的菜单按钮
         if (onEditAgent != null || onDeleteAgent != null) {
             Box(
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(4.dp)
+                modifier = Modifier.align(Alignment.BottomEnd).padding(6.dp)
             ) {
                 Box(
                     modifier =
@@ -456,7 +390,6 @@ private fun MyAgentCard(
             }
         }
 
-        // Delete confirmation dialog
         if (showDeleteDialog) {
             AlertDialog(
                 onDismissRequest = { showDeleteDialog = false },
