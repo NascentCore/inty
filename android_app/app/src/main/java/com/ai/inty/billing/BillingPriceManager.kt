@@ -9,7 +9,16 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 
-/** 计费价格管理类 */
+/* 从 Google Play 查询实时价格：
+ * 使用已弃用但仍可用的 SkuDetails API
+ * 查询订阅商品的价格信息
+ * 更新本地 VipPlan 对象，包含：
+ * - 格式化的价格字符串
+ * -货币代码
+ * -微单位价格
+ * 处理货币符号修正
+ * 仅在 BillingClient 连接时查询价格
+ */
 internal class BillingPriceManager(
     private val billingClient: BillingClient,
     private val eventScope: CoroutineScope,
