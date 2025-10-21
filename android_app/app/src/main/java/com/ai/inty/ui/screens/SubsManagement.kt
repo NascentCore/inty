@@ -49,7 +49,7 @@ fun SubscriptionManagementScreen(
                 }
 
                 is SubscriptionUiEvent.ShowToast -> {
-                    Toast.makeText(context, event.message, Toast.LENGTH_LONG).show()
+                    ToastUtils.showError(context, event.message)
                 }
             }
         }

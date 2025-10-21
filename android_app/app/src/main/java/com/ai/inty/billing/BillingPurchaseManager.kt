@@ -509,10 +509,10 @@ internal class BillingPurchaseManager(
     }
 
     private fun showError(activity: Activity, error: String?) {
-        activity.runOnUiThread { Toast.makeText(activity, "$error", Toast.LENGTH_SHORT).show() }
+        activity.runOnUiThread { ToastUtils.showError(activity, error) }
     }
 
     private fun showError(error: String?) {
-        Toast.makeText(AppEnv.context, "$error", Toast.LENGTH_SHORT).show()
+        ToastUtils.showError(AppEnv.context, error)
     }
 }

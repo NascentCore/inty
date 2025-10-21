@@ -251,7 +251,7 @@ class MainActivity : BaseActivity() {
 
     /** 显示退出提示 */
     private fun showExitHint() {
-        Toast.makeText(this, getString(R.string.edge_swipe_exit_hint), Toast.LENGTH_SHORT).show()
+        ToastUtils.showMessage(this, getString(R.string.edge_swipe_exit_hint))
     }
 
     override fun onResume() {

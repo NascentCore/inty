@@ -36,7 +36,7 @@ class SettingActivity : BaseActivity() {
                         val str =
                             if (isDelete) getString(R.string.delete_account_successfully)
                             else getString(R.string.logout_successfully)
-                        Toast.makeText(this@SettingActivity, str, Toast.LENGTH_SHORT).show()
+                        ToastUtils.showSuccess(this@SettingActivity, str)
                         // 返回到主页面
                         val intent = Intent(this@SettingActivity, MainActivity::class.java)
                         intent.flags =

@@ -75,7 +75,7 @@ fun ChatPage(
     // 暂时注释错误处理
     LaunchedEffect(errorMessage) {
         errorMessage?.let { message ->
-            Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+            ToastUtils.showError(context, message)
         }
     }
 
