@@ -19,7 +19,6 @@ import com.ai.inty.newchat.data.ChatDataManager
 import com.ai.inty.newchat.ui.components.ChatPage
 import com.ai.inty.newchat.viewmodel.ChatViewModel
 import com.ai.inty.newchat.viewmodel.ExploreViewModel
-import com.ai.inty.newchat.viewmodel.GlobalChatViewModel
 
 /**
  * Chat Tab页面
@@ -30,7 +29,6 @@ import com.ai.inty.newchat.viewmodel.GlobalChatViewModel
 fun ChatTabScreen(
     modifier: Modifier = Modifier,
     exploreViewModel: ExploreViewModel,
-    globalChatViewModel: GlobalChatViewModel,
     chatDataManager: ChatDataManager
 ) {
     val agents by exploreViewModel.agents.collectAsState()
@@ -72,11 +70,14 @@ fun ChatTabScreen(
 
         HorizontalPager(
             state = pagerState,
-            modifier = modifier.fillMaxSize()
+            modifier = modifier.fillMaxSize(),
+            beyondViewportPageCount = 3
         ) { pageIndex ->
             val agent = agents[pageIndex]
-            // 暂时直接创建ChatViewModel，避免ViewModelProvider的复杂性
-            val chatViewModel = remember { ChatViewModel(globalChatViewModel, chatDataManager) }
+            // 为每个Agent创建独立的ChatViewModel实例
+            val chatViewModel = remember(agent.id) {
+                ChatViewModel(chatDataManager)
+            }
 
             ChatPage(
                 agentId = agent.id,

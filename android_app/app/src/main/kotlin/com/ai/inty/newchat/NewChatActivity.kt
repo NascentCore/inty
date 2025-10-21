@@ -25,7 +25,6 @@ import com.ai.inty.net.IChatApi
 import com.ai.inty.newchat.data.ChatDataManager
 import com.ai.inty.newchat.ui.components.ChatPage
 import com.ai.inty.newchat.viewmodel.ChatViewModel
-import com.ai.inty.newchat.viewmodel.GlobalChatViewModel
 import com.therouter.TheRouter
 
 /**
@@ -36,7 +35,6 @@ class NewChatActivity : ComponentActivity() {
 
     // 依赖管理
     private lateinit var chatDataManager: ChatDataManager
-    private lateinit var globalChatViewModel: GlobalChatViewModel
     private lateinit var chatViewModel: ChatViewModel
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -77,8 +75,7 @@ class NewChatActivity : ComponentActivity() {
         chatDataManager = ChatDataManager(chatApi, agentApi, lifecycleScope)
 
         // 创建ViewModel
-        globalChatViewModel = GlobalChatViewModel(chatDataManager)
-        chatViewModel = ChatViewModel(globalChatViewModel, chatDataManager)
+        chatViewModel = ChatViewModel(chatDataManager)
     }
 }
 

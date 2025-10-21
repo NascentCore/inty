@@ -23,7 +23,6 @@ import com.ai.inty.newchat.ui.components.BottomNavigationBar
 import com.ai.inty.newchat.ui.screens.ChatTabScreen
 import com.ai.inty.newchat.ui.screens.ExploreTabScreen
 import com.ai.inty.newchat.viewmodel.ExploreViewModel
-import com.ai.inty.newchat.viewmodel.GlobalChatViewModel
 import com.therouter.TheRouter
 
 /**
@@ -34,7 +33,6 @@ class NewMainActivity : ComponentActivity() {
 
     // 依赖管理
     private lateinit var chatDataManager: ChatDataManager
-    private lateinit var globalChatViewModel: GlobalChatViewModel
     private lateinit var exploreViewModel: ExploreViewModel
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -52,7 +50,6 @@ class NewMainActivity : ComponentActivity() {
                 ) {
                     NewMainScreen(
                         chatDataManager = chatDataManager,
-                        globalChatViewModel = globalChatViewModel,
                         exploreViewModel = exploreViewModel,
                     )
                 }
@@ -71,7 +68,6 @@ class NewMainActivity : ComponentActivity() {
         chatDataManager = ChatDataManager(chatApi, agentApi, lifecycleScope)
 
         // 创建ViewModel
-        globalChatViewModel = GlobalChatViewModel(chatDataManager)
         exploreViewModel = ExploreViewModel(chatDataManager)
     }
 
@@ -81,7 +77,6 @@ class NewMainActivity : ComponentActivity() {
     @Composable
     fun NewMainScreen(
         chatDataManager: ChatDataManager,
-        globalChatViewModel: GlobalChatViewModel,
         exploreViewModel: ExploreViewModel,
     ) {
         var selectedTab by remember { mutableIntStateOf(0) }
@@ -98,7 +93,6 @@ class NewMainActivity : ComponentActivity() {
                 0 -> ChatTabScreen(
                     modifier = Modifier.padding(innerPadding),
                     exploreViewModel = exploreViewModel,
-                    globalChatViewModel = globalChatViewModel,
                     chatDataManager = chatDataManager
                 )
 
