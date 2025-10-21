@@ -20,7 +20,16 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 
-/** 计费购买管理类 */
+/* 处理购买更新：
+ * 处理完整的购买生命周期，购买流程:
+ * - 前置检查: 验证 Google Play 服务可用性
+ * - 查询商品: 从 Google Play 获取商品详情
+ * - 启动流程: 打开 Google Play 购买对话框
+ * - 回调处理: 接收 onPurchasesUpdated() 回调
+ * - 确认购买: 向 Google 确认购买
+ * - 服务器验证: 将购买凭证发送到后端验证
+ * - 更新状态: 更新本地订阅状态
+*/
 internal class BillingPurchaseManager(
     private val billingClient: BillingClient,
     private val eventScope: CoroutineScope,
