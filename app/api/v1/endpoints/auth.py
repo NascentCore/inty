@@ -115,6 +115,7 @@ async def google_login(
                         gender=existing_user.gender,
                         age_group=existing_user.age_group,
                         system_language=existing_user.system_language,
+                        description=existing_user.description,
                         is_new_user=False,
                     ),
                 )
@@ -191,6 +192,7 @@ async def google_login(
                     gender=new_user.gender,
                     age_group=new_user.age_group,
                     system_language=new_user.system_language,
+                    description=new_user.description,
                     is_new_user=True,
                 ),
             )
