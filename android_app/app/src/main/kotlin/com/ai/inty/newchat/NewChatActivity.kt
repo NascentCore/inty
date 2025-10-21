@@ -18,6 +18,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
+import androidx.lifecycle.lifecycleScope
 import com.ai.inty.R
 import com.ai.inty.net.IAgentApi
 import com.ai.inty.net.IChatApi
@@ -73,7 +74,7 @@ class NewChatActivity : ComponentActivity() {
             ?: throw IllegalStateException("IAgentApi not found")
 
         // 创建数据管理器
-        chatDataManager = ChatDataManager(chatApi, agentApi)
+        chatDataManager = ChatDataManager(chatApi, agentApi, lifecycleScope)
 
         // 创建ViewModel
         globalChatViewModel = GlobalChatViewModel(chatDataManager)

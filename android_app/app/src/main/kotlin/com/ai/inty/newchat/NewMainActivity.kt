@@ -15,6 +15,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.lifecycleScope
 import com.ai.inty.net.IAgentApi
 import com.ai.inty.net.IChatApi
 import com.ai.inty.newchat.data.ChatDataManager
@@ -67,7 +68,7 @@ class NewMainActivity : ComponentActivity() {
             ?: throw IllegalStateException("IAgentApi not found")
 
         // 创建数据管理器
-        chatDataManager = ChatDataManager(chatApi, agentApi)
+        chatDataManager = ChatDataManager(chatApi, agentApi, lifecycleScope)
 
         // 创建ViewModel
         globalChatViewModel = GlobalChatViewModel(chatDataManager)

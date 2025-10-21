@@ -22,6 +22,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -136,20 +137,14 @@ fun ChatPage(
                     items(messages) { message ->
                         if (message.content == "loading_animation" && message.role == "assistant") {
                             // 显示loading动画
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(16.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                CircularProgressIndicator()
-                            }
+                            LinearProgressIndicator()
                         } else {
                             MessageItem(
                                 message = message,
                                 onRetryClick = { chatViewModel.retryMessage(message.id) }
                             )
                         }
+
                     }
                 }
             }
