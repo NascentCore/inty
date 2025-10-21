@@ -172,7 +172,7 @@ fun ChatSettingsDrawer(
                 ) {
                     MySettingItem(
                         key = stringResource(R.string.str_name),
-                        value = userProfileState.nickname,
+                        value = userProfileState.nickname.ifEmpty { "Guest" },
                         horizontalPadding = horizontalPadding,
                         onClick = {
                             // 检查是否正式登录（非游客且已登录）
