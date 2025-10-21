@@ -1,5 +1,23 @@
 #!/bin/bash -e
 
+# Check for --all flag
+FORMAT_ALL=false
+if [ "$1" = "--all" ]; then
+    FORMAT_ALL=true
+fi
+
+if [ "$FORMAT_ALL" = true ]; then
+    echo "Formatting all files..."
+    # Format all Kotlin files
+    ktfmt --kotlinlang-style android_app/
+    # Format all Python files
+    black app/ scripts/ experimental/
+    # Format all other files
+    npx prettier --write evaluation/
+    echo "Formatting complete!"
+    exit 0
+fi
+
 # Get list of files changed compared to main branch
 CHANGED_FILES=$(git diff --name-only main)
 
