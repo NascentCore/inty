@@ -1,8 +1,25 @@
-# Inty Evaluation（inty-eval/角色评测工具）
+# Inty Evaluation（inty 评测运营工具）
 
 - **⚠️ 注意：所有人操作的都是同一份后端数据，使用同样的 API key**
 
 这是一个使用 React/TypeScript 构建的运行于浏览器内的 Web 应用程序，用于评估 AI 角色、管理提示和显示聊天交互。
+
+## 快速上手
+
+### 单角色聊天
+
+* 与 APP 类似的聊天功能
+
+<img width="960" height="1756" alt="image" src="https://github.com/user-attachments/assets/f89e9c07-1b3e-487d-91f2-a2fd15de3fe3" />
+
+### 智能体（角色）管理
+
+<img width="960" height="1198" alt="image" src="https://github.com/user-attachments/assets/caefe026-62d9-4e48-8555-26a45ee5e9c2" />
+
+### 智能体评测
+
+<img width="480" height="1648" alt="image" src="https://github.com/user-attachments/assets/a19f42e0-2f94-435f-bb94-fd3d4a820be6" />
+<img width="480" height="1464" alt="image" src="https://github.com/user-attachments/assets/29b15d93-92d5-476e-9bad-7ce4acb2dbb5" />
 
 ## 更新 inty_sdk 版本
 
