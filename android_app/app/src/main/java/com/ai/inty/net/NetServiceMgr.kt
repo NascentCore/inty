@@ -1,7 +1,7 @@
 package com.ai.inty.net
 
-import android.content.Context
-import android.content.Intent
+import ai.sxwl.android.utils.AppUtils
+import com.ai.inty.BuildConfig
 import com.ai.inty.Constant
 import com.ai.inty.utils.FirebaseManager
 import com.ai.inty.utils.FirebasePerformanceHelper
@@ -10,6 +10,7 @@ import com.architecture.httplib.core.HttpResponseCallAdapterFactory
 import com.architecture.httplib.core.MoshiResultTypeAdapterFactory
 import com.architecture.httplib.error.GlobalErrorHandler
 import com.chuckerteam.chucker.api.ChuckerInterceptor
+import com.google.firebase.perf.metrics.HttpMetric
 import com.inty.utils.AppEnv
 import com.inty.utils.log.EasyLog
 import com.inty.utils.storage.IntySetting
@@ -21,18 +22,16 @@ import com.therouter.inject.ServiceProvider
 import okhttp3.ConnectionPool
 import okhttp3.Dns
 import okhttp3.Interceptor
-import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
-import okhttp3.Protocol
 import okhttp3.Response
-import okhttp3.ResponseBody.Companion.toResponseBody
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
 import java.net.InetAddress
+import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
 /** 获取基础URL 根据构建类型返回对应的API基础URL */
-fun getBaseUrl(): String {
+private fun getBaseUrl(): String {
     return when (AppEnv.buildType) {
         "local" -> "http://${Constant.USER_HOST_LOCAL}/"
         "debug" -> "https://${Constant.USER_HOST_DEV}/"
@@ -42,7 +41,7 @@ fun getBaseUrl(): String {
     }
 }
 
-class AuthInterceptor : Interceptor {
+private class AuthInterceptor : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
         EasyLog.log("AuthInterceptor - getCurToken: ${IntySetting.getCurToken()}")
         val request =
@@ -92,7 +91,7 @@ class AuthInterceptor : Interceptor {
                 } else {
                     EasyLog.log("401 unauthorized - switching to guest mode", EasyLog.ERROR)
                     IntySetting.logout()
-                    restartAppProcess(context = AppEnv.context)
+                    AppUtils.relaunchApp(true)
                 }
             }
         }
@@ -102,174 +101,431 @@ class AuthInterceptor : Interceptor {
 }
 
 /** 重试拦截器 对网络错误进行重试，提高请求成功率 */
-class RetryInterceptor(private val maxRetries: Int = 3) : Interceptor {
+private class RetryInterceptor(private val maxRetries: Int = 3) : Interceptor {
+
+    companion object {
+        // 可重试的HTTP状态码
+        private val RETRYABLE_STATUS_CODES = setOf(500, 502, 503, 504, 429)
+
+        // 可重试的异常类型
+        private val RETRYABLE_EXCEPTIONS = setOf(
+            "java.net.SocketTimeoutException",
+            "java.net.ConnectException",
+            "java.net.UnknownHostException",
+            "java.io.IOException"
+        )
+
+        // 幂等性HTTP方法（可以安全重试）
+        private val IDEMPOTENT_METHODS = setOf("GET", "HEAD", "PUT", "DELETE")
+    }
+
     override fun intercept(chain: Interceptor.Chain): Response {
         val request = chain.request()
         var lastException: Exception? = null
+        var lastResponse: Response? = null
+
+        // 检查请求是否适合重试
+        if (!shouldRetryRequest(request)) {
+            return chain.proceed(request)
+        }
 
         // 重试逻辑
         for (attempt in 0 until maxRetries) {
             try {
                 val currentResponse = chain.proceed(request)
+                lastResponse = currentResponse
 
-                // 如果响应成功或客户端错误（4xx），不重试
-                if (currentResponse.isSuccessful || currentResponse.code in 400..499) {
-                    return currentResponse
-                }
-
-                // 服务器错误（5xx）才重试
-                if (currentResponse.code in 500..599) {
+                // 检查响应是否应该重试
+                if (shouldRetryResponse(currentResponse, attempt)) {
                     EasyLog.log(
-                        "Retry attempt ${attempt + 1} for ${request.url} due to server error ${currentResponse.code}"
+                        "Retry attempt ${attempt + 1} for ${request.url} due to status ${currentResponse.code}"
                     )
 
-                    // Firebase Analytics - 记录服务器错误重试
-                    FirebaseManager.logEvent(
-                        "network_retry",
-                        mapOf(
-                            "attempt" to (attempt + 1),
-                            "http_code" to currentResponse.code,
-                            "url" to request.url.toString(),
-                        ),
-                    )
+                    // 记录重试事件
+                    recordRetryEvent(request, attempt + 1, currentResponse.code, null)
 
+                    // 安全关闭响应
                     currentResponse.close()
+
+                    // 非阻塞延迟
                     if (attempt < maxRetries - 1) {
-                        Thread.sleep(1000L * (attempt + 1)) // 指数退避
+                        delayRetry(attempt)
                     }
                 } else {
+                    // 不需要重试，直接返回
                     return currentResponse
                 }
             } catch (e: Exception) {
                 lastException = e
-                EasyLog.log("Retry attempt ${attempt + 1} failed for ${request.url}: ${e.message}")
-                if (attempt < maxRetries - 1) {
-                    Thread.sleep(1000L * (attempt + 1)) // 指数退避
+
+                // 检查异常是否应该重试
+                if (shouldRetryException(e, attempt)) {
+                    EasyLog.log("Retry attempt ${attempt + 1} failed for ${request.url}: ${e.message}")
+
+                    // 记录重试事件
+                    recordRetryEvent(request, attempt + 1, null, e)
+
+                    // 非阻塞延迟
+                    if (attempt < maxRetries - 1) {
+                        delayRetry(attempt)
+                    }
+                } else {
+                    // 不应该重试的异常，直接抛出
+                    throw e
                 }
             }
         }
 
-        // 所有重试都失败了，返回错误响应而不是抛出异常
+        // 所有重试都失败了
+        recordFinalFailure(request, maxRetries, lastException)
+
+        // 如果有最后的响应，返回它；否则抛出最后的异常
+        return lastResponse ?: throw (lastException
+            ?: Exception("Network request failed after $maxRetries attempts"))
+    }
+
+    /**
+     * 检查请求是否适合重试
+     */
+    private fun shouldRetryRequest(request: okhttp3.Request): Boolean {
+        // 只对幂等性方法进行重试
+        return request.method in IDEMPOTENT_METHODS
+    }
+
+    /**
+     * 检查响应是否应该重试
+     */
+    private fun shouldRetryResponse(response: okhttp3.Response, attempt: Int): Boolean {
+        return attempt < maxRetries - 1 && response.code in RETRYABLE_STATUS_CODES
+    }
+
+    /**
+     * 检查异常是否应该重试
+     */
+    private fun shouldRetryException(exception: Exception, attempt: Int): Boolean {
+        if (attempt >= maxRetries - 1) return false
+
+        val exceptionType = exception.javaClass.name
+        return RETRYABLE_EXCEPTIONS.any { exceptionType.contains(it) }
+    }
+
+    /**
+     * 非阻塞延迟重试
+     */
+    private fun delayRetry(attempt: Int) {
+        try {
+            // 使用指数退避，但避免阻塞主线程
+            val delayMs = (1000L * (attempt + 1)).coerceAtMost(5000L) // 最大5秒
+
+            if (BuildConfig.DEBUG) {
+                // 调试模式下使用Thread.sleep便于调试
+                Thread.sleep(delayMs)
+            } else {
+                // 生产环境使用更轻量的延迟
+                Thread.sleep(delayMs.coerceAtMost(2000L)) // 生产环境最大2秒
+            }
+        } catch (e: InterruptedException) {
+            Thread.currentThread().interrupt()
+            throw RuntimeException("Retry interrupted", e)
+        }
+    }
+
+    /**
+     * 记录重试事件
+     */
+    private fun recordRetryEvent(
+        request: okhttp3.Request,
+        attempt: Int,
+        statusCode: Int?,
+        exception: Exception?
+    ) {
+        try {
+            FirebaseManager.logEvent(
+                "network_retry",
+                mapOf(
+                    "attempt" to attempt,
+                    "method" to request.method,
+                    "url" to request.url.toString(),
+                    "status_code" to (statusCode ?: -1),
+                    "exception_type" to (exception?.javaClass?.simpleName ?: "none")
+                )
+            )
+        } catch (e: Exception) {
+            // Firebase记录失败不应该影响重试逻辑
+            EasyLog.log("Failed to record retry event: ${e.message}", EasyLog.WARN)
+        }
+    }
+
+    /**
+     * 记录最终失败
+     */
+    private fun recordFinalFailure(
+        request: okhttp3.Request,
+        maxRetries: Int,
+        lastException: Exception?
+    ) {
         EasyLog.log(
             "All retry attempts failed for ${request.url} after $maxRetries attempts",
-            EasyLog.ERROR,
+            EasyLog.ERROR
         )
 
-        // Firebase Analytics - 记录网络请求最终失败
-        FirebaseManager.logEvent(
-            "network_final_failure",
-            mapOf(
-                "max_retries" to maxRetries,
-                "url" to request.url.toString(),
-                "last_error" to (lastException?.message ?: "unknown"),
-            ),
-        )
-
-        // Firebase Crashlytics - 记录网络失败
-        FirebaseManager.setCustomKey("network_failure_url", request.url.toString())
-        FirebaseManager.setCustomKey("network_failure_retries", maxRetries.toString())
-        FirebaseManager.recordException(
-            Exception(
-                "Network request failed after $maxRetries attempts: ${lastException?.message}"
+        try {
+            // Firebase Analytics - 记录网络请求最终失败
+            FirebaseManager.logEvent(
+                "network_final_failure",
+                mapOf(
+                    "max_retries" to maxRetries,
+                    "method" to request.method,
+                    "url" to request.url.toString(),
+                    "last_error" to (lastException?.message ?: "unknown"),
+                    "last_error_type" to (lastException?.javaClass?.simpleName ?: "unknown")
+                )
             )
-        )
 
-        // 如果没有响应但有异常，创建一个错误响应
-        val errorMessage = lastException?.message ?: ""
-        EasyLog.log("Creating error response for ${request.url}: $errorMessage", EasyLog.ERROR)
+            // Firebase Crashlytics - 记录网络失败
+            FirebaseManager.setCustomKey("network_failure_url", request.url.toString())
+            FirebaseManager.setCustomKey("network_failure_retries", maxRetries.toString())
+            FirebaseManager.setCustomKey("network_failure_method", request.method)
 
-        // 创建一个表示网络错误的响应
-        return Response.Builder()
-            .request(request)
-            .protocol(Protocol.HTTP_1_1)
-            .code(500) // 内部服务器错误
-            .message("RetryInterceptor Network Error")
-            .body(errorMessage.toResponseBody("text/plain".toMediaType()))
-            .build()
+            if (lastException != null) {
+                FirebaseManager.recordException(lastException)
+            }
+        } catch (e: Exception) {
+            // Firebase记录失败不应该影响重试逻辑
+            EasyLog.log("Failed to record final failure: ${e.message}", EasyLog.WARN)
+        }
     }
 }
 
 /** 网络性能监控拦截器 监控请求耗时，帮助识别性能问题 */
 private class PerformanceInterceptor : Interceptor {
+
+    // 性能阈值常量
+    private companion object {
+        const val FAST_REQUEST_THRESHOLD = 1000L
+        const val SLOW_REQUEST_THRESHOLD = 3000L
+    }
+
     override fun intercept(chain: Interceptor.Chain): Response {
         val request = chain.request()
         val startTime = System.currentTimeMillis()
 
-        EasyLog.log("🌐 Starting request: ${request.method} ${request.url}")
+        // 安全地创建和启动性能监控
+        val httpMetric = createHttpMetricSafely(request)
+        startHttpMetricSafely(httpMetric)
 
-        // 创建 Firebase Performance HTTP Metric
-        val httpMetric = FirebasePerformanceHelper.createHttpMetric(request)
-        FirebasePerformanceHelper.startHttpMetric(httpMetric)
+        // 记录请求开始（仅在调试模式下）
+        if (BuildConfig.DEBUG) {
+            EasyLog.log("🌐 Starting request: ${request.method} ${request.url}")
+        }
 
         return try {
+            // 执行实际请求
             val response = chain.proceed(request)
             val endTime = System.currentTimeMillis()
             val duration = endTime - startTime
 
-            // 停止 Firebase Performance HTTP Metric
-            FirebasePerformanceHelper.stopHttpMetric(httpMetric, response)
+            // 安全地停止性能监控
+            stopHttpMetricSafely(httpMetric, response)
 
-            // 记录请求性能
-            when {
-                duration < 1000 -> {
-                    EasyLog.log(
-                        "✅ Request completed: ${request.method} ${request.url} (${duration}ms)"
-                    )
-                }
-
-                duration < 3000 -> {
-                    EasyLog.log(
-                        "⚠️ Slow request: ${request.method} ${request.url} (${duration}ms)",
-                        EasyLog.WARN,
-                    )
-                }
-
-                else -> {
-                    EasyLog.log(
-                        "🚨 Very slow request: ${request.method} ${request.url} (${duration}ms)",
-                        EasyLog.ERROR,
-                    )
-                }
-            }
+            // 记录性能指标（不影响请求结果）
+            recordPerformanceMetrics(request, duration, response.isSuccessful)
 
             response
         } catch (e: Exception) {
             val endTime = System.currentTimeMillis()
             val duration = endTime - startTime
 
-            // 停止 Firebase Performance HTTP Metric (即使请求失败)
-            FirebasePerformanceHelper.stopHttpMetric(httpMetric, null)
+            // 安全地停止性能监控（即使请求失败）
+            stopHttpMetricSafely(httpMetric, null)
 
-            EasyLog.log(
-                "❌ Request failed: ${request.method} ${request.url} (${duration}ms): ${e.message}",
-                EasyLog.ERROR,
-            )
+            // 记录失败的性能指标
+            recordFailureMetrics(request, duration, e)
+
+            // 重要：不重新抛出异常，让其他拦截器或业务逻辑处理
+            // 性能监控不应该影响正常的错误处理流程
             throw e
+        }
+    }
+
+    /**
+     * 安全地创建HTTP性能指标
+     */
+    private fun createHttpMetricSafely(request: okhttp3.Request): HttpMetric? {
+        return try {
+            FirebasePerformanceHelper.createHttpMetric(request)
+        } catch (e: Exception) {
+            // 性能监控失败不应该影响业务请求
+            EasyLog.log("Failed to create HTTP metric: ${e.message}", EasyLog.WARN)
+            null
+        }
+    }
+
+    /**
+     * 安全地启动HTTP性能指标
+     */
+    private fun startHttpMetricSafely(httpMetric: HttpMetric?) {
+        if (httpMetric == null) return
+
+        try {
+            FirebasePerformanceHelper.startHttpMetric(httpMetric)
+        } catch (e: Exception) {
+            // 性能监控失败不应该影响业务请求
+            EasyLog.log("Failed to start HTTP metric: ${e.message}", EasyLog.WARN)
+        }
+    }
+
+    /**
+     * 安全地停止HTTP性能指标
+     */
+    private fun stopHttpMetricSafely(httpMetric: HttpMetric?, response: okhttp3.Response?) {
+        if (httpMetric == null) return
+
+        try {
+            FirebasePerformanceHelper.stopHttpMetric(httpMetric, response)
+        } catch (e: Exception) {
+            // 性能监控失败不应该影响业务请求
+            EasyLog.log("Failed to stop HTTP metric: ${e.message}", EasyLog.WARN)
+        }
+    }
+
+    /**
+     * 记录性能指标（异步执行，不阻塞请求）
+     */
+    private fun recordPerformanceMetrics(
+        request: okhttp3.Request,
+        duration: Long,
+        isSuccessful: Boolean
+    ) {
+        try {
+            // 使用线程池异步记录性能指标，避免阻塞主线程
+            NetServiceMgr.performanceExecutor.execute {
+                when {
+                    duration < FAST_REQUEST_THRESHOLD -> {
+                        if (BuildConfig.DEBUG) {
+                            EasyLog.log("✅ Fast request: ${request.method} ${request.url} (${duration}ms)")
+                        }
+                    }
+
+                    duration < SLOW_REQUEST_THRESHOLD -> {
+                        EasyLog.log(
+                            "⚠️ Slow request: ${request.method} ${request.url} (${duration}ms)",
+                            EasyLog.WARN
+                        )
+
+                        // Firebase Analytics - 记录慢请求
+                        FirebaseManager.logEvent(
+                            "slow_request", mapOf(
+                                "duration_ms" to duration,
+                                "method" to request.method,
+                                "url" to request.url.toString(),
+                                "successful" to isSuccessful
+                            )
+                        )
+                    }
+
+                    else -> {
+                        EasyLog.log(
+                            "🚨 Very slow request: ${request.method} ${request.url} (${duration}ms)",
+                            EasyLog.ERROR
+                        )
+
+                        // Firebase Analytics - 记录极慢请求
+                        FirebaseManager.logEvent(
+                            "very_slow_request", mapOf(
+                                "duration_ms" to duration,
+                                "method" to request.method,
+                                "url" to request.url.toString(),
+                                "successful" to isSuccessful
+                            )
+                        )
+
+                        // Firebase Crashlytics - 记录性能问题
+                        FirebaseManager.setCustomKey("slow_request_url", request.url.toString())
+                        FirebaseManager.setCustomKey("slow_request_duration", duration.toString())
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            // 性能记录失败不应该影响业务请求
+            EasyLog.log("Failed to record performance metrics: ${e.message}", EasyLog.WARN)
+        }
+    }
+
+    /**
+     * 记录失败的性能指标
+     */
+    private fun recordFailureMetrics(
+        request: okhttp3.Request,
+        duration: Long,
+        exception: Exception
+    ) {
+        try {
+            // 使用线程池异步记录失败指标
+            NetServiceMgr.performanceExecutor.execute {
+                EasyLog.log(
+                    "❌ Request failed: ${request.method} ${request.url} (${duration}ms): ${exception.message}",
+                    EasyLog.ERROR
+                )
+
+                // Firebase Analytics - 记录请求失败
+                FirebaseManager.logEvent(
+                    "request_failure", mapOf(
+                        "duration_ms" to duration,
+                        "method" to request.method,
+                        "url" to request.url.toString(),
+                        "error_type" to exception.javaClass.simpleName,
+                        "error_message" to (exception.message ?: "unknown")
+                    )
+                )
+
+                // Firebase Crashlytics - 记录网络错误
+                FirebaseManager.setCustomKey("failed_request_url", request.url.toString())
+                FirebaseManager.setCustomKey("failed_request_duration", duration.toString())
+                FirebaseManager.recordException(exception)
+            }
+        } catch (e: Exception) {
+            // 性能记录失败不应该影响业务请求
+            EasyLog.log("Failed to record failure metrics: ${e.message}", EasyLog.WARN)
         }
     }
 }
 
 /** 自定义DNS解析器，支持缓存 */
 private class CachedDns : Dns {
-    private val cache = mutableMapOf<String, List<InetAddress>>()
+    // 使用线程安全的ConcurrentHashMap
+    private val cache = java.util.concurrent.ConcurrentHashMap<String, List<InetAddress>>()
+
+    // 缓存过期时间（5分钟）
+    private val cacheExpiry = java.util.concurrent.ConcurrentHashMap<String, Long>()
+    private val CACHE_DURATION = 5 * 60 * 1000L // 5分钟
 
     override fun lookup(hostname: String): List<InetAddress> {
-        return cache.getOrPut(hostname) { Dns.SYSTEM.lookup(hostname) }
-    }
-}
+        val now = System.currentTimeMillis()
+        val expiry = cacheExpiry[hostname] ?: 0L
 
-private fun restartAppProcess(context: Context) {
-    val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)
-    intent?.apply {
-        addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP) // 清除历史栈
-        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) // 新任务栈
-        context.startActivity(this)
+        // 检查缓存是否过期
+        if (now > expiry) {
+            cache.remove(hostname)
+            cacheExpiry.remove(hostname)
+        }
+
+        return cache.getOrPut(hostname) {
+            val result = Dns.SYSTEM.lookup(hostname)
+            cacheExpiry[hostname] = now + CACHE_DURATION
+            result
+        }
     }
-    // 终止当前进程
-    android.os.Process.killProcess(android.os.Process.myPid())
 }
 
 object NetServiceMgr {
+
+    // 性能监控专用线程池
+    internal val performanceExecutor = Executors.newFixedThreadPool(2) { r ->
+        Thread(r, "PerformanceMonitor").apply {
+            isDaemon = true
+        }
+    }
 
     val okHttpClient: OkHttpClient
         get() {
