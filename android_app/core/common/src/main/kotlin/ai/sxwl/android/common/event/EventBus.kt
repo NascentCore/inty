@@ -130,7 +130,7 @@ internal class EventBusManager(
             return
         }
 
-        val weakSubscriber = WeakEventSubscriber(subscriber, priority)
+        val weakSubscriber = WeakEventSubscriber(WeakReference(subscriber), priority)
         subscriberSet.add(weakSubscriber)
 
         updateStats()
@@ -258,11 +258,11 @@ internal class EventBusManager(
  * 防止内存泄漏
  */
 private class WeakEventSubscriber<T : Any>(
-    subscriber: EventSubscriber<T>,
+    subscriberRef: WeakReference<EventSubscriber<T>>,
     val priority: Int,
 ) {
-    private val weakRef = WeakReference(subscriber)
-    private val subscriberId: Int = System.identityHashCode(subscriber)
+    private val weakRef: WeakReference<EventSubscriber<T>> = subscriberRef
+    private val subscriberId: Int = weakRef.get()?.let { System.identityHashCode(it) } ?: 0
 
     val getSubscriber: EventSubscriber<T>?
         get() = weakRef.get()
