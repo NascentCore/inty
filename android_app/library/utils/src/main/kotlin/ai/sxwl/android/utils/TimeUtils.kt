@@ -298,7 +298,8 @@ object TimeUtils {
 
                 for (pattern in patterns) {
                     try {
-                        val formatter = getFormatter(pattern)
+                        // 创建新的 SimpleDateFormat 实例，避免修改缓存的实例
+                        val formatter = SimpleDateFormat(pattern, Locale.getDefault())
                         formatter.timeZone = java.util.TimeZone.getTimeZone("UTC")
                         return formatter.parse(isoTimeString)?.time
                     } catch (e: ParseException) {

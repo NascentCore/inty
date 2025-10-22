@@ -79,6 +79,11 @@ object LogUtils {
         SimpleDateFormat("yyyy_MM_dd HH:mm:ss.SSS ", Locale.getDefault())
     }
 
+    // 专门用于日期解析的 ThreadLocal SimpleDateFormat
+    private val dateFormat = ThreadLocal.withInitial {
+        SimpleDateFormat("yyyy_MM_dd", Locale.getDefault())
+    }
+
     fun getConfig(): Config = CONFIG
 
     // 基础日志方法
@@ -473,23 +478,18 @@ object LogUtils {
 
         val file = File(filePath)
         val parentFile = file.parentFile
-        val files = parentFile.listFiles { _, name -> isMatchLogFileName(name) }
+        val files = parentFile?.listFiles { _, name -> isMatchLogFileName(name) }
 
         if (files.isNullOrEmpty()) return
 
-        // 使用 ThreadLocal 的 SimpleDateFormat 确保线程安全
-        val sdf = ThreadLocal.withInitial {
-            SimpleDateFormat("yyyy_MM_dd", Locale.getDefault())
-        }
-
         try {
-            val dueMillis = sdf.get()?.parse(date)?.time ?: return
+            val dueMillis = dateFormat.get()?.parse(date)?.time ?: return
             val cutOffTime = dueMillis - CONFIG.saveDays * 86400000L
 
             files.forEach { aFile ->
                 val name = aFile.name
                 val logDay = findDate(name)
-                val logDayTime = sdf.get()?.parse(logDay)?.time
+                val logDayTime = dateFormat.get()?.parse(logDay)?.time
                 if (logDayTime != null && logDayTime <= cutOffTime) {
                     EXECUTOR.execute {
                         val delete = aFile.delete()
