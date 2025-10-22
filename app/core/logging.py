@@ -40,6 +40,9 @@ def init_logger():
     # 移除默认的处理器
     logger.remove()
 
+    # 配置默认的 request_id，避免在非请求上下文中出错
+    logger.configure(extra={"request_id": "-"})
+
     # 添加控制台输出
     logger.add(
         sys.stderr,
