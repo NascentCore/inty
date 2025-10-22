@@ -1,9 +1,7 @@
 package com.ai.inty.newchat.di
 
-import com.ai.inty.net.IAgentApi
-import com.ai.inty.net.IChatApi
+import com.ai.inty.net.NetServiceMgr
 import com.ai.inty.newchat.data.ChatDataManager
-import com.therouter.TheRouter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -19,12 +17,8 @@ object NewChatDI {
 
     // 懒加载的单例 ChatDataManager
     val chatDataManager: ChatDataManager by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
-        val chatApi = TheRouter.get(IChatApi::class.java)
-            ?: throw IllegalStateException("IChatApi not found")
-        val agentApi = TheRouter.get(IAgentApi::class.java)
-            ?: throw IllegalStateException("IAgentApi not found")
+        val chatApi = NetServiceMgr.getChatApi()
+        val agentApi = NetServiceMgr.getAgentApi()
         ChatDataManager(chatApi, agentApi, applicationScope)
     }
 }
-
-

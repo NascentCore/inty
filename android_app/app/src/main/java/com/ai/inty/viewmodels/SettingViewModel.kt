@@ -6,11 +6,11 @@ import com.ai.inty.base.BaseViewModel
 import com.ai.inty.base.ToastUtils
 import com.ai.inty.billing.VipStatusHelper
 import com.ai.inty.net.IUserApi
+import com.ai.inty.net.NetServiceMgr
 import com.architecture.httplib.core.HttpResult
 import com.inty.utils.AppEnv
 import com.inty.utils.log.EasyLog
 import com.inty.utils.storage.IntySetting
-import com.therouter.TheRouter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -21,10 +21,7 @@ import kotlinx.coroutines.withContext
 /** 设置页面 ViewModel */
 class SettingViewModel : BaseViewModel() {
 
-    private val userApi: IUserApi by lazy {
-        TheRouter.get(IUserApi::class.java)
-            ?: throw IllegalStateException("IUserApi not found in TheRouter")
-    }
+    private val userApi: IUserApi by lazy { NetServiceMgr.getUserApi() }
 
     // 设置状态
     private val _settingsState = MutableStateFlow(SettingsState())

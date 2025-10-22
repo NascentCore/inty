@@ -1,54 +1,70 @@
 package com.ai.inty
 
-import ai.sxwl.android.design.theme.IntelliMateTheme
-import android.os.Bundle
+import ai.sxwl.android.common.base.BaseActivity
+import android.content.Context
+import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.lifecycle.lifecycleScope
-import com.ai.inty.base.BaseActivity
+import com.ai.inty.base.ViewModelEvent
 import com.ai.inty.ui.screens.ReportScreen
-
 import com.ai.inty.viewmodels.ReportViewModel
 import com.inty.utils.log.EasyLog
-import com.therouter.router.Autowired
-import com.therouter.router.Route
 import kotlinx.coroutines.launch
 
 /** 举报页面 */
-@Route(path = Constant.ROUTE_REPORT)
 class ReportActivity : BaseActivity() {
+
+    companion object {
+        private const val INTENT_KEY_TARGET_ID = "intent_key_target_id"
+        private const val INTENT_KEY_TARGET_TYPE = "intent_key_target_type"
+
+        /**
+         * 启动单独的聊天界面
+         * @param context 上下文context
+         * @param targetType
+         * @param targetId
+         */
+        fun launch(context: Context, targetType: String = "USER", targetId: String? = null) {
+            context.startActivity(Intent(context, ReportActivity::class.java).also { intent ->
+                intent.putExtra(INTENT_KEY_TARGET_ID, targetId)
+                intent.putExtra(INTENT_KEY_TARGET_TYPE, targetType)
+            })
+        }
+    }
 
     private val viewModel: ReportViewModel by viewModels()
 
-    @Autowired var targetID: String = ""
+    override fun initConfigData() {
+        super.initConfigData()
+        viewModel.targetID = intent.getStringExtra(INTENT_KEY_TARGET_ID) ?: ""
+        viewModel.targetType = intent.getStringExtra(INTENT_KEY_TARGET_TYPE) ?: "USER"
 
-    @Autowired var targetType: String = "USER"
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-
-        viewModel.targetID = targetID
-        viewModel.targetType = targetType
-
+        // 监听ViewModel事件
         lifecycleScope.launch {
-            viewModel.finishActivity.collect {
-                if (it) {
-                    finish()
+            viewModel.events.collect { event ->
+                when (event) {
+                    is ViewModelEvent.ReportSubmitted -> {
+                        finish()
+                    }
+
+                    else -> {
+                        // 其他事件暂不处理
+                    }
                 }
             }
         }
+    }
 
-        setContent {
-            IntelliMateTheme {
-                ReportContent(
-                    viewModel = viewModel,
-                    onBack = { finish() })
-            }
-        }
+    @Composable
+    override fun ConfigComposeUI() {
+        super.ConfigComposeUI()
+        ReportContent(
+            viewModel = viewModel,
+            onBack = { finish() })
     }
 }
 

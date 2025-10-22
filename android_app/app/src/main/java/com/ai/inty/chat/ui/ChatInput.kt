@@ -30,14 +30,13 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.ai.inty.Constant
 import com.ai.inty.R
+import com.ai.inty.RegInfoActivity
 import com.ai.inty.base.IntyImage
 import com.ai.inty.base.IntySmallTextField
 import com.ai.inty.base.noRippleClickable
 import com.ai.inty.chat.ChatViewModel
 import com.inty.utils.storage.IntySetting
-import com.therouter.TheRouter
 
 /** 聊天输入框组件 */
 @Composable
@@ -58,7 +57,8 @@ fun ChatInput(
 
     Column(
         modifier =
-            Modifier.padding(
+            Modifier
+                .padding(
                     start = horizontalPadding,
                     top = topPadding,
                     end = horizontalPadding,
@@ -69,12 +69,14 @@ fun ChatInput(
                 .background(colorResource(id = R.color.dark_purple_60_percent))
                 .clickable(enabled = IntySetting.needBlockInput()) {
                     // 游客 未登录的用户，需要弹出年龄段选择，18岁以下的，不让输入。
-                    TheRouter.build(Constant.ROUTE_REG_INFO).navigation(context)
+                    RegInfoActivity.launch(context)
                 }
     ) {
         // 主输入区域
         Row(
-            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 48.dp),
             verticalAlignment = Alignment.Bottom,
         ) {
             IntySmallTextField(
@@ -266,12 +268,16 @@ private fun MultiUseAccessButton(
         // 有输入内容时，发送按钮显示
         if (hasInput) {
             IntyImage(
-                modifier = Modifier.size(buttonSize).noRippleClickable { onSendMessage() },
+                modifier = Modifier
+                    .size(buttonSize)
+                    .noRippleClickable { onSendMessage() },
                 model = R.drawable.btn_send,
             )
         } else {
             IntyImage(
-                modifier = Modifier.size(buttonSize).noRippleClickable { onToggleMorePanel() },
+                modifier = Modifier
+                    .size(buttonSize)
+                    .noRippleClickable { onToggleMorePanel() },
                 model = if (showMorePanel) R.drawable.btn_down else R.drawable.btn_add2,
             )
         }

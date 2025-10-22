@@ -7,7 +7,6 @@ import com.ai.inty.beans.GenerateBackgroundRequest
 import com.ai.inty.beans.GenerateBackgroundResponse
 import com.ai.inty.beans.UploadAvatarResponse
 import com.architecture.httplib.core.HttpResult
-import com.therouter.inject.Singleton
 import okhttp3.MultipartBody
 import retrofit2.http.Body
 import retrofit2.http.DELETE
@@ -19,7 +18,6 @@ import retrofit2.http.Part
 import retrofit2.http.Path
 import retrofit2.http.Query
 
-@Singleton
 interface IAgentApi {
 
     /** 用于explore页面的列表数据 */

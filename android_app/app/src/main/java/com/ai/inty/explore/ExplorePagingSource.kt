@@ -4,12 +4,12 @@ import androidx.paging.PagingSource
 import androidx.paging.PagingState
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.net.IAgentApi
+import com.ai.inty.net.NetServiceMgr
 import com.ai.inty.utils.AgentCacheManager
 import com.ai.inty.utils.UnifiedStartupManager
 import com.architecture.httplib.core.HttpResult
 import com.inty.utils.log.EasyLog
 import com.inty.utils.storage.IntySetting
-import com.therouter.TheRouter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -21,10 +21,7 @@ class ExplorePagingSource(
     private val sortSeed: Int = IntySetting.sortSeed(),
 ) : PagingSource<Int, AgentInfo>() {
 
-    private val agentApi: IAgentApi by lazy {
-        TheRouter.get(IAgentApi::class.java)
-            ?: throw IllegalStateException("IAgentApi not found in TheRouter")
-    }
+    private val agentApi: IAgentApi by lazy { NetServiceMgr.getAgentApi() }
 
     companion object {
         // 使用统一的常量
@@ -105,7 +102,10 @@ class ExplorePagingSource(
                     }
 
                     is NetworkResult.Error -> {
-                        EasyLog.log("ExplorePagingSource - 网络加载失败: ${result.error}", EasyLog.ERROR)
+                        EasyLog.log(
+                            "ExplorePagingSource - 网络加载失败: ${result.error}",
+                            EasyLog.ERROR
+                        )
                         LoadResult.Error(Exception(result.error))
                     }
                 }
@@ -138,6 +138,7 @@ class ExplorePagingSource(
                 is HttpResult.Success -> {
                     NetworkResult.Success(result.data)
                 }
+
                 is HttpResult.Failure -> {
                     NetworkResult.Error(result.message)
                 }
@@ -172,8 +173,8 @@ class ExplorePagingSource(
     private fun shouldUpdateFromNetwork(): Boolean {
         // 确保用户账户已就绪（包括游客账户）且token有效
         return UnifiedStartupManager.isUserAccountReady() &&
-            IntySetting.isLogin() &&
-            IntySetting.getCurToken().isNotEmpty()
+                IntySetting.isLogin() &&
+                IntySetting.getCurToken().isNotEmpty()
     }
 }
 

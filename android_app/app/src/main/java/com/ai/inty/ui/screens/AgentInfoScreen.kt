@@ -42,14 +42,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.ai.inty.Constant
+import com.ai.inty.LoginActivity
 import com.ai.inty.R
+import com.ai.inty.ReportActivity
 import com.ai.inty.base.noRippleClickable
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.ui.components.AgentBackground
 import com.ai.inty.ui.components.SmartTagsLayout
 import com.inty.utils.storage.IntySetting
-import com.therouter.TheRouter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -289,13 +289,10 @@ internal fun AiAgentInfoScreen(agent: AgentInfo, onBack: () -> Unit) {
                     showBottomSheet = false
                     // 检查是否正式登录（非游客且已登录）
                     if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
-                        TheRouter.build(Constant.Companion.ROUTE_REPORT)
-                            .withString("targetID", agent.id)
-                            .withString("targetType", "AGENT")
-                            .navigation(context)
+                        ReportActivity.launch(context, agent.id, "AGENT")
                     } else {
                         // 未登录或游客时跳转到登录页面
-                        TheRouter.build(Constant.Companion.ROUTE_LOGIN).navigation(context)
+                        LoginActivity.launch(context)
                     }
                 },
                 onCancelClick = { showBottomSheet = false },

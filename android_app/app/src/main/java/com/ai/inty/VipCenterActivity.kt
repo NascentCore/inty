@@ -1,29 +1,36 @@
 package com.ai.inty
 
-import ai.sxwl.android.design.theme.IntelliMateTheme
-import android.os.Bundle
-import androidx.activity.compose.setContent
+import ai.sxwl.android.common.base.BaseActivity
+import android.content.Context
+import android.content.Intent
 import androidx.activity.viewModels
-import com.ai.inty.base.BaseActivity
+import androidx.compose.runtime.Composable
 import com.ai.inty.ui.screens.VipCenterContent
-
 import com.ai.inty.viewmodels.VipCenterViewModel
-import com.therouter.router.Route
 
 /** 会员中心页面，展示会员权益与订阅选项。 */
-@Route(path = Constant.ROUTE_VIP_CENTER)
 class VipCenterActivity : BaseActivity() {
+
+
+    companion object {
+
+        /**
+         * 启动订阅中心界面
+         * @param context 上下文context
+         */
+        fun launch(context: Context) {
+            context.startActivity(Intent(context, VipCenterActivity::class.java))
+        }
+    }
+
     private val viewModel: VipCenterViewModel by viewModels()
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContent {
-            IntelliMateTheme {
-                VipCenterContent(
-                    onClose = { finish() },
-                    onPurchase = { viewModel.purchaseSelectedPlan(this) },
-                )
-            }
-        }
+    @Composable
+    override fun ConfigComposeUI() {
+        super.ConfigComposeUI()
+        VipCenterContent(
+            onClose = { finish() },
+            onPurchase = { viewModel.purchaseSelectedPlan(this) },
+        )
     }
 }

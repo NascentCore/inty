@@ -6,7 +6,6 @@ import com.ai.inty.beans.UploadAvatarResponse
 import com.ai.inty.beans.UserDeleteResponse
 import com.ai.inty.beans.UserDeletionCheckResponse
 import com.architecture.httplib.core.HttpResult
-import com.therouter.inject.Singleton
 import okhttp3.MultipartBody
 import retrofit2.http.Body
 import retrofit2.http.GET
@@ -14,7 +13,6 @@ import retrofit2.http.Multipart
 import retrofit2.http.POST
 import retrofit2.http.Part
 
-@Singleton
 interface IUserApi {
 
     @POST("/api/v1/auth/google/login")

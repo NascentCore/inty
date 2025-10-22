@@ -5,12 +5,12 @@ import androidx.paging.PagingState
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.chat.constants.ChatConstants
 import com.ai.inty.net.IAgentApi
+import com.ai.inty.net.NetServiceMgr
 import com.ai.inty.utils.AgentCacheManager
 import com.ai.inty.utils.UnifiedStartupManager
 import com.architecture.httplib.core.HttpResult
 import com.inty.utils.log.EasyLog
 import com.inty.utils.storage.IntySetting
-import com.therouter.TheRouter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -23,8 +23,7 @@ class ChatPagingSource(
 ) : PagingSource<Int, AgentInfo>() {
 
     private val agentApi: IAgentApi by lazy {
-        TheRouter.get(IAgentApi::class.java)
-            ?: throw IllegalStateException("IAgentApi not found in TheRouter")
+        NetServiceMgr.getAgentApi()
     }
 
     companion object {
@@ -104,7 +103,10 @@ class ChatPagingSource(
                     }
 
                     is NetworkResult.Error -> {
-                        EasyLog.log("ChatPagingSource - 网络加载失败: ${result.error}", EasyLog.ERROR)
+                        EasyLog.log(
+                            "ChatPagingSource - 网络加载失败: ${result.error}",
+                            EasyLog.ERROR
+                        )
                         LoadResult.Error(Exception(result.error))
                     }
                 }
@@ -137,6 +139,7 @@ class ChatPagingSource(
                 is HttpResult.Success -> {
                     NetworkResult.Success(result.data)
                 }
+
                 is HttpResult.Failure -> {
                     NetworkResult.Error(result.message)
                 }
@@ -170,8 +173,8 @@ class ChatPagingSource(
     private fun shouldUpdateFromNetwork(): Boolean {
         // 确保用户账户已就绪（包括游客账户）且token有效
         return UnifiedStartupManager.isUserAccountReady() &&
-            IntySetting.isLogin() &&
-            IntySetting.getCurToken().isNotEmpty()
+                IntySetting.isLogin() &&
+                IntySetting.getCurToken().isNotEmpty()
     }
 }
 

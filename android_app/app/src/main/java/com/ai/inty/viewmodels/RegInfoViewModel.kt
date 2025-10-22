@@ -2,7 +2,8 @@ package com.ai.inty.viewmodels
 
 import android.content.Intent
 import com.ai.inty.MainActivity
-import com.ai.inty.base.BaseActivityViewModel
+import com.ai.inty.base.BaseViewModel
+import com.ai.inty.base.ViewModelEvent
 import com.ai.inty.beans.GENDER
 import com.ai.inty.utils.IntyUserProfileSDK
 import com.ai.inty.utils.UserProfileManager
@@ -10,7 +11,7 @@ import com.inty.utils.AppEnv
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-class RegInfoViewModel : BaseActivityViewModel() {
+class RegInfoViewModel : BaseViewModel() {
 
     fun onSave(gender: GENDER, age: String) {
         launchWithNetCheck {
@@ -26,8 +27,8 @@ class RegInfoViewModel : BaseActivityViewModel() {
                     // 更新本地缓存
                     UserProfileManager.saveUserProfile(result)
 
-                    // 关闭当前设置页面
-                    closeActivity()
+                    // 发送用户信息更新成功事件
+                    sendEvent(ViewModelEvent.UserProfileUpdated)
 
                     // 重启 MainActivity 以清理所有缓存数据
                     val intent =

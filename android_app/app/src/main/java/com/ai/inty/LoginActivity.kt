@@ -1,72 +1,66 @@
 package com.ai.inty
 
-import ai.sxwl.android.design.theme.IntelliMateTheme
-import android.os.Bundle
-import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
+import ai.sxwl.android.common.base.BaseActivity
+import android.content.Context
+import android.content.Intent
 import androidx.activity.viewModels
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.lifecycleScope
-import com.ai.inty.base.BaseActivity
+import com.ai.inty.base.ViewModelEvent
 import com.ai.inty.ui.screens.LoginScreen
-
 import com.ai.inty.utils.CredentialManagerHelper
 import com.ai.inty.utils.FirebaseManager
 import com.ai.inty.utils.UserProfileManager
 import com.ai.inty.viewmodels.LoginViewModel
-import com.inty.utils.log.EasyLog
-import com.therouter.TheRouter
-import com.therouter.router.Route
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
  * 登录页面 使用最新的 Credential Manager API 进行 Google 登录 参考:
  * https://developer.android.com/identity/sign-in/credential-manager-siwg
  */
-@Route(path = Constant.ROUTE_LOGIN)
 class LoginActivity : BaseActivity() {
+
+    companion object {
+
+        /**
+         * 启动登录界面
+         * @param context 上下文context
+         */
+        fun launch(context: Context) {
+            context.startActivity(Intent(context, LoginActivity::class.java))
+        }
+    }
 
     private val viewModel: LoginViewModel by viewModels()
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
-
-        setContent {
-            IntelliMateTheme {
-                LoginContent(
-                    onClose = { finish() },
-                    onGoogleLoginSuccess = { idToken -> viewModel.onGoogleLoginSuccess(idToken) },
-                )
-            }
-        }
-
+    override fun initConfigData() {
+        super.initConfigData()
         // 跟踪LoginActivity页面访问
         FirebaseManager.logScreenView(screenName = "LoginScreen", screenClass = "LoginActivity")
 
+        // 监听ViewModel事件
         lifecycleScope.launch {
-            viewModel.finishActivity.collect {
-                if (it) {
-                    checkAndShowRegInfo()
-                    finish()
+            viewModel.events.collect { event ->
+                when (event) {
+                    is ViewModelEvent.LoginSuccess -> {
+                        finish()
+                    }
+
+                    else -> {
+                        // 其他事件暂不处理
+                    }
                 }
             }
         }
     }
 
-    private fun checkAndShowRegInfo() {
-        val userProfile = UserProfileManager.getUserProfile()
-        if (userProfile.gender.isNullOrEmpty()) {
-            CoroutineScope(Dispatchers.Main).launch {
-                delay(300)
-                TheRouter.build(Constant.ROUTE_REG_INFO).navigation(this@LoginActivity)
-            }
-        } else {
-            EasyLog.log("User has set gender, no need to show RegInfoActivity")
-        }
+    @Composable
+    override fun ConfigComposeUI() {
+        super.ConfigComposeUI()
+        LoginContent(
+            onClose = { finish() },
+            onGoogleLoginSuccess = { idToken -> viewModel.onGoogleLoginSuccess(idToken) },
+        )
     }
 
     override fun onDestroy() {

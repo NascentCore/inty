@@ -1,41 +1,53 @@
 package com.ai.inty
 
-import ai.sxwl.android.design.theme.IntelliMateTheme
+import ai.sxwl.android.common.base.BaseActivity
+import android.content.Context
+import android.content.Intent
 import android.os.Build
-import android.os.Bundle
-import android.view.WindowManager
-import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
-import androidx.core.view.WindowCompat
-import com.ai.inty.base.BaseActivity
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.ui.screens.AiAgentInfoScreen
 import com.ai.inty.viewmodels.AgentInfoViewModel
-import com.therouter.router.Autowired
-import com.therouter.router.Route
+
 
 /** Ai模型的信息介绍页面 */
-@Route(path = Constant.ROUTE_AGENT_INFO)
 class AgentInfoActivity : BaseActivity() {
 
-    @Autowired
-    var agent: AgentInfo? = null
+    companion object {
+        private const val INTENT_KEY_AGENT_ID = "intent_key_agent_id"
+        private const val INTENT_KEY_AGENT_INFO = "intent_key_agent_info"
 
-    @Autowired
-    var agent_id: String? = null
+        /**
+         * 启动单独的聊天界面
+         * @param context 上下文context
+         * @param agentInfo Agent的Info对象
+         * @param agentId agent的id 两个参数选一即可，也必须只要有一个
+         */
+        fun launch(context: Context, agentInfo: AgentInfo? = null, agentId: String? = null) {
+            context.startActivity(Intent(context, AgentInfoActivity::class.java).also { intent ->
+                intent.putExtra(INTENT_KEY_AGENT_ID, agentId)
+                intent.putExtra(INTENT_KEY_AGENT_INFO, agentInfo)
+            })
+        }
+    }
 
-    val viewModel: AgentInfoViewModel by viewModels()
+    private var agent: AgentInfo? = null
+    private var agentId: String? = null
+    private val viewModel: AgentInfoViewModel by viewModels()
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-
-        // 强制设置状态栏为白色图标 - 多重保险
-        setupStatusBar()
-
+    override fun initConfigData() {
+        super.initConfigData()
+        agent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            intent.getParcelableExtra(INTENT_KEY_AGENT_INFO, AgentInfo::class.java)
+        } else {
+            intent.getParcelableExtra(INTENT_KEY_AGENT_INFO)
+        }
+        agentId = intent.getStringExtra(INTENT_KEY_AGENT_ID)
         if (agent == null) {
-            if (agent_id != null) {
-                viewModel.setAgentID(agent_id!!)
+            if (agentId != null) {
+                viewModel.setAgentID(agentId!!)
             } else {
                 // 既没有 agent 对象也没有 agent_id，说明参数传递有问题
                 finish()
@@ -44,25 +56,12 @@ class AgentInfoActivity : BaseActivity() {
         } else {
             viewModel.setAgentInfo(agent)
         }
-
-        setContent {
-            IntelliMateTheme {
-                val agentInfo = viewModel.agentInfo.collectAsState()
-                agentInfo.value?.let { agent -> AiAgentInfoScreen(agent, onBack = { finish() }) }
-            }
-        }
-    }
-}
-
-private fun AgentInfoActivity.setupStatusBar() {
-    // 使用现代API设置状态栏颜色
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-        window.statusBarColor = android.graphics.Color.parseColor("#1C1523")
-        window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
     }
 
-    // 使用WindowCompat兼容库统一处理状态栏样式
-    WindowCompat.setDecorFitsSystemWindows(window, false)
-    val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
-    windowInsetsController.isAppearanceLightStatusBars = false
+    @Composable
+    override fun ConfigComposeUI() {
+        super.ConfigComposeUI()
+        val agentInfo = viewModel.agentInfo.collectAsState()
+        agentInfo.value?.let { agent -> AiAgentInfoScreen(agent, onBack = { finish() }) }
+    }
 }

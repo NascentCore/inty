@@ -40,8 +40,11 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.ai.inty.Constant
+import com.ai.inty.ChatActivity
+import com.ai.inty.CreateRoleActivity
+import com.ai.inty.LoginActivity
 import com.ai.inty.R
+import com.ai.inty.VipCenterActivity
 import com.ai.inty.base.IntyImage
 import com.ai.inty.base.noRippleClickable
 import com.ai.inty.beans.UserProfile
@@ -59,7 +62,6 @@ import com.ai.inty.utils.TrackScreenView
 import com.ai.inty.viewmodels.HomeTabIndex
 import com.ai.inty.viewmodels.MainViewModel
 import com.inty.utils.storage.IntySetting
-import com.therouter.TheRouter
 
 /** 主页面，包含五个tab */
 @Composable
@@ -184,11 +186,11 @@ private fun ExpiredDialogLogic(mainViewModel: MainViewModel) {
                             BillingRepository.launchBillingFlow(context, googleProductId)
                     } else {
                         // 跳转到订阅中心
-                        TheRouter.build(Constant.ROUTE_VIP_CENTER).navigation()
+                        VipCenterActivity.launch(context)
                     }
                 } else {
                     // 如果未登录，要求先登录
-                    TheRouter.build(Constant.ROUTE_LOGIN).navigation(context)
+                    LoginActivity.launch(context)
                 }
 
                 showExpiredDialog = false
@@ -203,9 +205,9 @@ private fun ExpiredDialogLogic(mainViewModel: MainViewModel) {
 private fun handleTabSelection(tabIndex: Int, context: Context, mainViewModel: MainViewModel) {
     if (tabIndex == HomeTabIndex.Create.ordinal) {
         if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
-            TheRouter.build(Constant.ROUTE_CREATE_ROLE).navigation(context)
+            CreateRoleActivity.launch(context)
         } else {
-            TheRouter.build(Constant.ROUTE_LOGIN).navigation(context)
+            LoginActivity.launch(context)
         }
         return
     }
@@ -288,9 +290,7 @@ private fun ConversationsTabContent(chatViewModel: ChatViewModel, context: Conte
         onClickConversationItem = { conversation ->
             chatViewModel.setConversationReaded(conversation)
             // 从会话列表 跳转到聊天页面，
-            TheRouter.build(Constant.ROUTE_CHAT)
-                .withObject("agent", conversation.convertToAgentInfo())
-                .navigation(context)
+            ChatActivity.launch(context, conversation.convertToAgentInfo())
         },
         isLoadingConversations = isLoadingConversations,
         isRefreshingConversations = isRefreshingConversations,
@@ -309,7 +309,7 @@ private fun ExploreTabContent(
         modifier = Modifier,
         innerPadding = innerPadding,
         onClickAgent = { agent ->
-            TheRouter.build(Constant.ROUTE_CHAT).withObject("agent", agent).navigation(context)
+            ChatActivity.launch(context, agent)
         },
         viewModel = exploreViewModel,
     )
@@ -354,12 +354,10 @@ private fun ProfileTabContent(mainViewModel: MainViewModel, context: Context) {
         isLoading = isLoadingUserAgents.value,
         isRefreshing = isRefreshingUserAgents.value,
         onClickAgent = { agent ->
-            TheRouter.build(Constant.ROUTE_CHAT).withObject("agent", agent).navigation(context)
+            ChatActivity.launch(context, agent)
         },
         onEditAgent = { agent ->
-            TheRouter.build(Constant.ROUTE_CREATE_ROLE)
-                .withObject("agent", agent)
-                .navigation(context)
+            CreateRoleActivity.launch(context, agent)
         },
         onDeleteAgent = { agent ->
             mainViewModel.deleteAgent(

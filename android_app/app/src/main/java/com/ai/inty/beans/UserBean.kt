@@ -1,7 +1,9 @@
 package com.ai.inty.beans
 
+import android.os.Parcelable
 import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
+import kotlinx.parcelize.Parcelize
 
 /**
  * { "readable_id": "string", "nickname": "string", "avatar": "string", "email": "string", "phone":
@@ -12,6 +14,7 @@ import com.squareup.moshi.JsonClass
  * "connector_count": 0 }
  */
 @JsonClass(generateAdapter = true)
+@Parcelize
 data class UserProfile(
     @Json(name = "age_group") val ageGroup: String? = null,
     @Json(name = "auth_type") val authType: String = "",
@@ -34,7 +37,7 @@ data class UserProfile(
     @Json(name = "total_public_agents_follows") val totalAgentsFollows: Int = 0,
     @Json(name = "followers_count") val followerCount: Int = 0,
     @Json(name = "connector_count") val connectorCount: Int = 0,
-) {
+) : Parcelable {
     /** 性别代指 */
     fun pronouns(): String {
         return when (gender) {

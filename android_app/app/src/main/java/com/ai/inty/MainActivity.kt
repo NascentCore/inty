@@ -1,12 +1,9 @@
 package com.ai.inty
 
-import ai.sxwl.android.design.theme.IntelliMateTheme
-import android.os.Bundle
+import ai.sxwl.android.common.base.BaseActivity
 import android.view.GestureDetector
 import android.view.MotionEvent
 import androidx.activity.OnBackPressedCallback
-import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
@@ -27,9 +24,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.core.view.WindowCompat
 import androidx.lifecycle.lifecycleScope
-import com.ai.inty.base.BaseActivity
 import com.ai.inty.base.ToastUtils
 import com.ai.inty.billing.BillingRepository
 import com.ai.inty.chat.ChatViewModel
@@ -39,8 +34,6 @@ import com.ai.inty.utils.UnifiedStartupManager
 import com.ai.inty.viewmodels.MainViewModel
 import com.inty.utils.log.EasyLog
 import com.inty.utils.storage.IntySetting
-import com.therouter.router.Autowired
-import com.therouter.router.Route
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -49,10 +42,7 @@ import kotlinx.coroutines.launch
 import kotlin.math.abs
 
 /** 主页面，包含聊天、消息与关注、创建模型、模型列表、"我的" */
-@Route(path = Constant.ROUTE_MAIN)
 class MainActivity : BaseActivity() {
-
-    @Autowired var action: String = ""
 
     val mainViewModel: MainViewModel by viewModels()
     val chatViewModel: ChatViewModel by viewModels()
@@ -64,19 +54,11 @@ class MainActivity : BaseActivity() {
     private val backTimeout = 2000L // 2秒内需要第二次返回
     private var exitJob: Job? = null
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        // 不安装系统SplashScreen，完全使用自定义SplashUI
-        super.onCreate(savedInstanceState)
+    override fun initConfigData() {
+        super.initConfigData()
 
         // 追踪页面访问
         PageTrackingHelper.trackPageView("MainActivity", "MainActivity")
-
-        enableEdgeToEdge()
-
-        // 设置状态栏图标为白色
-        WindowCompat.setDecorFitsSystemWindows(window, false)
-        val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
-        windowInsetsController.isAppearanceLightStatusBars = false
 
         // 设置返回拦截功能
         setupBackInterception()
@@ -89,7 +71,7 @@ class MainActivity : BaseActivity() {
             // 等待启动管理器完成必要初始化（但不等缓存数据）
             while (
                 UnifiedStartupManager.startupState.value ==
-                    UnifiedStartupManager.StartupState.Initializing
+                UnifiedStartupManager.StartupState.Initializing
             ) {
                 delay(50) // 50ms检查一次，更快响应
             }
@@ -127,25 +109,24 @@ class MainActivity : BaseActivity() {
                 EasyLog.log("MainActivity - 用户未登录，跳过需要认证的数据加载", EasyLog.WARN)
             }
         }
+    }
 
-        setContent {
-            // 手动控制SplashUI显示，类似IntelliMate模式
-            var showSplash by remember { mutableStateOf(true) }
-
-            IntelliMateTheme {
-                if (showSplash) {
-                    // 显示自定义SplashUI
-                    SplashUI(onSplashComplete = { showSplash = false })
-                } else {
-                    // 显示主界面
-                    HomeScreen(
-                        modifier = Modifier.fillMaxSize(),
-                        mainViewModel = mainViewModel,
-                        chatViewModel = chatViewModel,
-                        viewModelFactory = defaultViewModelProviderFactory,
-                    )
-                }
-            }
+    @Composable
+    override fun ConfigComposeUI() {
+        super.ConfigComposeUI()
+        // 手动控制SplashUI显示，类似IntelliMate模式
+        var showSplash by remember { mutableStateOf(true) }
+        if (showSplash) {
+            // 显示自定义SplashUI
+            SplashUI(onSplashComplete = { showSplash = false })
+        } else {
+            // 显示主界面
+            HomeScreen(
+                modifier = Modifier.fillMaxSize(),
+                mainViewModel = mainViewModel,
+                chatViewModel = chatViewModel,
+                viewModelFactory = defaultViewModelProviderFactory,
+            )
         }
     }
 
@@ -318,7 +299,7 @@ private suspend fun waitForInitializationComplete(onComplete: () -> Unit) {
 
         while (
             UnifiedStartupManager.startupState.value ==
-                UnifiedStartupManager.StartupState.Initializing && waitTime < maxWaitTime
+            UnifiedStartupManager.StartupState.Initializing && waitTime < maxWaitTime
         ) {
             delay(50) // 50ms检查一次
             waitTime += 50

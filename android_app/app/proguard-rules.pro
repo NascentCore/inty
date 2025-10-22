@@ -68,9 +68,7 @@
     @com.fasterxml.jackson.annotation.* <methods>;
 }
 
-# TheRouter 混淆规则
--keep class cn.therouter.** { *; }
--keep class * implements cn.therouter.router.Route { *; }
+# TheRouter 混淆规则已移除
 
 # Firebase 混淆规则
 -keep class com.google.firebase.** { *; }

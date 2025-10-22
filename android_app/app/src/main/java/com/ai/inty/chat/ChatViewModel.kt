@@ -4,7 +4,7 @@ import android.content.Context
 import androidx.lifecycle.viewModelScope
 import com.ai.inty.R
 import com.ai.inty.audio.AudioManager
-import com.ai.inty.base.BaseActivityViewModel
+import com.ai.inty.base.BaseViewModel
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.beans.ChatSettingsReq
 import com.ai.inty.beans.ChatSettingsResponse
@@ -13,7 +13,7 @@ import com.ai.inty.beans.MsgInfo
 import com.ai.inty.beans.SendMsgReq
 import com.ai.inty.beans.UserProfile
 import com.ai.inty.billing.VipStatusHelper
-import com.ai.inty.net.IChatApi
+import com.ai.inty.net.NetServiceMgr
 import com.ai.inty.netapi.BusinessErrorCodes
 import com.ai.inty.utils.FirebaseManager
 import com.ai.inty.utils.FirebasePerformanceHelper
@@ -23,7 +23,6 @@ import com.architecture.httplib.core.HttpResult
 import com.inty.utils.AppEnv
 import com.inty.utils.log.EasyLog
 import com.inty.utils.storage.IntySetting
-import com.therouter.TheRouter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -32,7 +31,7 @@ import kotlinx.coroutines.launch
 
 // 操作什么数据，支持什么 UI？Model 是 beans
 // View 是各类 page/activity。
-class ChatViewModel : BaseActivityViewModel() {
+class ChatViewModel : BaseViewModel() {
 
     private val _agentInfo = MutableStateFlow<AgentInfo?>(null)
     val agentInfo = _agentInfo.asStateFlow()
@@ -91,10 +90,7 @@ class ChatViewModel : BaseActivityViewModel() {
     val isRefreshingConversations = _isRefreshingConversations.asStateFlow()
 
     // 延迟获取依赖，避免在构造函数中立即获取导致空指针异常
-    private val chatApi by lazy {
-        TheRouter.get(IChatApi::class.java)
-            ?: throw IllegalStateException("IChatApi not found in TheRouter")
-    }
+    private val chatApi by lazy { NetServiceMgr.getChatApi() }
 
 
     fun setAgentInfo(agentInfo: AgentInfo?) {

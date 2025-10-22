@@ -3,17 +3,18 @@ package com.ai.inty.viewmodels
 import android.net.Uri
 import androidx.compose.runtime.mutableStateSetOf
 import androidx.core.net.toUri
-import com.ai.inty.base.BaseActivityViewModel
+import com.ai.inty.base.BaseViewModel
+import com.ai.inty.base.ViewModelEvent
 import com.ai.inty.beans.ReportItem
 import com.ai.inty.netapi.services.ReportService
 import com.inty.api.models.api.v1.report.ReportCreateParams
 import com.inty.utils.AppEnv
 import com.inty.utils.log.EasyLog
-import java.io.InputStream
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import java.io.InputStream
 
-class ReportViewModel : BaseActivityViewModel() {
+class ReportViewModel : BaseViewModel() {
 
     var targetID: String = ""
     var targetType: String = "USER"
@@ -108,8 +109,8 @@ class ReportViewModel : BaseActivityViewModel() {
 
                 when (result) {
                     is com.ai.inty.netapi.ApiResult.Success -> {
-                        showSnackbar("Submitted successfully. We’ll review it soon.")
-                        closeActivity()
+                        showSnackbar("Submitted successfully. We'll review it soon.")
+                        sendEvent(ViewModelEvent.ReportSubmitted)
                     }
 
                     is com.ai.inty.netapi.ApiResult.Error -> {
