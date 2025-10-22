@@ -39,10 +39,9 @@ object ImageLoaderUtils {
         val screenWidth = maxWidth ?: displayMetrics.widthPixels
         val screenHeight = maxHeight ?: displayMetrics.heightPixels
 
-        // 根据屏幕密度调整目标尺寸，确保图片清晰度
-        val density = displayMetrics.density
-        val targetWidth = (screenWidth * density).toInt()
-        val targetHeight = (screenHeight * density).toInt()
+        // 直接使用像素单位的屏幕尺寸，避免重复乘密度
+        val targetWidth = screenWidth
+        val targetHeight = screenHeight
 
         return ImageRequest.Builder(context)
             .data(imageUrl)
