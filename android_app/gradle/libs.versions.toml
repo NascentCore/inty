@@ -2,7 +2,7 @@
 
 [versions]
 # Android & Kotlin 核心版本
-agp = "8.12.3"
+agp = "8.13.0"
 kotlin = "2.2.20"
 coroutines = "1.10.2"
 ksp = "2.2.20-2.0.3"
