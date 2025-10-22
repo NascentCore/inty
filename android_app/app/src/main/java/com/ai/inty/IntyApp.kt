@@ -12,7 +12,6 @@ import com.ai.inty.utils.UnifiedStartupManager
 import com.inty.utils.AppEnv
 import com.inty.utils.log.EasyLog
 import com.inty.utils.log.defaultInit
-import com.therouter.TheRouter
 import kotlinx.coroutines.launch
 
 /** 应用Application的实现类 */
@@ -26,8 +25,6 @@ class IntyApp : Application() {
         AppEnv.version_code = BuildConfig.VERSION_CODE
         AppEnv.version_name = BuildConfig.VERSION_NAME
         AppEnv.APPLICATION_ID = BuildConfig.APPLICATION_ID
-
-        TheRouter.isDebug = BuildConfig.DEBUG
 
         super.attachBaseContext(base)
     }

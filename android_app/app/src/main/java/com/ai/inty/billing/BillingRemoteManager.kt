@@ -1,10 +1,9 @@
 package com.ai.inty.billing
 
-import com.ai.inty.net.ISubscriptionApi
+import com.ai.inty.net.NetServiceMgr
 import com.architecture.httplib.core.HttpResult
 import com.inty.utils.log.EasyLog
 import com.inty.utils.parseIsoTimeToTimestamp
-import com.therouter.TheRouter
 import kotlinx.coroutines.flow.MutableStateFlow
 
 /* 从后端获取订阅计划：
@@ -18,9 +17,7 @@ internal class BillingRemoteManager(
     private val priceManager: BillingPriceManager,
 ) {
 
-    private val api =
-        TheRouter.get(ISubscriptionApi::class.java)
-            ?: error("Billing Remote Manager theRouter init Error")
+    private val api = NetServiceMgr.getSubscriptionApi()
 
     /** 获取远程数据 */
     suspend fun fetchRemote(isConnected: Boolean) {

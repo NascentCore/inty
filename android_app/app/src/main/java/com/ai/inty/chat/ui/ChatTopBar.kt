@@ -18,7 +18,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.ai.inty.Constant
+import com.ai.inty.AgentInfoActivity
 import com.ai.inty.R
 import com.ai.inty.base.IntyCircleImage
 import com.ai.inty.base.IntyImage
@@ -26,7 +26,6 @@ import com.ai.inty.base.ToastUtils
 import com.ai.inty.base.noRippleClickable
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.utils.getCdnImageUrl
-import com.therouter.TheRouter
 import kotlinx.coroutines.launch
 
 private const val CHAT_TOP_BAR_AVATAR_SIZE = 30
@@ -54,7 +53,9 @@ fun ChatTopBar(
         if (showBackButton) {
             IntyImage(
                 modifier =
-                    Modifier.size(BACK_BUTTON_SIZE.dp).noRippleClickable { onBack?.invoke() },
+                    Modifier
+                        .size(BACK_BUTTON_SIZE.dp)
+                        .noRippleClickable { onBack?.invoke() },
                 model = R.drawable.back,
             )
             Spacer(modifier = Modifier.width(8.dp))
@@ -62,7 +63,8 @@ fun ChatTopBar(
 
         Row(
             modifier =
-                Modifier.background(
+                Modifier
+                    .background(
                         color = CHAT_TOP_BAR_BACKGROUND_COLOR,
                         shape = RoundedCornerShape(CHAT_TOP_BAR_CORNER_RADIUS.dp),
                     )
@@ -72,9 +74,7 @@ fun ChatTopBar(
                             if (agentInfo.isDeleted) {
                                 ToastUtils.showToast(R.string.str_agent_is_deleted)
                             } else {
-                                TheRouter.build(Constant.ROUTE_AGENT_INFO)
-                                    .withObject("agent", agentInfo)
-                                    .navigation(context)
+                                AgentInfoActivity.launch(context, agentInfo)
                             }
                         }
                     },
@@ -82,7 +82,8 @@ fun ChatTopBar(
         ) {
             IntyCircleImage(
                 modifier =
-                    Modifier.padding(CHAT_TOP_BAR_AVATAR_PADDING.dp)
+                    Modifier
+                        .padding(CHAT_TOP_BAR_AVATAR_PADDING.dp)
                         .size(CHAT_TOP_BAR_AVATAR_SIZE.dp),
                 url = getCdnImageUrl(agentInfo.avatar, width = 64),
                 placeholderResID = R.drawable.img_default_avatar,
@@ -104,7 +105,8 @@ fun ChatTopBar(
 
         Box(
             modifier =
-                Modifier.size(48.dp, 32.dp)
+                Modifier
+                    .size(48.dp, 32.dp)
                     .background(
                         color = Color.Black.copy(.3f),
                         shape = RoundedCornerShape(topStart = 16.dp, bottomStart = 16.dp),
@@ -112,7 +114,9 @@ fun ChatTopBar(
             contentAlignment = Alignment.Center,
         ) {
             IntyImage(
-                modifier = Modifier.size(MORE_BUTTON_SIZE.dp).noRippleClickable { onClickMore() },
+                modifier = Modifier
+                    .size(MORE_BUTTON_SIZE.dp)
+                    .noRippleClickable { onClickMore() },
                 model = R.drawable.icon_more,
             )
         }

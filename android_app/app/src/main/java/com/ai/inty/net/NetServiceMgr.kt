@@ -18,7 +18,6 @@ import com.jakewharton.retrofit2.adapter.kotlin.coroutines.CoroutineCallAdapterF
 import com.squareup.moshi.DefaultIfNullFactory
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
-import com.therouter.inject.ServiceProvider
 import okhttp3.ConnectionPool
 import okhttp3.Dns
 import okhttp3.Interceptor
@@ -527,7 +526,7 @@ object NetServiceMgr {
         }
     }
 
-    val okHttpClient: OkHttpClient
+    private val okHttpClient: OkHttpClient
         get() {
             val authInterceptor = AuthInterceptor()
             val performanceInterceptor = PerformanceInterceptor()
@@ -551,7 +550,7 @@ object NetServiceMgr {
             return builder.build()
         }
 
-    val moshi: Moshi
+    private val moshi: Moshi
         get() {
             return Moshi.Builder()
                 // 添加返回的json 数据自定义解析器
@@ -561,7 +560,7 @@ object NetServiceMgr {
                 .build()
         }
 
-    val moshiNoWrapper: Moshi
+    private val moshiNoWrapper: Moshi
         get() {
             return Moshi.Builder()
                 // 添加返回的json 数据自定义解析器
@@ -599,7 +598,7 @@ object NetServiceMgr {
         return getBaseUrl()
     }
 
-    val retrofitNormal: Retrofit
+    private val retrofitNormal: Retrofit
         get() {
 
             val retrofitUser =
@@ -616,7 +615,7 @@ object NetServiceMgr {
             return retrofitUser
         }
 
-    val retrofitNoWrapper: Retrofit
+    private val retrofitNoWrapper: Retrofit
         get() {
             val retrofitUser =
                 Retrofit.Builder()
@@ -631,29 +630,26 @@ object NetServiceMgr {
 
             return retrofitUser
         }
-}
 
-@ServiceProvider
-fun getUserApi(): IUserApi {
-    return NetServiceMgr.retrofitNormal.create(IUserApi::class.java)
-}
 
-@ServiceProvider
-fun getAgentApi(): IAgentApi {
-    return NetServiceMgr.retrofitNormal.create(IAgentApi::class.java)
-}
+    fun getUserApi(): IUserApi {
+        return retrofitNormal.create(IUserApi::class.java)
+    }
 
-@ServiceProvider
-fun getChatApi(): IChatApi {
-    return NetServiceMgr.retrofitNoWrapper.create(IChatApi::class.java)
-}
+    fun getAgentApi(): IAgentApi {
+        return retrofitNormal.create(IAgentApi::class.java)
+    }
 
-@ServiceProvider
-fun getSubscriptionApi(): ISubscriptionApi {
-    return NetServiceMgr.retrofitNormal.create(ISubscriptionApi::class.java)
-}
+    fun getChatApi(): IChatApi {
+        return retrofitNoWrapper.create(IChatApi::class.java)
+    }
 
-@ServiceProvider
-fun getCommonApi(): ICommonApi {
-    return NetServiceMgr.retrofitNormal.create(ICommonApi::class.java)
+    fun getSubscriptionApi(): ISubscriptionApi {
+        return retrofitNormal.create(ISubscriptionApi::class.java)
+    }
+
+    fun getCommonApi(): ICommonApi {
+        return retrofitNormal.create(ICommonApi::class.java)
+    }
+
 }

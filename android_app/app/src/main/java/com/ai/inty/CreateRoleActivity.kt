@@ -1,12 +1,13 @@
 package com.ai.inty
 
+import ai.sxwl.android.common.base.BaseActivity
 import ai.sxwl.android.design.theme.HeartColor
-import ai.sxwl.android.design.theme.IntelliMateTheme
+import android.content.Context
+import android.content.Intent
 import android.net.Uri
-import android.os.Bundle
+import android.os.Build
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.Canvas
@@ -77,20 +78,16 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewModelScope
 import coil3.compose.AsyncImage
 import com.ai.inty.base.AntiClick
-import com.ai.inty.base.BaseActivity
 import com.ai.inty.base.ToastUtils
 import com.ai.inty.base.noRippleClickable
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.beans.CreateAgentRequest
-import com.ai.inty.net.IAgentApi
+import com.ai.inty.net.NetServiceMgr
 import com.ai.inty.ui.SingleLineTextInputField
 import com.ai.inty.utils.AvatarManager
 import com.ai.inty.utils.getCdnImageUrl
 import com.ai.inty.viewmodels.MainViewModel
 import com.inty.utils.log.EasyLog
-import com.therouter.TheRouter
-import com.therouter.router.Autowired
-import com.therouter.router.Route
 import com.yalantis.ucrop.UCrop
 import com.yalantis.ucrop.UCropActivity
 import kotlinx.coroutines.Dispatchers
@@ -108,32 +105,48 @@ import java.util.concurrent.TimeUnit
 import android.graphics.Color as AndroidColor
 
 /** 创建角色的页面 */
-@Route(path = Constant.ROUTE_CREATE_ROLE)
 class CreateRoleActivity : BaseActivity() {
 
-    @Autowired
-    var agent: AgentInfo? = null
+    companion object {
+        private const val INTENT_KEY_AGENT_INFO = "intent_key_agent_info"
 
+        /**
+         * 启动单独的聊天界面
+         * @param context 上下文context
+         * @param agentInfo Agent的Info对象
+         */
+        fun launch(context: Context, agentInfo: AgentInfo? = null) {
+            context.startActivity(Intent(context, CreateRoleActivity::class.java).also { intent ->
+                intent.putExtra(INTENT_KEY_AGENT_INFO, agentInfo)
+            })
+        }
+    }
+
+    private var agent: AgentInfo? = null
     private val mainViewModel: MainViewModel by viewModels()
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-
-        setContent {
-            IntelliMateTheme {
-                CreateRolePage(
-                    modifier = Modifier.fillMaxSize(),
-                    mainViewModel = mainViewModel,
-                    onBack = { finish() },
-                    onCreateSuccess = { finish() },
-                    onAvatarGenerateClick = {
-                        TheRouter.build(Constant.ROUTE_AVATAR_GENERATE)
-                            .navigation(this@CreateRoleActivity)
-                    },
-                    editAgent = agent,
-                )
-            }
+    override fun initConfigData() {
+        super.initConfigData()
+        agent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            intent.getParcelableExtra(INTENT_KEY_AGENT_INFO, AgentInfo::class.java)
+        } else {
+            intent.getParcelableExtra(INTENT_KEY_AGENT_INFO)
         }
+    }
+
+    @Composable
+    override fun ConfigComposeUI() {
+        super.ConfigComposeUI()
+        CreateRolePage(
+            modifier = Modifier.fillMaxSize(),
+            mainViewModel = mainViewModel,
+            onBack = { finish() },
+            onCreateSuccess = { finish() },
+            onAvatarGenerateClick = {
+                AvatarGenerateActivity.launch(this)
+            },
+            editAgent = agent,
+        )
     }
 }
 
@@ -250,12 +263,8 @@ private fun CreateRolePage(
                             val body =
                                 MultipartBody.Part.createFormData("file", file.name, requestFile)
 
-                            val agentApi =
-                                TheRouter.get(IAgentApi::class.java)
-                                    ?: throw IllegalStateException(
-                                        "IAgentApi not found in TheRouter"
-                                    )
 
+                            val agentApi = NetServiceMgr.getAgentApi()
                             // Use the mainViewModel's scope to launch the coroutine
                             mainViewModel.viewModelScope.launch(Dispatchers.IO) {
                                 try {

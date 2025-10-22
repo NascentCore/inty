@@ -1,11 +1,9 @@
 package com.ai.inty.viewmodels
 
-import android.content.Context
 import androidx.compose.runtime.mutableStateListOf
 import androidx.lifecycle.viewModelScope
-import com.ai.inty.Constant
 import com.ai.inty.R
-import com.ai.inty.base.BaseActivityViewModel
+import com.ai.inty.base.BaseViewModel
 import com.ai.inty.base.ToastUtils
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.beans.AppVersionRsp
@@ -15,6 +13,7 @@ import com.ai.inty.billing.BillingRepository
 import com.ai.inty.chat.ChatViewModel
 import com.ai.inty.net.IAgentApi
 import com.ai.inty.net.ICommonApi
+import com.ai.inty.net.NetServiceMgr
 import com.ai.inty.utils.AgentCacheManager
 import com.ai.inty.utils.CredentialManagerHelper.clearCredentialState
 import com.ai.inty.utils.FirebasePerformanceHelper
@@ -25,9 +24,6 @@ import com.architecture.httplib.core.HttpResult
 import com.inty.utils.AppEnv
 import com.inty.utils.log.EasyLog
 import com.inty.utils.storage.IntySetting
-import com.therouter.TheRouter
-import com.therouter.router.Navigator
-import com.therouter.router.action.interceptor.ActionInterceptor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -44,17 +40,11 @@ enum class HomeTabIndex {
     Profile,
 }
 
-class MainViewModel : BaseActivityViewModel() {
+class MainViewModel : BaseViewModel() {
 
-    private val agentApi: IAgentApi by lazy {
-        TheRouter.get(IAgentApi::class.java)
-            ?: throw IllegalStateException("IAgentApi not found in TheRouter")
-    }
+    private val agentApi: IAgentApi by lazy { NetServiceMgr.getAgentApi() }
 
-    private val commonApi: ICommonApi by lazy {
-        TheRouter.get(ICommonApi::class.java)
-            ?: throw IllegalStateException("ICommonApi not found in TheRouter")
-    }
+    private val commonApi: ICommonApi by lazy { NetServiceMgr.getCommonApi() }
 
     val followingAgents = mutableStateListOf<AgentInfo>() // 关注的agents列表数据
     val userCreatedAgents = mutableStateListOf<AgentInfo>() // 用户自创建的agents数据
@@ -81,19 +71,10 @@ class MainViewModel : BaseActivityViewModel() {
     private val _userProfile = MutableStateFlow(UserProfile())
     val userProfile = _userProfile.asStateFlow()
 
-    // 用户切换触发更新数据的拦截器
-    private val userProfileChanged =
-        object : ActionInterceptor() {
-            override fun handle(context: Context, navigator: Navigator): Boolean {
-                getUserProfile()
-                return super.handle(context, navigator)
-            }
-        }
 
     init {
         // 使用统一启动管理器的数据快速初始化UI
         loadStartupData()
-        TheRouter.addActionInterceptor(Constant.ACTION_USER_PROFILE_CHANGED, userProfileChanged)
     }
 
     /** 加载启动数据（快速展示） 从统一启动管理器获取预加载的数据 */
@@ -111,6 +92,7 @@ class MainViewModel : BaseActivityViewModel() {
             UserProfileManager.getUserProfile()
         }
     }
+
     fun loadBusinessData() {
         // 检查app版本更新
         checkAppVersion()
@@ -183,11 +165,6 @@ class MainViewModel : BaseActivityViewModel() {
                 EasyLog.log("getUserProfile exception: ${e.message}", priority = EasyLog.ERROR)
             }
         }
-    }
-
-    override fun onCleared() {
-        super.onCleared()
-        TheRouter.removeActionInterceptor(Constant.ACTION_USER_PROFILE_CHANGED, userProfileChanged)
     }
 
     // 感知接口获取到的用户订阅状态

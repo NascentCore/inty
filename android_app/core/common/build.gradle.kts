@@ -21,6 +21,7 @@ dependencies {
     implementation(libs.androidx.webkit)
 
     implementation(projects.core.data)
+    implementation(projects.core.design)
     implementation(projects.library.utils)
 
     // Google认证相关依赖

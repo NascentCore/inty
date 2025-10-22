@@ -6,10 +6,10 @@ import com.ai.inty.beans.UserProfile
 import com.ai.inty.chat.constants.ChatConstants
 import com.ai.inty.explore.ExploreConstants
 import com.ai.inty.net.IAgentApi
+import com.ai.inty.net.NetServiceMgr
 import com.architecture.httplib.core.HttpResult
 import com.inty.utils.log.EasyLog
 import com.inty.utils.storage.IntySetting
-import com.therouter.TheRouter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -82,7 +82,10 @@ object UnifiedStartupManager {
                         // 这里需拉取用户信息
                         refreshUserProfile()
                     } catch (e: Exception) {
-                        EasyLog.log("UnifiedStartupManager - 游客账户创建失败: ${e.message}", EasyLog.ERROR)
+                        EasyLog.log(
+                            "UnifiedStartupManager - 游客账户创建失败: ${e.message}",
+                            EasyLog.ERROR
+                        )
                         // 游客账户创建失败，仍然继续，避免阻塞启动
                     }
                 } else {
@@ -95,7 +98,10 @@ object UnifiedStartupManager {
                 // 立即开始关键数据预加载，不等待异步初始化
                 loadCriticalData()
             } catch (e: Exception) {
-                EasyLog.log("UnifiedStartupManager - 必要初始化失败，但不阻塞启动: ${e.message}", EasyLog.WARN)
+                EasyLog.log(
+                    "UnifiedStartupManager - 必要初始化失败，但不阻塞启动: ${e.message}",
+                    EasyLog.WARN
+                )
                 // 即使失败也继续，让SplashUI处理
             }
         }
@@ -151,7 +157,10 @@ object UnifiedStartupManager {
                         }
                     }
                 } else {
-                    EasyLog.log("UnifiedStartupManager - 用户未登录或token无效，跳过数据加载", EasyLog.WARN)
+                    EasyLog.log(
+                        "UnifiedStartupManager - 用户未登录或token无效，跳过数据加载",
+                        EasyLog.WARN
+                    )
                 }
 
             } catch (e: Exception) {
@@ -169,7 +178,10 @@ object UnifiedStartupManager {
             // 初始化音频预加载管理器
             AudioPreloadManager.init(context)
         } catch (e: Exception) {
-            EasyLog.log("UnifiedStartupManager - 预加载管理器初始化失败: ${e.message}", EasyLog.ERROR)
+            EasyLog.log(
+                "UnifiedStartupManager - 预加载管理器初始化失败: ${e.message}",
+                EasyLog.ERROR
+            )
         }
     }
 
@@ -324,7 +336,7 @@ object UnifiedStartupManager {
     private suspend fun syncRecommendedAgents() {
         try {
             val agentApi: IAgentApi =
-                TheRouter.get(IAgentApi::class.java)
+                NetServiceMgr.getAgentApi()
                     ?: throw IllegalStateException("IAgentApi not found")
 
             val sortSeed = IntySetting.sortSeed()
@@ -376,7 +388,7 @@ object UnifiedStartupManager {
     private suspend fun syncChatAgents() {
         try {
             val agentApi: IAgentApi =
-                TheRouter.get(IAgentApi::class.java)
+                NetServiceMgr.getAgentApi()
                     ?: throw IllegalStateException("IAgentApi not found")
 
             val sortSeed = IntySetting.randomSortSeed()
@@ -452,8 +464,8 @@ object UnifiedStartupManager {
     /** 检查是否有缓存数据 */
     fun hasCacheData(): Boolean {
         return _recommendedAgents.value.isNotEmpty() ||
-            _chatAgents.value.isNotEmpty() ||
-            _userProfile.value != null
+                _chatAgents.value.isNotEmpty() ||
+                _userProfile.value != null
     }
 
     /** 手动刷新推荐agents */
@@ -490,7 +502,10 @@ object UnifiedStartupManager {
             try {
                 syncChatAgents()
             } catch (e: Exception) {
-                EasyLog.log("UnifiedStartupManager - chat agents刷新失败: ${e.message}", EasyLog.ERROR)
+                EasyLog.log(
+                    "UnifiedStartupManager - chat agents刷新失败: ${e.message}",
+                    EasyLog.ERROR
+                )
             }
         }
     }

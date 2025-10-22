@@ -1,62 +1,63 @@
 package com.ai.inty
 
+import ai.sxwl.android.common.base.BaseActivity
 import ai.sxwl.android.design.theme.HeartColor
-import ai.sxwl.android.design.theme.IntelliMateTheme
-import android.os.Bundle
-import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
+import android.content.Context
+import android.content.Intent
+import android.os.Build
 import androidx.activity.viewModels
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.core.view.WindowCompat
-import com.ai.inty.base.BaseActivity
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.chat.ChatPage
 import com.ai.inty.chat.ChatViewModel
 import com.ai.inty.utils.FirebaseManager
-import com.therouter.router.Autowired
-import com.therouter.router.Route
+
 
 /** 私聊的聊天页面 */
-@Route(path = Constant.ROUTE_CHAT)
 class ChatActivity : BaseActivity() {
 
-    @Autowired
-    var agent: AgentInfo? = null
+    companion object {
+        private const val INTENT_KEY_AGENT_ID = "intent_key_agent_id"
+        private const val INTENT_KEY_AGENT_INFO = "intent_key_agent_info"
 
-    @Autowired
-    var agent_id: String? = null
+        /**
+         * 启动单独的聊天界面
+         * @param context 上下文context
+         * @param agentInfo Agent的Info对象
+         * @param agentId agent的id 两个参数选一即可，也必须只要有一个
+         */
+        fun launch(context: Context, agentInfo: AgentInfo? = null, agentId: String? = null) {
+            context.startActivity(Intent(context, ChatActivity::class.java).also { intent ->
+                intent.putExtra(INTENT_KEY_AGENT_ID, agentId)
+                intent.putExtra(INTENT_KEY_AGENT_INFO, agentInfo)
+            })
+        }
+    }
 
     private val chatViewModel: ChatViewModel by viewModels()
+    private var agent: AgentInfo? = null
+    private var agentId: String? = null
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setupWindow()
-        initializeChatViewModel()
-        setupUI()
-    }
-
-    /** 设置窗口属性 */
-    private fun setupWindow() {
-        enableEdgeToEdge()
-        // 设置状态栏图标为白色（深色主题）
-        WindowCompat.setDecorFitsSystemWindows(window, false)
-        val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
-        windowInsetsController.isAppearanceLightStatusBars = false
-    }
-
-    /** 初始化聊天ViewModel */
-    private fun initializeChatViewModel() {
+    override fun initConfigData() {
+        super.initConfigData()
+        agent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            intent.getParcelableExtra(INTENT_KEY_AGENT_INFO, AgentInfo::class.java)
+        } else {
+            intent.getParcelableExtra(INTENT_KEY_AGENT_INFO)
+        }
+        agentId = intent.getStringExtra(INTENT_KEY_AGENT_ID)
         when {
             agent != null -> {
                 chatViewModel.setAgentInfo(agent)
             }
 
-            agent_id != null -> {
-                chatViewModel.setAgentID(agent_id!!)
+            agentId != null -> {
+                chatViewModel.setAgentID(agentId!!)
             }
 
             else -> {
@@ -68,26 +69,22 @@ class ChatActivity : BaseActivity() {
         chatViewModel.updateUserInfo()
     }
 
-    /** 设置UI */
-    private fun setupUI() {
-        setContent {
-            IntelliMateTheme {
-                ChatPage(
-                    modifier =
-                        Modifier
-                            .fillMaxSize()
-                            .background(HeartColor.primaryColor)
-                            .imePadding()
-                            .navigationBarsPadding(),
-                    chatViewModel = chatViewModel,
-                    showBackButton = true,
-                    onBack = { finish() },
-                )
-            }
-        }
-
+    @Composable
+    override fun ConfigComposeUI() {
+        super.ConfigComposeUI()
+        ChatPage(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .background(HeartColor.primaryColor)
+                    .imePadding()
+                    .navigationBarsPadding(),
+            chatViewModel = chatViewModel,
+            showBackButton = true,
+            onBack = { finish() },
+        )
         // 跟踪ChatActivity页面访问
-        val agentId = agent?.id ?: agent_id ?: "unknown"
+        val agentId = agent?.id ?: agentId ?: "unknown"
         FirebaseManager.logScreenView(
             screenName = "ChatScreen",
             screenClass = "ChatActivity",

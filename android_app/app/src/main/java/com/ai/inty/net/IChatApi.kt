@@ -9,7 +9,6 @@ import com.ai.inty.beans.QueryMsgsResponse
 import com.ai.inty.beans.SendMsgReq
 import com.ai.inty.beans.SendMsgResponse
 import com.architecture.httplib.core.HttpResult
-import com.therouter.inject.Singleton
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.POST
@@ -17,7 +16,6 @@ import retrofit2.http.PUT
 import retrofit2.http.Path
 import retrofit2.http.Query
 
-@Singleton
 interface IChatApi {
     @POST("/api/v1/chat/completions/{agent_id}")
     suspend fun sendMsg(

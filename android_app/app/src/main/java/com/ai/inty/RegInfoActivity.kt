@@ -1,43 +1,56 @@
 package com.ai.inty
 
-import ai.sxwl.android.design.theme.IntelliMateTheme
-import android.os.Bundle
-import androidx.activity.compose.setContent
+import ai.sxwl.android.common.base.BaseActivity
+import android.content.Context
+import android.content.Intent
 import androidx.activity.viewModels
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.lifecycleScope
-import com.ai.inty.base.BaseActivity
+import com.ai.inty.base.ViewModelEvent
 import com.ai.inty.ui.screens.RegInfoScreen
-
 import com.ai.inty.viewmodels.RegInfoViewModel
-import com.therouter.router.Route
 import kotlinx.coroutines.launch
 
 /** 注册信息完善页面，性别和年龄 */
-@Route(path = Constant.ROUTE_REG_INFO)
 class RegInfoActivity : BaseActivity() {
+
+    companion object {
+        /**
+         * 启动注册信息页面
+         * @param context 上下文context
+         */
+        fun launch(context: Context) {
+            context.startActivity(Intent(context, RegInfoActivity::class.java))
+        }
+    }
 
     private val viewModel: RegInfoViewModel by viewModels()
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-
-        setContent {
-            IntelliMateTheme {
-                RegInfoContent(
-                    onClose = { finish() },
-                    onSave = { gender, age -> viewModel.onSave(gender, age) },
-                )
-            }
-        }
-
+    override fun initConfigData() {
+        super.initConfigData()
+        // 监听ViewModel事件
         lifecycleScope.launch {
-            viewModel.finishActivity.collect {
-                if (it) {
-                    finish()
+            viewModel.events.collect { event ->
+                when (event) {
+                    is ViewModelEvent.UserProfileUpdated -> {
+                        finish()
+                    }
+
+                    else -> {
+                        // 其他事件暂不处理
+                    }
                 }
             }
         }
+    }
+
+    @Composable
+    override fun ConfigComposeUI() {
+        super.ConfigComposeUI()
+        RegInfoContent(
+            onClose = { finish() },
+            onSave = { gender, age -> viewModel.onSave(gender, age) },
+        )
     }
 }
 

@@ -37,8 +37,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import com.ai.inty.Constant
+import com.ai.inty.LoginActivity
 import com.ai.inty.R
+import com.ai.inty.ReportActivity
+import com.ai.inty.VipCenterActivity
 import com.ai.inty.base.BottomSheetDialog
 import com.ai.inty.base.DiaAmountLayout
 import com.ai.inty.base.noRippleClickable
@@ -47,7 +49,6 @@ import com.ai.inty.billing.BillingRepository
 import com.ai.inty.chat.ChatViewModel
 import com.ai.inty.ui.ReplyStyleSheet
 import com.inty.utils.storage.IntySetting
-import com.therouter.TheRouter
 
 /** 聊天更多面板组件 */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -105,7 +106,7 @@ fun ChatMorePanel(
                                     }
                                 } else {
                                     // 未登录或游客时跳转到登录页面
-                                    TheRouter.build(Constant.ROUTE_LOGIN).navigation(context)
+                                    LoginActivity.launch(context)
                                 }
                             },
                         )
@@ -116,13 +117,10 @@ fun ChatMorePanel(
                             onClick = {
                                 // 检查是否正式登录（非游客且已登录）
                                 if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
-                                    TheRouter.build(Constant.ROUTE_REPORT)
-                                        .withString("targetID", agentInfo?.id)
-                                        .withString("targetType", "AGENT")
-                                        .navigation(context)
+                                    ReportActivity.launch(context, agentInfo?.id ?: "", "AGENT")
                                 } else {
                                     // 未登录或游客时跳转到登录页面
-                                    TheRouter.build(Constant.ROUTE_LOGIN).navigation(context)
+                                    LoginActivity.launch(context)
                                 }
                             },
                         )
@@ -171,10 +169,10 @@ fun ChatMorePanel(
         // 检查是否正式登录（非游客且已登录）
         if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
             // 去会员中心
-            TheRouter.build(Constant.ROUTE_VIP_CENTER).navigation()
+            VipCenterActivity.launch(context)
         } else {
             // 如果未登录，要求先登录
-            TheRouter.build(Constant.ROUTE_LOGIN).navigation(context)
+            LoginActivity.launch(context)
         }
         showDialog = false
     }

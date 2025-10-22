@@ -2,11 +2,10 @@ package com.ai.inty.audio
 
 import android.content.Context
 import com.ai.inty.base.ToastUtils
-import com.ai.inty.net.IChatApi
+import com.ai.inty.net.NetServiceMgr
 import com.ai.inty.netapi.BusinessErrorCodes
 import com.architecture.httplib.core.HttpResult
 import com.inty.utils.log.EasyLog
-import com.therouter.TheRouter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -20,7 +19,8 @@ import kotlinx.coroutines.withTimeout
 class TtsManager private constructor(private val context: Context) {
 
     companion object {
-        @Volatile private var INSTANCE: TtsManager? = null
+        @Volatile
+        private var INSTANCE: TtsManager? = null
 
         fun getInstance(context: Context): TtsManager {
             return INSTANCE
@@ -42,12 +42,7 @@ class TtsManager private constructor(private val context: Context) {
 
     // 延迟获取API依赖
     private val chatApi by lazy {
-        val api = TheRouter.get(IChatApi::class.java)
-        if (api == null) {
-            EasyLog.log("音频LOG测试 IChatApi not found in TheRouter", EasyLog.ERROR)
-            throw IllegalStateException("IChatApi not found in TheRouter")
-        }
-        api
+        NetServiceMgr.getChatApi()
     }
 
     /**
@@ -125,7 +120,10 @@ class TtsManager private constructor(private val context: Context) {
                         if (response.data.code == BusinessErrorCodes.VOICE_TTS_LIMIT_CODE) {
                             // 音频生成到达次数限制，需要给用户toast提示文案
                             ToastUtils.showToast("${response.data.message}")
-                            EasyLog.log("音频LOG测试 TTS 生成次数到达限制 (Agent: $agentId)", EasyLog.ERROR)
+                            EasyLog.log(
+                                "音频LOG测试 TTS 生成次数到达限制 (Agent: $agentId)",
+                                EasyLog.ERROR
+                            )
                             completeWithError(
                                 dedupKey,
                                 messageId,
@@ -137,7 +135,12 @@ class TtsManager private constructor(private val context: Context) {
                             if (audioUrl != null && audioUrl.isNotEmpty()) {
                                 completeWithSuccess(dedupKey, messageId, audioUrl, onSuccess)
                             } else {
-                                completeWithError(dedupKey, messageId, "TTS生成失败：返回空音频URL", onError)
+                                completeWithError(
+                                    dedupKey,
+                                    messageId,
+                                    "TTS生成失败：返回空音频URL",
+                                    onError
+                                )
                             }
                         }
                     }

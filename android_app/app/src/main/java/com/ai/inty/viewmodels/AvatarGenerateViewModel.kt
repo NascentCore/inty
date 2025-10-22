@@ -3,12 +3,11 @@ package com.ai.inty.viewmodels
 import com.ai.inty.base.BaseViewModel
 import com.ai.inty.beans.GenerateBackgroundRequest
 import com.ai.inty.beans.GenerateBackgroundResponse
-import com.ai.inty.net.IAgentApi
+import com.ai.inty.net.NetServiceMgr
 import com.ai.inty.utils.AvatarManager
 import com.ai.inty.utils.NetworkErrorHandler
 import com.ai.inty.utils.NetworkManager
 import com.inty.utils.log.EasyLog
-import com.therouter.TheRouter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -18,10 +17,7 @@ import kotlinx.coroutines.withContext
 class AvatarGenerateViewModel : BaseViewModel() {
 
     // 延迟获取依赖，避免在构造函数中立即获取导致空指针异常
-    private val agentApi by lazy {
-        TheRouter.get(IAgentApi::class.java)
-            ?: throw IllegalStateException("IAgentApi not found in TheRouter")
-    }
+    private val agentApi by lazy { NetServiceMgr.getAgentApi() }
 
     // UI States
     private val _prompt = MutableStateFlow("")
@@ -170,7 +166,7 @@ class AvatarGenerateViewModel : BaseViewModel() {
     fun getSelectedAvatarUrl(): String? {
         return when {
             _generatedImageUrls.value.isNotEmpty() &&
-                _selectedImageIndex.value < _generatedImageUrls.value.size -> {
+                    _selectedImageIndex.value < _generatedImageUrls.value.size -> {
                 _generatedImageUrls.value[_selectedImageIndex.value]
             }
 

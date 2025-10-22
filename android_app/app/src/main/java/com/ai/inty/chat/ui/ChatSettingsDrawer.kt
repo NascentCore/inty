@@ -1,6 +1,5 @@
 package com.ai.inty.chat.ui
 
-import android.content.Context
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -16,7 +15,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
@@ -39,8 +37,9 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.ai.inty.Constant
+import com.ai.inty.LoginActivity
 import com.ai.inty.R
+import com.ai.inty.ReportActivity
 import com.ai.inty.base.MyModalNavigationDrawer
 import com.ai.inty.base.noRippleClickable
 import com.ai.inty.beans.AgentInfo
@@ -51,9 +50,6 @@ import com.ai.inty.ui.components.EditKey
 import com.ai.inty.ui.components.MySettingItem
 import com.ai.inty.viewmodels.MySettingViewModel
 import com.inty.utils.storage.IntySetting
-import com.therouter.TheRouter
-import com.therouter.router.Navigator
-import com.therouter.router.action.interceptor.ActionInterceptor
 
 /** 聊天设置抽屉组件 */
 @Composable
@@ -101,28 +97,7 @@ fun ChatSettingsDrawer(
 
     LaunchedEffect(userProfileState) { mySettingViewModel.init(userProfileState) }
 
-    // 监听用户资料变更事件并刷新UI
-    val userProfileChangedInterceptor = remember {
-        object : ActionInterceptor() {
-            override fun handle(context: Context, navigator: Navigator): Boolean {
-                chatViewModel.updateUserInfo()
-                return super.handle(context, navigator)
-            }
-        }
-    }
-
-    DisposableEffect(Unit) {
-        TheRouter.addActionInterceptor(
-            Constant.ACTION_USER_PROFILE_CHANGED,
-            userProfileChangedInterceptor,
-        )
-        onDispose {
-            TheRouter.removeActionInterceptor(
-                Constant.ACTION_USER_PROFILE_CHANGED,
-                userProfileChangedInterceptor,
-            )
-        }
-    }
+    // 移除TheRouter拦截器，使用其他方式处理用户信息更新
 
     MyModalNavigationDrawer(
         modifier = Modifier,
@@ -181,7 +156,7 @@ fun ChatSettingsDrawer(
                                 editValue = userProfileState.nickname
                             } else {
                                 // 未登录或游客时跳转到登录页面
-                                TheRouter.build(Constant.ROUTE_LOGIN).navigation(context)
+                                LoginActivity.launch(context)
                             }
                         },
                     )
@@ -196,7 +171,7 @@ fun ChatSettingsDrawer(
                                 editValue = userProfileState.gender ?: ""
                             } else {
                                 // 未登录或游客时跳转到登录页面
-                                TheRouter.build(Constant.ROUTE_LOGIN).navigation(context)
+                                LoginActivity.launch(context)
                             }
                         },
                     )
@@ -211,7 +186,7 @@ fun ChatSettingsDrawer(
                                 editValue = userProfileState.description ?: ""
                             } else {
                                 // 未登录或游客时跳转到登录页面
-                                TheRouter.build(Constant.ROUTE_LOGIN).navigation(context)
+                                LoginActivity.launch(context)
                             }
                         },
                     )
@@ -261,14 +236,10 @@ fun ChatSettingsDrawer(
                                     .noRippleClickable {
                                         // 检查是否正式登录（非游客且已登录）
                                         if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
-                                            TheRouter.build(Constant.ROUTE_REPORT)
-                                                .withString("targetID", agent.id)
-                                                .withString("targetType", "AGENT")
-                                                .navigation(context)
+                                            ReportActivity.launch(context, agent.id, "AGENT")
                                         } else {
                                             // 未登录或游客时跳转到登录页面
-                                            TheRouter.build(Constant.ROUTE_LOGIN)
-                                                .navigation(context)
+                                            LoginActivity.launch(context)
                                         }
                                     },
                             verticalAlignment = Alignment.CenterVertically,

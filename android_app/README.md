@@ -63,7 +63,8 @@ the last one is associated with Google Play's app signing key.
 There are 4 OAuth client IDs created on Google Cloud.
 3 of them are associated with the 3 keys above.
 1 additional is the web client ID used by backend auth with Android app.
-Which is used as `serverClientId` in [cerdential-manager-siwg](https://developer.android.com/identity/sign-in/credential-manager-siwg).
+Which is used as `serverClientId`
+in [cerdential-manager-siwg](https://developer.android.com/identity/sign-in/credential-manager-siwg).
 
 Google Cloud project and Firebase project is associated through the
 `alien-paratext-461204-i9` project ID as well.
@@ -72,7 +73,8 @@ Google Cloud project and Firebase project is associated through the
 
 ## 🏗️ 架构设计
 
-**本机**运行后端，其端口位于`http://localhost:8000`；Android Studio，启动模拟器、或 USB 连接手机；需要使用 `adb` 命令行工具将本地服务端口映射到模拟器、手机上。
+**本机**运行后端，其端口位于`http://localhost:8000`；Android Studio，启动模拟器、或 USB 连接手机；需要使用
+`adb` 命令行工具将本地服务端口映射到模拟器、手机上。
 
 ```bash
 # 列出设备，记录自己使用的设备 ID
@@ -97,7 +99,7 @@ PATH="/Users/yzhao/Library/Android/sdk/platform-tools:$PATH"
 ## 参考
 
 - [Jetpack Compose](https://developer.android.com/jetpack/compose) 用于现代 UI 开发
-- [TheRouter](https://github.com/HuolalaTech/hll-wp-therouter-android) 用于导航
+- 原生Intent导航系统
 - [MMKV](https://github.com/Tencent/MMKV) 用于高效存储
 - [Coil](https://coil-kt.github.io/coil/) 用于图片加载
 - [Firebase](https://firebase.google.com/) 用于后端服务

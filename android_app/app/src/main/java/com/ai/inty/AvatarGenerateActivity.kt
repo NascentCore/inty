@@ -1,9 +1,9 @@
 package com.ai.inty
 
+import ai.sxwl.android.common.base.BaseActivity
 import ai.sxwl.android.design.theme.HeartColor
-import ai.sxwl.android.design.theme.IntelliMateTheme
-import android.os.Bundle
-import androidx.activity.compose.setContent
+import android.content.Context
+import android.content.Intent
 import androidx.activity.viewModels
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -63,32 +63,37 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
-import com.ai.inty.base.BaseActivity
 import com.ai.inty.base.noRippleClickable
 import com.ai.inty.utils.AvatarManager
 import com.ai.inty.utils.getCdnImageUrl
 import com.ai.inty.viewmodels.AvatarGenerateViewModel
 import com.inty.utils.log.EasyLog
-import com.therouter.router.Route
+
 
 /** Ai 模型形象的 封面头像生成页面 */
-@Route(path = Constant.ROUTE_AVATAR_GENERATE)
 class AvatarGenerateActivity : BaseActivity() {
+
+    companion object {
+
+        /**
+         * 启动单独的聊天界面
+         * @param context 上下文context
+         */
+        fun launch(context: Context) {
+            context.startActivity(Intent(context, AvatarGenerateActivity::class.java))
+        }
+    }
 
     private val viewModel: AvatarGenerateViewModel by viewModels()
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-
-        setContent {
-            IntelliMateTheme {
-                AvatarGeneratePage(
-                    modifier = Modifier.fillMaxSize(),
-                    viewModel = viewModel,
-                    onBack = { finish() },
-                )
-            }
-        }
+    @Composable
+    override fun ConfigComposeUI() {
+        super.ConfigComposeUI()
+        AvatarGeneratePage(
+            modifier = Modifier.fillMaxSize(),
+            viewModel = viewModel,
+            onBack = { finish() },
+        )
     }
 }
 

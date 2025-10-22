@@ -3,18 +3,16 @@ package com.ai.inty.viewmodels
 import android.net.Uri
 import androidx.core.net.toUri
 import androidx.lifecycle.viewModelScope
-import com.ai.inty.Constant
 import com.ai.inty.R
-import com.ai.inty.base.BaseActivityViewModel
+import com.ai.inty.base.BaseViewModel
 import com.ai.inty.base.ToastUtils
+import com.ai.inty.base.ViewModelEvent
 import com.ai.inty.beans.UserProfile
-import com.ai.inty.net.IUserApi
+import com.ai.inty.net.NetServiceMgr
 import com.ai.inty.ui.components.EditKey
 import com.ai.inty.utils.IntyUserProfileSDK
 import com.ai.inty.utils.UserProfileManager
 import com.architecture.httplib.core.HttpResult
-import com.therouter.TheRouter
-import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -22,8 +20,9 @@ import kotlinx.coroutines.launch
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
+import java.io.File
 
-class MySettingViewModel : BaseActivityViewModel() {
+class MySettingViewModel : BaseViewModel() {
 
     private val _userProfile = MutableStateFlow<UserProfile>(UserProfile())
     val userProfile = _userProfile.asStateFlow()
@@ -34,10 +33,7 @@ class MySettingViewModel : BaseActivityViewModel() {
     val isSaving = _isSaving.asStateFlow()
 
     // 延迟获取依赖，避免在构造函数中立即获取导致空指针异常
-    private val userApi by lazy {
-        TheRouter.get(IUserApi::class.java)
-            ?: throw IllegalStateException("IUserApi not found in TheRouter")
-    }
+    private val userApi by lazy { NetServiceMgr.getUserApi() }
 
     fun init(userProfile: UserProfile?) {
         viewModelScope.launch { userProfile?.let { _userProfile.emit(userProfile) } }
@@ -48,12 +44,15 @@ class MySettingViewModel : BaseActivityViewModel() {
             EditKey.Name -> {
                 _userProfile.value = _userProfile.value.copy(nickname = editValue)
             }
+
             EditKey.Pronouns -> {
                 _userProfile.value = _userProfile.value.copy(gender = editValue)
             }
+
             EditKey.Persona -> {
                 _userProfile.value = _userProfile.value.copy(description = editValue)
             }
+
             EditKey.None -> {}
         }
     }
@@ -90,6 +89,7 @@ class MySettingViewModel : BaseActivityViewModel() {
                                 ToastUtils.showToast(R.string.saved_successfully)
                             }
                         }
+
                         is HttpResult.Failure -> {
                             showNetworkAwareError(result.message)
                             return@launchWithNetCheck
@@ -104,9 +104,8 @@ class MySettingViewModel : BaseActivityViewModel() {
                         ToastUtils.showToast(R.string.saved_successfully)
                         UserProfileManager.saveUserProfile(updatedProfile)
                     }
-
-                    TheRouter.build(Constant.ACTION_USER_PROFILE_CHANGED).action()
-                    closeActivity()
+                    // 发送用户信息更新成功事件
+                    sendEvent(ViewModelEvent.UserProfileUpdated)
                 } else {
                     showNetworkAwareError("Failed to update user profile")
                 }

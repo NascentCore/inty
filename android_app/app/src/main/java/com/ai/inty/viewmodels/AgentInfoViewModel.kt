@@ -1,32 +1,24 @@
 package com.ai.inty.viewmodels
 
 import androidx.lifecycle.viewModelScope
-import com.ai.inty.base.BaseActivityViewModel
+import com.ai.inty.base.BaseViewModel
 import com.ai.inty.beans.AgentInfo
-import com.ai.inty.net.IAgentApi
-import com.ai.inty.net.IChatApi
+import com.ai.inty.net.NetServiceMgr
 import com.architecture.httplib.core.HttpResult
 import com.inty.utils.log.EasyLog
-import com.therouter.TheRouter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-class AgentInfoViewModel : BaseActivityViewModel() {
+class AgentInfoViewModel : BaseViewModel() {
 
     private val _agentInfo = MutableStateFlow<AgentInfo?>(null)
     val agentInfo = _agentInfo.asStateFlow()
 
     // 延迟获取依赖，避免在构造函数中立即获取导致空指针异常
-    val chatApi by lazy {
-        TheRouter.get(IChatApi::class.java)
-            ?: throw IllegalStateException("IChatApi not found in TheRouter")
-    }
-    val agentApi by lazy {
-        TheRouter.get(IAgentApi::class.java)
-            ?: throw IllegalStateException("IAgentApi not found in TheRouter")
-    }
+    val chatApi by lazy { NetServiceMgr.getChatApi() }
+    val agentApi by lazy { NetServiceMgr.getAgentApi() }
 
     fun setAgentID(agentId: String) {
         viewModelScope.launch(Dispatchers.IO) {

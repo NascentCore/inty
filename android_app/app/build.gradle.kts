@@ -8,8 +8,6 @@ plugins {
     alias(libs.plugins.firebase.crashlytics)
     alias(libs.plugins.firebase.perf)
     alias(libs.plugins.ksp)
-
-    id("therouter")
 }
 
 tasks.register("printVersionInfo") {
@@ -57,16 +55,6 @@ android {
     }
 }
 
-TheRouter {
-    debug = false
-    // 编译期检查路由表合法性，可选参数 warning(仅告警)/error(编译期抛异常)/delete(每次根据注解重新生成路由表)，不配置则不校验
-    // checkRouteMap = "delete"
-    // 检查 FlowTask 是否有循环引用，可选参数 warning(仅打印日志)/error(编译期抛异常)，不配置则不校验
-    checkFlowDepend = "warning"
-    // 图形化展示当前的 FlowTask 依赖图
-    showFlowDepend = true
-}
-
 dependencies {
     // ===== Inty SDK（Stainless https://app.stainless.com/ 根据 app/openapi.json 生成的代码）=====
     // 使用本地 library/inty_sdk 的版本，避免动态版本在测试时的依赖解析问题
@@ -74,10 +62,6 @@ dependencies {
 
     implementation(libs.androidx.appcompat)//ucropActivity需要
     implementation(libs.androidx.paging.compose)
-
-    // ===== 路由 =====
-    implementation(libs.router)
-    ksp(libs.therouter.apt)
 
     // ===== 项目模块 =====
     implementation(projects.core.common)

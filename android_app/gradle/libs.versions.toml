@@ -83,7 +83,6 @@ leakcanary = "2.14"
 # 腾讯系库
 mmkv = "2.2.4"
 mars = "1.2.6"
-theRouter = "1.3.0"
 
 # 其他第三方库
 ucrop = "2.2.10"
@@ -260,10 +259,6 @@ leakcanary-android = { module = "com.squareup.leakcanary:leakcanary-android", ve
 mmkv = { group = "com.tencent", name = "mmkv", version.ref = "mmkv" }
 mars-xlog = { group = "com.tencent.mars", name = "mars-xlog", version.ref = "mars" }
 
-# ===== 路由库 =====
-router = { module = "cn.therouter:router", version.ref = "theRouter" }
-therouter-apt = { module = "cn.therouter:apt", version.ref = "theRouter" }
-
 # ===== 图片处理库 =====
 ucrop = { module = "com.github.yalantis:ucrop", version.ref = "ucrop" }
 # 图片压缩库
@@ -309,9 +304,6 @@ ai-maven-publish = { id = "ai.maven.publish" }
 google-services = { id = "com.google.gms.google-services", version.ref = "googleServices" }
 firebase-crashlytics = { id = "com.google.firebase.crashlytics", version.ref = "firebaseCrashlytics" }
 firebase-perf = { id = "com.google.firebase.firebase-perf", version.ref = "firebasePerf" }
-
-# ===== 第三方插件 =====
-the-router = { id = "cn.therouter", version.ref = "theRouter" }
 
 #endregion
 

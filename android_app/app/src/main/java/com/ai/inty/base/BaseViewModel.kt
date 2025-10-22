@@ -5,16 +5,29 @@ import androidx.lifecycle.viewModelScope
 import com.ai.inty.utils.NetworkErrorHandler
 import com.ai.inty.utils.NetworkManager
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 open class BaseViewModel : ViewModel() {
 
+    // 事件通知机制
+    private val _events = MutableSharedFlow<ViewModelEvent>()
+    val events: SharedFlow<ViewModelEvent> = _events.asSharedFlow()
+
     fun showSnackbar(text: String) {
         viewModelScope.launch { ToastUtils.showToast(text) }
+    }
+
+    /**
+     * 发送事件通知
+     */
+    protected fun sendEvent(event: ViewModelEvent) {
+        viewModelScope.launch {
+            _events.emit(event)
+        }
     }
 
     /** 附带网络检查的launch */
@@ -97,7 +110,7 @@ open class BaseViewModel : ViewModel() {
                 when {
                     operation.contains("user", ignoreCase = true) -> "User information not found"
                     operation.contains("character", ignoreCase = true) ||
-                        operation.contains("agent", ignoreCase = true) -> "Character not found"
+                            operation.contains("agent", ignoreCase = true) -> "Character not found"
 
                     else -> "Resource not found"
                 }
@@ -106,6 +119,7 @@ open class BaseViewModel : ViewModel() {
             500 -> "Internal server error, please try again later"
             502,
             503 -> "Server temporarily unavailable, please try again later"
+
             else -> "Network request failed (${e.code()})"
         }
     }
@@ -139,21 +153,6 @@ open class BaseViewModel : ViewModel() {
                     }
                 "$operationName failed: ${e.message ?: "Unknown error"}"
             }
-        }
-    }
-}
-
-open class BaseActivityViewModel : BaseViewModel() {
-
-    private val _finishActivity = MutableStateFlow(false)
-    val finishActivity = _finishActivity.asStateFlow()
-
-    fun closeActivity(delayTimeMS: Long = 0) {
-        viewModelScope.launch(Dispatchers.Main) {
-            if (delayTimeMS > 0) {
-                delay(delayTimeMS)
-            }
-            _finishActivity.value = true
         }
     }
 }

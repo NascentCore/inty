@@ -55,8 +55,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.ai.inty.Constant
+import com.ai.inty.MySettingActivity
 import com.ai.inty.R
+import com.ai.inty.SettingActivity
+import com.ai.inty.VipCenterActivity
 import com.ai.inty.base.AntiClick
 import com.ai.inty.base.IntyCircleImage
 import com.ai.inty.base.IntyImage
@@ -70,7 +72,6 @@ import com.ai.inty.utils.AuthClickable
 import com.ai.inty.utils.TrackScreenView
 import com.ai.inty.utils.getCdnImageUrl
 import com.inty.utils.formatTimestampToString
-import com.therouter.TheRouter
 
 /** “我的”页面 */
 @Composable
@@ -108,7 +109,7 @@ internal fun ProfilePage(
                 Row {
                     Spacer(Modifier.weight(1f))
                     AuthClickable(
-                        onClick = { TheRouter.build(Constant.ROUTE_SETTING).navigation(context) }
+                        onClick = { SettingActivity.launch(context) }
                     ) { authModifier ->
                         IntyImage(
                             modifier = authModifier.size(24.dp),
@@ -189,9 +190,7 @@ internal fun ProfilePage(
 
                     AuthClickable(
                         onClick = {
-                            TheRouter.build(Constant.ROUTE_SETTING_MY)
-                                .withObject("userProfile", userProfile)
-                                .navigation(context)
+                            MySettingActivity.launch(context, userProfile)
                         }
                     ) { authModifier ->
                         IntyImage(modifier = authModifier.size(40.dp), model = R.drawable.icon_edit)
@@ -207,7 +206,7 @@ internal fun ProfilePage(
                     status = vipStatus.subscriptionStatus,
                     purchaseTime = formatTimestampToString(vipStatus.purchaseTime),
                     expireTime = formatTimestampToString(vipStatus.expiryTime),
-                    onClick = { TheRouter.build(Constant.ROUTE_VIP_CENTER).navigation(context) },
+                    onClick = { VipCenterActivity.launch(context) },
                 )
 
                 Spacer(Modifier.height(8.dp))

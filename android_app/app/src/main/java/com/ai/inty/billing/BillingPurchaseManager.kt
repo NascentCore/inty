@@ -1,10 +1,9 @@
 package com.ai.inty.billing
 
 import android.app.Activity
-import android.widget.Toast
 import com.ai.inty.base.ToastUtils
 import com.ai.inty.beans.SubscriptionVerifyRequest
-import com.ai.inty.net.ISubscriptionApi
+import com.ai.inty.net.NetServiceMgr
 import com.android.billingclient.api.AcknowledgePurchaseParams
 import com.android.billingclient.api.BillingClient
 import com.android.billingclient.api.BillingFlowParams
@@ -15,7 +14,6 @@ import com.architecture.httplib.core.HttpResult
 import com.google.android.gms.common.GoogleApiAvailability
 import com.inty.utils.AppEnv
 import com.inty.utils.log.EasyLog
-import com.therouter.TheRouter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -38,9 +36,7 @@ internal class BillingPurchaseManager(
     private val vipStatusFlow: MutableStateFlow<VipStatus>,
 ) {
 
-    private val api =
-        TheRouter.get(ISubscriptionApi::class.java)
-            ?: error("Billing Purchase Manager theRouter init Error")
+    private val api = NetServiceMgr.getSubscriptionApi()
 
     /** 处理购买更新 */
     fun onPurchasesUpdated(billingResult: BillingResult, purchases: MutableList<Purchase>?) {
@@ -449,11 +445,11 @@ internal class BillingPurchaseManager(
                             "BillingRepository BillingPurchaseManager ✅ 购买流程启动结果: $launchResult"
                         )
                     } ?: run {
-                            EasyLog.log(
-                                "BillingRepository BillingPurchaseManager ❌ 未找到商品详情: $productId"
-                            )
-                            showError(activity, "Product details not found: $productId")
-                        }
+                        EasyLog.log(
+                            "BillingRepository BillingPurchaseManager ❌ 未找到商品详情: $productId"
+                        )
+                        showError(activity, "Product details not found: $productId")
+                    }
                 }
 
                 BillingClient.BillingResponseCode.DEVELOPER_ERROR -> {

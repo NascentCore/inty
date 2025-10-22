@@ -4,25 +4,23 @@ import android.content.Intent
 import android.widget.Toast
 import com.ai.inty.MainActivity
 import com.ai.inty.R
-import com.ai.inty.base.BaseActivityViewModel
+import com.ai.inty.base.BaseViewModel
+import com.ai.inty.base.ViewModelEvent
 import com.ai.inty.beans.GoogleLoginRequest
-import com.ai.inty.net.IUserApi
+import com.ai.inty.net.NetServiceMgr
 import com.ai.inty.utils.UserProfileManager
 import com.architecture.httplib.core.HttpResult
 import com.inty.utils.AppEnv
 import com.inty.utils.log.EasyLog
 import com.inty.utils.storage.IntySetting
-import com.therouter.TheRouter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-class LoginViewModel : BaseActivityViewModel() {
+class LoginViewModel : BaseViewModel() {
 
     // 延迟获取依赖，避免在构造函数中立即获取导致空指针异常
-    private val userApi by lazy {
-        TheRouter.get(IUserApi::class.java)
-            ?: throw IllegalStateException("IUserApi not found in TheRouter")
-    }
+    private val userApi by lazy { NetServiceMgr.getUserApi() }
+
 
     fun onGoogleLoginSuccess(idToken: String) {
         launchWithNetCheck {
@@ -42,13 +40,13 @@ class LoginViewModel : BaseActivityViewModel() {
                     withContext(Dispatchers.Main) {
                         // 显示登录成功提示
                         Toast.makeText(
-                                AppEnv.context,
-                                AppEnv.context.getString(R.string.login_successfully),
-                                Toast.LENGTH_SHORT,
+                            AppEnv.context,
+                            AppEnv.context.getString(R.string.login_successfully),
+                            Toast.LENGTH_SHORT,
                         ).show()
 
-                        // 关闭当前登录页面
-                        closeActivity()
+                        // 发送登录成功事件
+                        sendEvent(ViewModelEvent.LoginSuccess)
 
                         // 重启 MainActivity
                         val intent =
@@ -59,6 +57,7 @@ class LoginViewModel : BaseActivityViewModel() {
                         AppEnv.context.startActivity(intent)
                     }
                 }
+
                 is HttpResult.Failure -> {
                     EasyLog.log("Google login failed: ${result.message}", EasyLog.ERROR)
                     withContext(Dispatchers.Main) { showNetworkAwareError(result.message) }

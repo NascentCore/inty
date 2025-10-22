@@ -30,8 +30,11 @@ import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ai.inty.BuildConfig
-import com.ai.inty.Constant
+import com.ai.inty.LoginActivity
 import com.ai.inty.R
+import com.ai.inty.ReportActivity
+import com.ai.inty.SubsManageActivity
+import com.ai.inty.VipCenterActivity
 import com.ai.inty.base.noRippleClickable
 import com.ai.inty.billing.BillingRepository
 import com.ai.inty.ui.components.DeleteAccountDialog
@@ -42,7 +45,6 @@ import com.ai.inty.ui.components.SettingSection
 import com.ai.inty.viewmodels.DialogState
 import com.ai.inty.viewmodels.SettingViewModel
 import com.inty.utils.storage.IntySetting
-import com.therouter.TheRouter
 import kotlinx.coroutines.flow.collectLatest
 
 /** 设置页面主内容 */
@@ -109,7 +111,9 @@ private fun SettingTopBar(onBack: () -> Unit) {
         },
         navigationIcon = {
             Image(
-                modifier = Modifier.padding(horizontal = 12.dp).noRippleClickable { onBack() },
+                modifier = Modifier
+                    .padding(horizontal = 12.dp)
+                    .noRippleClickable { onBack() },
                 painter = painterResource(R.drawable.back),
                 contentDescription = null,
             )
@@ -134,7 +138,7 @@ private fun SupportAndHelpSection(context: Context, onShowDeleteDialog: () -> Un
         // 举报
         SettingNavigationItem(
             title = stringResource(R.string.str_report),
-            onClick = { TheRouter.build(Constant.ROUTE_REPORT).navigation(context) },
+            onClick = { ReportActivity.launch(context) },
         )
 
         SettingDivider()
@@ -190,9 +194,9 @@ private fun SupportAndHelpSection(context: Context, onShowDeleteDialog: () -> Un
             title = str,
             onClick = {
                 if (vipStatus.isSubscribed) {
-                    TheRouter.build(Constant.ROUTE_SUBSCRIPTION_MANAGEMENT).navigation(context)
+                    SubsManageActivity.launch(context)
                 } else {
-                    TheRouter.build(Constant.ROUTE_VIP_CENTER).navigation(context)
+                    VipCenterActivity.launch(context)
                 }
             },
         )
@@ -237,10 +241,10 @@ private fun SettingDialogs(
         // 检查是否正式登录（非游客且已登录）
         if (IntySetting.isLogin() && !IntySetting.isGuestUser()) {
             // 去会员中心
-            TheRouter.build(Constant.ROUTE_VIP_CENTER).navigation()
+            VipCenterActivity.launch(context)
         } else {
             // 如果未登录，要求先登录
-            TheRouter.build(Constant.ROUTE_LOGIN).navigation(context)
+            LoginActivity.launch(context)
         }
         onHidePremiumDialog()
     }
