@@ -161,9 +161,7 @@ androidx-compose-animation = { group = "androidx.compose.animation", name = "ani
 androidx-lifecycle-livedata-ktx = { module = "androidx.lifecycle:lifecycle-livedata-ktx", version.ref = "lifecycleKtx" }
 androidx-lifecycle-viewmodel-ktx = { module = "androidx.lifecycle:lifecycle-viewmodel-ktx", version.ref = "lifecycleKtx" }
 androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycleKtx" }
-androidx-navigation-fragment-ktx = { group = "androidx.navigation", name = "navigation-fragment-ktx", version.ref = "navigation" }
 androidx-navigation-ui-ktx = { group = "androidx.navigation", name = "navigation-ui-ktx", version.ref = "navigation" }
-androidx-navigation-dynamic-features-fragment = { module = "androidx.navigation:navigation-dynamic-features-fragment", version.ref = "navigation" }
 androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigation" }
 
 androidx-paging-compose = { module = "androidx.paging:paging-compose", version.ref = "pagingKtx" }
@@ -339,7 +337,7 @@ ktor-bundle = ["ktor-client-core", "ktor-client-cio", "ktor-client-content-negot
 coil-bundle = ["coil-kt", "coil-network-okhttp", "coil-kt-gif", "coil-kt-svg", "coil-kt-video", "coil-network-cache-control", "coil-kt-compose", "coil-kt-network"]
 
 # ===== Compose 相关 =====
-compose-jetpack-bundle = ["androidx-activity-compose", "androidx-lifecycle-runtimeCompose", "androidx-lifecycle-viewmodel-compose", "androidx-navigation-compose", "androidx-compose-runtime-livedata"]
+compose-jetpack-bundle = ["androidx-activity-compose", "androidx-lifecycle-runtimeCompose", "androidx-lifecycle-viewmodel-compose", "androidx-navigation-compose", "androidx-compose-runtime-livedata", "androidx-paging-compose"]
 compose-ui-bundle = ["androidx-compose-ui-util", "androidx-constraintlayout-compose", "androidx-compose-foundation", "androidx-compose-foundation-layout", "androidx-compose-ui", "androidx-activity-graphics", "androidx-compose-ui-graphics", "androidx-compose-ui-tooling", "androidx-compose-ui-tooling-preview", "androidx-compose-material3"]
 
 # ===== JSON 序列化 =====

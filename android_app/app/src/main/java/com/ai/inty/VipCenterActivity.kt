@@ -1,11 +1,12 @@
 package com.ai.inty
 
+import ai.sxwl.android.design.theme.IntelliMateTheme
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import com.ai.inty.base.BaseActivity
 import com.ai.inty.ui.screens.VipCenterContent
-import com.ai.inty.ui.theme.IntyTheme
+
 import com.ai.inty.viewmodels.VipCenterViewModel
 import com.therouter.router.Route
 
@@ -17,7 +18,7 @@ class VipCenterActivity : BaseActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            IntyTheme {
+            IntelliMateTheme {
                 VipCenterContent(
                     onClose = { finish() },
                     onPurchase = { viewModel.purchaseSelectedPlan(this) },

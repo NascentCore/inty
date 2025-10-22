@@ -1,5 +1,6 @@
 package com.ai.inty
 
+import ai.sxwl.android.design.theme.IntelliMateTheme
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
@@ -7,7 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.lifecycle.lifecycleScope
 import com.ai.inty.base.BaseActivity
 import com.ai.inty.ui.screens.RegInfoScreen
-import com.ai.inty.ui.theme.IntyTheme
+
 import com.ai.inty.viewmodels.RegInfoViewModel
 import com.therouter.router.Route
 import kotlinx.coroutines.launch
@@ -22,7 +23,7 @@ class RegInfoActivity : BaseActivity() {
         super.onCreate(savedInstanceState)
 
         setContent {
-            IntyTheme {
+            IntelliMateTheme {
                 RegInfoContent(
                     onClose = { finish() },
                     onSave = { gender, age -> viewModel.onSave(gender, age) },

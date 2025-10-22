@@ -1,5 +1,6 @@
 package com.ai.inty
 
+import ai.sxwl.android.design.theme.IntelliMateTheme
 import android.os.Build
 import android.os.Bundle
 import android.view.WindowManager
@@ -10,7 +11,6 @@ import androidx.core.view.WindowCompat
 import com.ai.inty.base.BaseActivity
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.ui.screens.AiAgentInfoScreen
-import com.ai.inty.ui.theme.IntyTheme
 import com.ai.inty.viewmodels.AgentInfoViewModel
 import com.therouter.router.Autowired
 import com.therouter.router.Route
@@ -19,9 +19,11 @@ import com.therouter.router.Route
 @Route(path = Constant.ROUTE_AGENT_INFO)
 class AgentInfoActivity : BaseActivity() {
 
-    @Autowired var agent: AgentInfo? = null
+    @Autowired
+    var agent: AgentInfo? = null
 
-    @Autowired var agent_id: String? = null
+    @Autowired
+    var agent_id: String? = null
 
     val viewModel: AgentInfoViewModel by viewModels()
 
@@ -44,7 +46,7 @@ class AgentInfoActivity : BaseActivity() {
         }
 
         setContent {
-            IntyTheme {
+            IntelliMateTheme {
                 val agentInfo = viewModel.agentInfo.collectAsState()
                 agentInfo.value?.let { agent -> AiAgentInfoScreen(agent, onBack = { finish() }) }
             }

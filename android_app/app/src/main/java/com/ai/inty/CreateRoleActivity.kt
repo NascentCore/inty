@@ -1,9 +1,10 @@
 package com.ai.inty
 
+import ai.sxwl.android.design.theme.HeartColor
+import ai.sxwl.android.design.theme.IntelliMateTheme
 import android.net.Uri
 import android.os.Bundle
 import android.widget.Toast
-import com.ai.inty.base.ToastUtils
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
@@ -77,13 +78,12 @@ import androidx.lifecycle.viewModelScope
 import coil3.compose.AsyncImage
 import com.ai.inty.base.AntiClick
 import com.ai.inty.base.BaseActivity
+import com.ai.inty.base.ToastUtils
 import com.ai.inty.base.noRippleClickable
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.beans.CreateAgentRequest
 import com.ai.inty.net.IAgentApi
 import com.ai.inty.ui.SingleLineTextInputField
-import com.ai.inty.ui.theme.DarkPurple
-import com.ai.inty.ui.theme.IntyTheme
 import com.ai.inty.utils.AvatarManager
 import com.ai.inty.utils.getCdnImageUrl
 import com.ai.inty.viewmodels.MainViewModel
@@ -120,7 +120,7 @@ class CreateRoleActivity : BaseActivity() {
         super.onCreate(savedInstanceState)
 
         setContent {
-            IntyTheme {
+            IntelliMateTheme {
                 CreateRolePage(
                     modifier = Modifier.fillMaxSize(),
                     mainViewModel = mainViewModel,
@@ -445,8 +445,8 @@ private fun CreateRolePage(
     }
 
     Scaffold(
-        modifier = modifier.background(DarkPurple),
-        containerColor = DarkPurple,
+        modifier = modifier.background(HeartColor.primaryColor),
+        containerColor = HeartColor.primaryColor,
         topBar = {
             CenterAlignedTopAppBar(
                 colors =
@@ -918,20 +918,20 @@ private fun AvatarUploadSection(
                         .fillMaxWidth()
                         .aspectRatio(9.div(16f))
                 ).let { modifier ->
-                        if (isEmpty) {
-                            modifier
-                                .background(
-                                    color = Color(0x1A78599A),
-                                    shape = RoundedCornerShape(16.dp),
-                                )
-                                .noRippleClickable { onGenerateClick() }
-                        } else {
-                            modifier.background(
-                                color = Color.Black,
+                    if (isEmpty) {
+                        modifier
+                            .background(
+                                color = Color(0x1A78599A),
                                 shape = RoundedCornerShape(16.dp),
                             )
-                        }
-                    },
+                            .noRippleClickable { onGenerateClick() }
+                    } else {
+                        modifier.background(
+                            color = Color.Black,
+                            shape = RoundedCornerShape(16.dp),
+                        )
+                    }
+                },
             contentAlignment = Alignment.Center,
         ) {
             when {

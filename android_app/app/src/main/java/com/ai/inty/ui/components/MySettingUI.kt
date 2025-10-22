@@ -1,5 +1,6 @@
 package com.ai.inty.ui.components
 
+import ai.sxwl.android.design.theme.HeartColor
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -50,7 +51,6 @@ import com.ai.inty.base.IntySmallTextField2
 import com.ai.inty.base.noRippleClickable
 import com.ai.inty.beans.GENDER
 import com.ai.inty.beans.UserProfile
-import com.ai.inty.ui.theme.DarkPurple
 
 /** 编辑类型枚举 */
 enum class EditKey {
@@ -85,7 +85,7 @@ fun MySettingScreen(
     isSaving: Boolean = false,
 ) {
     Scaffold(
-        modifier = Modifier.background(DarkPurple),
+        modifier = Modifier.background(HeartColor.primaryColor),
         topBar = {
             CenterAlignedTopAppBar(
                 title = {

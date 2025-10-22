@@ -72,13 +72,7 @@ dependencies {
     // 使用本地 library/inty_sdk 的版本，避免动态版本在测试时的依赖解析问题
     implementation("com.inty.api:inty-kotlin:0.15.0")
 
-    // ===== AndroidX 核心库 =====
-    implementation(libs.androidx.core.ktx)
-    implementation(libs.androidx.lifecycle.runtime.ktx)
-    implementation(libs.androidx.lifecycle.runtimeCompose)
-    implementation(libs.androidx.activity.compose)
-    implementation(libs.androidx.appcompat)
-    implementation(libs.androidx.activity.ktx)
+    implementation(libs.androidx.appcompat)//ucropActivity需要
     implementation(libs.androidx.paging.compose)
 
     // ===== 路由 =====
@@ -86,22 +80,24 @@ dependencies {
     ksp(libs.therouter.apt)
 
     // ===== 项目模块 =====
-    implementation(projects.library.utils)
+    implementation(projects.core.common)
+    implementation(projects.core.data)
+    implementation(projects.core.design)
+    implementation(projects.core.firebase)
     implementation(projects.library.network)
+    implementation(projects.library.utils)
 
+    // ===== 网络库 =====
+    api(libs.retrofit.core)
+    implementation(libs.retrofit2.kotlin.coroutines.adapter)
     // ===== 调试工具 =====
     debugImplementation(libs.chucker.library)
     "localImplementation"(libs.chucker.library)
     releaseImplementation(libs.chucker.no.op)
     "playdebugImplementation"(libs.chucker.no.op)
 
-    // ===== 网络库 =====
-    api(libs.retrofit.core)
-    implementation(libs.retrofit2.kotlin.coroutines.adapter)
-
     // ===== 图片加载 =====
     implementation(libs.bundles.coil.bundle)
-    // Removed: coil-svg, coil-gif, coil-video, coil-network-ktor3 (likely unused)
 
     // ===== Google 服务 =====
     implementation(libs.billing.client)
@@ -117,6 +113,4 @@ dependencies {
     implementation(libs.bundles.androidx.media3.bundle)
     implementation(libs.androidx.media3.datasource.okhttp)
 
-    // ===== compose ui bundle =====
-    implementation(libs.bundles.compose.ui.bundle)
 }

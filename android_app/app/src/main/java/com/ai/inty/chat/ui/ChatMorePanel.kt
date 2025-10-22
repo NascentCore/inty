@@ -1,5 +1,6 @@
 package com.ai.inty.chat.ui
 
+import ai.sxwl.android.design.theme.HeartColor
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -45,7 +46,6 @@ import com.ai.inty.beans.AgentInfo
 import com.ai.inty.billing.BillingRepository
 import com.ai.inty.chat.ChatViewModel
 import com.ai.inty.ui.ReplyStyleSheet
-import com.ai.inty.ui.theme.DarkPurple
 import com.inty.utils.storage.IntySetting
 import com.therouter.TheRouter
 
@@ -81,8 +81,9 @@ fun ChatMorePanel(
                 val density = LocalDensity.current
                 Column(
                     modifier =
-                        Modifier.fillMaxWidth()
-                            .background(color = DarkPurple)
+                        Modifier
+                            .fillMaxWidth()
+                            .background(color = HeartColor.primaryColor)
                             .onGloballyPositioned { coords ->
                                 val h = with(density) { coords.size.height.toDp() }
                                 onHeightChange(h)
@@ -142,16 +143,16 @@ fun ChatMorePanel(
 
     // 获取当前agent的聊天设置，确保按agent隔离，并监听chatSettings变化
     val currentChatSetting by
-        remember(agentInfo?.id, chatSettings) {
-            derivedStateOf {
-                agentInfo?.id?.let { agentId -> chatViewModel.getChatSettingForAgent(agentId) }
-            }
+    remember(agentInfo?.id, chatSettings) {
+        derivedStateOf {
+            agentInfo?.id?.let { agentId -> chatViewModel.getChatSettingForAgent(agentId) }
         }
+    }
 
     val replyStr by
-        remember(agentInfo?.id, currentChatSetting) {
-            derivedStateOf { (currentChatSetting?.style_prompt ?: "") }
-        }
+    remember(agentInfo?.id, currentChatSetting) {
+        derivedStateOf { (currentChatSetting?.style_prompt ?: "") }
+    }
     if (showSheet) {
         ReplyStyleSheet(
             sheetState = sheetState,
@@ -189,11 +190,14 @@ private fun MorePanelItem(icon: Int, text: String, onClick: () -> Unit) {
         Spacer(Modifier.height(20.dp))
         Box(
             modifier =
-                Modifier.size(64.dp)
+                Modifier
+                    .size(64.dp)
                     .background(color = Color.White.copy(0.05f), shape = RoundedCornerShape(8.dp))
         ) {
             Image(
-                modifier = Modifier.size(36.dp).align(Alignment.Center),
+                modifier = Modifier
+                    .size(36.dp)
+                    .align(Alignment.Center),
                 painter = painterResource(id = icon),
                 contentDescription = null,
             )

@@ -1,18 +1,17 @@
 package com.ai.inty
 
+import ai.sxwl.android.design.theme.HeartColor
+import ai.sxwl.android.design.theme.IntelliMateTheme
 import android.content.Intent
 import android.os.Bundle
-import android.widget.Toast
-import com.ai.inty.base.ToastUtils
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Modifier
 import com.ai.inty.base.BaseActivity
+import com.ai.inty.base.ToastUtils
 import com.ai.inty.ui.screens.SettingContent
-import com.ai.inty.ui.theme.DarkPurple
-import com.ai.inty.ui.theme.IntyTheme
 import com.ai.inty.viewmodels.MainViewModel
 import com.therouter.router.Route
 
@@ -26,9 +25,11 @@ class SettingActivity : BaseActivity() {
         super.onCreate(savedInstanceState)
 
         setContent {
-            IntyTheme {
+            IntelliMateTheme {
                 SettingContent(
-                    modifier = Modifier.fillMaxSize().background(DarkPurple),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(HeartColor.primaryColor),
                     onBack = { finish() },
                     onLogout = { isDelete ->
                         // 使用MainViewModel的logout方法，不重启应用

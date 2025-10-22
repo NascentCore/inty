@@ -31,7 +31,6 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ai.inty.R
-import com.ai.inty.ui.theme.TextFieldColor
 import kotlinx.coroutines.launch
 
 @Composable
@@ -101,9 +100,11 @@ fun IntySmallTextField(
             val scope = rememberCoroutineScope()
             TextField(
                 modifier =
-                    Modifier.fillMaxWidth().onFocusChanged { focusState ->
-                        onFocusChanged?.invoke(focusState.isFocused)
-                    },
+                    Modifier
+                        .fillMaxWidth()
+                        .onFocusChanged { focusState ->
+                            onFocusChanged?.invoke(focusState.isFocused)
+                        },
                 enabled = enabled,
                 singleLine = singleLine,
                 value = textFieldValue,
@@ -126,7 +127,7 @@ fun IntySmallTextField(
                 },
                 keyboardOptions = keyboardOptions,
                 keyboardActions = newActions,
-                textStyle = TextStyle.Default.copy(fontSize = 14.sp, color = TextFieldColor.Text),
+                textStyle = TextStyle.Default.copy(fontSize = 14.sp, color = Color.White),
                 colors =
                     TextFieldDefaults.colors(
                         focusedContainerColor = Color.Transparent,
@@ -135,7 +136,7 @@ fun IntySmallTextField(
                         focusedIndicatorColor = Color.Transparent,
                         unfocusedIndicatorColor = Color.Transparent,
                         disabledIndicatorColor = Color.Transparent,
-                        cursorColor = TextFieldColor.Text,
+                        cursorColor = Color.White,
                     ),
                 placeholder = placeholder,
                 maxLines = maxLines,
@@ -196,7 +197,10 @@ fun IntySmallTextField2(
 
         Box(
             modifier =
-                Modifier.fillMaxHeight().weight(1f).padding(horizontal = 8.dp, vertical = 4.dp),
+                Modifier
+                    .fillMaxHeight()
+                    .weight(1f)
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
             contentAlignment = if (singleLine) Alignment.CenterStart else Alignment.TopStart,
         ) {
             BasicTextField(
@@ -204,7 +208,7 @@ fun IntySmallTextField2(
                 enabled = enabled,
                 singleLine = singleLine,
                 value = value,
-                textStyle = TextStyle.Default.copy(fontSize = 14.sp, color = TextFieldColor.Text),
+                textStyle = TextStyle.Default.copy(fontSize = 14.sp, color = Color.White),
                 onValueChange = { str ->
                     // 有最大输入数字限制时候
                     if (maxLength > 0 && str.length <= maxLength) {
@@ -218,7 +222,7 @@ fun IntySmallTextField2(
                 },
                 keyboardOptions = keyboardOptions,
                 keyboardActions = newActions,
-                cursorBrush = SolidColor(TextFieldColor.Text),
+                cursorBrush = SolidColor(Color.White),
             )
             if (value.isEmpty()) {
                 placeholder?.let { it() }

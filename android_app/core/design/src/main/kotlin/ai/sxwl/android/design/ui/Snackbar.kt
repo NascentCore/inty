@@ -73,7 +73,7 @@ data class HeartSnackbarData(
 
 /**
  * 自定义Snackbar组件
- * 符合HeartMate应用的设计风格
+ * 符合IntelliMate应用的设计风格
  */
 @Composable
 fun HeartSnackbar(

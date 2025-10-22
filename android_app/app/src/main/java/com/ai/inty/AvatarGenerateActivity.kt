@@ -1,5 +1,7 @@
 package com.ai.inty
 
+import ai.sxwl.android.design.theme.HeartColor
+import ai.sxwl.android.design.theme.IntelliMateTheme
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
@@ -63,8 +65,6 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.ai.inty.base.BaseActivity
 import com.ai.inty.base.noRippleClickable
-import com.ai.inty.ui.theme.DarkPurple
-import com.ai.inty.ui.theme.IntyTheme
 import com.ai.inty.utils.AvatarManager
 import com.ai.inty.utils.getCdnImageUrl
 import com.ai.inty.viewmodels.AvatarGenerateViewModel
@@ -81,7 +81,7 @@ class AvatarGenerateActivity : BaseActivity() {
         super.onCreate(savedInstanceState)
 
         setContent {
-            IntyTheme {
+            IntelliMateTheme {
                 AvatarGeneratePage(
                     modifier = Modifier.fillMaxSize(),
                     viewModel = viewModel,
@@ -117,8 +117,8 @@ private fun AvatarGeneratePage(
     }
 
     Scaffold(
-        modifier = modifier.background(DarkPurple),
-        containerColor = DarkPurple,
+        modifier = modifier.background(HeartColor.primaryColor),
+        containerColor = HeartColor.primaryColor,
         topBar = {
             CenterAlignedTopAppBar(
                 colors =

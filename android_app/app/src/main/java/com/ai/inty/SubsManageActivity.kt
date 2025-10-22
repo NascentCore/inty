@@ -1,5 +1,7 @@
 package com.ai.inty
 
+import ai.sxwl.android.design.theme.HeartColor
+import ai.sxwl.android.design.theme.IntelliMateTheme
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
@@ -9,8 +11,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.ai.inty.base.BaseActivity
 import com.ai.inty.ui.screens.SubscriptionManagementScreen
-import com.ai.inty.ui.theme.DarkPurple
-import com.ai.inty.ui.theme.IntyTheme
 import com.ai.inty.viewmodels.SubsManageViewModel
 import com.therouter.router.Route
 
@@ -22,7 +22,14 @@ class SubscriptionManagementActivity : BaseActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent { IntyTheme { SubsManageContent(onBack = { finish() }, viewModel = viewModel) } }
+        setContent {
+            IntelliMateTheme {
+                SubsManageContent(
+                    onBack = { finish() },
+                    viewModel = viewModel
+                )
+            }
+        }
     }
 }
 
@@ -30,7 +37,9 @@ class SubscriptionManagementActivity : BaseActivity() {
 @Composable
 private fun SubsManageContent(onBack: () -> Unit, viewModel: SubsManageViewModel) {
     SubscriptionManagementScreen(
-        modifier = Modifier.fillMaxSize().background(DarkPurple),
+        modifier = Modifier
+            .fillMaxSize()
+            .background(HeartColor.primaryColor),
         onBack = onBack,
         viewModel = viewModel,
     )
