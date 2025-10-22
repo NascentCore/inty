@@ -93,6 +93,30 @@ object FirebasePerformanceHelper {
         return try {
             val perf = firebasePerf ?: return null
             val httpMetric = perf.newHttpMetric(request.url.toString(), request.method)
+
+            // 设置请求属性
+            try {
+                // 设置用户代理
+                val userAgent = request.header("User-Agent")
+                if (!userAgent.isNullOrEmpty()) {
+                    httpMetric.putAttribute("user_agent", userAgent)
+                }
+
+                // 设置请求类型
+                httpMetric.putAttribute("request_type", "api_call")
+
+                // 设置端点信息
+                val path = request.url.encodedPath
+                if (!path.isNullOrEmpty()) {
+                    httpMetric.putAttribute("endpoint", path)
+                }
+            } catch (e: Exception) {
+                EasyLog.log(
+                    "Firebase Performance: Failed to set HTTP metric attributes: ${e.message}",
+                    EasyLog.WARN,
+                )
+            }
+            
             httpMetric
         } catch (e: Exception) {
             EasyLog.log(
@@ -127,8 +151,69 @@ object FirebasePerformanceHelper {
      */
     fun stopHttpMetric(httpMetric: HttpMetric?, response: Response?) {
         try {
-            // Firebase Performance HttpMetric 会自动记录响应信息
-            httpMetric?.stop()
+            if (httpMetric != null) {
+                // 设置响应码
+                if (response != null) {
+                    httpMetric.setHttpResponseCode(response.code)
+
+                    // 设置响应大小（如果可用）
+                    val contentLength = response.header("Content-Length")
+                    if (!contentLength.isNullOrEmpty()) {
+                        try {
+                            httpMetric.setResponsePayloadSize(contentLength.toLong())
+                        } catch (e: NumberFormatException) {
+                            EasyLog.log(
+                                "Firebase Performance: Invalid Content-Length header: $contentLength",
+                                EasyLog.WARN,
+                            )
+                        }
+                    }
+
+                    // 设置请求大小（如果可用）
+                    val requestBody = response.request.body
+                    if (requestBody != null) {
+                        try {
+                            httpMetric.setRequestPayloadSize(requestBody.contentLength())
+                        } catch (e: Exception) {
+                            // 忽略无法获取请求体大小的情况
+                        }
+                    }
+
+                    // 设置响应属性
+                    try {
+                        // 设置响应状态
+                        httpMetric.putAttribute("response_status", response.code.toString())
+
+                        // 设置响应类型
+                        val contentType = response.header("Content-Type")
+                        if (!contentType.isNullOrEmpty()) {
+                            httpMetric.putAttribute("content_type", contentType)
+                        }
+
+                        // 设置是否成功
+                        httpMetric.putAttribute("success", (response.code in 200..299).toString())
+
+                        // 设置响应时间（如果有的话）
+                        val responseTime = response.header("X-Response-Time")
+                        if (!responseTime.isNullOrEmpty()) {
+                            httpMetric.putAttribute("server_response_time", responseTime)
+                        }
+                    } catch (e: Exception) {
+                        EasyLog.log(
+                            "Firebase Performance: Failed to set response attributes: ${e.message}",
+                            EasyLog.WARN,
+                        )
+                    }
+                } else {
+                    // 请求失败时设置错误响应码
+                    httpMetric.setHttpResponseCode(0)
+                    httpMetric.putAttribute("response_status", "0")
+                    httpMetric.putAttribute("success", "false")
+                    httpMetric.putAttribute("error", "network_failure")
+                }
+
+                httpMetric.stop()
+            }
         } catch (e: Exception) {
             EasyLog.log(
                 "Firebase Performance: Failed to stop HTTP metric: ${e.message}",
