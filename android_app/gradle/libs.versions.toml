@@ -336,7 +336,7 @@ androidx-camera-bundle = ["androidx-camera-camera2", "androidx-camera-core", "an
 ktor-bundle = ["ktor-client-core", "ktor-client-cio", "ktor-client-content-negotiation", "ktor-client-logging", "ktor-client-encoding", "ktor-serialization-kotlinx-json"]
 
 # ===== 图片加载 =====
-coil-bundle = ["coil-kt", "coil-network-okhttp", "coil-network-cache-control", "coil-kt-compose", "coil-kt-network"]
+coil-bundle = ["coil-kt", "coil-network-okhttp", "coil-kt-gif", "coil-kt-svg", "coil-kt-video", "coil-network-cache-control", "coil-kt-compose", "coil-kt-network"]
 
 # ===== Compose 相关 =====
 compose-jetpack-bundle = ["androidx-activity-compose", "androidx-lifecycle-runtimeCompose", "androidx-lifecycle-viewmodel-compose", "androidx-navigation-compose", "androidx-compose-runtime-livedata"]
