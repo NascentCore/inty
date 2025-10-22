@@ -257,14 +257,23 @@ internal class EventBusManager(
  * 弱引用事件订阅者
  * 防止内存泄漏
  */
-private data class WeakEventSubscriber<T : Any>(
-    private val subscriber: EventSubscriber<T>?,
+private class WeakEventSubscriber<T : Any>(
+    subscriber: EventSubscriber<T>,
     val priority: Int,
 ) {
     private val weakRef = WeakReference(subscriber)
+    private val subscriberId: Int = System.identityHashCode(subscriber)
 
     val getSubscriber: EventSubscriber<T>?
         get() = weakRef.get()
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is WeakEventSubscriber<*>) return false
+        return subscriberId == other.subscriberId
+    }
+
+    override fun hashCode(): Int = subscriberId
 }
 
 /**
