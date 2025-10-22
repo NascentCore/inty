@@ -16,9 +16,6 @@ import java.io.IOException
 /**
  * 图片压缩管理器
  * 提供更高级的图片压缩功能，包括批量压缩、进度监控、结果统计等
- *
- * @author HeartMate
- * @since 1.0.0
  */
 class ImageCompressManager private constructor() {
 

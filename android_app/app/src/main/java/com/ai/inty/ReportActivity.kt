@@ -1,5 +1,6 @@
 package com.ai.inty
 
+import ai.sxwl.android.design.theme.IntelliMateTheme
 import android.os.Bundle
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -10,7 +11,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.lifecycle.lifecycleScope
 import com.ai.inty.base.BaseActivity
 import com.ai.inty.ui.screens.ReportScreen
-import com.ai.inty.ui.theme.IntyTheme
+
 import com.ai.inty.viewmodels.ReportViewModel
 import com.inty.utils.log.EasyLog
 import com.therouter.router.Autowired
@@ -41,7 +42,13 @@ class ReportActivity : BaseActivity() {
             }
         }
 
-        setContent { IntyTheme { ReportContent(viewModel = viewModel, onBack = { finish() }) } }
+        setContent {
+            IntelliMateTheme {
+                ReportContent(
+                    viewModel = viewModel,
+                    onBack = { finish() })
+            }
+        }
     }
 }
 

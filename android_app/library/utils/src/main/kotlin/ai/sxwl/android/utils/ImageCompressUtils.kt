@@ -12,9 +12,6 @@ import java.io.IOException
 /**
  * 图片压缩工具类
  * 基于Luban库封装，提供简洁的API供上层模块使用
- *
- * @author HeartMate
- * @since 1.0.0
  */
 object ImageCompressUtils {
 

@@ -1,5 +1,6 @@
 package com.ai.inty.ui.screens
 
+import ai.sxwl.android.design.theme.HeartColor
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -47,7 +48,6 @@ import com.ai.inty.base.noRippleClickable
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.ui.components.AgentBackground
 import com.ai.inty.ui.components.SmartTagsLayout
-import com.ai.inty.ui.theme.DarkPurple
 import com.inty.utils.storage.IntySetting
 import com.therouter.TheRouter
 
@@ -77,7 +77,9 @@ internal fun AiAgentInfoScreen(agent: AgentInfo, onBack: () -> Unit) {
                     navigationIcon = {
                         Image(
                             modifier =
-                                Modifier.padding(horizontal = 12.dp).noRippleClickable { onBack() },
+                                Modifier
+                                    .padding(horizontal = 12.dp)
+                                    .noRippleClickable { onBack() },
                             painter = painterResource(R.drawable.back),
                             contentDescription = null,
                         )
@@ -85,9 +87,11 @@ internal fun AiAgentInfoScreen(agent: AgentInfo, onBack: () -> Unit) {
                     actions = {
                         Image(
                             modifier =
-                                Modifier.padding(horizontal = 12.dp).noRippleClickable {
-                                    showBottomSheet = true
-                                },
+                                Modifier
+                                    .padding(horizontal = 12.dp)
+                                    .noRippleClickable {
+                                        showBottomSheet = true
+                                    },
                             painter = painterResource(R.drawable.icon_more2),
                             contentDescription = null,
                         )
@@ -99,7 +103,8 @@ internal fun AiAgentInfoScreen(agent: AgentInfo, onBack: () -> Unit) {
                 // 顶部渐变遮罩
                 Box(
                     modifier =
-                        Modifier.fillMaxWidth()
+                        Modifier
+                            .fillMaxWidth()
                             .height(160.dp)
                             .background(
                                 brush =
@@ -108,20 +113,25 @@ internal fun AiAgentInfoScreen(agent: AgentInfo, onBack: () -> Unit) {
                                     )
                             )
                 )
-                Box(modifier = Modifier.fillMaxWidth().weight(1f))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                )
                 Box(
                     modifier =
-                        Modifier.fillMaxWidth()
+                        Modifier
+                            .fillMaxWidth()
                             .background(
                                 brush =
                                     Brush.verticalGradient(
                                         listOf(
                                             Color(0x00000000),
-                                            DarkPurple.copy(.3f),
-                                            DarkPurple.copy(.7f),
-                                            DarkPurple.copy(.9f),
-                                            DarkPurple,
-                                            DarkPurple,
+                                            HeartColor.primaryColor.copy(.3f),
+                                            HeartColor.primaryColor.copy(.7f),
+                                            HeartColor.primaryColor.copy(.9f),
+                                            HeartColor.primaryColor,
+                                            HeartColor.primaryColor,
                                         ),
                                         endY = 900f,
                                     )
@@ -129,7 +139,9 @@ internal fun AiAgentInfoScreen(agent: AgentInfo, onBack: () -> Unit) {
                 ) {
                     Column(
                         modifier =
-                            Modifier.padding(innerPadding).verticalScroll(rememberScrollState())
+                            Modifier
+                                .padding(innerPadding)
+                                .verticalScroll(rememberScrollState())
                     ) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -165,7 +177,8 @@ internal fun AiAgentInfoScreen(agent: AgentInfo, onBack: () -> Unit) {
 
                         Column(
                             modifier =
-                                Modifier.padding(horizontal = 16.dp)
+                                Modifier
+                                    .padding(horizontal = 16.dp)
                                     .fillMaxWidth()
                                     .border(
                                         brush =
@@ -198,12 +211,12 @@ internal fun AiAgentInfoScreen(agent: AgentInfo, onBack: () -> Unit) {
                                 // 使用智能 Tags 布局
                                 val gender =
                                     runCatching {
-                                            val tmpGender = agent.gender.lowercase()
-                                            tmpGender.replaceFirst(
-                                                tmpGender.first(),
-                                                tmpGender.first().uppercase().first(),
-                                            )
-                                        }
+                                        val tmpGender = agent.gender.lowercase()
+                                        tmpGender.replaceFirst(
+                                            tmpGender.first(),
+                                            tmpGender.first().uppercase().first(),
+                                        )
+                                    }
                                         .getOrNull() ?: ""
 
                                 val agentTags =
@@ -268,7 +281,7 @@ internal fun AiAgentInfoScreen(agent: AgentInfo, onBack: () -> Unit) {
         ModalBottomSheet(
             onDismissRequest = { showBottomSheet = false },
             sheetState = bottomSheetState,
-            containerColor = DarkPurple,
+            containerColor = HeartColor.primaryColor,
             contentColor = Color.White,
         ) {
             BottomSheetContent(
@@ -296,7 +309,8 @@ private fun AgentSpacerLine() {
     Spacer(Modifier.height(4.dp))
     Box(
         modifier =
-            Modifier.fillMaxWidth()
+            Modifier
+                .fillMaxWidth()
                 .height(1.dp)
                 .background(
                     brush =
@@ -311,11 +325,17 @@ private fun AgentSpacerLine() {
 
 @Composable
 private fun BottomSheetContent(onReportClick: () -> Unit, onCancelClick: () -> Unit) {
-    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 24.dp)) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 24.dp)
+    ) {
         // Report按钮
         Button(
             onClick = onReportClick,
-            modifier = Modifier.fillMaxWidth().height(60.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(60.dp),
             colors = ButtonDefaults.buttonColors(containerColor = Color(0x3378599A)),
             shape = RoundedCornerShape(16.dp),
         ) {
@@ -332,7 +352,9 @@ private fun BottomSheetContent(onReportClick: () -> Unit, onCancelClick: () -> U
         // Cancel按钮
         Button(
             onClick = onCancelClick,
-            modifier = Modifier.fillMaxWidth().height(60.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(60.dp),
             colors = ButtonDefaults.buttonColors(containerColor = Color(0x3378599A)),
             shape = RoundedCornerShape(16.dp),
         ) {

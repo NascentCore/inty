@@ -406,12 +406,12 @@ private fun 预览设置分组容器() {
             item = SettingsItemData.CommonItemData("隐私政策"),
             isInGroup = true
         )
-        HeartMateDivider()
+        IntelliMateDivider()
         SettingsArrowItem(
             item = SettingsItemData.CommonItemData("用户协议", "欢迎查看"),
             isInGroup = true
         )
-        HeartMateDivider()
+        IntelliMateDivider()
         SettingsArrowItem(
             item = SettingsItemData.CommonItemData(
                 "关于App",
@@ -420,7 +420,7 @@ private fun 预览设置分组容器() {
             ),
             isInGroup = true
         )
-        HeartMateDivider()
+        IntelliMateDivider()
         SettingsCheckBoxItem(
             item = SettingsItemData.SwitchItemData("轻灵字体", true),
             fontLight = true,
@@ -432,7 +432,7 @@ private fun 预览设置分组容器() {
 
 @Preview
 @Composable
-fun HeartMateDivider() {
+fun IntelliMateDivider() {
     Box(
         Modifier
             .fillMaxWidth()

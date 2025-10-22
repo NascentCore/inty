@@ -1,5 +1,6 @@
 package com.ai.inty
 
+import ai.sxwl.android.design.theme.IntelliMateTheme
 import android.content.Context
 import android.net.Uri
 import android.os.Bundle
@@ -22,7 +23,7 @@ import com.ai.inty.base.ToastUtils
 import com.ai.inty.ui.components.EditDialog
 import com.ai.inty.ui.components.EditKey
 import com.ai.inty.ui.components.MySettingScreen
-import com.ai.inty.ui.theme.IntyTheme
+
 import com.ai.inty.utils.UCropHelper
 import com.ai.inty.viewmodels.MySettingViewModel
 import com.therouter.router.Autowired
@@ -52,7 +53,7 @@ class MySettingActivity : BaseActivity() {
         }
 
         setContent {
-            IntyTheme {
+            IntelliMateTheme {
                 val context = LocalContext.current
                 val cropTitle = stringResource(id = R.string.crop_image)
 

@@ -1,5 +1,6 @@
 package com.ai.inty
 
+import ai.sxwl.android.design.theme.IntelliMateTheme
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -8,7 +9,7 @@ import androidx.compose.runtime.Composable
 import androidx.lifecycle.lifecycleScope
 import com.ai.inty.base.BaseActivity
 import com.ai.inty.ui.screens.LoginScreen
-import com.ai.inty.ui.theme.IntyTheme
+
 import com.ai.inty.utils.CredentialManagerHelper
 import com.ai.inty.utils.FirebaseManager
 import com.ai.inty.utils.UserProfileManager
@@ -35,7 +36,7 @@ class LoginActivity : BaseActivity() {
         enableEdgeToEdge()
 
         setContent {
-            IntyTheme {
+            IntelliMateTheme {
                 LoginContent(
                     onClose = { finish() },
                     onGoogleLoginSuccess = { idToken -> viewModel.onGoogleLoginSuccess(idToken) },

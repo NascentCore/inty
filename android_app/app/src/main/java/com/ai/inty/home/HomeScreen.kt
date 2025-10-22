@@ -1,5 +1,6 @@
 package com.ai.inty.home
 
+import ai.sxwl.android.design.theme.HeartColor
 import android.app.Activity
 import android.content.Context
 import androidx.compose.foundation.background
@@ -54,8 +55,6 @@ import com.ai.inty.explore.ExploreViewModel
 import com.ai.inty.ui.ChatDialogData
 import com.ai.inty.ui.ExpiredVipDialog
 import com.ai.inty.ui.components.ForceUpgradeDialog
-import com.ai.inty.ui.theme.DarkPurple
-import com.ai.inty.ui.theme.MediumPurple
 import com.ai.inty.utils.TrackScreenView
 import com.ai.inty.viewmodels.HomeTabIndex
 import com.ai.inty.viewmodels.MainViewModel
@@ -97,7 +96,7 @@ fun HomeScreen(
     Scaffold(
         modifier = modifier
             .fillMaxSize()
-            .background(DarkPurple)
+            .background(HeartColor.primaryColor)
             .navigationBarsPadding(),
         containerColor = Color.Transparent,
         bottomBar = {
@@ -411,7 +410,7 @@ private fun AppBottomNavigationBar(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .background(DarkPurple)
+            .background(HeartColor.primaryColor)
             .height(BottomNavigationBarHeight),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -457,7 +456,7 @@ private fun BottomNavigationBarItem(modifier: Modifier, tabInfo: TabInfo, select
             text = stringResource(tabInfo.label),
             fontSize = tabTextFontSize.sp,
             fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-            color = if (selected) MediumPurple else Color.White, // 选中时使用紫色，未选中时使用白色
+            color = if (selected) Color(0xFF9C27B0) else Color.White, // 选中时使用紫色，未选中时使用白色
         )
     }
 }

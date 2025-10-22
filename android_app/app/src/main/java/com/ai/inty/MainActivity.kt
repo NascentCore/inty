@@ -1,10 +1,9 @@
 package com.ai.inty
 
+import ai.sxwl.android.design.theme.IntelliMateTheme
 import android.os.Bundle
 import android.view.GestureDetector
 import android.view.MotionEvent
-import android.widget.Toast
-import com.ai.inty.base.ToastUtils
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -31,10 +30,10 @@ import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.lifecycleScope
 import com.ai.inty.base.BaseActivity
+import com.ai.inty.base.ToastUtils
 import com.ai.inty.billing.BillingRepository
 import com.ai.inty.chat.ChatViewModel
 import com.ai.inty.home.HomeScreen
-import com.ai.inty.ui.theme.IntyTheme
 import com.ai.inty.utils.PageTrackingHelper
 import com.ai.inty.utils.UnifiedStartupManager
 import com.ai.inty.viewmodels.MainViewModel
@@ -130,10 +129,10 @@ class MainActivity : BaseActivity() {
         }
 
         setContent {
-            // 手动控制SplashUI显示，类似HeartMate模式
+            // 手动控制SplashUI显示，类似IntelliMate模式
             var showSplash by remember { mutableStateOf(true) }
 
-            IntyTheme {
+            IntelliMateTheme {
                 if (showSplash) {
                     // 显示自定义SplashUI
                     SplashUI(onSplashComplete = { showSplash = false })

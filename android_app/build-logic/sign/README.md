@@ -12,7 +12,7 @@
 
 ### signing-config.json
 
-签名配置文件位于 `build-logic/sign/signing-config.json`，包含以下结构：
+签名配置文件位于 `build-logic/sign/signing-config.json`，包含以下结构(示例)：
 
 ```json
 {

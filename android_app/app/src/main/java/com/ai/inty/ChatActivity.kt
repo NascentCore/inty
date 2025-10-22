@@ -1,5 +1,7 @@
 package com.ai.inty
 
+import ai.sxwl.android.design.theme.HeartColor
+import ai.sxwl.android.design.theme.IntelliMateTheme
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -14,8 +16,6 @@ import com.ai.inty.base.BaseActivity
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.chat.ChatPage
 import com.ai.inty.chat.ChatViewModel
-import com.ai.inty.ui.theme.DarkPurple
-import com.ai.inty.ui.theme.IntyTheme
 import com.ai.inty.utils.FirebaseManager
 import com.therouter.router.Autowired
 import com.therouter.router.Route
@@ -71,12 +71,12 @@ class ChatActivity : BaseActivity() {
     /** 设置UI */
     private fun setupUI() {
         setContent {
-            IntyTheme {
+            IntelliMateTheme {
                 ChatPage(
                     modifier =
                         Modifier
                             .fillMaxSize()
-                            .background(DarkPurple)
+                            .background(HeartColor.primaryColor)
                             .imePadding()
                             .navigationBarsPadding(),
                     chatViewModel = chatViewModel,
