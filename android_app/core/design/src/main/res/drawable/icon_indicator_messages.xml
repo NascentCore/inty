@@ -1,0 +1,53 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="10dp"
+    android:viewportWidth="108"
+    android:viewportHeight="10">
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M0,5H48"
+        android:strokeWidth="1">
+        <aapt:attr name="android:strokeColor">
+            <gradient
+                android:endX="48"
+                android:endY="5.5"
+                android:startX="0"
+                android:startY="5.5"
+                android:type="linear">
+                <item
+                    android:color="#00C931E9"
+                    android:offset="0" />
+                <item
+                    android:color="#FFDD55B4"
+                    android:offset="1" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M108,5L60,5"
+        android:strokeWidth="1">
+        <aapt:attr name="android:strokeColor">
+            <gradient
+                android:endX="60"
+                android:endY="4.5"
+                android:startX="108"
+                android:startY="4.5"
+                android:type="linear">
+                <item
+                    android:color="#00FD8D60"
+                    android:offset="0" />
+                <item
+                    android:color="#FFFE905D"
+                    android:offset="0.74" />
+                <item
+                    android:color="#FFE562A0"
+                    android:offset="1" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <path
+        android:fillColor="#E15BAB"
+        android:pathData="M53.81,0.71C53.86,0.51 54.14,0.51 54.19,0.71L54.99,3.63C55.01,3.69 55.05,3.74 55.11,3.77L57.57,4.82C57.73,4.89 57.73,5.11 57.57,5.18L55.11,6.23C55.05,6.26 55.01,6.31 54.99,6.37L54.19,9.29C54.14,9.49 53.86,9.49 53.81,9.29L53.01,6.37C52.99,6.31 52.95,6.26 52.89,6.23L50.43,5.18C50.27,5.11 50.27,4.89 50.43,4.82L52.89,3.77C52.95,3.74 52.99,3.69 53.01,3.63L53.81,0.71Z" />
+</vector>

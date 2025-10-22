@@ -1,0 +1,34 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="25dp"
+    android:height="24dp"
+    android:viewportWidth="25"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M3.464,5.769C3.464,3.56 5.255,1.769 7.464,1.769H18C20.209,1.769 22,3.56 22,5.769V19.583C22,20.493 21.262,21.231 20.352,21.231V21.231C19.923,21.231 19.511,21.064 19.203,20.765L19.054,20.62C18.355,19.941 17.281,19.827 16.456,20.347L16.124,20.556C15.493,20.952 14.673,20.866 14.139,20.347V20.347C13.605,19.827 12.785,19.741 12.154,20.138L11.49,20.556C10.859,20.952 10.039,20.866 9.505,20.347V20.347C8.971,19.827 8.151,19.741 7.52,20.138L6.22,20.955C5.933,21.136 5.601,21.231 5.263,21.231V21.231C4.269,21.231 3.464,20.426 3.464,19.433V5.769Z"
+        android:strokeWidth="1.5"
+        android:strokeAlpha="0.55"
+        android:strokeColor="#808080"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M8.346,7.329H17.614"
+        android:strokeWidth="1.5"
+        android:strokeAlpha="0.55"
+        android:strokeColor="#808080"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M8.346,12.89H11.127"
+        android:strokeWidth="1.5"
+        android:strokeAlpha="0.55"
+        android:strokeColor="#808080"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:fillAlpha="0.55"
+        android:fillColor="#808080"
+        android:pathData="M15.583,10.456C15.657,10.311 15.864,10.311 15.939,10.456L16.675,11.889C16.694,11.927 16.724,11.957 16.762,11.976L18.195,12.712C18.34,12.787 18.34,12.994 18.195,13.068L16.762,13.804C16.724,13.824 16.694,13.854 16.675,13.891L15.939,15.324C15.864,15.469 15.657,15.469 15.583,15.324L14.846,13.891C14.827,13.854 14.797,13.824 14.76,13.804L13.327,13.068C13.182,12.994 13.182,12.787 13.327,12.712L14.76,11.976C14.797,11.957 14.827,11.927 14.846,11.889L15.583,10.456Z" />
+</vector>
