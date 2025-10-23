@@ -1,5 +1,6 @@
 package com.ai.inty.billing
 
+import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.Utils
 import android.app.Activity
 import android.content.Context
@@ -7,7 +8,6 @@ import com.android.billingclient.api.BillingClient
 import com.android.billingclient.api.BillingClientStateListener
 import com.android.billingclient.api.BillingResult
 import com.android.billingclient.api.PurchasesUpdatedListener
-import com.inty.utils.log.EasyLog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -90,7 +90,7 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
 
     /** 处理Google Play服务不可用的情况 */
     private fun handleGooglePlayServicesUnavailable() {
-        log("Google Play 服务不可用，跳过BillingClient初始化")
+        log("Google Play 服务不可用，跳过BillingClient初始化", LogUtils.W)
         updateInitState(errorMessage = "Google Play 服务不可用")
         emitEvent(BillingEvent.InitializationFailed("Google Play 服务不可用"))
     }
@@ -134,8 +134,15 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
     }
 
     /** 统一日志记录 */
-    private fun log(message: String, level: Int = EasyLog.INFO) {
-        EasyLog.log("$TAG - $message", level)
+    private fun log(message: String, level: Int = LogUtils.I) {
+        when (level) {
+            LogUtils.V -> LogUtils.v("$TAG - $message")
+            LogUtils.D -> LogUtils.d("$TAG - $message")
+            LogUtils.I -> LogUtils.i("$TAG - $message")
+            LogUtils.W -> LogUtils.w("$TAG - $message")
+            LogUtils.E -> LogUtils.e("$TAG - $message")
+            else -> LogUtils.i("$TAG - $message")
+        }
     }
 
     fun release() {
@@ -157,12 +164,11 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
         purchases: MutableList<com.android.billingclient.api.Purchase>?,
     ) {
         purchaseManager.onPurchasesUpdated(billingResult, purchases)
-        log("购买结果onPurchasesUpdated $billingResult, $purchases", EasyLog.INFO)
+        log("购买结果onPurchasesUpdated $billingResult, $purchases")
     }
 
     override fun onBillingSetupFinished(billingResult: BillingResult) {
-        log("BillingClient 连接结果: 响应码=${billingResult.responseCode}")
-        log("连接详情: ${billingResult.debugMessage}")
+        log("BillingClient 连接结果: 响应码=${billingResult.responseCode}, 详情: ${billingResult.debugMessage}")
 
         if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
             handleBillingSetupSuccess()
@@ -174,9 +180,7 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
     /** 处理BillingClient连接成功 */
     private fun handleBillingSetupSuccess() {
         isConnected = true
-        log(
-            "BillingClient 连接成功 isReady:${billingClient.isReady}, connectState: ${billingClient.connectionState}"
-        )
+        log("BillingClient 连接成功 isReady:${billingClient.isReady}, connectState: ${billingClient.connectionState}")
 
         // 更新初始化状态
         updateInitState(isInitialized = true, isConnected = true, errorMessage = null)
@@ -190,8 +194,10 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
 
     /** 处理BillingClient连接失败 */
     private fun handleBillingSetupFailure(billingResult: BillingResult) {
-        log("BillingClient 连接失败: ${billingResult.debugMessage}")
-        log("连接失败响应码: ${billingResult.responseCode}")
+        log(
+            "BillingClient 连接失败: ${billingResult.debugMessage}, 响应码: ${billingResult.responseCode}",
+            LogUtils.E
+        )
 
         // 更新初始化状态
         updateInitState(
@@ -206,7 +212,7 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
 
     override fun onBillingServiceDisconnected() {
         isConnected = false
-        log("BillingClient 断开连接")
+        log("BillingClient 断开连接", LogUtils.W)
 
         // 发送断开连接事件
         emitEvent(BillingEvent.Disconnected)
@@ -240,35 +246,31 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
 
     /** 智能重连：根据错误类型选择不同的重连策略 */
     private fun smartReconnect(billingResult: BillingResult) {
-        val delayMs =
-            when (billingResult.responseCode) {
-                BillingClient.BillingResponseCode.SERVICE_UNAVAILABLE -> {
-                    log("服务不可用，使用较长延迟重连: 10秒")
-                    10000L
-                }
-
-                BillingClient.BillingResponseCode.NETWORK_ERROR -> {
-                    log("网络错误，使用中等延迟重连: 5秒")
-                    5000L
-                }
-
-                BillingClient.BillingResponseCode.BILLING_UNAVAILABLE -> {
-                    log("计费不可用，使用更长延迟重连: 30秒")
-                    30000L // 增加到30秒，因为这种错误通常需要更长时间恢复
-                }
-
-                else -> {
-                    log("其他错误，使用标准延迟重连: 5秒")
-                    5000L
-                }
+        val (delayMs, message) = when (billingResult.responseCode) {
+            BillingClient.BillingResponseCode.SERVICE_UNAVAILABLE -> {
+                10000L to "服务不可用，使用较长延迟重连: 10秒"
             }
 
+            BillingClient.BillingResponseCode.NETWORK_ERROR -> {
+                5000L to "网络错误，使用中等延迟重连: 5秒"
+            }
+
+            BillingClient.BillingResponseCode.BILLING_UNAVAILABLE -> {
+                30000L to "计费不可用，使用更长延迟重连: 30秒"
+            }
+
+            else -> {
+                5000L to "其他错误，使用标准延迟重连: 5秒"
+            }
+        }
+
+        log(message, LogUtils.W)
         scheduleReconnect(delayMs)
     }
 
     suspend fun fetchRemote() {
         if (!::remoteManager.isInitialized) {
-            log("remoteManager 未初始化，跳过远程数据获取")
+            log("remoteManager 未初始化，跳过远程数据获取", LogUtils.W)
             return
         }
         remoteManager.fetchRemote(isConnected)
@@ -287,7 +289,10 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
 
         // 如果状态不一致，同步状态
         if (internalConnected != clientConnected) {
-            log("状态不一致检测到: internalConnected=$internalConnected, clientConnected=$clientConnected")
+            log(
+                "状态不一致检测到: internalConnected=$internalConnected, clientConnected=$clientConnected",
+                LogUtils.W
+            )
             isConnected = clientConnected
         }
 
@@ -299,7 +304,7 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
 
     /** 强制重新检查Google Play服务状态 */
     fun forceCheckGooglePlayServices(context: Context): Boolean {
-        log("强制重新检查Google Play服务状态")
+        log("强制重新检查Google Play服务状态", LogUtils.D)
         val hasGooglePlayServices = BillingUtils.isGooglePlayServicesAvailable(context)
         updateInitState(hasGooglePlayServices = hasGooglePlayServices)
 
@@ -346,18 +351,21 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
     fun refreshSubscriptionStatus() {
         eventScope.launch {
             try {
-                log("开始刷新订阅状态")
+                log("开始刷新订阅状态", LogUtils.D)
                 val oldStatus = _vipStatusFlow.value
                 fetchRemote()
 
                 // 检查状态是否发生变化
                 val newStatus = _vipStatusFlow.value
                 if (oldStatus.isSubscribed != newStatus.isSubscribed) {
-                    log("订阅状态发生变化: ${oldStatus.isSubscribed} -> ${newStatus.isSubscribed}")
+                    log(
+                        "订阅状态发生变化: ${oldStatus.isSubscribed} -> ${newStatus.isSubscribed}",
+                        LogUtils.I
+                    )
                     _eventFlow.emit(BillingEvent.SubscriptionStatusChanged(oldStatus, newStatus))
                 }
             } catch (e: Exception) {
-                log("刷新订阅状态失败: ${e.message}")
+                log("刷新订阅状态失败: ${e.message}", LogUtils.E)
             }
         }
     }

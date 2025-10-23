@@ -117,7 +117,7 @@ class MySettingViewModel : BaseViewModel() {
     }
 
     fun setAvatar(uri: Uri?) {
-        //        EasyLog.log("avatar= $uri")
+        //        LogUtils.i("avatar= $uri")
         _avatarChanged.value = true
         _userProfile.value = _userProfile.value.copy(avatar = uri.toString())
     }

@@ -1,5 +1,6 @@
 package com.ai.inty.chat
 
+import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.Utils
 import android.content.Context
 import androidx.lifecycle.viewModelScope
@@ -21,7 +22,6 @@ import com.ai.inty.utils.FirebasePerformanceHelper
 import com.ai.inty.utils.PageTrackingHelper
 import com.ai.inty.utils.UserProfileManager
 import com.architecture.httplib.core.HttpResult
-import com.inty.utils.log.EasyLog
 import com.inty.utils.storage.IntySetting
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -225,12 +225,12 @@ class ChatViewModel : BaseViewModel() {
         val currentAgentId = agentInfo.value?.id
 
         if (isQueryingMsgs) {
-            EasyLog.log("Already querying messages, skipping", EasyLog.WARN)
+            LogUtils.w("Already querying messages, skipping")
             return
         }
 
         if (currentAgentId == null) {
-            EasyLog.log("No agent info available, skipping query", EasyLog.WARN)
+            LogUtils.w("No agent info available, skipping query")
             return
         }
 
@@ -240,10 +240,7 @@ class ChatViewModel : BaseViewModel() {
             lastQueryAgentId == currentAgentId &&
             currentTime - lastQueryTime < QUERY_DEBOUNCE_TIME
         ) {
-            EasyLog.log(
-                "Query debounced for agent $currentAgentId (loadMore: $loadMore, debounceTime: ${QUERY_DEBOUNCE_TIME}ms)",
-                EasyLog.WARN
-            )
+            LogUtils.w("Query debounced for agent $currentAgentId (loadMore: $loadMore, debounceTime: ${QUERY_DEBOUNCE_TIME}ms)")
             return
         }
 
@@ -261,13 +258,13 @@ class ChatViewModel : BaseViewModel() {
                 currentAgentValue?.let { agent ->
 
                     val result = chatApi.getMsgs(agent.id, PAGE_SIZE, currentOffset)
-                    EasyLog.log("queryMsgs result for ${agent.id} = $result")
+                    LogUtils.i("queryMsgs result for ${agent.id} = $result")
                     when (result) {
                         is HttpResult.Success -> {
                             val newMessages = result.data.messages ?: emptyList()
                             val hasMore = result.data.hasMore
 
-                            EasyLog.log("Loaded ${newMessages.size} messages, hasMore: $hasMore")
+                            LogUtils.i("Loaded ${newMessages.size} messages, hasMore: $hasMore")
 
                             if (loadMore) {
                                 // 加载更多：旧数据应追加到列表尾部（在 reverseLayout 下显示在顶部）
@@ -293,22 +290,18 @@ class ChatViewModel : BaseViewModel() {
                                     currentOffset = PAGE_SIZE
                                 } else {
                                     // 如果currentOffset不为0，说明这不是真正的首次加载，跳过数据替换
-                                    EasyLog.log(
-                                        "Skipping data replacement for non-first load: currentOffset=$currentOffset"
-                                    )
+                                    LogUtils.d("Skipping data replacement for non-first load: currentOffset=$currentOffset")
                                 }
                             }
 
                             _hasMoreMessages.value = hasMore
-                            EasyLog.log(
-                                "Successfully loaded messages. Total: ${_msgs.value.size}, hasMore: $hasMore"
-                            )
+                            LogUtils.i("Successfully loaded messages. Total: ${_msgs.value.size}, hasMore: $hasMore")
                             // 标记消息查询完成
                             _isQueryMsgsCompleted.value = true
                         }
 
                         is HttpResult.Failure -> {
-                            EasyLog.log("Failed to query messages: ${result.message}")
+                            LogUtils.i("Failed to query messages: ${result.message}")
                             showNetworkAwareError(result.message)
                             // 即使查询失败，也标记为完成，避免开场白永远不播放
                             _isQueryMsgsCompleted.value = true
@@ -316,7 +309,7 @@ class ChatViewModel : BaseViewModel() {
                     }
                 }
             } catch (e: Exception) {
-                EasyLog.log("queryMsgs exception: ${e.message}", priority = EasyLog.ERROR)
+                LogUtils.e("queryMsgs exception: ${e.message}")
                 handleNetworkException(e)
                 // 即使出现异常，也标记为完成，避免开场白永远不播放
                 _isQueryMsgsCompleted.value = true
@@ -329,26 +322,24 @@ class ChatViewModel : BaseViewModel() {
 
     /** 加载更多消息 */
     fun loadMoreMessages() {
-        EasyLog.log(
-            "loadMoreMessages called: hasMore=${_hasMoreMessages.value}, isLoading=${_isLoadingMore.value}, isQueryingMsgs=$isQueryingMsgs, currentOffset=$currentOffset"
-        )
+        LogUtils.d("loadMoreMessages called: hasMore=${_hasMoreMessages.value}, isLoading=${_isLoadingMore.value}, isQueryingMsgs=$isQueryingMsgs, currentOffset=$currentOffset")
 
         if (!_hasMoreMessages.value) {
-            EasyLog.log("Cannot load more messages: no more messages available")
+            LogUtils.i("Cannot load more messages: no more messages available")
             return
         }
 
         if (_isLoadingMore.value) {
-            EasyLog.log("Cannot load more messages: already loading more")
+            LogUtils.i("Cannot load more messages: already loading more")
             return
         }
 
         if (isQueryingMsgs) {
-            EasyLog.log("Cannot load more messages: already querying messages")
+            LogUtils.i("Cannot load more messages: already querying messages")
             return
         }
 
-        EasyLog.log("Loading more messages, current offset: $currentOffset")
+        LogUtils.i("Loading more messages, current offset: $currentOffset")
         queryMsgs(loadMore = true)
     }
 
@@ -359,14 +350,14 @@ class ChatViewModel : BaseViewModel() {
         // 防抖检查
         val currentTime = System.currentTimeMillis()
         if (currentTime - lastSendTime < SEND_DEBOUNCE_TIME) {
-            EasyLog.log("Send message debounced, ignoring rapid clicks")
+            LogUtils.i("Send message debounced, ignoring rapid clicks")
             return
         }
         lastSendTime = currentTime
 
         // 确保状态正确
         if (_isWaitingForReply.value) {
-            EasyLog.log("Already waiting for reply, ignoring new send request")
+            LogUtils.i("Already waiting for reply, ignoring new send request")
             return
         }
 
@@ -387,7 +378,7 @@ class ChatViewModel : BaseViewModel() {
                 try {
                     val inputMsg = inputData.value
                     if (inputMsg.isBlank()) {
-                        EasyLog.log("Empty message, ignoring send request")
+                        LogUtils.i("Empty message, ignoring send request")
                         return@launchWithNetCheck
                     }
 
@@ -410,15 +401,10 @@ class ChatViewModel : BaseViewModel() {
                             newMsgs.add(msgInfo) // 添加用户消息
                             // 创建当前消息的副本以避免并发修改
                             newMsgs.addAll(currentMsgs.toList())
-                            EasyLog.log(
-                                "Successfully updated messages - new count: ${newMsgs.size}"
-                            )
+                            LogUtils.i("Successfully updated messages - new count: ${newMsgs.size}")
                             newMsgs
                         } catch (e: Exception) {
-                            EasyLog.log(
-                                "Error updating messages list: ${e.message}",
-                                priority = EasyLog.ERROR,
-                            )
+                            LogUtils.e("Error updating messages list: ${e.message}")
                             currentMsgs // 返回原列表，避免数据丢失
                         }
                     }
@@ -457,7 +443,7 @@ class ChatViewModel : BaseViewModel() {
                         )
                         val result = chatApi.sendMsg(agent.id, req)
 
-                        EasyLog.log("sendMsg($agent, $req) -> $result")
+                        LogUtils.i("sendMsg($agent, $req) -> $result")
 
                         // 移除加载消息
                         _msgs.update { currentMsgs ->
@@ -511,10 +497,7 @@ class ChatViewModel : BaseViewModel() {
                                             newMsgs.addAll(currentMsgs.toList())
                                             newMsgs
                                         } catch (e: Exception) {
-                                            EasyLog.log(
-                                                "Error adding AI response: ${e.message}",
-                                                priority = EasyLog.ERROR,
-                                            )
+                                            LogUtils.e("Error adding AI response: ${e.message}")
                                             currentMsgs // 返回原列表，避免数据丢失
                                         }
                                     }
@@ -528,10 +511,7 @@ class ChatViewModel : BaseViewModel() {
                                             IntySetting.setConversationReaded(agent.id, str)
                                         }
                                 }.onFailure {
-                                    EasyLog.log(
-                                        "Error processing AI response: ${it.message}",
-                                        priority = EasyLog.ERROR,
-                                    )
+                                    LogUtils.e("Error processing AI response: ${it.message}")
                                     it.printStackTrace()
                                     // 错误恢复：确保状态正确
                                     _isWaitingForReply.value = false
@@ -565,22 +545,16 @@ class ChatViewModel : BaseViewModel() {
                     } ?: run {
                         // 如果没有 agent 信息，恢复状态
                         _isWaitingForReply.value = false
-                        EasyLog.log(
-                            "No agent info available for sending message",
-                            priority = EasyLog.ERROR,
-                        )
+                        LogUtils.e("No agent info available for sending message")
                     }
                 } catch (e: Exception) {
-                    EasyLog.log(
-                        "Unexpected error in sendMsg: ${e.message}",
-                        priority = EasyLog.ERROR,
-                    )
+                    LogUtils.e("Unexpected error in sendMsg: ${e.message}")
                     _isWaitingForReply.value = false
                     showNetworkAwareError("An unexpected error occurred while sending message")
                 } finally {
                     // 确保状态在最后被正确重置
                     if (_isWaitingForReply.value) {
-                        EasyLog.log("Force reset waiting state due to completion")
+                        LogUtils.i("Force reset waiting state due to completion")
                         _isWaitingForReply.value = false
                     }
                 }
@@ -597,7 +571,7 @@ class ChatViewModel : BaseViewModel() {
         // 防抖检查
         val currentTime = System.currentTimeMillis()
         if (currentTime - lastSendTime < SEND_DEBOUNCE_TIME) {
-            EasyLog.log("Send keep talking message debounced, ignoring rapid clicks")
+            LogUtils.i("Send keep talking message debounced, ignoring rapid clicks")
             return
         }
         lastSendTime = currentTime
@@ -629,7 +603,7 @@ class ChatViewModel : BaseViewModel() {
             agentInfo.value?.let { agent ->
                 val result = chatApi.sendMsg(agent.id, req)
 
-                EasyLog.log("sendKeepTalkingMessage($agent, $req) -> $result")
+                LogUtils.i("sendKeepTalkingMessage($agent, $req) -> $result")
 
                 // 移除加载消息
                 _msgs.update { currentMsgs ->
@@ -669,10 +643,7 @@ class ChatViewModel : BaseViewModel() {
                                 IntySetting.setConversationReaded(agent.id, str)
                             }
                         }.onFailure {
-                            EasyLog.log(
-                                "Error processing keep talking AI response: ${it.message}",
-                                priority = EasyLog.ERROR,
-                            )
+                            LogUtils.e("Error processing keep talking AI response: ${it.message}")
                             it.printStackTrace()
                             // 错误恢复：确保状态正确
                             _isWaitingForReply.value = false
@@ -689,10 +660,7 @@ class ChatViewModel : BaseViewModel() {
                 ?: run {
                     // 如果没有 agent 信息，恢复状态
                     _isWaitingForReply.value = false
-                    EasyLog.log(
-                        "No agent info available for keep talking",
-                        priority = EasyLog.ERROR,
-                    )
+                    LogUtils.e("No agent info available for keep talking")
                 }
         }
     }
@@ -714,7 +682,7 @@ class ChatViewModel : BaseViewModel() {
         when (result) {
             is HttpResult.Failure -> {
                 // 此设置，暂时不用toast显示
-                EasyLog.log(result.message)
+                LogUtils.e(result.message)
                 //                showNetworkAwareError(result.message)
             }
 
@@ -765,9 +733,7 @@ class ChatViewModel : BaseViewModel() {
             currentConversationsPage++
             loadConversations()
         } else {
-            EasyLog.log(
-                "loadMoreConversations - 跳过加载: isLoading=${_isLoadingConversations.value}, hasMoreData=$hasMoreConversations"
-            )
+            LogUtils.d("loadMoreConversations - 跳过加载: isLoading=${_isLoadingConversations.value}, hasMoreData=$hasMoreConversations")
         }
     }
 
@@ -792,17 +758,11 @@ class ChatViewModel : BaseViewModel() {
                     }
 
                     is HttpResult.Failure -> {
-                        EasyLog.log(
-                            "loadConversationsSilently - 第${currentConversationsPage + 1}页加载失败: ${result.message}",
-                            priority = EasyLog.ERROR,
-                        )
+                        LogUtils.e("loadConversationsSilently - 第${currentConversationsPage + 1}页加载失败: ${result.message}")
                     }
                 }
             } catch (e: Exception) {
-                EasyLog.log(
-                    "loadConversationsSilently - 第${currentConversationsPage + 1}页加载异常: ${e.message}",
-                    priority = EasyLog.ERROR,
-                )
+                LogUtils.e("loadConversationsSilently - 第${currentConversationsPage + 1}页加载异常: ${e.message}")
             }
         }
     }
@@ -845,26 +805,20 @@ class ChatViewModel : BaseViewModel() {
                     }
 
                     is HttpResult.Failure -> {
-                        EasyLog.log(
-                            "loadConversations - 第${currentConversationsPage + 1}页加载失败: ${result.message}",
-                            priority = EasyLog.ERROR,
-                        )
+                        LogUtils.e("loadConversations - 第${currentConversationsPage + 1}页加载失败: ${result.message}")
                         // 如果加载失败，回退页码
                         if (currentConversationsPage > 0) {
                             currentConversationsPage--
-                            EasyLog.log("loadConversations - 页码回退到: $currentConversationsPage")
+                            LogUtils.i("loadConversations - 页码回退到: $currentConversationsPage")
                         }
                     }
                 }
             } catch (e: Exception) {
-                EasyLog.log(
-                    "loadConversations - 第${currentConversationsPage + 1}页加载异常: ${e.message}",
-                    priority = EasyLog.ERROR,
-                )
+                LogUtils.e("loadConversations - 第${currentConversationsPage + 1}页加载异常: ${e.message}")
                 // 如果加载失败，回退页码
                 if (currentConversationsPage > 0) {
                     currentConversationsPage--
-                    EasyLog.log("loadConversations - 页码回退到: $currentConversationsPage")
+                    LogUtils.i("loadConversations - 页码回退到: $currentConversationsPage")
                 }
             }
 
@@ -881,7 +835,7 @@ class ChatViewModel : BaseViewModel() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val result = chatApi.getAgentInfo(agentId)
-                EasyLog.log("getAgentInfo = $result")
+                LogUtils.i("getAgentInfo = $result")
                 when (result) {
                     is HttpResult.Success -> {
                         setAgentInfo(result.data)
@@ -892,7 +846,7 @@ class ChatViewModel : BaseViewModel() {
                     }
                 }
             } catch (e: Exception) {
-                EasyLog.log("setAgentID exception: ${e.message}", priority = EasyLog.ERROR)
+                LogUtils.e("setAgentID exception: ${e.message}")
                 handleNetworkException(e)
             }
         }

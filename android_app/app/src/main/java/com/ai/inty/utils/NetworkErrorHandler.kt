@@ -1,6 +1,6 @@
 package com.ai.inty.utils
 
-import com.inty.utils.log.EasyLog
+import ai.sxwl.android.utils.LogUtils
 
 /** 网络错误处理工具类 用于统一处理网络请求错误，避免在无网络情况下频繁显示错误提示 */
 object NetworkErrorHandler {
@@ -33,7 +33,7 @@ object NetworkErrorHandler {
                 if (statusCode != null) append(" -> $statusCode")
                 append(": $errorMessage")
             }
-            EasyLog.log(logMessage, priority = EasyLog.ERROR)
+            LogUtils.e(logMessage)
         }
 
         // 只有在网络连接正常时才显示错误提示
@@ -41,10 +41,7 @@ object NetworkErrorHandler {
             showToast(errorMessage)
         } else {
             // 网络未连接时，只在日志中记录，不显示 Toast
-            EasyLog.log(
-                "Network error suppressed (no network): $errorMessage",
-                priority = EasyLog.WARN,
-            )
+            LogUtils.w("Network error suppressed (no network): $errorMessage")
         }
     }
 
@@ -75,8 +72,8 @@ object NetworkErrorHandler {
                 if (requestUrl != null) append(" $requestUrl")
                 append(": ${exception.message}")
             }
-            EasyLog.log(logMessage, priority = EasyLog.ERROR)
-            EasyLog.log(exception)
+            LogUtils.e(logMessage)
+            LogUtils.e(exception)
         }
 
         // 只有在网络连接正常时才显示错误提示
@@ -85,10 +82,7 @@ object NetworkErrorHandler {
             showToast(errorMessage)
         } else {
             // 网络未连接时，只在日志中记录，不显示 Toast
-            EasyLog.log(
-                "Network exception suppressed (no network): ${exception.message}",
-                priority = EasyLog.WARN,
-            )
+            LogUtils.w("Network exception suppressed (no network): ${exception.message}")
         }
     }
 
@@ -99,7 +93,7 @@ object NetworkErrorHandler {
      * @return 用户友好的错误信息
      */
     private fun getErrorMessageFromException(exception: Exception): String {
-        EasyLog.log("getErrorMessageFromException = ${exception.message}")
+        LogUtils.i("getErrorMessageFromException = ${exception.message}")
         return when {
             exception.message?.contains("timeout", ignoreCase = true) == true ->
                 "Request timeout, please try again later"

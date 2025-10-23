@@ -1,7 +1,7 @@
 package com.architecture.httplib.core
 
+import ai.sxwl.android.utils.LogUtils
 import com.architecture.httplib.error.BusinessException
-import com.inty.utils.log.EasyLog
 import com.squareup.moshi.JsonAdapter
 import com.squareup.moshi.JsonReader
 import com.squareup.moshi.JsonWriter
@@ -114,7 +114,7 @@ class MoshiResultTypeAdapterFactory(private val httpWrapper: HttpWrapper?) : Jso
                             try {
                                 data = dataTypeAdapter.fromJson(reader)
                             } catch (e: Exception) {
-                                EasyLog.log(e, priority = EasyLog.WARN)
+                                LogUtils.e(e.message)
                                 data = reader.nextString()
                                 reader.skipValue()
                             }

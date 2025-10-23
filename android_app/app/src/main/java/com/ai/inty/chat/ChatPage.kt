@@ -1,5 +1,6 @@
 package com.ai.inty.chat
 
+import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.ToastUtils
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -60,7 +61,6 @@ import com.ai.inty.ui.ChatDialogData
 import com.ai.inty.ui.UnlimitChatDialog
 import com.ai.inty.ui.components.AgentBackground
 import com.ai.inty.utils.TrackScreenView
-import com.inty.utils.log.EasyLog
 import com.inty.utils.storage.IntySetting
 import kotlinx.coroutines.launch
 
@@ -468,7 +468,7 @@ internal fun ChatPage(
                             val shouldLoadMore = hasEnoughData && isNearTop && hasScrolled
 
                             if (shouldLoadMore && hasMoreMessages && !isLoadingMore) {
-                                EasyLog.log("Triggering smart load more messages")
+                                LogUtils.i("Triggering smart load more messages")
                                 chatViewModel.loadMoreMessages()
                             }
                         }

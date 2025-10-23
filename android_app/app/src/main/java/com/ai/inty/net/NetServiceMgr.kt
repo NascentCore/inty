@@ -1,6 +1,7 @@
 package com.ai.inty.net
 
 import ai.sxwl.android.utils.AppUtils
+import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.Utils
 import com.ai.inty.BuildConfig
 import com.ai.inty.Constant
@@ -12,7 +13,6 @@ import com.architecture.httplib.core.MoshiResultTypeAdapterFactory
 import com.architecture.httplib.error.GlobalErrorHandler
 import com.chuckerteam.chucker.api.ChuckerInterceptor
 import com.google.firebase.perf.metrics.HttpMetric
-import com.inty.utils.log.EasyLog
 import com.inty.utils.storage.IntySetting
 import com.jakewharton.retrofit2.adapter.kotlin.coroutines.CoroutineCallAdapterFactory
 import com.squareup.moshi.DefaultIfNullFactory
@@ -42,7 +42,7 @@ private fun getBaseUrl(): String {
 
 private class AuthInterceptor : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
-        EasyLog.log("AuthInterceptor - getCurToken: ${IntySetting.getCurToken()}")
+        LogUtils.i("AuthInterceptor - getCurToken: ${IntySetting.getCurToken()}")
         val request =
             chain
                 .request()
@@ -53,12 +53,12 @@ private class AuthInterceptor : Interceptor {
                 .addHeader("Authorization", "Bearer ${IntySetting.getCurToken()}")
                 .build()
 
-        EasyLog.log("request = $request")
+        LogUtils.i("request = $request")
         val response = chain.proceed(request)
 
         when (response.code) {
             401 -> {
-                EasyLog.log("http 401 for ${request.url}", EasyLog.ERROR)
+                LogUtils.e("http 401 for ${request.url}")
 
                 // Firebase Analytics - 记录认证失败
                 FirebaseManager.logEvent(
@@ -86,9 +86,9 @@ private class AuthInterceptor : Interceptor {
 
                 // 检查是否正在退出登录过程中，避免重复重启
                 if (IntySetting.isLoggingOut()) {
-                    EasyLog.log("Ignoring 401 during logout process")
+                    LogUtils.i("Ignoring 401 during logout process")
                 } else {
-                    EasyLog.log("401 unauthorized - switching to guest mode", EasyLog.ERROR)
+                    LogUtils.e("401 unauthorized - switching to guest mode")
                     IntySetting.logout()
                     AppUtils.relaunchApp(true)
                 }
@@ -136,9 +136,7 @@ private class RetryInterceptor(private val maxRetries: Int = 3) : Interceptor {
 
                 // 检查响应是否应该重试
                 if (shouldRetryResponse(currentResponse, attempt)) {
-                    EasyLog.log(
-                        "Retry attempt ${attempt + 1} for ${request.url} due to status ${currentResponse.code}"
-                    )
+                    LogUtils.d("Retry attempt ${attempt + 1} for ${request.url} due to status ${currentResponse.code}")
 
                     // 记录重试事件
                     recordRetryEvent(request, attempt + 1, currentResponse.code, null)
@@ -159,7 +157,7 @@ private class RetryInterceptor(private val maxRetries: Int = 3) : Interceptor {
 
                 // 检查异常是否应该重试
                 if (shouldRetryException(e, attempt)) {
-                    EasyLog.log("Retry attempt ${attempt + 1} failed for ${request.url}: ${e.message}")
+                    LogUtils.i("Retry attempt ${attempt + 1} failed for ${request.url}: ${e.message}")
 
                     // 记录重试事件
                     recordRetryEvent(request, attempt + 1, null, e)
@@ -251,7 +249,7 @@ private class RetryInterceptor(private val maxRetries: Int = 3) : Interceptor {
             )
         } catch (e: Exception) {
             // Firebase记录失败不应该影响重试逻辑
-            EasyLog.log("Failed to record retry event: ${e.message}", EasyLog.WARN)
+            LogUtils.w("Failed to record retry event: ${e.message}")
         }
     }
 
@@ -263,10 +261,7 @@ private class RetryInterceptor(private val maxRetries: Int = 3) : Interceptor {
         maxRetries: Int,
         lastException: Exception?
     ) {
-        EasyLog.log(
-            "All retry attempts failed for ${request.url} after $maxRetries attempts",
-            EasyLog.ERROR
-        )
+        LogUtils.e("All retry attempts failed for ${request.url} after $maxRetries attempts")
 
         try {
             // Firebase Analytics - 记录网络请求最终失败
@@ -291,7 +286,7 @@ private class RetryInterceptor(private val maxRetries: Int = 3) : Interceptor {
             }
         } catch (e: Exception) {
             // Firebase记录失败不应该影响重试逻辑
-            EasyLog.log("Failed to record final failure: ${e.message}", EasyLog.WARN)
+            LogUtils.w("Failed to record final failure: ${e.message}")
         }
     }
 }
@@ -315,7 +310,7 @@ private class PerformanceInterceptor : Interceptor {
 
         // 记录请求开始（仅在调试模式下）
         if (BuildConfig.DEBUG) {
-            EasyLog.log("🌐 Starting request: ${request.method} ${request.url}")
+            LogUtils.i("🌐 Starting request: ${request.method} ${request.url}")
         }
 
         return try {
@@ -355,7 +350,7 @@ private class PerformanceInterceptor : Interceptor {
             FirebasePerformanceHelper.createHttpMetric(request)
         } catch (e: Exception) {
             // 性能监控失败不应该影响业务请求
-            EasyLog.log("Failed to create HTTP metric: ${e.message}", EasyLog.WARN)
+            LogUtils.w("Failed to create HTTP metric: ${e.message}")
             null
         }
     }
@@ -370,7 +365,7 @@ private class PerformanceInterceptor : Interceptor {
             FirebasePerformanceHelper.startHttpMetric(httpMetric)
         } catch (e: Exception) {
             // 性能监控失败不应该影响业务请求
-            EasyLog.log("Failed to start HTTP metric: ${e.message}", EasyLog.WARN)
+            LogUtils.w("Failed to start HTTP metric: ${e.message}")
         }
     }
 
@@ -384,7 +379,7 @@ private class PerformanceInterceptor : Interceptor {
             FirebasePerformanceHelper.stopHttpMetric(httpMetric, response)
         } catch (e: Exception) {
             // 性能监控失败不应该影响业务请求
-            EasyLog.log("Failed to stop HTTP metric: ${e.message}", EasyLog.WARN)
+            LogUtils.w("Failed to stop HTTP metric: ${e.message}")
         }
     }
 
@@ -402,15 +397,12 @@ private class PerformanceInterceptor : Interceptor {
                 when {
                     duration < FAST_REQUEST_THRESHOLD -> {
                         if (BuildConfig.DEBUG) {
-                            EasyLog.log("✅ Fast request: ${request.method} ${request.url} (${duration}ms)")
+                            LogUtils.i("✅ Fast request: ${request.method} ${request.url} (${duration}ms)")
                         }
                     }
 
                     duration < SLOW_REQUEST_THRESHOLD -> {
-                        EasyLog.log(
-                            "⚠️ Slow request: ${request.method} ${request.url} (${duration}ms)",
-                            EasyLog.WARN
-                        )
+                        LogUtils.w("⚠️ Slow request: ${request.method} ${request.url} (${duration}ms)")
 
                         // Firebase Analytics - 记录慢请求
                         FirebaseManager.logEvent(
@@ -424,10 +416,7 @@ private class PerformanceInterceptor : Interceptor {
                     }
 
                     else -> {
-                        EasyLog.log(
-                            "🚨 Very slow request: ${request.method} ${request.url} (${duration}ms)",
-                            EasyLog.ERROR
-                        )
+                        LogUtils.e("🚨 Very slow request: ${request.method} ${request.url} (${duration}ms)")
 
                         // Firebase Analytics - 记录极慢请求
                         FirebaseManager.logEvent(
@@ -447,7 +436,7 @@ private class PerformanceInterceptor : Interceptor {
             }
         } catch (e: Exception) {
             // 性能记录失败不应该影响业务请求
-            EasyLog.log("Failed to record performance metrics: ${e.message}", EasyLog.WARN)
+            LogUtils.w("Failed to record performance metrics: ${e.message}")
         }
     }
 
@@ -462,10 +451,7 @@ private class PerformanceInterceptor : Interceptor {
         try {
             // 使用线程池异步记录失败指标
             NetServiceMgr.performanceExecutor.execute {
-                EasyLog.log(
-                    "❌ Request failed: ${request.method} ${request.url} (${duration}ms): ${exception.message}",
-                    EasyLog.ERROR
-                )
+                LogUtils.e("❌ Request failed: ${request.method} ${request.url} (${duration}ms): ${exception.message}")
 
                 // Firebase Analytics - 记录请求失败
                 FirebaseManager.logEvent(
@@ -485,7 +471,7 @@ private class PerformanceInterceptor : Interceptor {
             }
         } catch (e: Exception) {
             // 性能记录失败不应该影响业务请求
-            EasyLog.log("Failed to record failure metrics: ${e.message}", EasyLog.WARN)
+            LogUtils.w("Failed to record failure metrics: ${e.message}")
         }
     }
 }

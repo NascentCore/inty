@@ -1,7 +1,7 @@
 package com.ai.inty.billing
 
+import ai.sxwl.android.utils.LogUtils
 import com.architecture.httplib.utils.MoshiUtils
-import com.inty.utils.log.EasyLog
 import com.inty.utils.storage.IntySetting
 
 /** 计费本地存储管理类 */
@@ -16,10 +16,7 @@ internal object BillingStorage {
             val json = MoshiUtils.toJson(vipStatus)
             IntySetting.setUserProfileData(KEY_VIP_STATUS, json)
         } catch (e: Exception) {
-            EasyLog.log(
-                "BillingRepository BillingStorage 保存本地会员状态失败: ${e.message}",
-                EasyLog.ERROR
-            )
+            LogUtils.e("保存本地会员状态失败: ${e.message}")
         }
     }
 
@@ -32,10 +29,7 @@ internal object BillingStorage {
             try {
                 MoshiUtils.fromJson<VipStatus>(vipStatusStr) ?: VipStatus(isSubscribed = false)
             } catch (e: Exception) {
-                EasyLog.log(
-                    "BillingRepository BillingStorage 解析本地会员状态失败: ${e.message}",
-                    EasyLog.ERROR
-                )
+                LogUtils.e("解析本地会员状态失败: ${e.message}")
                 VipStatus(isSubscribed = false)
             }
         }
@@ -50,7 +44,7 @@ internal object BillingStorage {
             val json = adapter.toJson(plans) ?: ""
             IntySetting.setUserProfileData(KEY_SUBSCRIPTION_PLANS, json)
         } catch (e: Exception) {
-            EasyLog.log("BillingRepository BillingStorage 保存本地订阅计划失败: ${e.message}")
+            LogUtils.w("保存本地订阅计划失败: ${e.message}")
         }
     }
 
@@ -69,15 +63,13 @@ internal object BillingStorage {
                 val adapter = MoshiUtils.moshiBuild.adapter<List<VipPlan>>(type)
                 adapter.fromJson(plansStr) ?: emptyList()
             } catch (e: Exception) {
-                EasyLog.log("BillingRepository BillingStorage 解析本地订阅计划失败: ${e.message}")
+                LogUtils.w("解析本地订阅计划失败: ${e.message}")
 
                 // 如果解析失败，清除损坏的缓存数据
                 try {
                     IntySetting.setUserProfileData(KEY_SUBSCRIPTION_PLANS, "")
                 } catch (clearException: Exception) {
-                    EasyLog.log(
-                        "BillingRepository BillingStorage 清除缓存数据失败: ${clearException.message}"
-                    )
+                    LogUtils.e("清除缓存数据失败: ${clearException.message}")
                 }
 
                 emptyList()

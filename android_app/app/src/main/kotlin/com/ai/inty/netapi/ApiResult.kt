@@ -1,6 +1,6 @@
 package com.ai.inty.netapi
 
-import com.inty.utils.log.EasyLog
+import ai.sxwl.android.utils.LogUtils
 
 /** 统一的API响应结果包装器 提供统一的成功/失败状态和错误处理 */
 sealed class ApiResult<out T> {
@@ -12,7 +12,7 @@ sealed class ApiResult<out T> {
 
 /** 将异常转换为ApiResult */
 fun <T> Exception.toApiResult(): ApiResult<T> {
-    EasyLog.log("API exception: ${this.message}", EasyLog.ERROR)
+    LogUtils.e("API exception: ${this.message}")
     return ApiResult.Error(code = -1, message = this.message ?: "Unknown error", exception = this)
 }
 

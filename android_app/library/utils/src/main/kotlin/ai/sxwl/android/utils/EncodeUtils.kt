@@ -44,9 +44,17 @@ object EncodeUtils {
      */
     fun urlDecode(input: String?, charsetName: String): String {
         if (input.isNullOrEmpty()) return ""
-        return try {
-            val safeInput = input.replace("%(?![0-9a-fA-F]{2})".toRegex(), "%25")
+
+        // 安全处理输入字符串，避免正则表达式异常
+        val safeInput = try {
+            input.replace("%(?![0-9a-fA-F]{2})".toRegex(), "%25")
                 .replace("\\+".toRegex(), "%2B")
+        } catch (e: Exception) {
+            // 如果正则处理失败，直接使用原始输入
+            input
+        }
+
+        return try {
             URLDecoder.decode(safeInput, charsetName)
         } catch (e: UnsupportedEncodingException) {
             // 使用UTF-8作为降级方案

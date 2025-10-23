@@ -1,5 +1,6 @@
 package com.ai.inty.utils
 
+import ai.sxwl.android.utils.LogUtils
 import android.content.Context
 import androidx.credentials.ClearCredentialStateRequest
 import androidx.credentials.CredentialManager
@@ -9,7 +10,6 @@ import androidx.credentials.exceptions.GetCredentialException
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
-import com.inty.utils.log.EasyLog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -41,8 +41,8 @@ object CredentialManagerHelper {
                 // GetSignInWithGoogleOption 用于触发“使用 Google 账号登录”按钮流程
                 val signInWithGoogleOption =
                     GetSignInWithGoogleOption.Builder(
-                            serverClientId = com.ai.inty.BuildConfig.WEB_CLIENT_ID
-                        )
+                        serverClientId = com.ai.inty.BuildConfig.WEB_CLIENT_ID
+                    )
                         .build()
 
                 // 创建获取凭证请求
@@ -58,10 +58,10 @@ object CredentialManagerHelper {
                 handleSignInWithGoogleResponse(response)
             }
         } catch (e: GetCredentialException) {
-            EasyLog.log("Credential Manager sign-in failed: ${e.message}", EasyLog.ERROR)
+            LogUtils.e("Credential Manager sign-in failed: ${e.message}")
             Result.failure(e)
         } catch (e: Exception) {
-            EasyLog.log("Unexpected error during sign-in: ${e.message}", EasyLog.ERROR)
+            LogUtils.e("Unexpected error during sign-in: ${e.message}")
             Result.failure(e)
         }
     }
@@ -85,30 +85,25 @@ object CredentialManagerHelper {
                             val googleIdTokenCredential =
                                 GoogleIdTokenCredential.createFrom(credential.data)
                             val idToken = googleIdTokenCredential.idToken
-                            EasyLog.log("Google Sign-In successful via GetSignInWithGoogleOption")
+                            LogUtils.i("Google Sign-In successful via GetSignInWithGoogleOption")
                             Result.success(idToken)
                         } catch (e: GoogleIdTokenParsingException) {
-                            EasyLog.log(
-                                "Received an invalid google id token response",
-                                EasyLog.ERROR,
-                            )
+                            LogUtils.e("Received an invalid google id token response")
                             Result.failure(Exception("Invalid Google ID token"))
                         }
                     } else {
-                        EasyLog.log("Unexpected type of credential: ${credential.type}")
+                        LogUtils.i("Unexpected type of credential: ${credential.type}")
                         Result.failure(Exception("Unexpected credential type"))
                     }
                 }
 
                 else -> {
-                    EasyLog.log(
-                        "Unexpected type of credential: ${credential::class.java.simpleName}"
-                    )
+                    LogUtils.e("Unexpected type of credential: ${credential::class.java.simpleName}")
                     Result.failure(Exception("Unexpected credential type"))
                 }
             }
         } catch (e: Exception) {
-            EasyLog.log("Error handling credential response: ${e.message}", EasyLog.ERROR)
+            LogUtils.e("Error handling credential response: ${e.message}")
             Result.failure(e)
         }
     }
@@ -121,9 +116,9 @@ object CredentialManagerHelper {
         try {
             val credentialManager = CredentialManager.create(context)
             credentialManager.clearCredentialState(ClearCredentialStateRequest())
-            EasyLog.log("Credential state cleared successfully")
+            LogUtils.i("Credential state cleared successfully")
         } catch (e: Exception) {
-            EasyLog.log("Error clearing credential state: ${e.message}", EasyLog.ERROR)
+            LogUtils.e("Error clearing credential state: ${e.message}")
         }
     }
 }

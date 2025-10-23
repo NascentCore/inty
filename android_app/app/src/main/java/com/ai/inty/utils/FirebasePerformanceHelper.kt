@@ -1,9 +1,9 @@
 package com.ai.inty.utils
 
+import ai.sxwl.android.utils.LogUtils
 import com.google.firebase.perf.FirebasePerformance
 import com.google.firebase.perf.metrics.HttpMetric
 import com.google.firebase.perf.metrics.Trace
-import com.inty.utils.log.EasyLog
 import okhttp3.Request
 import okhttp3.Response
 
@@ -26,10 +26,7 @@ object FirebasePerformanceHelper {
             trace.start()
             trace
         } catch (e: Exception) {
-            EasyLog.log(
-                "Firebase Performance: Failed to start trace '$traceName': ${e.message}",
-                EasyLog.ERROR,
-            )
+            LogUtils.e("Firebase Performance: Failed to start trace '$traceName': ${e.message}")
             null
         }
     }
@@ -43,7 +40,7 @@ object FirebasePerformanceHelper {
         try {
             trace?.stop()
         } catch (e: Exception) {
-            EasyLog.log("Firebase Performance: Failed to stop trace: ${e.message}", EasyLog.ERROR)
+            LogUtils.e("Firebase Performance: Failed to stop trace: ${e.message}")
         }
     }
 
@@ -58,10 +55,7 @@ object FirebasePerformanceHelper {
         try {
             trace?.putAttribute(attributeName, value)
         } catch (e: Exception) {
-            EasyLog.log(
-                "Firebase Performance: Failed to put attribute '$attributeName': ${e.message}",
-                EasyLog.ERROR,
-            )
+            LogUtils.e("Firebase Performance: Failed to put attribute '$attributeName': ${e.message}")
         }
     }
 
@@ -76,10 +70,7 @@ object FirebasePerformanceHelper {
         try {
             trace?.putMetric(metricName, value)
         } catch (e: Exception) {
-            EasyLog.log(
-                "Firebase Performance: Failed to put metric '$metricName': ${e.message}",
-                EasyLog.ERROR,
-            )
+            LogUtils.e("Firebase Performance: Failed to put metric '$metricName': ${e.message}")
         }
     }
 
@@ -111,18 +102,12 @@ object FirebasePerformanceHelper {
                     httpMetric.putAttribute("endpoint", path)
                 }
             } catch (e: Exception) {
-                EasyLog.log(
-                    "Firebase Performance: Failed to set HTTP metric attributes: ${e.message}",
-                    EasyLog.WARN,
-                )
+                LogUtils.w("Firebase Performance: Failed to set HTTP metric attributes: ${e.message}")
             }
-            
+
             httpMetric
         } catch (e: Exception) {
-            EasyLog.log(
-                "Firebase Performance: Failed to create HTTP metric: ${e.message}",
-                EasyLog.ERROR,
-            )
+            LogUtils.e("Firebase Performance: Failed to create HTTP metric: ${e.message}")
             null
         }
     }
@@ -136,10 +121,7 @@ object FirebasePerformanceHelper {
         try {
             httpMetric?.start()
         } catch (e: Exception) {
-            EasyLog.log(
-                "Firebase Performance: Failed to start HTTP metric: ${e.message}",
-                EasyLog.ERROR,
-            )
+            LogUtils.e("Firebase Performance: Failed to start HTTP metric: ${e.message}")
         }
     }
 
@@ -162,10 +144,7 @@ object FirebasePerformanceHelper {
                         try {
                             httpMetric.setResponsePayloadSize(contentLength.toLong())
                         } catch (e: NumberFormatException) {
-                            EasyLog.log(
-                                "Firebase Performance: Invalid Content-Length header: $contentLength",
-                                EasyLog.WARN,
-                            )
+                            LogUtils.w("Firebase Performance: Invalid Content-Length header: $contentLength")
                         }
                     }
 
@@ -199,10 +178,7 @@ object FirebasePerformanceHelper {
                             httpMetric.putAttribute("server_response_time", responseTime)
                         }
                     } catch (e: Exception) {
-                        EasyLog.log(
-                            "Firebase Performance: Failed to set response attributes: ${e.message}",
-                            EasyLog.WARN,
-                        )
+                        LogUtils.w("Firebase Performance: Failed to set response attributes: ${e.message}")
                     }
                 } else {
                     // 请求失败时设置错误响应码
@@ -215,10 +191,7 @@ object FirebasePerformanceHelper {
                 httpMetric.stop()
             }
         } catch (e: Exception) {
-            EasyLog.log(
-                "Firebase Performance: Failed to stop HTTP metric: ${e.message}",
-                EasyLog.ERROR,
-            )
+            LogUtils.e("Firebase Performance: Failed to stop HTTP metric: ${e.message}")
         }
     }
 

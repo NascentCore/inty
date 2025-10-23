@@ -1,7 +1,7 @@
 package com.ai.inty.utils
 
+import ai.sxwl.android.utils.LogUtils
 import com.ai.inty.beans.AgentInfo
-import com.inty.utils.log.EasyLog
 import com.inty.utils.storage.IntySetting
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.Types
@@ -31,9 +31,9 @@ object AgentCacheManager {
                 KEY_CACHE_TIMESTAMP,
                 System.currentTimeMillis().toString(),
             )
-            EasyLog.log("AgentCacheManager - 缓存推荐agents成功: ${agents.size}个")
+            LogUtils.i("AgentCacheManager - 缓存推荐agents成功: ${agents.size}个")
         } catch (e: Exception) {
-            EasyLog.log("AgentCacheManager - 缓存推荐agents失败: ${e.message}", EasyLog.ERROR)
+            LogUtils.e("AgentCacheManager - 缓存推荐agents失败: ${e.message}")
         }
     }
 
@@ -45,11 +45,11 @@ object AgentCacheManager {
                 emptyList()
             } else {
                 val agents = agentListAdapter.fromJson(agentsJson) ?: emptyList()
-                EasyLog.log("AgentCacheManager - 获取缓存推荐agents: ${agents.size}个")
+                LogUtils.i("AgentCacheManager - 获取缓存推荐agents: ${agents.size}个")
                 agents
             }
         } catch (e: Exception) {
-            EasyLog.log("AgentCacheManager - 获取缓存推荐agents失败: ${e.message}", EasyLog.ERROR)
+            LogUtils.e("AgentCacheManager - 获取缓存推荐agents失败: ${e.message}")
             emptyList()
         }
     }
@@ -63,9 +63,9 @@ object AgentCacheManager {
                 KEY_CHAT_CACHE_TIMESTAMP,
                 System.currentTimeMillis().toString(),
             )
-            EasyLog.log("AgentCacheManager - 缓存聊天agents成功: ${agents.size}个")
+            LogUtils.i("AgentCacheManager - 缓存聊天agents成功: ${agents.size}个")
         } catch (e: Exception) {
-            EasyLog.log("AgentCacheManager - 缓存聊天agents失败: ${e.message}", EasyLog.ERROR)
+            LogUtils.e("AgentCacheManager - 缓存聊天agents失败: ${e.message}")
         }
     }
 
@@ -77,11 +77,11 @@ object AgentCacheManager {
                 emptyList()
             } else {
                 val agents = agentListAdapter.fromJson(agentsJson) ?: emptyList()
-                EasyLog.log("AgentCacheManager - 获取缓存聊天agents: ${agents.size}个")
+                LogUtils.i("AgentCacheManager - 获取缓存聊天agents: ${agents.size}个")
                 agents
             }
         } catch (e: Exception) {
-            EasyLog.log("AgentCacheManager - 获取缓存聊天agents失败: ${e.message}", EasyLog.ERROR)
+            LogUtils.e("AgentCacheManager - 获取缓存聊天agents失败: ${e.message}")
             emptyList()
         }
     }
@@ -97,10 +97,10 @@ object AgentCacheManager {
             val timestamp = timestampStr.toLong()
             val currentTime = System.currentTimeMillis()
             val isExpired = (currentTime - timestamp) > CACHE_EXPIRY_TIME
-            EasyLog.log("AgentCacheManager - 缓存过期检查: ${if (isExpired) "已过期" else "未过期"}")
+            LogUtils.d("AgentCacheManager - 缓存过期检查: ${if (isExpired) "已过期" else "未过期"}")
             isExpired
         } catch (e: Exception) {
-            EasyLog.log("AgentCacheManager - 检查缓存过期失败: ${e.message}", EasyLog.ERROR)
+            LogUtils.e("AgentCacheManager - 检查缓存过期失败: ${e.message}")
             true
         }
     }
@@ -112,9 +112,9 @@ object AgentCacheManager {
             val recommendedAgents = getCachedAgents().toMutableList()
             recommendedAgents.removeAll { it.id == agentId }
             cacheAgents(recommendedAgents)
-            EasyLog.log("AgentCacheManager - 从缓存移除agent: $agentId")
+            LogUtils.i("AgentCacheManager - 从缓存移除agent: $agentId")
         } catch (e: Exception) {
-            EasyLog.log("AgentCacheManager - 从缓存移除agent失败: ${e.message}", EasyLog.ERROR)
+            LogUtils.e("AgentCacheManager - 从缓存移除agent失败: ${e.message}")
         }
     }
 
@@ -126,9 +126,9 @@ object AgentCacheManager {
             IntySetting.setUserProfileData(KEY_FOLLOWING_AGENTS, "")
             IntySetting.setUserProfileData(KEY_CACHE_TIMESTAMP, "")
             IntySetting.setUserProfileData(KEY_CHAT_CACHE_TIMESTAMP, "")
-            EasyLog.log("AgentCacheManager - 缓存已清理")
+            LogUtils.i("AgentCacheManager - 缓存已清理")
         } catch (e: Exception) {
-            EasyLog.log("AgentCacheManager - 清理缓存失败: ${e.message}", EasyLog.ERROR)
+            LogUtils.e("AgentCacheManager - 清理缓存失败: ${e.message}")
         }
     }
 

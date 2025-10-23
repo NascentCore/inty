@@ -1,5 +1,6 @@
 package com.ai.inty.viewmodels
 
+import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.ToastUtils
 import ai.sxwl.android.utils.Utils
 import androidx.compose.runtime.mutableStateListOf
@@ -22,7 +23,6 @@ import com.ai.inty.utils.IntyUserProfileSDK
 import com.ai.inty.utils.UnifiedStartupManager
 import com.ai.inty.utils.UserProfileManager
 import com.architecture.httplib.core.HttpResult
-import com.inty.utils.log.EasyLog
 import com.inty.utils.storage.IntySetting
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -83,7 +83,7 @@ class MainViewModel : BaseViewModel() {
         val startupUserProfile = UnifiedStartupManager.getCurrentUserProfile()
         if (startupUserProfile != null) {
             _userProfile.value = startupUserProfile
-            EasyLog.log("MainViewModel - 使用启动管理器用户信息: ${startupUserProfile.nickname}")
+            LogUtils.i("MainViewModel - 使用启动管理器用户信息: ${startupUserProfile.nickname}")
         }
     }
 
@@ -102,10 +102,7 @@ class MainViewModel : BaseViewModel() {
         // 防止数组越界，确保tab索引在有效范围内
         val tabEntries = HomeTabIndex.entries.toTypedArray()
         if (tab < 0 || tab >= tabEntries.size) {
-            EasyLog.log(
-                "selectTab - 无效的tab索引: $tab, 有效范围: 0-${tabEntries.size - 1}",
-                priority = EasyLog.ERROR,
-            )
+            LogUtils.e("selectTab - 无效的tab索引: $tab, 有效范围: 0-${tabEntries.size - 1}")
             return
         }
 
@@ -136,7 +133,7 @@ class MainViewModel : BaseViewModel() {
                 com.ai.inty.audio.AudioManager.getInstance(Utils.getApp(), viewModelScope)
             audioManager.stopAllPlayback()
         } catch (e: Exception) {
-            EasyLog.log("MainViewModel - 停止音频播放失败: ${e.message}", EasyLog.ERROR)
+            LogUtils.e("MainViewModel - 停止音频播放失败: ${e.message}")
         }
     }
 
@@ -157,12 +154,12 @@ class MainViewModel : BaseViewModel() {
                     _userProfile.value = userProfile
                     // 更新本地缓存
                     UserProfileManager.saveUserProfile(userProfile)
-                    EasyLog.log("Updated user profile from server: $userProfile")
+                    LogUtils.i("Updated user profile from server: $userProfile")
                 } else {
-                    EasyLog.log("getUserProfile failure: Failed to get user profile", EasyLog.ERROR)
+                    LogUtils.e("getUserProfile failure: Failed to get user profile")
                 }
             } catch (e: Exception) {
-                EasyLog.log("getUserProfile exception: ${e.message}", priority = EasyLog.ERROR)
+                LogUtils.e("getUserProfile exception: ${e.message}")
             }
         }
     }
@@ -183,27 +180,22 @@ class MainViewModel : BaseViewModel() {
                 }
 
                 if (!BillingRepository.isInitialized()) {
-                    EasyLog.log("BillingRepository MainViewModel BillingRepository 初始化超时，跳过更新")
+                    LogUtils.i("BillingRepository MainViewModel BillingRepository 初始化超时，跳过更新")
                     return@launch
                 }
 
                 // 检查BillingRepository是否已连接
                 if (!BillingRepository.isConnected()) {
-                    EasyLog.log("BillingRepository MainViewModel BillingRepository 未连接，跳过更新")
+                    LogUtils.i("BillingRepository MainViewModel BillingRepository 未连接，跳过更新")
                     return@launch
                 }
 
                 BillingRepository.fetchRemote()
             } catch (e: kotlinx.coroutines.CancellationException) {
-                EasyLog.log(
-                    "BillingRepository MainViewModel Member status update cancelled: ${e.message}"
-                )
+                LogUtils.e("BillingRepository MainViewModel Member status update cancelled: ${e.message}")
                 // 协程被取消是正常情况，不需要特殊处理
             } catch (e: Exception) {
-                EasyLog.log(
-                    "BillingRepository MainViewModel Member status update failed: ${e.message}",
-                    EasyLog.ERROR,
-                )
+                LogUtils.e("BillingRepository MainViewModel Member status update failed: ${e.message}")
                 // 不影响主流程，静默处理
             }
         }
@@ -244,31 +236,21 @@ class MainViewModel : BaseViewModel() {
                     is HttpResult.Success -> {
                         if (result.data.isEmpty()) {
                             hasMoreUserAgents = false
-                            EasyLog.log(
-                                "loadUserCreatedAgentsSilently - No more user created agents to load"
-                            )
+                            LogUtils.d("loadUserCreatedAgentsSilently - No more user created agents to load")
                         } else {
                             // 静默更新数据，直接替换
                             userCreatedAgents.clear()
                             userCreatedAgents.addAll(result.data)
-                            EasyLog.log(
-                                "loadUserCreatedAgentsSilently - 静默更新数据: ${result.data.size}个"
-                            )
+                            LogUtils.d("loadUserCreatedAgentsSilently - 静默更新数据: ${result.data.size}个")
                         }
                     }
 
                     is HttpResult.Failure -> {
-                        EasyLog.log(
-                            "loadUserCreatedAgentsSilently - API failure: ${result.message}",
-                            priority = EasyLog.ERROR,
-                        )
+                        LogUtils.e("loadUserCreatedAgentsSilently - API failure: ${result.message}")
                     }
                 }
             } catch (e: Exception) {
-                EasyLog.log(
-                    "loadUserCreatedAgentsSilently exception: ${e.message}",
-                    priority = EasyLog.ERROR,
-                )
+                LogUtils.e("loadUserCreatedAgentsSilently exception: ${e.message}")
             } finally {
                 _isRefreshingUserAgents.value = false
             }
@@ -294,22 +276,17 @@ class MainViewModel : BaseViewModel() {
                                 // 第一页，直接替换（这里才清空并替换数据）
                                 userCreatedAgents.clear()
                                 userCreatedAgents.addAll(result.data)
-                                EasyLog.log("loadUserCreatedAgents - 替换第一页数据: ${result.data.size}个")
+                                LogUtils.i("loadUserCreatedAgents - 替换第一页数据: ${result.data.size}个")
                             } else {
                                 // 后续页，追加到现有列表
                                 userCreatedAgents.addAll(result.data)
-                                EasyLog.log(
-                                    "loadUserCreatedAgents - 追加第${currentUserAgentsPage + 1}页数据: ${result.data.size}个，总计: ${userCreatedAgents.size}个"
-                                )
+                                LogUtils.d("loadUserCreatedAgents - 追加第${currentUserAgentsPage + 1}页数据: ${result.data.size}个，总计: ${userCreatedAgents.size}个")
                             }
                         }
                     }
 
                     is HttpResult.Failure -> {
-                        EasyLog.log(
-                            "loadUserCreatedAgents - API failure: ${result.message}",
-                            priority = EasyLog.ERROR,
-                        )
+                        LogUtils.e("loadUserCreatedAgents - API failure: ${result.message}")
                         //                        showNetworkAwareError(result.message)
                         // If loading failed, rollback page counter
                         if (currentUserAgentsPage > 0) {
@@ -318,10 +295,7 @@ class MainViewModel : BaseViewModel() {
                     }
                 }
             } catch (e: Exception) {
-                EasyLog.log(
-                    "loadUserCreatedAgents exception: ${e.message}",
-                    priority = EasyLog.ERROR,
-                )
+                LogUtils.e("loadUserCreatedAgents exception: ${e.message}")
                 // If loading failed, rollback page counter
                 if (currentUserAgentsPage > 0) {
                     currentUserAgentsPage--
@@ -337,7 +311,7 @@ class MainViewModel : BaseViewModel() {
             if (!_isLoadingUserAgents.value && !_isRefreshingUserAgents.value) {
                 getUserCreatedAgents()
             } else {
-                EasyLog.log("refreshCreatedAgentsListIfOnTab - 跳过刷新，正在加载中")
+                LogUtils.i("refreshCreatedAgentsListIfOnTab - 跳过刷新，正在加载中")
             }
         }
     }
@@ -375,7 +349,7 @@ class MainViewModel : BaseViewModel() {
                             }
 
                             is HttpResult.Failure -> {
-                                EasyLog.log("createAgent error: $result", priority = EasyLog.ERROR)
+                                LogUtils.e("createAgent error: $result")
                                 val errorMessage =
                                     result.message.ifBlank {
                                         "Creation failed, please check network connection"
@@ -386,15 +360,11 @@ class MainViewModel : BaseViewModel() {
                     }
                 } catch (e: retrofit2.HttpException) {
                     // 专门处理HTTP异常
-                    EasyLog.log(
-                        "createAgent HTTP Exception: ${e.code()} - ${e.message()}",
-                        EasyLog.ERROR,
-                    )
+                    LogUtils.e("createAgent HTTP Exception: ${e.code()} - ${e.message()}")
                     val errorMessage = handleHttpException(e, "create")
                     withContext(Dispatchers.Main) { onError(errorMessage) }
                 } catch (e: Exception) {
-                    EasyLog.log("createAgent exception: ${e.message}", priority = EasyLog.ERROR)
-                    EasyLog.log(e)
+                    LogUtils.e("createAgent exception: ${e.message}")
                     val errorMessage = handleGeneralException(e, "create")
                     withContext(Dispatchers.Main) { onError(errorMessage) }
                 }
@@ -424,10 +394,7 @@ class MainViewModel : BaseViewModel() {
             try {
                 clearCredentialState(Utils.getApp())
             } catch (e: Exception) {
-                EasyLog.log(
-                    "Failed to clear credential state during logout: ${e.message}",
-                    EasyLog.ERROR,
-                )
+                LogUtils.e("Failed to clear credential state during logout: ${e.message}")
             }
         }
 
@@ -459,7 +426,7 @@ class MainViewModel : BaseViewModel() {
                 UnifiedStartupManager.refreshRecommendedAgents()
                 UnifiedStartupManager.refreshChatAgents()
             } catch (e: Exception) {
-                EasyLog.log("Failed to load guest mode data: ${e.message}", EasyLog.ERROR)
+                LogUtils.e("Failed to load guest mode data: ${e.message}")
             }
         }
     }
@@ -505,17 +472,14 @@ class MainViewModel : BaseViewModel() {
                 }
             } catch (e: retrofit2.HttpException) {
                 // 专门处理HTTP异常
-                EasyLog.log(
-                    "deleteAgent HTTP Exception: ${e.code()} - ${e.message()}",
-                    EasyLog.ERROR,
-                )
+                LogUtils.e("deleteAgent HTTP Exception: ${e.code()} - ${e.message()}")
                 val errorMessage = handleHttpException(e, "delete")
                 withContext(Dispatchers.Main) {
                     ToastUtils.showShort(errorMessage)
                     onError(errorMessage)
                 }
             } catch (e: Exception) {
-                EasyLog.log("deleteAgent exception: ${e.message}", priority = EasyLog.ERROR)
+                LogUtils.e("deleteAgent exception: ${e.message}")
                 val errorMessage = handleGeneralException(e, "delete")
                 withContext(Dispatchers.Main) {
                     ToastUtils.showShort(errorMessage)
@@ -531,7 +495,7 @@ class MainViewModel : BaseViewModel() {
         onSuccess: (AgentInfo) -> Unit,
         onError: (String) -> Unit,
     ) {
-        EasyLog.log("updateAgent: $agentId")
+        LogUtils.i("updateAgent: $agentId")
         launchWithNetCheck {
             try {
                 val result = agentApi.updateAgent(agentId, request)
@@ -546,7 +510,7 @@ class MainViewModel : BaseViewModel() {
                         }
 
                         is HttpResult.Failure -> {
-                            EasyLog.log("updateAgent error: $result", priority = EasyLog.ERROR)
+                            LogUtils.e("updateAgent error: $result")
                             val errorMessage =
                                 result.message.ifBlank {
                                     Utils.getApp().getString(
@@ -567,17 +531,14 @@ class MainViewModel : BaseViewModel() {
                 }
             } catch (e: retrofit2.HttpException) {
                 // 专门处理HTTP异常
-                EasyLog.log(
-                    "updateAgent HTTP Exception: ${e.code()} - ${e.message()}",
-                    EasyLog.ERROR,
-                )
+                LogUtils.e("updateAgent HTTP Exception: ${e.code()} - ${e.message()}")
                 val errorMessage = handleHttpException(e, "update")
                 withContext(Dispatchers.Main) {
                     ToastUtils.showShort(errorMessage)
                     onError(errorMessage)
                 }
             } catch (e: Exception) {
-                EasyLog.log("updateAgent exception: ${e.message}", priority = EasyLog.ERROR)
+                LogUtils.e("updateAgent exception: ${e.message}")
                 val errorMessage = handleGeneralException(e, "update")
                 withContext(Dispatchers.Main) {
                     ToastUtils.showShort(errorMessage)
@@ -604,7 +565,7 @@ class MainViewModel : BaseViewModel() {
             }
 
             is HttpResult.Failure -> {
-                EasyLog.log(result.message, EasyLog.WARN)
+                LogUtils.w("result.message")
             }
         }
     }

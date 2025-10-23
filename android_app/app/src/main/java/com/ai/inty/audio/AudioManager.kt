@@ -1,9 +1,9 @@
 package com.ai.inty.audio
 
+import ai.sxwl.android.utils.LogUtils
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
-import com.inty.utils.log.EasyLog
 import com.inty.utils.storage.IntySetting
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.StateFlow
@@ -64,13 +64,13 @@ private constructor(private val context: Context, private var scope: CoroutineSc
     ) {
         // 参数验证
         if (messageId.isEmpty()) {
-            EasyLog.log("音频LOG测试 playMessageVoice failed: messageId is empty", EasyLog.ERROR)
+            LogUtils.e("音频LOG测试 playMessageVoice failed: messageId is empty")
             onTtsFailed?.invoke("MessageId Can't be null")
             return
         }
 
         if (agentId.isEmpty()) {
-            EasyLog.log("音频LOG测试 playMessageVoice failed: agentId is empty", EasyLog.ERROR)
+            LogUtils.e("音频LOG测试 playMessageVoice failed: agentId is empty")
             onTtsFailed?.invoke("Agent ID Can't be null")
             return
         }
@@ -83,12 +83,10 @@ private constructor(private val context: Context, private var scope: CoroutineSc
             // 开场白消息的localMsgId通常包含_assistant_标识
             val isOpeningMessage = messageId.contains("_assistant_")
             if (!isOpeningMessage) {
-                EasyLog.log("音频LOG测试 Auto play audio is disabled, skipping message voice playback")
+                LogUtils.i("音频LOG测试 Auto play audio is disabled, skipping message voice playback")
                 return
             } else {
-                EasyLog.log(
-                    "音频LOG测试 Opening message detected (messageId contains '_assistant_'), allowing auto play despite user setting"
-                )
+                LogUtils.d("音频LOG测试 Opening message detected (messageId contains '_assistant_'), allowing auto play despite user setting")
             }
         }
 
@@ -107,7 +105,7 @@ private constructor(private val context: Context, private var scope: CoroutineSc
                     playMessageWithUrl(messageId, generatedUrl, agentId, autoPlay, agentName)
                 },
                 onError = { error ->
-                    EasyLog.log("音频LOG测试 TTS generation failed: $error", EasyLog.ERROR)
+                    LogUtils.e("音频LOG测试 TTS generation failed: $error")
                     onTtsFailed?.invoke(error)
                 },
                 forceRegenerate = forceRegenerateTts,
@@ -133,7 +131,7 @@ private constructor(private val context: Context, private var scope: CoroutineSc
                 artist = "AI",
                 messageId = messageId,
                 agentId = agentId,
-                agentName = agentName,
+                agentName = agentName
             )
 
         // 始终在主线程调用ExoPlayer相关API
@@ -141,10 +139,7 @@ private constructor(private val context: Context, private var scope: CoroutineSc
             try {
                 playbackManager.playAudio(audioInfo, autoPlay = autoPlay)
             } catch (e: Exception) {
-                EasyLog.log(
-                    "音频LOG测试 Error in playbackManager.playAudio (main): ${e.message}",
-                    EasyLog.ERROR,
-                )
+                LogUtils.e("音频LOG测试 Error in playbackManager.playAudio (main): ${e.message}")
                 e.printStackTrace()
             }
         }

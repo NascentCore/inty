@@ -1,5 +1,6 @@
 package com.ai.inty.chat.paging
 
+import ai.sxwl.android.utils.LogUtils
 import androidx.paging.PagingSource
 import androidx.paging.PagingState
 import com.ai.inty.beans.AgentInfo
@@ -9,7 +10,6 @@ import com.ai.inty.net.NetServiceMgr
 import com.ai.inty.utils.AgentCacheManager
 import com.ai.inty.utils.UnifiedStartupManager
 import com.architecture.httplib.core.HttpResult
-import com.inty.utils.log.EasyLog
 import com.inty.utils.storage.IntySetting
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -38,7 +38,7 @@ class ChatPagingSource(
                 val page = params.key ?: INITIAL_PAGE
                 val pageSize = params.loadSize.coerceAtMost(PAGE_SIZE)
 
-                EasyLog.log("ChatPagingSource - 加载第${page}页，页面大小: $pageSize")
+                LogUtils.i("ChatPagingSource - 加载第${page}页，页面大小: $pageSize")
 
                 // 第一页特殊处理：优先使用缓存数据
                 if (page == INITIAL_PAGE && useCache) {
@@ -61,7 +61,7 @@ class ChatPagingSource(
 
                 // 检查用户账户是否已就绪，如果未就绪则等待或返回空数据
                 if (!UnifiedStartupManager.isUserAccountReady()) {
-                    EasyLog.log("ChatPagingSource - 用户账户未就绪，等待账户就绪")
+                    LogUtils.i("ChatPagingSource - 用户账户未就绪，等待账户就绪")
 
                     // 等待用户账户就绪，最多等待5秒
                     var waitTime = 0
@@ -71,7 +71,7 @@ class ChatPagingSource(
                     }
 
                     if (!UnifiedStartupManager.isUserAccountReady()) {
-                        EasyLog.log("ChatPagingSource - 等待超时，返回空数据")
+                        LogUtils.i("ChatPagingSource - 等待超时，返回空数据")
                         return@withContext LoadResult.Page(
                             data = emptyList(),
                             prevKey = null,
@@ -92,7 +92,7 @@ class ChatPagingSource(
                         if (page == INITIAL_PAGE && agents.isNotEmpty()) {
                             AgentCacheManager.cacheChatAgents(agents)
                             UnifiedStartupManager.refreshChatAgents()
-                            EasyLog.log("ChatPagingSource - 缓存第一页数据: ${agents.size}个")
+                            LogUtils.i("ChatPagingSource - 缓存第一页数据: ${agents.size}个")
                         }
 
                         LoadResult.Page(
@@ -103,15 +103,12 @@ class ChatPagingSource(
                     }
 
                     is NetworkResult.Error -> {
-                        EasyLog.log(
-                            "ChatPagingSource - 网络加载失败: ${result.error}",
-                            EasyLog.ERROR
-                        )
+                        LogUtils.e("ChatPagingSource - 网络加载失败: ${result.error}")
                         LoadResult.Error(Exception(result.error))
                     }
                 }
             } catch (e: Exception) {
-                EasyLog.log("ChatPagingSource - 加载异常: ${e.message}", EasyLog.ERROR)
+                LogUtils.e("ChatPagingSource - 加载异常: ${e.message}")
                 LoadResult.Error(e)
             }
         }
@@ -160,11 +157,11 @@ class ChatPagingSource(
                     if (agents.isNotEmpty()) {
                         AgentCacheManager.cacheChatAgents(agents)
                         UnifiedStartupManager.refreshChatAgents()
-                        EasyLog.log("ChatPagingSource - 后台刷新完成: ${agents.size}个")
+                        LogUtils.i("ChatPagingSource - 后台刷新完成: ${agents.size}个")
                     }
                 }
             } catch (e: Exception) {
-                EasyLog.log("ChatPagingSource - 后台刷新失败: ${e.message}", EasyLog.ERROR)
+                LogUtils.e("ChatPagingSource - 后台刷新失败: ${e.message}")
             }
         }
     }

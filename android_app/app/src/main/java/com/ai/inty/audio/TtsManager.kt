@@ -1,11 +1,11 @@
 package com.ai.inty.audio
 
+import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.ToastUtils
 import android.content.Context
 import com.ai.inty.net.NetServiceMgr
 import com.ai.inty.netapi.BusinessErrorCodes
 import com.architecture.httplib.core.HttpResult
-import com.inty.utils.log.EasyLog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -63,7 +63,7 @@ class TtsManager private constructor(private val context: Context) {
     ) {
         // 检查是否正在生成（除非强制重新生成）
         if (!forceRegenerate && _isGeneratingTts.value.contains(messageId)) {
-            EasyLog.log("音频LOG测试 TTS already generating for message: $messageId")
+            LogUtils.i("音频LOG测试 TTS already generating for message: $messageId")
             return
         }
 
@@ -80,7 +80,7 @@ class TtsManager private constructor(private val context: Context) {
             val list = inFlight.getOrPut(dedupKey) { mutableListOf() }
             list.add(callback)
             if (list.size > 1 && !forceRegenerate) {
-                EasyLog.log("音频LOG测试 TTS request deduped: $dedupKey, pendingCallbacks=${list.size}")
+                LogUtils.i("音频LOG测试 TTS request deduped: $dedupKey, pendingCallbacks=${list.size}")
                 return
             }
         }
@@ -91,10 +91,7 @@ class TtsManager private constructor(private val context: Context) {
         ioScope.launch {
             try {
                 if (agentId.isEmpty() || messageId.isEmpty()) {
-                    EasyLog.log(
-                        "音频LOG测试 TTS generation failed: agentId='$agentId', messageId='$messageId'",
-                        EasyLog.ERROR,
-                    )
+                    LogUtils.e("音频LOG测试 TTS generation failed: agentId='$agentId', messageId='$messageId'")
                     completeWithError(
                         dedupKey,
                         messageId,
@@ -106,10 +103,7 @@ class TtsManager private constructor(private val context: Context) {
 
                 // 验证agentId和messageId格式
                 if (agentId.length < 3 || messageId.length < 3) {
-                    EasyLog.log(
-                        "音频LOG测试 TTS generation failed: Invalid ID format - agentId='$agentId', messageId='$messageId'",
-                        EasyLog.ERROR,
-                    )
+                    LogUtils.e("音频LOG测试 TTS generation failed: Invalid ID format - agentId='$agentId', messageId='$messageId'")
                     completeWithError(dedupKey, messageId, "TTS生成失败：ID格式无效", onError)
                     return@launch
                 }
@@ -120,10 +114,7 @@ class TtsManager private constructor(private val context: Context) {
                         if (response.data.code == BusinessErrorCodes.VOICE_TTS_LIMIT_CODE) {
                             // 音频生成到达次数限制，需要给用户toast提示文案
                             ToastUtils.showShort("${response.data.message}")
-                            EasyLog.log(
-                                "音频LOG测试 TTS 生成次数到达限制 (Agent: $agentId)",
-                                EasyLog.ERROR
-                            )
+                            LogUtils.e("音频LOG测试 TTS 生成次数到达限制 (Agent: $agentId)")
                             completeWithError(
                                 dedupKey,
                                 messageId,
@@ -146,10 +137,7 @@ class TtsManager private constructor(private val context: Context) {
                     }
 
                     is HttpResult.Failure -> {
-                        EasyLog.log(
-                            "音频LOG测试 TTS generation failed: ${response.message} (Agent: $agentId)",
-                            EasyLog.ERROR,
-                        )
+                        LogUtils.e("音频LOG测试 TTS generation failed: ${response.message} (Agent: $agentId)")
                         completeWithError(
                             dedupKey,
                             messageId,
@@ -159,10 +147,7 @@ class TtsManager private constructor(private val context: Context) {
                     }
                 }
             } catch (e: Exception) {
-                EasyLog.log(
-                    "音频LOG测试 TTS generation exception: ${e.message} (Agent: $agentId)",
-                    EasyLog.ERROR,
-                )
+                LogUtils.e("音频LOG测试 TTS generation exception: ${e.message} (Agent: $agentId)")
                 completeWithError(dedupKey, messageId, "TTS生成异常：${e.message}", onError)
             } finally {
                 // UI状态标记移除
@@ -191,10 +176,7 @@ class TtsManager private constructor(private val context: Context) {
         val callbacks = synchronized(inFlight) { inFlight.remove(key) ?: emptyList() }
         if (callbacks.isEmpty()) return directError(errorMsg)
         callbacks.forEach { it(Result.failure(IllegalStateException(errorMsg))) }
-        EasyLog.log(
-            "音频LOG测试 TTS complete error, dispatched to ${callbacks.size} callbacks for key=$key : $errorMsg",
-            EasyLog.ERROR,
-        )
+        LogUtils.e("音频LOG测试 TTS complete error, dispatched to ${callbacks.size} callbacks for key=$key : $errorMsg")
     }
 
     /** 检查是否正在生成指定消息的TTS */

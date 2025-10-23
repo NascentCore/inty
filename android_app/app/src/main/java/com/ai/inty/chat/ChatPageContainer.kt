@@ -1,5 +1,6 @@
 package com.ai.inty.chat
 
+import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.Utils
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -40,7 +41,6 @@ import com.ai.inty.base.noRippleClickable
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.beans.UserProfile
 import com.ai.inty.chat.viewmodel.ChatTabViewModel
-import com.inty.utils.log.EasyLog
 import com.inty.utils.storage.IntySetting
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -68,15 +68,9 @@ fun ChatPageContainer(
                     agentsPagingItems[i]?.let { agent -> list.add(agent) }
                 }
             } catch (e: IndexOutOfBoundsException) {
-                EasyLog.log(
-                    "ChatPageContainer - 构建agentList时索引越界: ${e.message}",
-                    EasyLog.WARN
-                )
+                LogUtils.w("ChatPageContainer - 构建agentList时索引越界: ${e.message}")
             } catch (e: Exception) {
-                EasyLog.log(
-                    "ChatPageContainer - 构建agentList时发生异常: ${e.message}",
-                    EasyLog.ERROR
-                )
+                LogUtils.e("ChatPageContainer - 构建agentList时发生异常: ${e.message}")
             }
             list
         }
@@ -118,7 +112,7 @@ fun ChatPageContainer(
                     com.ai.inty.audio.AudioManager.getInstance(Utils.getApp(), scope)
                 audioManager.stopAllPlayback()
             } catch (e: Exception) {
-                EasyLog.log("ChatPageContainer - 停止音频播放失败: ${e.message}", EasyLog.ERROR)
+                LogUtils.e("ChatPageContainer - 停止音频播放失败: ${e.message}")
             }
             delay(100)
         }
@@ -143,9 +137,9 @@ fun ChatPageContainer(
                         agentsPagingItems[lastValidIndex]
                     }
                 } catch (e: IndexOutOfBoundsException) {
-                    EasyLog.log("ChatPageContainer - 索引越界，跳过预取: ${e.message}", EasyLog.WARN)
+                    LogUtils.w("ChatPageContainer - 索引越界，跳过预取: ${e.message}")
                 } catch (e: Exception) {
-                    EasyLog.log("ChatPageContainer - 预取触发失败: ${e.message}", EasyLog.WARN)
+                    LogUtils.w("ChatPageContainer - 预取触发失败: ${e.message}")
                 }
             }
         }
@@ -160,19 +154,13 @@ fun ChatPageContainer(
         ) { currentPage ->
             // 防止数组越界
             if (currentPage < 0 || currentPage >= agentList.size) {
-                EasyLog.log(
-                    "ChatPageContainer - HorizontalPager索引越界: currentPage=$currentPage, agentList.size=${agentList.size}",
-                    EasyLog.WARN,
-                )
+                LogUtils.w("ChatPageContainer - HorizontalPager索引越界: currentPage=$currentPage, agentList.size=${agentList.size}")
                 // 如果索引无效，显示空页面或返回
                 return@HorizontalPager
             }
             val agent = agentList.getOrNull(currentPage)
             if (agent == null) {
-                EasyLog.log(
-                    "ChatPageContainer - 获取agent失败: currentPage=$currentPage",
-                    EasyLog.WARN
-                )
+                LogUtils.w("ChatPageContainer - 获取agent失败: currentPage=$currentPage")
                 return@HorizontalPager
             }
             val chatViewModel: ChatViewModel = viewModel(key = agent.id, factory = viewModelFactory)
