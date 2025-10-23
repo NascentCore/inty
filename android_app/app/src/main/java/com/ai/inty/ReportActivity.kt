@@ -10,9 +10,9 @@ import androidx.activity.viewModels
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.lifecycle.lifecycleScope
-import com.ai.inty.base.ViewModelEvent
 import com.ai.inty.ui.screens.ReportScreen
 import com.ai.inty.viewmodels.ReportViewModel
+import com.ai.inty.viewmodels.ViewModelEvent
 import kotlinx.coroutines.launch
 
 /** 举报页面 */

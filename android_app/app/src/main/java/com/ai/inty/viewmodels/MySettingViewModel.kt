@@ -9,7 +9,6 @@ import android.net.Uri
 import androidx.core.net.toUri
 import androidx.lifecycle.viewModelScope
 import com.ai.inty.R
-import com.ai.inty.base.ViewModelEvent
 import com.ai.inty.ui.components.EditKey
 import com.ai.inty.utils.IntyUserProfileSDK
 import com.ai.inty.utils.NetworkErrorHandler

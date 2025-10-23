@@ -20,12 +20,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.lifecycleScope
-import com.ai.inty.base.ViewModelEvent
 import com.ai.inty.ui.components.EditDialog
 import com.ai.inty.ui.components.EditKey
 import com.ai.inty.ui.components.MySettingScreen
 import com.ai.inty.utils.UCropHelper
 import com.ai.inty.viewmodels.MySettingViewModel
+import com.ai.inty.viewmodels.ViewModelEvent
 import com.yalantis.ucrop.UCrop
 import kotlinx.coroutines.launch
 import java.util.Locale

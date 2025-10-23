@@ -1,6 +1,7 @@
 package com.ai.inty.ui
 
 import ai.sxwl.android.design.noRippleClickable
+import ai.sxwl.android.design.ui.HeartMultiLineEditor
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable

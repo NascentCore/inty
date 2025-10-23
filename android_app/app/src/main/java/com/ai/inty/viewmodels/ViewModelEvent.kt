@@ -1,4 +1,4 @@
-package com.ai.inty.base
+package com.ai.inty.viewmodels
 
 /**
  * ViewModel事件类型

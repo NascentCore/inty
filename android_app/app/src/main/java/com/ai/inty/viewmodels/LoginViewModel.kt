@@ -11,7 +11,6 @@ import android.content.Intent
 import androidx.lifecycle.viewModelScope
 import com.ai.inty.MainActivity
 import com.ai.inty.R
-import com.ai.inty.base.ViewModelEvent
 import com.ai.inty.utils.NetworkErrorHandler
 import com.ai.inty.utils.UserProfileManager
 import com.architecture.httplib.core.HttpResult

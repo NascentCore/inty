@@ -52,8 +52,8 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import com.ai.inty.R
-import com.ai.inty.base.IntySmallTextField
-import com.ai.inty.base.IntySmallTextField2
+import com.ai.inty.ui.IntySmallTextField
+import com.ai.inty.ui.IntySmallTextField2
 
 /** 编辑类型枚举 */
 enum class EditKey {

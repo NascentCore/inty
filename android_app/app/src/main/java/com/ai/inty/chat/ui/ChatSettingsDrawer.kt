@@ -43,9 +43,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ai.inty.LoginActivity
 import com.ai.inty.R
 import com.ai.inty.ReportActivity
-import com.ai.inty.base.MyModalNavigationDrawer
 import com.ai.inty.billing.BillingRepository
 import com.ai.inty.chat.ChatViewModel
+import com.ai.inty.ui.MyModalNavigationDrawer
 import com.ai.inty.ui.components.EditDialog
 import com.ai.inty.ui.components.EditKey
 import com.ai.inty.ui.components.MySettingItem

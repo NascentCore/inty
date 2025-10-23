@@ -35,8 +35,8 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.ai.inty.R
 import com.ai.inty.RegInfoActivity
-import com.ai.inty.base.IntySmallTextField
 import com.ai.inty.chat.ChatViewModel
+import com.ai.inty.ui.IntySmallTextField
 
 /** 聊天输入框组件 */
 @Composable
