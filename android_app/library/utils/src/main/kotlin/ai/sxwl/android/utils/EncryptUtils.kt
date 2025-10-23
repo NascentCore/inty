@@ -199,6 +199,7 @@ object EncryptUtils {
         if (encryptedData == null || encryptedData.size < 16 || key == null || key.isEmpty()) return null
 
         return try {
+
             // 提取IV和密文
             val iv = ByteArray(16)
             val ciphertext = ByteArray(encryptedData.size - 16)
@@ -207,6 +208,12 @@ object EncryptUtils {
 
             // 解密
             desTemplate(ciphertext, key, "AES", "AES/CBC/PKCS5Padding", iv, false)
+        } catch (e: ArrayIndexOutOfBoundsException) {
+            // 数组越界，返回null
+            null
+        } catch (e: OutOfMemoryError) {
+            // 内存不足，返回null
+            null
         } catch (e: Exception) {
             e.printStackTrace()
             null
@@ -305,6 +312,12 @@ object EncryptUtils {
 
             // 解密
             cipher.doFinal(ciphertext)
+        } catch (e: ArrayIndexOutOfBoundsException) {
+            // 数组越界，返回null
+            null
+        } catch (e: OutOfMemoryError) {
+            // 内存不足，返回null
+            null
         } catch (e: Exception) {
             e.printStackTrace()
             null
@@ -365,6 +378,12 @@ object EncryptUtils {
         } catch (e: NoSuchAlgorithmException) {
             e.printStackTrace()
             ByteArray(0)
+        } catch (e: OutOfMemoryError) {
+            // 内存不足，返回空数组
+            ByteArray(0)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            ByteArray(0)
         }
     }
 
@@ -377,6 +396,19 @@ object EncryptUtils {
         isEncrypt: Boolean
     ): ByteArray {
         if (data == null || data.isEmpty() || key == null || key.isEmpty()) return ByteArray(0)
+
+        // 验证密钥长度
+        val validKeyLengths = when (algorithm.uppercase()) {
+            "AES" -> listOf(16, 24, 32) // 128, 192, 256位
+            "DES" -> listOf(8) // 64位
+            "DESEDE", "3DES" -> listOf(16, 24) // 128, 192位
+            else -> listOf(16, 24, 32) // 默认AES长度
+        }
+
+        if (key.size !in validKeyLengths) {
+            return ByteArray(0)
+        }
+        
         return try {
             val keySpec = SecretKeySpec(key, algorithm)
             val cipher = Cipher.getInstance(transformation)
@@ -393,6 +425,9 @@ object EncryptUtils {
             }
 
             cipher.doFinal(data)
+        } catch (e: OutOfMemoryError) {
+            // 内存不足，返回空数组
+            ByteArray(0)
         } catch (e: Exception) {
             e.printStackTrace()
             ByteArray(0)

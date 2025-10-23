@@ -7,6 +7,7 @@ import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
 import android.os.Build
+import android.util.Log
 import androidx.annotation.RequiresPermission
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -362,7 +363,11 @@ object NetworkUtils {
         return callbackFlow {
             val listener = object : NetworkStateListener {
                 override fun onNetworkStateChanged(networkState: NetworkState) {
-                    trySend(networkState)
+                    try {
+                        trySend(networkState)
+                    } catch (e: Exception) {
+                        Log.e("NetworkUtils", "发送网络状态失败", e)
+                    }
                 }
             }
 
@@ -392,7 +397,11 @@ object NetworkUtils {
             cm?.registerNetworkCallback(networkRequest, callback)
 
             // 立即发送当前网络状态
-            trySend(getNetworkState(context))
+            try {
+                trySend(getNetworkState(context))
+            } catch (e: Exception) {
+                Log.e("NetworkUtils", "发送初始网络状态失败", e)
+            }
 
             awaitClose {
                 cm?.unregisterNetworkCallback(callback)

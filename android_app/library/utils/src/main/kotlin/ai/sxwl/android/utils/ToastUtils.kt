@@ -43,7 +43,7 @@ object ToastUtils {
     private var lastShowTime = 0L
 
     // 主线程Handler，用于线程安全
-    private val mainHandler = Handler(Looper.getMainLooper())
+    private val mainHandler by lazy { Handler(Looper.getMainLooper()) }
 
     // 当前显示的Toast引用，用于取消之前的Toast
     private var currentToast: WeakReference<Toast>? = null
@@ -171,8 +171,16 @@ object ToastUtils {
             currentToast = WeakReference(toast)
             lastShowTime = System.currentTimeMillis()
 
+        } catch (e: SecurityException) {
+            // 权限异常，记录日志但不降级
+            Log.e(TAG, "Toast显示权限异常: $message", e)
+        } catch (e: IllegalStateException) {
+            // 状态异常，尝试降级
+            Log.w(TAG, "Toast状态异常，尝试降级: $message", e)
+            fallbackToast(message, duration)
         } catch (e: Exception) {
-            // 优雅降级：使用系统默认Toast
+            // 其他异常，记录日志并降级
+            Log.e(TAG, "Toast显示异常: $message", e)
             fallbackToast(message, duration)
         }
     }
@@ -229,8 +237,16 @@ object ToastUtils {
             currentToast = WeakReference(toast)
             lastShowTime = System.currentTimeMillis()
 
+        } catch (e: SecurityException) {
+            // 权限异常，记录日志但不降级
+            Log.e(TAG, "长文本Toast显示权限异常: $message", e)
+        } catch (e: IllegalStateException) {
+            // 状态异常，尝试降级
+            Log.w(TAG, "长文本Toast状态异常，尝试降级: $message", e)
+            showToastInternal(message, duration)
         } catch (e: Exception) {
-            // 优雅降级：使用普通Toast
+            // 其他异常，记录日志并降级
+            Log.e(TAG, "长文本Toast显示异常: $message", e)
             showToastInternal(message, duration)
         }
     }
@@ -246,6 +262,9 @@ object ToastUtils {
             } else {
                 Log.e(TAG, "Context为null，无法显示Toast: $message")
             }
+        } catch (e: SecurityException) {
+            // 权限异常，记录日志
+            Log.e(TAG, "兜底Toast权限异常: $message", e)
         } catch (e: Exception) {
             // 最后的兜底方案：使用系统默认Toast
             try {
@@ -255,9 +274,12 @@ object ToastUtils {
                 } else {
                     Log.e(TAG, "ApplicationContext为null，无法显示Toast: $message")
                 }
-            } catch (e: Exception) {
+            } catch (e2: SecurityException) {
+                // 权限异常，记录日志
+                Log.e(TAG, "兜底Toast权限异常: $message", e2)
+            } catch (e2: Exception) {
                 // 如果连系统Toast都失败了，至少记录日志
-                Log.e(TAG, "Toast显示失败: $message", e)
+                Log.e(TAG, "Toast显示失败: $message", e2)
             }
         }
     }
@@ -267,8 +289,14 @@ object ToastUtils {
      */
     private fun getString(@StringRes resId: Int): String {
         return try {
-            Utils.getApp().getString(resId)
+            val context = Utils.getApp()
+            if (context != null) {
+                context.getString(resId)
+            } else {
+                "Unknown"
+            }
         } catch (e: Exception) {
+            Log.e(TAG, "获取字符串资源失败: $resId", e)
             "Unknown"
         }
     }

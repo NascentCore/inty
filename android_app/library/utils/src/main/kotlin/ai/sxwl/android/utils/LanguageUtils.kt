@@ -49,11 +49,16 @@ object LanguageUtils {
      * 获取当前语言
      */
     fun getCurrentLanguage(): Locale {
-        val app: Application? = Utils.getApp()
-        return if (app != null) {
-            getCurrentLanguage(app)
-        } else {
-            Log.w("LanguageUtils", "App context is null, using default locale")
+        return try {
+            val app: Application? = Utils.getApp()
+            if (app != null) {
+                getCurrentLanguage(app)
+            } else {
+                Log.w("LanguageUtils", "App context is null, using default locale")
+                Locale.getDefault()
+            }
+        } catch (e: Exception) {
+            Log.e("LanguageUtils", "Failed to get current language", e)
             Locale.getDefault()
         }
     }
@@ -127,10 +132,32 @@ object LanguageUtils {
         return try {
             val parts = localeString.split("_")
             when (parts.size) {
-                1 -> Locale(parts[0])
-                2 -> Locale(parts[0], parts[1])
-                else -> null
+                1 -> {
+                    if (parts[0].isNotEmpty()) {
+                        Locale(parts[0])
+                    } else {
+                        Log.w("LanguageUtils", "Empty language part in: $localeString")
+                        null
+                    }
+                }
+
+                2 -> {
+                    if (parts[0].isNotEmpty() && parts[1].isNotEmpty()) {
+                        Locale(parts[0], parts[1])
+                    } else {
+                        Log.w("LanguageUtils", "Empty language or country part in: $localeString")
+                        null
+                    }
+                }
+
+                else -> {
+                    Log.w("LanguageUtils", "Invalid locale string format: $localeString")
+                    null
+                }
             }
+        } catch (e: IllegalArgumentException) {
+            Log.e("LanguageUtils", "Invalid locale arguments: $localeString", e)
+            null
         } catch (e: Exception) {
             Log.e("LanguageUtils", "Failed to parse locale string: $localeString", e)
             null
@@ -161,10 +188,25 @@ object LanguageUtils {
             AppUtils.relaunchApp()
         } else {
             try {
-                for (activity in UtilsBridge.getActivityList()) {
+                val activityList = UtilsBridge.getActivityList()
+                if (activityList.isEmpty()) {
+                    Log.w("LanguageUtils", "No activities found, using app relaunch")
+                    AppUtils.relaunchApp()
+                    return
+                }
+
+                var successCount = 0
+                for (activity in activityList) {
                     if (!activity.isFinishing && !activity.isDestroyed) {
                         try {
                             activity.recreate()
+                            successCount++
+                        } catch (e: IllegalStateException) {
+                            Log.e(
+                                "LanguageUtils",
+                                "Activity is in invalid state: ${activity.javaClass.simpleName}",
+                                e
+                            )
                         } catch (e: Exception) {
                             Log.e(
                                 "LanguageUtils",
@@ -173,6 +215,11 @@ object LanguageUtils {
                             )
                         }
                     }
+                }
+
+                if (successCount == 0) {
+                    Log.w("LanguageUtils", "No activities were recreated, using app relaunch")
+                    AppUtils.relaunchApp()
                 }
             } catch (e: Exception) {
                 Log.e("LanguageUtils", "Failed to get activity list", e)
@@ -190,11 +237,29 @@ object LanguageUtils {
                 consumer.accept(false)
                 return
             }
+
             val resources = context.resources
+            if (resources == null) {
+                Log.e("LanguageUtils", "Resources is null")
+                consumer.accept(false)
+                return
+            }
+            
             val configuration = Configuration(resources.configuration)
             configuration.setLocale(locale)
-            val newContext = context.createConfigurationContext(configuration)
-            consumer.accept(true)
+
+            try {
+                val newContext = context.createConfigurationContext(configuration)
+                if (newContext == null) {
+                    Log.e("LanguageUtils", "Failed to create configuration context")
+                    consumer.accept(false)
+                    return
+                }
+                consumer.accept(true)
+            } catch (e: Exception) {
+                Log.e("LanguageUtils", "Failed to create configuration context", e)
+                consumer.accept(false)
+            }
         } catch (e: Exception) {
             Log.e("LanguageUtils", "Failed to update app context language", e)
             consumer.accept(false)

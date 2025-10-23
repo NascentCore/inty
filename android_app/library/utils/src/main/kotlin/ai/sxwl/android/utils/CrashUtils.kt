@@ -1,5 +1,6 @@
 package ai.sxwl.android.utils
 
+import android.app.Application
 import java.io.File
 import java.io.PrintWriter
 import java.io.StringWriter
@@ -15,7 +16,11 @@ import java.util.Locale
  */
 object CrashUtils {
 
-    private val FILE_SEP = FileSystems.getDefault().separator
+    private val FILE_SEP = try {
+        FileSystems.getDefault().separator
+    } catch (e: Exception) {
+        "/" // 默认分隔符
+    }
 
     private val DEFAULT_UNCAUGHT_EXCEPTION_HANDLER = Thread.getDefaultUncaughtExceptionHandler()
 
@@ -66,7 +71,16 @@ object CrashUtils {
      */
     fun init(crashDirPath: String, onCrashListener: OnCrashListener?) {
         val dirPath = if (UtilsBridge.isSpace(crashDirPath)) {
-            Utils.getApp().filesDir.toString() + FILE_SEP + "crash" + FILE_SEP
+            try {
+                val app: Application? = Utils.getApp()
+                if (app != null) {
+                    app.filesDir.toString() + FILE_SEP + "crash" + FILE_SEP
+                } else {
+                    "/crash/"
+                }
+            } catch (e: Exception) {
+                "/crash/"
+            }
         } else {
             if (crashDirPath.endsWith(FILE_SEP)) crashDirPath else crashDirPath + FILE_SEP
         }
