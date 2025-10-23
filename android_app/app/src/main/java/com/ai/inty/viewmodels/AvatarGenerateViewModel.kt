@@ -1,9 +1,9 @@
 package com.ai.inty.viewmodels
 
+import ai.sxwl.android.common.base.BaseVM
 import ai.sxwl.android.data.api.model.GenerateBackgroundRequest
 import ai.sxwl.android.data.api.model.GenerateBackgroundResponse
 import ai.sxwl.android.utils.LogUtils
-import com.ai.inty.base.BaseViewModel
 import com.ai.inty.net.NetServiceMgr
 import com.ai.inty.utils.AvatarManager
 import com.ai.inty.utils.NetworkErrorHandler
@@ -13,7 +13,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 
-class AvatarGenerateViewModel : BaseViewModel() {
+class AvatarGenerateViewModel : BaseVM() {
 
     // 延迟获取依赖，避免在构造函数中立即获取导致空指针异常
     private val agentApi by lazy { NetServiceMgr.getAgentApi() }
@@ -60,7 +60,7 @@ class AvatarGenerateViewModel : BaseViewModel() {
         _isLoading.value = true
         clearError()
 
-        launchWithNetCheck {
+        launchBackground {
             try {
                 val request = GenerateBackgroundRequest(prompt = currentPrompt)
 
@@ -123,7 +123,7 @@ class AvatarGenerateViewModel : BaseViewModel() {
         _isLoading.value = true
         _errorMessage.value = null
 
-        launchWithNetCheck {
+        launchBackground {
             try {
                 val request = GenerateBackgroundRequest(prompt = currentPrompt)
 

@@ -1,8 +1,8 @@
 package com.ai.inty.viewmodels
 
+import ai.sxwl.android.common.base.BaseVM
 import ai.sxwl.android.utils.LogUtils
 import android.app.Activity
-import com.ai.inty.base.BaseViewModel
 import com.ai.inty.billing.BillingRepository
 import com.ai.inty.billing.VipPlan
 import com.ai.inty.billing.VipStatus
@@ -13,7 +13,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 /** 会员中心ViewModel，管理订阅状态和计划信息。 */
-class VipCenterViewModel : BaseViewModel() {
+class VipCenterViewModel : BaseVM() {
     private val _selectedPlanIndex = MutableStateFlow(0)
     val selectedPlanIndex: StateFlow<Int> = _selectedPlanIndex.asStateFlow()
 

@@ -1,5 +1,6 @@
 package com.ai.inty.viewmodels
 
+import ai.sxwl.android.common.base.BaseVM
 import ai.sxwl.android.data.api.model.UserProfile
 import ai.sxwl.android.utils.ToastUtils
 import ai.sxwl.android.utils.Utils
@@ -7,7 +8,6 @@ import android.net.Uri
 import androidx.core.net.toUri
 import androidx.lifecycle.viewModelScope
 import com.ai.inty.R
-import com.ai.inty.base.BaseViewModel
 import com.ai.inty.base.ViewModelEvent
 import com.ai.inty.net.NetServiceMgr
 import com.ai.inty.ui.components.EditKey
@@ -16,7 +16,10 @@ import com.ai.inty.utils.NetworkErrorHandler
 import com.ai.inty.utils.UserProfileManager
 import com.architecture.httplib.core.HttpResult
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
@@ -24,7 +27,11 @@ import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
 import java.io.File
 
-class MySettingViewModel : BaseViewModel() {
+class MySettingViewModel : BaseVM() {
+
+    // 事件通知机制
+    private val _events = MutableSharedFlow<ViewModelEvent>()
+    val events: SharedFlow<ViewModelEvent> = _events.asSharedFlow()
 
     private val _userProfile = MutableStateFlow<UserProfile>(UserProfile())
     val userProfile = _userProfile.asStateFlow()
@@ -33,6 +40,15 @@ class MySettingViewModel : BaseViewModel() {
 
     private val _isSaving = MutableStateFlow(false)
     val isSaving = _isSaving.asStateFlow()
+
+    /**
+     * 发送事件通知
+     */
+    private fun sendEvent(event: ViewModelEvent) {
+        viewModelScope.launch {
+            _events.emit(event)
+        }
+    }
 
     // 延迟获取依赖，避免在构造函数中立即获取导致空指针异常
     private val userApi by lazy { NetServiceMgr.getUserApi() }
@@ -60,7 +76,7 @@ class MySettingViewModel : BaseViewModel() {
     }
 
     fun onSave() {
-        launchWithNetCheck {
+        launchBackground {
             _isSaving.value = true
             try {
                 if (_avatarChanged.value) {
@@ -68,7 +84,7 @@ class MySettingViewModel : BaseViewModel() {
 
                     if (fileUri?.path == null) {
                         NetworkErrorHandler.showNetworkAwareError("Invalid avatar file")
-                        return@launchWithNetCheck
+                        return@launchBackground
                     }
 
                     val requestBody =
@@ -94,7 +110,7 @@ class MySettingViewModel : BaseViewModel() {
 
                         is HttpResult.Failure -> {
                             NetworkErrorHandler.showNetworkAwareError(result.message)
-                            return@launchWithNetCheck
+                            return@launchBackground
                         }
                     }
                 }

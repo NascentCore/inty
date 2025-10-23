@@ -1,6 +1,7 @@
 package com.ai.inty.chat
 
 import ai.sxwl.android.common.analytics.PageTrackingHelper
+import ai.sxwl.android.common.base.BaseVM
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.api.model.ChatSettingsReq
 import ai.sxwl.android.data.api.model.ChatSettingsResponse
@@ -16,7 +17,6 @@ import android.content.Context
 import androidx.lifecycle.viewModelScope
 import com.ai.inty.R
 import com.ai.inty.audio.AudioManager
-import com.ai.inty.base.BaseViewModel
 import com.ai.inty.billing.VipStatusHelper
 import com.ai.inty.net.NetServiceMgr
 import com.ai.inty.netapi.BusinessErrorCodes
@@ -31,7 +31,7 @@ import kotlinx.coroutines.launch
 
 // 操作什么数据，支持什么 UI？Model 是 beans
 // View 是各类 page/activity。
-class ChatViewModel : BaseViewModel() {
+class ChatViewModel : BaseVM() {
 
     private val _agentInfo = MutableStateFlow<AgentInfo?>(null)
     val agentInfo = _agentInfo.asStateFlow()
@@ -374,12 +374,12 @@ class ChatViewModel : BaseViewModel() {
                 inputData.value.length.toString(),
             )
 
-            launchWithNetCheck {
+            launchBackground {
                 try {
                     val inputMsg = inputData.value
                     if (inputMsg.isBlank()) {
                         LogUtils.i("Empty message, ignoring send request")
-                        return@launchWithNetCheck
+                        return@launchBackground
                     }
 
                     inputData.update { "" }
@@ -576,7 +576,7 @@ class ChatViewModel : BaseViewModel() {
         }
         lastSendTime = currentTime
 
-        launchWithNetCheck {
+        launchBackground {
             val keepTalkingMsg = "continue"
 
             val msgInfo = MsgInfo(content = keepTalkingMsg, role = "user")
@@ -675,8 +675,8 @@ class ChatViewModel : BaseViewModel() {
         return _chatSettings.value[agentId]
     }
 
-    private fun getChatSetting() = launchWithNetCheck {
-        val agentId = agentInfo.value?.id ?: return@launchWithNetCheck
+    private fun getChatSetting() = launchBackground {
+        val agentId = agentInfo.value?.id ?: return@launchBackground
         // 有agent信息，才请求
         val result = chatApi.getChatSettings(agentId)
         when (result) {
@@ -696,8 +696,8 @@ class ChatViewModel : BaseViewModel() {
     }
 
     // 高级模型定制化回复的接口调用
-    fun updateChatReplySettings(prompt: String) = launchWithNetCheck {
-        val agentId = agentInfo.value?.id ?: return@launchWithNetCheck
+    fun updateChatReplySettings(prompt: String) = launchBackground {
+        val agentId = agentInfo.value?.id ?: return@launchBackground
         // 有agent信息，才请求
         val req = ChatSettingsReq(style_prompt = prompt)
         val result = chatApi.updateChatSettings(agentId, req)

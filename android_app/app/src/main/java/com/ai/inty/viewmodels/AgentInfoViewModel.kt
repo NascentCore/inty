@@ -1,9 +1,9 @@
 package com.ai.inty.viewmodels
 
+import ai.sxwl.android.common.base.BaseVM
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.utils.LogUtils
 import androidx.lifecycle.viewModelScope
-import com.ai.inty.base.BaseViewModel
 import com.ai.inty.net.NetServiceMgr
 import com.ai.inty.utils.NetworkErrorHandler
 import com.architecture.httplib.core.HttpResult
@@ -12,7 +12,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-class AgentInfoViewModel : BaseViewModel() {
+class AgentInfoViewModel : BaseVM() {
 
     private val _agentInfo = MutableStateFlow<AgentInfo?>(null)
     val agentInfo = _agentInfo.asStateFlow()

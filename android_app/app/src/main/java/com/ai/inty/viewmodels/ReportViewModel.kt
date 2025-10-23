@@ -1,5 +1,6 @@
 package com.ai.inty.viewmodels
 
+import ai.sxwl.android.common.base.BaseVM
 import ai.sxwl.android.data.api.model.ReportItem
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.ToastUtils
@@ -7,15 +8,32 @@ import ai.sxwl.android.utils.Utils
 import android.net.Uri
 import androidx.compose.runtime.mutableStateSetOf
 import androidx.core.net.toUri
-import com.ai.inty.base.BaseViewModel
+import androidx.lifecycle.viewModelScope
 import com.ai.inty.base.ViewModelEvent
 import com.ai.inty.netapi.services.ReportService
 import com.inty.api.models.api.v1.report.ReportCreateParams
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import java.io.InputStream
 
-class ReportViewModel : BaseViewModel() {
+class ReportViewModel : BaseVM() {
+
+    // 事件通知机制
+    private val _events = MutableSharedFlow<ViewModelEvent>()
+    val events: SharedFlow<ViewModelEvent> = _events.asSharedFlow()
+
+    /**
+     * 发送事件通知
+     */
+    private fun sendEvent(event: ViewModelEvent) {
+        viewModelScope.launch {
+            _events.emit(event)
+        }
+    }
 
     var targetID: String = ""
     var targetType: String = "USER"
@@ -80,7 +98,7 @@ class ReportViewModel : BaseViewModel() {
 
         _isSubmitting.value = true
 
-        launchWithNetCheck {
+        launchBackground {
             try {
                 val uploadedImageUrls = mutableListOf<String>()
                 for (imageUri in localImages) {

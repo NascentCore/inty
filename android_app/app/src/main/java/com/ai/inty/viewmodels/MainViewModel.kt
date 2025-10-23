@@ -1,5 +1,6 @@
 package com.ai.inty.viewmodels
 
+import ai.sxwl.android.common.base.BaseVM
 import ai.sxwl.android.data.api.IAgentApi
 import ai.sxwl.android.data.api.ICommonApi
 import ai.sxwl.android.data.api.model.AgentInfo
@@ -14,7 +15,6 @@ import ai.sxwl.android.utils.Utils
 import androidx.compose.runtime.mutableStateListOf
 import androidx.lifecycle.viewModelScope
 import com.ai.inty.R
-import com.ai.inty.base.BaseViewModel
 import com.ai.inty.billing.BillingRepository
 import com.ai.inty.chat.ChatViewModel
 import com.ai.inty.net.NetServiceMgr
@@ -41,7 +41,7 @@ enum class HomeTabIndex {
     Profile,
 }
 
-class MainViewModel : BaseViewModel() {
+class MainViewModel : BaseVM() {
 
     private val agentApi: IAgentApi by lazy { NetServiceMgr.getAgentApi() }
 
@@ -338,7 +338,7 @@ class MainViewModel : BaseViewModel() {
                 request.visibility,
             )
 
-            launchWithNetCheck {
+            launchBackground {
                 try {
                     val result = agentApi.createAgent(request)
 
@@ -434,7 +434,7 @@ class MainViewModel : BaseViewModel() {
     }
 
     fun deleteAgent(agentId: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
-        launchWithNetCheck {
+        launchBackground {
             try {
                 val result = agentApi.deleteAgent(agentId)
 
@@ -498,7 +498,7 @@ class MainViewModel : BaseViewModel() {
         onError: (String) -> Unit,
     ) {
         LogUtils.i("updateAgent: $agentId")
-        launchWithNetCheck {
+        launchBackground {
             try {
                 val result = agentApi.updateAgent(agentId, request)
 
@@ -553,7 +553,7 @@ class MainViewModel : BaseViewModel() {
     /** 检查app版本更新 */
     val needForceUpgrade = MutableStateFlow<AppVersionRsp.AppVersionData?>(null)
 
-    private fun checkAppVersion() = launchWithNetCheck {
+    private fun checkAppVersion() = launchBackground {
         val result = commonApi.checkAppUpgrade()
         when (result) {
             is HttpResult.Success -> {
