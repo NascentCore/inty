@@ -1,5 +1,6 @@
 package com.ai.inty.home
 
+import ai.sxwl.android.common.analytics.PageTrackingHelper
 import ai.sxwl.android.data.api.model.UserProfile
 import ai.sxwl.android.data.billing.BillingRepository
 import ai.sxwl.android.data.billing.VipStatusHelper
@@ -59,7 +60,6 @@ import com.ai.inty.explore.ExploreViewModel
 import com.ai.inty.ui.ChatDialogData
 import com.ai.inty.ui.ExpiredVipDialog
 import com.ai.inty.ui.components.ForceUpgradeDialog
-import com.ai.inty.utils.TrackScreenView
 import com.ai.inty.viewmodels.HomeTabIndex
 import com.ai.inty.viewmodels.MainViewModel
 
@@ -93,7 +93,10 @@ fun HomeScreen(
     }
 
     // 跟踪HomeScreen页面访问
-    TrackScreenView(screenName = "HomeScreen", screenClass = "MainActivity")
+    // 使用 PageTrackingHelper 进行页面跟踪
+    LaunchedEffect(Unit) {
+        PageTrackingHelper.trackPageView("HomeScreen", "MainActivity")
+    }
 
     Scaffold(
         modifier = modifier

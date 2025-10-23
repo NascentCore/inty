@@ -9,6 +9,7 @@ import ai.sxwl.android.data.http.services.AuthService
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.utils.LogUtils
 import android.content.Context
+import com.ai.inty.audio.AudioPreloadManager
 import com.ai.inty.chat.constants.ChatConstants
 import com.ai.inty.explore.ExploreConstants
 import com.architecture.httplib.core.HttpResult

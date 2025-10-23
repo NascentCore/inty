@@ -1,5 +1,6 @@
 package com.ai.inty.home
 
+import ai.sxwl.android.common.analytics.PageTrackingHelper
 import ai.sxwl.android.data.api.getCdnImageUrl
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.api.model.UserProfile
@@ -71,7 +72,6 @@ import com.ai.inty.SettingActivity
 import com.ai.inty.VipCenterActivity
 import com.ai.inty.ui.components.ShimmerPlaceholder
 import com.ai.inty.utils.AuthClickable
-import com.ai.inty.utils.TrackScreenView
 
 /** “我的”页面 */
 @Composable
@@ -88,12 +88,14 @@ internal fun ProfilePage(
 ) {
     val context = LocalContext.current
 
-    // 跟踪ProfilePage页面访问
-    TrackScreenView(
-        screenName = "ProfilePage",
-        screenClass = "MainActivity",
-        additionalParams = mapOf("agent_count" to agents.size, "is_loading" to isLoading),
-    )
+    // 使用 PageTrackingHelper 进行页面跟踪
+    LaunchedEffect(Unit) {
+        PageTrackingHelper.trackPageView(
+            "ProfilePage",
+            "MainActivity",
+            mapOf("agent_count" to agents.size, "is_loading" to isLoading)
+        )
+    }
 
     Box(modifier = modifier) {
         AsyncImage(
