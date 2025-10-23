@@ -1,11 +1,11 @@
 package com.ai.inty.netapi
 
+import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.utils.LogUtils
 import android.content.Context
 import com.ai.inty.netapi.config.NetworkConfig
 import com.inty.api.client.IntyClient
 import com.inty.api.client.okhttp.IntyOkHttpClient
-import com.inty.utils.storage.IntySetting
 import kotlinx.coroutines.withTimeout
 import java.lang.ref.WeakReference
 import java.util.concurrent.ConcurrentHashMap

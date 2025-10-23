@@ -10,7 +10,7 @@ import com.ai.inty.billing.VipStatusHelper
 import com.ai.inty.net.IUserApi
 import com.ai.inty.net.NetServiceMgr
 import com.architecture.httplib.core.HttpResult
-import com.inty.utils.storage.IntySetting
+import ai.sxwl.android.data.store.IntySetting
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

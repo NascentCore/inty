@@ -1,5 +1,6 @@
 package com.ai.inty.chat
 
+import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.ToastUtils
 import androidx.compose.foundation.background
@@ -61,7 +62,6 @@ import com.ai.inty.ui.ChatDialogData
 import com.ai.inty.ui.UnlimitChatDialog
 import com.ai.inty.ui.components.AgentBackground
 import com.ai.inty.utils.TrackScreenView
-import com.inty.utils.storage.IntySetting
 import kotlinx.coroutines.launch
 
 // The spacer from the bottom of the chat input to what ever that flows underneath it.

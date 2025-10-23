@@ -1,5 +1,6 @@
 package com.ai.inty.chat
 
+import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.Utils
 import android.content.Context
@@ -22,7 +23,6 @@ import com.ai.inty.utils.FirebasePerformanceHelper
 import com.ai.inty.utils.PageTrackingHelper
 import com.ai.inty.utils.UserProfileManager
 import com.architecture.httplib.core.HttpResult
-import com.inty.utils.storage.IntySetting
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow

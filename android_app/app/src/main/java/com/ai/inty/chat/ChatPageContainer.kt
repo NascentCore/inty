@@ -1,5 +1,6 @@
 package com.ai.inty.chat
 
+import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.Utils
 import androidx.compose.animation.AnimatedVisibility
@@ -41,7 +42,6 @@ import com.ai.inty.base.noRippleClickable
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.beans.UserProfile
 import com.ai.inty.chat.viewmodel.ChatTabViewModel
-import com.inty.utils.storage.IntySetting
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 

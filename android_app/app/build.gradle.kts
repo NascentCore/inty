@@ -72,7 +72,7 @@ dependencies {
     implementation(projects.library.utils)
 
     // ===== 网络库 =====
-    api(libs.retrofit.core)
+    implementation(libs.retrofit.core)
     implementation(libs.retrofit2.kotlin.coroutines.adapter)
     // ===== 调试工具 =====
     debugImplementation(libs.chucker.library)
@@ -91,7 +91,7 @@ dependencies {
     implementation(libs.bundles.credentials)
 
     // ===== 图片处理 =====
-    api(libs.ucrop)
+    implementation(libs.ucrop)
 
     // ===== Media3 音频播放 =====
     implementation(libs.bundles.androidx.media3.bundle)

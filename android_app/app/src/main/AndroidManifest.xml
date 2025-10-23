@@ -127,7 +127,7 @@
 
         <activity android:name=".VipCenterActivity" />
         <activity
-            android:name=".SubscriptionManagementActivity"
+            android:name=".SubsManageActivity"
             android:launchMode="singleTop"
             android:theme="@style/Theme.Inty.Popup" />
 

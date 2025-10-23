@@ -1,8 +1,8 @@
 package com.ai.inty.billing
 
+import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.utils.LogUtils
 import com.architecture.httplib.utils.MoshiUtils
-import com.inty.utils.storage.IntySetting
 
 /** 计费本地存储管理类 */
 internal object BillingStorage {

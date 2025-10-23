@@ -44,7 +44,7 @@ import com.ai.inty.ui.components.SettingNavigationItem
 import com.ai.inty.ui.components.SettingSection
 import com.ai.inty.viewmodels.DialogState
 import com.ai.inty.viewmodels.SettingViewModel
-import com.inty.utils.storage.IntySetting
+import ai.sxwl.android.data.store.IntySetting
 import kotlinx.coroutines.flow.collectLatest
 
 /** 设置页面主内容 */

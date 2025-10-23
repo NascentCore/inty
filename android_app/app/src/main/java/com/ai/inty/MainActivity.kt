@@ -1,6 +1,7 @@
 package com.ai.inty
 
 import ai.sxwl.android.common.base.BaseActivity
+import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.ToastUtils
 import android.view.GestureDetector
@@ -33,7 +34,6 @@ import com.ai.inty.home.HomeScreen
 import com.ai.inty.utils.PageTrackingHelper
 import com.ai.inty.utils.UnifiedStartupManager
 import com.ai.inty.viewmodels.MainViewModel
-import com.inty.utils.storage.IntySetting
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job

@@ -19,6 +19,6 @@ dependencies {
     ksp(libs.moshi.kotlin.codegen)
 
     // ===== 项目模块 =====
-    api(projects.library.utils)
+    implementation(projects.library.utils)
     api(libs.bundles.moshi)
 }

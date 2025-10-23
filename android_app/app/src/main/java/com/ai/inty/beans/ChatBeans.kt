@@ -1,7 +1,7 @@
 package com.ai.inty.beans
 
+import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.utils.TimeUtils
-import com.inty.utils.storage.IntySetting
 import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 

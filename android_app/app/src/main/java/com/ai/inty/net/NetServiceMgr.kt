@@ -13,7 +13,7 @@ import com.architecture.httplib.core.MoshiResultTypeAdapterFactory
 import com.architecture.httplib.error.GlobalErrorHandler
 import com.chuckerteam.chucker.api.ChuckerInterceptor
 import com.google.firebase.perf.metrics.HttpMetric
-import com.inty.utils.storage.IntySetting
+import ai.sxwl.android.data.store.IntySetting
 import com.jakewharton.retrofit2.adapter.kotlin.coroutines.CoroutineCallAdapterFactory
 import com.squareup.moshi.DefaultIfNullFactory
 import com.squareup.moshi.Moshi

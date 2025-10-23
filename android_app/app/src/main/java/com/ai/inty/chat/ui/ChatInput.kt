@@ -1,5 +1,6 @@
 package com.ai.inty.chat.ui
 
+import ai.sxwl.android.data.store.IntySetting
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -36,7 +37,6 @@ import com.ai.inty.base.IntyImage
 import com.ai.inty.base.IntySmallTextField
 import com.ai.inty.base.noRippleClickable
 import com.ai.inty.chat.ChatViewModel
-import com.inty.utils.storage.IntySetting
 
 /** 聊天输入框组件 */
 @Composable

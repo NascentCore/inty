@@ -1,8 +1,8 @@
 package com.ai.inty.utils
 
+import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.utils.LogUtils
 import com.ai.inty.beans.AgentInfo
-import com.inty.utils.storage.IntySetting
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.Types
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory

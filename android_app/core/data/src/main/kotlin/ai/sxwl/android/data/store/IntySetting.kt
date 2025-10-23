@@ -1,8 +1,10 @@
-package com.inty.utils.storage
+package ai.sxwl.android.data.store
 
 import ai.sxwl.android.utils.AppUtils
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.Utils
+import android.os.Handler
+import android.os.Looper
 import com.tencent.mmkv.MMKV
 import kotlin.random.Random
 
@@ -207,8 +209,7 @@ object IntySetting {
         }
         changeUser(geGuestUserID())
         // 延迟重置标志，确保401处理器有时间识别
-        android.os
-            .Handler(android.os.Looper.getMainLooper())
+        Handler(Looper.getMainLooper())
             .postDelayed({ isLoggingOut = false }, 2000)
     }
 
@@ -226,7 +227,7 @@ object IntySetting {
 
     fun randomSortSeed(): Int {
         if (_randomSortSeed == null) {
-            _randomSortSeed = Random.nextInt()
+            _randomSortSeed = Random.Default.nextInt()
         }
         return _randomSortSeed!!
     }

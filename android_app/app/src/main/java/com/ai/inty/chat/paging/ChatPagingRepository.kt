@@ -1,11 +1,11 @@
 package com.ai.inty.chat.paging
 
+import ai.sxwl.android.data.store.IntySetting
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.chat.constants.ChatConstants
-import com.inty.utils.storage.IntySetting
 import kotlinx.coroutines.flow.Flow
 
 /** Chat页面的Paging数据仓库 负责管理聊天agents的Paging数据流、配置和传统数据请求 */
