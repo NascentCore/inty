@@ -1,8 +1,7 @@
 package com.ai.inty.ui.screens
 
+import ai.sxwl.android.utils.ToastUtils
 import android.annotation.SuppressLint
-import android.widget.Toast
-import com.ai.inty.base.ToastUtils
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
@@ -50,7 +49,7 @@ fun SubscriptionManagementScreen(
                 }
 
                 is SubscriptionUiEvent.ShowToast -> {
-                    ToastUtils.showError(context, event.message)
+                    ToastUtils.showShort(event.message)
                 }
             }
         }

@@ -1,5 +1,6 @@
 package com.ai.inty.chat
 
+import ai.sxwl.android.utils.ToastUtils
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
@@ -46,7 +47,6 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.ai.inty.LoginActivity
 import com.ai.inty.R
 import com.ai.inty.VipCenterActivity
-import com.ai.inty.base.ToastUtils
 import com.ai.inty.beans.MsgInfo
 import com.ai.inty.billing.BillingRepository
 import com.ai.inty.chat.ui.ChatInput
@@ -218,7 +218,7 @@ internal fun ChatPage(
                             scope.launch {
                                 // 如果是已经删除的agent，则不可点击，并提示
                                 if (agentInfo?.isDeleted == true) {
-                                    ToastUtils.showToast(R.string.str_agent_is_deleted)
+                                    ToastUtils.showShort(R.string.str_agent_is_deleted)
                                 } else {
                                     if (drawerState.value == DrawerValue.Closed) {
                                         drawerState.value = DrawerValue.Open
@@ -241,7 +241,7 @@ internal fun ChatPage(
                             scope.launch {
                                 // 如果是已经删除的agent，则不可点击，并提示
                                 if (agentInfo?.isDeleted == true) {
-                                    ToastUtils.showToast(R.string.str_agent_is_deleted)
+                                    ToastUtils.showShort(R.string.str_agent_is_deleted)
                                 } else {
                                     // 如果不是VIP，显示高级模型的弹窗
                                     showPremiumDialog = true

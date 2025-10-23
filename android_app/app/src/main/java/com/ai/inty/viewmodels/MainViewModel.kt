@@ -1,10 +1,10 @@
 package com.ai.inty.viewmodels
 
+import ai.sxwl.android.utils.ToastUtils
 import androidx.compose.runtime.mutableStateListOf
 import androidx.lifecycle.viewModelScope
 import com.ai.inty.R
 import com.ai.inty.base.BaseViewModel
-import com.ai.inty.base.ToastUtils
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.beans.AppVersionRsp
 import com.ai.inty.beans.CreateAgentRequest
@@ -480,7 +480,7 @@ class MainViewModel : BaseViewModel() {
                             // 同步更新缓存
                             AgentCacheManager.removeAgent(agentId)
 
-                            ToastUtils.showToast(R.string.character_deleted_successfully)
+                            ToastUtils.showShort(R.string.character_deleted_successfully)
                             onSuccess()
                         }
 
@@ -493,7 +493,12 @@ class MainViewModel : BaseViewModel() {
                                         AppEnv.context.getString(R.string.check_network_connection),
                                     )
                                 }
-                            ToastUtils.showToast(R.string.delete_failed_with_reason, errorMessage)
+                            ToastUtils.showShort(
+                                AppEnv.context.getString(
+                                    R.string.delete_failed_with_reason,
+                                    errorMessage
+                                )
+                            )
                             onError(errorMessage)
                         }
                     }
@@ -506,14 +511,14 @@ class MainViewModel : BaseViewModel() {
                 )
                 val errorMessage = handleHttpException(e, "delete")
                 withContext(Dispatchers.Main) {
-                    ToastUtils.showToast(errorMessage)
+                    ToastUtils.showShort(errorMessage)
                     onError(errorMessage)
                 }
             } catch (e: Exception) {
                 EasyLog.log("deleteAgent exception: ${e.message}", priority = EasyLog.ERROR)
                 val errorMessage = handleGeneralException(e, "delete")
                 withContext(Dispatchers.Main) {
-                    ToastUtils.showToast(errorMessage)
+                    ToastUtils.showShort(errorMessage)
                     onError(errorMessage)
                 }
             }
@@ -550,7 +555,12 @@ class MainViewModel : BaseViewModel() {
                                         AppEnv.context.getString(R.string.check_network_connection),
                                     )
                                 }
-                            ToastUtils.showToast(R.string.update_failed_with_reason, errorMessage)
+                            ToastUtils.showShort(
+                                AppEnv.context.getString(
+                                    R.string.update_failed_with_reason,
+                                    errorMessage
+                                )
+                            )
                             onError(errorMessage)
                         }
                     }
@@ -563,14 +573,14 @@ class MainViewModel : BaseViewModel() {
                 )
                 val errorMessage = handleHttpException(e, "update")
                 withContext(Dispatchers.Main) {
-                    ToastUtils.showToast(errorMessage)
+                    ToastUtils.showShort(errorMessage)
                     onError(errorMessage)
                 }
             } catch (e: Exception) {
                 EasyLog.log("updateAgent exception: ${e.message}", priority = EasyLog.ERROR)
                 val errorMessage = handleGeneralException(e, "update")
                 withContext(Dispatchers.Main) {
-                    ToastUtils.showToast(errorMessage)
+                    ToastUtils.showShort(errorMessage)
                     onError(errorMessage)
                 }
             }

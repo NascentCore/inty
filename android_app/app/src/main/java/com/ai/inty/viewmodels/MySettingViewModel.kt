@@ -1,11 +1,11 @@
 package com.ai.inty.viewmodels
 
+import ai.sxwl.android.utils.ToastUtils
 import android.net.Uri
 import androidx.core.net.toUri
 import androidx.lifecycle.viewModelScope
 import com.ai.inty.R
 import com.ai.inty.base.BaseViewModel
-import com.ai.inty.base.ToastUtils
 import com.ai.inty.base.ViewModelEvent
 import com.ai.inty.beans.UserProfile
 import com.ai.inty.net.NetServiceMgr
@@ -13,6 +13,7 @@ import com.ai.inty.ui.components.EditKey
 import com.ai.inty.utils.IntyUserProfileSDK
 import com.ai.inty.utils.UserProfileManager
 import com.architecture.httplib.core.HttpResult
+import com.inty.utils.AppEnv
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -86,7 +87,7 @@ class MySettingViewModel : BaseViewModel() {
                                 )
                             // Show success toast for avatar upload
                             viewModelScope.launch(Dispatchers.Main) {
-                                ToastUtils.showToast(R.string.saved_successfully)
+                                ToastUtils.showShort(R.string.saved_successfully)
                             }
                         }
 
@@ -101,7 +102,7 @@ class MySettingViewModel : BaseViewModel() {
                 if (updatedProfile != null) {
                     // Show success toast for profile update
                     viewModelScope.launch(Dispatchers.Main) {
-                        ToastUtils.showToast(R.string.saved_successfully)
+                        ToastUtils.showShort(AppEnv.context.getString(R.string.saved_successfully))
                         UserProfileManager.saveUserProfile(updatedProfile)
                     }
                     // 发送用户信息更新成功事件

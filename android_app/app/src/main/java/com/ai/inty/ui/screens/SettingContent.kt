@@ -1,8 +1,8 @@
 package com.ai.inty.ui.screens
 
+import ai.sxwl.android.utils.ToastUtils
 import android.content.Context
 import android.content.Intent
-import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -256,8 +256,7 @@ private fun mailTo(context: Context, email: String) {
     try {
         context.startActivity(Intent.createChooser(intent, "email"))
     } catch (e: Exception) {
-        Toast.makeText(context, context.getString(R.string.toast_email_error), Toast.LENGTH_SHORT)
-            .show()
+        ToastUtils.showShort(R.string.toast_email_error)
     }
 }
 

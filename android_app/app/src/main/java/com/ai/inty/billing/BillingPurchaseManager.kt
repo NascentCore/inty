@@ -1,7 +1,7 @@
 package com.ai.inty.billing
 
+import ai.sxwl.android.utils.ToastUtils
 import android.app.Activity
-import com.ai.inty.base.ToastUtils
 import com.ai.inty.beans.SubscriptionVerifyRequest
 import com.ai.inty.net.NetServiceMgr
 import com.android.billingclient.api.AcknowledgePurchaseParams
@@ -12,7 +12,6 @@ import com.android.billingclient.api.Purchase
 import com.android.billingclient.api.SkuDetailsParams
 import com.architecture.httplib.core.HttpResult
 import com.google.android.gms.common.GoogleApiAvailability
-import com.inty.utils.AppEnv
 import com.inty.utils.log.EasyLog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -325,25 +324,25 @@ internal class BillingPurchaseManager(
                 EasyLog.log("BillingRepository BillingPurchaseManager ⚠️ Google Play 服务需要更新")
                 // 尝试更新 Google Play 服务
                 googleApiAvailability.getErrorDialog(activity, resultCode, 1001)?.show()
-                showError(activity, "Google Play Service update required")
+                showError("Google Play Service update required")
                 return false
             }
 
             com.google.android.gms.common.ConnectionResult.SERVICE_DISABLED -> {
                 EasyLog.log("BillingRepository BillingPurchaseManager ❌ Google Play 服务被禁用")
-                showError(activity, "Google Play Service disabled")
+                showError("Google Play Service disabled")
                 return false
             }
 
             com.google.android.gms.common.ConnectionResult.SERVICE_MISSING -> {
                 EasyLog.log("BillingRepository BillingPurchaseManager ❌ Google Play 服务未安装")
-                showError(activity, "Google Play Service missing")
+                showError("Google Play Service missing")
                 return false
             }
 
             com.google.android.gms.common.ConnectionResult.SERVICE_INVALID -> {
                 EasyLog.log("BillingRepository BillingPurchaseManager ❌ Google Play 服务无效")
-                showError(activity, "Google Play Service invalid")
+                showError("Google Play Service invalid")
                 return false
             }
 
@@ -351,7 +350,7 @@ internal class BillingPurchaseManager(
                 EasyLog.log(
                     "BillingRepository BillingPurchaseManager ❌ Google Play 服务不可用: $resultCode"
                 )
-                showError(activity, "Google Play Service unavailable")
+                showError("Google Play Service unavailable")
                 return false
             }
         }
@@ -359,7 +358,7 @@ internal class BillingPurchaseManager(
         // 检查设备是否支持计费
         if (!isBillingSupported()) {
             EasyLog.log("BillingRepository BillingPurchaseManager ❌ 设备不支持 Google Play 计费")
-            showError(activity, "Google Play billing isn't supported on this device")
+            showError("Google Play billing isn't supported on this device")
             return false
         }
 
@@ -393,7 +392,7 @@ internal class BillingPurchaseManager(
     fun launchBillingFlow(activity: Activity, productId: String) {
         // 检查购买前条件
         if (!checkPurchasePreconditions(activity)) {
-            showError(activity, "Purchase preconditions check failed")
+            showError("Purchase preconditions check failed")
             return
         }
 
@@ -448,7 +447,7 @@ internal class BillingPurchaseManager(
                         EasyLog.log(
                             "BillingRepository BillingPurchaseManager ❌ 未找到商品详情: $productId"
                         )
-                        showError(activity, "Product details not found: $productId")
+                        showError("Product details not found: $productId")
                     }
                 }
 
@@ -457,14 +456,12 @@ internal class BillingPurchaseManager(
                         "BillingRepository BillingPurchaseManager 商品ID: $productId ❌ 开发者错误 (12): 请检查商品ID配置、应用签名、测试用户设置"
                     )
                     showError(
-                        activity,
                         "Developer error: Please check product ID configuration, app signature, test user settings",
                     )
                 }
 
                 BillingClient.BillingResponseCode.SERVICE_UNAVAILABLE -> {
                     showError(
-                        activity,
                         "Service unavailable: Google Play services temporarily unavailable",
                     )
                     EasyLog.log(
@@ -474,7 +471,6 @@ internal class BillingPurchaseManager(
 
                 BillingClient.BillingResponseCode.BILLING_UNAVAILABLE -> {
                     showError(
-                        activity,
                         "Billing unavailable: Device does not support Google Play billing",
                     )
                     EasyLog.log(
@@ -483,18 +479,17 @@ internal class BillingPurchaseManager(
                 }
 
                 BillingClient.BillingResponseCode.ITEM_UNAVAILABLE -> {
-                    showError(activity, "Item unavailable: Item is not available in current region")
+                    showError("Item unavailable: Item is not available in current region")
                     EasyLog.log("BillingRepository BillingPurchaseManager ❌ 商品不可用: 商品在当前地区不可用")
                 }
 
                 BillingClient.BillingResponseCode.NETWORK_ERROR -> {
-                    showError(activity, "Network error: Network connection issue")
+                    showError("Network error: Network connection issue")
                     EasyLog.log("BillingRepository BillingPurchaseManager ❌ 网络错误: 网络连接问题")
                 }
 
                 else -> {
                     showError(
-                        activity,
                         "Query product details failed: ${billingResult.debugMessage}",
                     )
                     EasyLog.log(
@@ -505,11 +500,10 @@ internal class BillingPurchaseManager(
         }
     }
 
-    private fun showError(activity: Activity, error: String?) {
-        activity.runOnUiThread { ToastUtils.showError(activity, error) }
-    }
 
     private fun showError(error: String?) {
-        ToastUtils.showError(AppEnv.context, error)
+        error?.let {
+            ToastUtils.showShort(error)
+        }
     }
 }

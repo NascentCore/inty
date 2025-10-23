@@ -1,5 +1,6 @@
 package com.ai.inty.ui.screens
 
+import ai.sxwl.android.utils.ToastUtils
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -30,7 +31,6 @@ import androidx.credentials.exceptions.GetCredentialInterruptedException
 import androidx.credentials.exceptions.NoCredentialException
 import com.ai.inty.R
 import com.ai.inty.base.AntiClick
-import com.ai.inty.base.ToastUtils
 import com.ai.inty.ui.components.GoogleLoginButton
 import com.ai.inty.ui.components.LoginCloseButton
 import com.ai.inty.ui.components.LogoImage
@@ -90,7 +90,7 @@ internal fun LoginScreen(
                                     EasyLog.ERROR,
                                 )
                                 // 显示错误提示
-                                coroutineScope.launch { ToastUtils.showToast(errorMessage) }
+                                coroutineScope.launch { ToastUtils.showShort(errorMessage) }
                             }
                             is GetCredentialException -> {
                                 val errorMessage = context.getString(R.string.get_credential_failed)
@@ -99,7 +99,7 @@ internal fun LoginScreen(
                                     EasyLog.ERROR,
                                 )
                                 // 显示错误提示
-                                coroutineScope.launch { ToastUtils.showToast(errorMessage) }
+                                coroutineScope.launch { ToastUtils.showShort(errorMessage) }
                             }
                             else -> {
                                 val errorMessage = context.getString(R.string.login_failed)
@@ -108,7 +108,7 @@ internal fun LoginScreen(
                                     EasyLog.ERROR,
                                 )
                                 // 显示错误提示
-                                coroutineScope.launch { ToastUtils.showToast(errorMessage) }
+                                coroutineScope.launch { ToastUtils.showShort(errorMessage) }
                             }
                         }
                     },
@@ -119,10 +119,15 @@ internal fun LoginScreen(
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(0.6f))) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(0.6f))
+    ) {
         Column(
             modifier =
-                Modifier.fillMaxWidth()
+                Modifier
+                    .fillMaxWidth()
                     .align(Alignment.BottomCenter)
                     .background(
                         brush =

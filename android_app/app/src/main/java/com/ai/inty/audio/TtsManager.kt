@@ -1,7 +1,7 @@
 package com.ai.inty.audio
 
+import ai.sxwl.android.utils.ToastUtils
 import android.content.Context
-import com.ai.inty.base.ToastUtils
 import com.ai.inty.net.NetServiceMgr
 import com.ai.inty.netapi.BusinessErrorCodes
 import com.architecture.httplib.core.HttpResult
@@ -119,7 +119,7 @@ class TtsManager private constructor(private val context: Context) {
                     is HttpResult.Success -> {
                         if (response.data.code == BusinessErrorCodes.VOICE_TTS_LIMIT_CODE) {
                             // 音频生成到达次数限制，需要给用户toast提示文案
-                            ToastUtils.showToast("${response.data.message}")
+                            ToastUtils.showShort("${response.data.message}")
                             EasyLog.log(
                                 "音频LOG测试 TTS 生成次数到达限制 (Agent: $agentId)",
                                 EasyLog.ERROR

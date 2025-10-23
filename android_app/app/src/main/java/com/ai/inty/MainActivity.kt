@@ -1,6 +1,7 @@
 package com.ai.inty
 
 import ai.sxwl.android.common.base.BaseActivity
+import ai.sxwl.android.utils.ToastUtils
 import android.view.GestureDetector
 import android.view.MotionEvent
 import androidx.activity.OnBackPressedCallback
@@ -25,7 +26,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
-import com.ai.inty.base.ToastUtils
 import com.ai.inty.billing.BillingRepository
 import com.ai.inty.chat.ChatViewModel
 import com.ai.inty.home.HomeScreen
@@ -232,7 +232,7 @@ class MainActivity : BaseActivity() {
 
     /** 显示退出提示 */
     private fun showExitHint() {
-        ToastUtils.showMessage(this, getString(R.string.edge_swipe_exit_hint))
+        ToastUtils.showShort(getString(R.string.edge_swipe_exit_hint))
     }
 
     override fun onResume() {

@@ -1,9 +1,9 @@
 package com.ai.inty.viewmodels
 
+import ai.sxwl.android.utils.ToastUtils
 import androidx.lifecycle.viewModelScope
 import com.ai.inty.R
 import com.ai.inty.base.BaseViewModel
-import com.ai.inty.base.ToastUtils
 import com.ai.inty.billing.VipStatusHelper
 import com.ai.inty.net.IUserApi
 import com.ai.inty.net.NetServiceMgr
@@ -94,7 +94,7 @@ class SettingViewModel : BaseViewModel() {
                             if (result.data.canDelete && !result.data.activeSubscription) {
                                 deleteUserAccount()
                             } else {
-                                ToastUtils.showToast(
+                                ToastUtils.showShort(
                                     AppEnv.context.getString(
                                         R.string.toast_cancel_subscription_first
                                     )
@@ -103,7 +103,7 @@ class SettingViewModel : BaseViewModel() {
                         }
 
                         is HttpResult.Failure -> {
-                            ToastUtils.showToast(
+                            ToastUtils.showShort(
                                 AppEnv.context.getString(
                                     R.string.toast_check_account_deletion_error
                                 )
@@ -118,14 +118,14 @@ class SettingViewModel : BaseViewModel() {
                     EasyLog.ERROR,
                 )
                 val errorMessage = handleHttpException(e, "account")
-                withContext(Dispatchers.Main) { ToastUtils.showToast(errorMessage) }
+                withContext(Dispatchers.Main) { ToastUtils.showShort(errorMessage) }
             } catch (e: Exception) {
                 EasyLog.log(
                     "检查账号需要取消订阅 exception: ${e.message}",
                     priority = EasyLog.ERROR
                 )
                 val errorMessage = handleGeneralException(e, "account")
-                withContext(Dispatchers.Main) { ToastUtils.showToast(errorMessage) }
+                withContext(Dispatchers.Main) { ToastUtils.showShort(errorMessage) }
             }
         }
     }
@@ -147,7 +147,7 @@ class SettingViewModel : BaseViewModel() {
                         }
 
                         is HttpResult.Failure -> {
-                            ToastUtils.showToast(
+                            ToastUtils.showShort(
                                 AppEnv.context.getString(R.string.toast_account_deletion_error)
                             )
                         }
@@ -160,11 +160,11 @@ class SettingViewModel : BaseViewModel() {
                     EasyLog.ERROR,
                 )
                 val errorMessage = handleHttpException(e, "account")
-                withContext(Dispatchers.Main) { ToastUtils.showToast(errorMessage) }
+                withContext(Dispatchers.Main) { ToastUtils.showShort(errorMessage) }
             } catch (e: Exception) {
                 EasyLog.log("删除用户账号 exception: ${e.message}", priority = EasyLog.ERROR)
                 val errorMessage = handleGeneralException(e, "account")
-                withContext(Dispatchers.Main) { ToastUtils.showToast(errorMessage) }
+                withContext(Dispatchers.Main) { ToastUtils.showShort(errorMessage) }
             }
         }
     }

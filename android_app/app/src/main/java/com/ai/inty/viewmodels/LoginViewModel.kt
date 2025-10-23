@@ -1,7 +1,7 @@
 package com.ai.inty.viewmodels
 
+import ai.sxwl.android.utils.ToastUtils
 import android.content.Intent
-import android.widget.Toast
 import com.ai.inty.MainActivity
 import com.ai.inty.R
 import com.ai.inty.base.BaseViewModel
@@ -39,11 +39,7 @@ class LoginViewModel : BaseViewModel() {
 
                     withContext(Dispatchers.Main) {
                         // 显示登录成功提示
-                        Toast.makeText(
-                            AppEnv.context,
-                            AppEnv.context.getString(R.string.login_successfully),
-                            Toast.LENGTH_SHORT,
-                        ).show()
+                        ToastUtils.showShort(R.string.login_successfully)
 
                         // 发送登录成功事件
                         sendEvent(ViewModelEvent.LoginSuccess)
