@@ -26,7 +26,9 @@ from app.models import chat_history
 from app.services.cache_service import cache_service
 from app.utils.openai_client import (
     create_openai_client,
+    get_base_openai_client,
     langchain_message_to_openai_message,
+    wrap_client_with_langsmith,
 )
 
 
@@ -222,6 +224,10 @@ class Agent:
             thread_name_prefix=f"agent-{agent_id}",
         )
 
+        # OpenAI客户端缓存（用于性能优化）
+        self._wrapped_client: Optional[OpenAI] = None
+        self._client_lock = Lock()
+
         # 使用配置中的模型设置
         model_name = model_config.get(
             "model", global_config_loaded_from_config_yaml.agent.model
@@ -393,6 +399,30 @@ class Agent:
         """线程安全地更新最后使用时间"""
         with self._last_used_lock:
             self.last_used = time.time()
+
+    def _get_wrapped_client(self, chat_name: str, labels: dict) -> OpenAI:
+        """
+        获取或创建带LangSmith包装的OpenAI客户端（缓存版本）
+
+        使用双重检查锁定模式确保线程安全的客户端创建和复用。
+        客户端在Agent实例的生命周期内复用，避免每次请求都创建新客户端。
+
+        Args:
+            chat_name: 聊天名称，用于LangSmith追踪
+            labels: 元数据标签
+
+        Returns:
+            包装后的OpenAI客户端
+        """
+        if self._wrapped_client is None:
+            with self._client_lock:
+                if self._wrapped_client is None:
+                    logger.debug(f"为Agent创建wrapped client - Agent: {self.agent_id}")
+                    base_client = get_base_openai_client()
+                    self._wrapped_client = wrap_client_with_langsmith(
+                        base_client, chat_name, labels
+                    )
+        return self._wrapped_client
 
     @deprecated("Should be moved to user service")
     def _get_user_profile_sync(self, user_id: str) -> str:
@@ -614,9 +644,17 @@ class Agent:
                 )
                 default_top_p = global_config_loaded_from_config_yaml.agent.top_p
 
-                response = create_openai_client(
-                    chat_name=chat_name, labels=labels
-                ).chat.completions.create(
+                # 获取或创建wrapped client（性能优化：复用客户端）
+                client_start = time.time()
+                client = self._get_wrapped_client(chat_name, labels)
+                client_time = time.time() - client_start
+                logger.debug(
+                    f"客户端获取耗时: {client_time:.3f}秒 - Agent: {self.agent_id}"
+                )
+
+                # API调用
+                api_start = time.time()
+                response = client.chat.completions.create(
                     messages=openai_messages,
                     model=self.model_config.get("model", default_model),
                     temperature=self.model_config.get(
@@ -634,6 +672,9 @@ class Agent:
                         "user": user_id,
                     },
                 )
+                api_time = time.time() - api_start
+                logger.debug(f"API调用耗时: {api_time:.3f}秒 - Agent: {self.agent_id}")
+
                 agent_invoke_time = time.time() - agent_invoke_start
                 logger.debug(
                     f"Agent推理耗时: {agent_invoke_time:.3f}秒 - Agent: {self.agent_id}"

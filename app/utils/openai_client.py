@@ -6,16 +6,18 @@ Wrapper of OpenAI API, used to wrap the OpenAI API with LangSmith.
 Demo for using OpenAI SDK with LangSmith to track the usage of OpenAI API.
 """
 
-from enum import StrEnum
 import os
+import threading
+from enum import StrEnum
+from typing import Optional
+
 from langchain_core.messages import BaseMessage
-from typing_extensions import deprecated
-from openai import OpenAI
 from langsmith import traceable, wrappers
+from loguru import logger
+from openai import OpenAI
+from typing_extensions import deprecated
 
 from app.core.config import global_config_loaded_from_config_yaml
-
-from loguru import logger
 
 
 class Role(StrEnum):
@@ -56,7 +58,13 @@ _warn_env_var("LANGSMITH_TRACING_V2")
 _warn_env_var("LANGSMITH_PROJECT")
 
 
+# 全局单例基础客户端，用于复用HTTP连接
+_base_client: Optional[OpenAI] = None
+_client_lock = threading.Lock()
+
+
 def _create_openai_client():
+    """创建基础OpenAI客户端实例（不含LangSmith包装）"""
     return OpenAI(
         base_url=global_config_loaded_from_config_yaml.agent.base_url,
         api_key=global_config_loaded_from_config_yaml.agent.api_key,
@@ -66,6 +74,44 @@ def _create_openai_client():
             "HTTP-Referer": f"{global_config_loaded_from_config_yaml.app.name_for_openrouter}",  # Optional. Site URL for rankings on openrouter.ai.
             "X-Title": global_config_loaded_from_config_yaml.app.name,  # Optional. Site title for rankings on openrouter.ai.
         },
+    )
+
+
+def get_base_openai_client() -> OpenAI:
+    """
+    获取全局单例的基础OpenAI客户端（不含LangSmith包装）
+
+    使用双重检查锁定模式确保线程安全的单例创建。
+    复用HTTP连接池以提升性能。
+    """
+    global _base_client
+    if _base_client is None:
+        with _client_lock:
+            if _base_client is None:
+                logger.debug("创建全局基础OpenAI客户端")
+                _base_client = _create_openai_client()
+    return _base_client
+
+
+def wrap_client_with_langsmith(
+    client: OpenAI, chat_name: str, labels: dict[str, str]
+) -> OpenAI:
+    """
+    为已有客户端添加LangSmith包装
+
+    Args:
+        client: 基础OpenAI客户端
+        chat_name: 聊天名称，用于LangSmith追踪
+        labels: 元数据标签
+
+    Returns:
+        包装后的OpenAI客户端，带有LangSmith追踪功能
+    """
+    tracing_extra = {
+        "metadata": labels,
+    }
+    return wrappers.wrap_openai(
+        client, chat_name=chat_name, tracing_extra=tracing_extra
     )
 
 
@@ -88,21 +134,12 @@ def create_openai_client(chat_name: str, labels: dict[str, str]):
     Return an OpenAI client with LangSmith tracing.
     The ENV vars are required by langsmith.
     This maps the role of the messages: user->Human and assistant->AI.
-    """
-    # Create OpenAI client and wrap it with LangSmith
-    tracing_extra = {
-        "metadata": labels,
-    }
-    _client = wrappers.wrap_openai(
-        # Create a new OpenAI client for each call to avoid nested traces on langsmith.
-        # If this becomes a performance bottleneck, we need to cache the client.
-        # TODO: Monitor performance.
-        _create_openai_client(),
-        chat_name=chat_name,
-        tracing_extra=tracing_extra,
-    )
 
-    return _client
+    Note: 该函数保留用于向后兼容，但推荐在Agent类中使用缓存的客户端。
+    对于需要在Agent外部使用的场景，该函数仍然有效。
+    """
+    base_client = get_base_openai_client()
+    return wrap_client_with_langsmith(base_client, chat_name, labels)
 
 
 def langchain_message_to_openai_message(
