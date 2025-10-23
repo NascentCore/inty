@@ -1,6 +1,7 @@
-package com.ai.inty.utils
+package com.ai.inty
 
-import org.junit.Assert.assertEquals
+import com.ai.inty.utils.NetworkErrorHandler
+import org.junit.Assert
 import org.junit.Test
 
 class NetworkErrorHandlerTest {
@@ -63,7 +64,7 @@ class NetworkErrorHandlerTest {
                 logError = false,
             )
 
-            assertEquals(
+            Assert.assertEquals(
                 "Failed for: ${testCase.description}",
                 testCase.expectedMessage,
                 capturedMessage,
@@ -86,6 +87,6 @@ class NetworkErrorHandlerTest {
             logError = false,
         )
 
-        assertEquals("", capturedMessage)
+        Assert.assertEquals("", capturedMessage)
     }
 }
