@@ -21,13 +21,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
 import com.ai.inty.R
-import com.ai.inty.base.IntyImage
 import com.ai.inty.base.IntySmallTextField2
 
 /** 举报项组件 */
@@ -202,7 +204,13 @@ fun ReportImageEvidenceContainer(title: String, images: List<String>, onClickAdd
                     .clip(RoundedCornerShape(8.dp))
         ) {
             if (images.isNotEmpty()) {
-                IntyImage(modifier = Modifier.fillMaxSize(), model = images.firstOrNull())
+                AsyncImage(
+                    modifier = Modifier.fillMaxSize(),
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(images.firstOrNull())
+                        .build(),
+                    contentDescription = null
+                )
             } else {
                 Image(
                     modifier =

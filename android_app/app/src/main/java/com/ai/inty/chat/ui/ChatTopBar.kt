@@ -9,21 +9,24 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
 import com.ai.inty.AgentInfoActivity
 import com.ai.inty.R
-import com.ai.inty.base.IntyCircleImage
-import com.ai.inty.base.IntyImage
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.utils.getCdnImageUrl
 import kotlinx.coroutines.launch
@@ -51,12 +54,13 @@ fun ChatTopBar(
     Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
         // 返回按钮
         if (showBackButton) {
-            IntyImage(
+            AsyncImage(
                 modifier =
                     Modifier
                         .size(BACK_BUTTON_SIZE.dp)
                         .noRippleClickable { onBack?.invoke() },
                 model = R.drawable.back,
+                contentDescription = null,
             )
             Spacer(modifier = Modifier.width(8.dp))
         }
@@ -80,13 +84,18 @@ fun ChatTopBar(
                     },
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            IntyCircleImage(
+            AsyncImage(
                 modifier =
                     Modifier
                         .padding(CHAT_TOP_BAR_AVATAR_PADDING.dp)
-                        .size(CHAT_TOP_BAR_AVATAR_SIZE.dp),
-                url = getCdnImageUrl(agentInfo.avatar, width = 64),
-                placeholderResID = R.drawable.img_default_avatar,
+                        .size(CHAT_TOP_BAR_AVATAR_SIZE.dp)
+                        .clip(CircleShape),
+                model = ImageRequest.Builder(context)
+                    .data(getCdnImageUrl(agentInfo.avatar, width = 64))
+                    .build(),
+                placeholder = painterResource(R.drawable.img_default_avatar),
+                error = painterResource(R.drawable.img_default_avatar),
+                contentDescription = null,
             )
 
             Spacer(modifier = Modifier.width(6.dp))
@@ -113,11 +122,12 @@ fun ChatTopBar(
                     ),
             contentAlignment = Alignment.Center,
         ) {
-            IntyImage(
+            AsyncImage(
                 modifier = Modifier
                     .size(MORE_BUTTON_SIZE.dp)
                     .noRippleClickable { onClickMore() },
                 model = R.drawable.icon_more,
+                contentDescription = null,
             )
         }
     }

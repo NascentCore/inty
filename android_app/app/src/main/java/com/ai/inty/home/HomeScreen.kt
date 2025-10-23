@@ -42,12 +42,12 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil3.compose.AsyncImage
 import com.ai.inty.ChatActivity
 import com.ai.inty.CreateRoleActivity
 import com.ai.inty.LoginActivity
 import com.ai.inty.R
 import com.ai.inty.VipCenterActivity
-import com.ai.inty.base.IntyImage
 import com.ai.inty.beans.UserProfile
 import com.ai.inty.billing.BillingRepository
 import com.ai.inty.billing.VipStatusHelper
@@ -435,11 +435,12 @@ private fun BottomNavigationBarItem(modifier: Modifier, tabInfo: TabInfo, select
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Bottom,
     ) {
-        IntyImage(
+        AsyncImage(
             modifier = Modifier.size(TabIconSize),
             model = if (selected) tabInfo.iconSelected else tabInfo.icon,
             contentScale = ContentScale.Fit, // 保持图片宽高比不变
             alignment = Alignment.Center,
+            contentDescription = null,
         )
 
         val spacerRatio = 0.05f

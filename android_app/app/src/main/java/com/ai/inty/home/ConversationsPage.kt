@@ -39,8 +39,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil3.compose.AsyncImage
 import com.ai.inty.R
-import com.ai.inty.base.IntyImage
 import com.ai.inty.beans.ConversationItem
 import com.ai.inty.ui.components.EmptyDataState
 import com.ai.inty.utils.AuthClickable
@@ -69,7 +69,11 @@ fun ConversationsPage(
     )
 
     Box(modifier = modifier) {
-        IntyImage(modifier = Modifier.align(Alignment.TopEnd), model = R.drawable.notify_header_bg)
+        AsyncImage(
+            modifier = Modifier.align(Alignment.TopEnd),
+            model = R.drawable.notify_header_bg,
+            contentDescription = null
+        )
         Content(
             conversations = conversations,
             onClickConversationItem = onClickConversationItem,
@@ -234,12 +238,13 @@ private fun ChatHistoryItem(
         Spacer(Modifier.width(16.dp))
 
         // 头像
-        IntyImage(
+        AsyncImage(
             modifier = Modifier
                 .size(56.dp)
                 .clip(CircleShape),
             model = getCdnImageUrl(conversation.agentAvatar, width = 128),
             placeholder = painterResource(placeholderID),
+            contentDescription = null,
         )
 
         Spacer(Modifier.width(14.dp))

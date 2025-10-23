@@ -18,8 +18,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil3.compose.AsyncImage
 import com.ai.inty.R
-import com.ai.inty.base.IntyImage
 
 /** 空状态类型枚举 */
 enum class EmptyStateType {
@@ -51,7 +51,11 @@ fun EmptyStateComponent(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         // 空状态图标
-        IntyImage(model = R.drawable.img_content_empty, contentScale = ContentScale.Crop)
+        AsyncImage(
+            model = R.drawable.img_content_empty,
+            contentScale = ContentScale.Crop,
+            contentDescription = null
+        )
 
         Spacer(Modifier.height(16.dp))
 

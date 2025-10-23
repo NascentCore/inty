@@ -33,10 +33,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -45,8 +47,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
 import com.ai.inty.R
-import com.ai.inty.base.IntyCircleImage
 import com.ai.inty.base.IntySmallTextField
 import com.ai.inty.base.IntySmallTextField2
 import com.ai.inty.beans.GENDER
@@ -167,10 +170,16 @@ private fun AvatarSection(avatar: String, onSelectAvatar: () -> Unit) {
                 .padding(4.dp),
         contentAlignment = Alignment.Center,
     ) {
-        IntyCircleImage(
-            modifier = Modifier.fillMaxSize(),
-            url = avatar,
-            placeholderResID = R.drawable.app_icon,
+        AsyncImage(
+            modifier = Modifier
+                .fillMaxSize()
+                .clip(CircleShape),
+            model = ImageRequest.Builder(LocalContext.current)
+                .data(avatar)
+                .build(),
+            placeholder = painterResource(R.drawable.app_icon),
+            error = painterResource(R.drawable.app_icon),
+            contentDescription = null,
         )
         Image(
             modifier =

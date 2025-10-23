@@ -23,11 +23,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.ai.inty.base.IntyImage
+import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.ui.components.ShimmerPlaceholder
 import com.ai.inty.ui.components.SmartTagsLayout
@@ -80,9 +82,12 @@ fun ExploreCharacterCard(modifier: Modifier = Modifier, agentInfo: AgentInfo, on
                 ShimmerPlaceholder(modifier = Modifier.fillMaxSize(), cornerRadius = 8.dp)
             }
 
-            IntyImage(
+            AsyncImage(
                 modifier = Modifier.fillMaxSize(),
-                model = imageUrl,
+                model = ImageRequest.Builder(LocalContext.current)
+                    .data(imageUrl)
+                    .build(),
+                contentDescription = null,
                 contentScale = ContentScale.Crop,
                 onSuccess = {
                     // 只在状态真正改变时才更新，避免不必要的重组
