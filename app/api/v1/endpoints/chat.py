@@ -19,6 +19,7 @@ from app.api.utils.logger_route import LoggerRoute
 from app.core.agent.agent import agent_manager
 from app.core.chat import generate_chat_stream
 from app.core.config import global_config_loaded_from_config_yaml
+from app.models.user import AuthType
 from app.schemas.chat import ChatCompletionRequest
 from app.schemas.response import BusinessErrorCode, create_business_error_response
 from app.services import agent_service, chat_history_service, chat_service
@@ -28,6 +29,68 @@ from app.services.voice_service import voice_service
 from app.utils.timing import Timer, log_time
 
 router = APIRouter(prefix="/chat", route_class=LoggerRoute)
+
+
+def _handle_subscription_limit_error(
+    session_id: str,
+    last_user_message: str,
+    current_user: schemas.User,
+    used_count: int,
+    daily_limit: int,
+) -> schemas.APIResponse:
+    """处理订阅限制错误"""
+    try:
+        chat_history_service.add_user_message(session_id, last_user_message)
+        logger.debug(f"用户消息已保存到历史记录: {session_id}")
+    except Exception as e:
+        logger.warning(f"保存用户消息失败: {str(e)}")
+
+    if current_user.auth_type == AuthType.GUEST:
+        return create_business_error_response(
+            error_info=BusinessErrorCode.GUEST_LOGIN_REQUIRED,
+            extra_data={"used_count": used_count, "daily_limit": daily_limit},
+        )
+    else:
+        return create_business_error_response(
+            error_info=BusinessErrorCode.SUBSCRIPTION_REQUIRED,
+            extra_data={"used_count": used_count, "daily_limit": daily_limit},
+        )
+
+
+def _build_chat_response(
+    response_content: str,
+    last_user_message: str,
+    latest_message_info: Optional[dict],
+    audio_url: Optional[str],
+    request: ChatCompletionRequest,
+) -> dict:
+    """构建聊天响应数据"""
+    message = {"role": "assistant", "content": response_content}
+
+    if latest_message_info:
+        message["id"] = latest_message_info["id"]
+        message["meta_data"] = latest_message_info["meta_data"]
+        message["timestamp"] = latest_message_info["timestamp"]
+        message["audio_url"] = latest_message_info["audio_url"] or audio_url
+    elif audio_url:
+        message["audio_url"] = audio_url
+
+    if message.get("audio_url"):
+        logger.debug(f"响应包含语音URL: {message['audio_url']}")
+
+    return {
+        "id": f"chatcmpl-{uuid.uuid4().hex[:12]}",
+        "object": "chat.completion",
+        "created": int(time.time()),
+        "model": request.model,
+        "choices": [{"index": 0, "message": message, "finish_reason": "stop"}],
+        "usage": {
+            "prompt_tokens": len(last_user_message.split()),
+            "completion_tokens": len(response_content.split()),
+            "total_tokens": len(last_user_message.split())
+            + len(response_content.split()),
+        },
+    }
 
 
 @router.post(
@@ -58,30 +121,10 @@ async def agent_chat_completions(
         raise HTTPException(status_code=400, detail="Stream is not supported")
 
     try:
-        import time
-
         request_handling_timer = Timer("请求处理")
         logger.debug(
-            f"开始处理聊天请求 - Agent ID: {agent_id}, User ID: {current_user.id}"
+            f"聊天请求 - agent_id={agent_id}, user_id={current_user.id}, messages={len(request.messages)}"
         )
-        logger.debug(f"请求参数: {request.dict()}")
-        logger.debug(f"request.messages详情: {request.messages}")
-        logger.debug(
-            f"request.messages数量: {len(request.messages) if request.messages else 0}"
-        )
-
-        # 优化：简化Agent验证，在创建Agent实例时验证
-        # 简化查询，只获取基本字段
-        with log_time(f"简化Agent验证: {agent_id}"):
-            result = await db.execute(
-                select(models.Agent.id, models.Agent.name).where(
-                    models.Agent.id == agent_id
-                )
-            )
-        agent_basic = result.first()
-        if not agent_basic:
-            logger.error(f"Agent未找到: {agent_id}")
-            raise HTTPException(status_code=404, detail="Agent not found")
 
         # 获取或创建与该Agent的唯一会话
         with log_time(
@@ -102,8 +145,6 @@ async def agent_chat_completions(
         # 获取最后一条用户消息
         user_messages = [msg for msg in request.messages if msg.role == "user"]
         if not user_messages:
-            logger.error("请求中没有用户消息")
-            logger.error(f"所有消息的role: {[msg.role for msg in request.messages]}")
             raise HTTPException(status_code=400, detail="No user message found")
 
         last_user_message = user_messages[-1].content
@@ -124,68 +165,32 @@ async def agent_chat_completions(
 
         session_id = generate_session_id(chat.id)
 
-        is_allowed, used_count, daily_limit = (
-            await subscription_service.check_chat_limit(db, current_user)
-        )
-
-        if not is_allowed:
-            # 在返回错误前，先保存用户消息到聊天历史
-            # TODO: 考虑直接丢弃比较合适？但是会影响前后端一致性，需要跟 @zhiwei 讨论。
-            try:
-                chat_history_service.add_user_message(session_id, last_user_message)
-                logger.debug(f"用户消息已保存到历史记录: {session_id}")
-            except Exception as e:
-                logger.warning(f"保存用户消息失败: {str(e)}")
-
-            # 根据用户类型返回不同错误码
-            from app.models.user import AuthType
-
-            if current_user.auth_type == AuthType.GUEST:
-                # 游客用户：提示登录
-                return create_business_error_response(
-                    error_info=BusinessErrorCode.GUEST_LOGIN_REQUIRED,
-                    extra_data={"used_count": used_count, "daily_limit": daily_limit},
-                )
-            else:
-                # 已登录用户：提示订阅
-                return create_business_error_response(
-                    error_info=BusinessErrorCode.SUBSCRIPTION_REQUIRED,
-                    extra_data={"used_count": used_count, "daily_limit": daily_limit},
-                )
-
-        logger.debug(f"开始非流式聊天处理: session_id={session_id}")
-        chat_processing_start = time.time()
-
-        # 并行获取聊天设置和AI回复
-        try:
-            settings_task = asyncio.create_task(
-                chat_service.get_or_create_chat_settings(
-                    db, chat.id, current_user.id, agent_id
-                )
+        with log_time(f"订阅检查: user_id={current_user.id}"):
+            is_allowed, used_count, daily_limit = (
+                await subscription_service.check_chat_limit(db, current_user)
             )
 
-            # 先获取设置，然后传递给AI任务
-            chat_settings = await settings_task
-            logger.debug(f"chat_settings: {chat_settings.__dict__}")
+        if not is_allowed:
+            return _handle_subscription_limit_error(
+                session_id, last_user_message, current_user, used_count, daily_limit
+            )
 
-            ai_task = asyncio.create_task(
-                agent.chat(
+        # 获取聊天设置和AI回复
+        try:
+            with log_time(f"获取聊天设置: chat_id={chat.id}"):
+                chat_settings = await chat_service.get_or_create_chat_settings(
+                    db, chat.id, current_user.id, agent_id
+                )
+
+            with log_time(f"AI聊天处理: session_id={session_id}"):
+                response_content = await agent.chat(
                     user_id=current_user.id,
                     session_id=session_id,
                     messages=messages,
                     chat_settings=chat_settings,
                 )
-            )
 
-            # 等待任务完成
-            response_content = await ai_task
-            chat_processing_time = time.time() - chat_processing_start
-            logger.debug(
-                f"Agent聊天响应成功: {response_content[:100]}..., 耗时: {chat_processing_time:.3f}秒"
-            )
-            logger.debug(
-                f"聊天设置获取成功: voice_enabled={chat_settings.voice_enabled}"
-            )
+            logger.debug(f"Agent聊天响应成功: {response_content[:100]}...")
 
         except Exception as e:
             logger.error(f"Agent聊天处理失败: {str(e)}")
@@ -227,69 +232,41 @@ async def agent_chat_completions(
 
         # 记录聊天使用情况
         try:
-            logger.debug(f"记录聊天使用情况: user_id={current_user.id}")
-            await subscription_service.record_usage(
-                db,
-                current_user.id,
-                "chat",
-                1,
-                extra_data={
-                    "agent_id": agent_id,
-                    "message_length": len(last_user_message),
-                },
-            )
+            with log_time(f"记录使用情况: user_id={current_user.id}"):
+                await subscription_service.record_usage(
+                    db,
+                    current_user.id,
+                    "chat",
+                    1,
+                    extra_data={
+                        "agent_id": agent_id,
+                        "message_length": len(last_user_message),
+                    },
+                )
             logger.debug("聊天使用情况记录成功")
         except Exception as e:
             logger.warning(f"记录聊天使用情况失败: {str(e)}")
 
         # 获取最新AI消息的完整信息
         try:
-            latest_message_info = await chat_history_service.get_latest_ai_message_info(
-                db, session_id
-            )
+            with log_time(f"获取最新消息: session_id={session_id}"):
+                latest_message_info = (
+                    await chat_history_service.get_latest_ai_message_info(
+                        db, session_id
+                    )
+                )
         except Exception as e:
             logger.warning(f"获取最新消息信息失败: {str(e)}")
             latest_message_info = None
 
-        # 构建响应消息
-        logger.debug("构建聊天响应消息")
-        message = {"role": "assistant", "content": response_content}
-
-        # 添加消息的完整信息（id, meta_data, timestamp等）
-        if latest_message_info:
-            message["id"] = latest_message_info["id"]
-            message["meta_data"] = latest_message_info["meta_data"]
-            message["timestamp"] = latest_message_info["timestamp"]
-            # 如果数据库中有audio_url，使用数据库的，否则使用新生成的
-            if latest_message_info["audio_url"]:
-                message["audio_url"] = latest_message_info["audio_url"]
-            elif audio_url:
-                message["audio_url"] = audio_url
-        else:
-            # 如果获取失败，至少添加生成的语音URL
-            if audio_url:
-                message["audio_url"] = audio_url
-
-        if audio_url or (latest_message_info and latest_message_info.get("audio_url")):
-            logger.debug(f"响应包含语音URL: {message.get('audio_url')}")
+        # 构建响应
+        data = _build_chat_response(
+            response_content, last_user_message, latest_message_info, audio_url, request
+        )
 
         timing_message = request_handling_timer.stop()
-        logger.debug(
-            f"聊天请求处理成功: agent_id={agent_id}, response_length={len(response_content)}, {timing_message}"
-        )
-        data = {
-            "id": f"chatcmpl-{uuid.uuid4().hex[:12]}",  # 保持随机生成的外层ID
-            "object": "chat.completion",
-            "created": int(time.time()),
-            "model": request.model,
-            "choices": [{"index": 0, "message": message, "finish_reason": "stop"}],
-            "usage": {
-                "prompt_tokens": len(last_user_message.split()),
-                "completion_tokens": len(response_content.split()),
-                "total_tokens": len(last_user_message.split())
-                + len(response_content.split()),
-            },
-        }
+        logger.debug(f"聊天请求完成: agent_id={agent_id}, {timing_message}")
+
         return schemas.APIResponse.success(data=data)
 
     except Exception as e:

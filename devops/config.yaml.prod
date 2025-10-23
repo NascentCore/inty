@@ -70,3 +70,7 @@ cloudflare:
   domain: "images.sxwl.dev"
   enabled: true
   fallback_to_original: true
+
+logging:
+  level: "INFO"
+  format: "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <level>{level: <8}</level> | <cyan>{extra[request_id]}</cyan> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>"
