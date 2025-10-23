@@ -778,6 +778,8 @@ async def create_agent(
                 user_id,
                 cropped_avatar_url,
                 crop_avatar_result.avatar_size,
+                crop_avatar_result.format,
+                crop_avatar_result.byte_size,
             )
 
         db_agent = models.Agent(
@@ -834,6 +836,8 @@ async def create_agent(
 class CropAvatarFromGCSUrlResult:
     avatar_url: str
     avatar_size: ImageSize
+    format: ImageFormat
+    byte_size: int
 
 
 async def _crop_avatar_from_background(
@@ -855,6 +859,7 @@ async def _crop_avatar_from_background(
     crop_avatar_result = crop_avatar(background_data)
     cropped_avatar = crop_avatar_result.image
     avatar_data = get_jpg_bytes_from_pil_image(cropped_avatar)
+    avatar_byte_size = len(avatar_data)
 
     bucket, background_gcs_path = get_bucket_and_path_from_gcs_url(background_url)
     avatar_gcs_path = append_filename_suffix(
@@ -862,7 +867,9 @@ async def _crop_avatar_from_background(
     )
 
     avatar_url = upload_to_gcs(avatar_data, ImageFormat.JPEG, bucket, avatar_gcs_path)
-    return CropAvatarFromGCSUrlResult(avatar_url, crop_avatar_result.size)
+    return CropAvatarFromGCSUrlResult(
+        avatar_url, crop_avatar_result.size, ImageFormat.JPEG, avatar_byte_size
+    )
 
 
 def _validate_character_card_fields(agent_in: schemas.AgentCreate):
