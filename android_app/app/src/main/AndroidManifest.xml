@@ -51,7 +51,7 @@
             android:value="false" />
 
         <service
-            android:name=".FCMService"
+            android:name="ai.sxwl.android.firebase.FCMService"
             android:directBootAware="true"
             android:enabled="true"
             android:exported="true">

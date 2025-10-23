@@ -72,10 +72,6 @@ dependencies {
     implementation(libs.bundles.coil.bundle)
 
     // ===== Google 服务 =====
-    implementation(libs.billing.client)
-    implementation(platform(libs.firebase.bom))
-    implementation(libs.bundles.firebase.core)
-    implementation(libs.firebase.perf)
     implementation(libs.bundles.credentials)
 
     // ===== 图片处理 =====

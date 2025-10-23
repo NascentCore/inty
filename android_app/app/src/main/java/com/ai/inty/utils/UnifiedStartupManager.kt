@@ -1,5 +1,6 @@
 package com.ai.inty.utils
 
+import ai.sxwl.android.common.startup.ImagePreloadManager
 import ai.sxwl.android.data.api.IAgentApi
 import ai.sxwl.android.data.api.NetServiceMgr
 import ai.sxwl.android.data.api.model.AgentInfo

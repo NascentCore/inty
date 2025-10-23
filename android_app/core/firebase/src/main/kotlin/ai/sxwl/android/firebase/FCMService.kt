@@ -1,4 +1,4 @@
-package com.ai.inty
+package ai.sxwl.android.firebase
 
 import ai.sxwl.android.utils.LogUtils
 import android.annotation.SuppressLint
@@ -41,7 +41,7 @@ class FCMService : FirebaseMessagingService() {
     private fun showNotification(title: String, body: String) {
         val builder: NotificationCompat.Builder =
             NotificationCompat.Builder(this, "channel_id")
-                .setSmallIcon(R.drawable.app_icon)
+//                .setSmallIcon(R.drawable.app_icon)
                 .setContentTitle(title)
                 .setContentText(body)
                 .setPriority(NotificationCompat.PRIORITY_DEFAULT)

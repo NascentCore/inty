@@ -28,7 +28,7 @@ dependencies {
     ksp(libs.androidx.room.compiler)
 
     implementation(projects.core.firebase)
-    implementation(libs.billing.client)
+    api(libs.billing.client)
 
     implementation(projects.library.utils)
     implementation(projects.library.network)

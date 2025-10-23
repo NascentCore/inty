@@ -361,205 +361,192 @@ class ChatViewModel : BaseVM() {
             return
         }
 
-        // 开始性能追踪
-        FirebaseManager.trace("send_message") { trace ->
-            FirebaseManager.putTraceAttribute(
-                trace,
-                "agent_id",
-                agentInfo.value?.id ?: "unknown",
-            )
-            FirebaseManager.putTraceAttribute(
-                trace,
-                "message_length",
-                inputData.value.length.toString(),
-            )
+        launchBackground {
+            try {
+                val inputMsg = inputData.value
+                if (inputMsg.isBlank()) {
+                    LogUtils.i("Empty message, ignoring send request")
+                    return@launchBackground
+                }
 
-            launchBackground {
-                try {
-                    val inputMsg = inputData.value
-                    if (inputMsg.isBlank()) {
-                        LogUtils.i("Empty message, ignoring send request")
-                        return@launchBackground
+                inputData.update { "" }
+
+                val msgInfo = MsgInfo(content = inputMsg.trimEnd(), role = "user")
+
+                // 添加临时的加载消息
+                val loadingMsg =
+                    MsgInfo(
+                        content = "loading_animation", // 特殊标识符
+                        role = "assistant",
+                    )
+
+                // 使用 StateFlow 的 update 方法安全地更新列表
+                _msgs.update { currentMsgs ->
+                    try {
+                        val newMsgs = mutableListOf<MsgInfo>()
+                        newMsgs.add(loadingMsg) // 添加加载动画消息
+                        newMsgs.add(msgInfo) // 添加用户消息
+                        // 创建当前消息的副本以避免并发修改
+                        newMsgs.addAll(currentMsgs.toList())
+                        LogUtils.i("Successfully updated messages - new count: ${newMsgs.size}")
+                        newMsgs
+                    } catch (e: Exception) {
+                        LogUtils.e("Error updating messages list: ${e.message}")
+                        currentMsgs // 返回原列表，避免数据丢失
                     }
+                }
+                _isWaitingForReply.value = true
 
-                    inputData.update { "" }
+                val req = SendMsgReq(listOf(msgInfo))
+                val currentAgent = agentInfo.value
+                currentAgent?.let { agent ->
 
-                    val msgInfo = MsgInfo(content = inputMsg.trimEnd(), role = "user")
+                    // Firebase Analytics - 记录消息发送
+                    FirebaseManager.logEvent(
+                        "message_sent",
+                        mapOf(
+                            "agent_id" to agent.id,
+                            "message_length" to inputMsg.length,
+                            "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                        ),
+                    )
 
-                    // 添加临时的加载消息
-                    val loadingMsg =
-                        MsgInfo(
-                            content = "loading_animation", // 特殊标识符
-                            role = "assistant",
-                        )
+                    // Firebase Crashlytics - 记录消息发送上下文
+                    FirebaseManager.setCustomKey(
+                        "last_message_length",
+                        inputMsg.length.toString(),
+                    )
+                    FirebaseManager.setCustomKey("last_message_preview", inputMsg.take(50))
 
-                    // 使用 StateFlow 的 update 方法安全地更新列表
+                    // 追踪消息发送
+                    PageTrackingHelper.trackUserInteraction(
+                        "message_send",
+                        "chat_input",
+                        mapOf(
+                            "agent_id" to agent.id,
+                            "message_length" to inputMsg.length,
+                            "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                        ),
+                    )
+                    val result = chatApi.sendMsg(agent.id, req)
+
+                    LogUtils.i("sendMsg($agent, $req) -> $result")
+
+                    // 移除加载消息
                     _msgs.update { currentMsgs ->
-                        try {
-                            val newMsgs = mutableListOf<MsgInfo>()
-                            newMsgs.add(loadingMsg) // 添加加载动画消息
-                            newMsgs.add(msgInfo) // 添加用户消息
-                            // 创建当前消息的副本以避免并发修改
-                            newMsgs.addAll(currentMsgs.toList())
-                            LogUtils.i("Successfully updated messages - new count: ${newMsgs.size}")
-                            newMsgs
-                        } catch (e: Exception) {
-                            LogUtils.e("Error updating messages list: ${e.message}")
-                            currentMsgs // 返回原列表，避免数据丢失
+                        currentMsgs.filterNot {
+                            it.content == "loading_animation" && it.role == "assistant"
                         }
                     }
-                    _isWaitingForReply.value = true
+                    _isWaitingForReply.value = false
 
-                    val req = SendMsgReq(listOf(msgInfo))
-                    val currentAgent = agentInfo.value
-                    currentAgent?.let { agent ->
+                    when (result) {
+                        is HttpResult.Success -> {
+                            // Firebase Analytics - 记录消息发送成功
+                            FirebaseManager.logEvent(
+                                "message_send_success",
+                                mapOf(
+                                    "agent_id" to agent.id,
+                                    "response_code" to (result.data.code ?: 0),
+                                    "user_type" to
+                                            if (VipStatusHelper.isUserVip()) "vip" else "free",
+                                ),
+                            )
 
-                        // Firebase Analytics - 记录消息发送
-                        FirebaseManager.logEvent(
-                            "message_sent",
-                            mapOf(
-                                "agent_id" to agent.id,
-                                "message_length" to inputMsg.length,
-                                "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
-                            ),
-                        )
-
-                        // Firebase Crashlytics - 记录消息发送上下文
-                        FirebaseManager.setCustomKey(
-                            "last_message_length",
-                            inputMsg.length.toString(),
-                        )
-                        FirebaseManager.setCustomKey("last_message_preview", inputMsg.take(50))
-
-                        // 追踪消息发送
-                        PageTrackingHelper.trackUserInteraction(
-                            "message_send",
-                            "chat_input",
-                            mapOf(
-                                "agent_id" to agent.id,
-                                "message_length" to inputMsg.length,
-                                "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
-                            ),
-                        )
-                        val result = chatApi.sendMsg(agent.id, req)
-
-                        LogUtils.i("sendMsg($agent, $req) -> $result")
-
-                        // 移除加载消息
-                        _msgs.update { currentMsgs ->
-                            currentMsgs.filterNot {
-                                it.content == "loading_animation" && it.role == "assistant"
-                            }
-                        }
-                        _isWaitingForReply.value = false
-
-                        when (result) {
-                            is HttpResult.Success -> {
-                                // Firebase Analytics - 记录消息发送成功
-                                FirebaseManager.logEvent(
-                                    "message_send_success",
-                                    mapOf(
-                                        "agent_id" to agent.id,
-                                        "response_code" to (result.data.code ?: 0),
-                                        "user_type" to
-                                                if (VipStatusHelper.isUserVip()) "vip" else "free",
-                                    ),
-                                )
-
-                                runCatching {
-                                    if (
-                                        result.data.code ==
-                                        BusinessErrorCodes.GUEST_NEED_LOGIN_CODE
-                                    ) {
-                                        requestLogin.emit(true)
-                                        return@runCatching
-                                    }
-                                    // 有免费次数限制，需要vip订阅
-                                    if (
-                                        result.data.code ==
-                                        BusinessErrorCodes.SUBSCRIPTION_REQUIRED_CODE
-                                    ) {
-                                        // Firebase Analytics - 记录免费次数限制
-                                        FirebaseManager.logEvent(
-                                            "free_limit_reached",
-                                            mapOf("agent_id" to agent.id, "user_type" to "free"),
-                                        )
-                                        showLimitDialog.emit(true)
-                                    }
-                                    // 添加AI回复
-                                    _msgs.update { currentMsgs ->
-                                        try {
-                                            val newMsgs = mutableListOf<MsgInfo>()
-                                            result.data.data?.choices?.forEach { choice ->
-                                                newMsgs.add(choice.message)
-                                            }
-                                            // 创建当前消息的副本以避免并发修改
-                                            newMsgs.addAll(currentMsgs.toList())
-                                            newMsgs
-                                        } catch (e: Exception) {
-                                            LogUtils.e("Error adding AI response: ${e.message}")
-                                            currentMsgs // 返回原列表，避免数据丢失
-                                        }
-                                    }
-
-                                    result.data.data
-                                        ?.choices
-                                        ?.lastOrNull()
-                                        ?.message
-                                        ?.content
-                                        ?.let { str ->
-                                            IntySetting.setConversationReaded(agent.id, str)
-                                        }
-                                }.onFailure {
-                                    LogUtils.e("Error processing AI response: ${it.message}")
-                                    it.printStackTrace()
-                                    // 错误恢复：确保状态正确
-                                    _isWaitingForReply.value = false
+                            runCatching {
+                                if (
+                                    result.data.code ==
+                                    BusinessErrorCodes.GUEST_NEED_LOGIN_CODE
+                                ) {
+                                    requestLogin.emit(true)
+                                    return@runCatching
                                 }
-                            }
+                                // 有免费次数限制，需要vip订阅
+                                if (
+                                    result.data.code ==
+                                    BusinessErrorCodes.SUBSCRIPTION_REQUIRED_CODE
+                                ) {
+                                    // Firebase Analytics - 记录免费次数限制
+                                    FirebaseManager.logEvent(
+                                        "free_limit_reached",
+                                        mapOf("agent_id" to agent.id, "user_type" to "free"),
+                                    )
+                                    showLimitDialog.emit(true)
+                                }
+                                // 添加AI回复
+                                _msgs.update { currentMsgs ->
+                                    try {
+                                        val newMsgs = mutableListOf<MsgInfo>()
+                                        result.data.data?.choices?.forEach { choice ->
+                                            newMsgs.add(choice.message)
+                                        }
+                                        // 创建当前消息的副本以避免并发修改
+                                        newMsgs.addAll(currentMsgs.toList())
+                                        newMsgs
+                                    } catch (e: Exception) {
+                                        LogUtils.e("Error adding AI response: ${e.message}")
+                                        currentMsgs // 返回原列表，避免数据丢失
+                                    }
+                                }
 
-                            is HttpResult.Failure -> {
-                                // Firebase Analytics - 记录消息发送失败
-                                FirebaseManager.logEvent(
-                                    "message_send_failure",
-                                    mapOf(
-                                        "agent_id" to agent.id,
-                                        "error_message" to result.message,
-                                        "user_type" to
-                                                if (VipStatusHelper.isUserVip()) "vip" else "free",
-                                    ),
-                                )
-
-                                // Firebase Crashlytics - 记录非致命错误
-                                FirebaseManager.recordException(
-                                    Exception("Message send failed: ${result.message}")
-                                )
-                                // 所有消息接口错误，暂时统一文案
-                                NetworkErrorHandler.showNetworkAwareError(
-                                    "Something went wrong. Please try again later."
-                                )
+                                result.data.data
+                                    ?.choices
+                                    ?.lastOrNull()
+                                    ?.message
+                                    ?.content
+                                    ?.let { str ->
+                                        IntySetting.setConversationReaded(agent.id, str)
+                                    }
+                            }.onFailure {
+                                LogUtils.e("Error processing AI response: ${it.message}")
+                                it.printStackTrace()
                                 // 错误恢复：确保状态正确
                                 _isWaitingForReply.value = false
                             }
                         }
-                    } ?: run {
-                        // 如果没有 agent 信息，恢复状态
-                        _isWaitingForReply.value = false
-                        LogUtils.e("No agent info available for sending message")
+
+                        is HttpResult.Failure -> {
+                            // Firebase Analytics - 记录消息发送失败
+                            FirebaseManager.logEvent(
+                                "message_send_failure",
+                                mapOf(
+                                    "agent_id" to agent.id,
+                                    "error_message" to result.message,
+                                    "user_type" to
+                                            if (VipStatusHelper.isUserVip()) "vip" else "free",
+                                ),
+                            )
+
+                            // Firebase Crashlytics - 记录非致命错误
+                            FirebaseManager.recordException(
+                                Exception("Message send failed: ${result.message}")
+                            )
+                            // 所有消息接口错误，暂时统一文案
+                            NetworkErrorHandler.showNetworkAwareError(
+                                "Something went wrong. Please try again later."
+                            )
+                            // 错误恢复：确保状态正确
+                            _isWaitingForReply.value = false
+                        }
                     }
-                } catch (e: Exception) {
-                    LogUtils.e("Unexpected error in sendMsg: ${e.message}")
+                } ?: run {
+                    // 如果没有 agent 信息，恢复状态
                     _isWaitingForReply.value = false
-                    NetworkErrorHandler.showNetworkAwareError("An unexpected error occurred while sending message")
-                } finally {
-                    // 确保状态在最后被正确重置
-                    if (_isWaitingForReply.value) {
-                        LogUtils.i("Force reset waiting state due to completion")
-                        _isWaitingForReply.value = false
-                    }
+                    LogUtils.e("No agent info available for sending message")
+                }
+            } catch (e: Exception) {
+                LogUtils.e("Unexpected error in sendMsg: ${e.message}")
+                _isWaitingForReply.value = false
+                NetworkErrorHandler.showNetworkAwareError("An unexpected error occurred while sending message")
+            } finally {
+                // 确保状态在最后被正确重置
+                if (_isWaitingForReply.value) {
+                    LogUtils.i("Force reset waiting state due to completion")
+                    _isWaitingForReply.value = false
                 }
             }
         }
+
     }
 
     // 关闭limit次数 拦截消息的弹窗
