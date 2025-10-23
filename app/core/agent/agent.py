@@ -354,9 +354,6 @@ class Agent:
             )
             context_messages.append(SystemMessage(content=rendered_prompt))
 
-        if self.tags:
-            context_messages.append(SystemMessage(content=", ".join(self.tags)))
-
         return context_messages
 
     def _extract_user_name_from_profile(self, user_profile: str) -> str:

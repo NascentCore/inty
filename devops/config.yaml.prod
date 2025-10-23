@@ -50,7 +50,7 @@ agent:
   api_key: "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"
   base_url: "https://openrouter.ai/api/v1"
   langchain_api_key: "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"
-  force_default_prompts: true
+  force_default_prompts: false
 
 google_play:
   package_name: "com.ai.intellimate"
