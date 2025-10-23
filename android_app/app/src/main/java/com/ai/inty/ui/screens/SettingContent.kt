@@ -1,5 +1,7 @@
 package com.ai.inty.ui.screens
 
+import ai.sxwl.android.data.store.IntySetting
+import ai.sxwl.android.design.noRippleClickable
 import ai.sxwl.android.utils.ToastUtils
 import android.content.Context
 import android.content.Intent
@@ -35,7 +37,6 @@ import com.ai.inty.R
 import com.ai.inty.ReportActivity
 import com.ai.inty.SubsManageActivity
 import com.ai.inty.VipCenterActivity
-import com.ai.inty.base.noRippleClickable
 import com.ai.inty.billing.BillingRepository
 import com.ai.inty.ui.components.DeleteAccountDialog
 import com.ai.inty.ui.components.LogoutButton
@@ -44,7 +45,6 @@ import com.ai.inty.ui.components.SettingNavigationItem
 import com.ai.inty.ui.components.SettingSection
 import com.ai.inty.viewmodels.DialogState
 import com.ai.inty.viewmodels.SettingViewModel
-import ai.sxwl.android.data.store.IntySetting
 import kotlinx.coroutines.flow.collectLatest
 
 /** 设置页面主内容 */
@@ -57,9 +57,7 @@ fun SettingContent(
     viewModel: SettingViewModel = viewModel(),
 ) {
     val context = LocalContext.current
-    val settingsState by viewModel.settingsState.collectAsState()
     val dialogState by viewModel.dialogState.collectAsState()
-    val vipStatus by BillingRepository.vipStatusFlow.collectAsState()
 
     // 监听删除账号结果
     LaunchedEffect(viewModel) {
@@ -90,7 +88,6 @@ fun SettingContent(
                 dialogState = dialogState,
                 onHideDeleteDialog = { viewModel.hideDeleteAccountDialog() },
                 onConfirmDelete = { viewModel.checkAccountSubscribe() },
-                onHidePremiumDialog = { viewModel.hidePremiumDialog() },
             )
         }
     }
@@ -228,7 +225,6 @@ private fun SettingDialogs(
     dialogState: DialogState,
     onHideDeleteDialog: () -> Unit,
     onConfirmDelete: () -> Unit,
-    onHidePremiumDialog: () -> Unit,
 ) {
     // 删除账号对话框
     if (dialogState.showDeleteAccountDialog) {
@@ -246,7 +242,6 @@ private fun SettingDialogs(
             // 如果未登录，要求先登录
             LoginActivity.launch(context)
         }
-        onHidePremiumDialog()
     }
 }
 

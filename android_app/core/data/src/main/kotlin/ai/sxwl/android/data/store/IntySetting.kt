@@ -10,10 +10,13 @@ import kotlin.random.Random
 
 object IntySetting {
 
+    // App级通用标记的存储 使用的对象
     private val allUserSetting: MMKV
 
+    //当前用户级别的数据存储
     private var curUserSetting: MMKV
 
+    //当前UserId
     private var curUid: String = ""
 
     init {
@@ -48,14 +51,17 @@ object IntySetting {
         return isGuestUser() && userAgeYoung()
     }
 
+    /**
+     * 切换用户
+     * 对应Guest登录Google账户
+     * Google账户退出登录，到Guest账户
+     */
     fun changeUser(uid: String) {
         curUserSetting
 
         curUid = uid
         curUserSetting = MMKV.mmkvWithID("user_$curUid", MMKV.MULTI_PROCESS_MODE)
         allUserSetting.putString("cur_uid", uid)
-
-        //        last.close()
     }
 
     fun setToken(token: String) {
@@ -66,18 +72,14 @@ object IntySetting {
         return curUserSetting.decodeString("token") ?: ""
     }
 
-    fun setDeviceID(id: String?) {
-        allUserSetting.putString("deviceID", id)
-    }
-
-    fun getDeviceID(): String? {
-        return allUserSetting.decodeString("deviceID")
-    }
 
     fun isLogin(): Boolean {
         return getCurUserID().isNotEmpty() && getCurToken().isNotEmpty()
     }
 
+    /**
+     * 登录接口后，本地处理登录业务的数据逻辑
+     */
     fun login(isGuest: Boolean, uid: String, token: String) {
         changeUser(uid)
         setToken(token)
@@ -86,17 +88,26 @@ object IntySetting {
         }
     }
 
+    /**
+     * 用于业务标记消息已读的最后一条消息的判断
+     */
     fun isConversationReaded(agentID: String, lastMessage: String): Boolean {
         val configLastMsg = curUserSetting.decodeString("conversation_last_$agentID", agentID)
         LogUtils.d("$agentID = $configLastMsg, new=$lastMessage")
         return (configLastMsg == lastMessage)
     }
 
+    /**
+     * 用于业务标记消息已读的最后一条消息
+     */
     fun setConversationReaded(agentID: String, lastMessage: String) {
         LogUtils.d("$agentID = $lastMessage")
         curUserSetting.putString("conversation_last_$agentID", lastMessage)
     }
 
+    /**
+     * 记录是否显示keepTalking按钮
+     */
     fun setShowKeepTalking(show: Boolean) {
         curUserSetting.putBoolean("show_keep_talking", show)
         // 当全局设置改变时，重置所有角色的keep talking设置为与全局一致
@@ -147,28 +158,12 @@ object IntySetting {
 
     // region Premium model相关设置
 
-    /** 设置全局app的模型，都使用高级vip模型 */
-    fun setShowPremiumModel(show: Boolean) {
-        curUserSetting.putBoolean("show_premium_model", show)
-        // 当全局设置改变时，重置所有角色的premium model设置为与全局一致
-        resetAllAgentPremiumModelToGlobal(show)
-    }
 
     /** 判断是否使用全局 高级vip模型 */
     fun isShowPremiumModel(): Boolean {
         return curUserSetting.decodeBool("show_premium_model", false)
     }
 
-    // 重置所有角色的premium model设置为与全局设置一致
-    private fun resetAllAgentPremiumModelToGlobal(globalSetting: Boolean) {
-        // 获取所有以"agent_premium_model_"开头的key
-        val allKeys = curUserSetting.allKeys()
-        allKeys?.forEach { key ->
-            if (key.startsWith("agent_premium_model_")) {
-                curUserSetting.putBoolean(key, globalSetting)
-            }
-        }
-    }
 
     // endregion
 

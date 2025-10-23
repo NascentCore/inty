@@ -1,6 +1,5 @@
 package com.ai.inty.audio
 
-import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.utils.LogUtils
 import android.content.Context
 import android.os.Handler
@@ -78,7 +77,7 @@ private constructor(private val context: Context, private var scope: CoroutineSc
         // 检查是否启用自动播放
         // 手动点击时不受自动播放设置影响
         // 开场白消息的自动播放不受用户设置影响（业务逻辑必需）
-        if (autoPlay && !isManualClick && !IntySetting.isAutoPlayAudio()) {
+        if (autoPlay && !isManualClick) {
             // 检查是否是开场白消息，如果是则允许播放
             // 开场白消息的localMsgId通常包含_assistant_标识
             val isOpeningMessage = messageId.contains("_assistant_")

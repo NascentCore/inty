@@ -1,5 +1,6 @@
 package com.ai.inty.ui.screens
 
+import ai.sxwl.android.design.AntiClick
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.ToastUtils
 import androidx.compose.foundation.background
@@ -31,7 +32,6 @@ import androidx.credentials.exceptions.GetCredentialException
 import androidx.credentials.exceptions.GetCredentialInterruptedException
 import androidx.credentials.exceptions.NoCredentialException
 import com.ai.inty.R
-import com.ai.inty.base.AntiClick
 import com.ai.inty.ui.components.GoogleLoginButton
 import com.ai.inty.ui.components.LoginCloseButton
 import com.ai.inty.ui.components.LogoImage

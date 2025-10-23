@@ -10,17 +10,12 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 open class BaseViewModel : ViewModel() {
 
     // 事件通知机制
     private val _events = MutableSharedFlow<ViewModelEvent>()
     val events: SharedFlow<ViewModelEvent> = _events.asSharedFlow()
-
-    fun showSnackbar(text: String) {
-        viewModelScope.launch { ToastUtils.showShort(text) }
-    }
 
     /**
      * 发送事件通知
@@ -37,9 +32,7 @@ open class BaseViewModel : ViewModel() {
             // 检查网络连接
             val networkManager = NetworkManager.getInstance()
             if (!networkManager.isNetworkConnected()) {
-                withContext(Dispatchers.Main) {
-                    showSnackbar("Please check your network connection")
-                }
+                ToastUtils.showShort("Please check your network connection")
                 return@launch
             }
             runCatching { block() }.onFailure { it.printStackTrace() }
@@ -61,7 +54,7 @@ open class BaseViewModel : ViewModel() {
     ) {
         NetworkErrorHandler.handleNetworkError(
             errorMessage = errorMessage,
-            showToast = { message -> showSnackbar(message) },
+            showToast = { message -> ToastUtils.showShort(message) },
             requestUrl = requestUrl,
             requestMethod = requestMethod,
             statusCode = statusCode,
@@ -85,7 +78,7 @@ open class BaseViewModel : ViewModel() {
         NetworkErrorHandler.handleNetworkException(
             isNetworkConnected = NetworkManager.getInstance().isNetworkConnected(),
             exception = exception,
-            showToast = { message -> showSnackbar(message) },
+            showToast = { message -> ToastUtils.showShort(message) },
             requestUrl = requestUrl,
             requestMethod = requestMethod,
             operation = operation,

@@ -1,5 +1,6 @@
 package com.ai.inty.explore
 
+import ai.sxwl.android.design.noRippleClickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -27,7 +28,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ai.inty.base.IntyImage
-import com.ai.inty.base.noRippleClickable
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.ui.components.ShimmerPlaceholder
 import com.ai.inty.ui.components.SmartTagsLayout
@@ -54,14 +54,18 @@ fun ExploreCharacterCard(modifier: Modifier = Modifier, agentInfo: AgentInfo, on
 
     Box(
         modifier =
-            modifier.fillMaxWidth().aspectRatio(agentInfo.imageAspectRatio()).noRippleClickable {
-                onClick()
-            }
+            modifier
+                .fillMaxWidth()
+                .aspectRatio(agentInfo.imageAspectRatio())
+                .noRippleClickable {
+                    onClick()
+                }
     ) {
         // 背景图片层
         Box(
             modifier =
-                Modifier.fillMaxSize()
+                Modifier
+                    .fillMaxSize()
                     .clip(
                         RoundedCornerShape(
                             topStart = 7.dp,
@@ -98,7 +102,8 @@ fun ExploreCharacterCard(modifier: Modifier = Modifier, agentInfo: AgentInfo, on
         // 文本内容层 - 立即显示，不依赖图片加载状态
         Column(
             modifier =
-                Modifier.fillMaxWidth()
+                Modifier
+                    .fillMaxWidth()
                     .background(
                         brush = gradientBrush,
                         shape =
@@ -132,7 +137,9 @@ fun ExploreCharacterCard(modifier: Modifier = Modifier, agentInfo: AgentInfo, on
             )
 
             if (filteredTags.isNotEmpty()) {
-                Box(modifier = Modifier.fillMaxWidth().height(16.dp)) {
+                Box(modifier = Modifier
+                    .fillMaxWidth()
+                    .height(16.dp)) {
                     SmartTagsLayout(
                         modifier = Modifier.matchParentSize(),
                         tags = filteredTags,

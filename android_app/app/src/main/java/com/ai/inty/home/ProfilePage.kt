@@ -1,5 +1,7 @@
 package com.ai.inty.home
 
+import ai.sxwl.android.design.AntiClick
+import ai.sxwl.android.design.noRippleClickable
 import ai.sxwl.android.utils.TimeUtils
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -60,10 +62,8 @@ import com.ai.inty.MySettingActivity
 import com.ai.inty.R
 import com.ai.inty.SettingActivity
 import com.ai.inty.VipCenterActivity
-import com.ai.inty.base.AntiClick
 import com.ai.inty.base.IntyCircleImage
 import com.ai.inty.base.IntyImage
-import com.ai.inty.base.noRippleClickable
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.beans.UserProfile
 import com.ai.inty.billing.BillingRepository

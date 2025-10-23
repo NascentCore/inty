@@ -2,7 +2,6 @@ package com.ai.inty
 
 import ai.sxwl.android.utils.LogUtils
 import android.app.Application
-import com.ai.inty.base.initImageLoader
 import com.ai.inty.billing.BillingRepository
 import com.ai.inty.netapi.IntyNetworkManager
 import com.ai.inty.utils.FirebaseManager
@@ -55,9 +54,6 @@ class IntyApp : Application() {
         // 异步初始化所有可能阻塞的组件
         kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
             try {
-                // 初始化图片加载器（可能阻塞）
-                initImageLoader()
-
                 // 异步进行完整的数据预加载和缓存
                 UnifiedStartupManager.initializeAsync(this@IntyApp)
             } catch (e: Exception) {

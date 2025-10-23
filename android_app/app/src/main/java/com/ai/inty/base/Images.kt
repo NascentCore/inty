@@ -1,6 +1,5 @@
 package com.ai.inty.base
 
-import ai.sxwl.android.utils.Utils
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -15,36 +14,9 @@ import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import coil3.ImageLoader
 import coil3.compose.AsyncImage
 import coil3.compose.AsyncImagePainter
-import coil3.disk.DiskCache
-import coil3.disk.directory
-import coil3.memory.MemoryCache
 import coil3.request.ImageRequest
-
-fun initImageLoader() {
-    try {
-        val context = Utils.getApp()
-        ImageLoader.Builder(context)
-            .memoryCache {
-                MemoryCache.Builder()
-                    .maxSizePercent(context, 0.4) // 增加内存缓存到 40%
-                    .build()
-            }
-            .diskCache {
-                DiskCache.Builder()
-                    .directory(context.cacheDir.resolve("image_cache"))
-                    .maxSizePercent(0.05) // 增加磁盘缓存到 5%
-                    .build()
-            }
-            .build()
-    } catch (e: Exception) {
-        // 如果初始化失败，使用默认配置
-        val context = Utils.getApp()
-        ImageLoader.Builder(context).build()
-    }
-}
 
 @Composable
 fun IntyImage(

@@ -1,5 +1,6 @@
 package com.ai.inty.home
 
+import ai.sxwl.android.design.ui.HeartRedDot
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -40,7 +41,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ai.inty.R
 import com.ai.inty.base.IntyImage
-import com.ai.inty.base.RedDot
 import com.ai.inty.beans.ConversationItem
 import com.ai.inty.ui.components.EmptyDataState
 import com.ai.inty.utils.AuthClickable
@@ -280,7 +280,7 @@ private fun ChatHistoryItem(
             Spacer(Modifier.height(4.dp))
             Box(modifier = Modifier.height(22.dp), contentAlignment = Alignment.Center) {
                 if (conversation.isNew) {
-                    RedDot()
+                    HeartRedDot()
                 }
             }
         }

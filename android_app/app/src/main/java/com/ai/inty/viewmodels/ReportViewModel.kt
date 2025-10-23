@@ -1,6 +1,7 @@
 package com.ai.inty.viewmodels
 
 import ai.sxwl.android.utils.LogUtils
+import ai.sxwl.android.utils.ToastUtils
 import ai.sxwl.android.utils.Utils
 import android.net.Uri
 import androidx.compose.runtime.mutableStateSetOf
@@ -68,7 +69,7 @@ class ReportViewModel : BaseViewModel() {
 
     fun submit() {
         if (selectIDS.isEmpty()) {
-            showSnackbar("Please select at least one reason")
+            ToastUtils.showShort("Please select at least one reason")
             return
         }
 
@@ -109,13 +110,13 @@ class ReportViewModel : BaseViewModel() {
 
                 when (result) {
                     is com.ai.inty.netapi.ApiResult.Success -> {
-                        showSnackbar("Submitted successfully. We'll review it soon.")
+                        ToastUtils.showShort("Submitted successfully. We'll review it soon.")
                         sendEvent(ViewModelEvent.ReportSubmitted)
                     }
 
                     is com.ai.inty.netapi.ApiResult.Error -> {
                         LogUtils.e("Report creation failed: ${result.message}")
-                        showSnackbar(result.message ?: "Report creation failed")
+                        ToastUtils.showShort(result.message ?: "Report creation failed")
                     }
                 }
             } finally {
