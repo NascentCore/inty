@@ -7,6 +7,7 @@ import com.ai.inty.billing.BillingRepository
 import com.ai.inty.billing.VipPlan
 import com.ai.inty.billing.VipStatus
 import com.ai.inty.billing.VipStatusHelper
+import com.ai.inty.utils.NetworkErrorHandler
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -40,10 +41,10 @@ class VipCenterViewModel : BaseViewModel() {
         if (selectedIndex >= 0 && selectedIndex < currentPlans.size) {
             val selectedPlan = currentPlans[selectedIndex]
             VipStatusHelper.purchasePlan(activity, selectedPlan.googleProductId) { error ->
-                showNetworkAwareError(error)
+                NetworkErrorHandler.showNetworkAwareError(error)
             }
         } else {
-            showNetworkAwareError("Error VipPlan Index: $selectedIndex")
+            NetworkErrorHandler.showNetworkAwareError("Error VipPlan Index: $selectedIndex")
             LogUtils.i("BillingRepository VipViewModel 无效的计划索引: $selectedIndex")
         }
     }

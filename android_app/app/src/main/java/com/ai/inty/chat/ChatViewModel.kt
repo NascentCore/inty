@@ -20,6 +20,7 @@ import com.ai.inty.base.BaseViewModel
 import com.ai.inty.billing.VipStatusHelper
 import com.ai.inty.net.NetServiceMgr
 import com.ai.inty.netapi.BusinessErrorCodes
+import com.ai.inty.utils.NetworkErrorHandler
 import com.ai.inty.utils.UserProfileManager
 import com.architecture.httplib.core.HttpResult
 import kotlinx.coroutines.Dispatchers
@@ -301,7 +302,7 @@ class ChatViewModel : BaseViewModel() {
 
                         is HttpResult.Failure -> {
                             LogUtils.i("Failed to query messages: ${result.message}")
-                            showNetworkAwareError(result.message)
+                            NetworkErrorHandler.showNetworkAwareError(result.message)
                             // 即使查询失败，也标记为完成，避免开场白永远不播放
                             _isQueryMsgsCompleted.value = true
                         }
@@ -309,7 +310,7 @@ class ChatViewModel : BaseViewModel() {
                 }
             } catch (e: Exception) {
                 LogUtils.e("queryMsgs exception: ${e.message}")
-                handleNetworkException(e)
+                NetworkErrorHandler.handleNetworkException(e)
                 // 即使出现异常，也标记为完成，避免开场白永远不播放
                 _isQueryMsgsCompleted.value = true
             } finally {
@@ -534,7 +535,7 @@ class ChatViewModel : BaseViewModel() {
                                     Exception("Message send failed: ${result.message}")
                                 )
                                 // 所有消息接口错误，暂时统一文案
-                                showNetworkAwareError(
+                                NetworkErrorHandler.showNetworkAwareError(
                                     "Something went wrong. Please try again later."
                                 )
                                 // 错误恢复：确保状态正确
@@ -549,7 +550,7 @@ class ChatViewModel : BaseViewModel() {
                 } catch (e: Exception) {
                     LogUtils.e("Unexpected error in sendMsg: ${e.message}")
                     _isWaitingForReply.value = false
-                    showNetworkAwareError("An unexpected error occurred while sending message")
+                    NetworkErrorHandler.showNetworkAwareError("An unexpected error occurred while sending message")
                 } finally {
                     // 确保状态在最后被正确重置
                     if (_isWaitingForReply.value) {
@@ -650,7 +651,7 @@ class ChatViewModel : BaseViewModel() {
                     }
 
                     is HttpResult.Failure -> {
-                        showNetworkAwareError(result.message)
+                        NetworkErrorHandler.showNetworkAwareError(result.message)
                         // 错误恢复：确保状态正确
                         _isWaitingForReply.value = false
                     }
@@ -701,9 +702,11 @@ class ChatViewModel : BaseViewModel() {
         val req = ChatSettingsReq(style_prompt = prompt)
         val result = chatApi.updateChatSettings(agentId, req)
         when (result) {
-            is HttpResult.Failure -> showNetworkAwareError(result.message)
+            is HttpResult.Failure -> NetworkErrorHandler.showNetworkAwareError(result.message)
             is HttpResult.Success -> {
-                showNetworkAwareError(Utils.getApp().getString(R.string.custom_reply_successful))
+                NetworkErrorHandler.showNetworkAwareError(
+                    Utils.getApp().getString(R.string.custom_reply_successful)
+                )
                 // 要更新指定agent的chatsetting
                 result.data.data?.let { chatSettingData ->
                     _chatSettings.update { currentSettings ->
@@ -841,12 +844,12 @@ class ChatViewModel : BaseViewModel() {
                     }
 
                     is HttpResult.Failure -> {
-                        showNetworkAwareError(result.message)
+                        NetworkErrorHandler.showNetworkAwareError(result.message)
                     }
                 }
             } catch (e: Exception) {
                 LogUtils.e("setAgentID exception: ${e.message}")
-                handleNetworkException(e)
+                NetworkErrorHandler.handleNetworkException(e)
             }
         }
     }

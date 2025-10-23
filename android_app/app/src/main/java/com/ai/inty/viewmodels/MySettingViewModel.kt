@@ -12,6 +12,7 @@ import com.ai.inty.base.ViewModelEvent
 import com.ai.inty.net.NetServiceMgr
 import com.ai.inty.ui.components.EditKey
 import com.ai.inty.utils.IntyUserProfileSDK
+import com.ai.inty.utils.NetworkErrorHandler
 import com.ai.inty.utils.UserProfileManager
 import com.architecture.httplib.core.HttpResult
 import kotlinx.coroutines.Dispatchers
@@ -66,7 +67,7 @@ class MySettingViewModel : BaseViewModel() {
                     val fileUri = _userProfile.value.avatar?.toUri()
 
                     if (fileUri?.path == null) {
-                        showNetworkAwareError("Invalid avatar file")
+                        NetworkErrorHandler.showNetworkAwareError("Invalid avatar file")
                         return@launchWithNetCheck
                     }
 
@@ -92,7 +93,7 @@ class MySettingViewModel : BaseViewModel() {
                         }
 
                         is HttpResult.Failure -> {
-                            showNetworkAwareError(result.message)
+                            NetworkErrorHandler.showNetworkAwareError(result.message)
                             return@launchWithNetCheck
                         }
                     }
@@ -108,7 +109,7 @@ class MySettingViewModel : BaseViewModel() {
                     // 发送用户信息更新成功事件
                     sendEvent(ViewModelEvent.UserProfileUpdated)
                 } else {
-                    showNetworkAwareError("Failed to update user profile")
+                    NetworkErrorHandler.showNetworkAwareError("Failed to update user profile")
                 }
             } finally {
                 _isSaving.value = false

@@ -116,7 +116,7 @@ private fun AvatarGeneratePage(
     // Handle error messages
     LaunchedEffect(errorMessage) {
         errorMessage?.let { error ->
-            viewModel.showNetworkAwareError(error)
+            com.ai.inty.utils.NetworkErrorHandler.showNetworkAwareError(error)
             viewModel.clearError()
         }
     }

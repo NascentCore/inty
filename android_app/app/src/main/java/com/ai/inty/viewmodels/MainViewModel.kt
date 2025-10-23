@@ -20,6 +20,7 @@ import com.ai.inty.chat.ChatViewModel
 import com.ai.inty.net.NetServiceMgr
 import com.ai.inty.utils.AgentCacheManager
 import com.ai.inty.utils.CredentialManagerHelper.clearCredentialState
+import com.ai.inty.utils.HttpErrorHandler
 import com.ai.inty.utils.IntyUserProfileSDK
 import com.ai.inty.utils.UnifiedStartupManager
 import com.ai.inty.utils.UserProfileManager
@@ -362,11 +363,11 @@ class MainViewModel : BaseViewModel() {
                 } catch (e: retrofit2.HttpException) {
                     // 专门处理HTTP异常
                     LogUtils.e("createAgent HTTP Exception: ${e.code()} - ${e.message()}")
-                    val errorMessage = handleHttpException(e, "create")
+                    val errorMessage = HttpErrorHandler.handleHttpException(e, "create")
                     withContext(Dispatchers.Main) { onError(errorMessage) }
                 } catch (e: Exception) {
                     LogUtils.e("createAgent exception: ${e.message}")
-                    val errorMessage = handleGeneralException(e, "create")
+                    val errorMessage = HttpErrorHandler.handleGeneralException(e, "create")
                     withContext(Dispatchers.Main) { onError(errorMessage) }
                 }
             }
@@ -474,14 +475,14 @@ class MainViewModel : BaseViewModel() {
             } catch (e: retrofit2.HttpException) {
                 // 专门处理HTTP异常
                 LogUtils.e("deleteAgent HTTP Exception: ${e.code()} - ${e.message()}")
-                val errorMessage = handleHttpException(e, "delete")
+                val errorMessage = HttpErrorHandler.handleHttpException(e, "delete")
                 withContext(Dispatchers.Main) {
                     ToastUtils.showShort(errorMessage)
                     onError(errorMessage)
                 }
             } catch (e: Exception) {
                 LogUtils.e("deleteAgent exception: ${e.message}")
-                val errorMessage = handleGeneralException(e, "delete")
+                val errorMessage = HttpErrorHandler.handleGeneralException(e, "delete")
                 withContext(Dispatchers.Main) {
                     ToastUtils.showShort(errorMessage)
                     onError(errorMessage)
@@ -533,14 +534,14 @@ class MainViewModel : BaseViewModel() {
             } catch (e: retrofit2.HttpException) {
                 // 专门处理HTTP异常
                 LogUtils.e("updateAgent HTTP Exception: ${e.code()} - ${e.message()}")
-                val errorMessage = handleHttpException(e, "update")
+                val errorMessage = HttpErrorHandler.handleHttpException(e, "update")
                 withContext(Dispatchers.Main) {
                     ToastUtils.showShort(errorMessage)
                     onError(errorMessage)
                 }
             } catch (e: Exception) {
                 LogUtils.e("updateAgent exception: ${e.message}")
-                val errorMessage = handleGeneralException(e, "update")
+                val errorMessage = HttpErrorHandler.handleGeneralException(e, "update")
                 withContext(Dispatchers.Main) {
                     ToastUtils.showShort(errorMessage)
                     onError(errorMessage)

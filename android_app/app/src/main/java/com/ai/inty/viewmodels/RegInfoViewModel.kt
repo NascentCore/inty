@@ -7,6 +7,7 @@ import com.ai.inty.MainActivity
 import com.ai.inty.base.BaseViewModel
 import com.ai.inty.base.ViewModelEvent
 import com.ai.inty.utils.IntyUserProfileSDK
+import com.ai.inty.utils.NetworkErrorHandler
 import com.ai.inty.utils.UserProfileManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -38,7 +39,7 @@ class RegInfoViewModel : BaseViewModel() {
                     Utils.getApp().startActivity(intent)
                 }
             } else {
-                showNetworkAwareError("Failed to update user profile")
+                NetworkErrorHandler.showNetworkAwareError("Failed to update user profile")
             }
         }
     }

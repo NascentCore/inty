@@ -11,6 +11,7 @@ import com.ai.inty.R
 import com.ai.inty.base.BaseViewModel
 import com.ai.inty.base.ViewModelEvent
 import com.ai.inty.net.NetServiceMgr
+import com.ai.inty.utils.NetworkErrorHandler
 import com.ai.inty.utils.UserProfileManager
 import com.architecture.httplib.core.HttpResult
 import kotlinx.coroutines.Dispatchers
@@ -56,7 +57,7 @@ class LoginViewModel : BaseViewModel() {
 
                 is HttpResult.Failure -> {
                     LogUtils.e("Google login failed: ${result.message}")
-                    withContext(Dispatchers.Main) { showNetworkAwareError(result.message) }
+                    withContext(Dispatchers.Main) { NetworkErrorHandler.showNetworkAwareError(result.message) }
                 }
             }
         }

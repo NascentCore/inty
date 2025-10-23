@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.ai.inty.R
 import com.ai.inty.base.BaseViewModel
 import com.ai.inty.net.NetServiceMgr
+import com.ai.inty.utils.HttpErrorHandler
 import com.architecture.httplib.core.HttpResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -69,11 +70,11 @@ class SettingViewModel : BaseViewModel() {
             } catch (e: retrofit2.HttpException) {
                 // 专门处理HTTP异常
                 LogUtils.e("checkAccountSubscribe HTTP Exception: ${e.code()} - ${e.message()}")
-                val errorMessage = handleHttpException(e, "account")
+                val errorMessage = HttpErrorHandler.handleHttpException(e, "account")
                 withContext(Dispatchers.Main) { ToastUtils.showShort(errorMessage) }
             } catch (e: Exception) {
                 LogUtils.e("检查账号需要取消订阅 exception: ${e.message}")
-                val errorMessage = handleGeneralException(e, "account")
+                val errorMessage = HttpErrorHandler.handleGeneralException(e, "account")
                 withContext(Dispatchers.Main) { ToastUtils.showShort(errorMessage) }
             }
         }
@@ -105,11 +106,11 @@ class SettingViewModel : BaseViewModel() {
             } catch (e: retrofit2.HttpException) {
                 // 专门处理HTTP异常
                 LogUtils.e("deleteUserAccount HTTP Exception: ${e.code()} - ${e.message()}")
-                val errorMessage = handleHttpException(e, "account")
+                val errorMessage = HttpErrorHandler.handleHttpException(e, "account")
                 withContext(Dispatchers.Main) { ToastUtils.showShort(errorMessage) }
             } catch (e: Exception) {
                 LogUtils.e("删除用户账号 exception: ${e.message}")
-                val errorMessage = handleGeneralException(e, "account")
+                val errorMessage = HttpErrorHandler.handleGeneralException(e, "account")
                 withContext(Dispatchers.Main) { ToastUtils.showShort(errorMessage) }
             }
         }

@@ -7,7 +7,6 @@ import com.ai.inty.base.BaseViewModel
 import com.ai.inty.net.NetServiceMgr
 import com.ai.inty.utils.AvatarManager
 import com.ai.inty.utils.NetworkErrorHandler
-import com.ai.inty.utils.NetworkManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -95,14 +94,12 @@ class AvatarGenerateViewModel : BaseViewModel() {
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    NetworkErrorHandler.handleNetworkException(
-                        isNetworkConnected = NetworkManager.getInstance().isNetworkConnected(),
+                    val errorMessage = NetworkErrorHandler.handleNetworkException(
                         exception = e,
-                        showToast = { errorMessage ->
-                            AvatarManager.setGenerationError(errorMessage)
-                            _errorMessage.value = errorMessage
-                        },
+                        operation = "generate avatar"
                     )
+                    AvatarManager.setGenerationError(errorMessage)
+                    _errorMessage.value = errorMessage
                     LogUtils.e("Ai头像生成异常: ${e.message}")
                     _isLoading.value = false
                     clearError()
