@@ -1,9 +1,9 @@
 package com.ai.inty.billing
 
+import ai.sxwl.android.utils.TimeUtils
 import com.ai.inty.net.NetServiceMgr
 import com.architecture.httplib.core.HttpResult
 import com.inty.utils.log.EasyLog
-import com.inty.utils.parseIsoTimeToTimestamp
 import kotlinx.coroutines.flow.MutableStateFlow
 
 /* 从后端获取订阅计划：
@@ -32,8 +32,10 @@ internal class BillingRemoteManager(
                         // 更新会员状态
                         val isSubscribed = currentSubscription != null
                         val subscriptionId = currentSubscription?.planId
-                        val purchaseTime = parseIsoTimeToTimestamp(currentSubscription?.startDate)
-                        val expiryTime = parseIsoTimeToTimestamp(currentSubscription?.endDate)
+                        val purchaseTime =
+                            TimeUtils.parseIsoTimeToTimestamp(currentSubscription?.startDate)
+                        val expiryTime =
+                            TimeUtils.parseIsoTimeToTimestamp(currentSubscription?.endDate)
 
                         val vipStatus =
                             VipStatus(
