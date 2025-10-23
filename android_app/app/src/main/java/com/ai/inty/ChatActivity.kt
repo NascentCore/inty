@@ -2,6 +2,7 @@ package com.ai.inty
 
 import ai.sxwl.android.common.base.BaseActivity
 import ai.sxwl.android.design.theme.HeartColor
+import ai.sxwl.android.firebase.FirebaseManager
 import android.content.Context
 import android.content.Intent
 import android.os.Build
@@ -15,7 +16,6 @@ import androidx.compose.ui.Modifier
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.chat.ChatPage
 import com.ai.inty.chat.ChatViewModel
-import com.ai.inty.utils.FirebaseManager
 
 
 /** 私聊的聊天页面 */

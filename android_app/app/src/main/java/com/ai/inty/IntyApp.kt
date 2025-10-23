@@ -1,10 +1,10 @@
 package com.ai.inty
 
+import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.LogUtils
 import android.app.Application
 import com.ai.inty.billing.BillingRepository
 import com.ai.inty.netapi.IntyNetworkManager
-import com.ai.inty.utils.FirebaseManager
 import com.ai.inty.utils.GlobalExceptionHandler
 import com.ai.inty.utils.NetworkManager
 import com.ai.inty.utils.UnifiedStartupManager

@@ -1,5 +1,6 @@
 package com.ai.inty
 
+import ai.sxwl.android.common.analytics.PageTrackingHelper
 import ai.sxwl.android.common.base.BaseActivity
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.utils.LogUtils
@@ -31,7 +32,6 @@ import androidx.lifecycle.lifecycleScope
 import com.ai.inty.billing.BillingRepository
 import com.ai.inty.chat.ChatViewModel
 import com.ai.inty.home.HomeScreen
-import com.ai.inty.utils.PageTrackingHelper
 import com.ai.inty.utils.UnifiedStartupManager
 import com.ai.inty.viewmodels.MainViewModel
 import kotlinx.coroutines.CoroutineScope

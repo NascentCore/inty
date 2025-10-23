@@ -22,6 +22,7 @@ dependencies {
 
     implementation(projects.core.data)
     implementation(projects.core.design)
+    implementation(projects.core.firebase)
     implementation(projects.library.utils)
 
     // Google认证相关依赖

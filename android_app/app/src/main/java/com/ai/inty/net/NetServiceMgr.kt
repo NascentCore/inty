@@ -1,19 +1,18 @@
 package com.ai.inty.net
 
+import ai.sxwl.android.common.analytics.PageTrackingHelper
+import ai.sxwl.android.data.store.IntySetting
+import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.AppUtils
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.Utils
 import com.ai.inty.BuildConfig
 import com.ai.inty.Constant
-import com.ai.inty.utils.FirebaseManager
-import com.ai.inty.utils.FirebasePerformanceHelper
-import com.ai.inty.utils.PageTrackingHelper
 import com.architecture.httplib.core.HttpResponseCallAdapterFactory
 import com.architecture.httplib.core.MoshiResultTypeAdapterFactory
 import com.architecture.httplib.error.GlobalErrorHandler
 import com.chuckerteam.chucker.api.ChuckerInterceptor
 import com.google.firebase.perf.metrics.HttpMetric
-import ai.sxwl.android.data.store.IntySetting
 import com.jakewharton.retrofit2.adapter.kotlin.coroutines.CoroutineCallAdapterFactory
 import com.squareup.moshi.DefaultIfNullFactory
 import com.squareup.moshi.Moshi
@@ -347,7 +346,7 @@ private class PerformanceInterceptor : Interceptor {
      */
     private fun createHttpMetricSafely(request: okhttp3.Request): HttpMetric? {
         return try {
-            FirebasePerformanceHelper.createHttpMetric(request)
+            FirebaseManager.createHttpMetric(request.url.toString(), request.method)
         } catch (e: Exception) {
             // 性能监控失败不应该影响业务请求
             LogUtils.w("Failed to create HTTP metric: ${e.message}")
@@ -362,7 +361,7 @@ private class PerformanceInterceptor : Interceptor {
         if (httpMetric == null) return
 
         try {
-            FirebasePerformanceHelper.startHttpMetric(httpMetric)
+            FirebaseManager.startHttpMetric(httpMetric)
         } catch (e: Exception) {
             // 性能监控失败不应该影响业务请求
             LogUtils.w("Failed to start HTTP metric: ${e.message}")
@@ -376,7 +375,7 @@ private class PerformanceInterceptor : Interceptor {
         if (httpMetric == null) return
 
         try {
-            FirebasePerformanceHelper.stopHttpMetric(httpMetric, response)
+            FirebaseManager.stopHttpMetric(httpMetric, response?.code ?: -1)
         } catch (e: Exception) {
             // 性能监控失败不应该影响业务请求
             LogUtils.w("Failed to stop HTTP metric: ${e.message}")

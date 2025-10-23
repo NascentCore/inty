@@ -1,6 +1,8 @@
 package com.ai.inty.chat
 
+import ai.sxwl.android.common.analytics.PageTrackingHelper
 import ai.sxwl.android.data.store.IntySetting
+import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.Utils
 import android.content.Context
@@ -18,9 +20,6 @@ import com.ai.inty.beans.UserProfile
 import com.ai.inty.billing.VipStatusHelper
 import com.ai.inty.net.NetServiceMgr
 import com.ai.inty.netapi.BusinessErrorCodes
-import com.ai.inty.utils.FirebaseManager
-import com.ai.inty.utils.FirebasePerformanceHelper
-import com.ai.inty.utils.PageTrackingHelper
 import com.ai.inty.utils.UserProfileManager
 import com.architecture.httplib.core.HttpResult
 import kotlinx.coroutines.Dispatchers
@@ -362,13 +361,13 @@ class ChatViewModel : BaseViewModel() {
         }
 
         // 开始性能追踪
-        FirebasePerformanceHelper.trace("send_message") { trace ->
-            FirebasePerformanceHelper.putAttribute(
+        FirebaseManager.trace("send_message") { trace ->
+            FirebaseManager.putTraceAttribute(
                 trace,
                 "agent_id",
                 agentInfo.value?.id ?: "unknown",
             )
-            FirebasePerformanceHelper.putAttribute(
+            FirebaseManager.putTraceAttribute(
                 trace,
                 "message_length",
                 inputData.value.length.toString(),

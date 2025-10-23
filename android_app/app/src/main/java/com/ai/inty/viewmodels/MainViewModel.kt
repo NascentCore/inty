@@ -1,6 +1,7 @@
 package com.ai.inty.viewmodels
 
 import ai.sxwl.android.data.store.IntySetting
+import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.ToastUtils
 import ai.sxwl.android.utils.Utils
@@ -19,7 +20,6 @@ import com.ai.inty.net.ICommonApi
 import com.ai.inty.net.NetServiceMgr
 import com.ai.inty.utils.AgentCacheManager
 import com.ai.inty.utils.CredentialManagerHelper.clearCredentialState
-import com.ai.inty.utils.FirebasePerformanceHelper
 import com.ai.inty.utils.IntyUserProfileSDK
 import com.ai.inty.utils.UnifiedStartupManager
 import com.ai.inty.utils.UserProfileManager
@@ -323,14 +323,15 @@ class MainViewModel : BaseViewModel() {
         onError: (String) -> Unit,
     ) {
         // 开始性能追踪
-        FirebasePerformanceHelper.trace("create_agent") { trace ->
-            FirebasePerformanceHelper.putAttribute(trace, "agent_name", request.name)
-            FirebasePerformanceHelper.putAttribute(
+
+        FirebaseManager.trace("create_agent") { trace ->
+            FirebaseManager.putTraceAttribute(trace, "agent_name", request.name)
+            FirebaseManager.putTraceAttribute(
                 trace,
                 "has_avatar",
                 (request.avatar?.isNotEmpty() == true).toString(),
             )
-            FirebasePerformanceHelper.putAttribute(
+            FirebaseManager.putTraceAttribute(
                 trace,
                 "visibility",
                 request.visibility,

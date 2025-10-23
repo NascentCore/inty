@@ -1,6 +1,7 @@
 package com.ai.inty
 
 import ai.sxwl.android.common.base.BaseActivity
+import ai.sxwl.android.firebase.FirebaseManager
 import android.content.Context
 import android.content.Intent
 import androidx.activity.viewModels
@@ -9,7 +10,6 @@ import androidx.lifecycle.lifecycleScope
 import com.ai.inty.base.ViewModelEvent
 import com.ai.inty.ui.screens.LoginScreen
 import com.ai.inty.utils.CredentialManagerHelper
-import com.ai.inty.utils.FirebaseManager
 import com.ai.inty.utils.UserProfileManager
 import com.ai.inty.viewmodels.LoginViewModel
 import kotlinx.coroutines.launch

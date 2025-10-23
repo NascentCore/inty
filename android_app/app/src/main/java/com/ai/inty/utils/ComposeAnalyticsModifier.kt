@@ -1,5 +1,6 @@
 package com.ai.inty.utils
 
+import ai.sxwl.android.firebase.FirebaseManager
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.platform.LocalLifecycleOwner

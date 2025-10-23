@@ -1,5 +1,7 @@
 package com.ai.inty.utils
 
+import ai.sxwl.android.common.analytics.PageTrackingHelper
+import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.LogUtils
 import android.content.Context
 import java.lang.Thread.UncaughtExceptionHandler
