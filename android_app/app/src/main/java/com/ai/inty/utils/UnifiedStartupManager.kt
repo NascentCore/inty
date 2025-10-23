@@ -1,15 +1,15 @@
 package com.ai.inty.utils
 
+import ai.sxwl.android.data.api.IAgentApi
+import ai.sxwl.android.data.api.model.AgentInfo
+import ai.sxwl.android.data.api.model.UserProfile
+import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.utils.LogUtils
 import android.content.Context
-import com.ai.inty.beans.AgentInfo
-import com.ai.inty.beans.UserProfile
 import com.ai.inty.chat.constants.ChatConstants
 import com.ai.inty.explore.ExploreConstants
-import com.ai.inty.net.IAgentApi
 import com.ai.inty.net.NetServiceMgr
 import com.architecture.httplib.core.HttpResult
-import ai.sxwl.android.data.store.IntySetting
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob

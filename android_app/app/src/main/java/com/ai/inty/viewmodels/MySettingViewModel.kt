@@ -1,5 +1,6 @@
 package com.ai.inty.viewmodels
 
+import ai.sxwl.android.data.api.model.UserProfile
 import ai.sxwl.android.utils.ToastUtils
 import ai.sxwl.android.utils.Utils
 import android.net.Uri
@@ -8,7 +9,6 @@ import androidx.lifecycle.viewModelScope
 import com.ai.inty.R
 import com.ai.inty.base.BaseViewModel
 import com.ai.inty.base.ViewModelEvent
-import com.ai.inty.beans.UserProfile
 import com.ai.inty.net.NetServiceMgr
 import com.ai.inty.ui.components.EditKey
 import com.ai.inty.utils.IntyUserProfileSDK

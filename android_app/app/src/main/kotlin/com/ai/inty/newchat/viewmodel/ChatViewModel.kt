@@ -1,8 +1,8 @@
 package com.ai.inty.newchat.viewmodel
 
+import ai.sxwl.android.data.api.model.MsgInfo
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.ai.inty.beans.MsgInfo
 import com.ai.inty.newchat.data.ChatDataManager
 import com.ai.inty.newchat.data.ErrorEvent
 import kotlinx.coroutines.Job

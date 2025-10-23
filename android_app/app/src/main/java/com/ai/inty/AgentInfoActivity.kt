@@ -1,13 +1,13 @@
 package com.ai.inty
 
 import ai.sxwl.android.common.base.BaseActivity
+import ai.sxwl.android.data.api.model.AgentInfo
 import android.content.Context
 import android.content.Intent
 import android.os.Build
 import androidx.activity.viewModels
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
-import com.ai.inty.beans.AgentInfo
 import com.ai.inty.ui.screens.AiAgentInfoScreen
 import com.ai.inty.viewmodels.AgentInfoViewModel
 

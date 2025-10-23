@@ -1,4 +1,4 @@
-package com.ai.inty.beans
+package ai.sxwl.android.data.api.model
 
 import androidx.annotation.Keep
 import com.squareup.moshi.JsonClass

@@ -1,13 +1,13 @@
-package com.ai.inty.net
+package ai.sxwl.android.data.api
 
-import com.ai.inty.beans.AgentInfo
-import com.ai.inty.beans.ChatSettingsReq
-import com.ai.inty.beans.ChatSettingsResponse
-import com.ai.inty.beans.ConversationItem
-import com.ai.inty.beans.MsgVoiceRsp
-import com.ai.inty.beans.QueryMsgsResponse
-import com.ai.inty.beans.SendMsgReq
-import com.ai.inty.beans.SendMsgResponse
+import ai.sxwl.android.data.api.model.AgentInfo
+import ai.sxwl.android.data.api.model.ChatSettingsReq
+import ai.sxwl.android.data.api.model.ChatSettingsResponse
+import ai.sxwl.android.data.api.model.ConversationItem
+import ai.sxwl.android.data.api.model.MsgVoiceRsp
+import ai.sxwl.android.data.api.model.QueryMsgsResponse
+import ai.sxwl.android.data.api.model.SendMsgReq
+import ai.sxwl.android.data.api.model.SendMsgResponse
 import com.architecture.httplib.core.HttpResult
 import retrofit2.http.Body
 import retrofit2.http.GET

@@ -1,9 +1,9 @@
 package com.ai.inty.utils
 
+import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.utils.LogUtils
 import android.content.Context
 import com.ai.inty.audio.AudioCacheManager
-import com.ai.inty.beans.AgentInfo
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope

@@ -1,5 +1,7 @@
 package com.ai.inty.chat.ui
 
+import ai.sxwl.android.data.api.getCdnImageUrl
+import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.design.noRippleClickable
 import ai.sxwl.android.utils.ToastUtils
 import androidx.compose.foundation.background
@@ -27,8 +29,6 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import com.ai.inty.AgentInfoActivity
 import com.ai.inty.R
-import com.ai.inty.beans.AgentInfo
-import com.ai.inty.utils.getCdnImageUrl
 import kotlinx.coroutines.launch
 
 private const val CHAT_TOP_BAR_AVATAR_SIZE = 30
@@ -96,6 +96,7 @@ fun ChatTopBar(
                 placeholder = painterResource(R.drawable.img_default_avatar),
                 error = painterResource(R.drawable.img_default_avatar),
                 contentDescription = null,
+                alignment = Alignment.TopCenter
             )
 
             Spacer(modifier = Modifier.width(6.dp))

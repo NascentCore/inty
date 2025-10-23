@@ -1,5 +1,6 @@
 package com.ai.inty.ui.components
 
+import ai.sxwl.android.data.api.model.AgentInfo
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -27,7 +28,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
-import com.ai.inty.beans.AgentInfo
 import kotlin.math.abs
 import kotlin.math.roundToInt
 

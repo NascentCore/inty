@@ -1,5 +1,6 @@
 package com.ai.inty.viewmodels
 
+import ai.sxwl.android.data.api.model.ReportItem
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.ToastUtils
 import ai.sxwl.android.utils.Utils
@@ -8,7 +9,6 @@ import androidx.compose.runtime.mutableStateSetOf
 import androidx.core.net.toUri
 import com.ai.inty.base.BaseViewModel
 import com.ai.inty.base.ViewModelEvent
-import com.ai.inty.beans.ReportItem
 import com.ai.inty.netapi.services.ReportService
 import com.inty.api.models.api.v1.report.ReportCreateParams
 import kotlinx.coroutines.flow.MutableStateFlow

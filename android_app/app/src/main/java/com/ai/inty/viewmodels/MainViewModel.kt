@@ -1,5 +1,11 @@
 package com.ai.inty.viewmodels
 
+import ai.sxwl.android.data.api.IAgentApi
+import ai.sxwl.android.data.api.ICommonApi
+import ai.sxwl.android.data.api.model.AgentInfo
+import ai.sxwl.android.data.api.model.AppVersionRsp
+import ai.sxwl.android.data.api.model.CreateAgentRequest
+import ai.sxwl.android.data.api.model.UserProfile
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.LogUtils
@@ -9,14 +15,8 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.lifecycle.viewModelScope
 import com.ai.inty.R
 import com.ai.inty.base.BaseViewModel
-import com.ai.inty.beans.AgentInfo
-import com.ai.inty.beans.AppVersionRsp
-import com.ai.inty.beans.CreateAgentRequest
-import com.ai.inty.beans.UserProfile
 import com.ai.inty.billing.BillingRepository
 import com.ai.inty.chat.ChatViewModel
-import com.ai.inty.net.IAgentApi
-import com.ai.inty.net.ICommonApi
 import com.ai.inty.net.NetServiceMgr
 import com.ai.inty.utils.AgentCacheManager
 import com.ai.inty.utils.CredentialManagerHelper.clearCredentialState

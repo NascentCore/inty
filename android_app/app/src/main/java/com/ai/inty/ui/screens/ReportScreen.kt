@@ -1,5 +1,6 @@
 package com.ai.inty.ui.screens
 
+import ai.sxwl.android.data.api.model.ReportItem
 import ai.sxwl.android.design.noRippleClickable
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
@@ -30,7 +31,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ai.inty.R
-import com.ai.inty.beans.ReportItem
 import com.ai.inty.ui.components.ReportDescriptionContainer
 import com.ai.inty.ui.components.ReportImageEvidenceContainer
 import com.ai.inty.ui.components.ReportItem

@@ -1,11 +1,11 @@
 package com.ai.inty.viewmodels
 
+import ai.sxwl.android.data.api.model.GENDER
 import ai.sxwl.android.utils.Utils
 import android.content.Intent
 import com.ai.inty.MainActivity
 import com.ai.inty.base.BaseViewModel
 import com.ai.inty.base.ViewModelEvent
-import com.ai.inty.beans.GENDER
 import com.ai.inty.utils.IntyUserProfileSDK
 import com.ai.inty.utils.UserProfileManager
 import kotlinx.coroutines.Dispatchers

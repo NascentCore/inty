@@ -1,5 +1,7 @@
 package com.ai.inty.home
 
+import ai.sxwl.android.data.api.getCdnImageUrl
+import ai.sxwl.android.data.api.model.ConversationItem
 import ai.sxwl.android.design.ui.HeartRedDot
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -41,11 +43,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.ai.inty.R
-import com.ai.inty.beans.ConversationItem
 import com.ai.inty.ui.components.EmptyDataState
 import com.ai.inty.utils.AuthClickable
 import com.ai.inty.utils.TrackScreenView
-import com.ai.inty.utils.getCdnImageUrl
 
 /** 主页面第二个tab，会话列表页面，包含关注和聊天列表 */
 @Composable

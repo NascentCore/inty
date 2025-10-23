@@ -1,6 +1,6 @@
 package com.ai.inty.netapi.services
 
-import com.ai.inty.beans.AgentInfo
+import ai.sxwl.android.data.api.model.AgentInfo
 import com.ai.inty.netapi.ApiResult
 import com.ai.inty.netapi.IntyNetworkManager
 

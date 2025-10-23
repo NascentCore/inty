@@ -1,5 +1,6 @@
 package com.ai.inty.newchat.ui.components
 
+import ai.sxwl.android.data.api.model.MsgInfo
 import ai.sxwl.android.utils.ToastUtils
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -40,7 +41,6 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.ai.inty.R
-import com.ai.inty.beans.MsgInfo
 import com.ai.inty.newchat.data.ChatDataManager
 import com.ai.inty.newchat.viewmodel.ChatViewModel
 import kotlinx.coroutines.delay

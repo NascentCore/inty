@@ -1,8 +1,8 @@
 package com.ai.inty.newchat.viewmodel
 
+import ai.sxwl.android.data.api.model.AgentInfo
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.ai.inty.beans.AgentInfo
 import com.ai.inty.newchat.data.ChatDataManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

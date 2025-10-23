@@ -1,6 +1,7 @@
 package com.ai.inty
 
 import ai.sxwl.android.common.base.BaseActivity
+import ai.sxwl.android.data.api.model.UserProfile
 import ai.sxwl.android.utils.ToastUtils
 import android.content.Context
 import android.content.Intent
@@ -20,7 +21,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.lifecycleScope
 import com.ai.inty.base.ViewModelEvent
-import com.ai.inty.beans.UserProfile
 import com.ai.inty.ui.components.EditDialog
 import com.ai.inty.ui.components.EditKey
 import com.ai.inty.ui.components.MySettingScreen

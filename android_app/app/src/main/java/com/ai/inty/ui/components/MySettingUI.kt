@@ -1,5 +1,7 @@
 package com.ai.inty.ui.components
 
+import ai.sxwl.android.data.api.model.GENDER
+import ai.sxwl.android.data.api.model.UserProfile
 import ai.sxwl.android.design.noRippleClickable
 import ai.sxwl.android.design.theme.HeartColor
 import androidx.compose.foundation.Image
@@ -52,8 +54,6 @@ import coil3.request.ImageRequest
 import com.ai.inty.R
 import com.ai.inty.base.IntySmallTextField
 import com.ai.inty.base.IntySmallTextField2
-import com.ai.inty.beans.GENDER
-import com.ai.inty.beans.UserProfile
 
 /** 编辑类型枚举 */
 enum class EditKey {

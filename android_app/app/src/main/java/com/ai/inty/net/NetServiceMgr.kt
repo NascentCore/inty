@@ -1,6 +1,11 @@
 package com.ai.inty.net
 
 import ai.sxwl.android.common.analytics.PageTrackingHelper
+import ai.sxwl.android.data.api.IAgentApi
+import ai.sxwl.android.data.api.IChatApi
+import ai.sxwl.android.data.api.ICommonApi
+import ai.sxwl.android.data.api.ISubscriptionApi
+import ai.sxwl.android.data.api.IUserApi
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.AppUtils

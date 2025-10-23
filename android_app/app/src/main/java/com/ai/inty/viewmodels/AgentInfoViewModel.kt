@@ -1,9 +1,9 @@
 package com.ai.inty.viewmodels
 
+import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.utils.LogUtils
 import androidx.lifecycle.viewModelScope
 import com.ai.inty.base.BaseViewModel
-import com.ai.inty.beans.AgentInfo
 import com.ai.inty.net.NetServiceMgr
 import com.architecture.httplib.core.HttpResult
 import kotlinx.coroutines.Dispatchers

@@ -1,7 +1,7 @@
 package com.ai.inty.utils
 
+import ai.sxwl.android.data.api.model.UserProfile
 import ai.sxwl.android.utils.LogUtils
-import com.ai.inty.beans.UserProfile
 import com.ai.inty.netapi.services.UserService
 
 /** 使用 inty-sdk 进行用户信息操作的工具类 */

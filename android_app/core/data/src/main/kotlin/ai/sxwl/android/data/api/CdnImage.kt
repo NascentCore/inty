@@ -1,4 +1,4 @@
-package com.ai.inty.utils
+package ai.sxwl.android.data.api
 
 /**
  * 获取cdn裁剪图片的url

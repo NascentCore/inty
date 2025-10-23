@@ -1,9 +1,9 @@
 package com.ai.inty.viewmodels
 
+import ai.sxwl.android.data.api.model.GenerateBackgroundRequest
+import ai.sxwl.android.data.api.model.GenerateBackgroundResponse
 import ai.sxwl.android.utils.LogUtils
 import com.ai.inty.base.BaseViewModel
-import com.ai.inty.beans.GenerateBackgroundRequest
-import com.ai.inty.beans.GenerateBackgroundResponse
 import com.ai.inty.net.NetServiceMgr
 import com.ai.inty.utils.AvatarManager
 import com.ai.inty.utils.NetworkErrorHandler

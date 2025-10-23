@@ -1,10 +1,10 @@
-package com.ai.inty.net
+package ai.sxwl.android.data.api
 
-import com.ai.inty.beans.GoogleLoginRequest
-import com.ai.inty.beans.GoogleLoginResponse
-import com.ai.inty.beans.UploadAvatarResponse
-import com.ai.inty.beans.UserDeleteResponse
-import com.ai.inty.beans.UserDeletionCheckResponse
+import ai.sxwl.android.data.api.model.GoogleLoginRequest
+import ai.sxwl.android.data.api.model.GoogleLoginResponse
+import ai.sxwl.android.data.api.model.UploadAvatarResponse
+import ai.sxwl.android.data.api.model.UserDeleteResponse
+import ai.sxwl.android.data.api.model.UserDeletionCheckResponse
 import com.architecture.httplib.core.HttpResult
 import okhttp3.MultipartBody
 import retrofit2.http.Body

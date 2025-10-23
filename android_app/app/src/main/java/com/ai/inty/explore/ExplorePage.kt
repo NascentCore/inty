@@ -1,5 +1,6 @@
 package com.ai.inty.explore
 
+import ai.sxwl.android.data.api.model.AgentInfo
 import android.annotation.SuppressLint
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -31,7 +32,6 @@ import androidx.paging.LoadState
 import androidx.paging.compose.collectAsLazyPagingItems
 import coil3.compose.AsyncImage
 import com.ai.inty.R
-import com.ai.inty.beans.AgentInfo
 import com.ai.inty.utils.ImagePreloadManager
 import com.ai.inty.utils.TrackScreenView
 

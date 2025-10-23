@@ -1,5 +1,6 @@
 package com.ai.inty.viewmodels
 
+import ai.sxwl.android.data.api.model.GoogleLoginRequest
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.ToastUtils
@@ -9,7 +10,6 @@ import com.ai.inty.MainActivity
 import com.ai.inty.R
 import com.ai.inty.base.BaseViewModel
 import com.ai.inty.base.ViewModelEvent
-import com.ai.inty.beans.GoogleLoginRequest
 import com.ai.inty.net.NetServiceMgr
 import com.ai.inty.utils.UserProfileManager
 import com.architecture.httplib.core.HttpResult

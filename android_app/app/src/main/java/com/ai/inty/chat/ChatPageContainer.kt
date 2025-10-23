@@ -1,5 +1,7 @@
 package com.ai.inty.chat
 
+import ai.sxwl.android.data.api.model.AgentInfo
+import ai.sxwl.android.data.api.model.UserProfile
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.design.noRippleClickable
 import ai.sxwl.android.utils.LogUtils
@@ -39,8 +41,6 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.paging.compose.collectAsLazyPagingItems
 import com.ai.inty.R
-import com.ai.inty.beans.AgentInfo
-import com.ai.inty.beans.UserProfile
 import com.ai.inty.chat.viewmodel.ChatTabViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch

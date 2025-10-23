@@ -1,5 +1,6 @@
 package com.ai.inty.newchat.ui.components
 
+import ai.sxwl.android.data.api.model.AgentInfo
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -21,7 +22,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.ai.inty.beans.AgentInfo
 
 /**
  * Agent卡片组件

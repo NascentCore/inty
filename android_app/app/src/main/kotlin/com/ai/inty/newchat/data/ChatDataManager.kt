@@ -1,11 +1,11 @@
 package com.ai.inty.newchat.data
+import ai.sxwl.android.data.api.IAgentApi
+import ai.sxwl.android.data.api.IChatApi
+import ai.sxwl.android.data.api.model.AgentInfo
+import ai.sxwl.android.data.api.model.ConversationItem
+import ai.sxwl.android.data.api.model.MsgInfo
+import ai.sxwl.android.data.api.model.SendMsgReq
 import ai.sxwl.android.utils.LogUtils
-import com.ai.inty.beans.AgentInfo
-import com.ai.inty.beans.ConversationItem
-import com.ai.inty.beans.MsgInfo
-import com.ai.inty.beans.SendMsgReq
-import com.ai.inty.net.IAgentApi
-import com.ai.inty.net.IChatApi
 import com.architecture.httplib.core.HttpResult
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

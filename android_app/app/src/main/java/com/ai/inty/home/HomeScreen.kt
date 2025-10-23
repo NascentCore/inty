@@ -1,5 +1,6 @@
 package com.ai.inty.home
 
+import ai.sxwl.android.data.api.model.UserProfile
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.design.noRippleClickable
 import ai.sxwl.android.design.theme.HeartColor
@@ -48,7 +49,6 @@ import com.ai.inty.CreateRoleActivity
 import com.ai.inty.LoginActivity
 import com.ai.inty.R
 import com.ai.inty.VipCenterActivity
-import com.ai.inty.beans.UserProfile
 import com.ai.inty.billing.BillingRepository
 import com.ai.inty.billing.VipStatusHelper
 import com.ai.inty.chat.ChatPageContainer

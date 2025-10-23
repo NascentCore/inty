@@ -1,6 +1,9 @@
 package com.ai.inty
 
 import ai.sxwl.android.common.base.BaseActivity
+import ai.sxwl.android.data.api.getCdnImageUrl
+import ai.sxwl.android.data.api.model.AgentInfo
+import ai.sxwl.android.data.api.model.CreateAgentRequest
 import ai.sxwl.android.design.AntiClick
 import ai.sxwl.android.design.noRippleClickable
 import ai.sxwl.android.design.theme.HeartColor
@@ -80,12 +83,9 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewModelScope
 import coil3.compose.AsyncImage
-import com.ai.inty.beans.AgentInfo
-import com.ai.inty.beans.CreateAgentRequest
 import com.ai.inty.net.NetServiceMgr
 import com.ai.inty.ui.SingleLineTextInputField
 import com.ai.inty.utils.AvatarManager
-import com.ai.inty.utils.getCdnImageUrl
 import com.ai.inty.viewmodels.MainViewModel
 import com.yalantis.ucrop.UCrop
 import com.yalantis.ucrop.UCropActivity

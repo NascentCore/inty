@@ -1,11 +1,12 @@
 package com.ai.inty.explore
 
+import ai.sxwl.android.data.api.IAgentApi
+import ai.sxwl.android.data.api.model.AgentInfo
+import ai.sxwl.android.data.api.model.AgentInfoResponse
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.utils.LogUtils
 import androidx.paging.PagingSource
 import androidx.paging.PagingState
-import com.ai.inty.beans.AgentInfo
-import com.ai.inty.net.IAgentApi
 import com.ai.inty.net.NetServiceMgr
 import com.ai.inty.utils.AgentCacheManager
 import com.ai.inty.utils.UnifiedStartupManager
@@ -177,7 +178,7 @@ class ExplorePagingSource(
 
 /** 网络请求结果 */
 sealed class NetworkResult {
-    data class Success(val data: com.ai.inty.beans.AgentInfoResponse) : NetworkResult()
+    data class Success(val data: AgentInfoResponse) : NetworkResult()
 
     data class Error(val error: String) : NetworkResult()
 }

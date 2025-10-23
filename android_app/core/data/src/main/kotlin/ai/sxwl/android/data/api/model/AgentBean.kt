@@ -1,7 +1,7 @@
-package com.ai.inty.beans
+package ai.sxwl.android.data.api.model
 
+import ai.sxwl.android.data.api.getCdnImageUrl
 import android.os.Parcelable
-import com.ai.inty.utils.getCdnImageUrl
 import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 import kotlinx.parcelize.Parcelize

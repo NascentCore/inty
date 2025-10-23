@@ -1,5 +1,6 @@
 package com.ai.inty.ui.screens
 
+import ai.sxwl.android.data.api.model.GENDER
 import ai.sxwl.android.utils.ToastUtils
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -28,7 +29,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.ai.inty.R
-import com.ai.inty.beans.GENDER
 import com.ai.inty.ui.components.AgeItem
 import com.ai.inty.ui.components.CloseButton
 import com.ai.inty.ui.components.EnterButton

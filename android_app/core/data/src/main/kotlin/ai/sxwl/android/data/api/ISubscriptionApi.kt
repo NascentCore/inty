@@ -1,8 +1,8 @@
-package com.ai.inty.net
+package ai.sxwl.android.data.api
 
-import com.ai.inty.beans.SubscriptionPlansResponse
-import com.ai.inty.beans.SubscriptionVerifyRequest
-import com.ai.inty.beans.SubscriptionVerifyResponse
+import ai.sxwl.android.data.api.model.SubscriptionPlansResponse
+import ai.sxwl.android.data.api.model.SubscriptionVerifyRequest
+import ai.sxwl.android.data.api.model.SubscriptionVerifyResponse
 import com.architecture.httplib.core.HttpResult
 import retrofit2.http.Body
 import retrofit2.http.GET

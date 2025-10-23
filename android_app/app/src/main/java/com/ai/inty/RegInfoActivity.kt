@@ -1,6 +1,7 @@
 package com.ai.inty
 
 import ai.sxwl.android.common.base.BaseActivity
+import ai.sxwl.android.data.api.model.GENDER
 import android.content.Context
 import android.content.Intent
 import androidx.activity.viewModels
@@ -58,7 +59,7 @@ class RegInfoActivity : BaseActivity() {
 @Composable
 private fun RegInfoContent(
     onClose: () -> Unit,
-    onSave: (gender: com.ai.inty.beans.GENDER, age: String) -> Unit,
+    onSave: (gender: GENDER, age: String) -> Unit,
 ) {
     RegInfoScreen(onClose = onClose, onSave = onSave)
 }

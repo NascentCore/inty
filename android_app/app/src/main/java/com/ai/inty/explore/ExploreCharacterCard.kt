@@ -1,5 +1,6 @@
 package com.ai.inty.explore
 
+import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.design.noRippleClickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -30,7 +31,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
-import com.ai.inty.beans.AgentInfo
 import com.ai.inty.ui.components.ShimmerPlaceholder
 import com.ai.inty.ui.components.SmartTagsLayout
 
@@ -89,6 +89,7 @@ fun ExploreCharacterCard(modifier: Modifier = Modifier, agentInfo: AgentInfo, on
                     .build(),
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
+                alignment = Alignment.TopCenter,
                 onSuccess = {
                     // 只在状态真正改变时才更新，避免不必要的重组
                     if (!imageLoaded) {
