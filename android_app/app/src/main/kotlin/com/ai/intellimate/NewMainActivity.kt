@@ -1,14 +1,8 @@
 package com.ai.intellimate
 
-import android.os.Bundle
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
+import ai.sxwl.android.common.base.BaseActivity
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -27,34 +21,28 @@ import com.ai.intellimate.chat.viewmodel.ExploreViewModel
  * 新的主界面Activity
  * 包含Chat和Explore两个Tab
  */
-class NewMainActivity : ComponentActivity() {
+class NewMainActivity : BaseActivity() {
 
     // 依赖管理
     private lateinit var chatDataManager: ChatDataManager
     private lateinit var chatTabViewModel: ChatTabViewModel
     private lateinit var exploreViewModel: ExploreViewModel
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
 
+    override fun initConfigData() {
+        super.initConfigData()
         // 初始化依赖
         initDependencies()
+    }
 
-        setContent {
-            MaterialTheme {
-                Surface(
-                    modifier = Modifier.Companion.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    NewMainScreen(
-                        chatDataManager = chatDataManager,
-                        chatTabViewModel = chatTabViewModel,
-                        exploreViewModel = exploreViewModel,
-                    )
-                }
-            }
-        }
+    @Composable
+    override fun ConfigComposeUI() {
+        super.ConfigComposeUI()
+        NewMainScreen(
+            chatDataManager = chatDataManager,
+            chatTabViewModel = chatTabViewModel,
+            exploreViewModel = exploreViewModel,
+        )
     }
 
     private fun initDependencies() {

@@ -1,6 +1,8 @@
 package com.ai.inty.utils
 
+import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.ToastUtils
+import kotlinx.coroutines.CancellationException
 
 /**
  * 网络错误处理器
@@ -22,7 +24,15 @@ object NetworkErrorHandler {
         requestMethod: String? = null,
         statusCode: Int? = null,
     ) {
-        // 直接显示错误消息
+        // 检查是否为取消操作，如果是则不显示toast
+        if (errorMessage.contains("cancelled", ignoreCase = true) ||
+            errorMessage.contains("cancel", ignoreCase = true)
+        ) {
+            LogUtils.d("网络请求被取消: $requestUrl")
+            return
+        }
+
+        // 显示错误消息
         ToastUtils.showShort(errorMessage)
     }
 
@@ -41,8 +51,23 @@ object NetworkErrorHandler {
         requestMethod: String? = null,
         operation: String? = null,
     ): String {
+        // 检查是否为取消异常，如果是则不显示toast
+        if (exception is CancellationException) {
+            LogUtils.d("网络请求被取消: $requestUrl")
+            return "Request cancelled"
+        }
+        
         val errorMessage = exception.message ?: "Network error occurred"
-        // 直接显示错误消息
+
+        // 检查错误消息是否包含取消相关词汇
+        if (errorMessage.contains("cancelled", ignoreCase = true) ||
+            errorMessage.contains("cancel", ignoreCase = true)
+        ) {
+            LogUtils.d("网络请求被取消: $requestUrl - $errorMessage")
+            return errorMessage
+        }
+
+        // 显示错误消息
         ToastUtils.showShort(errorMessage)
         return errorMessage
     }

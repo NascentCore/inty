@@ -1,5 +1,6 @@
 package ai.sxwl.android.design.ui
 
+import ai.sxwl.android.design.R
 import ai.sxwl.android.design.theme.HeartColor
 import androidx.annotation.IntRange
 import androidx.compose.foundation.Image
@@ -31,7 +32,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import ai.sxwl.android.design.R
 
 /**
  * 封装项目用的Bottom Navigation Bar
@@ -67,7 +67,16 @@ fun HeartBottomAppBar(
                         )
                         if (tab.hasRedDot) HeartRedDot(Modifier.align(Alignment.TopEnd))
                     }
-
+                },
+                label = {
+                    if (tab.label.isNotEmpty()) {
+                        Text(
+                            text = tab.label,
+                            fontSize = 12.sp,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                            color = if (isSelected) Color(0xFF9C27B0) else Color.White,
+                        )
+                    }
                 },
                 colors = NavigationBarItemDefaults.colors(indicatorColor = Color.Transparent)
             )
@@ -82,6 +91,7 @@ data class HeartBottomTabItem(
     val index: Int,
     val selectedIcon: Int,
     val unselectedIcon: Int,
+    val label: String = "", // 标签文字
     val hasRedDot: Boolean = false,//是否有红点
 )
 
@@ -90,27 +100,32 @@ private val bottomTabItems = listOf(
         index = 0,
         selectedIcon = R.drawable.ic_tab_chat_selected,
         unselectedIcon = R.drawable.ic_tab_chat_unselected,
+        label = "聊天"
     ),
     HeartBottomTabItem(
         index = 1,
         selectedIcon = R.drawable.ic_tab_notification_selected,
         unselectedIcon = R.drawable.ic_tab_notification_unselected,
+        label = "消息",
         hasRedDot = true
     ),
     HeartBottomTabItem(
         index = 2,
         selectedIcon = R.drawable.ic_tab_ai,
         unselectedIcon = R.drawable.ic_tab_ai,
+        label = "" // Create tab 不需要文字标签
     ),
     HeartBottomTabItem(
         index = 3,
         selectedIcon = R.drawable.ic_tab_recommend_selected,
         unselectedIcon = R.drawable.ic_tab_recommend_unselected,
+        label = "推荐"
     ),
     HeartBottomTabItem(
         index = 4,
         selectedIcon = R.drawable.ic_tab_profile_selected,
         unselectedIcon = R.drawable.ic_tab_profile_unselected,
+        label = "我的"
     )
 )
 
