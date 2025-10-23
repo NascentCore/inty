@@ -157,25 +157,6 @@ object IntySetting {
         return curUserSetting.decodeBool("show_premium_model", false)
     }
 
-    // 角色专用的premium model设置 (二状态: true/false)
-    fun setAgentPremiumModel(agentId: String, show: Boolean) {
-        curUserSetting.putBoolean("agent_premium_model_$agentId", show)
-    }
-
-    fun getAgentPremiumModel(agentId: String): Boolean? {
-        return if (curUserSetting.containsKey("agent_premium_model_$agentId")) {
-            curUserSetting.decodeBool("agent_premium_model_$agentId", false)
-        } else {
-            null // 没有专门设置时返回null，使用全局设置
-        }
-    }
-
-    // 获取最终的premium model显示状态（有专门设置时使用专门设置，否则使用全局设置）
-    fun shouldShowPremiumModel(agentId: String): Boolean {
-        val agentSetting = getAgentPremiumModel(agentId)
-        return agentSetting ?: isShowPremiumModel()
-    }
-
     // 重置所有角色的premium model设置为与全局设置一致
     private fun resetAllAgentPremiumModelToGlobal(globalSetting: Boolean) {
         // 获取所有以"agent_premium_model_"开头的key

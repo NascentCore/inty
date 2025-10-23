@@ -13,5 +13,4 @@ dependencies {
     implementation(libs.luban)
     // ===== 腾讯系库 =====
     api(libs.mmkv)
-    implementation(libs.mars.xlog)
 }

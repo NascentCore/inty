@@ -162,22 +162,6 @@ internal fun ChatPage(
     // VIP状态
     val vipStatus by BillingRepository.vipStatusFlow.collectAsState()
 
-    // Premium model二状态设置：默认跟随全局设置，但受VIP状态限制
-    var agentPremiumModel by
-    remember(agentInfo?.id, vipStatus.isSubscribed) {
-        mutableStateOf(
-            if (!vipStatus.isSubscribed) {
-                // 如果不是VIP，强制关闭Premium model
-                false
-            } else {
-                agentInfo?.let {
-                    // 获取角色专用设置，如果不存在则使用全局设置
-                    IntySetting.getAgentPremiumModel(it.id) ?: IntySetting.isShowPremiumModel()
-                } ?: false
-            }
-        )
-    }
-
     var showMorePanel by remember { mutableStateOf(false) }
     var morePanelHeight by remember { mutableStateOf(0.dp) }
     var showPremiumDialog by remember { mutableStateOf(false) }
@@ -233,10 +217,9 @@ internal fun ChatPage(
 
                 Spacer(Modifier.height(16.dp))
 
-                // Premium model标签
+                // Premium model标签,非vip显示，vip隐藏（20251020的要求）
                 if (agentInfo != null && !vipStatus.isSubscribed) {
                     PremiumModelTag(
-                        isPremiumModel = agentPremiumModel,
                         onClick = {
                             scope.launch {
                                 // 如果是已经删除的agent，则不可点击，并提示
