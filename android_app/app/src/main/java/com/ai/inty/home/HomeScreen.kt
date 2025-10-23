@@ -1,5 +1,6 @@
 package com.ai.inty.home
 
+import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.design.theme.HeartColor
 import android.app.Activity
 import android.content.Context
@@ -61,7 +62,6 @@ import com.ai.inty.ui.components.ForceUpgradeDialog
 import com.ai.inty.utils.TrackScreenView
 import com.ai.inty.viewmodels.HomeTabIndex
 import com.ai.inty.viewmodels.MainViewModel
-import com.inty.utils.storage.IntySetting
 
 /** 主页面，包含五个tab */
 @Composable

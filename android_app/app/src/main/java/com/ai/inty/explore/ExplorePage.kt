@@ -29,7 +29,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.paging.LoadState
 import androidx.paging.compose.collectAsLazyPagingItems
-import com.ai.inty.Constant
 import com.ai.inty.R
 import com.ai.inty.base.IntyImage
 import com.ai.inty.beans.AgentInfo
@@ -72,14 +71,20 @@ fun ExplorePage(
     Box(modifier = modifier) {
         IntyImage(modifier = Modifier.align(Alignment.TopEnd), model = R.drawable.notify_header_bg)
 
-        Column(modifier = Modifier.fillMaxSize().background(Color.Transparent)) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Transparent)
+        ) {
             TopAppBar(
                 title = {
                     Image(
                         painter = painterResource(R.drawable.img_explore_title),
                         contentDescription = null,
                         modifier =
-                            Modifier.height(Constant.PAGE_TAB_TITLE_HEIGHT.dp).fillMaxWidth(),
+                            Modifier
+                                .height(30.dp)
+                                .fillMaxWidth(),
                         contentScale = ContentScale.Fit,
                         alignment = Alignment.CenterStart,
                     )

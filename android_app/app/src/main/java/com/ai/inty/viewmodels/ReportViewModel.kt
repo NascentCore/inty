@@ -1,5 +1,7 @@
 package com.ai.inty.viewmodels
 
+import ai.sxwl.android.utils.LogUtils
+import ai.sxwl.android.utils.Utils
 import android.net.Uri
 import androidx.compose.runtime.mutableStateSetOf
 import androidx.core.net.toUri
@@ -8,8 +10,6 @@ import com.ai.inty.base.ViewModelEvent
 import com.ai.inty.beans.ReportItem
 import com.ai.inty.netapi.services.ReportService
 import com.inty.api.models.api.v1.report.ReportCreateParams
-import com.inty.utils.AppEnv
-import com.inty.utils.log.EasyLog
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.io.InputStream
@@ -84,7 +84,7 @@ class ReportViewModel : BaseViewModel() {
                 val uploadedImageUrls = mutableListOf<String>()
                 for (imageUri in localImages) {
                     val uri = imageUri.toUri()
-                    val inputStream = AppEnv.context.contentResolver.openInputStream(uri)
+                    val inputStream = Utils.getApp().contentResolver.openInputStream(uri)
                     inputStream?.let { stream ->
                         val uploadedUrl = uploadImageWithIntySdk(stream)
                         if (uploadedUrl != null) {
@@ -114,7 +114,7 @@ class ReportViewModel : BaseViewModel() {
                     }
 
                     is com.ai.inty.netapi.ApiResult.Error -> {
-                        EasyLog.log("Report creation failed: ${result.message}", EasyLog.ERROR)
+                        LogUtils.e("Report creation failed: ${result.message}")
                         showSnackbar(result.message ?: "Report creation failed")
                     }
                 }
@@ -136,12 +136,12 @@ class ReportViewModel : BaseViewModel() {
         return when (result) {
             is com.ai.inty.netapi.ApiResult.Success -> {
                 val url = result.data
-                EasyLog.log("Image uploaded successfully: $url")
+                LogUtils.i("Image uploaded successfully: $url")
                 url
             }
 
             is com.ai.inty.netapi.ApiResult.Error -> {
-                EasyLog.log("Image upload failed: ${result.message}", EasyLog.ERROR)
+                LogUtils.e("Image upload failed: ${result.message}")
                 null
             }
         }

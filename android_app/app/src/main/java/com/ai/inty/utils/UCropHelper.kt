@@ -1,12 +1,12 @@
 package com.ai.inty.utils
 
+import ai.sxwl.android.utils.PathUtils
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.net.Uri
 import androidx.core.graphics.toColorInt
-import com.inty.utils.AppEnv
 import com.yalantis.ucrop.UCrop
 import com.yalantis.ucrop.UCropActivity
 import java.io.File
@@ -18,7 +18,7 @@ object UCropHelper {
         // This is required, otherwise the preview will always be tmp.jpg
         // So that the preview can be viewed after first modification,
         // but the future update will always be stale.
-        val avatarTempFile = File(AppEnv.dirs.imagecache, "my_avatar_${timestamp}.jpg")
+        val avatarTempFile = File(PathUtils.getExternalAppCachePath(), "my_avatar_${timestamp}.jpg")
 
         val uCropOptions = UCrop.Options()
         uCropOptions.apply {

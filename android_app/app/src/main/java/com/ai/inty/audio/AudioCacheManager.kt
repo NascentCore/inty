@@ -1,8 +1,8 @@
 package com.ai.inty.audio
 
+import ai.sxwl.android.utils.LogUtils
 import android.content.Context
 import android.util.LruCache
-import com.inty.utils.log.EasyLog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -71,7 +71,7 @@ class AudioCacheManager private constructor(private val context: Context) {
                     saveToFile(getCachedFile(cacheKey), data)
                 }
             } catch (e: Exception) {
-                EasyLog.log("音频LOG测试 Failed to preload audio: ${e.message}", EasyLog.ERROR)
+                LogUtils.e("音频LOG测试 Failed to preload audio: ${e.message}")
             }
         }
 
@@ -102,7 +102,7 @@ class AudioCacheManager private constructor(private val context: Context) {
             }
 
         } catch (e: Exception) {
-            EasyLog.log("音频LOG测试 Failed to clear cache: ${e.message}", EasyLog.ERROR)
+            LogUtils.e("音频LOG测试 Failed to clear cache: ${e.message}")
         }
     }
 
@@ -119,7 +119,7 @@ class AudioCacheManager private constructor(private val context: Context) {
             }
 
         } catch (e: Exception) {
-            EasyLog.log("音频LOG测试 Failed to clean expired cache: ${e.message}", EasyLog.ERROR)
+            LogUtils.e("音频LOG测试 Failed to clean expired cache: ${e.message}")
         }
     }
 
@@ -161,10 +161,7 @@ class AudioCacheManager private constructor(private val context: Context) {
                             if (body != null && body.isNotEmpty()) {
                                 return@withContext body
                             } else {
-                                EasyLog.log(
-                                    "音频LOG测试 Downloaded audio is empty: $url",
-                                    EasyLog.ERROR,
-                                )
+                                LogUtils.e("音频LOG测试 Downloaded audio is empty: $url")
                                 return@withContext null
                             }
                         } else {
@@ -175,10 +172,7 @@ class AudioCacheManager private constructor(private val context: Context) {
                                     500 -> "服务器内部错误"
                                     else -> "HTTP错误: ${response.code}"
                                 }
-                            EasyLog.log(
-                                "音频LOG测试 Failed to download audio: $errorMsg (${response.code})",
-                                EasyLog.ERROR,
-                            )
+                            LogUtils.e("音频LOG测试 Failed to download audio: $errorMsg (${response.code})")
 
                             // 对于4xx错误，不重试
                             if (response.code in 400..499) {
@@ -196,10 +190,9 @@ class AudioCacheManager private constructor(private val context: Context) {
                             e.message?.contains("network", ignoreCase = true) == true -> "网络错误"
                             else -> e.message ?: "未知错误"
                         }
-                    EasyLog.log(
-                        "音频LOG测试 Failed to download audio (attempt ${retryCount + 1}): $errorMsg",
-                        EasyLog.ERROR,
-                    )
+
+                    LogUtils.e("音频LOG测试 Failed to download audio (attempt ${retryCount + 1}): $errorMsg")
+
 
                     // 如果是最后一次重试，返回null
                     if (retryCount == maxRetries) {
@@ -223,7 +216,7 @@ class AudioCacheManager private constructor(private val context: Context) {
         try {
             FileOutputStream(file).use { fos -> fos.write(data) }
         } catch (e: IOException) {
-            EasyLog.log("音频LOG测试 Failed to save audio to file: ${e.message}", EasyLog.ERROR)
+            LogUtils.e("音频LOG测试 Failed to save audio to file: ${e.message}")
         }
     }
 }

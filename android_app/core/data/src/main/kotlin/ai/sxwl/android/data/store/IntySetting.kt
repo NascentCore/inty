@@ -1,7 +1,10 @@
-package com.inty.utils.storage
+package ai.sxwl.android.data.store
 
-import com.inty.utils.AppEnv
-import com.inty.utils.log.EasyLog
+import ai.sxwl.android.utils.AppUtils
+import ai.sxwl.android.utils.LogUtils
+import ai.sxwl.android.utils.Utils
+import android.os.Handler
+import android.os.Looper
 import com.tencent.mmkv.MMKV
 import kotlin.random.Random
 
@@ -14,8 +17,8 @@ object IntySetting {
     private var curUid: String = ""
 
     init {
-        MMKV.initialize(AppEnv.context)
-        allUserSetting = MMKV.defaultMMKV(MMKV.SINGLE_PROCESS_MODE, AppEnv.APPLICATION_ID)
+        MMKV.initialize(Utils.getApp())
+        allUserSetting = MMKV.defaultMMKV(MMKV.SINGLE_PROCESS_MODE, AppUtils.getPackageName())
 
         curUid = getCurUserID()
         curUserSetting = MMKV.mmkvWithID("user_$curUid", MMKV.MULTI_PROCESS_MODE)
@@ -85,12 +88,12 @@ object IntySetting {
 
     fun isConversationReaded(agentID: String, lastMessage: String): Boolean {
         val configLastMsg = curUserSetting.decodeString("conversation_last_$agentID", agentID)
-        EasyLog.log("$agentID = $configLastMsg, new=$lastMessage")
+        LogUtils.d("$agentID = $configLastMsg, new=$lastMessage")
         return (configLastMsg == lastMessage)
     }
 
     fun setConversationReaded(agentID: String, lastMessage: String) {
-        EasyLog.log("$agentID = $lastMessage")
+        LogUtils.d("$agentID = $lastMessage")
         curUserSetting.putString("conversation_last_$agentID", lastMessage)
     }
 
@@ -156,25 +159,6 @@ object IntySetting {
         return curUserSetting.decodeBool("show_premium_model", false)
     }
 
-    // 角色专用的premium model设置 (二状态: true/false)
-    fun setAgentPremiumModel(agentId: String, show: Boolean) {
-        curUserSetting.putBoolean("agent_premium_model_$agentId", show)
-    }
-
-    fun getAgentPremiumModel(agentId: String): Boolean? {
-        return if (curUserSetting.containsKey("agent_premium_model_$agentId")) {
-            curUserSetting.decodeBool("agent_premium_model_$agentId", false)
-        } else {
-            null // 没有专门设置时返回null，使用全局设置
-        }
-    }
-
-    // 获取最终的premium model显示状态（有专门设置时使用专门设置，否则使用全局设置）
-    fun shouldShowPremiumModel(agentId: String): Boolean {
-        val agentSetting = getAgentPremiumModel(agentId)
-        return agentSetting ?: isShowPremiumModel()
-    }
-
     // 重置所有角色的premium model设置为与全局设置一致
     private fun resetAllAgentPremiumModelToGlobal(globalSetting: Boolean) {
         // 获取所有以"agent_premium_model_"开头的key
@@ -225,8 +209,7 @@ object IntySetting {
         }
         changeUser(geGuestUserID())
         // 延迟重置标志，确保401处理器有时间识别
-        android.os
-            .Handler(android.os.Looper.getMainLooper())
+        Handler(Looper.getMainLooper())
             .postDelayed({ isLoggingOut = false }, 2000)
     }
 
@@ -244,7 +227,7 @@ object IntySetting {
 
     fun randomSortSeed(): Int {
         if (_randomSortSeed == null) {
-            _randomSortSeed = Random.nextInt()
+            _randomSortSeed = Random.Default.nextInt()
         }
         return _randomSortSeed!!
     }

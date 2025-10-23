@@ -316,16 +316,22 @@ object LogUtils {
     }
 
     private fun printMsg(type: Int, tag: String, msg: String) {
+        if (msg.isEmpty()) {
+            printSubMsg(type, tag, msg)
+            return
+        }
+        
         val len = msg.length
         val countOfSub = len / MAX_LEN
 
         if (countOfSub > 0) {
             var index = 0
             for (i in 0 until countOfSub) {
-                printSubMsg(type, tag, msg.substring(index, index + MAX_LEN))
+                val endIndex = minOf(index + MAX_LEN, len)
+                printSubMsg(type, tag, msg.substring(index, endIndex))
                 index += MAX_LEN
             }
-            if (index != len) {
+            if (index < len) {
                 printSubMsg(type, tag, msg.substring(index, len))
             }
         } else {
@@ -374,27 +380,34 @@ object LogUtils {
     }
 
     private fun printSingleTagMsg(type: Int, tag: String, msg: String) {
+        if (msg.isEmpty()) {
+            print2Console(type, tag, msg)
+            return
+        }
+        
         val len = msg.length
         val countOfSub = if (CONFIG.logBorderSwitch) {
-            (len - BOTTOM_BORDER.length) / MAX_LEN
+            maxOf(0, (len - BOTTOM_BORDER.length) / MAX_LEN)
         } else {
             len / MAX_LEN
         }
 
         if (countOfSub > 0) {
             if (CONFIG.logBorderSwitch) {
-                print2Console(type, tag, msg.substring(0, MAX_LEN) + LINE_SEP + BOTTOM_BORDER)
+                val firstPart = minOf(MAX_LEN, len)
+                print2Console(type, tag, msg.substring(0, firstPart) + LINE_SEP + BOTTOM_BORDER)
                 var index = MAX_LEN
                 for (i in 1 until countOfSub) {
+                    val endIndex = minOf(index + MAX_LEN, len)
                     print2Console(
                         type, tag,
                         PLACEHOLDER + LINE_SEP + TOP_BORDER + LINE_SEP +
-                                LEFT_BORDER + msg.substring(index, index + MAX_LEN) +
+                                LEFT_BORDER + msg.substring(index, endIndex) +
                                 LINE_SEP + BOTTOM_BORDER
                     )
                     index += MAX_LEN
                 }
-                if (index != len - BOTTOM_BORDER.length) {
+                if (index < len) {
                     print2Console(
                         type, tag,
                         PLACEHOLDER + LINE_SEP + TOP_BORDER + LINE_SEP +
@@ -402,16 +415,18 @@ object LogUtils {
                     )
                 }
             } else {
-                print2Console(type, tag, msg.substring(0, MAX_LEN))
+                val firstPart = minOf(MAX_LEN, len)
+                print2Console(type, tag, msg.substring(0, firstPart))
                 var index = MAX_LEN
                 for (i in 1 until countOfSub) {
+                    val endIndex = minOf(index + MAX_LEN, len)
                     print2Console(
                         type, tag,
-                        PLACEHOLDER + LINE_SEP + msg.substring(index, index + MAX_LEN)
+                        PLACEHOLDER + LINE_SEP + msg.substring(index, endIndex)
                     )
                     index += MAX_LEN
                 }
-                if (index != len) {
+                if (index < len) {
                     print2Console(type, tag, PLACEHOLDER + LINE_SEP + msg.substring(index, len))
                 }
             }
@@ -483,24 +498,51 @@ object LogUtils {
         if (files.isNullOrEmpty()) return
 
         try {
-            val dueMillis = dateFormat.get()?.parse(date)?.time ?: return
+            val dateFormatInstance = dateFormat.get()
+            if (dateFormatInstance == null) {
+                Log.e("LogUtils", "Date format is null")
+                return
+            }
+
+            val dueMillis = try {
+                dateFormatInstance.parse(date)?.time
+            } catch (e: ParseException) {
+                Log.e("LogUtils", "Failed to parse date: $date", e)
+                return
+            } ?: return
+            
             val cutOffTime = dueMillis - CONFIG.saveDays * 86400000L
 
             files.forEach { aFile ->
-                val name = aFile.name
-                val logDay = findDate(name)
-                val logDayTime = dateFormat.get()?.parse(logDay)?.time
-                if (logDayTime != null && logDayTime <= cutOffTime) {
-                    EXECUTOR.execute {
-                        val delete = aFile.delete()
-                        if (!delete) {
-                            Log.e("LogUtils", "delete $aFile failed!")
+                try {
+                    val name = aFile.name
+                    val logDay = findDate(name)
+                    if (logDay.isNotEmpty()) {
+                        val logDayTime = try {
+                            dateFormatInstance.parse(logDay)?.time
+                        } catch (e: ParseException) {
+                            Log.w("LogUtils", "Failed to parse log day: $logDay", e)
+                            null
+                        }
+                        if (logDayTime != null && logDayTime <= cutOffTime) {
+                            EXECUTOR.execute {
+                                try {
+                                    val delete = aFile.delete()
+                                    if (!delete) {
+                                        Log.e("LogUtils", "delete $aFile failed!")
+                                    }
+                                } catch (e: Exception) {
+                                    Log.e("LogUtils", "Failed to delete file: $aFile", e)
+                                }
+                            }
                         }
                     }
+                } catch (e: Exception) {
+                    Log.w("LogUtils", "Failed to process file: ${aFile.name}", e)
                 }
             }
-        } catch (e: ParseException) {
-            e.printStackTrace()
+        } catch (e: Exception) {
+            Log.e("LogUtils", "Failed to delete due logs", e)
         }
     }
 

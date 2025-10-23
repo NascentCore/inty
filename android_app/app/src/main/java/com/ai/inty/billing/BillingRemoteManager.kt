@@ -1,9 +1,9 @@
 package com.ai.inty.billing
 
+import ai.sxwl.android.utils.LogUtils
+import ai.sxwl.android.utils.TimeUtils
 import com.ai.inty.net.NetServiceMgr
 import com.architecture.httplib.core.HttpResult
-import com.inty.utils.log.EasyLog
-import com.inty.utils.parseIsoTimeToTimestamp
 import kotlinx.coroutines.flow.MutableStateFlow
 
 /* 从后端获取订阅计划：
@@ -32,8 +32,10 @@ internal class BillingRemoteManager(
                         // 更新会员状态
                         val isSubscribed = currentSubscription != null
                         val subscriptionId = currentSubscription?.planId
-                        val purchaseTime = parseIsoTimeToTimestamp(currentSubscription?.startDate)
-                        val expiryTime = parseIsoTimeToTimestamp(currentSubscription?.endDate)
+                        val purchaseTime =
+                            TimeUtils.parseIsoTimeToTimestamp(currentSubscription?.startDate)
+                        val expiryTime =
+                            TimeUtils.parseIsoTimeToTimestamp(currentSubscription?.endDate)
 
                         val vipStatus =
                             VipStatus(
@@ -90,34 +92,21 @@ internal class BillingRemoteManager(
                         if (isConnected) {
                             priceManager.querySkuDetails(isConnected)
                         } else {
-                            EasyLog.log(
-                                "BillingRepository BillingRemoteManager BillingClient 未连接，等待连接成功后查询价格",
-                                EasyLog.WARN
-                            )
+                            LogUtils.w("BillingClient 未连接，等待连接成功后查询价格")
                         }
                     }
 
                     is HttpResult.Failure -> {
-                        EasyLog.log(
-                            "BillingRepository BillingRemoteManager 获取订阅计划失败: ${result.message}",
-                            EasyLog.ERROR
-                        )
+                        LogUtils.e("获取订阅计划失败: ${result.message}")
                     }
                 }
             }.onFailure { exception ->
                 when (exception) {
                     is kotlinx.coroutines.CancellationException -> {
-                        EasyLog.log(
-                            "BillingRepository BillingRemoteManager 获取订阅计划被取消: ${exception.message}",
-                            EasyLog.ERROR
-                        )
+                        LogUtils.w("获取订阅计划被取消: ${exception.message}")
                     }
-
                     else -> {
-                        EasyLog.log(
-                            "BillingRepository BillingRemoteManager 获取订阅计划异常: ${exception.message}",
-                            EasyLog.ERROR
-                        )
+                        LogUtils.e("获取订阅计划异常: ${exception.message}")
                     }
                 }
             }

@@ -1,5 +1,7 @@
 package com.ai.inty.explore
 
+import ai.sxwl.android.data.store.IntySetting
+import ai.sxwl.android.utils.LogUtils
 import androidx.paging.PagingSource
 import androidx.paging.PagingState
 import com.ai.inty.beans.AgentInfo
@@ -8,8 +10,6 @@ import com.ai.inty.net.NetServiceMgr
 import com.ai.inty.utils.AgentCacheManager
 import com.ai.inty.utils.UnifiedStartupManager
 import com.architecture.httplib.core.HttpResult
-import com.inty.utils.log.EasyLog
-import com.inty.utils.storage.IntySetting
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -102,15 +102,12 @@ class ExplorePagingSource(
                     }
 
                     is NetworkResult.Error -> {
-                        EasyLog.log(
-                            "ExplorePagingSource - 网络加载失败: ${result.error}",
-                            EasyLog.ERROR
-                        )
+                        LogUtils.e("ExplorePagingSource - 网络加载失败: ${result.error}")
                         LoadResult.Error(Exception(result.error))
                     }
                 }
             } catch (e: Exception) {
-                EasyLog.log("ExplorePagingSource - 加载异常: ${e.message}", EasyLog.ERROR)
+                LogUtils.e("ExplorePagingSource - 加载异常: ${e.message}")
                 LoadResult.Error(e)
             }
         }
@@ -164,7 +161,7 @@ class ExplorePagingSource(
                     }
                 }
             } catch (e: Exception) {
-                EasyLog.log("ExplorePagingSource - 后台刷新失败: ${e.message}", EasyLog.ERROR)
+                LogUtils.e("ExplorePagingSource - 后台刷新失败: ${e.message}")
             }
         }
     }

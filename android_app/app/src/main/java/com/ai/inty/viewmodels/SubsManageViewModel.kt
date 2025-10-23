@@ -1,8 +1,8 @@
 package com.ai.inty.viewmodels
 
+import ai.sxwl.android.utils.LogUtils
 import androidx.lifecycle.viewModelScope
 import com.ai.inty.base.BaseViewModel
-import com.inty.utils.log.EasyLog
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.launch
@@ -29,7 +29,7 @@ class SubsManageViewModel : BaseViewModel() {
                 // 具体的Intent启动逻辑由View层负责
                 _uiEvent.emit(SubscriptionUiEvent.NavigateToPlayStoreSubscriptions)
             } catch (e: Exception) {
-                EasyLog.log("❌ 发送跳转事件失败: ${e.message}")
+                LogUtils.i("❌ 发送跳转事件失败: ${e.message}")
                 // 也可以发出一个事件让View显示错误信息
                 _uiEvent.emit(SubscriptionUiEvent.ShowToast("无法处理跳转请求。"))
             }

@@ -3,7 +3,6 @@ package ai.sxwl.android.utils
 import android.annotation.SuppressLint
 import android.os.Build
 import android.provider.Settings
-import androidx.annotation.RequiresApi
 import java.io.File
 import java.util.UUID
 
@@ -29,12 +28,20 @@ object DeviceUtils {
     /**
      * 判断ADB是否启用
      */
-    @RequiresApi(Build.VERSION_CODES.JELLY_BEAN_MR1)
     fun isAdbEnabled(): Boolean {
-        return Settings.Global.getInt(
-            Utils.getApp().contentResolver,
-            Settings.Global.ADB_ENABLED, 0
-        ) > 0
+        return try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
+                val app = Utils.getApp() ?: return false
+                Settings.Global.getInt(
+                    app.contentResolver,
+                    Settings.Global.ADB_ENABLED, 0
+                ) > 0
+            } else {
+                false // API 17以下不支持
+            }
+        } catch (e: Exception) {
+            false
+        }
     }
 
     /**
@@ -52,11 +59,16 @@ object DeviceUtils {
      */
     @SuppressLint("HardwareIds")
     fun getAndroidID(): String {
-        val id = Settings.Secure.getString(
-            Utils.getApp().contentResolver,
-            Settings.Secure.ANDROID_ID
-        )
-        return if ("9774d56d682e549c" == id) "" else id ?: ""
+        return try {
+            val app = Utils.getApp() ?: return ""
+            val id = Settings.Secure.getString(
+                app.contentResolver,
+                Settings.Secure.ANDROID_ID
+            )
+            if ("9774d56d682e549c" == id) "" else id ?: ""
+        } catch (e: Exception) {
+            ""
+        }
     }
 
     /**
@@ -121,20 +133,48 @@ object DeviceUtils {
     /**
      * 获取设备屏幕宽度
      */
-    fun getScreenWidth(): Int = Utils.getApp().resources.displayMetrics.widthPixels
+    fun getScreenWidth(): Int {
+        return try {
+            val app = Utils.getApp() ?: return 0
+            app.resources.displayMetrics.widthPixels
+        } catch (e: Exception) {
+            0
+        }
+    }
 
     /**
      * 获取设备屏幕高度
      */
-    fun getScreenHeight(): Int = Utils.getApp().resources.displayMetrics.heightPixels
+    fun getScreenHeight(): Int {
+        return try {
+            val app = Utils.getApp() ?: return 0
+            app.resources.displayMetrics.heightPixels
+        } catch (e: Exception) {
+            0
+        }
+    }
 
     /**
      * 获取设备屏幕密度
      */
-    fun getScreenDensity(): Float = Utils.getApp().resources.displayMetrics.density
+    fun getScreenDensity(): Float {
+        return try {
+            val app = Utils.getApp() ?: return 1.0f
+            app.resources.displayMetrics.density
+        } catch (e: Exception) {
+            1.0f
+        }
+    }
 
     /**
      * 获取设备屏幕密度DPI
      */
-    fun getScreenDensityDpi(): Int = Utils.getApp().resources.displayMetrics.densityDpi
+    fun getScreenDensityDpi(): Int {
+        return try {
+            val app = Utils.getApp() ?: return 160
+            app.resources.displayMetrics.densityDpi
+        } catch (e: Exception) {
+            160
+        }
+    }
 }

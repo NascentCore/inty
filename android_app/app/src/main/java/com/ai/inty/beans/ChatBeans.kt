@@ -1,7 +1,7 @@
 package com.ai.inty.beans
 
-import com.inty.utils.convertUtcToLocal
-import com.inty.utils.storage.IntySetting
+import ai.sxwl.android.data.store.IntySetting
+import ai.sxwl.android.utils.TimeUtils
 import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 
@@ -111,7 +111,7 @@ data class ConversationItem(
     val isNew: Boolean = !IntySetting.isConversationReaded(agentId, lastMessage),
 ) {
     fun getShowTime(): String {
-        return convertUtcToLocal(lastMessageTime)
+        return TimeUtils.convertUtcToLocal(lastMessageTime)
     }
 
     fun convertToAgentInfo(): AgentInfo {

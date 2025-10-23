@@ -46,8 +46,13 @@ object AppUtils {
     fun isAppInstalled(packageName: String): Boolean {
         if (UtilsBridge.isSpace(packageName)) return false
         return try {
-            Utils.getApp().packageManager.getApplicationInfo(packageName, 0).enabled
+            val app = Utils.getApp() ?: return false
+            val packageManager = app.packageManager ?: return false
+            packageManager.getApplicationInfo(packageName, 0).enabled
         } catch (e: PackageManager.NameNotFoundException) {
+            false
+        } catch (e: Exception) {
+            Log.e("AppUtils", "检查应用安装状态失败", e)
             false
         }
     }
@@ -55,13 +60,17 @@ object AppUtils {
     /**
      * 判断是否为调试应用
      */
-    fun isAppDebug(packageName: String = Utils.getApp().packageName): Boolean {
+    fun isAppDebug(packageName: String = Utils.getApp()?.packageName ?: ""): Boolean {
         if (UtilsBridge.isSpace(packageName)) return false
         return try {
-            val pm = Utils.getApp().packageManager
+            val app = Utils.getApp() ?: return false
+            val pm = app.packageManager ?: return false
             val ai = pm.getApplicationInfo(packageName, 0)
             (ai.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
         } catch (e: PackageManager.NameNotFoundException) {
+            false
+        } catch (e: Exception) {
+            Log.e("AppUtils", "检查应用调试状态失败", e)
             false
         }
     }
@@ -69,13 +78,17 @@ object AppUtils {
     /**
      * 判断是否为系统应用
      */
-    fun isAppSystem(packageName: String = Utils.getApp().packageName): Boolean {
+    fun isAppSystem(packageName: String = Utils.getApp()?.packageName ?: ""): Boolean {
         if (UtilsBridge.isSpace(packageName)) return false
         return try {
-            val pm = Utils.getApp().packageManager
+            val app = Utils.getApp() ?: return false
+            val pm = app.packageManager ?: return false
             val ai = pm.getApplicationInfo(packageName, 0)
             (ai.flags and ApplicationInfo.FLAG_SYSTEM) != 0
         } catch (e: PackageManager.NameNotFoundException) {
+            false
+        } catch (e: Exception) {
+            Log.e("AppUtils", "检查应用系统状态失败", e)
             false
         }
     }
@@ -83,9 +96,14 @@ object AppUtils {
     /**
      * 判断应用是否在前台
      */
-    fun isAppForeground(packageName: String = Utils.getApp().packageName): Boolean {
+    fun isAppForeground(packageName: String = Utils.getApp()?.packageName ?: ""): Boolean {
         if (UtilsBridge.isSpace(packageName)) return false
-        return packageName == UtilsBridge.getForegroundProcessName()
+        return try {
+            packageName == UtilsBridge.getForegroundProcessName()
+        } catch (e: Exception) {
+            Log.e("AppUtils", "检查应用前台状态失败", e)
+            false
+        }
     }
 
     /**
@@ -94,17 +112,25 @@ object AppUtils {
     fun isAppRunning(packageName: String): Boolean {
         if (UtilsBridge.isSpace(packageName)) return false
 
-        val am = Utils.getApp().getSystemService<ActivityManager>() ?: return false
+        return try {
+            val app = Utils.getApp() ?: return false
+            val am = app.getSystemService<ActivityManager>() ?: return false
 
-        // 检查运行的任务
-        val runningTasks = am.getRunningTasks(Int.MAX_VALUE)
-        if (runningTasks.any { it.baseActivity?.packageName == packageName }) {
-            return true
+            // 检查运行的任务（API 21+已废弃，但作为降级方案）
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
+                val runningTasks = am.getRunningTasks(Int.MAX_VALUE)
+                if (runningTasks.any { it.baseActivity?.packageName == packageName }) {
+                    return true
+                }
+            }
+
+            // 检查运行的服务
+            val runningServices = am.getRunningServices(Int.MAX_VALUE)
+            return runningServices?.any { it.service.packageName == packageName } ?: false
+        } catch (e: Exception) {
+            Log.e("AppUtils", "检查应用运行状态失败", e)
+            false
         }
-
-        // 检查运行的服务
-        val runningServices = am.getRunningServices(Int.MAX_VALUE)
-        return runningServices.any { it.service.packageName == packageName }
     }
 
     // ==================== 应用启动控制 ====================
@@ -115,35 +141,51 @@ object AppUtils {
     fun launchApp(packageName: String) {
         if (UtilsBridge.isSpace(packageName)) return
 
-        val launchIntent = Utils.getApp().packageManager.getLaunchIntentForPackage(packageName)
-        if (launchIntent == null) {
-            Log.e("AppUtils", "未找到启动Activity")
-            return
+        try {
+            val app = Utils.getApp() ?: return
+            val packageManager = app.packageManager ?: return
+
+            val launchIntent = packageManager.getLaunchIntentForPackage(packageName)
+            if (launchIntent == null) {
+                Log.e("AppUtils", "未找到启动Activity")
+                return
+            }
+            app.startActivity(launchIntent)
+        } catch (e: Exception) {
+            Log.e("AppUtils", "启动应用失败", e)
         }
-        Utils.getApp().startActivity(launchIntent)
     }
 
     /**
      * 重启应用
      */
     fun relaunchApp(killProcess: Boolean = false) {
-        val intent =
-            Utils.getApp().packageManager.getLaunchIntentForPackage(Utils.getApp().packageName)
-        if (intent == null) {
-            Log.e("AppUtils", "未找到启动Activity")
-            return
-        }
+        try {
+            val app = Utils.getApp() ?: return
+            val packageManager = app.packageManager ?: return
+            val packageName = app.packageName ?: return
 
-        intent.addFlags(
-            Intent.FLAG_ACTIVITY_NEW_TASK or
-                    Intent.FLAG_ACTIVITY_CLEAR_TOP or
-                    Intent.FLAG_ACTIVITY_CLEAR_TASK
-        )
-        Utils.getApp().startActivity(intent)
+            val intent = packageManager.getLaunchIntentForPackage(packageName)
+            if (intent == null) {
+                Log.e("AppUtils", "未找到启动Activity")
+                return
+            }
 
-        if (killProcess) {
-            Process.killProcess(Process.myPid())
-            exitProcess(0)
+            intent.addFlags(
+                Intent.FLAG_ACTIVITY_NEW_TASK or
+                        Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                        Intent.FLAG_ACTIVITY_CLEAR_TASK
+            )
+            app.startActivity(intent)
+
+            if (killProcess) {
+                // 警告：强制杀死进程可能导致数据丢失
+                Log.w("AppUtils", "强制杀死进程，可能导致数据丢失")
+                Process.killProcess(Process.myPid())
+                exitProcess(0)
+            }
+        } catch (e: Exception) {
+            Log.e("AppUtils", "重启应用失败", e)
         }
     }
 
@@ -151,8 +193,22 @@ object AppUtils {
      * 退出应用
      */
     fun exitApp() {
-        UtilsBridge.finishAllActivities()
-        exitProcess(0)
+        try {
+            // 先尝试正常退出
+            UtilsBridge.finishAllActivities()
+
+            // 延迟退出，给Activity时间完成清理
+            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                try {
+                    Log.w("AppUtils", "强制退出应用，可能导致数据丢失")
+                    exitProcess(0)
+                } catch (e: Exception) {
+                    Log.e("AppUtils", "强制退出失败", e)
+                }
+            }, 100)
+        } catch (e: Exception) {
+            Log.e("AppUtils", "退出应用失败", e)
+        }
     }
 
     // ==================== 应用信息获取 ====================
@@ -160,18 +216,22 @@ object AppUtils {
     /**
      * 获取应用包名
      */
-    fun getPackageName(): String = Utils.getApp().packageName
+    fun getPackageName(): String = Utils.getApp()?.packageName ?: ""
 
     /**
      * 获取应用名称
      */
-    fun getAppName(packageName: String = Utils.getApp().packageName): String {
+    fun getAppName(packageName: String = Utils.getApp()?.packageName ?: ""): String {
         if (UtilsBridge.isSpace(packageName)) return ""
         return try {
-            val pm = Utils.getApp().packageManager
+            val app = Utils.getApp() ?: return ""
+            val pm = app.packageManager ?: return ""
             val pi = pm.getPackageInfo(packageName, 0)
             pi?.applicationInfo?.loadLabel(pm)?.toString() ?: ""
         } catch (e: PackageManager.NameNotFoundException) {
+            ""
+        } catch (e: Exception) {
+            Log.e("AppUtils", "获取应用名称失败", e)
             ""
         }
     }
@@ -179,13 +239,17 @@ object AppUtils {
     /**
      * 获取应用版本名称
      */
-    fun getVersionName(packageName: String = Utils.getApp().packageName): String {
+    fun getVersionName(packageName: String = Utils.getApp()?.packageName ?: ""): String {
         if (UtilsBridge.isSpace(packageName)) return ""
         return try {
-            val pm = Utils.getApp().packageManager
+            val app = Utils.getApp() ?: return ""
+            val pm = app.packageManager ?: return ""
             val pi = pm.getPackageInfo(packageName, 0)
             pi?.versionName ?: ""
         } catch (e: PackageManager.NameNotFoundException) {
+            ""
+        } catch (e: Exception) {
+            Log.e("AppUtils", "获取应用版本名称失败", e)
             ""
         }
     }
@@ -193,13 +257,17 @@ object AppUtils {
     /**
      * 获取应用版本号
      */
-    fun getVersionCode(packageName: String = Utils.getApp().packageName): Int {
+    fun getVersionCode(packageName: String = Utils.getApp()?.packageName ?: ""): Int {
         if (UtilsBridge.isSpace(packageName)) return -1
         return try {
-            val pm = Utils.getApp().packageManager
+            val app = Utils.getApp() ?: return -1
+            val pm = app.packageManager ?: return -1
             val pi = pm.getPackageInfo(packageName, 0)
             pi?.versionCode ?: -1
         } catch (e: PackageManager.NameNotFoundException) {
+            -1
+        } catch (e: Exception) {
+            Log.e("AppUtils", "获取应用版本号失败", e)
             -1
         }
     }
@@ -207,13 +275,17 @@ object AppUtils {
     /**
      * 获取应用图标
      */
-    fun getAppIcon(packageName: String = Utils.getApp().packageName): Drawable? {
+    fun getAppIcon(packageName: String = Utils.getApp()?.packageName ?: ""): Drawable? {
         if (UtilsBridge.isSpace(packageName)) return null
         return try {
-            val pm = Utils.getApp().packageManager
+            val app = Utils.getApp() ?: return null
+            val pm = app.packageManager ?: return null
             val pi = pm.getPackageInfo(packageName, 0)
             pi?.applicationInfo?.loadIcon(pm)
         } catch (e: PackageManager.NameNotFoundException) {
+            null
+        } catch (e: Exception) {
+            Log.e("AppUtils", "获取应用图标失败", e)
             null
         }
     }
@@ -221,13 +293,17 @@ object AppUtils {
     /**
      * 获取应用路径
      */
-    fun getAppPath(packageName: String = Utils.getApp().packageName): String {
+    fun getAppPath(packageName: String = Utils.getApp()?.packageName ?: ""): String {
         if (UtilsBridge.isSpace(packageName)) return ""
         return try {
-            val pm = Utils.getApp().packageManager
+            val app = Utils.getApp() ?: return ""
+            val pm = app.packageManager ?: return ""
             val pi = pm.getPackageInfo(packageName, 0)
             pi?.applicationInfo?.sourceDir ?: ""
         } catch (e: PackageManager.NameNotFoundException) {
+            ""
+        } catch (e: Exception) {
+            Log.e("AppUtils", "获取应用路径失败", e)
             ""
         }
     }
@@ -237,30 +313,41 @@ object AppUtils {
     /**
      * 打开应用详情设置
      */
-    fun openAppDetailsSettings(packageName: String = Utils.getApp().packageName) {
+    fun openAppDetailsSettings(packageName: String = Utils.getApp()?.packageName ?: "") {
         if (UtilsBridge.isSpace(packageName)) return
 
-        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-            data = Uri.fromParts("package", packageName, null)
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        try {
+            val app = Utils.getApp() ?: return
+            val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                data = Uri.fromParts("package", packageName, null)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            app.startActivity(intent)
+        } catch (e: Exception) {
+            Log.e("AppUtils", "打开应用详情设置失败", e)
         }
-        Utils.getApp().startActivity(intent)
     }
 
     /**
      * 打开应用详情设置（带回调）
+     * @deprecated startActivityForResult已废弃，建议使用Activity Result API
      */
+    @Deprecated("startActivityForResult已废弃，建议使用Activity Result API")
     fun openAppDetailsSettings(
         activity: Activity,
         requestCode: Int,
-        packageName: String = Utils.getApp().packageName
+        packageName: String = Utils.getApp()?.packageName ?: ""
     ) {
         if (UtilsBridge.isSpace(packageName)) return
 
-        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-            data = Uri.fromParts("package", packageName, null)
+        try {
+            val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                data = Uri.fromParts("package", packageName, null)
+            }
+            activity.startActivityForResult(intent, requestCode)
+        } catch (e: Exception) {
+            Log.e("AppUtils", "打开应用详情设置失败", e)
         }
-        activity.startActivityForResult(intent, requestCode)
     }
 
     // ==================== 应用签名 ====================
@@ -268,10 +355,14 @@ object AppUtils {
     /**
      * 获取应用签名
      */
-    fun getAppSignatures(packageName: String = Utils.getApp().packageName): Array<Signature>? {
+    fun getAppSignatures(
+        packageName: String = Utils.getApp()?.packageName ?: ""
+    ): Array<Signature>? {
         if (UtilsBridge.isSpace(packageName)) return null
         return try {
-            val pm = Utils.getApp().packageManager
+            val app = Utils.getApp() ?: return null
+            val pm = app.packageManager ?: return null
+            
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                 val pi = pm.getPackageInfo(packageName, PackageManager.GET_SIGNING_CERTIFICATES)
                 val signingInfo = pi.signingInfo
@@ -287,13 +378,16 @@ object AppUtils {
             }
         } catch (e: PackageManager.NameNotFoundException) {
             null
+        } catch (e: Exception) {
+            Log.e("AppUtils", "获取应用签名失败", e)
+            null
         }
     }
 
     /**
      * 获取应用签名SHA1值
      */
-    fun getAppSignatureSHA1(packageName: String = Utils.getApp().packageName): String? {
+    fun getAppSignatureSHA1(packageName: String = Utils.getApp()?.packageName ?: ""): String? {
         val signatures = getAppSignatures(packageName) ?: return null
         return signatures.firstOrNull()?.let { signature ->
             try {
@@ -301,6 +395,7 @@ object AppUtils {
                 md.update(signature.toByteArray())
                 UtilsBridge.bytes2HexString(md.digest())
             } catch (e: Exception) {
+                Log.e("AppUtils", "计算签名SHA1失败", e)
                 null
             }
         }
@@ -335,11 +430,12 @@ object AppUtils {
     /**
      * 获取应用信息
      */
-    fun getAppInfo(packageName: String = Utils.getApp().packageName): AppInfo? {
+    fun getAppInfo(packageName: String = Utils.getApp()?.packageName ?: ""): AppInfo? {
         if (UtilsBridge.isSpace(packageName)) return null
 
         return try {
-            val pm = Utils.getApp().packageManager
+            val app = Utils.getApp() ?: return null
+            val pm = app.packageManager ?: return null
             val pi = pm.getPackageInfo(packageName, 0)
             pi.applicationInfo?.let { ai ->
                 AppInfo(
@@ -354,6 +450,9 @@ object AppUtils {
             }
         } catch (e: PackageManager.NameNotFoundException) {
             null
+        } catch (e: Exception) {
+            Log.e("AppUtils", "获取应用信息失败", e)
+            null
         }
     }
 
@@ -362,7 +461,8 @@ object AppUtils {
      */
     fun getAllAppInfo(): List<AppInfo> {
         return try {
-            val pm = Utils.getApp().packageManager
+            val app = Utils.getApp() ?: return emptyList()
+            val pm = app.packageManager ?: return emptyList()
             val installedPackages = pm.getInstalledPackages(0)
 
             installedPackages.mapNotNull { pi ->
@@ -379,10 +479,12 @@ object AppUtils {
                         )
                     }
                 } catch (e: Exception) {
+                    Log.w("AppUtils", "处理应用信息失败: ${pi.packageName}", e)
                     null
                 }
             }
         } catch (e: Exception) {
+            Log.e("AppUtils", "获取所有应用信息失败", e)
             emptyList()
         }
     }

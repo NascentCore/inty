@@ -24,7 +24,13 @@ object EncodeUtils {
         return try {
             URLEncoder.encode(input, charsetName)
         } catch (e: UnsupportedEncodingException) {
-            throw kotlin.AssertionError(e)
+            // 使用UTF-8作为降级方案
+            try {
+                URLEncoder.encode(input, "UTF-8")
+            } catch (e2: UnsupportedEncodingException) {
+                // 如果UTF-8也不支持，返回原始字符串
+                input
+            }
         }
     }
 
@@ -38,12 +44,26 @@ object EncodeUtils {
      */
     fun urlDecode(input: String?, charsetName: String): String {
         if (input.isNullOrEmpty()) return ""
-        return try {
-            val safeInput = input.replace("%(?![0-9a-fA-F]{2})".toRegex(), "%25")
+
+        // 安全处理输入字符串，避免正则表达式异常
+        val safeInput = try {
+            input.replace("%(?![0-9a-fA-F]{2})".toRegex(), "%25")
                 .replace("\\+".toRegex(), "%2B")
+        } catch (e: Exception) {
+            // 如果正则处理失败，直接使用原始输入
+            input
+        }
+
+        return try {
             URLDecoder.decode(safeInput, charsetName)
         } catch (e: UnsupportedEncodingException) {
-            throw kotlin.AssertionError(e)
+            // 使用UTF-8作为降级方案
+            try {
+                URLDecoder.decode(safeInput, "UTF-8")
+            } catch (e2: UnsupportedEncodingException) {
+                // 如果UTF-8也不支持，返回原始字符串
+                input
+            }
         }
     }
 
@@ -78,7 +98,15 @@ object EncodeUtils {
      */
     fun base64Decode(input: String?): ByteArray {
         if (input == null || input.isEmpty()) return ByteArray(0)
-        return Base64.getDecoder().decode(input)
+        return try {
+            Base64.getDecoder().decode(input)
+        } catch (e: IllegalArgumentException) {
+            // Base64格式错误，返回空数组
+            ByteArray(0)
+        } catch (e: Exception) {
+            // 其他异常，返回空数组
+            ByteArray(0)
+        }
     }
 
     /**
@@ -86,7 +114,15 @@ object EncodeUtils {
      */
     fun base64Decode(input: ByteArray?): ByteArray {
         if (input == null || input.isEmpty()) return ByteArray(0)
-        return Base64.getDecoder().decode(input)
+        return try {
+            Base64.getDecoder().decode(input)
+        } catch (e: IllegalArgumentException) {
+            // Base64格式错误，返回空数组
+            ByteArray(0)
+        } catch (e: Exception) {
+            // 其他异常，返回空数组
+            ByteArray(0)
+        }
     }
 
     /**

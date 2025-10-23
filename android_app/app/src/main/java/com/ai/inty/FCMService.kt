@@ -1,5 +1,6 @@
 package com.ai.inty
 
+import ai.sxwl.android.utils.LogUtils
 import android.annotation.SuppressLint
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -8,7 +9,6 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
-import com.inty.utils.log.EasyLog
 
 /** Firebase 消息推送服务 */
 class FCMService : FirebaseMessagingService() {
@@ -16,7 +16,7 @@ class FCMService : FirebaseMessagingService() {
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
         // 1. 处理数据消息（应用前后台均触发）
         if (remoteMessage.data.isNotEmpty()) {
-            EasyLog.log("FCMService onMessageReceived: " + remoteMessage.data, EasyLog.INFO)
+            LogUtils.i("FCMService onMessageReceived: " + remoteMessage.data)
         }
 
         // 2. 处理通知消息（仅前台触发；后台时由系统自动显示）

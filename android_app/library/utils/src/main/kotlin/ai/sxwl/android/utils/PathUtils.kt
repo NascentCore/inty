@@ -1,5 +1,6 @@
 package ai.sxwl.android.utils
 
+import android.app.Application
 import android.content.Context
 import android.os.Environment
 
@@ -13,7 +14,16 @@ object PathUtils {
      * 获取内部存储路径
      */
     fun getInternalAppFilesPath(): String {
-        return Utils.getApp().filesDir.absolutePath
+        return try {
+            val app: Application? = Utils.getApp()
+            if (app != null) {
+                app.filesDir.absolutePath
+            } else {
+                ""
+            }
+        } catch (e: Exception) {
+            ""
+        }
     }
 
     /**
@@ -27,7 +37,16 @@ object PathUtils {
      * 获取内部缓存路径
      */
     fun getInternalAppCachePath(): String {
-        return Utils.getApp().cacheDir.absolutePath
+        return try {
+            val app: Application? = Utils.getApp()
+            if (app != null) {
+                app.cacheDir.absolutePath
+            } else {
+                ""
+            }
+        } catch (e: Exception) {
+            ""
+        }
     }
 
     /**
@@ -41,14 +60,32 @@ object PathUtils {
      * 获取外部存储路径
      */
     fun getExternalStoragePath(): String {
-        return Environment.getExternalStorageDirectory().absolutePath
+        return try {
+            val externalDir = Environment.getExternalStorageDirectory()
+            if (externalDir != null) {
+                externalDir.absolutePath
+            } else {
+                ""
+            }
+        } catch (e: Exception) {
+            ""
+        }
     }
 
     /**
      * 获取外部存储路径
      */
     fun getExternalStoragePath(context: Context?): String {
-        return Environment.getExternalStorageDirectory().absolutePath
+        return try {
+            val externalDir = Environment.getExternalStorageDirectory()
+            if (externalDir != null) {
+                externalDir.absolutePath
+            } else {
+                ""
+            }
+        } catch (e: Exception) {
+            ""
+        }
     }
 
     /**

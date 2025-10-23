@@ -36,10 +36,11 @@ private val premiumInactiveBrush =
 
 /** Premium Model标签组件 */
 @Composable
-fun PremiumModelTag(isPremiumModel: Boolean, onClick: () -> Unit) {
+fun PremiumModelTag(isPremiumModel: Boolean = false, onClick: () -> Unit) {
     Row(
         modifier =
-            Modifier.padding(horizontal = 16.dp)
+            Modifier
+                .padding(horizontal = 16.dp)
                 .height(28.dp)
                 .background(
                     brush = if (isPremiumModel) premiumActiveBrush else premiumInactiveBrush,

@@ -82,7 +82,6 @@ leakcanary = "2.14"
 
 # 腾讯系库
 mmkv = "2.2.4"
-mars = "1.2.6"
 
 # 其他第三方库
 ucrop = "2.2.10"
@@ -257,7 +256,6 @@ leakcanary-android = { module = "com.squareup.leakcanary:leakcanary-android", ve
 
 # ===== 腾讯系库 =====
 mmkv = { group = "com.tencent", name = "mmkv", version.ref = "mmkv" }
-mars-xlog = { group = "com.tencent.mars", name = "mars-xlog", version.ref = "mars" }
 
 # ===== 图片处理库 =====
 ucrop = { module = "com.github.yalantis:ucrop", version.ref = "ucrop" }

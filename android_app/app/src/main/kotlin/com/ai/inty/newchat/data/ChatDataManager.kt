@@ -1,4 +1,5 @@
 package com.ai.inty.newchat.data
+import ai.sxwl.android.utils.LogUtils
 import com.ai.inty.beans.AgentInfo
 import com.ai.inty.beans.ConversationItem
 import com.ai.inty.beans.MsgInfo
@@ -6,7 +7,6 @@ import com.ai.inty.beans.SendMsgReq
 import com.ai.inty.net.IAgentApi
 import com.ai.inty.net.IChatApi
 import com.architecture.httplib.core.HttpResult
-import com.inty.utils.log.EasyLog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -323,18 +323,12 @@ class ChatDataManager(
 
                 is HttpResult.Failure -> {
                     // 处理加载失败
-                    EasyLog.log(
-                        "ChatDataManager - 加载$agentId 的消息历史 失败${result.message}",
-                        EasyLog.WARN
-                    )
+                    LogUtils.w("ChatDataManager - 加载$agentId 的消息历史 失败${result.message}")
                 }
             }
         } catch (e: Exception) {
             // 处理加载失败
-            EasyLog.log(
-                "ChatDataManager - 加载$agentId 的消息历史 接口异常${e.message}",
-                EasyLog.ERROR
-            )
+            LogUtils.e("ChatDataManager - 加载$agentId 的消息历史 接口异常${e.message}")
         }
     }
 

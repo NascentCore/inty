@@ -1,9 +1,9 @@
 package com.ai.inty.utils
 
+import ai.sxwl.android.utils.LogUtils
 import android.content.Context
 import com.ai.inty.audio.AudioCacheManager
 import com.ai.inty.beans.AgentInfo
-import com.inty.utils.log.EasyLog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -31,12 +31,12 @@ object AudioPreloadManager {
      */
     suspend fun preloadAgentsOpeningAudios(agents: List<AgentInfo>, maxConcurrent: Int = 3) {
         if (!isInitialized) {
-            EasyLog.log("AudioPreloadManager - 未初始化，跳过预加载", EasyLog.WARN)
+            LogUtils.w("AudioPreloadManager - 未初始化，跳过预加载")
             return
         }
 
         if (agents.isEmpty()) {
-            EasyLog.log("AudioPreloadManager - agents列表为空，跳过预加载")
+            LogUtils.i("AudioPreloadManager - agents列表为空，跳过预加载")
             return
         }
 
@@ -48,11 +48,11 @@ object AudioPreloadManager {
                 if (audioUrls.isNotEmpty()) {
                     // 使用并发预加载，提高效率
                     preloadAudioUrls(audioUrls, maxConcurrent)
-                    EasyLog.log("AudioPreloadManager - 批量预加载${audioUrls.size}个音频完成")
+                    LogUtils.i("AudioPreloadManager - 批量预加载${audioUrls.size}个音频完成")
                 }
             }
         } catch (e: Exception) {
-            EasyLog.log("AudioPreloadManager - 预加载异常: ${e.message}", EasyLog.ERROR)
+            LogUtils.e("AudioPreloadManager - 预加载异常: ${e.message}")
         }
     }
 
@@ -64,13 +64,13 @@ object AudioPreloadManager {
      */
     suspend fun preloadCriticalOpeningAudios(agents: List<AgentInfo>, criticalCount: Int = 5) {
         if (!isInitialized) {
-            EasyLog.log("AudioPreloadManager - 未初始化，跳过关键音频预加载", EasyLog.WARN)
+            LogUtils.w("AudioPreloadManager - 未初始化，跳过关键音频预加载")
             return
         }
 
         val criticalAgents = agents.take(criticalCount)
         if (criticalAgents.isEmpty()) {
-            EasyLog.log("AudioPreloadManager - 关键agents列表为空，跳过预加载")
+            LogUtils.i("AudioPreloadManager - 关键agents列表为空，跳过预加载")
             return
         }
 
@@ -84,7 +84,7 @@ object AudioPreloadManager {
                 }
             }
         } catch (e: Exception) {
-            EasyLog.log("AudioPreloadManager - 关键音频预加载异常: ${e.message}", EasyLog.ERROR)
+            LogUtils.e("AudioPreloadManager - 关键音频预加载异常: ${e.message}")
         }
     }
 
@@ -123,15 +123,12 @@ object AudioPreloadManager {
                                 // 检查是否已经缓存
                                 if (!audioCacheManager.isCached(url)) {
                                     audioCacheManager.preloadAudio(url)
-                                    EasyLog.log("AudioPreloadManager - 预加载音频成功: $url")
+                                    LogUtils.i("AudioPreloadManager - 预加载音频成功: $url")
                                 } else {
-                                    EasyLog.log("AudioPreloadManager - 音频已缓存，跳过: $url")
+                                    LogUtils.i("AudioPreloadManager - 音频已缓存，跳过: $url")
                                 }
                             } catch (e: Exception) {
-                                EasyLog.log(
-                                    "AudioPreloadManager - 预加载音频失败: $url, 错误: ${e.message}",
-                                    EasyLog.ERROR,
-                                )
+                                LogUtils.e("AudioPreloadManager - 预加载音频失败: $url, 错误: ${e.message}")
                             }
                         }
                     }
@@ -164,7 +161,7 @@ object AudioPreloadManager {
     fun clearCache() {
         if (isInitialized) {
             audioCacheManager.clearCache()
-            EasyLog.log("AudioPreloadManager - 清除预加载缓存")
+            LogUtils.i("AudioPreloadManager - 清除预加载缓存")
         }
     }
 
@@ -172,7 +169,7 @@ object AudioPreloadManager {
     fun cleanExpiredCache() {
         if (isInitialized) {
             audioCacheManager.cleanExpiredCache()
-            EasyLog.log("AudioPreloadManager - 清理过期缓存")
+            LogUtils.i("AudioPreloadManager - 清理过期缓存")
         }
     }
 

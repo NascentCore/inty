@@ -1,6 +1,7 @@
 package com.ai.inty
 
 import ai.sxwl.android.common.base.BaseActivity
+import ai.sxwl.android.utils.LogUtils
 import android.content.Context
 import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -12,7 +13,6 @@ import androidx.lifecycle.lifecycleScope
 import com.ai.inty.base.ViewModelEvent
 import com.ai.inty.ui.screens.ReportScreen
 import com.ai.inty.viewmodels.ReportViewModel
-import com.inty.utils.log.EasyLog
 import kotlinx.coroutines.launch
 
 /** 举报页面 */
@@ -86,7 +86,7 @@ private fun ReportContent(viewModel: ReportViewModel, onBack: () -> Unit) {
         reasons = reasons.value,
         selectIDs = selectIDs,
         onClickReason = { id, isSelect ->
-            EasyLog.log("onClickReason id = $id, isSelect = $isSelect")
+            LogUtils.i("onClickReason id = $id, isSelect = $isSelect")
             if (isSelect) {
                 viewModel.selectIDS.add(id)
             } else {

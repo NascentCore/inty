@@ -1,11 +1,12 @@
 package com.ai.inty.viewmodels
 
+import ai.sxwl.android.utils.ToastUtils
+import ai.sxwl.android.utils.Utils
 import android.net.Uri
 import androidx.core.net.toUri
 import androidx.lifecycle.viewModelScope
 import com.ai.inty.R
 import com.ai.inty.base.BaseViewModel
-import com.ai.inty.base.ToastUtils
 import com.ai.inty.base.ViewModelEvent
 import com.ai.inty.beans.UserProfile
 import com.ai.inty.net.NetServiceMgr
@@ -86,7 +87,7 @@ class MySettingViewModel : BaseViewModel() {
                                 )
                             // Show success toast for avatar upload
                             viewModelScope.launch(Dispatchers.Main) {
-                                ToastUtils.showToast(R.string.saved_successfully)
+                                ToastUtils.showShort(R.string.saved_successfully)
                             }
                         }
 
@@ -101,7 +102,7 @@ class MySettingViewModel : BaseViewModel() {
                 if (updatedProfile != null) {
                     // Show success toast for profile update
                     viewModelScope.launch(Dispatchers.Main) {
-                        ToastUtils.showToast(R.string.saved_successfully)
+                        ToastUtils.showShort(Utils.getApp().getString(R.string.saved_successfully))
                         UserProfileManager.saveUserProfile(updatedProfile)
                     }
                     // 发送用户信息更新成功事件
@@ -116,7 +117,7 @@ class MySettingViewModel : BaseViewModel() {
     }
 
     fun setAvatar(uri: Uri?) {
-        //        EasyLog.log("avatar= $uri")
+        //        LogUtils.i("avatar= $uri")
         _avatarChanged.value = true
         _userProfile.value = _userProfile.value.copy(avatar = uri.toString())
     }

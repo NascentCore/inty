@@ -1,5 +1,6 @@
 package com.ai.inty.base
 
+import ai.sxwl.android.utils.ToastUtils
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ai.inty.utils.NetworkErrorHandler
@@ -18,7 +19,7 @@ open class BaseViewModel : ViewModel() {
     val events: SharedFlow<ViewModelEvent> = _events.asSharedFlow()
 
     fun showSnackbar(text: String) {
-        viewModelScope.launch { ToastUtils.showToast(text) }
+        viewModelScope.launch { ToastUtils.showShort(text) }
     }
 
     /**

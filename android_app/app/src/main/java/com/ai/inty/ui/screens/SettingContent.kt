@@ -1,8 +1,8 @@
 package com.ai.inty.ui.screens
 
+import ai.sxwl.android.utils.ToastUtils
 import android.content.Context
 import android.content.Intent
-import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -44,7 +44,7 @@ import com.ai.inty.ui.components.SettingNavigationItem
 import com.ai.inty.ui.components.SettingSection
 import com.ai.inty.viewmodels.DialogState
 import com.ai.inty.viewmodels.SettingViewModel
-import com.inty.utils.storage.IntySetting
+import ai.sxwl.android.data.store.IntySetting
 import kotlinx.coroutines.flow.collectLatest
 
 /** 设置页面主内容 */
@@ -256,8 +256,7 @@ private fun mailTo(context: Context, email: String) {
     try {
         context.startActivity(Intent.createChooser(intent, "email"))
     } catch (e: Exception) {
-        Toast.makeText(context, context.getString(R.string.toast_email_error), Toast.LENGTH_SHORT)
-            .show()
+        ToastUtils.showShort(R.string.toast_email_error)
     }
 }
 

@@ -1,5 +1,6 @@
 package com.ai.inty.audio
 
+import ai.sxwl.android.utils.LogUtils
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -31,7 +32,6 @@ import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ai.inty.R
-import com.inty.utils.log.EasyLog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -89,10 +89,7 @@ fun VoicePlayer(
             if (isGeneratingTts && ttsGenerationStartTime > 0) {
                 val elapsedTime = System.currentTimeMillis() - ttsGenerationStartTime
                 if (elapsedTime > 30000) { // 30秒超时
-                    EasyLog.log(
-                        "音频LOG测试 TTS generation timeout: trackingId=$ttsTrackingId (localMsgId=$messageId), elapsed: ${elapsedTime}ms",
-                        EasyLog.ERROR,
-                    )
+                    LogUtils.e("音频LOG测试 TTS generation timeout: trackingId=$ttsTrackingId (localMsgId=$messageId), elapsed: ${elapsedTime}ms")
                     isGeneratingTts = false
                     ttsGenerationFailed = true
                     userClickedRecently = false
@@ -212,10 +209,7 @@ fun VoicePlayer(
                     isManualClick = false, // 自动播放
                     onTtsGenerated = onTtsGenerated,
                     onTtsFailed = { error ->
-                        EasyLog.log(
-                            "音频LOG测试 Auto play TTS generation failed: $error (Agent: ${audioInfo.agentName})",
-                            EasyLog.ERROR,
-                        )
+                        LogUtils.e("音频LOG测试 Auto play TTS generation failed: $error (Agent: ${audioInfo.agentName})")
                         ttsGenerationFailed = true
                         isLoading = false
                     },
@@ -223,14 +217,10 @@ fun VoicePlayer(
                     agentName = audioInfo.agentName, // 传递Agent名称用于日志分析
                 )
             } else {
-                EasyLog.log(
-                    "音频LOG测试 VoicePlayer auto play conditions no longer met after delay: autoPlay=$autoPlay, isPlaying=$isPlaying, hasError=$hasError"
-                )
+                LogUtils.d("音频LOG测试 VoicePlayer auto play conditions no longer met after delay: autoPlay=$autoPlay, isPlaying=$isPlaying, hasError=$hasError")
             }
         } else {
-            EasyLog.log(
-                "音频LOG测试 VoicePlayer auto play conditions not met: autoPlay=$autoPlay, isPlaying=$isPlaying, hasError=$hasError, agentId='${audioInfo.agentId}'"
-            )
+            LogUtils.w("音频LOG测试 VoicePlayer auto play conditions not met: autoPlay=$autoPlay, isPlaying=$isPlaying, hasError=$hasError, agentId='${audioInfo.agentId}'")
         }
     }
 
@@ -247,7 +237,7 @@ fun VoicePlayer(
 
             // 如果正在生成TTS且不是失败状态，则阻止点击
             if (isGeneratingTts && !ttsGenerationFailed) {
-                EasyLog.log("音频LOG测试 Click ignored due to TTS generation in progress")
+                LogUtils.i("音频LOG测试 Click ignored due to TTS generation in progress")
                 return@ChatVoicePlayer
             }
 
@@ -289,7 +279,7 @@ fun VoicePlayer(
                     },
                     onTtsFailed = { error ->
                         // TTS生成失败，显示错误状态
-                        EasyLog.log("音频LOG测试 TTS generation failed: $error", EasyLog.ERROR)
+                        LogUtils.e("音频LOG测试 TTS generation failed: $error")
                         ttsGenerationFailed = true
                     },
                     serverMessageId = serverMessageId, // 传递服务器端ID用于TTS生成

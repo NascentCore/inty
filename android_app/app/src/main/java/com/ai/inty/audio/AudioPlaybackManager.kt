@@ -1,5 +1,6 @@
 package com.ai.inty.audio
 
+import ai.sxwl.android.utils.LogUtils
 import android.content.Context
 import android.media.AudioAttributes
 import android.media.AudioFocusRequest
@@ -14,7 +15,6 @@ import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
-import com.inty.utils.log.EasyLog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -111,10 +111,7 @@ class AudioPlaybackManager private constructor(private val context: Context) : P
                     )
                 }
         } catch (e: Exception) {
-            EasyLog.log(
-                "音频LOG测试 Failed to initialize AudioPlaybackManager: ${e.message}",
-                EasyLog.ERROR,
-            )
+            LogUtils.e("音频LOG测试 Failed to initialize AudioPlaybackManager: ${e.message}")
             _error.value = "播放器初始化失败: ${e.message}"
         }
     }
@@ -143,7 +140,7 @@ class AudioPlaybackManager private constructor(private val context: Context) : P
 
             // 请求音频焦点
             if (!requestAudioFocus()) {
-                EasyLog.log("音频LOG测试 Failed to request audio focus", EasyLog.ERROR)
+                LogUtils.e("音频LOG测试 Failed to request audio focus")
                 _error.value = "无法获取音频焦点"
                 return
             }
@@ -167,10 +164,7 @@ class AudioPlaybackManager private constructor(private val context: Context) : P
                         try {
                             cacheManager.preloadAudio(audioInfo.url)
                         } catch (e: Exception) {
-                            EasyLog.log(
-                                "音频LOG测试 Failed to preload audio: ${e.message}",
-                                EasyLog.ERROR,
-                            )
+                            LogUtils.e("音频LOG测试 Failed to preload audio: ${e.message}")
                         }
                     }
                     MediaItem.fromUri(audioInfo.url)
@@ -183,7 +177,7 @@ class AudioPlaybackManager private constructor(private val context: Context) : P
                 exoPlayer?.play()
             }
         } catch (e: Exception) {
-            EasyLog.log("音频LOG测试 Failed to play audio: ${e.message}", EasyLog.ERROR)
+            LogUtils.e("音频LOG测试 Failed to play audio: ${e.message}")
             _error.value = "播放失败: ${e.message}"
             _isLoading.value = false
         }
@@ -197,7 +191,7 @@ class AudioPlaybackManager private constructor(private val context: Context) : P
             _playbackState.value = PlaybackState.PAUSED
             stopPositionUpdate()
         } catch (e: Exception) {
-            EasyLog.log("音频LOG测试 Failed to pause playback: ${e.message}", EasyLog.ERROR)
+            LogUtils.e("音频LOG测试 Failed to pause playback: ${e.message}")
         }
     }
 
@@ -206,9 +200,7 @@ class AudioPlaybackManager private constructor(private val context: Context) : P
         try {
             // 检查当前状态是否允许恢复
             if (_playbackState.value != PlaybackState.PAUSED) {
-                EasyLog.log(
-                    "音频LOG测试 Cannot resume: current state is ${_playbackState.value}, expected PAUSED"
-                )
+                LogUtils.w("音频LOG测试 Cannot resume: current state is ${_playbackState.value}, expected PAUSED")
                 return
             }
 
@@ -220,7 +212,7 @@ class AudioPlaybackManager private constructor(private val context: Context) : P
             _playbackState.value = PlaybackState.PLAYING
             startPositionUpdate()
         } catch (e: Exception) {
-            EasyLog.log("音频LOG测试 Failed to resume playback: ${e.message}", EasyLog.ERROR)
+            LogUtils.e("音频LOG测试 Failed to resume playback: ${e.message}")
         }
     }
 
@@ -236,7 +228,7 @@ class AudioPlaybackManager private constructor(private val context: Context) : P
             _playbackState.value = PlaybackState.IDLE
             positionUpdateJob?.cancel()
         } catch (e: Exception) {
-            EasyLog.log("音频LOG测试 Failed to stop playback: ${e.message}", EasyLog.ERROR)
+            LogUtils.e("音频LOG测试 Failed to stop playback: ${e.message}")
         }
     }
 
@@ -251,7 +243,7 @@ class AudioPlaybackManager private constructor(private val context: Context) : P
             _error.value = null
             positionUpdateJob?.cancel()
         } catch (e: Exception) {
-            EasyLog.log("音频LOG测试 Failed to reset player state: ${e.message}", EasyLog.ERROR)
+            LogUtils.e("音频LOG测试 Failed to reset player state: ${e.message}")
         }
     }
 
@@ -260,7 +252,7 @@ class AudioPlaybackManager private constructor(private val context: Context) : P
         try {
             exoPlayer?.seekTo(positionMs)
         } catch (e: Exception) {
-            EasyLog.log("音频LOG测试 Failed to seek: ${e.message}", EasyLog.ERROR)
+            LogUtils.e("音频LOG测试 Failed to seek: ${e.message}")
         }
     }
 
@@ -275,7 +267,7 @@ class AudioPlaybackManager private constructor(private val context: Context) : P
                 }
             result
         } catch (e: Exception) {
-            EasyLog.log("音频LOG测试 Failed to request audio focus: ${e.message}", EasyLog.ERROR)
+            LogUtils.e("音频LOG测试 Failed to request audio focus: ${e.message}")
             false
         }
     }
@@ -351,7 +343,7 @@ class AudioPlaybackManager private constructor(private val context: Context) : P
             }
             audioFocusRequest = null
         } catch (e: Exception) {
-            EasyLog.log("音频LOG测试 Failed to abandon audio focus: ${e.message}", EasyLog.ERROR)
+            LogUtils.e("音频LOG测试 Failed to abandon audio focus: ${e.message}")
         }
     }
 
@@ -444,7 +436,7 @@ class AudioPlaybackManager private constructor(private val context: Context) : P
 
     override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
         super.onPlayerError(error)
-        EasyLog.log("音频LOG测试 Player error: ${error.message}", EasyLog.ERROR)
+        LogUtils.e("音频LOG测试 Player error: ${error.message}")
         _error.value = "播放错误: ${error.message}"
         _isLoading.value = false
         _playbackState.value = PlaybackState.ERROR
@@ -459,10 +451,7 @@ class AudioPlaybackManager private constructor(private val context: Context) : P
             abandonAudioFocus()
             positionUpdateJob?.cancel()
         } catch (e: Exception) {
-            EasyLog.log(
-                "音频LOG测试 Failed to release AudioPlaybackManager: ${e.message}",
-                EasyLog.ERROR,
-            )
+            LogUtils.e("音频LOG测试 Failed to release AudioPlaybackManager: ${e.message}")
         }
     }
 
@@ -485,10 +474,7 @@ class AudioPlaybackManager private constructor(private val context: Context) : P
             stopPlayback()
             resetPlayerState()
         } catch (e: Exception) {
-            EasyLog.log(
-                "音频LOG测试 Failed to reset player state for page change: ${e.message}",
-                EasyLog.ERROR,
-            )
+            LogUtils.e("音频LOG测试 Failed to reset player state for page change: ${e.message}")
         }
     }
 }

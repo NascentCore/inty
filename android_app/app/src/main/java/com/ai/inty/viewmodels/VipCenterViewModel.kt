@@ -1,12 +1,12 @@
 package com.ai.inty.viewmodels
 
+import ai.sxwl.android.utils.LogUtils
 import android.app.Activity
 import com.ai.inty.base.BaseViewModel
 import com.ai.inty.billing.BillingRepository
 import com.ai.inty.billing.VipPlan
 import com.ai.inty.billing.VipStatus
 import com.ai.inty.billing.VipStatusHelper
-import com.inty.utils.log.EasyLog
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -28,9 +28,7 @@ class VipCenterViewModel : BaseViewModel() {
         if (index >= 0 && index < currentPlans.size) {
             _selectedPlanIndex.value = index
             val selectedPlan = currentPlans[index]
-            EasyLog.log(
-                "BillingRepository VipViewModel 选择订阅计划: ${selectedPlan.name} (${selectedPlan.googleProductId})"
-            )
+            LogUtils.d("BillingRepository VipViewModel 选择订阅计划: ${selectedPlan.name} (${selectedPlan.googleProductId})")
         }
     }
 
@@ -46,7 +44,7 @@ class VipCenterViewModel : BaseViewModel() {
             }
         } else {
             showNetworkAwareError("Error VipPlan Index: $selectedIndex")
-            EasyLog.log("BillingRepository VipViewModel 无效的计划索引: $selectedIndex")
+            LogUtils.i("BillingRepository VipViewModel 无效的计划索引: $selectedIndex")
         }
     }
 

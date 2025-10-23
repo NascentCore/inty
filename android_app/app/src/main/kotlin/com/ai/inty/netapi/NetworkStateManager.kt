@@ -1,11 +1,11 @@
 package com.ai.inty.netapi
 
+import ai.sxwl.android.utils.LogUtils
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
-import com.inty.utils.log.EasyLog
 import java.util.concurrent.CopyOnWriteArrayList
 
 /** 网络状态管理器 提供统一的网络状态监控和管理 */
@@ -40,7 +40,7 @@ object NetworkStateManager {
                 applicationContext?.getSystemService(Context.CONNECTIVITY_SERVICE)
                     as? ConnectivityManager
             registerNetworkCallback()
-            EasyLog.log("NetworkStateManager initialized")
+            LogUtils.i("NetworkStateManager initialized")
         }
     }
 
@@ -56,12 +56,12 @@ object NetworkStateManager {
                 override fun onAvailable(network: Network) {
                     super.onAvailable(network)
                     val networkType = getNetworkType(network)
-                    EasyLog.log("Network connected: $networkType")
+                    LogUtils.i("Network connected: $networkType")
                 }
 
                 override fun onLost(network: Network) {
                     super.onLost(network)
-                    EasyLog.log("Network disconnected")
+                    LogUtils.i("Network disconnected")
                 }
 
                 override fun onCapabilitiesChanged(
@@ -70,7 +70,7 @@ object NetworkStateManager {
                 ) {
                     super.onCapabilitiesChanged(network, networkCapabilities)
                     val networkType = getNetworkType(network)
-                    EasyLog.log("Network capabilities changed: $networkType")
+                    LogUtils.i("Network capabilities changed: $networkType")
                 }
             }
 
@@ -125,9 +125,9 @@ object NetworkStateManager {
             networkCallbacks.clear()
             connectivityManager = null
             applicationContext = null
-            EasyLog.log("NetworkStateManager released")
+            LogUtils.i("NetworkStateManager released")
         } catch (e: Exception) {
-            EasyLog.log("Failed to release NetworkStateManager: ${e.message}", EasyLog.ERROR)
+            LogUtils.e("Failed to release NetworkStateManager: ${e.message}")
         }
     }
 }

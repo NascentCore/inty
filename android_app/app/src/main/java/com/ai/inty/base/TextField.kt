@@ -1,5 +1,6 @@
 package com.ai.inty.base
 
+import ai.sxwl.android.utils.ToastUtils
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -115,7 +116,7 @@ fun IntySmallTextField(
                     // 限制最大字符数（含粘贴场景）
                     if (maxLength > 0 && nextText.length > maxLength) {
                         // 仅在首次超过时提示
-                        scope.launch { ToastUtils.showToast(R.string.str_message_is_too_long) }
+                        scope.launch { ToastUtils.showShort(R.string.str_message_is_too_long) }
                         nextText = nextText.substring(0, maxLength)
                         val sel = nextSelection.start.coerceAtMost(maxLength)
                         nextSelection = TextRange(sel)

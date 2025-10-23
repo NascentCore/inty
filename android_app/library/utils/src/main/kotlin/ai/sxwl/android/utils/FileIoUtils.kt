@@ -24,14 +24,24 @@ object FileIoUtils {
      * 从输入流写入文件
      */
     fun writeFileFromIS(filePath: String?, inputStream: InputStream?): Boolean {
-        return writeFileFromIS(FileUtils.getFileByPath(filePath), inputStream, false)
+        val file = FileUtils.getFileByPath(filePath)
+        return if (file != null) {
+            writeFileFromIS(file, inputStream, false)
+        } else {
+            false
+        }
     }
 
     /**
      * 从输入流写入文件
      */
     fun writeFileFromIS(filePath: String?, inputStream: InputStream?, append: Boolean): Boolean {
-        return writeFileFromIS(FileUtils.getFileByPath(filePath), inputStream, append)
+        val file = FileUtils.getFileByPath(filePath)
+        return if (file != null) {
+            writeFileFromIS(file, inputStream, append)
+        } else {
+            false
+        }
     }
 
     /**
@@ -46,27 +56,34 @@ object FileIoUtils {
      */
     fun writeFileFromIS(file: File?, inputStream: InputStream?, append: Boolean): Boolean {
         if (file == null || inputStream == null) return false
-        if (!FileUtils.createOrExistsFile(file)) return false
 
-        var os: OutputStream? = null
-        try {
-            os = BufferedOutputStream(FileOutputStream(file, append), BUFFER_SIZE)
-            val data = ByteArray(BUFFER_SIZE)
-            var len: Int
-            while (inputStream.read(data, 0, BUFFER_SIZE).also { len = it } != -1) {
-                os.write(data, 0, len)
+        return try {
+            if (!FileUtils.createOrExistsFile(file)) return false
+
+            var os: OutputStream? = null
+            try {
+                os = BufferedOutputStream(FileOutputStream(file, append), BUFFER_SIZE)
+                val data = ByteArray(BUFFER_SIZE)
+                var len: Int
+                while (inputStream.read(data, 0, BUFFER_SIZE).also { len = it } != -1) {
+                    os.write(data, 0, len)
+                }
+                true
+            } finally {
+                try {
+                    inputStream.close()
+                } catch (e: Exception) {
+                    // 静默处理关闭异常
+                }
+                try {
+                    os?.close()
+                } catch (e: Exception) {
+                    // 静默处理关闭异常
+                }
             }
-            return true
         } catch (e: Exception) {
             e.printStackTrace()
-            return false
-        } finally {
-            try {
-                inputStream.close()
-                os?.close()
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
+            false
         }
     }
 
@@ -74,14 +91,24 @@ object FileIoUtils {
      * 读取文件到字符串
      */
     fun readFile2String(filePath: String?): String {
-        return readFile2String(FileUtils.getFileByPath(filePath))
+        val file = FileUtils.getFileByPath(filePath)
+        return if (file != null) {
+            readFile2String(file)
+        } else {
+            ""
+        }
     }
 
     /**
      * 读取文件到字符串
      */
     fun readFile2String(filePath: String?, charsetName: String?): String {
-        return readFile2String(FileUtils.getFileByPath(filePath), charsetName)
+        val file = FileUtils.getFileByPath(filePath)
+        return if (file != null) {
+            readFile2String(file, charsetName)
+        } else {
+            ""
+        }
     }
 
     /**
@@ -100,8 +127,13 @@ object FileIoUtils {
         var reader: BufferedReader? = null
         try {
             val sb = kotlin.text.StringBuilder()
-            reader =
-                BufferedReader(InputStreamReader(FileInputStream(file), charsetName ?: "UTF-8"))
+            val charset = try {
+                charsetName ?: "UTF-8"
+            } catch (e: Exception) {
+                "UTF-8" // 默认使用UTF-8
+            }
+
+            reader = BufferedReader(InputStreamReader(FileInputStream(file), charset))
             var line: String?
             while (reader.readLine().also { line = it } != null) {
                 sb.append(line).append("\n")
@@ -114,7 +146,7 @@ object FileIoUtils {
             try {
                 reader?.close()
             } catch (e: Exception) {
-                e.printStackTrace()
+                // 静默处理关闭异常
             }
         }
     }
@@ -123,7 +155,12 @@ object FileIoUtils {
      * 读取文件到字节数组
      */
     fun readFile2Bytes(filePath: String?): ByteArray {
-        return readFile2Bytes(FileUtils.getFileByPath(filePath))
+        val file = FileUtils.getFileByPath(filePath)
+        return if (file != null) {
+            readFile2Bytes(file)
+        } else {
+            ByteArray(0)
+        }
     }
 
     /**
@@ -142,6 +179,9 @@ object FileIoUtils {
                 baos.write(data, 0, len)
             }
             return baos.toByteArray()
+        } catch (e: OutOfMemoryError) {
+            // 内存不足，返回空数组
+            return ByteArray(0)
         } catch (e: Exception) {
             e.printStackTrace()
             return ByteArray(0)
@@ -149,7 +189,7 @@ object FileIoUtils {
             try {
                 inputStream?.close()
             } catch (e: Exception) {
-                e.printStackTrace()
+                // 静默处理关闭异常
             }
         }
     }
@@ -158,14 +198,24 @@ object FileIoUtils {
      * 写入字符串到文件
      */
     fun writeFileFromString(filePath: String?, content: String?): Boolean {
-        return writeFileFromString(FileUtils.getFileByPath(filePath), content, false)
+        val file = FileUtils.getFileByPath(filePath)
+        return if (file != null) {
+            writeFileFromString(file, content, false)
+        } else {
+            false
+        }
     }
 
     /**
      * 写入字符串到文件
      */
     fun writeFileFromString(filePath: String?, content: String?, append: Boolean): Boolean {
-        return writeFileFromString(FileUtils.getFileByPath(filePath), content, append)
+        val file = FileUtils.getFileByPath(filePath)
+        return if (file != null) {
+            writeFileFromString(file, content, append)
+        } else {
+            false
+        }
     }
 
     /**
@@ -180,22 +230,25 @@ object FileIoUtils {
      */
     fun writeFileFromString(file: File?, content: String?, append: Boolean): Boolean {
         if (file == null || content == null) return false
-        if (!FileUtils.createOrExistsFile(file)) return false
 
-        var writer: BufferedWriter? = null
-        try {
-            writer = BufferedWriter(FileWriter(file, append))
-            writer.write(content)
-            return true
+        return try {
+            if (!FileUtils.createOrExistsFile(file)) return false
+
+            var writer: BufferedWriter? = null
+            try {
+                writer = BufferedWriter(FileWriter(file, append))
+                writer.write(content)
+                true
+            } finally {
+                try {
+                    writer?.close()
+                } catch (e: Exception) {
+                    // 静默处理关闭异常
+                }
+            }
         } catch (e: Exception) {
             e.printStackTrace()
-            return false
-        } finally {
-            try {
-                writer?.close()
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
+            false
         }
     }
 
@@ -203,14 +256,24 @@ object FileIoUtils {
      * 写入字节数组到文件
      */
     fun writeFileFromBytes(filePath: String?, bytes: ByteArray?): Boolean {
-        return writeFileFromBytes(FileUtils.getFileByPath(filePath), bytes, false)
+        val file = FileUtils.getFileByPath(filePath)
+        return if (file != null) {
+            writeFileFromBytes(file, bytes, false)
+        } else {
+            false
+        }
     }
 
     /**
      * 写入字节数组到文件
      */
     fun writeFileFromBytes(filePath: String?, bytes: ByteArray?, append: Boolean): Boolean {
-        return writeFileFromBytes(FileUtils.getFileByPath(filePath), bytes, append)
+        val file = FileUtils.getFileByPath(filePath)
+        return if (file != null) {
+            writeFileFromBytes(file, bytes, append)
+        } else {
+            false
+        }
     }
 
     /**
@@ -225,22 +288,25 @@ object FileIoUtils {
      */
     fun writeFileFromBytes(file: File?, bytes: ByteArray?, append: Boolean): Boolean {
         if (file == null || bytes == null) return false
-        if (!FileUtils.createOrExistsFile(file)) return false
 
-        var os: OutputStream? = null
-        try {
-            os = BufferedOutputStream(FileOutputStream(file, append), BUFFER_SIZE)
-            os.write(bytes)
-            return true
+        return try {
+            if (!FileUtils.createOrExistsFile(file)) return false
+
+            var os: OutputStream? = null
+            try {
+                os = BufferedOutputStream(FileOutputStream(file, append), BUFFER_SIZE)
+                os.write(bytes)
+                true
+            } finally {
+                try {
+                    os?.close()
+                } catch (e: Exception) {
+                    // 静默处理关闭异常
+                }
+            }
         } catch (e: Exception) {
             e.printStackTrace()
-            return false
-        } finally {
-            try {
-                os?.close()
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
+            false
         }
     }
 }

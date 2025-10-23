@@ -1,9 +1,10 @@
 package com.ai.inty.netapi.services
 
+import ai.sxwl.android.utils.DeviceUtils
+import ai.sxwl.android.utils.LanguageUtils
 import com.ai.inty.netapi.ApiResult
 import com.ai.inty.netapi.IntyNetworkManager
 import com.inty.api.models.api.v1.auth.AuthCreateGuestParams
-import com.inty.utils.AppEnv
 
 /** 认证服务 封装所有认证相关的API调用 替换原有的 IUserApi 认证相关方法 */
 object AuthService {
@@ -18,8 +19,8 @@ object AuthService {
                     .auth()
                     .createGuest(
                         AuthCreateGuestParams.builder()
-                            .deviceId(AppEnv.DeviceID)
-                            .systemLanguage(AppEnv.locale.language)
+                            .deviceId(DeviceUtils.getUniqueDeviceId())
+                            .systemLanguage(LanguageUtils.getCurrentLanguage().language)
                             .build()
                     )
 
