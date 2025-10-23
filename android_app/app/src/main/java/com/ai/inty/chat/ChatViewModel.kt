@@ -1,5 +1,6 @@
 package com.ai.inty.chat
 
+import ai.sxwl.android.utils.Utils
 import android.content.Context
 import androidx.lifecycle.viewModelScope
 import com.ai.inty.R
@@ -20,7 +21,6 @@ import com.ai.inty.utils.FirebasePerformanceHelper
 import com.ai.inty.utils.PageTrackingHelper
 import com.ai.inty.utils.UserProfileManager
 import com.architecture.httplib.core.HttpResult
-import com.inty.utils.AppEnv
 import com.inty.utils.log.EasyLog
 import com.inty.utils.storage.IntySetting
 import kotlinx.coroutines.Dispatchers
@@ -736,7 +736,7 @@ class ChatViewModel : BaseViewModel() {
         when (result) {
             is HttpResult.Failure -> showNetworkAwareError(result.message)
             is HttpResult.Success -> {
-                showNetworkAwareError(AppEnv.context.getString(R.string.custom_reply_successful))
+                showNetworkAwareError(Utils.getApp().getString(R.string.custom_reply_successful))
                 // 要更新指定agent的chatsetting
                 result.data.data?.let { chatSettingData ->
                     _chatSettings.update { currentSettings ->

@@ -1,6 +1,7 @@
 package com.ai.inty.viewmodels
 
 import ai.sxwl.android.utils.ToastUtils
+import ai.sxwl.android.utils.Utils
 import android.net.Uri
 import androidx.core.net.toUri
 import androidx.lifecycle.viewModelScope
@@ -13,7 +14,6 @@ import com.ai.inty.ui.components.EditKey
 import com.ai.inty.utils.IntyUserProfileSDK
 import com.ai.inty.utils.UserProfileManager
 import com.architecture.httplib.core.HttpResult
-import com.inty.utils.AppEnv
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -102,7 +102,7 @@ class MySettingViewModel : BaseViewModel() {
                 if (updatedProfile != null) {
                     // Show success toast for profile update
                     viewModelScope.launch(Dispatchers.Main) {
-                        ToastUtils.showShort(AppEnv.context.getString(R.string.saved_successfully))
+                        ToastUtils.showShort(Utils.getApp().getString(R.string.saved_successfully))
                         UserProfileManager.saveUserProfile(updatedProfile)
                     }
                     // 发送用户信息更新成功事件

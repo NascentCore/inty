@@ -1,11 +1,11 @@
 package com.ai.inty.utils
 
+import ai.sxwl.android.utils.Utils
 import android.content.Context
 import coil3.ImageLoader
 import coil3.disk.directory
 import coil3.request.ImageRequest
 import com.ai.inty.beans.AgentInfo
-import com.inty.utils.AppEnv
 import com.inty.utils.log.EasyLog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -142,7 +142,7 @@ object ImagePreloadManager {
                         async {
                             try {
                                 val request =
-                                    ImageRequest.Builder(AppEnv.context).data(imageUrl).build()
+                                    ImageRequest.Builder(Utils.getApp()).data(imageUrl).build()
                                 // 执行预加载，图片会被缓存到Coil的内存和磁盘缓存中
                                 loader.execute(request)
                             } catch (e: Exception) {
@@ -173,11 +173,14 @@ object ImagePreloadManager {
         try {
             withContext(Dispatchers.IO) {
                 val loader = imageLoader!!
-                val request = ImageRequest.Builder(AppEnv.context).data(imageUrl).build()
+                val request = ImageRequest.Builder(Utils.getApp()).data(imageUrl).build()
                 loader.execute(request)
             }
         } catch (e: Exception) {
-            EasyLog.log("ImagePreloadManager - 单图片预加载失败: $imageUrl, 错误: ${e.message}", EasyLog.WARN)
+            EasyLog.log(
+                "ImagePreloadManager - 单图片预加载失败: $imageUrl, 错误: ${e.message}",
+                EasyLog.WARN
+            )
         }
     }
 

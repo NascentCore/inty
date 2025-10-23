@@ -1,12 +1,12 @@
 package com.ai.inty.billing
 
+import ai.sxwl.android.utils.Utils
 import android.app.Activity
 import android.content.Context
 import com.android.billingclient.api.BillingClient
 import com.android.billingclient.api.BillingClientStateListener
 import com.android.billingclient.api.BillingResult
 import com.android.billingclient.api.PurchasesUpdatedListener
-import com.inty.utils.AppEnv
 import com.inty.utils.log.EasyLog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -223,7 +223,7 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
                 log("尝试重新连接 BillingClient")
 
                 // 重新检查Google Play服务状态
-                val context: Context? = AppEnv.context
+                val context: Context? = Utils.getApp()
                 if (context != null && BillingUtils.isGooglePlayServicesAvailable(context)) {
                     log("Google Play 服务可用，尝试重新连接")
                     connectToPlayBilling()

@@ -1,5 +1,6 @@
 package com.ai.inty.viewmodels
 
+import ai.sxwl.android.utils.Utils
 import android.content.Intent
 import com.ai.inty.MainActivity
 import com.ai.inty.base.BaseViewModel
@@ -7,7 +8,6 @@ import com.ai.inty.base.ViewModelEvent
 import com.ai.inty.beans.GENDER
 import com.ai.inty.utils.IntyUserProfileSDK
 import com.ai.inty.utils.UserProfileManager
-import com.inty.utils.AppEnv
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -32,10 +32,10 @@ class RegInfoViewModel : BaseViewModel() {
 
                     // 重启 MainActivity 以清理所有缓存数据
                     val intent =
-                        Intent(AppEnv.context, MainActivity::class.java).apply {
+                        Intent(Utils.getApp(), MainActivity::class.java).apply {
                             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                         }
-                    AppEnv.context.startActivity(intent)
+                    Utils.getApp().startActivity(intent)
                 }
             } else {
                 showNetworkAwareError("Failed to update user profile")

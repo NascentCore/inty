@@ -1,6 +1,7 @@
 package com.ai.inty.viewmodels
 
 import ai.sxwl.android.utils.ToastUtils
+import ai.sxwl.android.utils.Utils
 import androidx.lifecycle.viewModelScope
 import com.ai.inty.R
 import com.ai.inty.base.BaseViewModel
@@ -8,7 +9,6 @@ import com.ai.inty.billing.VipStatusHelper
 import com.ai.inty.net.IUserApi
 import com.ai.inty.net.NetServiceMgr
 import com.architecture.httplib.core.HttpResult
-import com.inty.utils.AppEnv
 import com.inty.utils.log.EasyLog
 import com.inty.utils.storage.IntySetting
 import kotlinx.coroutines.Dispatchers
@@ -95,7 +95,7 @@ class SettingViewModel : BaseViewModel() {
                                 deleteUserAccount()
                             } else {
                                 ToastUtils.showShort(
-                                    AppEnv.context.getString(
+                                    Utils.getApp().getString(
                                         R.string.toast_cancel_subscription_first
                                     )
                                 )
@@ -104,7 +104,7 @@ class SettingViewModel : BaseViewModel() {
 
                         is HttpResult.Failure -> {
                             ToastUtils.showShort(
-                                AppEnv.context.getString(
+                                Utils.getApp().getString(
                                     R.string.toast_check_account_deletion_error
                                 )
                             )
@@ -148,7 +148,7 @@ class SettingViewModel : BaseViewModel() {
 
                         is HttpResult.Failure -> {
                             ToastUtils.showShort(
-                                AppEnv.context.getString(R.string.toast_account_deletion_error)
+                                Utils.getApp().getString(R.string.toast_account_deletion_error)
                             )
                         }
                     }

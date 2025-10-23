@@ -1,6 +1,7 @@
 package com.ai.inty.net
 
 import ai.sxwl.android.utils.AppUtils
+import ai.sxwl.android.utils.Utils
 import com.ai.inty.BuildConfig
 import com.ai.inty.Constant
 import com.ai.inty.utils.FirebaseManager
@@ -11,7 +12,6 @@ import com.architecture.httplib.core.MoshiResultTypeAdapterFactory
 import com.architecture.httplib.error.GlobalErrorHandler
 import com.chuckerteam.chucker.api.ChuckerInterceptor
 import com.google.firebase.perf.metrics.HttpMetric
-import com.inty.utils.AppEnv
 import com.inty.utils.log.EasyLog
 import com.inty.utils.storage.IntySetting
 import com.jakewharton.retrofit2.adapter.kotlin.coroutines.CoroutineCallAdapterFactory
@@ -31,7 +31,7 @@ import java.util.concurrent.TimeUnit
 
 /** 获取基础URL 根据构建类型返回对应的API基础URL */
 private fun getBaseUrl(): String {
-    return when (AppEnv.buildType) {
+    return when (BuildConfig.BUILD_TYPE) {
         "local" -> "http://${Constant.USER_HOST_LOCAL}/"
         "debug" -> "https://${Constant.USER_HOST_DEV}/"
         "playdebug" -> "https://${Constant.USER_HOST_DEV}/"
@@ -48,8 +48,8 @@ private class AuthInterceptor : Interceptor {
                 .request()
                 .newBuilder()
                 .addHeader("accept", "application/json")
-                .addHeader("appVersionCode", AppEnv.version_code.toString())
-                .addHeader("appVersionName", AppEnv.version_name)
+                .addHeader("appVersionCode", AppUtils.getVersionCode().toString())
+                .addHeader("appVersionName", AppUtils.getVersionName())
                 .addHeader("Authorization", "Bearer ${IntySetting.getCurToken()}")
                 .build()
 
@@ -546,7 +546,7 @@ object NetServiceMgr {
                     .addInterceptor(performanceInterceptor)
                     //                    .addInterceptor(retryInterceptor)
                     .addInterceptor(authInterceptor)
-                    .addInterceptor(ChuckerInterceptor(AppEnv.context))
+                    .addInterceptor(ChuckerInterceptor(Utils.getApp()))
             return builder.build()
         }
 

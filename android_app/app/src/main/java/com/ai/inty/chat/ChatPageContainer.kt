@@ -1,5 +1,6 @@
 package com.ai.inty.chat
 
+import ai.sxwl.android.utils.Utils
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -67,9 +68,15 @@ fun ChatPageContainer(
                     agentsPagingItems[i]?.let { agent -> list.add(agent) }
                 }
             } catch (e: IndexOutOfBoundsException) {
-                EasyLog.log("ChatPageContainer - 构建agentList时索引越界: ${e.message}", EasyLog.WARN)
+                EasyLog.log(
+                    "ChatPageContainer - 构建agentList时索引越界: ${e.message}",
+                    EasyLog.WARN
+                )
             } catch (e: Exception) {
-                EasyLog.log("ChatPageContainer - 构建agentList时发生异常: ${e.message}", EasyLog.ERROR)
+                EasyLog.log(
+                    "ChatPageContainer - 构建agentList时发生异常: ${e.message}",
+                    EasyLog.ERROR
+                )
             }
             list
         }
@@ -108,7 +115,7 @@ fun ChatPageContainer(
         if (currentAgent != null) {
             try {
                 val audioManager =
-                    com.ai.inty.audio.AudioManager.getInstance(com.inty.utils.AppEnv.context, scope)
+                    com.ai.inty.audio.AudioManager.getInstance(Utils.getApp(), scope)
                 audioManager.stopAllPlayback()
             } catch (e: Exception) {
                 EasyLog.log("ChatPageContainer - 停止音频播放失败: ${e.message}", EasyLog.ERROR)
@@ -124,7 +131,7 @@ fun ChatPageContainer(
             val refreshState = agentsPagingItems.loadState.refresh
             val notEnd =
                 !(appendState is androidx.paging.LoadState.NotLoading &&
-                    appendState.endOfPaginationReached)
+                        appendState.endOfPaginationReached)
             val canPrefetch = refreshState is androidx.paging.LoadState.NotLoading
             if (pageState.currentPage >= thresholdIndex && notEnd && canPrefetch) {
                 // 修复：使用更安全的预取方式
@@ -162,7 +169,10 @@ fun ChatPageContainer(
             }
             val agent = agentList.getOrNull(currentPage)
             if (agent == null) {
-                EasyLog.log("ChatPageContainer - 获取agent失败: currentPage=$currentPage", EasyLog.WARN)
+                EasyLog.log(
+                    "ChatPageContainer - 获取agent失败: currentPage=$currentPage",
+                    EasyLog.WARN
+                )
                 return@HorizontalPager
             }
             val chatViewModel: ChatViewModel = viewModel(key = agent.id, factory = viewModelFactory)
@@ -221,31 +231,34 @@ private fun NewUserGuide(
             visible = showHand,
             enter =
                 fadeIn() +
-                    slideInHorizontally(
-                        initialOffsetX = { fullWidth -> fullWidth / 6 } // 从屏幕右侧1/6处出现
-                    ),
+                        slideInHorizontally(
+                            initialOffsetX = { fullWidth -> fullWidth / 6 } // 从屏幕右侧1/6处出现
+                        ),
             exit = fadeOut(targetAlpha = 0.01f) + slideOutHorizontally(targetOffsetX = { it }),
         ) {
             val scope = rememberCoroutineScope()
             Box(
                 modifier =
-                    Modifier.fillMaxSize().noRippleClickable {
-                        // 只有在引导期间才响应点击
-                        if (isGuideActive) {
-                            scope.launch {
-                                showHand = false
-                                pageState.animateScrollToPage(initialPageIndex)
-                                IntySetting.setShowGuested()
-                                onGuideCompleted()
-                                isGuideActive = false
+                    Modifier
+                        .fillMaxSize()
+                        .noRippleClickable {
+                            // 只有在引导期间才响应点击
+                            if (isGuideActive) {
+                                scope.launch {
+                                    showHand = false
+                                    pageState.animateScrollToPage(initialPageIndex)
+                                    IntySetting.setShowGuested()
+                                    onGuideCompleted()
+                                    isGuideActive = false
+                                }
                             }
                         }
-                    }
             ) {
                 // 背景渐变框
                 Box(
                     modifier =
-                        Modifier.align(Alignment.TopEnd)
+                        Modifier
+                            .align(Alignment.TopEnd)
                             .padding(top = 340.dp)
                             .size(210.dp, 40.dp)
                             .background(
@@ -261,7 +274,8 @@ private fun NewUserGuide(
                 // 手势图标
                 Image(
                     modifier =
-                        Modifier.align(Alignment.TopEnd)
+                        Modifier
+                            .align(Alignment.TopEnd)
                             .padding(top = 340.dp, end = 92.dp)
                             .size(112.dp),
                     painter = painterResource(R.drawable.scroll_hand),

@@ -1,6 +1,7 @@
 package com.ai.inty.viewmodels
 
 import ai.sxwl.android.utils.ToastUtils
+import ai.sxwl.android.utils.Utils
 import android.content.Intent
 import com.ai.inty.MainActivity
 import com.ai.inty.R
@@ -10,7 +11,6 @@ import com.ai.inty.beans.GoogleLoginRequest
 import com.ai.inty.net.NetServiceMgr
 import com.ai.inty.utils.UserProfileManager
 import com.architecture.httplib.core.HttpResult
-import com.inty.utils.AppEnv
 import com.inty.utils.log.EasyLog
 import com.inty.utils.storage.IntySetting
 import kotlinx.coroutines.Dispatchers
@@ -46,11 +46,11 @@ class LoginViewModel : BaseViewModel() {
 
                         // 重启 MainActivity
                         val intent =
-                            Intent(AppEnv.context, MainActivity::class.java).apply {
+                            Intent(Utils.getApp(), MainActivity::class.java).apply {
                                 flags =
                                     Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                             }
-                        AppEnv.context.startActivity(intent)
+                        Utils.getApp().startActivity(intent)
                     }
                 }
 

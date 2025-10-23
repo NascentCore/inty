@@ -1,6 +1,7 @@
 package com.ai.inty.viewmodels
 
 import ai.sxwl.android.utils.ToastUtils
+import ai.sxwl.android.utils.Utils
 import androidx.compose.runtime.mutableStateListOf
 import androidx.lifecycle.viewModelScope
 import com.ai.inty.R
@@ -21,7 +22,6 @@ import com.ai.inty.utils.IntyUserProfileSDK
 import com.ai.inty.utils.UnifiedStartupManager
 import com.ai.inty.utils.UserProfileManager
 import com.architecture.httplib.core.HttpResult
-import com.inty.utils.AppEnv
 import com.inty.utils.log.EasyLog
 import com.inty.utils.storage.IntySetting
 import kotlinx.coroutines.Dispatchers
@@ -133,7 +133,7 @@ class MainViewModel : BaseViewModel() {
         try {
             // 通过AudioManager单例停止所有播放
             val audioManager =
-                com.ai.inty.audio.AudioManager.getInstance(AppEnv.context, viewModelScope)
+                com.ai.inty.audio.AudioManager.getInstance(Utils.getApp(), viewModelScope)
             audioManager.stopAllPlayback()
         } catch (e: Exception) {
             EasyLog.log("MainViewModel - 停止音频播放失败: ${e.message}", EasyLog.ERROR)
@@ -422,7 +422,7 @@ class MainViewModel : BaseViewModel() {
         // https://developer.android.com/identity/sign-in/credential-manager-siwg#handle-sign-out
         viewModelScope.launch {
             try {
-                clearCredentialState(AppEnv.context)
+                clearCredentialState(Utils.getApp())
             } catch (e: Exception) {
                 EasyLog.log(
                     "Failed to clear credential state during logout: ${e.message}",
@@ -487,14 +487,14 @@ class MainViewModel : BaseViewModel() {
                         is HttpResult.Failure -> {
                             val errorMessage =
                                 result.message.ifBlank {
-                                    AppEnv.context.getString(
+                                    Utils.getApp().getString(
                                         R.string.operation_failed_check_network,
-                                        AppEnv.context.getString(R.string.delete_failed),
-                                        AppEnv.context.getString(R.string.check_network_connection),
+                                        Utils.getApp().getString(R.string.delete_failed),
+                                        Utils.getApp().getString(R.string.check_network_connection),
                                     )
                                 }
                             ToastUtils.showShort(
-                                AppEnv.context.getString(
+                                Utils.getApp().getString(
                                     R.string.delete_failed_with_reason,
                                     errorMessage
                                 )
@@ -549,14 +549,14 @@ class MainViewModel : BaseViewModel() {
                             EasyLog.log("updateAgent error: $result", priority = EasyLog.ERROR)
                             val errorMessage =
                                 result.message.ifBlank {
-                                    AppEnv.context.getString(
+                                    Utils.getApp().getString(
                                         R.string.operation_failed_check_network,
-                                        AppEnv.context.getString(R.string.update_failed),
-                                        AppEnv.context.getString(R.string.check_network_connection),
+                                        Utils.getApp().getString(R.string.update_failed),
+                                        Utils.getApp().getString(R.string.check_network_connection),
                                     )
                                 }
                             ToastUtils.showShort(
-                                AppEnv.context.getString(
+                                Utils.getApp().getString(
                                     R.string.update_failed_with_reason,
                                     errorMessage
                                 )

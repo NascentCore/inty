@@ -1,7 +1,6 @@
 package com.ai.inty
 
 import android.app.Application
-import android.content.Context
 import com.ai.inty.base.initImageLoader
 import com.ai.inty.billing.BillingRepository
 import com.ai.inty.netapi.IntyNetworkManager
@@ -9,25 +8,12 @@ import com.ai.inty.utils.FirebaseManager
 import com.ai.inty.utils.GlobalExceptionHandler
 import com.ai.inty.utils.NetworkManager
 import com.ai.inty.utils.UnifiedStartupManager
-import com.inty.utils.AppEnv
 import com.inty.utils.log.EasyLog
 import com.inty.utils.log.defaultInit
 import kotlinx.coroutines.launch
 
 /** 应用Application的实现类 */
 class IntyApp : Application() {
-
-    override fun attachBaseContext(base: Context?) {
-        AppEnv.context = this
-        AppEnv.DEBUG = BuildConfig.DEBUG
-        AppEnv.buildType = BuildConfig.BUILD_TYPE
-        AppEnv.testEnv = BuildConfig.DEBUG
-        AppEnv.version_code = BuildConfig.VERSION_CODE
-        AppEnv.version_name = BuildConfig.VERSION_NAME
-        AppEnv.APPLICATION_ID = BuildConfig.APPLICATION_ID
-
-        super.attachBaseContext(base)
-    }
 
     override fun onCreate() {
         super.onCreate()

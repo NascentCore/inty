@@ -1,9 +1,11 @@
 package ai.sxwl.android.utils
 
+import android.app.Application
 import android.content.Context
 import android.content.res.Configuration
 import android.content.res.Resources
 import android.os.Build
+import android.util.Log
 import java.util.Locale
 
 /**
@@ -47,23 +49,39 @@ object LanguageUtils {
      * 获取当前语言
      */
     fun getCurrentLanguage(): Locale {
-        return getCurrentLanguage(Utils.getApp())
+        val app: Application? = Utils.getApp()
+        return if (app != null) {
+            getCurrentLanguage(app)
+        } else {
+            Log.w("LanguageUtils", "App context is null, using default locale")
+            Locale.getDefault()
+        }
     }
 
     /**
      * 获取当前语言
      */
     fun getCurrentLanguage(context: Context): Locale {
-        val resources = context.resources
-        val configuration = resources.configuration
-        return getLocale(configuration)
+        return try {
+            val resources = context.resources
+            val configuration = resources.configuration
+            getLocale(configuration)
+        } catch (e: Exception) {
+            Log.e("LanguageUtils", "Failed to get current language", e)
+            Locale.getDefault()
+        }
     }
 
     /**
      * 获取系统语言
      */
     fun getSystemLanguage(): Locale {
-        return getLocale(Resources.getSystem().configuration)
+        return try {
+            getLocale(Resources.getSystem().configuration)
+        } catch (e: Exception) {
+            Log.e("LanguageUtils", "Failed to get system language", e)
+            Locale.getDefault()
+        }
     }
 
     /**
@@ -106,11 +124,16 @@ object LanguageUtils {
      */
     fun string2Locale(localeString: String?): Locale? {
         if (localeString.isNullOrEmpty()) return null
-        val parts = localeString.split("_")
-        return when (parts.size) {
-            1 -> Locale(parts[0])
-            2 -> Locale(parts[0], parts[1])
-            else -> null
+        return try {
+            val parts = localeString.split("_")
+            when (parts.size) {
+                1 -> Locale(parts[0])
+                2 -> Locale(parts[0], parts[1])
+                else -> null
+            }
+        } catch (e: Exception) {
+            Log.e("LanguageUtils", "Failed to parse locale string: $localeString", e)
+            null
         }
     }
 
@@ -137,8 +160,24 @@ object LanguageUtils {
         if (isRelaunchApp) {
             AppUtils.relaunchApp()
         } else {
-            for (activity in UtilsBridge.getActivityList()) {
-                activity.recreate()
+            try {
+                for (activity in UtilsBridge.getActivityList()) {
+                    if (!activity.isFinishing && !activity.isDestroyed) {
+                        try {
+                            activity.recreate()
+                        } catch (e: Exception) {
+                            Log.e(
+                                "LanguageUtils",
+                                "Failed to recreate activity: ${activity.javaClass.simpleName}",
+                                e
+                            )
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("LanguageUtils", "Failed to get activity list", e)
+                // 如果获取Activity列表失败，使用重启应用作为备选方案
+                AppUtils.relaunchApp()
             }
         }
     }
@@ -146,22 +185,38 @@ object LanguageUtils {
     private fun updateAppContextLanguage(locale: Locale, consumer: Utils.Consumer<Boolean>) {
         try {
             val context = Utils.getApp()
+            if (context == null) {
+                Log.e("LanguageUtils", "App context is null")
+                consumer.accept(false)
+                return
+            }
             val resources = context.resources
             val configuration = Configuration(resources.configuration)
             configuration.setLocale(locale)
             val newContext = context.createConfigurationContext(configuration)
             consumer.accept(true)
         } catch (e: Exception) {
+            Log.e("LanguageUtils", "Failed to update app context language", e)
             consumer.accept(false)
         }
     }
 
     private fun getLocale(configuration: Configuration): Locale {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            configuration.locales[0]
-        } else {
-            @Suppress("DEPRECATION")
-            configuration.locale
+        return try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                if (configuration.locales.isEmpty()) {
+                    Log.w("LanguageUtils", "Configuration locales is empty, using default locale")
+                    Locale.getDefault()
+                } else {
+                    configuration.locales[0]
+                }
+            } else {
+                @Suppress("DEPRECATION")
+                configuration.locale
+            }
+        } catch (e: Exception) {
+            Log.e("LanguageUtils", "Failed to get locale from configuration", e)
+            Locale.getDefault()
         }
     }
 }

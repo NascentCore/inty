@@ -1,6 +1,7 @@
 package com.inty.utils.storage
 
-import com.inty.utils.AppEnv
+import ai.sxwl.android.utils.AppUtils
+import ai.sxwl.android.utils.Utils
 import com.inty.utils.log.EasyLog
 import com.tencent.mmkv.MMKV
 import kotlin.random.Random
@@ -14,8 +15,8 @@ object IntySetting {
     private var curUid: String = ""
 
     init {
-        MMKV.initialize(AppEnv.context)
-        allUserSetting = MMKV.defaultMMKV(MMKV.SINGLE_PROCESS_MODE, AppEnv.APPLICATION_ID)
+        MMKV.initialize(Utils.getApp())
+        allUserSetting = MMKV.defaultMMKV(MMKV.SINGLE_PROCESS_MODE, AppUtils.getPackageName())
 
         curUid = getCurUserID()
         curUserSetting = MMKV.mmkvWithID("user_$curUid", MMKV.MULTI_PROCESS_MODE)
