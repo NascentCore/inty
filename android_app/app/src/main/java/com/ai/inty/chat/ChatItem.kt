@@ -51,7 +51,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.getSystemService
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.ai.inty.R
+import com.ai.intellimate.R
 import com.ai.inty.audio.AudioInfo
 import com.ai.inty.audio.OpeningPlayState
 import com.ai.inty.audio.VoicePlayer

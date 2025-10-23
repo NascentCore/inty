@@ -20,7 +20,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.ai.inty.R
+import com.ai.intellimate.R
 
 // 激活状态的渐变背景
 private val premiumActiveBrush =

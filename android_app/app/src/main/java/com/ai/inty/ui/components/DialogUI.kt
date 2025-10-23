@@ -25,7 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import com.ai.inty.R
+import com.ai.intellimate.R
 
 /** 删除账号确认对话框 */
 @Composable

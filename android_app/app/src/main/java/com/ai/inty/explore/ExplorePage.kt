@@ -33,7 +33,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.paging.LoadState
 import androidx.paging.compose.collectAsLazyPagingItems
 import coil3.compose.AsyncImage
-import com.ai.inty.R
+import com.ai.intellimate.R
 
 /** Explore页面 - 推荐agents展示 */
 @OptIn(ExperimentalMaterial3Api::class)

@@ -43,7 +43,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
-import com.ai.inty.R
+import com.ai.intellimate.R
 import com.ai.inty.ui.components.EmptyDataState
 import com.ai.inty.utils.AuthClickable
 

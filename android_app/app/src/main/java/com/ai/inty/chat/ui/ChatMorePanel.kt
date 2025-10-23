@@ -43,10 +43,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import com.ai.inty.LoginActivity
-import com.ai.inty.R
-import com.ai.inty.ReportActivity
-import com.ai.inty.VipCenterActivity
+import com.ai.intellimate.R
+import com.ai.intellimate.agent.report.ReportActivity
+import com.ai.intellimate.login.LoginActivity
+import com.ai.intellimate.vip.VipCenterActivity
 import com.ai.inty.chat.ChatViewModel
 import com.ai.inty.ui.ReplyStyleSheet
 

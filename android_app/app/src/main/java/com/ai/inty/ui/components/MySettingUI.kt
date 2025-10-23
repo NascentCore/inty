@@ -51,7 +51,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
-import com.ai.inty.R
+import com.ai.intellimate.R
 import com.ai.inty.ui.IntySmallTextField
 import com.ai.inty.ui.IntySmallTextField2
 

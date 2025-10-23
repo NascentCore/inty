@@ -40,7 +40,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.paging.compose.collectAsLazyPagingItems
-import com.ai.inty.R
+import com.ai.intellimate.R
 import com.ai.inty.chat.viewmodel.ChatTabViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch

@@ -45,7 +45,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import com.ai.inty.R
+import com.ai.intellimate.R
 
 /** 解锁更多聊天的拦截弹窗 */
 @Composable

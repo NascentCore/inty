@@ -15,7 +15,7 @@ import ai.sxwl.android.utils.ToastUtils
 import ai.sxwl.android.utils.Utils
 import androidx.compose.runtime.mutableStateListOf
 import androidx.lifecycle.viewModelScope
-import com.ai.inty.R
+import com.ai.intellimate.R
 import com.ai.inty.chat.ChatViewModel
 import com.ai.inty.utils.AgentCacheManager
 import com.ai.inty.utils.CredentialManagerHelper.clearCredentialState

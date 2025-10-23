@@ -66,10 +66,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
-import com.ai.inty.MySettingActivity
-import com.ai.inty.R
-import com.ai.inty.SettingActivity
-import com.ai.inty.VipCenterActivity
+import com.ai.intellimate.NewMainActivity
+import com.ai.intellimate.R
+import com.ai.intellimate.profile.ModifyProfileActivity
+import com.ai.intellimate.settings.SettingActivity
+import com.ai.intellimate.vip.VipCenterActivity
 import com.ai.inty.ui.components.ShimmerPlaceholder
 import com.ai.inty.utils.AuthClickable
 
@@ -144,7 +145,7 @@ internal fun ProfilePage(
                                 .noRippleClickable(onClick = {
                                     val intent = android.content.Intent(
                                         context,
-                                        com.ai.inty.newchat.NewMainActivity::class.java
+                                        NewMainActivity::class.java
                                     )
                                     context.startActivity(intent)
                                 }),
@@ -202,7 +203,7 @@ internal fun ProfilePage(
 
                     AuthClickable(
                         onClick = {
-                            MySettingActivity.launch(context, userProfile)
+                            ModifyProfileActivity.launch(context, userProfile)
                         }
                     ) { authModifier ->
                         AsyncImage(

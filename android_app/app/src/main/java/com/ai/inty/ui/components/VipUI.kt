@@ -34,7 +34,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.ai.inty.R
+import com.ai.intellimate.R
 import java.util.Locale
 
 /** 折扣标签组件 */

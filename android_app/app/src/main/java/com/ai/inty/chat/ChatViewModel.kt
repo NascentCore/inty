@@ -18,7 +18,7 @@ import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.Utils
 import android.content.Context
 import androidx.lifecycle.viewModelScope
-import com.ai.inty.R
+import com.ai.intellimate.R
 import com.ai.inty.audio.AudioManager
 import com.ai.inty.utils.NetworkErrorHandler
 import com.ai.inty.utils.UserProfileManager

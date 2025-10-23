@@ -30,6 +30,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
+import com.ai.intellimate.R
 import com.ai.inty.chat.ChatViewModel
 import com.ai.inty.home.HomeScreen
 import com.ai.inty.utils.UnifiedStartupManager

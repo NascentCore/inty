@@ -47,11 +47,11 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
+import com.ai.intellimate.R
+import com.ai.intellimate.agent.generate.CreateRoleActivity
+import com.ai.intellimate.login.LoginActivity
+import com.ai.intellimate.vip.VipCenterActivity
 import com.ai.inty.ChatActivity
-import com.ai.inty.CreateRoleActivity
-import com.ai.inty.LoginActivity
-import com.ai.inty.R
-import com.ai.inty.VipCenterActivity
 import com.ai.inty.chat.ChatPageContainer
 import com.ai.inty.chat.ChatViewModel
 import com.ai.inty.chat.viewmodel.ChatTabViewModel

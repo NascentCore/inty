@@ -41,15 +41,15 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.ai.inty.LoginActivity
-import com.ai.inty.R
-import com.ai.inty.ReportActivity
+import com.ai.intellimate.R
+import com.ai.intellimate.agent.report.ReportActivity
+import com.ai.intellimate.login.LoginActivity
+import com.ai.intellimate.profile.MySettingViewModel
 import com.ai.inty.chat.ChatViewModel
 import com.ai.inty.ui.MyModalNavigationDrawer
 import com.ai.inty.ui.components.EditDialog
 import com.ai.inty.ui.components.EditKey
 import com.ai.inty.ui.components.MySettingItem
-import com.ai.inty.viewmodels.MySettingViewModel
 
 /** 聊天设置抽屉组件 */
 @Composable

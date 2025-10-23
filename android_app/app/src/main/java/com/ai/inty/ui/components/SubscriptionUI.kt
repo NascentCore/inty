@@ -17,7 +17,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
-import com.ai.inty.R
+import com.ai.intellimate.R
 
 /** 订阅管理容器组件 */
 @Composable

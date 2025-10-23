@@ -33,8 +33,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
-import com.ai.inty.R
-import com.ai.inty.RegInfoActivity
+import com.ai.intellimate.R
+import com.ai.intellimate.login.RegInfoActivity
 import com.ai.inty.chat.ChatViewModel
 import com.ai.inty.ui.IntySmallTextField
 

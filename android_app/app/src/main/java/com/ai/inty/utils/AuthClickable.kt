@@ -11,7 +11,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import com.ai.inty.LoginActivity
+import com.ai.intellimate.login.LoginActivity
 
 @Composable
 fun AuthClickable(

@@ -36,6 +36,7 @@ import androidx.paging.LoadState
 import androidx.paging.PagingData
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
+import com.ai.intellimate.R
 import com.ai.inty.ui.components.EmptyDataState
 import com.ai.inty.ui.components.NetworkErrorState
 import com.ai.inty.ui.components.ShimmerPlaceholder
@@ -121,7 +122,7 @@ fun ExploreContent(
     } else if (loadState is LoadState.NotLoading && lazyPagingItems.itemCount == 0) {
         // 如果没有数据且加载完成，显示空数据状态
         EmptyDataState(
-            subtitle = stringResource(com.ai.inty.R.string.empty_explore_data),
+            subtitle = stringResource(R.string.empty_explore_data),
             modifier = modifier.fillMaxSize(),
         )
     } else {

@@ -7,6 +7,7 @@ import androidx.credentials.CredentialManager
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.GetCredentialResponse
 import androidx.credentials.exceptions.GetCredentialException
+import com.ai.intellimate.BuildConfig
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
@@ -41,7 +42,7 @@ object CredentialManagerHelper {
                 // GetSignInWithGoogleOption 用于触发“使用 Google 账号登录”按钮流程
                 val signInWithGoogleOption =
                     GetSignInWithGoogleOption.Builder(
-                        serverClientId = com.ai.inty.BuildConfig.WEB_CLIENT_ID
+                        serverClientId = BuildConfig.WEB_CLIENT_ID
                     )
                         .build()
 
