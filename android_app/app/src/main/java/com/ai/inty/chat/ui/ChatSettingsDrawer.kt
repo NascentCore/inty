@@ -1,6 +1,8 @@
 package com.ai.inty.chat.ui
 
+import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.store.IntySetting
+import ai.sxwl.android.design.noRippleClickable
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -42,8 +44,6 @@ import com.ai.inty.LoginActivity
 import com.ai.inty.R
 import com.ai.inty.ReportActivity
 import com.ai.inty.base.MyModalNavigationDrawer
-import com.ai.inty.base.noRippleClickable
-import com.ai.inty.beans.AgentInfo
 import com.ai.inty.billing.BillingRepository
 import com.ai.inty.chat.ChatViewModel
 import com.ai.inty.ui.components.EditDialog

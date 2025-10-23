@@ -1,5 +1,10 @@
 package com.ai.inty.home
 
+import ai.sxwl.android.data.api.getCdnImageUrl
+import ai.sxwl.android.data.api.model.AgentInfo
+import ai.sxwl.android.data.api.model.UserProfile
+import ai.sxwl.android.design.AntiClick
+import ai.sxwl.android.design.noRippleClickable
 import ai.sxwl.android.utils.TimeUtils
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -56,22 +61,17 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
 import com.ai.inty.MySettingActivity
 import com.ai.inty.R
 import com.ai.inty.SettingActivity
 import com.ai.inty.VipCenterActivity
-import com.ai.inty.base.AntiClick
-import com.ai.inty.base.IntyCircleImage
-import com.ai.inty.base.IntyImage
-import com.ai.inty.base.noRippleClickable
-import com.ai.inty.beans.AgentInfo
-import com.ai.inty.beans.UserProfile
 import com.ai.inty.billing.BillingRepository
 import com.ai.inty.billing.VipStatus
 import com.ai.inty.ui.components.ShimmerPlaceholder
 import com.ai.inty.utils.AuthClickable
 import com.ai.inty.utils.TrackScreenView
-import com.ai.inty.utils.getCdnImageUrl
 
 /** “我的”页面 */
 @Composable
@@ -96,7 +96,11 @@ internal fun ProfilePage(
     )
 
     Box(modifier = modifier) {
-        IntyImage(modifier = Modifier.align(Alignment.TopEnd), model = R.drawable.notify_header_bg)
+        AsyncImage(
+            modifier = Modifier.align(Alignment.TopEnd),
+            model = R.drawable.notify_header_bg,
+            contentDescription = null
+        )
         Scaffold(
             modifier = Modifier
                 .fillMaxSize()
@@ -111,9 +115,10 @@ internal fun ProfilePage(
                     AuthClickable(
                         onClick = { SettingActivity.launch(context) }
                     ) { authModifier ->
-                        IntyImage(
+                        AsyncImage(
                             modifier = authModifier.size(24.dp),
                             model = R.drawable.icon_setting,
+                            contentDescription = null,
                         )
                     }
                     Spacer(Modifier.width(16.dp))
@@ -130,9 +135,10 @@ internal fun ProfilePage(
                                 .background(color = Color.White, shape = CircleShape)
                                 .padding(4.dp)
                     ) {
-                        IntyCircleImage(
+                        AsyncImage(
                             modifier = Modifier
                                 .fillMaxSize()
+                                .clip(CircleShape)
                                 .noRippleClickable(onClick = {
                                     val intent = android.content.Intent(
                                         context,
@@ -140,8 +146,12 @@ internal fun ProfilePage(
                                     )
                                     context.startActivity(intent)
                                 }),
-                            url = getCdnImageUrl(userProfile.avatar, width = 512),
-                            placeholderResID = R.drawable.app_icon,
+                            model = ImageRequest.Builder(context)
+                                .data(getCdnImageUrl(userProfile.avatar, width = 512))
+                                .build(),
+                            placeholder = painterResource(R.drawable.app_icon),
+                            error = painterResource(R.drawable.app_icon),
+                            contentDescription = null,
                         )
                     }
                     Spacer(Modifier.width(19.dp))
@@ -193,7 +203,11 @@ internal fun ProfilePage(
                             MySettingActivity.launch(context, userProfile)
                         }
                     ) { authModifier ->
-                        IntyImage(modifier = authModifier.size(40.dp), model = R.drawable.icon_edit)
+                        AsyncImage(
+                            modifier = authModifier.size(40.dp),
+                            model = R.drawable.icon_edit,
+                            contentDescription = null,
+                        )
                     }
                 }
 
@@ -214,9 +228,10 @@ internal fun ProfilePage(
                 if (agents.isEmpty()) {
                     Spacer(Modifier.height(48.dp))
 
-                    IntyImage(
+                    AsyncImage(
                         modifier = Modifier.align(Alignment.CenterHorizontally),
                         model = R.drawable.img_content_empty,
+                        contentDescription = null,
                     )
 
                     Spacer(Modifier.height(16.dp))
@@ -335,9 +350,12 @@ private fun MyAgentCard(
                 ShimmerPlaceholder(modifier = Modifier.fillMaxSize(), cornerRadius = 12.dp)
             }
 
-            IntyImage(
+            AsyncImage(
                 modifier = Modifier.fillMaxSize(),
-                model = agentInfo.avatar,
+                model = ImageRequest.Builder(LocalContext.current)
+                    .data(agentInfo.avatar)
+                    .build(),
+                contentDescription = null,
                 placeholder = null, // 使用自定义的 Shimmer 占位显示
                 error = null, // 加载失败时也使用 Shimmer 占位显示
                 onSuccess = { imageLoaded = true },
@@ -409,7 +427,11 @@ private fun MyAgentCard(
                             ),
                     contentAlignment = Alignment.Center,
                 ) {
-                    IntyImage(modifier = Modifier.size(20.dp), model = R.drawable.icon_more2)
+                    AsyncImage(
+                        modifier = Modifier.size(20.dp),
+                        model = R.drawable.icon_more2,
+                        contentDescription = null
+                    )
                 }
 
                 DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {

@@ -1,6 +1,8 @@
 package com.ai.inty
 
 import ai.sxwl.android.common.base.BaseActivity
+import ai.sxwl.android.data.api.getCdnImageUrl
+import ai.sxwl.android.design.noRippleClickable
 import ai.sxwl.android.design.theme.HeartColor
 import ai.sxwl.android.utils.LogUtils
 import android.content.Context
@@ -64,9 +66,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
-import com.ai.inty.base.noRippleClickable
 import com.ai.inty.utils.AvatarManager
-import com.ai.inty.utils.getCdnImageUrl
 import com.ai.inty.viewmodels.AvatarGenerateViewModel
 
 
@@ -116,7 +116,7 @@ private fun AvatarGeneratePage(
     // Handle error messages
     LaunchedEffect(errorMessage) {
         errorMessage?.let { error ->
-            viewModel.showNetworkAwareError(error)
+            com.ai.inty.utils.NetworkErrorHandler.showNetworkAwareError(error)
             viewModel.clearError()
         }
     }

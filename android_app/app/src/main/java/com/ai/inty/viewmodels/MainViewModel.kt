@@ -1,25 +1,26 @@
 package com.ai.inty.viewmodels
 
+import ai.sxwl.android.common.base.BaseVM
+import ai.sxwl.android.data.api.IAgentApi
+import ai.sxwl.android.data.api.ICommonApi
+import ai.sxwl.android.data.api.model.AgentInfo
+import ai.sxwl.android.data.api.model.AppVersionRsp
+import ai.sxwl.android.data.api.model.CreateAgentRequest
+import ai.sxwl.android.data.api.model.UserProfile
 import ai.sxwl.android.data.store.IntySetting
+import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.ToastUtils
 import ai.sxwl.android.utils.Utils
 import androidx.compose.runtime.mutableStateListOf
 import androidx.lifecycle.viewModelScope
 import com.ai.inty.R
-import com.ai.inty.base.BaseViewModel
-import com.ai.inty.beans.AgentInfo
-import com.ai.inty.beans.AppVersionRsp
-import com.ai.inty.beans.CreateAgentRequest
-import com.ai.inty.beans.UserProfile
 import com.ai.inty.billing.BillingRepository
 import com.ai.inty.chat.ChatViewModel
-import com.ai.inty.net.IAgentApi
-import com.ai.inty.net.ICommonApi
 import com.ai.inty.net.NetServiceMgr
 import com.ai.inty.utils.AgentCacheManager
 import com.ai.inty.utils.CredentialManagerHelper.clearCredentialState
-import com.ai.inty.utils.FirebasePerformanceHelper
+import com.ai.inty.utils.HttpErrorHandler
 import com.ai.inty.utils.IntyUserProfileSDK
 import com.ai.inty.utils.UnifiedStartupManager
 import com.ai.inty.utils.UserProfileManager
@@ -40,7 +41,7 @@ enum class HomeTabIndex {
     Profile,
 }
 
-class MainViewModel : BaseViewModel() {
+class MainViewModel : BaseVM() {
 
     private val agentApi: IAgentApi by lazy { NetServiceMgr.getAgentApi() }
 
@@ -323,20 +324,21 @@ class MainViewModel : BaseViewModel() {
         onError: (String) -> Unit,
     ) {
         // 开始性能追踪
-        FirebasePerformanceHelper.trace("create_agent") { trace ->
-            FirebasePerformanceHelper.putAttribute(trace, "agent_name", request.name)
-            FirebasePerformanceHelper.putAttribute(
+
+        FirebaseManager.trace("create_agent") { trace ->
+            FirebaseManager.putTraceAttribute(trace, "agent_name", request.name)
+            FirebaseManager.putTraceAttribute(
                 trace,
                 "has_avatar",
                 (request.avatar?.isNotEmpty() == true).toString(),
             )
-            FirebasePerformanceHelper.putAttribute(
+            FirebaseManager.putTraceAttribute(
                 trace,
                 "visibility",
                 request.visibility,
             )
 
-            launchWithNetCheck {
+            launchBackground {
                 try {
                     val result = agentApi.createAgent(request)
 
@@ -361,11 +363,11 @@ class MainViewModel : BaseViewModel() {
                 } catch (e: retrofit2.HttpException) {
                     // 专门处理HTTP异常
                     LogUtils.e("createAgent HTTP Exception: ${e.code()} - ${e.message()}")
-                    val errorMessage = handleHttpException(e, "create")
+                    val errorMessage = HttpErrorHandler.handleHttpException(e, "create")
                     withContext(Dispatchers.Main) { onError(errorMessage) }
                 } catch (e: Exception) {
                     LogUtils.e("createAgent exception: ${e.message}")
-                    val errorMessage = handleGeneralException(e, "create")
+                    val errorMessage = HttpErrorHandler.handleGeneralException(e, "create")
                     withContext(Dispatchers.Main) { onError(errorMessage) }
                 }
             }
@@ -432,7 +434,7 @@ class MainViewModel : BaseViewModel() {
     }
 
     fun deleteAgent(agentId: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
-        launchWithNetCheck {
+        launchBackground {
             try {
                 val result = agentApi.deleteAgent(agentId)
 
@@ -473,14 +475,14 @@ class MainViewModel : BaseViewModel() {
             } catch (e: retrofit2.HttpException) {
                 // 专门处理HTTP异常
                 LogUtils.e("deleteAgent HTTP Exception: ${e.code()} - ${e.message()}")
-                val errorMessage = handleHttpException(e, "delete")
+                val errorMessage = HttpErrorHandler.handleHttpException(e, "delete")
                 withContext(Dispatchers.Main) {
                     ToastUtils.showShort(errorMessage)
                     onError(errorMessage)
                 }
             } catch (e: Exception) {
                 LogUtils.e("deleteAgent exception: ${e.message}")
-                val errorMessage = handleGeneralException(e, "delete")
+                val errorMessage = HttpErrorHandler.handleGeneralException(e, "delete")
                 withContext(Dispatchers.Main) {
                     ToastUtils.showShort(errorMessage)
                     onError(errorMessage)
@@ -496,7 +498,7 @@ class MainViewModel : BaseViewModel() {
         onError: (String) -> Unit,
     ) {
         LogUtils.i("updateAgent: $agentId")
-        launchWithNetCheck {
+        launchBackground {
             try {
                 val result = agentApi.updateAgent(agentId, request)
 
@@ -532,14 +534,14 @@ class MainViewModel : BaseViewModel() {
             } catch (e: retrofit2.HttpException) {
                 // 专门处理HTTP异常
                 LogUtils.e("updateAgent HTTP Exception: ${e.code()} - ${e.message()}")
-                val errorMessage = handleHttpException(e, "update")
+                val errorMessage = HttpErrorHandler.handleHttpException(e, "update")
                 withContext(Dispatchers.Main) {
                     ToastUtils.showShort(errorMessage)
                     onError(errorMessage)
                 }
             } catch (e: Exception) {
                 LogUtils.e("updateAgent exception: ${e.message}")
-                val errorMessage = handleGeneralException(e, "update")
+                val errorMessage = HttpErrorHandler.handleGeneralException(e, "update")
                 withContext(Dispatchers.Main) {
                     ToastUtils.showShort(errorMessage)
                     onError(errorMessage)
@@ -551,7 +553,7 @@ class MainViewModel : BaseViewModel() {
     /** 检查app版本更新 */
     val needForceUpgrade = MutableStateFlow<AppVersionRsp.AppVersionData?>(null)
 
-    private fun checkAppVersion() = launchWithNetCheck {
+    private fun checkAppVersion() = launchBackground {
         val result = commonApi.checkAppUpgrade()
         when (result) {
             is HttpResult.Success -> {

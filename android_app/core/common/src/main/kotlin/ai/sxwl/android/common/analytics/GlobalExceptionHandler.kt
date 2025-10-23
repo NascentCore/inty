@@ -1,14 +1,14 @@
-package com.ai.inty.utils
+package ai.sxwl.android.common.analytics
 
+import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.LogUtils
 import android.content.Context
-import java.lang.Thread.UncaughtExceptionHandler
 
 /** 全局异常处理器 捕获未处理的异常并记录到 Firebase Crashlytics */
 class GlobalExceptionHandler(
     private val context: Context,
-    private val defaultHandler: UncaughtExceptionHandler?,
-) : UncaughtExceptionHandler {
+    private val defaultHandler: Thread.UncaughtExceptionHandler?,
+) : Thread.UncaughtExceptionHandler {
 
     override fun uncaughtException(thread: Thread, exception: Throwable) {
         try {

@@ -1,9 +1,9 @@
 package com.ai.inty.billing
 
+import ai.sxwl.android.data.api.model.SubscriptionVerifyRequest
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.ToastUtils
 import android.app.Activity
-import com.ai.inty.beans.SubscriptionVerifyRequest
 import com.ai.inty.net.NetServiceMgr
 import com.android.billingclient.api.AcknowledgePurchaseParams
 import com.android.billingclient.api.BillingClient

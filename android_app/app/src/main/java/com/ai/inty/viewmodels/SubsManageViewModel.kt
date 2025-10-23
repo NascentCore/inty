@@ -1,8 +1,8 @@
 package com.ai.inty.viewmodels
 
+import ai.sxwl.android.common.base.BaseVM
 import ai.sxwl.android.utils.LogUtils
 import androidx.lifecycle.viewModelScope
-import com.ai.inty.base.BaseViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.launch
@@ -16,7 +16,7 @@ sealed class SubscriptionUiEvent {
 }
 
 /** 订阅管理页面 ViewModel */
-class SubsManageViewModel : BaseViewModel() {
+class SubsManageViewModel : BaseVM() {
 
     private val _uiEvent = MutableSharedFlow<SubscriptionUiEvent>()
     val uiEvent: SharedFlow<SubscriptionUiEvent> = _uiEvent

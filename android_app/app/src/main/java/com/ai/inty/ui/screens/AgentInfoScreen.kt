@@ -1,6 +1,8 @@
 package com.ai.inty.ui.screens
 
+import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.store.IntySetting
+import ai.sxwl.android.design.noRippleClickable
 import ai.sxwl.android.design.theme.HeartColor
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -46,8 +48,6 @@ import androidx.compose.ui.unit.sp
 import com.ai.inty.LoginActivity
 import com.ai.inty.R
 import com.ai.inty.ReportActivity
-import com.ai.inty.base.noRippleClickable
-import com.ai.inty.beans.AgentInfo
 import com.ai.inty.ui.components.AgentBackground
 import com.ai.inty.ui.components.SmartTagsLayout
 

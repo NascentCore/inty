@@ -18,14 +18,14 @@ constraintlayoutCompose = "1.1.1"
 # Jetpack Components
 lifecycleKtx = "2.9.4"
 navigation = "2.9.5"
-roomKtx = "2.8.2"
+roomKtx = "2.8.3"
 pagingKtx = "3.3.6"
-workKtx = "2.10.5"
+workKtx = "2.11.0"
 
 # Compose 相关
-composeBom = "2025.10.00"
-composeUI = "1.9.3"
-androidxComposeMaterial3Adaptive = "1.1.0"
+composeBom = "2025.10.01"
+composeUI = "1.9.4"
+androidxComposeMaterial3Adaptive = "1.2.0"
 androidxComposeMaterial3AdaptiveNavigationSuite = "1.4.0"
 
 # AndroidX 功能库
@@ -36,7 +36,7 @@ coreSplashscreen = "1.2.0-rc01"
 dataStore = "1.1.7"
 emoji2 = "1.6.0"
 exifinterface = "1.4.1"
-graphics = "1.0.1"
+graphics = "1.1.0"
 media3 = "1.8.0"
 preference = "1.2.1"
 profileinstaller = "1.4.1"
@@ -60,12 +60,12 @@ okhttp = "5.2.1"
 retrofit = "3.0.0"
 
 # Google & Firebase 相关
-googleServices = "4.4.3"
-firebaseBom = "34.1.0"
+googleServices = "4.4.4"
+firebaseBom = "34.4.0"
 firebaseCrashlytics = "3.0.6"
 firebasePerf = "2.0.1"
 googleIdentity = "1.1.1"
-credentialManager = "1.6.0-alpha05"
+credentialManager = "1.6.0-beta03"
 billingKtx = "7.0.0"
 
 # 测试相关库

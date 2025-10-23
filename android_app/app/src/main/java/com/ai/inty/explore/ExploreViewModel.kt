@@ -1,19 +1,19 @@
 package com.ai.inty.explore
 
+import ai.sxwl.android.common.base.BaseVM
+import ai.sxwl.android.data.api.model.AgentInfo
+import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.LogUtils
 import androidx.lifecycle.viewModelScope
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
-import com.ai.inty.base.BaseViewModel
-import com.ai.inty.beans.AgentInfo
-import com.ai.inty.utils.FirebaseManager
 import com.ai.inty.utils.UnifiedStartupManager
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 
 /** Explore页面ViewModel 负责管理推荐agents的Paging数据流、刷新、缓存等逻辑 */
-class ExploreViewModel : BaseViewModel() {
+class ExploreViewModel : BaseVM() {
 
     private val pagingRepository = ExplorePagingRepository()
 

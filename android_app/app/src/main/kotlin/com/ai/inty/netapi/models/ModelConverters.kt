@@ -1,6 +1,6 @@
 package com.ai.inty.netapi.models
 
-import com.ai.inty.beans.UserProfile
+import ai.sxwl.android.data.api.model.UserProfile
 import com.inty.api.models.api.v1.users.profile.User as IntyUser
 
 /** 数据模型转换工具 将Inty SDK的模型转换为业务层模型 */

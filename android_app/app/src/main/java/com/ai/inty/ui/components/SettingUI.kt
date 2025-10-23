@@ -1,5 +1,7 @@
 package com.ai.inty.ui.components
 
+import ai.sxwl.android.design.noRippleClickable
+import ai.sxwl.android.design.ui.HeartRedDot
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -25,8 +27,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ai.inty.R
-import com.ai.inty.base.RedDot
-import com.ai.inty.base.noRippleClickable
 
 /** 设置项容器组件 */
 @Composable
@@ -107,7 +107,7 @@ fun SettingNavigationItem(
         Text(text = title, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
         Spacer(Modifier.weight(1f))
         if (showRedDot) {
-            RedDot()
+            HeartRedDot()
             Spacer(Modifier.width(SPACER_WIDTH))
         }
         if (subtitle != null) {
@@ -146,7 +146,7 @@ fun SettingInfoItem(
             fontWeight = FontWeight.Normal,
             color = Color.White.copy(0.55f),
         )
-        if (hasRedDot) RedDot()
+        if (hasRedDot) HeartRedDot()
     }
 }
 

@@ -1,12 +1,12 @@
 package com.ai.inty.utils
 
+import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.Utils
 import android.content.Context
 import coil3.ImageLoader
 import coil3.disk.directory
 import coil3.request.ImageRequest
-import com.ai.inty.beans.AgentInfo
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope

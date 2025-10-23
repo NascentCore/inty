@@ -1,5 +1,6 @@
 package com.ai.inty.chat.ui
 
+import ai.sxwl.android.design.noRippleClickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -19,7 +20,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ai.inty.R
-import com.ai.inty.base.noRippleClickable
 
 /** Keep Talking按钮组件 */
 @Composable
@@ -27,12 +27,15 @@ fun KeepTalkingButton(visible: Boolean, onClick: () -> Unit) {
     if (!visible) return
 
     Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
         horizontalArrangement = Arrangement.Start,
     ) {
         Box(
             modifier =
-                Modifier.width(80.dp)
+                Modifier
+                    .width(80.dp)
                     .height(32.dp)
                     .background(Color.Black.copy(.3f), RoundedCornerShape(16.dp))
                     .noRippleClickable { onClick() },

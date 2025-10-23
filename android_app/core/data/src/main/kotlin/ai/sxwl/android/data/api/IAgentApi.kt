@@ -1,11 +1,11 @@
-package com.ai.inty.net
+package ai.sxwl.android.data.api
 
-import com.ai.inty.beans.AgentInfo
-import com.ai.inty.beans.AgentInfoResponse
-import com.ai.inty.beans.CreateAgentRequest
-import com.ai.inty.beans.GenerateBackgroundRequest
-import com.ai.inty.beans.GenerateBackgroundResponse
-import com.ai.inty.beans.UploadAvatarResponse
+import ai.sxwl.android.data.api.model.AgentInfo
+import ai.sxwl.android.data.api.model.AgentInfoResponse
+import ai.sxwl.android.data.api.model.CreateAgentRequest
+import ai.sxwl.android.data.api.model.GenerateBackgroundRequest
+import ai.sxwl.android.data.api.model.GenerateBackgroundResponse
+import ai.sxwl.android.data.api.model.UploadAvatarResponse
 import com.architecture.httplib.core.HttpResult
 import okhttp3.MultipartBody
 import retrofit2.http.Body

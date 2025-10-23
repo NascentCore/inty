@@ -1,5 +1,6 @@
 package com.ai.inty.ui.components
 
+import ai.sxwl.android.design.noRippleClickable
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
@@ -31,7 +32,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ai.inty.R
-import com.ai.inty.base.noRippleClickable
 
 /** 登录页面关闭按钮组件 */
 @Composable

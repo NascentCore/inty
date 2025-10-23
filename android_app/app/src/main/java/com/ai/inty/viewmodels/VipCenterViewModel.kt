@@ -1,18 +1,19 @@
 package com.ai.inty.viewmodels
 
+import ai.sxwl.android.common.base.BaseVM
 import ai.sxwl.android.utils.LogUtils
 import android.app.Activity
-import com.ai.inty.base.BaseViewModel
 import com.ai.inty.billing.BillingRepository
 import com.ai.inty.billing.VipPlan
 import com.ai.inty.billing.VipStatus
 import com.ai.inty.billing.VipStatusHelper
+import com.ai.inty.utils.NetworkErrorHandler
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 /** 会员中心ViewModel，管理订阅状态和计划信息。 */
-class VipCenterViewModel : BaseViewModel() {
+class VipCenterViewModel : BaseVM() {
     private val _selectedPlanIndex = MutableStateFlow(0)
     val selectedPlanIndex: StateFlow<Int> = _selectedPlanIndex.asStateFlow()
 
@@ -40,10 +41,10 @@ class VipCenterViewModel : BaseViewModel() {
         if (selectedIndex >= 0 && selectedIndex < currentPlans.size) {
             val selectedPlan = currentPlans[selectedIndex]
             VipStatusHelper.purchasePlan(activity, selectedPlan.googleProductId) { error ->
-                showNetworkAwareError(error)
+                NetworkErrorHandler.showNetworkAwareError(error)
             }
         } else {
-            showNetworkAwareError("Error VipPlan Index: $selectedIndex")
+            NetworkErrorHandler.showNetworkAwareError("Error VipPlan Index: $selectedIndex")
             LogUtils.i("BillingRepository VipViewModel 无效的计划索引: $selectedIndex")
         }
     }

@@ -1,10 +1,10 @@
 package com.ai.inty.chat.paging
 
+import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.store.IntySetting
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
-import com.ai.inty.beans.AgentInfo
 import com.ai.inty.chat.constants.ChatConstants
 import kotlinx.coroutines.flow.Flow
 

@@ -1,26 +1,26 @@
 package com.ai.inty.chat
 
+import ai.sxwl.android.common.analytics.PageTrackingHelper
+import ai.sxwl.android.common.base.BaseVM
+import ai.sxwl.android.data.api.model.AgentInfo
+import ai.sxwl.android.data.api.model.ChatSettingsReq
+import ai.sxwl.android.data.api.model.ChatSettingsResponse
+import ai.sxwl.android.data.api.model.ConversationItem
+import ai.sxwl.android.data.api.model.MsgInfo
+import ai.sxwl.android.data.api.model.SendMsgReq
+import ai.sxwl.android.data.api.model.UserProfile
 import ai.sxwl.android.data.store.IntySetting
+import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.Utils
 import android.content.Context
 import androidx.lifecycle.viewModelScope
 import com.ai.inty.R
 import com.ai.inty.audio.AudioManager
-import com.ai.inty.base.BaseViewModel
-import com.ai.inty.beans.AgentInfo
-import com.ai.inty.beans.ChatSettingsReq
-import com.ai.inty.beans.ChatSettingsResponse
-import com.ai.inty.beans.ConversationItem
-import com.ai.inty.beans.MsgInfo
-import com.ai.inty.beans.SendMsgReq
-import com.ai.inty.beans.UserProfile
 import com.ai.inty.billing.VipStatusHelper
 import com.ai.inty.net.NetServiceMgr
 import com.ai.inty.netapi.BusinessErrorCodes
-import com.ai.inty.utils.FirebaseManager
-import com.ai.inty.utils.FirebasePerformanceHelper
-import com.ai.inty.utils.PageTrackingHelper
+import com.ai.inty.utils.NetworkErrorHandler
 import com.ai.inty.utils.UserProfileManager
 import com.architecture.httplib.core.HttpResult
 import kotlinx.coroutines.Dispatchers
@@ -31,7 +31,7 @@ import kotlinx.coroutines.launch
 
 // 操作什么数据，支持什么 UI？Model 是 beans
 // View 是各类 page/activity。
-class ChatViewModel : BaseViewModel() {
+class ChatViewModel : BaseVM() {
 
     private val _agentInfo = MutableStateFlow<AgentInfo?>(null)
     val agentInfo = _agentInfo.asStateFlow()
@@ -302,7 +302,7 @@ class ChatViewModel : BaseViewModel() {
 
                         is HttpResult.Failure -> {
                             LogUtils.i("Failed to query messages: ${result.message}")
-                            showNetworkAwareError(result.message)
+                            NetworkErrorHandler.showNetworkAwareError(result.message)
                             // 即使查询失败，也标记为完成，避免开场白永远不播放
                             _isQueryMsgsCompleted.value = true
                         }
@@ -310,7 +310,7 @@ class ChatViewModel : BaseViewModel() {
                 }
             } catch (e: Exception) {
                 LogUtils.e("queryMsgs exception: ${e.message}")
-                handleNetworkException(e)
+                NetworkErrorHandler.handleNetworkException(e)
                 // 即使出现异常，也标记为完成，避免开场白永远不播放
                 _isQueryMsgsCompleted.value = true
             } finally {
@@ -362,24 +362,24 @@ class ChatViewModel : BaseViewModel() {
         }
 
         // 开始性能追踪
-        FirebasePerformanceHelper.trace("send_message") { trace ->
-            FirebasePerformanceHelper.putAttribute(
+        FirebaseManager.trace("send_message") { trace ->
+            FirebaseManager.putTraceAttribute(
                 trace,
                 "agent_id",
                 agentInfo.value?.id ?: "unknown",
             )
-            FirebasePerformanceHelper.putAttribute(
+            FirebaseManager.putTraceAttribute(
                 trace,
                 "message_length",
                 inputData.value.length.toString(),
             )
 
-            launchWithNetCheck {
+            launchBackground {
                 try {
                     val inputMsg = inputData.value
                     if (inputMsg.isBlank()) {
                         LogUtils.i("Empty message, ignoring send request")
-                        return@launchWithNetCheck
+                        return@launchBackground
                     }
 
                     inputData.update { "" }
@@ -535,7 +535,7 @@ class ChatViewModel : BaseViewModel() {
                                     Exception("Message send failed: ${result.message}")
                                 )
                                 // 所有消息接口错误，暂时统一文案
-                                showNetworkAwareError(
+                                NetworkErrorHandler.showNetworkAwareError(
                                     "Something went wrong. Please try again later."
                                 )
                                 // 错误恢复：确保状态正确
@@ -550,7 +550,7 @@ class ChatViewModel : BaseViewModel() {
                 } catch (e: Exception) {
                     LogUtils.e("Unexpected error in sendMsg: ${e.message}")
                     _isWaitingForReply.value = false
-                    showNetworkAwareError("An unexpected error occurred while sending message")
+                    NetworkErrorHandler.showNetworkAwareError("An unexpected error occurred while sending message")
                 } finally {
                     // 确保状态在最后被正确重置
                     if (_isWaitingForReply.value) {
@@ -576,7 +576,7 @@ class ChatViewModel : BaseViewModel() {
         }
         lastSendTime = currentTime
 
-        launchWithNetCheck {
+        launchBackground {
             val keepTalkingMsg = "continue"
 
             val msgInfo = MsgInfo(content = keepTalkingMsg, role = "user")
@@ -651,7 +651,7 @@ class ChatViewModel : BaseViewModel() {
                     }
 
                     is HttpResult.Failure -> {
-                        showNetworkAwareError(result.message)
+                        NetworkErrorHandler.showNetworkAwareError(result.message)
                         // 错误恢复：确保状态正确
                         _isWaitingForReply.value = false
                     }
@@ -675,8 +675,8 @@ class ChatViewModel : BaseViewModel() {
         return _chatSettings.value[agentId]
     }
 
-    private fun getChatSetting() = launchWithNetCheck {
-        val agentId = agentInfo.value?.id ?: return@launchWithNetCheck
+    private fun getChatSetting() = launchBackground {
+        val agentId = agentInfo.value?.id ?: return@launchBackground
         // 有agent信息，才请求
         val result = chatApi.getChatSettings(agentId)
         when (result) {
@@ -696,15 +696,17 @@ class ChatViewModel : BaseViewModel() {
     }
 
     // 高级模型定制化回复的接口调用
-    fun updateChatReplySettings(prompt: String) = launchWithNetCheck {
-        val agentId = agentInfo.value?.id ?: return@launchWithNetCheck
+    fun updateChatReplySettings(prompt: String) = launchBackground {
+        val agentId = agentInfo.value?.id ?: return@launchBackground
         // 有agent信息，才请求
         val req = ChatSettingsReq(style_prompt = prompt)
         val result = chatApi.updateChatSettings(agentId, req)
         when (result) {
-            is HttpResult.Failure -> showNetworkAwareError(result.message)
+            is HttpResult.Failure -> NetworkErrorHandler.showNetworkAwareError(result.message)
             is HttpResult.Success -> {
-                showNetworkAwareError(Utils.getApp().getString(R.string.custom_reply_successful))
+                NetworkErrorHandler.showNetworkAwareError(
+                    Utils.getApp().getString(R.string.custom_reply_successful)
+                )
                 // 要更新指定agent的chatsetting
                 result.data.data?.let { chatSettingData ->
                     _chatSettings.update { currentSettings ->
@@ -842,12 +844,12 @@ class ChatViewModel : BaseViewModel() {
                     }
 
                     is HttpResult.Failure -> {
-                        showNetworkAwareError(result.message)
+                        NetworkErrorHandler.showNetworkAwareError(result.message)
                     }
                 }
             } catch (e: Exception) {
                 LogUtils.e("setAgentID exception: ${e.message}")
-                handleNetworkException(e)
+                NetworkErrorHandler.handleNetworkException(e)
             }
         }
     }

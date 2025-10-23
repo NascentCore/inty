@@ -1,6 +1,6 @@
 package com.ai.inty.netapi.services
 
-import com.ai.inty.beans.UserProfile
+import ai.sxwl.android.data.api.model.UserProfile
 import com.ai.inty.netapi.ApiResult
 import com.ai.inty.netapi.IntyNetworkManager
 import com.ai.inty.netapi.models.toUserProfile

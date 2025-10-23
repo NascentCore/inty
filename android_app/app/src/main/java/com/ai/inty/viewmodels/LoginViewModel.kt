@@ -1,29 +1,48 @@
 package com.ai.inty.viewmodels
 
+import ai.sxwl.android.common.base.BaseVM
+import ai.sxwl.android.data.api.model.GoogleLoginRequest
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.ToastUtils
 import ai.sxwl.android.utils.Utils
 import android.content.Intent
+import androidx.lifecycle.viewModelScope
 import com.ai.inty.MainActivity
 import com.ai.inty.R
-import com.ai.inty.base.BaseViewModel
 import com.ai.inty.base.ViewModelEvent
-import com.ai.inty.beans.GoogleLoginRequest
 import com.ai.inty.net.NetServiceMgr
+import com.ai.inty.utils.NetworkErrorHandler
 import com.ai.inty.utils.UserProfileManager
 import com.architecture.httplib.core.HttpResult
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class LoginViewModel : BaseViewModel() {
+class LoginViewModel : BaseVM() {
+
+    // 事件通知机制
+    private val _events = MutableSharedFlow<ViewModelEvent>()
+    val events: SharedFlow<ViewModelEvent> = _events.asSharedFlow()
+
+    /**
+     * 发送事件通知
+     */
+    private fun sendEvent(event: ViewModelEvent) {
+        viewModelScope.launch {
+            _events.emit(event)
+        }
+    }
 
     // 延迟获取依赖，避免在构造函数中立即获取导致空指针异常
     private val userApi by lazy { NetServiceMgr.getUserApi() }
 
 
     fun onGoogleLoginSuccess(idToken: String) {
-        launchWithNetCheck {
+        launchBackground {
             val result = userApi.loginByGoogle(GoogleLoginRequest(idToken = idToken))
             LogUtils.i("loginByGoogle($idToken) result:")
             when (result) {
@@ -56,7 +75,7 @@ class LoginViewModel : BaseViewModel() {
 
                 is HttpResult.Failure -> {
                     LogUtils.e("Google login failed: ${result.message}")
-                    withContext(Dispatchers.Main) { showNetworkAwareError(result.message) }
+                    withContext(Dispatchers.Main) { NetworkErrorHandler.showNetworkAwareError(result.message) }
                 }
             }
         }

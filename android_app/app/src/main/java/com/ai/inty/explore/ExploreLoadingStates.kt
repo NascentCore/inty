@@ -1,5 +1,6 @@
 package com.ai.inty.explore
 
+import ai.sxwl.android.data.api.model.AgentInfo
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -15,7 +16,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.paging.LoadState
 import androidx.paging.compose.LazyPagingItems
-import com.ai.inty.beans.AgentInfo
 
 /** Explore页面的加载状态组件 */
 @Composable
@@ -57,7 +57,9 @@ fun ExploreLoadingStates(
 @Composable
 private fun LoadingMoreIndicator() {
     Box(
-        modifier = Modifier.size(165.dp, 60.dp).padding(16.dp),
+        modifier = Modifier
+            .size(165.dp, 60.dp)
+            .padding(16.dp),
         contentAlignment = Alignment.Center,
     ) {
         CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White.copy(0.7f))
@@ -67,7 +69,9 @@ private fun LoadingMoreIndicator() {
 /** 加载更多错误指示器 */
 @Composable
 private fun LoadMoreErrorIndicator() {
-    Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
+    Box(modifier = Modifier
+        .fillMaxWidth()
+        .padding(16.dp), contentAlignment = Alignment.Center) {
         Text(
             text = "Failed to load more data",
             color = Color.White.copy(0.7f),
@@ -80,7 +84,9 @@ private fun LoadMoreErrorIndicator() {
 /** 没有更多数据指示器 - 跨两列显示 */
 @Composable
 private fun NoMoreDataIndicator() {
-    Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
+    Box(modifier = Modifier
+        .fillMaxWidth()
+        .padding(16.dp), contentAlignment = Alignment.Center) {
         Text(
             text = "No more data available",
             color = Color.White.copy(0.6f),

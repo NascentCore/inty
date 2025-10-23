@@ -1,4 +1,4 @@
-package com.ai.inty.beans
+package ai.sxwl.android.data.api.model
 
 import android.os.Parcelable
 import com.squareup.moshi.Json

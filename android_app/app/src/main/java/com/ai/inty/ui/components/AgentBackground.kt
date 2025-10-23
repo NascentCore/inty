@@ -1,5 +1,6 @@
 package com.ai.inty.ui.components
 
+import ai.sxwl.android.data.api.model.AgentInfo
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,10 +23,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
-import com.ai.inty.base.IntyImage
-import com.ai.inty.beans.AgentInfo
+import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
@@ -86,9 +88,12 @@ fun AgentBackground(
                         }
                     }
         ) {
-            IntyImage(
+            AsyncImage(
                 modifier = Modifier.size(imageWidthDp.dp, imageHeightDp.dp),
-                model = agentInfo?.getAlbumImage(),
+                model = ImageRequest.Builder(LocalContext.current)
+                    .data(agentInfo?.getAlbumImage())
+                    .build(),
+                contentDescription = null,
                 alignment = Alignment.TopCenter,
                 contentScale = optimalContentScale,
                 onSuccess = { state ->

@@ -1,5 +1,6 @@
 package com.ai.inty.utils
 
+import ai.sxwl.android.design.noRippleClickable
 import android.content.Context
 import android.content.Intent
 import androidx.compose.material3.Text
@@ -12,7 +13,6 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.TextUnit
 import androidx.core.net.toUri
-import com.ai.inty.base.noRippleClickable
 
 /** 文本样式工具类 提供常用的文本格式化功能 */
 object TextStyleUtils {

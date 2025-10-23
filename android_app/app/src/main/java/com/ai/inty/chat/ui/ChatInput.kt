@@ -1,6 +1,7 @@
 package com.ai.inty.chat.ui
 
 import ai.sxwl.android.data.store.IntySetting
+import ai.sxwl.android.design.noRippleClickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -31,11 +32,10 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil3.compose.AsyncImage
 import com.ai.inty.R
 import com.ai.inty.RegInfoActivity
-import com.ai.inty.base.IntyImage
 import com.ai.inty.base.IntySmallTextField
-import com.ai.inty.base.noRippleClickable
 import com.ai.inty.chat.ChatViewModel
 
 /** 聊天输入框组件 */
@@ -267,18 +267,20 @@ private fun MultiUseAccessButton(
         val buttonSize = 24.dp
         // 有输入内容时，发送按钮显示
         if (hasInput) {
-            IntyImage(
+            AsyncImage(
                 modifier = Modifier
                     .size(buttonSize)
                     .noRippleClickable { onSendMessage() },
                 model = R.drawable.btn_send,
+                contentDescription = null,
             )
         } else {
-            IntyImage(
+            AsyncImage(
                 modifier = Modifier
                     .size(buttonSize)
                     .noRippleClickable { onToggleMorePanel() },
                 model = if (showMorePanel) R.drawable.btn_down else R.drawable.btn_add2,
+                contentDescription = null,
             )
         }
     }

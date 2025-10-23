@@ -1,6 +1,8 @@
 package com.ai.inty.utils
 
-import org.junit.Assert.*
+import ai.sxwl.android.data.api.getCdnImageUrl
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Test
 
 /** 测试 getCdnImageUrl 函数的功能 */

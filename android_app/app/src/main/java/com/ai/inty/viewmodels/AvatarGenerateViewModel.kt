@@ -1,20 +1,19 @@
 package com.ai.inty.viewmodels
 
+import ai.sxwl.android.common.base.BaseVM
+import ai.sxwl.android.data.api.model.GenerateBackgroundRequest
+import ai.sxwl.android.data.api.model.GenerateBackgroundResponse
 import ai.sxwl.android.utils.LogUtils
-import com.ai.inty.base.BaseViewModel
-import com.ai.inty.beans.GenerateBackgroundRequest
-import com.ai.inty.beans.GenerateBackgroundResponse
 import com.ai.inty.net.NetServiceMgr
 import com.ai.inty.utils.AvatarManager
 import com.ai.inty.utils.NetworkErrorHandler
-import com.ai.inty.utils.NetworkManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 
-class AvatarGenerateViewModel : BaseViewModel() {
+class AvatarGenerateViewModel : BaseVM() {
 
     // 延迟获取依赖，避免在构造函数中立即获取导致空指针异常
     private val agentApi by lazy { NetServiceMgr.getAgentApi() }
@@ -61,7 +60,7 @@ class AvatarGenerateViewModel : BaseViewModel() {
         _isLoading.value = true
         clearError()
 
-        launchWithNetCheck {
+        launchBackground {
             try {
                 val request = GenerateBackgroundRequest(prompt = currentPrompt)
 
@@ -95,14 +94,12 @@ class AvatarGenerateViewModel : BaseViewModel() {
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    NetworkErrorHandler.handleNetworkException(
-                        isNetworkConnected = NetworkManager.getInstance().isNetworkConnected(),
+                    val errorMessage = NetworkErrorHandler.handleNetworkException(
                         exception = e,
-                        showToast = { errorMessage ->
-                            AvatarManager.setGenerationError(errorMessage)
-                            _errorMessage.value = errorMessage
-                        },
+                        operation = "generate avatar"
                     )
+                    AvatarManager.setGenerationError(errorMessage)
+                    _errorMessage.value = errorMessage
                     LogUtils.e("Ai头像生成异常: ${e.message}")
                     _isLoading.value = false
                     clearError()
@@ -126,7 +123,7 @@ class AvatarGenerateViewModel : BaseViewModel() {
         _isLoading.value = true
         _errorMessage.value = null
 
-        launchWithNetCheck {
+        launchBackground {
             try {
                 val request = GenerateBackgroundRequest(prompt = currentPrompt)
 

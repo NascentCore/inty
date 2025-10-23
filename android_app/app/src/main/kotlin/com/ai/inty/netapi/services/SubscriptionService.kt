@@ -1,6 +1,6 @@
 package com.ai.inty.netapi.services
 
-import com.ai.inty.beans.SubscriptionPlan
+import ai.sxwl.android.data.api.model.SubscriptionPlan
 import com.ai.inty.netapi.ApiResult
 import com.ai.inty.netapi.IntyNetworkManager
 

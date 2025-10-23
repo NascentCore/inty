@@ -1,4 +1,4 @@
-package com.ai.inty.beans
+package ai.sxwl.android.data.api.model
 
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.utils.TimeUtils

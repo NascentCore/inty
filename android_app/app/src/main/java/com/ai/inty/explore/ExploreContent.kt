@@ -1,5 +1,6 @@
 package com.ai.inty.explore
 
+import ai.sxwl.android.data.api.model.AgentInfo
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -35,7 +36,6 @@ import androidx.paging.LoadState
 import androidx.paging.PagingData
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
-import com.ai.inty.beans.AgentInfo
 import com.ai.inty.ui.components.EmptyDataState
 import com.ai.inty.ui.components.NetworkErrorState
 import com.ai.inty.ui.components.ShimmerPlaceholder
@@ -160,7 +160,8 @@ fun ExploreContent(
                         // 显示加载占位符
                         ShimmerPlaceholder(
                             modifier =
-                                Modifier.fillMaxWidth()
+                                Modifier
+                                    .fillMaxWidth()
                                     .height(200.dp)
                                     .clip(RoundedCornerShape(8.dp))
                         )
@@ -181,7 +182,9 @@ fun ExploreContent(
 /** 空状态指示器 */
 @Composable
 private fun EmptyStateIndicator() {
-    Box(modifier = Modifier.fillMaxSize().height(200.dp), contentAlignment = Alignment.Center) {
+    Box(modifier = Modifier
+        .fillMaxSize()
+        .height(200.dp), contentAlignment = Alignment.Center) {
         CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White.copy(0.7f))
     }
 }

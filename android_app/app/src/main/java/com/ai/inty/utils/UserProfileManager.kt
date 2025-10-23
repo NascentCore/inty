@@ -1,8 +1,8 @@
 package com.ai.inty.utils
 
-import ai.sxwl.android.utils.LogUtils
-import com.ai.inty.beans.UserProfile
+import ai.sxwl.android.data.api.model.UserProfile
 import ai.sxwl.android.data.store.IntySetting
+import ai.sxwl.android.utils.LogUtils
 
 /** 用户信息的数据管理类 */
 object UserProfileManager {

@@ -4,16 +4,17 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.Picture
-import android.media.MediaScannerConnection
-import android.net.Uri
 import android.os.Build
-import android.os.Environment
-import android.provider.MediaStore
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.Interaction
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
@@ -30,9 +31,6 @@ import androidx.core.graphics.createBitmap
 import androidx.core.graphics.drawable.toBitmap
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.suspendCancellableCoroutine
-import java.io.File
-import kotlin.coroutines.resume
 import kotlin.math.roundToInt
 
 /**
@@ -236,54 +234,32 @@ fun Modifier.noRippleClickable(
     onClickLabel: String? = null,
     role: Role? = null,
     onClick: () -> Unit = {},
-) = this.clickable(
-    interactionSource = emptyInteractionSource,
-    indication = null,
-    enabled = enabled,
-    onClickLabel = onClickLabel,
-    role = role,
-    onClick = onClick,
-)
-
-
-//region 暂时不用的函数
-
-private suspend fun Bitmap.saveToDisk(context: Context): Uri {
-    val file = File(
-        Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES),
-        "screenshot-${System.currentTimeMillis()}.png"
+) = this.composed {
+    var lastClickTime by remember { mutableLongStateOf(0L) }
+    clickable(
+        interactionSource = emptyInteractionSource,
+        indication = null,
+        enabled = enabled,
+        onClickLabel = onClickLabel,
+        role = role,
+        onClick = {
+            val currentTime = System.currentTimeMillis()
+            if (AntiClick.isValidClick(lastClickTime)) {
+                lastClickTime = currentTime
+                onClick()
+            }
+        },
     )
-
-    file.writeBitmap(this, Bitmap.CompressFormat.PNG, 100)
-
-    return scanFilePath(context, file.path) ?: throw Exception("File could not be saved")
 }
 
 /**
- * We call [MediaScannerConnection] to index the newly created image inside MediaStore to be visible
- * for other apps, as well as returning its [MediaStore] Uri
+ * 点击防抖
  */
-private suspend fun scanFilePath(context: Context, filePath: String): Uri? {
-    return suspendCancellableCoroutine { continuation ->
-        MediaScannerConnection.scanFile(
-            context,
-            arrayOf(filePath),
-            arrayOf("image/png")
-        ) { _, scannedUri ->
-            if (scannedUri == null) {
-                continuation.cancel(Exception("File $filePath could not be scanned"))
-            } else {
-                continuation.resume(scannedUri)
-            }
-        }
+object AntiClick {
+    private const val CLICK_INTERVAL = 1000L // 1 second
+
+    fun isValidClick(lastClickTime: Long): Boolean {
+        val currentTime = System.currentTimeMillis()
+        return currentTime - lastClickTime >= CLICK_INTERVAL
     }
 }
-
-private fun File.writeBitmap(bitmap: Bitmap, format: Bitmap.CompressFormat, quality: Int) {
-    outputStream().use { out ->
-        bitmap.compress(format, quality, out)
-        out.flush()
-    }
-}
-
-//endregion

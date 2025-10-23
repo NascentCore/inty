@@ -1,5 +1,7 @@
 package com.ai.inty.chat
 
+import ai.sxwl.android.data.api.model.MsgInfo
+import ai.sxwl.android.design.noRippleClickable
 import ai.sxwl.android.utils.LogUtils
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -53,8 +55,6 @@ import com.ai.inty.R
 import com.ai.inty.audio.AudioInfo
 import com.ai.inty.audio.OpeningPlayState
 import com.ai.inty.audio.VoicePlayer
-import com.ai.inty.base.noRippleClickable
-import com.ai.inty.beans.MsgInfo
 import com.ai.inty.utils.ChatTextFormatter
 
 /** 复制文本到剪贴板；这是用于测试功能。 */

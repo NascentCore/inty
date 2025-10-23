@@ -1,20 +1,39 @@
 package com.ai.inty.viewmodels
 
+import ai.sxwl.android.common.base.BaseVM
+import ai.sxwl.android.data.api.model.GENDER
 import ai.sxwl.android.utils.Utils
 import android.content.Intent
+import androidx.lifecycle.viewModelScope
 import com.ai.inty.MainActivity
-import com.ai.inty.base.BaseViewModel
 import com.ai.inty.base.ViewModelEvent
-import com.ai.inty.beans.GENDER
 import com.ai.inty.utils.IntyUserProfileSDK
+import com.ai.inty.utils.NetworkErrorHandler
 import com.ai.inty.utils.UserProfileManager
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class RegInfoViewModel : BaseViewModel() {
+class RegInfoViewModel : BaseVM() {
+
+    // 事件通知机制
+    private val _events = MutableSharedFlow<ViewModelEvent>()
+    val events: SharedFlow<ViewModelEvent> = _events.asSharedFlow()
+
+    /**
+     * 发送事件通知
+     */
+    private fun sendEvent(event: ViewModelEvent) {
+        viewModelScope.launch {
+            _events.emit(event)
+        }
+    }
 
     fun onSave(gender: GENDER, age: String) {
-        launchWithNetCheck {
+        launchBackground {
             val info = UserProfileManager.getUserProfile()
             // 调用接口，需要让服务端存储游客的性别和年龄数据
             val updatedProfile = info.copy(gender = gender.value, ageGroup = age)
@@ -38,7 +57,7 @@ class RegInfoViewModel : BaseViewModel() {
                     Utils.getApp().startActivity(intent)
                 }
             } else {
-                showNetworkAwareError("Failed to update user profile")
+                NetworkErrorHandler.showNetworkAwareError("Failed to update user profile")
             }
         }
     }

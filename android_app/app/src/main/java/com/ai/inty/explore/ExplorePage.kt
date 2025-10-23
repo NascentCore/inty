@@ -1,5 +1,6 @@
 package com.ai.inty.explore
 
+import ai.sxwl.android.data.api.model.AgentInfo
 import android.annotation.SuppressLint
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -29,9 +30,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.paging.LoadState
 import androidx.paging.compose.collectAsLazyPagingItems
+import coil3.compose.AsyncImage
 import com.ai.inty.R
-import com.ai.inty.base.IntyImage
-import com.ai.inty.beans.AgentInfo
 import com.ai.inty.utils.ImagePreloadManager
 import com.ai.inty.utils.TrackScreenView
 
@@ -69,7 +69,11 @@ fun ExplorePage(
     LaunchedEffect(Unit) { viewModel.initializePagingData() }
 
     Box(modifier = modifier) {
-        IntyImage(modifier = Modifier.align(Alignment.TopEnd), model = R.drawable.notify_header_bg)
+        AsyncImage(
+            modifier = Modifier.align(Alignment.TopEnd),
+            model = R.drawable.notify_header_bg,
+            contentDescription = null
+        )
 
         Column(
             modifier = Modifier
