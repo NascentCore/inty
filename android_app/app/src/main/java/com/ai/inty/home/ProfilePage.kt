@@ -3,6 +3,8 @@ package com.ai.inty.home
 import ai.sxwl.android.data.api.getCdnImageUrl
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.api.model.UserProfile
+import ai.sxwl.android.data.billing.BillingRepository
+import ai.sxwl.android.data.billing.VipStatus
 import ai.sxwl.android.design.AntiClick
 import ai.sxwl.android.design.noRippleClickable
 import ai.sxwl.android.utils.TimeUtils
@@ -67,8 +69,6 @@ import com.ai.inty.MySettingActivity
 import com.ai.inty.R
 import com.ai.inty.SettingActivity
 import com.ai.inty.VipCenterActivity
-import com.ai.inty.billing.BillingRepository
-import com.ai.inty.billing.VipStatus
 import com.ai.inty.ui.components.ShimmerPlaceholder
 import com.ai.inty.utils.AuthClickable
 import com.ai.inty.utils.TrackScreenView

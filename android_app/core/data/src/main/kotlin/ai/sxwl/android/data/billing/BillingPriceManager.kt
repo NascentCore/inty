@@ -1,4 +1,4 @@
-package com.ai.inty.billing
+package ai.sxwl.android.data.billing
 
 import ai.sxwl.android.utils.LogUtils
 import com.android.billingclient.api.BillingClient

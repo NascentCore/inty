@@ -1,9 +1,18 @@
-package com.ai.inty.billing
+package ai.sxwl.android.data.billing
 
 import ai.sxwl.android.utils.LogUtils
 import android.app.Activity
 
-/** VIP状态检查工具类 统一管理VIP状态检查和购买逻辑 */
+/**
+ * VIP状态检查工具类
+ * 统一管理VIP状态检查和购买逻辑
+ *
+ * 职责：
+ * - 简化VIP状态检查
+ * - 统一购买流程
+ * - 业务逻辑封装
+ * - 错误处理
+ */
 object VipStatusHelper {
 
     /** 检查用户是否为VIP */

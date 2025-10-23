@@ -1,8 +1,9 @@
-package com.ai.inty.billing
+package ai.sxwl.android.data.billing
 
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.utils.LogUtils
 import com.architecture.httplib.utils.MoshiUtils
+import com.squareup.moshi.Types
 
 /** 计费本地存储管理类 */
 internal object BillingStorage {
@@ -39,7 +40,7 @@ internal object BillingStorage {
     fun saveLocalPlans(plans: List<VipPlan>) {
         try {
             val type =
-                com.squareup.moshi.Types.newParameterizedType(List::class.java, VipPlan::class.java)
+                Types.newParameterizedType(List::class.java, VipPlan::class.java)
             val adapter = MoshiUtils.moshiBuild.adapter<List<VipPlan>>(type)
             val json = adapter.toJson(plans) ?: ""
             IntySetting.setUserProfileData(KEY_SUBSCRIPTION_PLANS, json)
@@ -56,7 +57,7 @@ internal object BillingStorage {
         } else {
             try {
                 val type =
-                    com.squareup.moshi.Types.newParameterizedType(
+                    Types.newParameterizedType(
                         List::class.java,
                         VipPlan::class.java,
                     )

@@ -1,4 +1,4 @@
-package com.ai.inty.billing
+package ai.sxwl.android.data.billing
 
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.Utils
@@ -7,6 +7,7 @@ import android.content.Context
 import com.android.billingclient.api.BillingClient
 import com.android.billingclient.api.BillingClientStateListener
 import com.android.billingclient.api.BillingResult
+import com.android.billingclient.api.Purchase
 import com.android.billingclient.api.PurchasesUpdatedListener
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -161,7 +162,7 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
 
     override fun onPurchasesUpdated(
         billingResult: BillingResult,
-        purchases: MutableList<com.android.billingclient.api.Purchase>?,
+        purchases: MutableList<Purchase>?,
     ) {
         purchaseManager.onPurchasesUpdated(billingResult, purchases)
         log("购买结果onPurchasesUpdated $billingResult, $purchases")

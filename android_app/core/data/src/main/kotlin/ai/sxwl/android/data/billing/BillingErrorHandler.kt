@@ -1,4 +1,4 @@
-package com.ai.inty.billing
+package ai.sxwl.android.data.billing
 
 import ai.sxwl.android.utils.LogUtils
 import android.content.Context
@@ -123,15 +123,30 @@ object BillingErrorHandler {
                 }
 
                 BillingClient.BillingResponseCode.NETWORK_ERROR -> {
-                    listOf("1. 检查网络连接", "2. 尝试切换WiFi/移动网络", "3. 检查防火墙设置", "4. 等待网络稳定后重试")
+                    listOf(
+                        "1. 检查网络连接",
+                        "2. 尝试切换WiFi/移动网络",
+                        "3. 检查防火墙设置",
+                        "4. 等待网络稳定后重试"
+                    )
                 }
 
                 BillingClient.BillingResponseCode.DEVELOPER_ERROR -> {
-                    listOf("1. 检查商品ID配置是否正确", "2. 确认应用签名是否匹配", "3. 检查测试用户设置", "4. 联系开发者支持")
+                    listOf(
+                        "1. 检查商品ID配置是否正确",
+                        "2. 确认应用签名是否匹配",
+                        "3. 检查测试用户设置",
+                        "4. 联系开发者支持"
+                    )
                 }
 
                 else -> {
-                    listOf("1. 尝试重启应用", "2. 检查设备状态", "3. 等待一段时间后重试", "4. 联系客服支持")
+                    listOf(
+                        "1. 尝试重启应用",
+                        "2. 检查设备状态",
+                        "3. 等待一段时间后重试",
+                        "4. 联系客服支持"
+                    )
                 }
             }
 

@@ -1,9 +1,10 @@
-package com.ai.inty.billing
+package ai.sxwl.android.data.billing
 
 import ai.sxwl.android.data.api.NetServiceMgr
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.TimeUtils
 import com.architecture.httplib.core.HttpResult
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 
 /* 从后端获取订阅计划：
@@ -102,9 +103,10 @@ internal class BillingRemoteManager(
                 }
             }.onFailure { exception ->
                 when (exception) {
-                    is kotlinx.coroutines.CancellationException -> {
+                    is CancellationException -> {
                         LogUtils.w("获取订阅计划被取消: ${exception.message}")
                     }
+
                     else -> {
                         LogUtils.e("获取订阅计划异常: ${exception.message}")
                     }

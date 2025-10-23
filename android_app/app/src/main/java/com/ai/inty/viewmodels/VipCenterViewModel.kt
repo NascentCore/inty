@@ -1,12 +1,12 @@
 package com.ai.inty.viewmodels
 
 import ai.sxwl.android.common.base.BaseVM
+import ai.sxwl.android.data.billing.BillingRepository
+import ai.sxwl.android.data.billing.VipPlan
+import ai.sxwl.android.data.billing.VipStatus
+import ai.sxwl.android.data.billing.VipStatusHelper
 import ai.sxwl.android.utils.LogUtils
 import android.app.Activity
-import com.ai.inty.billing.BillingRepository
-import com.ai.inty.billing.VipPlan
-import com.ai.inty.billing.VipStatus
-import com.ai.inty.billing.VipStatusHelper
 import com.ai.inty.utils.NetworkErrorHandler
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

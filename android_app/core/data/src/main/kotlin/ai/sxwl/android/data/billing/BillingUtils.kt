@@ -1,7 +1,8 @@
-package com.ai.inty.billing
+package ai.sxwl.android.data.billing
 
 import ai.sxwl.android.utils.LogUtils
 import android.content.Context
+import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
 
 /** 计费工具类 */
@@ -15,44 +16,44 @@ internal object BillingUtils {
         LogUtils.i("BillingRepository BillingUtils - Google Play 服务检查结果: $resultCode")
 
         when (resultCode) {
-            com.google.android.gms.common.ConnectionResult.SUCCESS -> {
+            ConnectionResult.SUCCESS -> {
                 LogUtils.i("BillingRepository BillingUtils - Google Play 服务可用")
                 return true
             }
 
-            com.google.android.gms.common.ConnectionResult.SERVICE_MISSING -> {
+            ConnectionResult.SERVICE_MISSING -> {
                 LogUtils.i("BillingRepository BillingUtils - Google Play 服务缺失")
             }
 
-            com.google.android.gms.common.ConnectionResult.SERVICE_VERSION_UPDATE_REQUIRED -> {
+            ConnectionResult.SERVICE_VERSION_UPDATE_REQUIRED -> {
                 LogUtils.i("BillingRepository BillingUtils - Google Play 服务版本过低")
             }
 
-            com.google.android.gms.common.ConnectionResult.SERVICE_DISABLED -> {
+            ConnectionResult.SERVICE_DISABLED -> {
                 LogUtils.i("BillingRepository BillingUtils - Google Play 服务被禁用")
             }
 
-            com.google.android.gms.common.ConnectionResult.SERVICE_INVALID -> {
+            ConnectionResult.SERVICE_INVALID -> {
                 LogUtils.i("BillingRepository BillingUtils - Google Play 服务无效")
             }
 
-            com.google.android.gms.common.ConnectionResult.SERVICE_UPDATING -> {
+            ConnectionResult.SERVICE_UPDATING -> {
                 LogUtils.i("BillingRepository BillingUtils - Google Play 服务正在更新")
             }
 
-            com.google.android.gms.common.ConnectionResult.TIMEOUT -> {
+            ConnectionResult.TIMEOUT -> {
                 LogUtils.i("BillingRepository BillingUtils - Google Play 服务连接超时")
             }
 
-            com.google.android.gms.common.ConnectionResult.INTERRUPTED -> {
+            ConnectionResult.INTERRUPTED -> {
                 LogUtils.i("BillingRepository BillingUtils - Google Play 服务连接被中断")
             }
 
-            com.google.android.gms.common.ConnectionResult.INVALID_ACCOUNT -> {
+            ConnectionResult.INVALID_ACCOUNT -> {
                 LogUtils.i("BillingRepository BillingUtils - Google Play 账户无效")
             }
 
-            com.google.android.gms.common.ConnectionResult.RESOLUTION_REQUIRED -> {
+            ConnectionResult.RESOLUTION_REQUIRED -> {
                 LogUtils.i("BillingRepository BillingUtils - Google Play 服务需要用户操作解决")
             }
 

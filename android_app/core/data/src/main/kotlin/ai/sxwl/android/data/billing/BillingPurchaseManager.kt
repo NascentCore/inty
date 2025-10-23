@@ -1,4 +1,4 @@
-package com.ai.inty.billing
+package ai.sxwl.android.data.billing
 
 import ai.sxwl.android.data.api.NetServiceMgr
 import ai.sxwl.android.data.api.model.SubscriptionVerifyRequest
@@ -12,6 +12,7 @@ import com.android.billingclient.api.BillingResult
 import com.android.billingclient.api.Purchase
 import com.android.billingclient.api.SkuDetailsParams
 import com.architecture.httplib.core.HttpResult
+import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -283,11 +284,11 @@ internal class BillingPurchaseManager(
         LogUtils.d("Google Play 服务检查结果: $resultCode")
 
         when (resultCode) {
-            com.google.android.gms.common.ConnectionResult.SUCCESS -> {
+            ConnectionResult.SUCCESS -> {
                 LogUtils.i("✅ Google Play 服务可用")
             }
 
-            com.google.android.gms.common.ConnectionResult.SERVICE_VERSION_UPDATE_REQUIRED -> {
+            ConnectionResult.SERVICE_VERSION_UPDATE_REQUIRED -> {
                 LogUtils.w("⚠️ Google Play 服务需要更新")
                 // 尝试更新 Google Play 服务
                 googleApiAvailability.getErrorDialog(activity, resultCode, 1001)?.show()
@@ -295,19 +296,19 @@ internal class BillingPurchaseManager(
                 return false
             }
 
-            com.google.android.gms.common.ConnectionResult.SERVICE_DISABLED -> {
+            ConnectionResult.SERVICE_DISABLED -> {
                 LogUtils.e("❌ Google Play 服务被禁用")
                 showError("Google Play Service disabled")
                 return false
             }
 
-            com.google.android.gms.common.ConnectionResult.SERVICE_MISSING -> {
+            ConnectionResult.SERVICE_MISSING -> {
                 LogUtils.e("❌ Google Play 服务未安装")
                 showError("Google Play Service missing")
                 return false
             }
 
-            com.google.android.gms.common.ConnectionResult.SERVICE_INVALID -> {
+            ConnectionResult.SERVICE_INVALID -> {
                 LogUtils.e("❌ Google Play 服务无效")
                 showError("Google Play Service invalid")
                 return false

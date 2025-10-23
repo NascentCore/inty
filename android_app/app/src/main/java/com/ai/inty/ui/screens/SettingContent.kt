@@ -1,5 +1,6 @@
 package com.ai.inty.ui.screens
 
+import ai.sxwl.android.data.billing.BillingRepository
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.design.noRippleClickable
 import ai.sxwl.android.utils.ToastUtils
@@ -37,7 +38,6 @@ import com.ai.inty.R
 import com.ai.inty.ReportActivity
 import com.ai.inty.SubsManageActivity
 import com.ai.inty.VipCenterActivity
-import com.ai.inty.billing.BillingRepository
 import com.ai.inty.ui.components.DeleteAccountDialog
 import com.ai.inty.ui.components.LogoutButton
 import com.ai.inty.ui.components.SettingDivider

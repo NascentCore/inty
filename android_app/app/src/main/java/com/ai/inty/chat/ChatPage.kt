@@ -1,6 +1,7 @@
 package com.ai.inty.chat
 
 import ai.sxwl.android.data.api.model.MsgInfo
+import ai.sxwl.android.data.billing.BillingRepository
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.ToastUtils
@@ -50,7 +51,6 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.ai.inty.LoginActivity
 import com.ai.inty.R
 import com.ai.inty.VipCenterActivity
-import com.ai.inty.billing.BillingRepository
 import com.ai.inty.chat.ui.ChatInput
 import com.ai.inty.chat.ui.ChatMorePanel
 import com.ai.inty.chat.ui.ChatSettingsDrawer

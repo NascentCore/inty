@@ -1,11 +1,11 @@
 package com.ai.inty
 
 import ai.sxwl.android.common.analytics.GlobalExceptionHandler
+import ai.sxwl.android.data.billing.BillingRepository
 import ai.sxwl.android.data.http.IntyNetworkManager
 import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.LogUtils
 import android.app.Application
-import com.ai.inty.billing.BillingRepository
 import com.ai.inty.utils.NetworkManager
 import com.ai.inty.utils.UnifiedStartupManager
 import kotlinx.coroutines.CoroutineScope

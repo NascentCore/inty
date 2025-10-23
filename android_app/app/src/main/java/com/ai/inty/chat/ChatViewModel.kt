@@ -10,6 +10,7 @@ import ai.sxwl.android.data.api.model.ConversationItem
 import ai.sxwl.android.data.api.model.MsgInfo
 import ai.sxwl.android.data.api.model.SendMsgReq
 import ai.sxwl.android.data.api.model.UserProfile
+import ai.sxwl.android.data.billing.VipStatusHelper
 import ai.sxwl.android.data.http.BusinessErrorCodes
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.firebase.FirebaseManager
@@ -19,7 +20,6 @@ import android.content.Context
 import androidx.lifecycle.viewModelScope
 import com.ai.inty.R
 import com.ai.inty.audio.AudioManager
-import com.ai.inty.billing.VipStatusHelper
 import com.ai.inty.utils.NetworkErrorHandler
 import com.ai.inty.utils.UserProfileManager
 import com.architecture.httplib.core.HttpResult
